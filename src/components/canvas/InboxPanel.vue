@@ -380,10 +380,13 @@ const handleTaskContextMenu = (event: MouseEvent, task: any) => {
 
 const handleDragStart = (event: DragEvent, task: any) => {
   if (event.dataTransfer) {
-    event.dataTransfer.setData('text/plain', JSON.stringify({
+    event.dataTransfer.setData('application/json', JSON.stringify({
       type: 'task',
-      id: task.id,
-      title: task.title
+      taskId: task.id,
+      taskIds: [task.id], // For batch operation compatibility
+      title: task.title,
+      fromInbox: true,
+      source: 'inbox'
     }))
     event.dataTransfer.effectAllowed = 'move'
   }

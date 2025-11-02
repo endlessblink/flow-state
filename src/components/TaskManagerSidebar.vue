@@ -352,7 +352,10 @@ const handleDragStart = (event: DragEvent, task: Task) => {
     event.dataTransfer.setData('application/json', JSON.stringify({
       type: 'task',
       taskId: task.id,
-      title: task.title
+      taskIds: [task.id], // For batch operation compatibility
+      title: task.title,
+      fromInbox: true,
+      source: 'sidebar'
     }))
     event.dataTransfer.effectAllowed = 'move'
   }

@@ -56,21 +56,26 @@ export function useUncategorizedTasks() {
    * @returns true if uncategorized tasks should be included in regular views
    */
   function shouldShowUncategorizedInViews(activeSmartView: 'today' | 'week' | 'uncategorized' | null): boolean {
-    // Always include uncategorized tasks in regular views (My Tasks, quick sort, etc.)
-    // This ensures unknown project tasks are always visible
-    return true
+    // When My Tasks is selected, show only uncategorized tasks
+    // For other views, include uncategorized tasks with all other tasks
+    return activeSmartView === 'uncategorized' || activeSmartView === null
   }
 
   /**
    * Filters tasks for regular views (Board, Calendar, Canvas, AllTasks)
-   * Includes all tasks including uncategorized/unknown project tasks
+   * Respects smart view filtering while including unknown project tasks
    * @param tasks Array of tasks to filter
-   * @param activeSmartView Current smart filter state (unused but kept for compatibility)
-   * @returns Filtered tasks array including uncategorized tasks
+   * @param activeSmartView Current smart filter state
+   * @returns Filtered tasks array
    */
   function filterTasksForRegularViews(tasks: Task[], activeSmartView: 'today' | 'week' | 'uncategorized' | null): Task[] {
-    // Always include all tasks now, including uncategorized ones
-    // This ensures unknown project tasks appear in My Tasks and quick sort
+    // When My Tasks smart view is active, show only uncategorized/unknown tasks
+    if (activeSmartView === 'uncategorized') {
+      return getUncategorizedTasks(tasks)
+    }
+
+    // For regular views (no smart filter or other smart filters), include all tasks
+    // This ensures unknown project tasks are always visible in regular views
     return tasks
   }
 

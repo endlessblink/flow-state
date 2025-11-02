@@ -1688,6 +1688,13 @@ export const useTaskStore = defineStore('tasks', () => {
     return projects.value.find(p => p.id === projectId)
   }
 
+  const getProjectDisplayName = (projectId: string | null | undefined): string => {
+    if (!projectId) return 'My Tasks'
+    if (projectId === '1') return 'My Tasks' // Legacy uncategorized project ID
+    const project = getProjectById(projectId)
+    return project?.name || 'My Tasks' // Show "My Tasks" instead of "Unknown Project"
+  }
+
   const isDescendantOf = (projectId: string, potentialAncestorId: string): boolean => {
     // Check if projectId is a descendant of potentialAncestorId
     // Used to prevent circular dependencies when nesting projects
@@ -2080,6 +2087,7 @@ export const useTaskStore = defineStore('tasks', () => {
     setProjectColor,
     moveTaskToProject,
     getProjectById,
+    getProjectDisplayName,
     isDescendantOf,
     getChildProjects,
     getProjectHierarchy,

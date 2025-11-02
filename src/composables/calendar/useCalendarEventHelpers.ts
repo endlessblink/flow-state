@@ -125,8 +125,7 @@ export function useCalendarEventHelpers() {
   }
 
   const getProjectName = (event: CalendarEvent): string => {
-    const project = getTaskProject(event)
-    return project?.name || 'Unknown Project'
+    return taskStore.getProjectDisplayName(event.extendedProps?.projectId || null)
   }
 
   return {

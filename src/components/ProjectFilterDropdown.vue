@@ -172,7 +172,7 @@ const selectProject = (projectId: string | null) => {
 
 const getTriggerLabel = () => {
   if (!activeProjectId.value) return 'All Projects'
-  return activeProject.value?.name || 'Unknown Project'
+  return taskStore.getProjectDisplayName(activeProjectId.value)
 }
 
 const getTriggerTitle = () => {

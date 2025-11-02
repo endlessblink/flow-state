@@ -150,8 +150,7 @@ const isDragValid = computed(() => {
 const getProjectName = () => {
   if (!props.projectId) return ''
   if (props.projectId === '__root__') return 'Root Level'
-  const project = taskStore.getProjectById(props.projectId)
-  return project?.name || 'Unknown Project'
+  return taskStore.getProjectDisplayName(props.projectId)
 }
 
 // Drag start handler for projects

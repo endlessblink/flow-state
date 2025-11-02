@@ -503,43 +503,28 @@ const commandPaletteRef = ref<{ open: () => void; close: () => void } | null>(nu
 // Platform detection
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
-// Helper function to check if a project and its children have active tasks
-const projectHasActiveTasks = (projectId: string): boolean => {
-  // Helper function to get all child project IDs recursively
-  const getChildProjectIds = (parentId: string): string[] => {
-    const ids = [parentId]
-    const childProjects = taskStore.projects.filter(p => p.parentId === parentId)
-    childProjects.forEach(child => {
-      ids.push(...getChildProjectIds(child.id))
-    })
-    return ids
-  }
-
-  // Get all project IDs including children recursively
-  const projectIds = getChildProjectIds(projectId)
-
-  // Check if any filtered tasks (active tasks only) belong to this project or its children
-  return taskStore.filteredTasks.some(task => projectIds.includes(task.projectId || '1'))
-}
+// Note: Removed project filtering functions - projects now always visible regardless of task count
+// Smart filters only affect main board content, not sidebar project visibility
 
 // Computed Properties for Project Hierarchy
-// UPDATED: Only show root projects that have active (non-done) tasks
+// Show all root projects regardless of task count (but exclude the synthetic My Tasks project)
 const rootProjects = computed(() => {
   return taskStore.projects
     .filter(p => !p.parentId) // Only root projects
-    .filter(project => projectHasActiveTasks(project.id)) // Only projects with active tasks
+    .filter(p => p.id !== '1' && p.name !== 'My Tasks') // Exclude synthetic My Tasks project
+    // Note: No longer filtering by active tasks - show all projects
 })
 
 const getChildren = (parentId: string) => {
   return taskStore.projects
     .filter(p => p.parentId === parentId)
-    .filter(project => projectHasActiveTasks(project.id)) // Only children with active tasks
+    // Note: No longer filtering by active tasks - show all child projects
 }
 
 const hasChildren = (projectId: string) => {
   return taskStore.projects
     .filter(p => p.parentId === projectId)
-    .some(project => projectHasActiveTasks(project.id)) // Only children with active tasks
+    .length > 0 // Check if there are any child projects
 }
 
 // Smart View Counts

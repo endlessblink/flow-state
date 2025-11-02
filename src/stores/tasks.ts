@@ -853,11 +853,18 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log(`🔧 TaskStore.filteredTasks: Status filter "${activeStatusFilter.value}" applied - removed ${beforeStatusFilter - filtered.length} tasks, ${filtered.length} remaining`)
     }
 
-    // Apply global done task exclusion (completed tasks treated as archived)
-    const beforeHideDone = filtered.length
-    filtered = filtered.filter(task => task.status !== 'done')
-    if (shouldLogTaskDiagnostics()) {
-      console.log(`🔧 TaskStore.filteredTasks: Global done task exclusion applied - removed ${beforeHideDone - filtered.length} done tasks, ${filtered.length} remaining`)
+    // Apply done task visibility based on user preference
+    if (hideDoneTasks.value) {
+      const beforeHideDone = filtered.length
+      filtered = filtered.filter(task => task.status !== 'done')
+      if (shouldLogTaskDiagnostics()) {
+        console.log(`🔧 TaskStore.filteredTasks: Hide done tasks enabled - removed ${beforeHideDone - filtered.length} done tasks, ${filtered.length} remaining`)
+      }
+    } else {
+      if (shouldLogTaskDiagnostics()) {
+        const doneTaskCount = filtered.filter(task => task.status === 'done').length
+        console.log(`🔧 TaskStore.filteredTasks: Hide done tasks disabled - keeping ${doneTaskCount} done tasks in filter results`)
+      }
     }
 
     // NEW: Include nested tasks when their parent matches the filter

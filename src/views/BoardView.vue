@@ -377,7 +377,7 @@ const totalDisplayedTasks = computed(() => {
 })
 
 // Filtered tasks specifically for Board View
-// Excludes uncategorized tasks unless My Tasks smart filter is active
+// Uses taskStore.filteredTasks directly when smart views are active to avoid double filtering
 const boardFilteredTasks = computed(() => {
   try {
     // Validate input from taskStore
@@ -387,7 +387,13 @@ const boardFilteredTasks = computed(() => {
       return []
     }
 
-    // Call filter function
+    // When smart views are active, use filteredTasks directly to avoid double filtering
+    if (taskStore.activeSmartView && taskStore.activeSmartView !== 'uncategorized') {
+      console.log('BoardView.boardFilteredTasks: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
+      return storeTasks
+    }
+
+    // For uncategorized smart view or regular views, use the existing filter logic
     const filtered = filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
 
     // Validate result

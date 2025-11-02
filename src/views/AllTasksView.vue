@@ -137,9 +137,24 @@ const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
 
 // Computed Tasks - Filter for AllTasksView
+// Uses taskStore.filteredTasks directly when smart views are active to avoid double filtering
 const filteredTasks = computed(() => {
   try {
-    return filterTasksForRegularViews(taskStore.filteredTasks, taskStore.activeSmartView)
+    // Validate input from taskStore
+    const storeTasks = taskStore.filteredTasks
+    if (!Array.isArray(storeTasks)) {
+      console.warn('AllTasksView.filteredTasks: taskStore.filteredTasks is not an array:', storeTasks)
+      return []
+    }
+
+    // When smart views are active, use filteredTasks directly to avoid double filtering
+    if (taskStore.activeSmartView && taskStore.activeSmartView !== 'uncategorized') {
+      console.log('AllTasksView.filteredTasks: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
+      return storeTasks
+    }
+
+    // For uncategorized smart view or regular views, use the existing filter logic
+    return filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
   } catch (error) {
     console.error('AllTasksView.filteredTasks: Error filtering tasks:', error)
     return []

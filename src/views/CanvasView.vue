@@ -452,6 +452,7 @@ import type { Node, Edge } from '@vue-flow/core'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
+import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import InboxPanel from '@/components/canvas/InboxPanel.vue'
@@ -480,6 +481,9 @@ const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
 const undoHistory = getUndoSystem()
+
+// Uncategorized tasks composable
+const { filterTasksForRegularViews } = useUncategorizedTasks()
 
 if (import.meta.env.DEV) {
   ;(window as any).__canvasStore = canvasStore
@@ -595,6 +599,17 @@ const zoomPresets = [
 
 // Computed properties
 const sections = computed(() => canvasStore.sections)
+
+// Filtered tasks specifically for Canvas View
+// Excludes uncategorized tasks unless My Tasks smart filter is active
+const canvasFilteredTasks = computed(() => {
+  try {
+    return filterTasksForRegularViews(canvasFilteredTasks.value, taskStore.activeSmartView)
+  } catch (error) {
+    console.error('CanvasView.canvasFilteredTasks: Error filtering tasks:', error)
+    return []
+  }
+})
 
 // Dynamic node extent based on content and zoom limits
 const dynamicNodeExtent = computed(() => {
@@ -741,7 +756,7 @@ const syncNodes = () => {
   })
 
   // Add task nodes AFTER (so they render on top) - only if section is NOT collapsed
-  taskStore.filteredTasks
+  canvasFilteredTasks.value
     .filter(task => task && task.id) // CRITICAL: Ensure task object is valid before processing
     .forEach((task, index) => {
       // Skip tasks still in inbox or without canvas position (inbox-first architecture)
@@ -794,15 +809,15 @@ const getTaskCountForSection = (sectionId: string) => {
   if (!section) return 0
 
   // Use the new canvas store utility for accurate task counting
-  return canvasStore.getTaskCountInSection(section, taskStore.filteredTasks)
+  return canvasStore.getTaskCountInSection(section, canvasFilteredTasks.value)
 }
 
 // Sync edges from store
 const syncEdges = () => {
   const allEdges: Edge[] = []
-  const taskIds = new Set(taskStore.filteredTasks.map(t => t.id))
+  const taskIds = new Set(canvasFilteredTasks.value.map(t => t.id))
 
-  taskStore.filteredTasks.forEach(task => {
+  canvasFilteredTasks.value.forEach(task => {
     if (task.dependsOn && task.dependsOn.length > 0) {
       // Clean up orphaned dependencies (remove references to deleted tasks)
       const validDependencies = task.dependsOn.filter(depId => taskIds.has(depId))
@@ -836,7 +851,7 @@ const syncEdges = () => {
 }
 
 // Watch for task and section changes
-watch(() => taskStore.filteredTasks, () => {
+watch(() => canvasFilteredTasks.value, () => {
   syncNodes()
   syncEdges()
 }, { deep: true })
@@ -852,7 +867,7 @@ watch(() => canvasStore.sections.map(s => ({ id: s.id, isCollapsed: s.isCollapse
 }, { deep: true })
 
 // Watch for task position changes to update section counts
-watch(() => taskStore.filteredTasks.map(t => ({ id: t.id, canvasPosition: t.canvasPosition })), () => {
+watch(() => canvasFilteredTasks.value.map(t => ({ id: t.id, canvasPosition: t.canvasPosition })), () => {
   syncNodes()
 }, { deep: true })
 
@@ -900,7 +915,7 @@ const collectTasksForSection = (sectionId: string) => {
   })
 
   // Get tasks currently in inbox ONLY (not canvas tasks, excluding done tasks)
-  const inboxTasks = taskStore.filteredTasks.filter(t =>
+  const inboxTasks = canvasFilteredTasks.value.filter(t =>
     t.isInInbox === true && t.status !== 'done'
   )
 
@@ -1122,7 +1137,7 @@ const handleNodeDragStop = (event: any) => {
       })
 
       // Update all child task positions to maintain relative positioning
-      taskStore.filteredTasks
+      canvasFilteredTasks.value
         .filter(task => {
           if (!task.canvasPosition) return false
           const taskSection = canvasStore.sections.find(s => {
@@ -1143,7 +1158,7 @@ const handleNodeDragStop = (event: any) => {
           })
         })
 
-      console.log(`Section dragged to: (${node.position.x}, ${node.position.y}) with ${taskStore.filteredTasks.filter(t => {
+      console.log(`Section dragged to: (${node.position.x}, ${node.position.y}) with ${canvasFilteredTasks.value.filter(t => {
         if (!t.canvasPosition) return false
         const taskSection = canvasStore.sections.find(s => {
           const { x, y, width, height } = s.position
@@ -1540,7 +1555,7 @@ const handleSectionResizeEnd = ({ sectionId, event }: any) => {
         console.log('🔄 [CanvasView] Adjusting task positions by delta:', { deltaX, deltaY })
 
         // Find all tasks inside this section (geometric bounds check using ORIGINAL section bounds)
-        const tasksInSection = taskStore.filteredTasks.filter(task => {
+        const tasksInSection = canvasFilteredTasks.value.filter(task => {
           if (!task.canvasPosition || task.isInInbox || section.isCollapsed) return false
 
           const taskX = task.canvasPosition.x
@@ -1896,7 +1911,7 @@ const deleteNode = () => {
     }
     
     // Confirm deletion for sections with tasks
-    const tasksInSection = canvasStore.getTasksInSection(section, taskStore.filteredTasks)
+    const tasksInSection = canvasStore.getTasksInSection(section, canvasFilteredTasks.value)
     const confirmMessage = tasksInSection.length > 0 
       ? `Delete "${section.name}" section? It contains ${tasksInSection.length} task(s) that will be moved to the canvas.`
       : `Delete "${section.name}" section?`
@@ -2270,8 +2285,8 @@ const handleKeyDown = async (event: KeyboardEvent) => {
 
       // Find section for confirmation
       const section = canvasStore.sections.find(s => s.id === sectionId)
-      const confirmMessage = section && canvasStore.getTasksInSection(section, taskStore.filteredTasks).length > 0
-        ? `Delete "${section.name}" section? It contains ${canvasStore.getTasksInSection(section, taskStore.filteredTasks).length} task(s) that will be moved to the canvas.`
+      const confirmMessage = section && canvasStore.getTasksInSection(section, canvasFilteredTasks.value).length > 0
+        ? `Delete "${section.name}" section? It contains ${canvasStore.getTasksInSection(section, canvasFilteredTasks.value).length} task(s) that will be moved to the canvas.`
         : `Delete section?`
 
       if (confirm(confirmMessage)) {
@@ -2818,7 +2833,7 @@ const autoArrange = () => {
   }
 
   // Auto-arrange ALL tasks (not just in sections)
-  const allTasks = taskStore.filteredTasks.filter(task => task.canvasPosition)
+  const allTasks = canvasFilteredTasks.value.filter(task => task.canvasPosition)
   const unsectionedTasks = allTasks.filter(task => {
     return !canvasStore.sections.some(section => {
       const { x, y, width, height } = section.position
@@ -2917,7 +2932,7 @@ const autoArrange = () => {
 }
 
 const getTasksForSection = (section: any) => {
-  const tasks = canvasStore.getTasksInSection(section, taskStore.filteredTasks)
+  const tasks = canvasStore.getTasksInSection(section, canvasFilteredTasks.value)
   // If section is collapsed, return empty array to hide tasks
   return section.isCollapsed ? [] : tasks
 }

@@ -95,6 +95,7 @@ import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import ViewControls, { type ViewType, type DensityType } from '@/components/ViewControls.vue'
 import TaskTable from '@/components/TaskTable.vue'
 import TaskList from '@/components/TaskList.vue'
@@ -107,6 +108,9 @@ import type { Task } from '@/stores/tasks'
 // Stores
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+
+// Uncategorized tasks composable
+const { filterTasksForRegularViews } = useUncategorizedTasks()
 
 // Extract only reactive state refs, not computed properties
 // Computed properties stay on the store to maintain full reactivity chain
@@ -132,9 +136,14 @@ const contextMenuTask = ref<Task | null>(null)
 const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
 
-// Computed Tasks - Access store's computed directly (maintains full reactivity)
+// Computed Tasks - Filter for AllTasksView
 const filteredTasks = computed(() => {
-  return taskStore.filteredTasks
+  try {
+    return filterTasksForRegularViews(taskStore.filteredTasks, taskStore.activeSmartView)
+  } catch (error) {
+    console.error('AllTasksView.filteredTasks: Error filtering tasks:', error)
+    return []
+  }
 })
 
 const sortedTasks = computed(() => {

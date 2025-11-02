@@ -196,6 +196,7 @@ import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
+import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
@@ -212,6 +213,9 @@ const router = useRouter()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
+
+// Uncategorized tasks composable
+const { getUncategorizedTasks, filterTasksForRegularViews } = useUncategorizedTasks()
 
 // Density state from global UI store
 const currentDensity = computed(() => uiStore.boardDensity)
@@ -252,17 +256,53 @@ const setDensity = (density: 'ultrathin' | 'compact' | 'comfortable') => {
 
 // Group tasks by project (using filtered tasks from store)
 const tasksByProject = computed(() => {
-  const grouped: Record<string, Task[]> = {}
+  try {
+    const grouped: Record<string, Task[]> = {}
 
-  taskStore.filteredTasks.forEach(task => {
-    const projectId = task.projectId || '1'
-    if (!grouped[projectId]) {
-      grouped[projectId] = []
+    // Add comprehensive safety check for boardFilteredTasks
+    let tasks: Task[] = []
+    try {
+      // Check if boardFilteredTasks exists and has a value property
+      if (boardFilteredTasks && typeof boardFilteredTasks === 'object' && 'value' in boardFilteredTasks) {
+        tasks = boardFilteredTasks.value || []
+      } else {
+        console.warn('BoardView.tasksByProject: boardFilteredTasks is not a valid computed ref:', boardFilteredTasks)
+        return grouped
+      }
+
+      // Validate that we got an array
+      if (!Array.isArray(tasks)) {
+        console.warn('BoardView.tasksByProject: boardFilteredTasks.value is not an array:', tasks)
+        return grouped
+      }
+    } catch (error) {
+      console.error('BoardView.tasksByProject: Error accessing boardFilteredTasks:', error)
+      return grouped
     }
-    grouped[projectId].push(task)
-  })
 
-  return grouped
+    tasks.forEach(task => {
+      try {
+        // Validate task object
+        if (!task || typeof task !== 'object') {
+          console.warn('BoardView.tasksByProject: Invalid task object:', task)
+          return
+        }
+
+        const projectId = task.projectId || '1'
+        if (!grouped[projectId]) {
+          grouped[projectId] = []
+        }
+        grouped[projectId].push(task)
+      } catch (error) {
+        console.error('BoardView.tasksByProject: Error processing task:', error, task)
+      }
+    })
+
+    return grouped
+  } catch (error) {
+    console.error('BoardView.tasksByProject: Critical error grouping tasks by project:', error)
+    return {}
+  }
 })
 
 // Helper to get a project and all its descendants recursively
@@ -277,30 +317,47 @@ const getProjectAndChildren = (projectId: string): string[] => {
 
 // Helper function to check if a project and its children have active tasks
 const projectHasActiveTasks = (projectId: string): boolean => {
-  // Get all project IDs including children recursively
-  const projectIds = getProjectAndChildren(projectId)
+  try {
+    // Get all project IDs including children recursively
+    const projectIds = getProjectAndChildren(projectId)
 
-  // Check if any filtered tasks (active tasks only) belong to this project or its children
-  return taskStore.filteredTasks.some(task => projectIds.includes(task.projectId || '1'))
+    // Check if any filtered tasks (active tasks only) belong to this project or its children
+    const tasks = boardFilteredTasks.value
+    return tasks.some(task => projectIds.includes(task.projectId || '1'))
+  } catch (error) {
+    console.error('BoardView.projectHasActiveTasks: Error checking project tasks:', error)
+    return false
+  }
 }
 
 // Get projects to display - REMOVED: My Tasks is now a smart filter, not a project
 // UPDATED: Only show projects that have active (non-done) tasks
 const projectsWithTasks = computed(() => {
-  // Start with all projects (excluding the synthetic My Tasks project)
-  let projects = taskStore.projects.filter(p => p.id !== '1' && p.name !== 'My Tasks')
+  try {
+    // Start with all projects (excluding the synthetic My Tasks project)
+    let projects = taskStore.projects.filter(p => p.id !== '1' && p.name !== 'My Tasks')
 
-  // If a specific project is selected, show that project AND its children
-  // but only if they have active tasks
-  if (taskStore.activeProjectId) {
-    const projectIds = getProjectAndChildren(taskStore.activeProjectId)
-    return projects.filter(project =>
-      projectIds.includes(project.id) && projectHasActiveTasks(project.id)
-    )
+    // Validate that projects is an array
+    if (!Array.isArray(projects)) {
+      console.warn('BoardView.projectsWithTasks: taskStore.projects is not an array:', projects)
+      return []
+    }
+
+    // If a specific project is selected, show that project AND its children
+    // but only if they have active tasks
+    if (taskStore.activeProjectId) {
+      const projectIds = getProjectAndChildren(taskStore.activeProjectId)
+      return projects.filter(project =>
+        projectIds.includes(project.id) && projectHasActiveTasks(project.id)
+      )
+    }
+
+    // Otherwise, show all projects that have active tasks
+    return projects.filter(project => projectHasActiveTasks(project.id))
+  } catch (error) {
+    console.error('BoardView.projectsWithTasks: Error filtering projects:', error)
+    return []
   }
-
-  // Otherwise, show all projects that have active tasks
-  return projects.filter(project => projectHasActiveTasks(project.id))
 })
 
 // Total displayed tasks (uses centralized counter for consistency)
@@ -319,16 +376,37 @@ const totalDisplayedTasks = computed(() => {
   }
 })
 
+// Filtered tasks specifically for Board View
+// Excludes uncategorized tasks unless My Tasks smart filter is active
+const boardFilteredTasks = computed(() => {
+  try {
+    // Validate input from taskStore
+    const storeTasks = taskStore.filteredTasks
+    if (!Array.isArray(storeTasks)) {
+      console.warn('BoardView.boardFilteredTasks: taskStore.filteredTasks is not an array:', storeTasks)
+      return []
+    }
+
+    // Call filter function
+    const filtered = filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
+
+    // Validate result
+    if (!Array.isArray(filtered)) {
+      console.warn('BoardView.boardFilteredTasks: filterTasksForRegularViews did not return an array:', filtered)
+      return []
+    }
+
+    return filtered
+  } catch (error) {
+    console.error('BoardView.boardFilteredTasks: Error filtering tasks:', error)
+    return []
+  }
+})
+
 // Count of uncategorized tasks for the filter badge
 const uncategorizedTaskCount = computed(() => {
   try {
-    return taskStore.tasks.filter(task =>
-      task.isUncategorized === true ||
-      !task.projectId ||
-      task.projectId === '' ||
-      task.projectId === null ||
-      task.projectId === '1'
-    ).length
+    return getUncategorizedTasks(taskStore.tasks).length
   } catch (error) {
     console.error('BoardView.uncategorizedTaskCount: Error calculating uncategorized count:', error)
     return 0

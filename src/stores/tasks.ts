@@ -755,49 +755,88 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // Apply smart view filter
     if (activeSmartView.value === 'today') {
-      const todayStr = new Date().toISOString().split('T')[0]
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      console.log('🔧 TaskStore.filteredTasks: Applying "today" smart view filter for date:', todayStr)
+      try {
+        const todayStr = new Date().toISOString().split('T')[0]
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        console.log('🔧 TaskStore.filteredTasks: Applying "today" smart view filter for date:', todayStr)
 
-      const beforeSmartFilter = filtered.length
-      filtered = filtered.filter(task => {
-        // Check instances first (new format) - tasks scheduled for today
-        const instances = getTaskInstances(task)
-        if (instances.length > 0) {
-          if (instances.some(inst => {
-            const instanceDate = new Date(inst.scheduledDate)
-            if (!isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr) {
-              console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (scheduled instance)`)
-              return true
+        const beforeSmartFilter = filtered.length
+        filtered = filtered.filter(task => {
+          try {
+            // Validate task object
+            if (!task || typeof task !== 'object') {
+              console.warn('TaskStore.filteredTasks: Invalid task object in today filter:', task)
+              return false
             }
+
+            // Exclude done tasks from today filter by default
+            if (task.status === 'done') {
+              console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" excluded from today filter (status: done)`)
+              return false
+            }
+
+            // Check instances first (new format) - tasks scheduled for today
+            try {
+              const instances = getTaskInstances(task)
+              if (Array.isArray(instances) && instances.length > 0) {
+                if (instances.some(inst => {
+                  try {
+                    if (!inst || !inst.scheduledDate) return false
+                    const instanceDate = new Date(inst.scheduledDate)
+                    if (!isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr) {
+                      console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (scheduled instance)`)
+                      return true
+                    }
+                    return false
+                  } catch (error) {
+                    console.warn('TaskStore.filteredTasks: Error processing instance in today filter:', error, inst)
+                    return false
+                  }
+                })) return true
+              }
+            } catch (error) {
+              console.warn('TaskStore.filteredTasks: Error getting task instances in today filter:', error, task)
+            }
+
+            // Fallback to legacy scheduledDate - tasks scheduled for today
+            if (task.scheduledDate) {
+              try {
+                const scheduledDate = new Date(task.scheduledDate)
+                if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) {
+                  console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (legacy scheduled)`)
+                  return true
+                }
+              } catch (error) {
+                console.warn('TaskStore.filteredTasks: Error processing scheduledDate in today filter:', error, task.scheduledDate)
+              }
+            }
+
+            // Tasks due today
+            if (task.dueDate) {
+              try {
+                const taskDueDate = new Date(task.dueDate)
+                if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) {
+                  console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (due today)`)
+                  return true
+                }
+              } catch (error) {
+                console.warn('TaskStore.filteredTasks: Error processing dueDate in today filter:', error, task.dueDate)
+              }
+            }
+
             return false
-          })) return true
-        }
-
-        // Fallback to legacy scheduledDate - tasks scheduled for today
-        if (task.scheduledDate) {
-          const scheduledDate = new Date(task.scheduledDate)
-          if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) {
-            console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (legacy scheduled)`)
-            return true
+          } catch (error) {
+            console.error('TaskStore.filteredTasks: Error processing task in today filter:', error, task)
+            return false
           }
-        }
-
-        
-        // Tasks due today
-        if (task.dueDate) {
-          const taskDueDate = new Date(task.dueDate)
-          if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) {
-            console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (due today)`)
-            return true
-          }
-        }
-
-        
-        return false
-      })
-      console.log(`🔧 TaskStore.filteredTasks: Today smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
+        })
+        console.log(`🔧 TaskStore.filteredTasks: Today smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
+      } catch (error) {
+        console.error('TaskStore.filteredTasks: Critical error in today filter:', error)
+        // Return original filtered array if today filter fails
+        console.log('TaskStore.filteredTasks: Falling back to pre-filtered tasks due to today filter error')
+      }
 
     } else if (activeSmartView.value === 'week') {
       const today = new Date()
@@ -881,112 +920,185 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     // Find the actual nested task objects and APPLY THE SAME FILTERS
-    const nestedTasks = tasks.value
-      .filter(task => nestedTaskIds.includes(task.id))
-      .filter(task => {
-        console.log(`🔧 TaskStore.filteredTasks: Evaluating nested task "${task.title}" (status: ${task.status})`)
+    let nestedTasks: Task[] = []
+    try {
+      nestedTasks = tasks.value
+        .filter(task => nestedTaskIds.includes(task.id))
+        .filter(task => {
+          try {
+            console.log(`🔧 TaskStore.filteredTasks: Evaluating nested task "${task.title}" (status: ${task.status})`)
 
-        // Apply project filter to nested tasks (including child projects)
-        if (activeProjectId.value) {
-          const projectIds = getChildProjectIds(activeProjectId.value)
-          if (!projectIds.includes(task.projectId)) {
-            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by project filter (projectId: ${task.projectId})`)
+            // Validate task object
+            if (!task || typeof task !== 'object') {
+              console.warn('TaskStore.filteredTasks: Invalid nested task object:', task)
+              return false
+            }
+
+            // Apply project filter to nested tasks (including child projects)
+            if (activeProjectId.value) {
+              try {
+                const projectIds = getChildProjectIds(activeProjectId.value)
+                if (!projectIds.includes(task.projectId)) {
+                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by project filter (projectId: ${task.projectId})`)
+                  return false
+                }
+              } catch (error) {
+                console.warn('TaskStore.filteredTasks: Error in project filter for nested task:', error, task)
+                return false
+              }
+            }
+
+            // Apply smart view filter to nested tasks
+            if (activeSmartView.value === 'today') {
+              try {
+                // Exclude done tasks from today filter by default
+                if (task.status === 'done') {
+                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" excluded from today filter (status: done)`)
+                  return false
+                }
+
+                const todayStr = new Date().toISOString().split('T')[0]
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+
+                // Check instances first (new format) - tasks scheduled for today
+                const instances = getTaskInstances(task)
+                if (Array.isArray(instances) && instances.length > 0) {
+                  if (instances.some(inst => {
+                    try {
+                      if (!inst || !inst.scheduledDate) return false
+                      const instanceDate = new Date(inst.scheduledDate)
+                      if (!isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr) {
+                        console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (scheduled instance)`)
+                        return true
+                      }
+                      return false
+                    } catch (error) {
+                      console.warn('TaskStore.filteredTasks: Error processing nested task instance:', error, inst)
+                      return false
+                    }
+                  })) return true
+                }
+
+                // Fallback to legacy scheduledDate - tasks scheduled for today
+                if (task.scheduledDate) {
+                  try {
+                    const scheduledDate = new Date(task.scheduledDate)
+                    if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) {
+                      console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (legacy scheduled)`)
+                      return true
+                    }
+                  } catch (error) {
+                    console.warn('TaskStore.filteredTasks: Error processing nested task scheduledDate:', error, task.scheduledDate)
+                  }
+                }
+
+                // Tasks created today
+                if (task.createdAt) {
+                  try {
+                    const taskCreatedDate = new Date(task.createdAt)
+                    taskCreatedDate.setHours(0, 0, 0, 0)
+                    if (taskCreatedDate.getTime() === today.getTime()) {
+                      console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (created today)`)
+                      return true
+                    }
+                  } catch (error) {
+                    console.warn('TaskStore.filteredTasks: Error processing nested task createdAt:', error, task.createdAt)
+                  }
+                }
+
+                // Tasks due today
+                if (task.dueDate) {
+                  try {
+                    const taskDueDate = new Date(task.dueDate)
+                    if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) {
+                      console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (due today)`)
+                      return true
+                    }
+                  } catch (error) {
+                    console.warn('TaskStore.filteredTasks: Error processing nested task dueDate:', error, task.dueDate)
+                  }
+                }
+
+                // Tasks currently in progress
+                if (task.status === 'in_progress') {
+                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (in progress)`)
+                  return true
+                }
+
+                console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" does not match today filter`)
+                return false
+              } catch (error) {
+                console.error('TaskStore.filteredTasks: Error in today filter for nested task:', error, task)
+                return false
+              }
+            } else if (activeSmartView.value === 'week') {
+              try {
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                const todayStr = today.toISOString().split('T')[0]
+                const weekEnd = new Date(today)
+                weekEnd.setDate(weekEnd.getDate() + 7)
+                const weekEndStr = weekEnd.toISOString().split('T')[0]
+
+                // Check instances first (new format)
+                const instances = getTaskInstances(task)
+                if (Array.isArray(instances) && instances.length > 0) {
+                  return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
+                }
+                // Fallback to legacy scheduledDate
+                if (!task.scheduledDate) return false
+                return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+              } catch (error) {
+                console.warn('TaskStore.filteredTasks: Error in week filter for nested task:', error, task)
+                return false
+              }
+
+            } else if (activeSmartView.value === 'uncategorized') {
+              try {
+                // Check if nested task is uncategorized
+                if (task.isUncategorized === true) {
+                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches uncategorized filter (isUncategorized flag)`)
+                  return true
+                }
+
+                // Backward compatibility: also treat tasks without proper project assignment as uncategorized
+                if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
+                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches uncategorized filter (legacy projectId check)`)
+                  return true
+                }
+
+                console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" does not match uncategorized filter`)
+                return false
+              } catch (error) {
+                console.warn('TaskStore.filteredTasks: Error in uncategorized filter for nested task:', error, task)
+                return false
+              }
+            }
+
+            // Apply status filter to nested tasks
+            if (activeStatusFilter.value && task.status !== activeStatusFilter.value) {
+              console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by status filter "${activeStatusFilter.value}" (status: ${task.status})`)
+              return false
+            }
+
+            // Apply global done task exclusion to nested tasks
+            if (task.status === 'done') {
+              console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by global done task exclusion`)
+              return false
+            }
+
+            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" passed all filters`)
+            return true
+          } catch (error) {
+            console.error('TaskStore.filteredTasks: Error processing nested task:', error, task)
             return false
           }
-        }
-
-        // Apply smart view filter to nested tasks
-        if (activeSmartView.value === 'today') {
-          const todayStr = new Date().toISOString().split('T')[0]
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-
-          // Check instances first (new format) - tasks scheduled for today
-          const instances = getTaskInstances(task)
-          if (instances.length > 0) {
-            if (instances.some(inst => inst.scheduledDate === todayStr)) {
-              console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (scheduled instance)`)
-              return true
-            }
-          }
-
-          // Fallback to legacy scheduledDate - tasks scheduled for today
-          if (task.scheduledDate === todayStr) {
-            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (legacy scheduled)`)
-            return true
-          }
-
-          // Tasks created today
-          const taskCreatedDate = new Date(task.createdAt)
-          taskCreatedDate.setHours(0, 0, 0, 0)
-          if (taskCreatedDate.getTime() === today.getTime()) {
-            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (created today)`)
-            return true
-          }
-
-          // Tasks due today
-          if (task.dueDate === todayStr) {
-            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (due today)`)
-            return true
-          }
-
-          // Tasks currently in progress
-          if (task.status === 'in_progress') {
-            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (in progress)`)
-            return true
-          }
-
-          console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" does not match today filter`)
-          return false
-        } else if (activeSmartView.value === 'week') {
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          const todayStr = today.toISOString().split('T')[0]
-          const weekEnd = new Date(today)
-          weekEnd.setDate(weekEnd.getDate() + 7)
-          const weekEndStr = weekEnd.toISOString().split('T')[0]
-
-          // Check instances first (new format)
-          const instances = getTaskInstances(task)
-          if (instances.length > 0) {
-            return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
-          }
-          // Fallback to legacy scheduledDate
-          if (!task.scheduledDate) return false
-          return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
-
-        } else if (activeSmartView.value === 'uncategorized') {
-          // Check if nested task is uncategorized
-          if (task.isUncategorized === true) {
-            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches uncategorized filter (isUncategorized flag)`)
-            return true
-          }
-
-          // Backward compatibility: also treat tasks without proper project assignment as uncategorized
-          if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
-            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches uncategorized filter (legacy projectId check)`)
-            return true
-          }
-
-          console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" does not match uncategorized filter`)
-          return false
-        }
-
-        // Apply status filter to nested tasks
-        if (activeStatusFilter.value && task.status !== activeStatusFilter.value) {
-          console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by status filter "${activeStatusFilter.value}" (status: ${task.status})`)
-          return false
-        }
-
-        // Apply global done task exclusion to nested tasks
-        if (task.status === 'done') {
-          console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by global done task exclusion`)
-          return false
-        }
-
-        console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" passed all filters`)
-        return true
-      })
+        })
+    } catch (error) {
+      console.error('TaskStore.filteredTasks: Critical error in nested tasks filtering:', error)
+      nestedTasks = []
+    }
 
     console.log(`🚨 TaskStore.filteredTasks: Found ${nestedTasks.length} nested tasks that passed all filters`)
 

@@ -473,6 +473,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
+import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import { useCalendarDragCreate } from '@/composables/useCalendarDragCreate'
 import { useCalendarEventHelpers } from '@/composables/calendar/useCalendarEventHelpers'
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
@@ -488,6 +489,9 @@ import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, ListTodo, Play, Check
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
+
+// Uncategorized tasks composable
+const { filterTasksForRegularViews } = useUncategorizedTasks()
 
 // View state
 const currentDate = ref(new Date())
@@ -522,6 +526,7 @@ const debugTaskInventory = () => {
   })
 
   console.log('🚨 CALENDAR VIEW: Current filtered tasks:', taskStore.filteredTasks.length)
+  console.log('🚨 CALENDAR VIEW: Calendar filtered tasks (uncategorized-aware):', calendarFilteredTasks.value.length)
   console.log('🚨 CALENDAR VIEW: Current calendar events:', calendarEvents.value.length)
   console.log('🚨 CALENDAR VIEW: === END TASK INVENTORY ===')
 }
@@ -562,9 +567,24 @@ const handleStatusFilterChange = (event: MouseEvent, newFilter: 'planned' | 'in_
 // Composables - Refactored logic into focused modules
 const dragCreate = useCalendarDragCreate()
 const eventHelpers = useCalendarEventHelpers()
-const dayView = useCalendarDayView(currentDate, statusFilter)
-const weekView = useCalendarWeekView(currentDate, statusFilter)
-const monthView = useCalendarMonthView(currentDate, statusFilter)
+
+// Filtered tasks specifically for Calendar View
+// Excludes uncategorized tasks unless My Tasks smart filter is active
+const calendarFilteredTasks = computed(() => {
+  try {
+    return filterTasksForRegularViews(taskStore.filteredTasks, taskStore.activeSmartView)
+  } catch (error) {
+    console.error('CalendarView.calendarFilteredTasks: Error filtering tasks:', error)
+    return []
+  }
+})
+
+// Create a computed ref for filtered tasks to pass to composables
+const filteredTasksForCalendar = computed(() => calendarFilteredTasks.value)
+
+const dayView = useCalendarDayView(currentDate, statusFilter, filteredTasksForCalendar)
+const weekView = useCalendarWeekView(currentDate, statusFilter, filteredTasksForCalendar)
+const monthView = useCalendarMonthView(currentDate, statusFilter, filteredTasksForCalendar)
 
 // Reactive current time for time indicator
 const currentTime = ref(new Date())

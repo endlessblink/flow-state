@@ -765,10 +765,13 @@ watch(() => props.tasks, () => {
   scrollbar-width: thin;
   scrollbar-color: var(--border-medium) transparent;
   width: 100%;
-  /* Add proper containment and touch handling */
-  contain: layout style;
+  /* Enhanced containment to prevent overflow propagation */
   touch-action: pan-x;
   position: relative;
+  /* Contain paint operations to prevent performance issues */
+  contain: layout paint style;
+  /* Ensure proper scroll boundary behavior */
+  max-width: 100%;
 }
 
 /* Drag states for visual feedback */
@@ -790,7 +793,8 @@ watch(() => props.tasks, () => {
   gap: var(--kanban-gap);
   padding: var(--space-4) var(--space-8) var(--space-4) var(--space-8);
   min-height: 0;
-  min-width: fit-content; /* Ensure columns don't shrink */
+  min-width: max-content; /* Allow columns to expand to their natural width */
+  width: max-content; /* Force expansion to show all columns */
 }
 
 /* Webkit scrollbar styling for Chrome/Safari */

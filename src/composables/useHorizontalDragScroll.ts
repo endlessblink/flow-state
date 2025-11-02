@@ -79,8 +79,25 @@ export function useHorizontalDragScroll(
   const handleStart = (clientX: number, clientY: number, target: HTMLElement) => {
     if (!scrollContainer.value) return
 
-    // Check if clicking on a draggable element (task card, etc.)
-    if (target?.closest('.draggable') || target?.closest('[data-draggable="true"]')) {
+    // Enhanced check for draggable elements (task cards, etc.)
+    const isDraggableElement =
+      target?.closest('.draggable') ||
+      target?.closest('[data-draggable="true"]') ||
+      target?.closest('.task-card') ||
+      target?.closest('[draggable="true"]') ||
+      target?.closest('.vue-flow__node') ||
+      target?.closest('.vue-flow__handle') ||
+      target?.classList.contains('task-card') ||
+      target?.getAttribute('draggable') === 'true'
+
+    if (isDraggableElement) {
+      console.log('🔄 [HorizontalDragScroll] Ignoring drag on draggable element:', {
+        element: target.tagName,
+        classes: target.className,
+        closestTaskCard: !!target?.closest('.task-card'),
+        hasDraggableAttr: target?.getAttribute('draggable') === 'true',
+        isTaskCard: target?.classList.contains('task-card')
+      })
       return // Don't interfere with existing drag-drop
     }
 
@@ -88,6 +105,12 @@ export function useHorizontalDragScroll(
     if (!scrollContainer.value.contains(target)) {
       return // Only handle events within our container
     }
+
+    // Log scroll container dimensions for debugging
+    console.log('🔄 [HorizontalDragScroll] Container scrollWidth:', scrollContainer.value.scrollWidth)
+    console.log('🔄 [HorizontalDragScroll] Container clientWidth:', scrollContainer.value.clientWidth)
+    console.log('🔄 [HorizontalDragScroll] Can scroll horizontally:',
+      scrollContainer.value.scrollWidth > scrollContainer.value.clientWidth)
 
     isDragging.value = true
     startX.value = clientX
@@ -137,6 +160,10 @@ export function useHorizontalDragScroll(
     // Prevent default browser behavior and stop propagation
     e.preventDefault()
     e.stopPropagation()
+
+    // Additional containment: ensure no body-level scrolling during drag
+    document.body.style.overflowX = 'hidden'
+    document.body.style.touchAction = 'pan-y'
   }
 
   // End drag
@@ -156,6 +183,10 @@ export function useHorizontalDragScroll(
     if (e) {
       e.stopPropagation()
     }
+
+    // Restore body overflow settings
+    document.body.style.overflowX = ''
+    document.body.style.touchAction = ''
 
     // Start momentum scrolling if we have velocity
     if (Math.abs(velocity.value) > 0.5) {

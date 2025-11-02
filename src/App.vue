@@ -1147,7 +1147,8 @@ onUnmounted(() => {
   color: var(--text-primary);
   display: flex;
   position: relative;
-  overflow: visible;
+  overflow-x: hidden; /* Prevent horizontal overflow at root level */
+  overflow-y: visible; /* Allow vertical scrolling */
 }
 
 /* Animated gradient overlay */
@@ -1749,7 +1750,8 @@ onUnmounted(() => {
   flex-direction: column;
   min-height: 100vh;
   max-height: 100vh;
-  overflow: visible;
+  overflow-x: hidden; /* Prevent horizontal overflow from affecting main layout */
+  overflow-y: visible; /* Allow vertical scrolling */
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 

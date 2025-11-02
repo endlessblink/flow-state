@@ -1,0 +1,29 @@
+{
+  "level": "INFO",
+  "maxLogFiles": 10,
+  "maxLogSize": "10MB",
+  "enableMetrics": true,
+  "enablePerformanceTracking": true,
+  "retentionDays": 30,
+  "logFormat": "json",
+  "enableConsoleOutput": false,
+  "trackSessions": true,
+  "sanitizeParameters": true,
+  "skills": {
+    "qa-testing": {
+      "enabled": true,
+      "trackDuration": true,
+      "trackParameters": true
+    },
+    "ops-port-manager": {
+      "enabled": true,
+      "trackDuration": true,
+      "trackParameters": false
+    },
+    "dev-vue": {
+      "enabled": true,
+      "trackDuration": true,
+      "trackParameters": true
+    }
+  }
+}

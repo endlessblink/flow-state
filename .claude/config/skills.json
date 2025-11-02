@@ -1,0 +1,358 @@
+{
+  "project": "PomoFlow",
+  "version": "1.0.0",
+  "last_updated": "2024-10-22",
+  "skills": {
+    "dev-debug-reactivity": {
+      "name": "Debug Vue Reactivity",
+      "category": "debug",
+      "triggers": [
+        "components won't update",
+        "reactivity issues",
+        "computed not working",
+        "watcher not firing",
+        "UI not updating",
+        "stale state"
+      ],
+      "keywords": ["vue", "reactivity", "ref", "reactive", "computed", "watch", "components"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-fix-pinia", "dev-optimize-performance"]
+    },
+    "dev-fix-pinia": {
+      "name": "Fix Pinia State Bugs",
+      "category": "fix",
+      "triggers": [
+        "store not updating",
+        "pinia state issues",
+        "state not syncing",
+        "store actions not working",
+        "persistence problems"
+      ],
+      "keywords": ["pinia", "store", "state", "persistence", "actions", "subscriptions"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-debug-reactivity", "dev-fix-task-store"]
+    },
+    "dev-debug-canvas": {
+      "name": "Debug Canvas Issues",
+      "category": "debug",
+      "triggers": [
+        "drag and drop not working",
+        "canvas selection issues",
+        "node won't move",
+        "viewport problems",
+        "mouse events not working"
+      ],
+      "keywords": ["canvas", "drag", "drop", "selection", "viewport", "mouse", "events"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-debug-reactivity", "dev-fix-keyboard"]
+    },
+    "dev-optimize-performance": {
+      "name": "Optimize Performance",
+      "category": "optimize",
+      "triggers": [
+        "application is slow",
+        "performance issues",
+        "memory leaks",
+        "slow renders",
+        "optimization needed"
+      ],
+      "keywords": ["performance", "optimization", "memory", "render", "speed", "efficiency"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-debug-reactivity", "dev-fix-pinia"]
+    },
+    "dev-fix-timer": {
+      "name": "Fix Timer State Bugs",
+      "category": "fix",
+      "triggers": [
+        "timer not working",
+        "pomodoro timer issues",
+        "countdown problems",
+        "timer state bugs",
+        "time display wrong"
+      ],
+      "keywords": ["timer", "pomodoro", "countdown", "time", "interval", "state"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-fix-pinia", "dev-debug-reactivity"]
+    },
+    "dev-fix-task-store": {
+      "name": "Fix Task Store Issues",
+      "category": "fix",
+      "triggers": [
+        "tasks not saving",
+        "task creation fails",
+        "tasks disappear",
+        "store persistence issues",
+        "task CRUD problems"
+      ],
+      "keywords": ["tasks", "store", "CRUD", "persistence", "tasks", "projects"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-fix-pinia", "dev-optimize-performance"]
+    },
+    "dev-fix-keyboard": {
+      "name": "Fix Keyboard Shortcuts",
+      "category": "fix",
+      "triggers": [
+        "keyboard shortcuts not working",
+        "hotkeys not working",
+        "event handling issues",
+        "keyboard conflicts",
+        "shortcuts disabled"
+      ],
+      "keywords": ["keyboard", "shortcuts", "hotkeys", "events", "handlers", "conflicts"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-debug-reactivity", "dev-debug-canvas"]
+    },
+    "dev-undo-redo": {
+      "name": "Fix Undo/Redo Conflicts",
+      "category": "fix",
+      "triggers": [
+        "undo not working",
+        "redo not working",
+        "undo redo broken",
+        "state corrupted",
+        "keyboard shortcuts fail"
+      ],
+      "keywords": ["undo", "redo", "history", "state", "conflicts", "vueuse"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-fix-pinia", "dev-debug-reactivity", "dev-fix-keyboard"]
+    },
+    "ops-port-manager": {
+      "name": "Resolve Port Conflicts",
+      "category": "resolve",
+      "triggers": [
+        "port is in use",
+        "server won't start",
+        "npm run dev fails",
+        "port conflicts",
+        "development server issues"
+      ],
+      "keywords": ["port", "conflict", "server", "development", "5546", "startup"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["qa-testing"]
+    },
+    "arch-undo-redo-systems": {
+      "name": "Design Undo/Redo Systems",
+      "category": "design",
+      "triggers": [
+        "building undo system",
+        "designing redo functionality",
+        "command pattern implementation",
+        "architecture design",
+        "state management design"
+      ],
+      "keywords": ["design", "architecture", "command pattern", "undo", "redo", "systems"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-undo-redo", "dev-fix-pinia"]
+    },
+    "dev-vue": {
+      "name": "Create Vue Components",
+      "category": "create",
+      "triggers": [
+        "building new component",
+        "create vue component",
+        "component development",
+        "UI component needed",
+        "component architecture"
+      ],
+      "keywords": ["vue", "components", "composition api", "typescript", "props", "events"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-debug-reactivity", "dev-optimize-performance"]
+    },
+    "dev-vueuse": {
+      "name": "Implement VueUse Features",
+      "category": "implement",
+      "triggers": [
+        "add keyboard shortcuts",
+        "local storage needed",
+        "clipboard functionality",
+        "drag and drop",
+        "browser API integration"
+      ],
+      "keywords": ["vueuse", "browser apis", "storage", "keyboard", "clipboard", "drag"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-vue", "dev-fix-keyboard"]
+    },
+    "qa-testing": {
+      "name": "Test Application Features",
+      "category": "test",
+      "triggers": [
+        "testing functionality",
+        "validate bug fixes",
+        "ensure features work",
+        "regression testing",
+        "playwright testing"
+      ],
+      "keywords": ["testing", "validation", "playwright", "verification", "quality"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-debug-reactivity", "dev-fix-pinia"]
+    },
+    "dev-debugging": {
+      "name": "Comprehensive Debugging",
+      "category": "debug",
+      "triggers": [
+        "complex debugging needed",
+        "multiple issues",
+        "systematic troubleshooting",
+        "advanced debugging",
+        "comprehensive analysis"
+      ],
+      "keywords": ["debugging", "troubleshooting", "analysis", "systematic", "comprehensive"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-debug-reactivity", "dev-fix-pinia", "dev-debug-canvas"]
+    },
+    "qa-verify": {
+      "name": "Verify Before Claiming",
+      "category": "test",
+      "triggers": [
+        "making improvements",
+        "claiming features work",
+        "testing functionality",
+        "performance claims",
+        "bug fixes verification"
+      ],
+      "keywords": ["testing", "verification", "evidence", "screenshot", "build", "functionality"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["qa-testing", "dev-debugging"],
+      "description": "Prevents false claims by requiring proper testing protocol before any declarations"
+    },
+    "qa-audit-ui-ux": {
+      "name": "Audit UI/UX Consistency",
+      "category": "audit",
+      "triggers": [
+        "audit UI consistency",
+        "check design system compliance",
+        "review component consistency",
+        "UX consistency check",
+        "visual inconsistencies",
+        "design system violations",
+        "accessibility audit",
+        "check design tokens"
+      ],
+      "keywords": ["design system", "consistency", "UI", "UX", "accessibility", "design tokens", "visual hierarchy", "interaction patterns", "component design", "WCAG"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-vue", "dev-optimize-performance", "dev-debugging"],
+      "description": "Comprehensive UI/UX consistency auditing with design system compliance, accessibility, and interaction pattern verification"
+    },
+    "dev-debug-cache": {
+      "name": "Debug Vue 3 Cache Issues",
+      "category": "debug",
+      "triggers": [
+        "cache not clearing",
+        "changes not showing",
+        "hard refresh doesn't work",
+        "HMR not working",
+        "hot reload broken",
+        "old code showing",
+        "stale content",
+        "service worker issues",
+        "Vite cache problems"
+      ],
+      "keywords": ["cache", "caching", "service worker", "PWA", "HMR", "hot module replacement", "Vite", "refresh", "stale", "not updating"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-debug-reactivity", "dev-vue", "dev-debugging"],
+      "description": "Systematic troubleshooting for Vue 3 development cache issues that persist after standard browser cache clearing and hard refresh"
+    },
+    "dev-implement-ui-ux": {
+      "name": "Implement UI/UX Fixes",
+      "category": "implement",
+      "triggers": [
+        "implement UI fixes",
+        "apply design system",
+        "fix accessibility",
+        "consolidate buttons",
+        "migrate to design tokens",
+        "match reference design",
+        "standardize components",
+        "fix theme break",
+        "improve visual consistency",
+        "align to grid",
+        "fix spacing rhythm"
+      ],
+      "keywords": ["design system", "accessibility", "ARIA labels", "focus indicators", "design tokens", "component consolidation", "visual consistency", "theme", "composition", "alignment"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["qa-audit-ui-ux", "dev-vue", "css-design-system"],
+      "description": "Systematically implement UI/UX fixes from audits including design token migration, component consolidation, accessibility improvements, and visual consistency"
+    },
+    "dev-storybook": {
+      "name": "Build Storybook Stories",
+      "category": "create",
+      "triggers": [
+        "creating storybook story",
+        "fixing story compilation",
+        "storybook errors",
+        "component documentation",
+        "story not rendering",
+        "vue storybook issues",
+        "storybook consistency",
+        "review storybook stories"
+      ],
+      "keywords": ["storybook", "stories", "documentation", "components", "vue", "typescript", "compilation", "CSF", "args", "controls"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["dev-vue", "dev-debug-reactivity", "qa-audit-ui-ux"],
+      "description": "Build and fix Storybook stories for Vue 3 components with proper patterns, error resolution, and consistent documentation"
+    }
+  },
+  "categories": {
+    "debug": {
+      "description": "Skills for identifying and diagnosing issues",
+      "color": "#FF6B6B"
+    },
+    "fix": {
+      "description": "Skills for resolving specific problems",
+      "color": "#4ECDC4"
+    },
+    "create": {
+      "description": "Skills for building new components and features",
+      "color": "#45B7D1"
+    },
+    "optimize": {
+      "description": "Skills for improving performance and efficiency",
+      "color": "#96CEB4"
+    },
+    "implement": {
+      "description": "Skills for adding specific functionality",
+      "color": "#FECA57"
+    },
+    "design": {
+      "description": "Skills for architectural design and patterns",
+      "color": "#9B59B6"
+    },
+    "resolve": {
+      "description": "Skills for resolving conflicts and configuration issues",
+      "color": "#E67E22"
+    },
+    "test": {
+      "description": "Skills for validation and testing",
+      "color": "#3498DB"
+    },
+    "audit": {
+      "description": "Skills for comprehensive auditing and analysis",
+      "color": "#8E44AD"
+    }
+  },
+  "usage_stats": {
+    "total_activations": 0,
+    "most_used_skill": null,
+    "last_skill_used": null,
+    "usage_by_category": {}
+  }
+}

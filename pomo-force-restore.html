@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Force Backup Restore</title>
+</head>
+<body>
+    <h1>Forcing backup restoration...</h1>
+    <div id="result">Loading...</div>
+
+    <script>
+        async function forceRestore() {
+            const resultDiv = document.getElementById('result');
+
+            try {
+                resultDiv.textContent = 'Fetching backup file...';
+
+                // Fetch the backup file
+                const response = await fetch('/user-backup.json');
+                const backup = await response.json();
+
+                resultDiv.textContent = `Found ${backup.data.length} tasks. Storing to localStorage...`;
+
+                // Store in localStorage
+                localStorage.setItem('pomo-flow-user-backup', JSON.stringify(backup.data));
+
+                resultDiv.innerHTML = `
+                    <h2>✅ Restoration Complete!</h2>
+                    <p>Stored ${backup.data.length} tasks in localStorage</p>
+                    <p><a href="http://localhost:5550" target="_blank">Open Pomo-Flow App</a></p>
+                    <button onclick="window.open('http://localhost:5550', '_blank')">Launch App</button>
+                `;
+
+                // Auto-open the main app after 2 seconds
+                setTimeout(() => {
+                    window.open('http://localhost:5550', '_blank');
+                }, 2000);
+
+            } catch (error) {
+                resultDiv.innerHTML = `<h2>❌ Error</h2><p>${error.message}</p>`;
+            }
+        }
+
+        // Auto-run on page load
+        window.addEventListener('load', forceRestore);
+    </script>
+</body>
+</html>

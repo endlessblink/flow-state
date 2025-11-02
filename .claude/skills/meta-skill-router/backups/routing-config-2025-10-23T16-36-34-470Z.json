@@ -1,0 +1,352 @@
+{
+  "version": "1.0.0",
+  "project": "pomo-flow",
+  "description": "Intelligent skill routing configuration for Pomo-Flow productivity application",
+
+  "routingPatterns": {
+    "testing": {
+      "patterns": [
+        "test.*",
+        "verify.*",
+        "validate.*",
+        "check.*"
+      ],
+      "skill": "qa-testing",
+      "priority": 10,
+      "description": "Testing and validation requests"
+    },
+
+    "debugging": {
+      "patterns": [
+        "fix.*bug",
+        "debug.*",
+        "broken.*",
+        "error.*",
+        "issue.*",
+        "problem.*",
+        "not.*work"
+      ],
+      "skill": "comprehensive-debugging",
+      "priority": 9,
+      "description": "Debugging and bug fixing requests"
+    },
+
+    "performance": {
+      "patterns": [
+        "performance.*",
+        "slow.*",
+        "optimize.*",
+        "speed.*",
+        "fast.*",
+        "lag.*"
+      ],
+      "skill": "optimize-performance",
+      "priority": 8,
+      "description": "Performance optimization requests"
+    },
+
+    "vueDevelopment": {
+      "patterns": [
+        "vue.*component",
+        "component.*",
+        "reactive.*",
+        "composable.*",
+        "template.*"
+      ],
+      "skill": "vue-development",
+      "priority": 8,
+      "description": "Vue.js component development"
+    },
+
+    "stateManagement": {
+      "patterns": [
+        "pinia.*",
+        "store.*",
+        "state.*",
+        "persist.*",
+        "database.*"
+      ],
+      "skill": "dev-pinia-state",
+      "priority": 7,
+      "description": "State management and persistence"
+    },
+
+    "canvasIntegration": {
+      "patterns": [
+        "canvas.*",
+        "drag.*drop",
+        "node.*",
+        "flow.*",
+        "connection.*"
+      ],
+      "skill": "calendar-canvas-integration",
+      "priority": 7,
+      "description": "Canvas and drag-drop functionality"
+    },
+
+    "uiConsistency": {
+      "patterns": [
+        "ui.*consistency",
+        "design.*system",
+        "style.*",
+        "theme.*",
+        "visual.*"
+      ],
+      "skill": "qa-audit-ui-ux",
+      "priority": 6,
+      "description": "UI/UX consistency and design system"
+    },
+
+    "undoRedo": {
+      "patterns": [
+        "undo.*redo",
+        "history.*",
+        "state.*sync",
+        "revert.*",
+        "restore.*"
+      ],
+      "skill": "dev-undo-redo",
+      "priority": 6,
+      "description": "Undo/redo system and state synchronization"
+    },
+
+    "timerFunctionality": {
+      "patterns": [
+        "timer.*",
+        "pomodoro.*",
+        "session.*",
+        "countdown.*",
+        "work.*time"
+      ],
+      "skill": "fix-timer-bugs",
+      "priority": 7,
+      "description": "Timer and Pomodoro functionality"
+    },
+
+    "taskManagement": {
+      "patterns": [
+        "task.*store",
+        "task.*creation",
+        "task.*management",
+        "create.*task",
+        "task.*crud"
+      ],
+      "skill": "fix-task-store",
+      "priority": 7,
+      "description": "Task management and CRUD operations"
+    },
+
+    "keyboardAccessibility": {
+      "patterns": [
+        "keyboard.*",
+        "shortcut.*",
+        "accessibility.*",
+        "hotkey.*",
+        "key.*bind"
+      ],
+      "skill": "dev-fix-keyboard",
+      "priority": 5,
+      "description": "Keyboard shortcuts and accessibility"
+    },
+
+    "portManagement": {
+      "patterns": [
+        "port.*",
+        "server.*",
+        "localhost.*",
+        "dev.*server",
+        "npm.*dev"
+      ],
+      "skill": "port-manager",
+      "priority": 4,
+      "description": "Development server and port management"
+    },
+
+    "planningArchitecture": {
+      "patterns": [
+        "plan.*",
+        "architecture.*",
+        "refactor.*",
+        "structure.*",
+        "design.*pattern"
+      ],
+      "skill": "arch-planning",
+      "priority": 5,
+      "description": "Planning and architectural decisions"
+    },
+
+    "reactivityDebugging": {
+      "patterns": [
+        "reactive.*debug",
+        "vue.*reactivity",
+        "watch.*",
+        "computed.*",
+        "state.*update"
+      ],
+      "skill": "dev-debug-reactivity",
+      "priority": 6,
+      "description": "Vue reactivity system debugging"
+    }
+  },
+
+  "mandatoryGates": {
+    "beforeSuccessClaim": {
+      "triggers": [
+        "claim.*works",
+        "claim.*done",
+        "claim.*ready",
+        "ready.*production",
+        "done.*",
+        "finished.*",
+        "complete.*"
+      ],
+      "requiredSkills": [
+        "qa-testing",
+        "qa-verify"
+      ],
+      "description": "Mandatory testing and verification before claiming success"
+    },
+
+    "beforeDeployment": {
+      "triggers": [
+        "deploy.*",
+        "merge.*",
+        "release.*",
+        "ship.*",
+        "publish.*"
+      ],
+      "requiredSkills": [
+        "qa-testing",
+        "qa-verify"
+      ],
+      "description": "Mandatory testing and verification before deployment"
+    },
+
+    "afterFeatureChange": {
+      "triggers": [
+        "feature.*",
+        "implement.*",
+        "add.*feature",
+        "new.*feature",
+        "build.*"
+      ],
+      "requiredSkills": [
+        "qa-testing"
+      ],
+      "description": "Mandatory testing after feature implementation"
+    },
+
+    "afterBugFix": {
+      "triggers": [
+        "fix.*bug",
+        "bug.*fix",
+        "resolve.*issue",
+        "patch.*"
+      ],
+      "requiredSkills": [
+        "qa-testing",
+        "qa-verify"
+      ],
+      "description": "Mandatory testing and verification after bug fixes"
+    }
+  },
+
+  "contextualRouting": {
+    "fileBased": {
+      "*.vue": {
+        "defaultSkill": "vue-development",
+        "additionalContext": ["component", "template", "script"]
+      },
+      "*/stores/*.ts": {
+        "defaultSkill": "dev-pinia-state",
+        "additionalContext": ["state", "store", "pinia"]
+      },
+      "*/composables/*.ts": {
+        "defaultSkill": "vue-development",
+        "additionalContext": ["composable", "reactive", "logic"]
+      },
+      "*/canvas/*": {
+        "defaultSkill": "calendar-canvas-integration",
+        "additionalContext": ["canvas", "drag", "flow"]
+      },
+      "*/timer/*": {
+        "defaultSkill": "fix-timer-bugs",
+        "additionalContext": ["timer", "pomodoro", "session"]
+      }
+    },
+
+    "viewBased": {
+      "BoardView": {
+        "defaultSkill": "vue-development",
+        "context": ["kanban", "board", "task-management"]
+      },
+      "CalendarView": {
+        "defaultSkill": "calendar-canvas-integration",
+        "context": ["calendar", "scheduling", "time"]
+      },
+      "CanvasView": {
+        "defaultSkill": "calendar-canvas-integration",
+        "context": ["canvas", "nodes", "flow"]
+      }
+    }
+  },
+
+  "userOverride": {
+    "allowExplicitSelection": true,
+    "overrideSyntax": {
+      "explicit": "/skill:{skill-name}",
+      "force": "/force-skill:{skill-name}",
+      "skipGates": "/skip-gates"
+    },
+    "rememberPreferences": true,
+    "learningEnabled": true
+  },
+
+  "routingOptions": {
+    "caseSensitive": false,
+    "fuzzyMatching": true,
+    "confidenceThreshold": 0.7,
+    "maxSuggestions": 3,
+    "debugMode": false
+  },
+
+  "skillChains": {
+    "featureDevelopment": [
+      "vue-development",
+      "qa-testing",
+      "qa-verify"
+    ],
+
+    "bugFix": [
+      "comprehensive-debugging",
+      "qa-testing",
+      "qa-verify"
+    ],
+
+    "performanceOptimization": [
+      "optimize-performance",
+      "qa-testing",
+      "qa-verify"
+    ],
+
+    "uiImprovement": [
+      "qa-audit-ui-ux",
+      "vue-development",
+      "qa-testing",
+      "qa-verify"
+    ],
+
+    "canvasEnhancement": [
+      "calendar-canvas-integration",
+      "qa-testing",
+      "qa-verify"
+    ]
+  },
+
+  "fallbackBehavior": {
+    "noMatch": "comprehensive-debugging",
+    "lowConfidence": "suggest-skills",
+    "multipleMatches": "highest-priority",
+    "gateFailure": "block-and-explain"
+  }
+}

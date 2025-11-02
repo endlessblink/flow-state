@@ -604,7 +604,7 @@ const sections = computed(() => canvasStore.sections)
 // Excludes uncategorized tasks unless My Tasks smart filter is active
 const canvasFilteredTasks = computed(() => {
   try {
-    return filterTasksForRegularViews(canvasFilteredTasks.value, taskStore.activeSmartView)
+    return filterTasksForRegularViews(taskStore.filteredTasks, taskStore.activeSmartView)
   } catch (error) {
     console.error('CanvasView.canvasFilteredTasks: Error filtering tasks:', error)
     return []
@@ -2674,14 +2674,27 @@ const getNodeColor = (node: Node) => {
 
 // Task edit
 const handleEditTask = (task: Task) => {
-  // Detect multi-selection - open batch edit modal instead
-  if (canvasStore.selectedNodeIds.length > 1 && canvasStore.selectedNodeIds.includes(task.id)) {
-    batchEditTaskIds.value = [...canvasStore.selectedNodeIds]
-    isBatchEditModalOpen.value = true
-  } else {
-    // Single task edit (existing behavior)
-    selectedTask.value = task
-    isEditModalOpen.value = true
+  try {
+    // Validate task input
+    if (!task || !task.id) {
+      console.warn('handleEditTask: Invalid task data', task)
+      return
+    }
+
+    // Detect multi-selection - open batch edit modal instead
+    if (canvasStore.selectedNodeIds &&
+        canvasStore.selectedNodeIds.length > 1 &&
+        canvasStore.selectedNodeIds.includes(task.id)) {
+      batchEditTaskIds.value = [...canvasStore.selectedNodeIds]
+      isBatchEditModalOpen.value = true
+    } else {
+      // Single task edit (existing behavior)
+      selectedTask.value = task
+      isEditModalOpen.value = true
+    }
+  } catch (error) {
+    console.error('Error in handleEditTask:', error)
+    // Continue execution - don't let edit errors crash the canvas
   }
 }
 
@@ -3079,31 +3092,59 @@ const handleBulkAction = (action: string, params: any) => {
 
 // Task selection handlers - FIXED to maintain group connection
 const handleTaskSelect = (task: Task, multiSelect: boolean) => {
-  if (multiSelect) {
-    // In multi-select mode, preserve existing selection and toggle this task
-    canvasStore.toggleNodeSelection(task.id)
-  } else {
-    // In single-select mode, clear all other selections and select only this task
-    canvasStore.setSelectedNodes([task.id])
-  }
-
-  // Ensure selection state is immediately reflected in the nodes
-  const nodeIndex = nodes.value.findIndex(n => n.id === task.id)
-  if (nodeIndex > -1) {
-    // Update the Vue Flow node selection state to match canvas store
-    const isSelected = canvasStore.selectedNodeIds.includes(task.id)
-    if (nodes.value[nodeIndex].selected !== isSelected) {
-      nodes.value[nodeIndex].selected = isSelected
+  try {
+    // Validate inputs
+    if (!task || !task.id) {
+      console.warn('handleTaskSelect: Invalid task data', task)
+      return
     }
+
+    if (multiSelect) {
+      // In multi-select mode, preserve existing selection and toggle this task
+      canvasStore.toggleNodeSelection(task.id)
+    } else {
+      // In single-select mode, clear all other selections and select only this task
+      canvasStore.setSelectedNodes([task.id])
+    }
+
+    // Ensure selection state is immediately reflected in the nodes
+    // Add safety checks for nodes array
+    if (!nodes.value || !Array.isArray(nodes.value)) {
+      console.warn('handleTaskSelect: nodes array is not available')
+      return
+    }
+
+    const nodeIndex = nodes.value.findIndex(n => n && n.id === task.id)
+    if (nodeIndex > -1 && nodes.value[nodeIndex]) {
+      // Update the Vue Flow node selection state to match canvas store
+      const isSelected = canvasStore.selectedNodeIds && canvasStore.selectedNodeIds.includes(task.id)
+      if (nodes.value[nodeIndex].selected !== isSelected) {
+        nodes.value[nodeIndex].selected = isSelected
+      }
+    }
+  } catch (error) {
+    console.error('Error in handleTaskSelect:', error)
+    // Continue execution - don't let selection errors crash the canvas
   }
 }
 
 const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
-  console.log('Task context menu:', task)
-  // Emit custom event for App.vue to handle
-  window.dispatchEvent(new CustomEvent('task-context-menu', {
-    detail: { event, task }
-  }))
+  try {
+    // Validate inputs
+    if (!event || !task || !task.id) {
+      console.warn('handleTaskContextMenu: Invalid inputs', { event, task })
+      return
+    }
+
+    console.log('Task context menu:', task)
+    // Emit custom event for App.vue to handle
+    window.dispatchEvent(new CustomEvent('task-context-menu', {
+      detail: { event, task }
+    }))
+  } catch (error) {
+    console.error('Error in handleTaskContextMenu:', error)
+    // Continue execution - don't let context menu errors crash the canvas
+  }
 }
 
 // Initialize on mount

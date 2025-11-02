@@ -1744,7 +1744,7 @@ export const useTaskStore = defineStore('tasks', () => {
       },
       moveTaskWithUndo: async (taskId: string, newStatus: Task['status']) => {
         const actions = await getUndoRedoActions()
-        return actions.moveTaskWithUndo(taskId, newStatus)
+        return actions.updateTaskWithUndo(taskId, { status: newStatus })
       },
       moveTaskToProjectWithUndo: async (taskId: string, targetProjectId: string) => {
         // Unified undo/redo doesn't support moveTaskToProject yet

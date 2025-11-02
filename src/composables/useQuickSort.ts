@@ -1,7 +1,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useQuickSortStore } from '@/stores/quickSort'
-import type { Task } from '@/types/tasks'
+import type { Task } from '@/stores/taskCore'
 import type { CategoryAction } from '@/stores/quickSort'
 
 export function useQuickSort() {
@@ -15,10 +15,12 @@ export function useQuickSort() {
   const uncategorizedTasks = computed<Task[]>(() => {
     return taskStore.tasks.filter(
       (task) =>
+        task.isUncategorized === true ||
+        // Backward compatibility: also treat tasks in "My Tasks" project as uncategorized
         !task.projectId ||
         task.projectId === '' ||
         task.projectId === null ||
-        task.projectId === '1' // "My Tasks" is the uncategorized bucket
+        task.projectId === '1'
     )
   })
 
@@ -83,8 +85,11 @@ export function useQuickSort() {
       timestamp: Date.now()
     }
 
-    // Update task
-    taskStore.updateTask(taskId, { projectId })
+    // Update task - categorize it by setting projectId and isUncategorized flag
+    taskStore.updateTask(taskId, {
+      projectId: projectId,
+      isUncategorized: false
+    })
 
     // Record action
     quickSortStore.recordAction(action)
@@ -117,8 +122,12 @@ export function useQuickSort() {
     const action = quickSortStore.undo()
     if (!action) return
 
-    // Revert the task update
-    taskStore.updateTask(action.taskId, { projectId: action.oldProjectId })
+    // Revert the task update - make it uncategorized again
+    const isUncategorizedAgain = !action.oldProjectId || action.oldProjectId === '1'
+    taskStore.updateTask(action.taskId, {
+      projectId: action.oldProjectId,
+      isUncategorized: isUncategorizedAgain
+    })
 
     // Adjust index if needed
     if (currentIndex.value > 0) {
@@ -130,8 +139,11 @@ export function useQuickSort() {
     const action = quickSortStore.redo()
     if (!action) return
 
-    // Reapply the task update
-    taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
+    // Reapply the task update - categorize it again
+    taskStore.updateTask(action.taskId, {
+      projectId: action.newProjectId,
+      isUncategorized: false
+    })
 
     // Move forward
     moveToNext()

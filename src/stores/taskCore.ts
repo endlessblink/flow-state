@@ -45,6 +45,7 @@ export interface Task {
   updatedAt: Date
   canvasPosition?: { x: number; y: number }
   isInInbox?: boolean
+  isUncategorized?: boolean
   dependsOn?: string[]
   connectionTypes?: { [targetTaskId: string]: 'sequential' | 'blocker' | 'reference' }
 }
@@ -74,6 +75,11 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
   // Task CRUD operations
   const createTask = (taskData: Partial<Task>): Task => {
     const now = new Date()
+
+    // Determine if task should be uncategorized
+    const hasProjectId = taskData.projectId && taskData.projectId !== '1' && taskData.projectId !== 'default'
+    const isUncategorized = taskData.isUncategorized !== undefined ? taskData.isUncategorized : !hasProjectId
+
     const task: Task = {
       id: uuidv4(),
       title: taskData.title || '',
@@ -88,10 +94,11 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
       scheduledTime: taskData.scheduledTime,
       estimatedDuration: taskData.estimatedDuration,
       instances: taskData.instances || [],
-      projectId: taskData.projectId || 'default',
+      projectId: hasProjectId ? taskData.projectId! : null,
       parentTaskId: taskData.parentTaskId || null,
       canvasPosition: taskData.canvasPosition,
       isInInbox: taskData.isInInbox || false,
+      isUncategorized: isUncategorized,
       dependsOn: taskData.dependsOn || [],
       connectionTypes: taskData.connectionTypes || {},
       createdAt: now,

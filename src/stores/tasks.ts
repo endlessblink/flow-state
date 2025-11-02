@@ -243,6 +243,32 @@ export const useTaskStore = defineStore('tasks', () => {
     })
   }
 
+  // Migrate tasks to add isUncategorized flag
+  const migrateTaskUncategorizedFlag = () => {
+    let migratedCount = 0
+    tasks.value.forEach(task => {
+      // Only migrate tasks that don't have the isUncategorized field set
+      if (task.isUncategorized === undefined) {
+        // Determine if task should be uncategorized based on existing logic
+        const shouldBeUncategorized = !task.projectId ||
+          task.projectId === '' ||
+          task.projectId === null ||
+          task.projectId === '1' // "My Tasks" project
+
+        task.isUncategorized = shouldBeUncategorized
+        migratedCount++
+
+        if (shouldBeUncategorized) {
+          console.log(`🔄 Marked task "${task.title}" as uncategorized (projectId: ${task.projectId})`)
+        }
+      }
+    })
+
+    if (migratedCount > 0) {
+      console.log(`🔄 Migration complete: Set isUncategorized flag for ${migratedCount} tasks`)
+    }
+  }
+
   // DEBUG: Add test calendar instances for filter testing
   const addTestCalendarInstances = () => {
     console.log('🔧 DEBUG: Adding test calendar instances...')
@@ -338,7 +364,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const currentView = ref('board')
   const selectedTaskIds = ref<string[]>([])
   const activeProjectId = ref<string | null>(null) // null = show all projects
-  const activeSmartView = ref<'today' | 'week' | null>(null)
+  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | null>(null)
   const activeStatusFilter = ref<string | null>(null) // null = show all statuses, 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   const hideDoneTasks = ref(false) // Global setting to hide done tasks across all views (disabled by default to show completed tasks for logging)
 
@@ -540,6 +566,7 @@ export const useTaskStore = defineStore('tasks', () => {
       migrateTaskStatuses() // Fix "todo" -> "planned" status mapping
       migrateInboxFlag()
       migrateNestedTaskProjectIds() // Fix nested tasks to inherit parent's projectId
+      migrateTaskUncategorizedFlag() // Set isUncategorized flag for existing tasks
 
       // DEBUG: Add test instances for calendar filter testing
       addTestCalendarInstances()
@@ -793,6 +820,26 @@ export const useTaskStore = defineStore('tasks', () => {
         return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
       })
       console.log(`🔧 TaskStore.filteredTasks: Week smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
+
+    } else if (activeSmartView.value === 'uncategorized') {
+      console.log('🔧 TaskStore.filteredTasks: Applying "uncategorized" smart view filter')
+      const beforeSmartFilter = filtered.length
+      filtered = filtered.filter(task => {
+        // New logic: check isUncategorized flag first
+        if (task.isUncategorized === true) {
+          console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches uncategorized filter (isUncategorized flag)`)
+          return true
+        }
+
+        // Backward compatibility: also treat tasks without proper project assignment as uncategorized
+        if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
+          console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches uncategorized filter (legacy projectId check)`)
+          return true
+        }
+
+        return false
+      })
+      console.log(`🔧 TaskStore.filteredTasks: Uncategorized smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
     }
 
     // Apply status filter (NEW GLOBAL STATUS FILTER)
@@ -900,6 +947,22 @@ export const useTaskStore = defineStore('tasks', () => {
           // Fallback to legacy scheduledDate
           if (!task.scheduledDate) return false
           return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+
+        } else if (activeSmartView.value === 'uncategorized') {
+          // Check if nested task is uncategorized
+          if (task.isUncategorized === true) {
+            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches uncategorized filter (isUncategorized flag)`)
+            return true
+          }
+
+          // Backward compatibility: also treat tasks without proper project assignment as uncategorized
+          if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
+            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches uncategorized filter (legacy projectId check)`)
+            return true
+          }
+
+          console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" does not match uncategorized filter`)
+          return false
         }
 
         // Apply status filter to nested tasks
@@ -1376,7 +1439,7 @@ export const useTaskStore = defineStore('tasks', () => {
     activeSmartView.value = null // Clear smart view when selecting a project
   }
 
-  const setSmartView = (view: 'today' | 'week' | null) => {
+  const setSmartView = (view: 'today' | 'week' | 'uncategorized' | null) => {
     activeSmartView.value = view
     if (view) {
       activeProjectId.value = null // Clear project filter when using smart view
@@ -1649,6 +1712,10 @@ export const useTaskStore = defineStore('tasks', () => {
               return deleteTask(taskId)
             },
             moveTask: (taskId: string, newStatus: Task['status']) => moveTask(taskId, newStatus),
+            moveTaskWithUndo: (taskId: string, newStatus: Task['status']) => {
+              console.log('⚠️ FALLBACK moveTaskWithUndo called - no undo support')
+              return moveTask(taskId, newStatus)
+            },
             moveTaskToProject: (taskId: string, targetProjectId: string) => moveTaskToProject(taskId, targetProjectId),
             moveTaskToDate: (taskId: string, dateColumn: string) => moveTaskToDate(taskId, dateColumn),
             createSubtask: (taskId: string, subtaskData: Partial<Subtask>) => createSubtask(taskId, subtaskData),
@@ -1744,7 +1811,7 @@ export const useTaskStore = defineStore('tasks', () => {
       },
       moveTaskWithUndo: async (taskId: string, newStatus: Task['status']) => {
         const actions = await getUndoRedoActions()
-        return actions.updateTaskWithUndo(taskId, { status: newStatus })
+        return actions.moveTaskWithUndo(taskId, newStatus)
       },
       moveTaskToProjectWithUndo: async (taskId: string, targetProjectId: string) => {
         // Unified undo/redo doesn't support moveTaskToProject yet

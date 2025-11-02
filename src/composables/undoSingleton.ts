@@ -86,7 +86,8 @@ export function getUndoSystem() {
 
   const taskStore = useTaskStore()
 
-  return {
+  // Create the complete undo system object with all operations
+  const undoSystem = {
     canUndo,
     canRedo,
     undoCount,
@@ -214,8 +215,31 @@ export function getUndoSystem() {
       // Save state AFTER creation
       globalUndo.saveStateAfter('After task creation')
       return newTask
+    },
+
+    moveTaskWithUndo: (taskId: string, newStatus: string) => {
+      console.log('📍 [SINGLETON] moveTaskWithUndo called for:', taskId, 'to:', newStatus)
+
+      // Save state BEFORE move
+      const globalUndo = getUndoSystem()
+      globalUndo.saveStateBefore('Before task move')
+
+      // Perform the move
+      taskStore.moveTask(taskId, newStatus)
+      console.log(`✅ Task moved: ${taskId} to ${newStatus}`)
+
+      // Save state AFTER move
+      globalUndo.saveStateAfter('After task move')
     }
   }
+
+  // Update the global window object to include ALL operations
+  if (typeof window !== 'undefined') {
+    (window as any).__pomoFlowUndoSystem = undoSystem
+    console.log('✅ Global undo system updated with complete task operations')
+  }
+
+  return undoSystem
 }
 
 /**

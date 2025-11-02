@@ -534,6 +534,11 @@ const todayTaskCount = computed(() => {
   today.setHours(0, 0, 0, 0)
 
   return taskStore.tasks.filter(task => {
+    // Exclude done tasks from today count - CRITICAL FIX
+    if (task.status === 'done') {
+      return false
+    }
+
     // Check instances first (new format) - tasks scheduled for today
     const instances = getTaskInstances(task)
     if (instances.length > 0) {

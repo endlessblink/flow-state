@@ -217,6 +217,19 @@ function handleUndo() {
 }
 
 function handleExit() {
+  // Check if there are still uncategorized tasks
+  const hasRemainingUncategorized = uncategorizedTasks.value.length > 0
+
+  if (hasRemainingUncategorized) {
+    // Activate uncategorized filter when returning to board
+    taskStore.setSmartView('uncategorized')
+    console.log('🔧 QuickSort: Returning to board with uncategorized filter active')
+  } else {
+    // Clear smart view if all tasks are categorized
+    taskStore.setSmartView(null)
+    console.log('🔧 QuickSort: All tasks categorized, returning to board with no filter')
+  }
+
   router.push({ name: 'board' })
 }
 

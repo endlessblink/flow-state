@@ -249,7 +249,7 @@ onUnmounted(() => {
 
 .create-new-button:hover {
   border-color: var(--brand-primary) !important;
-  background: var(--brand-bg) !important;
+  background: var(--glass-bg-medium) !important;
   color: var(--brand-primary);
 }
 

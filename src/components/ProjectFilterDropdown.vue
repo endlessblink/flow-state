@@ -116,9 +116,31 @@ const activeProject = computed(() => {
   return taskStore.getProjectById(activeProjectId.value)
 })
 
+// Helper function to check if a project and its children have active tasks
+const projectHasActiveTasks = (projectId: string): boolean => {
+  // Helper function to get all child project IDs recursively
+  const getChildProjectIds = (parentId: string): string[] => {
+    const ids = [parentId]
+    const childProjects = taskStore.projects.filter(p => p.parentId === parentId)
+    childProjects.forEach(child => {
+      ids.push(...getChildProjectIds(child.id))
+    })
+    return ids
+  }
+
+  // Get all project IDs including children recursively
+  const projectIds = getChildProjectIds(projectId)
+
+  // Check if any filtered tasks (active tasks only) belong to this project or its children
+  return taskStore.filteredTasks.some(task => projectIds.includes(task.projectId || '1'))
+}
+
 // Sort projects: root level first, then nested, alphabetically within each level
+// UPDATED: Only show projects that have active (non-done) tasks
 const sortedProjects = computed(() => {
-  const projects = [...taskStore.projects]
+  const projects = [...taskStore.projects].filter(project =>
+    projectHasActiveTasks(project.id)
+  )
 
   return projects.sort((a, b) => {
     // Root projects come first
@@ -167,7 +189,8 @@ const getNestedName = (project: Project) => {
 }
 
 const getProjectTaskCount = (projectId: string): number => {
-  const directTasks = taskStore.tasks.filter(task => task.projectId === projectId).length
+  // Count only active (non-done) tasks using filteredTasks
+  const directTasks = taskStore.filteredTasks.filter(task => task.projectId === projectId).length
   const childProjects = taskStore.projects.filter(p => p.parentId === projectId)
   const childTasks = childProjects.reduce((sum, child) => sum + getProjectTaskCount(child.id), 0)
   return directTasks + childTasks

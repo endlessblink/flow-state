@@ -55,6 +55,34 @@
         <CalendarDays :size="16" />
       </button>
 
+      <!-- Uncategorized Filter -->
+      <button
+        class="uncategorized-filter icon-only"
+        :class="{ active: taskStore.activeSmartView === 'uncategorized' }"
+        @click="handleToggleUncategorizedFilter"
+        title="Show Uncategorized Tasks"
+      >
+        <Inbox :size="16" />
+        <span
+          v-if="uncategorizedTaskCount > 0"
+          class="filter-badge"
+          :class="{ 'badge-active': taskStore.activeSmartView === 'uncategorized' }"
+        >
+          {{ uncategorizedTaskCount }}
+        </span>
+      </button>
+
+      <!-- Quick Sort Button (shows when uncategorized filter is active) -->
+      <button
+        v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedTaskCount > 0"
+        class="quick-sort-button"
+        @click="handleStartQuickSort"
+        title="Start Quick Sort to categorize these tasks"
+      >
+        <Zap :size="16" />
+        Quick Sort
+      </button>
+
       <!-- Status Filters -->
       <div class="status-filters">
         <button
@@ -164,6 +192,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
@@ -172,9 +201,12 @@ import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
-import { Eye, EyeOff, CheckCircle, Circle, Minimize2, Maximize2, AlignCenter, ListTodo, Calendar as CalendarIcon, Play, Check, CalendarDays } from 'lucide-vue-next'
+import { Eye, EyeOff, CheckCircle, Circle, Minimize2, Maximize2, AlignCenter, ListTodo, Calendar as CalendarIcon, Play, Check, CalendarDays, Inbox, Zap } from 'lucide-vue-next'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import type { Task } from '@/stores/tasks'
+
+// Router
+const router = useRouter()
 
 // Stores
 const taskStore = useTaskStore()
@@ -243,49 +275,32 @@ const getProjectAndChildren = (projectId: string): string[] => {
   return ids
 }
 
-// Get projects to display - CRITICAL FIX: Always include My Tasks if it has tasks
+// Helper function to check if a project and its children have active tasks
+const projectHasActiveTasks = (projectId: string): boolean => {
+  // Get all project IDs including children recursively
+  const projectIds = getProjectAndChildren(projectId)
+
+  // Check if any filtered tasks (active tasks only) belong to this project or its children
+  return taskStore.filteredTasks.some(task => projectIds.includes(task.projectId || '1'))
+}
+
+// Get projects to display - REMOVED: My Tasks is now a smart filter, not a project
+// UPDATED: Only show projects that have active (non-done) tasks
 const projectsWithTasks = computed(() => {
-  // Start with all projects
-  let projects = [...taskStore.projects]
-
-  // CRITICAL FIX: Always ensure "My Tasks" project is included
-  const hasMyTasksTasks = taskStore.filteredTasks.some(t => t.projectId === '1')
-  const myTasksProject = projects.find(p => p.id === '1' || p.name === 'My Tasks')
-
-  if (!myTasksProject && hasMyTasksTasks) {
-    // Find My Tasks project from store and add it
-    const missingMyTasks = taskStore.projects.find(p => p.id === '1' || p.name === 'My Tasks')
-    if (missingMyTasks && !projects.find(p => p.id === missingMyTasks.id)) {
-      projects.push(missingMyTasks)
-    }
-  }
-
-  // ENHANCED FIX: If My Tasks project still doesn't exist in projects array, create it
-  const finalMyTasksProject = projects.find(p => p.id === '1' || p.name === 'My Tasks')
-  if (!finalMyTasksProject && hasMyTasksTasks) {
-    // Create a synthetic My Tasks project to ensure swimlane appears
-    const syntheticMyTasks = {
-      id: '1',
-      name: 'My Tasks',
-      description: 'Default project for tasks',
-      color: '#3b82f6',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isDefault: true,
-      parentId: null,
-      _synthetic: true // Mark as synthetic for debugging
-    }
-    projects.push(syntheticMyTasks)
-    console.log('🔧 BoardView: Created synthetic My Tasks project:', syntheticMyTasks)
-  }
+  // Start with all projects (excluding the synthetic My Tasks project)
+  let projects = taskStore.projects.filter(p => p.id !== '1' && p.name !== 'My Tasks')
 
   // If a specific project is selected, show that project AND its children
+  // but only if they have active tasks
   if (taskStore.activeProjectId) {
     const projectIds = getProjectAndChildren(taskStore.activeProjectId)
-    return projects.filter(project => projectIds.includes(project.id))
+    return projects.filter(project =>
+      projectIds.includes(project.id) && projectHasActiveTasks(project.id)
+    )
   }
 
-  return projects
+  // Otherwise, show all projects that have active tasks
+  return projects.filter(project => projectHasActiveTasks(project.id))
 })
 
 // Total displayed tasks (uses centralized counter for consistency)
@@ -300,6 +315,22 @@ const totalDisplayedTasks = computed(() => {
     return taskStore?.filteredTasks?.length || 0
   } catch (error) {
     console.error('BoardView.totalDisplayedTasks: Error calculating task count:', error)
+    return 0
+  }
+})
+
+// Count of uncategorized tasks for the filter badge
+const uncategorizedTaskCount = computed(() => {
+  try {
+    return taskStore.tasks.filter(task =>
+      task.isUncategorized === true ||
+      !task.projectId ||
+      task.projectId === '' ||
+      task.projectId === null ||
+      task.projectId === '1'
+    ).length
+  } catch (error) {
+    console.error('BoardView.uncategorizedTaskCount: Error calculating uncategorized count:', error)
     return 0
   }
 })
@@ -495,6 +526,36 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
     }
   } catch (error) {
     console.error('🔧 BoardView: Error toggling Today filter:', error)
+  }
+}
+
+// Toggle Uncategorized filter
+const handleToggleUncategorizedFilter = (event: MouseEvent) => {
+  event.stopPropagation()
+  console.log('🔧 BoardView: Uncategorized filter toggle clicked!')
+  console.log('🔧 BoardView: Current activeSmartView:', taskStore.activeSmartView)
+
+  try {
+    // Toggle between 'uncategorized' and null
+    if (taskStore.activeSmartView === 'uncategorized') {
+      taskStore.setSmartView(null)
+      console.log('🔧 BoardView: Cleared Uncategorized filter')
+    } else {
+      taskStore.setSmartView('uncategorized')
+      console.log('🔧 BoardView: Activated Uncategorized filter')
+    }
+  } catch (error) {
+    console.error('🔧 BoardView: Error toggling Uncategorized filter:', error)
+  }
+}
+
+// Start Quick Sort from uncategorized view
+const handleStartQuickSort = () => {
+  console.log('🔧 BoardView: Starting Quick Sort from uncategorized view')
+  try {
+    router.push({ name: 'quick-sort' })
+  } catch (error) {
+    console.error('🔧 BoardView: Error navigating to Quick Sort:', error)
   }
 }
 </script>
@@ -739,6 +800,125 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
   backdrop-filter: var(--state-active-glass);
   color: var(--state-active-text);
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* Uncategorized Filter Toggle */
+.uncategorized-filter {
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-soft) 0%,
+    var(--glass-bg-light) 100%
+  );
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  user-select: none;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.uncategorized-filter.icon-only {
+  padding: var(--space-2);
+  justify-content: center;
+}
+
+.uncategorized-filter:hover {
+  background: linear-gradient(
+    135deg,
+    var(--state-hover-bg) 0%,
+    var(--glass-bg-soft) 100%
+  );
+  border-color: var(--state-hover-border);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+.uncategorized-filter.active {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* Filter Badge */
+.filter-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--attention-bg);
+  color: var(--attention-text);
+  border: 1px solid var(--attention-border);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.filter-badge.badge-active {
+  background: var(--state-active-bg);
+  color: var(--state-active-text);
+  border-color: var(--state-active-border);
+}
+
+.uncategorized-filter {
+  position: relative;
+}
+
+/* Quick Sort Button */
+.quick-sort-button {
+  background: linear-gradient(
+    135deg,
+    var(--attention-bg) 0%,
+    var(--attention-bg-light) 100%
+  );
+  border: 1px solid var(--attention-border);
+  color: var(--attention-text);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  user-select: none;
+  min-height: 40px;
+}
+
+.quick-sort-button:hover {
+  background: linear-gradient(
+    135deg,
+    var(--attention-hover-bg) 0%,
+    var(--attention-bg) 100%
+  );
+  border-color: var(--attention-hover-border);
+  transform: translateY(-1px);
+  box-shadow: var(--attention-glow);
+}
+
+.quick-sort-button:active {
+  transform: translateY(0);
 }
 
 /* Status Filters - Board View */

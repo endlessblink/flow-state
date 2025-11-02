@@ -92,6 +92,37 @@
             </template>
             This Weekend
           </DateDropZone>
+
+          <!-- Uncategorized Tasks (My Tasks) -->
+          <div class="smart-view-uncategorized">
+            <button
+              class="uncategorized-filter"
+              :class="{ active: taskStore.activeSmartView === 'uncategorized' }"
+              @click="selectSmartView('uncategorized')"
+              title="Show Uncategorized Tasks"
+            >
+              <Inbox :size="16" />
+              <span>My Tasks</span>
+              <span
+                v-if="uncategorizedCount > 0"
+                class="filter-badge"
+                :class="{ 'badge-active': taskStore.activeSmartView === 'uncategorized' }"
+              >
+                {{ uncategorizedCount }}
+              </span>
+            </button>
+
+            <!-- Quick Sort Button (shows when uncategorized filter is active) -->
+            <button
+              v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedCount > 0"
+              class="quick-sort-button"
+              @click="handleStartQuickSort"
+              title="Start Quick Sort to categorize these tasks"
+            >
+              <Zap :size="16" />
+              <span>Quick Sort</span>
+            </button>
+          </div>
         </div>
 
         <!-- Projects Section Header -->
@@ -344,6 +375,7 @@ import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
 import { useDirection } from '@/i18n/useDirection'
+import { useRouter } from 'vue-router'
 // 🚨 FORCE CACHE BREAKER - UNDO SINGLETON V3 - 2025-10-22T22:58:00Z
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
@@ -385,6 +417,7 @@ const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
 const authStore = useAuthStore()
+const router = useRouter()
 
 // RTL/LTR direction support
 const { direction, isRTL } = useDirection()
@@ -470,17 +503,43 @@ const commandPaletteRef = ref<{ open: () => void; close: () => void } | null>(nu
 // Platform detection
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
+// Helper function to check if a project and its children have active tasks
+const projectHasActiveTasks = (projectId: string): boolean => {
+  // Helper function to get all child project IDs recursively
+  const getChildProjectIds = (parentId: string): string[] => {
+    const ids = [parentId]
+    const childProjects = taskStore.projects.filter(p => p.parentId === parentId)
+    childProjects.forEach(child => {
+      ids.push(...getChildProjectIds(child.id))
+    })
+    return ids
+  }
+
+  // Get all project IDs including children recursively
+  const projectIds = getChildProjectIds(projectId)
+
+  // Check if any filtered tasks (active tasks only) belong to this project or its children
+  return taskStore.filteredTasks.some(task => projectIds.includes(task.projectId || '1'))
+}
+
 // Computed Properties for Project Hierarchy
+// UPDATED: Only show root projects that have active (non-done) tasks
 const rootProjects = computed(() => {
-  return taskStore.projects.filter(p => !p.parentId)
+  return taskStore.projects
+    .filter(p => !p.parentId) // Only root projects
+    .filter(project => projectHasActiveTasks(project.id)) // Only projects with active tasks
 })
 
 const getChildren = (parentId: string) => {
-  return taskStore.projects.filter(p => p.parentId === parentId)
+  return taskStore.projects
+    .filter(p => p.parentId === parentId)
+    .filter(project => projectHasActiveTasks(project.id)) // Only children with active tasks
 }
 
 const hasChildren = (projectId: string) => {
-  return taskStore.projects.some(p => p.parentId === projectId)
+  return taskStore.projects
+    .filter(p => p.parentId === projectId)
+    .some(project => projectHasActiveTasks(project.id)) // Only children with active tasks
 }
 
 // Smart View Counts
@@ -585,7 +644,7 @@ const pageTitle = computed(() => {
     return project ? project.name : 'My Tasks'
   }
 
-  return 'My Tasks'
+  return 'Board'
 })
 
 // Theme toggle - using new cohesive design system
@@ -673,8 +732,14 @@ const selectProject = (project: Project) => {
 }
 
 
-const selectSmartView = (view: 'today' | 'weekend') => {
+const selectSmartView = (view: 'today' | 'weekend' | 'uncategorized') => {
   taskStore.setSmartView(view)
+}
+
+// Start Quick Sort from uncategorized view
+const handleStartQuickSort = () => {
+  console.log('🔧 App: Starting Quick Sort from uncategorized view')
+  router.push({ name: 'quick-sort' })
 }
 
 const getProjectTaskCount = (projectId: string) => {
@@ -2345,6 +2410,98 @@ onUnmounted(() => {
 }
 
 /* Theme toggle CSS removed - app now uses dark mode only */
+
+/* Uncategorized Filter Styles */
+.smart-view-uncategorized {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--glass-bg-heavy);
+  padding-top: var(--space-2);
+}
+
+.uncategorized-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.uncategorized-filter:hover {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.uncategorized-filter.active {
+  background: var(--brand-primary-bg-subtle);
+  border-color: var(--brand-primary-border-medium);
+  color: var(--brand-primary);
+  font-weight: var(--font-semibold);
+  box-shadow: var(--brand-primary-glow-subtle);
+}
+
+.uncategorized-filter .filter-badge {
+  margin-left: auto;
+  background: var(--glass-bg-heavy);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
+  border: 1px solid var(--glass-border);
+  transition: all var(--duration-fast) var(--spring-smooth);
+}
+
+.uncategorized-filter .filter-badge.badge-active {
+  background: var(--brand-primary);
+  color: white;
+  border-color: var(--brand-primary);
+  box-shadow: var(--brand-primary-glow-subtle);
+}
+
+/* Quick Sort Button */
+.quick-sort-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: linear-gradient(135deg, var(--brand-primary-bg-subtle), var(--brand-primary-bg-medium));
+  border: 1px solid var(--brand-primary-border-medium);
+  border-radius: var(--radius-lg);
+  color: var(--brand-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--spring-smooth);
+  box-shadow: var(--brand-primary-glow-subtle);
+}
+
+.quick-sort-button:hover {
+  background: linear-gradient(135deg, var(--brand-primary-bg-medium), var(--brand-primary-bg-heavy));
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--brand-primary-glow-medium);
+}
+
+.quick-sort-button:active {
+  transform: translateY(0);
+  box-shadow: var(--brand-primary-glow-subtle);
+}
 
 /* Removed - using BaseButton now */
 </style>

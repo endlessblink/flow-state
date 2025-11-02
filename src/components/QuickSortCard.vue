@@ -418,8 +418,8 @@ function handleSwipeEnd() {
 }
 
 .priority-btn.active {
-  background: var(--brand-gradient);
-  border-color: var(--brand-primary);
+  background: var(--glass-bg-light);
+  border: 2px solid var(--brand-primary);
   font-weight: var(--font-semibold);
 }
 

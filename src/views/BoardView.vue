@@ -243,16 +243,49 @@ const getProjectAndChildren = (projectId: string): string[] => {
   return ids
 }
 
-// Get projects to display - respect active project filter but always show projects for smart views
+// Get projects to display - CRITICAL FIX: Always include My Tasks if it has tasks
 const projectsWithTasks = computed(() => {
+  // Start with all projects
+  let projects = [...taskStore.projects]
+
+  // CRITICAL FIX: Always ensure "My Tasks" project is included
+  const hasMyTasksTasks = taskStore.filteredTasks.some(t => t.projectId === '1')
+  const myTasksProject = projects.find(p => p.id === '1' || p.name === 'My Tasks')
+
+  if (!myTasksProject && hasMyTasksTasks) {
+    // Find My Tasks project from store and add it
+    const missingMyTasks = taskStore.projects.find(p => p.id === '1' || p.name === 'My Tasks')
+    if (missingMyTasks && !projects.find(p => p.id === missingMyTasks.id)) {
+      projects.push(missingMyTasks)
+    }
+  }
+
+  // ENHANCED FIX: If My Tasks project still doesn't exist in projects array, create it
+  const finalMyTasksProject = projects.find(p => p.id === '1' || p.name === 'My Tasks')
+  if (!finalMyTasksProject && hasMyTasksTasks) {
+    // Create a synthetic My Tasks project to ensure swimlane appears
+    const syntheticMyTasks = {
+      id: '1',
+      name: 'My Tasks',
+      description: 'Default project for tasks',
+      color: '#3b82f6',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isDefault: true,
+      parentId: null,
+      _synthetic: true // Mark as synthetic for debugging
+    }
+    projects.push(syntheticMyTasks)
+    console.log('🔧 BoardView: Created synthetic My Tasks project:', syntheticMyTasks)
+  }
+
   // If a specific project is selected, show that project AND its children
   if (taskStore.activeProjectId) {
     const projectIds = getProjectAndChildren(taskStore.activeProjectId)
-    return taskStore.projects.filter(project => projectIds.includes(project.id))
+    return projects.filter(project => projectIds.includes(project.id))
   }
 
-  // For smart views (today, week) or no filter, show all projects
-  return taskStore.projects
+  return projects
 })
 
 // Total displayed tasks (uses centralized counter for consistency)
@@ -768,12 +801,15 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
 .kanban-scroll-container {
   flex: 1;
   overflow-y: auto;
-  overflow-x: visible; /* Allow horizontal scrolling in inner containers */
+  overflow-x: auto; /* Enable horizontal scrolling within Kanban only */
   min-height: 0; /* Critical: allows flexbox shrinking */
   padding-bottom: 2rem;
-  /* Add containment to prevent child scroll from affecting parent */
-  contain: layout style;
   position: relative;
+  /* Ensure horizontal scroll doesn't propagate to parent */
+  contain: layout paint;
+  /* Custom scrollbar styling for better UX */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
 }
 
 /* KANBAN BOARD */
@@ -783,8 +819,7 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
   gap: var(--space-3);
   padding: var(--space-6) 0;
   width: 100%;
-  max-width: 100%;
-  overflow: hidden;
+  /* Let swimlanes determine width, but contain within scroll container */
   /* Ensure swimlanes can scroll horizontally within their containers */
   isolation: isolate;
 }

@@ -54,12 +54,13 @@
     </div>
 
     <!-- Time Filters -->
-    <InboxTimeFilters
-      v-if="!isCollapsed"
-      :tasks="baseInboxTasks"
-      :active-filter="activeTimeFilter"
-      @filter-changed="activeTimeFilter = $event"
-    />
+    <div v-if="!isCollapsed">
+      <InboxTimeFilters
+        :tasks="baseInboxTasks"
+        :active-filter="activeTimeFilter"
+        @filter-changed="activeTimeFilter = $event"
+      />
+    </div>
 
     <!-- Batch Actions Bar -->
     <div v-if="!isCollapsed && selectedTaskIds.size > 0" class="batch-actions">
@@ -136,6 +137,7 @@ import { NInput, NButton, NBadge, NTag, NIcon } from 'naive-ui'
 import { Plus, Zap, Clock, ChevronLeft, ChevronRight, Timer } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import InboxTimeFilters from './InboxTimeFilters.vue'
 
@@ -245,65 +247,33 @@ const inboxTasks = computed(() => {
         // Fallback to legacy scheduledDate
         if (task.scheduledDate === today) return true
 
-        // Tasks created today
-        const createdDate = new Date(task.createdAt)
-        createdDate.setHours(0, 0, 0, 0)
-        if (createdDate.getTime() === getToday().getTime()) return true
-
-        // Tasks due today
-        if (task.dueDate === today) return true
-
-        // Tasks currently in progress
-        if (task.status === 'in_progress') return true
-
         return false
       })
 
-    case 'today':
-      // Tasks scheduled for today
-      const todayStr = getToday().toISOString().split('T')[0]
-
-      return tasks.filter(task => {
-        // Check instances first
-        if (task.instances && task.instances.length > 0) {
-          return task.instances.some((inst: any) => inst.scheduledDate === todayStr)
-        }
-        // Fallback to legacy scheduledDate
-        return task.scheduledDate === todayStr
-      })
-
     case 'tomorrow':
-      // Tasks scheduled for tomorrow
-      const tomorrowStr = getTomorrow().toISOString().split('T')[0]
-
       return tasks.filter(task => {
-        // Check instances first
+        const tomorrow = getTomorrow().toISOString().split('T')[0]
+        // Check instances for tomorrow scheduling
         if (task.instances && task.instances.length > 0) {
-          return task.instances.some((inst: any) => inst.scheduledDate === tomorrowStr)
+          if (task.instances.some((inst: any) => inst.scheduledDate === tomorrow)) return true
         }
         // Fallback to legacy scheduledDate
-        return task.scheduledDate === tomorrowStr
+        if (task.scheduledDate === tomorrow) return true
+        return false
       })
 
     case 'thisWeek':
-      // Tasks scheduled within next 7 days
-      const todayWeek = getToday().toISOString().split('T')[0]
-      const weekEndStr = getWeekEnd().toISOString().split('T')[0]
-
       return tasks.filter(task => {
-        // Check instances first
+        // Check instances for this week scheduling
         if (task.instances && task.instances.length > 0) {
-          return task.instances.some((inst: any) =>
-            inst.scheduledDate >= todayWeek && inst.scheduledDate < weekEndStr
-          )
+          if (task.instances.some((inst: any) => isThisWeek(inst.scheduledDate))) return true
         }
         // Fallback to legacy scheduledDate
-        if (!task.scheduledDate) return false
-        return task.scheduledDate >= todayWeek && task.scheduledDate < weekEndStr
+        if (isThisWeek(task.scheduledDate)) return true
+        return false
       })
 
     case 'noDate':
-      // Tasks without any scheduled date
       return tasks.filter(task => !hasDate(task))
 
     default:
@@ -314,179 +284,193 @@ const inboxTasks = computed(() => {
 // Parse brain dump text to count tasks
 const parsedTaskCount = computed(() => {
   if (!brainDumpText.value.trim()) return 0
-  return brainDumpText.value.split('\n').filter(line => line.trim()).length
+
+  const lines = brainDumpText.value.split('\n').filter(line => line.trim())
+  return lines.length
 })
 
-// Add single task from quick input
+// Task management methods
 const addTask = () => {
   if (!newTaskTitle.value.trim()) return
 
-  taskStore.createTask({
+  const { createTaskWithUndo } = useUnifiedUndoRedo()
+  createTaskWithUndo({
     title: newTaskTitle.value.trim(),
-    isInInbox: true,
-    priority: 'medium',
-    status: 'planned'
+    status: 'planned',
+    isInInbox: true
   })
 
   newTaskTitle.value = ''
-  quickInputRef.value?.focus()
 }
 
-// Process brain dump (multi-line)
 const processBrainDump = () => {
+  if (!brainDumpText.value.trim()) return
+
   const lines = brainDumpText.value.split('\n').filter(line => line.trim())
+  const { createTaskWithUndo } = useUnifiedUndoRedo()
 
   lines.forEach(line => {
-    let title = line.trim()
-    let priority: 'low' | 'medium' | 'high' = 'medium'
+    // Parse task line for priority, duration, etc.
+    const cleanedLine = line.trim()
+    let title = cleanedLine
+    let priority: any = null
     let estimatedDuration: number | undefined
 
-    // Parse priority markers
-    if (title.includes('!!!')) {
-      priority = 'high'
-      title = title.replace(/!!!/g, '').trim()
-    } else if (title.includes('!!')) {
-      priority = 'medium'
-      title = title.replace(/!!/g, '').trim()
-    } else if (title.includes('!')) {
-      priority = 'low'
-      title = title.replace(/!/g, '').trim()
+    // Extract priority (e.g., "!!!", "!!", "!")
+    const priorityMatch = cleanedLine.match(/(!+)$/)
+    if (priorityMatch) {
+      const exclamationCount = priorityMatch[1].length
+      if (exclamationCount >= 3) priority = 'high'
+      else if (exclamationCount === 2) priority = 'medium'
+      else if (exclamationCount === 1) priority = 'low'
+      title = cleanedLine.replace(/\s*!+$/, '').trim()
     }
 
-    // Parse time estimates (30m, 1h, 2h, etc.)
-    const timeMatch = title.match(/(\d+)(h|m)/i)
-    if (timeMatch) {
-      const value = parseInt(timeMatch[1])
-      const unit = timeMatch[2].toLowerCase()
-      estimatedDuration = unit === 'h' ? value * 60 : value
-      title = title.replace(/\d+(h|m)/i, '').trim()
+    // Extract duration (e.g., "2h", "30m")
+    const durationMatch = cleanedLine.match(/(\d+)([hm])$/i)
+    if (durationMatch) {
+      const value = parseInt(durationMatch[1])
+      const unit = durationMatch[2].toLowerCase()
+      if (unit === 'h') estimatedDuration = value * 60
+      else estimatedDuration = value
+      title = cleanedLine.replace(/\s*\d+[hm]$/i, '').trim()
     }
 
-    // Create task
-    if (title) {
-      taskStore.createTask({
-        title,
-        priority,
-        estimatedDuration,
-        isInInbox: true,
-        status: 'planned'
-      })
-    }
+    createTaskWithUndo({
+      title,
+      priority,
+      estimatedDuration,
+      status: 'planned',
+      isInInbox: true
+    })
   })
 
+  // Clear brain dump
   brainDumpText.value = ''
   brainDumpMode.value = false
 }
 
-// Handle task click for multi-select
+// Task interaction handlers
 const handleTaskClick = (event: MouseEvent, task: any) => {
-  // Cmd/Ctrl for multi-select - ONLY way to select
-  if (event.metaKey || event.ctrlKey) {
+  if (event.ctrlKey || event.metaKey) {
+    // Toggle selection with Ctrl/Cmd
     if (selectedTaskIds.value.has(task.id)) {
       selectedTaskIds.value.delete(task.id)
     } else {
       selectedTaskIds.value.add(task.id)
     }
-  }
-  // Shift for range select (future enhancement)
-  else if (event.shiftKey) {
-    // TODO: Implement range selection
+  } else {
+    // Single selection
+    selectedTaskIds.value.clear()
     selectedTaskIds.value.add(task.id)
   }
-  // Normal click without modifier - do nothing (allows friction-free dragging)
-  // No auto-selection - drag works directly without pre-selecting
 }
 
-// Handle double-click to edit task
 const handleTaskDoubleClick = (task: any) => {
-  // Clear any selection when opening edit modal (double-click takes priority)
-  selectedTaskIds.value.clear()
-
-  // Emit custom event for App.vue to handle (opens edit modal)
-  // App.vue expects taskId in detail, not task object
-  window.dispatchEvent(new CustomEvent('open-task-edit', {
-    detail: { taskId: task.id }
-  }))
+  // TODO: Implement task editing functionality
+  console.log('Edit task:', task.id)
 }
 
-// Handle right-click context menu
 const handleTaskContextMenu = (event: MouseEvent, task: any) => {
-  // Only show context menu without selecting the task
-  // Clear selection to prevent multi-select from right-click
-  selectedTaskIds.value.clear()
-
-  // Store the task that was right-clicked for context menu actions
   contextMenuTask.value = task
-
-  // Show context menu
   contextMenuX.value = event.clientX
   contextMenuY.value = event.clientY
   showContextMenu.value = true
 }
 
-const closeContextMenu = () => {
-  showContextMenu.value = false
-  contextMenuTask.value = null
+const handleDragStart = (event: DragEvent, task: any) => {
+  if (event.dataTransfer) {
+    event.dataTransfer.setData('text/plain', JSON.stringify({
+      type: 'task',
+      id: task.id,
+      title: task.title
+    }))
+    event.dataTransfer.effectAllowed = 'move'
+  }
 }
 
-// Context menu actions
-const handleSetPriority = (priority: 'low' | 'medium' | 'high') => {
-  console.log('🔧 handleSetPriority called with priority:', priority)
-  console.log('🔧 contextMenuTask.value:', contextMenuTask.value)
-  console.log('🔧 selectedTaskIds.value:', Array.from(selectedTaskIds.value))
+// Context menu handlers
+const handleSetPriority = (priority: string) => {
+  const { updateTaskWithUndo } = useUnifiedUndoRedo()
+  const tasksToUpdate = selectedTaskIds.value.size > 0
+    ? Array.from(selectedTaskIds.value)
+    : [contextMenuTask.value?.id]
 
-  // If we have a right-clicked task, update that one
-  if (contextMenuTask.value) {
-    console.log('🔧 Updating context task priority:', contextMenuTask.value.id, 'to', priority)
-    taskStore.updateTask(contextMenuTask.value.id, { priority })
-  }
-  // Otherwise, update all selected tasks (for backward compatibility)
-  else if (selectedTaskIds.value.size > 0) {
-    console.log('🔧 Updating selected tasks priority:', Array.from(selectedTaskIds.value), 'to', priority)
-    selectedTaskIds.value.forEach(taskId => {
-      taskStore.updateTask(taskId, { priority })
-    })
-  }
+  tasksToUpdate.forEach(taskId => {
+    if (taskId) {
+      updateTaskWithUndo(taskId, { priority: priority as any })
+    }
+  })
+
   closeContextMenu()
 }
 
-const handleSetStatus = (status: 'planned' | 'in_progress' | 'done') => {
-  console.log('🔧 handleSetStatus called with status:', status)
-  console.log('🔧 contextMenuTask.value:', contextMenuTask.value)
-  console.log('🔧 selectedTaskIds.value:', Array.from(selectedTaskIds.value))
+const handleSetStatus = (status: string) => {
+  const { updateTaskWithUndo } = useUnifiedUndoRedo()
+  const tasksToUpdate = selectedTaskIds.value.size > 0
+    ? Array.from(selectedTaskIds.value)
+    : [contextMenuTask.value?.id]
 
-  // If we have a right-clicked task, update that one
-  if (contextMenuTask.value) {
-    console.log('🔧 Updating context task status:', contextMenuTask.value.id, 'to', status)
-    taskStore.updateTask(contextMenuTask.value.id, { status })
+  tasksToUpdate.forEach(taskId => {
+    if (taskId) {
+      updateTaskWithUndo(taskId, { status: status as any })
+    }
+  })
+
+  closeContextMenu()
+}
+
+const handleSetDueDate = (dateType: string) => {
+  const { updateTaskWithUndo } = useUnifiedUndoRedo()
+  const tasksToUpdate = selectedTaskIds.value.size > 0
+    ? Array.from(selectedTaskIds.value)
+    : [contextMenuTask.value?.id]
+
+  let dueDate: string | undefined
+
+  switch (dateType) {
+    case 'today':
+      dueDate = new Date().toISOString().split('T')[0]
+      break
+    case 'tomorrow':
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      dueDate = tomorrow.toISOString().split('T')[0]
+      break
+    case 'thisWeek':
+      const weekEnd = new Date()
+      weekEnd.setDate(weekEnd.getDate() + 7)
+      dueDate = weekEnd.toISOString().split('T')[0]
+      break
+    case 'noDate':
+      dueDate = undefined
+      break
   }
-  // Otherwise, update all selected tasks (for backward compatibility)
-  else if (selectedTaskIds.value.size > 0) {
-    console.log('🔧 Updating selected tasks status:', Array.from(selectedTaskIds.value), 'to', status)
-    selectedTaskIds.value.forEach(taskId => {
-      taskStore.updateTask(taskId, { status })
-    })
-    selectedTaskIds.value.clear()
-  }
+
+  tasksToUpdate.forEach(taskId => {
+    if (taskId) {
+      updateTaskWithUndo(taskId, { dueDate })
+    }
+  })
+
+  closeContextMenu()
+}
+
+const handleEnterFocusMode = () => {
+  // TODO: Implement focus mode functionality
+  console.log('Enter focus mode for task:', contextMenuTask.value?.id)
   closeContextMenu()
 }
 
 const handleDeleteSelected = () => {
-  // If we have a right-clicked task, delete that one
-  if (contextMenuTask.value) {
-    if (confirm(`Delete "${contextMenuTask.value.title}"?`)) {
-      taskStore.deleteTask(contextMenuTask.value.id)
-    }
+  const { deleteTasksWithUndo } = useUnifiedUndoRedo()
+  const tasksToDelete = Array.from(selectedTaskIds.value)
+
+  if (tasksToDelete.length > 0) {
+    deleteTasksWithUndo(tasksToDelete)
+    selectedTaskIds.value.clear()
   }
-  // Otherwise, delete all selected tasks (for backward compatibility)
-  else if (selectedTaskIds.value.size > 0) {
-    if (confirm(`Delete ${selectedTaskIds.value.size} selected tasks?`)) {
-      selectedTaskIds.value.forEach(taskId => {
-        taskStore.deleteTask(taskId)
-      })
-      selectedTaskIds.value.clear()
-    }
-  }
+
   closeContextMenu()
 }
 
@@ -495,392 +479,190 @@ const handleClearSelection = () => {
   closeContextMenu()
 }
 
-// Date setting handler
-const handleSetDueDate = (dateType: 'today' | 'tomorrow' | 'weekend' | 'nextweek') => {
-  console.log('🔧 handleSetDueDate called with dateType:', dateType)
-  console.log('🔧 contextMenuTask.value:', contextMenuTask.value)
-
-  if (contextMenuTask.value) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    let dueDate: Date | null = null
-
-    switch (dateType) {
-      case 'today':
-        dueDate = today
-        break
-      case 'tomorrow':
-        dueDate = new Date(today)
-        dueDate.setDate(today.getDate() + 1)
-        break
-      case 'weekend':
-        dueDate = new Date(today)
-        const daysUntilSaturday = (6 - today.getDay()) % 7 || 7
-        dueDate.setDate(today.getDate() + daysUntilSaturday)
-        break
-      case 'nextweek':
-        dueDate = new Date(today)
-        const daysUntilMonday = (8 - today.getDay()) % 7 || 7
-        dueDate.setDate(today.getDate() + daysUntilMonday)
-        break
-    }
-
-    if (dueDate) {
-      const formattedDate = dueDate.toLocaleDateString()
-      console.log('🔧 Setting due date for task:', contextMenuTask.value.id, 'to', formattedDate)
-      taskStore.updateTask(contextMenuTask.value.id, { dueDate: formattedDate })
-    }
-  }
-  closeContextMenu()
+const closeContextMenu = () => {
+  showContextMenu.value = false
+  contextMenuTask.value = null
 }
 
-// Focus mode handler
-const handleEnterFocusMode = () => {
-  console.log('🔧 handleEnterFocusMode called')
-  console.log('🔧 contextMenuTask.value:', contextMenuTask.value)
-
-  if (contextMenuTask.value) {
-    // Emit custom event for App.vue to handle (opens focus view)
-    window.dispatchEvent(new CustomEvent('enter-focus-mode', {
-      detail: { taskId: contextMenuTask.value.id }
-    }))
-  }
-  closeContextMenu()
-}
-
-// Edit task handler (for TaskContextMenu compatibility)
 const handleEdit = (taskId: string) => {
-  // Clear any selection when opening edit modal (double-click takes priority)
-  selectedTaskIds.value.clear()
-
-  // Emit custom event for App.vue to handle (opens edit modal)
-  // App.vue expects taskId in detail, not task object
-  window.dispatchEvent(new CustomEvent('open-task-edit', {
-    detail: { taskId }
-  }))
+  // TODO: Implement task editing functionality
+  console.log('Edit task:', taskId)
   closeContextMenu()
 }
 
-// Confirm delete handler (for TaskContextMenu compatibility)
-const handleConfirmDelete = (taskId: string, instanceId?: string, isCalendarEvent?: boolean) => {
-  // Handle single task deletion (same logic as handleDeleteSelected)
-  if (confirm(`Delete "${contextMenuTask.value?.title || 'task'}"?`)) {
-    taskStore.deleteTask(taskId)
-  }
+const handleConfirmDelete = (taskId: string) => {
+  const { deleteTasksWithUndo } = useUnifiedUndoRedo()
+  deleteTasksWithUndo([taskId])
+  selectedTaskIds.value.delete(taskId)
   closeContextMenu()
 }
 
-// Handle drag start from inbox - supports batch dragging
-const handleDragStart = (event: DragEvent, task: any) => {
-  // If dragging a selected task, drag all selected tasks
-  let taskIds: string[]
-  if (selectedTaskIds.value.has(task.id) && selectedTaskIds.value.size > 1) {
-    taskIds = Array.from(selectedTaskIds.value)
-  } else {
-    taskIds = [task.id]
-    selectedTaskIds.value.clear()
-    selectedTaskIds.value.add(task.id)
-  }
-
-  event.dataTransfer?.setData('application/json', JSON.stringify({
-    taskIds, // Array of task IDs for batch operations
-    fromInbox: true
-  }))
-}
-
-// Click outside handler to close context menu
-const handleClickOutside = (event: MouseEvent) => {
-  if (showContextMenu.value) {
-    const target = event.target as HTMLElement
-    if (!target.closest('.inbox-context-menu')) {
-      closeContextMenu()
-    }
-  }
-}
-
+// Lifecycle hooks
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  // Component mounted
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
+  // Cleanup if needed
+  closeContextMenu()
 })
 </script>
 
 <style scoped>
-/* UNIFIED DESIGN SYSTEM - Outlined + Glass with Green Accent */
-
 .inbox-panel {
-  width: 320px;
-  margin: var(--space-4) 0; /* RTL: top and bottom margins */
-  margin-inline-start: var(--space-4); /* RTL: left margin in LTR, right margin in RTL */
-  max-height: calc(100vh - 220px);
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  overflow: visible;
-  transition: width var(--duration-normal) var(--spring-smooth), padding var(--duration-normal);
-  /* Clean solid background matching target design */
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px; /* Moderate rounded corners */
-  box-shadow: var(--shadow-sm);
+  @apply bg-white/10 backdrop-blur-md rounded-lg border border-white/20 h-full flex flex-col overflow-hidden;
+  transition: all 0.3s ease;
 }
 
 .inbox-panel.collapsed {
-  width: 60px;
-  padding: var(--space-4) var(--space-2);
+  @apply min-w-12;
 }
 
 .inbox-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-2);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
+  @apply flex items-center gap-2 p-3 border-b border-white/10;
 }
 
 .collapse-btn {
-  background: transparent;
-  border: 1px solid var(--border-medium);
-  color: var(--text-muted);
-  padding: var(--space-2);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: var(--shadow-sm);
-}
-
-.collapse-btn:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow);
+  @apply p-1 rounded hover:bg-white/10 transition-colors flex-shrink-0;
 }
 
 .inbox-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin: 0;
-  flex: 1;
+  @apply text-white font-medium text-sm flex-1;
 }
 
 .quick-add {
-  /* Naive UI handles internal styling */
+  @apply p-3 border-b border-white/10;
 }
 
 .brain-dump {
-  padding: var(--space-4);
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  box-shadow: var(--shadow-sm);
+  @apply p-3 border-b border-white/10 space-y-3;
 }
 
-.inbox-tasks {
-  flex: 1;
-  overflow-x: visible;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  margin: calc(var(--space-2) * -1) calc(var(--space-4) * -1);
-}
-
-/* Unified card styling - subtle at rest, green vibrant on hover */
-.inbox-task-card {
-  position: relative;
-  padding: var(--space-4);
-  margin-bottom: var(--space-1);
-  cursor: move;
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-sm);
-}
-
-.inbox-task-card:last-child {
-  margin-bottom: 0;
-}
-
-.inbox-task-card:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-  z-index: 10;
-}
-
-/* Hover state: Enhanced visibility */
-.inbox-task-card:hover .task-title {
-  color: var(--text-primary);
-}
-
-.inbox-task-card:hover .task-meta {
-  opacity: 0.95;
-}
-
-.priority-stripe {
-  position: absolute;
-  top: 0;
-  inset-inline-start: 0; /* RTL: priority stripe position */
-  width: 3px;
-  height: 100%;
-  border-start-start-radius: var(--radius-sm); /* RTL: top-left in LTR, top-right in RTL */
-  border-end-start-radius: var(--radius-sm); /* RTL: bottom-left in LTR, bottom-right in RTL */
-}
-
-.task-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.task-title {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  line-height: var(--leading-tight);
-  transition: color var(--duration-normal);
-}
-
-.task-meta {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  transition: opacity var(--duration-normal);
-}
-
-.duration-badge {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  font-weight: var(--font-medium);
-}
-
-/* Unified scrollbar styling */
-.inbox-tasks::-webkit-scrollbar {
-  width: 6px;
-}
-
-.inbox-tasks::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.inbox-tasks::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
-  border-radius: var(--radius-md);
-  transition: background var(--duration-fast);
-}
-
-.inbox-tasks::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hover);
-}
-
-.inbox-tasks {
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-border) transparent;
-}
-
-/* Batch Actions Bar */
 .batch-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  background: var(--blue-bg-medium);
-  border: 1px solid var(--blue-border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  @apply flex items-center justify-between p-2 bg-white/5 border-b border-white/10;
 }
 
 .selected-count {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--blue-text);
+  @apply text-white/70 text-xs font-medium;
 }
 
-/* Timer Active Styling */
-.inbox-task-card.timer-active {
-  background: var(--blue-bg-subtle);
-  border-color: var(--brand-primary);
-  box-shadow: var(--shadow-md), 0 0 0 2px var(--brand-primary), 0 0 16px rgba(59, 130, 246, 0.3);
+.inbox-tasks {
+  @apply flex-1 overflow-y-auto p-2 space-y-2;
 }
 
-.inbox-task-card.timer-active .priority-stripe {
-  background: var(--brand-primary) !important;
-  box-shadow: 0 0 8px var(--brand-primary);
+.inbox-task-card {
+  @apply bg-white/5 border border-white/10 rounded-lg p-3 cursor-pointer relative;
+  @apply hover:bg-white/10 hover:border-white/20 transition-all duration-200;
+  @apply select-none;
 }
 
-/* Timer Indicator */
-.timer-indicator {
-  position: absolute;
-  top: 6px;
-  inset-inline-end: 6px; /* RTL: timer indicator position */
-  width: 20px;
-  height: 20px;
-  background: var(--brand-primary);
-  color: white;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5;
-  box-shadow: 0 2px 6px var(--brand-primary);
-  animation: timerPulse 2s ease-in-out infinite;
-  border: 2px solid white;
-}
-
-@keyframes timerPulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 2px 6px var(--brand-primary);
-  }
-  50% {
-    transform: scale(1.1);
-    box-shadow: 0 2px 10px var(--brand-primary), 0 0 12px rgba(59, 130, 246, 0.4);
-  }
-}
-
-/* Selected Task Styling */
 .inbox-task-card.selected {
-  background: var(--blue-bg-medium);
-  border-color: var(--blue-border-active);
-  box-shadow: var(--shadow-md), 0 0 0 2px var(--blue-bg-subtle);
+  @apply bg-blue-500/20 border-blue-400/50;
+}
+
+.inbox-task-card.timer-active {
+  @apply bg-orange-500/10 border-orange-400/50;
 }
 
 .selection-indicator {
-  position: absolute;
-  top: var(--space-2);
-  inset-inline-end: var(--space-2); /* RTL: selection indicator position */
-  width: 20px;
-  height: 20px;
-  background: var(--blue-bg);
-  border: 2px solid var(--blue-border-active);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply absolute top-2 left-2 w-2 h-2 bg-blue-400 rounded-full;
 }
 
-.selection-indicator::after {
-  content: '✓';
-  color: var(--blue-text);
-  font-size: 12px;
-  font-weight: bold;
+.priority-stripe {
+  @apply absolute left-0 top-0 bottom-0 w-1;
+}
+
+.priority-stripe-high {
+  @apply bg-red-400;
+}
+
+.priority-stripe-medium {
+  @apply bg-yellow-400;
+}
+
+.priority-stripe-low {
+  @apply bg-blue-400;
+}
+
+.priority-stripe-null {
+  @apply bg-gray-400;
+}
+
+.timer-indicator {
+  @apply absolute top-2 right-2 text-orange-400;
+}
+
+.task-content {
+  @apply pl-3;
+}
+
+.task-title {
+  @apply text-white text-sm font-medium mb-1 leading-tight;
+}
+
+.task-meta {
+  @apply flex items-center gap-2;
+}
+
+.duration-badge {
+  @apply text-white/50 text-xs;
+}
+
+/* Collapsed state adjustments */
+.inbox-panel.collapsed .inbox-header {
+  @apply justify-center;
+}
+
+.inbox-panel.collapsed .quick-add,
+.inbox-panel.collapsed .brain-dump,
+.inbox-panel.collapsed .batch-actions,
+.inbox-panel.collapsed .inbox-tasks {
+  @apply hidden;
+}
+
+/* Scrollbar styling */
+.inbox-tasks::-webkit-scrollbar {
+  @apply w-2;
+}
+
+.inbox-tasks::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.inbox-tasks::-webkit-scrollbar-thumb {
+  @apply bg-white/20 rounded-full;
+}
+
+.inbox-tasks::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/30;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .inbox-panel {
+    @apply bg-gray-900/50 border-gray-700/50;
+  }
+
+  .inbox-task-card {
+    @apply bg-gray-800/50 border-gray-700/50;
+    @apply hover:bg-gray-800/70 hover:border-gray-600/50;
+  }
+}
+
+/* Animation for collapse/expand */
+.inbox-panel {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
+

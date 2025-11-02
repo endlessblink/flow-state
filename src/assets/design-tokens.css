@@ -729,4 +729,26 @@ WHEN TO USE WHAT:
 - Typography: var(--text-*) + var(--font-*)
 */
 
+/* ===== GLOBAL OVERFLOW POLICIES ===== */
+/* Prevent unwanted horizontal scrolling throughout the app */
+
+/* Root level overflow containment */
+html, body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Allow horizontal scrolling only in designated areas */
+.horizontal-scroll-container {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+/* Ensure proper scroll containment in scrollable areas */
+.scroll-contained {
+  overflow-x: auto;
+  overflow-y: visible;
+  contain: layout paint;
+}
+
 /* Cache bust: 1761553951 */

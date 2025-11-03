@@ -108,7 +108,7 @@
 
   <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
   <div class="kanban-scroll-container">
-    <div class="kanban-board" @click="closeContextMenu">
+    <div class="kanban-board" @click="closeAllContextMenus">
       <KanbanSwimlane
         v-for="project in projectsWithTasks"
         :key="project.id"
@@ -122,6 +122,7 @@
         @editTask="handleEditTask"
         @moveTask="handleMoveTask"
         @contextMenu="handleContextMenu"
+        @groupContextMenu="handleGroupContextMenu"
       />
     </div>
   </div>
@@ -153,6 +154,26 @@
     @confirmDelete="handleConfirmDelete"
   />
 
+  <!-- PROJECT GROUP CONTEXT MENU -->
+  <ProjectGroupContextMenu
+    :isVisible="showGroupContextMenu"
+    :x="groupContextMenuX"
+    :y="groupContextMenuY"
+    :project="contextMenuProject"
+    :tasksCount="getProjectTaskCount(contextMenuProject?.id)"
+    :isExpanded="isProjectExpanded(contextMenuProject?.id)"
+    @close="closeGroupContextMenu"
+    @editProject="handleEditProject"
+    @deleteProject="handleDeleteProject"
+    @createSubProject="handleCreateSubProject"
+    @createTask="handleCreateTaskInProject"
+    @hideTasks="handleHideProjectTasks"
+    @changeViewType="handleChangeViewType"
+    @expandCollapseAll="handleExpandCollapseAll"
+    @sortTasks="handleSortProjectTasks"
+    @archiveProject="handleArchiveProject"
+  />
+
   <!-- CONFIRMATION MODAL -->
   <ConfirmationModal
     :isOpen="showConfirmModal"
@@ -161,6 +182,26 @@
     confirmText="Delete"
     @confirm="confirmDeleteTask"
     @cancel="cancelDeleteTask"
+  />
+
+  <!-- PROJECT MODAL -->
+  <ProjectModal
+    :isOpen="showProjectModal"
+    :project="selectedProject"
+    :parentProjectId="parentProjectId"
+    @close="closeProjectModal"
+    @created="handleProjectCreated"
+    @updated="handleProjectUpdated"
+  />
+
+  <!-- PROJECT DELETE CONFIRMATION MODAL -->
+  <ConfirmationModal
+    :isOpen="showProjectDeleteConfirmModal"
+    title="Delete Project"
+    :message="`Are you sure you want to delete the project '${projectToDelete?.name}'? All tasks in this project will be moved to the default project. This action cannot be undone.`"
+    confirmText="Delete Project"
+    @confirm="confirmDeleteProject"
+    @cancel="cancelDeleteProject"
   />
 </template>
 
@@ -175,10 +216,12 @@ import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
+import ProjectGroupContextMenu from '@/components/ProjectGroupContextMenu.vue'
+import ProjectModal from '@/components/ProjectModal.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import { Eye, EyeOff, CheckCircle, Circle, Minimize2, Maximize2, AlignCenter, ListTodo, Calendar as CalendarIcon, Play, Check, CalendarDays, Inbox, Zap } from 'lucide-vue-next'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
-import type { Task } from '@/stores/tasks'
+import type { Task, Project } from '@/stores/tasks'
 
 // Router
 const router = useRouter()
@@ -475,9 +518,24 @@ const contextMenuX = ref(0)
 const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null)
 
+// Group context menu state
+const showGroupContextMenu = ref(false)
+const groupContextMenuX = ref(0)
+const groupContextMenuY = ref(0)
+const contextMenuProject = ref<Project | null>(null)
+
 // Confirmation modal state
 const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
+
+// Project modal state
+const showProjectModal = ref(false)
+const selectedProject = ref<Project | null>(null)
+const parentProjectId = ref<string | null>(null)
+
+// Project delete confirmation state
+const showProjectDeleteConfirmModal = ref(false)
+const projectToDelete = ref<Project | null>(null)
 
 // Task management methods
 const handleAddTask = (status: string) => {
@@ -552,6 +610,164 @@ const handleContextMenu = (event: MouseEvent, task: Task) => {
 const closeContextMenu = () => {
   showContextMenu.value = false
   contextMenuTask.value = null
+}
+
+const closeAllContextMenus = () => {
+  closeContextMenu()
+  closeGroupContextMenu()
+}
+
+// Group context menu handlers
+const handleGroupContextMenu = (event: MouseEvent, project: Project) => {
+  console.log('Group context menu triggered for project:', project.name, 'at position:', event.clientX, event.clientY)
+  groupContextMenuX.value = event.clientX
+  groupContextMenuY.value = event.clientY
+  contextMenuProject.value = project
+  showGroupContextMenu.value = true
+}
+
+const closeGroupContextMenu = () => {
+  showGroupContextMenu.value = false
+  contextMenuProject.value = null
+}
+
+// Project action handlers
+const handleEditProject = (project: Project) => {
+  // Open the project modal with the selected project
+  selectedProject.value = project
+  showProjectModal.value = true
+}
+
+const handleDeleteProject = (project: Project) => {
+  // Show confirmation modal for project deletion
+  projectToDelete.value = project
+  showProjectDeleteConfirmModal.value = true
+}
+
+const handleCreateSubProject = (parentProject: Project) => {
+  // Open project modal with parent pre-selected
+  parentProjectId.value = parentProject.id
+  selectedProject.value = null
+  showProjectModal.value = true
+}
+
+const handleCreateTaskInProject = (projectId: string) => {
+  // Create a task in the specified project
+  taskStore.createTaskWithUndo({
+    title: 'New Task',
+    projectId: projectId,
+    status: 'planned'
+  })
+}
+
+const handleHideProjectTasks = (projectId: string) => {
+  // Hide all tasks in the project by moving them to a "hidden" status
+  const projectTasks = taskStore.tasks.filter(task => task.projectId === projectId && task.status !== 'done')
+  if (projectTasks.length > 0) {
+    const taskIds = projectTasks.map(task => task.id)
+    taskStore.bulkUpdateTasksWithUndo(taskIds, { status: 'backlog' })
+  }
+}
+
+const handleChangeViewType = (projectId: string, viewType: 'status' | 'date' | 'priority') => {
+  // Update the project's view type
+  taskStore.updateProject(projectId, { viewType })
+}
+
+const handleExpandCollapseAll = (projectId: string, isExpanded: boolean) => {
+  // Store collapse state in localStorage or a separate state management
+  const collapseKey = `project-collapse-${projectId}`
+  localStorage.setItem(collapseKey, (!isExpanded).toString())
+  // Force a reactivity update if needed by emitting an event
+  window.dispatchEvent(new CustomEvent('project-collapse-changed', {
+    detail: { projectId, collapsed: !isExpanded }
+  }))
+}
+
+const handleSortProjectTasks = (projectId: string) => {
+  // Sort tasks in the project by priority and due date
+  const projectTasks = taskStore.tasks.filter(task => task.projectId === projectId)
+  if (projectTasks.length > 0) {
+    // Sort by priority first, then by due date
+    const sortedTasks = [...projectTasks].sort((a, b) => {
+      const priorityOrder = { high: 3, medium: 2, low: 1 }
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 0
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 0
+
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority // Higher priority first
+      }
+
+      // Then by due date (earlier dates first)
+      if (a.dueDate && b.dueDate) {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      }
+      if (a.dueDate && !b.dueDate) return -1
+      if (!a.dueDate && b.dueDate) return 1
+      return 0
+    })
+
+    // For now, just log the sort order - actual reordering would need more complex state management
+    console.log('Sorted tasks for project:', projectId, sortedTasks.map(t => t.title))
+  }
+}
+
+const handleArchiveProject = (projectId: string) => {
+  // Archive the project by marking it as archived (add archived field to project)
+  const project = taskStore.projects.find(p => p.id === projectId)
+  if (project) {
+    // For now, just mark all tasks as done to "archive" them
+    const projectTasks = taskStore.tasks.filter(task => task.projectId === projectId && task.status !== 'done')
+    if (projectTasks.length > 0) {
+      const taskIds = projectTasks.map(task => task.id)
+      taskStore.bulkUpdateTasksWithUndo(taskIds, { status: 'done' })
+    }
+
+    // TODO: Add archived field to Project interface and update project
+    console.log('Archived project:', project.name)
+  }
+}
+
+// Helper methods
+const getProjectTaskCount = (projectId: string | null | undefined): number => {
+  if (!projectId) return 0
+  return taskStore.tasks.filter(task => task.projectId === projectId).length
+}
+
+const isProjectExpanded = (projectId: string | null | undefined): boolean => {
+  // This would need to be stored in state - for now return true
+  return true
+}
+
+// Modal handlers
+const closeProjectModal = () => {
+  showProjectModal.value = false
+  selectedProject.value = null
+  parentProjectId.value = null
+}
+
+const handleProjectCreated = (project: Project) => {
+  console.log('Project created:', project)
+  closeProjectModal()
+}
+
+const handleProjectUpdated = (project: Project) => {
+  console.log('Project updated:', project)
+  closeProjectModal()
+}
+
+const confirmDeleteProject = () => {
+  if (projectToDelete.value) {
+    // Delete the project and move tasks to default project
+    taskStore.deleteProject(projectToDelete.value.id)
+    projectToDelete.value = null
+    showProjectDeleteConfirmModal.value = false
+  }
+}
+
+const cancelDeleteProject = () => {
+  projectToDelete.value = null
+  showProjectDeleteConfirmModal.value = false
 }
 
 const handleAddSubtaskFromMenu = (taskId: string) => {

@@ -89,7 +89,7 @@
           <div class="quick-date-shortcuts">
             <button class="quick-date-btn" @click.stop="setToday">Today</button>
             <button class="quick-date-btn" @click.stop="setTomorrow">Tomorrow</button>
-            <button class="quick-date-btn" @click.stop="setWeekend">Weekend</button>
+            <button class="quick-date-btn" @click.stop="setWeek">This Week</button>
             <button class="quick-date-btn" @click.stop="setNextWeek">Next Week</button>
             <button class="quick-date-btn clear-btn" @click.stop="clearDate">Clear</button>
           </div>
@@ -196,14 +196,13 @@ function setTomorrow() {
   emit('updateTask', { dueDate: tomorrow.toISOString() })
 }
 
-function setWeekend() {
+function setWeek() {
   const today = new Date()
-  const dayOfWeek = today.getDay()
-  const daysUntilSaturday = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7
-  const saturday = new Date()
-  saturday.setDate(today.getDate() + daysUntilSaturday)
-  saturday.setHours(0, 0, 0, 0)
-  emit('updateTask', { dueDate: saturday.toISOString() })
+  today.setHours(0, 0, 0, 0)
+  const weekEnd = new Date(today)
+  weekEnd.setDate(weekEnd.getDate() + 7)
+  weekEnd.setHours(0, 0, 0, 0)
+  emit('updateTask', { dueDate: weekEnd.toISOString() })
 }
 
 function setNextWeek() {

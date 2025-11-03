@@ -825,6 +825,12 @@ export const useTaskStore = defineStore('tasks', () => {
               }
             }
 
+            // Tasks currently in progress should be included in today filter (matches sidebar logic)
+            if (task.status === 'in_progress') {
+              console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (in_progress)`)
+              return true
+            }
+
             return false
           } catch (error) {
             console.error('TaskStore.filteredTasks: Error processing task in today filter:', error, task)
@@ -1478,12 +1484,6 @@ export const useTaskStore = defineStore('tasks', () => {
         // End of current week (Sunday)
         targetDate = new Date(today)
         targetDate.setDate(today.getDate() + (7 - today.getDay()))
-        break
-      case 'thisWeekend':
-        // Friday of current week
-        targetDate = new Date(today)
-        const daysUntilFriday = (5 - today.getDay() + 7) % 7
-        targetDate.setDate(today.getDate() + daysUntilFriday)
         break
       case 'nextWeek':
         // Start of next week (Monday)

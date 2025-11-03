@@ -1288,6 +1288,12 @@ export const useTaskStore = defineStore('tasks', () => {
         updates.canvasPosition = undefined
       }
 
+      // CRITICAL FIX: When instances are added to a task, remove it from inbox
+      if (updates.instances && updates.instances.length > 0 && task.isInInbox !== false) {
+        updates.isInInbox = false
+        console.log(`Task "${task.title}" removed from inbox (instances added via updateTask)`)
+      }
+
       tasks.value[taskIndex] = {
         ...task,
         ...updates,
@@ -1543,6 +1549,12 @@ export const useTaskStore = defineStore('tasks', () => {
       if (previousCount > 0) {
         console.log(`Removed ${previousCount} instances for task "${task.title}" (moved to no date)`)
       }
+    }
+
+    // CRITICAL FIX: When a task is scheduled, it should no longer be in the inbox
+    if (task.isInInbox !== false) {
+      task.isInInbox = false
+      console.log(`Task "${task.title}" removed from inbox (scheduled for ${dateColumn})`)
     }
 
     task.updatedAt = new Date()

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "TASK-45096",
+    "title": "Comprehensive Undo/Redo System Fix - Pomo-Flow Vue.js App",
+    "description": "Fix mixed undo/redo implementations causing TypeError: store.tasks.find is not a function and [object Object] console errors. Replace conflicting command pattern + VueUse systems with single unified VueUse approach. Ensure Delete/Shift+Delete/Backspace register in undo history and Cmd+Z/Ctrl+Z visually restores deleted elements.",
+    "status": "in_progress",
+    "priority": "high",
+    "project": "pomo-flow-undo-redo-fix",
+    "created": "2025-10-22T14:47:54.016Z"
+  }
+]

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Undo Debug Test</title>
+    <script type="module">
+        // Simple test to verify undo system logging
+        console.log('🚀 Starting undo system debug test');
+
+        // Test keyboard shortcut detection
+        document.addEventListener('keydown', (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+                console.log('🎹 Ctrl+Z detected in simple HTML test');
+            }
+            if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
+                console.log('🎹 Ctrl+Y detected in simple HTML test');
+            }
+        });
+
+        console.log('✅ Debug test ready - press Ctrl+Z or Ctrl+Y to test keyboard detection');
+    </script>
+</head>
+<body>
+    <h1>Undo System Debug Test</h1>
+    <p>Open browser console and press Ctrl+Z or Ctrl+Y to test keyboard shortcut detection.</p>
+    <p>This is a simple test to verify keyboard shortcuts are being detected.</p>
+</body>
+</html>

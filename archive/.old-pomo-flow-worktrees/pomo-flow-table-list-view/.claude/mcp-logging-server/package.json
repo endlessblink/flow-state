@@ -1,0 +1,27 @@
+{
+  "name": "claude-skill-logging-server",
+  "version": "1.0.0",
+  "description": "MCP server for Claude Code skill usage logging and real-time monitoring",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "express": "^4.21.1",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.1"
+  },
+  "keywords": [
+    "claude-code",
+    "mcp",
+    "logging",
+    "monitoring",
+    "skills"
+  ],
+  "author": "",
+  "license": "MIT"
+}

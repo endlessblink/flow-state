@@ -1,4 +1,12 @@
 import { useCopy } from '@/composables/useCopy'
+import {
+  setupGlobalErrorHandlers,
+  logError,
+  classifyError,
+  getUserFriendlyMessage,
+  ErrorType,
+  ErrorSeverity
+} from './errorHandling'
 
 export interface ErrorInfo {
   message: string
@@ -26,7 +34,10 @@ export class GlobalErrorHandler {
   }
 
   private setupGlobalHandlers() {
-    // Capture unhandled JavaScript errors
+    // Use the enhanced global error handlers from errorHandling.ts
+    setupGlobalErrorHandlers()
+
+    // Still capture errors for the notification system and local error tracking
     window.addEventListener('error', (event) => {
       const errorInfo: ErrorInfo = {
         message: event.message,
@@ -36,6 +47,17 @@ export class GlobalErrorHandler {
         stack: event.error?.stack,
         timestamp: new Date()
       }
+
+      // Log with enhanced error handling
+      logError(event.error, {
+        operation: 'global_error_handler',
+        additionalData: {
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno
+        }
+      })
+
       this.addError(errorInfo)
       this.showErrorNotification(errorInfo)
     })
@@ -48,8 +70,18 @@ export class GlobalErrorHandler {
         stack: event.reason?.stack,
         timestamp: new Date()
       }
+
+      // Log with enhanced error handling
+      logError(event.reason, {
+        operation: 'unhandled_promise_rejection',
+        additionalData: { promise: 'Unhandled promise rejection' }
+      })
+
       this.addError(errorInfo)
       this.showErrorNotification(errorInfo)
+
+      // Prevent default browser error page
+      event.preventDefault()
     })
   }
 
@@ -61,17 +93,32 @@ export class GlobalErrorHandler {
   }
 
   private showErrorNotification(error: ErrorInfo) {
+    // Use enhanced error classification to determine severity and styling
+    const errorClassification = classifyError(error.message || error.source || 'Unknown error')
+    const userMessage = getUserFriendlyMessage(error.message)
+
+    // Determine styling based on error severity
+    const severityColors = {
+      [ErrorSeverity.LOW]: { bg: '#f59e0b', border: '#d97706' },      // amber
+      [ErrorSeverity.MEDIUM]: { bg: '#ef4444', border: '#dc2626' },   // red
+      [ErrorSeverity.HIGH]: { bg: '#dc2626', border: '#b91c1c' },     // dark red
+      [ErrorSeverity.CRITICAL]: { bg: '#991b1b', border: '#7f1d1d' }  // darker red
+    }
+
+    const colors = severityColors[errorClassification.severity] || severityColors[ErrorSeverity.MEDIUM]
+
     // Create a more user-friendly error notification
     const notification = document.createElement('div')
     notification.style.cssText = `
       position: fixed;
       top: 20px;
       right: 20px;
-      background: #ef4444;
+      background: ${colors.bg};
       color: white;
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border-left: 4px solid ${colors.border};
       z-index: 10001;
       max-width: 400px;
       font-family: system-ui, -apple-system, sans-serif;
@@ -89,7 +136,10 @@ export class GlobalErrorHandler {
     const titleDiv = document.createElement('div')
     titleDiv.style.fontWeight = '600'
     titleDiv.style.fontSize = '14px'
-    titleDiv.textContent = 'JavaScript Error'
+    titleDiv.textContent = errorClassification.severity === ErrorSeverity.CRITICAL ? 'Critical Error' :
+                           errorClassification.severity === ErrorSeverity.HIGH ? 'Error' :
+                           errorClassification.severity === ErrorSeverity.MEDIUM ? 'Problem Detected' :
+                           'Warning'
 
     const closeButton = document.createElement('button')
     closeButton.style.background = 'none'
@@ -107,7 +157,7 @@ export class GlobalErrorHandler {
     messageDiv.style.fontSize = '13px'
     messageDiv.style.marginBottom = '12px'
     messageDiv.style.opacity = '0.9'
-    messageDiv.textContent = error.message
+    messageDiv.textContent = userMessage
 
     const locationDiv = document.createElement('div')
     locationDiv.style.fontSize = '11px'
@@ -173,6 +223,52 @@ export class GlobalErrorHandler {
 
   clearErrors() {
     this.errors = []
+  }
+
+  // Enhanced methods using the new error handling system
+  getErrorSeverity(error: unknown): ErrorSeverity {
+    return classifyError(error).severity
+  }
+
+  getErrorType(error: unknown): ErrorType {
+    return classifyError(error).type
+  }
+
+  getUserFriendlyErrorMessage(error: unknown): string {
+    return getUserFriendlyMessage(error)
+  }
+
+  getErrorsByType(type: ErrorType): ErrorInfo[] {
+    return this.errors.filter(error => {
+      const classification = classifyError(error.message || error.source || 'Unknown error')
+      return classification.type === type
+    })
+  }
+
+  getErrorsBySeverity(severity: ErrorSeverity): ErrorInfo[] {
+    return this.errors.filter(error => {
+      const classification = classifyError(error.message || error.source || 'Unknown error')
+      return classification.severity === severity
+    })
+  }
+
+  // Method to handle errors with context
+  handleErrorWithContext(error: unknown, context: {
+    operation?: string
+    userId?: string
+    additionalData?: Record<string, any>
+  }) {
+    logError(error, context)
+
+    const errorInfo: ErrorInfo = {
+      message: error instanceof Error ? error.message : String(error),
+      source: context.operation,
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date()
+    }
+
+    this.addError(errorInfo)
+    this.showErrorNotification(errorInfo)
   }
 }
 

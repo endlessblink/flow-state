@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Undo/Redo Final Test</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8fafc;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .success { color: #166534; background: #dcfce7; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; }
+        .error { color: #dc2626; background: #fef2f2; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; }
+        .info { color: #1d4ed8; background: #eff6ff; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; }
+        code { background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 3px; font-family: monospace; }
+        .step { background: #fef3c7; padding: 1rem; border-radius: 6px; margin: 1rem 0; border-left: 4px solid #f59e0b; }
+        .result { background: #e0f2fe; padding: 1rem; border-radius: 6px; margin: 1rem 0; border-left: 4px solid #0284c7; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Undo/Redo Final Test</h1>
+
+    <div class="test-section">
+        <h2>🚨 Critical Issue Fixed</h2>
+        <p><strong>Root Cause:</strong> The undo/redo system was using CommonJS <code>require()</code> statements in a Vue/ESM project, causing dynamic imports to fail.</p>
+
+        <div class="success">
+            <strong>✅ FIXED:</strong> Updated all stores (tasks.ts, canvas.ts, timer.ts) to use proper ES dynamic imports:
+            <ul>
+                <li>Changed <code>require('@/composables/useUndoRedo')</code> to <code>await import('@/composables/useUndoRedo')</code></li>
+                <li>Made all undo-enabled methods async to handle dynamic imports</li>
+                <li>Added proper error handling and fallbacks</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Test Steps</h2>
+
+        <div class="step">
+            <h3>Step 1: Open Main Application</h3>
+            <p>Open the app at <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></p>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Check Console for Initialization</h3>
+            <p>Open browser console (F12) and look for:</p>
+            <ul>
+                <li><code>UndoRedo: Global keyboard handler initialized</code></li>
+                <li>No import errors or "Undo/Redo system not available" warnings</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Create a Task</h3>
+            <ol>
+                <li>Go to any view (Board, Canvas, etc.)</li>
+                <li>Create a new task</li>
+                <li>Check console for <code>UndoRedo: Executed - Create task</code></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Test Undo (Ctrl+Z)</h3>
+            <ol>
+                <li>Press <kbd>Ctrl</kbd> + <kbd>Z</kbd></li>
+                <li>Task should disappear</li>
+                <li>Check console for <code>UndoRedo: Undid - Create task</code></li>
+                <li>Check console for <code>UndoRedo: Undo shortcut triggered</code></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Step 5: Test Redo (Ctrl+Shift+Z)</h3>
+            <ol>
+                <li>Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></li>
+                <li>Task should reappear</li>
+                <li>Check console for <code>UndoRedo: Redid - Create task</code></li>
+                <li>Check console for <code>UndoRedo: Redo shortcut triggered</code></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Step 6: Test Alternative Redo (Ctrl+Y)</h3>
+            <ol>
+                <li>Press <kbd>Ctrl</kbd> + <kbd>Y</kbd></li>
+                <li>Should also redo the action</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Expected Console Messages</h2>
+        <div class="result">
+            <h3>Success Indicators:</h3>
+            <ul>
+                <li>✅ <code>UndoRedo: Global keyboard handler initialized</code></li>
+                <li>✅ <code>UndoRedo: Executed - Create task</code> (when creating tasks)</li>
+                <li>✅ <code>UndoRedo: Undid - Create task</code> (when pressing Ctrl+Z)</li>
+                <li>✅ <code>UndoRedo: Redid - Create task</code> (when pressing Ctrl+Shift+Z)</li>
+                <li>✅ <code>UndoRedo: Undo shortcut triggered</code></li>
+                <li>✅ <code>UndoRedo: Redo shortcut triggered</code></li>
+                <li>✅ <code>UndoRedo: Redo shortcut triggered (Ctrl+Y)</code></li>
+            </ul>
+        </div>
+
+        <div class="error">
+            <h3>Error Indicators:</h3>
+            <ul>
+                <li>❌ <code>UndoRedo system not available, using direct updates</code></li>
+                <li>❌ <code>Cannot find module '@/composables/useUndoRedo'</code></li>
+                <li>❌ No console messages when using keyboard shortcuts</li>
+                <li>❌ Tasks don't disappear/reappear with Ctrl+Z/Ctrl+Shift+Z</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Test Multiple Actions</h2>
+        <p>Test various actions to ensure comprehensive undo/redo support:</p>
+        <ul>
+            <li><strong>Task Operations:</strong> Create, edit, delete, move tasks</li>
+            <li><strong>Canvas Operations:</strong> Create sections, move nodes, update viewport</li>
+            <li><strong>Timer Operations:</strong> Start/stop timer, change settings</li>
+            <li><strong>Project Operations:</strong> Create, update, delete projects</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🐛 Debugging Commands</h2>
+        <p>If undo/redo still doesn't work, run these in the browser console:</p>
+        <pre><code>// Test direct store access
+import('/src/stores/undoRedo.js').then(({ useUndoRedoStore }) => {
+  const store = useUndoRedoStore();
+  console.log('UndoRedo Store:', {
+    canUndo: store.canUndo,
+    canRedo: store.canRedo,
+    undoCount: store.undoCount,
+    redoCount: store.redoCount,
+    lastAction: store.lastActionDescription
+  });
+});
+
+// Test keyboard handler
+import('/src/utils/globalKeyboardHandler.js').then(({ getGlobalKeyboardHandler }) => {
+  const handler = getGlobalKeyboardHandler();
+  console.log('Keyboard Handler:', handler ? 'Active' : 'Not found');
+  if (handler) {
+    console.log('Settings:', handler.getSettings());
+  }
+});
+
+// Test manual undo/redo
+import('/src/stores/undoRedo.js').then(({ useUndoRedoStore }) => {
+  const store = useUndoRedoStore();
+  console.log('Before undo - Can undo:', store.canUndo);
+  store.undo().then(() => {
+    console.log('After undo - Can undo:', store.canUndo, 'Can redo:', store.canRedo);
+  });
+});</code></pre>
+    </div>
+
+    <script>
+        console.log('🧪 Undo/Redo Final Test Loaded');
+        console.log('📝 Follow the test steps above to verify the undo/redo functionality');
+        console.log('✅ Fixed dynamic import issues in all stores');
+        console.log('🔧 Ready to test with main application');
+    </script>
+</body>
+</html>

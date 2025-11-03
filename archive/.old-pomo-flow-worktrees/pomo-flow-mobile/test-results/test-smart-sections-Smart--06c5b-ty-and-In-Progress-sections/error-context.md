@@ -1,0 +1,128 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: 🍅
+        - generic [ref=e9]: Pomo-Flow
+      - button "Create project" [ref=e10] [cursor=pointer]:
+        - img [ref=e11] [cursor=pointer]
+        - text: Create project
+      - button "🌙 Dark" [ref=e12] [cursor=pointer]
+    - generic [ref=e14]:
+      - img [ref=e15]
+      - textbox "Add a task..." [ref=e16]
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - heading "Projects" [level=3] [ref=e19]:
+          - img [ref=e20]
+          - text: Projects
+        - button "Add Project" [ref=e22] [cursor=pointer]:
+          - img [ref=e23] [cursor=pointer]
+      - generic [ref=e24]:
+        - generic [ref=e25] [cursor=pointer]:
+          - img [ref=e26] [cursor=pointer]
+          - generic [ref=e29] [cursor=pointer]: All Projects
+          - generic [ref=e30] [cursor=pointer]: "0"
+        - generic [ref=e31] [cursor=pointer]:
+          - img [ref=e32] [cursor=pointer]
+          - generic [ref=e34] [cursor=pointer]: Today
+          - generic [ref=e35] [cursor=pointer]: "0"
+        - generic [ref=e36] [cursor=pointer]:
+          - img [ref=e37] [cursor=pointer]
+          - generic [ref=e39] [cursor=pointer]: This Week
+          - generic [ref=e40] [cursor=pointer]: "0"
+      - generic [ref=e44] [cursor=pointer]:
+        - generic [ref=e46] [cursor=pointer]: My Tasks
+        - generic [ref=e47] [cursor=pointer]: "0"
+    - button "Settings" [ref=e49] [cursor=pointer]:
+      - img [ref=e50] [cursor=pointer]
+      - text: Settings
+  - main [ref=e53]:
+    - generic [ref=e54]:
+      - heading "My Tasks" [level=1] [ref=e55]
+      - generic [ref=e57]:
+        - img [ref=e59]
+        - generic [ref=e63]: 20:00
+        - generic [ref=e65]:
+          - button "Start 25-min work timer" [ref=e66] [cursor=pointer]:
+            - img [ref=e67] [cursor=pointer]
+          - button "Start 5-min break" [ref=e69] [cursor=pointer]:
+            - img [ref=e70] [cursor=pointer]
+          - button "Start 15-min long break" [ref=e73] [cursor=pointer]:
+            - img [ref=e74] [cursor=pointer]
+    - generic [ref=e77]:
+      - generic [ref=e78]:
+        - link "Board" [ref=e79] [cursor=pointer]:
+          - /url: /
+        - link "Calendar" [ref=e80] [cursor=pointer]:
+          - /url: /calendar
+        - link "Canvas" [ref=e81] [cursor=pointer]:
+          - /url: /canvas
+        - button "Table" [disabled] [ref=e82]
+        - button "List" [disabled] [ref=e83]
+      - generic [ref=e84]:
+        - textbox "Search anything..." [ref=e86]
+        - button "Filter" [ref=e87] [cursor=pointer]:
+          - img [ref=e88] [cursor=pointer]
+          - text: Filter
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - button "Collapse Inbox" [ref=e93] [cursor=pointer]:
+            - img [ref=e94] [cursor=pointer]
+          - heading "Inbox" [level=3] [ref=e96]
+        - generic [ref=e100]:
+          - textbox "Quick add task (Enter)..." [ref=e101]
+          - generic:
+            - generic: Quick add task (Enter)...
+        - button "Brain Dump Mode" [ref=e104] [cursor=pointer]:
+          - generic [ref=e105] [cursor=pointer]: Brain Dump Mode
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]:
+            - button "Toggle Sections" [ref=e110] [cursor=pointer]:
+              - img [ref=e111] [cursor=pointer]
+            - button "Add Section" [ref=e114] [cursor=pointer]:
+              - img [ref=e115] [cursor=pointer]
+            - button "Auto Arrange" [ref=e116] [cursor=pointer]:
+              - img [ref=e117] [cursor=pointer]
+          - button "Multi-Select Mode" [ref=e120] [cursor=pointer]:
+            - img [ref=e121] [cursor=pointer]
+          - generic [ref=e124]:
+            - button "Toggle Priority" [ref=e125] [cursor=pointer]:
+              - img [ref=e126] [cursor=pointer]
+            - button "Toggle Status" [ref=e128] [cursor=pointer]:
+              - img [ref=e129] [cursor=pointer]
+            - button "Toggle Duration" [ref=e132] [cursor=pointer]:
+              - img [ref=e133] [cursor=pointer]
+            - button "Toggle Schedule" [ref=e136] [cursor=pointer]:
+              - img [ref=e137] [cursor=pointer]
+          - generic [ref=e139]:
+            - button "Fit View (F)" [ref=e140] [cursor=pointer]:
+              - img [ref=e141] [cursor=pointer]
+            - button "Zoom In (+)" [ref=e146] [cursor=pointer]:
+              - img [ref=e147] [cursor=pointer]
+            - button "Zoom Out (-)" [ref=e150] [cursor=pointer]:
+              - img [ref=e151] [cursor=pointer]
+            - generic [ref=e154]: 100%
+        - generic [ref=e156]:
+          - generic [ref=e158]:
+            - generic:
+              - img
+              - generic:
+                - group [ref=e159]:
+                  - generic [ref=e169]:
+                    - textbox "Section name..." [ref=e171]: High Priority
+                    - generic "Priority Section - Auto-assigns priority" [ref=e172]: 🏳️
+                    - generic [ref=e173]: "0"
+                - group [ref=e174]:
+                  - generic [ref=e184]:
+                    - textbox "Section name..." [ref=e186]: In Progress
+                    - generic "Status Section - Auto-assigns status" [ref=e187]: ▶️
+                    - generic [ref=e188]: "0"
+          - img [ref=e189]
+          - img "Vue Flow mini map" [ref=e192]
+```

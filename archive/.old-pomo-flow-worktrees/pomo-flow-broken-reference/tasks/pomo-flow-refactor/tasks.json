@@ -1,0 +1,11 @@
+[
+  {
+    "id": "TASK-67888",
+    "title": "Phase 1: CanvasView.vue Refactoring - Extract Composables",
+    "description": "Successfully extracted 6 composables from CanvasView.vue (~2,225 lines):\n- useCanvasControls (~475 lines) - Zoom, display toggles, sections, auto-arrange\n- useCanvasContextMenus (~550 lines) - Context menus, alignment, distribution, group modals\n- useCanvasDragDrop (~400 lines) - Drag/drop handlers, section containment\n- useCanvasResize (~350 lines) - Resize state, handlers, dimension changes\n- useCanvasEdges (~200 lines) - Edge syncing, connection handlers\n- useCanvasNodes (~250 lines) - Node syncing, selection management\n\nNext: Integrate composables into CanvasView.vue to reduce from ~4,082 lines to ~1,800 lines",
+    "status": "in_progress",
+    "priority": "high",
+    "project": "pomo-flow-refactor",
+    "created": "2025-10-26T09:16:40.369Z"
+  }
+]

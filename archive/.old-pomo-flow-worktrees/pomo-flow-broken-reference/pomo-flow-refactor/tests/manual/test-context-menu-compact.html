@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskContextMenu Compact Mode Test</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .test-info {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .test-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .density-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .density-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .density-btn.active {
+            background: #007bff;
+            color: white;
+        }
+        .test-results {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>TaskContextMenu Compact Mode Implementation Test</h1>
+
+    <div class="test-info">
+        <h2>Implementation Status</h2>
+        <div class="status success">✅ Added compactMode prop to TaskContextMenu component</div>
+        <div class="status success">✅ Updated template to conditionally hide text labels</div>
+        <div class="status success">✅ Added CSS styles for compact menu items</div>
+        <div class="status success">✅ Created global density state in UI store</div>
+        <div class="status success">✅ Updated BoardView to use global density state</div>
+        <div class="status success">✅ Updated App.vue to use global density for context menu</div>
+        <div class="status info">ℹ️ Ready for manual testing</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Manual Testing Instructions</h2>
+        <p>To test the compact context menu functionality:</p>
+        <ol>
+            <li>Open the application at <a href="http://localhost:5174" target="_blank">http://localhost:5174</a></li>
+            <li>Navigate to the Board view</li>
+            <li>Change the density selector to "Ultra-thin" (the first button with minimize icon)</li>
+            <li>Right-click on any task card to open the context menu</li>
+            <li>Verify that these menu items show only icons (no text labels):
+                <ul>
+                    <li>Focus Mode (eye icon)</li>
+                    <li>Start Now (play icon)</li>
+                    <li>Start Timer (play icon)</li>
+                    <li>Duplicate (copy icon)</li>
+                </ul>
+            </li>
+            <li>Switch back to "Comfortable" density and verify text labels reappear</li>
+        </ol>
+
+        <div class="density-buttons">
+            <button class="density-btn" onclick="window.open('http://localhost:5174', '_blank')">
+                🚀 Open App
+            </button>
+        </div>
+
+        <div class="test-results">
+            <h3>Expected Behavior:</h3>
+            <ul>
+                <li><strong>Normal Mode:</strong> Context menu shows icon + text + shortcut</li>
+                <li><strong>Compact Mode:</strong> Context menu shows only icon + shortcut</li>
+                <li><strong>Hover:</strong> Both modes should show tooltips for accessibility</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Technical Implementation Details</h2>
+        <p><strong>Components Modified:</strong></p>
+        <ul>
+            <li><code>TaskContextMenu.vue</code> - Added compact mode support</li>
+            <li><code>UIStore (ui.ts)</code> - Added global boardDensity state</li>
+            <li><code>BoardView.vue</code> - Updated to use global density</li>
+            <li><code>App.vue</code> - Updated TaskContextMenu usage</li>
+        </ul>
+
+        <p><strong>CSS Classes Added:</strong></p>
+        <ul>
+            <li><code>.menu-item--compact</code> - Compact styling for menu items</li>
+            <li><code>.menu-shortcut--compact</code> - Compact shortcut styling</li>
+        </ul>
+
+        <p><strong>Key Features:</strong></p>
+        <ul>
+            <li>Context menu items hide text labels in ultrathin mode</li>
+            <li>Keyboard shortcuts remain visible for functionality</li>
+            <li>Hover tooltips provide accessibility</li>
+            <li>Seamless integration with existing density system</li>
+        </ul>
+    </div>
+</body>
+</html>

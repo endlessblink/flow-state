@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code MCP Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --border-color: #333333;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-red);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--accent-green);
+        }
+
+        .status-dot.connecting {
+            background: var(--accent-yellow);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-button {
+            padding: 10px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-button:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+            transform: translateY(-1px);
+        }
+
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .control-button.primary {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .control-button.danger {
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .auto-refresh-select {
+            padding: 10px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card.updated::before {
+            transform: scaleX(1);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1);
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .metric-value.updating {
+            transform: scale(1.1);
+            color: var(--accent-blue);
+        }
+
+        /* Main Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .panel-badge {
+            padding: 4px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Skill Distribution */
+        .skill-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .skill-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .skill-name {
+            min-width: 120px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .skill-progress {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .skill-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .skill-percentage {
+            min-width: 40px;
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* Circular Progress */
+        .circular-progress {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .circular-progress svg {
+            transform: rotate(-90deg);
+        }
+
+        .circular-progress-text {
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Live Events */
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border-left: 3px solid transparent;
+            animation: slideIn 0.3s ease;
+            min-height: 48px;
+            word-break: break-word;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .event-item.PRE {
+            border-left-color: var(--accent-purple);
+        }
+
+        .event-item.POST {
+            border-left-color: var(--accent-green);
+        }
+
+        .event-item.ERROR {
+            border-left-color: var(--accent-red);
+        }
+
+        .event-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .event-badge.PRE {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent-purple);
+        }
+
+        .event-badge.POST {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .event-badge.ERROR {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+
+        .event-skill {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .event-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Sessions */
+        .sessions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-blue);
+            transition: all 0.2s ease;
+        }
+
+        .session-item:hover {
+            transform: translateX(2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+
+        .session-item.inactive {
+            border-left-color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .session-id {
+            font-family: monospace;
+            font-size: 13px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .session-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .session-status.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .session-status.inactive {
+            background: rgba(139, 139, 139, 0.2);
+            color: var(--text-secondary);
+        }
+
+        .session-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .session-detail {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+        }
+
+        .session-detail strong {
+            color: var(--text-primary);
+        }
+
+        /* Skill Router */
+        .skill-router-info {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .router-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .router-stat {
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .router-stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .router-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .router-scan-info {
+            padding: 10px;
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid var(--accent-blue);
+            border-radius: 4px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Usage Summary */
+        .usage-summary-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .usage-period {
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .usage-period-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .usage-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .usage-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .usage-stat strong {
+            color: var(--text-primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Info Box */
+        .info-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-box h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-box details {
+            cursor: pointer;
+        }
+
+        .info-box summary {
+            font-size: 14px;
+            color: var(--text-secondary);
+            padding: 8px 0;
+            user-select: none;
+        }
+
+        .info-box summary:hover {
+            color: var(--text-primary);
+        }
+
+        .action-explanations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .action-explanation {
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border-left: 3px solid;
+        }
+
+        .action-explanation.pre {
+            border-left-color: var(--accent-purple);
+        }
+
+        .action-explanation.post {
+            border-left-color: var(--accent-green);
+        }
+
+        .action-explanation.test {
+            border-left-color: var(--accent-blue);
+        }
+
+        .action-explanation h5 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .action-explanation p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Error Banner */
+        .error-banner {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-banner.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        /* Last Update */
+        .last-update {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-secondary);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Claude Code MCP Dashboard</h1>
+            <div class="connection-status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="connectionStatus">Disconnected</span>
+            </div>
+        </header>
+
+        <!-- Error Banner -->
+        <div class="error-banner" id="errorBanner">
+            <span id="errorMessage">Connection to MCP server failed</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <select class="auto-refresh-select" id="autoRefreshSelect">
+                <option value="5000">Auto-refresh: 5s</option>
+                <option value="10000" selected>Auto-refresh: 10s</option>
+                <option value="30000">Auto-refresh: 30s</option>
+                <option value="60000">Auto-refresh: 1min</option>
+                <option value="300000">Auto-refresh: 5min</option>
+            </select>
+            <button class="control-button primary" id="refreshButton">
+                <span>🔄</span> Refresh Now
+            </button>
+            <button class="control-button" id="exportButton">
+                <span>📊</span> Export Data
+            </button>
+            <button class="control-button danger" id="clearButton">
+                <span>🗑️</span> Clear Events
+            </button>
+        </div>
+
+        <!-- Info Box: Event Actions Explained -->
+        <div class="info-box">
+            <h4>📊 Understanding Skill Event Actions</h4>
+            <details>
+                <summary>Click to learn about PRE, POST, and TEST events</summary>
+                <div class="action-explanations">
+                    <div class="action-explanation pre">
+                        <h5>🔄 PRE Events</h5>
+                        <p>
+                            Triggered <strong>before</strong> a skill executes. These events capture the initial state
+                            and context before any action is taken. Useful for tracking skill invocations and
+                            understanding what skills are being called.
+                        </p>
+                    </div>
+                    <div class="action-explanation post">
+                        <h5>✅ POST Events</h5>
+                        <p>
+                            Triggered <strong>after</strong> a skill completes execution. These events capture the
+                            outcome, results, and any changes made by the skill. Essential for tracking skill
+                            completion and success rates.
+                        </p>
+                    </div>
+                    <div class="action-explanation test">
+                        <h5>🧪 TEST Events</h5>
+                        <p>
+                            Triggered during <strong>manual testing</strong> or validation workflows. These events
+                            help verify skill functionality and are part of quality assurance processes.
+                        </p>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card" id="totalEventsCard">
+                <div class="metric-label">Total Events</div>
+                <div class="metric-value" id="totalEvents">0</div>
+            </div>
+            <div class="metric-card" id="activeSkillsCard">
+                <div class="metric-label">Active Skills</div>
+                <div class="metric-value" id="activeSkills">0</div>
+            </div>
+            <div class="metric-card" id="activeSessionsCard">
+                <div class="metric-label">Active Sessions</div>
+                <div class="metric-value" id="activeSessions">0</div>
+            </div>
+            <div class="metric-card" id="preEventsCard">
+                <div class="metric-label">PRE Events</div>
+                <div class="metric-value" id="preEvents">0</div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="content-grid">
+            <!-- Skill Distribution Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Skill Usage Distribution</h2>
+                    <div class="panel-badge" id="skillCount">0 skills</div>
+                </div>
+                <div class="skill-bars" id="skillBars">
+                    <div class="empty-state">No skill usage data available</div>
+                </div>
+                <div class="circular-progress">
+                    <svg width="120" height="120">
+                        <circle cx="60" cy="60" r="50" stroke="var(--bg-tertiary)" stroke-width="8" fill="none" />
+                        <circle id="progressCircle" cx="60" cy="60" r="50" stroke="url(#gradient)" stroke-width="8" fill="none"
+                                stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" />
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:var(--accent-blue)" />
+                                <stop offset="100%" style="stop-color:var(--accent-purple)" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="circular-progress-text" id="topSkillText">No active skills</div>
+                </div>
+            </div>
+
+            <!-- Live Events Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Live Skill Events</h2>
+                    <div class="panel-badge" id="eventCount">0 events</div>
+                </div>
+                <div class="events-list" id="eventsList">
+                    <div class="empty-state">No events received yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Sessions Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Active Sessions</h2>
+                <div class="panel-badge" id="sessionCount">0 sessions</div>
+            </div>
+            <div class="sessions-list" id="sessionsList">
+                <div class="empty-state">No active sessions</div>
+            </div>
+        </div>
+
+        <!-- Skill Router Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">🎯 Skill Router</h2>
+                <div class="panel-badge" id="skillRouterBadge">Loading...</div>
+            </div>
+            <div class="skill-router-info" id="skillRouterInfo">
+                <div class="empty-state">Loading skill router information...</div>
+            </div>
+        </div>
+
+
+        <!-- Usage Summary Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">📊 Usage Summary</h2>
+            </div>
+            <div class="usage-summary-container" id="usageSummaryContainer">
+                <div class="empty-state">Loading usage summary...</div>
+            </div>
+        </div>
+        <!-- Last Update -->
+        <div class="last-update" id="lastUpdate">
+            Last update: Never
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            WS_URL: 'ws://localhost:6777',
+            MAX_EVENTS: 1000,
+            MAX_DISPLAYED_EVENTS: 10,
+            DEFAULT_REFRESH_INTERVAL: 10000,
+            RECONNECT_DELAY: 2000,
+            RECONNECT_MAX_DELAY: 30000,
+            SESSION_TIMEOUT: 300000, // 5 minutes
+            API_BASE_URL: 'http://localhost:6777'
+        };
+
+        // Optimized MCP Dashboard Class
+        class MCPDashboard {
+            constructor() {
+                this.ws = null;
+
+                // PERFORMANCE: Use Maps for O(1) lookups
+                this.events = [];
+                this.eventMap = new Map(); // For quick event lookup
+                this.sessions = new Map();
+
+                // PERFORMANCE: Cache for calculated metrics
+                this.metricsCache = {
+                    data: null,
+                    timestamp: 0,
+                    ttl: 1000 // Cache for 1 second
+                };
+
+                this.metrics = {
+                    totalEvents: 0,
+                    activeSkills: 0,
+                    activeSessions: 0,
+                    preEvents: 0
+                };
+
+  
+                this.reconnectAttempts = 0;
+                this.reconnectTimer = null;
+                this.autoRefreshTimer = null;
+                this.sessionCleanupTimer = null;
+                this.refreshInterval = CONFIG.DEFAULT_REFRESH_INTERVAL;
+                this.lastUpdateTime = null;
+                this.isConnected = false;
+
+                // PERFORMANCE: Debounce rapid updates
+                this.updateTimer = null;
+                this.pendingUpdates = new Set();
+
+                this.initializeElements();
+                this.setupEventListeners();
+                this.loadSettings();
+                this.connect();
+            }
+
+            initializeElements() {
+                // Connection status
+                this.statusDot = document.getElementById('statusDot');
+                this.connectionStatus = document.getElementById('connectionStatus');
+                this.errorBanner = document.getElementById('errorBanner');
+                this.errorMessage = document.getElementById('errorMessage');
+
+                // Controls
+                this.autoRefreshSelect = document.getElementById('autoRefreshSelect');
+                this.refreshButton = document.getElementById('refreshButton');
+                this.exportButton = document.getElementById('exportButton');
+                this.clearButton = document.getElementById('clearButton');
+
+                // Metrics
+                this.totalEventsEl = document.getElementById('totalEvents');
+                this.activeSkillsEl = document.getElementById('activeSkills');
+                this.activeSessionsEl = document.getElementById('activeSessions');
+                this.preEventsEl = document.getElementById('preEvents');
+
+                // Metric cards for animations
+                this.totalEventsCard = document.getElementById('totalEventsCard');
+                this.activeSkillsCard = document.getElementById('activeSkillsCard');
+                this.activeSessionsCard = document.getElementById('activeSessionsCard');
+                this.preEventsCard = document.getElementById('preEventsCard');
+
+                // Panels
+                this.skillBars = document.getElementById('skillBars');
+                this.skillCount = document.getElementById('skillCount');
+                this.progressCircle = document.getElementById('progressCircle');
+                this.topSkillText = document.getElementById('topSkillText');
+                this.eventsList = document.getElementById('eventsList');
+                this.eventCount = document.getElementById('eventCount');
+                this.sessionsList = document.getElementById('sessionsList');
+                this.sessionCount = document.getElementById('sessionCount');
+                this.skillRouterInfo = document.getElementById('skillRouterInfo');
+                this.skillRouterBadge = document.getElementById('skillRouterBadge');
+                this.usageSummaryContainer = document.getElementById('usageSummaryContainer');
+                this.lastUpdate = document.getElementById('lastUpdate');
+            }
+
+            setupEventListeners() {
+                // Auto-refresh dropdown
+                this.autoRefreshSelect.addEventListener('change', (e) => {
+                    this.refreshInterval = parseInt(e.target.value);
+                    this.saveSettings();
+                    this.restartAutoRefresh();
+                });
+
+                // Control buttons
+                this.refreshButton.addEventListener('click', () => this.refreshData());
+                this.exportButton.addEventListener('click', () => this.exportData());
+                this.clearButton.addEventListener('click', () => this.clearEvents());
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        switch(e.key.toLowerCase()) {
+                            case 'r':
+                                e.preventDefault();
+                                this.refreshData();
+                                break;
+                            case 'e':
+                                e.preventDefault();
+                                this.exportData();
+                                break;
+                            case 'c':
+                                e.preventDefault();
+                                this.clearEvents();
+                                break;
+                        }
+                    }
+                });
+            }
+
+            loadSettings() {
+                const saved = localStorage.getItem('mcp-dashboard-settings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    this.refreshInterval = settings.refreshInterval || CONFIG.DEFAULT_REFRESH_INTERVAL;
+                    this.autoRefreshSelect.value = this.refreshInterval;
+                }
+            }
+
+            saveSettings() {
+                localStorage.setItem('mcp-dashboard-settings', JSON.stringify({
+                    refreshInterval: this.refreshInterval
+                }));
+            }
+
+            connect() {
+                this.updateConnectionStatus('connecting', 'Connecting...');
+                this.showError('Connecting to MCP server...');
+
+                try {
+                    this.ws = new WebSocket(CONFIG.WS_URL);
+
+                    this.ws.onopen = () => {
+                        this.isConnected = true;
+                        this.reconnectAttempts = 0;
+                        this.updateConnectionStatus('connected', 'Connected');
+                        this.hideError();
+
+                        // Only load initial data if dashboard is empty (first connection)
+                        if (this.events.length === 0) {
+                            this.refreshData();
+                        }
+
+                        this.startAutoRefresh();
+                        console.log('Connected to MCP server');
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            this.handleMessage(message);
+                        } catch (error) {
+                            console.error('Failed to parse WebSocket message:', error);
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        this.isConnected = false;
+                        this.updateConnectionStatus('disconnected', 'Disconnected');
+                        this.showError('Connection to MCP server lost');
+                        this.stopAutoRefresh();
+                        this.attemptReconnect();
+                    };
+
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.updateConnectionStatus('error', 'Connection Error');
+                        this.showError('Failed to connect to MCP server');
+                    };
+
+                } catch (error) {
+                    console.error('Failed to create WebSocket connection:', error);
+                    this.updateConnectionStatus('error', 'Connection Error');
+                    this.showError('Failed to connect to MCP server');
+                    this.attemptReconnect();
+                }
+            }
+
+            handleMessage(message) {
+                switch (message.type) {
+                    case 'skillEvent':
+                        this.handleSkillEvent(message.event);
+                        break;
+                    case 'connected':
+                        console.log('Dashboard connected to MCP server');
+                        if (message.initialData) {
+                            this.loadInitialData(message.initialData);
+                        }
+                        break;
+                    default:
+                        console.log('Unknown message type:', message.type);
+                }
+            }
+
+            // PERFORMANCE: Optimized skill event handling
+            handleSkillEvent(event) {
+                this.addEvent(event);
+
+                // PERFORMANCE: Invalidate caches when new event arrives
+                this.metricsCache.data = null;
+
+                // PERFORMANCE: Debounce UI updates for rapid events
+                this.pendingUpdates.add('events');
+                this.pendingUpdates.add('metrics');
+
+                this.updateMetrics();
+                this.updateUI();
+                this.lastUpdateTime = new Date();
+                this.updateLastUpdateTime();
+            }
+
+            addEvent(event) {
+                // Add to events array (circular buffer)
+                this.events.push(event);
+                if (this.events.length > CONFIG.MAX_EVENTS) {
+                    this.events.shift();
+                }
+
+                // Update session tracking
+                this.updateSession(event);
+            }
+
+            updateSession(event) {
+                const sessionId = event.session_id || event.sessionId;
+                if (!sessionId) return;
+
+                if (!this.sessions.has(sessionId)) {
+                    this.sessions.set(sessionId, {
+                        id: sessionId,
+                        startTime: new Date(event.timestamp),
+                        lastActivity: new Date(event.timestamp),
+                        skills: new Set(),
+                        hostname: event.hostname || event.host || 'unknown',
+                        user: event.user || event.username || 'unknown',
+                        eventCount: 0
+                    });
+                }
+
+                const session = this.sessions.get(sessionId);
+                session.lastActivity = new Date(event.timestamp);
+                session.eventCount++;
+
+                // Update hostname and user if provided
+                if (event.hostname || event.host) {
+                    session.hostname = event.hostname || event.host;
+                }
+                if (event.user || event.username) {
+                    session.user = event.user || event.username;
+                }
+
+                if (event.skill_name || event.skill) {
+                    session.skills.add(event.skill_name || event.skill);
+                }
+
+                // Clean up old sessions
+                this.cleanupOldSessions();
+            }
+
+            cleanupOldSessions() {
+                const now = Date.now();
+                for (const [sessionId, session] of this.sessions.entries()) {
+                    if (now - session.lastActivity.getTime() > CONFIG.SESSION_TIMEOUT) {
+                        this.sessions.delete(sessionId);
+                    }
+                }
+            }
+
+            updateMetrics() {
+                this.metrics.totalEvents = this.events.length;
+                this.metrics.activeSessions = this.sessions.size;
+
+                // Count unique skills with recent activity
+                const recentSkills = new Set();
+                const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+
+                for (const event of this.events) {
+                    if (new Date(event.timestamp).getTime() > fiveMinutesAgo) {
+                        const skillName = event.skill_name || event.skill;
+                        if (skillName) recentSkills.add(skillName);
+                    }
+                }
+                this.metrics.activeSkills = recentSkills.size;
+
+                // Count PRE events
+                this.metrics.preEvents = this.events.filter(e =>
+                    e.action === 'pre' || e.action === 'PRE'
+                ).length;
+            }
+
+            async refreshData() {
+                if (!this.isConnected) {
+                    this.showError('Not connected to MCP server');
+                    return;
+                }
+
+                this.setRefreshButtonLoading(true);
+
+                try {
+                    // Fetch both metrics and events
+                    const [metricsResponse, eventsResponse] = await Promise.all([
+                        fetch(`${CONFIG.API_BASE_URL}/api/metrics`),
+                        fetch(`${CONFIG.API_BASE_URL}/api/events?limit=50`)
+                    ]);
+
+                    if (metricsResponse.ok && eventsResponse.ok) {
+                        const events = await eventsResponse.json();
+
+                        // Only add events that we don't already have (avoid duplicates)
+                        const existingEventIds = new Set(this.events.map(e => e.id));
+                        const newEvents = events.filter(event => !existingEventIds.has(event.id));
+
+                        // Add new events
+                        newEvents.forEach(event => {
+                            this.addEvent(event);
+                        });
+
+                        // Update metrics and UI
+                        this.updateMetrics();
+                        this.updateUI();
+                        this.lastUpdateTime = new Date();
+                        this.updateLastUpdateTime();
+                    }
+                } catch (error) {
+                    console.error('Failed to refresh data:', error);
+                    this.showError('Failed to refresh data from MCP server');
+                } finally {
+                    this.setRefreshButtonLoading(false);
+                }
+            }
+
+            loadInitialData(data) {
+                // Only clear and reload if this is initial load (no existing data)
+                const isInitialLoad = this.events.length === 0 && this.sessions.size === 0;
+
+                if (isInitialLoad) {
+                    // Load events from recent events
+                    if (data.recentEvents) {
+                        data.recentEvents.forEach(event => {
+                            this.addEvent(event);
+                        });
+                    }
+
+                    // Load sessions from server data
+                    if (data.sessions && Array.isArray(data.sessions)) {
+                        data.sessions.forEach(session => {
+                            const sessionObj = {
+                                id: session.sessionId || session.id,
+                                startTime: new Date(session.startTime),
+                                lastActivity: new Date(session.lastActivity),
+                                skills: new Set(session.skills || [])
+                            };
+                            this.sessions.set(sessionObj.id, sessionObj);
+                        });
+                    }
+
+                    this.updateMetrics();
+                    this.updateUI();
+                    this.lastUpdateTime = new Date();
+                    this.updateLastUpdateTime();
+                }
+            }
+
+            // PERFORMANCE: Debounced UI updates
+            updateUI() {
+                if (this.updateTimer) {
+                    clearTimeout(this.updateTimer);
+                }
+
+                this.updateTimer = setTimeout(() => {
+                    this.updateMetricCards();
+                    this.updateSkillDistribution();
+                    this.updateLiveEvents();
+                    this.updateSessions();
+                    this.updateSkillRouter();
+                    this.updateUsageSummary();
+                }, 16); // 60fps updates
+            }
+
+  
+            updateMetricCards() {
+                this.animateValue(this.totalEventsEl, this.metrics.totalEvents, this.totalEventsCard);
+                this.animateValue(this.activeSkillsEl, this.metrics.activeSkills, this.activeSkillsCard);
+                this.animateValue(this.activeSessionsEl, this.metrics.activeSessions, this.activeSessionsCard);
+                this.animateValue(this.preEventsEl, this.metrics.preEvents, this.preEventsCard);
+            }
+
+            animateValue(element, value, card) {
+                const currentValue = parseInt(element.textContent) || 0;
+                if (currentValue !== value) {
+                    element.textContent = value;
+                    card.classList.add('updated');
+                    setTimeout(() => card.classList.remove('updated'), 300);
+                }
+            }
+
+            // PERFORMANCE: Cached skill distribution update
+            updateSkillDistribution() {
+                // PERFORMANCE: Check cache first
+                const now = Date.now();
+                if (this.metricsCache.data &&
+                    (now - this.metricsCache.timestamp) < this.metricsCache.ttl) {
+                    this.renderSkillDistribution(this.metricsCache.data);
+                    return;
+                }
+
+                if (this.events.length === 0) {
+                    const emptyData = { skills: [], topSkill: null, totalUsage: 0 };
+                    this.metricsCache.data = emptyData;
+                    this.metricsCache.timestamp = now;
+                    this.renderSkillDistribution(emptyData);
+                    return;
+                }
+
+                // PERFORMANCE: Use Map for O(1) skill counting
+                const skillUsage = new Map();
+                for (const event of this.events) {
+                    const skillName = event.skill_name || event.skill;
+                    if (skillName) {
+                        skillUsage.set(skillName, (skillUsage.get(skillName) || 0) + 1);
+                    }
+                }
+
+                const totalUsage = Array.from(skillUsage.values()).reduce((sum, count) => sum + count, 0);
+                const sortedSkills = Array.from(skillUsage.entries())
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 5);
+
+                const data = {
+                    skills: sortedSkills.map(([skill, count]) => ({
+                        skill,
+                        count,
+                        percentage: (count / totalUsage * 100).toFixed(1)
+                    })),
+                    topSkill: sortedSkills.length > 0 ? sortedSkills[0][0] : null,
+                    totalUsage,
+                    skillCount: skillUsage.size
+                };
+
+                // PERFORMANCE: Cache result
+                this.metricsCache.data = data;
+                this.metricsCache.timestamp = now;
+
+                this.renderSkillDistribution(data);
+            }
+
+            // PERFORMANCE: Separate render function from calculation
+            renderSkillDistribution(data) {
+                if (data.skills.length === 0) {
+                    this.skillBars.innerHTML = '<div class="empty-state">No skill usage data available</div>';
+                    this.topSkillText.textContent = 'No active skills';
+                    this.skillCount.textContent = '0 skills';
+                    this.updateCircularProgress(0);
+                    return;
+                }
+
+                // PERFORMANCE: Use DocumentFragment for batch DOM updates
+                const fragment = document.createDocumentFragment();
+                this.skillBars.innerHTML = '';
+
+                data.skills.forEach(({ skill, count, percentage }) => {
+                    const skillItem = document.createElement('div');
+                    skillItem.className = 'skill-item';
+                    skillItem.innerHTML = `
+                        <div class="skill-name">${skill}</div>
+                        <div class="skill-progress">
+                            <div class="skill-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="skill-percentage">${percentage}%</div>
+                    `;
+                    fragment.appendChild(skillItem);
+
+                    // PERFORMANCE: Use requestAnimationFrame for smooth animations
+                    requestAnimationFrame(() => {
+                        skillItem.querySelector('.skill-progress-fill').style.width = `${percentage}%`;
+                    });
+                });
+
+                // PERFORMANCE: Single DOM append
+                this.skillBars.appendChild(fragment);
+
+                // Update top skill and circular progress
+                if (data.topSkill) {
+                    const topSkillData = data.skills.find(s => s.skill === data.topSkill);
+                    if (topSkillData) {
+                        this.topSkillText.textContent = `${data.topSkill}: ${topSkillData.percentage}%`;
+                        this.updateCircularProgress(parseFloat(topSkillData.percentage));
+                    }
+                }
+
+                this.skillCount.textContent = `${data.skillCount} skills`;
+            }
+
+            updateCircularProgress(percentage) {
+                const circumference = 2 * Math.PI * 50; // radius = 50
+                const offset = circumference - (percentage / 100 * circumference);
+                this.progressCircle.style.strokeDashoffset = offset;
+            }
+
+            updateLiveEvents() {
+                if (this.events.length === 0) {
+                    this.eventsList.innerHTML = '<div class="empty-state">No events received yet</div>';
+                    this.eventCount.textContent = '0 events';
+                    return;
+                }
+
+                // Sort events by timestamp (newest first) and take the most recent ones
+                const sortedEvents = [...this.events].sort((a, b) => {
+                    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                });
+                const recentEvents = sortedEvents.slice(0, CONFIG.MAX_DISPLAYED_EVENTS);
+
+                this.eventsList.innerHTML = '';
+                recentEvents.forEach((event, index) => {
+                    const action = event.action || 'UNKNOWN';
+                    const skillName = event.skill_name || event.skill || 'Unknown Skill';
+                    const timestamp = this.formatRelativeTime(new Date(event.timestamp));
+
+                    const eventItem = document.createElement('div');
+                    eventItem.className = `event-item ${action}`;
+                    eventItem.innerHTML = `
+                        <span class="event-badge ${action}">${action}</span>
+                        <span class="event-skill">${skillName}</span>
+                        <span class="event-time">${timestamp}</span>
+                    `;
+
+                    // Add animation delay for staggered appearance
+                    eventItem.style.animationDelay = `${index * 50}ms`;
+                    this.eventsList.appendChild(eventItem);
+                });
+
+                this.eventCount.textContent = `${this.events.length} events`;
+            }
+
+            updateSessions() {
+                if (this.sessions.size === 0) {
+                    this.sessionsList.innerHTML = '<div class="empty-state">No active sessions</div>';
+                    this.sessionCount.textContent = '0 sessions';
+                    return;
+                }
+
+                this.sessionsList.innerHTML = '';
+                const now = Date.now();
+
+                this.sessions.forEach(session => {
+                    const sessionItem = document.createElement('div');
+
+                    // Check if session is active (activity within last 5 minutes)
+                    const timeSinceActivity = now - session.lastActivity.getTime();
+                    const isActive = timeSinceActivity < CONFIG.SESSION_TIMEOUT;
+
+                    sessionItem.className = `session-item ${isActive ? 'active' : 'inactive'}`;
+
+                    const sessionId = session.id.substring(0, 12);
+                    const lastActivityTime = this.formatRelativeTime(session.lastActivity);
+                    const skillCount = session.skills.size;
+
+                    sessionItem.innerHTML = `
+                        <div class="session-header">
+                            <div class="session-id">${sessionId}</div>
+                            <div class="session-status ${isActive ? 'active' : 'inactive'}">
+                                ${isActive ? '🟢 Active' : '🔴 Inactive'}
+                            </div>
+                        </div>
+                        <div class="session-details">
+                            <div class="session-detail">
+                                <span>🖥️</span>
+                                <span><strong>${session.hostname}</strong></span>
+                            </div>
+                            <div class="session-detail">
+                                <span>👤</span>
+                                <span><strong>${session.user}</strong></span>
+                            </div>
+                            <div class="session-detail">
+                                <span>🔧</span>
+                                <span><strong>${skillCount}</strong> skills</span>
+                            </div>
+                            <div class="session-detail">
+                                <span>⏰</span>
+                                <span>Last: <strong>${lastActivityTime}</strong></span>
+                            </div>
+                        </div>
+                    `;
+
+                    this.sessionsList.appendChild(sessionItem);
+                });
+
+                this.sessionCount.textContent = `${this.sessions.size} sessions`;
+            }
+
+            async updateSkillRouter() {
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/skill-router`);
+                    if (!response.ok) {
+                        this.skillRouterInfo.innerHTML = '<div class="empty-state">Failed to load skill router info</div>';
+                        return;
+                    }
+
+                    const routerData = await response.json();
+
+                    const routerHTML = `
+                        <div class="router-stats">
+                            <div class="router-stat">
+                                <div class="router-stat-label">Total Skills</div>
+                                <div class="router-stat-value">${routerData.totalSkills}</div>
+                            </div>
+                            <div class="router-stat">
+                                <div class="router-stat-label">Patterns</div>
+                                <div class="router-stat-value">${routerData.routerConfig?.totalPatterns || 0}</div>
+                            </div>
+                            <div class="router-stat">
+                                <div class="router-stat-label">Gates</div>
+                                <div class="router-stat-value">${routerData.routerConfig?.mandatoryGates || 0}</div>
+                            </div>
+                            <div class="router-stat">
+                                <div class="router-stat-label">Chains</div>
+                                <div class="router-stat-value">${routerData.routerConfig?.skillChains || 0}</div>
+                            </div>
+                        </div>
+                        <div class="router-scan-info">
+                            🔍 Last scan: ${this.formatRelativeTime(new Date(routerData.lastScan))} |
+                            Next scan: ${this.formatRelativeTime(new Date(routerData.nextScan))}
+                        </div>
+                    `;
+
+                    this.skillRouterInfo.innerHTML = routerHTML;
+                    this.skillRouterBadge.textContent = `v${routerData.routerConfig?.version || 'N/A'}`;
+                } catch (error) {
+                    console.error('Failed to update skill router:', error);
+                    this.skillRouterInfo.innerHTML = '<div class="empty-state">Error loading router info</div>';
+                }
+
+            async updateUsageSummary() {
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/usage-summary`);
+                    if (!response.ok) {
+                        this.usageSummaryContainer.innerHTML = '<div class="empty-state">Failed to load usage summary</div>';
+                        return;
+                    }
+
+                    const summary = await response.json();
+
+                    const summaryHTML = `
+                        <div class="usage-period">
+                            <div class="usage-period-title">📅 This Week</div>
+                            <div class="usage-stats">
+                                <div class="usage-stat">• <strong>${summary.thisWeek.uniqueSkills}</strong> skills used</div>
+                                <div class="usage-stat">• <strong>${summary.thisWeek.totalExecutions}</strong> total executions</div>
+                                ${summary.thisWeek.mostUsed ? `<div class="usage-stat">• Most used: <strong>${summary.thisWeek.mostUsed.skill}</strong> (${summary.thisWeek.mostUsed.count}x)</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="usage-period">
+                            <div class="usage-period-title">📅 This Month</div>
+                            <div class="usage-stats">
+                                <div class="usage-stat">• <strong>${summary.thisMonth.uniqueSkills}</strong> skills used</div>
+                                <div class="usage-stat">• <strong>${summary.thisMonth.totalExecutions}</strong> total executions</div>
+                                ${summary.thisMonth.mostUsed ? `<div class="usage-stat">• Most used: <strong>${summary.thisMonth.mostUsed.skill}</strong> (${summary.thisMonth.mostUsed.count}x)</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="usage-period">
+                            <div class="usage-period-title">📅 All Time</div>
+                            <div class="usage-stats">
+                                <div class="usage-stat">• <strong>${summary.allTime.uniqueSkills}</strong> skills discovered</div>
+                                <div class="usage-stat">• <strong>${summary.allTime.totalExecutions}</strong> total executions</div>
+                                ${summary.allTime.mostUsed ? `<div class="usage-stat">• Most used: <strong>${summary.allTime.mostUsed.skill}</strong> (${summary.allTime.mostUsed.count}x)</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+
+                    this.usageSummaryContainer.innerHTML = summaryHTML;
+                } catch (error) {
+                    console.error('Failed to update usage summary:', error);
+                    this.usageSummaryContainer.innerHTML = '<div class="empty-state">Error loading usage summary</div>';
+                }
+            }
+            }
+
+            updateConnectionStatus(status, text) {
+                this.statusDot.className = `status-dot ${status}`;
+                this.connectionStatus.textContent = text;
+            }
+
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorBanner.classList.add('show');
+            }
+
+            hideError() {
+                this.errorBanner.classList.remove('show');
+            }
+
+            updateLastUpdateTime() {
+                if (this.lastUpdateTime) {
+                    this.lastUpdate.textContent = `Last update: ${this.lastUpdateTime.toLocaleTimeString()}`;
+                }
+            }
+
+            setRefreshButtonLoading(loading) {
+                if (loading) {
+                    this.refreshButton.disabled = true;
+                    this.refreshButton.innerHTML = '<span class="spinner"></span> Refreshing...';
+                } else {
+                    this.refreshButton.disabled = false;
+                    this.refreshButton.innerHTML = '<span>🔄</span> Refresh Now';
+                }
+            }
+
+            startAutoRefresh() {
+                this.stopAutoRefresh();
+                if (this.refreshInterval > 0) {
+                    this.autoRefreshTimer = setInterval(() => {
+                        this.refreshData();
+                    }, this.refreshInterval);
+                }
+
+                // Start session cleanup timer (every 30 seconds)
+                this.startSessionCleanup();
+            }
+
+            stopAutoRefresh() {
+                if (this.autoRefreshTimer) {
+                    clearInterval(this.autoRefreshTimer);
+                    this.autoRefreshTimer = null;
+                }
+                this.stopSessionCleanup();
+            }
+
+            startSessionCleanup() {
+                this.stopSessionCleanup();
+                this.sessionCleanupTimer = setInterval(() => {
+                    this.cleanupOldSessions();
+                    this.updateSessions(); // Update display after cleanup
+                }, 30000); // Every 30 seconds
+            }
+
+            stopSessionCleanup() {
+                if (this.sessionCleanupTimer) {
+                    clearInterval(this.sessionCleanupTimer);
+                    this.sessionCleanupTimer = null;
+                }
+            }
+
+            restartAutoRefresh() {
+                if (this.isConnected) {
+                    this.startAutoRefresh();
+                }
+            }
+
+            attemptReconnect() {
+                if (this.reconnectAttempts >= 10) {
+                    this.showError('Failed to reconnect after multiple attempts. Please refresh the page.');
+                    return;
+                }
+
+                const delay = Math.min(
+                    CONFIG.RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts),
+                    CONFIG.RECONNECT_MAX_DELAY
+                );
+
+                this.reconnectAttempts++;
+                this.updateConnectionStatus('connecting', `Reconnecting... (${this.reconnectAttempts}/10)`);
+
+                this.reconnectTimer = setTimeout(() => {
+                    this.connect();
+                }, delay);
+            }
+
+            async exportData() {
+                const exportData = {
+                    timestamp: new Date().toISOString(),
+                    metrics: { ...this.metrics },
+                    events: [...this.events],
+                    sessions: Array.from(this.sessions.values()).map(session => ({
+                        ...session,
+                        skills: Array.from(session.skills)
+                    })),
+                    lastUpdate: this.lastUpdateTime?.toISOString()
+                };
+
+                const filename = `mcp-dashboard-export-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                console.log('Data exported to', filename);
+            }
+
+            clearEvents() {
+                if (confirm('Are you sure you want to clear all events and reset the dashboard? This action cannot be undone.')) {
+                    this.events = [];
+                    this.sessions.clear();
+                    this.updateMetrics();
+                    this.updateUI();
+                    this.lastUpdateTime = new Date();
+                    this.updateLastUpdateTime();
+                    console.log('All events cleared');
+                }
+            }
+
+            formatRelativeTime(date) {
+                const now = new Date();
+                const diff = now - date;
+                const seconds = Math.floor(diff / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+
+                if (seconds < 60) return `${seconds}s ago`;
+                if (minutes < 60) return `${minutes}m ago`;
+                if (hours < 24) return `${hours}h ago`;
+                return date.toLocaleDateString();
+            }
+
+            formatDuration(startTime) {
+                const now = new Date();
+                const diff = now - startTime;
+                const minutes = Math.floor(diff / 60000);
+                const hours = Math.floor(minutes / 60);
+
+                if (hours > 0) {
+                    return `${hours}h ${minutes % 60}m`;
+                }
+                return `${minutes}m`;
+            }
+
+            destroy() {
+                this.stopAutoRefresh();
+                this.stopSessionCleanup();
+                if (this.reconnectTimer) {
+                    clearTimeout(this.reconnectTimer);
+                }
+                if (this.ws) {
+                    this.ws.close();
+                }
+            }
+        }
+
+        // Initialize dashboard when DOM is loaded
+        let dashboard;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            dashboard = new MCPDashboard();
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                if (dashboard) {
+                    dashboard.destroy();
+                }
+            });
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (dashboard) {
+                if (document.hidden) {
+                    dashboard.stopAutoRefresh();
+                } else if (dashboard.isConnected) {
+                    dashboard.startAutoRefresh();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

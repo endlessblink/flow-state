@@ -1,0 +1,11 @@
+[
+  {
+    "id": "TASK-91052",
+    "title": "Remove TimerDebugPanel component",
+    "description": "Safely remove the TimerDebugPanel component that was created during debugging phase",
+    "status": "done",
+    "priority": "medium",
+    "project": "Pomo-Flow Productivity App",
+    "created": "2025-10-19T06:58:02.139Z"
+  }
+]

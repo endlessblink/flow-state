@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomo-Flow Task Recovery Tool</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+        button.secondary:hover {
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+            font-size: 0.9rem;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .task-item {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        .task-item:hover {
+            transform: translateX(5px);
+        }
+        .task-title {
+            font-weight: bold;
+            color: #2d3748;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        .task-details {
+            font-size: 0.9rem;
+            color: #718096;
+            line-height: 1.5;
+        }
+        .personal-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Pomo-Flow Task Recovery Tool</h1>
+        <p>Find and restore your personal productivity tasks from browser storage</p>
+    </div>
+
+    <div class="container">
+        <h2>🚀 Quick Actions</h2>
+        <div class="button-group">
+            <button onclick="checkAllStorage()">🔍 Search All Browser Storage</button>
+            <button onclick="addSamplePersonalTasks()" class="secondary">🎯 Add Sample Personal Tasks</button>
+            <button onclick="clearResults()">🗑️ Clear Results</button>
+            <button onclick="exportData()">💾 Export Found Data</button>
+            <button onclick="importToMainApp()">📥 Import to Main App</button>
+        </div>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        let foundData = {
+            indexedDB: {},
+            localStorage: {},
+            sessionStorage: {},
+            results: []
+        };
+
+        const samplePersonalTasks = [
+            {
+                id: 'personal-' + Date.now() + '-1',
+                title: 'Buy groceries for the week',
+                description: 'Milk, eggs, bread, vegetables, and fruits',
+                status: 'todo',
+                priority: 'high',
+                projectId: 'personal',
+                createdAt: new Date().toISOString(),
+                tags: ['shopping', 'personal', 'errands'],
+                estimatedDuration: 60
+            },
+            {
+                id: 'personal-' + Date.now() + '-2',
+                title: 'Call dentist for appointment',
+                description: 'Schedule routine checkup for next month',
+                status: 'todo',
+                priority: 'medium',
+                projectId: 'personal',
+                createdAt: new Date().toISOString(),
+                tags: ['health', 'appointment'],
+                estimatedDuration: 15
+            },
+            {
+                id: 'personal-' + Date.now() + '-3',
+                title: 'Pay utility bills',
+                description: 'Electricity, water, and internet bills due this week',
+                status: 'todo',
+                priority: 'urgent',
+                projectId: 'personal',
+                createdAt: new Date().toISOString(),
+                tags: ['finance', 'bills'],
+                estimatedDuration: 30
+            },
+            {
+                id: 'personal-' + Date.now() + '-4',
+                title: 'Exercise - 30 min walk',
+                description: 'Evening walk in the park',
+                status: 'todo',
+                priority: 'medium',
+                projectId: 'personal',
+                createdAt: new Date().toISOString(),
+                tags: ['health', 'exercise'],
+                estimatedDuration: 30
+            },
+            {
+                id: 'personal-' + Date.now() + '-5',
+                title: 'Read for 20 minutes',
+                description: 'Continue reading current book',
+                status: 'todo',
+                priority: 'low',
+                projectId: 'personal',
+                createdAt: new Date().toISOString(),
+                tags: ['personal', 'learning', 'relaxation'],
+                estimatedDuration: 20
+            },
+            {
+                id: 'personal-' + Date.now() + '-6',
+                title: 'Plan weekend trip',
+                description: 'Research destinations and book accommodation',
+                status: 'todo',
+                priority: 'low',
+                projectId: 'personal',
+                createdAt: new Date().toISOString(),
+                tags: ['travel', 'planning'],
+                estimatedDuration: 45
+            }
+        ];
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            foundData = {
+                indexedDB: {},
+                localStorage: {},
+                sessionStorage: {},
+                results: []
+            };
+        }
+
+        function addResult(title, content, type = 'success') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `container ${type}`;
+            resultDiv.innerHTML = `
+                <h3>${title}</h3>
+                <div class="result ${type}">${content}</div>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function isPersonalTask(task) {
+            if (!task) return false;
+
+            const personalKeywords = [
+                'buy', 'call', 'pay', 'exercise', 'walk', 'read', 'cook', 'clean',
+                'groceries', 'dentist', 'doctor', 'appointment', 'bills', 'shopping',
+                'personal', 'errands', 'health', 'fitness', 'home', 'family'
+            ];
+
+            const title = (task.title || '').toLowerCase();
+            const description = (task.description || '').toLowerCase();
+            const project = (task.projectId || task.project || '').toLowerCase();
+
+            // Check if it's explicitly marked as personal
+            if (project === 'personal' || task.tags?.includes('personal')) {
+                return true;
+            }
+
+            // Check for personal keywords
+            return personalKeywords.some(keyword =>
+                title.includes(keyword) || description.includes(keyword)
+            );
+        }
+
+        function formatTask(task) {
+            const isPersonal = isPersonalTask(task);
+            const personalBadge = isPersonal ? '<span class="personal-badge">PERSONAL</span>' : '';
+
+            return `
+                <div class="task-item">
+                    <div class="task-title">${task.title || 'Untitled Task'}${personalBadge}</div>
+                    <div class="task-details">
+                        Status: ${task.status || 'unknown'} |
+                        Priority: ${task.priority || 'unknown'} |
+                        Project: ${task.projectId || task.project || 'unknown'}<br>
+                        Created: ${task.createdAt ? new Date(task.createdAt).toLocaleString() : 'unknown'}<br>
+                        ${task.description ? `Description: ${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}` : ''}
+                        ${task.tags ? `<br>Tags: ${task.tags.join(', ')}` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function checkIndexedDB() {
+            return new Promise((resolve) => {
+                const result = { databases: [], taskData: [] };
+
+                if (!window.indexedDB) {
+                    result.error = 'IndexedDB not supported';
+                    resolve(result);
+                    return;
+                }
+
+                const request = indexedDB.databases();
+                request.then(databases => {
+                    result.databases = databases;
+
+                    const promises = databases.map(async db => {
+                        try {
+                            const dbInstance = await openDatabase(db.name);
+                            const stores = getAllObjectStores(dbInstance);
+                            const tasks = [];
+
+                            for (const store of stores) {
+                                const storeData = await getAllFromStore(dbInstance, store);
+                                const taskLikeData = storeData.filter(item =>
+                                    item && typeof item === 'object' && (
+                                        item.title ||
+                                        item.taskTitle ||
+                                        item.name ||
+                                        (item.id && (item.status || item.priority || item.projectId))
+                                    )
+                                );
+                                tasks.push(...taskLikeData);
+                            }
+
+                            if (tasks.length > 0) {
+                                result.taskData.push({ database: db.name, tasks });
+                            }
+
+                            dbInstance.close();
+                        } catch (error) {
+                            console.warn(`Could not access database ${db.name}:`, error);
+                        }
+                    });
+
+                    Promise.all(promises).then(() => {
+                        resolve(result);
+                    });
+                }).catch(error => {
+                    result.error = error.message;
+                    resolve(result);
+                });
+            });
+        }
+
+        function openDatabase(name) {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(name);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function getAllObjectStores(db) {
+            const stores = [];
+            for (let i = 0; i < db.objectStoreNames.length; i++) {
+                stores.push(db.objectStoreNames[i]);
+            }
+            return stores;
+        }
+
+        function getAllFromStore(db, storeName) {
+            return new Promise((resolve) => {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        function checkLocalStorage() {
+            const result = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                try {
+                    const parsed = JSON.parse(value);
+                    if (Array.isArray(parsed) && parsed.length > 0 &&
+                        parsed[0] && typeof parsed[0] === 'object' &&
+                        (parsed[0].title || parsed[0].taskTitle || parsed[0].name)) {
+                        result[key] = parsed;
+                    }
+                } catch (e) {
+                    // Not JSON, skip
+                }
+            }
+            return result;
+        }
+
+        function checkSessionStorage() {
+            const result = {};
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                const value = sessionStorage.getItem(key);
+                try {
+                    const parsed = JSON.parse(value);
+                    if (Array.isArray(parsed) && parsed.length > 0 &&
+                        parsed[0] && typeof parsed[0] === 'object' &&
+                        (parsed[0].title || parsed[0].taskTitle || parsed[0].name)) {
+                        result[key] = parsed;
+                    }
+                } catch (e) {
+                    // Not JSON, skip
+                }
+            }
+            return result;
+        }
+
+        function addSamplePersonalTasks() {
+            clearResults();
+            addResult('🎯 Adding Sample Personal Tasks', 'Creating sample personal productivity tasks...', 'warning');
+
+            // Store sample tasks in localStorage for recovery
+            localStorage.setItem('pomo-flow-sample-personal-tasks', JSON.stringify(samplePersonalTasks));
+
+            let taskInfo = `<strong>Added ${samplePersonalTasks.length} sample personal tasks:</strong><br>`;
+            samplePersonalTasks.forEach(task => {
+                taskInfo += formatTask(task);
+            });
+
+            addResult('✅ Sample Personal Tasks Added', taskInfo, 'success');
+
+            // Show instructions
+            addResult('📋 Next Steps',
+                'Now you can:<br>' +
+                '1. Click "🔍 Search All Browser Storage" to verify the tasks are stored<br>' +
+                '2. Click "📥 Import to Main App" to load them into Pomo-Flow<br>' +
+                '3. Refresh the main Pomo-Flow app to see your personal tasks',
+                'warning'
+            );
+        }
+
+        async function checkAllStorage() {
+            clearResults();
+            addResult('🔍 Starting Storage Analysis', 'Checking all browser storage locations for task data...', 'warning');
+
+            let totalTasks = 0;
+            let personalTasks = 0;
+
+            // Check IndexedDB
+            addResult('📊 Checking IndexedDB', 'Analyzing IndexedDB databases...', 'warning');
+            const indexedDBResult = await checkIndexedDB();
+            foundData.indexedDB = indexedDBResult;
+
+            if (indexedDBResult.error) {
+                addResult('❌ IndexedDB Error', indexedDBResult.error, 'error');
+            } else {
+                if (indexedDBResult.databases.length === 0) {
+                    addResult('📭 IndexedDB', 'No IndexedDB databases found', 'warning');
+                } else {
+                    let dbInfo = `<strong>Found ${indexedDBResult.databases.length} databases:</strong><br>`;
+                    indexedDBResult.databases.forEach(db => {
+                        dbInfo += `- ${db.name} (version ${db.version})<br>`;
+                    });
+                    addResult('📊 IndexedDB Databases', dbInfo, 'success');
+
+                    if (indexedDBResult.taskData.length > 0) {
+                        indexedDBResult.taskData.forEach(dbData => {
+                            const personalTasksInDb = dbData.tasks.filter(isPersonalTask);
+                            totalTasks += dbData.tasks.length;
+                            personalTasks += personalTasksInDb.length;
+
+                            let taskInfo = `<strong>Found ${dbData.tasks.length} tasks in database "${dbData.database}"`;
+                            if (personalTasksInDb.length > 0) {
+                                taskInfo += ` (${personalTasksInDb.length} personal)</strong><br>`;
+                            } else {
+                                taskInfo += ' (0 personal)</strong><br>';
+                            }
+
+                            dbData.tasks.slice(0, 5).forEach(task => {
+                                taskInfo += formatTask(task);
+                            });
+                            if (dbData.tasks.length > 5) {
+                                taskInfo += `<p><em>... and ${dbData.tasks.length - 5} more tasks</em></p>`;
+                            }
+                            addResult(`📋 Tasks from ${dbData.database}`, taskInfo, 'success');
+                        });
+                    }
+                }
+            }
+
+            // Check Local Storage
+            addResult('💾 Checking Local Storage', 'Analyzing localStorage...', 'warning');
+            const localStorageResult = checkLocalStorage();
+            foundData.localStorage = localStorageResult;
+
+            if (Object.keys(localStorageResult).length === 0) {
+                addResult('💾 Local Storage', 'No task data found in localStorage', 'warning');
+            } else {
+                Object.entries(localStorageResult).forEach(([key, tasks]) => {
+                    const personalTasksInStorage = tasks.filter(isPersonalTask);
+                    totalTasks += tasks.length;
+                    personalTasks += personalTasksInStorage.length;
+
+                    let taskInfo = `<strong>Found ${tasks.length} tasks in localStorage key "${key}"`;
+                    if (personalTasksInStorage.length > 0) {
+                        taskInfo += ` (${personalTasksInStorage.length} personal)</strong><br>`;
+                    } else {
+                        taskInfo += ' (0 personal)</strong><br>';
+                    }
+
+                    tasks.slice(0, 5).forEach(task => {
+                        taskInfo += formatTask(task);
+                    });
+                    if (tasks.length > 5) {
+                        taskInfo += `<p><em>... and ${tasks.length - 5} more tasks</em></p>`;
+                    }
+                    addResult(`💾 Local Storage: ${key}`, taskInfo, 'success');
+                });
+            }
+
+            // Check Session Storage
+            addResult('🔄 Checking Session Storage', 'Analyzing sessionStorage...', 'warning');
+            const sessionStorageResult = checkSessionStorage();
+            foundData.sessionStorage = sessionStorageResult;
+
+            if (Object.keys(sessionStorageResult).length === 0) {
+                addResult('🔄 Session Storage', 'No task data found in sessionStorage', 'warning');
+            } else {
+                Object.entries(sessionStorageResult).forEach(([key, tasks]) => {
+                    const personalTasksInStorage = tasks.filter(isPersonalTask);
+                    totalTasks += tasks.length;
+                    personalTasks += personalTasksInStorage.length;
+
+                    let taskInfo = `<strong>Found ${tasks.length} tasks in sessionStorage key "${key}"`;
+                    if (personalTasksInStorage.length > 0) {
+                        taskInfo += ` (${personalTasksInStorage.length} personal)</strong><br>`;
+                    } else {
+                        taskInfo += ' (0 personal)</strong><br>';
+                    }
+
+                    tasks.slice(0, 5).forEach(task => {
+                        taskInfo += formatTask(task);
+                    });
+                    if (tasks.length > 5) {
+                        taskInfo += `<p><em>... and ${tasks.length - 5} more tasks</em></p>`;
+                    }
+                    addResult(`🔄 Session Storage: ${key}`, taskInfo, 'success');
+                });
+            }
+
+            // Summary with stats
+            const statsHTML = `
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number">${totalTasks}</div>
+                        <div class="stat-label">Total Tasks Found</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${personalTasks}</div>
+                        <div class="stat-label">Personal Tasks</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${totalTasks - personalTasks}</div>
+                        <div class="stat-label">Other Tasks</div>
+                    </div>
+                </div>
+            `;
+
+            if (totalTasks === 0) {
+                addResult('❌ No Task Data Found',
+                    'No personal task data was found in any storage location.<br><br>' +
+                    '<strong>Recommendation:</strong> Click "🎯 Add Sample Personal Tasks" to create example personal tasks for testing.',
+                    'error'
+                );
+            } else if (personalTasks === 0) {
+                addResult('⚠️ No Personal Tasks Found',
+                    `Found ${totalTasks} tasks but none appear to be personal productivity tasks.<br><br>` +
+                    '<strong>Recommendation:</strong> Click "🎯 Add Sample Personal Tasks" to add personal productivity examples.',
+                    'warning'
+                );
+            } else {
+                addResult('✅ Task Recovery Complete',
+                    `Found a total of ${totalTasks} tasks, including ${personalTasks} personal productivity tasks! Use the import button to load them into the main app.`,
+                    'success'
+                );
+            }
+
+            // Add stats
+            const resultsDiv = document.getElementById('results');
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'container';
+            statsDiv.innerHTML = statsHTML;
+            resultsDiv.appendChild(statsDiv);
+        }
+
+        function exportData() {
+            const allTasks = [];
+
+            // Collect all tasks from all sources
+            Object.entries(foundData.localStorage).forEach(([key, tasks]) => {
+                tasks.forEach(task => {
+                    allTasks.push({ ...task, _source: `localStorage:${key}` });
+                });
+            });
+
+            Object.entries(foundData.sessionStorage).forEach(([key, tasks]) => {
+                tasks.forEach(task => {
+                    allTasks.push({ ...task, _source: `sessionStorage:${key}` });
+                });
+            });
+
+            foundData.indexedDB.taskData.forEach(dbData => {
+                dbData.tasks.forEach(task => {
+                    allTasks.push({ ...task, _source: `indexedDB:${dbData.database}` });
+                });
+            });
+
+            if (allTasks.length === 0) {
+                addResult('❌ No Data to Export', 'No task data found to export.', 'error');
+                return;
+            }
+
+            // Create and download JSON file
+            const dataStr = JSON.stringify(allTasks, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `pomo-flow-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            addResult('✅ Export Complete', `Exported ${allTasks.length} tasks to pomo-flow-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`, 'success');
+        }
+
+        function importToMainApp() {
+            // Try to communicate with the main app
+            try {
+                // Store tasks in a known location for the main app to pick up
+                const allTasks = [];
+
+                // Include sample tasks if no real tasks found
+                if (Object.keys(foundData.localStorage).length === 0 &&
+                    Object.keys(foundData.sessionStorage).length === 0 &&
+                    foundData.indexedDB.taskData.length === 0) {
+                    allTasks.push(...samplePersonalTasks);
+                } else {
+                    // Collect found tasks
+                    Object.entries(foundData.localStorage).forEach(([key, tasks]) => {
+                        allTasks.push(...tasks);
+                    });
+                    Object.entries(foundData.sessionStorage).forEach(([key, tasks]) => {
+                        allTasks.push(...tasks);
+                    });
+                    foundData.indexedDB.taskData.forEach(dbData => {
+                        allTasks.push(...dbData.tasks);
+                    });
+                }
+
+                // Store in localStorage for main app to import
+                localStorage.setItem('pomo-flow-import-ready-tasks', JSON.stringify(allTasks));
+
+                addResult('📥 Import Ready',
+                    `Prepared ${allTasks.length} tasks for import.<br><br>` +
+                    '<strong>Next Steps:</strong><br>' +
+                    '1. Go to the main Pomo-Flow app (http://localhost:5550)<br>' +
+                    '2. Look for an "Import Tasks" button or option<br>' +
+                    '3. The tasks should be automatically available for import<br>' +
+                    '4. Refresh the main app if needed',
+                    'success'
+                );
+
+                // Try to open the main app in a new tab
+                setTimeout(() => {
+                    window.open('/', '_blank');
+                }, 2000);
+
+            } catch (error) {
+                addResult('❌ Import Failed', `Error preparing import: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run when page loads
+        window.onload = () => {
+            addResult('🚀 Task Recovery Tool Ready',
+                'This tool helps you find and restore personal productivity tasks.<br><br>' +
+                '<strong>Getting Started:</strong><br>' +
+                '1. Click "🔍 Search All Browser Storage" to scan for existing tasks<br>' +
+                '2. If no personal tasks are found, click "🎯 Add Sample Personal Tasks"<br>' +
+                '3. Use "📥 Import to Main App" to load tasks into Pomo-Flow',
+                'success'
+            );
+        };
+    </script>
+</body>
+</html>

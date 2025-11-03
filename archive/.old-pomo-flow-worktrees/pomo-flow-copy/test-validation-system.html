@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Validation System Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2196f3;
+            margin: 15px 0;
+        }
+        .test-list {
+            list-style: none;
+            padding: 0;
+        }
+        .test-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .test-list li:last-child {
+            border-bottom: none;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .badge.new { background: #4caf50; color: white; }
+        .badge.test { background: #ff9800; color: white; }
+        .badge.check { background: #2196f3; color: white; }
+        .iframe-container {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Pomo-Flow Sync Validation System Test</h1>
+
+    <div class="test-section">
+        <h2>System Status</h2>
+        <div id="system-status" class="status success">
+            ✅ Validation system implemented and ready for testing
+        </div>
+
+        <h3>Components Created:</h3>
+        <ul class="test-list">
+            <li>✅ Real-time Sync Validation Composable <span class="badge new">NEW</span></li>
+            <li>✅ Visual Validation Indicator Component <span class="badge new">NEW</span></li>
+            <li>✅ Global Sync Validation Service <span class="badge new">NEW</span></li>
+            <li>✅ Integration with App.vue <span class="badge new">NEW</span></li>
+            <li>✅ Test scripts and validation logic <span class="badge new">NEW</span></li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Instructions</h2>
+
+        <div class="instructions">
+            <strong>🚀 Quick Start:</strong><br>
+            1. Open <a href="http://localhost:5546" target="_blank">http://localhost:5546</a> in a new tab<br>
+            2. Look for the validation indicator badge in the top-right corner<br>
+            3. Click the badge to see detailed validation results<br>
+            4. Create tasks following the test scenarios below
+        </div>
+
+        <h3>🧪 Test Scenarios:</h3>
+
+        <div class="instructions">
+            <strong>Scenario 1: Basic Consistency Check</strong><br>
+            1. Create 2-3 normal tasks<br>
+            2. Navigate between Board, Today, and All Tasks views<br>
+            3. Check validation indicator - should show green (healthy)<br>
+            4. Verify task counts are consistent across views
+        </div>
+
+        <div class="instructions">
+            <strong>Scenario 2: Inbox vs Canvas Logic</strong><br>
+            1. Create a task but don't position it on canvas (stays in inbox)<br>
+            2. Create another task and drag it to the canvas<br>
+            3. Check validation panel for correct inbox/canvas detection<br>
+            4. Verify both tasks appear in Board view
+        </div>
+
+        <div class="instructions">
+            <strong>Scenario 3: Today Filter Testing</strong><br>
+            1. Create a task and set status to "In Progress"<br>
+            2. Create another task and schedule it for today<br>
+            3. Navigate to Today view<br>
+            4. Check validation shows correct subset relationship
+        </div>
+
+        <div class="instructions">
+            <strong>Scenario 4: Hide Done Filter</strong><br>
+            1. Create several tasks<br>
+            2. Mark one as completed<br>
+            3. Toggle "Hide Done" in Board view<br>
+            4. Verify validation detects correct filtering logic
+        </div>
+
+        <div class="instructions">
+            <strong>Scenario 5: Stress Testing</strong><br>
+            1. Create 10+ tasks with different properties<br>
+            2. Switch rapidly between views<br>
+            3. Monitor validation panel for real-time detection<br>
+            4. Check for performance issues or false positives
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Expected Behaviors</h2>
+
+        <h3>✅ Healthy System (Green Badge)</h3>
+        <ul class="test-list">
+            <li>Task counts consistent across all views</li>
+            <li>Today tasks are subset of Board tasks</li>
+            <li>Inbox tasks are subset of Board tasks</li>
+            <li>Canvas tasks are subset of Board tasks</li>
+            <li>Hide Done filter works correctly</li>
+        </ul>
+
+        <h3>⚠️ Warnings (Yellow Badge)</h3>
+        <ul class="test-list">
+            <li>Minor filtering inconsistencies detected</li>
+            <li>Canvas tasks not appearing in Board view</li>
+            <li>Non-critical logic violations</li>
+        </ul>
+
+        <h3>❌ Errors (Red Badge)</h3>
+        <ul class="test-list">
+            <li>Today tasks exceed Board tasks count</li>
+            <li>Inbox tasks exceed Board tasks count</li>
+            <li>Invalid subset relationships detected</li>
+            <li>Critical filtering logic failures</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Validation Features</h2>
+
+        <h3>🔍 Real-time Monitoring</h3>
+        <ul class="test-list">
+            <li>Automatic validation every 3 seconds</li>
+            <li>Immediate detection of consistency issues</li>
+            <li>Configurable monitoring intervals</li>
+        </ul>
+
+        <h3>📊 Detailed Reporting</h3>
+        <ul class="test-list">
+            <li>Issue classification (error/warning/info)</li>
+            <li>Affected views identification</li>
+            <li>Expected vs actual values</li>
+            <li>Resolution suggestions</li>
+        </ul>
+
+        <h3>🎯 Cross-View Analysis</h3>
+        <ul class="test-list">
+            <li>Board vs Today consistency checks</li>
+            <li>Board vs Inbox subset validation</li>
+            <li>Board vs Canvas relationship verification</li>
+            <li>Filter composition logic testing</li>
+        </ul>
+
+        <h3>⚡ Performance Optimized</h3>
+        <ul class="test-list">
+            <li>Efficient snapshot comparison</li>
+            <li>Debounced validation cycles</li>
+            <li>Memory-efficient history management</li>
+            <li>Development-only activation</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Technical Implementation</h2>
+
+        <h3>📁 Files Created</h3>
+        <ul class="test-list">
+            <li><code>src/composables/useRealTimeSyncValidation.ts</code> - Core validation logic</li>
+            <li><code>src/components/SyncValidationIndicator.vue</code> - Visual indicator component</li>
+            <li><code>src/services/SyncValidationService.ts</code> - Global service management</li>
+            <li><code>tests/debug/test-sync-validation.js</code> - Test automation</li>
+            <li><code>src/App.vue</code> - Integration point</li>
+        </ul>
+
+        <h3>🔧 Integration Points</h3>
+        <ul class="test-list">
+            <li>Unified Task Filter System</li>
+            <li>Task Invariant Validation</li>
+            <li>Migration Adapter Architecture</li>
+            <li>Vue 3 Composition API</li>
+        </ul>
+
+        <h3>🎨 UI Components</h3>
+        <ul class="test-list">
+            <li>Status badge with real-time updates</li>
+            <li>Expandable validation panel</li>
+            <li>Issue categorization and details</li>
+            <li>Monitoring controls and history</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Live Application Test</h2>
+        <p>Open the application below to test the sync validation system in real-time:</p>
+
+        <div class="iframe-container">
+            <iframe src="http://localhost:5546" title="Pomo-Flow Application"></iframe>
+        </div>
+
+        <div class="status check">
+            <strong>💡 Testing Tips:</strong><br>
+            • Look for the colored badge in the top-right corner<br>
+            • Click it to open the detailed validation panel<br>
+            • Create tasks with different properties to trigger validation<br>
+            • Watch the console for detailed validation logs
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Validation Checklist</h2>
+
+        <div id="validation-checklist">
+            <label><input type="checkbox" id="check1"> ✅ Validation badge appears in development mode</label><br>
+            <label><input type="checkbox" id="check2"> ✅ Badge shows correct color (green/yellow/red)</label><br>
+            <label><input type="checkbox" id="check3"> ✅ Clicking badge opens validation panel</label><br>
+            <label><input type="checkbox" id="check4"> ✅ Panel shows current validation status</label><br>
+            <label><input type="checkbox" id="check5"> ✅ Creating tasks triggers validation</label><br>
+            <label><input type="checkbox" id="check6"> ✅ Navigation between views updates validation</label><br>
+            <label><input type="checkbox" id="check7"> ✅ Console shows validation logs</label><br>
+            <label><input type="checkbox" id="check8"> ✅ Issues are correctly categorized</label><br>
+            <label><input type="checkbox" id="check9"> ✅ Resolution suggestions are helpful</label><br>
+            <label><input type="checkbox" id="check10"> ✅ Performance remains acceptable</label><br>
+        </div>
+    </div>
+
+    <script>
+        // Auto-update system status
+        function updateSystemStatus() {
+            fetch('http://localhost:5546')
+                .then(() => {
+                    document.getElementById('system-status').className = 'status success';
+                    document.getElementById('system-status').innerHTML = '✅ Application running on port 5546 - Ready for testing';
+                })
+                .catch(() => {
+                    document.getElementById('system-status').className = 'status error';
+                    document.getElementById('system-status').innerHTML = '❌ Application not accessible on port 5546 - Please start the development server';
+                });
+        }
+
+        // Check status every 5 seconds
+        updateSystemStatus();
+        setInterval(updateSystemStatus, 5000);
+
+        // Progress tracker
+        const checkboxes = document.querySelectorAll('#validation-checklist input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const checked = document.querySelectorAll('#validation-checklist input:checked').length;
+                const total = checkboxes.length;
+                const progress = Math.round((checked / total) * 100);
+
+                if (checked === total) {
+                    alert(`🎉 Testing Complete! All ${total} validation tests passed.`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

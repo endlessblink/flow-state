@@ -72,17 +72,6 @@ const router = createRouter({
       path: '/mobile',
       redirect: '/today'
     },
-    {
-      path: '/keyboard-test',
-      name: 'keyboard-test',
-      component: () => import('@/components/KeyboardDeletionTest.vue')
-    },
-    {
-      path: '/yjs-test',
-      name: 'yjs-test',
-      component: () => import('@/components/test/YjsTestComponent.vue'),
-      meta: { requiresAuth: false }
-    }
     // TODO: Add other views when implemented
     // {
     //   path: '/todo',

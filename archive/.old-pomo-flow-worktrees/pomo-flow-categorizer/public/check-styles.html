@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Style Inspector</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .result {
+      margin: 10px 0;
+      padding: 10px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>CSS Variable Inspector</h1>
+  <div id="results"></div>
+
+  <script>
+    window.addEventListener('load', () => {
+      // Open the app in iframe
+      const iframe = document.createElement('iframe');
+      iframe.src = 'http://localhost:5546/#/calendar';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.opacity = '0';
+      iframe.style.position = 'absolute';
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          const sidebarTask = iframeDoc.querySelector('.sidebar-task');
+          const root = iframeDoc.documentElement;
+
+          const results = document.getElementById('results');
+
+          if (!sidebarTask) {
+            results.innerHTML = '<div class="result">❌ No .sidebar-task element found</div>';
+            return;
+          }
+
+          const computed = iframe.contentWindow.getComputedStyle(sidebarTask);
+          const rootComputed = iframe.contentWindow.getComputedStyle(root);
+
+          results.innerHTML = `
+            <div class="result">
+              <h2>CSS Variables (from :root)</h2>
+              <div>--radius-sm: ${rootComputed.getPropertyValue('--radius-sm')}</div>
+              <div>--radius-md: ${rootComputed.getPropertyValue('--radius-md')}</div>
+              <div>--radius-lg: ${rootComputed.getPropertyValue('--radius-lg')}</div>
+              <div>--radius-xl: ${rootComputed.getPropertyValue('--radius-xl')}</div>
+              <div>--radius-2xl: ${rootComputed.getPropertyValue('--radius-2xl')}</div>
+            </div>
+            <div class="result">
+              <h2>Computed border-radius on .sidebar-task</h2>
+              <div>border-radius: <strong>${computed.borderRadius}</strong></div>
+              <div>border-top-left-radius: ${computed.borderTopLeftRadius}</div>
+              <div>border-top-right-radius: ${computed.borderTopRightRadius}</div>
+              <div>border-bottom-left-radius: ${computed.borderBottomLeftRadius}</div>
+              <div>border-bottom-right-radius: ${computed.borderBottomRightRadius}</div>
+            </div>
+            <div class="result">
+              <h2>Element Info</h2>
+              <div>Class: ${sidebarTask.className}</div>
+              <div>Data attributes: ${Array.from(sidebarTask.attributes).filter(a => a.name.startsWith('data-v-')).map(a => a.name).join(', ')}</div>
+            </div>
+          `;
+        }, 2000);
+      };
+    });
+  </script>
+</body>
+</html>

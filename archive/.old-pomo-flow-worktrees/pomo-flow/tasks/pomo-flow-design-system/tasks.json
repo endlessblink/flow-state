@@ -1,0 +1,11 @@
+[
+  {
+    "id": "TASK-27816",
+    "title": "USER DECISION: Choose primary brand color",
+    "description": "Review color options in Storybook and choose:\n- Option A: TEAL (#4ECDC4) - Recommended\n- Option B: BLUE (#4A90E2) - Alternative\n\nLocation: http://localhost:6006\nStory: Design System > Colors > Brand Primary Decision\n\nDecision will determine unified color across all views.",
+    "status": "todo",
+    "priority": "urgent",
+    "project": "pomo-flow-design-system",
+    "created": "2025-10-26T08:58:40.130Z"
+  }
+]

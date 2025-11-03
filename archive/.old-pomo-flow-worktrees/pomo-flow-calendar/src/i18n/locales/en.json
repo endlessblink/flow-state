@@ -1,0 +1,62 @@
+{
+  "common": {
+    "app_name": "Pomo-Flow",
+    "tasks": "Tasks",
+    "projects": "Projects",
+    "settings": "Settings",
+    "search": "Search",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "timer": {
+    "start": "Start",
+    "pause": "Pause",
+    "stop": "Stop",
+    "work_session": "Work Session",
+    "short_break": "Short Break",
+    "long_break": "Long Break"
+  },
+  "views": {
+    "board": "Board",
+    "calendar": "Calendar",
+    "canvas": "Canvas",
+    "all_tasks": "All Tasks"
+  },
+  "smart_views": {
+    "today": "Today",
+    "weekend": "This Weekend"
+  },
+  "task": {
+    "title": "Task Title",
+    "description": "Description",
+    "status": "Status",
+    "priority": "Priority",
+    "due_date": "Due Date",
+    "completed": "Completed",
+    "in_progress": "In Progress",
+    "planned": "Planned",
+    "create_task": "Create Task",
+    "add_task": "Add a task...",
+    "no_tasks": "No tasks found",
+    "create_first": "Create your first task"
+  },
+  "project": {
+    "create": "Create Project",
+    "edit": "Edit Project",
+    "delete": "Delete Project",
+    "duplicate": "Duplicate Project"
+  },
+  "settings": {
+    "general": "General",
+    "appearance": "Appearance",
+    "language": "Language",
+    "direction": "Text Direction",
+    "ltr": "Left to Right (LTR)",
+    "rtl": "Right to Left (RTL)",
+    "auto": "Auto-detect"
+  }
+}

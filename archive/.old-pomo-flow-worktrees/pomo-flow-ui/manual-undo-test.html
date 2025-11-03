@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomo-Flow Manual Undo Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-frame {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .step {
+            background: #333;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007acc;
+        }
+        .critical {
+            border-left-color: #ff4444;
+            background: #3a1a1a;
+        }
+        iframe {
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Pomo-Flow Manual Undo/Redo Test</h1>
+
+        <div class="instructions">
+            <h2>CRITICAL TEST: Visual Restoration Verification</h2>
+
+            <div class="step">
+                <strong>Step 1:</strong> In the application below, identify a visible task (any task card)
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> Right-click on the task to open the context menu, or look for a delete button
+            </div>
+
+            <div class="step critical">
+                <strong>Step 3 (CRITICAL):</strong> Delete the task - verify it DISAPPEARS from the UI
+            </div>
+
+            <div class="step critical">
+                <strong>Step 4 (CRITICAL):</strong> Press <kbd>Ctrl+Z</kbd> (or <kbd>Cmd+Z</kbd> on Mac)
+            </div>
+
+            <div class="step critical">
+                <strong>Step 5 (VERIFICATION):</strong> Check if the task VISUALLY REAPPEARS in the interface
+            </div>
+
+            <div style="background: #1a3a1a; border-left-color: #00ff88; padding: 20px; border-radius: 4px; margin-top: 20px;">
+                <h3>✅ SUCCESS INDICATORS:</h3>
+                <ul>
+                    <li>Task disappears when deleted</li>
+                    <li>Task reappears when Ctrl+Z is pressed</li>
+                    <li>No console errors during the process</li>
+                </ul>
+
+                <h3>❌ FAILURE INDICATORS:</h3>
+                <ul>
+                    <li>Task doesn't reappear after Ctrl+Z</li>
+                    <li>Console shows undo errors</li>
+                    <li>Nothing happens when Ctrl+Z is pressed</li>
+                </ul>
+            </div>
+        </div>
+
+        <iframe src="http://localhost:5547" class="test-frame" id="app-frame"></iframe>
+
+        <div style="background: #2a2a2a; padding: 20px; border-radius: 8px;">
+            <h3>Test Results Form</h3>
+            <p>Please report your results:</p>
+            <div>
+                <label><input type="radio" name="result" value="success"> ✅ SUCCESS: Task reappeared after undo</label><br>
+                <label><input type="radio" name="result" value="failure"> ❌ FAILURE: Task did not reappear</label><br>
+                <label><input type="radio" name="result" value="partial"> ⚠️ PARTIAL: Something happened but not complete</label>
+            </div>
+            <br>
+            <textarea placeholder="Describe what happened..." style="width: 100%; height: 100px; background: #1a1a1a; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px;"></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Monitor console messages from iframe if possible
+        const iframe = document.getElementById('app-frame');
+        iframe.onload = function() {
+            console.log('Pomo-Flow application loaded in test frame');
+        };
+    </script>
+</body>
+</html>

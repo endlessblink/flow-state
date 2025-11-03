@@ -55,33 +55,7 @@
         <CalendarDays :size="16" />
       </button>
 
-      <!-- Uncategorized Filter -->
-      <button
-        class="uncategorized-filter icon-only"
-        :class="{ active: taskStore.activeSmartView === 'uncategorized' }"
-        @click="handleToggleUncategorizedFilter"
-        title="Show Uncategorized Tasks"
-      >
-        <Inbox :size="16" />
-        <span
-          v-if="uncategorizedTaskCount > 0"
-          class="filter-badge"
-          :class="{ 'badge-active': taskStore.activeSmartView === 'uncategorized' }"
-        >
-          {{ uncategorizedTaskCount }}
-        </span>
-      </button>
-
-      <!-- Quick Sort Button (shows when uncategorized filter is active) -->
-      <button
-        v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedTaskCount > 0"
-        class="quick-sort-button"
-        @click="handleStartQuickSort"
-        title="Start Quick Sort to categorize these tasks"
-      >
-        <Zap :size="16" />
-        Quick Sort
-      </button>
+      <!-- Note: Uncategorized filter removed - now using the unified "My Tasks" Smart View in the sidebar -->
 
       <!-- Status Filters -->
       <div class="status-filters">
@@ -388,12 +362,12 @@ const boardFilteredTasks = computed(() => {
     }
 
     // When smart views are active, use filteredTasks directly to avoid double filtering
-    if (taskStore.activeSmartView && taskStore.activeSmartView !== 'uncategorized') {
+    if (taskStore.activeSmartView) {
       console.log('BoardView.boardFilteredTasks: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
       return storeTasks
     }
 
-    // For uncategorized smart view or regular views, use the existing filter logic
+    // For regular views (no smart filter), use the existing filter logic
     const filtered = filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
 
     // Validate result
@@ -409,15 +383,7 @@ const boardFilteredTasks = computed(() => {
   }
 })
 
-// Count of uncategorized tasks for the filter badge
-const uncategorizedTaskCount = computed(() => {
-  try {
-    return getUncategorizedTasks(taskStore.tasks).length
-  } catch (error) {
-    console.error('BoardView.uncategorizedTaskCount: Error calculating uncategorized count:', error)
-    return 0
-  }
-})
+// Note: uncategorizedTaskCount removed - now using unified sidebar My Tasks Smart View
 
 // Edit modal state
 const showEditModal = ref(false)
@@ -613,35 +579,9 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
   }
 }
 
-// Toggle Uncategorized filter
-const handleToggleUncategorizedFilter = (event: MouseEvent) => {
-  event.stopPropagation()
-  console.log('🔧 BoardView: Uncategorized filter toggle clicked!')
-  console.log('🔧 BoardView: Current activeSmartView:', taskStore.activeSmartView)
+// Note: handleToggleUncategorizedFilter removed - now using unified sidebar My Tasks Smart View
 
-  try {
-    // Toggle between 'uncategorized' and null
-    if (taskStore.activeSmartView === 'uncategorized') {
-      taskStore.setSmartView(null)
-      console.log('🔧 BoardView: Cleared Uncategorized filter')
-    } else {
-      taskStore.setSmartView('uncategorized')
-      console.log('🔧 BoardView: Activated Uncategorized filter')
-    }
-  } catch (error) {
-    console.error('🔧 BoardView: Error toggling Uncategorized filter:', error)
-  }
-}
-
-// Start Quick Sort from uncategorized view
-const handleStartQuickSort = () => {
-  console.log('🔧 BoardView: Starting Quick Sort from uncategorized view')
-  try {
-    router.push({ name: 'quick-sort' })
-  } catch (error) {
-    console.error('🔧 BoardView: Error navigating to Quick Sort:', error)
-  }
-}
+// Note: handleStartQuickSort removed - Quick Sort is now available from sidebar My Tasks Smart View
 </script>
 
 <style scoped>
@@ -886,124 +826,7 @@ const handleStartQuickSort = () => {
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 
-/* Uncategorized Filter Toggle */
-.uncategorized-filter {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  padding: var(--space-2);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all 0.2s ease;
-  backdrop-filter: blur(8px);
-  user-select: none;
-  min-width: 40px;
-  min-height: 40px;
-}
-
-.uncategorized-filter.icon-only {
-  padding: var(--space-2);
-  justify-content: center;
-}
-
-.uncategorized-filter:hover {
-  background: linear-gradient(
-    135deg,
-    var(--state-hover-bg) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--state-hover-border);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.uncategorized-filter.active {
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  color: var(--state-active-text);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-/* Filter Badge */
-.filter-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: var(--attention-bg);
-  color: var(--attention-text);
-  border: 1px solid var(--attention-border);
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
-  min-width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  line-height: 1;
-  z-index: 10;
-  transition: all 0.2s ease;
-}
-
-.filter-badge.badge-active {
-  background: var(--state-active-bg);
-  color: var(--state-active-text);
-  border-color: var(--state-active-border);
-}
-
-.uncategorized-filter {
-  position: relative;
-}
-
-/* Quick Sort Button */
-.quick-sort-button {
-  background: linear-gradient(
-    135deg,
-    var(--attention-bg) 0%,
-    var(--attention-bg-light) 100%
-  );
-  border: 1px solid var(--attention-border);
-  color: var(--attention-text);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all 0.2s ease;
-  backdrop-filter: blur(8px);
-  user-select: none;
-  min-height: 40px;
-}
-
-.quick-sort-button:hover {
-  background: linear-gradient(
-    135deg,
-    var(--attention-hover-bg) 0%,
-    var(--attention-bg) 100%
-  );
-  border-color: var(--attention-hover-border);
-  transform: translateY(-1px);
-  box-shadow: var(--attention-glow);
-}
-
-.quick-sort-button:active {
-  transform: translateY(0);
-}
+/* Note: Uncategorized Filter CSS removed - now using unified sidebar My Tasks Smart View */
 
 /* Status Filters - Board View */
 .status-filters {

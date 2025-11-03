@@ -506,24 +506,34 @@ const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase
 // Note: Removed project filtering functions - projects now always visible regardless of task count
 // Smart filters only affect main board content, not sidebar project visibility
 
+// Helper function to filter out synthetic My Tasks project
+const filterOutSyntheticMyTasks = (project: any) => {
+  // Exclude synthetic My Tasks project with multiple criteria for robustness
+  return project.id !== '1' &&
+         project.name !== 'My Tasks' &&
+         !(project.color === '#3b82f6' && project.colorType === 'hex' && project.viewType === 'status')
+}
+
 // Computed Properties for Project Hierarchy
 // Show all root projects regardless of task count (but exclude the synthetic My Tasks project)
 const rootProjects = computed(() => {
   return taskStore.projects
     .filter(p => !p.parentId) // Only root projects
-    .filter(p => p.id !== '1' && p.name !== 'My Tasks') // Exclude synthetic My Tasks project
+    .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
     // Note: No longer filtering by active tasks - show all projects
 })
 
 const getChildren = (parentId: string) => {
   return taskStore.projects
     .filter(p => p.parentId === parentId)
+    .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
     // Note: No longer filtering by active tasks - show all child projects
 }
 
 const hasChildren = (projectId: string) => {
   return taskStore.projects
     .filter(p => p.parentId === projectId)
+    .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
     .length > 0 // Check if there are any child projects
 }
 
@@ -583,6 +593,11 @@ const weekTaskCount = computed(() => {
   const weekEndStr = weekEnd.toISOString().split('T')[0]
 
   return taskStore.tasks.filter(task => {
+    // Exclude done tasks from week count - CRITICAL FIX (matches today filter)
+    if (task.status === 'done') {
+      return false
+    }
+
     // Check instances first (new format)
     const instances = getTaskInstances(task)
     if (instances.length > 0) {
@@ -597,21 +612,34 @@ const weekTaskCount = computed(() => {
 
 // Uncategorized task count for Quick Sort badge
 const uncategorizedCount = computed(() => {
-  return taskStore.tasks.filter((task) => {
+  // Use the exact same logic as the store's uncategorized filter for consistency
+  const filteredTasks = taskStore.tasks.filter(task => {
     // Apply same filtering logic as uncategorized smart view
     // Check isUncategorized flag first
     if (task.isUncategorized === true) {
+      // Apply additional filters that happen AFTER smart view filtering in the store
+      // Apply status filter if active
+      if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
+        return false
+      }
+
+      // Apply hide done tasks filter if enabled
+      if (taskStore.hideDoneTasks && task.status === 'done') {
+        return false
+      }
+
       return true
     }
 
     // Backward compatibility: also treat tasks without proper project assignment as uncategorized
     if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
-      // Additional filtering: apply status filter if active
+      // Apply additional filters that happen AFTER smart view filtering in the store
+      // Apply status filter if active
       if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
         return false
       }
 
-      // Additional filtering: hide done tasks if enabled
+      // Apply hide done tasks filter if enabled
       if (taskStore.hideDoneTasks && task.status === 'done') {
         return false
       }
@@ -620,7 +648,12 @@ const uncategorizedCount = computed(() => {
     }
 
     return false
-  }).length
+  })
+
+  // Debug logging to verify consistency with store filtering
+  console.log(`🔧 App.uncategorizedCount: Calculated ${filteredTasks.length} uncategorized tasks (activeStatusFilter: ${taskStore.activeStatusFilter}, hideDoneTasks: ${taskStore.hideDoneTasks})`)
+
+  return filteredTasks.length
 })
 
 // Dynamic page title

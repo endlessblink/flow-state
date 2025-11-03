@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Backup Restoration Verification</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .task-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            font-size: 14px;
+        }
+        .task-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .task-meta {
+            color: #666;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .status-done { border-left: 4px solid #28a745; }
+        .status-in-progress { border-left: 4px solid #ffc107; }
+        .status-planned { border-left: 4px solid #6c757d; }
+        .priority-high { color: #dc3545; }
+        .priority-medium { color: #fd7e14; }
+        .priority-low { color: #28a745; }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        .big-button {
+            background: #28a745;
+            font-size: 16px;
+            padding: 15px 25px;
+        }
+        .big-button:hover {
+            background: #218838;
+        }
+        .count-badge {
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Pomo-Flow Backup Restoration Verification</h1>
+
+        <div class="success">
+            <strong>✅ RESTORATION INFRASTRUCTURE READY</strong><br>
+            Server: http://localhost:5546<br>
+            Backup File: ✅ 22 tasks found<br>
+            Restoration Page: ✅ Functional
+        </div>
+
+        <button class="big-button" onclick="performRestoration()">
+            🔄 STEP 1: Restore Backup Now
+        </button>
+        <button class="big-button" onclick="openMainApp()">
+            📱 STEP 2: Open Pomo-Flow App
+        </button>
+
+        <div id="status"></div>
+        <div id="tasks"></div>
+    </div>
+
+    <script>
+        async function performRestoration() {
+            const statusDiv = document.getElementById('status');
+            const tasksDiv = document.getElementById('tasks');
+
+            statusDiv.innerHTML = '<div class="warning">🔄 Starting backup restoration...</div>';
+
+            try {
+                // Step 1: Fetch backup
+                const response = await fetch('/user-backup.json');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch backup file');
+                }
+
+                const backup = await response.json();
+                const tasks = backup.data;
+
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Successfully fetched backup file<br>
+                        📊 Found <span class="count-badge">${tasks.length}</span> tasks
+                    </div>
+                `;
+
+                // Step 2: Store in localStorage
+                localStorage.setItem('pomo-flow-user-backup', JSON.stringify(tasks));
+
+                statusDiv.innerHTML += `
+                    <div class="success">
+                        💾 Tasks stored in localStorage successfully
+                    </div>
+                `;
+
+                // Step 3: Display task breakdown
+                const doneTasks = tasks.filter(t => t.status === 'done');
+                const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
+                const plannedTasks = tasks.filter(t => t.status === 'planned');
+
+                statusDiv.innerHTML += `
+                    <div style="margin: 20px 0;">
+                        <h3>📈 Task Status Breakdown:</h3>
+                        <ul>
+                            <li>✅ Done: <strong>${doneTasks.length}</strong> tasks</li>
+                            <li>🔄 In Progress: <strong>${inProgressTasks.length}</strong> tasks</li>
+                            <li>📋 Planned: <strong>${plannedTasks.length}</strong> tasks</li>
+                        </ul>
+                    </div>
+                `;
+
+                // Step 4: Check for expected tasks
+                const expectedTasks = ['Test Task', 'sdfgsdfg', 'Implement enhanced resize handles'];
+                const foundExpected = expectedTasks.filter(expected =>
+                    tasks.some(task => task.title.includes(expected))
+                );
+
+                if (foundExpected.length === expectedTasks.length) {
+                    statusDiv.innerHTML += `
+                        <div class="success">
+                            ✅ All expected tasks found: ${foundExpected.join(', ')}
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML += `
+                        <div class="warning">
+                            ⚠️ Expected tasks found: ${foundExpected.length}/${expectedTasks.length}
+                        </div>
+                    `;
+                }
+
+                // Step 5: Display sample tasks
+                displayTasks(tasks.slice(0, 12)); // Show first 12 tasks
+
+                statusDiv.innerHTML += `
+                    <div class="success" style="margin-top: 20px;">
+                        <strong>🎉 RESTORATION COMPLETE!</strong><br>
+                        ✅ ${tasks.length} tasks ready to be loaded in Pomo-Flow<br>
+                        📱 Open the main app to see your restored tasks
+                    </div>
+                `;
+
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="warning">
+                        ❌ Error during restoration: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function displayTasks(tasks) {
+            const tasksDiv = document.getElementById('tasks');
+
+            const taskGrid = tasks.map(task => `
+                <div class="task-card status-${task.status}">
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-meta">
+                        Status: ${task.status}<br>
+                        Priority: ${task.priority || 'none'}<br>
+                        ${task.scheduledDate ? `Scheduled: ${task.scheduledDate} ${task.scheduledTime || ''}` : 'Not scheduled'}<br>
+                        ID: ${task.id}
+                    </div>
+                </div>
+            `).join('');
+
+            tasksDiv.innerHTML = `
+                <h3>📋 Restored Tasks (Sample):</h3>
+                <div class="task-grid">${taskGrid}</div>
+                ${tasks.length > 12 ? `<p><em>Showing 12 of ${tasks.length} tasks...</em></p>` : ''}
+            `;
+        }
+
+        function openMainApp() {
+            window.open('http://localhost:5546', '_blank');
+        }
+
+        // Auto-start restoration when page loads
+        window.addEventListener('load', () => {
+            setTimeout(performRestoration, 1000);
+        });
+    </script>
+</body>
+</html>

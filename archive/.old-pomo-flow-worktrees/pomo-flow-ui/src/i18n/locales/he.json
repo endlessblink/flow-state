@@ -1,0 +1,62 @@
+{
+  "common": {
+    "app_name": "بومو-فلو",
+    "tasks": "المهام",
+    "projects": "المشاريع",
+    "settings": "الإعدادات",
+    "search": "بحث",
+    "add": "إضافة",
+    "edit": "تحرير",
+    "delete": "حذف",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد"
+  },
+  "timer": {
+    "start": "ابدأ",
+    "pause": "إيقاف مؤقت",
+    "stop": "إيقاف",
+    "work_session": "جلسة عمل",
+    "short_break": "استراحة قصيرة",
+    "long_break": "استراحة طويلة"
+  },
+  "views": {
+    "board": "اللوحة",
+    "calendar": "التقويم",
+    "canvas": "القماش",
+    "all_tasks": "جميع المهام"
+  },
+  "smart_views": {
+    "today": "اليوم",
+    "weekend": "نهاية هذا الأسبوع"
+  },
+  "task": {
+    "title": "عنوان المهمة",
+    "description": "الوصف",
+    "status": "الحالة",
+    "priority": "الأولوية",
+    "due_date": "تاريخ الاستحقاق",
+    "completed": "مكتملة",
+    "in_progress": "قيد التنفيذ",
+    "planned": "مخطط",
+    "create_task": "إنشاء مهمة",
+    "add_task": "أضف مهمة...",
+    "no_tasks": "لم يتم العثور على مهام",
+    "create_first": "أنشئ مهمتك الأولى"
+  },
+  "project": {
+    "create": "إنشاء مشروع",
+    "edit": "تحرير المشروع",
+    "delete": "حذف المشروع",
+    "duplicate": "تكرار المشروع"
+  },
+  "settings": {
+    "general": "عام",
+    "appearance": "المظهر",
+    "language": "اللغة",
+    "direction": "اتجاه النص",
+    "ltr": "من اليسار إلى اليمين (LTR)",
+    "rtl": "من اليمين إلى اليسار (RTL)",
+    "auto": "اكتشاف تلقائي"
+  }
+}

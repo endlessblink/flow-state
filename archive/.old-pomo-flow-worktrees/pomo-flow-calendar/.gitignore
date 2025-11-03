@@ -1,0 +1,25 @@
+node_modules
+dist
+
+*storybook.log
+storybook-static
+
+# Test and debug artifacts
+docs/testing/scripts/
+docs/testing/screenshots/
+testing-artifacts/screenshots/
+testing-artifacts/manual-tests/
+
+# Debug documentation
+docs/debugging/
+docs/guides/
+
+# Temporary test files in root (prevent regression)
+test-*.js
+test-*.cjs
+test-*.spec.ts
+check-*.mjs
+
+# Backup files
+*-backup-*.md
+*.bak

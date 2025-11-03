@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Undo/Redo Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+        .expected-result {
+            background: #e8f5e8;
+            border-left-color: #28a745;
+        }
+        .error-result {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .iframe-container {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        .console-output {
+            background: #1e1e1e;
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Canvas Undo/Redo Manual Test</h1>
+        <p>This test will guide you through verifying that the undo/redo functionality works correctly after our fixes.</p>
+
+        <div class="status info">
+            <strong>📋 Instructions:</strong> Follow each step below and verify the expected results. Check the browser console (F12) for detailed debugging logs.
+        </div>
+
+        <div class="iframe-container">
+            <iframe src="http://localhost:5550/#/canvas" id="testFrame"></iframe>
+        </div>
+
+        <div class="console-output" id="consoleOutput">
+            <div style="color: #888;">Console output will appear here...</div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 1: Create Test Tasks</h3>
+            <p><strong>Action:</strong> Click on the canvas 3 times in different locations to create 3 tasks.</p>
+            <p><strong>Expected:</strong> A quick task modal should appear each time. Fill in a title (e.g., "Test Task 1", "Test Task 2", "Test Task 3") and click create.</p>
+            <p><strong>Verify:</strong> You should see 3 cyan circles on the canvas.</p>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 2: Test Delete Key</h3>
+            <p><strong>Action:</strong> Click on one task to select it, then press the <kbd>Delete</kbd> key.</p>
+            <p><strong>Expected:</strong> The task should disappear from canvas.</p>
+            <p><strong>Console:</strong> Look for logs like:
+                <br>• <code>📤 CanvasView: Delete detected for task: [id] - moving to inbox with undo support</code>
+                <br>• <code>💾 saveState called for: Update task "..."</code>
+                <br>• <code>✅ State saved successfully</code>
+            </p>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 3: Test Undo (Cmd+Z)</h3>
+            <p><strong>Action:</strong> Press <kbd>Cmd+Z</kbd> (or <kbd>Ctrl+Z</kbd> on Windows).</p>
+            <p><strong>Expected:</strong> The deleted task should reappear on the canvas in its original position.</p>
+            <p><strong>Console:</strong> Look for logs like:
+                <br>• <code>🎹 Ctrl+Z keyboard shortcut detected in App.vue</code>
+                <br>• <code>🔄 UndoRedoStore.undo() called</code>
+                <br>• <code>↩️ DeleteTaskCommand.undo() called</code>
+            </p>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 4: Test Redo (Cmd+Shift+Z)</h3>
+            <p><strong>Action:</strong> Press <kbd>Cmd+Shift+Z</kbd> (or <kbd>Ctrl+Y</kbd> on Windows).</p>
+            <p><strong>Expected:</strong> The task should disappear again (redo the deletion).</p>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 5: Test Shift+Delete</h3>
+            <p><strong>Action:</strong> Select another task and press <kbd>Shift+Delete</kbd>.</p>
+            <p><strong>Expected:</strong> The task should be permanently deleted.</p>
+            <p><strong>Console:</strong> Look for logs like:
+                <br>• <code>🗑️ CanvasView: Shift+Delete detected for task: [id]</code>
+                <br>• <code>✅ deleteTask completed successfully</code>
+            </p>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 6: Test Backspace</h3>
+            <p><strong>Action:</strong> Select a task and press <kbd>Backspace</kbd>.</p>
+            <p><strong>Expected:</strong> Same behavior as Delete key - task moves to inbox.</p>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 7: Test Multiple Undos</h3>
+            <p><strong>Action:</strong> Delete multiple tasks, then press <kbd>Cmd+Z</kbd> multiple times.</p>
+            <p><strong>Expected:</strong> Each press should restore one deleted task in reverse order.</p>
+        </div>
+
+        <div id="testResults">
+            <h3>🎯 Test Results</h3>
+            <div id="resultsContent">
+                <p>Complete the tests above and check the results.</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 8px;">
+            <h3>🔍 Debugging Information</h3>
+            <p>If tests fail, check for these error patterns in console:</p>
+            <ul>
+                <li><strong>JSON Errors:</strong> <code>❌ Failed to serialize data</code> → JSON serialization issue</li>
+                <li><strong>Property Access:</strong> <code>undoRedo.undoCount is undefined</code> → Computed property access issue</li>
+                <li><strong>No Commands:</strong> No <code>⚡ UndoRedoStore.executeCommand()</code> logs → Commands not being created</li>
+                <li><strong>No Undo:</strong> No <code>🔄 UndoRedoStore.undo()</code> logs → Undo not triggered</li>
+            </ul>
+        </div>
+
+        <button onclick="clearConsole()">Clear Console</button>
+        <button onclick="refreshFrame()">Refresh Canvas</button>
+        <button onclick="showTestResults()">Show Results Summary</button>
+    </div>
+
+    <script>
+        let consoleMessages = [];
+
+        // Override console.log to capture messages
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        function logToPage(type, ...args) {
+            const message = args.join(' ');
+            consoleMessages.push({ type, message, timestamp: new Date().toLocaleTimeString() });
+            updateConsoleOutput();
+
+            // Call original console method
+            if (type === 'error') originalError(...args);
+            else if (type === 'warn') originalWarn(...args);
+            else originalLog(...args);
+        }
+
+        console.log = (...args) => logToPage('log', ...args);
+        console.error = (...args) => logToPage('error', ...args);
+        console.warn = (...args) => logToPage('warn', ...args);
+
+        function updateConsoleOutput() {
+            const output = document.getElementById('consoleOutput');
+            const html = consoleMessages.slice(-20).map(msg => {
+                let color = '#fff';
+                if (msg.type === 'error') color = '#ff6b6b';
+                else if (msg.type === 'warn') color = '#feca57';
+                else if (msg.message.includes('✅')) color = '#48dbfb';
+                else if (msg.message.includes('❌')) color = '#ff6b6b';
+                else if (msg.message.includes('💾')) color = '#feca57';
+                else if (msg.message.includes('🔄')) color = '#48dbfb';
+                else if (msg.message.includes('↩️')) color = '#1dd1a1';
+
+                return `<div style="color: ${color}; margin: 2px 0;">[${msg.timestamp}] ${msg.message}</div>`;
+            }).join('');
+
+            output.innerHTML = html || '<div style="color: #888;">Console output will appear here...</div>';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearConsole() {
+            consoleMessages = [];
+            updateConsoleOutput();
+        }
+
+        function refreshFrame() {
+            document.getElementById('testFrame').src = document.getElementById('testFrame').src;
+        }
+
+        function showTestResults() {
+            const results = {
+                jsonErrors: consoleMessages.filter(m => m.message.includes('Failed to serialize data')),
+                propertyErrors: consoleMessages.filter(m => m.message.includes('undoCount is undefined')),
+                commandsCreated: consoleMessages.filter(m => m.message.includes('executeCommand')),
+                undoTriggered: consoleMessages.filter(m => m.message.includes('UndoRedoStore.undo')),
+                stateSaved: consoleMessages.filter(m => m.message.includes('State saved successfully')),
+                deleteDetected: consoleMessages.filter(m => m.message.includes('Delete detected')),
+                shiftDeleteDetected: consoleMessages.filter(m => m.message.includes('Shift+Delete detected')),
+                undoCompleted: consoleMessages.filter(m => m.message.includes('Command.undo() completed'))
+            };
+
+            let html = '<h4>📊 Test Results Summary</h4>';
+
+            if (results.jsonErrors.length > 0) {
+                html += '<div class="status error">❌ JSON Serialization Errors Found (' + results.jsonErrors.length + ')</div>';
+            } else {
+                html += '<div class="status success">✅ No JSON Serialization Errors</div>';
+            }
+
+            if (results.propertyErrors.length > 0) {
+                html += '<div class="status error">❌ Property Access Errors Found (' + results.propertyErrors.length + ')</div>';
+            } else {
+                html += '<div class="status success">✅ No Property Access Errors</div>';
+            }
+
+            if (results.commandsCreated.length > 0) {
+                html += '<div class="status success">✅ Commands Created (' + results.commandsCreated.length + ')</div>';
+            } else {
+                html += '<div class="status error">❌ No Commands Created</div>';
+            }
+
+            if (results.stateSaved.length > 0) {
+                html += '<div class="status success">✅ State Saved Successfully (' + results.stateSaved.length + ')</div>';
+            } else {
+                html += '<div class="status error">❌ State Not Saved</div>';
+            }
+
+            if (results.undoTriggered.length > 0) {
+                html += '<div class="status success">✅ Undo Triggered (' + results.undoTriggered.length + ')</div>';
+            } else {
+                html += '<div class="status info">ℹ️ Undo Not Yet Triggered (Press Cmd+Z to test)</div>';
+            }
+
+            if (results.undoCompleted.length > 0) {
+                html += '<div class="status success">✅ Undo Completed (' + results.undoCompleted.length + ')</div>';
+            } else {
+                html += '<div class="status info">ℹ️ Undo Not Yet Completed</div>';
+            }
+
+            html += '<h4>🔍 Detailed Analysis</h4>';
+            html += '<ul>';
+            html += '<li>Delete operations detected: ' + results.deleteDetected.length + '</li>';
+            html += '<li>Shift+Delete operations detected: ' + results.shiftDeleteDetected.length + '</li>';
+            html += '<li>Total console messages: ' + consoleMessages.length + '</li>';
+            html += '</ul>';
+
+            document.getElementById('resultsContent').innerHTML = html;
+        }
+
+        // Auto-refresh results every 5 seconds
+        setInterval(showTestResults, 5000);
+    </script>
+</body>
+</html>

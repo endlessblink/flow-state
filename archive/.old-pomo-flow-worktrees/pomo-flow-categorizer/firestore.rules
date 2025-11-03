@@ -1,0 +1,101 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ======================
+    // Helper Functions
+    // ======================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if document being created/updated has correct userId
+    function hasValidUserId() {
+      return request.resource.data.userId == request.auth.uid;
+    }
+
+    // Validate timestamps are set correctly
+    function hasValidTimestamps() {
+      return request.resource.data.updatedAt == request.time;
+    }
+
+    // ======================
+    // User Documents
+    // ======================
+
+    match /users/{userId} {
+      // Users can read and write their own user document
+      allow read, write: if isOwner(userId);
+
+      // ======================
+      // Tasks Subcollection
+      // ======================
+
+      match /tasks/{taskId} {
+        // Users can only access their own tasks
+        allow read: if isOwner(userId);
+
+        // Users can create tasks (with proper userId)
+        allow create: if isOwner(userId) && hasValidUserId();
+
+        // Users can update their own tasks
+        allow update: if isOwner(userId) && hasValidUserId();
+
+        // Users can delete their own tasks
+        allow delete: if isOwner(userId);
+      }
+
+      // ======================
+      // Projects Subcollection
+      // ======================
+
+      match /projects/{projectId} {
+        // Users can only access their own projects
+        allow read: if isOwner(userId);
+
+        // Users can create projects
+        allow create: if isOwner(userId) && hasValidUserId();
+
+        // Users can update their own projects
+        allow update: if isOwner(userId) && hasValidUserId();
+
+        // Users can delete their own projects
+        allow delete: if isOwner(userId);
+      }
+
+      // ======================
+      // Settings Subcollection
+      // ======================
+
+      match /settings/{settingId} {
+        // Users can only access their own settings
+        allow read: if isOwner(userId);
+
+        // Users can create settings
+        allow create: if isOwner(userId) && hasValidUserId();
+
+        // Users can update their own settings
+        allow update: if isOwner(userId);
+
+        // Users can delete their own settings
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // ======================
+    // Deny all other access
+    // ======================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

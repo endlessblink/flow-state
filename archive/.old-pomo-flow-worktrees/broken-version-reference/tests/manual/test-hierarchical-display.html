@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hierarchical Task Display Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 20px;
+        }
+
+        .test-section:last-child {
+            border-bottom: none;
+        }
+
+        h1 {
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #334155;
+            margin-bottom: 15px;
+        }
+
+        .instructions {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .status.error {
+            background: #fecaca;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .test-result {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+        }
+
+        .btn.secondary {
+            background: #64748b;
+        }
+
+        .btn.secondary:hover {
+            background: #475569;
+        }
+
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Hierarchical Task Display Test</h1>
+
+        <div class="test-section">
+            <h2>📋 Test Overview</h2>
+            <div class="instructions">
+                <p><strong>Objective:</strong> Test the hierarchical task display functionality in the KanbanSwimlane component.</p>
+                <p><strong>What was implemented:</strong></p>
+                <ul>
+                    <li>✅ Updated TaskCard.vue to accept hierarchical props (isParent, isExpanded, subtaskCount, isNested)</li>
+                    <li>✅ Added expand/collapse chevron buttons for parent tasks</li>
+                    <li>✅ Added subtask count badges</li>
+                    <li>✅ Added visual styling for nested tasks (indentation, opacity)</li>
+                    <li>✅ Added toggle-expand event emission</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🚀 Quick Test</h2>
+            <div id="testStatus" class="status warning">
+                Ready to test. Click the buttons below to run tests.
+            </div>
+
+            <button class="btn" onclick="runBasicTest()">Run Basic Test</button>
+            <button class="btn secondary" onclick="loadTestTasks()">Load Test Tasks</button>
+            <button class="btn secondary" onclick="openAppWindow()">Open App Window</button>
+
+            <div id="testResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🖥️ Application Window</h2>
+            <iframe id="appFrame" src="http://localhost:5546/" style="display: none;"></iframe>
+            <div id="framePlaceholder" style="padding: 40px; text-align: center; color: #64748b; background: #f8fafc; border-radius: 6px;">
+                Click "Open App Window" to load the application
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Manual Testing Instructions</h2>
+            <div class="instructions">
+                <p><strong>To test manually in the application:</strong></p>
+                <ol>
+                    <li>Navigate to <a href="http://localhost:5546/" target="_blank">http://localhost:5546/</a></li>
+                    <li>Open browser console (F12)</li>
+                    <li>Paste and run the test script from <code>test-hierarchical-tasks.js</code></li>
+                    <li>Go to Board view</li>
+                    <li>Look for tasks with expand/collapse chevrons</li>
+                    <li>Test clicking on chevrons to expand/collapse subtasks</li>
+                    <li>Verify visual hierarchy is working</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testWindow = null;
+
+        function updateStatus(message, type = 'success') {
+            const status = document.getElementById('testStatus');
+            status.className = `status ${type}`;
+            status.textContent = message;
+        }
+
+        function showResult(result) {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.textContent = result;
+            resultDiv.style.display = 'block';
+        }
+
+        function runBasicTest() {
+            updateStatus('Running basic connectivity test...', 'warning');
+
+            // Test if the application is accessible
+            fetch('http://localhost:5546/')
+                .then(response => {
+                    if (response.ok) {
+                        updateStatus('✅ Application is accessible at localhost:5546', 'success');
+                        showResult('Basic connectivity test passed!\n\nNext steps:\n1. Click "Load Test Tasks" to create hierarchical tasks\n2. Click "Open App Window" to interact with the app\n3. Look for expand/collapse chevrons on parent tasks');
+                    } else {
+                        updateStatus('❌ Application responded with error', 'error');
+                        showResult(`Error: ${response.status} ${response.statusText}`);
+                    }
+                })
+                .catch(error => {
+                    updateStatus('❌ Cannot connect to application', 'error');
+                    showResult(`Connection error: ${error.message}\n\nMake sure the application is running on localhost:5546`);
+                });
+        }
+
+        function loadTestTasks() {
+            updateStatus('Loading test tasks...', 'warning');
+
+            // First, we need to inject the test script into the application
+            const frame = document.getElementById('appFrame');
+            if (frame.style.display === 'none') {
+                updateStatus('❌ Please open the application window first', 'error');
+                return;
+            }
+
+            try {
+                // Load the test script content
+                fetch('/test-hierarchical-tasks.js')
+                    .then(response => response.text())
+                    .then(scriptContent => {
+                        // Execute the script in the iframe context
+                        frame.contentWindow.eval(scriptContent);
+
+                        // Execute the function to create test tasks
+                        frame.contentWindow.eval('createTestHierarchicalTasks()');
+
+                        updateStatus('✅ Test tasks loaded successfully!', 'success');
+                        showResult('Hierarchical test tasks have been created!\n\nYou should now see:\n• Parent tasks with expand/collapse chevrons\n• Subtask count badges\n• Nested tasks indented under parents\n\nTry navigating to the Board view to see the hierarchy.');
+                    })
+                    .catch(error => {
+                        updateStatus('⚠️ Could not load test script automatically', 'warning');
+                        showResult(`Manual loading required:\n\n1. Open the application in a new tab\n2. Open browser console\n3. Copy and paste the content from test-hierarchical-tasks.js\n4. Run createTestHierarchicalTasks()\n\nError: ${error.message}`);
+                    });
+            } catch (error) {
+                updateStatus('⚠️ Could not load test tasks automatically', 'warning');
+                showResult('Please load test tasks manually using the browser console.');
+            }
+        }
+
+        function openAppWindow() {
+            const frame = document.getElementById('appFrame');
+            const placeholder = document.getElementById('framePlaceholder');
+
+            if (frame.style.display === 'none') {
+                frame.style.display = 'block';
+                placeholder.style.display = 'none';
+                updateStatus('✅ Application window opened', 'success');
+                showResult('Application loaded in the frame above.\n\nYou can now:\n• Navigate to Board view\n• Load test tasks\n• Test hierarchical functionality');
+            } else {
+                frame.style.display = 'none';
+                placeholder.style.display = 'block';
+                updateStatus('Application window closed', 'warning');
+            }
+        }
+
+        // Run basic test on page load
+        window.addEventListener('load', () => {
+            setTimeout(runBasicTest, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1582,7 +1582,7 @@ export const useTaskStore = defineStore('tasks', () => {
     activeSmartView.value = null // Clear smart view when selecting a project
   }
 
-  const setSmartView = (view: 'today' | 'week' | 'uncategorized' | null) => {
+  const setSmartView = (view: 'today' | 'week' | 'uncategorized' | 'above_my_tasks' | null) => {
     activeSmartView.value = view
     if (view) {
       activeProjectId.value = null // Clear project filter when using smart view

@@ -266,7 +266,7 @@
           <router-link to="/" class="view-tab" active-class="active">Board</router-link>
           <router-link to="/calendar" class="view-tab" active-class="active">Calendar</router-link>
           <router-link to="/canvas" class="view-tab" active-class="active">Canvas</router-link>
-          <router-link to="/tasks" class="view-tab" active-class="active">All Tasks</router-link>
+          <router-link to="/catalog" class="view-tab" active-class="active">Catalog</router-link>
           <router-link to="/quick-sort" class="view-tab" active-class="active">
             Quick Sort
             <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
@@ -636,41 +636,29 @@ const aboveMyTasksCount = computed(() => {
 const uncategorizedCount = computed(() => {
   // Use the exact same logic as the store's uncategorized filter for consistency
   const filteredTasks = taskStore.tasks.filter(task => {
-    // CRITICAL FIX: Counters should NEVER show done tasks, regardless of hideDoneTasks setting
-    if (task.status === 'done') {
-      return false
-    }
-
-    // Apply same filtering logic as uncategorized smart view
+    // Apply same filtering logic as uncategorized smart view in taskStore.filteredTasks
     // Check isUncategorized flag first
     if (task.isUncategorized === true) {
-      // Apply additional filters that happen AFTER smart view filtering in the store
-      // Apply status filter if active
-      if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
-        return false
-      }
-
       return true
     }
 
     // Backward compatibility: also treat tasks without proper project assignment as uncategorized
     if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
-      // Apply additional filters that happen AFTER smart view filtering in the store
-      // Apply status filter if active
-      if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
-        return false
-      }
-
       return true
     }
 
     return false
   })
 
-  // Debug logging to verify consistency with store filtering
-  console.log(`🔧 App.uncategorizedCount: Calculated ${filteredTasks.length} uncategorized tasks (activeStatusFilter: ${taskStore.activeStatusFilter})`)
+  // Apply the same hideDoneTasks logic as the task store
+  const finalCount = taskStore.hideDoneTasks
+    ? filteredTasks.filter(task => task.status !== 'done').length
+    : filteredTasks.length
 
-  return filteredTasks.length
+  // Debug logging to verify consistency with store filtering
+  console.log(`🔧 App.uncategorizedCount: Calculated ${finalCount} uncategorized tasks (hideDoneTasks: ${taskStore.hideDoneTasks})`)
+
+  return finalCount
 })
 
 // Dynamic page title
@@ -771,7 +759,7 @@ const selectProject = (project: Project) => {
 }
 
 
-const selectSmartView = (view: 'today' | 'week' | 'uncategorized') => {
+const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'above_my_tasks') => {
   taskStore.setSmartView(view)
 }
 

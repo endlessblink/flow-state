@@ -136,7 +136,7 @@ const contextMenuTask = ref<Task | null>(null)
 const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
 
-// Computed Tasks - Filter for AllTasksView
+// Computed Tasks - Filter for CatalogView
 // Uses taskStore.filteredTasks directly when smart views are active to avoid double filtering
 const filteredTasks = computed(() => {
   try {
@@ -288,7 +288,7 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
     console.log('🔧 CatalogView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
     console.log('🔧 CatalogView: Method call successful')
   } catch (error) {
-    console.error('🔧 AllTasksView: Error calling toggleHideDoneTasks:', error)
+    console.error('🔧 CatalogView: Error calling toggleHideDoneTasks:', error)
   }
 }
 </script>

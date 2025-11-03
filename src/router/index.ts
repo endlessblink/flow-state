@@ -6,7 +6,7 @@ import BoardView from '@/views/BoardView.vue'
 import CalendarView from '@/views/CalendarView.vue'
 import CalendarViewVueCal from '@/views/CalendarViewVueCal.vue'
 import CanvasView from '@/views/CanvasView.vue'
-import AllTasksView from '@/views/AllTasksView.vue'
+import CatalogView from '@/views/CatalogView.vue'
 import FocusView from '@/views/FocusView.vue'
 import QuickSortView from '@/views/QuickSortView.vue'
 
@@ -45,9 +45,9 @@ const router = createRouter({
       }
     },
     {
-      path: '/tasks',
-      name: 'all-tasks',
-      component: AllTasksView,
+      path: '/catalog',
+      name: 'catalog',
+      component: CatalogView,
       meta: { requiresAuth: true }
     },
     {

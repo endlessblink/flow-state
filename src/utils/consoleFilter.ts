@@ -9,8 +9,7 @@
 
 // Helper function to check if task diagnostics should be logged
 export const shouldLogTaskDiagnostics = () => {
-  return import.meta.env.DEV &&
-         localStorage.getItem('DEV_LOG_TASK_DIAGNOSTICS') === 'true'
+  return import.meta.env.DEV // Always enable in development for debugging kanban issue
 }
 
 interface LogToggles {

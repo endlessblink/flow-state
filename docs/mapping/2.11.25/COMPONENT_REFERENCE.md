@@ -38,7 +38,7 @@ App.vue (Root Component)
     ├── BoardView.vue (Kanban Board)
     ├── CalendarView.vue (Calendar Scheduling)
     ├── CanvasView.vue (Visual Canvas)
-    ├── AllTasksView.vue (Task List/Table)
+    ├── CatalogView.vue (Master Task Catalog - RENAMED from AllTasksView)
     ├── QuickSortView.vue (Rapid Sorting)
     └── FocusView.vue (Focus Mode)
 ```
@@ -315,9 +315,9 @@ CanvasView.vue
 
 ---
 
-### 4. AllTasksView.vue - Master Task List
+### 4. CatalogView.vue - Master Task Catalog (RENAMED from AllTasksView)
 
-**Primary Function**: Comprehensive task management with list and table display modes
+**Primary Function**: Enhanced comprehensive task management with list and table display modes
 
 **Key Features**:
 - Dual display modes (list vs table)
@@ -325,10 +325,13 @@ CanvasView.vue
 - Batch operations with multi-select
 - Task hierarchy with parent-child relationships
 - Inline editing and export functionality
+- **Enhanced Smart Views**: Integrated "above_my_tasks" smart view for task organization
+- **Counter Consistency**: Resolved counter vs display mismatches across all views
+- **Hide/Show Done Tasks**: Integrated toggle for completed task visibility
 
 **Component Structure**:
 ```
-AllTasksView.vue
+CatalogView.vue (RENAMED from AllTasksView)
 ├── ViewControls.vue
 │   ├── ViewModeToggle.vue
 │   │   ├── ListViewButton.vue
@@ -339,7 +342,8 @@ AllTasksView.vue
 │   └── FilterControls.vue
 │       ├── FilterDropdown.vue
 │       ├── SearchInput.vue
-│       └── ClearFiltersButton.vue
+│       ├── ClearFiltersButton.vue
+│       └── HideDoneTasksToggle.vue (NEW)
 ├── TaskList.vue (List Mode)
 │   ├── ListHeader.vue
 │   │   ├── ColumnHeaders.vue
@@ -938,7 +942,7 @@ const projectGroups = computed(() => {
 │   │   │   └── TaskNode.vue
 │   │   ├── MultiSelectionOverlay.vue
 │   │   └── InboxPanel.vue
-│   ├── **AllTasksView.vue**
+│   ├── **CatalogView.vue** (RENAMED from AllTasksView.vue)
 │   │   ├── TaskList.vue
 │   │   │   └── TaskRow.vue
 │   │   ├── TaskTable.vue
@@ -1631,7 +1635,7 @@ This consolidated component reference provides a comprehensive overview of the P
 
 ---
 
-**Last Updated**: November 2, 2025
+**Last Updated**: November 3, 2025
 **Architecture Version**: Vue 3.4.0, Composition API, TypeScript
 **Document Consolidation**: Merged from 4 separate component documentation files
-**Recent Updates**: Added BaseNavItem, ProjectFilterDropdown, TaskList components; Enhanced error handling patterns; Integration with useUncategorizedTasks and useHorizontalDragScroll composables
+**Recent Updates**: Renamed AllTasksView to CatalogView with enhanced functionality; Added BaseNavItem, ProjectFilterDropdown, TaskList components; Enhanced error handling patterns; Integration with useUncategorizedTasks and useHorizontalDragScroll composables; Updated routing structure and smart view filtering

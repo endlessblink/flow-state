@@ -14,6 +14,7 @@ export interface CalendarEvent {
   color: string
   column: number
   totalColumns: number
+  isUnscheduled?: boolean // Flag to distinguish unscheduled inbox tasks
 }
 
 /**

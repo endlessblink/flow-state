@@ -1223,6 +1223,174 @@ export const useTaskStore = defineStore('tasks', () => {
     tasks.value.reduce((sum, task) => sum + task.completedPomodoros, 0)
   )
 
+  // Calendar-aware task filtering - includes both scheduled and unscheduled inbox tasks
+  const calendarFilteredTasks = computed(() => {
+    // Safety check: ensure tasks array exists and is iterable
+    if (!tasks.value || !Array.isArray(tasks.value)) {
+      console.warn('TaskStore.calendarFilteredTasks: tasks array not initialized, returning empty array')
+      return []
+    }
+
+    if (shouldLogTaskDiagnostics()) {
+      console.log('🚨 TaskStore.calendarFilteredTasks: === COMPUTING CALENDAR FILTERED TASKS ===')
+      console.log('🚨 TaskStore.calendarFilteredTasks: Total tasks available:', tasks.value.length)
+      console.log('🚨 TaskStore.calendarFilteredTasks: activeProjectId:', activeProjectId.value)
+      console.log('🚨 TaskStore.calendarFilteredTasks: activeSmartView:', activeSmartView.value)
+      console.log('🚨 TaskStore.calendarFilteredTasks: activeStatusFilter:', activeStatusFilter.value)
+    }
+
+    // Use the same base filtering as filteredTasks to maintain consistency
+    let filtered = tasks.value
+
+    // Apply project filter first (including child projects) - same as filteredTasks
+    if (activeProjectId.value) {
+      const getChildProjectIds = (projectId: string): string[] => {
+        const ids = [projectId]
+        const childProjects = projects.value.filter(p => p.parentId === projectId)
+        childProjects.forEach(child => {
+          ids.push(...getChildProjectIds(child.id))
+        })
+        return ids
+      }
+
+      const projectIds = getChildProjectIds(activeProjectId.value)
+      filtered = filtered.filter(task => projectIds.includes(task.projectId))
+    }
+
+    // Apply smart view filter (same logic as filteredTasks)
+    if (activeSmartView.value === 'today') {
+      const todayStr = new Date().toISOString().split('T')[0]
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      filtered = filtered.filter(task => {
+        // Exclude done tasks from today filter by default
+        if (task.status === 'done') return false
+
+        // Check instances first (new format) - tasks scheduled for today
+        try {
+          const instances = getTaskInstances(task)
+          if (Array.isArray(instances) && instances.length > 0) {
+            if (instances.some(inst => {
+              if (!inst || !inst.scheduledDate) return false
+              const instanceDate = new Date(inst.scheduledDate)
+              if (!isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr) {
+                return true
+              }
+              return false
+            })) return true
+          }
+        } catch (error) {
+          console.warn('TaskStore.calendarFilteredTasks: Error getting task instances in today filter:', error, task)
+        }
+
+        // Fallback to legacy scheduledDate - tasks scheduled for today
+        if (task.scheduledDate) {
+          try {
+            const scheduledDate = new Date(task.scheduledDate)
+            if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) {
+              return true
+            }
+          } catch (error) {
+            console.warn('TaskStore.calendarFilteredTasks: Error processing scheduledDate in today filter:', error, task.scheduledDate)
+          }
+        }
+
+        // Tasks due today
+        if (task.dueDate) {
+          try {
+            const taskDueDate = new Date(task.dueDate)
+            if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) {
+              return true
+            }
+          } catch (error) {
+            console.warn('TaskStore.calendarFilteredTasks: Error processing dueDate in today filter:', error, task.dueDate)
+          }
+        }
+
+        // Tasks currently in progress should be included in today filter
+        if (task.status === 'in_progress') {
+          return true
+        }
+
+        // CALENDAR-SPECIFIC: Include unscheduled inbox tasks for today
+        const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
+        const hasInstances = task.instances && task.instances.length > 0
+        const hasLegacySchedule = task.scheduledDate && task.scheduledTime
+
+        if (!hasInstances && !hasLegacySchedule && isInInbox) {
+          console.log(`🚨 TaskStore.calendarFilteredTasks: Including unscheduled inbox task "${task.title}" for today`)
+          return true
+        }
+
+        return false
+      })
+
+    } else if (activeSmartView.value === 'week') {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayStr = today.toISOString().split('T')[0]
+      const weekEnd = new Date(today)
+      weekEnd.setDate(weekEnd.getDate() + 7)
+      const weekEndStr = weekEnd.toISOString().split('T')[0]
+
+      filtered = filtered.filter(task => {
+        // Check instances first (new format)
+        const instances = getTaskInstances(task)
+        if (instances.length > 0) {
+          return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
+        }
+        // Fallback to legacy scheduledDate
+        if (!task.scheduledDate) return false
+        return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+      })
+
+    } else if (activeSmartView.value === 'uncategorized') {
+      filtered = filtered.filter(task => {
+        // New logic: check isUncategorized flag first
+        if (task.isUncategorized === true) {
+          return true
+        }
+
+        // Fallback: check if project is undefined or null
+        if (!task.projectId || task.projectId === '1') {
+          return true
+        }
+
+        return false
+      })
+
+    } else if (activeSmartView.value === 'above_my_tasks') {
+      const aboveMyTasksProject = projects.value.find(p => p.name?.toLowerCase().includes('above my tasks'))
+      if (aboveMyTasksProject) {
+        const allChildIds = getChildProjects(aboveMyTasksProject.id)
+        allChildIds.push(aboveMyTasksProject.id)
+
+        filtered = filtered.filter(task => allChildIds.includes(task.projectId))
+      }
+    }
+
+    // Apply status filter if set
+    if (activeStatusFilter.value) {
+      filtered = filtered.filter(task => task.status === activeStatusFilter.value)
+    }
+
+    // Apply hide done tasks filter if enabled
+    if (hideDoneTasks.value) {
+      filtered = filtered.filter(task => task.status !== 'done')
+    }
+
+    if (shouldLogTaskDiagnostics()) {
+      console.log(`🚨 TaskStore.calendarFilteredTasks: Final calendar filtered tasks: ${filtered.length}`)
+      filtered.forEach(task => {
+        console.log(`🚨 TaskStore.calendarFilteredTasks:   - "${task.title}" (Status: ${task.status}, Inbox: ${task.isInInbox}, Instances: ${task.instances?.length || 0})`)
+      })
+      console.log('🚨 TaskStore.calendarFilteredTasks: === END CALENDAR FILTERED TASKS ===')
+    }
+
+    return filtered
+  })
+
   // Centralized non-done task counter - single source of truth for all task counting
   const nonDoneTaskCount = computed(() => {
     // Use the already-filtered tasks from filteredTasks computed property

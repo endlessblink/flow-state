@@ -139,7 +139,7 @@ This comprehensive analysis identifies architectural gaps, unused components, mi
 | **Base Components** | High | Button, Input, Card, Badge | Add component unit tests |
 | **Canvas Components** | High | TaskNode, CanvasSection | Add interaction tests |
 | **Modal Components** | Medium | TaskEditModal, SettingsModal | Add user interaction tests |
-| **View Components** | High | BoardView, CalendarView | Add integration tests |
+| **View Components** | High | BoardView, CalendarView, CatalogView | Add integration tests |
 
 #### **Store Testing (Partial Coverage)**
 | Store | Current Coverage | Missing Areas | Recommendation |
@@ -280,7 +280,7 @@ This comprehensive analysis identifies architectural gaps, unused components, mi
 - ✅ **useUncategorizedTasks Composable**: Centralized uncategorized task detection and filtering
 - ✅ **Smart View Integration**: "My Tasks" filter for uncategorized tasks across all views
 - ✅ **Backward Compatibility**: Support for legacy project assignments and data migration
-- ✅ **Consistent Filtering**: Unified filtering logic across BoardView, CalendarView, CanvasView, AllTasksView
+- ✅ **Consistent Filtering**: Unified filtering logic across BoardView, CalendarView, CanvasView, CatalogView (RENAMED from AllTasksView)
 
 **Implementation Details**:
 ```typescript
@@ -309,6 +309,26 @@ const filteredTasks = computed(() => {
 - **Task Discovery**: Better visibility of uncategorized tasks through smart filtering
 - **Data Consistency**: Centralized logic prevents inconsistencies across views
 - **Performance**: Optimized scrolling with 60fps target and proper resource cleanup
+
+#### **✅ Recent Architectural Improvements Completed (November 2025)**
+
+**View Structure Enhancement**:
+- ✅ **CatalogView Renaming**: AllTasksView.vue successfully renamed to CatalogView.vue with enhanced functionality
+- ✅ **Routing Updates**: Updated route structure to reflect new view naming (/tasks → catalog)
+- ✅ **Enhanced Smart Views**: Added "above_my_tasks" smart view for hierarchical task organization
+- ✅ **Counter Consistency**: Resolved counter vs display mismatches across all views
+
+**Smart Filtering System**:
+- ✅ **Enhanced Filtering**: Integrated hide/show done tasks toggle in CatalogView
+- ✅ **Real-time Updates**: Counter consistency fixes across BoardView, CalendarView, CanvasView, CatalogView
+- ✅ **Backward Compatibility**: Maintained support for legacy filtering patterns
+- ✅ **State Synchronization**: Enhanced state management for filtering preferences
+
+**User Experience Improvements**:
+- ✅ **Enhanced CatalogView**: Dual display modes (list/table) with maintained filter state
+- ✅ **Visibility Controls**: Eye/EyeOff icons for done task visibility
+- ✅ **Persistent Preferences**: localStorage integration for user settings
+- ✅ **Cross-View Sync**: Real-time synchronization of filtering and display preferences
 
 ### **Performance Optimizations**
 
@@ -475,8 +495,8 @@ Week 11-12: Infrastructure improvements
 
 ---
 
-**Last Updated**: November 2, 2025
+**Last Updated**: November 3, 2025
 **Analysis Scope**: Complete codebase review with focus on architectural gaps
 **Priority Focus**: Code cleanup, error handling, and testing coverage
 **Implementation Timeline**: 12-week roadmap with phased approach
-**Recent Implementation Status**: Error handling improvements completed; Uncategorized task system implemented; Horizontal drag scroll optimized
+**Recent Implementation Status**: Error handling improvements completed; Uncategorized task system implemented; Horizontal drag scroll optimized; CatalogView renamed and enhanced with smart filtering; Counter consistency resolved across all views

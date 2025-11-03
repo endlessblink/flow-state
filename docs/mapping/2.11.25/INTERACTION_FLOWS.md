@@ -36,7 +36,7 @@ Pomo-Flow uses Vue Router with hash-based routing for navigation between differe
 | **Board View** | `/` | `board` | `BoardView.vue` | ❌ No | Kanban board with project swimlanes |
 | **Calendar View** | `/calendar` | `calendar` | `CalendarView.vue` | ✅ Yes | Calendar scheduling interface |
 | **Canvas View** | `/canvas` | `canvas` | `CanvasView.vue` | ❌ No | Visual task organization |
-| **All Tasks View** | `/tasks` | `all-tasks` | `AllTasksView.vue` | ✅ Yes | Master task list |
+| **Catalog View** | `/tasks` | `catalog` | `CatalogView.vue` | ✅ Yes | Master task catalog (RENAMED from AllTasksView) |
 | **Quick Sort View** | `/quick-sort` | `quick-sort` | `QuickSortView.vue` | ✅ Yes | Rapid task categorization |
 | **Focus View** | `/focus/:taskId` | `focus` | `FocusView.vue` | ✅ Yes | Pomodoro focus sessions |
 
@@ -549,7 +549,7 @@ Visual Update: Done Tasks Disappear from Columns
     ↓
 State Persistence: hideDoneTasks saved to localStorage
     ↓
-Cross-View Sync: Setting applies to AllTasksView and BoardView
+Cross-View Sync: Setting applies to CatalogView and BoardView
 ```
 
 #### Enhanced Error Recovery Workflow
@@ -657,6 +657,59 @@ IndexedDB Storage via LocalForage
 Cross-Session Recovery: State restored on page reload
     ↓
 Consistent UX: User preferences maintained across sessions
+```
+
+#### Enhanced CatalogView Workflow (November 2025)
+
+```
+User Accesses CatalogView (/tasks route)
+    ↓
+UI Store and Task Store Initialize
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Smart View and Counter Consistency System                         │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ above_my_tasks Smart View Implementation                 │ │
+│ │ • Filters tasks above current task in hierarchy         │ │
+│ │ • Integrates with parent-child task relationships      │ │
+│ │ • Provides focused task organization                    │ │
+│ │                                                         │ │
+│ │ Counter vs Display Consistency Fix                     │ │
+│ │ • Real-time counter updates across all views           │ │
+│ │ • Synchronizes display count with filtered results    │ │
+│ │ • Prevents counter/display mismatch errors            │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Enhanced Filtering and Display Options                        │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Hide/Show Done Tasks Toggle                              │ │
+│ │ • Eye/EyeOff icon toggle in header                     │ │
+│ │ • Persists preference in localStorage                │ │
+│ │ • Updates reactively across all task displays          │ │
+│ │                                                         │
+│ │ Dual Display Modes                                     │ │
+│ │ • List view: Hierarchical task display                │ │
+│ │ • Table view: Tabular task organization               │ │
+│ │ • Mode switching with maintained filter state         │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Advanced Task Operations                                    │
+│ • Bulk selection and operations                            │
+│ • Inline editing with immediate persistence               │
+│ • Hierarchical task expansion/collapse                     │
+│ • Multi-criteria sorting and filtering                       │
+│ • Export functionality for task data                        │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+State Synchronization: Changes immediately reflect in:
+- Task Store (global state)
+- UI Store (view preferences)
+- IndexedDB (persistence)
+- Other Views (real-time sync)
 ```
 
 ---
@@ -1324,7 +1377,7 @@ This interaction flows reference provides complete visibility into the Pomo-Flow
 
 ---
 
-**Last Updated**: November 2, 2025
+**Last Updated**: November 3, 2025
 **Consolidated From**: 4 separate interaction and flow documents
 **Document Type**: Comprehensive Interaction Flows Reference
-**Recent Workflows Added**: Uncategorized task filtering, Done task visibility toggle, Enhanced error recovery, Horizontal drag scroll, Smart state persistence
+**Recent Workflows Added**: Uncategorized task filtering, Done task visibility toggle, Enhanced error recovery, Horizontal drag scroll, Smart state persistence, Enhanced CatalogView workflow with smart filtering and counter consistency

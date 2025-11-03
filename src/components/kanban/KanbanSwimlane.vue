@@ -5,7 +5,7 @@
     'scrolling': isScrolling
   }">
     <!-- Swimlane Header (fixed, not scrollable) -->
-    <div class="swimlane-header" @click="toggleCollapse">
+    <div class="swimlane-header" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
       <div class="header-content">
         <button class="collapse-btn">
           <ChevronDown v-if="!isCollapsed" :size="16" />
@@ -201,6 +201,7 @@ const emit = defineEmits<{
   editTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
   contextMenu: [event: MouseEvent, task: Task]
+  groupContextMenu: [event: MouseEvent, project: Project]
 }>()
 
 const taskStore = useTaskStore()
@@ -544,6 +545,10 @@ watch(() => props.showDoneColumn, () => {
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
+}
+
+const handleGroupContextMenu = (event: MouseEvent) => {
+  emit('groupContextMenu', event, props.project)
 }
 
 const handleViewTypeChange = (event: Event) => {

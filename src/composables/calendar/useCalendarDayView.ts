@@ -81,29 +81,94 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
       const instances = getTaskInstances(task)
       console.log(`🚨 useCalendarDayView: Task has ${instances.length} instances`)
 
-      const matchingInstances = instances.filter(instance => {
-        const matchesDate = instance.scheduledDate === dateStr
-        console.log(`🚨 useCalendarDayView: Instance ${instance.id} on ${instance.scheduledDate} ${matchesDate ? 'MATCHES' : 'DOES NOT MATCH'} current date ${dateStr}`)
-        return matchesDate
-      })
+      // COMPREHENSIVE FIX: Show both scheduled tasks AND unscheduled inbox tasks
+      const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
+      const hasInstances = instances && instances.length > 0
+      const hasLegacySchedule = task.scheduledDate && task.scheduledTime
 
-      console.log(`🚨 useCalendarDayView: Task "${task.title}" has ${matchingInstances.length} instances for current date`)
+      console.log(`🚨 useCalendarDayView: Task "${task.title}" - isInInbox: ${isInInbox}, hasInstances: ${hasInstances}, hasLegacySchedule: ${hasLegacySchedule}`)
 
-      matchingInstances.forEach(instance => {
-          const [hour, minute] = instance.scheduledTime.split(':').map(Number)
-          const startTime = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
-          const duration = instance.duration || task.estimatedDuration || 30
+      // Case 1: Scheduled tasks with instances matching current date
+      if (hasInstances) {
+        const matchingInstances = instances.filter(instance => {
+          const matchesDate = instance.scheduledDate === dateStr
+          console.log(`🚨 useCalendarDayView: Instance ${instance.id} on ${instance.scheduledDate} ${matchesDate ? 'MATCHES' : 'DOES NOT MATCH'} current date ${dateStr}`)
+          return matchesDate
+        })
+
+        console.log(`🚨 useCalendarDayView: Task "${task.title}" has ${matchingInstances.length} instances for current date`)
+
+        matchingInstances.forEach(instance => {
+            const [hour, minute] = instance.scheduledTime.split(':').map(Number)
+            const startTime = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
+            const duration = instance.duration || task.estimatedDuration || 30
+            const endTime = new Date(startTime.getTime() + duration * 60000)
+
+            const startSlot = hour * 2 + (minute === 30 ? 1 : 0)
+            const slotSpan = Math.ceil(duration / 30)
+
+            console.log(`🚨 useCalendarDayView: Creating SCHEDULED event for "${task.title}" at ${instance.scheduledTime} (duration: ${duration}min, slots: ${startSlot}-${startSlot + slotSpan})`)
+
+            events.push({
+              id: instance.id,
+              taskId: task.id,
+              instanceId: instance.id,
+              title: task.title,
+              startTime,
+              endTime,
+              duration,
+              startSlot,
+              slotSpan,
+              color: getPriorityColor(task.priority),
+              column: 0,
+              totalColumns: 1
+            })
+          })
+      }
+
+      // Case 2: Unscheduled inbox tasks - show as all-day events at the top
+      if (!hasInstances && !hasLegacySchedule && isInInbox) {
+        console.log(`🚨 useCalendarDayView: Creating UNSCHEDULED event for inbox task "${task.title}"`)
+
+        // Create an all-day event at the first time slot (8:00 AM)
+        const startTime = new Date(`${dateStr}T08:00:00`)
+        const endTime = new Date(startTime.getTime() + 30 * 60000) // 30 minutes by default
+
+        events.push({
+          id: `unscheduled-${task.id}`,
+          taskId: task.id,
+          instanceId: `unscheduled-${task.id}`,
+          title: task.title,
+          startTime,
+          endTime,
+          duration: 30,
+          startSlot: 16, // 8:00 AM slot (8 * 2)
+          slotSpan: 1, // 30 minutes
+          color: getPriorityColor(task.priority),
+          column: 0,
+          totalColumns: 1,
+          isUnscheduled: true // Custom flag to distinguish unscheduled tasks
+        })
+      }
+
+      // Case 3: Legacy scheduled tasks (backward compatibility)
+      if (!hasInstances && hasLegacySchedule) {
+        const matchesDate = task.scheduledDate === dateStr
+        if (matchesDate) {
+          console.log(`🚨 useCalendarDayView: Creating LEGACY event for "${task.title}" at ${task.scheduledTime}`)
+
+          const [hour, minute] = task.scheduledTime.split(':').map(Number)
+          const startTime = new Date(`${task.scheduledDate}T${task.scheduledTime}`)
+          const duration = task.estimatedDuration || 30
           const endTime = new Date(startTime.getTime() + duration * 60000)
 
           const startSlot = hour * 2 + (minute === 30 ? 1 : 0)
           const slotSpan = Math.ceil(duration / 30)
 
-          console.log(`🚨 useCalendarDayView: Creating event for "${task.title}" at ${instance.scheduledTime} (duration: ${duration}min, slots: ${startSlot}-${startSlot + slotSpan})`)
-
           events.push({
-            id: instance.id,
+            id: `legacy-${task.id}`,
             taskId: task.id,
-            instanceId: instance.id,
+            instanceId: `legacy-${task.id}`,
             title: task.title,
             startTime,
             endTime,
@@ -114,7 +179,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
             column: 0,
             totalColumns: 1
           })
-        })
+        }
+      }
     })
 
     console.log('🚨 useCalendarDayView: Generated events before positioning:', events.length)

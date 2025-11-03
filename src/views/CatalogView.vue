@@ -147,14 +147,14 @@ const filteredTasks = computed(() => {
       return []
     }
 
-    // When smart views are active, use filteredTasks directly to avoid double filtering
-    if (taskStore.activeSmartView && taskStore.activeSmartView !== 'uncategorized') {
-      console.log('CatalogView.filteredTasks: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
-      return storeTasks
-    }
+    // When ANY smart view is active, use the store's filteredTasks directly
+  // The store already applies the correct filtering logic for each smart view
+  if (taskStore.activeSmartView) {
+    return storeTasks
+  }
 
-    // For uncategorized smart view or regular views, use the existing filter logic
-    return filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
+  // For regular views (no smart filter), use the existing filter logic
+  return filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
   } catch (error) {
     console.error('CatalogView.filteredTasks: Error filtering tasks:', error)
     return []

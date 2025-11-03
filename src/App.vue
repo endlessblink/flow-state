@@ -655,9 +655,6 @@ const uncategorizedCount = computed(() => {
     ? filteredTasks.filter(task => task.status !== 'done').length
     : filteredTasks.length
 
-  // Debug logging to verify consistency with store filtering
-  console.log(`🔧 App.uncategorizedCount: Calculated ${finalCount} uncategorized tasks (hideDoneTasks: ${taskStore.hideDoneTasks})`)
-
   return finalCount
 })
 

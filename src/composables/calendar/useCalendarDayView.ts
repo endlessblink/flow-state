@@ -275,6 +275,12 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     const { taskId } = JSON.parse(data)
     const timeStr = `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
 
+    // DEBUG LOG: Track task drop on calendar
+    const task = taskStore.tasks.find(t => t.id === taskId)
+    console.log(`🎯 CALENDAR DROP: Task "${task?.title}" (ID: ${taskId}) dropped on ${slot.date} at ${timeStr}`)
+    console.log(`🎯 CALENDAR DROP: Task inbox status before:`, task?.isInInbox)
+    console.log(`🎯 CALENDAR DROP: Task instances before:`, task?.instances?.length || 0)
+
     // Create task instance and update task to remove from inbox
     const instance = taskStore.createTaskInstance(taskId, {
       scheduledDate: slot.date,
@@ -283,12 +289,15 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
 
     // If instance was created successfully, update task to remove from inbox
     if (instance) {
-      const task = taskStore.tasks.find(t => t.id === taskId)
+      console.log(`🎯 CALENDAR DROP: Instance created successfully:`, instance.id)
       if (task) {
         taskStore.updateTask(taskId, {
           isInInbox: false // Task is now scheduled, no longer in inbox
         })
+        console.log(`🎯 CALENDAR DROP: Task inbox status after:`, task.isInInbox)
       }
+    } else {
+      console.log(`🎯 CALENDAR DROP: Failed to create instance for task ${taskId}`)
     }
 
     dragGhost.value.visible = false

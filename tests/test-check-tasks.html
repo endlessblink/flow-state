@@ -1,0 +1,32 @@
+// Simple test to check for existing tasks in localStorage
+console.log('=== Checking for existing tasks ===');
+
+// Check if localStorage has any task data
+const tasksKey = 'tasks';
+const projectsKey = 'projects';
+
+console.log('Available localStorage keys:', Object.keys(localStorage));
+
+try {
+  const tasksData = localStorage.getItem(tasksKey);
+  const projectsData = localStorage.getItem(projectsKey);
+
+  console.log('Tasks data found:', !!tasksData);
+  console.log('Projects data found:', !!projectsData);
+
+  if (tasksData) {
+    const tasks = JSON.parse(tasksData);
+    console.log('Number of tasks:', tasks.length);
+    console.log('Sample tasks:', tasks.slice(0, 3).map(t => ({ id: t.id, title: t.title, status: t.status, projectId: t.projectId })));
+  }
+
+  if (projectsData) {
+    const projects = JSON.parse(projectsData);
+    console.log('Number of projects:', projects.length);
+    console.log('Sample projects:', projects.slice(0, 3).map(p => ({ id: p.id, name: p.name })));
+  }
+} catch (error) {
+  console.error('Error reading localStorage:', error);
+}
+
+console.log('=== Check complete ===');

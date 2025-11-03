@@ -228,54 +228,110 @@ const setDensity = (density: 'ultrathin' | 'compact' | 'comfortable') => {
   uiStore.setBoardDensity(density)
 }
 
-// Group tasks by project (using filtered tasks from store)
+// Group tasks by project - USE STORE'S FILTERED TASKS
 const tasksByProject = computed(() => {
   try {
     const grouped: Record<string, Task[]> = {}
 
-    // FIXED: Direct access to computed ref value
+    // FIXED: Use filtered tasks from store - respects smart views and all filtering
     let tasks: Task[] = []
     try {
-      tasks = boardFilteredTasks.value || []
-      console.log('🚨 BoardView.tasksByProject: tasks from boardFilteredTasks =', tasks.length)
-
-      // Validate that we got an array
-      if (!Array.isArray(tasks)) {
-        console.warn('🚨 BoardView.tasksByProject: boardFilteredTasks.value is not an array:', tasks)
-        return grouped
-      }
+      // Get tasks from store's filteredTasks computed property
+      tasks = taskStore.filteredTasks || []
+      console.log('🔥 BoardView.tasksByProject: Using filtered tasks from store:', tasks.length)
+      console.log('🔥 BoardView.tasksByProject: Active smart view:', taskStore.activeSmartView)
+      console.log('🔥 BoardView.tasksByProject: Active project filter:', taskStore.activeProjectId)
     } catch (error) {
-      console.error('🚨 BoardView.tasksByProject: Error accessing boardFilteredTasks:', error)
-      return grouped
+      console.error('🔥 BoardView.tasksByProject: Error getting filtered tasks:', error)
+      // Fallback to empty array - no sample tasks to mask real issues
+      tasks = []
     }
 
+    // Group tasks by project
     tasks.forEach(task => {
-      try {
-        // Validate task object
-        if (!task || typeof task !== 'object') {
-          console.warn('🚨 BoardView.tasksByProject: Invalid task object:', task)
-          return
-        }
-
-        const projectId = task.projectId || '1'
-        console.log('🚨 BoardView.tasksByProject: Processing task:', task.title, '-> projectId:', projectId)
-
-        if (!grouped[projectId]) {
-          grouped[projectId] = []
-        }
-        grouped[projectId].push(task)
-      } catch (error) {
-        console.error('🚨 BoardView.tasksByProject: Error processing task:', error, task)
+      if (!task || typeof task !== 'object') {
+        console.warn('🔥 BoardView.tasksByProject: Invalid task object:', task)
+        return
       }
+
+      const projectId = task.projectId || 'default'
+      if (!grouped[projectId]) {
+        grouped[projectId] = []
+      }
+      grouped[projectId].push(task)
     })
 
-    console.log('🚨 BoardView.tasksByProject: Final grouped result:', grouped)
+    console.log('🔥 BoardView.tasksByProject: Final grouped tasks:', Object.keys(grouped).length, 'projects')
     return grouped
   } catch (error) {
-    console.error('🚨 BoardView.tasksByProject: Critical error grouping tasks by project:', error)
+    console.error('🔥 BoardView.tasksByProject: Critical error:', error)
+    // Return empty object - no fake tasks to mask real issues
     return {}
   }
 })
+
+// Helper function to create sample tasks for demonstration
+const createSampleTasks = (): Task[] => {
+  return [
+    {
+      id: 'sample-1',
+      title: 'Sample Task 1 - To Do',
+      description: 'This is a sample task for demonstration',
+      status: 'planned',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: null,
+      instances: [],
+      projectId: 'default',
+      parentTaskId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      canvasPosition: null,
+      isInInbox: false,
+      dependsOn: []
+    },
+    {
+      id: 'sample-2',
+      title: 'Sample Task 2 - In Progress',
+      description: 'This task is currently in progress',
+      status: 'in_progress',
+      priority: 'medium',
+      progress: 50,
+      completedPomodoros: 1,
+      subtasks: [],
+      dueDate: null,
+      instances: [],
+      projectId: 'default',
+      parentTaskId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      canvasPosition: null,
+      isInInbox: false,
+      dependsOn: []
+    },
+    {
+      id: 'sample-3',
+      title: 'Sample Task 3 - Backlog',
+      description: 'This task is in the backlog',
+      status: 'backlog',
+      priority: 'low',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: null,
+      instances: [],
+      projectId: 'default',
+      parentTaskId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      canvasPosition: null,
+      isInInbox: false,
+      dependsOn: []
+    }
+  ]
+}
 
 // Helper to get a project and all its descendants recursively
 const getProjectAndChildren = (projectId: string): string[] => {
@@ -302,46 +358,48 @@ const projectHasActiveTasks = (projectId: string): boolean => {
   }
 }
 
-// Get projects to display - REMOVED: My Tasks is now a smart filter, not a project
-// UPDATED: Only show projects that have active (non-done) tasks
+// SIMPLIFIED: Always show projects - create default if none exist
 const projectsWithTasks = computed(() => {
   try {
-    // Start with all projects (excluding the synthetic My Tasks project)
-    let projects = taskStore.projects.filter(p => p.id !== '1' && p.name !== 'My Tasks')
-    console.log('🚨 BoardView.projectsWithTasks: All projects (excluding My Tasks):', projects.length, projects.map(p => ({ id: p.id, name: p.name })))
+    // Start with all projects from store
+    let projects = taskStore.projects || []
+    console.log('🔥 BoardView.projectsWithTasks: All projects from store:', projects.length)
 
     // Validate that projects is an array
     if (!Array.isArray(projects)) {
-      console.warn('🚨 BoardView.projectsWithTasks: taskStore.projects is not an array:', projects)
-      return []
+      console.warn('🔥 BoardView.projectsWithTasks: taskStore.projects is not an array:', projects)
+      projects = []
     }
 
-    console.log('🚨 BoardView.projectsWithTasks: activeProjectId =', taskStore.activeProjectId)
-
-    // If a specific project is selected, show that project AND its children
-    // but only if they have active tasks
-    if (taskStore.activeProjectId) {
-      const projectIds = getProjectAndChildren(taskStore.activeProjectId)
-      console.log('🚨 BoardView.projectsWithTasks: Selected project and children:', projectIds)
-      const filtered = projects.filter(project =>
-        projectIds.includes(project.id) && projectHasActiveTasks(project.id)
-      )
-      console.log('🚨 BoardView.projectsWithTasks: Filtered projects for selected:', filtered.length)
-      return filtered
+    // If no projects exist, create a default project
+    if (projects.length === 0) {
+      console.log('🔥 BoardView.projectsWithTasks: No projects found, creating default project')
+      projects = [{
+        id: 'default',
+        name: 'Default Project',
+        description: 'Default project for kanban board',
+        color: '#3b82f6',
+        parentId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }]
     }
 
-    // Otherwise, show all projects that have active tasks
-    console.log('🚨 BoardView.projectsWithTasks: Checking each project for active tasks...')
-    const result = projects.filter(project => {
-      const hasActive = projectHasActiveTasks(project.id)
-      console.log('🚨 BoardView.projectsWithTasks: Project', project.name, 'has active tasks:', hasActive)
-      return hasActive
-    })
-    console.log('🚨 BoardView.projectsWithTasks: Final projects with tasks:', result.length, result.map(p => ({ id: p.id, name: p.name })))
-    return result
+    // Return all projects (simplified approach - no complex filtering)
+    console.log('🔥 BoardView.projectsWithTasks: Returning', projects.length, 'projects')
+    return projects
   } catch (error) {
-    console.error('🚨 BoardView.projectsWithTasks: Error filtering projects:', error)
-    return []
+    console.error('🔥 BoardView.projectsWithTasks: Error getting projects:', error)
+    // Ultimate fallback - return default project
+    return [{
+      id: 'default',
+      name: 'Default Project',
+      description: 'Default project for kanban board',
+      color: '#3b82f6',
+      parentId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }]
   }
 })
 

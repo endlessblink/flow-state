@@ -124,19 +124,11 @@ const filterOptions = [
 
 // Computed
 const inboxTasks = computed(() => {
-  const allTasks = taskStore.filteredTasks
+  // Use raw tasks instead of filteredTasks to avoid conflicts with smart views
+  // Calendar inbox should work independently of smart view filtering
+  const allTasks = taskStore.tasks
 
-  // Debug: Log all tasks to understand what we're working with
-  console.log('🔍 DEBUG: All tasks in store:', allTasks.map(t => ({
-    id: t.id,
-    title: t.title,
-    status: t.status,
-    isInInbox: t.isInInbox,
-    canvasPosition: !!t.canvasPosition,
-    hasInstances: t.instances && t.instances.length > 0,
-    hasLegacySchedule: t.scheduledDate && t.scheduledTime
-  })))
-
+  
   const filtered = allTasks.filter(task => {
     // Calculate task properties
     const hasInstances = task.instances && task.instances.length > 0

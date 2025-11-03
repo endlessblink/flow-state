@@ -87,11 +87,11 @@ export const getTaskInstances = (task: Task): TaskInstance[] => {
   }
 
   // Backward compatibility: create synthetic instance from legacy fields
-  if (task.scheduledDate && task.scheduledTime) {
+  if (task.scheduledDate) {
     return [{
       id: `legacy-${task.id}`,
       scheduledDate: task.scheduledDate,
-      scheduledTime: task.scheduledTime,
+      scheduledTime: task.scheduledTime || null,
       duration: task.estimatedDuration
     }]
   }

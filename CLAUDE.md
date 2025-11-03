@@ -98,7 +98,7 @@ src/
 │   ├── BoardView.vue   # Kanban board with swimlanes
 │   ├── CalendarView.vue # Time-based task scheduling
 │   ├── CanvasView.vue  # Free-form task organization
-│   └── AllTasksView.vue # Master task list
+│   └── CatalogView.vue # Master task catalog
 ├── components/         # Reusable UI components
 │   ├── base/          # Base components (Button, Modal, etc.)
 │   ├── canvas/        # Canvas-specific components

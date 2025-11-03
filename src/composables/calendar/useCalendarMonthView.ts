@@ -48,19 +48,71 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
         })
         .forEach(task => {
           const instances = getTaskInstances(task)
-          instances
-            .filter(instance => instance.scheduledDate === dateString)
-            .forEach(instance => {
-              const [hour, minute] = instance.scheduledTime.split(':').map(Number)
-              const duration = instance.duration || task.estimatedDuration || 30
+
+          // COMPREHENSIVE FIX: Show both scheduled tasks AND unscheduled inbox tasks
+          const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
+          const hasInstances = instances && instances.length > 0
+          const hasLegacySchedule = task.scheduledDate && task.scheduledTime
+
+          // Case 1: Scheduled tasks with instances
+          if (hasInstances) {
+            instances
+              .filter(instance => instance.scheduledDate === dateString)
+              .forEach(instance => {
+                const [hour, minute] = instance.scheduledTime.split(':').map(Number)
+                const duration = instance.duration || task.estimatedDuration || 30
+
+                dayEvents.push({
+                  id: instance.id,
+                  taskId: task.id,
+                  instanceId: instance.id,
+                  title: task.title,
+                  startTime: new Date(`${instance.scheduledDate}T${instance.scheduledTime}`),
+                  endTime: new Date(new Date(`${instance.scheduledDate}T${instance.scheduledTime}`).getTime() + duration * 60000),
+                  duration,
+                  startSlot: 0,
+                  slotSpan: 0,
+                  color: getPriorityColor(task.priority),
+                  column: 0,
+                  totalColumns: 1
+                })
+              })
+          }
+
+          // Case 2: Unscheduled inbox tasks - show in today's cell only
+          if (!hasInstances && !hasLegacySchedule && isInInbox) {
+            if (dateString === today) {
+              dayEvents.push({
+                id: `unscheduled-${task.id}`,
+                taskId: task.id,
+                instanceId: `unscheduled-${task.id}`,
+                title: task.title,
+                startTime: new Date(`${dateString}T08:00:00`),
+                endTime: new Date(new Date(`${dateString}T08:00:00`).getTime() + 30 * 60000),
+                duration: 30,
+                startSlot: 0,
+                slotSpan: 0,
+                color: getPriorityColor(task.priority),
+                column: 0,
+                totalColumns: 1,
+                isUnscheduled: true
+              })
+            }
+          }
+
+          // Case 3: Legacy scheduled tasks (backward compatibility)
+          if (!hasInstances && hasLegacySchedule) {
+            if (task.scheduledDate === dateString) {
+              const [hour, minute] = task.scheduledTime.split(':').map(Number)
+              const duration = task.estimatedDuration || 30
 
               dayEvents.push({
-                id: instance.id,
+                id: `legacy-${task.id}`,
                 taskId: task.id,
-                instanceId: instance.id,
+                instanceId: `legacy-${task.id}`,
                 title: task.title,
-                startTime: new Date(`${instance.scheduledDate}T${instance.scheduledTime}`),
-                endTime: new Date(new Date(`${instance.scheduledDate}T${instance.scheduledTime}`).getTime() + duration * 60000),
+                startTime: new Date(`${task.scheduledDate}T${task.scheduledTime}`),
+                endTime: new Date(new Date(`${task.scheduledDate}T${task.scheduledTime}`).getTime() + duration * 60000),
                 duration,
                 startSlot: 0,
                 slotSpan: 0,
@@ -68,7 +120,8 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
                 column: 0,
                 totalColumns: 1
               })
-            })
+            }
+          }
         })
 
       days.push({

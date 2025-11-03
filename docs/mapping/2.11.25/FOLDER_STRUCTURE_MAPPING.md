@@ -60,11 +60,11 @@ src/
 
 ```
 src/views/
-├── AllTasksView.vue              # Master task list with table/list views
 ├── BoardView.vue                 # Kanban board with project swimlanes
 ├── CalendarView.vue              # Calendar scheduling with day/week/month views
 ├── CalendarViewVueCal.vue        # Alternative calendar implementation
 ├── CanvasView.vue               # Free-form visual task organization
+├── CatalogView.vue              # Master task catalog with table/list views (RENAMED from AllTasksView)
 ├── FocusView.vue                # Pomodoro-focused deep work sessions
 └── QuickSortView.vue            # Rapid task categorization interface
 ```
@@ -397,6 +397,14 @@ This folder structure supports a scalable, maintainable Vue.js application with 
 - **TaskList.vue**: Improved error handling and hierarchical task display
 - **ProjectFilterDropdown.vue**: Enhanced uncategorized task filtering support
 
+### Recent View Changes (November 2025)
+- **CatalogView.vue**: Renamed from AllTasksView.vue with enhanced catalog functionality
+  - Master task catalog with table/list views
+  - Enhanced smart view filtering and counter consistency
+  - Added "above_my_tasks" smart view for task organization
+  - Integrated hide/show done tasks functionality
+- **Routing Updates**: Updated routing structure to reflect new view naming and enhanced filtering
+
 ### Additional Composables Discovered
 The structure update also revealed additional composables not previously documented:
 - useBulletproofPersistence.ts: Enhanced data persistence
@@ -407,6 +415,6 @@ The structure update also revealed additional composables not previously documen
 - useTabVisibility.ts: Browser tab visibility detection
 - useYjsSync.ts: Collaborative editing synchronization
 
-**Last Updated**: November 2, 2025
+**Last Updated**: November 3, 2025
 **Architecture Version**: Vue 3.4.0, TypeScript 5.9.3
-**Recent Updates**: Added new composables, enhanced directory organization, documented recently modified components
+**Recent Updates**: Renamed AllTasksView to CatalogView, enhanced smart view filtering, updated routing structure

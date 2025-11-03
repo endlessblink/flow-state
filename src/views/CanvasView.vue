@@ -2215,6 +2215,16 @@ const arrangeInGrid = () => {
 const handleKeyDown = async (event: KeyboardEvent) => {
   const isDeleteKey = event.key === 'Delete' || event.key === 'Backspace'
 
+  // Check if we're typing in an input field - if so, don't intercept keyboard shortcuts
+  const target = event.target as HTMLElement | null
+  if (target) {
+    const tagName = target.tagName
+    const isEditableTarget = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
+    if (isEditableTarget) {
+      return // Let the input handle the key normally
+    }
+  }
+
   // Handle zoom shortcuts with Ctrl/Cmd modifier
   if (event.ctrlKey || event.metaKey) {
     switch (event.key) {
@@ -2262,15 +2272,6 @@ const handleKeyDown = async (event: KeyboardEvent) => {
   const selectedNodes = getSelectedNodes.value
   if (!selectedNodes || selectedNodes.length === 0) {
     return
-  }
-
-  const target = event.target as HTMLElement | null
-  if (target) {
-    const tagName = target.tagName
-    const isEditableTarget = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
-    if (isEditableTarget && !event.shiftKey) {
-      return
-    }
   }
 
   if (import.meta.env.DEV) {

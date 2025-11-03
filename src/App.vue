@@ -80,17 +80,17 @@
             Today
           </DateDropZone>
 
-          <!-- This Weekend -->
+          <!-- This Week -->
           <DateDropZone
-            :active="taskStore.activeSmartView === 'weekend'"
-            :count="weekendTaskCount"
-            target-type="weekend"
-            @click="selectSmartView('weekend')"
+            :active="taskStore.activeSmartView === 'week'"
+            :count="weekTaskCount"
+            target-type="week"
+            @click="selectSmartView('week')"
           >
             <template #icon>
-              <Coffee :size="16" />
+              <Calendar :size="16" />
             </template>
-            This Weekend
+            This Week
           </DateDropZone>
 
           <!-- Uncategorized Tasks (My Tasks) -->
@@ -573,38 +573,49 @@ const todayTaskCount = computed(() => {
   }).length
 })
 
-const weekendTaskCount = computed(() => {
+const weekTaskCount = computed(() => {
+  // Calculate tasks for the next 7 days using same logic as store
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-
-  // Find next Saturday (start of weekend)
-  const saturday = new Date(today)
-  const daysUntilSaturday = (6 - today.getDay() + 7) % 7 || 7
-  saturday.setDate(today.getDate() + daysUntilSaturday)
-
-  // Find next Sunday (end of weekend)
-  const sunday = new Date(saturday)
-  sunday.setDate(saturday.getDate() + 1)
-
-  const saturdayStr = saturday.toISOString().split('T')[0]
-  const sundayStr = sunday.toISOString().split('T')[0]
+  const todayStr = today.toISOString().split('T')[0]
+  const weekEnd = new Date(today)
+  weekEnd.setDate(weekEnd.getDate() + 7)
+  const weekEndStr = weekEnd.toISOString().split('T')[0]
 
   return taskStore.tasks.filter(task => {
     // Check instances first (new format)
     const instances = getTaskInstances(task)
     if (instances.length > 0) {
-      if (instances.some(inst => inst.scheduledDate === saturdayStr || inst.scheduledDate === sundayStr)) {
-        return true
-      }
+      return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
     }
-
     // Fallback to legacy scheduledDate
-    if (task.scheduledDate === saturdayStr || task.scheduledDate === sundayStr) {
+    if (!task.scheduledDate) return false
+    return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+  }).length
+})
+
+
+// Uncategorized task count for Quick Sort badge
+const uncategorizedCount = computed(() => {
+  return taskStore.tasks.filter((task) => {
+    // Apply same filtering logic as uncategorized smart view
+    // Check isUncategorized flag first
+    if (task.isUncategorized === true) {
       return true
     }
 
-    // Tasks due on weekend
-    if (task.dueDate === saturdayStr || task.dueDate === sundayStr) {
+    // Backward compatibility: also treat tasks without proper project assignment as uncategorized
+    if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
+      // Additional filtering: apply status filter if active
+      if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
+        return false
+      }
+
+      // Additional filtering: hide done tasks if enabled
+      if (taskStore.hideDoneTasks && task.status === 'done') {
+        return false
+      }
+
       return true
     }
 
@@ -612,22 +623,10 @@ const weekendTaskCount = computed(() => {
   }).length
 })
 
-
-// Uncategorized task count for Quick Sort badge
-const uncategorizedCount = computed(() => {
-  return taskStore.tasks.filter(
-    (task) =>
-      !task.projectId ||
-      task.projectId === '' ||
-      task.projectId === null ||
-      task.projectId === '1' // "My Tasks" is the uncategorized bucket
-  ).length
-})
-
 // Dynamic page title
 const pageTitle = computed(() => {
   if (taskStore.activeSmartView === 'today') return 'Today'
-  if (taskStore.activeSmartView === 'weekend') return 'This Weekend'
+  if (taskStore.activeSmartView === 'week') return 'This Week'
 
   if (taskStore.activeProjectId) {
     const project = taskStore.projects.find(p => p.id === taskStore.activeProjectId)
@@ -722,7 +721,7 @@ const selectProject = (project: Project) => {
 }
 
 
-const selectSmartView = (view: 'today' | 'weekend' | 'uncategorized') => {
+const selectSmartView = (view: 'today' | 'week' | 'uncategorized') => {
   taskStore.setSmartView(view)
 }
 

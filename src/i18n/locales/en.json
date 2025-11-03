@@ -28,7 +28,7 @@
   },
   "smart_views": {
     "today": "Today",
-    "weekend": "This Weekend"
+    "week": "This Week"
   },
   "task": {
     "title": "Task Title",

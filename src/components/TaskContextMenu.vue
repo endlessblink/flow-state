@@ -41,9 +41,9 @@
         <button class="icon-btn sun-icon" @click="setDueDate('tomorrow')" title="Tomorrow">
           <Sun :size="16" :stroke-width="1.5" class="sun-stroke" />
         </button>
-        <!-- Weekend with Moon icon (cool purple) -->
-        <button class="icon-btn moon-icon" @click="setDueDate('weekend')" title="This Weekend">
-          <Moon :size="16" :stroke-width="1.5" class="moon-stroke" />
+        <!-- This Week with Calendar icon (blue) -->
+        <button class="icon-btn calendar-icon" @click="setDueDate('week')" title="This Week">
+          <Calendar :size="16" :stroke-width="1.5" class="calendar-stroke" />
         </button>
         <!-- Next Week with Arrow icon (blue) -->
         <button class="icon-btn next-week-icon" @click="setDueDate('nextweek')" title="Next Week">
@@ -246,7 +246,7 @@ const emit = defineEmits<{
   clearSelection: []
   setPriority: [priority: 'low' | 'medium' | 'high']
   setStatus: [status: 'planned' | 'in_progress' | 'done']
-  setDueDate: [dateType: 'today' | 'tomorrow' | 'weekend' | 'nextweek']
+  setDueDate: [dateType: 'today' | 'tomorrow' | 'week' | 'nextweek']
   enterFocusMode: []
   deleteSelected: []
 }>()
@@ -346,7 +346,7 @@ const setDueDate = (dateType: string) => {
 
   if (isBatchOperation.value) {
     // Emit for batch operations in InboxPanel
-    emit('setDueDate', dateType as 'today' | 'tomorrow' | 'weekend' | 'nextweek')
+    emit('setDueDate', dateType as 'today' | 'tomorrow' | 'week' | 'nextweek')
     emit('close')
     return
   }
@@ -363,10 +363,9 @@ const setDueDate = (dateType: string) => {
       dueDate = new Date(today)
       dueDate.setDate(today.getDate() + 1)
       break
-    case 'weekend':
+    case 'week':
       dueDate = new Date(today)
-      const daysUntilSaturday = (6 - today.getDay()) % 7 || 7
-      dueDate.setDate(today.getDate() + daysUntilSaturday)
+      dueDate.setDate(today.getDate() + 7)
       break
     case 'nextweek':
       dueDate = new Date(today)

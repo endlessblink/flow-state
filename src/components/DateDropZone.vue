@@ -52,7 +52,7 @@ import { useTaskStore } from '@/stores/tasks'
 interface Props {
   active?: boolean
   count?: number
-  targetType: 'today' | 'weekend' | 'tomorrow' | 'nodate'
+  targetType: 'today' | 'week' | 'tomorrow' | 'nodate'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -82,7 +82,7 @@ const isDragValid = computed(() => {
 const targetLabel = computed(() => {
   switch (props.targetType) {
     case 'today': return 'Today'
-    case 'weekend': return 'This Weekend'
+    case 'week': return 'This Week'
     case 'tomorrow': return 'Tomorrow'
     case 'nodate': return 'No Date'
     default: return props.targetType
@@ -153,12 +153,11 @@ const calculateTargetDate = (): string => {
       return tomorrow.toISOString().split('T')[0]
     }
 
-    case 'weekend': {
-      // Find next Saturday (start of weekend)
-      const saturday = new Date(today)
-      const daysUntilSaturday = (6 - today.getDay() + 7) % 7 || 7 // If today is Saturday, use next Saturday
-      saturday.setDate(today.getDate() + daysUntilSaturday)
-      return saturday.toISOString().split('T')[0]
+    case 'week': {
+      // For "This Week", set to end of current week (Sunday)
+      const weekEnd = new Date(today)
+      weekEnd.setDate(today.getDate() + (7 - today.getDay()))
+      return weekEnd.toISOString().split('T')[0]
     }
 
     case 'nodate':

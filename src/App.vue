@@ -93,21 +93,21 @@
             This Week
           </DateDropZone>
 
-          <!-- All Tasks -->
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'above_my_tasks'"
-            :count="aboveMyTasksCount"
-            target-type="above_my_tasks"
-            @click="selectSmartView('above_my_tasks')"
-          >
-            <template #icon>
-              <List :size="16" />
-            </template>
-            All Tasks
-          </DateDropZone>
-
           <!-- Uncategorized Tasks (My Tasks) -->
           <div class="smart-view-uncategorized">
+            <!-- All Tasks -->
+            <DateDropZone
+              :active="taskStore.activeSmartView === 'above_my_tasks'"
+              :count="aboveMyTasksCount"
+              target-type="above_my_tasks"
+              @click="selectSmartView('above_my_tasks')"
+            >
+              <template #icon>
+                <List :size="16" />
+              </template>
+              All Tasks
+            </DateDropZone>
+
             <button
               class="uncategorized-filter"
               :class="{ active: taskStore.activeSmartView === 'uncategorized' }"

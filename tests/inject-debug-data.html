@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inject Debug Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
+        button:hover { background: #2563eb; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #10b981; color: white; }
+        .error { background: #ef4444; color: white; }
+        .info { background: #f3f4f6; color: #374151; }
+        pre { background: #f3f4f6; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Pomo-Flow Debug Data Injection</h1>
+
+    <div id="status" class="status info">Ready to inject debug data...</div>
+
+    <div>
+        <button onclick="injectSampleData()">Inject Sample Tasks & Projects</button>
+        <button onclick="checkExistingData()">Check Existing Data</button>
+        <button onclick="clearAllData()">Clear All Data</button>
+        <button onclick="openPomoFlow()">Open Pomo-Flow</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <script>
+        // Configure localforage to match Pomo-Flow's configuration
+        localforage.config({
+            name: 'pomo-flow',
+            version: 3,
+            storeName: 'pomo_flow_data',
+            description: 'Pomo-Flow productivity data storage'
+        });
+
+        const DB_KEYS = {
+            TASKS: 'tasks',
+            PROJECTS: 'projects',
+            CANVAS: 'canvas',
+            TIMER: 'timer',
+            SETTINGS: 'settings',
+            HIDE_DONE_TASKS: 'hide_done_tasks',
+            VERSION: 'version'
+        };
+
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function log(message) {
+            const outputEl = document.getElementById('output');
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<pre>${new Date().toLocaleTimeString()}: ${message}</pre>`;
+            outputEl.appendChild(logEntry);
+        }
+
+        async function checkExistingData() {
+            try {
+                updateStatus('Checking existing data...', 'info');
+
+                const tasks = await localforage.getItem(DB_KEYS.TASKS);
+                const projects = await localforage.getItem(DB_KEYS.PROJECTS);
+                const version = await localforage.getItem(DB_KEYS.VERSION);
+
+                log(`=== EXISTING DATA ===`);
+                log(`Tasks: ${tasks ? tasks.length : 0} items`);
+                log(`Projects: ${projects ? projects.length : 0} items`);
+                log(`Version: ${version || 'Not set'}`);
+
+                if (tasks && tasks.length > 0) {
+                    log('\nSample tasks:');
+                    tasks.slice(0, 3).forEach(task => {
+                        log(`  - "${task.title}" (${task.status}, Project: ${task.projectId})`);
+                    });
+                }
+
+                if (projects && projects.length > 0) {
+                    log('\nSample projects:');
+                    projects.slice(0, 3).forEach(project => {
+                        log(`  - "${project.name}" (ID: ${project.id})`);
+                    });
+                }
+
+                updateStatus('Data check complete', 'success');
+            } catch (error) {
+                log(`ERROR checking data: ${error.message}`);
+                updateStatus('Error checking data', 'error');
+            }
+        }
+
+        async function injectSampleData() {
+            try {
+                updateStatus('Injecting sample data...', 'info');
+
+                // Sample projects
+                const sampleProjects = [
+                    {
+                        id: 'proj-1',
+                        name: 'Development',
+                        description: 'Development tasks and features',
+                        color: '#3b82f6',
+                        parentId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'proj-2',
+                        name: 'Design',
+                        description: 'Design and UI tasks',
+                        color: '#8b5cf6',
+                        parentId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'proj-3',
+                        name: 'Personal',
+                        description: 'Personal tasks and goals',
+                        color: '#10b981',
+                        parentId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    }
+                ];
+
+                // Sample tasks with different statuses
+                const sampleTasks = [
+                    {
+                        id: 'task-1',
+                        title: 'Fix kanban board display issue',
+                        description: 'Debug why tasks are not showing in the kanban board',
+                        status: 'in_progress',
+                        priority: 'high',
+                        progress: 50,
+                        completedPomodoros: 2,
+                        subtasks: [],
+                        dueDate: null,
+                        instances: [],
+                        projectId: 'proj-1',
+                        parentTaskId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        canvasPosition: null,
+                        isInInbox: false,
+                        dependsOn: []
+                    },
+                    {
+                        id: 'task-2',
+                        title: 'Add task filtering debugging',
+                        description: 'Enhance console logging for task filtering',
+                        status: 'planned',
+                        priority: 'medium',
+                        progress: 0,
+                        completedPomodoros: 0,
+                        subtasks: [],
+                        dueDate: null,
+                        instances: [],
+                        projectId: 'proj-1',
+                        parentTaskId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        canvasPosition: null,
+                        isInInbox: false,
+                        dependsOn: []
+                    },
+                    {
+                        id: 'task-3',
+                        title: 'Design new task card layout',
+                        description: 'Create improved visual design for task cards',
+                        status: 'planned',
+                        priority: 'medium',
+                        progress: 0,
+                        completedPomodoros: 0,
+                        subtasks: [],
+                        dueDate: null,
+                        instances: [],
+                        projectId: 'proj-2',
+                        parentTaskId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        canvasPosition: null,
+                        isInInbox: false,
+                        dependsOn: []
+                    },
+                    {
+                        id: 'task-4',
+                        title: 'Update project documentation',
+                        description: 'Update README with latest features',
+                        status: 'done',
+                        priority: 'low',
+                        progress: 100,
+                        completedPomodoros: 1,
+                        subtasks: [],
+                        dueDate: null,
+                        instances: [],
+                        projectId: 'proj-1',
+                        parentTaskId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        canvasPosition: null,
+                        isInInbox: false,
+                        dependsOn: []
+                    },
+                    {
+                        id: 'task-5',
+                        title: 'Plan weekend activities',
+                        description: 'Organize weekend trip and activities',
+                        status: 'backlog',
+                        priority: 'low',
+                        progress: 0,
+                        completedPomodoros: 0,
+                        subtasks: [],
+                        dueDate: null,
+                        instances: [],
+                        projectId: 'proj-3',
+                        parentTaskId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        canvasPosition: null,
+                        isInInbox: false,
+                        dependsOn: []
+                    },
+                    {
+                        id: 'task-6',
+                        title: 'Review pull requests',
+                        description: 'Review and merge pending pull requests',
+                        status: 'on_hold',
+                        priority: 'medium',
+                        progress: 25,
+                        completedPomodoros: 1,
+                        subtasks: [],
+                        dueDate: null,
+                        instances: [],
+                        projectId: 'proj-1',
+                        parentTaskId: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        canvasPosition: null,
+                        isInInbox: false,
+                        dependsOn: []
+                    }
+                ];
+
+                // Save to IndexedDB
+                await localforage.setItem(DB_KEYS.PROJECTS, sampleProjects);
+                await localforage.setItem(DB_KEYS.TASKS, sampleTasks);
+                await localforage.setItem(DB_KEYS.VERSION, '3');
+                await localforage.setItem(DB_KEYS.HIDE_DONE_TASKS, false);
+
+                log(`=== DATA INJECTED ===`);
+                log(`Injected ${sampleProjects.length} projects`);
+                log(`Injected ${sampleTasks.length} tasks`);
+                log('\nTask breakdown by status:');
+
+                const statusCounts = {};
+                sampleTasks.forEach(task => {
+                    statusCounts[task.status] = (statusCounts[task.status] || 0) + 1;
+                });
+
+                Object.entries(statusCounts).forEach(([status, count]) => {
+                    log(`  ${status}: ${count} tasks`);
+                });
+
+                updateStatus('Sample data injected successfully!', 'success');
+
+            } catch (error) {
+                log(`ERROR injecting data: ${error.message}`);
+                updateStatus('Error injecting data', 'error');
+            }
+        }
+
+        async function clearAllData() {
+            try {
+                updateStatus('Clearing all data...', 'info');
+
+                await localforage.removeItem(DB_KEYS.TASKS);
+                await localforage.removeItem(DB_KEYS.PROJECTS);
+                await localforage.removeItem(DB_KEYS.CANVAS);
+                await localforage.removeItem(DB_KEYS.TIMER);
+                await localforage.removeItem(DB_KEYS.SETTINGS);
+                await localforage.removeItem(DB_KEYS.HIDE_DONE_TASKS);
+                await localforage.removeItem(DB_KEYS.VERSION);
+
+                log('All Pomo-Flow data cleared from IndexedDB');
+                updateStatus('All data cleared', 'success');
+
+            } catch (error) {
+                log(`ERROR clearing data: ${error.message}`);
+                updateStatus('Error clearing data', 'error');
+            }
+        }
+
+        function openPomoFlow() {
+            window.open('http://localhost:5547', '_blank');
+        }
+
+        // Check existing data on page load
+        window.addEventListener('load', () => {
+            checkExistingData();
+        });
+    </script>
+</body>
+</html>

@@ -232,6 +232,11 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
 const handleDragStart = (event: DragEvent, task: Task) => {
   if (!event.dataTransfer) return
 
+  // DEBUG LOG: Track task drag from inbox
+  console.log(`🚀 INBOX DRAG START: Task "${task.title}" (ID: ${task.id})`)
+  console.log(`🚀 INBOX DRAG START: Task inbox status:`, task.isInInbox)
+  console.log(`🚀 INBOX DRAG START: Task instances:`, task.instances?.length || 0)
+
   // Match canvas panel drag data format exactly
   const dragData = {
     taskIds: [task.id], // Array format for consistency

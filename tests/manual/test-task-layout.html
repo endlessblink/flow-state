@@ -118,14 +118,14 @@
         </div>
 
         <div class="test-controls">
-            <button class="test-btn" onclick="loadView('tasks')">📋 All Tasks (Table View)</button>
+            <button class="test-btn" onclick="loadView('catalog')">📋 Catalog (Table View)</button>
             <button class="test-btn" onclick="loadView('/')">📌 Board View</button>
             <button class="test-btn" onclick="measureElements()">📏 Measure Elements</button>
             <button class="test-btn" onclick="takeScreenshot()">📸 Screenshot</button>
             <button class="test-btn" onclick="toggleMobile()">📱 Mobile View</button>
         </div>
 
-        <iframe id="testFrame" class="test-iframe" src="http://localhost:5546/tasks" onload="onFrameLoad()"></iframe>
+        <iframe id="testFrame" class="test-iframe" src="http://localhost:5546/catalog" onload="onFrameLoad()"></iframe>
 
         <div id="results" class="info-panel" style="display: none;">
             <h3>📊 Measurement Results:</h3>
@@ -134,7 +134,7 @@
     </div>
 
     <script>
-        let currentView = 'tasks';
+        let currentView = 'catalog';
         let isMobile = false;
 
         function onFrameLoad() {

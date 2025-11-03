@@ -2,7 +2,7 @@
 
 ## Overview
 
-Pomo-Flow utilizes Vue 3's Composition API with 25+ composables that encapsulate reusable logic across the application. These composables provide clean, testable, and reusable functionality that can be shared across components and views.
+Pomo-Flow utilizes Vue 3's Composition API with 27+ composables that encapsulate reusable logic across the application. These composables provide clean, testable, and reusable functionality that can be shared across components and views.
 
 ## Composable Architecture
 
@@ -264,6 +264,163 @@ useKeyboardShortcuts({
   'Ctrl+Z': () => goBackTask()
 })
 ```
+
+---
+
+### useUncategorizedTasks.ts - Uncategorized Task Filtering
+
+**Purpose**: Consistent uncategorized task detection and filtering across all views
+**Pattern**: Smart view filtering with backward compatibility
+
+#### Core Features
+- **Task Categorization**: Identifies uncategorized tasks using multiple criteria
+- **Smart View Integration**: Works with "My Tasks" smart filter
+- **Backward Compatibility**: Handles legacy project assignments
+- **View Filtering**: Filters tasks for regular and smart views
+- **State Management**: Integrates with task store and smart filter state
+
+#### API
+```typescript
+// Task categorization
+isTaskUncategorized(task: Task): boolean
+
+// Task filtering
+getUncategorizedTasks(tasks: Task[]): Task[]
+
+// Smart view filtering
+filterTasksBySmartView(tasks: Task[], activeSmartView: 'today' | 'week' | 'uncategorized' | null): Task[]
+
+// View visibility logic
+shouldShowUncategorizedInViews(activeSmartView: 'today' | 'week' | 'uncategorized' | null): boolean
+
+// Regular view filtering
+filterTasksForRegularViews(tasks: Task[], activeSmartView: 'today' | 'week' | 'uncategorized' | null): Task[]
+```
+
+#### Categorization Logic
+```typescript
+// Primary criteria: explicit uncategorized flag
+if (task.isUncategorized === true) return true
+
+// Backward compatibility: tasks without proper project assignment
+if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
+  return true
+}
+```
+
+#### Usage Pattern
+```typescript
+// In views (BoardView, CalendarView, CanvasView, AllTasksView)
+const { filterTasksForRegularViews } = useUncategorizedTasks()
+const taskStore = useTaskStore()
+
+const filteredTasks = computed(() => {
+  const allTasks = taskStore.getAllTasks
+  return filterTasksForRegularViews(allTasks, activeSmartView.value)
+})
+```
+
+#### Integration Points
+- **Task Store**: Smart filter state management
+- **BoardView**: Kanban board task filtering
+- **CalendarView**: Calendar task display
+- **CanvasView**: Canvas task organization
+- **AllTasksView**: Master task list filtering
+
+---
+
+### useHorizontalDragScroll.ts - Horizontal Scroll with Drag Physics
+
+**Purpose**: Smooth horizontal scrolling with drag interactions and momentum physics
+**Pattern**: Touch-enabled drag scrolling with conflict resolution
+
+#### Core Features
+- **Drag Scrolling**: Horizontal scrolling via mouse/touch drag
+- **Momentum Physics**: Smooth momentum scrolling with friction
+- **Conflict Resolution**: Smart detection of draggable elements
+- **Touch Support**: Mobile device compatibility
+- **Performance**: GPU-accelerated smooth scrolling
+- **Accessibility**: Proper cursor and touch feedback
+
+#### API
+```typescript
+// Composable setup
+const {
+  isDragging,
+  isScrolling,
+  scrollTo,
+  scrollBy,
+  scrollToElement
+} = useHorizontalDragScroll(scrollContainer, options)
+
+// Configuration options
+interface HorizontalDragScrollOptions {
+  threshold?: number        // Minimum drag distance (default: 10)
+  sensitivity?: number      // Scroll multiplier (default: 1)
+  friction?: number         // Momentum friction (default: 0.95)
+  touchEnabled?: boolean    // Touch support (default: true)
+  dragCursor?: string       // Drag cursor (default: 'grabbing')
+  onDragStart?: () => void  // Drag start callback
+  onDragEnd?: () => void    // Drag end callback
+}
+```
+
+#### Smart Drag Detection
+```typescript
+// Detects draggable elements to prevent conflicts
+const draggableSelectors = [
+  '.draggable', '[data-draggable="true"]', '[draggable="true"]',
+  '.task-card', '.inbox-task-card', '[data-inbox-task="true"]',
+  '.vuedraggable', '.vue-flow__node', '.vue-flow__handle'
+]
+
+// Allows interactive elements within task cards
+const interactiveSelectors = [
+  'button', 'input', 'textarea', 'select', '[role="button"]',
+  '.draggable-handle', '.status-icon-button', '.task-title',
+  '.card-header', '.metadata-badges', '.card-actions'
+]
+```
+
+#### Momentum Physics
+```typescript
+// Smooth momentum scrolling with configurable friction
+const applyMomentum = () => {
+  if (Math.abs(velocity.value) > 0.1) {
+    scrollContainer.value.scrollLeft += velocity.value
+    velocity.value *= friction // Apply friction
+    requestAnimationFrame(applyMomentum)
+  }
+}
+```
+
+#### Usage Pattern
+```typescript
+// In Kanban board components
+const scrollContainer = ref<HTMLElement>()
+
+const { isDragging, isScrolling } = useHorizontalDragScroll(scrollContainer, {
+  threshold: 10,
+  sensitivity: 1.2,
+  friction: 0.95,
+  dragCursor: 'grabbing',
+  onDragStart: () => console.log('Drag scroll started'),
+  onDragEnd: () => console.log('Drag scroll ended')
+})
+```
+
+#### Conflict Resolution
+- **Task Cards**: Preserves existing drag-and-drop functionality
+- **Vue Flow Canvas**: Allows canvas-specific interactions
+- **Interactive Elements**: Maintains button/input functionality
+- **Container Boundaries**: Respects scroll container limits
+- **Touch Events**: Proper touch-action management
+
+#### Integration Points
+- **Kanban Board**: Horizontal scrolling for project swimlanes
+- **Canvas View**: Smooth panning alongside Vue Flow interactions
+- **Mobile Support**: Touch events with proper gesture handling
+- **Performance**: GPU acceleration and event optimization
 
 ---
 
@@ -972,3 +1129,4 @@ This comprehensive composable architecture provides reusable, testable, and effi
 
 **Last Updated**: November 2, 2025
 **Architecture Version**: Vue 3.4.0, Composition API
+**Recent Additions**: useUncategorizedTasks.ts (task filtering), useHorizontalDragScroll.ts (drag physics)

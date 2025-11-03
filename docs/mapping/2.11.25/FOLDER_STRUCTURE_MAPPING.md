@@ -80,6 +80,7 @@ src/components/base/
 ├── BaseDropdown.vue             # Dropdown selector component
 ├── BaseInput.vue                # Form input component
 ├── BaseModal.vue                # Modal dialog component
+├── BaseNavItem.vue              # Navigation item with drag-and-drop support (UPDATED)
 ├── BasePopover.vue              # Popover component
 └── index.ts                     # Component exports
 ```
@@ -166,25 +167,45 @@ src/stores/
 
 ```
 src/composables/
-├── useAuth.ts                   # Authentication logic
-├── useBackupScheduler.ts        # Automated data backup management
-├── useBrowserTab.ts             # Browser tab visibility management
-├── useCalendarDragCreate.ts     # Calendar drag-and-drop scheduling
-├── useCloudSync.ts              # Data synchronization capabilities
-├── useDatabase.ts               # IndexedDB abstraction layer
-├── useDeepMerge.ts              # Object deep merging utilities
-└── useDragAndDrop.ts            # Generic drag-and-drop functionality
-├── useFocusMode.ts              # Focus mode session management
-├── useKeyboardShortcuts.ts      # Keyboard shortcut handling
-├── useNotification.ts           # Browser notification management
-├── usePerformanceMonitor.ts     # Application performance tracking
-├── usePersistentStorage.ts      # localStorage management with fallbacks
-├── useQuickSort.ts              # Session management for rapid categorization
-├── useTheme.ts                  # Theme switching and preferences
-├── useTimer.ts                  # Timer-specific functionality
-├── useUnifiedUndoRedo.ts        # Centralized undo/redo system
-├── useVirtualList.ts            # Virtual scrolling for large lists
-└── index.ts                     # Composable exports
+├── adapters/                    # External service adapters
+│   └── FirebaseAdapter.ts        # Firebase integration adapter
+├── calendar/                     # Calendar-specific composables
+│   ├── useCalendarDayView.ts     # Day view logic and state
+│   ├── useCalendarEventHelpers.ts # Calendar event utilities (NEW)
+│   ├── useCalendarMonthView.ts   # Month view logic and state
+│   └── useCalendarWeekView.ts    # Week view logic and state
+├── useAuth.ts                    # Authentication logic
+├── useBackupScheduler.ts         # Automated data backup management
+├── useBrowserTab.ts              # Browser tab visibility management
+├── useBulletproofPersistence.ts  # Enhanced data persistence with error recovery
+├── useCalendarDragCreate.ts      # Calendar drag-and-drop scheduling
+├── useCloudSync.ts               # Data synchronization capabilities
+├── useCopy.ts                    # Clipboard functionality
+├── useDatabase.ts                # IndexedDB abstraction layer
+├── useDatabaseAdapter.ts         # Database interface abstraction
+├── useDeepMerge.ts               # Object deep merging utilities
+└── useDragAndDrop.ts             # Generic drag-and-drop functionality
+├── useFavicon.ts                 # Dynamic favicon management
+├── useFocusManagement.ts         # Focus management utilities
+├── useFocusMode.ts               # Focus mode session management
+├── useFirestore.ts              # Firestore database integration
+├── useHorizontalDragScroll.ts    # Horizontal scroll with drag physics (NEW)
+├── useKeyboardShortcuts.ts       # Keyboard shortcut handling
+├── useNotification.ts            # Browser notification management
+├── usePerformanceMonitor.ts      # Application performance tracking
+├── usePersistentStorage.ts       # localStorage management with fallbacks
+├── useProgressiveDisclosure.ts   # Progressive disclosure UI pattern
+├── useQuickSort.ts               # Session management for rapid categorization
+├── useSidebarToggle.ts           # Sidebar visibility management
+├── useTabVisibility.ts           # Browser tab visibility detection
+├── useTheme.ts                   # Theme switching and preferences
+├── useTimer.ts                   # Timer-specific functionality
+├── useUncategorizedTasks.ts      # Uncategorized task filtering system (NEW)
+├── useUnifiedUndoRedo.ts         # Centralized undo/redo system
+├── useVirtualList.ts             # Virtual scrolling for large lists
+├── useYjsSync.ts                 # YJS collaborative editing synchronization
+├── undoSingleton.ts              # Undo system singleton implementation
+└── index.ts                      # Composable exports
 ```
 
 ## Types Directory (src/types/)
@@ -357,5 +378,35 @@ tests/
 
 This folder structure supports a scalable, maintainable Vue.js application with clear separation of concerns, type safety, and comprehensive testing coverage.
 
+## Recent Structure Changes (November 2025)
+
+### New Composables Added
+- **useHorizontalDragScroll.ts**: Horizontal scrolling with drag physics and conflict resolution
+- **useUncategorizedTasks.ts**: Centralized uncategorized task filtering and smart view integration
+- **useCalendarEventHelpers.ts**: Calendar event utilities (newly organized in calendar/ subdirectory)
+
+### Enhanced Directory Organization
+- **calendar/ subdirectory**: Organized calendar-specific composables
+  - useCalendarDayView.ts, useCalendarWeekView.ts, useCalendarMonthView.ts
+  - useCalendarEventHelpers.ts (NEW)
+- **adapters/ subdirectory**: External service adapters
+  - FirebaseAdapter.ts for Firebase integration
+
+### Updated Components
+- **BaseNavItem.vue**: Enhanced with drag-and-drop support and visual feedback
+- **TaskList.vue**: Improved error handling and hierarchical task display
+- **ProjectFilterDropdown.vue**: Enhanced uncategorized task filtering support
+
+### Additional Composables Discovered
+The structure update also revealed additional composables not previously documented:
+- useBulletproofPersistence.ts: Enhanced data persistence
+- useCopy.ts: Clipboard functionality
+- useFavicon.ts: Dynamic favicon management
+- useProgressiveDisclosure.ts: UI progressive disclosure pattern
+- useSidebarToggle.ts: Sidebar visibility management
+- useTabVisibility.ts: Browser tab visibility detection
+- useYjsSync.ts: Collaborative editing synchronization
+
 **Last Updated**: November 2, 2025
 **Architecture Version**: Vue 3.4.0, TypeScript 5.9.3
+**Recent Updates**: Added new composables, enhanced directory organization, documented recently modified components

@@ -493,6 +493,172 @@ User Submits Form
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### New User Workflows (November 2025)
+
+#### Uncategorized Task Filtering Workflow ("My Tasks" Smart Filter)
+
+```
+User Activates "My Tasks" Smart Filter
+    ↓
+UI Store Updates activeSmartView to 'uncategorized'
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ useUncategorizedTasks Composable Executes                     │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ isTaskUncategorized(task) Check                       │ │
+│ │ • Primary: task.isUncategorized === true             │ │
+│ │ • Fallback: !task.projectId || invalid projectId    │ │
+│ │ • Legacy: projectId === '1' or empty                 │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ View-Specific Filtering Applied                              │
+│ ┌─────────────────┐ ┌─────────────────┐ ┌───────────────┐ │
+│ │ BoardView       │ │ CalendarView    │ │ CanvasView    │ │
+│ │ Filter Kanban   │ │ Filter Calendar │ │ Filter Canvas │ │
+│ │ Swimlanes        │ │ Events          │ │ Nodes         │ │
+│ └─────────────────┴─┴─────────────────┴─┴───────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+UI Updates: Only Uncategorized Tasks Visible
+    ↓
+User Interaction: Task Operations Available
+    ↓
+State Persistence: Smart filter state saved to UI Store
+```
+
+#### Done Task Visibility Toggle Workflow
+
+```
+User Toggles "Hide Done Tasks" in Kanban Board
+    ↓
+UI Store Updates hideDoneTasks Boolean
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Kanban View Reactively Updates                               │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Task Filtering Logic                                     │ │
+│ │ if (hideDoneTasks && task.status === 'done') {        │ │
+│ │   exclude from render                                  │ │
+│ │ }                                                       │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+Visual Update: Done Tasks Disappear from Columns
+    ↓
+State Persistence: hideDoneTasks saved to localStorage
+    ↓
+Cross-View Sync: Setting applies to AllTasksView and BoardView
+```
+
+#### Enhanced Error Recovery Workflow
+
+```
+Error Occurs in Component Operation
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Error Boundary Pattern Activated                             │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ try {                                                  │ │
+│ │   await criticalOperation()                           │ │
+│ │ } catch (error) {                                     │ │
+│ │   console.error('Operation failed:', error)           │ │
+│ │   uiStore.showNotification(                           │ │
+│ │     'Operation failed. Please try again.',             │ │
+│ │     'error'                                           │ │
+│ │   )                                                    │ │
+│ │   return fallbackValue                                │ │
+│ │ }                                                      │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ User-Friendly Error Display                                │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Error Notification with Action Buttons                 │ │
+│ │ • "Retry" Button: Re-attempt failed operation        │ │
+│ │ • "Dismiss" Button: Close notification                │ │
+│ │ • Auto-hide after 5 seconds                           │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+State Recovery: Application state remains consistent
+    ↓
+User Can Continue: Other functionality unaffected
+```
+
+#### Horizontal Drag Scroll Interaction Workflow
+
+```
+User Initiates Drag on Kanban Board Horizontal Area
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ useHorizontalDragScroll Composable Analyzes Intent             │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Smart Drag Intent Detection                            │ │
+│ │ • Check for draggable elements (task cards, etc.)    │ │
+│ │ • Identify interactive elements (buttons, inputs)    │ │
+│ │ • Detect Vue Flow canvas interactions                │ │
+│ │ • Determine scroll vs drag intent                    │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Interaction Decision                                          │
+│ ┌─────────────────┐ ┌─────────────────┐                     │
+│ │ Drag Intent     │ │ Scroll Intent   │                     │
+│ │ Detected?       │ │ Detected?       │                     │
+│ │ • Allow task    │ │ • Activate      │                     │
+│ │   drag-and-drop │ │   horizontal    │                     │
+│ │ • Don't         │ │   scroll        │                     │
+│ │   interfere     │ │ • Apply         │                     │
+│ └─────────────────┴─┴─────────────────┘                     │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+[Scroll Intent Path]
+useHorizontalDragScroll Activates
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Physics-Based Scrolling                                      │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ • Track mouse/touch movement                          │ │
+│ │ • Calculate velocity for momentum                     │ │
+│ │ • Apply configurable friction (0.95)                  │ │
+│ │ • Smooth 60fps scrolling with requestAnimationFrame  │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+Visual Feedback: Cursor changes to 'grabbing'
+    ↓
+User Releases: Momentum scrolling continues with friction
+    ↓
+State Restoration: Cursor and touch-action properties reset
+```
+
+#### Smart State Persistence Workflow
+
+```
+User Performs Any UI State Change
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Automatic State Persistence                                   │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ debounceSave(1000ms) Triggered                       │ │
+│ │ • activeSmartView saved                               │ │
+│ │ • hideDoneTasks saved                                 │ │
+│ │ • expandedProjects saved                              │ │
+│ │ • sidebarStates saved                                 │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+IndexedDB Storage via LocalForage
+    ↓
+Cross-Session Recovery: State restored on page reload
+    ↓
+Consistent UX: User preferences maintained across sessions
+```
+
 ---
 
 ## Event System Architecture
@@ -1161,3 +1327,4 @@ This interaction flows reference provides complete visibility into the Pomo-Flow
 **Last Updated**: November 2, 2025
 **Consolidated From**: 4 separate interaction and flow documents
 **Document Type**: Comprehensive Interaction Flows Reference
+**Recent Workflows Added**: Uncategorized task filtering, Done task visibility toggle, Enhanced error recovery, Horizontal drag scroll, Smart state persistence

@@ -651,6 +651,43 @@ FocusView.vue
 **Props**: trigger, position, offset, persistent
 **Usage**: Tooltips, context menus, quick actions
 
+### BaseNavItem.vue
+**Function**: Navigation item component with drag-and-drop support
+
+**Features**: Nested navigation, drag targets, project indicators, expand/collapse
+**Props**: active, nested, hasChildren, expanded, projectId, colorType, emoji, colorDot
+**Events**: click, toggle-expand, dragstart, dragend, dragenter, dragover, dragleave, drop
+**Usage**: Sidebar navigation, project tree, hierarchical navigation
+
+**Key Features**:
+- **Drag & Drop Integration**: Acts as drag target for task assignment
+- **Visual Feedback**: Drag validity indicators and state changes
+- **Hierarchical Support**: Expand/collapse for nested items
+- **Project Integration**: Emoji and color support for projects
+- **Accessibility**: Proper ARIA attributes and keyboard navigation
+
+**Usage Locations**:
+- **Sidebar.vue**: Main navigation menu items
+- **ProjectTreeItem.vue**: Project hierarchy navigation
+- **RightSidebar.vue**: Contextual navigation items
+- **TaskManagerSidebar.vue**: Task organization navigation
+
+**Drag & Drop Behavior**:
+```typescript
+// Drag target validation
+const isDragValid = computed(() => {
+  if (!projectId || !isDragging.value) return false
+  return true // Project can accept task drops
+})
+
+// Visual drag feedback
+:class="{
+  'is-drag-target': isDragTarget,
+  'is-drag-valid': isDragValid && projectId,
+  'is-drag-invalid': isDragTarget && !isDragValid && isDragging && projectId
+}"
+```
+
 ---
 
 ## Specialized Components
@@ -699,6 +736,153 @@ FocusView.vue
 **Features**: Priority indicators, progress bars, actions menu
 **Props**: task, compact, showProject, dragHandle
 **Store Integration**: taskStore for task operations
+
+#### ProjectFilterDropdown.vue
+**Function**: Project filtering dropdown with smart view integration
+**Features**: Project selection, uncategorized tasks support, visual indicators
+**Props**: activeProjectId, projects, onProjectChange
+**Events**: project-changed, dropdown-toggled
+**Store Integration**: taskStore for projects, uiStore for filter state
+
+**Key Features**:
+- **Smart View Integration**: Works with "My Tasks" uncategorized filter
+- **Visual Project Indicators**: Emoji and color support for projects
+- **Uncategorized Support**: Handles tasks without project assignment
+- **Dropdown Navigation**: Keyboard navigation and search functionality
+- **Active State Display**: Shows current filter state with visual feedback
+
+**Usage Pattern**:
+```typescript
+// In BoardView or other filtered views
+<ProjectFilterDropdown
+  :activeProjectId="activeProjectId"
+  :projects="projects"
+  @project-changed="handleProjectChange"
+/>
+
+const handleProjectChange = (projectId: string | null) => {
+  activeProjectId.value = projectId
+  // Apply project filter to tasks
+}
+```
+
+**Component Structure**:
+```vue
+<template>
+  <div class="project-filter-dropdown">
+    <!-- Trigger button with project indicator -->
+    <button class="filter-trigger" @click="toggleDropdown">
+      <div v-if="activeProject" class="project-indicator">
+        <!-- Project emoji or color -->
+      </div>
+      <div v-else class="all-projects-icon">
+        <!-- All projects icon -->
+      </div>
+      <span class="filter-label">{{ getTriggerLabel() }}</span>
+      <ChevronDown class="dropdown-chevron" />
+    </button>
+
+    <!-- Dropdown panel with project list -->
+    <Transition name="dropdown-slide">
+      <div v-if="isOpen" class="dropdown-panel">
+        <div class="project-list">
+          <!-- All Projects option -->
+          <!-- Individual project options -->
+        </div>
+      </div>
+    </Transition>
+  </div>
+</template>
+```
+
+**Integration with useUncategorizedTasks**:
+- Filters uncategorized tasks when no project selected
+- Supports smart view filtering for "My Tasks"
+- Maintains backward compatibility with legacy project assignments
+
+#### TaskList.vue - Hierarchical Task Display
+**Function**: Project-grouped task list with hierarchical organization
+**Features**: Project grouping, expand/collapse, hierarchical tasks, bulk selection
+**Props**: tasks, selectedTaskIds, expandedProjects, expandedTasks
+**Events**: select, toggleComplete, startTimer, edit, contextMenu, toggleExpand, moveTask
+**Store Integration**: taskStore for task data, uses useUncategorizedTasks for filtering
+
+**Key Features**:
+- **Project Grouping**: Groups tasks by project with expand/collapse
+- **Hierarchical Display**: Shows parent-child task relationships
+- **Error Handling**: Robust array validation and defensive programming
+- **Empty States**: Contextual empty state messages
+- **Bulk Operations**: Multi-select with bulk actions support
+
+**Component Structure**:
+```vue
+<template>
+  <div class="task-list">
+    <!-- Project Groups -->
+    <div v-for="project in projectGroups" :key="project.id" class="project-group">
+      <!-- Project Header -->
+      <div class="project-header" @click="toggleProjectExpand(project.id)">
+        <ChevronRight class="project-expand-icon" />
+        <span class="project-emoji">{{ project.emoji || '📁' }}</span>
+        <span class="project-name">{{ project.name }}</span>
+        <span class="project-task-count">{{ project.tasks.length }}</span>
+      </div>
+
+      <!-- Hierarchical Tasks -->
+      <template v-if="expandedProjects.has(project.id)">
+        <HierarchicalTaskRow
+          v-for="task in project.parentTasks"
+          :key="task.id"
+          :task="task"
+          :indent-level="0"
+          :selected="selectedTaskIds.includes(task.id)"
+          :expanded-tasks="expandedTasks"
+          @select="$emit('select', $event)"
+          @toggleExpand="toggleTaskExpand"
+        />
+      </template>
+    </div>
+
+    <!-- Empty State -->
+    <div v-if="projectGroups.length === 0" class="empty-state">
+      <Inbox class="empty-icon" />
+      <p class="empty-title">No tasks found</p>
+      <p class="empty-description">{{ emptyMessage }}</p>
+    </div>
+  </div>
+</template>
+```
+
+**Error Handling Pattern**:
+```typescript
+// Defensive array validation
+const projectGroups = computed(() => {
+  if (!Array.isArray(tasks.value)) {
+    console.warn('TaskList: tasks is not an array', tasks.value)
+    return []
+  }
+
+  // Group tasks by project with error handling
+  const groups = tasks.value.reduce((acc, task) => {
+    if (!task || !task.id) return acc // Skip invalid tasks
+
+    const projectId = task.projectId || 'uncategorized'
+    if (!acc[projectId]) {
+      acc[projectId] = { id: projectId, tasks: [] }
+    }
+    acc[projectId].tasks.push(task)
+    return acc
+  }, {})
+
+  return Object.values(groups)
+})
+```
+
+**Integration with useUncategorizedTasks**:
+- Uses `getUncategorizedTasks()` for uncategorized task filtering
+- Respects smart view state for "My Tasks" filtering
+- Handles backward compatibility with legacy project assignments
+- Provides seamless integration across all views
 
 ### Authentication Components
 
@@ -982,6 +1166,74 @@ interface ContextMenuItem {
   <span>{{ errorMessage }}</span>
 </div>
 ```
+
+#### Recent Error Handling Improvements (November 2025)
+
+**Enhanced Defensive Programming Patterns**:
+
+1. **Array Validation in TaskList.vue**:
+```typescript
+// Defensive array validation with fallback
+const projectGroups = computed(() => {
+  if (!Array.isArray(tasks.value)) {
+    console.warn('TaskList: tasks is not an array', tasks.value)
+    return []
+  }
+  // Process tasks with validation...
+})
+```
+
+2. **CanvasView Error Boundaries**:
+```typescript
+// Task operation wrapper with error handling
+const handleTaskOperation = async (operation: () => Promise<void>) => {
+  try {
+    await operation()
+  } catch (error) {
+    console.error('CanvasView: Task operation failed', error)
+    // Show user-friendly error message
+    uiStore.showNotification('Operation failed. Please try again.', 'error')
+  }
+}
+```
+
+3. **BoardView Error Recovery**:
+```typescript
+// Safe task filtering with error recovery
+const filteredTasks = computed(() => {
+  try {
+    return tasks.value.filter(task => {
+      if (!task || !task.id) return false
+      return matchesFilterCriteria(task)
+    })
+  } catch (error) {
+    console.error('BoardView: Task filtering failed', error)
+    return [] // Fallback to empty array
+  }
+})
+```
+
+4. **Graceful Degradation Patterns**:
+```typescript
+// Component-level error boundaries
+<template>
+  <div v-if="hasError" class="error-fallback">
+    <AlertCircle class="error-icon" />
+    <p>Unable to load content. Please refresh.</p>
+    <BaseButton @click="retry">Retry</BaseButton>
+  </div>
+  <div v-else>
+    <!-- Normal component content -->
+  </div>
+</template>
+```
+
+**Key Error Handling Principles**:
+- **Fail Gracefully**: Always provide fallbacks for failed operations
+- **User Feedback**: Show clear error messages to users
+- **Console Logging**: Log detailed errors for debugging
+- **State Recovery**: Ensure application state remains consistent
+- **Performance**: Don't let errors block rendering of unaffected components
 
 ### Loading States
 
@@ -1382,3 +1634,4 @@ This consolidated component reference provides a comprehensive overview of the P
 **Last Updated**: November 2, 2025
 **Architecture Version**: Vue 3.4.0, Composition API, TypeScript
 **Document Consolidation**: Merged from 4 separate component documentation files
+**Recent Updates**: Added BaseNavItem, ProjectFilterDropdown, TaskList components; Enhanced error handling patterns; Integration with useUncategorizedTasks and useHorizontalDragScroll composables

@@ -276,35 +276,81 @@ const tasksByProject = computed(() => {
   try {
     const grouped: Record<string, Task[]> = {}
 
-    // FIXED: Use filtered tasks from store - respects smart views and all filtering
+    // COMPREHENSIVE DEBUGGING FOR SMART VIEW ISSUE
     let tasks: Task[] = []
     try {
-      // Get tasks from store's filteredTasks computed property
+      // STATE SNAPSHOT BEFORE FILTERING
+      console.log('🔥🔥🔥 BoardView.tasksByProject: STARTING COMPUTATION')
+      console.log('🔥 BoardView.tasksByProject: Task store state:')
+      console.log('  - Total raw tasks:', taskStore.tasks?.length || 0)
+      console.log('  - Active smart view:', taskStore.activeSmartView)
+      console.log('  - Active project ID:', taskStore.activeProjectId)
+      console.log('  - Hide done tasks:', taskStore.hideDoneTasks)
+
+      // Get filtered tasks from store
       tasks = taskStore.filteredTasks || []
-      console.log('🔥 BoardView.tasksByProject: Using filtered tasks from store:', tasks.length)
-      console.log('🔥 BoardView.tasksByProject: Active smart view:', taskStore.activeSmartView)
-      console.log('🔥 BoardView.tasksByProject: Active project filter:', taskStore.activeProjectId)
+      console.log('🔥 BoardView.tasksByProject: Filtered tasks received:', tasks.length)
+
+      // LOGGING FOR TASK ANALYSIS
+      if (tasks.length === 0) {
+        console.log('🔥 BoardView.tasksByProject: ⚠️ NO TASKS PASSED FILTERING!')
+        console.log('🔥 BoardView.tasksByProject: Investigating raw tasks...')
+
+        const rawTasks = taskStore.tasks || []
+        console.log('🔥 BoardView.tasksByProject: Raw tasks available:', rawTasks.length)
+
+        if (rawTasks.length > 0) {
+          console.log('🔥 BoardView.tasksByProject: Sample raw tasks (first 5):')
+          rawTasks.slice(0, 5).forEach((task, i) => {
+            console.log(`    ${i+1}. "${task.title}" - Status: ${task.status}, Project: ${task.projectId || 'NONE'}`)
+          })
+        }
+      } else {
+        console.log('🔥 BoardView.tasksByProject: Tasks that passed filtering:')
+        tasks.forEach((task, i) => {
+          console.log(`    ${i+1}. "${task.title}" - Status: ${task.status}, Project: ${task.projectId || 'NONE'}`)
+        })
+      }
     } catch (error) {
       console.error('🔥 BoardView.tasksByProject: Error getting filtered tasks:', error)
-      // Fallback to empty array - no sample tasks to mask real issues
       tasks = []
     }
 
-    // Group tasks by project
+    // Group tasks by project with detailed logging
+    let uncategorizedCount = 0
+    let validTaskCount = 0
+
+    console.log('🔥 BoardView.tasksByProject: Starting task grouping...')
     tasks.forEach(task => {
       if (!task || typeof task !== 'object') {
-        console.warn('🔥 BoardView.tasksByProject: Invalid task object:', task)
+        console.warn('🔥 BoardView.tasksByProject: ⚠️ Invalid task object:', task)
         return
       }
 
-      const projectId = task.projectId || 'default'
+      validTaskCount++
+      const projectId = task.projectId || 'uncategorized'
+
+      if (projectId === 'uncategorized') {
+        uncategorizedCount++
+        console.log(`🔥 BoardView.tasksByProject: Found uncategorized task: "${task.title}"`)
+      }
+
       if (!grouped[projectId]) {
         grouped[projectId] = []
+        console.log(`🔥 BoardView.tasksByProject: Created project group: "${projectId}"`)
       }
       grouped[projectId].push(task)
     })
 
-    console.log('🔥 BoardView.tasksByProject: Final grouped tasks:', Object.keys(grouped).length, 'projects')
+    console.log('🔥 BoardView.tasksByProject: Grouping complete:')
+    console.log('  - Valid tasks processed:', validTaskCount)
+    console.log('  - Uncategorized tasks:', uncategorizedCount)
+    console.log('  - Total project groups:', Object.keys(grouped).length)
+
+    // Log each project's task count
+    Object.entries(grouped).forEach(([projectId, projectTasks]) => {
+      console.log(`    Project "${projectId}": ${projectTasks.length} tasks`)
+    })
     return grouped
   } catch (error) {
     console.error('🔥 BoardView.tasksByProject: Critical error:', error)

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filtering Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .warning { background: #fff3e0; color: #f57c00; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        iframe { width: 100%; height: 600px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Pomo-Flow Task Filtering Test</h1>
+
+    <div class="log">
+        <h3>Test Instructions:</h3>
+        <p>1. Click the buttons below to test different smart views</p>
+        <p>2. Check the iframe to see if tasks appear in the kanban board</p>
+        <p>3. Look for 🔥, 🚨, and 🔧 prefixed logs in the console</p>
+    </div>
+
+    <div>
+        <button onclick="testView('today')">Test Today View</button>
+        <button onclick="testView('week')">Test This Week View</button>
+        <button onclick="testView('all')">Test All Tasks View</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div id="logs"></div>
+
+    <h3>Application (loaded in iframe):</h3>
+    <iframe src="http://localhost:5546" id="app-frame"></iframe>
+
+    <script>
+        function addLog(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        function testView(viewName) {
+            addLog(`Testing ${viewName} view...`, 'info');
+
+            const iframe = document.getElementById('app-frame');
+
+            // Wait for iframe to load, then try to click on the smart view
+            iframe.onload = function() {
+                try {
+                    const iframeWindow = iframe.contentWindow;
+                    const iframeDocument = iframe.contentDocument;
+
+                    // Look for smart view buttons
+                    const buttons = iframeDocument.querySelectorAll('button, [role="button"]');
+
+                    let foundButton = null;
+                    buttons.forEach(button => {
+                        const text = button.textContent.toLowerCase();
+                        if (text.includes(viewName.toLowerCase()) ||
+                            (viewName === 'today' && text.includes('today')) ||
+                            (viewName === 'week' && text.includes('week')) ||
+                            (viewName === 'all' && text.includes('all'))) {
+                            foundButton = button;
+                        }
+                    });
+
+                    if (foundButton) {
+                        addLog(`Found ${viewName} button, clicking...`, 'success');
+                        foundButton.click();
+
+                        // Wait a moment and then check for tasks
+                        setTimeout(() => {
+                            const taskCards = iframeDocument.querySelectorAll('[data-testid="task-card"], .task-card, .task');
+                            addLog(`Found ${taskCards.length} task cards after clicking ${viewName}`,
+                                   taskCards.length > 0 ? 'success' : 'warning');
+                        }, 2000);
+                    } else {
+                        addLog(`Could not find ${viewName} button`, 'error');
+
+                        // Log all button text for debugging
+                        const buttonTexts = Array.from(buttons).map(btn => btn.textContent).filter(text => text.trim());
+                        addLog(`Available buttons: ${buttonTexts.join(', ')}`, 'warning');
+                    }
+                } catch (error) {
+                    addLog(`Error testing ${viewName}: ${error.message}`, 'error');
+                }
+            };
+
+            // Reload iframe to ensure fresh state
+            iframe.src = iframe.src;
+        }
+
+        // Monitor console messages from iframe
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'console') {
+                const message = event.data.message;
+                if (message.includes('🔥') || message.includes('🚨') || message.includes('🔧')) {
+                    addLog(`APP CONSOLE: ${message}`, 'info');
+                }
+            }
+        });
+
+        addLog('Test page loaded. Ready to test task filtering.', 'success');
+    </script>
+</body>
+</html>

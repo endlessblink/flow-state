@@ -711,49 +711,61 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log('🚨 TaskStore.filteredTasks: After initial assignment:', filtered.length, 'tasks')
     }
 
-    // Apply project filter first (including child projects)
-    if (activeProjectId.value) {
-      const beforeProjectFilter = filtered.length
-      const projectIds = getChildProjectIds(activeProjectId.value)
-
+    // CRITICAL FIX: Apply smart view filter FIRST when active
+    // Smart views should override project filters to fix kanban board issue
+    if (activeSmartView.value && activeSmartView.value !== 'all') {
       if (shouldLogTaskDiagnostics()) {
-        // 🚨 DIAGNOSTIC LOGGING - DELETE AFTER DEBUGGING
-        console.log('\n🚨🚨🚨 PROJECT FILTER DIAGNOSTIC 🚨🚨🚨')
-        console.log(`   Active Project ID: ${activeProjectId.value} (type: ${typeof activeProjectId.value})`)
-        console.log(`   Target Project IDs (including children): ${projectIds.join(', ')}`)
-        console.log(`   Tasks before filter: ${filtered.length}`)
-
-        // Log task details BEFORE filtering
-        console.log('\n   TASKS BEFORE FILTERING:')
-        filtered.forEach((task, idx) => {
-          const matches = projectIds.includes(task.projectId)
-          const looseMatches = projectIds.some(pid => pid == task.projectId)
-          const strictType = typeof task.projectId
-          console.log(`     [${idx}] "${task.title.substring(0, 40)}"`)
-          console.log(`          projectId: ${task.projectId} (type: ${strictType})`)
-          console.log(`          Strict match (includes): ${matches ? '✅' : '❌'}`)
-          console.log(`          Loose match (==): ${looseMatches ? '✅' : '❌'}`)
-        })
+        console.log('🔥🔥🔥 CRITICAL FIX: Smart view active, applying BEFORE project filter:', activeSmartView.value)
+        console.log('🔥 Smart views override project filters to fix kanban board issue')
       }
 
-      filtered = filtered.filter(task => projectIds.includes(task.projectId))
+      // Apply smart view filter first (will be handled in the smart view section below)
+      // Project filter will be skipped when smart view is active
+    } else {
+      // Apply project filter only when NO smart view is active
+      if (activeProjectId.value) {
+        const beforeProjectFilter = filtered.length
+        const projectIds = getChildProjectIds(activeProjectId.value)
 
-      if (shouldLogTaskDiagnostics()) {
-        console.log(`\n   Tasks after filter: ${filtered.length}`)
-        console.log(`   Removed: ${beforeProjectFilter - filtered.length}`)
-        if (filtered.length === 0 && beforeProjectFilter > 0) {
-          console.log('\n   ⚠️  WARNING: Filtered to 0 tasks but had tasks before!')
-          console.log('   This means NO task.projectId matched any target project ID')
-          console.log('   Possible causes:')
-          console.log('     1. Type mismatch (string vs number)')
-          console.log('     2. Task is in child project with different ID')
-          console.log('     3. Null/undefined projectId values')
+        if (shouldLogTaskDiagnostics()) {
+          // 🚨 DIAGNOSTIC LOGGING - DELETE AFTER DEBUGGING
+          console.log('\n🚨🚨🚨 PROJECT FILTER DIAGNOSTIC (No Smart View Active) 🚨🚨🚨')
+          console.log(`   Active Project ID: ${activeProjectId.value} (type: ${typeof activeProjectId.value})`)
+          console.log(`   Target Project IDs (including children): ${projectIds.join(', ')}`)
+          console.log(`   Tasks before filter: ${filtered.length}`)
+
+          // Log task details BEFORE filtering
+          console.log('\n   TASKS BEFORE FILTERING:')
+          filtered.forEach((task, idx) => {
+            const matches = projectIds.includes(task.projectId)
+            const looseMatches = projectIds.some(pid => pid == task.projectId)
+            const strictType = typeof task.projectId
+            console.log(`     [${idx}] "${task.title.substring(0, 40)}"`)
+            console.log(`          projectId: ${task.projectId} (type: ${strictType})`)
+            console.log(`          Strict match (includes): ${matches ? '✅' : '❌'}`)
+            console.log(`          Loose match (==): ${looseMatches ? '✅' : '❌'}`)
+          })
         }
-        console.log('🚨🚨🚨 END DIAGNOSTIC 🚨🚨🚨\n')
+
+        filtered = filtered.filter(task => projectIds.includes(task.projectId))
+
+        if (shouldLogTaskDiagnostics()) {
+          console.log(`\n   Tasks after filter: ${filtered.length}`)
+          console.log(`   Removed: ${beforeProjectFilter - filtered.length}`)
+          if (filtered.length === 0 && beforeProjectFilter > 0) {
+            console.log('\n   ⚠️  WARNING: Filtered to 0 tasks but had tasks before!')
+            console.log('   This means NO task.projectId matched any target project ID')
+            console.log('   Possible causes:')
+            console.log('     1. Type mismatch (string vs number)')
+            console.log('     2. Task is in child project with different ID')
+            console.log('     3. Null/undefined projectId values')
+          }
+          console.log('🚨🚨🚨 END DIAGNOSTIC 🚨🚨🚨\n')
+        }
       }
     }
 
-    // Apply smart view filter
+    // Apply smart view filter (now takes precedence over project filter)
     if (activeSmartView.value === 'today') {
       try {
         const todayStr = new Date().toISOString().split('T')[0]
@@ -812,18 +824,9 @@ export const useTaskStore = defineStore('tasks', () => {
               }
             }
 
-            // Tasks due today
-            if (task.dueDate) {
-              try {
-                const taskDueDate = new Date(task.dueDate)
-                if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) {
-                  console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (due today)`)
-                  return true
-                }
-              } catch (error) {
-                console.warn('TaskStore.filteredTasks: Error processing dueDate in today filter:', error, task.dueDate)
-              }
-            }
+            // Note: Tasks due today are NOT included in today filter
+            // They should appear in the calendar inbox, not as scheduled events
+            // This prevents auto-scheduling of due-but-unscheduled tasks
 
             // Tasks currently in progress should be included in today filter (matches sidebar logic)
             if (task.status === 'in_progress') {
@@ -2249,6 +2252,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // Computed
     filteredTasks,
+    calendarFilteredTasks,
     doneTasksForColumn,
     tasksWithCanvasPosition,
     tasksByStatus,

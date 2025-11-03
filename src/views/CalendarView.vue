@@ -157,7 +157,8 @@
               :style="getEventStyle(event)"
               :class="{
                 'multi-slot': event.slotSpan > 1,
-                'timer-active-event': timerStore.currentTaskId === event.taskId
+                'timer-active-event': timerStore.currentTaskId === event.taskId,
+                'unscheduled-event': event.isUnscheduled
               }"
               :draggable="dragMode !== 'none'"
               @dragstart="handleEventDragStart($event, event)"
@@ -2348,5 +2349,52 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Unscheduled tasks - visual distinction */
+.calendar-event.unscheduled-event {
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.15) 0%,  /* Purple background */
+    rgba(59, 130, 246, 0.15) 100%  /* Blue background */
+  );
+  border: 2px dashed rgba(139, 92, 246, 0.5); /* Dashed purple border */
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.calendar-event.unscheduled-event:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.25) 0%,
+    rgba(59, 130, 246, 0.25) 100%
+  );
+  border-color: rgba(139, 92, 246, 0.7);
+  border-style: dashed;
+}
+
+.calendar-event.unscheduled-event .event-title {
+  font-style: italic;
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+}
+
+.calendar-event.unscheduled-event .event-title::before {
+  content: "📋 ";
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* Add a subtle indicator for unscheduled tasks */
+.calendar-event.unscheduled-event::after {
+  content: "Unscheduled";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: rgba(139, 92, 246, 0.7);
+  font-weight: var(--font-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 </style>

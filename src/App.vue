@@ -614,17 +614,17 @@ const weekTaskCount = computed(() => {
 const uncategorizedCount = computed(() => {
   // Use the exact same logic as the store's uncategorized filter for consistency
   const filteredTasks = taskStore.tasks.filter(task => {
+    // CRITICAL FIX: Counters should NEVER show done tasks, regardless of hideDoneTasks setting
+    if (task.status === 'done') {
+      return false
+    }
+
     // Apply same filtering logic as uncategorized smart view
     // Check isUncategorized flag first
     if (task.isUncategorized === true) {
       // Apply additional filters that happen AFTER smart view filtering in the store
       // Apply status filter if active
       if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
-        return false
-      }
-
-      // Apply hide done tasks filter if enabled
-      if (taskStore.hideDoneTasks && task.status === 'done') {
         return false
       }
 
@@ -639,11 +639,6 @@ const uncategorizedCount = computed(() => {
         return false
       }
 
-      // Apply hide done tasks filter if enabled
-      if (taskStore.hideDoneTasks && task.status === 'done') {
-        return false
-      }
-
       return true
     }
 
@@ -651,7 +646,7 @@ const uncategorizedCount = computed(() => {
   })
 
   // Debug logging to verify consistency with store filtering
-  console.log(`🔧 App.uncategorizedCount: Calculated ${filteredTasks.length} uncategorized tasks (activeStatusFilter: ${taskStore.activeStatusFilter}, hideDoneTasks: ${taskStore.hideDoneTasks})`)
+  console.log(`🔧 App.uncategorizedCount: Calculated ${filteredTasks.length} uncategorized tasks (activeStatusFilter: ${taskStore.activeStatusFilter})`)
 
   return filteredTasks.length
 })

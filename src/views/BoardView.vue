@@ -233,24 +233,19 @@ const tasksByProject = computed(() => {
   try {
     const grouped: Record<string, Task[]> = {}
 
-    // Add comprehensive safety check for boardFilteredTasks
+    // FIXED: Direct access to computed ref value
     let tasks: Task[] = []
     try {
-      // Check if boardFilteredTasks exists and has a value property
-      if (boardFilteredTasks && typeof boardFilteredTasks === 'object' && 'value' in boardFilteredTasks) {
-        tasks = boardFilteredTasks.value || []
-      } else {
-        console.warn('BoardView.tasksByProject: boardFilteredTasks is not a valid computed ref:', boardFilteredTasks)
-        return grouped
-      }
+      tasks = boardFilteredTasks.value || []
+      console.log('🚨 BoardView.tasksByProject: tasks from boardFilteredTasks =', tasks.length)
 
       // Validate that we got an array
       if (!Array.isArray(tasks)) {
-        console.warn('BoardView.tasksByProject: boardFilteredTasks.value is not an array:', tasks)
+        console.warn('🚨 BoardView.tasksByProject: boardFilteredTasks.value is not an array:', tasks)
         return grouped
       }
     } catch (error) {
-      console.error('BoardView.tasksByProject: Error accessing boardFilteredTasks:', error)
+      console.error('🚨 BoardView.tasksByProject: Error accessing boardFilteredTasks:', error)
       return grouped
     }
 
@@ -258,23 +253,26 @@ const tasksByProject = computed(() => {
       try {
         // Validate task object
         if (!task || typeof task !== 'object') {
-          console.warn('BoardView.tasksByProject: Invalid task object:', task)
+          console.warn('🚨 BoardView.tasksByProject: Invalid task object:', task)
           return
         }
 
         const projectId = task.projectId || '1'
+        console.log('🚨 BoardView.tasksByProject: Processing task:', task.title, '-> projectId:', projectId)
+
         if (!grouped[projectId]) {
           grouped[projectId] = []
         }
         grouped[projectId].push(task)
       } catch (error) {
-        console.error('BoardView.tasksByProject: Error processing task:', error, task)
+        console.error('🚨 BoardView.tasksByProject: Error processing task:', error, task)
       }
     })
 
+    console.log('🚨 BoardView.tasksByProject: Final grouped result:', grouped)
     return grouped
   } catch (error) {
-    console.error('BoardView.tasksByProject: Critical error grouping tasks by project:', error)
+    console.error('🚨 BoardView.tasksByProject: Critical error grouping tasks by project:', error)
     return {}
   }
 })
@@ -310,26 +308,39 @@ const projectsWithTasks = computed(() => {
   try {
     // Start with all projects (excluding the synthetic My Tasks project)
     let projects = taskStore.projects.filter(p => p.id !== '1' && p.name !== 'My Tasks')
+    console.log('🚨 BoardView.projectsWithTasks: All projects (excluding My Tasks):', projects.length, projects.map(p => ({ id: p.id, name: p.name })))
 
     // Validate that projects is an array
     if (!Array.isArray(projects)) {
-      console.warn('BoardView.projectsWithTasks: taskStore.projects is not an array:', projects)
+      console.warn('🚨 BoardView.projectsWithTasks: taskStore.projects is not an array:', projects)
       return []
     }
+
+    console.log('🚨 BoardView.projectsWithTasks: activeProjectId =', taskStore.activeProjectId)
 
     // If a specific project is selected, show that project AND its children
     // but only if they have active tasks
     if (taskStore.activeProjectId) {
       const projectIds = getProjectAndChildren(taskStore.activeProjectId)
-      return projects.filter(project =>
+      console.log('🚨 BoardView.projectsWithTasks: Selected project and children:', projectIds)
+      const filtered = projects.filter(project =>
         projectIds.includes(project.id) && projectHasActiveTasks(project.id)
       )
+      console.log('🚨 BoardView.projectsWithTasks: Filtered projects for selected:', filtered.length)
+      return filtered
     }
 
     // Otherwise, show all projects that have active tasks
-    return projects.filter(project => projectHasActiveTasks(project.id))
+    console.log('🚨 BoardView.projectsWithTasks: Checking each project for active tasks...')
+    const result = projects.filter(project => {
+      const hasActive = projectHasActiveTasks(project.id)
+      console.log('🚨 BoardView.projectsWithTasks: Project', project.name, 'has active tasks:', hasActive)
+      return hasActive
+    })
+    console.log('🚨 BoardView.projectsWithTasks: Final projects with tasks:', result.length, result.map(p => ({ id: p.id, name: p.name })))
+    return result
   } catch (error) {
-    console.error('BoardView.projectsWithTasks: Error filtering projects:', error)
+    console.error('🚨 BoardView.projectsWithTasks: Error filtering projects:', error)
     return []
   }
 })
@@ -356,29 +367,36 @@ const boardFilteredTasks = computed(() => {
   try {
     // Validate input from taskStore
     const storeTasks = taskStore.filteredTasks
+    console.log('🚨 BoardView.boardFilteredTasks: taskStore.filteredTasks =', storeTasks)
+    console.log('🚨 BoardView.boardFilteredTasks: taskStore.filteredTasks.length =', storeTasks?.length)
+    console.log('🚨 BoardView.boardFilteredTasks: activeSmartView =', taskStore.activeSmartView)
+
     if (!Array.isArray(storeTasks)) {
-      console.warn('BoardView.boardFilteredTasks: taskStore.filteredTasks is not an array:', storeTasks)
+      console.warn('🚨 BoardView.boardFilteredTasks: taskStore.filteredTasks is not an array:', storeTasks)
       return []
     }
 
+    console.log('🚨 BoardView.boardFilteredTasks: Input tasks count:', storeTasks.length)
+
     // When smart views are active, use filteredTasks directly to avoid double filtering
     if (taskStore.activeSmartView) {
-      console.log('BoardView.boardFilteredTasks: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
+      console.log('🚨 BoardView.boardFilteredTasks: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
       return storeTasks
     }
 
     // For regular views (no smart filter), use the existing filter logic
     const filtered = filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
+    console.log('🚨 BoardView.boardFilteredTasks: After filterTasksForRegularViews:', filtered?.length)
 
     // Validate result
     if (!Array.isArray(filtered)) {
-      console.warn('BoardView.boardFilteredTasks: filterTasksForRegularViews did not return an array:', filtered)
+      console.warn('🚨 BoardView.boardFilteredTasks: filterTasksForRegularViews did not return an array:', filtered)
       return []
     }
 
     return filtered
   } catch (error) {
-    console.error('BoardView.boardFilteredTasks: Error filtering tasks:', error)
+    console.error('🚨 BoardView.boardFilteredTasks: Error filtering tasks:', error)
     return []
   }
 })

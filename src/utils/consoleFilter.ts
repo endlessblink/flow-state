@@ -41,7 +41,7 @@ const originalConsole = {
 let logToggles: LogToggles = {
   timer: false,
   tabUpdate: false,
-  taskFiltering: false,
+  taskFiltering: true, // Enable to debug kanban board issue
   taskUpdates: false,
   undoSystem: false,
   undoOperations: false,

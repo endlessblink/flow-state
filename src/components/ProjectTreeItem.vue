@@ -109,7 +109,7 @@ const getProjectTaskCount = (projectId: string): number => {
     // Only count tasks that belong to this project tree
     if (!allChildProjectIds.includes(task.projectId)) return false
 
-    // Apply hideDoneTasks filter (global done task exclusion)
+    // CRITICAL: Counters should NEVER show done tasks, regardless of settings
     if (task.status === 'done') return false
 
     return true

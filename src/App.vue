@@ -93,7 +93,7 @@
             This Week
           </DateDropZone>
 
-          <!-- Above My Tasks -->
+          <!-- All Tasks -->
           <DateDropZone
             :active="taskStore.activeSmartView === 'above_my_tasks'"
             :count="aboveMyTasksCount"
@@ -103,7 +103,7 @@
             <template #icon>
               <List :size="16" />
             </template>
-            Above My Tasks
+            All Tasks
           </DateDropZone>
 
           <!-- Uncategorized Tasks (My Tasks) -->

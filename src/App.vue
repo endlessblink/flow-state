@@ -93,6 +93,19 @@
             This Week
           </DateDropZone>
 
+          <!-- Above My Tasks -->
+          <DateDropZone
+            :active="taskStore.activeSmartView === 'above_my_tasks'"
+            :count="aboveMyTasksCount"
+            target-type="above_my_tasks"
+            @click="selectSmartView('above_my_tasks')"
+          >
+            <template #icon>
+              <List :size="16" />
+            </template>
+            Above My Tasks
+          </DateDropZone>
+
           <!-- Uncategorized Tasks (My Tasks) -->
           <div class="smart-view-uncategorized">
             <button
@@ -408,7 +421,7 @@ import {
   Inbox, Bell, FileText, Archive,
   Coffee, User, Timer, FolderOpen, ChevronDown,
   Clock, Flag, Calendar, Edit, Trash2, Copy, Palette,
-  PanelLeft, PanelLeftClose, Zap
+  PanelLeft, PanelLeftClose, Zap, List
 } from 'lucide-vue-next'
 
 // Stores
@@ -606,6 +619,15 @@ const weekTaskCount = computed(() => {
     // Fallback to legacy scheduledDate
     if (!task.scheduledDate) return false
     return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+  }).length
+})
+
+// Above My Tasks task count - counts all non-done tasks
+const aboveMyTasksCount = computed(() => {
+  return taskStore.tasks.filter(task => {
+    // Count all tasks that are not marked as done
+    // This matches the "above_my_tasks" smart view logic
+    return task.status !== 'done'
   }).length
 })
 

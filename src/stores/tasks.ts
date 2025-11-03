@@ -364,7 +364,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const currentView = ref('board')
   const selectedTaskIds = ref<string[]>([])
   const activeProjectId = ref<string | null>(null) // null = show all projects
-  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | null>(null)
+  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'above_my_tasks' | null>(null)
   const activeStatusFilter = ref<string | null>(null) // null = show all statuses, 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   const hideDoneTasks = ref(false) // Global setting to hide done tasks across all views (disabled by default to show completed tasks for logging)
 
@@ -885,6 +885,18 @@ export const useTaskStore = defineStore('tasks', () => {
         return false
       })
       console.log(`🔧 TaskStore.filteredTasks: Uncategorized smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
+
+    } else if (activeSmartView.value === 'above_my_tasks') {
+      console.log('🔧 TaskStore.filteredTasks: Applying "above_my_tasks" smart view filter')
+      const beforeSmartFilter = filtered.length
+      // "Above My Tasks" shows all tasks except done/deleted ones
+      // This works with the existing hideDoneTasks toggle to optionally show done tasks
+      filtered = filtered.filter(task => {
+        // Include all tasks that are not marked as done
+        // The global hideDoneTasks toggle will control whether done tasks are shown
+        return task.status !== 'done'
+      })
+      console.log(`🔧 TaskStore.filteredTasks: Above My Tasks smart filter applied - removed ${beforeSmartFilter - filtered.length} done tasks, ${filtered.length} remaining`)
     }
 
     // Apply status filter (NEW GLOBAL STATUS FILTER)

@@ -45,10 +45,19 @@
       :style="{ backgroundColor: colorDot }"
     ></div>
 
-    <!-- Label -->
-    <span class="nav-label">
-      <slot />
-    </span>
+    <!-- Label with overflow tooltip -->
+    <OverflowTooltip
+      :text="slotText"
+      tooltip-position="right"
+      class="nav-label-tooltip"
+    >
+      <span class="nav-label">
+        <slot />
+      </span>
+      <template #tooltip-content>
+        {{ slotText }}
+      </template>
+    </OverflowTooltip>
 
     <!-- Count badge -->
     <BaseBadge
@@ -65,9 +74,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, useSlots } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
 import BaseBadge from './BaseBadge.vue'
+import OverflowTooltip from './OverflowTooltip.vue'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTaskStore } from '@/stores/tasks'
 
@@ -100,8 +110,27 @@ const emit = defineEmits<{
 
 const { isDragging, dragData, isValidDrop, setDropTarget, startDrag, endDrag } = useDragAndDrop()
 const taskStore = useTaskStore()
+const slots = useSlots()
 
 const isDragTarget = ref(false)
+
+// Get the text content from the default slot for tooltip
+const slotText = computed(() => {
+  const slotContent = slots.default?.()
+  if (!slotContent) return ''
+
+  // Extract text from slot content (handle simple text nodes)
+  const textNodes = slotContent
+    .flatMap(node => {
+      if (typeof node === 'string') return node
+      if (node.children) return node.children
+      return []
+    })
+    .filter(text => typeof text === 'string')
+    .join('')
+
+  return textNodes.trim()
+})
 
 const isDragValid = computed(() => {
   if (!props.projectId || !dragData.value) return false
@@ -285,10 +314,15 @@ const handleDrop = (event: DragEvent) => {
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 
-/* Nested items - indented like in screenshot */
+/* Nested items - dynamic indentation based on CSS custom property */
 .base-nav-item.is-nested {
-  padding-inline-start: var(--space-8); /* RTL: nested item indentation */
+  padding-inline-start: var(--nesting-indent, var(--space-8)); /* RTL: nested item indentation */
   min-height: 36px;
+}
+
+/* Special handling for deeper nesting levels */
+.base-nav-item.is-nested[style*="--nesting-indent"] {
+  padding-inline-start: calc(var(--nesting-indent) + var(--space-4));
 }
 
 /* Expand chevron */
@@ -377,10 +411,19 @@ const handleDrop = (event: DragEvent) => {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   flex: 1;
-  white-space: nowrap;
+  /* Allow multi-line text wrapping instead of truncation */
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+  /* Set a reasonable max height to allow 2-3 lines */
+  max-height: 3.6em; /* ~3 lines at 1.4 line-height */
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Allow up to 3 lines */
+  -webkit-box-orient: vertical;
   transition: color var(--duration-fast);
+  min-width: 0; /* Allow proper flex shrinking */
 }
 
 .base-nav-item.is-active .nav-label {
@@ -395,6 +438,13 @@ const handleDrop = (event: DragEvent) => {
 /* Nested items - smaller labels */
 .base-nav-item.is-nested .nav-label {
   font-size: var(--text-sm);
+}
+
+/* Tooltip container styling */
+.nav-label-tooltip {
+  flex: 1;
+  min-width: 0;
+  position: relative;
 }
 
 /* Project emoji */

@@ -255,4 +255,124 @@ describe('Application Smoke Tests', () => {
       console.log('Design system route not available, skipping design system test')
     }
   })
+
+  it('should handle calendar task editing without task deletion (bug fix verification)', async () => {
+    // Navigate to calendar view
+    const calendarNav = page.locator('a[href*="calendar"], button:has-text("Calendar"), .nav-calendar').first()
+    if (await calendarNav.isVisible()) {
+      await calendarNav.click()
+      await page.waitForLoadState('networkidle')
+
+      // Look for any calendar events/tasks that can be edited
+      await page.waitForTimeout(1000)
+
+      // Monitor console for task deletion errors
+      const consoleErrors: string[] = []
+      const consoleLogs: string[] = []
+
+      page.on('console', (msg) => {
+        const text = msg.text()
+        consoleLogs.push(text)
+        if (msg.type() === 'error') {
+          consoleErrors.push(text)
+        }
+      })
+
+      page.on('pageerror', (error) => {
+        consoleErrors.push(error.message)
+      })
+
+      // Check for task-related elements in calendar
+      const taskElements = page.locator('.calendar-event, .task-item, .fc-event, [data-testid*="task"], .calendar-task')
+
+      const taskCount = await taskElements.count()
+      console.log(`Found ${taskCount} task elements in calendar view`)
+
+      if (taskCount > 0) {
+        // Try to interact with the first task (simulate double-click to edit)
+        const firstTask = taskElements.first()
+
+        // Double-click to trigger edit modal (if implemented)
+        await firstTask.dblclick()
+        await page.waitForTimeout(500)
+
+        // Check if edit modal appeared
+        const editModal = page.locator('.modal, .dialog, .task-edit-modal')
+        if (await editModal.isVisible()) {
+          console.log('Edit modal opened successfully')
+
+          // Try to find and edit the task title
+          const titleInput = editModal.locator('input[type="text"], textarea').first()
+          if (await titleInput.isVisible()) {
+            const originalTitle = await titleInput.inputValue()
+            await titleInput.fill(originalTitle + ' - Edited')
+            console.log(`Changed task title from "${originalTitle}" to "${originalTitle} - Edited"`)
+
+            // Look for save button
+            const saveBtn = editModal.locator('button:has-text("Save"), button:has-text("Update"), button[type="submit"]').first()
+            if (await saveBtn.isVisible()) {
+              await saveBtn.click()
+              console.log('Clicked save button')
+              await page.waitForTimeout(1000)
+
+              // Verify no task deletion occurred
+              const taskCountAfterEdit = await taskElements.count()
+              console.log(`Task count after edit: ${taskCountAfterEdit}`)
+
+              // Task count should remain the same (task shouldn't be deleted)
+              expect(taskCountAfterEdit).toBe(taskCount)
+
+              // Check for any task deletion or error messages
+              const deletionErrors = consoleErrors.filter(error =>
+                error.toLowerCase().includes('delet') ||
+                error.toLowerCase().includes('error') ||
+                error.toLowerCase().includes('undefined')
+              )
+
+              expect(deletionErrors.length).toBe(0)
+
+              console.log('✅ Calendar task editing test passed - no task deletion detected')
+            } else {
+              console.log('Save button not found in edit modal')
+            }
+          } else {
+            console.log('Title input not found in edit modal')
+          }
+
+          // Close modal if still open
+          const closeBtn = editModal.locator('button:has-text("Close"), button:has-text("Cancel"), .modal-close').first()
+          if (await closeBtn.isVisible()) {
+            await closeBtn.click()
+          }
+        } else {
+          console.log('Edit modal did not appear after double-click')
+        }
+      } else {
+        console.log('No tasks found in calendar view to test editing')
+      }
+
+      // Log console activity for debugging
+      const relevantLogs = consoleLogs.filter(log =>
+        log.toLowerCase().includes('task') ||
+        log.toLowerCase().includes('instance') ||
+        log.toLowerCase().includes('inbox') ||
+        log.toLowerCase().includes('calendar')
+      )
+
+      if (relevantLogs.length > 0) {
+        console.log('Relevant console logs during test:', relevantLogs)
+      }
+
+      // Should not have any task-related errors
+      const taskErrors = consoleErrors.filter(error =>
+        error.toLowerCase().includes('task') ||
+        error.toLowerCase().includes('instance')
+      )
+
+      expect(taskErrors.length).toBe(0)
+
+    } else {
+      console.log('Calendar navigation not found, skipping calendar task editing test')
+    }
+  })
 })

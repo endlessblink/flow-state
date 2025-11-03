@@ -141,19 +141,26 @@
         <!-- Projects Section Header -->
         <div class="projects-divider"></div>
 
-        <!-- Project List - Recursive tree rendering -->
-        <div class="projects-list">
+        <!-- Project List - Recursive tree rendering with accessibility -->
+        <nav
+          class="projects-list"
+          role="tree"
+          aria-label="Projects"
+          :aria-activedescendant="activeProjectId ? `project-${activeProjectId}` : undefined"
+          @keydown="handleProjectTreeKeydown"
+        >
           <ProjectTreeItem
             v-for="project in rootProjects"
             :key="project.id"
             :project="project"
             :expanded-projects="expandedProjects"
+            :level="1"
             @click="selectProject"
             @toggle-expand="toggleProjectExpansion"
             @contextmenu="handleProjectContextMenu"
             @project-drop="() => {}"
           />
-        </div>
+        </nav>
       </div>
       </aside>
     </Transition>
@@ -755,6 +762,140 @@ const selectProject = (project: Project) => {
   taskStore.setSmartView(null)
 }
 
+// Keyboard navigation for project tree
+const handleProjectTreeKeydown = (event: KeyboardEvent) => {
+  const { key } = event
+
+  switch (key) {
+    case 'ArrowDown':
+      event.preventDefault()
+      navigateToNextProject()
+      break
+    case 'ArrowUp':
+      event.preventDefault()
+      navigateToPreviousProject()
+      break
+    case 'ArrowRight':
+      event.preventDefault()
+      expandCurrentProject()
+      break
+    case 'ArrowLeft':
+      event.preventDefault()
+      collapseCurrentProjectOrNavigateToParent()
+      break
+    case 'Enter':
+    case ' ':
+      event.preventDefault()
+      activateCurrentProject()
+      break
+    case 'Home':
+      event.preventDefault()
+      navigateToFirstProject()
+      break
+    case 'End':
+      event.preventDefault()
+      navigateToLastProject()
+      break
+  }
+}
+
+// Navigation helpers
+const navigateToNextProject = () => {
+  const currentProjectId = taskStore.activeProjectId
+  const allProjects = getFlattenedProjectList()
+  const currentIndex = allProjects.findIndex(p => p.id === currentProjectId)
+
+  if (currentIndex < allProjects.length - 1) {
+    taskStore.setActiveProject(allProjects[currentIndex + 1].id)
+  }
+}
+
+const navigateToPreviousProject = () => {
+  const currentProjectId = taskStore.activeProjectId
+  const allProjects = getFlattenedProjectList()
+  const currentIndex = allProjects.findIndex(p => p.id === currentProjectId)
+
+  if (currentIndex > 0) {
+    taskStore.setActiveProject(allProjects[currentIndex - 1].id)
+  }
+}
+
+const expandCurrentProject = () => {
+  const currentProjectId = taskStore.activeProjectId
+  if (currentProjectId && hasProjectChildren(currentProjectId)) {
+    if (!expandedProjects.value.includes(currentProjectId)) {
+      expandedProjects.value.push(currentProjectId)
+    }
+  }
+}
+
+const collapseCurrentProjectOrNavigateToParent = () => {
+  const currentProjectId = taskStore.activeProjectId
+  if (!currentProjectId) return
+
+  // If project has children and is expanded, collapse it
+  if (hasProjectChildren(currentProjectId) && expandedProjects.value.includes(currentProjectId)) {
+    const index = expandedProjects.value.indexOf(currentProjectId)
+    expandedProjects.value.splice(index, 1)
+  } else {
+    // Otherwise, navigate to parent if exists
+    const project = taskStore.getProjectById(currentProjectId)
+    if (project?.parentId) {
+      taskStore.setActiveProject(project.parentId)
+    }
+  }
+}
+
+const activateCurrentProject = () => {
+  const currentProjectId = taskStore.activeProjectId
+  if (currentProjectId) {
+    const project = taskStore.getProjectById(currentProjectId)
+    if (project) {
+      selectProject(project)
+    }
+  }
+}
+
+const navigateToFirstProject = () => {
+  const allProjects = getFlattenedProjectList()
+  if (allProjects.length > 0) {
+    taskStore.setActiveProject(allProjects[0].id)
+  }
+}
+
+const navigateToLastProject = () => {
+  const allProjects = getFlattenedProjectList()
+  if (allProjects.length > 0) {
+    taskStore.setActiveProject(allProjects[allProjects.length - 1].id)
+  }
+}
+
+// Helper functions for navigation
+const getFlattenedProjectList = () => {
+  const flatten = (projects: Project[], level = 1): Project[] => {
+    const result: Project[] = []
+
+    for (const project of projects) {
+      if (!project.parentId) { // Only include root projects initially
+        result.push(project)
+
+        if (expandedProjects.value.includes(project.id)) {
+          const children = taskStore.projects.filter(p => p.parentId === project.id)
+          result.push(...flatten(children, level + 1))
+        }
+      }
+    }
+
+    return result
+  }
+
+  return flatten(taskStore.projects)
+}
+
+const hasProjectChildren = (projectId: string) => {
+  return taskStore.projects.some(p => p.parentId === projectId)
+}
+
 
 const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'above_my_tasks') => {
   taskStore.setSmartView(view)
@@ -1096,8 +1237,39 @@ const handleRedo = async () => {
   }
 }
 
+// Route mapping for keyboard shortcuts
+const viewRouteMap = {
+  '1': '/',
+  '2': '/calendar',
+  '3': '/canvas',
+  '4': '/catalog',
+  '5': '/quick-sort'
+}
+
+// Helper function to check if element should ignore keyboard shortcuts
+const shouldIgnoreElement = (target: HTMLElement | null): boolean => {
+  if (!target) return false
+
+  // Check if target is an input, textarea, or contenteditable
+  if (target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable) {
+    return true
+  }
+
+  // Check if target is within a modal
+  const closestModal = target.closest('[role="dialog"], .modal, .n-modal')
+  if (closestModal) return true
+
+  return false
+}
+
 // Keyboard shortcut handlers
 const handleKeydown = (event: KeyboardEvent) => {
+  // Check if we should ignore keyboard shortcuts
+  const target = event.target as HTMLElement
+  if (shouldIgnoreElement(target)) return
+
   // Cmd/Ctrl+K to open Command Palette (Quick Add)
   if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
     event.preventDefault()
@@ -1118,11 +1290,6 @@ const handleKeydown = (event: KeyboardEvent) => {
 
   // Ctrl+Z (or Cmd+Z) to undo
   if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
-    // Don't interfere with text input
-    const target = event.target as HTMLElement
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-      return
-    }
     event.preventDefault()
     handleUndo()
   }
@@ -1130,13 +1297,20 @@ const handleKeydown = (event: KeyboardEvent) => {
   // Ctrl+Y (or Cmd+Shift+Z) to redo
   if (((event.ctrlKey || event.metaKey) && event.key === 'y') ||
       ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z')) {
-    // Don't interfere with text input
-    const target = event.target as HTMLElement
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-      return
-    }
     event.preventDefault()
     handleRedo()
+  }
+
+  // Shift+1-5 for view switching
+  if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    const key = event.key
+    if (key >= '1' && key <= '5') {
+      const route = viewRouteMap[key as keyof typeof viewRouteMap]
+      if (route) {
+        event.preventDefault()
+        router.push(route)
+      }
+    }
   }
 }
 
@@ -1234,10 +1408,17 @@ onUnmounted(() => {
   min-height: 100vh;
   font-family: var(--font-sans);
   color: var(--text-primary);
-  display: flex;
+  /* Use CSS Grid for flexible sidebar layout */
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) 1fr;
   position: relative;
   overflow-x: hidden; /* Prevent horizontal overflow at root level */
   overflow-y: visible; /* Allow vertical scrolling */
+}
+
+/* When sidebar is hidden, collapse the first column */
+.app.sidebar-hidden {
+  grid-template-columns: 0 1fr;
 }
 
 /* Animated gradient overlay */
@@ -1260,7 +1441,10 @@ onUnmounted(() => {
 
 /* LEFT SIDEBAR - Glass effect */
 .sidebar {
-  width: 260px;
+  /* Remove fixed width - let CSS Grid control the width */
+  min-width: 240px; /* Minimum width for usability */
+  max-width: 300px; /* Maximum width to prevent overly wide sidebar */
+  width: 100%; /* Fill the grid column */
   background: linear-gradient(
     135deg,
     var(--glass-border) 0%,
@@ -1278,6 +1462,7 @@ onUnmounted(() => {
     var(--shadow-2xl),
     inset -1px 0 0 var(--glass-bg-heavy);
   contain: layout style; /* Performance optimization */
+  overflow: hidden; /* Prevent sidebar content from causing horizontal scroll */
 }
 
 /* Sidebar toggle transitions */
@@ -1657,6 +1842,14 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  overflow-y: auto;
+  max-height: calc(100vh - 500px); /* Leave space for header and controls */
+  padding-right: var(--space-2); /* Prevent scroll from interfering with content */
+}
+
+/* Ensure the project tree items can use full width */
+.projects-list .project-tree-item {
+  width: 100%;
 }
 
 .project-group {
@@ -1830,7 +2023,7 @@ onUnmounted(() => {
 
 /* MAIN CONTENT - Transparent with glass effects */
 .main-content {
-  flex: 1;
+  /* Grid column automatically takes remaining space */
   background: transparent;
   padding: var(--space-10) var(--space-12); /* RTL: increased padding for less cramped feel */
   position: relative;

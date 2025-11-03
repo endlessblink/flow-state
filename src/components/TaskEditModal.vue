@@ -479,9 +479,31 @@ const saveTask = () => {
   } else {
     // Remove all instances if no scheduled date
     const existingInstances = taskStore.getTaskInstances(props.task)
-    existingInstances.forEach(instance => {
-      taskStore.deleteTaskInstanceWithUndo(editedTask.value.id, instance.id)
-    })
+
+    // CRITICAL FIX: Track instance deletions and update task state properly
+    if (existingInstances.length > 0) {
+      console.log(`🗑️ Removing ${existingInstances.length} instances from task "${editedTask.value.title}"`)
+
+      existingInstances.forEach(instance => {
+        taskStore.deleteTaskInstanceWithUndo(editedTask.value.id, instance.id)
+      })
+
+      // CRITICAL FIX: Update the task to ensure instances array is properly cleared
+      // and task is returned to inbox when all instances are removed
+      setTimeout(() => {
+        const currentTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
+        if (currentTask) {
+          const hasRemainingInstances = taskStore.getTaskInstances(currentTask).length > 0
+          if (!hasRemainingInstances && currentTask.isInInbox === false) {
+            taskStore.updateTask(currentTask.id, {
+              instances: [],  // Ensure instances array is explicitly cleared
+              isInInbox: true // Return task to inbox visibility
+            })
+            console.log(`✅ Task "${currentTask.title}" returned to inbox after instances cleared`)
+          }
+        }
+      }, 100) // Small delay to ensure instance deletions are processed
+    }
   }
 
   // Update subtasks

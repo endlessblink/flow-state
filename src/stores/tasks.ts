@@ -1465,6 +1465,14 @@ export const useTaskStore = defineStore('tasks', () => {
         console.log(`Task "${task.title}" removed from inbox (instances added via updateTask)`)
       }
 
+      // CRITICAL FIX: When all instances are removed from a task, return it to inbox
+      if (updates.instances !== undefined) {
+        if (updates.instances.length === 0 && task.instances && task.instances.length > 0 && task.isInInbox === false) {
+          updates.isInInbox = true
+          console.log(`Task "${task.title}" returned to inbox (all instances removed via updateTask)`)
+        }
+      }
+
       tasks.value[taskIndex] = {
         ...task,
         ...updates,

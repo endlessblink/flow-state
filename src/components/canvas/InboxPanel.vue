@@ -7,6 +7,39 @@
         <ChevronRight v-else :size="16" />
       </button>
       <h3 v-if="!isCollapsed" class="inbox-title">Inbox</h3>
+
+      <!-- Collapsed state task count indicators -->
+      <div v-if="isCollapsed" class="collapsed-badges">
+        <!-- Show dual count when filter is active, single count when no filter -->
+        <BaseBadge
+          v-if="activeTimeFilter === 'all'"
+          variant="count"
+          size="sm"
+          rounded
+        >
+          {{ baseInboxTasks.length }}
+        </BaseBadge>
+        <div v-else class="dual-badges">
+          <BaseBadge
+            variant="count"
+            size="sm"
+            rounded
+            class="total-count"
+          >
+            {{ baseInboxTasks.length }}
+          </BaseBadge>
+          <BaseBadge
+            variant="info"
+            size="sm"
+            rounded
+            class="filtered-count"
+          >
+            {{ inboxTasks.length }}
+          </BaseBadge>
+        </div>
+      </div>
+
+      <!-- Expanded state count -->
       <n-badge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
     </div>
 
@@ -140,6 +173,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import InboxTimeFilters from './InboxTimeFilters.vue'
+import BaseBadge from '@/components/base/BaseBadge.vue'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
@@ -614,6 +648,22 @@ onBeforeUnmount(() => {
 /* Collapsed state adjustments */
 .inbox-panel.collapsed .inbox-header {
   @apply justify-center;
+}
+
+.collapsed-badges {
+  @apply flex flex-col items-center gap-1;
+}
+
+.dual-badges {
+  @apply flex flex-col items-center gap-1;
+}
+
+.dual-badges .total-count {
+  @apply opacity-70;
+}
+
+.dual-badges .filtered-count {
+  @apply scale-90;
 }
 
 .inbox-panel.collapsed .quick-add,

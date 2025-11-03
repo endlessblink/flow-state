@@ -77,7 +77,7 @@ This directory contains comprehensive documentation of the Pomo-Flow Vue.js appl
 - **BoardView** - Kanban board with project swimlanes
 - **CalendarView** - Time-based task scheduling
 - **CanvasView** - Free-form visual organization
-- **AllTasksView** - Master task list
+- **CatalogView** - Master task catalog (RENAMED from AllTasksView)
 - **FocusView** - Pomodoro-focused sessions
 - **QuickSortView** - Rapid task categorization
 
@@ -127,9 +127,10 @@ npm run storybook
 
 ## Documentation Versions
 
-- **Current Version**: November 2, 2025
+- **Current Version**: November 3, 2025
 - **Framework Version**: Vue 3.4.0, Vite 7.1.10, TypeScript 5.9.3
-- **Archive Version**: Available in `./2.11.25/` directory
+- **Latest Version**: Available in `./3.11.25/` directory (updated with CatalogView and smart filtering)
+- **Previous Archive**: Available in `./2.11.25/` directory
 
 ## Contributing to Documentation
 
@@ -186,6 +187,7 @@ Pomo-Flow follows these core principles:
 
 This documentation serves as the definitive guide to understanding and working with the Pomo-Flow codebase.
 
-**Last Updated**: November 2, 2025
-**Documentation Version**: 1.0.0
+**Last Updated**: November 3, 2025
+**Documentation Version**: 3.11.25
 **Architecture Version**: Vue 3.4.0, Composition API
+**Recent Updates**: AllTasksView renamed to CatalogView, enhanced smart filtering system, counter consistency fixes

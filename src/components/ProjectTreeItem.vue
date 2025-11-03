@@ -1,5 +1,15 @@
 <template>
-  <div class="project-tree-item">
+  <div
+    class="project-tree-item"
+    :style="{ '--nesting-depth': nestingDepth }"
+    role="treeitem"
+    :aria-expanded="hasChildren ? isExpanded : undefined"
+    :aria-level="level"
+    :aria-selected="taskStore.activeProjectId === project.id"
+    :aria-label="project.name"
+    :id="`project-${project.id}`"
+    tabindex="-1"
+  >
     <!-- The project itself -->
     <BaseNavItem
       :active="taskStore.activeProjectId === project.id"
@@ -11,6 +21,10 @@
       :emoji="project.emoji"
       :count="getProjectTaskCount(project.id)"
       :nested="nested"
+      :style="{ '--nesting-indent': `${nestingDepth * 20}px` }"
+      :aria-expanded="hasChildren ? isExpanded : undefined"
+      :aria-level="level"
+      :tabindex="taskStore.activeProjectId === project.id ? 0 : -1"
       @click="handleProjectClick(project)"
       @toggle-expand="toggleExpand"
       @contextmenu.prevent="$emit('contextmenu', $event, project)"
@@ -20,22 +34,32 @@
     </BaseNavItem>
 
     <!-- Recursively render children if expanded -->
-    <div
-      v-if="hasChildren && isExpanded"
-      class="nested-children"
+    <Transition
+      name="nested-projects"
+      tag="div"
+      class="nested-children-transition"
     >
-      <ProjectTreeItem
-        v-for="child in children"
-        :key="child.id"
-        :project="child"
-        :expanded-projects="expandedProjects"
-        nested
-        @click="(project) => $emit('click', project)"
-        @toggle-expand="(projectId) => $emit('toggle-expand', projectId)"
-        @contextmenu="(event, project) => $emit('contextmenu', event, project)"
-        @project-drop="(data) => $emit('project-drop', data)"
-      />
-    </div>
+      <div
+        v-if="hasChildren && isExpanded"
+        class="nested-children"
+        role="group"
+        :style="{ '--nesting-indent': `${(nestingDepth + 1) * 20}px` }"
+      >
+        <ProjectTreeItem
+          v-for="child in children"
+          :key="child.id"
+          :project="child"
+          :expanded-projects="expandedProjects"
+          :nested="true"
+          :nesting-depth="nestingDepth + 1"
+          :level="level + 1"
+          @click="(project) => $emit('click', project)"
+          @toggle-expand="(projectId) => $emit('toggle-expand', projectId)"
+          @contextmenu="(event, project) => $emit('contextmenu', event, project)"
+          @project-drop="(data) => $emit('project-drop', data)"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -48,10 +72,14 @@ interface Props {
   project: Project
   expandedProjects: string[]
   nested?: boolean
+  nestingDepth?: number
+  level?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  nested: false
+  nested: false,
+  nestingDepth: 0,
+  level: 1
 })
 
 const emit = defineEmits<{
@@ -126,10 +154,66 @@ const getProjectTaskCount = (projectId: string): number => {
 }
 
 .nested-children {
-  margin-left: var(--space-6);
+  /* Dynamic indentation based on nesting level */
+  padding-left: calc(var(--nesting-indent, 20px) + var(--space-2));
   margin-top: var(--space-1);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  position: relative;
+}
+
+/* Add visual connection lines for nested projects */
+.nested-children::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--nesting-indent, 20px) / 2);
+  top: 0;
+  bottom: calc(var(--space-1) / 2);
+  width: 1px;
+  background: var(--border-subtle);
+  opacity: 0.5;
+}
+
+/* Smooth expand/collapse animations for nested children */
+.nested-children {
+  overflow: hidden;
+  transition:
+    max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animation states handled by Vue's Transition component will override these */
+
+/* Vue Transition for nested projects expand/collapse */
+.nested-projects-enter-active,
+.nested-projects-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.nested-projects-enter-from {
+  opacity: 0;
+  max-height: 0;
+  transform: scaleY(0) translateY(-8px);
+}
+
+.nested-projects-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: scaleY(0) translateY(-8px);
+}
+
+.nested-projects-enter-to,
+.nested-projects-leave-from {
+  opacity: 1;
+  max-height: 500px; /* Sufficient height for typical nested projects */
+  transform: scaleY(1) translateY(0);
+}
+
+/* Container for the transition to ensure proper layout */
+.nested-children-transition {
+  display: contents;
 }
 </style>

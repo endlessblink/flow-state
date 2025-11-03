@@ -37,6 +37,9 @@
             :key="currentTask.id"
             :task="currentTask"
             @update-task="handleTaskUpdate"
+            @mark-done="handleMarkDone"
+            @edit-task="handleEditTask"
+            @mark-done-and-delete="handleMarkDoneAndDelete"
           />
 
           <!-- Empty State -->
@@ -129,6 +132,13 @@
       v-if="showProjectModal"
       :is-open="showProjectModal"
       @close="showProjectModal = false"
+    />
+
+    <!-- Task Edit Modal -->
+    <TaskEditModal
+      :is-open="showEditModal"
+      :task="taskToEdit"
+      @close="closeEditModal"
     />
   </div>
 </template>

@@ -1170,35 +1170,7 @@ export const useTaskStore = defineStore('tasks', () => {
         // Exclude done tasks from today filter by default
         if (task.status === 'done') return false
 
-        // Check instances first (new format) - tasks scheduled for today
-        try {
-          const instances = getTaskInstances(task)
-          if (Array.isArray(instances) && instances.length > 0) {
-            if (instances.some(inst => {
-              if (!inst || !inst.scheduledDate) return false
-              const instanceDate = new Date(inst.scheduledDate)
-              if (!isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr) {
-                return true
-              }
-              return false
-            })) return true
-          }
-        } catch (error) {
-          console.warn('TaskStore.calendarFilteredTasks: Error getting task instances in today filter:', error, task)
-        }
-
-        // Fallback to legacy scheduledDate - tasks scheduled for today
-        if (task.scheduledDate) {
-          try {
-            const scheduledDate = new Date(task.scheduledDate)
-            if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) {
-              return true
-            }
-          } catch (error) {
-            console.warn('TaskStore.calendarFilteredTasks: Error processing scheduledDate in today filter:', error, task.scheduledDate)
-          }
-        }
-
+        
         // Tasks due today
         if (task.dueDate) {
           try {
@@ -1238,14 +1210,9 @@ export const useTaskStore = defineStore('tasks', () => {
       const weekEndStr = weekEnd.toISOString().split('T')[0]
 
       filtered = filtered.filter(task => {
-        // Check instances first (new format)
-        const instances = getTaskInstances(task)
-        if (instances.length > 0) {
-          return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
-        }
-        // Fallback to legacy scheduledDate
-        if (!task.scheduledDate) return false
-        return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+        // SIMPLIFIED: Check if task is due within the week
+        if (!task.dueDate) return false
+        return task.dueDate >= todayStr && task.dueDate < weekEndStr
       })
 
     } else if (activeSmartView.value === 'uncategorized') {
@@ -1305,17 +1272,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const createTask = (taskData: Partial<Task>) => {
     const taskId = Date.now().toString()
 
-    // If scheduledDate/Time provided, create instances array
-    const instances: TaskInstance[] = []
-    if (taskData.scheduledDate && taskData.scheduledTime) {
-      instances.push({
-        id: `instance-${taskId}-${Date.now()}`,
-        scheduledDate: taskData.scheduledDate,
-        scheduledTime: taskData.scheduledTime,
-        duration: taskData.estimatedDuration
-      })
-    }
-
+    
     // If this is a nested task (has parentTaskId), inherit parent's projectId
     let projectId = taskData.projectId || '1'
     if (taskData.parentTaskId) {
@@ -1338,8 +1295,7 @@ export const useTaskStore = defineStore('tasks', () => {
       projectId,
       createdAt: new Date(),
       updatedAt: new Date(),
-      instances, // Use instances array instead of legacy fields
-      isInInbox: true, // Default: tasks start in inbox
+            isInInbox: true, // Default: tasks start in inbox
       canvasPosition: undefined, // No canvas position until explicitly placed
       ...taskData
     }
@@ -1458,58 +1414,7 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  // Task Instance management
-  const createTaskInstance = (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => {
-    const task = tasks.value.find(t => t.id === taskId)
-    if (!task) return null
-
-    const newInstance: TaskInstance = {
-      id: Date.now().toString(),
-      scheduledDate: instanceData.scheduledDate,
-      scheduledTime: instanceData.scheduledTime,
-      duration: instanceData.duration,
-      completedPomodoros: instanceData.completedPomodoros || 0
-    }
-
-    if (!task.instances) {
-      task.instances = []
-    }
-
-    task.instances.push(newInstance)
-    task.updatedAt = new Date()
-    return newInstance
-  }
-
-  const updateTaskInstance = (taskId: string, instanceId: string, updates: Partial<TaskInstance>) => {
-    const task = tasks.value.find(t => t.id === taskId)
-    if (!task || !task.instances) return
-
-    const instanceIndex = task.instances.findIndex(inst => inst.id === instanceId)
-
-    if (instanceIndex !== -1) {
-      // Create updated instance
-      const updatedInstance = {
-        ...task.instances[instanceIndex],
-        ...updates
-      }
-
-      // Use splice to force Vue reactivity
-      task.instances.splice(instanceIndex, 1, updatedInstance)
-      task.updatedAt = new Date()
-    }
-  }
-
-  const deleteTaskInstance = (taskId: string, instanceId: string) => {
-    const task = tasks.value.find(t => t.id === taskId)
-    if (!task || !task.instances) return
-
-    const instanceIndex = task.instances.findIndex(inst => inst.id === instanceId)
-    if (instanceIndex !== -1) {
-      task.instances.splice(instanceIndex, 1)
-      task.updatedAt = new Date()
-    }
-  }
-
+  
   // Start task now - move to current time and mark as in progress
   const startTaskNow = (taskId: string) => {
     const task = tasks.value.find(t => t.id === taskId)
@@ -1950,10 +1855,7 @@ export const useTaskStore = defineStore('tasks', () => {
             createSubtask: (taskId: string, subtaskData: Partial<Subtask>) => createSubtask(taskId, subtaskData),
             updateSubtask: (taskId: string, subtaskId: string, updates: Partial<Subtask>) => updateSubtask(taskId, subtaskId, updates),
             deleteSubtask: (taskId: string, subtaskId: string) => deleteSubtask(taskId, subtaskId),
-            createTaskInstance: (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => createTaskInstance(taskId, instanceData),
-            updateTaskInstance: (taskId: string, instanceId: string, updates: Partial<TaskInstance>) => updateTaskInstance(taskId, instanceId, updates),
-            deleteTaskInstance: (taskId: string, instanceId: string) => deleteTaskInstance(taskId, instanceId),
-            createProject: (projectData: Partial<Project>) => createProject(projectData),
+                        createProject: (projectData: Partial<Project>) => createProject(projectData),
             updateProject: (projectId: string, updates: Partial<Project>) => updateProject(projectId, updates),
             deleteProject: (projectId: string) => deleteProject(projectId),
             bulkUpdateTasks: (taskIds: string[], updates: Partial<Task>) => {
@@ -2052,12 +1954,6 @@ export const useTaskStore = defineStore('tasks', () => {
         // Using direct operation for now
         return moveTaskToDate(taskId, dateColumn)
       },
-      deleteTaskInstanceWithUndo: async (taskId: string, instanceId: string) => {
-        // Unified undo/redo doesn't support task instance deletion yet
-        // Using direct deletion for now
-        return deleteTaskInstance(taskId, instanceId)
-      },
-
       // Subtask actions with undo/redo
       createSubtaskWithUndo: async (taskId: string, subtaskData: Partial<Subtask>) => {
         // Unified undo/redo doesn't support subtask operations yet
@@ -2073,18 +1969,6 @@ export const useTaskStore = defineStore('tasks', () => {
         // Unified undo/redo doesn't support subtask operations yet
         // Using direct operations for now
         return deleteSubtask(taskId, subtaskId)
-      },
-
-      // Task instance actions with undo/redo
-      createTaskInstanceWithUndo: async (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => {
-        // Unified undo/redo doesn't support task instance operations yet
-        // Using direct operations for now
-        return createTaskInstance(taskId, instanceData)
-      },
-      updateTaskInstanceWithUndo: async (taskId: string, instanceId: string, updates: Partial<TaskInstance>) => {
-        // Unified undo/redo doesn't support task instance operations yet
-        // Using direct operations for now
-        return updateTaskInstance(taskId, instanceId, updates)
       },
 
       // Project actions with undo/redo
@@ -2209,11 +2093,7 @@ export const useTaskStore = defineStore('tasks', () => {
     updateSubtask,
     deleteSubtask,
 
-    // Task Instance actions
-    createTaskInstance,
-    updateTaskInstance,
-    deleteTaskInstance,
-
+    
     // Nested task management
     getNestedTasks,
     getTaskChildren,

@@ -3,7 +3,7 @@
     <n-global-style />
     <n-message-provider>
   <!-- PROFESSIONAL PROJECT MANAGEMENT SYSTEM - CODOMO STYLE -->
-  <div class="app" :dir="direction">
+  <div class="app" :dir="direction" :data-testid="appLoaded.isLoaded ? 'app-loaded' : 'app-loading'">
     <!-- LEFT SIDEBAR NAVIGATION -->
     <Transition name="sidebar-slide">
       <aside v-show="uiStore.mainSidebarVisible" class="sidebar" aria-label="Main navigation" :aria-hidden="!uiStore.mainSidebarVisible">
@@ -388,6 +388,7 @@ import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
 import { useDirection } from '@/i18n/useDirection'
+import { useGlobalAppLoaded } from '@/composables/useAppLoaded'
 import { useRouter } from 'vue-router'
 // 🚨 FORCE CACHE BREAKER - UNDO SINGLETON V3 - 2025-10-22T22:58:00Z
 import { getUndoSystem } from '@/composables/undoSingleton'
@@ -396,6 +397,8 @@ import { provideFocusMode } from '@/composables/useFocusMode'
 import { useSidebarToggle } from '@/composables/useSidebarToggle'
 import { useFavicon } from '@/composables/useFavicon'
 import { useBrowserTab } from '@/composables/useBrowserTab'
+import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
+import { useProjectNormalization } from '@/composables/useProjectNormalization'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
 import DateDropZone from '@/components/DateDropZone.vue'
@@ -431,6 +434,23 @@ const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
 const authStore = useAuthStore()
 const router = useRouter()
+
+// App loading state management
+const appLoaded = useGlobalAppLoaded()
+
+// Enhanced project and task management composables
+const {
+  getUncategorizedTasks,
+  filterTasksForRegularViews,
+  shouldShowUncategorizedInViews,
+  getProjectAssociation
+} = useUncategorizedTasks()
+
+const {
+  getProjectDisplayName,
+  normalizeProjectsForDisplay,
+  createProjectCountsComputed
+} = useProjectNormalization()
 
 // RTL/LTR direction support
 const { direction, isRTL } = useDirection()
@@ -632,55 +652,40 @@ const aboveMyTasksCount = computed(() => {
 })
 
 
-// Uncategorized task count for Quick Sort badge
+// Enhanced uncategorized task counting using composable for consistency
 const uncategorizedCount = computed(() => {
-  // Use the exact same logic as the store's uncategorized filter for consistency
-  const filteredTasks = taskStore.tasks.filter(task => {
-    // CRITICAL FIX: Counters should NEVER show done tasks, regardless of hideDoneTasks setting
+  const uncategorizedTasks = getUncategorizedTasks(taskStore.tasks)
+
+  // Apply additional filters that happen after smart view filtering
+  const filteredTasks = uncategorizedTasks.filter(task => {
+    // CRITICAL FIX: Counters should NEVER show done tasks
     if (task.status === 'done') {
       return false
     }
 
-    // Apply same filtering logic as uncategorized smart view
-    // Check isUncategorized flag first
-    if (task.isUncategorized === true) {
-      // Apply additional filters that happen AFTER smart view filtering in the store
-      // Apply status filter if active
-      if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
-        return false
-      }
-
-      return true
+    // Apply status filter if active
+    if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
+      return false
     }
 
-    // Backward compatibility: also treat tasks without proper project assignment as uncategorized
-    if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
-      // Apply additional filters that happen AFTER smart view filtering in the store
-      // Apply status filter if active
-      if (taskStore.activeStatusFilter && task.status !== taskStore.activeStatusFilter) {
-        return false
-      }
-
-      return true
-    }
-
-    return false
+    return true
   })
 
   // Debug logging to verify consistency with store filtering
-  console.log(`🔧 App.uncategorizedCount: Calculated ${filteredTasks.length} uncategorized tasks (activeStatusFilter: ${taskStore.activeStatusFilter})`)
+  console.log(`🔧 App.uncategorizedCount: Using enhanced composable - ${filteredTasks.length} uncategorized tasks (activeStatusFilter: ${taskStore.activeStatusFilter})`)
 
   return filteredTasks.length
 })
 
-// Dynamic page title
+// Dynamic page title using enhanced project normalization
 const pageTitle = computed(() => {
   if (taskStore.activeSmartView === 'today') return 'Today'
   if (taskStore.activeSmartView === 'week') return 'This Week'
 
   if (taskStore.activeProjectId) {
-    const project = taskStore.projects.find(p => p.id === taskStore.activeProjectId)
-    return project ? project.name : 'My Tasks'
+    // Use enhanced project display name resolution with fallback
+    const projectName = getProjectDisplayName(taskStore.activeProjectId, taskStore.projects)
+    return projectName
   }
 
   return 'Board'
@@ -720,7 +725,7 @@ const createQuickTask = async () => {
       title: newTaskTitle.value.trim(),
       description: '',
       status: 'planned',
-      projectId: '1' // Default project
+      projectId: null // Use null for uncategorized tasks with enhanced fallback logic
     })
     newTaskTitle.value = ''
   }
@@ -742,7 +747,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
     title: title,
     description: description,
     status: 'planned',
-    projectId: '1' // Default project
+    projectId: null // Use null for uncategorized tasks with enhanced fallback logic
   })
 
   // Close the quick create modal
@@ -784,7 +789,16 @@ const handleStartQuickSort = () => {
 const getProjectTaskCount = (projectId: string) => {
   // Include tasks from child projects recursively
   const countTasksRecursive = (pid: string): number => {
-    const directTasks = taskStore.tasks.filter(task => task.projectId === pid).length
+    // Use enhanced project filtering that excludes done tasks from counters
+    const directTasks = taskStore.tasks.filter(task => {
+      if (task.projectId === pid && task.status !== 'done') {
+        // Additional check for uncategorized tasks using composable logic
+        const association = getProjectAssociation(task, taskStore.projects)
+        return association.projectId === pid
+      }
+      return false
+    }).length
+
     const children = getChildren(pid)
     const childTasks = children.reduce((sum, child) => sum + countTasksRecursive(child.id), 0)
     return directTasks + childTasks
@@ -1195,36 +1209,75 @@ const handleGlobalTaskContextMenu = (event: CustomEvent) => {
   handleTaskContextMenu(mouseEvent, task)
 }
 
-// Initialize theme and app
+// Initialize theme and app with progress tracking
 onMounted(async () => {
-  // Initialize cohesive theme system
-  initializeTheme()
+  try {
+    console.log('🚀 [APP.LOADING] Starting application initialization...')
 
-  // Load UI state from localStorage
-  uiStore.loadState()
+    // Phase 1: Initialize cohesive theme system
+    appLoaded.theme.start()
+    initializeTheme()
+    appLoaded.theme.complete()
 
-  // Load data from IndexedDB
-  await taskStore.loadFromDatabase()
-  await canvasStore.loadFromDatabase()
+    // Phase 2: Load UI state from localStorage
+    appLoaded.uiState.start()
+    uiStore.loadState()
+    appLoaded.uiState.complete()
 
-  // Request notification permission for timer
-  timerStore.requestNotificationPermission()
+    // Phase 3: Load tasks and projects from IndexedDB
+    appLoaded.taskDatabase.start()
+    await taskStore.loadFromDatabase()
+    appLoaded.taskDatabase.complete()
 
-  // Listen for task edit requests
-  window.addEventListener('open-task-edit', handleOpenTaskEdit as EventListener)
-  window.addEventListener('task-context-menu', handleGlobalTaskContextMenu as EventListener)
+    // Phase 4: Load canvas layout from IndexedDB
+    appLoaded.canvasDatabase.start()
+    await canvasStore.loadFromDatabase()
+    appLoaded.canvasDatabase.complete()
 
-  // Add keyboard shortcut listener for search
-  window.addEventListener('keydown', handleKeydown)
+    // Phase 5: Request notification permission for timer
+    appLoaded.timerPermissions.start()
+    timerStore.requestNotificationPermission()
+    appLoaded.timerPermissions.complete()
 
-  // Auto-open auth modal if not authenticated (after auth state loads)
-  // Wait for auth to initialize, then check if user is authenticated
-  setTimeout(() => {
-    if (!authStore.isLoading && !authStore.isAuthenticated && !uiStore.authModalOpen) {
-      console.log('🔐 [APP.VUE] Auto-opening auth modal - user not authenticated')
-      uiStore.openAuthModal('login', '/')
-    }
-  }, 1000) // Wait 1 second for auth to initialize
+    // Phase 6: Set up event listeners
+    appLoaded.eventListeners.start()
+    window.addEventListener('open-task-edit', handleOpenTaskEdit as EventListener)
+    window.addEventListener('task-context-menu', handleGlobalTaskContextMenu as EventListener)
+    window.addEventListener('keydown', handleKeydown)
+    appLoaded.eventListeners.complete()
+
+    // Phase 7: Check authentication state
+    appLoaded.authCheck.start()
+    // Auto-open auth modal if not authenticated (after auth state loads)
+    // Wait for auth to initialize, then check if user is authenticated
+    setTimeout(() => {
+      if (!authStore.isLoading && !authStore.isAuthenticated && !uiStore.authModalOpen) {
+        console.log('🔐 [APP.VUE] Auto-opening auth modal - user not authenticated')
+        uiStore.openAuthModal('login', '/')
+      }
+      appLoaded.authCheck.complete()
+
+      // Phase 8: Finalize setup
+      appLoaded.finalization.start()
+      console.log('✅ [APP.LOADING] Application initialization complete!')
+      console.log(`📊 [APP.LOADING] Final progress: ${appLoaded.overallProgress.value}%`)
+      appLoaded.finalization.complete()
+
+      // Safety fallback: Ensure app is marked as loaded even if some phases didn't complete
+      setTimeout(() => {
+        if (!appLoaded.isLoaded.value) {
+          console.warn('⚠️ [APP.LOADING] Safety fallback - marking app as loaded')
+          // Force completion of remaining phases
+          appLoaded.completePhase('authCheck')
+          appLoaded.completePhase('finalization')
+        }
+      }, 2000) // 2 second safety fallback
+    }, 1000) // Wait 1 second for auth to initialize
+
+  } catch (error) {
+    console.error('❌ [APP.LOADING] Error during initialization:', error)
+    appLoaded.addGlobalError(`Initialization failed: ${error}`)
+  }
 })
 
 onUnmounted(() => {

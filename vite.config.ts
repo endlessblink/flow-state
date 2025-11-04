@@ -19,7 +19,7 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 5546
+    port: 5549
   },
   build: {
     // Simplified build for faster compilation

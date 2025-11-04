@@ -1,16 +1,26 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useGlobalAppLoaded } from '@/composables/useAppLoaded'
 
 const UI_STATE_STORAGE_KEY = 'pomo-flow-ui-state'
 
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
 export const useUIStore = defineStore('ui', () => {
+  // Initialize app loading state
+  const appLoaded = useGlobalAppLoaded()
+
   // Sidebar visibility state
   const mainSidebarVisible = ref(true)
   const secondarySidebarVisible = ref(true)
   const focusMode = ref(false)
   const boardDensity = ref<'ultrathin' | 'compact' | 'comfortable'>('comfortable')
+
+  // App loading state (computed from appLoaded composable)
+  const isAppLoading = computed(() => !appLoaded.isLoaded.value)
+  const appLoadedProgress = computed(() => appLoaded.overallProgress.value)
+  const currentLoadingPhase = computed(() => appLoaded.currentPhase.value)
+  const loadingErrors = computed(() => appLoaded.allErrors.value)
 
   // Auth modal state
   const authModalOpen = ref(false)
@@ -133,6 +143,12 @@ export const useUIStore = defineStore('ui', () => {
     authModalRedirect,
     settingsModalOpen,
 
+    // App loading state
+    isAppLoading,
+    appLoadedProgress,
+    currentLoadingPhase,
+    loadingErrors,
+
     // Actions
     toggleMainSidebar,
     toggleSecondarySidebar,
@@ -145,6 +161,10 @@ export const useUIStore = defineStore('ui', () => {
     switchAuthView,
     openSettingsModal,
     closeSettingsModal,
-    loadState
+    loadState,
+
+    // App loading actions (passthrough to appLoaded composable)
+    startAppLoading: appLoaded.reset,
+    getAppLoadedComposable: () => appLoaded
   }
 })

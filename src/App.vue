@@ -1452,7 +1452,7 @@ onUnmounted(() => {
   color: var(--text-primary);
   /* Use CSS Grid for flexible sidebar layout */
   display: grid;
-  grid-template-columns: minmax(240px, 300px) 1fr;
+  grid-template-columns: minmax(240px, 340px) 1fr;
   position: relative;
   overflow-x: hidden; /* Prevent horizontal overflow at root level */
   overflow-y: visible; /* Allow vertical scrolling */
@@ -1489,7 +1489,7 @@ onUnmounted(() => {
 .sidebar {
   /* Remove fixed width - let CSS Grid control the width */
   min-width: 240px; /* Minimum width for usability */
-  max-width: 300px; /* Maximum width to prevent overly wide sidebar */
+  max-width: 340px; /* Maximum width to prevent overly wide sidebar */
   width: 100%; /* Fill the grid column */
   background: linear-gradient(
     135deg,

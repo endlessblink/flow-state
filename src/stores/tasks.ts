@@ -2306,5 +2306,64 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 })
 
-// REMOVED: getTaskInstances standalone export
-// We now use only dueDate - no complex instance system needed
+// Export getTaskInstances as a standalone function for direct import
+// Simplified implementation for calendar compatibility
+export const getTaskInstances = (task: Task) => {
+  // DEBUG: Track what data we're working with
+  console.log('🔍 getTaskInstances called for task:', task.title)
+  console.log('🔍 getTaskInstances - task.dueDate:', task.dueDate)
+  console.log('🔍 getTaskInstances - task.scheduledDate:', task.scheduledDate)
+  console.log('🔍 getTaskInstances - task.scheduledTime:', task.scheduledTime)
+  console.log('🔍 getTaskInstances - task.instances:', task.instances)
+
+  // Check for both legacy fields and new instances
+  if (task.instances && task.instances.length > 0) {
+    console.log('🔍 getTaskInstances - Using task.instances:', task.instances.length, 'instances')
+    return task.instances
+  }
+
+  // Legacy fallback: create synthetic instance from scheduledDate/scheduledTime
+  if (task.scheduledDate && task.scheduledTime) {
+    console.log('🔍 getTaskInstances - Creating synthetic instance from scheduledDate/scheduledTime')
+    return [{
+      id: `${task.id}-synthetic`,
+      taskId: task.id,
+      scheduledDate: task.scheduledDate,
+      scheduledTime: task.scheduledTime,
+      date: task.scheduledDate, // For backward compatibility
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      completedPomodoros: task.completedPomodoros,
+      progress: task.progress,
+      estimatedDuration: task.estimatedDuration,
+      duration: task.estimatedDuration || 60,
+      isCompleted: task.status === 'done'
+    }]
+  }
+
+  // Legacy fallback: use dueDate if available
+  if (task.dueDate) {
+    console.log('🔍 getTaskInstances - Creating synthetic instance from dueDate')
+    return [{
+      id: `${task.id}-synthetic`,
+      taskId: task.id,
+      scheduledDate: task.dueDate,
+      scheduledTime: '09:00', // Default time
+      date: task.dueDate,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      completedPomodoros: task.completedPomodoros,
+      progress: task.progress,
+      estimatedDuration: task.estimatedDuration,
+      duration: task.estimatedDuration || 60,
+      isCompleted: task.status === 'done'
+    }]
+  }
+
+  console.log('🔍 getTaskInstances - No date information found, returning empty array')
+  return []
+}

@@ -21,7 +21,7 @@
       :emoji="project.emoji"
       :count="getProjectTaskCount(project.id)"
       :nested="nested"
-      :style="{ '--nesting-indent': `${nestingDepth * 14}px` }"
+      :style="{ '--nesting-indent': `${Math.min(nestingDepth * 12, 32)}px` }"
       :aria-expanded="hasChildren ? isExpanded : undefined"
       :aria-level="level"
       :tabindex="taskStore.activeProjectId === project.id ? 0 : -1"
@@ -43,7 +43,7 @@
         v-if="hasChildren && isExpanded"
         class="nested-children"
         role="group"
-        :style="{ '--nesting-indent': `${(nestingDepth + 1) * 14}px` }"
+        :style="{ '--nesting-indent': `${Math.min((nestingDepth + 1) * 12, 32)}px` }"
       >
         <ProjectTreeItem
           v-for="child in children"
@@ -154,8 +154,7 @@ const getProjectTaskCount = (projectId: string): number => {
 }
 
 .nested-children {
-  /* Optimized dynamic indentation for Todoist-style efficiency */
-  padding-left: calc(var(--nesting-indent, 14px) + 6px); /* Reduced spacing for better text area */
+  /* Eliminate compound padding - let BaseNavItem handle all indentation */
   margin-top: var(--space-1);
   display: flex;
   flex-direction: column;

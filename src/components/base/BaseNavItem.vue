@@ -299,6 +299,7 @@ const handleDrop = (event: DragEvent) => {
   min-height: 40px;
   user-select: none;
   border: 1px solid transparent; /* Always have border to prevent layout shift */
+  flex-shrink: 1; /* CRITICAL: Allow container to shrink properly */
 }
 
 .base-nav-item:hover {
@@ -411,19 +412,12 @@ const handleDrop = (event: DragEvent) => {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   flex: 1;
-  /* Allow multi-line text wrapping instead of truncation */
-  white-space: normal;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  line-height: 1.4;
-  /* Set a reasonable max height to allow 2-3 lines */
-  max-height: 3.6em; /* ~3 lines at 1.4 line-height */
+  /* CRITICAL: Fix text truncation with flexbox */
+  min-width: 0; /* CRITICAL: Override default min-width: auto */
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3; /* Allow up to 3 lines */
-  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: color var(--duration-fast);
-  min-width: 0; /* Allow proper flex shrinking */
 }
 
 .base-nav-item.is-active .nav-label {

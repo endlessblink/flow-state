@@ -5,7 +5,7 @@
     'scrolling': isScrolling
   }">
     <!-- Swimlane Header (fixed, not scrollable) -->
-    <div class="swimlane-header" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
+    <div class="swimlane-header" @click="toggleCollapse" @contextmenu.prevent.stop="handleGroupContextMenu">
       <div class="header-content">
         <button class="collapse-btn">
           <ChevronDown v-if="!isCollapsed" :size="16" />
@@ -334,7 +334,8 @@ const getTasksByDate = (dateColumn: string) => {
   const afterNextWeekStart = addDays(nextWeekEnd, 1)
 
   const result = props.tasks.filter(task => {
-    const instances = getTaskInstances(task)
+    // Simple check: use task.dueDate directly (no more complex instance system)
+    const taskDueDate = task.dueDate ? parseDateKey(task.dueDate) : null
 
     // Check for overdue tasks first (highest priority)
     if (dateColumn === 'overdue') {
@@ -344,16 +345,8 @@ const getTasksByDate = (dateColumn: string) => {
       }
 
       // Check if task has a past due date
-      if (task.dueDate && task.dueDate < todayStr) {
+      if (taskDueDate && taskDueDate < today) {
         return true
-      }
-
-      // Check if any instance is overdue
-      if (instances.length > 0) {
-        return instances.some(instance => {
-          const instanceDate = parseDateKey(instance.scheduledDate)
-          return instanceDate && instanceDate < today
-        })
       }
 
       // Check if task is old (created more than 1 day ago) and has no date
@@ -362,27 +355,21 @@ const getTasksByDate = (dateColumn: string) => {
       const oneDayAgo = new Date(today)
       oneDayAgo.setDate(oneDayAgo.getDate() - 1)
 
-      // Include tasks that are at least 1 day old, have no date/instances, and are not in backlog
-      if (taskCreatedDate < oneDayAgo && instances.length === 0 &&
-          !task.dueDate && task.status !== 'backlog') {
+      // Include tasks that are at least 1 day old, have no date, and are not in backlog
+      if (taskCreatedDate < oneDayAgo && !task.dueDate && task.status !== 'backlog') {
         return true
       }
 
       return false
     }
 
-    // For tasks without instances, check additional criteria
-    if (instances.length === 0) {
+    // For tasks without due date, check additional criteria
+    if (!task.dueDate) {
       // Check if task was created today (for today column)
       if (dateColumn === 'today') {
         const taskCreatedDate = new Date(task.createdAt)
         taskCreatedDate.setHours(0, 0, 0, 0)
         if (taskCreatedDate.getTime() === today.getTime()) {
-          return true
-        }
-
-        // Check if task is due today
-        if (task.dueDate === todayStr) {
           return true
         }
 
@@ -398,49 +385,36 @@ const getTasksByDate = (dateColumn: string) => {
         const taskCreatedDate = new Date(task.createdAt)
         taskCreatedDate.setHours(0, 0, 0, 0)
         const isCreatedToday = taskCreatedDate.getTime() === today.getTime()
-        const isDueToday = task.dueDate === todayStr
         const isInProgress = task.status === 'in_progress'
 
-        return !isCreatedToday && !isDueToday && !isInProgress
+        return !isCreatedToday && !isInProgress
       }
 
       return false
     }
 
-    // For tasks with instances, use the original logic with later flag support
-    return instances.some(instance => {
-      // Check for later flag first
-      if (instance.isLater) {
-        return dateColumn === 'later'
-      }
-
-      const instanceDate = parseDateKey(instance.scheduledDate)
-      if (!instanceDate) return false
-
-      // Past dates go to overdue column (but we already handled overdue above)
-      if (instanceDate < today) {
-        return dateColumn === 'overdue'
-      }
-
+    // For tasks with due dates, use simple date comparison
+    if (taskDueDate) {
       switch (dateColumn) {
         case 'inbox':
-          // New tasks without specific scheduling
-          // Include tasks that are unscheduled and not completed
-          return !task.dueDate && task.status !== 'done' && task.status !== 'in_progress'
+          // New tasks without specific scheduling (shouldn't have due date for inbox)
+          return false
         case 'today':
-          return isSameDay(instanceDate, today)
+          return isSameDay(taskDueDate, today)
         case 'tomorrow':
-          return isSameDay(instanceDate, tomorrow) && !(instanceDate >= weekendStart && instanceDate <= weekendEnd)
+          return isSameDay(taskDueDate, tomorrow) && !(taskDueDate >= weekendStart && taskDueDate <= weekendEnd)
         case 'thisWeek':
           // Include this weekend and next week
-          return (instanceDate >= weekendStart && instanceDate <= weekendEnd) ||
-                 (instanceDate >= nextWeekStart && instanceDate <= nextWeekEnd)
+          return (taskDueDate >= weekendStart && taskDueDate <= weekendEnd) ||
+                 (taskDueDate >= nextWeekStart && taskDueDate <= nextWeekEnd)
         case 'later':
-          return instanceDate >= afterNextWeekStart && !instance.isLater
+          return taskDueDate >= afterNextWeekStart
         default:
           return false
       }
-    })
+    }
+
+    return false
   })
 
   // Include completed tasks in noDate column (Todoist-style)

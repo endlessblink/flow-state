@@ -47,27 +47,7 @@
               />
             </div>
 
-            <div class="metadata-field" title="Scheduled for - When you plan to work on this task">
-              <CalendarClock :size="14" />
-              <input
-                v-model="editedTask.scheduledDate"
-                type="date"
-                class="inline-input"
-                placeholder="Schedule"
-                @change="handleScheduledDateChange"
-              />
-            </div>
-
-            <div class="metadata-field">
-              <Clock :size="14" />
-              <input
-                v-model="editedTask.scheduledTime"
-                type="time"
-                class="inline-input"
-                :disabled="!editedTask.scheduledDate"
-              />
-            </div>
-
+            
             <div class="metadata-field">
               <TimerReset :size="14" />
               <input
@@ -278,7 +258,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useTaskStore, getTaskInstances } from '@/stores/tasks'
+import { useTaskStore, formatDateKey } from '@/stores/tasks'
 import type { Task, Subtask } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useNotificationStore } from '@/stores/notifications'
@@ -503,19 +483,15 @@ const resetPomodoros = () => {
 const saveTask = () => {
   if (!props.task) return
 
-  // DEBUG: Track task state before update
+  // DEBUG: Track task state before update (simplified - no more complex instance system)
   const originalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  const originalInstances = getTaskInstances(originalTask)
   console.log('🔍 DEBUG: BEFORE UPDATE - Task:', originalTask?.title)
-  console.log('🔍 DEBUG: BEFORE UPDATE - Task instances count:', originalInstances.length)
-  console.log('🔍 DEBUG: BEFORE UPDATE - Task instances:', originalInstances)
-  console.log('🔍 DEBUG: BEFORE UPDATE - editedTask.instances:', editedTask.value.instances)
-  console.log('🔍 DEBUG: BEFORE UPDATE - scheduledDate:', editedTask.value.scheduledDate)
-  console.log('🔍 DEBUG: BEFORE UPDATE - scheduledTime:', editedTask.value.scheduledTime)
+  console.log('🔍 DEBUG: BEFORE UPDATE - Task dueDate:', originalTask?.dueDate)
+  console.log('🔍 DEBUG: BEFORE UPDATE - Task scheduledDate:', editedTask.value.scheduledDate)
+  console.log('🔍 DEBUG: BEFORE UPDATE - Task scheduledTime:', editedTask.value.scheduledTime)
 
-  // Check if task had original scheduling that was explicitly removed
-  const hadOriginalSchedule = originalInstances.length > 0 ||
-                            (originalTask?.scheduledDate && originalTask?.scheduledTime) ||
+  // Check if task had original scheduling that was explicitly removed (simplified)
+  const hadOriginalSchedule = (originalTask?.scheduledDate && originalTask?.scheduledTime) ||
                             (originalTask?.instances && originalTask.instances.length > 0)
   const hasNewSchedule = editedTask.value.scheduledDate && editedTask.value.scheduledTime
   const scheduleExplicitlyRemoved = hadOriginalSchedule && !hasNewSchedule
@@ -547,70 +523,19 @@ const saveTask = () => {
   // Update main task
   taskStore.updateTaskWithUndo(editedTask.value.id, updates)
 
-  // DEBUG: Check state after main task update (no async needed - undo system handles this)
+  // DEBUG: Check state after main task update (simplified - no more complex instance system)
   const taskAfterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  const instancesAfterUpdate = getTaskInstances(taskAfterUpdate)
-  console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task instances count:', instancesAfterUpdate.length)
+  console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task scheduledDate:', taskAfterUpdate?.scheduledDate)
   console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task.isInInbox:', taskAfterUpdate?.isInInbox)
   console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task.instances:', taskAfterUpdate?.instances)
 
-  // Handle task instances for calendar
+  // Handle task scheduling (simplified - no more complex instance system)
   if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {
-    console.log('🔍 DEBUG: Handling instance creation/update')
-    // Check if task already has instances
-    const existingInstances = getTaskInstances(props.task)
-    const sameDayInstance = existingInstances.find(
-      inst => inst.scheduledDate === editedTask.value.scheduledDate
-    )
-
-    if (sameDayInstance) {
-      // Update existing instance
-      taskStore.updateTaskInstanceWithUndo(editedTask.value.id, sameDayInstance.id, {
-        scheduledTime: editedTask.value.scheduledTime,
-        duration: editedTask.value.estimatedDuration || 60
-      })
-      console.log('🔍 DEBUG: Updated existing instance:', sameDayInstance.id)
-    } else {
-      // Create new instance
-      taskStore.createTaskInstanceWithUndo(editedTask.value.id, {
-        scheduledDate: editedTask.value.scheduledDate,
-        scheduledTime: editedTask.value.scheduledTime,
-        duration: editedTask.value.estimatedDuration || 60
-      })
-      console.log('🔍 DEBUG: Created new instance')
-    }
-  } else if (scheduleExplicitlyRemoved) {
-    console.log('🔍 DEBUG: Schedule explicitly removed - handling instance deletion')
-    // Remove all instances only when schedule was explicitly removed by user
-    const existingInstances = getTaskInstances(props.task)
-
-    // CRITICAL FIX: Track instance deletions and update task state properly
-    if (existingInstances.length > 0) {
-      console.log(`🗑️ User removed schedule - removing ${existingInstances.length} instances from task "${editedTask.value.title}"`)
-
-      existingInstances.forEach(instance => {
-        taskStore.deleteTaskInstanceWithUndo(editedTask.value.id, instance.id)
-      })
-
-      // CRITICAL FIX: Update the task to ensure instances array is properly cleared
-      // and task is returned to inbox when all instances are removed
-      // No async needed - handle immediately after instance deletions
-      const currentTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-      if (currentTask) {
-        const hasRemainingInstances = getTaskInstances(currentTask).length > 0
-        if (!hasRemainingInstances && currentTask.isInInbox === false) {
-          taskStore.updateTask(currentTask.id, {
-            instances: [],  // Ensure instances array is explicitly cleared
-            isInInbox: true // Return task to inbox visibility
-          })
-          console.log(`✅ Task "${currentTask.title}" returned to inbox after schedule removal`)
-        }
-      }
-    } else {
-      console.log('🔍 DEBUG: No existing instances to remove')
-    }
+    console.log('🔍 DEBUG: Task is scheduled - no complex instance management needed')
+    // Task scheduling is now handled simply via scheduledDate/scheduledTime fields
+    // No more complex instance creation/update logic needed
   } else {
-    console.log('🔍 DEBUG: No schedule changes - preserving existing instances')
+    console.log('🔍 DEBUG: No schedule changes - task remains as is')
   }
 
   // Update subtasks
@@ -635,14 +560,13 @@ const saveTask = () => {
     }
   })
 
-  // DEBUG: Final state check (no async needed)
+  // DEBUG: Final state check (simplified - no more complex instance system)
   const finalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  const finalInstances = getTaskInstances(finalTask)
   console.log('🔍 DEBUG: FINAL STATE - Task:', finalTask?.title)
-  console.log('🔍 DEBUG: FINAL STATE - Task instances count:', finalInstances.length)
+  console.log('🔍 DEBUG: FINAL STATE - Task.scheduledDate:', finalTask?.scheduledDate)
+  console.log('🔍 DEBUG: FINAL STATE - Task.scheduledTime:', finalTask?.scheduledTime)
   console.log('🔍 DEBUG: FINAL STATE - Task.isInInbox:', finalTask?.isInInbox)
-  console.log('🔍 DEBUG: FINAL STATE - Task.instances:', finalTask?.instances)
-  console.log('🔍 DEBUG: FINAL STATE - Should be visible in calendar:', finalInstances.length > 0 || (finalTask?.scheduledDate && finalTask?.scheduledTime))
+  console.log('🔍 DEBUG: FINAL STATE - Should be visible in calendar:', !!(finalTask?.scheduledDate && finalTask?.scheduledTime))
 
   emit('close')
 }

@@ -196,6 +196,37 @@
           </div>
         </section>
 
+        <!-- Recurrence Section (Collapsible) -->
+        <section class="form-section collapsible">
+          <button @click="showRecurrence = !showRecurrence" class="section-toggle" type="button">
+            <ChevronDown :size="14" :class="['chevron-icon', { rotated: showRecurrence }]" />
+            <h3 class="section-title">Recurrence</h3>
+          </button>
+          <div v-show="showRecurrence" class="section-content">
+            <RecurrencePatternSelector
+              :task-id="editedTask.id"
+              :due-date="editedTask.dueDate"
+              :due-time="editedTask.scheduledTime"
+              @recurrence-changed="handleRecurrenceChange"
+            />
+          </div>
+        </section>
+
+        <!-- Notifications Section (Collapsible) -->
+        <section class="form-section collapsible">
+          <button @click="showNotifications = !showNotifications" class="section-toggle" type="button">
+            <ChevronDown :size="14" :class="['chevron-icon', { rotated: showNotifications }]" />
+            <h3 class="section-title">Notifications</h3>
+          </button>
+          <div v-show="showNotifications" class="section-content">
+            <NotificationPreferences
+              :task-id="editedTask.id"
+              :initial-preferences="editedTask.notificationPreferences"
+              @preferences-changed="handleNotificationPreferencesChange"
+            />
+          </div>
+        </section>
+
         <!-- Pomodoro Sessions Section (Collapsible) -->
         <section class="form-section collapsible">
           <div class="section-toggle-wrapper">
@@ -250,6 +281,9 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import type { Task, Subtask } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
+import { useNotificationStore } from '@/stores/notifications'
+import RecurrencePatternSelector from '@/components/recurrence/RecurrencePatternSelector.vue'
+import NotificationPreferences from '@/components/notifications/NotificationPreferences.vue'
 import {
   X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
   Calendar, CalendarClock, Clock, TimerReset, ChevronDown

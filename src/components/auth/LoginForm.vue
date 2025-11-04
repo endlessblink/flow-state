@@ -75,12 +75,12 @@
         class="submit-button"
         data-testid="login-button"
       >
-        {{ isLoading ? t('auth.signingIn') : t('auth.signIn') }}
+        {{ isLoading ? safeT('auth.signingIn', 'Signing in...') : safeT('auth.signIn', 'Sign In') }}
       </BaseButton>
 
       <!-- Divider -->
       <div class="divider">
-        <span>{{ t('auth.or') }}</span>
+        <span>{{ safeT('auth.or', 'or') }}</span>
       </div>
 
       <!-- Google Sign-In (will be separate component) -->
@@ -89,7 +89,7 @@
       <!-- Sign Up Link -->
       <div class="form-footer">
         <span class="footer-text">
-          {{ t('auth.noAccount') }}
+          {{ safeT('auth.noAccount', "Don't have an account?") }}
         </span>
         <button
           type="button"
@@ -97,7 +97,7 @@
           class="switch-mode-link"
           :disabled="isLoading"
         >
-          {{ t('auth.signUp') }}
+          {{ safeT('auth.signUp', 'Sign Up') }}
         </button>
       </div>
     </form>

@@ -5,6 +5,12 @@ import { usePersistentStorage } from '@/composables/usePersistentStorage'
 import { useCloudSync } from '@/composables/useCloudSync'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
+import type {
+  TaskRecurrence,
+  RecurringTaskInstance,
+  NotificationPreferences,
+  ScheduledNotification
+} from '@/types/recurrence'
 
 export interface Subtask {
   id: string
@@ -38,6 +44,11 @@ export interface Task {
   isInInbox?: boolean // True if not yet positioned on canvas
   dependsOn?: string[] // Task IDs this depends on
   connectionTypes?: { [targetTaskId: string]: 'sequential' | 'blocker' | 'reference' }
+
+  // Recurrence and notification fields
+  recurrence?: TaskRecurrence // Recurrence pattern and generated instances
+  notificationPreferences?: NotificationPreferences // Notification settings for this task
+  recurringInstances?: RecurringTaskInstance[] // Generated recurring task instances (for backwards compatibility)
 }
 
 export interface Project {
@@ -758,46 +769,20 @@ export const useTaskStore = defineStore('tasks', () => {
               return false
             }
 
-            // Check instances first (new format) - tasks scheduled for today
-            try {
-              const instances = getTaskInstances(task)
-              if (Array.isArray(instances) && instances.length > 0) {
-                if (instances.some(inst => {
-                  try {
-                    if (!inst || !inst.scheduledDate) return false
-                    const instanceDate = new Date(inst.scheduledDate)
-                    if (!isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr) {
-                      console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (scheduled instance)`)
-                      return true
-                    }
-                    return false
-                  } catch (error) {
-                    console.warn('TaskStore.filteredTasks: Error processing instance in today filter:', error, inst)
-                    return false
-                  }
-                })) return true
-              }
-            } catch (error) {
-              console.warn('TaskStore.filteredTasks: Error getting task instances in today filter:', error, task)
-            }
-
-            // Fallback to legacy scheduledDate - tasks scheduled for today
-            if (task.scheduledDate) {
+            // SIMPLIFIED: Check if task is due today
+            if (task.dueDate) {
               try {
-                const scheduledDate = new Date(task.scheduledDate)
-                if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) {
-                  console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (legacy scheduled)`)
+                const dueDate = new Date(task.dueDate)
+                if (!isNaN(dueDate.getTime()) && formatDateKey(dueDate) === todayStr) {
+                  console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (due today)`)
                   return true
                 }
               } catch (error) {
-                console.warn('TaskStore.filteredTasks: Error processing scheduledDate in today filter:', error, task.scheduledDate)
+                console.warn('TaskStore.filteredTasks: Error processing dueDate in today filter:', error, task.dueDate)
               }
             }
 
-            // Note: Tasks due today are NOT included in today filter
-            // They should appear in the calendar inbox, not as scheduled events
-            // This prevents auto-scheduling of due-but-unscheduled tasks
-
+  
             // Tasks currently in progress should be included in today filter (matches sidebar logic)
             if (task.status === 'in_progress') {
               console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" matches today filter (in_progress)`)
@@ -828,14 +813,9 @@ export const useTaskStore = defineStore('tasks', () => {
 
       const beforeSmartFilter = filtered.length
       filtered = filtered.filter(task => {
-        // Check instances first (new format)
-        const instances = getTaskInstances(task)
-        if (instances.length > 0) {
-          return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
-        }
-        // Fallback to legacy scheduledDate
-        if (!task.scheduledDate) return false
-        return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+        // SIMPLIFIED: Check if task is due within the week
+        if (!task.dueDate) return false
+        return task.dueDate >= todayStr && task.dueDate < weekEndStr
       })
       console.log(`🔧 TaskStore.filteredTasks: Week smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
 
@@ -952,38 +932,7 @@ export const useTaskStore = defineStore('tasks', () => {
                 const today = new Date()
                 today.setHours(0, 0, 0, 0)
 
-                // Check instances first (new format) - tasks scheduled for today
-                const instances = getTaskInstances(task)
-                if (Array.isArray(instances) && instances.length > 0) {
-                  if (instances.some(inst => {
-                    try {
-                      if (!inst || !inst.scheduledDate) return false
-                      const instanceDate = new Date(inst.scheduledDate)
-                      if (!isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr) {
-                        console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (scheduled instance)`)
-                        return true
-                      }
-                      return false
-                    } catch (error) {
-                      console.warn('TaskStore.filteredTasks: Error processing nested task instance:', error, inst)
-                      return false
-                    }
-                  })) return true
-                }
-
-                // Fallback to legacy scheduledDate - tasks scheduled for today
-                if (task.scheduledDate) {
-                  try {
-                    const scheduledDate = new Date(task.scheduledDate)
-                    if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) {
-                      console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (legacy scheduled)`)
-                      return true
-                    }
-                  } catch (error) {
-                    console.warn('TaskStore.filteredTasks: Error processing nested task scheduledDate:', error, task.scheduledDate)
-                  }
-                }
-
+                
                 // Tasks created today
                 if (task.createdAt) {
                   try {
@@ -1032,14 +981,9 @@ export const useTaskStore = defineStore('tasks', () => {
                 weekEnd.setDate(weekEnd.getDate() + 7)
                 const weekEndStr = weekEnd.toISOString().split('T')[0]
 
-                // Check instances first (new format)
-                const instances = getTaskInstances(task)
-                if (Array.isArray(instances) && instances.length > 0) {
-                  return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
-                }
-                // Fallback to legacy scheduledDate
-                if (!task.scheduledDate) return false
-                return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+                // SIMPLIFIED: Check if nested task is due within the week
+                if (!task.dueDate) return false
+                return task.dueDate >= todayStr && task.dueDate < weekEndStr
               } catch (error) {
                 console.warn('TaskStore.filteredTasks: Error in week filter for nested task:', error, task)
                 return false
@@ -1158,21 +1102,7 @@ export const useTaskStore = defineStore('tasks', () => {
       today.setHours(0, 0, 0, 0)
 
       doneTasks = doneTasks.filter(task => {
-        // Check instances first (new format)
-        const instances = getTaskInstances(task)
-        if (instances.length > 0) {
-          if (instances.some(inst => {
-            const instanceDate = new Date(inst.scheduledDate)
-            return !isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr
-          })) return true
-        }
-
-        // Fallback to legacy scheduledDate
-        if (task.scheduledDate) {
-          const scheduledDate = new Date(task.scheduledDate)
-          if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) return true
-        }
-
+        
         // Tasks created today
         const taskCreatedDate = new Date(task.createdAt)
         taskCreatedDate.setHours(0, 0, 0, 0)
@@ -2306,64 +2236,6 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 })
 
-// Export getTaskInstances as a standalone function for direct import
-// Simplified implementation for calendar compatibility
-export const getTaskInstances = (task: Task) => {
-  // DEBUG: Track what data we're working with
-  console.log('🔍 getTaskInstances called for task:', task.title)
-  console.log('🔍 getTaskInstances - task.dueDate:', task.dueDate)
-  console.log('🔍 getTaskInstances - task.scheduledDate:', task.scheduledDate)
-  console.log('🔍 getTaskInstances - task.scheduledTime:', task.scheduledTime)
-  console.log('🔍 getTaskInstances - task.instances:', task.instances)
-
-  // Check for both legacy fields and new instances
-  if (task.instances && task.instances.length > 0) {
-    console.log('🔍 getTaskInstances - Using task.instances:', task.instances.length, 'instances')
-    return task.instances
-  }
-
-  // Legacy fallback: create synthetic instance from scheduledDate/scheduledTime
-  if (task.scheduledDate && task.scheduledTime) {
-    console.log('🔍 getTaskInstances - Creating synthetic instance from scheduledDate/scheduledTime')
-    return [{
-      id: `${task.id}-synthetic`,
-      taskId: task.id,
-      scheduledDate: task.scheduledDate,
-      scheduledTime: task.scheduledTime,
-      date: task.scheduledDate, // For backward compatibility
-      title: task.title,
-      description: task.description,
-      status: task.status,
-      priority: task.priority,
-      completedPomodoros: task.completedPomodoros,
-      progress: task.progress,
-      estimatedDuration: task.estimatedDuration,
-      duration: task.estimatedDuration || 60,
-      isCompleted: task.status === 'done'
-    }]
-  }
-
-  // Legacy fallback: use dueDate if available
-  if (task.dueDate) {
-    console.log('🔍 getTaskInstances - Creating synthetic instance from dueDate')
-    return [{
-      id: `${task.id}-synthetic`,
-      taskId: task.id,
-      scheduledDate: task.dueDate,
-      scheduledTime: '09:00', // Default time
-      date: task.dueDate,
-      title: task.title,
-      description: task.description,
-      status: task.status,
-      priority: task.priority,
-      completedPomodoros: task.completedPomodoros,
-      progress: task.progress,
-      estimatedDuration: task.estimatedDuration,
-      duration: task.estimatedDuration || 60,
-      isCompleted: task.status === 'done'
-    }]
-  }
-
-  console.log('🔍 getTaskInstances - No date information found, returning empty array')
-  return []
-}
+// REMOVED: getTaskInstances function - COMPLETE ELIMINATION
+// We now use only dueDate - NO MORE COMPLEX INSTANCE SYSTEM
+// This eliminates 60+ lines of complex scheduling logic

@@ -2198,3 +2198,149 @@
 [debug] [2025-11-04T19:00:22.884Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com [omitted]
 [debug] [2025-11-04T19:00:22.998Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com 200
 [debug] [2025-11-04T19:00:22.998Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:32.176Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-04T19:15:32.178Z] > authorizing via signed-in user (endlessblink@gmail.com)
+[debug] [2025-11-04T19:15:32.178Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-04T19:15:32.179Z] > authorizing via signed-in user (endlessblink@gmail.com)
+[debug] [2025-11-04T19:15:32.362Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.363Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.364Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.367Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.367Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.395Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.396Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.396Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.396Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.396Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.402Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.402Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.403Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.403Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.403Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.404Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.404Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.404Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.404Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.404Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.414Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.414Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.414Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.415Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.415Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.416Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.416Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.416Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.417Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.417Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.419Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.419Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.419Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.419Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.419Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.420Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.420Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.420Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.421Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.421Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.421Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-04T19:15:32.422Z] > authorizing via signed-in user (endlessblink@gmail.com)
+[debug] [2025-11-04T19:15:32.428Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.428Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.428Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.428Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.428Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.430Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.430Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.430Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.430Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.430Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.432Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.432Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.432Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.432Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.432Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:32.434Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.434Z] Checked if tokens are valid: false, expires at: 1762284556314
+[debug] [2025-11-04T19:15:32.434Z] > refreshing access token with scopes: []
+[debug] [2025-11-04T19:15:32.434Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-04T19:15:32.434Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:33.696Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:33.696Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:33.707Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-11-04T19:15:33.708Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:33.924Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:33.925Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:33.937Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-11-04T19:15:33.937Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:33.939Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:33.939Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:33.945Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-11-04T19:15:33.945Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.053Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.053Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.059Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-11-04T19:15:34.059Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.110Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.110Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.122Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-11-04T19:15:34.123Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.215Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.215Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.222Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-11-04T19:15:34.222Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.224Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.224Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.231Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com [none]
+[debug] [2025-11-04T19:15:34.231Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.290Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.291Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.299Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com [none]
+[debug] [2025-11-04T19:15:34.300Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.423Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.423Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.433Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-11-04T19:15:34.434Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.542Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.543Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.548Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com [none]
+[debug] [2025-11-04T19:15:34.549Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.571Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.572Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.578Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-11-04T19:15:34.578Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:34.729Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-04T19:15:34.729Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-04T19:15:34.735Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-11-04T19:15:34.735Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/pomo-flow
+[debug] [2025-11-04T19:15:35.391Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-11-04T19:15:35.391Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:35.430Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-04T19:15:35.430Z] > authorizing via signed-in user (endlessblink@gmail.com)
+[debug] [2025-11-04T19:15:35.452Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-04T19:15:35.452Z] > authorizing via signed-in user (endlessblink@gmail.com)
+[debug] [2025-11-04T19:15:35.480Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-04T19:15:35.480Z] > authorizing via signed-in user (endlessblink@gmail.com)
+[debug] [2025-11-04T19:15:35.495Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-04T19:15:35.496Z] > authorizing via signed-in user (endlessblink@gmail.com)
+[debug] [2025-11-04T19:15:35.601Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com 200
+[debug] [2025-11-04T19:15:35.602Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:35.664Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-11-04T19:15:35.665Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:35.671Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com 200
+[debug] [2025-11-04T19:15:35.671Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:35.764Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-11-04T19:15:35.765Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:35.773Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com 403
+[debug] [2025-11-04T19:15:35.773Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com [omitted]
+[debug] [2025-11-04T19:15:35.860Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-11-04T19:15:35.860Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:35.904Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com 403
+[debug] [2025-11-04T19:15:35.905Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com [omitted]
+[debug] [2025-11-04T19:15:35.963Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com 403
+[debug] [2025-11-04T19:15:35.964Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseio.com [omitted]
+[debug] [2025-11-04T19:15:36.101Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com 200
+[debug] [2025-11-04T19:15:36.102Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/cloudfunctions.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:36.350Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-11-04T19:15:36.350Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-11-04T19:15:36.563Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-11-04T19:15:36.563Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/pomo-flow/services/firebaseapphosting.googleapis.com [omitted]

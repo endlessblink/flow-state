@@ -119,18 +119,16 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
 
     const { taskId, instanceId } = JSON.parse(data)
 
-    if (instanceId) {
-      // Moving existing event - update its date, keep time
-      taskStore.updateTaskInstance(taskId, instanceId, {
-        scheduledDate: targetDate
-      })
-    } else {
-      // Creating new instance from sidebar
-      taskStore.createTaskInstance(taskId, {
-        scheduledDate: targetDate,
-        scheduledTime: '09:00' // Default to 9 AM
-      })
-    }
+    // Simple update: modify task's scheduledDate directly
+    // Keep existing time if task has one, otherwise set to 9 AM
+    const existingTask = taskStore.getTask(taskId)
+    const scheduledTime = existingTask?.scheduledTime || '09:00'
+
+    taskStore.updateTask(taskId, {
+      scheduledDate: targetDate,
+      scheduledTime: scheduledTime,
+      isInInbox: false // Task is now scheduled, no longer in inbox
+    })
   }
 
   const handleMonthDayClick = (dateString: string, viewMode: Ref<'day' | 'week' | 'month'>) => {

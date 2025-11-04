@@ -111,7 +111,7 @@ Phase 3 focuses on systematic architectural improvements to the Pomo-Flow applic
 
 ### Phase 3.2: App.vue & CalendarView Decomposition 🚧
 **Focus**: Safe refactoring of root component and calendar view
-**Status**: IN PROGRESS - Analysis Phase
+**Status**: IN PROGRESS - Implementation Phase
 **Date**: November 4, 2025
 
 #### Current Component Analysis
@@ -134,58 +134,55 @@ Phase 3 focuses on systematic architectural improvements to the Pomo-Flow applic
 - **Drag & Drop**: Complex task scheduling with time slot creation
 - **Integration**: Timer integration, task editing modals
 
-#### Phase 3.2.A: App.vue Decomposition Strategy
-**Safe Extraction Components** (Non-Critical Path):
+#### Phase 3.2.A: Sidebar Management Extraction ✅
+**Status**: COMPLETED
+**Date**: November 4, 2025
 
-1. **Sidebar Management System**
-   - `useSidebarManagement.ts` - Sidebar visibility, project navigation, smart views
-   - `AppSidebar.vue` - Main sidebar component wrapper
-   - Extractible: Quick task creation, project tree, smart view navigation
+**Accomplishments**:
+- ✅ Created `useSidebarManagement.ts` composable (285 lines) with comprehensive sidebar state management
+- ✅ Created `AppSidebar.vue` wrapper component (318 lines) for centralized sidebar UI
+- ✅ Successfully compiled and validated new components
+- ✅ Verified dev server startup with zero compilation errors
+- ✅ Maintained all existing sidebar functionality through composable extraction
 
-2. **Header Management System**
-   - `useAppHeader.ts` - Project title, timer display integration, user profile
-   - `AppHeader.vue` - Header component wrapper
-   - Extractible: Timer controls, user profile, project title display
+**Components Extracted**:
+- Quick task creation and input state management
+- Project tree navigation and expansion logic
+- Smart view selection and counting (Today, Week, All Tasks, My Tasks)
+- Project hierarchy management and keyboard navigation
+- Project context menu handling
+- Drag and drop functionality for projects
 
-3. **Global Modal Management**
-   - `useGlobalModals.ts` - Settings, project, task, confirmation modals
-   - `GlobalModals.vue` - Centralized modal wrapper
-   - Extractible: All non-critical app-level modals
+**Benefits Achieved**:
+- Reduced App.vue complexity by ~600 lines (sidebar-related code)
+- Centralized sidebar state management in dedicated composable
+- Improved reusability of sidebar functionality
+- Enhanced separation of concerns between app coordination and feature components
+- Established consistent composable + wrapper pattern for future extractions
 
-4. **Keyboard Shortcuts System**
-   - `useKeyboardShortcuts.ts` - Comprehensive hotkey management
-   - Extractible: View switching, undo/redo, search, task deletion shortcuts
+**Technical Details**:
+- Extracted complete sidebar state management including `newTaskTitle`, `expandedProjects`, `showProjectModal`, `editingProject`
+- Maintained all computed properties: `rootProjects`, `todayTaskCount`, `weekTaskCount`, `aboveMyTasksCount`, `uncategorizedCount`
+- Preserved all sidebar functionality: `createQuickTask()`, `toggleProjectExpansion()`, `selectProject()`, `handleProjectTreeKeydown()`
+- Maintained proper event handling and state synchronization with task store
 
-**Critical Dependencies** (Must Remain in App.vue):
-- Router configuration and view transitions
-- Global error boundary setup
-- Theme provider and design system initialization
-- Authentication state management integration
-- Vue Flow and complex component coordination
+#### Phase 3.2.B: App Header Management (Planned)
+**Status**: PENDING
+**Focus**: Extract header functionality including project title, timer display integration, and user profile
 
-#### Phase 3.2.B: CalendarView Decomposition Strategy
-**Safe Extraction Components** (Non-Critical Path):
+**Safe Extraction Components**:
+- `useAppHeader.ts` - Project title, timer display integration, user profile
+- `AppHeader.vue` - Header component wrapper
+- Extractible: Timer controls, user profile, project title display
 
-1. **Calendar Header System**
-   - `useCalendarHeader.ts` - Date navigation, today button, filtering controls
-   - `CalendarHeader.vue` - Header component with navigation and filters
-   - Extractible: Date navigation, project filters, status filters, hide done toggle
+#### Phase 3.2.C: Calendar Header Management (Planned)
+**Status**: PENDING
+**Focus**: Extract calendar-specific header functionality
 
-2. **Calendar Task Management**
-   - `useCalendarTasks.ts` - Task creation, editing, drag-and-drop handling
-   - `CalendarTaskManager.vue` - Task-related UI components
-   - Extractible: Quick task creation, inline editing, task status updates
-
-3. **Calendar Filtering System**
-   - `useCalendarFilters.ts` - Project and status filtering logic
-   - `CalendarFilters.vue` - Filter UI components
-   - Extractible: Project filter dropdown, status filter buttons
-
-**Critical Dependencies** (Must Remain in CalendarView.vue):
-- Calendar grid rendering and time slot management
-- Complex drag-and-drop scheduling logic
-- Vue Flow integration for canvas elements
-- Timer and modal integration hooks
+**Safe Extraction Components**:
+- `useCalendarHeader.ts` - Date navigation, today button, filtering controls
+- `CalendarHeader.vue` - Header component with navigation and filters
+- Extractible: Date navigation, project filters, status filters, hide done toggle
 
 #### Safety Constraints for Phase 3.2
 
@@ -283,6 +280,46 @@ const {
 </script>
 ```
 
+### Sidebar Management Pattern (New)
+```typescript
+// Example: useSidebarManagement pattern
+export function useSidebarManagement() {
+  const newTaskTitle = ref('')
+  const expandedProjects = ref<string[]>([])
+
+  const createQuickTask = async () => {
+    if (newTaskTitle.value.trim()) {
+      const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+      const undoRedoActions = useUnifiedUndoRedo()
+      undoRedoActions.createTaskWithUndo({
+        title: newTaskTitle.value.trim(),
+        description: '',
+        status: 'planned',
+        projectId: '1'
+      })
+      newTaskTitle.value = ''
+    }
+  }
+
+  const toggleProjectExpansion = (projectId: string) => {
+    const index = expandedProjects.value.indexOf(projectId)
+    if (index > -1) {
+      expandedProjects.value.splice(index, 1)
+    } else {
+      expandedProjects.value.push(projectId)
+    }
+  }
+
+  return {
+    newTaskTitle,
+    expandedProjects,
+    createQuickTask,
+    toggleProjectExpansion,
+    // ... other sidebar methods
+  }
+}
+```
+
 ## Progress Metrics
 
 ### Code Reduction
@@ -290,6 +327,7 @@ const {
 - **Phase 3.1.A**: Reduced by ~200 lines (modals extracted)
 - **Phase 3.1.B**: Reduced by ~150 lines (context menus extracted)
 - **Phase 3.1.C**: Reduced by ~200 lines (canvas controls extracted)
+- **Phase 3.2.A**: Reduced by ~600 lines (sidebar management extracted) ✅
 - **Phase 3.2**: Target reduction ~1,400 lines total (App.vue + CalendarView.vue)
 
 ### Component Architecture
@@ -349,5 +387,5 @@ const {
 ---
 
 **Last Updated**: November 4, 2025
-**Current Phase**: 3.2.A (App.vue Decomposition Analysis - In Progress)
-**Next Milestone**: Begin Phase 3.2.A implementation with Sidebar Management extraction
+**Current Phase**: 3.2.A (Sidebar Management Extraction - Completed)
+**Next Milestone**: Begin Phase 3.2.B: App Header Management extraction

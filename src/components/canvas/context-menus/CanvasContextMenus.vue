@@ -29,6 +29,9 @@
 </template>
 
 <script setup lang="ts">
+import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
+import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
+import NodeContextMenu from '@/components/canvas/NodeContextMenu.vue'
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 
 // Use the canvas context menus composable

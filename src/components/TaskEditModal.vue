@@ -327,6 +327,8 @@ const editedTask = ref<Task>({
 const showDependencies = ref(false)
 const showSubtasks = ref(true) // Expanded by default if has subtasks
 const showPomodoros = ref(false)
+const showRecurrence = ref(false)
+const showNotifications = ref(false)
 
 // Watch for task changes
 watch(() => props.task, (newTask) => {
@@ -469,6 +471,14 @@ const resetPomodoros = () => {
   editedTask.value.subtasks.forEach(subtask => {
     subtask.completedPomodoros = 0
   })
+}
+
+const handleRecurrenceChange = (recurrenceData: any) => {
+  editedTask.value.recurrence = recurrenceData
+}
+
+const handleNotificationPreferencesChange = (preferences: any) => {
+  editedTask.value.notificationPreferences = preferences
 }
 
 const saveTask = () => {

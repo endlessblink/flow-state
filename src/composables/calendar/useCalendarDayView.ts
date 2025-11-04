@@ -315,7 +315,6 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     const clickOffsetY = event.clientY - eventRect.top
 
     const isDuplicateMode = event.altKey
-    let duplicateInstanceId: string | null = null
 
     const initialSlot = calendarEvent.startSlot
     let lastUpdatedSlot = initialSlot
@@ -332,26 +331,28 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
           const newHour = Math.floor((targetSlot * 30) / 60)
           const newMinute = (targetSlot * 30) % 60
           const newTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`
+          const newDate = currentDate.value.toISOString().split('T')[0]
 
           if (isDuplicateMode) {
-            if (!duplicateInstanceId) {
-              const newInstance = taskStore.createTaskInstance(calendarEvent.taskId, {
-                scheduledDate: currentDate.value.toISOString().split('T')[0],
+            // In duplicate mode, create a copy of the task with new schedule
+            const originalTask = taskStore.getTask(calendarEvent.taskId)
+            if (originalTask) {
+              taskStore.createTask({
+                title: originalTask.title,
+                description: originalTask.description,
+                scheduledDate: newDate,
                 scheduledTime: newTime,
-                duration: calendarEvent.duration
-              })
-              if (newInstance) {
-                duplicateInstanceId = newInstance.id
-              }
-            } else {
-              taskStore.updateTaskInstance(calendarEvent.taskId, duplicateInstanceId, {
-                scheduledDate: currentDate.value.toISOString().split('T')[0],
-                scheduledTime: newTime
+                estimatedDuration: calendarEvent.duration,
+                projectId: originalTask.projectId,
+                priority: originalTask.priority,
+                status: originalTask.status,
+                isInInbox: false
               })
             }
           } else {
-            taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
-              scheduledDate: currentDate.value.toISOString().split('T')[0],
+            // Simple update: modify task's scheduledDate and scheduledTime directly
+            taskStore.updateTask(calendarEvent.taskId, {
+              scheduledDate: newDate,
               scheduledTime: newTime
             })
           }
@@ -419,8 +420,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
       }
 
       if (direction === 'bottom') {
-        taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
-          duration: newDuration
+        taskStore.updateTask(calendarEvent.taskId, {
+          estimatedDuration: newDuration
         })
       } else {
         const [currentHour, currentMinute] = calendarEvent.startTime.toTimeString().slice(0, 5).split(':').map(Number)
@@ -430,9 +431,9 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
         const newMinute = newStartTime % 60
 
         if (newStartTime >= 0) {
-          taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
+          taskStore.updateTask(calendarEvent.taskId, {
             scheduledTime: `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`,
-            duration: newDuration
+            estimatedDuration: newDuration
           })
         }
       }

@@ -351,6 +351,7 @@ import { useUIStore } from '@/stores/ui'
 import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
+import { useCanvasControls } from '@/composables/canvas/useCanvasControls'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import InboxPanel from '@/components/canvas/InboxPanel.vue'
 import TaskNode from '@/components/canvas/TaskNode.vue'
@@ -480,6 +481,36 @@ const {
   getCanvasCoordinates
 } = useCanvasContextMenus()
 
+// Canvas controls
+const {
+  // State
+  showZoomDropdown,
+  zoomPresets,
+  currentZoomLevel,
+  isZoomAtMin,
+  isZoomAtMax,
+  zoomPercentage,
+
+  // Basic zoom controls
+  fitView,
+  zoomIn,
+  zoomOut,
+  resetZoom,
+  centerCanvas,
+
+  // Advanced zoom controls
+  applyZoomPreset,
+  toggleZoomDropdown,
+  closeZoomDropdown,
+
+  // Keyboard shortcuts
+  handleKeyboardShortcuts: handleZoomKeyboardShortcuts,
+
+  // Utility functions
+  enforceZoomLimits,
+  cleanup: cleanupCanvasControls
+} = useCanvasControls()
+
 // Canvas context section (local state)
 const canvasContextSection = ref<any>(null)
 
@@ -501,8 +532,7 @@ const showSections = ref(false)
 const activeSectionId = ref<string | null>(null)
 const showSectionTypeDropdown = ref(false)
 
-// Canvas zoom state (added back - was previously removed)
-const showZoomDropdown = ref(false)
+// Canvas zoom state now managed by useCanvasControls composable
 
 // Computed properties
 const sections = computed(() => canvasStore.sections)
@@ -2146,41 +2176,11 @@ const handleKeyDown = async (event: KeyboardEvent) => {
     }
   }
 
-  // Handle zoom shortcuts with Ctrl/Cmd modifier
-  if (event.ctrlKey || event.metaKey) {
-    switch (event.key) {
-      case '0':
-        event.preventDefault()
-        resetZoom()
-        return
-      case '1':
-        event.preventDefault()
-        applyZoomPreset(1.0)
-        return
-      case '2':
-        event.preventDefault()
-        applyZoomPreset(2.0)
-        return
-      case '=':
-      case '+':
-        event.preventDefault()
-        zoomIn()
-        return
-      case '-':
-      case '_':
-        event.preventDefault()
-        zoomOut()
-        return
-      case 'f':
-      case 'F':
-        event.preventDefault()
-        fitToContent()
-        return
-    }
-  }
+  // Handle zoom shortcuts using composable
+  handleZoomKeyboardShortcuts(event)
 
-  // Handle fit view shortcut (F without Ctrl)
-  if (event.key === 'f' || event.key === 'F') {
+  // Handle fit view shortcut (F without Ctrl) if not handled by composable
+  if (!event.ctrlKey && !event.metaKey && (event.key === 'f' || event.key === 'F')) {
     event.preventDefault()
     fitView()
     return
@@ -2380,171 +2380,10 @@ const handleDrop = (event: DragEvent) => {
   }
 }
 
-// Performance optimization: Zoom throttling and batching
-const zoomPerformanceManager = {
-  animationFrameId: null as number | null,
-  pendingOperations: [] as Array<() => void>,
-  lastZoomTime: 0,
-  zoomThrottleMs: 16, // ~60fps
+// Canvas controls functions now managed by useCanvasControls composable
+// Performance optimization and zoom throttling handled in composable
 
-  shouldThrottleZoom(): boolean {
-    const now = performance.now()
-    if (now - this.lastZoomTime < this.zoomThrottleMs) {
-      return true
-    }
-    this.lastZoomTime = now
-    return false
-  },
-
-  scheduleOperation(operation: () => void) {
-    this.pendingOperations.push(operation)
-
-    if (!this.animationFrameId) {
-      this.animationFrameId = requestAnimationFrame(() => {
-        this.flushOperations()
-      })
-    }
-  },
-
-  flushOperations() {
-    // Process all pending operations in batch
-    this.pendingOperations.forEach(operation => operation())
-    this.pendingOperations.length = 0
-    this.animationFrameId = null
-  },
-
-  cleanup() {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId)
-      this.animationFrameId = null
-    }
-    this.pendingOperations.length = 0
-  }
-}
-
-// Performance optimized viewport culling for extreme zoom levels
-const shouldCullNode = (node: Node, currentZoom: number): boolean => {
-  // Cull nodes when zoom is extremely low to improve performance
-  if (currentZoom < 0.1) { // Below 10% zoom
-    // Only show visible nodes in viewport or important nodes
-    const viewportBounds = {
-      x: -viewport.value.x / currentZoom,
-      y: -viewport.value.y / currentZoom,
-      width: window.innerWidth / currentZoom,
-      height: window.innerHeight / currentZoom
-    }
-
-    const nodeBounds = {
-      x: node.position.x,
-      y: node.position.y,
-      width: 220,
-      height: 100
-    }
-
-    // Check if node is in viewport
-    const inViewport = !(
-      nodeBounds.x > viewportBounds.x + viewportBounds.width ||
-      nodeBounds.x + nodeBounds.width < viewportBounds.x ||
-      nodeBounds.y > viewportBounds.y + viewportBounds.height ||
-      nodeBounds.y + nodeBounds.height < viewportBounds.y
-    )
-
-    return !inViewport
-  }
-  return false
-}
-
-// Canvas controls
-const fitView = () => {
-  vueFlowFitView({ padding: 0.2, duration: 300 })
-}
-
-const zoomIn = () => {
-  if (zoomPerformanceManager.shouldThrottleZoom()) return
-
-  zoomPerformanceManager.scheduleOperation(() => {
-    vueFlowZoomIn({ duration: 200 })
-  })
-}
-
-const zoomOut = () => {
-  if (zoomPerformanceManager.shouldThrottleZoom()) return
-
-  zoomPerformanceManager.scheduleOperation(() => {
-    const currentZoom = viewport.value.zoom
-    let newZoom = Math.max(canvasStore.zoomConfig.minZoom, currentZoom - 0.1)
-
-    console.log(`[Zoom Debug] Zoom out: ${currentZoom} -> ${newZoom}`)
-    console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
-
-    // Force Vue Flow to respect our zoom limits by explicitly setting min zoom first
-    const { setMinZoom } = useVueFlow()
-    if (setMinZoom) {
-      setMinZoom(canvasStore.zoomConfig.minZoom)
-      console.log(`[Zoom Debug] Forcefully set minZoom to ${canvasStore.zoomConfig.minZoom}`)
-    }
-
-    // Use vueFlowZoomTo instead of vueFlowZoomOut to ensure we respect minZoom
-    vueFlowZoomTo(newZoom, { duration: 200 })
-
-    // Double-check that zoom was actually applied and enforce if needed
-    setTimeout(() => {
-      const actualZoom = viewport.value.zoom
-      if (actualZoom > newZoom && Math.abs(actualZoom - newZoom) > 0.01) {
-        console.log(`[Zoom Debug] Vue Flow ignored zoom request, forcing again: ${actualZoom} -> ${newZoom}`)
-        vueFlowZoomTo(newZoom, { duration: 0 })
-      }
-    }, 250)
-  })
-}
-
-// Zoom control functions
-const toggleZoomDropdown = () => {
-  showZoomDropdown.value = !showZoomDropdown.value
-}
-
-const applyZoomPreset = (zoomLevel: number) => {
-  // Validate zoom level is within bounds
-  const validatedZoom = Math.max(
-    canvasStore.zoomConfig.minZoom,
-    Math.min(canvasStore.zoomConfig.maxZoom, zoomLevel)
-  )
-
-  console.log(`[Zoom Debug] Applying preset: ${zoomLevel} (validated: ${validatedZoom})`)
-  console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
-
-  zoomPerformanceManager.scheduleOperation(() => {
-    // Force Vue Flow to respect our zoom limits for presets too
-    const { setMinZoom, setMaxZoom } = useVueFlow()
-    if (setMinZoom && setMaxZoom) {
-      setMinZoom(canvasStore.zoomConfig.minZoom)
-      setMaxZoom(canvasStore.zoomConfig.maxZoom)
-      console.log(`[Zoom Debug] Forcefully set zoom limits: ${canvasStore.zoomConfig.minZoom} - ${canvasStore.zoomConfig.maxZoom}`)
-    }
-
-    vueFlowZoomTo(validatedZoom, { duration: 300 })
-    canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, validatedZoom)
-
-    // Double-check that zoom was actually applied for critical presets
-    if (validatedZoom <= 0.1) { // For 5% and 10% presets
-      setTimeout(() => {
-        const actualZoom = viewport.value.zoom
-        if (actualZoom > validatedZoom && Math.abs(actualZoom - validatedZoom) > 0.01) {
-          console.log(`[Zoom Debug] Vue Flow ignored preset zoom, forcing again: ${actualZoom} -> ${validatedZoom}`)
-          vueFlowZoomTo(validatedZoom, { duration: 0 })
-        }
-      }, 350)
-    }
-  })
-  showZoomDropdown.value = false
-}
-
-const resetZoom = () => {
-  vueFlowZoomTo(1.0, { duration: 300 })
-  canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, 1.0)
-  showZoomDropdown.value = false
-}
-
+// fitToContent function kept here as it needs access to taskStore
 const fitToContent = () => {
   const tasks = taskStore.tasksWithCanvasPosition
   if (!tasks || !tasks.length) {
@@ -2576,7 +2415,7 @@ const fitToContent = () => {
     }, 200)
   }
 
-  showZoomDropdown.value = false
+  closeZoomDropdown()
 }
 
 // Hide done tasks toggle
@@ -3060,7 +2899,7 @@ const handleClickOutside = (event: MouseEvent) => {
   }
   // Close zoom dropdown if clicking outside its container (if it exists)
   if (!target.closest('.zoom-dropdown-container')) {
-    showZoomDropdown.value = false
+    closeZoomDropdown()
   }
 }
 
@@ -3117,7 +2956,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('keydown', handleKeyDown, { capture: true })
-  zoomPerformanceManager.cleanup()
+  cleanupCanvasControls()
 })
 
 // Keyboard Deletion Test Function

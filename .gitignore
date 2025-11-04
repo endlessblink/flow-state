@@ -24,5 +24,13 @@ check-*.mjs
 *-backup-*.md
 *.bak
 
+# Log files with sensitive data (CRITICAL SECURITY)
+firebase-debug.log
+*.log
+
+# Environment files with API keys (CRITICAL SECURITY)
+.env.local
+.env.*.local
+
 # Private planning documents (keep local only, do not push to GitHub)
 /plan.md

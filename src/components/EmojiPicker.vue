@@ -379,7 +379,6 @@ const getEmojiDescription = (emoji: string): string => {
     '📚': 'books',
     '📓': 'notebook with decorative cover',
     '🎯': 'bullseye',
-    '🚀': 'rocket',
     '⚡': 'high voltage',
     '🔥': 'fire',
 

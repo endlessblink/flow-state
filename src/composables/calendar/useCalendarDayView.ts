@@ -1,5 +1,5 @@
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
+import { useTaskStore, formatDateKey } from '@/stores/tasks'
 import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
 
 export interface TimeSlot {

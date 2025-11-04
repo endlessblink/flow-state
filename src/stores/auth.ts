@@ -13,7 +13,7 @@ import {
   type User
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, type Timestamp } from 'firebase/firestore'
-import { auth, db } from '@/config/firebase'
+import { auth, db, waitForFirebase } from '@/config/firebase'
 
 /**
  * User profile data stored in Firestore
@@ -112,16 +112,27 @@ export const useAuthStore = defineStore('auth', () => {
    * Initialize auth state listener
    * Called once on app mount to listen for auth state changes
    */
-  function initAuthListener(): void {
+  async function initAuthListener(): Promise<void> {
     if (authListenerInitialized.value) {
       console.warn('Auth listener already initialized')
       return
     }
 
+    // Wait for Firebase to be initialized
+    console.log('🔄 Waiting for Firebase initialization...')
+    const firebaseReady = await waitForFirebase(10000) // Wait up to 10 seconds
+
+    if (!firebaseReady) {
+      console.warn('⚠️ Firebase initialization failed or timed out - running in offline mode')
+      console.log('ℹ️ App will work offline. Configure Firebase credentials in .env.local for full functionality.')
+      isLoading.value = false
+      return
+    }
+
     // Check if Firebase Auth is available
     if (!auth) {
-      console.error('❌ Firebase Auth not initialized - cannot start auth listener')
-      console.log('ℹ️ Please configure Firebase credentials in .env.local')
+      console.warn('⚠️ Firebase Auth not available - running without authentication')
+      console.log('ℹ️ Please configure Firebase credentials in .env.local for authentication features.')
       isLoading.value = false
       return
     }

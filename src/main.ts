@@ -41,8 +41,18 @@ app.use(i18n)
 console.log('🔵 [MAIN.TS] About to initialize auth store...')
 const authStore = useAuthStore()
 console.log('🔵 [MAIN.TS] Auth store created, calling initAuthListener()...')
+
+// Initialize auth listener asynchronously
 authStore.initAuthListener()
-console.log('🔵 [MAIN.TS] initAuthListener() called')
+  .then(() => {
+    console.log('✅ [MAIN.TS] Auth listener initialized successfully')
+  })
+  .catch((error) => {
+    console.warn('⚠️ [MAIN.TS] Auth listener initialization failed:', error)
+  })
+  .finally(() => {
+    console.log('🔵 [MAIN.TS] initAuthListener() completed')
+  })
 
 // Initialize undo/redo system after mounting
 const mountedApp = app.mount('#root')

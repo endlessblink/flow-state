@@ -14,6 +14,7 @@ export interface DatabaseStore {
   canvas: string
   timer: string
   settings: string
+  notifications: string
 }
 
 export const DB_KEYS = {
@@ -22,6 +23,7 @@ export const DB_KEYS = {
   CANVAS: 'canvas',
   TIMER: 'timer',
   SETTINGS: 'settings',
+  NOTIFICATIONS: 'notifications',
   HIDE_DONE_TASKS: 'hide_done_tasks',
   VERSION: 'version'
 } as const

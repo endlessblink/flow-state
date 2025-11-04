@@ -1,8 +1,8 @@
 <template>
   <div class="login-form">
     <div class="form-header">
-      <h2 class="form-title">{{ $t('auth.login.title') }}</h2>
-      <p class="form-subtitle">{{ $t('auth.login.subtitle') }}</p>
+      <h2 class="form-title">{{ t('auth.login.title') }}</h2>
+      <p class="form-subtitle">{{ t('auth.login.subtitle') }}</p>
     </div>
 
     <form @submit.prevent="handleSubmit" class="auth-form">
@@ -106,6 +106,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -124,6 +125,9 @@ interface Emits {
 }
 
 const emit = defineEmits<Emits>()
+
+// ===== i18n Setup =====
+const { t } = useI18n()
 
 // ===== State =====
 const authStore = useAuthStore()

@@ -22,4 +22,8 @@ html, body {
   width: 100vw;
   height: 100vh;
   overflow: visible; /* Allow canvas controls to overflow */
+  /* Ensure no borders are applied to root element */
+  border: none;
+  outline: none;
+  box-shadow: none;
 }

@@ -45,8 +45,9 @@ export class SimpleGlobalKeyboardHandler {
         console.log('⚠️ Keyboard shortcuts will only log messages without undo/redo functionality')
       }
 
+      console.log('🎯 [GLOBAL HANDLER] Adding keyboard event listener (bubble phase)')
       window.addEventListener('keydown', this.keydownHandler, false)
-      console.log('Global keyboard handler initialized')
+      console.log('✅ Global keyboard handler initialized in bubble phase')
     }
   }
 
@@ -55,8 +56,9 @@ export class SimpleGlobalKeyboardHandler {
    */
   destroy(): void {
     if (typeof window !== 'undefined') {
+      console.log('🗑️ [GLOBAL HANDLER] Removing keyboard event listener')
       window.removeEventListener('keydown', this.keydownHandler, false)
-      console.log('Simple keyboard handler destroyed')
+      console.log('✅ Simple keyboard handler destroyed')
     }
   }
 
@@ -100,18 +102,44 @@ export class SimpleGlobalKeyboardHandler {
    * Handle keyboard events
    */
   private handleKeydown(event: KeyboardEvent): void {
+    // Comprehensive logging for global keyboard handler debugging
+    console.log('🌐 [GLOBAL HANDLER] handleKeydown called (bubble phase):', {
+      key: event.key,
+      shiftKey: event.shiftKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      altKey: event.altKey,
+      target: event.target,
+      targetTagName: (event.target as HTMLElement)?.tagName,
+      timestamp: new Date().toISOString()
+    })
+
     // Check if handler is enabled
     if (!this.enabled) {
+      console.log('❌ [GLOBAL HANDLER] Handler disabled - ignoring event')
       return
     }
 
     // Check if we should ignore this element
-    if (this.shouldIgnoreElement(event.target as Element)) {
+    const shouldIgnore = this.shouldIgnoreElement(event.target as Element)
+    console.log('🚫 [GLOBAL HANDLER] shouldIgnoreElement result:', shouldIgnore, {
+      targetElement: event.target,
+      ignoreInputs: this.ignoreInputs,
+      ignoreModals: this.ignoreModals
+    })
+
+    if (shouldIgnore) {
+      console.log('❌ [GLOBAL HANDLER] Event blocked by shouldIgnoreElement')
       return
     }
 
     const { ctrlKey, metaKey, shiftKey, key } = event
     const hasModifier = ctrlKey || metaKey
+
+    // Check if this is Shift+1-5 that might interfere with App.vue
+    if (shiftKey && !ctrlKey && !metaKey && !event.altKey && key >= '1' && key <= '5') {
+      console.log('⚠️ [GLOBAL HANDLER] Shift+1-5 detected but not handled by global handler - should be handled by App.vue')
+    }
 
   
     // Handle Ctrl+Z (Undo) and Ctrl+Shift+Z (Redo)

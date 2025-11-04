@@ -48,13 +48,32 @@ console.log('🔵 [MAIN.TS] initAuthListener() called')
 const mountedApp = app.mount('#root')
 
 // Initialize global keyboard shortcuts
+console.log('🎯 [MAIN.TS] About to initialize global keyboard shortcuts...')
 initGlobalKeyboardShortcuts({
   enabled: true,
   preventDefault: true,
   ignoreInputs: true,
   ignoreModals: true
+}).then(() => {
+  console.log('✅ [MAIN.TS] Global keyboard shortcuts initialized successfully')
 }).catch(error => {
-  console.error('Failed to initialize global keyboard shortcuts:', error)
+  console.error('❌ [MAIN.TS] Failed to initialize global keyboard shortcuts:', error)
 })
+
+// Add global keyboard event diagnostics to track all keyboard events
+console.log('🔍 [MAIN.TS] Setting up global keyboard event diagnostics...')
+window.addEventListener('keydown', (event) => {
+  // Only log Shift+1-5 events to avoid console spam
+  if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && event.key >= '1' && event.key <= '5') {
+    console.log('🔍 [MAIN.TS] GLOBAL: Shift+' + event.key + ' detected at document level:', {
+      eventPhase: event.eventPhase,
+      target: event.target,
+      currentTarget: event.currentTarget,
+      timestamp: new Date().toISOString(),
+      bubbles: event.bubbles,
+      cancelable: event.cancelable
+    })
+  }
+}, true) // Use capture phase to see events before any other handlers
 
 export default mountedApp

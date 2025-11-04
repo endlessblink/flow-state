@@ -1456,6 +1456,10 @@ onUnmounted(() => {
   position: relative;
   overflow-x: hidden; /* Prevent horizontal overflow at root level */
   overflow-y: visible; /* Allow vertical scrolling */
+  /* Ensure no borders are applied to the main app container */
+  border: none;
+  outline: none;
+  box-shadow: none;
 }
 
 /* When sidebar is hidden, collapse the first column */
@@ -2077,6 +2081,10 @@ onUnmounted(() => {
   overflow-x: hidden; /* Prevent horizontal overflow from affecting main layout */
   overflow-y: visible; /* Allow vertical scrolling */
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ensure no borders are accidentally applied */
+  border: none;
+  outline: none;
+  box-shadow: none;
 }
 
 /* When sidebar is hidden, content expands naturally via flexbox */

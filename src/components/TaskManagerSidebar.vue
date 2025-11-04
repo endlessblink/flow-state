@@ -126,10 +126,7 @@
                   <span v-if="task.scheduledDate" class="scheduled-badge" title="Scheduled">
                     <Clock :size="12" :stroke-width="1.5" />
                   </span>
-                  <span v-if="getTaskInstances(task).length > 0" class="instance-badge" :title="`${getTaskInstances(task).length} calendar instance(s)`">
-                    {{ getTaskInstances(task).length }}×
-                  </span>
-                  <span class="priority-badge" :class="task.priority" v-if="task.priority !== 'medium'">
+                                    <span class="priority-badge" :class="task.priority" v-if="task.priority !== 'medium'">
                     <Flag :size="12" :stroke-width="1.5" />
                   </span>
                   <span v-if="taskStore.hasNestedTasks(task.id)" class="children-badge" :title="`${taskStore.getTaskChildren(task.id).length} nested task(s)`">
@@ -197,10 +194,7 @@
                     <span v-if="childTask.scheduledDate" class="scheduled-badge" title="Scheduled">
                       <Clock :size="12" :stroke-width="1.5" />
                     </span>
-                    <span v-if="getTaskInstances(childTask).length > 0" class="instance-badge" :title="`${getTaskInstances(childTask).length} calendar instance(s)`">
-                      {{ getTaskInstances(childTask).length }}×
-                    </span>
-                    <span class="priority-badge" :class="childTask.priority" v-if="childTask.priority !== 'medium'">
+                                        <span class="priority-badge" :class="childTask.priority" v-if="childTask.priority !== 'medium'">
                       <Flag :size="12" :stroke-width="1.5" />
                     </span>
                   </div>
@@ -260,7 +254,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useTaskStore, getTaskInstances } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import {
   ListTodo, Plus, Search, Clock, Flag, Timer, Calendar,

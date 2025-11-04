@@ -1,5 +1,5 @@
 import { computed, type Ref } from 'vue'
-import { useTaskStore, getTaskInstances } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
 
 export interface WeekDay {
@@ -62,101 +62,33 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
 
       // Use filtered tasks to respect active status filter
       taskStore.filteredTasks.forEach(task => {
-        const instances = getTaskInstances(task)
+        // SIMPLIFIED: Only check if task is due on this day - no complex instance system
+        const isDueOnDay = task.dueDate && task.dueDate === day.dateString
 
-        // COMPREHENSIVE FIX: Show both scheduled tasks AND unscheduled inbox tasks
-        const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
-        const hasInstances = instances && instances.length > 0
-        const hasLegacySchedule = task.scheduledDate && task.scheduledTime
+        if (isDueOnDay) {
+          // Create a simple deadline event at 9:00 AM
+          const startTime = new Date(`${day.dateString}T09:00:00`)
+          const duration = task.estimatedDuration || 60 // Default 1 hour for due tasks
+          const endTime = new Date(startTime.getTime() + duration * 60000)
 
-        // Case 1: Scheduled tasks with instances
-        if (hasInstances) {
-          instances
-            .filter(instance => instance.scheduledDate === day.dateString)
-            .forEach(instance => {
-              const [hour, minute] = instance.scheduledTime.split(':').map(Number)
-              const duration = instance.duration || task.estimatedDuration || 30
+          const startSlot = (9 - 6) * 2 // 9:00 AM slot = 6 slots after 6 AM start
+          const slotSpan = Math.ceil(duration / 30)
 
-              // Only show if within working hours
-              if (hour >= 6 && hour < 23) {
-                const startTime = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
-                const endTime = new Date(startTime.getTime() + duration * 60000)
-
-                dayEvents.push({
-                  id: instance.id,
-                  taskId: task.id,
-                  instanceId: instance.id,
-                  title: task.title,
-                  startTime,
-                  endTime,
-                  duration,
-                  startSlot: (hour - 6) * 2 + (minute === 30 ? 1 : 0),
-                  slotSpan: Math.ceil(duration / 30),
-                  color: getPriorityColor(task.priority),
-                  column: 0,
-                  totalColumns: 1,
-                  dayIndex
-                })
-              }
-            })
-        }
-
-        // Case 2: Unscheduled inbox tasks - show as all-day events for the current week
-        if (!hasInstances && !hasLegacySchedule && isInInbox) {
-          // Show unscheduled tasks in today's column only (dayIndex === today's index)
-          const today = new Date()
-          const todayStr = getDateString(today)
-          if (day.dateString === todayStr) {
-            const startTime = new Date(`${day.dateString}T08:00:00`)
-            const endTime = new Date(startTime.getTime() + 30 * 60000)
-
-            dayEvents.push({
-              id: `unscheduled-${task.id}`,
-              taskId: task.id,
-              instanceId: `unscheduled-${task.id}`,
-              title: task.title,
-              startTime,
-              endTime,
-              duration: 30,
-              startSlot: 4, // 8:00 AM slot ((8-6) * 2)
-              slotSpan: 1,
-              color: getPriorityColor(task.priority),
-              column: 0,
-              totalColumns: 1,
-              dayIndex,
-              isUnscheduled: true
-            })
-          }
-        }
-
-        // Case 3: Legacy scheduled tasks (backward compatibility)
-        if (!hasInstances && hasLegacySchedule) {
-          if (task.scheduledDate === day.dateString) {
-            const [hour, minute] = task.scheduledTime.split(':').map(Number)
-            const duration = task.estimatedDuration || 30
-
-            // Only show if within working hours
-            if (hour >= 6 && hour < 23) {
-              const startTime = new Date(`${task.scheduledDate}T${task.scheduledTime}`)
-              const endTime = new Date(startTime.getTime() + duration * 60000)
-
-              dayEvents.push({
-                id: `legacy-${task.id}`,
-                taskId: task.id,
-                instanceId: `legacy-${task.id}`,
-                title: task.title,
-                startTime,
-                endTime,
-                duration,
-                startSlot: (hour - 6) * 2 + (minute === 30 ? 1 : 0),
-                slotSpan: Math.ceil(duration / 30),
-                color: getPriorityColor(task.priority),
-                column: 0,
-                totalColumns: 1,
-                dayIndex
-              })
-            }
-          }
+          dayEvents.push({
+            id: task.id,
+            taskId: task.id,
+            title: task.title,
+            startTime,
+            endTime,
+            duration,
+            startSlot,
+            slotSpan,
+            color: getPriorityColor(task.priority),
+            column: 0,
+            totalColumns: 1,
+            dayIndex,
+            isDueDate: true // Custom flag to distinguish due date tasks
+          })
         }
       })
 

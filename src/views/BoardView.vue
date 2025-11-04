@@ -108,7 +108,7 @@
 
   <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
   <div class="kanban-scroll-container">
-    <div class="kanban-board" @click="closeAllContextMenus">
+    <div class="kanban-board" @click="handleBoardClick">
       <KanbanSwimlane
         v-for="project in projectsWithTasks"
         :key="project.id"
@@ -707,6 +707,14 @@ const closeAllContextMenus = () => {
     console.log('✅ [BoardView] All context menus closed')
   } catch (error) {
     console.error('❌ [BoardView] Error closing context menus:', error)
+  }
+}
+
+const handleBoardClick = (event: MouseEvent) => {
+  // Only close context menus on left clicks (button === 0)
+  // Right clicks (button === 2) should not close context menus
+  if (event.button === 0) {
+    closeAllContextMenus()
   }
 }
 

@@ -389,7 +389,7 @@ import '@/assets/design-tokens.css'
 import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme } from 'naive-ui'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useTimerStore } from '@/stores/timer'
-import { useTaskStore, getTaskInstances } from '@/stores/tasks'
+import { useTaskStore, formatDateKey } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
@@ -570,12 +570,9 @@ const todayTaskCount = computed(() => {
       return false
     }
 
-    // Check instances first (new format) - tasks scheduled for today
-    const instances = getTaskInstances(task)
-    if (instances.length > 0) {
-      if (instances.some(inst => inst.scheduledDate === todayStr)) {
-        return true
-      }
+    // Check if task is due today (simplified - no more complex instance system)
+    if (task.dueDate === todayStr) {
+      return true
     }
 
     // Fallback to legacy scheduledDate - tasks scheduled for today
@@ -619,14 +616,9 @@ const weekTaskCount = computed(() => {
       return false
     }
 
-    // Check instances first (new format)
-    const instances = getTaskInstances(task)
-    if (instances.length > 0) {
-      return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
-    }
-    // Fallback to legacy scheduledDate
-    if (!task.scheduledDate) return false
-    return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+    // Check if task is due within the week (simplified - no more complex instance system)
+    if (!task.dueDate) return false
+    return task.dueDate >= todayStr && task.dueDate < weekEndStr
   }).length
 })
 
@@ -1452,7 +1444,7 @@ onUnmounted(() => {
   color: var(--text-primary);
   /* Use CSS Grid for flexible sidebar layout */
   display: grid;
-  grid-template-columns: minmax(240px, 340px) 1fr;
+  grid-template-columns: minmax(280px, 320px) 1fr;
   position: relative;
   overflow-x: hidden; /* Prevent horizontal overflow at root level */
   overflow-y: visible; /* Allow vertical scrolling */

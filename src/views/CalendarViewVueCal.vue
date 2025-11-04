@@ -63,24 +63,58 @@ const selectedTask = ref<any>(null)
 
 // Convert Pinia tasks to vue-cal event format
 const vueCalEvents = computed(() => {
-  return taskStore.tasks
-    .filter(task => task.scheduledDate && task.scheduledTime)
-    .map(task => {
+  const events: any[] = []
+
+  // Add regular tasks
+  taskStore.tasks
+    .filter(task => task.scheduledDate && task.scheduledTime && !task.recurrence?.isEnabled)
+    .forEach(task => {
       const [hour, minute] = task.scheduledTime!.split(':').map(Number)
       const start = new Date(`${task.scheduledDate}T${task.scheduledTime}`)
       const duration = task.estimatedDuration || 30
       const end = new Date(start.getTime() + duration * 60000)
 
-      return {
+      events.push({
         id: task.id,
         start,
         end,
         title: task.title,
         content: task.description,
         class: `priority-${task.priority}`,
-        taskId: task.id
-      }
+        taskId: task.id,
+        isRecurring: false
+      })
     })
+
+  // Add recurring task instances
+  taskStore.tasks
+    .filter(task => task.recurrence?.isEnabled && task.recurrence?.generatedInstances)
+    .forEach(task => {
+      task.recurrence!.generatedInstances
+        .filter(instance => !instance.isSkipped && instance.scheduledDate && instance.scheduledTime)
+        .forEach(instance => {
+          const [hour, minute] = instance.scheduledTime!.split(':').map(Number)
+          const start = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
+          const duration = instance.duration || task.estimatedDuration || 30
+          const end = new Date(start.getTime() + duration * 60000)
+
+          events.push({
+            id: instance.id,
+            start,
+            end,
+            title: `${task.title} 🔁`, // Add recurrence indicator
+            content: task.description,
+            class: `priority-${task.priority} recurring-task`,
+            taskId: task.id,
+            instanceId: instance.id,
+            isRecurring: true,
+            isModified: instance.isModified,
+            parentTaskId: instance.parentTaskId
+          })
+        })
+    })
+
+  return events
 })
 
 const getPriorityColor = (priority: string) => {
@@ -99,10 +133,32 @@ const handleEventDragDrop = (event: any, originalEvent: any) => {
   const dateStr = newStart.toISOString().split('T')[0]
   const timeStr = `${newStart.getHours().toString().padStart(2, '0')}:${newStart.getMinutes().toString().padStart(2, '0')}`
 
-  taskStore.updateTask(event.id, {
-    scheduledDate: dateStr,
-    scheduledTime: timeStr
-  })
+  // Handle recurring task instance modification
+  if (event.isRecurring && event.instanceId && event.parentTaskId) {
+    // This is a recurring task instance being moved
+    const parentTask = taskStore.tasks.find(t => t.id === event.parentTaskId)
+    if (parentTask?.recurrence) {
+      // Create exception for this instance
+      const recurrenceUtils = require('@/utils/recurrenceUtils')
+      if (recurrenceUtils && recurrenceUtils.addException) {
+        recurrenceUtils.addException(
+          event.parentTaskId,
+          event.scheduledDate,
+          'modify',
+          {
+            newDate: dateStr,
+            newTime: timeStr
+          }
+        )
+      }
+    }
+  } else {
+    // Regular task update
+    taskStore.updateTask(event.id, {
+      scheduledDate: dateStr,
+      scheduledTime: timeStr
+    })
+  }
 }
 
 const handleEventResize = (event: any, originalEvent: any) => {
@@ -209,6 +265,32 @@ const closeEditModal = () => {
 .custom-vuecal {
   flex: 1;
   background: var(--bg-primary);
+}
+
+/* Recurring task styles */
+.custom-vuecal :deep(.vuecal__event.recurring-task) {
+  border-left: 3px solid var(--color-recurring, #8b5cf6);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+  position: relative;
+}
+
+.custom-vuecal :deep(.vuecal__event.recurring-task::before) {
+  content: '🔁';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.custom-vuecal :deep(.vuecal__event.recurring-task.isModified) {
+  border-left-color: var(--color-modified, #f59e0b);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+}
+
+.custom-vuecal :deep(.vuecal__event.recurring-task.isModified::before) {
+  content: '✏️';
+  color: var(--color-modified, #f59e0b);
 }
 
 /* Apply our translucent green design to vue-cal */

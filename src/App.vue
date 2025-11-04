@@ -393,6 +393,7 @@ import { useTaskStore, formatDateKey } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notifications'
 import { useTheme } from '@/composables/useTheme'
 import { useDirection } from '@/i18n/useDirection'
 import { useRouter } from 'vue-router'
@@ -436,6 +437,7 @@ const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 const router = useRouter()
 
 // RTL/LTR direction support
@@ -1398,6 +1400,9 @@ onMounted(async () => {
   // Load data from IndexedDB
   await taskStore.loadFromDatabase()
   await canvasStore.loadFromDatabase()
+
+  // Initialize notification system for recurring tasks and reminders
+  await notificationStore.initializeNotifications()
 
   // Request notification permission for timer
   timerStore.requestNotificationPermission()

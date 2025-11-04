@@ -27,6 +27,7 @@
           <div class="form-group">
             <label class="form-label">Description</label>
             <textarea
+              ref="descriptionTextarea"
               v-model="editedTask.description"
               class="form-textarea"
               rows="3"
@@ -248,6 +249,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import type { Task, Subtask } from '@/stores/tasks'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import {
   X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
   Calendar, CalendarClock, Clock, TimerReset, ChevronDown
@@ -265,8 +267,12 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 
+// Hebrew alignment support
+const { shouldAlignRight, applyInputAlignment } = useHebrewAlignment()
+
 // Template refs
 const titleInput = ref<HTMLInputElement>()
+const descriptionTextarea = ref<HTMLTextAreaElement>()
 
 // Keyboard shortcuts
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -331,6 +337,19 @@ watch(() => props.task, (newTask) => {
         titleInput.value.select() // Select the default text so user can type over it
       }
     })
+  }
+}, { immediate: true })
+
+// Hebrew text alignment watchers
+watch(() => editedTask.value.title, (newTitle) => {
+  if (titleInput.value && newTitle) {
+    applyInputAlignment(titleInput.value, newTitle)
+  }
+}, { immediate: true })
+
+watch(() => editedTask.value.description, (newDescription) => {
+  if (descriptionTextarea.value && newDescription) {
+    applyInputAlignment(descriptionTextarea.value, newDescription)
   }
 }, { immediate: true })
 

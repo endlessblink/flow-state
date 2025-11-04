@@ -16,7 +16,8 @@
         :placeholder="placeholder"
         :disabled="disabled"
         :required="required"
-        :class="['base-input', { 'has-prefix': $slots.prefix, 'has-suffix': $slots.suffix }]"
+        :class="inputClasses"
+        :style="inputStyles"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
       />
@@ -31,7 +32,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {
   modelValue?: string | number
@@ -60,10 +62,63 @@ const emit = defineEmits<{
 const inputRef = ref<HTMLInputElement>()
 const inputId = computed(() => props.id || `input-${Math.random().toString(36).substr(2, 9)}`)
 
+// Hebrew alignment support
+const { shouldAlignRight, getTextAlignment, getTextDirection } = useHebrewAlignment()
+
 const localValue = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
+
+// Computed properties for Hebrew text alignment
+const inputText = computed(() => String(localValue.value || ''))
+const hasHebrew = computed(() => shouldAlignRight(inputText.value))
+const textAlignment = computed(() => getTextAlignment(inputText.value))
+const textDirection = computed(() => getTextDirection(inputText.value))
+
+// Dynamic classes for Hebrew alignment
+const inputClasses = computed(() => [
+  'base-input',
+  { 'has-prefix': $slots.prefix, 'has-suffix': $slots.suffix },
+  {
+    'hebrew-input': hasHebrew.value,
+    'hebrew-text': hasHebrew.value,
+    'text-align-right': hasHebrew.value
+  }
+])
+
+// Dynamic styles for Hebrew alignment
+const inputStyles = computed(() => {
+  if (hasHebrew.value) {
+    return {
+      textAlign: 'right',
+      direction: 'rtl'
+    }
+  }
+  return {}
+})
+
+// Watch for value changes to apply alignment
+watch(localValue, (newValue) => {
+  if (inputRef.value && newValue) {
+    applyHebrewAlignment(inputRef.value, String(newValue))
+  }
+}, { immediate: true })
+
+// Apply Hebrew alignment to input element
+const applyHebrewAlignment = (element: HTMLInputElement, text: string) => {
+  if (!element) return
+
+  if (shouldAlignRight(text)) {
+    element.style.textAlign = 'right'
+    element.style.direction = 'rtl'
+    element.classList.add('hebrew-input', 'hebrew-text')
+  } else {
+    element.style.textAlign = ''
+    element.style.direction = ''
+    element.classList.remove('hebrew-input', 'hebrew-text')
+  }
+}
 
 // Expose focus method
 defineExpose({

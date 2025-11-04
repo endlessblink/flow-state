@@ -1,8 +1,8 @@
 <template>
   <div class="login-form">
     <div class="form-header">
-      <h2 class="form-title">{{ $t('auth.login.title', 'Welcome Back') }}</h2>
-      <p class="form-subtitle">{{ $t('auth.login.subtitle', 'Sign in to continue to Pomo-Flow') }}</p>
+      <h2 class="form-title">{{ $t('auth.login.title') }}</h2>
+      <p class="form-subtitle">{{ $t('auth.login.subtitle') }}</p>
     </div>
 
     <form @submit.prevent="handleSubmit" class="auth-form">
@@ -16,8 +16,8 @@
       <BaseInput
         v-model="email"
         type="email"
-        :label="$t('auth.email', 'Email')"
-        :placeholder="$t('auth.emailPlaceholder', 'your@email.com')"
+        :label="$t('auth.email')"
+        :placeholder="$t('auth.emailPlaceholder')"
         required
         :disabled="isLoading"
         @keydown.enter="handleSubmit"
@@ -30,8 +30,8 @@
         <BaseInput
           v-model="password"
           :type="showPassword ? 'text' : 'password'"
-          :label="$t('auth.password', 'Password')"
-          :placeholder="$t('auth.passwordPlaceholder', 'Enter your password')"
+          :label="$t('auth.password')"
+          :placeholder="$t('auth.passwordPlaceholder')"
           required
           :disabled="isLoading"
           @keydown.enter="handleSubmit"
@@ -61,7 +61,7 @@
           class="forgot-password-link"
           :disabled="isLoading"
         >
-          {{ $t('auth.forgotPassword', 'Forgot password?') }}
+          {{ $t('auth.forgotPassword') }}
         </button>
       </div>
 
@@ -75,12 +75,12 @@
         class="submit-button"
         data-testid="login-button"
       >
-        {{ isLoading ? $t('auth.signingIn', 'Signing in...') : $t('auth.signIn', 'Sign In') }}
+        {{ isLoading ? $t('auth.signingIn') : $t('auth.signIn') }}
       </BaseButton>
 
       <!-- Divider -->
       <div class="divider">
-        <span>{{ $t('auth.or', 'or') }}</span>
+        <span>{{ $t('auth.or') }}</span>
       </div>
 
       <!-- Google Sign-In (will be separate component) -->
@@ -89,7 +89,7 @@
       <!-- Sign Up Link -->
       <div class="form-footer">
         <span class="footer-text">
-          {{ $t('auth.noAccount', "Don't have an account?") }}
+          {{ $t('auth.noAccount') }}
         </span>
         <button
           type="button"
@@ -97,7 +97,7 @@
           class="switch-mode-link"
           :disabled="isLoading"
         >
-          {{ $t('auth.signUp', 'Sign Up') }}
+          {{ $t('auth.signUp') }}
         </button>
       </div>
     </form>

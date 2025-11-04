@@ -285,7 +285,7 @@
       :has-selected-tasks="canvasStore.selectedNodeIds.length > 0"
       :selected-count="canvasStore.selectedNodeIds.length"
       :context-section="canvasContextSection"
-      :task="selectedTask"
+      :task="selectedTaskForContextMenu"
       :section="selectedSection"
       :edge="selectedEdge"
       :node="selectedNode"
@@ -295,7 +295,7 @@
       :show-node-context-menu="showNodeContextMenu"
       :node-context-menu-x="nodeContextMenuX"
       :node-context-menu-y="nodeContextMenuY"
-      @close="closeCanvasContextMenu"
+      @close="closeCanvasContextMenuWithReset"
       @createTaskHere="createTaskHere"
       @createGroup="createGroup"
       @createSection="createSection"
@@ -456,7 +456,7 @@ const {
   nodeContextMenuY,
   selectedNode,
   selectedEdge,
-  selectedTask,
+  selectedTask: selectedTaskForContextMenu,
   selectedSection,
 
   // Computed
@@ -1557,9 +1557,7 @@ const handlePaneContextMenu = (event: MouseEvent) => {
 
   console.log('🎯 Right-click detected!', event.clientX, event.clientY)
   event.preventDefault()
-  canvasContextMenuX.value = event.clientX
-  canvasContextMenuY.value = event.clientY
-  showCanvasContextMenu.value = true
+  openCanvasContextMenu(event.clientX, event.clientY)
   console.log('📋 Context menu should be visible:', showCanvasContextMenu.value)
 }
 
@@ -1583,9 +1581,7 @@ const handleCanvasRightClick = (event: MouseEvent) => {
   }
 
   // Show menu for all other clicks (empty space)
-  canvasContextMenuX.value = event.clientX
-  canvasContextMenuY.value = event.clientY
-  showCanvasContextMenu.value = true
+  openCanvasContextMenu(event.clientX, event.clientY)
   console.log('🎯 Canvas right-click at:', event.clientX, event.clientY)
 }
 
@@ -1828,18 +1824,9 @@ const handleNodeContextMenu = (event: { event: MouseEvent; node: any }) => {
     return
   }
 
-  nodeContextMenuX.value = event.event.clientX
-  nodeContextMenuY.value = event.event.clientY
-  selectedNode.value = event.node
-  showNodeContextMenu.value = true
-  closeCanvasContextMenu()
-  closeEdgeContextMenu()
+  openNodeContextMenu(event.event.clientX, event.event.clientY, event.node)
 }
 
-const closeNodeContextMenu = () => {
-  showNodeContextMenu.value = false
-  selectedNode.value = null
-}
 
 const deleteNode = () => {
   if (!selectedNode.value) {
@@ -1876,18 +1863,9 @@ const deleteNode = () => {
 const handleEdgeContextMenu = (event: { event: MouseEvent; edge: any }) => {
   console.log('🔗 Edge context menu triggered:', event.edge)
   event.event.preventDefault()
-  edgeContextMenuX.value = event.event.clientX
-  edgeContextMenuY.value = event.event.clientY
-  selectedEdge.value = event.edge
-  showEdgeContextMenu.value = true
-  closeCanvasContextMenu()
-  closeNodeContextMenu()
+  openEdgeContextMenu(event.event.clientX, event.event.clientY, event.edge)
 }
 
-const closeEdgeContextMenu = () => {
-  showEdgeContextMenu.value = false
-  selectedEdge.value = null
-}
 
 const handleEdgeDoubleClick = (event: { edge: any }) => {
   // Check if Shift key is pressed for disconnect action

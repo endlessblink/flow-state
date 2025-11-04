@@ -10,9 +10,10 @@
       'timer-active': isTimerActive,
       'selected': isSelected,
       'multi-select-mode': multiSelectMode,
-      'is-dragging': isNodeDragging
+      'is-dragging': isNodeDragging,
+      'is-connecting': isConnecting
     }"
-    draggable="true"
+    :draggable="!isConnecting"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
     @dblclick="$emit('edit', task)"
@@ -75,6 +76,7 @@ interface Props {
   showStatus?: boolean
   showDuration?: boolean
   showSchedule?: boolean
+  isConnecting?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -83,7 +85,8 @@ const props = withDefaults(defineProps<Props>(), {
   showPriority: true,
   showStatus: true,
   showDuration: true,
-  showSchedule: true
+  showSchedule: true,
+  isConnecting: false
 })
 
 // Defensive validation - gracefully handle undefined task prop
@@ -139,6 +142,12 @@ const isTimerActive = computed(() => {
 
 // Drag handler with proper state management
 const handleDragStart = (event: DragEvent) => {
+  // Prevent HTML5 drag during connection operations to avoid opaque preview
+  if (props.isConnecting) {
+    event.preventDefault()
+    return
+  }
+
   if (event.dataTransfer && props.task) {
     const dragData: DragData = {
       type: 'task',
@@ -162,6 +171,13 @@ const handleDragStart = (event: DragEvent) => {
 // Event handlers
 const handleClick = (event: MouseEvent) => {
   if (!props.task) return
+
+  // Prevent edit modal when connecting to avoid conflicts
+  if (props.isConnecting) {
+    // Don't emit edit event when connecting, just handle selection
+    emit('select', props.task, event.ctrlKey || event.metaKey)
+    return
+  }
 
   // If task is already selected and clicking again (without modifiers), open edit modal
   if (props.isSelected && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
@@ -265,8 +281,35 @@ const handleDragEnd = () => {
   cursor: grabbing;
 }
 
-/* Drag state styles to prevent visual artifacts */
-.task-node.is-dragging {
+/* Connection mode styles */
+.task-node.is-connecting {
+  border: 2px solid var(--color-navigation) !important;
+  box-shadow:
+    0 0 20px var(--color-navigation),
+    0 8px 32px var(--shadow-strong) !important;
+  animation: pulse-connection 2s infinite;
+  cursor: crosshair;
+}
+
+.task-node.is-connecting::before {
+  border: 2px solid var(--color-navigation);
+}
+
+@keyframes pulse-connection {
+  0%, 100% {
+    box-shadow:
+      0 0 20px var(--color-navigation),
+      0 8px 32px var(--shadow-strong);
+  }
+  50% {
+    box-shadow:
+      0 0 30px var(--color-navigation),
+      0 12px 48px var(--shadow-strong);
+  }
+}
+
+/* Drag state styles to prevent visual artifacts - only for movement dragging */
+.task-node.is-dragging:not(.is-connecting) {
   /* Prevent any transition effects during drag to avoid ghosting */
   transition: none !important;
   animation: none !important;
@@ -284,6 +327,15 @@ const handleDragEnd = () => {
   border: none !important;
 }
 
+/* Connection mode styles - no opacity changes, keep handles visible */
+.task-node.is-connecting {
+  /* Keep task fully visible during connections */
+  opacity: 1 !important;
+  transform: none !important;
+  /* Keep connection handles fully visible during connections */
+  z-index: 5;
+}
+
 /* Hide all text shadows and complex effects during drag */
 .task-node.is-dragging * {
   text-shadow: none !important;
@@ -299,10 +351,16 @@ body.dragging-active .task-node .vue-flow__handle {
   transition: opacity 0.2s ease !important;
 }
 
-/* Hide connection handles during node-specific drag */
-.task-node.is-dragging .vue-flow__handle {
+/* Hide connection handles during node-specific movement drag (not during connections) */
+.task-node.is-dragging:not(.is-connecting) .vue-flow__handle {
   opacity: 0.1 !important;
   transition: opacity 0.1s ease !important;
+}
+
+/* Keep connection handles fully visible during connection operations */
+.task-node.is-connecting .vue-flow__handle {
+  opacity: 1 !important;
+  transition: opacity 0.2s ease !important;
 }
 
 /* Prevent text selection during drag, but allow events on root and children */

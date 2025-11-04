@@ -225,6 +225,7 @@
           :min-zoom="0.05"
           :max-zoom="4.0"
           :fit-view-on-init="false"
+          :connect-on-drag-nodes="false"
           :zoom-scroll-sensitivity="1.0"
           :zoom-activation-key-code="null"
           :prevent-scrolling="true"
@@ -237,6 +238,7 @@
           @pane-context-menu="handlePaneContextMenu"
           @node-context-menu="handleNodeContextMenu"
           @edge-context-menu="handleEdgeContextMenu"
+          @edge-dblclick="handleEdgeDoubleClick"
           @connect="handleConnect"
           @connect-start="handleConnectStart"
           @connect-end="handleConnectEnd"
@@ -289,11 +291,46 @@
             :show-status="canvasStore.showStatusBadge"
             :show-duration="canvasStore.showDurationBadge"
             :show-schedule="canvasStore.showScheduleBadge"
+            :is-connecting="isConnecting"
             @edit="handleEditTask"
             @select="handleTaskSelect"
             @context-menu="handleTaskContextMenu"
           />
         </template>
+
+        <!-- SVG markers for connection arrows -->
+        <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="10"
+              refX="9"
+              refY="3"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <polygon
+                points="0 0, 10 3, 0 6"
+                fill="var(--border-secondary)"
+              />
+            </marker>
+            <marker
+              id="arrowhead-hover"
+              markerWidth="10"
+              markerHeight="10"
+              refX="9"
+              refY="3"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <polygon
+                points="0 0, 10 3, 0 6"
+                fill="var(--color-navigation)"
+              />
+            </marker>
+          </defs>
+        </svg>
       </VueFlow>
       </div>
     </div>
@@ -853,8 +890,16 @@ const syncEdges = () => {
             id: `${depId}-${task.id}`,
             source: depId,
             target: task.id,
-            type: task.connectionTypes?.[depId] || 'default',
-            animated: false
+            type: 'smoothstep',
+            animated: false,
+            markerEnd: 'url(#arrowhead)',
+            style: {
+              strokeWidth: '2px',
+              stroke: 'var(--border-secondary)'
+            },
+            data: {
+              hoverMarkerEnd: 'url(#arrowhead-hover)'
+            }
           })
         }
       })
@@ -1953,6 +1998,14 @@ const handleEdgeContextMenu = (event: { event: MouseEvent; edge: any }) => {
 const closeEdgeContextMenu = () => {
   showEdgeContextMenu.value = false
   selectedEdge.value = null
+}
+
+const handleEdgeDoubleClick = (event: { event: MouseEvent; edge: any }) => {
+  event.event.preventDefault()
+
+  // Set the selected edge and disconnect it directly
+  selectedEdge.value = event.edge
+  disconnectEdge()
 }
 
 const disconnectEdge = () => {
@@ -3781,10 +3834,23 @@ const runKeyboardDeletionTest = async () => {
 .vue-flow__edge-path {
   stroke: var(--border-secondary);
   stroke-width: 2px;
+  transition: all 0.2s ease;
+}
+
+.vue-flow__edge {
+  cursor: pointer;
 }
 
 .vue-flow__edge:hover .vue-flow__edge-path {
-  stroke: var(--color-navigation);
+  stroke: var(--brand-primary);
+  stroke-width: 3px;
+  filter: drop-shadow(0 3px 8px rgba(99, 102, 241, 0.5));
+}
+
+.vue-flow__edge.selected .vue-flow__edge-path {
+  stroke: var(--accent-primary);
+  stroke-width: 3px;
+  filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.4));
 }
 
 .vue-flow__controls {

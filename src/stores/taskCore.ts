@@ -16,15 +16,6 @@ export interface Subtask {
   updatedAt: Date
 }
 
-export interface TaskInstance {
-  id: string
-  scheduledDate: string
-  scheduledTime: string
-  duration?: number
-  completedPomodoros?: number
-  isLater?: boolean
-}
-
 export interface Task {
   id: string
   title: string
@@ -34,11 +25,8 @@ export interface Task {
   progress: number
   completedPomodoros: number
   subtasks: Subtask[]
-  dueDate: string
-  scheduledDate?: string
-  scheduledTime?: string
+  dueDate: string // Simplified: Single date field - when this task needs to be completed by
   estimatedDuration?: number
-  instances?: TaskInstance[]
   projectId: string
   parentTaskId?: string | null
   createdAt: Date

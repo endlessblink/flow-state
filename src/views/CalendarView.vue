@@ -580,14 +580,23 @@ const calendarFilteredTasks = computed(() => {
       return []
     }
 
+    // DEBUG: Track filtering pipeline
+    console.log('🔍 CALENDAR FILTERING: storeTasks.length:', storeTasks.length)
+    console.log('🔍 CALENDAR FILTERING: activeSmartView:', taskStore.activeSmartView)
+    console.log('🔍 CALENDAR FILTERING: storeTasks:', storeTasks.map(t => ({ id: t.id, title: t.title, status: t.status, isInInbox: t.isInInbox })))
+
     // When smart views are active, use filteredTasks directly to avoid double filtering
     if (taskStore.activeSmartView && taskStore.activeSmartView !== 'uncategorized') {
-      console.log('CalendarView.calendarFilteredTasks: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
+      console.log('🔍 CALENDAR FILTERING: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
       return storeTasks
     }
 
     // For uncategorized smart view or regular views, use the existing filter logic
-    return filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
+    const filteredForRegular = filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
+    console.log('🔍 CALENDAR FILTERING: After filterTasksForRegularViews:', filteredForRegular.length, 'tasks')
+    console.log('🔍 CALENDAR FILTERING: Filtered tasks:', filteredForRegular.map(t => ({ id: t.id, title: t.title, status: t.status, isInInbox: t.isInInbox })))
+
+    return filteredForRegular
   } catch (error) {
     console.error('CalendarView.calendarFilteredTasks: Error filtering tasks:', error)
     return []

@@ -1,5 +1,5 @@
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
-import { useTaskStore, getTaskInstances } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
 
 export interface TimeSlot {
@@ -78,7 +78,19 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
 
     allTasks.forEach(task => {
       console.log(`🚨 useCalendarDayView: Processing task "${task.title}" (ID: ${task.id})`)
-      const instances = getTaskInstances(task)
+      const instances = task.dueDate ? [{
+        id: task.id,
+        taskId: task.id,
+        date: task.dueDate,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        completedPomodoros: task.completedPomodoros,
+        progress: task.progress,
+        estimatedDuration: task.estimatedDuration,
+        isCompleted: task.status === 'done'
+      }] : []
       console.log(`🚨 useCalendarDayView: Task has ${instances.length} instances`)
 
       // COMPREHENSIVE FIX: Show both scheduled tasks AND unscheduled inbox tasks

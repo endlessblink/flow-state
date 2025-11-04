@@ -92,7 +92,7 @@ export default [
       'vue/require-default-prop': 'error',
       'vue/require-explicit-emits': 'error',
       'vue/require-prop-types': 'error',
-      'vue/require-toggle-inside-event': 'error',
+      // 'vue/require-toggle-inside-event': 'error', // Removed - rule not found in vue plugin
       'vue/script-setup-uses-vars': 'error',
 
       // Prevent undefined variables in templates

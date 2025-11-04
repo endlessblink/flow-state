@@ -67,31 +67,8 @@ export const parseDateKey = (dateKey?: string): Date | null => {
   return parsed
 }
 
-// Helper function for backward compatibility
-export const getTaskInstances = (task: Task | null | undefined): TaskInstance[] => {
-  // Handle null/undefined task input
-  if (!task) {
-    return []
-  }
-
-  // If task has instances array, return it
-  if (task.instances && task.instances.length > 0) {
-    return task.instances
-  }
-
-  // Backward compatibility: create synthetic instance from legacy fields
-  if (task.scheduledDate) {
-    return [{
-      id: `legacy-${task.id}`,
-      scheduledDate: task.scheduledDate,
-      scheduledTime: task.scheduledTime || null,
-      duration: task.estimatedDuration
-    }]
-  }
-
-  // No instances
-  return []
-}
+// REMOVED: getTaskInstances function - we now use only dueDate
+// Tasks are organized by dueDate, no complex scheduling system
 
 // Clear only hardcoded test tasks while preserving user's real tasks
 export const clearHardcodedTestTasks = async () => {
@@ -2227,6 +2204,9 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  // REMOVED: getTaskInstances function - using only dueDate now
+// No more complex instance system - tasks are organized by dueDate only
+
   // Restore state for undo/redo functionality
   const restoreState = (newTasks: Task[]) => {
     console.log('🔄 [TASK-STORE] restoreState called with', newTasks.length, 'tasks')
@@ -2316,8 +2296,7 @@ export const useTaskStore = defineStore('tasks', () => {
     importTasksFromJSON,
     importFromRecoveryTool,
 
-    // Helper functions
-    getTaskInstances,
+    // Helper functions - REMOVED getTaskInstances (using only dueDate now)
 
     // Undo/Redo support
     restoreState,
@@ -2326,3 +2305,6 @@ export const useTaskStore = defineStore('tasks', () => {
     ...undoRedoEnabledActions()
   }
 })
+
+// REMOVED: getTaskInstances standalone export
+// We now use only dueDate - no complex instance system needed

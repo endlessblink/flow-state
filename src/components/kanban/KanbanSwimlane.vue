@@ -548,7 +548,17 @@ const toggleCollapse = () => {
 }
 
 const handleGroupContextMenu = (event: MouseEvent) => {
-  emit('groupContextMenu', event, props.project)
+  console.log('🔍 [KanbanSwimlane] handleGroupContextMenu called')
+  console.log('🔍 [KanbanSwimlane] Event:', event)
+  console.log('🔍 [KanbanSwimlane] Project:', props.project)
+
+  try {
+    emit('groupContextMenu', event, props.project)
+    console.log('✅ [KanbanSwimlane] groupContextMenu event emitted successfully')
+  } catch (error) {
+    console.error('❌ [KanbanSwimlane] Error emitting groupContextMenu:', error)
+    console.error('❌ [KanbanSwimlane] Error details:', error.stack)
+  }
 }
 
 const handleViewTypeChange = (event: Event) => {

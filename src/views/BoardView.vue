@@ -439,13 +439,18 @@ const projectHasActiveTasks = (projectId: string): boolean => {
   }
 }
 
-// SMART PROJECT FILTERING: Only show projects that have filtered tasks when smart views are active
+// COMPREHENSIVE SWIMLANE FILTERING: Only show projects that have filtered tasks for BOTH smart views AND project selection
 const projectsWithTasks = computed(() => {
   try {
     // Get all projects from store
     let allProjects = taskStore.projects || []
+    const activeSmartView = taskStore.activeSmartView
+    const activeProjectId = taskStore.activeProjectId
+
+    console.log('🔥 BoardView.projectsWithTasks: STARTING COMPREHENSIVE FILTERING')
     console.log('🔥 BoardView.projectsWithTasks: All projects from store:', allProjects.length)
-    console.log('🔥 BoardView.projectsWithTasks: Active smart view:', taskStore.activeSmartView)
+    console.log('🔥 BoardView.projectsWithTasks: Active smart view:', activeSmartView)
+    console.log('🔥 BoardView.projectsWithTasks: Active project ID:', activeProjectId)
 
     // Validate that projects is an array
     if (!Array.isArray(allProjects)) {
@@ -467,47 +472,71 @@ const projectsWithTasks = computed(() => {
       }]
     }
 
-    // CRITICAL FIX: When smart views are active, only show projects that have filtered tasks
-    if (taskStore.activeSmartView && taskStore.activeSmartView !== 'all') {
-      console.log('🔥🔥🔥 SMART VIEW ACTIVE - FILTERING PROJECTS TO SHOW ONLY THOSE WITH TASKS:', taskStore.activeSmartView)
+    // Get project IDs that actually have filtered tasks (this respects BOTH smart view AND project filtering)
+    const filteredTasks = taskStore.filteredTasks || []
+    console.log('🔥 BoardView.projectsWithTasks: Total filtered tasks available:', filteredTasks.length)
 
-      // Get project IDs from the filtered tasks (this respects smart view filtering)
-      const projectIdsWithFilteredTasks = Object.keys(tasksByProject.value)
-      console.log('🔥 BoardView.projectsWithTasks: Project IDs with filtered tasks:', projectIdsWithFilteredTasks)
+    const projectIdsWithTasks = new Set(
+      filteredTasks.map(task => task.projectId || 'uncategorized')
+    )
+    console.log('🔥 BoardView.projectsWithTasks: Project IDs with filtered tasks:', Array.from(projectIdsWithTasks))
 
-      // Handle uncategorized tasks
-      if (projectIdsWithFilteredTasks.includes('uncategorized')) {
-        console.log('🔥 BoardView.projectsWithTasks: Including uncategorized tasks in smart view')
-      }
+    let projectsToShow = []
 
-      // Filter projects to only include those that have filtered tasks
-      let filteredProjects = allProjects.filter(project => {
-        const hasTasks = projectIdsWithFilteredTasks.includes(project.id)
-        console.log(`🔥 BoardView.projectsWithTasks: Project "${project.name}" (${project.id}) has filtered tasks: ${hasTasks}`)
+    // COMPREHENSIVE FILTERING LOGIC
+    if (activeSmartView && activeSmartView !== 'all') {
+      // SMART VIEW ACTIVE: Only show projects that have tasks matching the smart view
+      console.log('🔥🔥🔥 SMART VIEW ACTIVE - Only showing projects with tasks matching:', activeSmartView)
+
+      projectsToShow = allProjects.filter(project => {
+        const hasTasks = projectIdsWithTasks.has(project.id)
+        console.log(`🔥 BoardView.projectsWithTasks: Project "${project.name}" (${project.id}) has smart view tasks: ${hasTasks}`)
         return hasTasks
       })
 
-      // If no projects have tasks but we have uncategorized tasks, create a default project for them
-      if (filteredProjects.length === 0 && projectIdsWithFilteredTasks.includes('uncategorized')) {
-        console.log('🔥 BoardView.projectsWithTasks: No projects have tasks but uncategorized exist, creating default project')
-        filteredProjects = [{
-          id: 'default',
-          name: 'Default Project',
-          description: 'Default project for uncategorized tasks',
-          color: '#3b82f6',
-          parentId: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }]
-      }
+      console.log('🔥 BoardView.projectsWithTasks: SMART VIEW - Returning', projectsToShow.length, 'projects with smart view tasks')
 
-      console.log('🔥 BoardView.projectsWithTasks: SMART VIEW - Returning', filteredProjects.length, 'projects with tasks')
-      return filteredProjects
+    } else if (activeProjectId) {
+      // PROJECT SELECTION ACTIVE: Show selected project + children that have tasks
+      console.log('🔥🔥🔥 PROJECT SELECTION ACTIVE - Only showing selected project + children with tasks:', activeProjectId)
+
+      // Get all related project IDs (selected project + children)
+      const allRelatedProjectIds = getProjectAndChildren(activeProjectId)
+      console.log('🔥 BoardView.projectsWithTasks: Related project IDs (selected + children):', allRelatedProjectIds)
+
+      projectsToShow = allProjects.filter(project => {
+        const isRelated = allRelatedProjectIds.includes(project.id)
+        const hasTasks = projectIdsWithTasks.has(project.id)
+        const shouldShow = isRelated && hasTasks
+        console.log(`🔥 BoardView.projectsWithTasks: Project "${project.name}" (${project.id}) - Related: ${isRelated}, Has tasks: ${hasTasks}, Should show: ${shouldShow}`)
+        return shouldShow
+      })
+
+      console.log('🔥 BoardView.projectsWithTasks: PROJECT SELECTION - Returning', projectsToShow.length, 'related projects with tasks')
+
     } else {
-      // No smart view active or "all" selected - return all projects (preserve existing behavior)
-      console.log('🔥 BoardView.projectsWithTasks: NO SMART VIEW - Returning all', allProjects.length, 'projects')
-      return allProjects
+      // NO FILTERS ACTIVE: Show all projects (preserve existing behavior)
+      console.log('🔥 BoardView.projectsWithTasks: NO FILTERS ACTIVE - Returning all', allProjects.length, 'projects')
+      projectsToShow = allProjects
     }
+
+    // Handle uncategorized tasks special case
+    if (projectIdsWithTasks.has('uncategorized') && projectsToShow.length === 0) {
+      console.log('🔥 BoardView.projectsWithTasks: Only uncategorized tasks exist, creating default project')
+      projectsToShow = [{
+        id: 'default',
+        name: 'Default Project',
+        description: 'Default project for uncategorized tasks',
+        color: '#3b82f6',
+        parentId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }]
+    }
+
+    console.log('🔥 BoardView.projectsWithTasks: FINAL - Returning', projectsToShow.length, 'projects to display')
+    return projectsToShow
+
   } catch (error) {
     console.error('🔥 BoardView.projectsWithTasks: Error getting projects:', error)
     // Ultimate fallback - return default project
@@ -671,17 +700,33 @@ const closeContextMenu = () => {
 }
 
 const closeAllContextMenus = () => {
-  closeContextMenu()
-  closeGroupContextMenu()
+  console.log('🔍 [BoardView] closeAllContextMenus called')
+  try {
+    closeContextMenu()
+    closeGroupContextMenu()
+    console.log('✅ [BoardView] All context menus closed')
+  } catch (error) {
+    console.error('❌ [BoardView] Error closing context menus:', error)
+  }
 }
 
 // Group context menu handlers
 const handleGroupContextMenu = (event: MouseEvent, project: Project) => {
-  console.log('Group context menu triggered for project:', project.name, 'at position:', event.clientX, event.clientY)
-  groupContextMenuX.value = event.clientX
-  groupContextMenuY.value = event.clientY
-  contextMenuProject.value = project
-  showGroupContextMenu.value = true
+  console.log('🔍 [BoardView] handleGroupContextMenu called')
+  console.log('🔍 [BoardView] Event:', event)
+  console.log('🔍 [BoardView] Project:', project)
+  console.log('🔍 [BoardView] Event coords:', event.clientX, event.clientY)
+
+  try {
+    groupContextMenuX.value = event.clientX
+    groupContextMenuY.value = event.clientY
+    contextMenuProject.value = project
+    showGroupContextMenu.value = true
+    console.log('✅ [BoardView] Group context menu state set successfully')
+  } catch (error) {
+    console.error('❌ [BoardView] Error in handleGroupContextMenu:', error)
+    console.error('❌ [BoardView] Error details:', error.stack)
+  }
 }
 
 const closeGroupContextMenu = () => {

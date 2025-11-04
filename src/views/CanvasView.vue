@@ -415,6 +415,7 @@ if (import.meta.env.DEV) {
 // === MODAL STATE MANAGEMENT GROUP ===
 // State: isEditModalOpen, selectedTask, showKeyboardTest, isTestRunning
 //       isQuickTaskCreateOpen, isBatchEditModalOpen, batchEditTaskIds
+//       showSections, activeSectionId, showSectionTypeDropdown, showZoomDropdown
 // Location: Lines ~565-590 (modal states)
 
 // === CONTEXT MENU STATE GROUP ===
@@ -479,9 +480,13 @@ const sectionWizardPosition = ref({ x: 100, y: 100 })
 const isGroupEditModalOpen = ref(false)
 const selectedSectionForEdit = ref<any>(null)
 
-// Sections control state removed (keeping activeSectionId for other functionality)
+// Sections control state (added back - was previously removed)
+const showSections = ref(false)
+const activeSectionId = ref<string | null>(null)
+const showSectionTypeDropdown = ref(false)
 
-// Canvas zoom state removed
+// Canvas zoom state (added back - was previously removed)
+const showZoomDropdown = ref(false)
 
 // Computed properties
 const sections = computed(() => canvasStore.sections)
@@ -3055,9 +3060,11 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
 // Click outside handler for dropdowns
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
+  // Close section type dropdown if clicking outside its container (if it exists)
   if (!target.closest('.dropdown-container')) {
     showSectionTypeDropdown.value = false
   }
+  // Close zoom dropdown if clicking outside its container (if it exists)
   if (!target.closest('.zoom-dropdown-container')) {
     showZoomDropdown.value = false
   }

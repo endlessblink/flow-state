@@ -16,8 +16,8 @@
       <BaseInput
         v-model="email"
         type="email"
-        :label="$t('auth.email')"
-        :placeholder="$t('auth.emailPlaceholder')"
+        :label="t('auth.email')"
+        :placeholder="t('auth.emailPlaceholder')"
         required
         :disabled="isLoading"
         @keydown.enter="handleSubmit"
@@ -30,8 +30,8 @@
         <BaseInput
           v-model="password"
           :type="showPassword ? 'text' : 'password'"
-          :label="$t('auth.password')"
-          :placeholder="$t('auth.passwordPlaceholder')"
+          :label="t('auth.password')"
+          :placeholder="t('auth.passwordPlaceholder')"
           required
           :disabled="isLoading"
           @keydown.enter="handleSubmit"
@@ -61,7 +61,7 @@
           class="forgot-password-link"
           :disabled="isLoading"
         >
-          {{ $t('auth.forgotPassword') }}
+          {{ t('auth.forgotPassword') }}
         </button>
       </div>
 
@@ -75,12 +75,12 @@
         class="submit-button"
         data-testid="login-button"
       >
-        {{ isLoading ? $t('auth.signingIn') : $t('auth.signIn') }}
+        {{ isLoading ? t('auth.signingIn') : t('auth.signIn') }}
       </BaseButton>
 
       <!-- Divider -->
       <div class="divider">
-        <span>{{ $t('auth.or') }}</span>
+        <span>{{ t('auth.or') }}</span>
       </div>
 
       <!-- Google Sign-In (will be separate component) -->
@@ -89,7 +89,7 @@
       <!-- Sign Up Link -->
       <div class="form-footer">
         <span class="footer-text">
-          {{ $t('auth.noAccount') }}
+          {{ t('auth.noAccount') }}
         </span>
         <button
           type="button"
@@ -97,7 +97,7 @@
           class="switch-mode-link"
           :disabled="isLoading"
         >
-          {{ $t('auth.signUp') }}
+          {{ t('auth.signUp') }}
         </button>
       </div>
     </form>

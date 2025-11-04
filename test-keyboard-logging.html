@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyboard Shortcut Logging Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        .log-display {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-app-vue { color: #81c784; }
+        .log-sidebar { color: #64b5f6; }
+        .log-global { color: #ffb74d; }
+        .log-main { color: #e57373; }
+        .log-diagnostic { color: #ba68c8; }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .shortcuts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .shortcut-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .shortcut-key {
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .test-status {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .status-waiting { background: #fff3cd; color: #856404; }
+        .status-testing { background: #cce5ff; color: #004085; }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 Pomo-Flow Keyboard Shortcut Logging Test</h1>
+
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li><strong>Open Developer Tools:</strong> Press F12 to open browser console</li>
+                <li><strong>Load Application:</strong> Wait for the iframe below to load completely</li>
+                <li><strong>Close Modals:</strong> Make sure no authentication or other modal dialogs are open</li>
+                <li><strong>Click Outside Inputs:</strong> Make sure your cursor is not in any input field</li>
+                <li><strong>Test Shortcuts:</strong> Press each keyboard shortcut listed below</li>
+                <li><strong>Monitor Console:</strong> Watch the browser console for detailed logging output</li>
+            </ol>
+            <p><strong>🎯 Focus:</strong> Look for logs with 🎹, 🔧, 🌐, and 🔍 prefixes to understand the event flow.</p>
+        </div>
+
+        <h2>⌨️ Keyboard Shortcuts to Test:</h2>
+        <div class="shortcuts-grid">
+            <div class="shortcut-card">
+                <div>
+                    <span class="shortcut-key">Shift + 1</span>
+                    <span class="test-status status-waiting" id="status-1">Waiting</span>
+                </div>
+                <div>Board View (/)</div>
+            </div>
+            <div class="shortcut-card">
+                <div>
+                    <span class="shortcut-key">Shift + 2</span>
+                    <span class="test-status status-waiting" id="status-2">Waiting</span>
+                </div>
+                <div>Calendar View (/calendar)</div>
+            </div>
+            <div class="shortcut-card">
+                <div>
+                    <span class="shortcut-key">Shift + 3</span>
+                    <span class="test-status status-waiting" id="status-3">Waiting</span>
+                </div>
+                <div>Canvas View (/canvas)</div>
+            </div>
+            <div class="shortcut-card">
+                <div>
+                    <span class="shortcut-key">Shift + 4</span>
+                    <span class="test-status status-waiting" id="status-4">Waiting</span>
+                </div>
+                <div>Catalog View (/catalog)</div>
+            </div>
+            <div class="shortcut-card">
+                <div>
+                    <span class="shortcut-key">Shift + 5</span>
+                    <span class="test-status status-waiting" id="status-5">Waiting</span>
+                </div>
+                <div>Quick Sort View (/quick-sort)</div>
+            </div>
+        </div>
+
+        <h2>📊 Expected Log Output Pattern:</h2>
+        <div class="log-display">
+            <div class="log-entry log-diagnostic">🔍 [MAIN.TS] GLOBAL: Shift+1 detected at document level</div>
+            <div class="log-entry log-sidebar">🔧 [SIDEBAR TOGGLE] handleKeyboardShortcuts called</div>
+            <div class="log-entry log-sidebar">⚠️ [SIDEBAR TOGGLE] Shift+1-5 detected but not handled by sidebar toggle</div>
+            <div class="log-entry log-global">🌐 [GLOBAL HANDLER] handleKeydown called (bubble phase)</div>
+            <div class="log-entry log-global">⚠️ [GLOBAL HANDLER] Shift+1-5 detected but not handled by global handler</div>
+            <div class="log-entry log-app-vue">🎹 [APP.VUE] handleKeydown called</div>
+            <div class="log-entry log-app-vue">🔍 [APP.VUE] Checking Shift+1-5 condition</div>
+            <div class="log-entry log-app-vue">✅ [APP.VUE] Key 1 is in range 1-5. Looking up route...</div>
+            <div class="log-entry log-app-vue">🗺️ [APP.VUE] Route lookup result: {key: "1", route: "/"}</div>
+            <div class="log-entry log-app-vue">🚀 [APP.VUE] Route found! Attempting navigation to: /</div>
+            <div class="log-entry log-app-vue">✅ [APP.VUE] Navigation command sent successfully to: /</div>
+        </div>
+
+        <h2>🌐 Test Application:</h2>
+        <iframe id="test-frame" src="http://localhost:5547" title="Pomo-Flow Application"></iframe>
+
+        <h2>🐛 Troubleshooting:</h2>
+        <div class="instructions">
+            <h3>If shortcuts don't work:</h3>
+            <ul>
+                <li><strong>Check Console:</strong> Look for error messages or warnings</li>
+                <li><strong>Verify Order:</strong> Make sure you see all the expected log entries in the correct order</li>
+                <li><strong>Check shouldIgnoreElement:</strong> Look for messages about input fields or modals blocking shortcuts</li>
+                <li><strong>Verify Route Map:</strong> Check if the route lookup is working correctly</li>
+                <li><strong>Check Navigation:</strong> Look for navigation success/failure messages</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Track which shortcuts we've tested
+        const testedShortcuts = new Set();
+        const testStartTime = Date.now();
+
+        // Update status based on keyboard events
+        document.addEventListener('keydown', function(event) {
+            const { shiftKey, ctrlKey, metaKey, altKey, key } = event;
+
+            // Check if it's a Shift+1-5 shortcut
+            if (shiftKey && !ctrlKey && !metaKey && !altKey && key >= '1' && key <= '5') {
+                const statusElement = document.getElementById(`status-${key}`);
+                if (statusElement && !testedShortcuts.has(key)) {
+                    statusElement.textContent = 'Testing...';
+                    statusElement.className = 'test-status status-testing';
+                    testedShortcuts.add(key);
+
+                    // Send the keystroke to the iframe
+                    const iframe = document.getElementById('test-frame');
+                    if (iframe.contentWindow) {
+                        const iframeEvent = new KeyboardEvent('keydown', {
+                            shiftKey: shiftKey,
+                            ctrlKey: ctrlKey,
+                            metaKey: metaKey,
+                          altKey: altKey,
+                            key: key,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        iframe.contentWindow.dispatchEvent(iframeEvent);
+                    }
+
+                    // Check result after a delay
+                    setTimeout(() => {
+                        try {
+                            const currentUrl = iframe.contentWindow?.location?.href;
+                            if (currentUrl) {
+                                let expectedRoute = '';
+                                switch(key) {
+                                    case '1': expectedRoute = '/'; break;
+                                    case '2': expectedRoute = '/calendar'; break;
+                                    case '3': expectedRoute = '/canvas'; break;
+                                    case '4': expectedRoute = '/catalog'; break;
+                                    case '5': expectedRoute = '/quick-sort'; break;
+                                }
+
+                                if (currentUrl.includes(expectedRoute) || (expectedRoute === '/' && (currentUrl.endsWith('/') || currentUrl.endsWith('/#/')))) {
+                                    statusElement.textContent = '✅ Success!';
+                                    statusElement.className = 'test-status status-success';
+                                } else {
+                                    statusElement.textContent = '❌ No navigation';
+                                    statusElement.className = 'test-status status-error';
+                                }
+                            }
+                        } catch (e) {
+                            statusElement.textContent = '⚠️ Cannot verify';
+                            statusElement.className = 'test-status status-error';
+                        }
+                    }, 2000);
+                }
+            }
+        });
+
+        // Monitor console messages from iframe (limited due to cross-origin)
+        const iframe = document.getElementById('test-frame');
+        iframe.addEventListener('load', function() {
+            console.log('✅ Test iframe loaded successfully');
+            console.log('📝 Open browser console and test Shift+1-5 shortcuts');
+            console.log('🔍 Look for logs with prefixes: 🔍, 🎹, 🔧, 🌐');
+        });
+
+        // Add instructions to console
+        console.log('='.repeat(80));
+        console.log('🚀 POMO-FLOW KEYBOARD SHORTCUT LOGGING TEST');
+        console.log('='.repeat(80));
+        console.log('📋 Instructions:');
+        console.log('1. Test Shift+1-5 shortcuts in the iframe above');
+        console.log('2. Watch this console for detailed logging');
+        console.log('3. Look for these log prefixes:');
+        console.log('   🔍 [MAIN.TS] - Global event diagnostics');
+        console.log('   🎹 [APP.VUE] - Main keyboard handler');
+        console.log('   🔧 [SIDEBAR TOGGLE] - Sidebar shortcuts');
+        console.log('   🌐 [GLOBAL HANDLER] - Undo/redo shortcuts');
+        console.log('='.repeat(80));
+    </script>
+</body>
+</html>

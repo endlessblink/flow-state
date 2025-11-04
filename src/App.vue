@@ -1258,9 +1258,31 @@ const shouldIgnoreElement = (target: HTMLElement | null): boolean => {
 
 // Keyboard shortcut handlers
 const handleKeydown = (event: KeyboardEvent) => {
+  // Comprehensive logging for keyboard shortcut debugging
+  console.log('🎹 [APP.VUE] handleKeydown called:', {
+    key: event.key,
+    shiftKey: event.shiftKey,
+    ctrlKey: event.ctrlKey,
+    metaKey: event.metaKey,
+    altKey: event.altKey,
+    target: event.target,
+    targetTagName: (event.target as HTMLElement)?.tagName,
+    timestamp: new Date().toISOString()
+  })
+
   // Check if we should ignore keyboard shortcuts
   const target = event.target as HTMLElement
-  if (shouldIgnoreElement(target)) return
+  const shouldIgnore = shouldIgnoreElement(target)
+  console.log('🚫 [APP.VUE] shouldIgnoreElement result:', shouldIgnore, {
+    targetElement: target,
+    isInput: target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.contentEditable === 'true',
+    isInModal: !!target?.closest('[role="dialog"], .modal, .n-modal')
+  })
+
+  if (shouldIgnore) {
+    console.log('❌ [APP.VUE] Keyboard shortcut blocked by shouldIgnoreElement')
+    return
+  }
 
   // Cmd/Ctrl+K to open Command Palette (Quick Add)
   if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
@@ -1294,14 +1316,41 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 
   // Shift+1-5 for view switching
+  console.log('🔍 [APP.VUE] Checking Shift+1-5 condition:', {
+    isShift: event.shiftKey,
+    noCtrl: !event.ctrlKey,
+    noMeta: !event.metaKey,
+    noAlt: !event.altKey,
+    key: event.key,
+    conditionMet: event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey
+  })
+
   if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
     const key = event.key
+    console.log('🔢 [APP.VUE] Shift+number detected, key:', key, 'Checking range 1-5...')
+
     if (key >= '1' && key <= '5') {
+      console.log('✅ [APP.VUE] Key', key, 'is in range 1-5. Looking up route...')
       const route = viewRouteMap[key as keyof typeof viewRouteMap]
+      console.log('🗺️ [APP.VUE] Route lookup result:', { key, route, availableRoutes: viewRouteMap })
+
       if (route) {
+        console.log('🚀 [APP.VUE] Route found! Attempting navigation to:', route)
+        console.log('📍 [APP.VUE] Current route before navigation:', router.currentRoute.value.path)
+
         event.preventDefault()
-        router.push(route)
+
+        try {
+          router.push(route)
+          console.log('✅ [APP.VUE] Navigation command sent successfully to:', route)
+        } catch (error) {
+          console.error('❌ [APP.VUE] Navigation failed:', error)
+        }
+      } else {
+        console.log('❌ [APP.VUE] No route found for key:', key)
       }
+    } else {
+      console.log('❌ [APP.VUE] Key', key, 'is not in range 1-5')
     }
   }
 }

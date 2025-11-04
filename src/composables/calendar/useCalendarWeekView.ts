@@ -236,23 +236,24 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
           const newTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`
 
           if (isDuplicateMode) {
-            if (!duplicateInstanceId) {
-              const newInstance = taskStore.createTaskInstance(calendarEvent.taskId, {
+            // In duplicate mode, create a copy of the task with new schedule
+            const originalTask = taskStore.getTask(calendarEvent.taskId)
+            if (originalTask) {
+              taskStore.createTask({
+                title: originalTask.title,
+                description: originalTask.description,
                 scheduledDate: newDate,
                 scheduledTime: newTime,
-                duration: calendarEvent.duration
-              })
-              if (newInstance) {
-                duplicateInstanceId = newInstance.id
-              }
-            } else {
-              taskStore.updateTaskInstance(calendarEvent.taskId, duplicateInstanceId, {
-                scheduledDate: newDate,
-                scheduledTime: newTime
+                estimatedDuration: calendarEvent.duration,
+                projectId: originalTask.projectId,
+                priority: originalTask.priority,
+                status: originalTask.status,
+                isInInbox: false
               })
             }
           } else {
-            taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
+            // Simple update: modify task's scheduledDate and scheduledTime directly
+            taskStore.updateTask(calendarEvent.taskId, {
               scheduledDate: newDate,
               scheduledTime: newTime
             })
@@ -306,17 +307,17 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
       }
 
       if (direction === 'bottom') {
-        taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
-          duration: newDuration
+        taskStore.updateTask(calendarEvent.taskId, {
+          estimatedDuration: newDuration
         })
       } else {
         const newHour = Math.floor(newStartSlot / 2) + WORKING_HOURS_OFFSET
         const newMinute = (newStartSlot % 2) * 30
 
         if (newHour >= WORKING_HOURS_OFFSET && newHour < 23) {
-          taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
+          taskStore.updateTask(calendarEvent.taskId, {
             scheduledTime: `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`,
-            duration: newDuration
+            estimatedDuration: newDuration
           })
         }
       }
@@ -346,9 +347,11 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
     const { taskId } = JSON.parse(data)
     const timeStr = `${hour.toString().padStart(2, '0')}:00`
 
-    taskStore.createTaskInstance(taskId, {
+    // Simple update: modify task's scheduledDate and scheduledTime directly
+    taskStore.updateTask(taskId, {
       scheduledDate: dateString,
-      scheduledTime: timeStr
+      scheduledTime: timeStr,
+      isInInbox: false // Task is now scheduled, no longer in inbox
     })
   }
 

@@ -62,6 +62,9 @@ const emit = defineEmits<{
 const inputRef = ref<HTMLInputElement>()
 const inputId = computed(() => props.id || `input-${Math.random().toString(36).substr(2, 9)}`)
 
+// Initialize slots for Vue 3 Composition API
+const slots = useSlots()
+
 // Hebrew alignment support
 const { shouldAlignRight, getTextAlignment, getTextDirection } = useHebrewAlignment()
 
@@ -79,7 +82,7 @@ const textDirection = computed(() => getTextDirection(inputText.value))
 // Dynamic classes for Hebrew alignment
 const inputClasses = computed(() => [
   'base-input',
-  { 'has-prefix': $slots.prefix, 'has-suffix': $slots.suffix },
+  { 'has-prefix': slots.prefix, 'has-suffix': slots.suffix },
   {
     'hebrew-input': hasHebrew.value,
     'hebrew-text': hasHebrew.value,

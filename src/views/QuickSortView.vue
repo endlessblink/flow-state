@@ -153,6 +153,7 @@ import QuickSortCard from '@/components/QuickSortCard.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import SortProgress from '@/components/SortProgress.vue'
 import ProjectModal from '@/components/ProjectModal.vue'
+import TaskEditModal from '@/components/TaskEditModal.vue'
 import type { SessionSummary } from '@/stores/quickSort'
 import type { Task } from '@/types/tasks'
 
@@ -160,8 +161,10 @@ const router = useRouter()
 const taskStore = useTaskStore()
 
 const showProjectModal = ref(false)
+const showEditModal = ref(false)
 const showCelebration = ref(false)
 const sessionSummary = ref<SessionSummary | null>(null)
+const taskToEdit = ref<Task | null>(null)
 
 const {
   currentTask,
@@ -174,6 +177,8 @@ const {
   startSession,
   endSession,
   categorizeTask,
+  markTaskDone,
+  markDoneAndDeleteTask,
   skipTask,
   undoLastCategorization
 } = useQuickSort()

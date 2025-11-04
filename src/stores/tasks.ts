@@ -17,15 +17,6 @@ export interface Subtask {
   updatedAt: Date
 }
 
-export interface TaskInstance {
-  id: string
-  scheduledDate: string
-  scheduledTime: string
-  duration?: number // Duration override (defaults to task.estimatedDuration)
-  completedPomodoros?: number // Pomodoros completed for this specific instance
-  isLater?: boolean // Flag to distinguish "Later" from "No Date"
-}
-
 export interface Task {
   id: string
   title: string
@@ -35,11 +26,8 @@ export interface Task {
   progress: number
   completedPomodoros: number
   subtasks: Subtask[]
-  dueDate: string
-  scheduledDate?: string // DEPRECATED - kept for backward compatibility, use instances instead
-  scheduledTime?: string // DEPRECATED - kept for backward compatibility, use instances instead
+  dueDate: string // Simplified: Single date field - when this task needs to be completed by
   estimatedDuration?: number // in minutes
-  instances?: TaskInstance[] // Calendar occurrences - enables task reuse
   projectId: string
   parentTaskId?: string | null // For nested tasks - null means root-level task
   createdAt: Date

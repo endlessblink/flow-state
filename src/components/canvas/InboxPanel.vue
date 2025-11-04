@@ -8,39 +8,39 @@
       </button>
       <h3 v-if="!isCollapsed" class="inbox-title">Inbox</h3>
 
-      <!-- Collapsed state task count indicators -->
-      <div v-if="isCollapsed" class="collapsed-badges">
-        <!-- Show dual count when filter is active, single count when no filter -->
+      <!-- Expanded state count -->
+      <n-badge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
+    </div>
+
+    <!-- Collapsed state task count indicators positioned under arrow -->
+    <div v-if="isCollapsed" class="collapsed-badges-container">
+      <!-- Show dual count when filter is active, single count when no filter -->
+      <BaseBadge
+        v-if="activeTimeFilter === 'all'"
+        variant="count"
+        size="sm"
+        rounded
+      >
+        {{ baseInboxTasks.length }}
+      </BaseBadge>
+      <div v-else class="dual-badges">
         <BaseBadge
-          v-if="activeTimeFilter === 'all'"
           variant="count"
           size="sm"
           rounded
+          class="total-count"
         >
           {{ baseInboxTasks.length }}
         </BaseBadge>
-        <div v-else class="dual-badges">
-          <BaseBadge
-            variant="count"
-            size="sm"
-            rounded
-            class="total-count"
-          >
-            {{ baseInboxTasks.length }}
-          </BaseBadge>
-          <BaseBadge
-            variant="info"
-            size="sm"
-            rounded
-            class="filtered-count"
-          >
-            {{ inboxTasks.length }}
-          </BaseBadge>
-        </div>
+        <BaseBadge
+          variant="info"
+          size="sm"
+          rounded
+          class="filtered-count"
+        >
+          {{ inboxTasks.length }}
+        </BaseBadge>
       </div>
-
-      <!-- Expanded state count -->
-      <n-badge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
     </div>
 
     <!-- Quick Add -->
@@ -650,8 +650,11 @@ onBeforeUnmount(() => {
   @apply justify-center;
 }
 
-.collapsed-badges {
+.collapsed-badges-container {
   @apply flex flex-col items-center gap-1;
+  margin-top: var(--space-2);
+  width: 100%;
+  overflow: visible;
 }
 
 .dual-badges {

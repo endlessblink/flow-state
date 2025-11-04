@@ -80,7 +80,11 @@
             </div>
 
             <div class="metadata-field">
-              <component :is="priorityIcon" :size="14" :class="priorityIconClass" />
+              <component
+                :is="priorityIcon || AlertCircle"
+                :size="14"
+                :class="priorityIconClass"
+              />
               <select v-model="editedTask.priority" class="inline-select">
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -89,7 +93,11 @@
             </div>
 
             <div class="metadata-field">
-              <component :is="statusIcon" :size="14" :class="statusIconClass" />
+              <component
+                :is="statusIcon || Circle"
+                :size="14"
+                :class="statusIconClass"
+              />
               <select v-model="editedTask.status" class="inline-select">
                 <option value="planned">Planned</option>
                 <option value="in_progress">Active</option>
@@ -348,9 +356,9 @@ const totalTaskPomodoros = computed(() =>
 // Dynamic icon and class for priority
 const priorityIcon = computed(() => {
   switch (editedTask.value.priority) {
-    case 'low': return Flag
-    case 'high': return Zap
-    default: return AlertCircle
+    case 'low': return Flag || AlertCircle
+    case 'high': return Zap || AlertCircle
+    default: return AlertCircle || Circle
   }
 })
 
@@ -365,11 +373,11 @@ const priorityIconClass = computed(() => {
 // Dynamic icon and class for status
 const statusIcon = computed(() => {
   switch (editedTask.value.status) {
-    case 'planned': return Circle
-    case 'in_progress': return PlayCircle
-    case 'done': return CheckCircle
-    case 'backlog': return Archive
-    default: return Circle
+    case 'planned': return Circle || AlertCircle
+    case 'in_progress': return PlayCircle || Circle
+    case 'done': return CheckCircle || Circle
+    case 'backlog': return Archive || Circle
+    default: return Circle || AlertCircle
   }
 })
 
@@ -442,8 +450,29 @@ const resetPomodoros = () => {
 const saveTask = () => {
   if (!props.task) return
 
-  // Update main task
-  taskStore.updateTaskWithUndo(editedTask.value.id, {
+  // DEBUG: Track task state before update
+  const originalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
+  const originalInstances = taskStore.getTaskInstances(originalTask)
+  console.log('🔍 DEBUG: BEFORE UPDATE - Task:', originalTask?.title)
+  console.log('🔍 DEBUG: BEFORE UPDATE - Task instances count:', originalInstances.length)
+  console.log('🔍 DEBUG: BEFORE UPDATE - Task instances:', originalInstances)
+  console.log('🔍 DEBUG: BEFORE UPDATE - editedTask.instances:', editedTask.value.instances)
+  console.log('🔍 DEBUG: BEFORE UPDATE - scheduledDate:', editedTask.value.scheduledDate)
+  console.log('🔍 DEBUG: BEFORE UPDATE - scheduledTime:', editedTask.value.scheduledTime)
+
+  // Check if task had original scheduling that was explicitly removed
+  const hadOriginalSchedule = originalInstances.length > 0 ||
+                            (originalTask?.scheduledDate && originalTask?.scheduledTime) ||
+                            (originalTask?.instances && originalTask.instances.length > 0)
+  const hasNewSchedule = editedTask.value.scheduledDate && editedTask.value.scheduledTime
+  const scheduleExplicitlyRemoved = hadOriginalSchedule && !hasNewSchedule
+
+  console.log('🔍 DEBUG: hadOriginalSchedule:', hadOriginalSchedule)
+  console.log('🔍 DEBUG: hasNewSchedule:', hasNewSchedule)
+  console.log('🔍 DEBUG: scheduleExplicitlyRemoved:', scheduleExplicitlyRemoved)
+
+  // CRITICAL FIX: Include instances in the update to preserve them
+  const updates: any = {
     title: editedTask.value.title,
     description: editedTask.value.description,
     status: editedTask.value.status,
@@ -452,22 +481,42 @@ const saveTask = () => {
     scheduledDate: editedTask.value.scheduledDate,
     scheduledTime: editedTask.value.scheduledTime,
     estimatedDuration: editedTask.value.estimatedDuration
-  })
+  }
+
+  // CRITICAL: Preserve existing instances if we're not updating them separately
+  if (editedTask.value.instances && editedTask.value.instances.length > 0) {
+    updates.instances = editedTask.value.instances
+    console.log('🔍 DEBUG: Including instances in update:', updates.instances.length)
+  }
+
+  console.log('🔍 DEBUG: Updates being applied:', updates)
+
+  // Update main task
+  taskStore.updateTaskWithUndo(editedTask.value.id, updates)
+
+  // DEBUG: Check state after main task update (no async needed - undo system handles this)
+  const taskAfterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)
+  const instancesAfterUpdate = taskStore.getTaskInstances(taskAfterUpdate)
+  console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task instances count:', instancesAfterUpdate.length)
+  console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task.isInInbox:', taskAfterUpdate?.isInInbox)
+  console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task.instances:', taskAfterUpdate?.instances)
 
   // Handle task instances for calendar
   if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {
+    console.log('🔍 DEBUG: Handling instance creation/update')
     // Check if task already has instances
     const existingInstances = taskStore.getTaskInstances(props.task)
     const sameDayInstance = existingInstances.find(
       inst => inst.scheduledDate === editedTask.value.scheduledDate
     )
-    
+
     if (sameDayInstance) {
       // Update existing instance
       taskStore.updateTaskInstanceWithUndo(editedTask.value.id, sameDayInstance.id, {
         scheduledTime: editedTask.value.scheduledTime,
         duration: editedTask.value.estimatedDuration || 60
       })
+      console.log('🔍 DEBUG: Updated existing instance:', sameDayInstance.id)
     } else {
       // Create new instance
       taskStore.createTaskInstanceWithUndo(editedTask.value.id, {
@@ -475,14 +524,16 @@ const saveTask = () => {
         scheduledTime: editedTask.value.scheduledTime,
         duration: editedTask.value.estimatedDuration || 60
       })
+      console.log('🔍 DEBUG: Created new instance')
     }
-  } else {
-    // Remove all instances if no scheduled date
+  } else if (scheduleExplicitlyRemoved) {
+    console.log('🔍 DEBUG: Schedule explicitly removed - handling instance deletion')
+    // Remove all instances only when schedule was explicitly removed by user
     const existingInstances = taskStore.getTaskInstances(props.task)
 
     // CRITICAL FIX: Track instance deletions and update task state properly
     if (existingInstances.length > 0) {
-      console.log(`🗑️ Removing ${existingInstances.length} instances from task "${editedTask.value.title}"`)
+      console.log(`🗑️ User removed schedule - removing ${existingInstances.length} instances from task "${editedTask.value.title}"`)
 
       existingInstances.forEach(instance => {
         taskStore.deleteTaskInstanceWithUndo(editedTask.value.id, instance.id)
@@ -490,20 +541,23 @@ const saveTask = () => {
 
       // CRITICAL FIX: Update the task to ensure instances array is properly cleared
       // and task is returned to inbox when all instances are removed
-      setTimeout(() => {
-        const currentTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-        if (currentTask) {
-          const hasRemainingInstances = taskStore.getTaskInstances(currentTask).length > 0
-          if (!hasRemainingInstances && currentTask.isInInbox === false) {
-            taskStore.updateTask(currentTask.id, {
-              instances: [],  // Ensure instances array is explicitly cleared
-              isInInbox: true // Return task to inbox visibility
-            })
-            console.log(`✅ Task "${currentTask.title}" returned to inbox after instances cleared`)
-          }
+      // No async needed - handle immediately after instance deletions
+      const currentTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
+      if (currentTask) {
+        const hasRemainingInstances = taskStore.getTaskInstances(currentTask).length > 0
+        if (!hasRemainingInstances && currentTask.isInInbox === false) {
+          taskStore.updateTask(currentTask.id, {
+            instances: [],  // Ensure instances array is explicitly cleared
+            isInInbox: true // Return task to inbox visibility
+          })
+          console.log(`✅ Task "${currentTask.title}" returned to inbox after schedule removal`)
         }
-      }, 100) // Small delay to ensure instance deletions are processed
+      }
+    } else {
+      console.log('🔍 DEBUG: No existing instances to remove')
     }
+  } else {
+    console.log('🔍 DEBUG: No schedule changes - preserving existing instances')
   }
 
   // Update subtasks
@@ -527,6 +581,15 @@ const saveTask = () => {
       taskStore.createSubtaskWithUndo(editedTask.value.id, subtask)
     }
   })
+
+  // DEBUG: Final state check (no async needed)
+  const finalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
+  const finalInstances = taskStore.getTaskInstances(finalTask)
+  console.log('🔍 DEBUG: FINAL STATE - Task:', finalTask?.title)
+  console.log('🔍 DEBUG: FINAL STATE - Task instances count:', finalInstances.length)
+  console.log('🔍 DEBUG: FINAL STATE - Task.isInInbox:', finalTask?.isInInbox)
+  console.log('🔍 DEBUG: FINAL STATE - Task.instances:', finalTask?.instances)
+  console.log('🔍 DEBUG: FINAL STATE - Should be visible in calendar:', finalInstances.length > 0 || (finalTask?.scheduledDate && finalTask?.scheduledTime))
 
   emit('close')
 }

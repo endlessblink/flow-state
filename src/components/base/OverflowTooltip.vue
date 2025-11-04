@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import { useTextOverflow } from '@/composables/useTextOverflow'
 
 interface Props {

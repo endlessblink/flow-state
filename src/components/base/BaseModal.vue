@@ -18,12 +18,12 @@
       ref="modalRef"
     >
       <!-- Modal Header -->
-      <header v-if="showHeader" class="modal-header">
+      <header v-if="showHeader" class="modal-header" :class="{ 'rtl-header': isRTL }">
         <div class="header-content">
           <h2
             :id="titleId"
             class="modal-title"
-            :class="titleClass"
+            :class="[titleClass, { 'text-end': isRTL }]"
           >
             <slot name="title">{{ title }}</slot>
           </h2>
@@ -32,7 +32,7 @@
             v-if="description || $slots.description"
             :id="descriptionId"
             class="modal-description"
-            :class="descriptionClass"
+            :class="[descriptionClass, { 'text-end': isRTL }]"
           >
             <slot name="description">{{ description }}</slot>
           </p>
@@ -42,6 +42,7 @@
         <button
           v-if="showCloseButton"
           class="modal-close-btn"
+          :class="{ 'rtl-close-btn': isRTL }"
           @click="handleClose"
           :aria-label="closeAriaLabel"
           type="button"
@@ -57,10 +58,10 @@
       </main>
 
       <!-- Modal Footer -->
-      <footer v-if="showFooter || $slots.footer" class="modal-footer" :class="footerClass">
+      <footer v-if="showFooter || $slots.footer" class="modal-footer" :class="[footerClass, { 'rtl-footer': isRTL }]">
         <slot name="footer">
           <!-- Default footer actions -->
-          <div class="default-actions">
+          <div class="default-actions" :class="{ 'rtl-actions': isRTL }">
             <BaseButton
               v-if="showCancelButton"
               variant="secondary"
@@ -92,6 +93,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
+import { useDirection } from '@/i18n/useDirection'
 import BaseButton from './BaseButton.vue'
 
 interface Props {
@@ -145,6 +147,9 @@ const emit = defineEmits<{
   afterOpen: []
   afterClose: []
 }>()
+
+// RTL support
+const { isRTL } = useDirection()
 
 // Template refs
 const overlayRef = ref<HTMLElement>()
@@ -593,6 +598,33 @@ defineExpose({
     animation: none;
     transition: opacity 0.2s ease;
   }
+}
+
+/* RTL Styles */
+.modal-header.rtl-header {
+  flex-direction: row-reverse;
+}
+
+.modal-header.rtl-header .modal-close-btn {
+  margin-inline-start: var(--space-2);
+  margin-inline-end: 0;
+}
+
+.modal-close-btn.rtl-close-btn {
+  transform: scaleX(-1);
+}
+
+.modal-footer.rtl-footer {
+  flex-direction: row-reverse;
+}
+
+.default-actions.rtl-actions {
+  flex-direction: row-reverse;
+}
+
+/* RTL text alignment */
+.text-end {
+  text-align: end;
 }
 
 /* Screen Reader Only */

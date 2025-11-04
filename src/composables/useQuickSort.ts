@@ -98,6 +98,55 @@ export function useQuickSort() {
     moveToNext()
   }
 
+  function markTaskDone(taskId: string) {
+    const task = taskStore.tasks.find((t) => t.id === taskId)
+    if (!task) return
+
+    const oldStatus = task.status
+
+    // Create action for undo/redo
+    const action: CategoryAction = {
+      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: 'MARK_DONE',
+      taskId,
+      oldStatus,
+      newStatus: 'done',
+      timestamp: Date.now()
+    }
+
+    // Update task status to done
+    taskStore.updateTask(taskId, { status: 'done' })
+
+    // Record action
+    quickSortStore.recordAction(action)
+
+    // Move to next task automatically
+    moveToNext()
+  }
+
+  function markDoneAndDeleteTask(taskId: string) {
+    const task = taskStore.tasks.find((t) => t.id === taskId)
+    if (!task) return
+
+    // Create action for undo/redo - store full task data
+    const action: CategoryAction = {
+      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: 'MARK_DONE_AND_DELETE',
+      taskId,
+      deletedTask: { ...task }, // Store full task for restoration
+      timestamp: Date.now()
+    }
+
+    // Delete task from store
+    taskStore.deleteTask(taskId)
+
+    // Record action
+    quickSortStore.recordAction(action)
+
+    // Move to next task automatically (index stays same since task was removed)
+    // No need to call moveToNext, just stay at current index
+  }
+
   function moveToNext() {
     if (hasNext.value) {
       currentIndex.value++
@@ -122,12 +171,22 @@ export function useQuickSort() {
     const action = quickSortStore.undo()
     if (!action) return
 
-    // Revert the task update - make it uncategorized again
-    const isUncategorizedAgain = !action.oldProjectId || action.oldProjectId === '1'
-    taskStore.updateTask(action.taskId, {
-      projectId: action.oldProjectId,
-      isUncategorized: isUncategorizedAgain
-    })
+    if (action.type === 'CATEGORIZE_TASK') {
+      // Revert the task update - make it uncategorized again
+      const isUncategorizedAgain = !action.oldProjectId || action.oldProjectId === '1'
+      taskStore.updateTask(action.taskId, {
+        projectId: action.oldProjectId,
+        isUncategorized: isUncategorizedAgain
+      })
+    } else if (action.type === 'MARK_DONE') {
+      // Revert status change
+      taskStore.updateTask(action.taskId, { status: action.oldStatus })
+    } else if (action.type === 'MARK_DONE_AND_DELETE') {
+      // Restore deleted task
+      if (action.deletedTask) {
+        taskStore.tasks.push(action.deletedTask)
+      }
+    }
 
     // Adjust index if needed
     if (currentIndex.value > 0) {
@@ -139,11 +198,19 @@ export function useQuickSort() {
     const action = quickSortStore.redo()
     if (!action) return
 
-    // Reapply the task update - categorize it again
-    taskStore.updateTask(action.taskId, {
-      projectId: action.newProjectId,
-      isUncategorized: false
-    })
+    if (action.type === 'CATEGORIZE_TASK') {
+      // Reapply the task update - categorize it again
+      taskStore.updateTask(action.taskId, {
+        projectId: action.newProjectId,
+        isUncategorized: false
+      })
+    } else if (action.type === 'MARK_DONE') {
+      // Reapply status change
+      taskStore.updateTask(action.taskId, { status: action.newStatus })
+    } else if (action.type === 'MARK_DONE_AND_DELETE') {
+      // Delete task again
+      taskStore.deleteTask(action.taskId)
+    }
 
     // Move forward
     moveToNext()
@@ -188,6 +255,8 @@ export function useQuickSort() {
     startSession,
     endSession,
     categorizeTask,
+    markTaskDone,
+    markDoneAndDeleteTask,
     moveToNext,
     moveToPrevious,
     skipTask,

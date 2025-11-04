@@ -68,7 +68,12 @@ export const parseDateKey = (dateKey?: string): Date | null => {
 }
 
 // Helper function for backward compatibility
-export const getTaskInstances = (task: Task): TaskInstance[] => {
+export const getTaskInstances = (task: Task | null | undefined): TaskInstance[] => {
+  // Handle null/undefined task input
+  if (!task) {
+    return []
+  }
+
   // If task has instances array, return it
   if (task.instances && task.instances.length > 0) {
     return task.instances

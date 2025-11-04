@@ -3,10 +3,13 @@ import { ref, computed } from 'vue'
 
 export interface CategoryAction {
   id: string
-  type: 'CATEGORIZE_TASK'
+  type: 'CATEGORIZE_TASK' | 'MARK_DONE' | 'MARK_DONE_AND_DELETE'
   taskId: string
-  oldProjectId: string | null
-  newProjectId: string
+  oldProjectId?: string | null
+  newProjectId?: string
+  oldStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
+  newStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
+  deletedTask?: any // Store full task data for undo of deleted tasks
   timestamp: number
 }
 

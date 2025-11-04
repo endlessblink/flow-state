@@ -131,59 +131,7 @@
 
         <!-- Language & Direction Settings -->
         <section class="settings-section">
-          <h3 class="section-title">🌐 Language & Direction</h3>
-
-          <div class="setting-group">
-            <label class="setting-label">Language</label>
-            <div class="duration-options">
-              <button
-                class="duration-btn"
-                :class="{ active: locale === 'en' }"
-                @click="changeLocale('en')"
-              >
-                English
-              </button>
-              <button
-                class="duration-btn"
-                :class="{ active: locale === 'he' }"
-                @click="changeLocale('he')"
-              >
-                עברית
-              </button>
-            </div>
-          </div>
-
-          <div class="setting-group">
-            <label class="setting-label">Text Direction</label>
-            <div class="duration-options">
-              <button
-                class="duration-btn"
-                :class="{ active: directionPreference === 'ltr' }"
-                @click="changeDirection('ltr')"
-              >
-                LTR →
-              </button>
-              <button
-                class="duration-btn"
-                :class="{ active: directionPreference === 'rtl' }"
-                @click="changeDirection('rtl')"
-              >
-                ← RTL
-              </button>
-              <button
-                class="duration-btn"
-                :class="{ active: directionPreference === 'auto' }"
-                @click="changeDirection('auto')"
-              >
-                Auto
-              </button>
-            </div>
-          </div>
-
-          <p class="setting-description">
-            Current direction: <strong>{{ direction.toUpperCase() }}</strong>
-            <span v-if="directionPreference === 'auto'"> (auto-detected from language)</span>
-          </p>
+          <LanguageSettings />
         </section>
 
         <!-- Cloud Sync Settings -->
@@ -202,6 +150,7 @@ import { useDirection } from '@/i18n/useDirection'
 import { useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
 import CloudSyncSettings from './CloudSyncSettings.vue'
+import LanguageSettings from './settings/LanguageSettings.vue'
 
 interface Props {
   isOpen: boolean
@@ -214,9 +163,9 @@ defineEmits<{
 
 const timerStore = useTimerStore()
 
-// Direction and locale management
-const { direction, directionPreference, setDirection } = useDirection()
-const { locale } = useI18n()
+// Direction and locale management (now handled by LanguageSettings component)
+// const { direction, directionPreference, setDirection } = useDirection()
+// const { locale } = useI18n()
 
 // Show done column setting
 const showDoneColumn = ref(false)
@@ -255,16 +204,16 @@ const updateShowDoneColumn = (value: boolean) => {
   saveKanbanSettings()
 }
 
-// Direction and locale handlers
-const changeDirection = (newDirection: 'ltr' | 'rtl' | 'auto') => {
-  setDirection(newDirection)
-}
+// Direction and locale handlers (now handled by LanguageSettings component)
+// const changeDirection = (newDirection: 'ltr' | 'rtl' | 'auto') => {
+//   setDirection(newDirection)
+// }
 
-const changeLocale = (newLocale: string) => {
-  locale.value = newLocale
-  localStorage.setItem('app-locale', newLocale)
-  // Direction will auto-update via the composable if set to 'auto'
-}
+// const changeLocale = (newLocale: string) => {
+//   locale.value = newLocale
+//   localStorage.setItem('app-locale', newLocale)
+//   // Direction will auto-update via the composable if set to 'auto'
+// }
 
 const saveSettings = () => {
   localStorage.setItem('pomo-flow-settings', JSON.stringify(timerStore.settings))

@@ -89,9 +89,39 @@
           <div class="quick-date-shortcuts">
             <button class="quick-date-btn" @click.stop="setToday">Today</button>
             <button class="quick-date-btn" @click.stop="setTomorrow">Tomorrow</button>
-            <button class="quick-date-btn" @click.stop="setWeek">This Week</button>
+            <button class="quick-date-btn" @click.stop="setWeekend">Weekend</button>
             <button class="quick-date-btn" @click.stop="setNextWeek">Next Week</button>
             <button class="quick-date-btn clear-btn" @click.stop="clearDate">Clear</button>
+          </div>
+        </div>
+
+        <div class="edit-section">
+          <label class="edit-label">Actions:</label>
+          <div class="action-buttons-group">
+            <button
+              class="mark-done-btn action-icon-btn"
+              @click.stop="handleMarkDone"
+              title="Mark Done (D)"
+            >
+              <CheckCircle :size="20" />
+              <kbd class="shortcut-key">D</kbd>
+            </button>
+            <button
+              class="edit-btn action-icon-btn"
+              @click.stop="handleEditTask"
+              title="Edit Task (E)"
+            >
+              <Edit :size="20" />
+              <kbd class="shortcut-key">E</kbd>
+            </button>
+            <button
+              class="delete-btn action-icon-btn"
+              @click.stop="handleMarkDoneAndDelete"
+              title="Done + Delete (Del)"
+            >
+              <Trash2 :size="20" />
+              <kbd class="shortcut-key">Del</kbd>
+            </button>
           </div>
         </div>
       </div>
@@ -107,7 +137,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Calendar, Flag, ListTodo, Timer, ArrowRight, ArrowLeft } from 'lucide-vue-next'
+import { Calendar, Flag, ListTodo, Timer, ArrowRight, ArrowLeft, CheckCircle, Trash2, Edit } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 
 interface Props {
@@ -118,6 +148,9 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
+  markDone: []
+  markDoneAndDelete: []
+  editTask: []
 }>()
 
 // Date picker ref
@@ -196,13 +229,14 @@ function setTomorrow() {
   emit('updateTask', { dueDate: tomorrow.toISOString() })
 }
 
-function setWeek() {
+function setWeekend() {
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const weekEnd = new Date(today)
-  weekEnd.setDate(weekEnd.getDate() + 7)
-  weekEnd.setHours(0, 0, 0, 0)
-  emit('updateTask', { dueDate: weekEnd.toISOString() })
+  const dayOfWeek = today.getDay()
+  const daysUntilSaturday = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7
+  const saturday = new Date()
+  saturday.setDate(today.getDate() + daysUntilSaturday)
+  saturday.setHours(0, 0, 0, 0)
+  emit('updateTask', { dueDate: saturday.toISOString() })
 }
 
 function setNextWeek() {
@@ -216,6 +250,21 @@ function setNextWeek() {
 
 function clearDate() {
   emit('updateTask', { dueDate: '' })
+}
+
+// Mark Done handler
+function handleMarkDone() {
+  emit('markDone')
+}
+
+// Edit Task handler
+function handleEditTask() {
+  emit('editTask')
+}
+
+// Mark Done and Delete handler
+function handleMarkDoneAndDelete() {
+  emit('markDoneAndDelete')
 }
 
 // Mouse/Touch handling
@@ -417,8 +466,8 @@ function handleSwipeEnd() {
 }
 
 .priority-btn.active {
-  background: var(--glass-bg-light);
-  border: 2px solid var(--brand-primary);
+  background: var(--brand-gradient);
+  border-color: var(--brand-primary);
   font-weight: var(--font-semibold);
 }
 
@@ -511,6 +560,88 @@ function handleSwipeEnd() {
   background: var(--danger-bg);
   border-color: var(--danger);
   color: var(--danger);
+}
+
+/* Action Buttons Group */
+.action-buttons-group {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+/* Base Icon Button Styles */
+.action-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 56px;
+  height: 56px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal);
+}
+
+.action-icon-btn .shortcut-key {
+  position: absolute;
+  bottom: var(--space-1);
+  right: var(--space-1);
+  padding: var(--space-0_5) var(--space-1);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  font-size: 9px;
+  font-weight: var(--font-medium);
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+/* Mark as Done Button */
+.mark-done-btn {
+  background: var(--success-bg);
+  border: 1px solid var(--success-muted);
+  color: var(--success);
+}
+
+.mark-done-btn:hover {
+  background: var(--success);
+  color: var(--bg-primary);
+  border-color: var(--success);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Edit Button */
+.edit-btn {
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+.edit-btn:hover {
+  background: var(--brand-primary);
+  color: var(--bg-primary);
+  border-color: var(--brand-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Delete Button */
+.delete-btn {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-muted);
+  color: var(--danger);
+}
+
+.delete-btn:hover {
+  background: var(--danger);
+  color: var(--bg-primary);
+  border-color: var(--danger);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Reduce motion for accessibility */

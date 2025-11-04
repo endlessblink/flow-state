@@ -231,6 +231,45 @@ function handleUndo() {
   }
 }
 
+function handleMarkDone() {
+  if (!currentTask.value) return
+
+  // Show minimal celebration animation
+  showCelebration.value = true
+  setTimeout(() => {
+    showCelebration.value = false
+  }, 500)
+
+  // Mark task as done and move to next
+  markTaskDone(currentTask.value.id)
+}
+
+function handleMarkDoneAndDelete() {
+  if (!currentTask.value) return
+
+  // Show minimal celebration animation
+  showCelebration.value = true
+  setTimeout(() => {
+    showCelebration.value = false
+  }, 500)
+
+  // Mark done and delete task, then move to next
+  markDoneAndDeleteTask(currentTask.value.id)
+}
+
+function handleEditTask() {
+  if (!currentTask.value) return
+
+  // Set the task to edit and open modal
+  taskToEdit.value = currentTask.value
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  taskToEdit.value = null
+}
+
 function handleExit() {
   // Check if there are still uncategorized tasks
   const hasRemainingUncategorized = uncategorizedTasks.value.length > 0
@@ -259,6 +298,24 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
     event.preventDefault()
     handleUndo()
+  }
+
+  // D key to mark as done
+  if (event.key === 'd' || event.key === 'D') {
+    event.preventDefault()
+    handleMarkDone()
+  }
+
+  // E key to edit task
+  if (event.key === 'e' || event.key === 'E') {
+    event.preventDefault()
+    handleEditTask()
+  }
+
+  // Delete key to mark done and delete
+  if (event.key === 'Delete') {
+    event.preventDefault()
+    handleMarkDoneAndDelete()
   }
 }
 

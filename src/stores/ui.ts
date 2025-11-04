@@ -1,16 +1,32 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useDirection } from '@/i18n/useDirection'
 
 const UI_STATE_STORAGE_KEY = 'pomo-flow-ui-state'
 
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
 export const useUIStore = defineStore('ui', () => {
+  // RTL and i18n support
+  const { locale } = useI18n()
+  const { direction, isRTL, isLTR, setDirection, directionPreference } = useDirection()
+
   // Sidebar visibility state
   const mainSidebarVisible = ref(true)
   const secondarySidebarVisible = ref(true)
   const focusMode = ref(false)
   const boardDensity = ref<'ultrathin' | 'compact' | 'comfortable'>('comfortable')
+
+  // Language and direction state
+  const availableLanguages = [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'he', name: 'Hebrew', nativeName: 'עברית' }
+  ]
+
+  const currentLanguage = computed(() =>
+    availableLanguages.find(lang => lang.code === locale.value) || availableLanguages[0]
+  )
 
   // Auth modal state
   const authModalOpen = ref(false)
@@ -96,13 +112,36 @@ export const useUIStore = defineStore('ui', () => {
     settingsModalOpen.value = false
   }
 
+  // Language and direction actions
+  const setLanguage = (languageCode: 'en' | 'he') => {
+    locale.value = languageCode
+    localStorage.setItem('app-locale', languageCode)
+    persistState()
+  }
+
+  const setDirectionPreference = (pref: 'ltr' | 'rtl' | 'auto') => {
+    setDirection(pref)
+    persistState()
+  }
+
+  const toggleDirection = () => {
+    if (directionPreference.value === 'auto') {
+      setDirectionPreference(isRTL.value ? 'ltr' : 'rtl')
+    } else {
+      setDirectionPreference('auto')
+    }
+    persistState()
+  }
+
   // Persistence
   const persistState = () => {
     const state = {
       mainSidebarVisible: mainSidebarVisible.value,
       secondarySidebarVisible: secondarySidebarVisible.value,
       focusMode: focusMode.value,
-      boardDensity: boardDensity.value
+      boardDensity: boardDensity.value,
+      locale: locale.value,
+      directionPreference: directionPreference.value
     }
     localStorage.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(state))
   }
@@ -116,6 +155,16 @@ export const useUIStore = defineStore('ui', () => {
         secondarySidebarVisible.value = state.secondarySidebarVisible ?? true
         focusMode.value = state.focusMode ?? false
         boardDensity.value = state.boardDensity ?? 'comfortable'
+
+        // Restore language and direction preferences
+        if (state.locale && ['en', 'he'].includes(state.locale)) {
+          locale.value = state.locale
+          localStorage.setItem('app-locale', state.locale)
+        }
+
+        if (state.directionPreference && ['ltr', 'rtl', 'auto'].includes(state.directionPreference)) {
+          setDirection(state.directionPreference)
+        }
       } catch (error) {
         console.warn('Failed to load UI state from localStorage:', error)
       }
@@ -133,6 +182,15 @@ export const useUIStore = defineStore('ui', () => {
     authModalRedirect,
     settingsModalOpen,
 
+    // RTL and i18n state
+    locale,
+    direction,
+    isRTL,
+    isLTR,
+    directionPreference,
+    availableLanguages,
+    currentLanguage,
+
     // Actions
     toggleMainSidebar,
     toggleSecondarySidebar,
@@ -145,6 +203,11 @@ export const useUIStore = defineStore('ui', () => {
     switchAuthView,
     openSettingsModal,
     closeSettingsModal,
+
+    // Language and direction actions
+    setLanguage,
+    setDirectionPreference,
+    toggleDirection,
     loadState
   }
 })

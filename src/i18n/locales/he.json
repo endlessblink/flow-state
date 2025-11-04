@@ -1,62 +1,77 @@
 {
   "common": {
-    "app_name": "بومو-فلو",
-    "tasks": "المهام",
-    "projects": "المشاريع",
-    "settings": "الإعدادات",
-    "search": "بحث",
-    "add": "إضافة",
-    "edit": "تحرير",
-    "delete": "حذف",
-    "save": "حفظ",
-    "cancel": "إلغاء",
-    "confirm": "تأكيد"
+    "app_name": "פומו-פלו",
+    "tasks": "משימות",
+    "projects": "פרויקטים",
+    "settings": "הגדרות",
+    "search": "חיפוש",
+    "add": "הוסף",
+    "edit": "ערוך",
+    "delete": "מחק",
+    "save": "שמור",
+    "cancel": "בטל",
+    "confirm": "אשר"
   },
   "timer": {
-    "start": "ابدأ",
-    "pause": "إيقاف مؤقت",
-    "stop": "إيقاف",
-    "work_session": "جلسة عمل",
-    "short_break": "استراحة قصيرة",
-    "long_break": "استراحة طويلة"
+    "start": "התחל",
+    "pause": "השהה",
+    "stop": "עצור",
+    "work_session": "סשן עבודה",
+    "short_break": "הפסקה קצרה",
+    "long_break": "הפסקה ארוכה"
   },
   "views": {
-    "board": "اللوحة",
-    "calendar": "التقويم",
-    "canvas": "القماش",
-    "all_tasks": "جميع المهام"
+    "board": "לוח",
+    "calendar": "לוח שנה",
+    "canvas": "קנבס",
+    "all_tasks": "כל המשימות"
   },
   "smart_views": {
-    "today": "اليوم",
-    "weekend": "نهاية هذا الأسبوع"
+    "today": "היום",
+    "weekend": "סוף השבוע"
   },
   "task": {
-    "title": "عنوان المهمة",
-    "description": "الوصف",
-    "status": "الحالة",
-    "priority": "الأولوية",
-    "due_date": "تاريخ الاستحقاق",
-    "completed": "مكتملة",
-    "in_progress": "قيد التنفيذ",
-    "planned": "مخطط",
-    "create_task": "إنشاء مهمة",
-    "add_task": "أضف مهمة...",
-    "no_tasks": "لم يتم العثور على مهام",
-    "create_first": "أنشئ مهمتك الأولى"
+    "title": "כותרת המשימה",
+    "description": "תיאור",
+    "status": "סטטוס",
+    "priority": "עדיפות",
+    "due_date": "תאריך יעד",
+    "completed": "הושלמה",
+    "in_progress": "בביצוע",
+    "planned": "מתוכנן",
+    "create_task": "צור משימה",
+    "add_task": "הוסף משימה...",
+    "no_tasks": "לא נמצאו משימות",
+    "create_first": "צור את המשימה הראשונה שלך"
   },
   "project": {
-    "create": "إنشاء مشروع",
-    "edit": "تحرير المشروع",
-    "delete": "حذف المشروع",
-    "duplicate": "تكرار المشروع"
+    "create": "צור פרויקט",
+    "edit": "ערוך פרויקט",
+    "delete": "מחק פרויקט",
+    "duplicate": "שכפל פרויקט"
   },
   "settings": {
-    "general": "عام",
-    "appearance": "المظهر",
-    "language": "اللغة",
-    "direction": "اتجاه النص",
-    "ltr": "من اليسار إلى اليمين (LTR)",
-    "rtl": "من اليمين إلى اليسار (RTL)",
-    "auto": "اكتشاف تلقائي"
+    "general": "כללי",
+    "appearance": "מראה",
+    "language": "שפה",
+    "direction": "כיוון טקסט",
+    "ltr": "משמאל לימין (LTR)",
+    "rtl": "מימין לשמאל (RTL)",
+    "auto": "זיהוי אוטומטי"
+  },
+  "auth": {
+    "login": {
+      "title": "התחברות",
+      "subtitle": "ברוך שובך! התחבר כדי לגשת למשימות שלך",
+      "email": "אימייל",
+      "emailPlaceholder": "הזן את האימייל שלך",
+      "password": "סיסמה",
+      "passwordPlaceholder": "הזן את הסיסמה שלך",
+      "forgotPassword": "שכחת סיסמה?",
+      "or": "או",
+      "noAccount": "אין לך חשבון?",
+      "signUp": "צור חשבון",
+      "signIn": "התחבר"
+    }
   }
 }

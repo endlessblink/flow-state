@@ -146,7 +146,7 @@
           class="projects-list"
           role="tree"
           aria-label="Projects"
-          :aria-activedescendant="activeProjectId ? `project-${activeProjectId}` : undefined"
+          :aria-activedescendant="taskStore.activeProjectId ? `project-${taskStore.activeProjectId}` : undefined"
           @keydown="handleProjectTreeKeydown"
         >
           <ProjectTreeItem
@@ -1377,13 +1377,14 @@ onMounted(async () => {
   window.addEventListener('keydown', handleKeydown)
 
   // Auto-open auth modal if not authenticated (after auth state loads)
+  // DISABLED: App works perfectly with IndexedDB without requiring authentication
   // Wait for auth to initialize, then check if user is authenticated
-  setTimeout(() => {
-    if (!authStore.isLoading && !authStore.isAuthenticated && !uiStore.authModalOpen) {
-      console.log('🔐 [APP.VUE] Auto-opening auth modal - user not authenticated')
-      uiStore.openAuthModal('login', '/')
-    }
-  }, 1000) // Wait 1 second for auth to initialize
+  // setTimeout(() => {
+  //   if (!authStore.isLoading && !authStore.isAuthenticated && !uiStore.authModalOpen) {
+  //     console.log('🔐 [APP.VUE] Auto-opening auth modal - user not authenticated')
+  //     uiStore.openAuthModal('login', '/')
+  //   }
+  // }, 1000) // Wait 1 second for auth to initialize
 })
 
 onUnmounted(() => {

@@ -238,7 +238,7 @@
           @pane-context-menu="handlePaneContextMenu"
           @node-context-menu="handleNodeContextMenu"
           @edge-context-menu="handleEdgeContextMenu"
-          @edge-dblclick="handleEdgeDoubleClick"
+          @edgeDoubleClick="handleEdgeDoubleClick"
           @connect="handleConnect"
           @connect-start="handleConnectStart"
           @connect-end="handleConnectEnd"
@@ -2000,12 +2000,13 @@ const closeEdgeContextMenu = () => {
   selectedEdge.value = null
 }
 
-const handleEdgeDoubleClick = (event: { event: MouseEvent; edge: any }) => {
-  event.event.preventDefault()
-
-  // Set the selected edge and disconnect it directly
-  selectedEdge.value = event.edge
-  disconnectEdge()
+const handleEdgeDoubleClick = (event: { edge: any }) => {
+  // Check if Shift key is pressed for disconnect action
+  if (event.edge) {
+    // Set the selected edge and disconnect it
+    selectedEdge.value = event.edge
+    disconnectEdge()
+  }
 }
 
 const disconnectEdge = () => {

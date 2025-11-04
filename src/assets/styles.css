@@ -2,28 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global reset */
+/* Comprehensive Global Reset - Eliminate All Blue Borders */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Remove all browser default borders and outlines */
+*, *::before, *::after {
+  border: none !important;
+  outline: none !important;
+}
+
+/* Remove focus outlines completely */
+*:focus, *:focus-visible, *:focus-within {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove selection styling that might show blue */
+::selection {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: inherit !important;
+}
+
+::-moz-selection {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: inherit !important;
+}
+
 html, body {
   font-family: ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: visible; /* Allow canvas controls to overflow */
-  height: 100vh;
-  width: 100vw;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  height: 100vh !important;
+  width: 100vw !important;
+  /* Ensure no borders on root elements */
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
-#root {
-  width: 100vw;
-  height: 100vh;
-  overflow: visible; /* Allow canvas controls to overflow */
-  /* Ensure no borders are applied to root element */
-  border: none;
-  outline: none;
-  box-shadow: none;
+#root, #app {
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  /* Force border removal on root elements */
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  /* Remove any inherited positioning that might cause borders */
+  position: relative !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }

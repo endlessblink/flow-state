@@ -723,6 +723,8 @@ const handleGroupContextMenu = (event: MouseEvent, project: Project) => {
     contextMenuProject.value = project
     showGroupContextMenu.value = true
     console.log('✅ [BoardView] Group context menu state set successfully')
+    console.log('🔍 [BoardView] showGroupContextMenu:', showGroupContextMenu.value)
+    console.log('🔍 [BoardView] contextMenuProject:', contextMenuProject.value?.name)
   } catch (error) {
     console.error('❌ [BoardView] Error in handleGroupContextMenu:', error)
     console.error('❌ [BoardView] Error details:', error.stack)

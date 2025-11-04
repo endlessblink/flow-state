@@ -1,8 +1,8 @@
 <template>
   <div class="login-form">
     <div class="form-header">
-      <h2 class="form-title">{{ t('auth.login.title') }}</h2>
-      <p class="form-subtitle">{{ t('auth.login.subtitle') }}</p>
+      <h2 class="form-title">{{ safeT('auth.login.title', 'Sign In') }}</h2>
+      <p class="form-subtitle">{{ safeT('auth.login.subtitle', 'Welcome back! Sign in to access your tasks') }}</p>
     </div>
 
     <form @submit.prevent="handleSubmit" class="auth-form">
@@ -16,8 +16,8 @@
       <BaseInput
         v-model="email"
         type="email"
-        :label="t('auth.email')"
-        :placeholder="t('auth.emailPlaceholder')"
+        :label="safeT('auth.email', 'Email')"
+        :placeholder="safeT('auth.emailPlaceholder', 'Enter your email')"
         required
         :disabled="isLoading"
         @keydown.enter="handleSubmit"
@@ -30,8 +30,8 @@
         <BaseInput
           v-model="password"
           :type="showPassword ? 'text' : 'password'"
-          :label="t('auth.password')"
-          :placeholder="t('auth.passwordPlaceholder')"
+          :label="safeT('auth.password', 'Password')"
+          :placeholder="safeT('auth.passwordPlaceholder', 'Enter your password')"
           required
           :disabled="isLoading"
           @keydown.enter="handleSubmit"
@@ -61,7 +61,7 @@
           class="forgot-password-link"
           :disabled="isLoading"
         >
-          {{ t('auth.forgotPassword') }}
+          {{ safeT('auth.forgotPassword', 'Forgot password?') }}
         </button>
       </div>
 
@@ -128,6 +128,17 @@ const emit = defineEmits<Emits>()
 
 // ===== i18n Setup =====
 const { t } = useI18n()
+
+// Safe translation function with fallbacks
+const safeT = (key: string, fallback?: string): string => {
+  try {
+    const result = t(key)
+    return typeof result === 'string' ? result : fallback || key
+  } catch (error) {
+    console.warn(`Translation error for key: ${key}`, error)
+    return fallback || key
+  }
+}
 
 // ===== State =====
 const authStore = useAuthStore()

@@ -1456,10 +1456,23 @@ onUnmounted(() => {
   position: relative;
   overflow-x: hidden; /* Prevent horizontal overflow at root level */
   overflow-y: visible; /* Allow vertical scrolling */
-  /* Ensure no borders are applied to the main app container */
-  border: none;
-  outline: none;
-  box-shadow: none;
+  /* Force border removal with !important */
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  /* Remove any inherited margins or padding that might cause borders */
+  margin: 0 !important;
+  padding: 0 !important;
+  /* Ensure no positioning artifacts */
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  /* Remove any border-like styling */
+  border-radius: 0 !important;
+  border-image: none !important;
+  border-style: none !important;
+  border-width: 0 !important;
 }
 
 /* When sidebar is hidden, collapse the first column */

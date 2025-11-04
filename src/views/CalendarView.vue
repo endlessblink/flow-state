@@ -471,7 +471,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useTaskStore, type Task } from '@/stores/tasks'
+import { useTaskStore, type Task, getTaskInstances } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
@@ -519,7 +519,7 @@ const debugTaskInventory = () => {
     console.log(`🚨 CALENDAR VIEW:   ${status}: ${tasks.length} tasks`)
     tasks.forEach(task => {
       console.log(`🚨 CALENDAR VIEW:     - "${task.title}" (ID: ${task.id})`)
-      const instances = taskStore.getTaskInstances(task)
+      const instances = getTaskInstances(task)
       if (instances.length > 0) {
         console.log(`🚨 CALENDAR VIEW:       Instances: ${instances.map(i => `${i.scheduledDate} ${i.scheduledTime}`).join(', ')}`)
       }

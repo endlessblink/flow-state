@@ -24,7 +24,7 @@ export const getLocaleDirection = (locale: string): 'ltr' | 'rtl' => {
   return rtlLanguages.includes(locale) ? 'rtl' : 'ltr'
 }
 
-const i18n = createI18n<[MessageSchema], 'en' | 'he'>({
+const i18n = createI18n({
   legacy: false, // Use Composition API mode
   locale: getSavedLocale(),
   fallbackLocale: 'en',

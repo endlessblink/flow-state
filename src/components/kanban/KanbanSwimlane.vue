@@ -181,7 +181,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import type { Task, Project } from '@/stores/tasks'
-import { useTaskStore, parseDateKey } from '@/stores/tasks'
+import { useTaskStore, parseDateKey, getTaskInstances } from '@/stores/tasks'
 import { ChevronDown, ChevronRight, Calendar } from 'lucide-vue-next'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import { useHorizontalDragScroll } from '@/composables/useHorizontalDragScroll'
@@ -334,7 +334,7 @@ const getTasksByDate = (dateColumn: string) => {
   const afterNextWeekStart = addDays(nextWeekEnd, 1)
 
   const result = props.tasks.filter(task => {
-    const instances = taskStore.getTaskInstances(task)
+    const instances = getTaskInstances(task)
 
     // Check for overdue tasks first (highest priority)
     if (dateColumn === 'overdue') {

@@ -277,14 +277,24 @@
       @save="handleGroupEditSave"
     />
 
-    <!-- Canvas Context Menu -->
-    <CanvasContextMenu
+    <!-- Canvas Context Menus -->
+    <CanvasContextMenus
       :is-visible="showCanvasContextMenu"
       :x="canvasContextMenuX"
       :y="canvasContextMenuY"
       :has-selected-tasks="canvasStore.selectedNodeIds.length > 0"
       :selected-count="canvasStore.selectedNodeIds.length"
       :context-section="canvasContextSection"
+      :task="selectedTask"
+      :section="selectedSection"
+      :edge="selectedEdge"
+      :node="selectedNode"
+      :show-edge-context-menu="showEdgeContextMenu"
+      :edge-context-menu-x="edgeContextMenuX"
+      :edge-context-menu-y="edgeContextMenuY"
+      :show-node-context-menu="showNodeContextMenu"
+      :node-context-menu-x="nodeContextMenuX"
+      :node-context-menu-y="nodeContextMenuY"
       @close="closeCanvasContextMenu"
       @createTaskHere="createTaskHere"
       @createGroup="createGroup"
@@ -302,25 +312,8 @@
       @arrangeInRow="arrangeInRow"
       @arrangeInColumn="arrangeInColumn"
       @arrangeInGrid="arrangeInGrid"
-    />
-
-    <!-- Edge Context Menu -->
-    <EdgeContextMenu
-      :is-visible="showEdgeContextMenu"
-      :x="edgeContextMenuX"
-      :y="edgeContextMenuY"
-      @close="closeEdgeContextMenu"
       @disconnect="disconnectEdge"
-    />
-
-    <!-- Node Context Menu (for sections) -->
-    <EdgeContextMenu
-      :is-visible="showNodeContextMenu"
-      :x="nodeContextMenuX"
-      :y="nodeContextMenuY"
-      menu-text="Delete Section"
-      @close="closeNodeContextMenu"
-      @disconnect="deleteNode"
+      @deleteNode="deleteNode"
     />
 
     <!-- Resize Preview Overlay - FIXED positioning -->
@@ -357,6 +350,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import InboxPanel from '@/components/canvas/InboxPanel.vue'
 import TaskNode from '@/components/canvas/TaskNode.vue'
@@ -364,8 +358,7 @@ import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import BatchEditModal from '@/components/BatchEditModal.vue'
 import MultiSelectionOverlay from '@/components/canvas/MultiSelectionOverlay.vue'
-import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
-import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
+import CanvasContextMenus from '@/components/canvas/context-menus/CanvasContextMenus.vue'
 import GroupModal from '@/components/GroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import SectionWizard from '@/components/canvas/SectionWizard.vue'
@@ -446,26 +439,49 @@ const testResults = ref<Array<{status: 'passed' | 'failed' | 'running', message:
 const isBatchEditModalOpen = ref(false)
 const batchEditTaskIds = ref<string[]>([])
 
-// Canvas Context Menu state
-const showCanvasContextMenu = ref(false)
-const canvasContextMenuX = ref(0)
-const canvasContextMenuY = ref(0)
-const canvasContextSection = ref<any>(null)
-
 // Connection state tracking
 const isConnecting = ref(false)
 
-// Edge Context Menu state
-const showEdgeContextMenu = ref(false)
-const edgeContextMenuX = ref(0)
-const edgeContextMenuY = ref(0)
-const selectedEdge = ref<any>(null)
+// Context menu state management - extracted to composable
+const {
+  // State
+  showCanvasContextMenu,
+  canvasContextMenuX,
+  canvasContextMenuY,
+  showEdgeContextMenu,
+  edgeContextMenuX,
+  edgeContextMenuY,
+  showNodeContextMenu,
+  nodeContextMenuX,
+  nodeContextMenuY,
+  selectedNode,
+  selectedEdge,
+  selectedTask,
+  selectedSection,
 
-// Node Context Menu state (for sections)
-const showNodeContextMenu = ref(false)
-const nodeContextMenuX = ref(0)
-const nodeContextMenuY = ref(0)
-const selectedNode = ref<any>(null)
+  // Computed
+  hasOpenContextMenu,
+  openContextMenuCount,
+
+  // Canvas Context Menu methods
+  openCanvasContextMenu,
+  closeCanvasContextMenu,
+
+  // Edge Context Menu methods
+  openEdgeContextMenu,
+  closeEdgeContextMenu,
+
+  // Node Context Menu methods
+  openNodeContextMenu,
+  closeNodeContextMenu,
+
+  // Utility methods
+  closeAllContextMenus,
+  getCanvasCoordinates
+} = useCanvasContextMenus()
+
+// Canvas context section (local state)
+const canvasContextSection = ref<any>(null)
 
 // Group Modal state
 const isGroupModalOpen = ref(false)
@@ -1573,10 +1589,10 @@ const handleCanvasRightClick = (event: MouseEvent) => {
   console.log('🎯 Canvas right-click at:', event.clientX, event.clientY)
 }
 
-// Canvas context menu handlers
-const closeCanvasContextMenu = () => {
+// Canvas context menu handlers - wrapped to include local state reset
+const closeCanvasContextMenuWithReset = () => {
   console.log('🔧 CanvasView: Closing context menu, resetting canvasContextSection')
-  showCanvasContextMenu.value = false
+  closeCanvasContextMenu()
   canvasContextSection.value = null // Reset context section so "Create Custom Group" appears
 }
 

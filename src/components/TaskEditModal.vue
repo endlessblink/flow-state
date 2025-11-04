@@ -471,7 +471,7 @@ const saveTask = () => {
 
   // DEBUG: Track task state before update
   const originalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  const originalInstances = taskStore.getTaskInstances(originalTask)
+  const originalInstances = getTaskInstances(originalTask)
   console.log('🔍 DEBUG: BEFORE UPDATE - Task:', originalTask?.title)
   console.log('🔍 DEBUG: BEFORE UPDATE - Task instances count:', originalInstances.length)
   console.log('🔍 DEBUG: BEFORE UPDATE - Task instances:', originalInstances)
@@ -515,7 +515,7 @@ const saveTask = () => {
 
   // DEBUG: Check state after main task update (no async needed - undo system handles this)
   const taskAfterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  const instancesAfterUpdate = taskStore.getTaskInstances(taskAfterUpdate)
+  const instancesAfterUpdate = getTaskInstances(taskAfterUpdate)
   console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task instances count:', instancesAfterUpdate.length)
   console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task.isInInbox:', taskAfterUpdate?.isInInbox)
   console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task.instances:', taskAfterUpdate?.instances)
@@ -524,7 +524,7 @@ const saveTask = () => {
   if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {
     console.log('🔍 DEBUG: Handling instance creation/update')
     // Check if task already has instances
-    const existingInstances = taskStore.getTaskInstances(props.task)
+    const existingInstances = getTaskInstances(props.task)
     const sameDayInstance = existingInstances.find(
       inst => inst.scheduledDate === editedTask.value.scheduledDate
     )
@@ -548,7 +548,7 @@ const saveTask = () => {
   } else if (scheduleExplicitlyRemoved) {
     console.log('🔍 DEBUG: Schedule explicitly removed - handling instance deletion')
     // Remove all instances only when schedule was explicitly removed by user
-    const existingInstances = taskStore.getTaskInstances(props.task)
+    const existingInstances = getTaskInstances(props.task)
 
     // CRITICAL FIX: Track instance deletions and update task state properly
     if (existingInstances.length > 0) {
@@ -563,7 +563,7 @@ const saveTask = () => {
       // No async needed - handle immediately after instance deletions
       const currentTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
       if (currentTask) {
-        const hasRemainingInstances = taskStore.getTaskInstances(currentTask).length > 0
+        const hasRemainingInstances = getTaskInstances(currentTask).length > 0
         if (!hasRemainingInstances && currentTask.isInInbox === false) {
           taskStore.updateTask(currentTask.id, {
             instances: [],  // Ensure instances array is explicitly cleared
@@ -603,7 +603,7 @@ const saveTask = () => {
 
   // DEBUG: Final state check (no async needed)
   const finalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  const finalInstances = taskStore.getTaskInstances(finalTask)
+  const finalInstances = getTaskInstances(finalTask)
   console.log('🔍 DEBUG: FINAL STATE - Task:', finalTask?.title)
   console.log('🔍 DEBUG: FINAL STATE - Task instances count:', finalInstances.length)
   console.log('🔍 DEBUG: FINAL STATE - Task.isInInbox:', finalTask?.isInInbox)

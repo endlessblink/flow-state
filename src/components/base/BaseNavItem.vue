@@ -320,9 +320,9 @@ const handleDrop = (event: DragEvent) => {
   min-height: 36px;
 }
 
-/* Special handling for deeper nesting levels */
+/* Optimized handling for deeper nesting levels - Todoist-style efficiency */
 .base-nav-item.is-nested[style*="--nesting-indent"] {
-  padding-inline-start: calc(var(--nesting-indent) + var(--space-4));
+  padding-inline-start: calc(var(--nesting-indent) + 8px); /* Reduced padding for better text space */
 }
 
 /* Expand chevron */

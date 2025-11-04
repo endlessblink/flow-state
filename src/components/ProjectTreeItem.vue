@@ -21,7 +21,7 @@
       :emoji="project.emoji"
       :count="getProjectTaskCount(project.id)"
       :nested="nested"
-      :style="{ '--nesting-indent': `${nestingDepth * 20}px` }"
+      :style="{ '--nesting-indent': `${nestingDepth * 14}px` }"
       :aria-expanded="hasChildren ? isExpanded : undefined"
       :aria-level="level"
       :tabindex="taskStore.activeProjectId === project.id ? 0 : -1"
@@ -43,7 +43,7 @@
         v-if="hasChildren && isExpanded"
         class="nested-children"
         role="group"
-        :style="{ '--nesting-indent': `${(nestingDepth + 1) * 20}px` }"
+        :style="{ '--nesting-indent': `${(nestingDepth + 1) * 14}px` }"
       >
         <ProjectTreeItem
           v-for="child in children"
@@ -163,17 +163,7 @@ const getProjectTaskCount = (projectId: string): number => {
   position: relative;
 }
 
-/* Add visual connection lines for nested projects */
-.nested-children::before {
-  content: '';
-  position: absolute;
-  left: calc(var(--nesting-indent, 20px) / 2);
-  top: 0;
-  bottom: calc(var(--space-1) / 2);
-  width: 1px;
-  background: var(--border-subtle);
-  opacity: 0.5;
-}
+/* Visual connection lines removed for cleaner Todoist-style appearance */
 
 /* Smooth expand/collapse animations for nested children */
 .nested-children {

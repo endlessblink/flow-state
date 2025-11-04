@@ -183,12 +183,10 @@
             <h3 class="section-title">Recurrence</h3>
           </button>
           <div v-show="showRecurrence" class="section-content">
-            <RecurrencePatternSelector
-              :task-id="editedTask.id"
-              :due-date="editedTask.dueDate"
-              :due-time="editedTask.scheduledTime"
-              @recurrence-changed="handleRecurrenceChange"
-            />
+            <!-- RecurrencePatternSelector temporarily disabled due to error -->
+            <div class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">
+              Recurrence feature temporarily disabled
+            </div>
           </div>
         </section>
 
@@ -262,11 +260,11 @@ import { useTaskStore, formatDateKey } from '@/stores/tasks'
 import type { Task, Subtask } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useNotificationStore } from '@/stores/notifications'
-import RecurrencePatternSelector from '@/components/recurrence/RecurrencePatternSelector.vue'
+// import RecurrencePatternSelector from '@/components/recurrence/RecurrencePatternSelector.vue' // Temporarily disabled due to error
 import NotificationPreferences from '@/components/notifications/NotificationPreferences.vue'
 import {
   X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
-  Calendar, CalendarClock, Clock, TimerReset, ChevronDown
+  Calendar, TimerReset, ChevronDown
 } from 'lucide-vue-next'
 
 interface Props {
@@ -319,9 +317,7 @@ const editedTask = ref<Task>({
   completedPomodoros: 0,
   subtasks: [],
   dueDate: '',
-  scheduledDate: '',
-  scheduledTime: '09:00',
-  estimatedDuration: 60,
+    estimatedDuration: 60,
   projectId: '1',
   createdAt: new Date(),
   updatedAt: new Date()
@@ -425,11 +421,6 @@ const statusIconClass = computed(() => {
 })
 
 // Methods
-const handleScheduledDateChange = () => {
-  if (editedTask.value.scheduledDate && !editedTask.value.scheduledTime) {
-    editedTask.value.scheduledTime = '09:00'
-  }
-}
 
 const addSubtask = () => {
   const newSubtask: Subtask = {
@@ -487,19 +478,7 @@ const saveTask = () => {
   const originalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
   console.log('🔍 DEBUG: BEFORE UPDATE - Task:', originalTask?.title)
   console.log('🔍 DEBUG: BEFORE UPDATE - Task dueDate:', originalTask?.dueDate)
-  console.log('🔍 DEBUG: BEFORE UPDATE - Task scheduledDate:', editedTask.value.scheduledDate)
-  console.log('🔍 DEBUG: BEFORE UPDATE - Task scheduledTime:', editedTask.value.scheduledTime)
-
-  // Check if task had original scheduling that was explicitly removed (simplified)
-  const hadOriginalSchedule = (originalTask?.scheduledDate && originalTask?.scheduledTime) ||
-                            (originalTask?.instances && originalTask.instances.length > 0)
-  const hasNewSchedule = editedTask.value.scheduledDate && editedTask.value.scheduledTime
-  const scheduleExplicitlyRemoved = hadOriginalSchedule && !hasNewSchedule
-
-  console.log('🔍 DEBUG: hadOriginalSchedule:', hadOriginalSchedule)
-  console.log('🔍 DEBUG: hasNewSchedule:', hasNewSchedule)
-  console.log('🔍 DEBUG: scheduleExplicitlyRemoved:', scheduleExplicitlyRemoved)
-
+  
   // CRITICAL FIX: Include instances in the update to preserve them
   const updates: any = {
     title: editedTask.value.title,
@@ -507,36 +486,11 @@ const saveTask = () => {
     status: editedTask.value.status,
     priority: editedTask.value.priority,
     dueDate: editedTask.value.dueDate,
-    scheduledDate: editedTask.value.scheduledDate,
-    scheduledTime: editedTask.value.scheduledTime,
     estimatedDuration: editedTask.value.estimatedDuration
   }
 
-  // CRITICAL: Preserve existing instances if we're not updating them separately
-  if (editedTask.value.instances && editedTask.value.instances.length > 0) {
-    updates.instances = editedTask.value.instances
-    console.log('🔍 DEBUG: Including instances in update:', updates.instances.length)
-  }
-
-  console.log('🔍 DEBUG: Updates being applied:', updates)
-
   // Update main task
   taskStore.updateTaskWithUndo(editedTask.value.id, updates)
-
-  // DEBUG: Check state after main task update (simplified - no more complex instance system)
-  const taskAfterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task scheduledDate:', taskAfterUpdate?.scheduledDate)
-  console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task.isInInbox:', taskAfterUpdate?.isInInbox)
-  console.log('🔍 DEBUG: AFTER MAIN UPDATE - Task.instances:', taskAfterUpdate?.instances)
-
-  // Handle task scheduling (simplified - no more complex instance system)
-  if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {
-    console.log('🔍 DEBUG: Task is scheduled - no complex instance management needed')
-    // Task scheduling is now handled simply via scheduledDate/scheduledTime fields
-    // No more complex instance creation/update logic needed
-  } else {
-    console.log('🔍 DEBUG: No schedule changes - task remains as is')
-  }
 
   // Update subtasks
   const originalSubtasks = props.task.subtasks || []
@@ -563,10 +517,7 @@ const saveTask = () => {
   // DEBUG: Final state check (simplified - no more complex instance system)
   const finalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
   console.log('🔍 DEBUG: FINAL STATE - Task:', finalTask?.title)
-  console.log('🔍 DEBUG: FINAL STATE - Task.scheduledDate:', finalTask?.scheduledDate)
-  console.log('🔍 DEBUG: FINAL STATE - Task.scheduledTime:', finalTask?.scheduledTime)
-  console.log('🔍 DEBUG: FINAL STATE - Task.isInInbox:', finalTask?.isInInbox)
-  console.log('🔍 DEBUG: FINAL STATE - Should be visible in calendar:', !!(finalTask?.scheduledDate && finalTask?.scheduledTime))
+  console.log('🔍 DEBUG: FINAL STATE - Task.dueDate:', finalTask?.dueDate)
 
   emit('close')
 }

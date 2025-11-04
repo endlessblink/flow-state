@@ -173,22 +173,19 @@ const inboxTasks = computed(() => {
 
   
   const filtered = allTasks.filter(task => {
-    // Calculate task properties
-    const hasInstances = task.instances && task.instances.length > 0
-    const hasLegacySchedule = task.scheduledDate && task.scheduledTime
-    // FIXED: Respect the isInInbox flag - if it's explicitly false, don't show in calendar inbox
+    // SIMPLIFIED: Check if task is in inbox (not scheduled on calendar)
     const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
 
-    // Filter logic based on current selection
+    // Filter logic based on current selection - simplified for dueDate only
     let passesFilter = false
     switch (currentFilter.value) {
       case 'today': {
         const todayStr = new Date().toISOString().split('T')[0]
-        passesFilter = task.dueDate === todayStr && !hasInstances && isInInbox
+        passesFilter = task.dueDate === todayStr && isInInbox
         break
       }
       case 'unscheduled':
-        passesFilter = !hasInstances && isInInbox
+        passesFilter = !task.dueDate && isInInbox
         break
       case 'notOnCanvas':
         passesFilter = !task.canvasPosition && isInInbox
@@ -200,14 +197,13 @@ const inboxTasks = computed(() => {
         passesFilter = isInInbox
         break
       default:
-        passesFilter = !hasInstances && isInInbox
+        passesFilter = !task.dueDate && isInInbox
     }
 
     // Debug: Log filter reasoning
     console.log(`🔍 [${currentFilter.value}] Task "${task.title}":`, {
       passesFilter,
-      hasInstances,
-      hasLegacySchedule,
+      dueDate: task.dueDate,
       status: task.status,
       canvasPosition: !!task.canvasPosition,
       isInInbox

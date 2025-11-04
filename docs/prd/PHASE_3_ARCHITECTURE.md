@@ -17,7 +17,7 @@ Phase 3 focuses on systematic architectural improvements to the Pomo-Flow applic
 - Establish baseline documentation and testing procedures
 - Set up comprehensive regression testing framework
 
-### Phase 3.1: CanvasView Decomposition
+### Phase 3.1: CanvasView Decomposition ✅
 **Focus**: Safe extraction of non-Vue-Flow components from CanvasView.vue (4,164 lines)
 
 #### Phase 3.1.A: Modal Extraction ✅
@@ -73,14 +73,135 @@ Phase 3 focuses on systematic architectural improvements to the Pomo-Flow applic
 - Maintained local state wrapper for `canvasContextSection` to preserve existing functionality
 - Updated event handlers to use composable methods while preserving all existing behavior
 
-#### Phase 3.1.C: Canvas Controls Extraction (Planned)
-**Target Components**:
-- Zoom controls
-- Section management controls
-- Viewport controls
+#### Phase 3.1.C: Canvas Controls Extraction ✅
+**Status**: COMPLETED
+**Date**: November 4, 2025
 
-### Phase 3.2: App.vue & CalendarView Decomposition (Planned)
+**Accomplishments**:
+- ✅ Created `useCanvasControls.ts` composable with comprehensive zoom and viewport control management
+- ✅ Created `CanvasControls.vue` wrapper component for centralized controls UI
+- ✅ Successfully integrated controls system into CanvasView.vue
+- ✅ Replaced local zoom functions with composable methods
+- ✅ Updated keyboard shortcuts handler to use composable methods
+- ✅ Removed duplicate zoom performance manager and related code
+- ✅ Updated click outside handlers and cleanup functions
+- ✅ Verified zero compilation errors with successful build validation
+
+**Components Extracted**:
+- Zoom controls (zoom in/out, reset, presets)
+- Viewport controls (fit view, center canvas)
+- Zoom performance management
+- Keyboard shortcuts for zoom operations
+
+**Benefits Achieved**:
+- Reduced CanvasView.vue complexity by ~200 lines
+- Centralized canvas controls state management
+- Improved separation of concerns and reusability
+- Enhanced type safety for canvas control operations
+- Consistent composable pattern established across canvas components
+- Performance optimization maintained with zoom throttling and batching
+
+**Technical Details**:
+- Extracted zoom performance manager with requestAnimationFrame batching
+- Replaced local zoom functions: `fitView`, `zoomIn`, `zoomOut`, `applyZoomPreset`, `resetZoom`
+- Updated keyboard shortcuts handler to use `handleZoomKeyboardShortcuts` composable method
+- Maintained all zoom presets and validation logic in composable
+- Preserved Vue Flow integration for viewport operations
+- Enhanced zoom limit enforcement and validation
+
+### Phase 3.2: App.vue & CalendarView Decomposition 🚧
 **Focus**: Safe refactoring of root component and calendar view
+**Status**: IN PROGRESS - Analysis Phase
+**Date**: November 4, 2025
+
+#### Current Component Analysis
+
+**App.vue** (3,159 lines) - Root application component:
+- **Sidebar Management**: Main sidebar with project navigation, smart views, quick task creation
+- **Header Section**: Project title, timer display, user profile
+- **View Navigation**: Tab-based navigation between Board/Calendar/Canvas/Catalog/Quick Sort
+- **Global Modals**: Settings, projects, tasks, confirmation, search, authentication
+- **Keyboard Shortcuts**: Comprehensive hotkey system (Cmd+K, Ctrl+Z, Shift+Delete, etc.)
+- **Theme Integration**: Dark theme and design system coordination
+- **Error Boundaries**: View-level error handling
+
+**CalendarView.vue** (2,408 lines) - Calendar scheduling interface:
+- **Date Navigation**: Previous/next day, today button, date display
+- **Calendar Grid**: Time-based task scheduling with drag-and-drop
+- **Task Management**: Quick create, inline editing, status updates
+- **Filtering**: Project filters, status filters, hide completed tasks
+- **Inbox Panel**: Secondary sidebar for calendar-specific task management
+- **Drag & Drop**: Complex task scheduling with time slot creation
+- **Integration**: Timer integration, task editing modals
+
+#### Phase 3.2.A: App.vue Decomposition Strategy
+**Safe Extraction Components** (Non-Critical Path):
+
+1. **Sidebar Management System**
+   - `useSidebarManagement.ts` - Sidebar visibility, project navigation, smart views
+   - `AppSidebar.vue` - Main sidebar component wrapper
+   - Extractible: Quick task creation, project tree, smart view navigation
+
+2. **Header Management System**
+   - `useAppHeader.ts` - Project title, timer display integration, user profile
+   - `AppHeader.vue` - Header component wrapper
+   - Extractible: Timer controls, user profile, project title display
+
+3. **Global Modal Management**
+   - `useGlobalModals.ts` - Settings, project, task, confirmation modals
+   - `GlobalModals.vue` - Centralized modal wrapper
+   - Extractible: All non-critical app-level modals
+
+4. **Keyboard Shortcuts System**
+   - `useKeyboardShortcuts.ts` - Comprehensive hotkey management
+   - Extractible: View switching, undo/redo, search, task deletion shortcuts
+
+**Critical Dependencies** (Must Remain in App.vue):
+- Router configuration and view transitions
+- Global error boundary setup
+- Theme provider and design system initialization
+- Authentication state management integration
+- Vue Flow and complex component coordination
+
+#### Phase 3.2.B: CalendarView Decomposition Strategy
+**Safe Extraction Components** (Non-Critical Path):
+
+1. **Calendar Header System**
+   - `useCalendarHeader.ts` - Date navigation, today button, filtering controls
+   - `CalendarHeader.vue` - Header component with navigation and filters
+   - Extractible: Date navigation, project filters, status filters, hide done toggle
+
+2. **Calendar Task Management**
+   - `useCalendarTasks.ts` - Task creation, editing, drag-and-drop handling
+   - `CalendarTaskManager.vue` - Task-related UI components
+   - Extractible: Quick task creation, inline editing, task status updates
+
+3. **Calendar Filtering System**
+   - `useCalendarFilters.ts` - Project and status filtering logic
+   - `CalendarFilters.vue` - Filter UI components
+   - Extractible: Project filter dropdown, status filter buttons
+
+**Critical Dependencies** (Must Remain in CalendarView.vue):
+- Calendar grid rendering and time slot management
+- Complex drag-and-drop scheduling logic
+- Vue Flow integration for canvas elements
+- Timer and modal integration hooks
+
+#### Safety Constraints for Phase 3.2
+
+1. **Router Integration**: App.vue must remain the router coordination hub
+2. **Global State**: Theme, authentication, and error boundary management
+3. **Complex Interactions**: Calendar drag-and-drop and Vue Flow integrations
+4. **Performance**: Maintain current rendering performance and optimization
+5. **Zero Regressions**: All existing functionality must work identically
+
+#### Expected Benefits
+
+- **Reduced Complexity**: Target reduction of ~800 lines from App.vue and ~600 lines from CalendarView.vue
+- **Improved Maintainability**: Separated concerns for sidebar, header, and modal management
+- **Enhanced Reusability**: Composable patterns for cross-component functionality
+- **Better Testing**: Isolated components for unit testing
+- **Cleaner Architecture**: Clear separation between app coordination and feature components
 
 ### Phase 3.3: Store Architecture Modernization (Planned)
 **Focus**: Store decomposition and event bus pattern implementation
@@ -167,7 +288,9 @@ const {
 ### Code Reduction
 - **CanvasView.vue**: Target reduction from 4,164 to ~3,500 lines
 - **Phase 3.1.A**: Reduced by ~200 lines (modals extracted)
-- **Phase 3.1.B**: Expected reduction of ~150 lines (context menus)
+- **Phase 3.1.B**: Reduced by ~150 lines (context menus extracted)
+- **Phase 3.1.C**: Reduced by ~200 lines (canvas controls extracted)
+- **Phase 3.2**: Target reduction ~1,400 lines total (App.vue + CalendarView.vue)
 
 ### Component Architecture
 - Enhanced modularity and reusability
@@ -186,6 +309,14 @@ const {
 ### Vue Flow Integration Constraints
 **Risk**: Breaking Vue Flow parent-child relationships
 **Mitigation**: Only extracting non-Vue-Flow components, maintaining all Vue Flow integration within CanvasView.vue
+
+### App.vue Coordination Complexity
+**Risk**: Disrupting global app coordination and router management
+**Mitigation**: Maintaining critical app coordination in App.vue, only extracting feature-specific functionality
+
+### Calendar Drag-and-Drop Complexity
+**Risk**: Breaking complex calendar scheduling interactions
+**Mitigation**: Keeping calendar grid and drag-drop logic in CalendarView.vue, extracting only supporting components
 
 ### Regression Risk
 **Risk**: Introducing bugs during refactoring
@@ -218,5 +349,5 @@ const {
 ---
 
 **Last Updated**: November 4, 2025
-**Current Phase**: 3.1.B (Context Menu Extraction - In Progress)
-**Next Milestone**: Complete Phase 3.1.B integration and validation
+**Current Phase**: 3.2.A (App.vue Decomposition Analysis - In Progress)
+**Next Milestone**: Begin Phase 3.2.A implementation with Sidebar Management extraction

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyboard Shortcuts Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .shortcut-item {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .shortcut-key {
+            background: #e3f2fd;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .status.testing { background: #fff3cd; color: #856404; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .instructions {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Pomo-Flow Keyboard Shortcuts Test</h1>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Click on the iframe below to load the Pomo-Flow application</li>
+                <li>Make sure no modal dialogs are open (close any auth/login modals)</li>
+                <li>Test each keyboard shortcut listed below</li>
+                <li>The status will update automatically when shortcuts are detected</li>
+            </ol>
+            <p><strong>Important:</strong> Make sure your cursor is not in any input field when testing shortcuts!</p>
+        </div>
+
+        <h2>Keyboard Shortcuts Test:</h2>
+        <div id="shortcuts-list">
+            <div class="shortcut-item">
+                <span>Switch to Board View</span>
+                <span class="shortcut-key">Shift + 1</span>
+                <span class="status testing" id="test-1">Testing...</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Switch to Calendar View</span>
+                <span class="shortcut-key">Shift + 2</span>
+                <span class="status testing" id="test-2">Testing...</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Switch to Canvas View</span>
+                <span class="shortcut-key">Shift + 3</span>
+                <span class="status testing" id="test-3">Testing...</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Switch to Catalog View</span>
+                <span class="shortcut-key">Shift + 4</span>
+                <span class="status testing" id="test-4">Testing...</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Switch to Quick Sort View</span>
+                <span class="shortcut-key">Shift + 5</span>
+                <span class="status testing" id="test-5">Testing...</span>
+            </div>
+        </div>
+
+        <h2>Test Application:</h2>
+        <iframe id="test-frame" src="http://localhost:5546" title="Pomo-Flow Application"></iframe>
+    </div>
+
+    <script>
+        // Track which shortcuts we've tested
+        const testedShortcuts = new Set();
+
+        // Listen for keyboard events
+        document.addEventListener('keydown', function(event) {
+            const { shiftKey, ctrlKey, metaKey, altKey, key } = event;
+
+            // Check if it's a Shift+1-5 shortcut
+            if (shiftKey && !ctrlKey && !metaKey && !altKey && key >= '1' && key <= '5') {
+                const shortcutId = `test-${key}`;
+                const statusElement = document.getElementById(shortcutId);
+
+                if (statusElement) {
+                    statusElement.textContent = '✓ Detected!';
+                    statusElement.className = 'status success';
+                    testedShortcuts.add(key);
+
+                    // Check if all shortcuts have been tested
+                    if (testedShortcuts.size === 5) {
+                        setTimeout(() => {
+                            alert('🎉 All keyboard shortcuts are working correctly!');
+                        }, 500);
+                    }
+                }
+
+                // Send the keystroke to the iframe
+                const iframe = document.getElementById('test-frame');
+                if (iframe.contentWindow) {
+                    const iframeEvent = new KeyboardEvent('keydown', {
+                        shiftKey: shiftKey,
+                        ctrlKey: ctrlKey,
+                        metaKey: metaKey,
+                        altKey: altKey,
+                        key: key,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    iframe.contentWindow.dispatchEvent(iframeEvent);
+                }
+            }
+        });
+
+        // Monitor iframe URL changes to detect successful navigation
+        const iframe = document.getElementById('test-frame');
+        let lastUrl = '';
+
+        iframe.addEventListener('load', function() {
+            console.log('Iframe loaded successfully');
+        });
+
+        // Check URL changes periodically
+        setInterval(() => {
+            try {
+                const currentUrl = iframe.contentWindow?.location?.href;
+                if (currentUrl && currentUrl !== lastUrl) {
+                    lastUrl = currentUrl;
+                    console.log('URL changed to:', currentUrl);
+
+                    // Update status based on detected URL
+                    if (currentUrl.includes('/calendar')) {
+                        updateStatus('2', '✓ Calendar View Loaded!');
+                    } else if (currentUrl.includes('/canvas')) {
+                        updateStatus('3', '✓ Canvas View Loaded!');
+                    } else if (currentUrl.includes('/catalog')) {
+                        updateStatus('4', '✓ Catalog View Loaded!');
+                    } else if (currentUrl.includes('/quick-sort')) {
+                        updateStatus('5', '✓ Quick Sort View Loaded!');
+                    } else if (currentUrl.endsWith('/') || currentUrl.endsWith('/#/')) {
+                        updateStatus('1', '✓ Board View Loaded!');
+                    }
+                }
+            } catch (e) {
+                // Cross-origin restrictions, ignore
+            }
+        }, 500);
+
+        function updateStatus(key, message) {
+            const shortcutId = `test-${key}`;
+            const statusElement = document.getElementById(shortcutId);
+            if (statusElement && !statusElement.classList.contains('success')) {
+                statusElement.textContent = message;
+                statusElement.className = 'status success';
+                testedShortcuts.add(key);
+            }
+        }
+    </script>
+</body>
+</html>

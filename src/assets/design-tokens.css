@@ -751,4 +751,65 @@ html, body {
   contain: layout paint;
 }
 
-/* Cache bust: 1761553951 */
+/* ===== HEBREW TEXT ALIGNMENT SYSTEM ===== */
+
+/* Hebrew content right-alignment - overrides document direction */
+.hebrew-text,
+.hebrew-content,
+.text-align-right {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* Force Hebrew alignment in LTR mode */
+[dir="ltr"] .hebrew-text,
+[dir="ltr"] .hebrew-content,
+[dir="ltr"] .text-align-right {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* Ensure Hebrew alignment in RTL mode as well */
+[dir="rtl"] .hebrew-text,
+[dir="rtl"] .hebrew-content,
+[dir="rtl"] .text-align-right {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* Hebrew-specific input styling */
+.hebrew-input {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* Apply Hebrew alignment to specific components */
+.hebrew-task-title,
+.hebrew-task-description,
+.hebrew-input-field {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* Handle mixed Hebrew/English content with unicode-bidi */
+.hebrew-mixed-content {
+  text-align: right !important;
+  direction: rtl !important;
+  unicode-bidi: plaintext;
+}
+
+/* Force right alignment for any element containing Hebrew */
+*:has(.hebrew-indicator) {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* Hebrew text indicators for dynamic detection */
+.hebrew-indicator {
+  /* Hidden class used for detection */
+  display: none;
+}
+
+/* ===== END HEBREW TEXT ALIGNMENT ===== */
+
+/* Cache bust: 1761553952 */

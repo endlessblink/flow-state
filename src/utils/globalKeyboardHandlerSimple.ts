@@ -45,7 +45,7 @@ export class SimpleGlobalKeyboardHandler {
         console.log('⚠️ Keyboard shortcuts will only log messages without undo/redo functionality')
       }
 
-      window.addEventListener('keydown', this.keydownHandler, true)
+      window.addEventListener('keydown', this.keydownHandler, false)
       console.log('Global keyboard handler initialized')
     }
   }
@@ -55,7 +55,7 @@ export class SimpleGlobalKeyboardHandler {
    */
   destroy(): void {
     if (typeof window !== 'undefined') {
-      window.removeEventListener('keydown', this.keydownHandler, true)
+      window.removeEventListener('keydown', this.keydownHandler, false)
       console.log('Simple keyboard handler destroyed')
     }
   }
@@ -113,6 +113,7 @@ export class SimpleGlobalKeyboardHandler {
     const { ctrlKey, metaKey, shiftKey, key } = event
     const hasModifier = ctrlKey || metaKey
 
+  
     // Handle Ctrl+Z (Undo) and Ctrl+Shift+Z (Redo)
     if (hasModifier && key.toLowerCase() === 'z') {
       if (shiftKey) {

@@ -44,134 +44,7 @@
 
     <!-- MAIN CANVAS AREA -->
     <div class="canvas-main">
-      <!-- CANVAS CONTROLS SECTION (Safe to Extract) -->
-      <!-- Component: CanvasControls -->
-      <!-- Dependencies: zoom functions, section functions, display toggles -->
-      <div class="canvas-controls">
-        <!-- Test Controls (Temporary) -->
-        <div class="control-group">
-          <button @click="showKeyboardTest = true" class="control-btn" title="Test Keyboard Deletion">
-            <PlayCircle :size="16" />
-          </button>
-        </div>
-
-        <!-- Section Controls -->
-        <div class="control-group">
-          <button @click="toggleSections" class="control-btn" :class="{ active: showSections }" title="Toggle Sections">
-            <Grid3X3 :size="16" />
-          </button>
-          <div class="dropdown-container">
-            <button @click="addSection" class="control-btn" title="Add Section">
-              <Plus :size="16" />
-            </button>
-            <div v-if="showSectionTypeDropdown" class="section-type-dropdown">
-              <div class="dropdown-section">
-                <div class="dropdown-label">Priority</div>
-                <button @click="createSmartSection('priority-high')" class="dropdown-item priority-high">
-                  <AlertTriangle :size="14" />
-                  <span>High Priority</span>
-                </button>
-                <button @click="createSmartSection('priority-medium')" class="dropdown-item priority-medium">
-                  <Flag :size="14" />
-                  <span>Medium Priority</span>
-                </button>
-                <button @click="createSmartSection('priority-low')" class="dropdown-item priority-low">
-                  <Circle :size="14" />
-                  <span>Low Priority</span>
-                </button>
-              </div>
-              <div class="dropdown-section">
-                <div class="dropdown-label">Status</div>
-                <button @click="createSmartSection('status-planned')" class="dropdown-item status-planned">
-                  <Calendar :size="14" />
-                  <span>Planned</span>
-                </button>
-                <button @click="createSmartSection('status-in_progress')" class="dropdown-item status-in_progress">
-                  <PlayCircle :size="14" />
-                  <span>In Progress</span>
-                </button>
-                <button @click="createSmartSection('status-done')" class="dropdown-item status-done">
-                  <CheckCircle :size="14" />
-                  <span>Done</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          <button @click="autoArrange" class="control-btn" title="Auto Arrange">
-            <Layout :size="16" />
-          </button>
-        </div>
-        
-        <!-- Selection Controls -->
-        <div class="control-group">
-          <button @click="toggleMultiSelect" class="control-btn" :class="{ active: canvasStore.multiSelectMode }" title="Multi-Select Mode">
-            <CheckSquare :size="16" />
-          </button>
-        </div>
-
-        <!-- Display Controls -->
-        <div class="control-group">
-          <button @click="canvasStore.togglePriorityIndicatorWithUndo" class="control-btn" :class="{ active: canvasStore.showPriorityIndicator }" title="Toggle Priority">
-            <Flag :size="16" />
-          </button>
-          <button @click="canvasStore.toggleStatusBadgeWithUndo" class="control-btn" :class="{ active: canvasStore.showStatusBadge }" title="Toggle Status">
-            <PlayCircle :size="16" />
-          </button>
-          <button @click="canvasStore.toggleDurationBadgeWithUndo" class="control-btn" :class="{ active: canvasStore.showDurationBadge }" title="Toggle Duration">
-            <Clock :size="16" />
-          </button>
-          <button @click="canvasStore.toggleScheduleBadgeWithUndo" class="control-btn" :class="{ active: canvasStore.showScheduleBadge }" title="Toggle Schedule">
-            <Calendar :size="16" />
-          </button>
-          <button
-            class="hide-done-toggle control-btn icon-only"
-            :class="{ active: taskStore.hideDoneTasks }"
-            @click="handleToggleDoneTasks"
-            :title="taskStore.hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-          >
-            <EyeOff v-if="taskStore.hideDoneTasks" :size="16" />
-            <Eye v-else :size="16" />
-          </button>
-        </div>
-
-        <!-- View Controls -->
-        <div class="control-group">
-          <button @click="fitView" class="control-btn" title="Fit View (F)">
-            <Maximize :size="16" />
-          </button>
-          <button @click="zoomIn" class="control-btn" title="Zoom In (+)">
-            <ZoomIn :size="16" />
-          </button>
-          <button @click="zoomOut" class="control-btn" title="Zoom Out (-)">
-            <ZoomOut :size="16" />
-          </button>
-          <div class="zoom-level">{{ Math.round(viewport.zoom * 100) }}%</div>
-          <div class="zoom-dropdown-container">
-            <button @click="toggleZoomDropdown" class="control-btn zoom-dropdown-trigger" title="Zoom Presets">
-              <ChevronDown :size="14" />
-            </button>
-            <div v-if="showZoomDropdown" class="zoom-dropdown">
-              <button
-                v-for="preset in zoomPresets"
-                :key="preset.value"
-                @click="applyZoomPreset(preset.value)"
-                class="zoom-preset-btn"
-                :class="{ active: Math.abs(viewport.zoom - preset.value) < 0.01 }"
-              >
-                {{ preset.label }}
-              </button>
-              <div class="zoom-divider"></div>
-              <button @click="resetZoom" class="zoom-preset-btn">
-                Reset (100%)
-              </button>
-              <button @click="fitToContent" class="zoom-preset-btn">
-                Fit to Content
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+  
        <!-- Vue Flow Canvas -->
       <div
         @drop="handleDrop"
@@ -369,14 +242,7 @@
       @close="closeEditModal"
     />
 
-    <!-- Quick Task Create Modal -->
-    <QuickTaskCreateModal
-      :is-open="isQuickTaskCreateOpen"
-      :loading="false"
-      @cancel="closeQuickTaskCreate"
-      @create="handleQuickTaskCreate"
-    />
-
+  
     <!-- Batch Edit Modal -->
     <BatchEditModal
       :is-open="isBatchEditModalOpen"
@@ -496,7 +362,6 @@ import InboxPanel from '@/components/canvas/InboxPanel.vue'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
-import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import BatchEditModal from '@/components/BatchEditModal.vue'
 import MultiSelectionOverlay from '@/components/canvas/MultiSelectionOverlay.vue'
 import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
@@ -504,7 +369,7 @@ import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
 import GroupModal from '@/components/GroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import SectionWizard from '@/components/canvas/SectionWizard.vue'
-import { Maximize, ZoomIn, ZoomOut, Grid3X3, Plus, Layout, CheckSquare, Flag, PlayCircle, Clock, Calendar, AlertTriangle, CheckCircle, Circle, Eye, EyeOff, ChevronDown, TestTube } from 'lucide-vue-next'
+// Canvas controls icons removed
 
 // Import Vue Flow styles
 import '@vue-flow/core/dist/style.css'
@@ -575,9 +440,6 @@ const isTestRunning = ref(false)
 const testStatus = ref('')
 const testResults = ref<Array<{status: 'passed' | 'failed' | 'running', message: string}>>([])
 
-// Quick Task Create Modal state
-const isQuickTaskCreateOpen = ref(false)
-const quickTaskPosition = ref({ x: 0, y: 0 })
 
 // Batch Edit Modal state
 const isBatchEditModalOpen = ref(false)
@@ -617,22 +479,9 @@ const sectionWizardPosition = ref({ x: 100, y: 100 })
 const isGroupEditModalOpen = ref(false)
 const selectedSectionForEdit = ref<any>(null)
 
-// Sections state
-const showSections = ref(true)
-const activeSectionId = ref<string | null>(null)
-const showSectionTypeDropdown = ref(false)
+// Sections control state removed (keeping activeSectionId for other functionality)
 
-// Zoom state
-const showZoomDropdown = ref(false)
-const zoomPresets = [
-  { label: '5%', value: 0.05 },
-  { label: '10%', value: 0.10 },
-  { label: '25%', value: 0.25 },
-  { label: '50%', value: 0.50 },
-  { label: '100%', value: 1.0 },
-  { label: '200%', value: 2.0 },
-  { label: '400%', value: 4.0 }
-]
+// Canvas zoom state removed
 
 // Computed properties
 const sections = computed(() => canvasStore.sections)
@@ -1704,8 +1553,11 @@ const handleCanvasRightClick = (event: MouseEvent) => {
 
   const target = event.target as HTMLElement
 
-  // Don't show menu if clicking on a task or section node
-  if (target.closest('.task-node') || target.closest('[data-id^="section-"]')) {
+  // Don't show menu if clicking on a task, section node, or edge
+  if (target.closest('.task-node') ||
+      target.closest('[data-id^="section-"]') ||
+      target.closest('.vue-flow__edge') ||
+      target.closest('.vue-flow__edge-path')) {
     return
   }
 
@@ -1777,20 +1629,35 @@ const createTaskHere = () => {
   const canvasY = (canvasContextMenuY.value - rect.top - viewport.value.y) / viewport.value.zoom
 
   // Debug logging
-  console.log('🎯 Opening task creation at:', {
+  console.log('🎯 Creating task at:', {
     screenCoords: { x: canvasContextMenuX.value, y: canvasContextMenuY.value },
     viewport: { x: viewport.value.x, y: viewport.value.y, zoom: viewport.value.zoom },
     canvasCoords: { x: canvasX, y: canvasY }
   })
 
-  // Store the position for when the task is created
-  quickTaskPosition.value = { x: canvasX, y: canvasY }
-
   // Close context menu first to prevent any interference
   closeCanvasContextMenu()
 
-  // Open quick task create modal instead of creating task directly
-  isQuickTaskCreateOpen.value = true
+  // Create new task immediately with default values at the calculated position
+  const newTask = taskStore.createTaskWithUndo({
+    title: 'New Task',
+    description: '',
+    canvasPosition: { x: canvasX, y: canvasY },
+    isInInbox: false,
+    priority: 'medium',
+    status: 'planned'
+  })
+
+  // Open TaskEditModal immediately for editing
+  if (newTask) {
+    selectedTask.value = newTask
+    // Use nextTick to ensure DOM has updated before opening modal
+    nextTick(() => {
+      isEditModalOpen.value = true
+    })
+  } else {
+    console.error('Failed to create new task')
+  }
 }
 
 const createGroup = () => {
@@ -1986,6 +1853,7 @@ const deleteNode = () => {
 
 // Edge context menu handlers
 const handleEdgeContextMenu = (event: { event: MouseEvent; edge: any }) => {
+  console.log('🔗 Edge context menu triggered:', event.edge)
   event.event.preventDefault()
   edgeContextMenuX.value = event.event.clientX
   edgeContextMenuY.value = event.event.clientY
@@ -2772,39 +2640,6 @@ const closeEditModal = () => {
   selectedTask.value = null
 }
 
-// Quick Task Create Modal handlers
-const closeQuickTaskCreate = () => {
-  isQuickTaskCreateOpen.value = false
-  quickTaskPosition.value = { x: 0, y: 0 }
-}
-
-const handleQuickTaskCreate = (title: string, description: string) => {
-  console.log('🎯 Creating task with title:', title, 'at position:', quickTaskPosition.value)
-
-  // Create new task at the stored canvas position with user-provided title
-  const newTask = taskStore.createTaskWithUndo({
-    title: title,
-    description: description,
-    canvasPosition: { x: quickTaskPosition.value.x, y: quickTaskPosition.value.y },
-    isInInbox: false,
-    priority: 'medium',
-    status: 'planned'
-  })
-
-  // Close the quick create modal
-  closeQuickTaskCreate()
-
-  // Optionally open the full edit modal for additional details
-  if (newTask) {
-    selectedTask.value = newTask
-    // Use nextTick to ensure DOM has updated before opening modal
-    nextTick(() => {
-      isEditModalOpen.value = true
-    })
-  } else {
-    console.error('Failed to create new task')
-  }
-}
 
 const closeBatchEditModal = () => {
   isBatchEditModalOpen.value = false
@@ -3443,263 +3278,6 @@ const runKeyboardDeletionTest = async () => {
   overflow: visible; /* Allow controls to overflow at top */
 }
 
-.canvas-controls {
-  position: absolute;
-  top: var(--space-4);
-  inset-inline-start: var(--space-4); /* LEFT side positioning */
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start; /* Don't stretch control-groups */
-  width: fit-content; /* Only as wide as content - no extra space */
-  gap: 4px;
-  background: var(--surface-primary);
-  padding: var(--space-1); /* Minimal 4px padding */
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-medium);
-  box-shadow: 0 4px 12px var(--shadow-strong);
-}
-
-.control-btn,
-.dropdown-container {
-  pointer-events: auto;
-}
-
-.control-group {
-  display: flex;
-  gap: 4px; /* RTL: reduced gap for compact layout */
-  align-items: center;
-  justify-content: flex-start; /* Force left alignment of buttons */
-}
-
-.control-group:not(:last-child) {
-  padding-bottom: 4px; /* RTL: reduced padding for less dead space */
-  border-bottom: 1px solid var(--border-secondary);
-}
-
-.control-btn {
-  background: transparent;
-  border: 1px solid var(--border-medium);
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-}
-
-.control-btn:hover {
-  /* Outlined + Glass hover (not filled!) */
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  -webkit-backdrop-filter: var(--state-active-glass);
-  color: var(--text-primary);
-  box-shadow: var(--state-hover-shadow);
-}
-
-.control-btn.active {
-  /* Outlined + Glass active (not filled!) */
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  -webkit-backdrop-filter: var(--state-active-glass);
-  color: var(--text-primary);
-  box-shadow: var(--state-hover-glow);
-}
-
-.hide-done-toggle {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  padding: var(--space-2);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-md);
-  position: relative;
-  z-index: 1000;
-  pointer-events: auto;
-  user-select: none;
-  min-width: 40px;
-  min-height: 40px;
-}
-
-.hide-done-toggle.icon-only {
-  padding: var(--space-2);
-  justify-content: center;
-}
-
-.hide-done-toggle:hover {
-  background: linear-gradient(
-    135deg,
-    var(--state-hover-bg) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--state-hover-border);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.hide-done-toggle.active {
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  color: var(--state-active-text);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.dropdown-container {
-  position: relative;
-}
-
-.section-type-dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  left: 0;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: var(--space-2);
-  min-width: 200px;
-  z-index: 100;
-}
-
-.dropdown-section {
-  padding: var(--space-2) 0;
-}
-
-.dropdown-section:not(:last-child) {
-  border-bottom: 1px solid var(--border-secondary);
-}
-
-.dropdown-label {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: var(--space-2) var(--space-3);
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-}
-
-.dropdown-item:hover {
-  background: var(--bg-hover);
-  transform: translateX(2px);
-}
-
-.dropdown-item.priority-high {
-  color: var(--color-priority-high);
-}
-
-.dropdown-item.priority-medium {
-  color: var(--color-priority-medium);
-}
-
-.dropdown-item.priority-low {
-  color: var(--brand-primary);
-}
-
-.dropdown-item.status-planned {
-  color: var(--brand-primary);
-}
-
-.dropdown-item.status-in_progress {
-  color: var(--color-priority-medium);
-}
-
-.dropdown-item.status-done {
-  color: var(--color-work);
-}
-
-.zoom-level {
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  font-weight: var(--font-medium);
-  min-width: 45px;
-  justify-content: center;
-}
-
-.zoom-dropdown-container {
-  position: relative;
-}
-
-.zoom-dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  right: 0;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: var(--space-2);
-  min-width: 120px;
-  z-index: 100;
-}
-
-.zoom-preset-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  text-align: center;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-}
-
-.zoom-preset-btn:hover {
-  background: var(--bg-hover);
-  transform: translateY(-1px);
-}
-
-.zoom-preset-btn.active {
-  background: var(--brand-primary);
-  color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.zoom-divider {
-  height: 1px;
-  background: var(--border-secondary);
-  margin: var(--space-2) 0;
-}
 
 .canvas-drop-zone {
   width: 100%;

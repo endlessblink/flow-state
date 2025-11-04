@@ -134,14 +134,7 @@
     @close="closeEditModal"
   />
 
-  <!-- QUICK TASK CREATE MODAL -->
-  <QuickTaskCreateModal
-    :isOpen="showQuickTaskCreate"
-    :loading="false"
-    @cancel="closeQuickTaskCreate"
-    @create="handleQuickTaskCreate"
-  />
-
+  
   <!-- TASK CONTEXT MENU -->
   <TaskContextMenu
     :isVisible="showContextMenu"
@@ -214,7 +207,6 @@ import { useUIStore } from '@/stores/ui'
 import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
-import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import ProjectGroupContextMenu from '@/components/ProjectGroupContextMenu.vue'
 import ProjectModal from '@/components/ProjectModal.vue'
@@ -447,23 +439,24 @@ const projectHasActiveTasks = (projectId: string): boolean => {
   }
 }
 
-// SIMPLIFIED: Always show projects - create default if none exist
+// SMART PROJECT FILTERING: Only show projects that have filtered tasks when smart views are active
 const projectsWithTasks = computed(() => {
   try {
-    // Start with all projects from store
-    let projects = taskStore.projects || []
-    console.log('🔥 BoardView.projectsWithTasks: All projects from store:', projects.length)
+    // Get all projects from store
+    let allProjects = taskStore.projects || []
+    console.log('🔥 BoardView.projectsWithTasks: All projects from store:', allProjects.length)
+    console.log('🔥 BoardView.projectsWithTasks: Active smart view:', taskStore.activeSmartView)
 
     // Validate that projects is an array
-    if (!Array.isArray(projects)) {
-      console.warn('🔥 BoardView.projectsWithTasks: taskStore.projects is not an array:', projects)
-      projects = []
+    if (!Array.isArray(allProjects)) {
+      console.warn('🔥 BoardView.projectsWithTasks: taskStore.projects is not an array:', allProjects)
+      allProjects = []
     }
 
     // If no projects exist, create a default project
-    if (projects.length === 0) {
+    if (allProjects.length === 0) {
       console.log('🔥 BoardView.projectsWithTasks: No projects found, creating default project')
-      projects = [{
+      allProjects = [{
         id: 'default',
         name: 'Default Project',
         description: 'Default project for kanban board',
@@ -474,9 +467,47 @@ const projectsWithTasks = computed(() => {
       }]
     }
 
-    // Return all projects (simplified approach - no complex filtering)
-    console.log('🔥 BoardView.projectsWithTasks: Returning', projects.length, 'projects')
-    return projects
+    // CRITICAL FIX: When smart views are active, only show projects that have filtered tasks
+    if (taskStore.activeSmartView && taskStore.activeSmartView !== 'all') {
+      console.log('🔥🔥🔥 SMART VIEW ACTIVE - FILTERING PROJECTS TO SHOW ONLY THOSE WITH TASKS:', taskStore.activeSmartView)
+
+      // Get project IDs from the filtered tasks (this respects smart view filtering)
+      const projectIdsWithFilteredTasks = Object.keys(tasksByProject.value)
+      console.log('🔥 BoardView.projectsWithTasks: Project IDs with filtered tasks:', projectIdsWithFilteredTasks)
+
+      // Handle uncategorized tasks
+      if (projectIdsWithFilteredTasks.includes('uncategorized')) {
+        console.log('🔥 BoardView.projectsWithTasks: Including uncategorized tasks in smart view')
+      }
+
+      // Filter projects to only include those that have filtered tasks
+      let filteredProjects = allProjects.filter(project => {
+        const hasTasks = projectIdsWithFilteredTasks.includes(project.id)
+        console.log(`🔥 BoardView.projectsWithTasks: Project "${project.name}" (${project.id}) has filtered tasks: ${hasTasks}`)
+        return hasTasks
+      })
+
+      // If no projects have tasks but we have uncategorized tasks, create a default project for them
+      if (filteredProjects.length === 0 && projectIdsWithFilteredTasks.includes('uncategorized')) {
+        console.log('🔥 BoardView.projectsWithTasks: No projects have tasks but uncategorized exist, creating default project')
+        filteredProjects = [{
+          id: 'default',
+          name: 'Default Project',
+          description: 'Default project for uncategorized tasks',
+          color: '#3b82f6',
+          parentId: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }]
+      }
+
+      console.log('🔥 BoardView.projectsWithTasks: SMART VIEW - Returning', filteredProjects.length, 'projects with tasks')
+      return filteredProjects
+    } else {
+      // No smart view active or "all" selected - return all projects (preserve existing behavior)
+      console.log('🔥 BoardView.projectsWithTasks: NO SMART VIEW - Returning all', allProjects.length, 'projects')
+      return allProjects
+    }
   } catch (error) {
     console.error('🔥 BoardView.projectsWithTasks: Error getting projects:', error)
     // Ultimate fallback - return default project
@@ -554,9 +585,6 @@ const boardFilteredTasks = computed(() => {
 const showEditModal = ref(false)
 const selectedTask = ref<Task | null>(null)
 
-// Quick Task Create Modal state
-const showQuickTaskCreate = ref(false)
-const pendingTaskStatus = ref<string>('planned')
 
 // Context menu state
 const showContextMenu = ref(false)
@@ -585,12 +613,22 @@ const projectToDelete = ref<Project | null>(null)
 
 // Task management methods
 const handleAddTask = (status: string) => {
-  // Store the status for when the task is created
-  pendingTaskStatus.value = status
+  // Create new task immediately with the specified status
+  const newTask = taskStore.createTaskWithUndo({
+    title: 'New Task',
+    description: '',
+    status: status,
+    priority: 'medium'
+  })
 
-  // Open quick task create modal instead of creating task directly
-  showQuickTaskCreate.value = true
-  console.log('Opening task creation modal for status:', status)
+  // Open TaskEditModal for editing
+  if (newTask) {
+    selectedTask.value = newTask
+    showEditModal.value = true
+    console.log('Opening task edit modal for status:', status)
+  } else {
+    console.error('Failed to create new task')
+  }
 }
 
 const handleSelectTask = (taskId: string) => {
@@ -616,32 +654,6 @@ const closeEditModal = () => {
   selectedTask.value = null
 }
 
-// Quick Task Create Modal handlers
-const closeQuickTaskCreate = () => {
-  showQuickTaskCreate.value = false
-  pendingTaskStatus.value = 'planned'
-}
-
-const handleQuickTaskCreate = (title: string, description: string) => {
-  console.log('🎯 Creating task with title:', title, 'and status:', pendingTaskStatus.value)
-
-  // Create new task with user-provided title and stored status
-  const newTask = taskStore.createTaskWithUndo({
-    title: title,
-    description: description,
-    status: pendingTaskStatus.value as any,
-    projectId: taskStore.activeProjectId || '1'
-  })
-
-  // Close the quick create modal
-  closeQuickTaskCreate()
-
-  if (newTask) {
-    console.log('✅ Successfully created task:', newTask.title)
-  } else {
-    console.error('❌ Failed to create new task')
-  }
-}
 
 // Context menu handlers
 const handleContextMenu = (event: MouseEvent, task: Task) => {

@@ -29,7 +29,7 @@
     </div>
 
     <!-- Title -->
-    <div class="task-title">{{ task?.title || 'Untitled Task' }}</div>
+    <div class="task-title" :class="taskTitleClasses">{{ task?.title || 'Untitled Task' }}</div>
 
     <!-- Metadata -->
     <div class="task-metadata">
@@ -67,6 +67,7 @@ import { Calendar, Timer } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTimerStore } from '@/stores/timer'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {
   task: Task
@@ -103,6 +104,9 @@ const emit = defineEmits<{
 const { startDrag, endDrag } = useDragAndDrop()
 const timerStore = useTimerStore()
 
+// Hebrew alignment support
+const { getHebrewTextClasses } = useHebrewAlignment()
+
 // Track local dragging state to prevent visual artifacts
 const isNodeDragging = ref(false)
 
@@ -138,6 +142,12 @@ const hasSchedule = computed(() =>
 // Check if this task has an active timer
 const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
+})
+
+// Hebrew text alignment for task title
+const taskTitleClasses = computed(() => {
+  const title = props.task?.title || ''
+  return getHebrewTextClasses(title)
 })
 
 // Drag handler with proper state management

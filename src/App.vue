@@ -357,13 +357,13 @@
       @selectProject="handleSearchSelectProject"
     />
 
-    <!-- QUICK TASK CREATE MODAL -->
-    <QuickTaskCreateModal
-      :isOpen="showQuickTaskCreate"
-      :loading="false"
-      @cancel="closeQuickTaskCreate"
-      @create="handleQuickTaskCreate"
+    <!-- TASK EDIT MODAL -->
+    <TaskEditModal
+      :is-open="showEditModal"
+      :task="selectedTask"
+      @close="closeEditModal"
     />
+
 
     <!-- COMMAND PALETTE - ADHD Feature #1 (Cmd+K) -->
     <CommandPalette ref="commandPaletteRef" />
@@ -419,7 +419,6 @@ import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
 import SearchModal from '@/components/SearchModal.vue'
-import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import AuthModal from '@/components/auth/AuthModal.vue'
 import UserProfile from '@/components/auth/UserProfile.vue'
 import type { Task, Project } from '@/stores/tasks'
@@ -513,8 +512,10 @@ const confirmDetails = ref<string[]>([])
 // Search modal state
 const showSearchModal = ref(false)
 
-// Quick Task Create Modal state
-const showQuickTaskCreate = ref(false)
+// Task Edit Modal state
+const showEditModal = ref(false)
+const selectedTask = ref<any>(null)
+
 
 // Command Palette ref
 const commandPaletteRef = ref<{ open: () => void; close: () => void } | null>(null)
@@ -718,33 +719,10 @@ const createQuickTask = async () => {
   }
 }
 
-// Quick Task Create Modal handlers
-const closeQuickTaskCreate = () => {
-  showQuickTaskCreate.value = false
-}
-
-const handleQuickTaskCreate = async (title: string, description: string) => {
-  console.log('🎯 Creating quick task with title:', title)
-
-  // Use the unified undo system
-  // Create new task with user-provided title using undo/redo system
-  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-  const undoRedoActions = useUnifiedUndoRedo()
-  undoRedoActions.createTaskWithUndo({
-    title: title,
-    description: description,
-    status: 'planned',
-    projectId: '1' // Default project
-  })
-
-  // Close the quick create modal
-  closeQuickTaskCreate()
-
-  if (newTask) {
-    console.log('✅ Successfully created quick task:', newTask.title)
-  } else {
-    console.error('❌ Failed to create new quick task')
-  }
+// Task Edit Modal handlers
+const closeEditModal = () => {
+  showEditModal.value = false
+  selectedTask.value = null
 }
 
 // Project Navigation Methods
@@ -966,9 +944,23 @@ const startTaskTimer = (taskId: string) => {
 
 
 const addTaskToProject = (projectId: string) => {
-  // Open quick task create modal instead of creating task directly
-  showQuickTaskCreate.value = true
-  console.log('Opening task creation modal for project:', projectId)
+  // Create new task immediately with default values
+  const newTask = taskStore.createTask({
+    title: 'New Task',
+    description: '',
+    status: 'planned',
+    priority: 'medium',
+    projectId: projectId
+  })
+
+  // Open TaskEditModal for editing
+  if (newTask) {
+    selectedTask.value = newTask
+    showEditModal.value = true
+    console.log('Opening task edit modal for project:', projectId)
+  } else {
+    console.error('Failed to create new task')
+  }
 }
 
 // Project management methods

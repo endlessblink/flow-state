@@ -36,12 +36,11 @@
       />
     </div>
 
-    <!-- QUICK TASK CREATE MODAL -->
-    <QuickTaskCreateModal
-      :is-open="showQuickTaskCreate"
-      :loading="false"
-      @cancel="closeQuickTaskCreate"
-      @create="handleQuickTaskCreate"
+    <!-- TASK EDIT MODAL -->
+    <TaskEditModal
+      :is-open="isEditModalOpen"
+      :task="selectedTask"
+      @close="closeEditModal"
     />
   </div>
 </template>
@@ -53,13 +52,14 @@ import 'vue-cal/dist/vuecal.css'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import TaskManagerSidebar from '@/components/TaskManagerSidebar.vue'
-import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
+import TaskEditModal from '@/components/TaskEditModal.vue'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 
-// Quick Task Create Modal state
-const showQuickTaskCreate = ref(false)
+// Task Edit Modal state
+const isEditModalOpen = ref(false)
+const selectedTask = ref<any>(null)
 
 // Convert Pinia tasks to vue-cal event format
 const vueCalEvents = computed(() => {
@@ -125,9 +125,22 @@ const handleEventDblClick = (event: any, e: MouseEvent) => {
 }
 
 const handleAddTask = () => {
-  // Open quick task create modal instead of creating task directly
-  showQuickTaskCreate.value = true
-  console.log('Opening task creation modal for calendar')
+  // Create new task immediately with default values
+  const newTask = taskStore.createTask({
+    title: 'New Task',
+    description: '',
+    status: 'planned',
+    priority: 'medium'
+  })
+
+  // Open TaskEditModal for editing
+  if (newTask) {
+    selectedTask.value = newTask
+    isEditModalOpen.value = true
+    console.log('Opening task edit modal for calendar')
+  } else {
+    console.error('Failed to create new task')
+  }
 }
 
 const handleStartTimer = (taskId: string) => {
@@ -140,29 +153,10 @@ const handleEditTask = (taskId: string) => {
   }))
 }
 
-// Quick Task Create Modal handlers
-const closeQuickTaskCreate = () => {
-  showQuickTaskCreate.value = false
-}
-
-const handleQuickTaskCreate = (title: string, description: string) => {
-  console.log('🎯 Creating calendar task with title:', title)
-
-  // Create new task with user-provided title
-  const newTask = taskStore.createTask({
-    title: title,
-    description: description,
-    status: 'planned'
-  })
-
-  // Close the quick create modal
-  closeQuickTaskCreate()
-
-  if (newTask) {
-    console.log('✅ Successfully created calendar task:', newTask.title)
-  } else {
-    console.error('❌ Failed to create new calendar task')
-  }
+// Task Edit Modal handlers
+const closeEditModal = () => {
+  isEditModalOpen.value = false
+  selectedTask.value = null
 }
 </script>
 

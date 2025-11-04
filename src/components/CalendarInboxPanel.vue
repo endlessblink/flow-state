@@ -14,9 +14,9 @@
 
     <!-- Collapsed state task count indicators positioned under arrow -->
     <div v-if="isCollapsed" class="collapsed-badges-container">
-      <!-- Show dual count when filter is active, single count when no filter -->
+      <!-- Show dual count when filter is active, single count when in default state -->
       <BaseBadge
-        v-if="currentFilter === 'allTasks'"
+        v-if="currentFilter === 'unscheduled'"
         variant="count"
         size="sm"
         rounded

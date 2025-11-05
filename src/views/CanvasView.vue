@@ -2406,9 +2406,6 @@ const handleDrop = (event: DragEvent) => {
 
 
 // Canvas controls
-const fitView = () => {
-  vueFlowFitView({ padding: 0.2, duration: 300 })
-}
 
 const zoomIn = () => {
   if (performanceManager.shouldThrottleZoom()) return

@@ -44,133 +44,38 @@
 
     <!-- MAIN CANVAS AREA -->
     <div class="canvas-main">
-      <!-- CANVAS CONTROLS SECTION (Safe to Extract) -->
-      <!-- Component: CanvasControls -->
-      <!-- Dependencies: zoom functions, section functions, display toggles -->
-      <div class="canvas-controls">
-        <!-- Test Controls (Temporary) -->
-        <div class="control-group">
-          <button @click="showKeyboardTest = true" class="control-btn" title="Test Keyboard Deletion">
-            <PlayCircle :size="16" />
-          </button>
-        </div>
-
-        <!-- Section Controls -->
-        <div class="control-group">
-          <button @click="toggleSections" class="control-btn" :class="{ active: showSections }" title="Toggle Sections">
-            <Grid3X3 :size="16" />
-          </button>
-          <div class="dropdown-container">
-            <button @click="addSection" class="control-btn" title="Add Section">
-              <Plus :size="16" />
-            </button>
-            <div v-if="showSectionTypeDropdown" class="section-type-dropdown">
-              <div class="dropdown-section">
-                <div class="dropdown-label">Priority</div>
-                <button @click="createSmartSection('priority-high')" class="dropdown-item priority-high">
-                  <AlertTriangle :size="14" />
-                  <span>High Priority</span>
-                </button>
-                <button @click="createSmartSection('priority-medium')" class="dropdown-item priority-medium">
-                  <Flag :size="14" />
-                  <span>Medium Priority</span>
-                </button>
-                <button @click="createSmartSection('priority-low')" class="dropdown-item priority-low">
-                  <Circle :size="14" />
-                  <span>Low Priority</span>
-                </button>
-              </div>
-              <div class="dropdown-section">
-                <div class="dropdown-label">Status</div>
-                <button @click="createSmartSection('status-planned')" class="dropdown-item status-planned">
-                  <Calendar :size="14" />
-                  <span>Planned</span>
-                </button>
-                <button @click="createSmartSection('status-in_progress')" class="dropdown-item status-in_progress">
-                  <PlayCircle :size="14" />
-                  <span>In Progress</span>
-                </button>
-                <button @click="createSmartSection('status-done')" class="dropdown-item status-done">
-                  <CheckCircle :size="14" />
-                  <span>Done</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          <button @click="autoArrange" class="control-btn" title="Auto Arrange">
-            <Layout :size="16" />
-          </button>
-        </div>
-        
-        <!-- Selection Controls -->
-        <div class="control-group">
-          <button @click="toggleMultiSelect" class="control-btn" :class="{ active: canvasStore.multiSelectMode }" title="Multi-Select Mode">
-            <CheckSquare :size="16" />
-          </button>
-        </div>
-
-        <!-- Display Controls -->
-        <div class="control-group">
-          <button @click="canvasStore.togglePriorityIndicatorWithUndo" class="control-btn" :class="{ active: canvasStore.showPriorityIndicator }" title="Toggle Priority">
-            <Flag :size="16" />
-          </button>
-          <button @click="canvasStore.toggleStatusBadgeWithUndo" class="control-btn" :class="{ active: canvasStore.showStatusBadge }" title="Toggle Status">
-            <PlayCircle :size="16" />
-          </button>
-          <button @click="canvasStore.toggleDurationBadgeWithUndo" class="control-btn" :class="{ active: canvasStore.showDurationBadge }" title="Toggle Duration">
-            <Clock :size="16" />
-          </button>
-          <button @click="canvasStore.toggleScheduleBadgeWithUndo" class="control-btn" :class="{ active: canvasStore.showScheduleBadge }" title="Toggle Schedule">
-            <Calendar :size="16" />
-          </button>
-          <button
-            class="hide-done-toggle control-btn icon-only"
-            :class="{ active: taskStore.hideDoneTasks }"
-            @click="handleToggleDoneTasks"
-            :title="taskStore.hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-          >
-            <EyeOff v-if="taskStore.hideDoneTasks" :size="16" />
-            <Eye v-else :size="16" />
-          </button>
-        </div>
-
-        <!-- View Controls -->
-        <div class="control-group">
-          <button @click="fitView" class="control-btn" title="Fit View (F)">
-            <Maximize :size="16" />
-          </button>
-          <button @click="zoomIn" class="control-btn" title="Zoom In (+)">
-            <ZoomIn :size="16" />
-          </button>
-          <button @click="zoomOut" class="control-btn" title="Zoom Out (-)">
-            <ZoomOut :size="16" />
-          </button>
-          <div class="zoom-level">{{ Math.round(viewport.zoom * 100) }}%</div>
-          <div class="zoom-dropdown-container">
-            <button @click="toggleZoomDropdown" class="control-btn zoom-dropdown-trigger" title="Zoom Presets">
-              <ChevronDown :size="14" />
-            </button>
-            <div v-if="showZoomDropdown" class="zoom-dropdown">
-              <button
-                v-for="preset in zoomPresets"
-                :key="preset.value"
-                @click="applyZoomPreset(preset.value)"
-                class="zoom-preset-btn"
-                :class="{ active: Math.abs(viewport.zoom - preset.value) < 0.01 }"
-              >
-                {{ preset.label }}
-              </button>
-              <div class="zoom-divider"></div>
-              <button @click="resetZoom" class="zoom-preset-btn">
-                Reset (100%)
-              </button>
-              <button @click="fitToContent" class="zoom-preset-btn">
-                Fit to Content
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Canvas Controls Component (Extracted) -->
+      <CanvasControls
+        :show-sections="showSections"
+        :show-section-type-dropdown="showSectionTypeDropdown"
+        :multi-select-mode="canvasStore.multiSelectMode"
+        :show-priority-indicator="canvasStore.showPriorityIndicator"
+        :show-status-badge="canvasStore.showStatusBadge"
+        :show-duration-badge="canvasStore.showDurationBadge"
+        :show-schedule-badge="canvasStore.showScheduleBadge"
+        :hide-done-tasks="taskStore.hideDoneTasks"
+        :zoom-level="viewport.zoom"
+        :show-zoom-dropdown="showZoomDropdown"
+        :zoom-presets="zoomPresets"
+        @test:keyboard="showKeyboardTest = true"
+        @sections:toggle="toggleSections"
+        @sections:add="addSection"
+        @sections:create="createSmartSection"
+        @sections:auto-arrange="autoArrange"
+        @selection:toggle-multi="toggleMultiSelect"
+        @display:toggle-priority="canvasStore.togglePriorityIndicatorWithUndo"
+        @display:toggle-status="canvasStore.toggleStatusBadgeWithUndo"
+        @display:toggle-duration="canvasStore.toggleDurationBadgeWithUndo"
+        @display:toggle-schedule="canvasStore.toggleScheduleBadgeWithUndo"
+        @display:toggle-done="handleToggleDoneTasks"
+        @view:fit="fitView"
+        @zoom:in="zoomIn"
+        @zoom:out="zoomOut"
+        @zoom:toggle-dropdown="toggleZoomDropdown"
+        @zoom:apply-preset="applyZoomPreset"
+        @zoom:reset="resetZoom"
+        @zoom:fit-content="fitToContent"
+      />
 
        <!-- Vue Flow Canvas -->
       <div
@@ -304,26 +209,14 @@
     <!-- Dependencies: Modal state variables, task data                    -->
 
     <!-- Keyboard Deletion Test Component (Temporary) -->
-    <div v-if="showKeyboardTest" class="keyboard-test-overlay">
-      <div class="keyboard-test-content">
-        <div class="test-header">
-          <h3>Keyboard Deletion Test Suite</h3>
-          <button @click="showKeyboardTest = false" class="close-btn">✕</button>
-        </div>
-        <div class="test-controls">
-          <button @click="runKeyboardDeletionTest" :disabled="isTestRunning" class="test-btn primary">
-            {{ isTestRunning ? '⏳ Running...' : '🚀 Run Test' }}
-          </button>
-          <div class="test-status">{{ testStatus }}</div>
-        </div>
-        <div class="test-results">
-          <div v-for="(result, index) in testResults" :key="index" :class="['result-item', result.status]">
-            <span>{{ result.status === 'passed' ? '✅' : result.status === 'failed' ? '❌' : '⏳' }}</span>
-            <span>{{ result.message }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <KeyboardTestSuite
+      :is-visible="showKeyboardTest"
+      :is-test-running="isTestRunning"
+      :test-status="testStatus"
+      :test-results="testResults"
+      @close="showKeyboardTest = false"
+      @run-test="runKeyboardDeletionTest"
+    />
 
     <!-- Task Edit Modal -->
     <TaskEditModal
@@ -454,8 +347,11 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { useCanvasPerformance } from '@/composables/useCanvasPerformance'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import InboxPanel from '@/components/canvas/InboxPanel.vue'
+import CanvasControls from '@/components/canvas/CanvasControls.vue'
+import KeyboardTestSuite from '@/components/canvas/KeyboardTestSuite.vue'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
@@ -484,6 +380,9 @@ const undoHistory = getUndoSystem()
 
 // Uncategorized tasks composable
 const { filterTasksForRegularViews } = useUncategorizedTasks()
+
+// Canvas performance composable
+const { performanceManager, shouldCullNode } = useCanvasPerformance()
 
 if (import.meta.env.DEV) {
   ;(window as any).__canvasStore = canvasStore
@@ -2458,79 +2357,6 @@ const handleDrop = (event: DragEvent) => {
   }
 }
 
-// Performance optimization: Zoom throttling and batching
-const zoomPerformanceManager = {
-  animationFrameId: null as number | null,
-  pendingOperations: [] as Array<() => void>,
-  lastZoomTime: 0,
-  zoomThrottleMs: 16, // ~60fps
-
-  shouldThrottleZoom(): boolean {
-    const now = performance.now()
-    if (now - this.lastZoomTime < this.zoomThrottleMs) {
-      return true
-    }
-    this.lastZoomTime = now
-    return false
-  },
-
-  scheduleOperation(operation: () => void) {
-    this.pendingOperations.push(operation)
-
-    if (!this.animationFrameId) {
-      this.animationFrameId = requestAnimationFrame(() => {
-        this.flushOperations()
-      })
-    }
-  },
-
-  flushOperations() {
-    // Process all pending operations in batch
-    this.pendingOperations.forEach(operation => operation())
-    this.pendingOperations.length = 0
-    this.animationFrameId = null
-  },
-
-  cleanup() {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId)
-      this.animationFrameId = null
-    }
-    this.pendingOperations.length = 0
-  }
-}
-
-// Performance optimized viewport culling for extreme zoom levels
-const shouldCullNode = (node: Node, currentZoom: number): boolean => {
-  // Cull nodes when zoom is extremely low to improve performance
-  if (currentZoom < 0.1) { // Below 10% zoom
-    // Only show visible nodes in viewport or important nodes
-    const viewportBounds = {
-      x: -viewport.value.x / currentZoom,
-      y: -viewport.value.y / currentZoom,
-      width: window.innerWidth / currentZoom,
-      height: window.innerHeight / currentZoom
-    }
-
-    const nodeBounds = {
-      x: node.position.x,
-      y: node.position.y,
-      width: 220,
-      height: 100
-    }
-
-    // Check if node is in viewport
-    const inViewport = !(
-      nodeBounds.x > viewportBounds.x + viewportBounds.width ||
-      nodeBounds.x + nodeBounds.width < viewportBounds.x ||
-      nodeBounds.y > viewportBounds.y + viewportBounds.height ||
-      nodeBounds.y + nodeBounds.height < viewportBounds.y
-    )
-
-    return !inViewport
-  }
-  return false
-}
 
 // Canvas controls
 const fitView = () => {
@@ -2538,17 +2364,17 @@ const fitView = () => {
 }
 
 const zoomIn = () => {
-  if (zoomPerformanceManager.shouldThrottleZoom()) return
+  if (performanceManager.shouldThrottleZoom()) return
 
-  zoomPerformanceManager.scheduleOperation(() => {
+  performanceManager.scheduleOperation(() => {
     vueFlowZoomIn({ duration: 200 })
   })
 }
 
 const zoomOut = () => {
-  if (zoomPerformanceManager.shouldThrottleZoom()) return
+  if (performanceManager.shouldThrottleZoom()) return
 
-  zoomPerformanceManager.scheduleOperation(() => {
+  performanceManager.scheduleOperation(() => {
     const currentZoom = viewport.value.zoom
     let newZoom = Math.max(canvasStore.zoomConfig.minZoom, currentZoom - 0.1)
 
@@ -2591,7 +2417,7 @@ const applyZoomPreset = (zoomLevel: number) => {
   console.log(`[Zoom Debug] Applying preset: ${zoomLevel} (validated: ${validatedZoom})`)
   console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
 
-  zoomPerformanceManager.scheduleOperation(() => {
+  performanceManager.scheduleOperation(() => {
     // Force Vue Flow to respect our zoom limits for presets too
     const { setMinZoom, setMaxZoom } = useVueFlow()
     if (setMinZoom && setMaxZoom) {
@@ -3226,7 +3052,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('keydown', handleKeyDown, { capture: true })
-  zoomPerformanceManager.cleanup()
+  performanceManager.cleanup()
 })
 
 // Keyboard Deletion Test Function
@@ -3388,263 +3214,9 @@ const runKeyboardDeletionTest = async () => {
   overflow: visible; /* Allow controls to overflow at top */
 }
 
-.canvas-controls {
-  position: absolute;
-  top: var(--space-4);
-  inset-inline-start: var(--space-4); /* LEFT side positioning */
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start; /* Don't stretch control-groups */
-  width: fit-content; /* Only as wide as content - no extra space */
-  gap: 4px;
-  background: var(--surface-primary);
-  padding: var(--space-1); /* Minimal 4px padding */
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-medium);
-  box-shadow: 0 4px 12px var(--shadow-strong);
-}
+/* Canvas controls styles moved to CanvasControls.vue component */
 
-.control-btn,
-.dropdown-container {
-  pointer-events: auto;
-}
-
-.control-group {
-  display: flex;
-  gap: 4px; /* RTL: reduced gap for compact layout */
-  align-items: center;
-  justify-content: flex-start; /* Force left alignment of buttons */
-}
-
-.control-group:not(:last-child) {
-  padding-bottom: 4px; /* RTL: reduced padding for less dead space */
-  border-bottom: 1px solid var(--border-secondary);
-}
-
-.control-btn {
-  background: transparent;
-  border: 1px solid var(--border-medium);
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-}
-
-.control-btn:hover {
-  /* Outlined + Glass hover (not filled!) */
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  -webkit-backdrop-filter: var(--state-active-glass);
-  color: var(--text-primary);
-  box-shadow: var(--state-hover-shadow);
-}
-
-.control-btn.active {
-  /* Outlined + Glass active (not filled!) */
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  -webkit-backdrop-filter: var(--state-active-glass);
-  color: var(--text-primary);
-  box-shadow: var(--state-hover-glow);
-}
-
-.hide-done-toggle {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  padding: var(--space-2);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-md);
-  position: relative;
-  z-index: 1000;
-  pointer-events: auto;
-  user-select: none;
-  min-width: 40px;
-  min-height: 40px;
-}
-
-.hide-done-toggle.icon-only {
-  padding: var(--space-2);
-  justify-content: center;
-}
-
-.hide-done-toggle:hover {
-  background: linear-gradient(
-    135deg,
-    var(--state-hover-bg) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--state-hover-border);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.hide-done-toggle.active {
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  color: var(--state-active-text);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.dropdown-container {
-  position: relative;
-}
-
-.section-type-dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  left: 0;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: var(--space-2);
-  min-width: 200px;
-  z-index: 100;
-}
-
-.dropdown-section {
-  padding: var(--space-2) 0;
-}
-
-.dropdown-section:not(:last-child) {
-  border-bottom: 1px solid var(--border-secondary);
-}
-
-.dropdown-label {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: var(--space-2) var(--space-3);
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-}
-
-.dropdown-item:hover {
-  background: var(--bg-hover);
-  transform: translateX(2px);
-}
-
-.dropdown-item.priority-high {
-  color: var(--color-priority-high);
-}
-
-.dropdown-item.priority-medium {
-  color: var(--color-priority-medium);
-}
-
-.dropdown-item.priority-low {
-  color: var(--brand-primary);
-}
-
-.dropdown-item.status-planned {
-  color: var(--brand-primary);
-}
-
-.dropdown-item.status-in_progress {
-  color: var(--color-priority-medium);
-}
-
-.dropdown-item.status-done {
-  color: var(--color-work);
-}
-
-.zoom-level {
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  font-weight: var(--font-medium);
-  min-width: 45px;
-  justify-content: center;
-}
-
-.zoom-dropdown-container {
-  position: relative;
-}
-
-.zoom-dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  right: 0;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: var(--space-2);
-  min-width: 120px;
-  z-index: 100;
-}
-
-.zoom-preset-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  text-align: center;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-}
-
-.zoom-preset-btn:hover {
-  background: var(--bg-hover);
-  transform: translateY(-1px);
-}
-
-.zoom-preset-btn.active {
-  background: var(--brand-primary);
-  color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.zoom-divider {
-  height: 1px;
-  background: var(--border-secondary);
-  margin: var(--space-2) 0;
-}
+/* Zoom-related styles moved to CanvasControls.vue component */
 
 .canvas-drop-zone {
   width: 100%;
@@ -4296,129 +3868,6 @@ body.dragging-active .vue-flow__background {
   }
 }
 
-/* Keyboard Deletion Test Overlay Styles */
-.keyboard-test-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.keyboard-test-content {
-  background: var(--surface-primary);
-  border-radius: var(--border-radius-lg);
-  padding: var(--spacing-lg);
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-xl);
-}
-
-.test-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.test-header h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: var(--text-lg);
-  cursor: pointer;
-  color: var(--text-secondary);
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
-}
-
-.test-controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.test-btn {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: none;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-weight: var(--font-medium);
-  transition: all 0.2s ease;
-}
-
-.test-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.test-btn.primary {
-  background: var(--brand-primary);
-  color: white;
-}
-
-.test-btn.primary:hover:not(:disabled) {
-  background: var(--brand-primary-hover);
-}
-
-.test-status {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  text-align: center;
-}
-
-.test-results {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.result-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--border-radius-xs);
-  font-size: var(--text-sm);
-}
-
-.result-item.passed {
-  background: rgba(34, 197, 94, 0.1);
-  color: var(--text-success);
-}
-
-.result-item.failed {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--text-error);
-}
-
-.result-item.running {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--text-warning);
-}
 
 /* ====================================================================
    MINIMAL RESIZE HANDLE FIXES (work with library CSS, don't fight it)

@@ -1,11 +1,44 @@
 import { computed } from 'vue'
-import type { Task } from '@/stores/tasks'
+import type { Task, Project } from '@/stores/tasks'
+
+// Constants for consistent project handling
+export const DEFAULT_PROJECT_ID = '1'
+export const UNCATEGORIZED_PROJECT_NAME = 'Unknown Project'
+
+/**
+ * Type definitions for project-related operations
+ */
+export interface ProjectAssociation {
+  projectId: string | null
+  projectName: string
+  isUncategorized: boolean
+  isValid: boolean
+}
+
+export interface ProjectStats {
+  totalTasks: number
+  uncategorizedTasks: number
+  categorizedTasks: number
+  percentageUncategorized: number
+}
 
 /**
  * Composable for consistent uncategorized task detection and filtering
  * across all views and components.
  */
 export function useUncategorizedTasks() {
+
+  /**
+   * Normalizes project ID to standard format
+   * @param projectId Raw project ID from task
+   * @returns Normalized project ID or null
+   */
+  function normalizeProjectId(projectId: string | null | undefined): string | null {
+    if (!projectId || projectId === '' || projectId === null || projectId === DEFAULT_PROJECT_ID) {
+      return null
+    }
+    return projectId
+  }
 
   /**
    * Determines if a task is uncategorized based on multiple criteria
@@ -19,11 +52,68 @@ export function useUncategorizedTasks() {
     }
 
     // Backward compatibility: tasks without proper project assignment
-    if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
-      return true
+    const normalizedProjectId = normalizeProjectId(task.projectId)
+    return normalizedProjectId === null
+  }
+
+  /**
+   * Gets comprehensive project association information for a task
+   * @param task The task to analyze
+   * @param projects Array of available projects
+   * @returns Project association details
+   */
+  function getProjectAssociation(task: Task, projects: Project[]): ProjectAssociation {
+    const normalizedProjectId = normalizeProjectId(task.projectId)
+    const isUncategorized = isTaskUncategorized(task)
+
+    // Find project if it exists
+    const project = normalizedProjectId ? projects.find(p => p.id === normalizedProjectId) : null
+
+    return {
+      projectId: normalizedProjectId,
+      projectName: project?.name || UNCATEGORIZED_PROJECT_NAME,
+      isUncategorized,
+      isValid: !!project
+    }
+  }
+
+  /**
+   * Calculates project statistics for a given set of tasks
+   * @param tasks Array of tasks to analyze
+   * @returns Project statistics
+   */
+  function calculateProjectStats(tasks: Task[]): ProjectStats {
+    const totalTasks = tasks.length
+    const uncategorizedTasks = tasks.filter(isTaskUncategorized).length
+    const categorizedTasks = totalTasks - uncategorizedTasks
+
+    return {
+      totalTasks,
+      uncategorizedTasks,
+      categorizedTasks,
+      percentageUncategorized: totalTasks > 0 ? (uncategorizedTasks / totalTasks) * 100 : 0
+    }
+  }
+
+  /**
+   * Validates project ID format
+   * @param projectId Project ID to validate
+   * @returns true if ID format is valid
+   */
+  function isValidProjectId(projectId: string): boolean {
+    // Check for empty or null values
+    if (!projectId || projectId === '' || projectId === null) {
+      return false
     }
 
-    return false
+    // Check for default project ID
+    if (projectId === DEFAULT_PROJECT_ID) {
+      return false
+    }
+
+    // Check for UUID format (basic validation)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidRegex.test(projectId)
   }
 
   /**
@@ -80,10 +170,21 @@ export function useUncategorizedTasks() {
   }
 
   return {
+    // Constants
+    DEFAULT_PROJECT_ID,
+    UNCATEGORIZED_PROJECT_NAME,
+
+    // Core functions
     isTaskUncategorized,
     getUncategorizedTasks,
     filterTasksBySmartView,
     shouldShowUncategorizedInViews,
-    filterTasksForRegularViews
+    filterTasksForRegularViews,
+
+    // Enhanced Phase 2 functions
+    normalizeProjectId,
+    getProjectAssociation,
+    calculateProjectStats,
+    isValidProjectId
   }
 }

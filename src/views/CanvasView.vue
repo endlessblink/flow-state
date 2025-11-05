@@ -44,7 +44,43 @@
 
     <!-- MAIN CANVAS AREA -->
     <div class="canvas-main">
+<<<<<<< HEAD
   
+=======
+      <!-- Canvas Controls Component (Extracted) -->
+      <CanvasControls
+        :show-sections="showSections"
+        :show-section-type-dropdown="showSectionTypeDropdown"
+        :multi-select-mode="canvasStore.multiSelectMode"
+        :show-priority-indicator="canvasStore.showPriorityIndicator"
+        :show-status-badge="canvasStore.showStatusBadge"
+        :show-duration-badge="canvasStore.showDurationBadge"
+        :show-schedule-badge="canvasStore.showScheduleBadge"
+        :hide-done-tasks="taskStore.hideDoneTasks"
+        :zoom-level="viewport.zoom"
+        :show-zoom-dropdown="showZoomDropdown"
+        :zoom-presets="zoomPresets"
+        @test:keyboard="showKeyboardTest = true"
+        @sections:toggle="toggleSections"
+        @sections:add="addSection"
+        @sections:create="createSmartSection"
+        @sections:auto-arrange="autoArrange"
+        @selection:toggle-multi="toggleMultiSelect"
+        @display:toggle-priority="canvasStore.togglePriorityIndicatorWithUndo"
+        @display:toggle-status="canvasStore.toggleStatusBadgeWithUndo"
+        @display:toggle-duration="canvasStore.toggleDurationBadgeWithUndo"
+        @display:toggle-schedule="canvasStore.toggleScheduleBadgeWithUndo"
+        @display:toggle-done="handleToggleDoneTasks"
+        @view:fit="fitView"
+        @zoom:in="zoomIn"
+        @zoom:out="zoomOut"
+        @zoom:toggle-dropdown="toggleZoomDropdown"
+        @zoom:apply-preset="applyZoomPreset"
+        @zoom:reset="resetZoom"
+        @zoom:fit-content="fitToContent"
+      />
+
+>>>>>>> feature/task-project-unification
        <!-- Vue Flow Canvas -->
       <div
         @drop="handleDrop"
@@ -214,26 +250,14 @@
     <!-- Dependencies: Modal state variables, task data                    -->
 
     <!-- Keyboard Deletion Test Component (Temporary) -->
-    <div v-if="showKeyboardTest" class="keyboard-test-overlay">
-      <div class="keyboard-test-content">
-        <div class="test-header">
-          <h3>Keyboard Deletion Test Suite</h3>
-          <button @click="showKeyboardTest = false" class="close-btn">✕</button>
-        </div>
-        <div class="test-controls">
-          <button @click="runKeyboardDeletionTest" :disabled="isTestRunning" class="test-btn primary">
-            {{ isTestRunning ? '⏳ Running...' : '🚀 Run Test' }}
-          </button>
-          <div class="test-status">{{ testStatus }}</div>
-        </div>
-        <div class="test-results">
-          <div v-for="(result, index) in testResults" :key="index" :class="['result-item', result.status]">
-            <span>{{ result.status === 'passed' ? '✅' : result.status === 'failed' ? '❌' : '⏳' }}</span>
-            <span>{{ result.message }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <KeyboardTestSuite
+      :is-visible="showKeyboardTest"
+      :is-test-running="isTestRunning"
+      :test-status="testStatus"
+      :test-results="testResults"
+      @close="showKeyboardTest = false"
+      @run-test="runKeyboardDeletionTest"
+    />
 
     <!-- Task Edit Modal -->
     <TaskEditModal
@@ -350,10 +374,16 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+<<<<<<< HEAD
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasControls } from '@/composables/canvas/useCanvasControls'
+=======
+import { useCanvasPerformance } from '@/composables/useCanvasPerformance'
+>>>>>>> feature/task-project-unification
 import { getUndoSystem } from '@/composables/undoSingleton'
 import InboxPanel from '@/components/canvas/InboxPanel.vue'
+import CanvasControls from '@/components/canvas/CanvasControls.vue'
+import KeyboardTestSuite from '@/components/canvas/KeyboardTestSuite.vue'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
@@ -380,6 +410,9 @@ const undoHistory = getUndoSystem()
 
 // Uncategorized tasks composable
 const { filterTasksForRegularViews } = useUncategorizedTasks()
+
+// Canvas performance composable
+const { performanceManager, shouldCullNode } = useCanvasPerformance()
 
 if (import.meta.env.DEV) {
   ;(window as any).__canvasStore = canvasStore
@@ -2380,8 +2413,102 @@ const handleDrop = (event: DragEvent) => {
   }
 }
 
+<<<<<<< HEAD
 // Canvas controls functions now managed by useCanvasControls composable
 // Performance optimization and zoom throttling handled in composable
+=======
+
+// Canvas controls
+const fitView = () => {
+  vueFlowFitView({ padding: 0.2, duration: 300 })
+}
+
+const zoomIn = () => {
+  if (performanceManager.shouldThrottleZoom()) return
+
+  performanceManager.scheduleOperation(() => {
+    vueFlowZoomIn({ duration: 200 })
+  })
+}
+
+const zoomOut = () => {
+  if (performanceManager.shouldThrottleZoom()) return
+
+  performanceManager.scheduleOperation(() => {
+    const currentZoom = viewport.value.zoom
+    let newZoom = Math.max(canvasStore.zoomConfig.minZoom, currentZoom - 0.1)
+
+    console.log(`[Zoom Debug] Zoom out: ${currentZoom} -> ${newZoom}`)
+    console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
+
+    // Force Vue Flow to respect our zoom limits by explicitly setting min zoom first
+    const { setMinZoom } = useVueFlow()
+    if (setMinZoom) {
+      setMinZoom(canvasStore.zoomConfig.minZoom)
+      console.log(`[Zoom Debug] Forcefully set minZoom to ${canvasStore.zoomConfig.minZoom}`)
+    }
+
+    // Use vueFlowZoomTo instead of vueFlowZoomOut to ensure we respect minZoom
+    vueFlowZoomTo(newZoom, { duration: 200 })
+
+    // Double-check that zoom was actually applied and enforce if needed
+    setTimeout(() => {
+      const actualZoom = viewport.value.zoom
+      if (actualZoom > newZoom && Math.abs(actualZoom - newZoom) > 0.01) {
+        console.log(`[Zoom Debug] Vue Flow ignored zoom request, forcing again: ${actualZoom} -> ${newZoom}`)
+        vueFlowZoomTo(newZoom, { duration: 0 })
+      }
+    }, 250)
+  })
+}
+
+// Zoom control functions
+const toggleZoomDropdown = () => {
+  showZoomDropdown.value = !showZoomDropdown.value
+}
+
+const applyZoomPreset = (zoomLevel: number) => {
+  // Validate zoom level is within bounds
+  const validatedZoom = Math.max(
+    canvasStore.zoomConfig.minZoom,
+    Math.min(canvasStore.zoomConfig.maxZoom, zoomLevel)
+  )
+
+  console.log(`[Zoom Debug] Applying preset: ${zoomLevel} (validated: ${validatedZoom})`)
+  console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
+
+  performanceManager.scheduleOperation(() => {
+    // Force Vue Flow to respect our zoom limits for presets too
+    const { setMinZoom, setMaxZoom } = useVueFlow()
+    if (setMinZoom && setMaxZoom) {
+      setMinZoom(canvasStore.zoomConfig.minZoom)
+      setMaxZoom(canvasStore.zoomConfig.maxZoom)
+      console.log(`[Zoom Debug] Forcefully set zoom limits: ${canvasStore.zoomConfig.minZoom} - ${canvasStore.zoomConfig.maxZoom}`)
+    }
+
+    vueFlowZoomTo(validatedZoom, { duration: 300 })
+    canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, validatedZoom)
+
+    // Double-check that zoom was actually applied for critical presets
+    if (validatedZoom <= 0.1) { // For 5% and 10% presets
+      setTimeout(() => {
+        const actualZoom = viewport.value.zoom
+        if (actualZoom > validatedZoom && Math.abs(actualZoom - validatedZoom) > 0.01) {
+          console.log(`[Zoom Debug] Vue Flow ignored preset zoom, forcing again: ${actualZoom} -> ${validatedZoom}`)
+          vueFlowZoomTo(validatedZoom, { duration: 0 })
+        }
+      }, 350)
+    }
+  })
+  showZoomDropdown.value = false
+}
+
+const resetZoom = () => {
+  vueFlowZoomTo(1.0, { duration: 300 })
+  canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, 1.0)
+  showZoomDropdown.value = false
+}
+>>>>>>> feature/task-project-unification
 
 // fitToContent function kept here as it needs access to taskStore
 const fitToContent = () => {
@@ -2956,7 +3083,11 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('keydown', handleKeyDown, { capture: true })
+<<<<<<< HEAD
   cleanupCanvasControls()
+=======
+  performanceManager.cleanup()
+>>>>>>> feature/task-project-unification
 })
 
 // Keyboard Deletion Test Function
@@ -3118,6 +3249,12 @@ const runKeyboardDeletionTest = async () => {
   overflow: visible; /* Allow controls to overflow at top */
 }
 
+<<<<<<< HEAD
+=======
+/* Canvas controls styles moved to CanvasControls.vue component */
+
+/* Zoom-related styles moved to CanvasControls.vue component */
+>>>>>>> feature/task-project-unification
 
 .canvas-drop-zone {
   width: 100%;
@@ -3782,129 +3919,6 @@ body.dragging-active .vue-flow__background {
   }
 }
 
-/* Keyboard Deletion Test Overlay Styles */
-.keyboard-test-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.keyboard-test-content {
-  background: var(--surface-primary);
-  border-radius: var(--border-radius-lg);
-  padding: var(--spacing-lg);
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-xl);
-}
-
-.test-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.test-header h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: var(--text-lg);
-  cursor: pointer;
-  color: var(--text-secondary);
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
-}
-
-.test-controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.test-btn {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: none;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-weight: var(--font-medium);
-  transition: all 0.2s ease;
-}
-
-.test-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.test-btn.primary {
-  background: var(--brand-primary);
-  color: white;
-}
-
-.test-btn.primary:hover:not(:disabled) {
-  background: var(--brand-primary-hover);
-}
-
-.test-status {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  text-align: center;
-}
-
-.test-results {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.result-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--border-radius-xs);
-  font-size: var(--text-sm);
-}
-
-.result-item.passed {
-  background: rgba(34, 197, 94, 0.1);
-  color: var(--text-success);
-}
-
-.result-item.failed {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--text-error);
-}
-
-.result-item.running {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--text-warning);
-}
 
 /* ====================================================================
    MINIMAL RESIZE HANDLE FIXES (work with library CSS, don't fight it)

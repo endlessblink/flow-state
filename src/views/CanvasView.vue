@@ -44,9 +44,6 @@
 
     <!-- MAIN CANVAS AREA -->
     <div class="canvas-main">
-<<<<<<< HEAD
-  
-=======
       <!-- Canvas Controls Component (Extracted) -->
       <CanvasControls
         :show-sections="showSections"
@@ -80,7 +77,6 @@
         @zoom:fit-content="fitToContent"
       />
 
->>>>>>> feature/task-project-unification
        <!-- Vue Flow Canvas -->
       <div
         @drop="handleDrop"
@@ -2408,10 +2404,6 @@ const handleDrop = (event: DragEvent) => {
   }
 }
 
-<<<<<<< HEAD
-// Canvas controls functions now managed by useCanvasControls composable
-// Performance optimization and zoom throttling handled in composable
-=======
 
 // Canvas controls
 const fitView = () => {
@@ -2503,7 +2495,6 @@ const resetZoom = () => {
   canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, 1.0)
   showZoomDropdown.value = false
 }
->>>>>>> feature/task-project-unification
 
 // fitToContent function kept here as it needs access to taskStore
 const fitToContent = () => {
@@ -3078,11 +3069,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('keydown', handleKeyDown, { capture: true })
-<<<<<<< HEAD
-  cleanupCanvasControls()
-=======
   performanceManager.cleanup()
->>>>>>> feature/task-project-unification
 })
 
 // Keyboard Deletion Test Function
@@ -3244,12 +3231,9 @@ const runKeyboardDeletionTest = async () => {
   overflow: visible; /* Allow controls to overflow at top */
 }
 
-<<<<<<< HEAD
-=======
 /* Canvas controls styles moved to CanvasControls.vue component */
 
 /* Zoom-related styles moved to CanvasControls.vue component */
->>>>>>> feature/task-project-unification
 
 .canvas-drop-zone {
   width: 100%;

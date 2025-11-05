@@ -102,8 +102,7 @@ export const useTimerStore = defineStore('timer', () => {
     const taskStore = useTaskStore()
     const task = taskStore.tasks.find(t => t.id === currentSession.value.taskId)
     const result = task?.title || 'Work Session'
-    console.log('🍅 DEBUG sessionStatusText computed:', result)
-    return result
+        return result
   })
 
   const timerPercentage = computed(() => {
@@ -111,8 +110,7 @@ export const useTimerStore = defineStore('timer', () => {
     const totalDuration = currentSession.value.duration
     const remainingTime = currentSession.value.remainingTime
     const result = Math.round(((totalDuration - remainingTime) / totalDuration) * 100)
-    console.log('🍅 DEBUG timerPercentage computed:', result)
-    return result
+        return result
   })
 
   const faviconStatus = computed(() => {
@@ -166,17 +164,7 @@ export const useTimerStore = defineStore('timer', () => {
       isBreak
     }
 
-    console.log('🍅 DEBUG: Timer session created:', {
-      id: currentSession.value.id,
-      taskId,
-      duration: sessionDuration,
-      remainingTime: sessionDuration,
-      isActive: true,
-      isPaused: false,
-      isBreak,
-      computedIsActive: isTimerActive.value
-    })
-
+    
     // Play start sound
     playStartSound()
 

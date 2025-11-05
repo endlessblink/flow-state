@@ -17,7 +17,7 @@ const router = createRouter({
       path: '/',
       name: 'board',
       component: BoardView,
-      meta: { requiresAuth: false } // Temporarily disabled for development
+      meta: { requiresAuth: true }
     },
     {
       path: '/calendar',
@@ -29,7 +29,7 @@ const router = createRouter({
       path: '/canvas',
       name: 'canvas',
       component: CanvasView,
-      meta: { requiresAuth: false } // Temporarily disabled for development
+      meta: { requiresAuth: true }
     },
     {
       path: '/calendar-test',

@@ -84,12 +84,7 @@ export function useHorizontalDragScroll(
     )
 
     if (draggableElement) {
-      console.log('🎯 [HorizontalDragScroll] Detected drag intent, allowing drag-and-drop:', {
-        element: target.tagName,
-        classes: target.className,
-        closestDraggable: draggableElement.tagName + '.' + draggableElement.className
-      })
-      return true
+            return true
     }
 
     // Check for drag handles and interactive elements within task cards
@@ -285,22 +280,18 @@ export function useHorizontalDragScroll(
     const withinTaskCard = target.closest('.task-card, .inbox-task-card')
 
     if (withinTaskCard) {
-      console.log('🎯 [HorizontalDragScroll] Within task card, completely bypassing scroll handling')
-      return // Don't interfere at all - let task card handle its own drag-and-drop
+            return // Don't interfere at all - let task card handle its own drag-and-drop
     }
 
     // Only process scroll logic if we're not within a task card
-    console.log('🔄 [HorizontalDragScroll] Outside task cards, checking drag intent')
-    const isDragIntent = detectDragIntent(target, e.clientX, e.clientY)
+        const isDragIntent = detectDragIntent(target, e.clientX, e.clientY)
 
     if (isDragIntent) {
-      console.log('🎯 [HorizontalDragScroll] Drag intent detected, allowing drag-and-drop to handle this event')
-      return // Don't interfere - let drag-and-drop handle this
+            return // Don't interfere - let drag-and-drop handle this
     }
 
     // Only interfere with scroll events if no drag intent detected and not in task card
-    console.log('🔄 [HorizontalDragScroll] No drag intent detected, handling as scroll event')
-    e.preventDefault()
+        e.preventDefault()
     e.stopPropagation()
     handleStart(e.clientX, e.clientY, target)
 

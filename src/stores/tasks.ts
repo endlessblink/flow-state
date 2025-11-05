@@ -662,19 +662,10 @@ export const useTaskStore = defineStore('tasks', () => {
       return []
     }
 
+    // Only log diagnostic info if specifically enabled for debugging
     if (shouldLogTaskDiagnostics()) {
-      console.log('🚨 TaskStore.filteredTasks: === STARTING FILTERED TASKS COMPUTATION ===')
-      console.log('🚨 TaskStore.filteredTasks: Total tasks available:', tasks.value.length)
-      console.log('🚨 TaskStore.filteredTasks: activeProjectId:', activeProjectId.value)
-      console.log('🚨 TaskStore.filteredTasks: activeSmartView:', activeSmartView.value)
-      console.log('🚨 TaskStore.filteredTasks: activeStatusFilter:', activeStatusFilter.value)
-      console.log('🚨 TaskStore.filteredTasks: hideDoneTasks:', hideDoneTasks.value)
-
-      // Log all tasks with their basic info
-      console.log('🚨 TaskStore.filteredTasks: All tasks in store:')
-      tasks.value.forEach(task => {
-        console.log(`🚨 TaskStore.filteredTasks:   - "${task.title}" (ID: ${task.id}, Status: ${task.status}, Project: ${task.projectId})`)
-      })
+      console.log('🚨 TaskStore.filteredTasks: Starting filter computation with', tasks.value.length, 'tasks')
+      console.log('🚨 TaskStore.filteredTasks: Filters - Project:', activeProjectId.value, 'SmartView:', activeSmartView.value, 'Status:', activeStatusFilter.value)
     }
 
     // Helper function to get all child projects (recursively) of a given project
@@ -728,7 +719,11 @@ export const useTaskStore = defineStore('tasks', () => {
           })
         }
 
-        filtered = filtered.filter(task => projectIds.includes(task.projectId))
+        filtered = filtered.filter(task => {
+          // Convert both to strings for comparison to handle type mismatches
+          const taskProjectId = String(task.projectId)
+          return projectIds.some(id => String(id) === taskProjectId)
+        })
 
         if (shouldLogTaskDiagnostics()) {
           console.log(`\n   Tasks after filter: ${filtered.length}`)
@@ -909,7 +904,9 @@ export const useTaskStore = defineStore('tasks', () => {
             if (activeProjectId.value) {
               try {
                 const projectIds = getChildProjectIds(activeProjectId.value)
-                if (!projectIds.includes(task.projectId)) {
+                // Convert both to strings for comparison to handle type mismatches
+                const taskProjectId = String(task.projectId)
+                if (!projectIds.some(id => String(id) === taskProjectId)) {
                   console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by project filter (projectId: ${task.projectId})`)
                   return false
                 }
@@ -1092,7 +1089,11 @@ export const useTaskStore = defineStore('tasks', () => {
         return ids
       }
       const projectIds = getChildProjectIds(activeProjectId.value)
-      doneTasks = doneTasks.filter(task => projectIds.includes(task.projectId))
+      doneTasks = doneTasks.filter(task => {
+        // Convert both to strings for comparison to handle type mismatches
+        const taskProjectId = String(task.projectId)
+        return projectIds.some(id => String(id) === taskProjectId)
+      })
     }
 
     // Apply smart view filter if active
@@ -1157,7 +1158,11 @@ export const useTaskStore = defineStore('tasks', () => {
       }
 
       const projectIds = getChildProjectIds(activeProjectId.value)
-      filtered = filtered.filter(task => projectIds.includes(task.projectId))
+      filtered = filtered.filter(task => {
+        // Convert both to strings for comparison to handle type mismatches
+        const taskProjectId = String(task.projectId)
+        return projectIds.some(id => String(id) === taskProjectId)
+      })
     }
 
     // Apply smart view filter (same logic as filteredTasks)

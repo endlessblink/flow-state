@@ -501,68 +501,14 @@ const viewMode = ref<'day' | 'week' | 'month'>('day')
 const statusFilter = computed(() => taskStore.activeStatusFilter)
 const timeGridRef = ref<HTMLElement | null>(null)
 
-// Debug function to inventory all tasks with their statuses
-const debugTaskInventory = () => {
-  console.log('🚨 CALENDAR VIEW: === TASK INVENTORY DEBUG ===')
-  console.log('🚨 CALENDAR VIEW: Total tasks in store:', taskStore.tasks.length)
-
-  const tasksByStatus = {
-    planned: taskStore.tasks.filter(t => t.status === 'planned'),
-    'in-progress': taskStore.tasks.filter(t => t.status === 'in_progress'),
-    done: taskStore.tasks.filter(t => t.status === 'done'),
-    backlog: taskStore.tasks.filter(t => t.status === 'backlog'),
-    'on_hold': taskStore.tasks.filter(t => t.status === 'on_hold')
-  }
-
-  console.log('🚨 CALENDAR VIEW: Tasks by status:')
-  Object.entries(tasksByStatus).forEach(([status, tasks]) => {
-    console.log(`🚨 CALENDAR VIEW:   ${status}: ${tasks.length} tasks`)
-    tasks.forEach(task => {
-      console.log(`🚨 CALENDAR VIEW:     - "${task.title}" (ID: ${task.id})`)
-      // Simplified - log due date instead of complex instances
-      if (task.dueDate) {
-        console.log(`🚨 CALENDAR VIEW:       Due: ${task.dueDate}`)
-      }
-    })
-  })
-
-  console.log('🚨 CALENDAR VIEW: Current filtered tasks:', taskStore.filteredTasks.length)
-  console.log('🚨 CALENDAR VIEW: Calendar filtered tasks (uncategorized-aware):', calendarFilteredTasks.value.length)
-  console.log('🚨 CALENDAR VIEW: Current calendar events:', calendarEvents.value.length)
-  console.log('🚨 CALENDAR VIEW: === END TASK INVENTORY ===')
-}
 
 // Status filter change handler using global TaskStore
 const handleStatusFilterChange = (event: MouseEvent, newFilter: 'planned' | 'in_progress' | 'done' | null) => {
   // Prevent event bubbling that might interfere with other click handlers
   event.stopPropagation()
-  console.log('🚨 CALENDAR VIEW: Status filter button clicked!')
-  console.log('🚨 CALENDAR VIEW: Previous filter:', statusFilter.value)
-  console.log('🚨 CALENDAR VIEW: New filter:', newFilter)
-  console.log('🚨 CALENDAR VIEW: Event target:', event.target)
-
-  // Show task inventory before filter change
-  debugTaskInventory()
 
   // Use global TaskStore method to set status filter
   taskStore.setActiveStatusFilter(newFilter)
-
-  console.log('🚨 CALENDAR VIEW: Filter updated via TaskStore, current value:', statusFilter.value)
-  console.log('🚨 CALENDAR VIEW: Task store filteredTasks count:', taskStore.filteredTasks.length)
-
-  // Force Vue reactivity check
-  nextTick(() => {
-    console.log('🚨 CALENDAR VIEW: After nextTick, filter value:', statusFilter.value)
-    console.log('🚨 CALENDAR VIEW: Task store filteredTasks count after tick:', taskStore.filteredTasks.length)
-    console.log('🚨 CALENDAR VIEW: Calendar events after filter:', calendarEvents.value.length)
-
-    // Show which calendar events passed the filter
-    console.log('🚨 CALENDAR VIEW: Calendar events after filter:')
-    calendarEvents.value.forEach(event => {
-      const task = taskStore.tasks.find(t => t.id === event.taskId)
-      console.log(`🚨 CALENDAR VIEW:   - "${event.title}" (Status: ${task?.status}, Task ID: ${event.taskId})`)
-    })
-  })
 }
 
 // Composables - Refactored logic into focused modules

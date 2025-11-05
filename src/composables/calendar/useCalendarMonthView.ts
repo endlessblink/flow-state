@@ -47,33 +47,12 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
           return task.status === statusFilter.value
         })
         .forEach(task => {
-          // Simplified: Show both scheduled tasks AND unscheduled inbox tasks (no complex instance system)
+          // FIXED: Only show unscheduled inbox tasks in today's cell - no auto-scheduling
+          // Calendar events are now created only through explicit user action (drag & drop)
           const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
-          const hasSchedule = task.scheduledDate && task.scheduledTime
 
-          // Case 1: Scheduled tasks - show on their scheduled date
-          if (hasSchedule && task.scheduledDate === dateString) {
-            const [hour, minute] = task.scheduledTime.split(':').map(Number)
-            const duration = task.estimatedDuration || 30
-
-            dayEvents.push({
-              id: task.id,
-              taskId: task.id,
-              title: task.title,
-              startTime: new Date(`${task.scheduledDate}T${task.scheduledTime}`),
-              endTime: new Date(new Date(`${task.scheduledDate}T${task.scheduledTime}`).getTime() + duration * 60000),
-              duration,
-              startSlot: 0,
-              slotSpan: 0,
-              color: getPriorityColor(task.priority),
-              column: 0,
-              totalColumns: 1,
-              isScheduled: true
-            })
-          }
-
-          // Case 2: Unscheduled inbox tasks - show in today's cell only
-          if (!hasSchedule && isInInbox && dateString === today) {
+          // FIXED: Unscheduled inbox tasks - show in today's cell only (no auto-scheduling)
+          if (isInInbox && dateString === today) {
             dayEvents.push({
               id: `unscheduled-${task.id}`,
               taskId: task.id,

@@ -72,6 +72,7 @@
             :active="taskStore.activeSmartView === 'today'"
             :count="todayTaskCount"
             target-type="today"
+            data-testid="view-today"
             @click="selectSmartView('today')"
           >
             <template #icon>
@@ -85,6 +86,7 @@
             :active="taskStore.activeSmartView === 'week'"
             :count="weekTaskCount"
             target-type="week"
+            data-testid="view-week"
             @click="selectSmartView('week')"
           >
             <template #icon>
@@ -179,100 +181,15 @@
     <!-- MAIN CONTENT AREA -->
     <main class="main-content" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }">
 
-      <!-- PROJECT TITLE AND TIMER -->
-      <div class="header-section">
-        <!-- USER PROFILE (Left side) -->
-        <div class="user-profile-container">
-          <UserProfile v-if="authStore.isAuthenticated" />
-        </div>
-
-        <h1 class="project-title">{{ pageTitle }}</h1>
-
-        <!-- INTEGRATED CONTROL PANEL: Clock + Timer -->
-        <div class="control-panel">
-          <!-- TIME DISPLAY - ADHD Feature #4 -->
-          <div class="time-display-container">
-            <TimeDisplay />
-          </div>
-
-          <!-- POMODORO TIMER DISPLAY -->
-          <div class="timer-container">
-          <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
-            <div class="timer-icon">
-              <!-- Animated emoticons when timer is active -->
-              <span v-if="timerStore.isTimerActive && !timerStore.currentSession?.isBreak" class="timer-emoticon active">🍅</span>
-              <span v-else-if="timerStore.isTimerActive && timerStore.currentSession?.isBreak" class="timer-emoticon active">🧎</span>
-              <!-- Static icons when timer is inactive -->
-              <Timer v-else :size="20" :stroke-width="1.5" class="timer-stroke" />
-            </div>
-            <div class="timer-info">
-              <div class="timer-time">{{ timerStore.displayTime }}</div>
-              <!-- Always render task name div to prevent layout shift -->
-              <div class="timer-task">{{ timerStore.currentTaskName || '&nbsp;' }}</div>
-            </div>
-            <div class="timer-controls">
-              <div v-if="!timerStore.currentSession" class="timer-start-options">
-                <button
-                  class="timer-btn timer-start"
-                  @click="startQuickTimer"
-                  title="Start 25-min work timer"
-                >
-                  <Play :size="16" />
-                </button>
-                <button
-                  class="timer-btn timer-break"
-                  @click="startShortBreak"
-                  title="Start 5-min break"
-                >
-                  <Coffee :size="16" :stroke-width="1.5" class="coffee-stroke" />
-                </button>
-                <button
-                  class="timer-btn timer-break"
-                  @click="startLongBreak"
-                  title="Start 15-min long break"
-                >
-                  <User :size="16" :stroke-width="1.5" class="meditation-stroke" />
-                </button>
-              </div>
-
-              <button
-                v-else-if="timerStore.isPaused"
-                class="timer-btn timer-resume"
-                @click="timerStore.resumeTimer"
-                title="Resume timer"
-              >
-                <Play :size="16" />
-              </button>
-
-              <button
-                v-else-if="timerStore.isTimerActive"
-                class="timer-btn timer-pause"
-                @click="timerStore.pauseTimer"
-                title="Pause timer"
-              >
-                <Pause :size="16" />
-              </button>
-
-              <button
-                v-if="timerStore.currentSession"
-                class="timer-btn timer-stop"
-                @click="timerStore.stopTimer"
-                title="Stop timer"
-              >
-                <Square :size="16" />
-              </button>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
+      <!-- APP HEADER (Extracted Component) -->
+      <AppHeader />
 
       <!-- VIEW TABS AND CONTROLS -->
       <div class="content-header">
         <div class="view-tabs">
-          <router-link to="/" class="view-tab" active-class="active">Board</router-link>
-          <router-link to="/calendar" class="view-tab" active-class="active">Calendar</router-link>
-          <router-link to="/canvas" class="view-tab" active-class="active">Canvas</router-link>
+          <router-link to="/" class="view-tab" active-class="active" data-testid="view-board">Board</router-link>
+          <router-link to="/calendar" class="view-tab" active-class="active" data-testid="view-calendar">Calendar</router-link>
+          <router-link to="/canvas" class="view-tab" active-class="active" data-testid="view-canvas">Canvas</router-link>
           <router-link to="/catalog" class="view-tab" active-class="active">Catalog</router-link>
           <router-link to="/quick-sort" class="view-tab" active-class="active">
             Quick Sort
@@ -409,7 +326,7 @@ import BaseNavItem from '@/components/base/BaseNavItem.vue'
 import DateDropZone from '@/components/DateDropZone.vue'
 import ProjectTreeItem from '@/components/ProjectTreeItem.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
-import TimeDisplay from '@/components/TimeDisplay.vue'
+import AppHeader from '@/components/app/AppHeader.vue'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import FaviconManager from '@/components/FaviconManager.vue'
 import DevLogController from '@/components/DevLogController.vue'
@@ -421,12 +338,11 @@ import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
 import SearchModal from '@/components/SearchModal.vue'
 import AuthModal from '@/components/auth/AuthModal.vue'
-import UserProfile from '@/components/auth/UserProfile.vue'
 import type { Task, Project } from '@/stores/tasks'
 import {
-  Play, Pause, Square, Plus, Settings,
+  Plus, Settings,
   Inbox, Bell, FileText, Archive,
-  Coffee, User, Timer, FolderOpen, ChevronDown,
+  FolderOpen, ChevronDown,
   Clock, Flag, Calendar, Edit, Trash2, Copy, Palette,
   PanelLeft, PanelLeftClose, Zap, List
 } from 'lucide-vue-next'
@@ -660,41 +576,9 @@ const uncategorizedCount = computed(() => {
   return finalCount
 })
 
-// Dynamic page title
-const pageTitle = computed(() => {
-  if (taskStore.activeSmartView === 'today') return 'Today'
-  if (taskStore.activeSmartView === 'week') return 'This Week'
-
-  if (taskStore.activeProjectId) {
-    const project = taskStore.projects.find(p => p.id === taskStore.activeProjectId)
-    return project ? project.name : 'My Tasks'
-  }
-
-  return 'Board'
-})
-
 // Theme toggle - using new cohesive design system
 const toggleDarkMode = () => {
   toggleTheme()
-}
-
-// Timer methods
-const startQuickTimer = () => {
-  console.log('🍅 DEBUG: startQuickTimer called - starting general timer')
-  // Start a general 25-minute timer (no specific task)
-  timerStore.startTimer('general')
-}
-
-const startShortBreak = () => {
-  console.log('🍅 DEBUG: startShortBreak called - starting short break timer')
-  // Start a 5-minute break timer
-  timerStore.startTimer('short-break', timerStore.settings.shortBreakDuration, true)
-}
-
-const startLongBreak = () => {
-  console.log('🍅 DEBUG: startLongBreak called - starting long break timer')
-  // Start a 15-minute long break timer
-  timerStore.startTimer('long-break', timerStore.settings.longBreakDuration, true)
 }
 
 // Task management methods

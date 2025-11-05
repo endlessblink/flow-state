@@ -173,19 +173,51 @@ const inboxTasks = computed(() => {
 
   
   const filtered = allTasks.filter(task => {
-    // SIMPLIFIED: Check if task is in inbox (not scheduled on calendar)
-    const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
+    // Helper function to normalize date to YYYY-MM-DD format
+    const normalizeDate = (dateStr: string | undefined | null): string | null => {
+      if (!dateStr) return null
 
-    // Filter logic based on current selection - simplified for dueDate only
+      try {
+        // Handle YYYY-MM-DD format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          return dateStr
+        }
+
+        // Handle DD/MM/YYYY format
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+          const [day, month, year] = dateStr.split('/')
+          return `${year}-${month}-${day}`
+        }
+
+        // Try to parse as date and format
+        const date = new Date(dateStr)
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0]
+        }
+      } catch (error) {
+        console.warn('Failed to normalize date:', dateStr, error)
+      }
+
+      return null
+    }
+
+    // SIMPLIFIED: Check if task is in inbox (not scheduled on calendar)
+    // More permissive inbox logic - include tasks unless explicitly marked as not in inbox
+    const isInInbox = task.isInInbox !== false
+
+    // Get normalized due date
+    const normalizedDueDate = normalizeDate(task.dueDate)
+
+    // Filter logic based on current selection
     let passesFilter = false
     switch (currentFilter.value) {
       case 'today': {
         const todayStr = new Date().toISOString().split('T')[0]
-        passesFilter = task.dueDate === todayStr && isInInbox
+        passesFilter = normalizedDueDate === todayStr && isInInbox
         break
       }
       case 'unscheduled':
-        passesFilter = !task.dueDate && isInInbox
+        passesFilter = !normalizedDueDate && isInInbox
         break
       case 'notOnCanvas':
         passesFilter = !task.canvasPosition && isInInbox
@@ -197,13 +229,14 @@ const inboxTasks = computed(() => {
         passesFilter = isInInbox
         break
       default:
-        passesFilter = !task.dueDate && isInInbox
+        passesFilter = !normalizedDueDate && isInInbox
     }
 
     // Debug: Log filter reasoning
     console.log(`🔍 [${currentFilter.value}] Task "${task.title}":`, {
       passesFilter,
-      dueDate: task.dueDate,
+      originalDueDate: task.dueDate,
+      normalizedDueDate,
       status: task.status,
       canvasPosition: !!task.canvasPosition,
       isInInbox

@@ -60,37 +60,12 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
     weekDays.value.forEach((day, dayIndex) => {
       const dayEvents: WeekEvent[] = []
 
-      // Use filtered tasks to respect active status filter
-      taskStore.filteredTasks.forEach(task => {
-        // SIMPLIFIED: Only check if task is due on this day - no complex instance system
-        const isDueOnDay = task.dueDate && task.dueDate === day.dateString
+      // FIXED: No longer automatically create calendar events for tasks due on this day
+      // Tasks should only appear in calendar inbox until manually scheduled by user
+      // Calendar events are now created only through explicit user action (drag & drop)
 
-        if (isDueOnDay) {
-          // Create a simple deadline event at 9:00 AM
-          const startTime = new Date(`${day.dateString}T09:00:00`)
-          const duration = task.estimatedDuration || 60 // Default 1 hour for due tasks
-          const endTime = new Date(startTime.getTime() + duration * 60000)
-
-          const startSlot = (9 - 6) * 2 // 9:00 AM slot = 6 slots after 6 AM start
-          const slotSpan = Math.ceil(duration / 30)
-
-          dayEvents.push({
-            id: task.id,
-            taskId: task.id,
-            title: task.title,
-            startTime,
-            endTime,
-            duration,
-            startSlot,
-            slotSpan,
-            color: getPriorityColor(task.priority),
-            column: 0,
-            totalColumns: 1,
-            dayIndex,
-            isDueDate: true // Custom flag to distinguish due date tasks
-          })
-        }
-      })
+      // Note: dayEvents array will be populated by manual scheduling actions only
+      // Tasks with dueDate but no explicit scheduling will stay in the inbox
 
       // Calculate overlapping positions for this day
       eventsByDay[dayIndex] = calculateOverlappingPositions(dayEvents)

@@ -55,12 +55,10 @@ export function useCanvasContextMenus() {
     selectedTask.value = data?.task || null
     selectedSection.value = data?.section || null
     showCanvasContextMenu.value = true
-    console.log('📋 Canvas context menu opened:', { x, y, data })
   }
 
   const closeCanvasContextMenu = () => {
     showCanvasContextMenu.value = false
-    console.log('📋 Canvas context menu closed')
   }
 
   // Edge Context Menu methods
@@ -71,13 +69,11 @@ export function useCanvasContextMenus() {
     showEdgeContextMenu.value = true
     closeCanvasContextMenu()
     closeNodeContextMenu()
-    console.log('📋 Edge context menu opened:', { x, y, edge })
   }
 
   const closeEdgeContextMenu = () => {
     showEdgeContextMenu.value = false
     selectedEdge.value = null
-    console.log('📋 Edge context menu closed')
   }
 
   // Node Context Menu methods
@@ -88,13 +84,11 @@ export function useCanvasContextMenus() {
     showNodeContextMenu.value = true
     closeCanvasContextMenu()
     closeEdgeContextMenu()
-    console.log('📋 Node context menu opened:', { x, y, node })
   }
 
   const closeNodeContextMenu = () => {
     showNodeContextMenu.value = false
     selectedNode.value = null
-    console.log('📋 Node context menu closed')
   }
 
   // Close all context menus
@@ -108,12 +102,6 @@ export function useCanvasContextMenus() {
   const getCanvasCoordinates = (screenX: number, screenY: number, viewport: any, rect: DOMRect) => {
     const canvasX = (screenX - rect.left - viewport.x) / viewport.zoom
     const canvasY = (screenY - rect.top - viewport.y) / viewport.zoom
-
-    console.log('📐 Converting screen coordinates to canvas:', {
-      screenCoords: { x: screenX, y: screenY },
-      viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom },
-      canvasCoords: { x: canvasX, y: canvasY }
-    })
 
     return { x: canvasX, y: canvasY }
   }

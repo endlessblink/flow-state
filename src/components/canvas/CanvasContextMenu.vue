@@ -191,12 +191,15 @@ const showLayoutSubmenu = ref(false)
 const submenuTimeout = ref<number | null>(null)
 const submenuPosition = ref({ flipHorizontal: false, adjustVertical: 0 })
 
-const menuPosition = computed(() => ({
-  position: 'fixed',
-  left: `${props.x}px`,
-  top: `${props.y}px`,
-  zIndex: 99999
-}))
+const menuPosition = computed(() => {
+  console.log('🔧 CanvasContextMenu - Positioning menu at:', props.x, props.y, 'Visible:', props.isVisible)
+  return {
+    position: 'fixed',
+    left: `${props.x}px`,
+    top: `${props.y}px`,
+    zIndex: 999999
+  }
+})
 
 // Close menu on click outside
 const handleClickOutside = (event: MouseEvent) => {
@@ -347,7 +350,7 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-md);
   padding: var(--space-2) 0;
   min-width: 240px;
-  z-index: 99999 !important;
+  z-index: 999999 !important;
   animation: menuSlideIn var(--duration-fast) var(--spring-bounce);
 }
 

@@ -142,6 +142,7 @@
           @pane-context-menu="handlePaneContextMenu"
           @node-context-menu="handleNodeContextMenu"
           @edge-context-menu="handleEdgeContextMenu"
+          @edge-double-click="handleEdgeDoubleClick"
           @connect="handleConnect"
           @connect-start="handleConnectStart"
           @connect-end="handleConnectEnd"
@@ -189,6 +190,7 @@
           <TaskNode
             :task="nodeProps.data.task"
             :is-selected="canvasStore.selectedNodeIds.includes(nodeProps.data.task.id)"
+            :is-connecting="isConnecting"
             :multi-select-mode="canvasStore.multiSelectMode"
             :show-priority="canvasStore.showPriorityIndicator"
             :show-status="canvasStore.showStatusBadge"
@@ -294,24 +296,8 @@
       @arrangeInGrid="arrangeInGrid"
     />
 
-    <!-- Edge Context Menu -->
-    <EdgeContextMenu
-      :is-visible="showEdgeContextMenu"
-      :x="edgeContextMenuX"
-      :y="edgeContextMenuY"
-      @close="closeEdgeContextMenu"
-      @disconnect="disconnectEdge"
-    />
-
-    <!-- Node Context Menu (for sections) -->
-    <EdgeContextMenu
-      :is-visible="showNodeContextMenu"
-      :x="nodeContextMenuX"
-      :y="nodeContextMenuY"
-      menu-text="Delete Section"
-      @close="closeNodeContextMenu"
-      @disconnect="deleteNode"
-    />
+    <!-- Unified Context Menus -->
+    <CanvasContextMenus ref="canvasContextMenusRef" />
 
     <!-- Resize Preview Overlay - FIXED positioning -->
     <div
@@ -348,6 +334,8 @@ import { useUIStore } from '@/stores/ui'
 import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useCanvasPerformance } from '@/composables/useCanvasPerformance'
+import { useCanvasControls } from '@/composables/canvas/useCanvasControls'
+import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import InboxPanel from '@/components/canvas/InboxPanel.vue'
 import CanvasControls from '@/components/canvas/CanvasControls.vue'
@@ -359,7 +347,7 @@ import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import BatchEditModal from '@/components/BatchEditModal.vue'
 import MultiSelectionOverlay from '@/components/canvas/MultiSelectionOverlay.vue'
 import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
-import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
+import CanvasContextMenus from '@/components/canvas/context-menus/CanvasContextMenus.vue'
 import GroupModal from '@/components/GroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import SectionWizard from '@/components/canvas/SectionWizard.vue'
@@ -383,6 +371,54 @@ const { filterTasksForRegularViews } = useUncategorizedTasks()
 
 // Canvas performance composable
 const { performanceManager, shouldCullNode } = useCanvasPerformance()
+
+// Canvas context menus composable
+const {
+  // State
+  showCanvasContextMenu,
+  canvasContextMenuX,
+  canvasContextMenuY,
+  showEdgeContextMenu,
+  edgeContextMenuX,
+  edgeContextMenuY,
+  showNodeContextMenu,
+  nodeContextMenuX,
+  nodeContextMenuY,
+  selectedNode,
+  selectedEdge,
+  selectedTask,
+  selectedSection,
+
+  // Canvas Context Menu methods
+  openCanvasContextMenu,
+  closeCanvasContextMenu,
+
+  // Edge Context Menu methods
+  openEdgeContextMenu,
+  closeEdgeContextMenu,
+
+  // Node Context Menu methods
+  openNodeContextMenu,
+  closeNodeContextMenu,
+
+  // Utility methods
+  closeAllContextMenus,
+  getCanvasCoordinates
+} = useCanvasContextMenus()
+
+// Canvas controls composable
+const {
+  showZoomDropdown,
+  zoomPresets,
+  fitView,
+  zoomIn,
+  zoomOut,
+  zoomTo,
+  resetZoom,
+  fitToContent,
+  toggleZoomDropdown,
+  applyZoomPreset
+} = useCanvasControls()
 
 if (import.meta.env.DEV) {
   ;(window as any).__canvasStore = canvasStore
@@ -429,7 +465,7 @@ if (import.meta.env.DEV) {
 
 // Task Edit Modal state
 const isEditModalOpen = ref(false)
-const selectedTask = ref<Task | null>(null)
+// selectedTask is imported from useCanvasContextMenus composable
 
 // Keyboard Test state
 const showKeyboardTest = ref(false)
@@ -445,26 +481,14 @@ const quickTaskPosition = ref({ x: 0, y: 0 })
 const isBatchEditModalOpen = ref(false)
 const batchEditTaskIds = ref<string[]>([])
 
-// Canvas Context Menu state
-const showCanvasContextMenu = ref(false)
-const canvasContextMenuX = ref(0)
-const canvasContextMenuY = ref(0)
+// Canvas Context Menu state - imported from useCanvasContextMenus composable
+// showCanvasContextMenu, canvasContextMenuX, canvasContextMenuY are from composable
 const canvasContextSection = ref<any>(null)
 
 // Connection state tracking
 const isConnecting = ref(false)
 
-// Edge Context Menu state
-const showEdgeContextMenu = ref(false)
-const edgeContextMenuX = ref(0)
-const edgeContextMenuY = ref(0)
-const selectedEdge = ref<any>(null)
 
-// Node Context Menu state (for sections)
-const showNodeContextMenu = ref(false)
-const nodeContextMenuX = ref(0)
-const nodeContextMenuY = ref(0)
-const selectedNode = ref<any>(null)
 
 // Group Modal state
 const isGroupModalOpen = ref(false)
@@ -484,17 +508,6 @@ const showSections = ref(true)
 const activeSectionId = ref<string | null>(null)
 const showSectionTypeDropdown = ref(false)
 
-// Zoom state
-const showZoomDropdown = ref(false)
-const zoomPresets = [
-  { label: '5%', value: 0.05 },
-  { label: '10%', value: 0.10 },
-  { label: '25%', value: 0.25 },
-  { label: '50%', value: 0.50 },
-  { label: '100%', value: 1.0 },
-  { label: '200%', value: 2.0 },
-  { label: '400%', value: 4.0 }
-]
 
 // Computed properties
 const sections = computed(() => canvasStore.sections)
@@ -620,7 +633,7 @@ const nodeTypes = markRaw({
 })
 
 // Get Vue Flow instance methods
-const { fitView: vueFlowFitView, zoomIn: vueFlowZoomIn, zoomOut: vueFlowZoomOut, zoomTo: vueFlowZoomTo, viewport, getSelectedNodes, getNodes, findNode } = useVueFlow()
+const { fitView: vueFlowFitView, zoomIn: vueFlowZoomIn, zoomOut: vueFlowZoomOut, zoomTo: vueFlowZoomTo, viewport, getSelectedNodes, getNodes, findNode, project } = useVueFlow()
 
 // Get nodesInitialized composable - tracks when all nodes have measured dimensions
 const nodesInitialized = useNodesInitialized()
@@ -1564,14 +1577,17 @@ const handleCanvasRightClick = (event: MouseEvent) => {
   }
 
   // Show menu for all other clicks (empty space)
+  // Use screen coordinates directly for position: fixed context menu
+  // The project function is used for node positioning, but context menu needs screen coords
   canvasContextMenuX.value = event.clientX
   canvasContextMenuY.value = event.clientY
   showCanvasContextMenu.value = true
-  console.log('🎯 Canvas right-click at:', event.clientX, event.clientY)
+  console.log('🎯 Canvas right-click at screen coordinates:', event.clientX, event.clientY)
+  console.log('🎯 Context menu state - X:', canvasContextMenuX.value, 'Y:', canvasContextMenuY.value, 'Visible:', showCanvasContextMenu.value)
 }
 
-// Canvas context menu handlers
-const closeCanvasContextMenu = () => {
+// Canvas context menu handlers - local implementations with custom behavior
+const closeCanvasContextMenuLocal = () => {
   console.log('🔧 CanvasView: Closing context menu, resetting canvasContextSection')
   showCanvasContextMenu.value = false
   canvasContextSection.value = null // Reset context section so "Create Custom Group" appears
@@ -1802,10 +1818,7 @@ const handleNodeContextMenu = (event: { event: MouseEvent; node: any }) => {
   closeEdgeContextMenu()
 }
 
-const closeNodeContextMenu = () => {
-  showNodeContextMenu.value = false
-  selectedNode.value = null
-}
+// closeNodeContextMenu is imported from useCanvasContextMenus composable
 
 const deleteNode = () => {
   if (!selectedNode.value) {
@@ -1841,17 +1854,15 @@ const deleteNode = () => {
 // Edge context menu handlers
 const handleEdgeContextMenu = (event: { event: MouseEvent; edge: any }) => {
   event.event.preventDefault()
-  edgeContextMenuX.value = event.event.clientX
-  edgeContextMenuY.value = event.event.clientY
-  selectedEdge.value = event.edge
-  showEdgeContextMenu.value = true
+  openEdgeContextMenu(event.event.clientX, event.event.clientY, event.edge)
   closeCanvasContextMenu()
   closeNodeContextMenu()
 }
 
-const closeEdgeContextMenu = () => {
-  showEdgeContextMenu.value = false
-  selectedEdge.value = null
+// Edge double-click handler - disconnect edges
+const handleEdgeDoubleClick = (event: { edge: any }) => {
+  selectedEdge.value = event.edge
+  disconnectEdge()
 }
 
 const disconnectEdge = () => {
@@ -2358,130 +2369,6 @@ const handleDrop = (event: DragEvent) => {
 }
 
 
-// Canvas controls
-const fitView = () => {
-  vueFlowFitView({ padding: 0.2, duration: 300 })
-}
-
-const zoomIn = () => {
-  if (performanceManager.shouldThrottleZoom()) return
-
-  performanceManager.scheduleOperation(() => {
-    vueFlowZoomIn({ duration: 200 })
-  })
-}
-
-const zoomOut = () => {
-  if (performanceManager.shouldThrottleZoom()) return
-
-  performanceManager.scheduleOperation(() => {
-    const currentZoom = viewport.value.zoom
-    let newZoom = Math.max(canvasStore.zoomConfig.minZoom, currentZoom - 0.1)
-
-    console.log(`[Zoom Debug] Zoom out: ${currentZoom} -> ${newZoom}`)
-    console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
-
-    // Force Vue Flow to respect our zoom limits by explicitly setting min zoom first
-    const { setMinZoom } = useVueFlow()
-    if (setMinZoom) {
-      setMinZoom(canvasStore.zoomConfig.minZoom)
-      console.log(`[Zoom Debug] Forcefully set minZoom to ${canvasStore.zoomConfig.minZoom}`)
-    }
-
-    // Use vueFlowZoomTo instead of vueFlowZoomOut to ensure we respect minZoom
-    vueFlowZoomTo(newZoom, { duration: 200 })
-
-    // Double-check that zoom was actually applied and enforce if needed
-    setTimeout(() => {
-      const actualZoom = viewport.value.zoom
-      if (actualZoom > newZoom && Math.abs(actualZoom - newZoom) > 0.01) {
-        console.log(`[Zoom Debug] Vue Flow ignored zoom request, forcing again: ${actualZoom} -> ${newZoom}`)
-        vueFlowZoomTo(newZoom, { duration: 0 })
-      }
-    }, 250)
-  })
-}
-
-// Zoom control functions
-const toggleZoomDropdown = () => {
-  showZoomDropdown.value = !showZoomDropdown.value
-}
-
-const applyZoomPreset = (zoomLevel: number) => {
-  // Validate zoom level is within bounds
-  const validatedZoom = Math.max(
-    canvasStore.zoomConfig.minZoom,
-    Math.min(canvasStore.zoomConfig.maxZoom, zoomLevel)
-  )
-
-  console.log(`[Zoom Debug] Applying preset: ${zoomLevel} (validated: ${validatedZoom})`)
-  console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
-
-  performanceManager.scheduleOperation(() => {
-    // Force Vue Flow to respect our zoom limits for presets too
-    const { setMinZoom, setMaxZoom } = useVueFlow()
-    if (setMinZoom && setMaxZoom) {
-      setMinZoom(canvasStore.zoomConfig.minZoom)
-      setMaxZoom(canvasStore.zoomConfig.maxZoom)
-      console.log(`[Zoom Debug] Forcefully set zoom limits: ${canvasStore.zoomConfig.minZoom} - ${canvasStore.zoomConfig.maxZoom}`)
-    }
-
-    vueFlowZoomTo(validatedZoom, { duration: 300 })
-    canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, validatedZoom)
-
-    // Double-check that zoom was actually applied for critical presets
-    if (validatedZoom <= 0.1) { // For 5% and 10% presets
-      setTimeout(() => {
-        const actualZoom = viewport.value.zoom
-        if (actualZoom > validatedZoom && Math.abs(actualZoom - validatedZoom) > 0.01) {
-          console.log(`[Zoom Debug] Vue Flow ignored preset zoom, forcing again: ${actualZoom} -> ${validatedZoom}`)
-          vueFlowZoomTo(validatedZoom, { duration: 0 })
-        }
-      }, 350)
-    }
-  })
-  showZoomDropdown.value = false
-}
-
-const resetZoom = () => {
-  vueFlowZoomTo(1.0, { duration: 300 })
-  canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, 1.0)
-  showZoomDropdown.value = false
-}
-
-const fitToContent = () => {
-  const tasks = taskStore.tasksWithCanvasPosition
-  if (!tasks || !tasks.length) {
-    resetZoom()
-    return
-  }
-
-  const contentBounds = canvasStore.calculateContentBounds(tasks)
-  const centerX = (contentBounds.minX + contentBounds.maxX) / 2
-  const centerY = (contentBounds.minY + contentBounds.maxY) / 2
-
-  // Calculate zoom to fit content with padding
-  const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
-  if (vueFlowElement) {
-    const rect = vueFlowElement.getBoundingClientRect()
-    const contentWidth = contentBounds.maxX - contentBounds.minX
-    const contentHeight = contentBounds.maxY - contentBounds.minY
-
-    const zoomX = (rect.width * 0.8) / contentWidth
-    const zoomY = (rect.height * 0.8) / contentHeight
-    const targetZoom = Math.min(zoomX, zoomY, canvasStore.zoomConfig.maxZoom)
-
-    vueFlowZoomTo(targetZoom, { duration: 400 })
-    // Center the content
-    setTimeout(() => {
-      const panX = rect.width / 2 - centerX * targetZoom
-      const panY = rect.height / 2 - centerY * targetZoom
-      canvasStore.setViewportWithHistory(panX, panY, targetZoom)
-    }, 200)
-  }
-
-  showZoomDropdown.value = false
-}
 
 // Hide done tasks toggle
 const handleToggleDoneTasks = (event: MouseEvent) => {

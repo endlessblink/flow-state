@@ -62,71 +62,20 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
 
   // Generate calendar events with overlap positioning
   const calendarEvents = computed<CalendarEvent[]>(() => {
-    console.log('🚨 useCalendarDayView: === COMPUTING CALENDAR EVENTS ===')
-    console.log('🚨 useCalendarDayView: Current date:', currentDate.value.toISOString().split('T')[0])
-    console.log('🚨 useCalendarDayView: Status filter:', statusFilter.value)
-    console.log('🚨 useCalendarDayView: Total filtered tasks from store:', taskStore.filteredTasks.length)
-
     const dateStr = currentDate.value.toISOString().split('T')[0]
     const events: CalendarEvent[] = []
 
-    console.log('🚨 useCalendarDayView: Processing filtered tasks for calendar instances...')
-
     // Use filtered tasks to respect active status filter
     const allTasks = taskStore.filteredTasks
-    console.log(`🚨 useCalendarDayView: Processing ${allTasks.length} filtered tasks for calendar instances`)
 
-    allTasks.forEach(task => {
-      console.log(`🚨 useCalendarDayView: Processing task "${task.title}" (ID: ${task.id})`)
+    // FIXED: No longer automatically create calendar events for tasks due today
+    // Tasks should only appear in calendar inbox until manually scheduled by user
+    // Calendar events are now created only through explicit user action (drag & drop)
 
-      // SIMPLIFIED: Only check if task is due on current date - no complex instance system
-      const isDueToday = task.dueDate && formatDateKey(new Date(task.dueDate)) === dateStr
-
-      console.log(`🚨 useCalendarDayView: Task "${task.title}" - dueDate: ${task.dueDate}, isDueToday: ${isDueToday}`)
-
-      // SIMPLIFIED: Only create calendar events for tasks due today
-      if (isDueToday) {
-        console.log(`🚨 useCalendarDayView: Creating DUE DATE event for "${task.title}"`)
-
-        // Create a simple deadline event at 9:00 AM
-        const startTime = new Date(`${dateStr}T09:00:00`)
-        const duration = task.estimatedDuration || 60 // Default 1 hour for due tasks
-        const endTime = new Date(startTime.getTime() + duration * 60000)
-
-        const startSlot = 18 // 9:00 AM slot (9 * 2)
-        const slotSpan = Math.ceil(duration / 30)
-
-        events.push({
-          id: task.id,
-          taskId: task.id,
-          title: task.title,
-          startTime,
-          endTime,
-          duration,
-          startSlot,
-          slotSpan,
-          color: getPriorityColor(task.priority),
-          column: 0,
-          totalColumns: 1,
-          isDueDate: true // Custom flag to distinguish due date tasks
-        })
-      }
-    })
-
-    console.log('🚨 useCalendarDayView: Generated events before positioning:', events.length)
-    console.log('🚨 useCalendarDayView: Events details:', events.map(e => ({
-      id: e.id,
-      taskId: e.taskId,
-      title: e.title,
-      startTime: e.startTime,
-      endTime: e.endTime,
-      status: taskStore.tasks.find(t => t.id === e.taskId)?.status
-    })))
+    // Note: This array will be populated by manual scheduling actions only
+    // Tasks with dueDate but no explicit scheduling will stay in the inbox
 
     const positionedEvents = calculateOverlappingPositions(events)
-    console.log('🚨 useCalendarDayView: Final positioned events:', positionedEvents.length)
-    console.log('🚨 useCalendarDayView: === END CALENDAR EVENTS COMPUTATION ===')
-
     return positionedEvents
   })
 
@@ -277,24 +226,14 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     console.log(`🎯 CALENDAR DROP: Task inbox status before:`, task?.isInInbox)
     console.log(`🎯 CALENDAR DROP: Task instances before:`, task?.instances?.length || 0)
 
-    // Create task instance and update task to remove from inbox
-    const instance = taskStore.createTaskInstance(taskId, {
+    // Update task with scheduled date and time, and remove from inbox
+    console.log(`🎯 CALENDAR DROP: Updating task with scheduled date ${slot.date} and time ${timeStr}`)
+    taskStore.updateTask(taskId, {
       scheduledDate: slot.date,
-      scheduledTime: timeStr
+      scheduledTime: timeStr,
+      isInInbox: false // Task is now scheduled, no longer in inbox
     })
-
-    // If instance was created successfully, update task to remove from inbox
-    if (instance) {
-      console.log(`🎯 CALENDAR DROP: Instance created successfully:`, instance.id)
-      if (task) {
-        taskStore.updateTask(taskId, {
-          isInInbox: false // Task is now scheduled, no longer in inbox
-        })
-        console.log(`🎯 CALENDAR DROP: Task inbox status after:`, task.isInInbox)
-      }
-    } else {
-      console.log(`🎯 CALENDAR DROP: Failed to create instance for task ${taskId}`)
-    }
+    console.log(`🎯 CALENDAR DROP: Task updated successfully with schedule`)
 
     dragGhost.value.visible = false
   }

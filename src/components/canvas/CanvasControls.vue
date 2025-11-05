@@ -5,13 +5,7 @@
 -->
 <template>
   <div class="canvas-controls">
-    <!-- Test Controls (Temporary) -->
-    <div class="control-group">
-      <button @click="$emit('test:keyboard')" class="control-btn" title="Test Keyboard Deletion">
-        <PlayCircle :size="16" />
-      </button>
-    </div>
-
+  
     <!-- Section Controls -->
     <div class="control-group">
       <button
@@ -180,8 +174,8 @@
 
 <script setup lang="ts">
 import {
-  PlayCircle,
-  Grid3X3,
+    PlayCircle,
+    Grid3X3,
   Plus,
   AlertTriangle,
   Flag,

@@ -1,38 +1,39 @@
 <template>
   <!-- PROJECT TITLE AND TIMER -->
-  <div class="header-section">
+  <div class="header-section" data-testid="app-header" @keydown="handleTimerKeydown" tabindex="0">
     <!-- USER PROFILE (Left side) -->
-    <div class="user-profile-container">
-      <UserProfile v-if="isAuthenticated" />
+    <div class="user-profile-container" data-testid="user-profile-container">
+      <UserProfile v-if="isAuthenticated" data-testid="user-profile" />
     </div>
 
-    <h1 class="project-title">{{ pageTitle }}</h1>
+    <h1 class="project-title" data-testid="project-title">{{ pageTitle }}</h1>
 
     <!-- INTEGRATED CONTROL PANEL: Clock + Timer -->
-    <div class="control-panel">
+    <div class="control-panel" data-testid="control-panel">
       <!-- TIME DISPLAY - ADHD Feature #4 -->
-      <div class="time-display-container">
-        <TimeDisplay />
+      <div class="time-display-container" data-testid="time-display-container">
+        <TimeDisplay data-testid="time-display" />
       </div>
 
       <!-- POMODORO TIMER DISPLAY -->
-      <div class="timer-container">
-        <div class="timer-display" :class="timerClasses">
-          <div class="timer-icon">
+      <div class="timer-container" data-testid="timer-container">
+        <div class="timer-display" :class="timerClasses" data-testid="timer-display">
+          <div class="timer-icon" data-testid="timer-icon">
             <!-- Animated emoticons when timer is active -->
             <span v-if="timerIcon" class="timer-emoticon active">{{ timerIcon }}</span>
             <!-- Static icons when timer is inactive -->
             <Timer v-else :size="20" :stroke-width="1.5" class="timer-stroke" />
           </div>
           <div class="timer-info">
-            <div class="timer-time">{{ timerDisplayTime }}</div>
+            <div class="timer-time" data-testid="timer-time">{{ timerDisplayTime }}</div>
             <!-- Always render task name div to prevent layout shift -->
-            <div class="timer-task">{{ currentTaskName }}</div>
+            <div class="timer-task" data-testid="timer-task">{{ currentTaskName }}</div>
           </div>
           <div class="timer-controls">
             <div v-if="!currentSession" class="timer-start-options">
               <button
                 class="timer-btn timer-start"
+                data-testid="timer-start-btn"
                 @click="startQuickTimer"
                 title="Start 25-min work timer"
               >
@@ -40,6 +41,7 @@
               </button>
               <button
                 class="timer-btn timer-break"
+                data-testid="timer-short-break-btn"
                 @click="startShortBreak"
                 title="Start 5-min break"
               >
@@ -47,6 +49,7 @@
               </button>
               <button
                 class="timer-btn timer-break"
+                data-testid="timer-long-break-btn"
                 @click="startLongBreak"
                 title="Start 15-min long break"
               >
@@ -57,6 +60,7 @@
             <button
               v-else-if="isTimerPaused"
               class="timer-btn timer-resume"
+              data-testid="timer-resume-btn"
               @click="resumeTimer"
               title="Resume timer"
             >
@@ -66,6 +70,7 @@
             <button
               v-else-if="isTimerActive"
               class="timer-btn timer-pause"
+              data-testid="timer-pause-btn"
               @click="pauseTimer"
               title="Pause timer"
             >
@@ -75,6 +80,7 @@
             <button
               v-if="currentSession"
               class="timer-btn timer-stop"
+              data-testid="timer-stop-btn"
               @click="stopTimer"
               title="Stop timer"
             >
@@ -89,38 +95,51 @@
 
 <script setup lang="ts">
 import { useAppHeader } from '@/composables/app/useAppHeader'
-import { useTimerStore } from '@/stores/timer'
-import UserProfile from '@/components/UserProfile.vue'
+import UserProfile from '@/components/auth/UserProfile.vue'
 import TimeDisplay from '@/components/TimeDisplay.vue'
 import {
   Timer, Play, Pause, Square, Coffee, User
 } from 'lucide-vue-next'
 
-// Use app header composable
+/**
+ * AppHeader Component
+ *
+ * Extracted header functionality from App.vue including:
+ * - User profile integration
+ * - Dynamic project title display
+ * - Timer display and controls
+ * - Time display integration
+ * - Glass morphism styling
+ *
+ * This component handles all header-related UI and state management
+ * through the useAppHeader composable.
+ */
+
+// Use the header composable for all state and logic
 const {
-  // Computed properties
+  // State
   pageTitle,
-  timerDisplayTime,
-  currentTaskName,
+  isAuthenticated,
   isTimerActive,
   isTimerPaused,
+  isBreakSession,
+  currentTaskName,
+  timerDisplayTime,
   currentSession,
   timerIcon,
   timerClasses,
-  isAuthenticated,
 
-  // Timer control methods
+  // Timer Control Methods
   startQuickTimer,
   startShortBreak,
-  startLongBreak
+  startLongBreak,
+  resumeTimer,
+  pauseTimer,
+  stopTimer,
+
+  // Event Handlers
+  handleTimerKeydown
 } = useAppHeader()
-
-// Direct timer store access for pause/resume/stop operations
-const timerStore = useTimerStore()
-
-const resumeTimer = () => timerStore.resumeTimer()
-const pauseTimer = () => timerStore.pauseTimer()
-const stopTimer = () => timerStore.stopTimer()
 </script>
 
 <style scoped>

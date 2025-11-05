@@ -374,12 +374,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
-<<<<<<< HEAD
-import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
-import { useCanvasControls } from '@/composables/canvas/useCanvasControls'
-=======
 import { useCanvasPerformance } from '@/composables/useCanvasPerformance'
->>>>>>> feature/task-project-unification
 import { getUndoSystem } from '@/composables/undoSingleton'
 import InboxPanel from '@/components/canvas/InboxPanel.vue'
 import CanvasControls from '@/components/canvas/CanvasControls.vue'

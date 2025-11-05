@@ -130,7 +130,6 @@
           :min-zoom="0.05"
           :max-zoom="4.0"
           :fit-view-on-init="false"
-          :connect-on-drag-nodes="false"
           :zoom-scroll-sensitivity="1.0"
           :zoom-activation-key-code="null"
           :prevent-scrolling="true"
@@ -143,7 +142,6 @@
           @pane-context-menu="handlePaneContextMenu"
           @node-context-menu="handleNodeContextMenu"
           @edge-context-menu="handleEdgeContextMenu"
-          @edgeDoubleClick="handleEdgeDoubleClick"
           @connect="handleConnect"
           @connect-start="handleConnectStart"
           @connect-end="handleConnectEnd"
@@ -196,46 +194,11 @@
             :show-status="canvasStore.showStatusBadge"
             :show-duration="canvasStore.showDurationBadge"
             :show-schedule="canvasStore.showScheduleBadge"
-            :is-connecting="isConnecting"
             @edit="handleEditTask"
             @select="handleTaskSelect"
             @context-menu="handleTaskContextMenu"
           />
         </template>
-
-        <!-- SVG markers for connection arrows -->
-        <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
-          <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="3"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
-              <polygon
-                points="0 0, 10 3, 0 6"
-                fill="var(--border-secondary)"
-              />
-            </marker>
-            <marker
-              id="arrowhead-hover"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="3"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
-              <polygon
-                points="0 0, 10 3, 0 6"
-                fill="var(--color-navigation)"
-              />
-            </marker>
-          </defs>
-        </svg>
       </VueFlow>
       </div>
     </div>
@@ -262,7 +225,14 @@
       @close="closeEditModal"
     />
 
-  
+    <!-- Quick Task Create Modal -->
+    <QuickTaskCreateModal
+      :is-open="isQuickTaskCreateOpen"
+      :loading="false"
+      @cancel="closeQuickTaskCreate"
+      @create="handleQuickTaskCreate"
+    />
+
     <!-- Batch Edit Modal -->
     <BatchEditModal
       :is-open="isBatchEditModalOpen"
@@ -297,25 +267,15 @@
       @save="handleGroupEditSave"
     />
 
-    <!-- Canvas Context Menus -->
-    <CanvasContextMenus
+    <!-- Canvas Context Menu -->
+    <CanvasContextMenu
       :is-visible="showCanvasContextMenu"
       :x="canvasContextMenuX"
       :y="canvasContextMenuY"
       :has-selected-tasks="canvasStore.selectedNodeIds.length > 0"
       :selected-count="canvasStore.selectedNodeIds.length"
       :context-section="canvasContextSection"
-      :task="selectedTaskForContextMenu"
-      :section="selectedSection"
-      :edge="selectedEdge"
-      :node="selectedNode"
-      :show-edge-context-menu="showEdgeContextMenu"
-      :edge-context-menu-x="edgeContextMenuX"
-      :edge-context-menu-y="edgeContextMenuY"
-      :show-node-context-menu="showNodeContextMenu"
-      :node-context-menu-x="nodeContextMenuX"
-      :node-context-menu-y="nodeContextMenuY"
-      @close="closeCanvasContextMenuWithReset"
+      @close="closeCanvasContextMenu"
       @createTaskHere="createTaskHere"
       @createGroup="createGroup"
       @createSection="createSection"
@@ -332,8 +292,25 @@
       @arrangeInRow="arrangeInRow"
       @arrangeInColumn="arrangeInColumn"
       @arrangeInGrid="arrangeInGrid"
+    />
+
+    <!-- Edge Context Menu -->
+    <EdgeContextMenu
+      :is-visible="showEdgeContextMenu"
+      :x="edgeContextMenuX"
+      :y="edgeContextMenuY"
+      @close="closeEdgeContextMenu"
       @disconnect="disconnectEdge"
-      @deleteNode="deleteNode"
+    />
+
+    <!-- Node Context Menu (for sections) -->
+    <EdgeContextMenu
+      :is-visible="showNodeContextMenu"
+      :x="nodeContextMenuX"
+      :y="nodeContextMenuY"
+      menu-text="Delete Section"
+      @close="closeNodeContextMenu"
+      @disconnect="deleteNode"
     />
 
     <!-- Resize Preview Overlay - FIXED positioning -->
@@ -378,13 +355,15 @@ import KeyboardTestSuite from '@/components/canvas/KeyboardTestSuite.vue'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
+import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import BatchEditModal from '@/components/BatchEditModal.vue'
 import MultiSelectionOverlay from '@/components/canvas/MultiSelectionOverlay.vue'
-import CanvasContextMenus from '@/components/canvas/context-menus/CanvasContextMenus.vue'
+import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
+import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
 import GroupModal from '@/components/GroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import SectionWizard from '@/components/canvas/SectionWizard.vue'
-// Canvas controls icons removed
+import { Maximize, ZoomIn, ZoomOut, Grid3X3, Plus, Layout, CheckSquare, Flag, PlayCircle, Clock, Calendar, AlertTriangle, CheckCircle, Circle, Eye, EyeOff, ChevronDown, TestTube } from 'lucide-vue-next'
 
 // Import Vue Flow styles
 import '@vue-flow/core/dist/style.css'
@@ -433,7 +412,6 @@ if (import.meta.env.DEV) {
 // === MODAL STATE MANAGEMENT GROUP ===
 // State: isEditModalOpen, selectedTask, showKeyboardTest, isTestRunning
 //       isQuickTaskCreateOpen, isBatchEditModalOpen, batchEditTaskIds
-//       showSections, activeSectionId, showSectionTypeDropdown, showZoomDropdown
 // Location: Lines ~565-590 (modal states)
 
 // === CONTEXT MENU STATE GROUP ===
@@ -459,84 +437,34 @@ const isTestRunning = ref(false)
 const testStatus = ref('')
 const testResults = ref<Array<{status: 'passed' | 'failed' | 'running', message: string}>>([])
 
+// Quick Task Create Modal state
+const isQuickTaskCreateOpen = ref(false)
+const quickTaskPosition = ref({ x: 0, y: 0 })
 
 // Batch Edit Modal state
 const isBatchEditModalOpen = ref(false)
 const batchEditTaskIds = ref<string[]>([])
 
+// Canvas Context Menu state
+const showCanvasContextMenu = ref(false)
+const canvasContextMenuX = ref(0)
+const canvasContextMenuY = ref(0)
+const canvasContextSection = ref<any>(null)
+
 // Connection state tracking
 const isConnecting = ref(false)
 
-// Context menu state management - extracted to composable
-const {
-  // State
-  showCanvasContextMenu,
-  canvasContextMenuX,
-  canvasContextMenuY,
-  showEdgeContextMenu,
-  edgeContextMenuX,
-  edgeContextMenuY,
-  showNodeContextMenu,
-  nodeContextMenuX,
-  nodeContextMenuY,
-  selectedNode,
-  selectedEdge,
-  selectedTask: selectedTaskForContextMenu,
-  selectedSection,
+// Edge Context Menu state
+const showEdgeContextMenu = ref(false)
+const edgeContextMenuX = ref(0)
+const edgeContextMenuY = ref(0)
+const selectedEdge = ref<any>(null)
 
-  // Computed
-  hasOpenContextMenu,
-  openContextMenuCount,
-
-  // Canvas Context Menu methods
-  openCanvasContextMenu,
-  closeCanvasContextMenu,
-
-  // Edge Context Menu methods
-  openEdgeContextMenu,
-  closeEdgeContextMenu,
-
-  // Node Context Menu methods
-  openNodeContextMenu,
-  closeNodeContextMenu,
-
-  // Utility methods
-  closeAllContextMenus,
-  getCanvasCoordinates
-} = useCanvasContextMenus()
-
-// Canvas controls
-const {
-  // State
-  showZoomDropdown,
-  zoomPresets,
-  currentZoomLevel,
-  isZoomAtMin,
-  isZoomAtMax,
-  zoomPercentage,
-
-  // Basic zoom controls
-  fitView,
-  zoomIn,
-  zoomOut,
-  resetZoom,
-  centerCanvas,
-
-  // Advanced zoom controls
-  applyZoomPreset,
-  toggleZoomDropdown,
-  closeZoomDropdown,
-
-  // Keyboard shortcuts
-  handleKeyboardShortcuts: handleZoomKeyboardShortcuts,
-
-  // Utility functions
-  enforceZoomLimits,
-  cleanup: cleanupCanvasControls
-} = useCanvasControls()
-
-// Canvas context section (local state)
-const canvasContextSection = ref<any>(null)
+// Node Context Menu state (for sections)
+const showNodeContextMenu = ref(false)
+const nodeContextMenuX = ref(0)
+const nodeContextMenuY = ref(0)
+const selectedNode = ref<any>(null)
 
 // Group Modal state
 const isGroupModalOpen = ref(false)
@@ -551,12 +479,22 @@ const sectionWizardPosition = ref({ x: 100, y: 100 })
 const isGroupEditModalOpen = ref(false)
 const selectedSectionForEdit = ref<any>(null)
 
-// Sections control state (added back - was previously removed)
-const showSections = ref(false)
+// Sections state
+const showSections = ref(true)
 const activeSectionId = ref<string | null>(null)
 const showSectionTypeDropdown = ref(false)
 
-// Canvas zoom state now managed by useCanvasControls composable
+// Zoom state
+const showZoomDropdown = ref(false)
+const zoomPresets = [
+  { label: '5%', value: 0.05 },
+  { label: '10%', value: 0.10 },
+  { label: '25%', value: 0.25 },
+  { label: '50%', value: 0.50 },
+  { label: '100%', value: 1.0 },
+  { label: '200%', value: 2.0 },
+  { label: '400%', value: 4.0 }
+]
 
 // Computed properties
 const sections = computed(() => canvasStore.sections)
@@ -814,16 +752,8 @@ const syncEdges = () => {
             id: `${depId}-${task.id}`,
             source: depId,
             target: task.id,
-            type: 'smoothstep',
-            animated: false,
-            markerEnd: 'url(#arrowhead)',
-            style: {
-              strokeWidth: '2px',
-              stroke: 'var(--border-secondary)'
-            },
-            data: {
-              hoverMarkerEnd: 'url(#arrowhead-hover)'
-            }
+            type: task.connectionTypes?.[depId] || 'default',
+            animated: false
           })
         }
       })
@@ -1611,7 +1541,9 @@ const handlePaneContextMenu = (event: MouseEvent) => {
 
   console.log('🎯 Right-click detected!', event.clientX, event.clientY)
   event.preventDefault()
-  openCanvasContextMenu(event.clientX, event.clientY)
+  canvasContextMenuX.value = event.clientX
+  canvasContextMenuY.value = event.clientY
+  showCanvasContextMenu.value = true
   console.log('📋 Context menu should be visible:', showCanvasContextMenu.value)
 }
 
@@ -1626,23 +1558,22 @@ const handleCanvasRightClick = (event: MouseEvent) => {
 
   const target = event.target as HTMLElement
 
-  // Don't show menu if clicking on a task, section node, or edge
-  if (target.closest('.task-node') ||
-      target.closest('[data-id^="section-"]') ||
-      target.closest('.vue-flow__edge') ||
-      target.closest('.vue-flow__edge-path')) {
+  // Don't show menu if clicking on a task or section node
+  if (target.closest('.task-node') || target.closest('[data-id^="section-"]')) {
     return
   }
 
   // Show menu for all other clicks (empty space)
-  openCanvasContextMenu(event.clientX, event.clientY)
+  canvasContextMenuX.value = event.clientX
+  canvasContextMenuY.value = event.clientY
+  showCanvasContextMenu.value = true
   console.log('🎯 Canvas right-click at:', event.clientX, event.clientY)
 }
 
-// Canvas context menu handlers - wrapped to include local state reset
-const closeCanvasContextMenuWithReset = () => {
+// Canvas context menu handlers
+const closeCanvasContextMenu = () => {
   console.log('🔧 CanvasView: Closing context menu, resetting canvasContextSection')
-  closeCanvasContextMenu()
+  showCanvasContextMenu.value = false
   canvasContextSection.value = null // Reset context section so "Create Custom Group" appears
 }
 
@@ -1700,35 +1631,20 @@ const createTaskHere = () => {
   const canvasY = (canvasContextMenuY.value - rect.top - viewport.value.y) / viewport.value.zoom
 
   // Debug logging
-  console.log('🎯 Creating task at:', {
+  console.log('🎯 Opening task creation at:', {
     screenCoords: { x: canvasContextMenuX.value, y: canvasContextMenuY.value },
     viewport: { x: viewport.value.x, y: viewport.value.y, zoom: viewport.value.zoom },
     canvasCoords: { x: canvasX, y: canvasY }
   })
 
+  // Store the position for when the task is created
+  quickTaskPosition.value = { x: canvasX, y: canvasY }
+
   // Close context menu first to prevent any interference
   closeCanvasContextMenu()
 
-  // Create new task immediately with default values at the calculated position
-  const newTask = taskStore.createTaskWithUndo({
-    title: 'New Task',
-    description: '',
-    canvasPosition: { x: canvasX, y: canvasY },
-    isInInbox: false,
-    priority: 'medium',
-    status: 'planned'
-  })
-
-  // Open TaskEditModal immediately for editing
-  if (newTask) {
-    selectedTask.value = newTask
-    // Use nextTick to ensure DOM has updated before opening modal
-    nextTick(() => {
-      isEditModalOpen.value = true
-    })
-  } else {
-    console.error('Failed to create new task')
-  }
+  // Open quick task create modal instead of creating task directly
+  isQuickTaskCreateOpen.value = true
 }
 
 const createGroup = () => {
@@ -1878,9 +1794,18 @@ const handleNodeContextMenu = (event: { event: MouseEvent; node: any }) => {
     return
   }
 
-  openNodeContextMenu(event.event.clientX, event.event.clientY, event.node)
+  nodeContextMenuX.value = event.event.clientX
+  nodeContextMenuY.value = event.event.clientY
+  selectedNode.value = event.node
+  showNodeContextMenu.value = true
+  closeCanvasContextMenu()
+  closeEdgeContextMenu()
 }
 
+const closeNodeContextMenu = () => {
+  showNodeContextMenu.value = false
+  selectedNode.value = null
+}
 
 const deleteNode = () => {
   if (!selectedNode.value) {
@@ -1915,19 +1840,18 @@ const deleteNode = () => {
 
 // Edge context menu handlers
 const handleEdgeContextMenu = (event: { event: MouseEvent; edge: any }) => {
-  console.log('🔗 Edge context menu triggered:', event.edge)
   event.event.preventDefault()
-  openEdgeContextMenu(event.event.clientX, event.event.clientY, event.edge)
+  edgeContextMenuX.value = event.event.clientX
+  edgeContextMenuY.value = event.event.clientY
+  selectedEdge.value = event.edge
+  showEdgeContextMenu.value = true
+  closeCanvasContextMenu()
+  closeNodeContextMenu()
 }
 
-
-const handleEdgeDoubleClick = (event: { edge: any }) => {
-  // Check if Shift key is pressed for disconnect action
-  if (event.edge) {
-    // Set the selected edge and disconnect it
-    selectedEdge.value = event.edge
-    disconnectEdge()
-  }
+const closeEdgeContextMenu = () => {
+  showEdgeContextMenu.value = false
+  selectedEdge.value = null
 }
 
 const disconnectEdge = () => {
@@ -2190,21 +2114,41 @@ const arrangeInGrid = () => {
 const handleKeyDown = async (event: KeyboardEvent) => {
   const isDeleteKey = event.key === 'Delete' || event.key === 'Backspace'
 
-  // Check if we're typing in an input field - if so, don't intercept keyboard shortcuts
-  const target = event.target as HTMLElement | null
-  if (target) {
-    const tagName = target.tagName
-    const isEditableTarget = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
-    if (isEditableTarget) {
-      return // Let the input handle the key normally
+  // Handle zoom shortcuts with Ctrl/Cmd modifier
+  if (event.ctrlKey || event.metaKey) {
+    switch (event.key) {
+      case '0':
+        event.preventDefault()
+        resetZoom()
+        return
+      case '1':
+        event.preventDefault()
+        applyZoomPreset(1.0)
+        return
+      case '2':
+        event.preventDefault()
+        applyZoomPreset(2.0)
+        return
+      case '=':
+      case '+':
+        event.preventDefault()
+        zoomIn()
+        return
+      case '-':
+      case '_':
+        event.preventDefault()
+        zoomOut()
+        return
+      case 'f':
+      case 'F':
+        event.preventDefault()
+        fitToContent()
+        return
     }
   }
 
-  // Handle zoom shortcuts using composable
-  handleZoomKeyboardShortcuts(event)
-
-  // Handle fit view shortcut (F without Ctrl) if not handled by composable
-  if (!event.ctrlKey && !event.metaKey && (event.key === 'f' || event.key === 'F')) {
+  // Handle fit view shortcut (F without Ctrl)
+  if (event.key === 'f' || event.key === 'F') {
     event.preventDefault()
     fitView()
     return
@@ -2217,6 +2161,15 @@ const handleKeyDown = async (event: KeyboardEvent) => {
   const selectedNodes = getSelectedNodes.value
   if (!selectedNodes || selectedNodes.length === 0) {
     return
+  }
+
+  const target = event.target as HTMLElement | null
+  if (target) {
+    const tagName = target.tagName
+    const isEditableTarget = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
+    if (isEditableTarget && !event.shiftKey) {
+      return
+    }
   }
 
   if (import.meta.env.DEV) {
@@ -2405,6 +2358,101 @@ const handleDrop = (event: DragEvent) => {
 }
 
 
+// Canvas controls
+const fitView = () => {
+  vueFlowFitView({ padding: 0.2, duration: 300 })
+}
+
+const zoomIn = () => {
+  if (performanceManager.shouldThrottleZoom()) return
+
+  performanceManager.scheduleOperation(() => {
+    vueFlowZoomIn({ duration: 200 })
+  })
+}
+
+const zoomOut = () => {
+  if (performanceManager.shouldThrottleZoom()) return
+
+  performanceManager.scheduleOperation(() => {
+    const currentZoom = viewport.value.zoom
+    let newZoom = Math.max(canvasStore.zoomConfig.minZoom, currentZoom - 0.1)
+
+    console.log(`[Zoom Debug] Zoom out: ${currentZoom} -> ${newZoom}`)
+    console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
+
+    // Force Vue Flow to respect our zoom limits by explicitly setting min zoom first
+    const { setMinZoom } = useVueFlow()
+    if (setMinZoom) {
+      setMinZoom(canvasStore.zoomConfig.minZoom)
+      console.log(`[Zoom Debug] Forcefully set minZoom to ${canvasStore.zoomConfig.minZoom}`)
+    }
+
+    // Use vueFlowZoomTo instead of vueFlowZoomOut to ensure we respect minZoom
+    vueFlowZoomTo(newZoom, { duration: 200 })
+
+    // Double-check that zoom was actually applied and enforce if needed
+    setTimeout(() => {
+      const actualZoom = viewport.value.zoom
+      if (actualZoom > newZoom && Math.abs(actualZoom - newZoom) > 0.01) {
+        console.log(`[Zoom Debug] Vue Flow ignored zoom request, forcing again: ${actualZoom} -> ${newZoom}`)
+        vueFlowZoomTo(newZoom, { duration: 0 })
+      }
+    }, 250)
+  })
+}
+
+// Zoom control functions
+const toggleZoomDropdown = () => {
+  showZoomDropdown.value = !showZoomDropdown.value
+}
+
+const applyZoomPreset = (zoomLevel: number) => {
+  // Validate zoom level is within bounds
+  const validatedZoom = Math.max(
+    canvasStore.zoomConfig.minZoom,
+    Math.min(canvasStore.zoomConfig.maxZoom, zoomLevel)
+  )
+
+  console.log(`[Zoom Debug] Applying preset: ${zoomLevel} (validated: ${validatedZoom})`)
+  console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
+
+  performanceManager.scheduleOperation(() => {
+    // Force Vue Flow to respect our zoom limits for presets too
+    const { setMinZoom, setMaxZoom } = useVueFlow()
+    if (setMinZoom && setMaxZoom) {
+      setMinZoom(canvasStore.zoomConfig.minZoom)
+      setMaxZoom(canvasStore.zoomConfig.maxZoom)
+      console.log(`[Zoom Debug] Forcefully set zoom limits: ${canvasStore.zoomConfig.minZoom} - ${canvasStore.zoomConfig.maxZoom}`)
+    }
+
+    vueFlowZoomTo(validatedZoom, { duration: 300 })
+    canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, validatedZoom)
+
+    // Double-check that zoom was actually applied for critical presets
+    if (validatedZoom <= 0.1) { // For 5% and 10% presets
+      setTimeout(() => {
+        const actualZoom = viewport.value.zoom
+        if (actualZoom > validatedZoom && Math.abs(actualZoom - validatedZoom) > 0.01) {
+          console.log(`[Zoom Debug] Vue Flow ignored preset zoom, forcing again: ${actualZoom} -> ${validatedZoom}`)
+          vueFlowZoomTo(validatedZoom, { duration: 0 })
+        }
+      }, 350)
+    }
+  })
+  showZoomDropdown.value = false
+}
+
+const resetZoom = () => {
+  vueFlowZoomTo(1.0, { duration: 300 })
+  canvasStore.setViewportWithHistory(viewport.value.x, viewport.value.y, 1.0)
+  showZoomDropdown.value = false
+}
+
+const fitToContent = () => {
+  const tasks = taskStore.tasksWithCanvasPosition
+  if (!tasks || !tasks.length) {
+    resetZoom()
     return
   }
 
@@ -2432,7 +2480,7 @@ const handleDrop = (event: DragEvent) => {
     }, 200)
   }
 
-  closeZoomDropdown()
+  showZoomDropdown.value = false
 }
 
 // Hide done tasks toggle
@@ -2495,6 +2543,39 @@ const closeEditModal = () => {
   selectedTask.value = null
 }
 
+// Quick Task Create Modal handlers
+const closeQuickTaskCreate = () => {
+  isQuickTaskCreateOpen.value = false
+  quickTaskPosition.value = { x: 0, y: 0 }
+}
+
+const handleQuickTaskCreate = (title: string, description: string) => {
+  console.log('🎯 Creating task with title:', title, 'at position:', quickTaskPosition.value)
+
+  // Create new task at the stored canvas position with user-provided title
+  const newTask = taskStore.createTaskWithUndo({
+    title: title,
+    description: description,
+    canvasPosition: { x: quickTaskPosition.value.x, y: quickTaskPosition.value.y },
+    isInInbox: false,
+    priority: 'medium',
+    status: 'planned'
+  })
+
+  // Close the quick create modal
+  closeQuickTaskCreate()
+
+  // Optionally open the full edit modal for additional details
+  if (newTask) {
+    selectedTask.value = newTask
+    // Use nextTick to ensure DOM has updated before opening modal
+    nextTick(() => {
+      isEditModalOpen.value = true
+    })
+  } else {
+    console.error('Failed to create new task')
+  }
+}
 
 const closeBatchEditModal = () => {
   isBatchEditModalOpen.value = false
@@ -2910,13 +2991,11 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
 // Click outside handler for dropdowns
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  // Close section type dropdown if clicking outside its container (if it exists)
   if (!target.closest('.dropdown-container')) {
     showSectionTypeDropdown.value = false
   }
-  // Close zoom dropdown if clicking outside its container (if it exists)
   if (!target.closest('.zoom-dropdown-container')) {
-    closeZoomDropdown()
+    showZoomDropdown.value = false
   }
 }
 
@@ -3273,23 +3352,10 @@ const runKeyboardDeletionTest = async () => {
 .vue-flow__edge-path {
   stroke: var(--border-secondary);
   stroke-width: 2px;
-  transition: all 0.2s ease;
-}
-
-.vue-flow__edge {
-  cursor: pointer;
 }
 
 .vue-flow__edge:hover .vue-flow__edge-path {
-  stroke: var(--brand-primary);
-  stroke-width: 3px;
-  filter: drop-shadow(0 3px 8px rgba(99, 102, 241, 0.5));
-}
-
-.vue-flow__edge.selected .vue-flow__edge-path {
-  stroke: var(--accent-primary);
-  stroke-width: 3px;
-  filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.4));
+  stroke: var(--color-navigation);
 }
 
 .vue-flow__controls {

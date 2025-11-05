@@ -89,8 +89,7 @@ export const useTimerStore = defineStore('timer', () => {
     const minutes = Math.floor(currentSession.value.remainingTime / 60)
     const seconds = currentSession.value.remainingTime % 60
     const result = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-    console.log('🍅 DEBUG tabDisplayTime computed:', result)
-    return result
+        return result
   })
 
   const sessionStatusText = computed(() => {
@@ -148,12 +147,10 @@ export const useTimerStore = defineStore('timer', () => {
 
   // Actions
   const startTimer = (taskId: string, duration?: number, isBreak: boolean = false) => {
-    console.log('🍅 DEBUG startTimer called:', { taskId, duration, isBreak })
-
+    
     // Stop any existing timer
     if (currentSession.value) {
-      console.log('🍅 DEBUG: Stopping existing timer')
-      stopTimer()
+            stopTimer()
     }
 
     const sessionDuration = duration || settings.value.workDuration
@@ -391,8 +388,7 @@ export const useTimerStore = defineStore('timer', () => {
           }, 1000)
         }
       } catch (error) {
-        console.log('Failed to load timer session:', error)
-      }
+              }
     }
   }
 

@@ -72,20 +72,17 @@ export function useAppHeader() {
    * Timer control methods extracted from App.vue
    */
   const startQuickTimer = () => {
-    console.log('🍅 DEBUG: startQuickTimer called - starting general timer')
-    // Start a general 25-minute timer (no specific task)
+        // Start a general 25-minute timer (no specific task)
     timerStore.startTimer('general')
   }
 
   const startShortBreak = () => {
-    console.log('🍅 DEBUG: startShortBreak called - starting short break timer')
-    // Start a 5-minute break timer
+        // Start a 5-minute break timer
     timerStore.startTimer('short-break', timerStore.settings.shortBreakDuration, true)
   }
 
   const startLongBreak = () => {
-    console.log('🍅 DEBUG: startLongBreak called - starting long break timer')
-    // Start a 15-minute long break timer
+        // Start a 15-minute long break timer
     timerStore.startTimer('long-break', timerStore.settings.longBreakDuration, true)
   }
 

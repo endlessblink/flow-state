@@ -1,0 +1,426 @@
+{
+  "timestamp": "2025-11-09T11:13:00.274Z",
+  "summary": {
+    "databases": {
+      "pomo-flow-v1": {
+        "name": "pomo-flow",
+        "version": 1,
+        "taskCount": 22,
+        "tasks": [
+          {
+            "id": "old-1",
+            "title": "Old Task 1",
+            "description": "Stale data from backup"
+          },
+          {
+            "id": "old-2",
+            "title": "Old Task 2",
+            "description": "This should not be here"
+          },
+          {
+            "id": "old-3",
+            "title": "Old Task 3",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-4",
+            "title": "Old Task 4",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-5",
+            "title": "Old Task 5",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-6",
+            "title": "Old Task 6",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-7",
+            "title": "Old Task 7",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-8",
+            "title": "Old Task 8",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-9",
+            "title": "Old Task 9",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-10",
+            "title": "Old Task 10",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-11",
+            "title": "Old Task 11",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-12",
+            "title": "Old Task 12",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-13",
+            "title": "Old Task 13",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-14",
+            "title": "Old Task 14",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-15",
+            "title": "Old Task 15",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-16",
+            "title": "Old Task 16",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-17",
+            "title": "Old Task 17",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-18",
+            "title": "Old Task 18",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-19",
+            "title": "Old Task 19",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-20",
+            "title": "Old Task 20",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-21",
+            "title": "Old Task 21",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-22",
+            "title": "Old Task 22",
+            "description": "Stale demo data"
+          }
+        ],
+        "timestamp": "2025-11-09T11:13:00.254Z",
+        "hebrewTasks": 0
+      },
+      "pomo-flow-v2": {
+        "name": "pomo-flow",
+        "version": 2,
+        "taskCount": 22,
+        "tasks": [
+          {
+            "id": "old-1",
+            "title": "Old Task 1",
+            "description": "Stale data from backup"
+          },
+          {
+            "id": "old-2",
+            "title": "Old Task 2",
+            "description": "This should not be here"
+          },
+          {
+            "id": "old-3",
+            "title": "Old Task 3",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-4",
+            "title": "Old Task 4",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-5",
+            "title": "Old Task 5",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-6",
+            "title": "Old Task 6",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-7",
+            "title": "Old Task 7",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-8",
+            "title": "Old Task 8",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-9",
+            "title": "Old Task 9",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-10",
+            "title": "Old Task 10",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-11",
+            "title": "Old Task 11",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-12",
+            "title": "Old Task 12",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-13",
+            "title": "Old Task 13",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-14",
+            "title": "Old Task 14",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-15",
+            "title": "Old Task 15",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-16",
+            "title": "Old Task 16",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-17",
+            "title": "Old Task 17",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-18",
+            "title": "Old Task 18",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-19",
+            "title": "Old Task 19",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-20",
+            "title": "Old Task 20",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-21",
+            "title": "Old Task 21",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-22",
+            "title": "Old Task 22",
+            "description": "Stale demo data"
+          }
+        ],
+        "timestamp": "2025-11-09T11:13:00.259Z",
+        "hebrewTasks": 0
+      },
+      "pomo-flow-v3": {
+        "name": "pomo-flow",
+        "version": 3,
+        "taskCount": 22,
+        "tasks": [
+          {
+            "id": "old-1",
+            "title": "Old Task 1",
+            "description": "Stale data from backup"
+          },
+          {
+            "id": "old-2",
+            "title": "Old Task 2",
+            "description": "This should not be here"
+          },
+          {
+            "id": "old-3",
+            "title": "Old Task 3",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-4",
+            "title": "Old Task 4",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-5",
+            "title": "Old Task 5",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-6",
+            "title": "Old Task 6",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-7",
+            "title": "Old Task 7",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-8",
+            "title": "Old Task 8",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-9",
+            "title": "Old Task 9",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-10",
+            "title": "Old Task 10",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-11",
+            "title": "Old Task 11",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-12",
+            "title": "Old Task 12",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-13",
+            "title": "Old Task 13",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-14",
+            "title": "Old Task 14",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-15",
+            "title": "Old Task 15",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-16",
+            "title": "Old Task 16",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-17",
+            "title": "Old Task 17",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-18",
+            "title": "Old Task 18",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-19",
+            "title": "Old Task 19",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-20",
+            "title": "Old Task 20",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-21",
+            "title": "Old Task 21",
+            "description": "Stale demo data"
+          },
+          {
+            "id": "old-22",
+            "title": "Old Task 22",
+            "description": "Stale demo data"
+          }
+        ],
+        "timestamp": "2025-11-09T11:13:00.264Z",
+        "hebrewTasks": 0
+      },
+      "pomo-flow-v3-v3": {
+        "name": "pomo-flow-v3",
+        "version": 3,
+        "taskCount": 2,
+        "tasks": [
+          {
+            "id": "mock-1",
+            "title": "Mock Task 1",
+            "description": "Old mock data"
+          },
+          {
+            "id": "mock-2",
+            "title": "Mock Task 2",
+            "description": "More old data"
+          }
+        ],
+        "timestamp": "2025-11-09T11:13:00.273Z",
+        "hebrewTasks": 0
+      }
+    },
+    "inconsistencies": [
+      {
+        "type": "task_count_mismatch",
+        "databases": [
+          "pomo-flow-v1: 22",
+          "pomo-flow-v2: 22",
+          "pomo-flow-v3: 22",
+          "pomo-flow-v3-v3: 2"
+        ],
+        "severity": "high"
+      }
+    ],
+    "hebrewContent": [],
+    "recommendations": [
+      {
+        "type": "data_sync",
+        "priority": "high",
+        "issue": "Database inconsistencies detected",
+        "recommendation": "Ensure backup system reads from the correct IndexedDB version",
+        "action": "Update backup system to use latest database version and verify data source"
+      },
+      {
+        "type": "hebrew_support",
+        "priority": "medium",
+        "issue": "No Hebrew content found in any database",
+        "recommendation": "Verify Hebrew Unicode handling in data pipeline",
+        "action": "Test Hebrew character preservation through backup/restore cycle"
+      },
+      {
+        "type": "stale_data",
+        "priority": "high",
+        "issue": "Database contains 22 tasks, user reports only 4 tasks",
+        "recommendation": "Backup system may be reading from stale/demo data",
+        "action": "Identify and clear stale database entries, ensure data source accuracy"
+      }
+    ]
+  },
+  "analysis": {
+    "totalDatabases": 4,
+    "accessibleDatabases": 4,
+    "inconsistenciesFound": true,
+    "hebrewContentFound": false,
+    "recommendationsCount": 3
+  }
+}

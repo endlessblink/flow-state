@@ -1,0 +1,1169 @@
+{
+  "config": {
+    "configFile": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/user-flow-testing-skills/config/playwright.config.cjs",
+    "rootDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 4
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/user-flow-playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/user-flow-playwright-results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/user-flow-junit-results.xml"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows",
+        "testIgnore": [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.git/**"
+        ],
+        "testMatch": [
+          "**/*.spec.js"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows",
+        "testIgnore": [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.git/**"
+        ],
+        "testMatch": [
+          "**/*.spec.js"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows",
+        "testIgnore": [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.git/**"
+        ],
+        "testMatch": [
+          "**/*.spec.js"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "mobile-chrome",
+        "name": "mobile-chrome",
+        "testDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows",
+        "testIgnore": [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.git/**"
+        ],
+        "testMatch": [
+          "**/mobile-*.spec.js"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "mobile-safari",
+        "name": "mobile-safari",
+        "testDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows",
+        "testIgnore": [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.git/**"
+        ],
+        "testMatch": [
+          "**/mobile-*.spec.js"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "tablet-chrome",
+        "name": "tablet-chrome",
+        "testDir": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows",
+        "testIgnore": [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.git/**"
+        ],
+        "testMatch": [
+          "**/tablet-*.spec.js"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 4,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "task-management.spec.js",
+      "file": "task-management.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Task Management Flows",
+          "file": "task-management.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "quick task creation via sidebar",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 16882,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 12
+                        },
+                        "snippet": "  10 |   test('quick task creation via sidebar', async ({ page }) => {\n  11 |     // Click add task button\n> 12 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  13 |\n  14 |     // Fill task title\n  15 |     await page.fill('[data-testid=\"task-title-input\"]', 'Test Task from Playwright');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 12
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  10 |   test('quick task creation via sidebar', async ({ page }) => {\n  11 |     // Click add task button\n> 12 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  13 |\n  14 |     // Fill task title\n  15 |     await page.fill('[data-testid=\"task-title-input\"]', 'Test Task from Playwright');\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-23T21:59:28.346Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 12
+                      }
+                    },
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 16425,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 12
+                        },
+                        "snippet": "  10 |   test('quick task creation via sidebar', async ({ page }) => {\n  11 |     // Click add task button\n> 12 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  13 |\n  14 |     // Fill task title\n  15 |     await page.fill('[data-testid=\"task-title-input\"]', 'Test Task from Playwright');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 12
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  10 |   test('quick task creation via sidebar', async ({ page }) => {\n  11 |     // Click add task button\n> 12 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  13 |\n  14 |     // Fill task title\n  15 |     await page.fill('[data-testid=\"task-title-input\"]', 'Test Task from Playwright');\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-11-23T21:59:46.283Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 12
+                      }
+                    },
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 16206,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 12
+                        },
+                        "snippet": "  10 |   test('quick task creation via sidebar', async ({ page }) => {\n  11 |     // Click add task button\n> 12 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  13 |\n  14 |     // Fill task title\n  15 |     await page.fill('[data-testid=\"task-title-input\"]', 'Test Task from Playwright');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 12
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  10 |   test('quick task creation via sidebar', async ({ page }) => {\n  11 |     // Click add task button\n> 12 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  13 |\n  14 |     // Fill task title\n  15 |     await page.fill('[data-testid=\"task-title-input\"]', 'Test Task from Playwright');\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2025-11-23T22:00:03.368Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 12
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b9d6ab12fd61dd2b0788-5d484d4a4c05887598e1",
+              "file": "task-management.spec.js",
+              "line": 10,
+              "column": 3
+            },
+            {
+              "title": "detailed task creation with all fields",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 17029,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 28
+                        },
+                        "snippet": "  26 |\n  27 |   test('detailed task creation with all fields', async ({ page }) => {\n> 28 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  29 |\n  30 |     // Fill all fields\n  31 |     await page.fill('[data-testid=\"task-title-input\"]', 'Detailed Test Task');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 28
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  26 |\n  27 |   test('detailed task creation with all fields', async ({ page }) => {\n> 28 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  29 |\n  30 |     // Fill all fields\n  31 |     await page.fill('[data-testid=\"task-title-input\"]', 'Detailed Test Task');\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-23T21:59:28.345Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 28
+                      }
+                    },
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 16444,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 28
+                        },
+                        "snippet": "  26 |\n  27 |   test('detailed task creation with all fields', async ({ page }) => {\n> 28 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  29 |\n  30 |     // Fill all fields\n  31 |     await page.fill('[data-testid=\"task-title-input\"]', 'Detailed Test Task');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 28
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  26 |\n  27 |   test('detailed task creation with all fields', async ({ page }) => {\n> 28 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  29 |\n  30 |     // Fill all fields\n  31 |     await page.fill('[data-testid=\"task-title-input\"]', 'Detailed Test Task');\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-11-23T21:59:46.426Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 28
+                      }
+                    },
+                    {
+                      "workerIndex": 9,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 16022,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 28
+                        },
+                        "snippet": "  26 |\n  27 |   test('detailed task creation with all fields', async ({ page }) => {\n> 28 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  29 |\n  30 |     // Fill all fields\n  31 |     await page.fill('[data-testid=\"task-title-input\"]', 'Detailed Test Task');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 28
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  26 |\n  27 |   test('detailed task creation with all fields', async ({ page }) => {\n> 28 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  29 |\n  30 |     // Fill all fields\n  31 |     await page.fill('[data-testid=\"task-title-input\"]', 'Detailed Test Task');\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2025-11-23T22:00:03.525Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 28
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b9d6ab12fd61dd2b0788-868e290d8e972e906936",
+              "file": "task-management.spec.js",
+              "line": 27,
+              "column": 3
+            },
+            {
+              "title": "task editing workflow",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "failed",
+                      "duration": 17170,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 46
+                        },
+                        "snippet": "  44 |   test('task editing workflow', async ({ page }) => {\n  45 |     // Create a task first\n> 46 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  47 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Edit');\n  48 |     await page.click('[data-testid=\"save-task-button\"]');\n  49 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 46
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  44 |   test('task editing workflow', async ({ page }) => {\n  45 |     // Create a task first\n> 46 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  47 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Edit');\n  48 |     await page.click('[data-testid=\"save-task-button\"]');\n  49 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-23T21:59:28.350Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 46
+                      }
+                    },
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 2,
+                      "status": "failed",
+                      "duration": 16579,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 46
+                        },
+                        "snippet": "  44 |   test('task editing workflow', async ({ page }) => {\n  45 |     // Create a task first\n> 46 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  47 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Edit');\n  48 |     await page.click('[data-testid=\"save-task-button\"]');\n  49 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 46
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  44 |   test('task editing workflow', async ({ page }) => {\n  45 |     // Create a task first\n> 46 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  47 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Edit');\n  48 |     await page.click('[data-testid=\"save-task-button\"]');\n  49 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-11-23T21:59:46.570Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 46
+                      }
+                    },
+                    {
+                      "workerIndex": 11,
+                      "parallelIndex": 2,
+                      "status": "failed",
+                      "duration": 15918,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 46
+                        },
+                        "snippet": "  44 |   test('task editing workflow', async ({ page }) => {\n  45 |     // Create a task first\n> 46 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  47 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Edit');\n  48 |     await page.click('[data-testid=\"save-task-button\"]');\n  49 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 46
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  44 |   test('task editing workflow', async ({ page }) => {\n  45 |     // Create a task first\n> 46 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  47 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Edit');\n  48 |     await page.click('[data-testid=\"save-task-button\"]');\n  49 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2025-11-23T22:00:03.875Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 46
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b9d6ab12fd61dd2b0788-1227cce2f29c13d22b1b",
+              "file": "task-management.spec.js",
+              "line": 44,
+              "column": 3
+            },
+            {
+              "title": "task status changes",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "failed",
+                      "duration": 16935,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 61
+                        },
+                        "snippet": "  59 |   test('task status changes', async ({ page }) => {\n  60 |     // Create task\n> 61 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  62 |     await page.fill('[data-testid=\"task-title-input\"]', 'Status Test Task');\n  63 |     await page.click('[data-testid=\"save-task-button\"]');\n  64 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 61
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  59 |   test('task status changes', async ({ page }) => {\n  60 |     // Create task\n> 61 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  62 |     await page.fill('[data-testid=\"task-title-input\"]', 'Status Test Task');\n  63 |     await page.click('[data-testid=\"save-task-button\"]');\n  64 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-23T21:59:28.387Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 61
+                      }
+                    },
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 3,
+                      "status": "failed",
+                      "duration": 16572,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 61
+                        },
+                        "snippet": "  59 |   test('task status changes', async ({ page }) => {\n  60 |     // Create task\n> 61 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  62 |     await page.fill('[data-testid=\"task-title-input\"]', 'Status Test Task');\n  63 |     await page.click('[data-testid=\"save-task-button\"]');\n  64 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 61
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  59 |   test('task status changes', async ({ page }) => {\n  60 |     // Create task\n> 61 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  62 |     await page.fill('[data-testid=\"task-title-input\"]', 'Status Test Task');\n  63 |     await page.click('[data-testid=\"save-task-button\"]');\n  64 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-11-23T21:59:46.331Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 61
+                      }
+                    },
+                    {
+                      "workerIndex": 10,
+                      "parallelIndex": 3,
+                      "status": "failed",
+                      "duration": 16005,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 61
+                        },
+                        "snippet": "  59 |   test('task status changes', async ({ page }) => {\n  60 |     // Create task\n> 61 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  62 |     await page.fill('[data-testid=\"task-title-input\"]', 'Status Test Task');\n  63 |     await page.click('[data-testid=\"save-task-button\"]');\n  64 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 61
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  59 |   test('task status changes', async ({ page }) => {\n  60 |     // Create task\n> 61 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  62 |     await page.fill('[data-testid=\"task-title-input\"]', 'Status Test Task');\n  63 |     await page.click('[data-testid=\"save-task-button\"]');\n  64 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2025-11-23T22:00:03.536Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 61
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b9d6ab12fd61dd2b0788-75c6410b6b751f53f816",
+              "file": "task-management.spec.js",
+              "line": 59,
+              "column": 3
+            },
+            {
+              "title": "task deletion workflow",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 12,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 16448,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 76
+                        },
+                        "snippet": "  74 |   test('task deletion workflow', async ({ page }) => {\n  75 |     // Create task\n> 76 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  77 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Delete');\n  78 |     await page.click('[data-testid=\"save-task-button\"]');\n  79 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 76
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  74 |   test('task deletion workflow', async ({ page }) => {\n  75 |     // Create task\n> 76 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  77 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Delete');\n  78 |     await page.click('[data-testid=\"save-task-button\"]');\n  79 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-23T22:00:20.151Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 76
+                      }
+                    },
+                    {
+                      "workerIndex": 13,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 16305,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 76
+                        },
+                        "snippet": "  74 |   test('task deletion workflow', async ({ page }) => {\n  75 |     // Create task\n> 76 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  77 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Delete');\n  78 |     await page.click('[data-testid=\"save-task-button\"]');\n  79 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 76
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  74 |   test('task deletion workflow', async ({ page }) => {\n  75 |     // Create task\n> 76 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  77 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Delete');\n  78 |     await page.click('[data-testid=\"save-task-button\"]');\n  79 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-11-23T22:00:37.107Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 76
+                      }
+                    },
+                    {
+                      "workerIndex": 14,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 16207,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16",
+                        "location": {
+                          "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                          "column": 16,
+                          "line": 76
+                        },
+                        "snippet": "  74 |   test('task deletion workflow', async ({ page }) => {\n  75 |     // Create task\n> 76 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  77 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Delete');\n  78 |     await page.click('[data-testid=\"save-task-button\"]');\n  79 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                            "column": 16,
+                            "line": 76
+                          },
+                          "message": "TimeoutError: page.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"add-task-button\"]')\u001b[22m\n\n\n  74 |   test('task deletion workflow', async ({ page }) => {\n  75 |     // Create task\n> 76 |     await page.click('[data-testid=\"add-task-button\"]');\n     |                ^\n  77 |     await page.fill('[data-testid=\"task-title-input\"]', 'Task to Delete');\n  78 |     await page.click('[data-testid=\"save-task-button\"]');\n  79 |\n    at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2025-11-23T22:00:53.988Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js",
+                        "column": 16,
+                        "line": 76
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b9d6ab12fd61dd2b0788-97ab6acb5beadef74ce5",
+              "file": "task-management.spec.js",
+              "line": 74,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-11-23T21:59:27.805Z",
+    "duration": 102526.64,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 5,
+    "flaky": 0
+  }
+}

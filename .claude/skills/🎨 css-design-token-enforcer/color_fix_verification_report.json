@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-11-09T08:16:44.006Z",
+  "fixApplied": true,
+  "checks": [
+    {
+      "check": "design_tokens",
+      "status": "ERROR",
+      "details": "ENOENT: no such file or directory, open 'src/assets/design-tokens.css'"
+    },
+    {
+      "check": "hardcoded_colors",
+      "status": "PASS",
+      "details": "No problematic hardcoded colors found"
+    },
+    {
+      "check": "affected_components",
+      "status": "INFO",
+      "details": "No components using --color-warning found"
+    },
+    {
+      "check": "manual_testing_required",
+      "status": "PENDING",
+      "details": "Manual testing required to verify fix in browser"
+    }
+  ]
+}

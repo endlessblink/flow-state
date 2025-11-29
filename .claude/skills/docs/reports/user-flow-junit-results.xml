@@ -1,0 +1,661 @@
+<testsuites id="" name="" tests="5" failures="5" skipped="0" errors="0" time="102.52664">
+<testsuite name="task-management.spec.js" timestamp="2025-11-23T21:59:27.924Z" hostname="chromium" tests="5" failures="5" skipped="0" time="247.147" errors="0">
+<testcase name="Task Management Flows › quick task creation via sidebar" classname="task-management.spec.js" time="49.513">
+<failure message="task-management.spec.js:10:3 quick task creation via sidebar" type="FAILURE">
+<![CDATA[  [chromium] › task-management.spec.js:10:3 › Task Management Flows › quick task creation via sidebar 
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      10 |   test('quick task creation via sidebar', async ({ page }) => {
+      11 |     // Click add task button
+    > 12 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      13 |
+      14 |     // Fill task title
+      15 |     await page.fill('[data-testid="task-title-input"]', 'Test Task from Playwright');
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      10 |   test('quick task creation via sidebar', async ({ page }) => {
+      11 |     // Click add task button
+    > 12 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      13 |
+      14 |     // Fill task title
+      15 |     await page.fill('[data-testid="task-title-input"]', 'Test Task from Playwright');
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      10 |   test('quick task creation via sidebar', async ({ page }) => {
+      11 |     // Click add task button
+    > 12 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      13 |
+      14 |     // Fill task title
+      15 |     await page.fill('[data-testid="task-title-input"]', 'Test Task from Playwright');
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:12:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry1/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-a3e74-k-task-creation-via-sidebar-chromium-retry2/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Task Management Flows › detailed task creation with all fields" classname="task-management.spec.js" time="49.495">
+<failure message="task-management.spec.js:27:3 detailed task creation with all fields" type="FAILURE">
+<![CDATA[  [chromium] › task-management.spec.js:27:3 › Task Management Flows › detailed task creation with all fields 
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      26 |
+      27 |   test('detailed task creation with all fields', async ({ page }) => {
+    > 28 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      29 |
+      30 |     // Fill all fields
+      31 |     await page.fill('[data-testid="task-title-input"]', 'Detailed Test Task');
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      26 |
+      27 |   test('detailed task creation with all fields', async ({ page }) => {
+    > 28 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      29 |
+      30 |     // Fill all fields
+      31 |     await page.fill('[data-testid="task-title-input"]', 'Detailed Test Task');
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      26 |
+      27 |   test('detailed task creation with all fields', async ({ page }) => {
+    > 28 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      29 |
+      30 |     // Fill all fields
+      31 |     await page.fill('[data-testid="task-title-input"]', 'Detailed Test Task');
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:28:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry1/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Manag-aa12a-sk-creation-with-all-fields-chromium-retry2/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Task Management Flows › task editing workflow" classname="task-management.spec.js" time="49.667">
+<failure message="task-management.spec.js:44:3 task editing workflow" type="FAILURE">
+<![CDATA[  [chromium] › task-management.spec.js:44:3 › Task Management Flows › task editing workflow ────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      44 |   test('task editing workflow', async ({ page }) => {
+      45 |     // Create a task first
+    > 46 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      47 |     await page.fill('[data-testid="task-title-input"]', 'Task to Edit');
+      48 |     await page.click('[data-testid="save-task-button"]');
+      49 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      44 |   test('task editing workflow', async ({ page }) => {
+      45 |     // Create a task first
+    > 46 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      47 |     await page.fill('[data-testid="task-title-input"]', 'Task to Edit');
+      48 |     await page.click('[data-testid="save-task-button"]');
+      49 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      44 |   test('task editing workflow', async ({ page }) => {
+      45 |     // Create a task first
+    > 46 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      47 |     await page.fill('[data-testid="task-title-input"]', 'Task to Edit');
+      48 |     await page.click('[data-testid="save-task-button"]');
+      49 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:46:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry1/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-editing-workflow-chromium-retry2/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Task Management Flows › task status changes" classname="task-management.spec.js" time="49.512">
+<failure message="task-management.spec.js:59:3 task status changes" type="FAILURE">
+<![CDATA[  [chromium] › task-management.spec.js:59:3 › Task Management Flows › task status changes ──────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      59 |   test('task status changes', async ({ page }) => {
+      60 |     // Create task
+    > 61 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      62 |     await page.fill('[data-testid="task-title-input"]', 'Status Test Task');
+      63 |     await page.click('[data-testid="save-task-button"]');
+      64 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      59 |   test('task status changes', async ({ page }) => {
+      60 |     // Create task
+    > 61 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      62 |     await page.fill('[data-testid="task-title-input"]', 'Status Test Task');
+      63 |     await page.click('[data-testid="save-task-button"]');
+      64 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      59 |   test('task status changes', async ({ page }) => {
+      60 |     // Create task
+    > 61 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      62 |     await page.fill('[data-testid="task-title-input"]', 'Status Test Task');
+      63 |     await page.click('[data-testid="save-task-button"]');
+      64 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:61:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry1/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-status-changes-chromium-retry2/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Task Management Flows › task deletion workflow" classname="task-management.spec.js" time="48.96">
+<failure message="task-management.spec.js:74:3 task deletion workflow" type="FAILURE">
+<![CDATA[  [chromium] › task-management.spec.js:74:3 › Task Management Flows › task deletion workflow ───────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      74 |   test('task deletion workflow', async ({ page }) => {
+      75 |     // Create task
+    > 76 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      77 |     await page.fill('[data-testid="task-title-input"]', 'Task to Delete');
+      78 |     await page.click('[data-testid="save-task-button"]');
+      79 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      74 |   test('task deletion workflow', async ({ page }) => {
+      75 |     // Create task
+    > 76 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      77 |     await page.fill('[data-testid="task-title-input"]', 'Task to Delete');
+      78 |     await page.click('[data-testid="save-task-button"]');
+      79 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    TimeoutError: page.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="add-task-button"]')
+
+
+      74 |   test('task deletion workflow', async ({ page }) => {
+      75 |     // Create task
+    > 76 |     await page.click('[data-testid="add-task-button"]');
+         |                ^
+      77 |     await page.fill('[data-testid="task-title-input"]', 'Task to Delete');
+      78 |     await page.click('[data-testid="save-task-button"]');
+      79 |
+        at /media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/tests/user-flows/task-management.spec.js:76:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../.claude/skills/docs/reports/test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry1/trace.zip]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/test-failed-1.png]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/video.webm]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/error-context.md]]
+
+[[ATTACHMENT|test-artifacts/task-management-Task-Management-Flows-task-deletion-workflow-chromium-retry2/trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

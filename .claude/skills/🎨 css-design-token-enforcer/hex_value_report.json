@@ -1,0 +1,17 @@
+{
+  "summary": {
+    "total_files_scanned": 0,
+    "total_matches": 0,
+    "unique_colors": 0,
+    "priority_issues": 0
+  },
+  "categories": {
+    "priority_colors": 0,
+    "ui_colors": 0,
+    "semantic_colors": 0,
+    "unknown": 0
+  },
+  "priority_issues": [],
+  "color_frequency": {},
+  "files_with_issues": []
+}

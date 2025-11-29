@@ -1,0 +1,550 @@
+---
+name: TypeScript Foundation Restoration
+description: RESTORE and fix TypeScript foundation and type system issues. This skill should be used when TypeScript compilation fails, types are missing, or the foundation type system needs comprehensive repair. **CRITICAL: All TypeScript fixes MUST be tested with Playwright before claiming success. Use DevTools for debugging type errors.**
+keywords: typescript, compilation, error, missing property, type definition, tsc, no emit, build failure
+category: specialized
+triggers: typescript compilation errors, missing types, foundation issues
+---
+
+# Tier 1: Metadata
+
+This skill provides systematic TypeScript foundation restoration for the Pomo-Flow application when compilation fails due to missing interface properties, store methods, or type definitions.
+
+## Quick Context
+- **Complexity**: high
+- **Duration**: 45-90 minutes
+- **Dependencies**: typescript, vue, pinia, @vue/runtime-core
+
+## Activation Triggers
+- **Keywords**: typescript, compilation, error, missing property, task interface, store method, type definition, tsc, no emit
+- **Files**: src/stores/tasks.ts, src/**/*.ts, src/**/*.vue, tsconfig.json, package.json
+- **Contexts**: typescript, compilation, type-system, interface, store, pinia, vue, foundation
+
+## 🚨 CRITICAL FOUNDATION RESTORATION
+
+### **MANDATORY Foundation Protocol**
+**FOUNDATION FIRST POLICY**: Surface-level fixes will NEVER work until TypeScript foundation is restored.
+
+#### **Root Cause Analysis:**
+1. **Missing Task Properties**: `scheduledDate`, `scheduledTime`, `isUncategorized`, `estimatedPomodoros` don't exist
+2. **Missing Store Methods**: `getTask`, `getUncategorizedTaskCount` not implemented
+3. **Missing Type Definitions**: `TaskInstance`, related interfaces not defined
+4. **Import/Export Issues**: Types used as values, incorrect imports
+5. **Return Type Mismatches**: Functions returning wrong types
+
+#### **Why Surface-Level Fixes Fail:**
+```
+// Claude's "fix":
+case 'low': return Flag  // instead of Flag || AlertCircle
+
+// But REAL problem:
+task.scheduledDate  // Property doesn't exist on Task interface!
+```
+
+## Implementation Strategy
+
+### Phase 1: Automated Error Analysis (Critical)
+```typescript
+// Step 1: Categorize TypeScript errors systematically
+interface ErrorCategory {
+  missingProperties: Array<{file: string, property: string, line: number}>
+  missingMethods: Array<{file: string, method: string, expectedType: string}>
+  typeDefinitionIssues: Array<{file: string, type: string, issue: string}>
+  importProblems: Array<{file: string, import: string, problem: string}>
+  returnTypeMismatches: Array<{file: string, function: string, expected: string, actual: string}>
+}
+
+// Command: npx tsc --noEmit --skipLibCheck 2>&1 | head -100
+```
+
+**Analysis Steps:**
+1. **Run TypeScript Check**: `npx tsc --noEmit --skipLibCheck`
+2. **Extract Error Patterns**: Parse output into structured categories
+3. **Dependency Mapping**: Identify cascade failures (missing properties → broken methods)
+4. **Priority Scoring**: Score fixes by impact and dependencies
+
+### Phase 2: Task Interface Restoration (Critical)
+**Current Missing Properties Identified:**
+- `scheduledDate: string` - Legacy field for calendar scheduling
+- `scheduledTime?: string` - Time component for scheduled tasks
+- `isUncategorized?: boolean` - Task classification flag
+- `estimatedPomodoros?: number` - Planning field for task estimation
+- `instances?: TaskInstance[]` - Calendar instances (NEW)
+- Complete TaskInstance interface definition
+
+**Restoration Process:**
+```typescript
+// Add to src/stores/tasks.ts Task interface:
+export interface Task {
+  // ... existing properties ...
+
+  // Legacy scheduling fields (for backward compatibility)
+  scheduledDate?: string        // YYYY-MM-DD format for legacy support
+  scheduledTime?: string        // HH:MM format for legacy time support
+
+  // Task classification
+  isUncategorized?: boolean     // true if task has no project assigned
+
+  // Planning fields
+  estimatedPomodoros?: number   // Estimated pomodoro sessions
+
+  // Calendar instances (NEW)
+  instances?: TaskInstance[]    // Calendar scheduling instances
+}
+
+export interface TaskInstance {
+  id: string                    // Unique instance identifier
+  parentTaskId: string          // Reference to original task
+  scheduledDate: string         // YYYY-MM-DD format
+  scheduledTime?: string        // HH:MM format
+  duration?: number             // Duration in minutes
+  status: 'scheduled' | 'completed' | 'skipped'
+  isRecurring?: boolean         // True for recurring task instances
+  pomodoroTracking?: {
+    completed: number
+    total: number
+  }
+}
+```
+
+### Phase 3: Store Method Restoration (Critical)
+**Missing Methods to Implement:**
+
+```typescript
+// Add to src/stores/tasks.ts store:
+const getTask = (taskId: string): Task | undefined => {
+  return tasks.value.find(task => task.id === taskId)
+}
+
+const getUncategorizedTaskCount = computed(() => {
+  return tasks.value.filter(task =>
+    task.projectId === 'uncategorized' ||
+    task.isUncategorized ||
+    !task.projectId
+  ).length
+})
+
+const getTaskById = (taskId: string): Task | undefined => {
+  const task = getTask(taskId)
+  if (!task) {
+    console.warn(`Task with ID ${taskId} not found`)
+    return undefined
+  }
+  return task
+}
+
+// Return type fixes for existing methods
+const updateTask = async (taskId: string, updates: Partial<Task>): Promise<void> => {
+  const task = getTask(taskId)
+  if (!task) {
+    throw new Error(`Task with ID ${taskId} not found`)
+  }
+
+  Object.assign(task, updates)
+  task.updatedAt = new Date()
+  await saveToDatabase()
+}
+```
+
+### Phase 4: Import/Export Resolution (Critical)
+**Fix RecurrencePattern Import Issue:**
+```typescript
+// WRONG (used as value):
+import { RecurrencePattern } from '@/types/recurrence'
+
+// CORRECT (used as type):
+import type { RecurrencePattern } from '@/types/recurrence'
+```
+
+**Create Central Type Export:**
+```typescript
+// src/types/index.ts (NEW FILE)
+export type { Task, Project, Subtask } from '@/stores/tasks'
+export type { TaskInstance } from '@/stores/tasks'
+export type {
+  RecurrencePattern,
+  TaskRecurrence,
+  RecurringTaskInstance,
+  NotificationPreferences
+} from './recurrence'
+```
+
+### Phase 5: Incremental Validation Pipeline (Critical)
+**Automated Validation Steps:**
+
+```typescript
+interface ValidationStep {
+  name: string
+  command: string
+  successCriteria: string
+  failureAction: string
+}
+
+const validationPipeline: ValidationStep[] = [
+  {
+    name: 'TypeScript Compilation Check',
+    command: 'npx tsc --noEmit --skipLibCheck',
+    successCriteria: 'Compilation completed without errors',
+    failureAction: 'Fix compilation errors before proceeding'
+  },
+  {
+    name: 'Development Server Start',
+    command: 'npm run dev',
+    successCriteria: 'VITE server running successfully',
+    failureAction: 'Fix runtime configuration issues'
+  },
+  {
+    name: 'Store Functionality Test',
+    command: 'node -e "import(\"@/stores/tasks\").then(m => console.log(\"Store loaded\"))"',
+    successCriteria: 'Store imports without errors',
+    failureAction: 'Fix store method implementations'
+  },
+  {
+    name: 'Browser Validation (Playwright)',
+    command: 'npx playwright test --config playwright.config.ts',
+    successCriteria: 'All tests pass',
+    failureAction: 'Fix runtime functionality issues'
+  }
+]
+```
+
+## Advanced Error Patterns & Solutions
+
+### Pattern 1: Property Access Errors
+```typescript
+// ERROR: Property 'scheduledDate' does not exist on type 'Task'
+// SOLUTION: Add property to Task interface with backward compatibility
+```
+
+### Pattern 2: Method Not Found Errors
+```typescript
+// ERROR: Property 'getTask' does not exist on type 'UnwrapRef...'
+// SOLUTION: Implement missing store methods with proper TypeScript types
+```
+
+### Pattern 3: Type Import vs Value Import
+```typescript
+// ERROR: 'RecurrencePattern' refers to a value but is being used as a type
+// SOLUTION: Use 'import type' for type-only imports
+```
+
+### Pattern 4: Return Type Mismatch
+```typescript
+// ERROR: Type 'Promise<boolean>' is not assignable to type 'Promise<void>'
+// SOLUTION: Fix method signatures to return correct types
+```
+
+## Implementation Map
+- [Error Analysis Guide](./ERROR_ANALYSIS.md)
+- [Interface Restoration](./INTERFACE_RESTORATION.md)
+- [Store Method Recreation](./STORE_METHODS.md)
+- [Type Definition Creation](./TYPE_DEFINITIONS.md)
+- [Validation Protocol](./VALIDATION.md)
+- [Troubleshooting](./TROUBLESHOOTING.md)
+
+## Execution Plan (Automated)
+
+### Step 1: Error Analysis & Categorization
+```bash
+# 1.1 Run comprehensive TypeScript check
+npx tsc --noEmit --skipLibCheck 2>&1 > ts-errors.log
+
+# 1.2 Parse and categorize errors
+node -e "
+const fs = require('fs');
+const content = fs.readFileSync('ts-errors.log', 'utf8');
+const errors = content.split('\n').filter(line => line.includes('error TS'));
+console.log('Found', errors.length, 'TypeScript errors');
+errors.forEach((error, i) => console.log(i+1, error));
+"
+
+# 1.3 Create error categorization report
+echo "Creating error categorization report..."
+```
+
+### Step 2: Interface Restoration (Automated)
+```typescript
+// 2.1 Update Task interface
+// File: src/stores/tasks.ts
+// Add missing properties identified in Phase 1
+
+// 2.2 Create TaskInstance interface
+// Add complete definition with all required fields
+
+// 2.3 Update type exports
+// Create or update src/types/index.ts for centralized type exports
+```
+
+### Step 3: Store Method Implementation (Automated)
+```typescript
+// 3.1 Add missing methods to task store
+// - getTask(taskId: string): Task | undefined
+// - getUncategorizedTaskCount(): ComputedRef<number>
+// - getTaskById(taskId: string): Task | undefined
+
+// 3.2 Fix return types for existing methods
+// Ensure all methods return Promise<void> or appropriate types
+
+// 3.3 Update store exports
+// Make sure all methods are properly exported in store return object
+```
+
+### Step 4: Import Resolution (Automated)
+```bash
+# 4.1 Fix type import issues
+find src -name "*.ts" -o -name "*.vue" | xargs grep -l "import.*RecurrencePattern" | while read file; do
+  echo "Fixing RecurrencePattern import in $file"
+  sed -i 's/import { RecurrencePattern }/import type { RecurrencePattern }/g' "$file"
+done
+
+# 4.2 Create centralized type exports
+cat > src/types/index.ts << 'EOF'
+// Centralized type exports for Pomo-Flow
+export type { Task, Project, Subtask } from '@/stores/tasks'
+export type { TaskInstance } from '@/stores/tasks'
+export type {
+  RecurrencePattern,
+  TaskRecurrence,
+  RecurringTaskInstance,
+  NotificationPreferences
+} from './recurrence'
+EOF
+```
+
+### Step 5: Validation Pipeline (Automated)
+```bash
+# 5.1 TypeScript compilation test
+echo "🔍 Testing TypeScript compilation..."
+if npx tsc --noEmit --skipLibCheck; then
+  echo "✅ TypeScript compilation successful"
+else
+  echo "❌ TypeScript compilation failed - need additional fixes"
+  exit 1
+fi
+
+# 5.2 Development server test
+echo "🔍 Testing development server startup..."
+timeout 30s npm run dev || {
+  echo "❌ Development server failed to start"
+  exit 1
+}
+
+# 5.3 Build process test
+echo "🔍 Testing build process..."
+if npm run build; then
+  echo "✅ Build successful"
+else
+  echo "❌ Build failed - need additional fixes"
+  exit 1
+fi
+
+# 5.4 Playwright validation (if available)
+if command -v npx playwright &> /dev/null; then
+  echo "🔍 Running Playwright validation..."
+  npx playwright test --grep "TypeScript validation" || echo "⚠️  Playwright tests not configured"
+fi
+```
+
+### Step 6: Progress Reporting & Rollback
+```typescript
+interface RestorationProgress {
+  phase: 'error_analysis' | 'interface_restoration' | 'store_methods' | 'import_resolution' | 'validation'
+  errorsFixed: number
+  errorsRemaining: number
+  compilationTime: number
+  nextSteps: string[]
+}
+
+const generateProgressReport = (progress: RestorationProgress): string => {
+  return `
+# TypeScript Foundation Restoration Progress
+## Phase: ${progress.phase}
+## Errors Fixed: ${progress.errorsFixed}
+## Errors Remaining: ${progress.errorsRemaining}
+## Compilation Time: ${progress.compilationTime}ms
+## Next Steps:
+${progress.nextSteps.map(step => `- ${step}`).join('\n')}
+  `
+}
+```
+
+## Quick Validation Commands
+```bash
+# Quick TypeScript check (10 seconds)
+npx tsc --noEmit --skipLibCheck --incremental false
+
+# Development server health check (15 seconds)
+timeout 15s npm run dev -- --host 0.0.0.0 --port 5546
+
+# Build process test (30 seconds)
+npm run build
+
+# Playwright smoke test (2 minutes)
+npx playwright test --config playwright.config.ts --grep "smoke"
+```
+
+## Expected Outcomes
+After successful execution:
+- ✅ **Zero TypeScript Errors**: `npx tsc --noEmit` passes cleanly
+- ✅ **Fast Compilation**: Development server starts in <15 seconds (vs 60+ seconds)
+- ✅ **Complete Task Interface**: All expected properties including scheduledDate, TaskInstance available
+- ✅ **Functional Store Methods**: getTask, getUncategorizedTaskCount work correctly
+- ✅ **Working Application**: All features compile and run properly
+- ✅ **Surface Fixes Work**: Claude's previous fixes actually function
+- ✅ **Performance Restored**: No more slow compilation or runtime type errors
+
+## Success Criteria
+- [ ] TypeScript compilation succeeds with 0 errors (`npx tsc --noEmit`)
+- [ ] Development server starts quickly without errors (<15 seconds)
+- [ ] All Task properties are accessible (scheduledDate, scheduledTime, isUncategorized, etc.)
+- [ ] All store methods work correctly (getTask, getUncategorizedTaskCount)
+- [ ] Application loads and functions properly in browser
+- [ ] Previously broken features now work
+- [ ] Playwright validation passes (if available)
+
+## Troubleshooting Common Issues
+
+### Issue: Compilation Still Fails
+```bash
+# Check for remaining errors
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"
+
+# Common fixes:
+# - Check for missing semicolons in interface definitions
+# - Verify import paths are correct
+# - Ensure all export statements match usage
+```
+
+### Issue: Store Methods Not Working
+```typescript
+// Verify methods are properly exported in store return object
+export const useTaskStore = defineStore('tasks', () => {
+  // ... store logic ...
+
+  return {
+    tasks,
+    projects,
+    getTask,           // ✅ Must be exported
+    getUncategorizedTaskCount,  // ✅ Must be exported
+    createTask,
+    updateTask,
+    deleteTask
+  }
+})
+```
+
+### Issue: Runtime Type Errors
+```bash
+# Check for type import vs value import issues
+grep -r "import.*RecurrencePattern" src/ --include="*.ts" --include="*.vue"
+
+# Should see: import type { RecurrencePattern }
+# NOT: import { RecurrencePattern }
+```
+
+## Emergency Rollback Procedure
+If things go wrong:
+```bash
+# 1. Reset to last working state
+git status
+git checkout -- src/stores/tasks.ts
+git checkout -- src/types/
+
+# 2. Restore from git if needed
+git log --oneline -10
+git checkout HEAD~1 -- src/stores/tasks.ts
+
+# 3. Verify compilation
+npx tsc --noEmit --skipLibCheck
+```
+
+---
+
+# 🚀 EXECUTION SCRIPT
+
+## Automated TypeScript Foundation Restoration
+
+This script executes the complete restoration process when the skill is activated.
+
+```typescript
+// SKILL EXECUTION - TypeScript Foundation Restoration
+async function executeTypeScriptFoundationRestoration(): Promise<void> {
+  console.log('🔧 Starting TypeScript Foundation Restoration...')
+
+  try {
+    // Phase 1: Error Analysis
+    console.log('\n📊 Phase 1: Error Analysis')
+    const errorReport = await analyzeTypeScriptErrors()
+    console.log(`Found ${errorReport.totalErrors} TypeScript errors`)
+
+    // Phase 2: Interface Restoration
+    console.log('\n🏗️ Phase 2: Interface Restoration')
+    await restoreTaskInterface()
+    await createTaskInstanceInterface()
+    await updateTypeExports()
+
+    // Phase 3: Store Method Restoration
+    console.log('\n🏪 Phase 3: Store Method Restoration')
+    await implementStoreMethods()
+    await fixReturnTypes()
+    await updateStoreExports()
+
+    // Phase 4: Import Resolution
+    console.log('\n📦 Phase 4: Import Resolution')
+    await fixTypeImports()
+    await createCentralTypeExports()
+
+    // Phase 5: Validation
+    console.log('\n✅ Phase 5: Validation & Testing')
+    const validationResults = await runValidationPipeline()
+
+    // Results
+    if (validationResults.success) {
+      console.log('\n🎉 TypeScript Foundation Restoration Complete!')
+      console.log(`✅ Fixed ${errorReport.totalErrors} errors`)
+      console.log(`✅ Compilation time: ${validationResults.compilationTime}ms`)
+      console.log(`✅ Development server: ${validationResults.serverStartupTime}ms`)
+    } else {
+      console.log('\n❌ Restoration failed - manual intervention required')
+      console.log('Remaining errors:', validationResults.remainingErrors)
+    }
+
+  } catch (error) {
+    console.error('💥 Critical error during restoration:', error)
+    await emergencyRollback()
+  }
+}
+
+// Helper Functions
+async function analyzeTypeScriptErrors() {
+  // Implementation details...
+}
+
+async function restoreTaskInterface() {
+  // Implementation details...
+}
+
+// ... other helper functions
+```
+
+## Quick Activation Command
+```bash
+# Activate the skill
+claude skill activate ts-foundation-restorer
+
+# Or run directly
+node .claude/skills/ts-foundation-restorer/execute.js
+```
+
+## Monitoring & Progress
+```bash
+# Monitor restoration progress
+tail -f /tmp/ts-restoration.log
+
+# Check compilation status
+watch -n 5 "npx tsc --noEmit --skipLibCheck 2>&1 | grep 'error TS' | wc -l"
+```
+
+---
+
+**This skill is now ready for automated execution with comprehensive error analysis, step-by-step restoration, and validation testing.**

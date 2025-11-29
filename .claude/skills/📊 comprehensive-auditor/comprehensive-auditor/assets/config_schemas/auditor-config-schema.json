@@ -1,0 +1,180 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Comprehensive Auditor Configuration",
+  "description": "Configuration schema for the comprehensive project auditor",
+  "type": "object",
+  "properties": {
+    "dimensions": {
+      "type": "object",
+      "description": "Audit dimension configuration",
+      "properties": {
+        "static_code": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.15 }
+          }
+        },
+        "runtime_behavior": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.12 }
+          }
+        },
+        "data_flow": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.10 }
+          }
+        },
+        "api_deps": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.08 }
+          }
+        },
+        "security": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.15 }
+          }
+        },
+        "performance": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.08 }
+          }
+        },
+        "documentation": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.10 }
+          }
+        },
+        "test_coverage": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.12 }
+          }
+        },
+        "infrastructure": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.05 }
+          }
+        },
+        "accessibility": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.03 }
+          }
+        },
+        "business_logic": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.01 }
+          }
+        },
+        "team_health": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.01 }
+          }
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "properties": {
+        "high_confidence": { "type": "number", "minimum": 0, "maximum": 100, "default": 90 },
+        "medium_confidence": { "type": "number", "minimum": 0, "maximum": 100, "default": 70 },
+        "low_confidence": { "type": "number", "minimum": 0, "maximum": 100, "default": 50 },
+        "min_overall_health": { "type": "number", "minimum": 0, "maximum": 100, "default": 75 }
+      },
+      "required": ["high_confidence", "medium_confidence", "low_confidence"]
+    },
+    "reporting": {
+      "type": "object",
+      "properties": {
+        "include_blind_spots": { "type": "boolean", "default": true },
+        "prioritize_cross_dimension": { "type": "boolean", "default": true },
+        "suggest_improvements": { "type": "boolean", "default": true },
+        "include_recommendations": { "type": "boolean", "default": true },
+        "generate_charts": { "type": "boolean", "default": false },
+        "export_formats": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["json", "markdown", "html", "pdf"] },
+          "default": ["json", "markdown"]
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "scan_secrets": { "type": "boolean", "default": true },
+        "scan_dependencies": { "type": "boolean", "default": true },
+        "check_authentication": { "type": "boolean", "default": true },
+        "check_xss": { "type": "boolean", "default": true },
+        "check_sql_injection": { "type": "boolean", "default": true },
+        "ignore_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["test", "example", "demo", "sample"]
+        }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "properties": {
+        "bundle_size_threshold_mb": { "type": "number", "minimum": 0.1, "maximum": 10, "default": 1.0 },
+        "chunk_size_threshold_mb": { "type": "number", "minimum": 0.1, "maximum": 5, "default": 0.3 },
+        "large_file_threshold_kb": { "type": "number", "minimum": 10, "maximum": 1000, "default": 100 },
+        "complexity_threshold": { "type": "number", "minimum": 1, "maximum": 100, "default": 50 },
+        "analyze_bundle": { "type": "boolean", "default": true },
+        "analyze_memory_patterns": { "type": "boolean", "default": true }
+      }
+    },
+    "test_coverage": {
+      "type": "object",
+      "properties": {
+        "min_line_coverage": { "type": "number", "minimum": 0, "maximum": 100, "default": 80 },
+        "min_branch_coverage": { "type": "number", "minimum": 0, "maximum": 100, "default": 70 },
+        "run_mutation_testing": { "type": "boolean", "default": false },
+        "run_flaky_test_detection": { "type": "boolean", "default": true }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "properties": {
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["node_modules", ".git", "dist", "build", "coverage", ".next", ".nuxt", "__pycache__"]
+        },
+        "include": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["**/*.js", "**/*.ts", "**/*.jsx", "**/*.tsx", "**/*.py", "**/*.java"]
+        },
+        "config_files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["*.json", "*.yaml", "*.yml", "*.toml", "*.ini", "*.env*"]
+        }
+      }
+    }
+  },
+  "required": ["dimensions", "thresholds"],
+  "additionalProperties": false
+}

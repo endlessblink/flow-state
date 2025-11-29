@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Analyzer Stub"""
+
+import json
+import sys
+
+def analyze(root_dir: str):
+    return {
+        "findings": [],
+        "score": 75,
+        "blind_spots": ["Analysis limitations"],
+        "metadata": {"execution_time": 1.0}
+    }
+
+if __name__ == "__main__":
+    print(json.dumps(analyze(sys.argv[1]), indent=2))

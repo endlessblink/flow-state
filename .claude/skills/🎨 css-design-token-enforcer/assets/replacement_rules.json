@@ -1,0 +1,226 @@
+{
+  "version": "1.0.0",
+  "description": "CSS design token replacement rules for Pomo-Flow application",
+  "rules": [
+    {
+      "id": "priority-medium-main",
+      "hex_value": "#f59e0b",
+      "replacement": "var(--color-priority-medium)",
+      "priority": 1,
+      "contexts": ["background", "background-color", "color", "border-color"],
+      "description": "Main medium priority color - orange/amber"
+    },
+    {
+      "id": "priority-medium-yellow-variant",
+      "hex_value": "#feca57",
+      "replacement": "var(--color-priority-medium)",
+      "priority": 1,
+      "contexts": ["background", "background-color", "color", "border-color"],
+      "description": "Yellow variant that causes color inconsistency - URGENT"
+    },
+    {
+      "id": "priority-medium-another-yellow",
+      "hex_value": "#fbbf24",
+      "replacement": "var(--color-priority-medium)",
+      "priority": 1,
+      "contexts": ["background", "background-color", "color", "border-color"],
+      "description": "Another yellow variant - URGENT"
+    },
+    {
+      "id": "priority-high-main",
+      "hex_value": "#ef4444",
+      "replacement": "var(--color-priority-high)",
+      "priority": 1,
+      "contexts": ["background", "background-color", "color", "border-color"],
+      "description": "High priority color - red"
+    },
+    {
+      "id": "priority-low-main",
+      "hex_value": "#3b82f6",
+      "replacement": "var(--color-priority-low)",
+      "priority": 1,
+      "contexts": ["background", "background-color", "color", "border-color"],
+      "description": "Low priority color - blue"
+    },
+    {
+      "id": "work-color-main",
+      "hex_value": "#10b981",
+      "replacement": "var(--color-work)",
+      "priority": 1,
+      "contexts": ["background", "background-color", "color", "border-color"],
+      "description": "Work color - green"
+    }
+  ],
+  "rgba_rules": [
+    {
+      "id": "priority-medium-bg-standard",
+      "rgba_value": "rgba(245, 158, 11, 0.3)",
+      "replacement": "var(--color-priority-medium-bg)",
+      "alpha": 0.3,
+      "priority": 1,
+      "contexts": ["background", "background-color"],
+      "description": "Standard medium priority background with 30% opacity"
+    },
+    {
+      "id": "priority-medium-bg-light",
+      "rgba_value": "rgba(245, 158, 11, 0.1)",
+      "replacement": "var(--color-warning-alpha-10)",
+      "alpha": 0.1,
+      "priority": 1,
+      "contexts": ["background", "background-color"],
+      "description": "Light medium priority background with 10% opacity"
+    },
+    {
+      "id": "priority-medium-bg-subtle",
+      "rgba_value": "rgba(245, 158, 11, 0.05)",
+      "replacement": "var(--color-priority-medium-bg-subtle)",
+      "alpha": 0.05,
+      "priority": 2,
+      "contexts": ["background", "background-color"],
+      "description": "Subtle medium priority background with 5% opacity"
+    },
+    {
+      "id": "priority-medium-border",
+      "rgba_value": "rgba(245, 158, 11, 0.2)",
+      "replacement": "var(--color-priority-medium-border-medium)",
+      "alpha": 0.2,
+      "priority": 2,
+      "contexts": ["border-color", "border"],
+      "description": "Medium priority border with 20% opacity"
+    },
+    {
+      "id": "priority-high-bg-standard",
+      "rgba_value": "rgba(239, 68, 68, 0.3)",
+      "replacement": "var(--priority-high-bg)",
+      "alpha": 0.3,
+      "priority": 1,
+      "contexts": ["background", "background-color"],
+      "description": "Standard high priority background with 30% opacity"
+    },
+    {
+      "id": "priority-high-bg-light",
+      "rgba_value": "rgba(239, 68, 68, 0.1)",
+      "replacement": "var(--color-error-alpha-10)",
+      "alpha": 0.1,
+      "priority": 1,
+      "contexts": ["background", "background-color"],
+      "description": "Light high priority background with 10% opacity"
+    },
+    {
+      "id": "priority-low-bg-standard",
+      "rgba_value": "rgba(59, 130, 246, 0.3)",
+      "replacement": "var(--priority-low-bg)",
+      "alpha": 0.3,
+      "priority": 1,
+      "contexts": ["background", "background-color"],
+      "description": "Standard low priority background with 30% opacity"
+    }
+  ],
+  "gradient_rules": [
+    {
+      "id": "priority-medium-gradient-elimination",
+      "pattern": "linear-gradient.*#feca57",
+      "replacement": "var(--color-priority-medium)",
+      "priority": 1,
+      "description": "Eliminate gradients that end in yellow - causes color inconsistency"
+    },
+    {
+      "id": "priority-medium-gradient-cleanup",
+      "pattern": "linear-gradient.*rgba\\(245, 158, 11",
+      "replacement": "var(--color-priority-medium)",
+      "priority": 2,
+      "description": "Clean up any remaining gradients with medium priority color"
+    }
+  ],
+  "shadow_rules": [
+    {
+      "id": "priority-medium-shadow-standard",
+      "pattern": "0 0 .*rgba\\(245, 158, 11",
+      "replacement": "var(--priority-medium-glow)",
+      "priority": 1,
+      "description": "Replace hardcoded medium priority shadow effects"
+    },
+    {
+      "id": "priority-high-shadow-standard",
+      "pattern": "0 0 .*rgba\\(239, 68, 68",
+      "replacement": "var(--priority-high-glow)",
+      "priority": 1,
+      "description": "Replace hardcoded high priority shadow effects"
+    },
+    {
+      "id": "priority-low-shadow-standard",
+      "pattern": "0 0 .*rgba\\(59, 130, 246",
+      "replacement": "var(--priority-low-glow)",
+      "priority": 1,
+      "description": "Replace hardcoded low priority shadow effects"
+    }
+  ],
+  "file_specific_rules": {
+    "TaskCard.vue": [
+      {
+        "line_pattern": "background: rgba\\(245, 158, 11, 0\\.1\\)",
+        "replacement": "background: var(--color-warning-alpha-10)",
+        "description": "Fix TaskCard priority background"
+      },
+      {
+        "line_pattern": "border: 1px solid rgba\\(245, 158, 11, 0\\.2\\)",
+        "replacement": "border: 1px solid var(--color-priority-medium-border-medium)",
+        "description": "Fix TaskCard priority border"
+      }
+    ],
+    "CalendarView.vue": [
+      {
+        "line_pattern": "background: linear-gradient.*#feca57",
+        "replacement": "background: var(--color-priority-medium)",
+        "description": "Fix CalendarView gradient ending in yellow"
+      }
+    ],
+    "BaseModal.vue": [
+      {
+        "line_pattern": "box-shadow: 0 0 .*rgba\\(245, 158, 11, 0\\.2\\)",
+        "replacement": "box-shadow: var(--priority-medium-glow)",
+        "description": "Fix BaseModal shadow effect"
+      }
+    ],
+    "QuickCapture.vue": [
+      {
+        "line_pattern": "--accent-blue",
+        "replacement": "--color-priority-medium",
+        "description": "Fix mobile component color variable"
+      }
+    ],
+    "TaskList.vue": [
+      {
+        "line_pattern": "--accent-blue",
+        "replacement": "--color-priority-medium",
+        "description": "Fix mobile task list color variable"
+      }
+    ]
+  },
+  "validation_rules": {
+    "forbidden_hex_values": [
+      "#feca57",
+      "#fbbf24"
+    ],
+    "required_tokens": [
+      "--color-priority-medium",
+      "--priority-medium-glow"
+    ],
+    "consistency_checks": [
+      "all_priority_medium_colors_must_use_var_color_priority_medium",
+      "no_gradients_ending_in_yellow_values",
+      "all_rgba_values_must_use_css_variables"
+    ]
+  },
+  "backup_policy": {
+    "create_backup": true,
+    "backup_location": ".claude/css-token-backups",
+    "backup_naming": "timestamped_directory"
+  },
+  "reporting": {
+    "include_line_numbers": true,
+    "include_context": true,
+    "include_css_property": true,
+    "categorize_by_priority": true
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "skill_name": "\ud83d\udcca comprehensive-auditor",
+  "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/\ud83d\udcca comprehensive-auditor",
+  "validation": {
+    "errors": [],
+    "warnings": [
+      "Skill not found in skills.json registry",
+      "No main script found for testing"
+    ],
+    "is_valid": true
+  },
+  "structure": {
+    "has_skill_md": true,
+    "scripts_count": 1,
+    "references_count": 2,
+    "assets_count": 0
+  },
+  "size_info": {
+    "total_bytes": 160509,
+    "total_kb": 156.75,
+    "file_counts": {
+      "total": 19,
+      "python": 11,
+      "markdown": 3,
+      "json": 1,
+      "other": 4
+    }
+  }
+}

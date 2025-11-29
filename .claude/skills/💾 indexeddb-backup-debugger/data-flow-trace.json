@@ -1,0 +1,414 @@
+{
+  "timestamp": "2025-11-09T12:16:37.920Z",
+  "traceTime": 97,
+  "pipeline": [
+    {
+      "layer": "UI",
+      "component": "TaskDisplay",
+      "taskCount": 0,
+      "hebrewTasks": 0,
+      "tasks": [],
+      "timestamp": 1762690597831,
+      "error": "Cannot read properties of undefined (reading 'match')"
+    },
+    {
+      "layer": "Pinia Store",
+      "component": "Task Store",
+      "taskCount": 0,
+      "hebrewTasks": 0,
+      "tasks": [],
+      "timestamp": 1762690597894,
+      "syncStatus": "has_persistence"
+    },
+    {
+      "layer": "IndexedDB",
+      "component": "Database Storage",
+      "taskCount": 22,
+      "hebrewTasks": 0,
+      "tasks": [
+        {
+          "id": "indexeddb-task-1",
+          "title": "IndexedDB Task 1",
+          "description": "Task from IndexedDB 1",
+          "status": "planned",
+          "timestamp": 1762690597910
+        },
+        {
+          "id": "indexeddb-task-2",
+          "title": "IndexedDB Task 2",
+          "description": "Task from IndexedDB 2",
+          "status": "planned",
+          "timestamp": 1762690596910
+        },
+        {
+          "id": "indexeddb-task-3",
+          "title": "IndexedDB Task 3",
+          "description": "Task from IndexedDB 3",
+          "status": "planned",
+          "timestamp": 1762690595910
+        },
+        {
+          "id": "indexeddb-task-4",
+          "title": "IndexedDB Task 4",
+          "description": "Task from IndexedDB 4",
+          "status": "planned",
+          "timestamp": 1762690594910
+        },
+        {
+          "id": "indexeddb-task-5",
+          "title": "IndexedDB Task 5",
+          "description": "Task from IndexedDB 5",
+          "status": "planned",
+          "timestamp": 1762690593910
+        },
+        {
+          "id": "indexeddb-task-6",
+          "title": "IndexedDB Task 6",
+          "description": "Task from IndexedDB 6",
+          "status": "planned",
+          "timestamp": 1762690592910
+        },
+        {
+          "id": "indexeddb-task-7",
+          "title": "IndexedDB Task 7",
+          "description": "Task from IndexedDB 7",
+          "status": "planned",
+          "timestamp": 1762690591910
+        },
+        {
+          "id": "indexeddb-task-8",
+          "title": "IndexedDB Task 8",
+          "description": "Task from IndexedDB 8",
+          "status": "planned",
+          "timestamp": 1762690590910
+        },
+        {
+          "id": "indexeddb-task-9",
+          "title": "IndexedDB Task 9",
+          "description": "Task from IndexedDB 9",
+          "status": "planned",
+          "timestamp": 1762690589910
+        },
+        {
+          "id": "indexeddb-task-10",
+          "title": "IndexedDB Task 10",
+          "description": "Task from IndexedDB 10",
+          "status": "planned",
+          "timestamp": 1762690588910
+        },
+        {
+          "id": "indexeddb-task-11",
+          "title": "IndexedDB Task 11",
+          "description": "Task from IndexedDB 11",
+          "status": "planned",
+          "timestamp": 1762690587910
+        },
+        {
+          "id": "indexeddb-task-12",
+          "title": "IndexedDB Task 12",
+          "description": "Task from IndexedDB 12",
+          "status": "planned",
+          "timestamp": 1762690586910
+        },
+        {
+          "id": "indexeddb-task-13",
+          "title": "IndexedDB Task 13",
+          "description": "Task from IndexedDB 13",
+          "status": "planned",
+          "timestamp": 1762690585910
+        },
+        {
+          "id": "indexeddb-task-14",
+          "title": "IndexedDB Task 14",
+          "description": "Task from IndexedDB 14",
+          "status": "planned",
+          "timestamp": 1762690584910
+        },
+        {
+          "id": "indexeddb-task-15",
+          "title": "IndexedDB Task 15",
+          "description": "Task from IndexedDB 15",
+          "status": "planned",
+          "timestamp": 1762690583910
+        },
+        {
+          "id": "indexeddb-task-16",
+          "title": "IndexedDB Task 16",
+          "description": "Task from IndexedDB 16",
+          "status": "planned",
+          "timestamp": 1762690582910
+        },
+        {
+          "id": "indexeddb-task-17",
+          "title": "IndexedDB Task 17",
+          "description": "Task from IndexedDB 17",
+          "status": "planned",
+          "timestamp": 1762690581910
+        },
+        {
+          "id": "indexeddb-task-18",
+          "title": "IndexedDB Task 18",
+          "description": "Task from IndexedDB 18",
+          "status": "planned",
+          "timestamp": 1762690580910
+        },
+        {
+          "id": "indexeddb-task-19",
+          "title": "IndexedDB Task 19",
+          "description": "Task from IndexedDB 19",
+          "status": "planned",
+          "timestamp": 1762690579910
+        },
+        {
+          "id": "indexeddb-task-20",
+          "title": "IndexedDB Task 20",
+          "description": "Task from IndexedDB 20",
+          "status": "planned",
+          "timestamp": 1762690578910
+        },
+        {
+          "id": "indexeddb-task-21",
+          "title": "IndexedDB Task 21",
+          "description": "Task from IndexedDB 21",
+          "status": "planned",
+          "timestamp": 1762690577910
+        },
+        {
+          "id": "indexeddb-task-22",
+          "title": "IndexedDB Task 22",
+          "description": "Task from IndexedDB 22",
+          "status": "planned",
+          "timestamp": 1762690576910
+        }
+      ],
+      "timestamp": 1762690597910,
+      "databaseVersions": [
+        {
+          "name": "pomo-flow",
+          "version": 3,
+          "taskCount": 22
+        },
+        {
+          "name": "pomo-flow-v3",
+          "version": 3,
+          "taskCount": 0
+        }
+      ]
+    },
+    {
+      "layer": "Backup System",
+      "component": "Simple Backup",
+      "taskCount": 22,
+      "hebrewTasks": 0,
+      "tasks": [
+        {
+          "id": "indexeddb-task-1",
+          "title": "IndexedDB Task 1",
+          "description": "Task from IndexedDB 1",
+          "status": "planned",
+          "timestamp": 1762690597920
+        },
+        {
+          "id": "indexeddb-task-2",
+          "title": "IndexedDB Task 2",
+          "description": "Task from IndexedDB 2",
+          "status": "planned",
+          "timestamp": 1762690596920
+        },
+        {
+          "id": "indexeddb-task-3",
+          "title": "IndexedDB Task 3",
+          "description": "Task from IndexedDB 3",
+          "status": "planned",
+          "timestamp": 1762690595920
+        },
+        {
+          "id": "indexeddb-task-4",
+          "title": "IndexedDB Task 4",
+          "description": "Task from IndexedDB 4",
+          "status": "planned",
+          "timestamp": 1762690594920
+        },
+        {
+          "id": "indexeddb-task-5",
+          "title": "IndexedDB Task 5",
+          "description": "Task from IndexedDB 5",
+          "status": "planned",
+          "timestamp": 1762690593920
+        },
+        {
+          "id": "indexeddb-task-6",
+          "title": "IndexedDB Task 6",
+          "description": "Task from IndexedDB 6",
+          "status": "planned",
+          "timestamp": 1762690592920
+        },
+        {
+          "id": "indexeddb-task-7",
+          "title": "IndexedDB Task 7",
+          "description": "Task from IndexedDB 7",
+          "status": "planned",
+          "timestamp": 1762690591920
+        },
+        {
+          "id": "indexeddb-task-8",
+          "title": "IndexedDB Task 8",
+          "description": "Task from IndexedDB 8",
+          "status": "planned",
+          "timestamp": 1762690590920
+        },
+        {
+          "id": "indexeddb-task-9",
+          "title": "IndexedDB Task 9",
+          "description": "Task from IndexedDB 9",
+          "status": "planned",
+          "timestamp": 1762690589920
+        },
+        {
+          "id": "indexeddb-task-10",
+          "title": "IndexedDB Task 10",
+          "description": "Task from IndexedDB 10",
+          "status": "planned",
+          "timestamp": 1762690588920
+        },
+        {
+          "id": "indexeddb-task-11",
+          "title": "IndexedDB Task 11",
+          "description": "Task from IndexedDB 11",
+          "status": "planned",
+          "timestamp": 1762690587920
+        },
+        {
+          "id": "indexeddb-task-12",
+          "title": "IndexedDB Task 12",
+          "description": "Task from IndexedDB 12",
+          "status": "planned",
+          "timestamp": 1762690586920
+        },
+        {
+          "id": "indexeddb-task-13",
+          "title": "IndexedDB Task 13",
+          "description": "Task from IndexedDB 13",
+          "status": "planned",
+          "timestamp": 1762690585920
+        },
+        {
+          "id": "indexeddb-task-14",
+          "title": "IndexedDB Task 14",
+          "description": "Task from IndexedDB 14",
+          "status": "planned",
+          "timestamp": 1762690584920
+        },
+        {
+          "id": "indexeddb-task-15",
+          "title": "IndexedDB Task 15",
+          "description": "Task from IndexedDB 15",
+          "status": "planned",
+          "timestamp": 1762690583920
+        },
+        {
+          "id": "indexeddb-task-16",
+          "title": "IndexedDB Task 16",
+          "description": "Task from IndexedDB 16",
+          "status": "planned",
+          "timestamp": 1762690582920
+        },
+        {
+          "id": "indexeddb-task-17",
+          "title": "IndexedDB Task 17",
+          "description": "Task from IndexedDB 17",
+          "status": "planned",
+          "timestamp": 1762690581920
+        },
+        {
+          "id": "indexeddb-task-18",
+          "title": "IndexedDB Task 18",
+          "description": "Task from IndexedDB 18",
+          "status": "planned",
+          "timestamp": 1762690580920
+        },
+        {
+          "id": "indexeddb-task-19",
+          "title": "IndexedDB Task 19",
+          "description": "Task from IndexedDB 19",
+          "status": "planned",
+          "timestamp": 1762690579920
+        },
+        {
+          "id": "indexeddb-task-20",
+          "title": "IndexedDB Task 20",
+          "description": "Task from IndexedDB 20",
+          "status": "planned",
+          "timestamp": 1762690578920
+        },
+        {
+          "id": "indexeddb-task-21",
+          "title": "IndexedDB Task 21",
+          "description": "Task from IndexedDB 21",
+          "status": "planned",
+          "timestamp": 1762690577920
+        },
+        {
+          "id": "indexeddb-task-22",
+          "title": "IndexedDB Task 22",
+          "description": "Task from IndexedDB 22",
+          "status": "planned",
+          "timestamp": 1762690576920
+        }
+      ],
+      "timestamp": 1762690597911,
+      "backupCount": 0,
+      "lastBackup": null
+    }
+  ],
+  "breakpoints": [
+    {
+      "type": "data_count_mismatch",
+      "severity": "high",
+      "description": "UI shows 0 tasks, backup shows 22 tasks",
+      "uiCount": 0,
+      "backupCount": 22,
+      "difference": 22
+    },
+    {
+      "type": "store_db_mismatch",
+      "severity": "high",
+      "description": "Store has 0 tasks, DB has 22 tasks",
+      "storeCount": 0,
+      "dbCount": 22
+    }
+  ],
+  "timingIssues": [],
+  "hebrewHandling": {
+    "UI": {
+      "hebrewTasks": 0,
+      "totalTasks": 0,
+      "percentage": 0,
+      "preserved": false
+    },
+    "Pinia Store": {
+      "hebrewTasks": 0,
+      "totalTasks": 0,
+      "percentage": 0,
+      "preserved": false
+    },
+    "IndexedDB": {
+      "hebrewTasks": 0,
+      "totalTasks": 22,
+      "percentage": 0,
+      "preserved": false
+    },
+    "Backup System": {
+      "hebrewTasks": 0,
+      "totalTasks": 22,
+      "percentage": 0,
+      "preserved": false
+    }
+  },
+  "summary": {
+    "layers": 4,
+    "breakpoints": 2,
+    "timingIssues": 0,
+    "hebrewContentFound": false
+  }
+}

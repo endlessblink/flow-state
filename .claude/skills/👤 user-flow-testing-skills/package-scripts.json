@@ -1,0 +1,24 @@
+{
+  "name": "user-flow-testing-scripts",
+  "description": "NPM scripts for running user flow tests in Pomo-Flow",
+  "scripts": {
+    "test:user-flows": "node .claude/skills/user-flow-testing-skills/index.js",
+    "test:task-flows": "npx playwright test tests/user-flows/task-management.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js",
+    "test:timer-flows": "npx playwright test tests/user-flows/timer-workflows.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js",
+    "test:navigation-flows": "npx playwright test tests/user-flows/navigation.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js",
+    "test:canvas-flows": "npx playwright test tests/user-flows/canvas-interactions.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js",
+    "test:calendar-flows": "npx playwright test tests/user-flows/calendar-operations.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js",
+    "test:advanced-flows": "npx playwright test tests/user-flows/advanced-features.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js",
+    "test:user-flows:debug": "npx playwright test tests/user-flows/ --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js --debug",
+    "test:user-flows:ui": "npx playwright test tests/user-flows/ --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js --ui",
+    "test:user-flows:report": "npx playwright test tests/user-flows/ --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js --reporter=html",
+    "test:user-flows:coverage": "npx playwright test tests/user-flows/ --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js --reporter=html && npx playwright show-report test-results/user-flow-playwright-report",
+    "test:mobile-flows": "npx playwright test tests/user-flows/mobile-*.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js",
+    "test:accessibility-flows": "npx playwright test tests/user-flows/accessibility.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js",
+    "test:performance-flows": "npx playwright test tests/user-flows/performance.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "playwright": "^1.40.0"
+  }
+}

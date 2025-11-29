@@ -1,0 +1,29 @@
+{
+  "skill_name": "\ud83e\uddf9 legacy-tech-remover",
+  "path": "/media/noam/Drive_D/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/.claude/skills/\ud83e\uddf9 legacy-tech-remover",
+  "validation": {
+    "errors": [],
+    "warnings": [
+      "Skill not found in skills.json registry",
+      "No main script found for testing"
+    ],
+    "is_valid": true
+  },
+  "structure": {
+    "has_skill_md": true,
+    "scripts_count": 5,
+    "references_count": 2,
+    "assets_count": 2
+  },
+  "size_info": {
+    "total_bytes": 196990,
+    "total_kb": 192.37,
+    "file_counts": {
+      "total": 9,
+      "python": 5,
+      "markdown": 3,
+      "json": 1,
+      "other": 0
+    }
+  }
+}

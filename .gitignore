@@ -9,6 +9,13 @@ docs/testing/scripts/
 docs/testing/screenshots/
 testing-artifacts/screenshots/
 testing-artifacts/manual-tests/
+.claude/skills/docs/reports/test-artifacts/
+**/test-artifacts/
+**/*.webm
+**/*.trace.zip
+
+# Worktrees inside main repo (prevent accidents)
+stable-working-version/
 
 # Debug documentation
 docs/debugging/

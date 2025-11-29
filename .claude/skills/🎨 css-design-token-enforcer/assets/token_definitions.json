@@ -1,0 +1,195 @@
+{
+  "version": "1.0.0",
+  "description": "Complete CSS design token definitions for Pomo-Flow",
+  "token_categories": {
+    "priority_colors": {
+      "description": "Colors used for task priority indicators",
+      "tokens": {
+        "--color-priority-high": {
+          "value": "#ef4444",
+          "description": "High priority - red for urgent tasks",
+          "usage": ["task_badges", "priority_indicators", "alert_colors"]
+        },
+        "--color-priority-medium": {
+          "value": "#f59e0b",
+          "description": "Medium priority - orange/amber for default tasks",
+          "usage": ["task_badges", "priority_indicators", "default_priority"]
+        },
+        "--color-priority-low": {
+          "value": "#3b82f6",
+          "description": "Low priority - blue for optional tasks",
+          "usage": ["task_badges", "priority_indicators", "low_priority"]
+        },
+        "--color-work": {
+          "value": "#10b981",
+          "description": "Work color - green for active work state",
+          "usage": ["work_indicators", "active_states", "progress_colors"]
+        }
+      }
+    },
+    "priority_backgrounds": {
+      "description": "Background colors with transparency for priority indicators",
+      "tokens": {
+        "--priority-high-bg": {
+          "value": "rgba(239, 68, 68, 0.3)",
+          "description": "High priority background with 30% opacity",
+          "usage": ["badge_backgrounds", "highlight_backgrounds"]
+        },
+        "--priority-medium-bg": {
+          "value": "rgba(245, 158, 11, 0.3)",
+          "description": "Medium priority background with 30% opacity",
+          "usage": ["badge_backgrounds", "highlight_backgrounds"]
+        },
+        "--priority-low-bg": {
+          "value": "rgba(59, 130, 246, 0.3)",
+          "description": "Low priority background with 30% opacity",
+          "usage": ["badge_backgrounds", "highlight_backgrounds"]
+        }
+      }
+    },
+    "priority_glows": {
+      "description": "Glow effects for emphasis and visual feedback",
+      "tokens": {
+        "--priority-high-glow": {
+          "value": "0 4px 8px rgba(239, 68, 68, 0.3), 0 0 12px rgba(239, 68, 68, 0.2)",
+          "description": "High priority glow effect with dual shadows",
+          "usage": ["focus_states", "hover_effects", "active_indicators"]
+        },
+        "--priority-medium-glow": {
+          "value": "0 4px 8px rgba(245, 158, 11, 0.3), 0 0 12px rgba(245, 158, 11, 0.2)",
+          "description": "Medium priority glow effect with dual shadows",
+          "usage": ["focus_states", "hover_effects", "active_indicators"]
+        },
+        "--priority-low-glow": {
+          "value": "0 4px 8px rgba(59, 130, 246, 0.3), 0 0 12px rgba(59, 130, 246, 0.2)",
+          "description": "Low priority glow effect with dual shadows",
+          "usage": ["focus_states", "hover_effects", "active_indicators"]
+        }
+      }
+    },
+    "alpha_variants": {
+      "description": "Alpha variants for different opacity levels",
+      "tokens": {
+        "--color-warning-alpha-10": {
+          "value": "rgba(245, 158, 11, 0.1)",
+          "description": "Medium priority color with 10% opacity",
+          "usage": ["subtle_backgrounds", "light_highlights"]
+        },
+        "--color-error-alpha-10": {
+          "value": "rgba(239, 68, 68, 0.1)",
+          "description": "High priority color with 10% opacity",
+          "usage": ["error_backgrounds", "alert_highlights"]
+        },
+        "--color-priority-medium-bg-subtle": {
+          "value": "rgba(245, 158, 11, 0.05)",
+          "description": "Very subtle medium priority background",
+          "usage": ["subtle_indicators", "minimal_highlights"]
+        },
+        "--color-priority-medium-border-medium": {
+          "value": "rgba(245, 158, 11, 0.3)",
+          "description": "Medium priority border color",
+          "usage": ["border_colors", "outline_effects"]
+        }
+      }
+    }
+  },
+  "usage_guidelines": {
+    "consistency_rules": [
+      "All medium priority indicators must use --color-priority-medium",
+      "All glow effects must use corresponding --priority-*-glow token",
+      "No hardcoded hex values allowed for priority colors",
+      "Gradients must not end in different hex values than they start with",
+      "Alpha values must use appropriate CSS variables"
+    ],
+    "forbidden_patterns": [
+      "#feca57 - yellow variant causing color inconsistency",
+      "#fbbf24 - another yellow variant",
+      "linear-gradient ending in different color than starting color",
+      "rgba(245, 158, 11, X) with X not in predefined alpha variants",
+      "hardcoded shadow effects using rgba values"
+    ],
+    "required_tokens": [
+      "--color-priority-medium",
+      "--priority-medium-glow",
+      "--color-warning-alpha-10"
+    ]
+  },
+  "validation_criteria": {
+    "color_consistency": {
+      "description": "All medium priority colors must be identical",
+      "test_cases": [
+        "Board view medium priority badges match canvas view",
+        "Calendar view medium priority indicators match table view",
+        "Mobile app medium priority colors match web app",
+        "All hover states use consistent colors"
+      ]
+    },
+    "token_usage": {
+      "description": "All colors must use CSS design tokens",
+      "test_cases": [
+        "No hardcoded hex values in priority colors",
+        "All rgba values use appropriate CSS variables",
+        "All gradients use CSS tokens not hex values",
+        "All shadows use CSS glow variables"
+      ]
+    },
+    "opacity_consistency": {
+      "description": "Alpha levels must be consistent across contexts",
+      "test_cases": [
+        "Background opacity levels follow predefined values",
+        "Border opacity levels use appropriate tokens",
+        "Hover states use consistent alpha values"
+      ]
+    }
+  },
+  "migration_strategy": {
+    "phases": [
+      {
+        "phase": 1,
+        "name": "Critical Color Consistency",
+        "description": "Replace all #feca57 and problematic gradients",
+        "priority": "URGENT",
+        "expected_impact": "Eliminates yellow vs orange discrepancy"
+      },
+      {
+        "phase": 2,
+        "name": "Standard Token Usage",
+        "description": "Replace remaining hardcoded hex values",
+        "priority": "HIGH",
+        "expected_impact": "Complete token compliance"
+      },
+      {
+        "phase": 3,
+        "name": "Alpha Variant Standardization",
+        "description": "Replace hardcoded rgba values",
+        "priority": "MEDIUM",
+        "expected_impact": "Consistent opacity levels"
+      }
+    ],
+    "rollback_procedure": {
+      "backups": "Created automatically in .claude/css-token-backups",
+      "validation": "Run consistency validation after each phase",
+      "testing": "Visual testing across all views required"
+    }
+  },
+  "quality_assurance": {
+    "automated_checks": [
+      "Scan for forbidden hex values",
+      "Validate token naming conventions",
+      "Check color consistency across components",
+      "Verify alpha level compliance"
+    ],
+    "manual_checks": [
+      "Visual testing in all views (Board, Calendar, Canvas, Table)",
+      "Cross-browser compatibility testing",
+      "Mobile responsive design verification",
+      "Accessibility compliance for color contrast"
+    ],
+    "success_criteria": {
+      "no_hardcoded_hex_values": "100%",
+      "color_consistency_score": "100%",
+      "token_usage_compliance": "100%",
+      "user_visual_validation": "Approved"
+    }
+  }
+}

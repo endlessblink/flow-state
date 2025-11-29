@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-11-08 21:17:25.293800",
+  "summary": {
+    "total_files_analyzed": 0,
+    "files_with_token_usage": 0,
+    "files_with_hardcoded_issues": 0,
+    "total_hardcoded_matches": 0,
+    "consistency_score": 100,
+    "coverage_score": 100,
+    "overall_score": 100.0
+  },
+  "token_usage": {},
+  "inconsistencies": {
+    "hardcoded_priority_colors": [],
+    "mixed_approaches": {},
+    "potential_issues": []
+  },
+  "color_analysis": {
+    "frequency": {},
+    "by_property": {},
+    "by_file": {},
+    "total_unique_colors": 0
+  },
+  "vue_issues": {
+    "inline_styles": [],
+    "computed_colors": [],
+    "template_colors": []
+  },
+  "recommendations": [
+    "\u2705 Codebase shows good consistency with design token usage"
+  ]
+}

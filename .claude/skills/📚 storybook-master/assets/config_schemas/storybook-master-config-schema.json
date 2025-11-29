@@ -1,0 +1,484 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Storybook Master Configuration",
+  "description": "Configuration schema for the Storybook Master skill",
+  "type": "object",
+  "properties": {
+    "discovery": {
+      "type": "object",
+      "description": "Component discovery settings",
+      "properties": {
+        "component_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "src/components/**/*",
+            "lib/components/**/*",
+            "components/**/*"
+          ],
+          "description": "Paths to search for components"
+        },
+        "story_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "src/**/*.stories.*",
+            "stories/**/*",
+            "*.stories.*"
+          ],
+          "description": "Paths where story files are located"
+        },
+        "ignore_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*.test.*",
+            "*.spec.*",
+            "node_modules/**",
+            ".git/**",
+            "dist/**",
+            "build/**"
+          ],
+          "description": "File patterns to ignore during discovery"
+        },
+        "framework_detection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to automatically detect component frameworks"
+        }
+      }
+    },
+    "generation": {
+      "type": "object",
+      "description": "Story generation settings",
+      "properties": {
+        "autodocs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic documentation generation"
+        },
+        "controls": {
+          "type": "boolean",
+          "default": true,
+          "description": "Generate interactive controls for component props"
+        },
+        "interactions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Generate interaction examples and event handlers"
+        },
+        "responsive_variants": {
+          "type": "boolean",
+          "default": true,
+          "description": "Generate responsive story variants"
+        },
+        "accessibility_testing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include accessibility testing in generated stories"
+        },
+        "design_token_integration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Integrate with design system tokens"
+        }
+      }
+    },
+    "testing": {
+      "type": "object",
+      "description": "Testing configuration",
+      "properties": {
+        "visual_testing": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable visual regression testing"
+            },
+            "tool": {
+              "type": "string",
+              "enum": ["chromatic", "percy", "playwright"],
+              "default": "chromatic",
+              "description": "Visual testing tool to use"
+            },
+            "browsers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["chrome", "firefox", "safari"],
+              "description": "Browsers to test against"
+            },
+            "viewports": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["320px", "768px", "1024px", "1440px"],
+              "description": "Viewport sizes for responsive testing"
+            }
+          }
+        },
+        "accessibility": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable accessibility testing"
+            },
+            "standards": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["WCAG2.1AA"],
+              "description": "Accessibility standards to test against"
+            },
+            "automatic": {
+              "type": "boolean",
+              "default": true,
+              "description": "Run accessibility tests automatically"
+            }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "minimum_story_coverage": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 80,
+              "description": "Minimum percentage of components with stories"
+            },
+            "minimum_variant_coverage": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 60,
+              "description": "Minimum percentage of component variants covered"
+            },
+            "exclude_patterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["*.internal.*"],
+              "description": "Component patterns to exclude from coverage"
+            }
+          }
+        }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "description": "CI/CD integration settings",
+      "properties": {
+        "enforce_coverage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enforce minimum coverage in CI"
+        },
+        "fail_on_missing_stories": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fail CI build if new components lack stories"
+        },
+        "generate_reports": {
+          "type": "boolean",
+          "default": true,
+          "description": "Generate coverage and quality reports in CI"
+        },
+        "pr_comments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Add Storybook status comments to pull requests"
+        },
+        "notification_channels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["slack", "github", "email", "teams"]
+          },
+          "default": ["slack", "github"],
+          "description": "Channels for CI notifications"
+        }
+      }
+    },
+    "figma": {
+      "type": "object",
+      "description": "Figma integration settings",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Figma integration"
+        },
+        "token": {
+          "type": "string",
+          "description": "Figma API token (use environment variable)"
+        },
+        "team_id": {
+          "type": "string",
+          "description": "Figma team ID for design system access"
+        },
+        "file_id": {
+          "type": "string",
+          "description": "Figma file ID containing design system"
+        },
+        "auto_sync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically sync component changes with Figma"
+        }
+      }
+    },
+    "design_tokens": {
+      "type": "object",
+      "description": "Design token integration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable design token integration"
+        },
+        "source": {
+          "type": "string",
+          "default": "tokens.json",
+          "description": "Path to design tokens file"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["css", "scss", "json", "js"],
+          "default": "json",
+          "description": "Format of design tokens"
+        }
+      }
+    },
+    "templates": {
+      "type": "object",
+      "description": "Story template configuration",
+      "properties": {
+        "default_controls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["text", "boolean", "number", "select", "color", "object"],
+          "description": "Default control types to generate"
+        },
+        "default_variants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["Default", "Primary", "Secondary", "Disabled", "Loading"],
+          "description": "Default story variants to generate"
+        },
+        "responsive_breakpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["320px", "768px", "1024px", "1440px"],
+          "description": "Breakpoints for responsive variants"
+        }
+      }
+    },
+    "documentation": {
+      "type": "object",
+      "description": "Documentation settings",
+      "properties": {
+        "include_prop_descriptions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include prop descriptions in generated docs"
+        },
+        "include_event_descriptions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include event descriptions in generated docs"
+        },
+        "include_usage_examples": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include usage examples in generated stories"
+        },
+        "include_accessibility_notes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include accessibility information in docs"
+        }
+      }
+    },
+    "frameworks": {
+      "type": "object",
+      "description": "Framework-specific settings",
+      "properties": {
+        "react": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable React component processing"
+            },
+            "extensions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [".tsx", ".jsx"],
+              "description": "File extensions for React components"
+            },
+            "story_pattern": {
+              "type": "string",
+              "default": "{component}.stories.{ext}",
+              "description": "Pattern for React story file naming"
+            }
+          }
+        },
+        "vue": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable Vue component processing"
+            },
+            "extensions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [".vue"],
+              "description": "File extensions for Vue components"
+            },
+            "story_pattern": {
+              "type": "string",
+              "default": "{component}.stories.{ext}",
+              "description": "Pattern for Vue story file naming"
+            }
+          }
+        },
+        "svelte": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable Svelte component processing"
+            },
+            "extensions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [".svelte"],
+              "description": "File extensions for Svelte components"
+            }
+          }
+        }
+      }
+    },
+    "story_generation": {
+      "type": "object",
+      "description": "Story generation behavior",
+      "properties": {
+        "auto_create_missing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically create stories for missing components"
+        },
+        "update_existing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Update existing stories when component props change"
+        },
+        "preserve_manual_changes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Preserve manually added content in existing stories"
+        },
+        "backup_existing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create backup of existing stories before updating"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "description": "Output configuration",
+      "properties": {
+        "directory": {
+          "type": "string",
+          "default": "storybook-master-output",
+          "description": "Directory for generated reports and files"
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["json", "csv", "markdown", "html"]
+          },
+          "default": ["json", "csv", "markdown"],
+          "description": "Output formats for reports"
+        },
+        "include_timestamps": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include timestamps in output filenames"
+        }
+      }
+    },
+    "advanced": {
+      "type": "object",
+      "description": "Advanced configuration options",
+      "properties": {
+        "parallel_processing": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable parallel processing for large codebases"
+        },
+        "max_workers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "default": 4,
+          "description": "Maximum number of parallel workers"
+        },
+        "cache_results": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cache analysis results for faster subsequent runs"
+        },
+        "cache_ttl_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24,
+          "default": 2,
+          "description": "Cache time-to-live in hours"
+        },
+        "debug_mode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode with verbose logging"
+        }
+      }
+    }
+  },
+  "required": [
+    "discovery",
+    "generation"
+  ],
+  "additionalProperties": false
+}

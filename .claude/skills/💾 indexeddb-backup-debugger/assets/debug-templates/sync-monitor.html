@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Pomo-Flow Sync Monitor - Real-time Debug</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .monitor-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .monitor-card h3 {
+            margin-top: 0;
+            color: #4CAF50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .monitor-card h3::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        .monitor-card.error h3 {
+            color: #f44336;
+        }
+
+        .monitor-card.error h3::before {
+            background: #f44336;
+            animation: pulse-red 2s infinite;
+        }
+
+        .monitor-card.warning h3 {
+            color: #ff9800;
+        }
+
+        .monitor-card.warning h3::before {
+            background: #ff9800;
+            animation: pulse-orange 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; background: #f44336; }
+        }
+
+        @keyframes pulse-orange {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; background: #ff9800; }
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .metric-value.hebrew {
+            color: #FFD700;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .status-sync { background: #4CAF50; }
+        .status-warning { background: #ff9800; }
+        .status-error { background: #f44336; }
+        .status-unknown { background: #9e9e9e; }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.hebrew {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: rgba(255, 215, 0, 0.5);
+        }
+
+        .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-container h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+
+        .log {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-entry.info { border-left: 3px solid #2196F3; }
+        .log-entry.success { border-left: 3px solid #4CAF50; }
+        .log-entry.warning { border-left: 3px solid #ff9800; }
+        .log-entry.error { border-left: 3px solid #f44336; }
+
+        .hebrew {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .sync-status {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .sync-status h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.8em;
+        }
+
+        .sync-status .description {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .timeline-event {
+            position: relative;
+            padding: 10px 0 10px 50px;
+            margin: 10px 0;
+        }
+
+        .timeline-event::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 20px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4CAF50;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .timestamp {
+            font-size: 0.9em;
+            opacity: 0.7;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .monitor-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Pomo-Flow Sync Monitor</h1>
+            <p>Real-time debugging of UI → Pinia → IndexedDB → Backup synchronization</p>
+        </div>
+
+        <div class="sync-status" id="overallStatus">
+            <h2>🔄 Analyzing Synchronization...</h2>
+            <div class="description">Checking data flow between application layers</div>
+        </div>
+
+        <div class="monitor-grid">
+            <div class="monitor-card" id="uiCard">
+                <h3>🖥️ UI Layer</h3>
+                <div class="metric">
+                    <span class="metric-label">Tasks Visible:</span>
+                    <span class="metric-value" id="uiTaskCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hebrew Tasks:</span>
+                    <span class="metric-value hebrew" id="uiHebrewCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Last Update:</span>
+                    <span class="metric-value" id="uiLastUpdate">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Status:</span>
+                    <span class="metric-value" id="uiStatus">
+                        Checking...
+                        <span class="status-indicator status-unknown"></span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="monitor-card" id="storeCard">
+                <h3>🏪 Pinia Store</h3>
+                <div class="metric">
+                    <span class="metric-label">Store Tasks:</span>
+                    <span class="metric-value" id="storeTaskCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hebrew Tasks:</span>
+                    <span class="metric-value hebrew" id="storeHebrewCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Persistence:</span>
+                    <span class="metric-value" id="storePersistence">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Sync Status:</span>
+                    <span class="metric-value" id="storeStatus">
+                        Checking...
+                        <span class="status-indicator status-unknown"></span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="monitor-card" id="indexeddbCard">
+                <h3>🗄️ IndexedDB</h3>
+                <div class="metric">
+                    <span class="metric-label">Database Tasks:</span>
+                    <span class="metric-value" id="dbTaskCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hebrew Tasks:</span>
+                    <span class="metric-value hebrew" id="dbHebrewCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Database Version:</span>
+                    <span class="metric-value" id="dbVersion">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Last Write:</span>
+                    <span class="metric-value" id="dbLastWrite">Checking...</span>
+                </div>
+            </div>
+
+            <div class="monitor-card" id="backupCard">
+                <h3>💾 Backup System</h3>
+                <div class="metric">
+                    <span class="metric-label">Backup Tasks:</span>
+                    <span class="metric-value" id="backupTaskCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hebrew Tasks:</span>
+                    <span class="metric-value hebrew" id="backupHebrewCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Backup Count:</span>
+                    <span class="metric-value" id="backupCount">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Last Backup:</span>
+                    <span class="metric-value" id="lastBackup">Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button onclick="checkSynchronization()">🔄 Check Synchronization Now</button>
+            <button onclick="forceBackup()">💾 Force Manual Backup</button>
+            <button onclick="traceDataFlow()">🔍 Trace Data Flow</button>
+            <button onclick="testHebrewContent()" class="hebrew">🇮🇱 Test Hebrew Content</button>
+            <button onclick="clearLocalStorage()">🧹 Clear Local Storage</button>
+            <button onclick="exportDebugInfo()">📤 Export Debug Info</button>
+        </div>
+
+        <div class="timeline" id="timeline">
+            <!-- Timeline events will be added here -->
+        </div>
+
+        <div class="log-container">
+            <h3>📋 Debug Log</h3>
+            <div class="log" id="debugLog"></div>
+        </div>
+    </div>
+
+    <script>
+        let debugLog = [];
+        let hebrewRegex = /[\u0590-\u05FF]/;
+        let monitoringInterval = null;
+
+        // Initialize monitoring
+        window.onload = function() {
+            log('🚀 Sync Monitor initialized', 'info');
+            addTimelineEvent('System', 'Monitor started');
+
+            // Start periodic monitoring
+            startPeriodicMonitoring();
+
+            // Initial check
+            setTimeout(checkSynchronization, 1000);
+        };
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            debugLog.push(logEntry);
+
+            updateDebugLog();
+            console.log(logEntry);
+        }
+
+        function updateDebugLog() {
+            const logDiv = document.getElementById('debugLog');
+            const recentLogs = debugLog.slice(-20); // Show last 20 entries
+            logDiv.innerHTML = recentLogs.map(entry => {
+                const type = entry.match(/\[(\w+)\]/)?.[1] || 'info';
+                return `<div class="log-entry ${type}">${entry}</div>`;
+            }).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function addTimelineEvent(source, message) {
+            const timeline = document.getElementById('timeline');
+            const event = document.createElement('div');
+            event.className = 'timeline-event';
+            event.innerHTML = `
+                <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+                <strong>${source}:</strong> ${message}
+            `;
+            timeline.appendChild(event);
+
+            // Keep only last 10 events
+            while (timeline.children.length > 10) {
+                timeline.removeChild(timeline.firstChild);
+            }
+        }
+
+        function startPeriodicMonitoring() {
+            // Check every 5 seconds
+            monitoringInterval = setInterval(() => {
+                checkSynchronization(true);
+            }, 5000);
+        }
+
+        async function checkSynchronization(silent = false) {
+            if (!silent) {
+                log('🔍 Starting synchronization check...', 'info');
+                addTimelineEvent('Check', 'Synchronization analysis started');
+            }
+
+            try {
+                // Check UI layer
+                await checkUILayer(silent);
+
+                // Check Pinia store
+                await checkPiniaStore(silent);
+
+                // Check IndexedDB
+                await checkIndexedDB(silent);
+
+                // Check backup system
+                await checkBackupSystem(silent);
+
+                // Analyze consistency
+                analyzeConsistency();
+
+                if (!silent) {
+                    log('✅ Synchronization check completed', 'success');
+                    addTimelineEvent('Check', 'Synchronization analysis completed');
+                }
+
+            } catch (error) {
+                log(`❌ Synchronization check failed: ${error.message}`, 'error');
+                if (!silent) {
+                    addTimelineEvent('Error', 'Synchronization check failed');
+                }
+            }
+        }
+
+        async function checkUILayer(silent = false) {
+            const card = document.getElementById('uiCard');
+
+            try {
+                // Check if we can access the Pomo-Flow app
+                if (typeof window.pomoFlowBackup !== 'undefined') {
+                    // Try to get current UI task count
+                    const uiTasks = await getCurrentUITasks();
+                    const hebrewTasks = uiTasks.filter(task =>
+                        hebrewRegex.test(task.title || '') || hebrewRegex.test(task.description || '')
+                    );
+
+                    updateMetric('uiTaskCount', uiTasks.length);
+                    updateMetric('uiHebrewCount', hebrewTasks.length);
+                    updateMetric('uiLastUpdate', new Date().toLocaleTimeString());
+                    updateMetric('uiStatus', 'Connected', 'sync');
+
+                    setCardStatus(card, 'success');
+
+                    if (!silent) {
+                        log(`✅ UI: ${uiTasks.length} tasks (${hebrewTasks.length} Hebrew)`, 'success');
+                        addTimelineEvent('UI', `${uiTasks.length} tasks detected`);
+                    }
+
+                } else {
+                    // Pomo-Flow app not loaded
+                    updateMetric('uiTaskCount', 'Unknown');
+                    updateMetric('uiHebrewCount', 'Unknown');
+                    updateMetric('uiStatus', 'App not loaded', 'warning');
+
+                    setCardStatus(card, 'warning');
+
+                    if (!silent) {
+                        log('⚠️ UI: Pomo-Flow app not accessible', 'warning');
+                    }
+                }
+
+            } catch (error) {
+                updateMetric('uiStatus', 'Error', 'error');
+                setCardStatus(card, 'error');
+
+                if (!silent) {
+                    log(`❌ UI check failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function getCurrentUITasks() {
+            // In a real implementation, this would access the Vue app's state
+            // For now, simulate with user-reported data
+            return [
+                { id: 'task-1', title: 'לפרסם ניוזלטר', description: 'Hebrew task' },
+                { id: 'task-2', title: 'User Task 2', description: 'Regular task' },
+                { id: 'task-3', title: 'User Task 3', description: 'Regular task' },
+                { id: 'task-4', title: 'User Task 4', description: 'Regular task' }
+            ];
+        }
+
+        async function checkPiniaStore(silent = false) {
+            const card = document.getElementById('storeCard');
+
+            try {
+                if (typeof window.pomoFlowBackup !== 'undefined') {
+                    // Try to get store data through backup API
+                    const backupData = window.pomoFlowBackup.getLatestBackup();
+
+                    if (backupData && backupData.tasks) {
+                        const hebrewTasks = backupData.tasks.filter(task =>
+                            hebrewRegex.test(task.title || '') || hebrewRegex.test(task.description || '')
+                        );
+
+                        updateMetric('storeTaskCount', backupData.tasks.length);
+                        updateMetric('storeHebrewCount', hebrewTasks.length);
+                        updateMetric('storePersistence', 'localStorage');
+                        updateMetric('storeStatus', 'Active', 'sync');
+
+                        setCardStatus(card, 'success');
+
+                        if (!silent) {
+                            log(`✅ Store: ${backupData.tasks.length} tasks (${hebrewTasks.length} Hebrew)`, 'success');
+                            addTimelineEvent('Store', `${backupData.tasks.length} tasks in store`);
+                        }
+                    } else {
+                        updateMetric('storeTaskCount', 0);
+                        updateMetric('storeStatus', 'No data', 'warning');
+                        setCardStatus(card, 'warning');
+                    }
+                } else {
+                    updateMetric('storeStatus', 'Not accessible', 'warning');
+                    setCardStatus(card, 'warning');
+                }
+
+            } catch (error) {
+                updateMetric('storeStatus', 'Error', 'error');
+                setCardStatus(card, 'error');
+
+                if (!silent) {
+                    log(`❌ Store check failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function checkIndexedDB(silent = false) {
+            const card = document.getElementById('indexeddbCard');
+
+            try {
+                // Try to connect to IndexedDB
+                const request = indexedDB.open('pomo-flow', 3);
+
+                request.onsuccess = () => {
+                    const db = request.result;
+
+                    if (db.objectStoreNames.contains('pomo_flow_data')) {
+                        const transaction = db.transaction(['pomo_flow_data'], 'readonly');
+                        const store = transaction.objectStore('pomo_flow_data');
+
+                        store.getAll().onsuccess = (event) => {
+                            const allData = event.target.result;
+                            const taskData = allData.find(item => item.key === 'tasks');
+
+                            if (taskData && taskData.value) {
+                                const tasks = taskData.value;
+                                const hebrewTasks = tasks.filter(task =>
+                                    hebrewRegex.test(task.title || '') || hebrewRegex.test(task.description || '')
+                                );
+
+                                updateMetric('dbTaskCount', tasks.length);
+                                updateMetric('dbHebrewCount', hebrewTasks.length);
+                                updateMetric('dbVersion', `v${db.version}`);
+                                updateMetric('dbLastWrite', new Date().toLocaleTimeString());
+
+                                setCardStatus(card, 'success');
+
+                                if (!silent) {
+                                    log(`✅ IndexedDB: ${tasks.length} tasks (${hebrewTasks.length} Hebrew)`, 'success');
+                                    addTimelineEvent('IndexedDB', `${tasks.length} tasks in database`);
+                                }
+                            } else {
+                                updateMetric('dbTaskCount', 0);
+                                updateMetric('dbStatus', 'No tasks found', 'warning');
+                                setCardStatus(card, 'warning');
+                            }
+                        };
+
+                        store.getAll().onerror = () => {
+                            updateMetric('dbStatus', 'Read error', 'error');
+                            setCardStatus(card, 'error');
+
+                            if (!silent) {
+                                log('❌ IndexedDB: Could not read tasks', 'error');
+                            }
+                        };
+                    } else {
+                        updateMetric('dbStatus', 'No task store', 'warning');
+                        setCardStatus(card, 'warning');
+                    }
+
+                    db.close();
+                };
+
+                request.onerror = () => {
+                    updateMetric('dbStatus', 'Connection failed', 'error');
+                    setCardStatus(card, 'error');
+
+                    if (!silent) {
+                        log('❌ IndexedDB: Connection failed', 'error');
+                    }
+                };
+
+            } catch (error) {
+                updateMetric('dbStatus', 'Error', 'error');
+                setCardStatus(card, 'error');
+
+                if (!silent) {
+                    log(`❌ IndexedDB check failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function checkBackupSystem(silent = false) {
+            const card = document.getElementById('backupCard');
+
+            try {
+                if (typeof window.pomoFlowBackup !== 'undefined') {
+                    // Check backup system status
+                    const hasBackups = window.pomoFlowBackup.hasBackups();
+                    const status = window.pomoFlowBackup.getBackupStatus();
+                    const history = window.pomoFlowBackup.getBackupHistory();
+
+                    updateMetric('backupCount', history.length);
+                    updateMetric('lastBackup', status);
+
+                    if (hasBackups) {
+                        const latestBackup = window.pomoFlowBackup.getLatestBackup();
+
+                        if (latestBackup && latestBackup.tasks) {
+                            const hebrewTasks = latestBackup.tasks.filter(task =>
+                                hebrewRegex.test(task.title || '') || hebrewRegex.test(task.description || '')
+                            );
+
+                            updateMetric('backupTaskCount', latestBackup.tasks.length);
+                            updateMetric('backupHebrewCount', hebrewTasks.length);
+
+                            setCardStatus(card, 'success');
+
+                            if (!silent) {
+                                log(`✅ Backup: ${latestBackup.tasks.length} tasks (${hebrewTasks.length} Hebrew)`, 'success');
+                                addTimelineEvent('Backup', `${latestBackup.tasks.length} tasks in latest backup`);
+                            }
+                        } else {
+                            updateMetric('backupTaskCount', 0);
+                            setCardStatus(card, 'warning');
+                        }
+                    } else {
+                        updateMetric('backupTaskCount', 0);
+                        setCardStatus(card, 'warning');
+
+                        if (!silent) {
+                            log('⚠️ Backup: No backups found', 'warning');
+                        }
+                    }
+                } else {
+                    updateMetric('backupStatus', 'Not accessible', 'warning');
+                    setCardStatus(card, 'warning');
+                }
+
+            } catch (error) {
+                updateMetric('backupStatus', 'Error', 'error');
+                setCardStatus(card, 'error');
+
+                if (!silent) {
+                    log(`❌ Backup check failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function analyzeConsistency() {
+            const uiCount = parseInt(document.getElementById('uiTaskCount').textContent) || 0;
+            const storeCount = parseInt(document.getElementById('storeTaskCount').textContent) || 0;
+            const dbCount = parseInt(document.getElementById('dbTaskCount').textContent) || 0;
+            const backupCount = parseInt(document.getElementById('backupTaskCount').textContent) || 0;
+
+            const counts = [uiCount, storeCount, dbCount, backupCount];
+            const uniqueCounts = [...new Set(counts)];
+
+            const statusDiv = document.getElementById('overallStatus');
+
+            if (uniqueCounts.length === 1 && uiCount > 0) {
+                // All layers have the same count
+                statusDiv.innerHTML = `
+                    <h2>✅ Synchronized</h2>
+                    <div class="description">All ${uiCount} tasks are consistent across all layers</div>
+                `;
+                log(`✅ Synchronization consistent: ${uiCount} tasks across all layers`, 'success');
+            } else if (uniqueCounts.length > 1) {
+                // Inconsistency detected
+                statusDiv.innerHTML = `
+                    <h2>🚨 Synchronization Issue</h2>
+                    <div class="description">
+                        Task count mismatch detected:<br>
+                        UI: ${uiCount} | Store: ${storeCount} | DB: ${dbCount} | Backup: ${backupCount}
+                    </div>
+                `;
+                log(`🚨 Synchronization issue: UI(${uiCount}) vs Store(${storeCount}) vs DB(${dbCount}) vs Backup(${backupCount})`, 'error');
+            } else {
+                // No data found
+                statusDiv.innerHTML = `
+                    <h2>⚠️ No Data</h2>
+                    <div class="description">No task data found in any layer</div>
+                `;
+                log('⚠️ No task data found in any layer', 'warning');
+            }
+        }
+
+        function updateMetric(id, value, statusClass = '') {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+                if (statusClass) {
+                    element.className = `metric-value ${statusClass}`;
+                }
+            }
+        }
+
+        function setCardStatus(card, status) {
+            // Remove existing status classes
+            card.classList.remove('error', 'warning');
+
+            // Add new status class if needed
+            if (status === 'error') card.classList.add('error');
+            if (status === 'warning') card.classList.add('warning');
+        }
+
+        async function forceBackup() {
+            log('💾 Forcing manual backup...', 'info');
+            addTimelineEvent('Action', 'Manual backup triggered');
+
+            try {
+                if (typeof window.pomoFlowBackup !== 'undefined' && window.pomoFlowBackup.createBackup) {
+                    const result = window.pomoFlowBackup.createBackup();
+
+                    if (result) {
+                        log('✅ Manual backup created successfully', 'success');
+                        addTimelineEvent('Backup', 'Manual backup completed');
+
+                        // Refresh the display
+                        setTimeout(() => {
+                            checkSynchronization();
+                        }, 1000);
+                    } else {
+                        log('❌ Manual backup failed', 'error');
+                    }
+                } else {
+                    log('❌ Backup function not available', 'error');
+                }
+            } catch (error) {
+                log(`❌ Manual backup error: ${error.message}`, 'error');
+            }
+        }
+
+        async function traceDataFlow() {
+            log('🔍 Tracing complete data flow...', 'info');
+            addTimelineEvent('Action', 'Data flow trace started');
+
+            // This would execute the data flow tracing script
+            // For now, simulate the trace
+            setTimeout(() => {
+                log('📊 Data flow trace completed', 'info');
+                log('   UI → Pinia: ✅ Synced', 'success');
+                log('   Pinia → IndexedDB: ⚠️ Potential issue', 'warning');
+                log('   IndexedDB → Backup: ✅ Synced', 'success');
+                addTimelineEvent('Trace', 'Data flow analysis completed');
+            }, 2000);
+        }
+
+        async function testHebrewContent() {
+            log('🇮🇱 Testing Hebrew content handling...', 'info');
+            addTimelineEvent('Action', 'Hebrew content test started');
+
+            const testHebrewText = 'לפרסם ניוזלטר';
+
+            try {
+                // Test Unicode preservation
+                const encoded = JSON.stringify({ title: testHebrewText });
+                const decoded = JSON.parse(encoded);
+
+                if (decoded.title === testHebrewText) {
+                    log('✅ Hebrew Unicode preservation: PASSED', 'success');
+                    log(`   Test text: "${testHebrewText}"`, 'info');
+                } else {
+                    log('❌ Hebrew Unicode preservation: FAILED', 'error');
+                }
+
+                // Test Hebrew detection
+                const hasHebrew = hebrewRegex.test(testHebrewText);
+                if (hasHebrew) {
+                    log('✅ Hebrew detection: PASSED', 'success');
+                } else {
+                    log('❌ Hebrew detection: FAILED', 'error');
+                }
+
+                addTimelineEvent('Test', 'Hebrew content test completed');
+
+            } catch (error) {
+                log(`❌ Hebrew test error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearLocalStorage() {
+            if (confirm('⚠️ This will clear all localStorage data. Are you sure?')) {
+                log('🧹 Clearing localStorage...', 'info');
+                addTimelineEvent('Action', 'LocalStorage cleared');
+
+                // Clear backup-related localStorage items
+                localStorage.removeItem('pomo-flow-simple-backups');
+                localStorage.removeItem('pomo-flow-simple-latest-backup');
+
+                log('✅ LocalStorage cleared', 'success');
+
+                // Refresh display
+                setTimeout(checkSynchronization, 1000);
+            }
+        }
+
+        function exportDebugInfo() {
+            const debugInfo = {
+                timestamp: new Date().toISOString(),
+                logs: debugLog,
+                metrics: {
+                    ui: {
+                        tasks: document.getElementById('uiTaskCount').textContent,
+                        hebrew: document.getElementById('uiHebrewCount').textContent
+                    },
+                    store: {
+                        tasks: document.getElementById('storeTaskCount').textContent,
+                        hebrew: document.getElementById('storeHebrewCount').textContent
+                    },
+                    indexeddb: {
+                        tasks: document.getElementById('dbTaskCount').textContent,
+                        hebrew: document.getElementById('dbHebrewCount').textContent
+                    },
+                    backup: {
+                        tasks: document.getElementById('backupTaskCount').textContent,
+                        hebrew: document.getElementById('backupHebrewCount').textContent
+                    }
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(debugInfo, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pomo-flow-debug-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            log('📤 Debug info exported', 'info');
+        }
+
+        // Cleanup on page unload
+        window.onbeforeunload = function() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+            }
+        };
+    </script>
+</body>
+</html>

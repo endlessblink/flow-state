@@ -28,7 +28,9 @@
   },
   "smart_views": {
     "today": "Today",
-    "week": "This Week"
+    "week": "This Week",
+    "uncategorized_tasks": "Uncategorized Tasks",
+    "all_active_tasks": "All Active Tasks"
   },
   "task": {
     "title": "Task Title",
@@ -60,19 +62,19 @@
     "auto": "Auto-detect"
   },
   "auth": {
-    "email": "Email",
-    "emailPlaceholder": "Enter your email",
-    "password": "Password",
-    "passwordPlaceholder": "Enter your password",
-    "forgotPassword": "Forgot password?",
-    "or": "or",
-    "noAccount": "Don't have an account?",
-    "signUp": "Sign Up",
-    "signIn": "Sign In",
-    "signingIn": "Signing in...",
     "login": {
       "title": "Sign In",
-      "subtitle": "Welcome back! Sign in to access your tasks"
+      "subtitle": "Welcome back! Sign in to access your tasks",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "forgotPassword": "Forgot password?",
+      "or": "or",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign Up",
+      "signingIn": "Signing In...",
+      "signIn": "Sign In"
     }
   }
 }

@@ -37,11 +37,11 @@ const emit = defineEmits<{
 const menuRef = ref<HTMLElement | null>(null)
 
 const menuPosition = computed(() => ({
-  position: 'fixed',
+  position: 'fixed' as const,
   left: `${props.x}px`,
   top: `${props.y}px`,
   zIndex: 9999
-}))
+}) as any)
 
 // Close menu on click outside
 const handleClickOutside = (event: MouseEvent) => {

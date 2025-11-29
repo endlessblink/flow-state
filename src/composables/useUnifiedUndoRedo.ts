@@ -22,8 +22,7 @@ export const useUnifiedUndoRedo = () => {
     history,
     undo,
     redo,
-    saveStateBefore,
-    saveStateAfter
+    saveState
   } = singletonUndo
 
   // Sync state from store (call after operations that don't use undo)
@@ -33,49 +32,46 @@ export const useUnifiedUndoRedo = () => {
     console.log('🔄 syncFromStore called - using singleton pattern')
   }
 
-  // Task operations with undo support - DELEGATE to singleton
-  const deleteTaskWithUndo = (taskId: string) => {
-    console.log('🗑️ [CONSOLIDATED] deleteTaskWithUndo called for:', taskId)
-    return singletonUndo.deleteTaskWithUndo(taskId)
+  // Task operations with undo support - Use proper VueUse pattern
+  const deleteTaskWithUndo = async (taskId: string) => {
+    console.log('🗑️ deleteTaskWithUndo called for:', taskId)
+    return await singletonUndo.deleteTaskWithUndo(taskId)
   }
 
-  const updateTaskWithUndo = (taskId: string, updates: any) => {
-    console.log('✏️ [CONSOLIDATED] updateTaskWithUndo called for:', taskId, updates)
-    return singletonUndo.updateTaskWithUndo(taskId, updates)
+  const updateTaskWithUndo = async (taskId: string, updates: any) => {
+    console.log('✏️ updateTaskWithUndo called for:', taskId, updates)
+    return await singletonUndo.updateTaskWithUndo(taskId, updates)
   }
 
-  const createTaskWithUndo = (taskData: any) => {
-    console.log('➕ [CONSOLIDATED] createTaskWithUndo called with:', taskData)
-
-    // Save state BEFORE creation
-    saveStateBefore('Before task creation')
-
-    // Create the task
-    const newTask = taskStore.createTask(taskData)
-    console.log(`✅ Task created: ${newTask.title}`)
-
-    // Save state AFTER creation
-    saveStateAfter('After task creation')
-    return newTask
+  const createTaskWithUndo = async (taskData: any) => {
+    console.log('➕ createTaskWithUndo called with:', taskData)
+    return await singletonUndo.createTaskWithUndo(taskData)
   }
 
-  // Move operations with undo
-  const moveTaskWithUndo = (taskId: string, newStatus: string) => {
-    console.log('📍 [CONSOLIDATED] moveTaskWithUndo called for:', taskId, 'to:', newStatus)
+  // Move operations - Simplified for now, just perform the operation without undo
+  // (Undo system is primarily for create/update/delete operations)
+  const moveTaskWithUndo = async (taskId: string, newStatus: string) => {
+    console.log('📍 [CONSOLIDATED-V4] moveTaskWithUndo called for:', taskId, 'to:', newStatus)
 
-    saveStateBefore('Before task move')
-    taskStore.moveTask(taskId, newStatus)
-    saveStateAfter('After task move')
-    console.log(`✅ Task moved: ${taskId} to ${newStatus}`)
+    try {
+      // Just perform the move operation
+      taskStore.moveTask(taskId, newStatus as any)
+      console.log(`✅ Task moved: ${taskId} to ${newStatus}`)
+    } catch (error) {
+      console.error('❌ Error moving task:', error)
+    }
   }
 
-  const moveTaskToProjectWithUndo = (taskId: string, projectId: string) => {
-    console.log('🏢 [CONSOLIDATED] moveTaskToProjectWithUndo called for:', taskId, 'to:', projectId)
+  const moveTaskToProjectWithUndo = async (taskId: string, projectId: string) => {
+    console.log('🏢 [CONSOLIDATED-V4] moveTaskToProjectWithUndo called for:', taskId, 'to:', projectId)
 
-    saveStateBefore('Before project move')
-    taskStore.moveTaskToProject(taskId, projectId)
-    saveStateAfter('After project move')
-    console.log(`✅ Task moved to project: ${taskId} to ${projectId}`)
+    try {
+      // Just perform the move operation
+      taskStore.moveTaskToProject(taskId, projectId)
+      console.log(`✅ Task moved to project: ${taskId} to ${projectId}`)
+    } catch (error) {
+      console.error('❌ Error moving task to project:', error)
+    }
   }
 
   // Computed properties for UI state

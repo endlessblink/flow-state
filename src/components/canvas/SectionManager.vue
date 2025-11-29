@@ -154,7 +154,7 @@
             </div>
 
             <!-- Date Range Filters -->
-            <div v-if="sectionForm.type === 'date'" class="filter-group">
+            <div v-if="sectionForm.type === 'timeline'" class="filter-group">
               <label class="filter-label">Date Range:</label>
               <div class="date-range-group">
                 <input
@@ -193,7 +193,7 @@
                 :key="layout"
                 class="layout-btn"
                 :class="{ active: sectionForm.layout === layout }"
-                @click="sectionForm.layout = layout"
+                @click="sectionForm.layout = layout as any"
               >
                 {{ layout.charAt(0).toUpperCase() + layout.slice(1) }}
               </button>
@@ -271,7 +271,7 @@ const getSectionTypeLabel = (type: CanvasSection['type']) => {
     date: 'Date Range',
     tags: 'Tags'
   }
-  return labels[type]
+  return (labels as any)[type]
 }
 
 const getStatusLabel = (status: string) => {
@@ -281,7 +281,7 @@ const getStatusLabel = (status: string) => {
     done: 'Done',
     backlog: 'Backlog'
   }
-  return labels[status] || status
+  return (labels as any)[status] || status
 }
 
 const toggleSectionVisibility = (sectionId: string) => {
@@ -299,7 +299,7 @@ const editSection = (section: CanvasSection) => {
       priorities: section.filters?.priorities || [],
       statuses: section.filters?.statuses || [],
       projects: section.filters?.projects || [],
-      dateRange: section.filters?.dateRange || { start: '', end: '' }
+      dateRange: (section.filters?.dateRange as any) || { start: '', end: '' }
     }
   }
 }
@@ -356,9 +356,9 @@ const saveSection = () => {
   }
 
   if (editingSection.value) {
-    canvasStore.updateSection(editingSection.value.id, sectionData)
+    canvasStore.updateSection(editingSection.value.id, sectionData as any)
   } else {
-    canvasStore.createSection(sectionData)
+    canvasStore.createSection(sectionData as any)
   }
 
   closeModal()

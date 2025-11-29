@@ -99,27 +99,30 @@ defineEmits<{
 
 /* Active State */
 .base-icon-button.is-active {
-  background: var(--brand-primary);
+  background: transparent;
   border-color: var(--brand-primary);
-  color: var(--surface-primary);
-  box-shadow: 0 0 12px var(--purple-border-medium);
+  color: var(--brand-primary);
+  box-shadow: 0 0 0 1px var(--brand-primary) inset;
 }
 
 .base-icon-button.is-active:hover:not(:disabled) {
-  background: var(--brand-hover);
+  background: rgba(78, 205, 196, 0.08);
   border-color: var(--brand-hover);
+  color: var(--brand-hover);
 }
 
 /* Variant: Primary (brand color) */
 .base-icon-button.variant-primary {
-  background: var(--brand-primary);
+  background: transparent;
   border-color: var(--brand-primary);
-  color: var(--surface-primary);
+  color: var(--brand-primary);
 }
 
 .base-icon-button.variant-primary:hover:not(:disabled) {
-  background: var(--brand-hover);
-  box-shadow: var(--shadow-md);
+  background: rgba(78, 205, 196, 0.08);
+  border-color: var(--brand-hover);
+  color: var(--brand-hover);
+  box-shadow: var(--state-hover-shadow);
 }
 
 /* Variant: Success (green) */

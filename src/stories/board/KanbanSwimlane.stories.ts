@@ -659,7 +659,7 @@ export const InteractiveDemo: Story = {
           <div style="display: flex; align-items: end;">
             <button
               @click="addNewTask"
-              style="padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
+              style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 14px;"
             >
               Add Task
             </button>

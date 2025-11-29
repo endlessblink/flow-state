@@ -1,22 +1,35 @@
 import { defineStore } from 'pinia'
 import { ref, watch, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useDirection } from '@/i18n/useDirection'
+// Temporarily remove i18n to fix setup function error
+// import { useI18n } from 'vue-i18n'
+// import { useDirection } from '@/i18n/useDirection'
 
 const UI_STATE_STORAGE_KEY = 'pomo-flow-ui-state'
 
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
 export const useUIStore = defineStore('ui', () => {
-  // RTL and i18n support
-  const { locale } = useI18n()
-  const { direction, isRTL, isLTR, setDirection, directionPreference } = useDirection()
+  // RTL and i18n support - temporarily disabled to fix initialization
+  // const { locale } = useI18n()
+  // const { direction, isRTL, isLTR, setDirection, directionPreference } = useDirection()
+
+  // Temporary hardcoded values until i18n is fixed
+  const locale = ref('en')
+  const direction = ref('ltr')
+  const isRTL = computed(() => direction.value === 'rtl')
+  const isLTR = computed(() => direction.value === 'ltr')
+  const directionPreference = ref('ltr') // Temporary value
 
   // Sidebar visibility state
   const mainSidebarVisible = ref(true)
   const secondarySidebarVisible = ref(true)
   const focusMode = ref(false)
   const boardDensity = ref<'ultrathin' | 'compact' | 'comfortable'>('comfortable')
+
+  // Theme and additional UI state
+  const theme = ref<'light' | 'dark' | 'auto'>('dark')
+  const sidebarCollapsed = ref(false) // Legacy compatibility property
+  const activeView = ref<'board' | 'canvas' | 'calendar' | 'all-tasks'>('board')
 
   // Language and direction state
   const availableLanguages = [
@@ -120,11 +133,14 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   const setDirectionPreference = (pref: 'ltr' | 'rtl' | 'auto') => {
-    setDirection(pref)
+    // Temporarily disabled direction setting functionality
+    // setDirection(pref)
+    directionPreference.value = pref
     persistState()
   }
 
   const toggleDirection = () => {
+    // Temporarily disabled direction toggling
     if (directionPreference.value === 'auto') {
       setDirectionPreference(isRTL.value ? 'ltr' : 'rtl')
     } else {
@@ -163,7 +179,9 @@ export const useUIStore = defineStore('ui', () => {
         }
 
         if (state.directionPreference && ['ltr', 'rtl', 'auto'].includes(state.directionPreference)) {
-          setDirection(state.directionPreference)
+          // Temporarily disabled direction setting
+          // setDirection(state.directionPreference)
+          directionPreference.value = state.directionPreference
         }
       } catch (error) {
         console.warn('Failed to load UI state from localStorage:', error)
@@ -177,6 +195,9 @@ export const useUIStore = defineStore('ui', () => {
     secondarySidebarVisible,
     focusMode,
     boardDensity,
+    theme,
+    sidebarCollapsed,
+    activeView,
     authModalOpen,
     authModalView,
     authModalRedirect,

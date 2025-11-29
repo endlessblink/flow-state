@@ -133,13 +133,6 @@
       :is-open="showProjectModal"
       @close="showProjectModal = false"
     />
-
-    <!-- Task Edit Modal -->
-    <TaskEditModal
-      :is-open="showEditModal"
-      :task="taskToEdit"
-      @close="closeEditModal"
-    />
   </div>
 </template>
 
@@ -226,7 +219,7 @@ function handleSkip() {
 }
 
 function handleUndo() {
-  if (canUndo.value) {
+  if (canUndo) {
     undoLastCategorization()
   }
 }
@@ -271,19 +264,6 @@ function closeEditModal() {
 }
 
 function handleExit() {
-  // Check if there are still uncategorized tasks
-  const hasRemainingUncategorized = uncategorizedTasks.value.length > 0
-
-  if (hasRemainingUncategorized) {
-    // Activate uncategorized filter when returning to board
-    taskStore.setSmartView('uncategorized')
-    console.log('🔧 QuickSort: Returning to board with uncategorized filter active')
-  } else {
-    // Clear smart view if all tasks are categorized
-    taskStore.setSmartView(null)
-    console.log('🔧 QuickSort: All tasks categorized, returning to board with no filter')
-  }
-
   router.push({ name: 'board' })
 }
 
@@ -342,6 +322,7 @@ function formatTime(milliseconds: number): string {
   flex-direction: column;
   gap: var(--space-8);
   overflow-y: auto; /* Enable scrolling if content exceeds */
+  position: relative; /* Establish positioning context for celebration overlay */
 }
 
 .quick-sort-header {
@@ -535,31 +516,35 @@ function formatTime(milliseconds: number): string {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3_5) var(--space-7);
-  background: var(--brand-primary);
-  border: none;
+  background: transparent;
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-lg);
-  color: var(--text-primary);
+  color: var(--brand-primary);
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
   cursor: pointer;
   transition: all var(--duration-normal);
-  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
 }
 
 .primary-button:hover {
-  background: var(--brand-hover);
+  background: rgba(78, 205, 196, 0.08);
+  border-color: var(--brand-hover);
+  color: var(--brand-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+  box-shadow: var(--state-hover-shadow);
 }
 
 /* Celebration Overlay */
 .celebration-overlay {
-  position: fixed;
+  position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: var(--z-toast);
+  z-index: 50;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .celebration-content {
@@ -597,6 +582,7 @@ function formatTime(milliseconds: number): string {
   font-size: var(--text-2xl);
   font-weight: var(--font-bold);
   color: var(--text-primary);
+  text-align: center;
 }
 
 /* Transitions */

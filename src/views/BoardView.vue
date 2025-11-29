@@ -1,97 +1,13 @@
 <template>
   <!-- KANBAN BOARD HEADER CONTROLS -->
-  <div class="kanban-header">
+<div class="kanban-header">
     <div class="header-left">
       <h2 class="board-title">Kanban Board</h2>
       <span class="task-count">{{ totalDisplayedTasks }} tasks</span>
     </div>
     <div class="header-controls">
-      <!-- Density Selector -->
-      <div class="density-selector">
-        <button
-          class="density-btn"
-          :class="{ active: currentDensity === 'ultrathin' }"
-          @click="setDensity('ultrathin')"
-          title="Ultra-thin cards"
-        >
-          <Minimize2 :size="14" />
-        </button>
-        <button
-          class="density-btn"
-          :class="{ active: currentDensity === 'compact' }"
-          @click="setDensity('compact')"
-          title="Compact cards"
-        >
-          <Maximize2 :size="14" />
-        </button>
-        <button
-          class="density-btn"
-          :class="{ active: currentDensity === 'comfortable' }"
-          @click="setDensity('comfortable')"
-          title="Comfortable cards"
-        >
-          <AlignCenter :size="14" />
-        </button>
-      </div>
-
-      <!-- Hide Done Tasks Toggle -->
-      <button
-        class="hide-done-toggle icon-only"
-        :class="{ active: taskStore.hideDoneTasks }"
-        @click="handleToggleDoneTasks"
-        :title="taskStore.hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-      >
-        <EyeOff v-if="taskStore.hideDoneTasks" :size="16" />
-        <Eye v-else :size="16" />
-      </button>
-
-      <!-- Today Filter -->
-      <button
-        class="today-filter icon-only"
-        :class="{ active: taskStore.activeSmartView === 'today' }"
-        @click="handleToggleTodayFilter"
-        title="Show Today's Tasks"
-      >
-        <CalendarDays :size="16" />
-      </button>
-
-      <!-- Note: Uncategorized filter removed - now using the unified "My Tasks" Smart View in the sidebar -->
-
-      <!-- Status Filters -->
-      <div class="status-filters">
-        <button
-          class="status-btn icon-only"
-          :class="{ active: taskStore.activeStatusFilter === null }"
-          @click="taskStore.setActiveStatusFilter(null)"
-          title="All Tasks"
-        >
-          <ListTodo :size="16" />
-        </button>
-        <button
-          class="status-btn icon-only"
-          :class="{ active: taskStore.activeStatusFilter === 'planned' }"
-          @click="taskStore.setActiveStatusFilter('planned')"
-          title="Planned Tasks"
-        >
-          <CalendarIcon :size="16" />
-        </button>
-        <button
-          class="status-btn icon-only"
-          :class="{ active: taskStore.activeStatusFilter === 'in_progress' }"
-          @click="taskStore.setActiveStatusFilter('in_progress')"
-          title="In Progress Tasks"
-        >
-          <Play :size="16" />
-        </button>
-        <button
-          class="status-btn icon-only"
-          :class="{ active: taskStore.activeStatusFilter === 'done' }"
-          @click="taskStore.setActiveStatusFilter('done')"
-          title="Completed Tasks"
-        >
-          <Check :size="16" />
-        </button>
-      </div>
+      <!-- Filter Controls -->
+      <FilterControls />
 
       <!-- Show Done Column Toggle -->
       <button
@@ -108,21 +24,21 @@
 
   <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
   <div class="kanban-scroll-container">
-    <div class="kanban-board" @click="handleBoardClick">
+    <div class="kanban-board" @click="closeContextMenu">
       <KanbanSwimlane
         v-for="project in projectsWithTasks"
         :key="project.id"
         :project="project"
         :tasks="tasksByProject[project.id] || []"
-        :currentFilter="taskStore.activeSmartView"
+        :currentFilter="taskStore.activeSmartView as any"
         :density="currentDensity"
         :showDoneColumn="showDoneColumn"
         @selectTask="handleSelectTask"
         @startTimer="handleStartTimer"
         @editTask="handleEditTask"
         @moveTask="handleMoveTask"
+        @addTask="handleAddTask"
         @contextMenu="handleContextMenu"
-        @groupContextMenu="handleGroupContextMenu"
       />
     </div>
   </div>
@@ -134,7 +50,14 @@
     @close="closeEditModal"
   />
 
-  
+  <!-- QUICK TASK CREATE MODAL -->
+  <QuickTaskCreateModal
+    :isOpen="showQuickTaskCreate"
+    :loading="false"
+    @cancel="closeQuickTaskCreate"
+    @create="handleQuickTaskCreate"
+  />
+
   <!-- TASK CONTEXT MENU -->
   <TaskContextMenu
     :isVisible="showContextMenu"
@@ -147,26 +70,6 @@
     @confirmDelete="handleConfirmDelete"
   />
 
-  <!-- PROJECT GROUP CONTEXT MENU -->
-  <ProjectGroupContextMenu
-    :isVisible="showGroupContextMenu"
-    :x="groupContextMenuX"
-    :y="groupContextMenuY"
-    :project="contextMenuProject"
-    :tasksCount="getProjectTaskCount(contextMenuProject?.id)"
-    :isExpanded="isProjectExpanded(contextMenuProject?.id)"
-    @close="closeGroupContextMenu"
-    @editProject="handleEditProject"
-    @deleteProject="handleDeleteProject"
-    @createSubProject="handleCreateSubProject"
-    @createTask="handleCreateTaskInProject"
-    @hideTasks="handleHideProjectTasks"
-    @changeViewType="handleChangeViewType"
-    @expandCollapseAll="handleExpandCollapseAll"
-    @sortTasks="handleSortProjectTasks"
-    @archiveProject="handleArchiveProject"
-  />
-
   <!-- CONFIRMATION MODAL -->
   <ConfirmationModal
     :isOpen="showConfirmModal"
@@ -176,55 +79,27 @@
     @confirm="confirmDeleteTask"
     @cancel="cancelDeleteTask"
   />
-
-  <!-- PROJECT MODAL -->
-  <ProjectModal
-    :isOpen="showProjectModal"
-    :project="selectedProject"
-    :parentProjectId="parentProjectId"
-    @close="closeProjectModal"
-    @created="handleProjectCreated"
-    @updated="handleProjectUpdated"
-  />
-
-  <!-- PROJECT DELETE CONFIRMATION MODAL -->
-  <ConfirmationModal
-    :isOpen="showProjectDeleteConfirmModal"
-    title="Delete Project"
-    :message="`Are you sure you want to delete the project '${projectToDelete?.name}'? All tasks in this project will be moved to the default project. This action cannot be undone.`"
-    confirmText="Delete Project"
-    @confirm="confirmDeleteProject"
-    @cancel="cancelDeleteProject"
-  />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
-import { useUncategorizedTasks } from '@/composables/useUncategorizedTasks'
 import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
+import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
-import ProjectGroupContextMenu from '@/components/ProjectGroupContextMenu.vue'
-import ProjectModal from '@/components/ProjectModal.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
-import { Eye, EyeOff, CheckCircle, Circle, Minimize2, Maximize2, AlignCenter, ListTodo, Calendar as CalendarIcon, Play, Check, CalendarDays, Inbox, Zap } from 'lucide-vue-next'
+import { Eye, EyeOff, CheckCircle, Circle, Minimize2, Maximize2, AlignCenter, ListTodo, Calendar as CalendarIcon, Play, Check, CalendarDays } from 'lucide-vue-next'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
-import type { Task, Project } from '@/stores/tasks'
-
-// Router
-const router = useRouter()
+import type { Task } from '@/stores/tasks'
+import FilterControls from '@/components/base/FilterControls.vue'
 
 // Stores
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
-
-// Uncategorized tasks composable
-const { getUncategorizedTasks, filterTasksForRegularViews } = useUncategorizedTasks()
 
 // Density state from global UI store
 const currentDensity = computed(() => uiStore.boardDensity)
@@ -254,8 +129,9 @@ onUnmounted(() => {
 })
 
 // Handle kanban settings changes
-const handleKanbanSettingsChange = (event: CustomEvent) => {
-  showDoneColumn.value = event.detail.showDoneColumn
+const handleKanbanSettingsChange = (event: Event) => {
+  const customEvent = event as CustomEvent
+  showDoneColumn.value = customEvent.detail.showDoneColumn
 }
 
 // Set density using global store
@@ -263,156 +139,20 @@ const setDensity = (density: 'ultrathin' | 'compact' | 'comfortable') => {
   uiStore.setBoardDensity(density)
 }
 
-// Group tasks by project - USE STORE'S FILTERED TASKS
+// Group tasks by project (using filtered tasks from store)
 const tasksByProject = computed(() => {
-  try {
-    const grouped: Record<string, Task[]> = {}
+  const grouped: Record<string, Task[]> = {}
 
-    // COMPREHENSIVE DEBUGGING FOR SMART VIEW ISSUE
-    let tasks: Task[] = []
-    try {
-      // STATE SNAPSHOT BEFORE FILTERING
-      console.log('🔥🔥🔥 BoardView.tasksByProject: STARTING COMPUTATION')
-      console.log('🔥 BoardView.tasksByProject: Task store state:')
-      console.log('  - Total raw tasks:', taskStore.tasks?.length || 0)
-      console.log('  - Active smart view:', taskStore.activeSmartView)
-      console.log('  - Active project ID:', taskStore.activeProjectId)
-      console.log('  - Hide done tasks:', taskStore.hideDoneTasks)
-
-      // Get filtered tasks from store
-      tasks = taskStore.filteredTasks || []
-      console.log('🔥 BoardView.tasksByProject: Filtered tasks received:', tasks.length)
-
-      // LOGGING FOR TASK ANALYSIS
-      if (tasks.length === 0) {
-        console.log('🔥 BoardView.tasksByProject: ⚠️ NO TASKS PASSED FILTERING!')
-        console.log('🔥 BoardView.tasksByProject: Investigating raw tasks...')
-
-        const rawTasks = taskStore.tasks || []
-        console.log('🔥 BoardView.tasksByProject: Raw tasks available:', rawTasks.length)
-
-        if (rawTasks.length > 0) {
-          console.log('🔥 BoardView.tasksByProject: Sample raw tasks (first 5):')
-          rawTasks.slice(0, 5).forEach((task, i) => {
-            console.log(`    ${i+1}. "${task.title}" - Status: ${task.status}, Project: ${task.projectId || 'NONE'}`)
-          })
-        }
-      } else {
-        console.log('🔥 BoardView.tasksByProject: Tasks that passed filtering:')
-        tasks.forEach((task, i) => {
-          console.log(`    ${i+1}. "${task.title}" - Status: ${task.status}, Project: ${task.projectId || 'NONE'}`)
-        })
-      }
-    } catch (error) {
-      console.error('🔥 BoardView.tasksByProject: Error getting filtered tasks:', error)
-      tasks = []
+  taskStore.filteredTasks.forEach(task => {
+    const projectId = task.projectId || 'uncategorized' // Use string for uncategorized tasks
+    if (!grouped[projectId]) {
+      grouped[projectId] = []
     }
+    grouped[projectId].push(task)
+  })
 
-    // Group tasks by project with detailed logging
-    let uncategorizedCount = 0
-    let validTaskCount = 0
-
-    console.log('🔥 BoardView.tasksByProject: Starting task grouping...')
-    tasks.forEach(task => {
-      if (!task || typeof task !== 'object') {
-        console.warn('🔥 BoardView.tasksByProject: ⚠️ Invalid task object:', task)
-        return
-      }
-
-      validTaskCount++
-      const projectId = task.projectId || 'uncategorized'
-
-      if (projectId === 'uncategorized') {
-        uncategorizedCount++
-        console.log(`🔥 BoardView.tasksByProject: Found uncategorized task: "${task.title}"`)
-      }
-
-      if (!grouped[projectId]) {
-        grouped[projectId] = []
-        console.log(`🔥 BoardView.tasksByProject: Created project group: "${projectId}"`)
-      }
-      grouped[projectId].push(task)
-    })
-
-    console.log('🔥 BoardView.tasksByProject: Grouping complete:')
-    console.log('  - Valid tasks processed:', validTaskCount)
-    console.log('  - Uncategorized tasks:', uncategorizedCount)
-    console.log('  - Total project groups:', Object.keys(grouped).length)
-
-    // Log each project's task count
-    Object.entries(grouped).forEach(([projectId, projectTasks]) => {
-      console.log(`    Project "${projectId}": ${projectTasks.length} tasks`)
-    })
-    return grouped
-  } catch (error) {
-    console.error('🔥 BoardView.tasksByProject: Critical error:', error)
-    // Return empty object - no fake tasks to mask real issues
-    return {}
-  }
+  return grouped
 })
-
-// Helper function to create sample tasks for demonstration
-const createSampleTasks = (): Task[] => {
-  return [
-    {
-      id: 'sample-1',
-      title: 'Sample Task 1 - To Do',
-      description: 'This is a sample task for demonstration',
-      status: 'planned',
-      priority: 'high',
-      progress: 0,
-      completedPomodoros: 0,
-      subtasks: [],
-      dueDate: null,
-      instances: [],
-      projectId: 'default',
-      parentTaskId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      canvasPosition: null,
-      isInInbox: false,
-      dependsOn: []
-    },
-    {
-      id: 'sample-2',
-      title: 'Sample Task 2 - In Progress',
-      description: 'This task is currently in progress',
-      status: 'in_progress',
-      priority: 'medium',
-      progress: 50,
-      completedPomodoros: 1,
-      subtasks: [],
-      dueDate: null,
-      instances: [],
-      projectId: 'default',
-      parentTaskId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      canvasPosition: null,
-      isInInbox: false,
-      dependsOn: []
-    },
-    {
-      id: 'sample-3',
-      title: 'Sample Task 3 - Backlog',
-      description: 'This task is in the backlog',
-      status: 'backlog',
-      priority: 'low',
-      progress: 0,
-      completedPomodoros: 0,
-      subtasks: [],
-      dueDate: null,
-      instances: [],
-      projectId: 'default',
-      parentTaskId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      canvasPosition: null,
-      isInInbox: false,
-      dependsOn: []
-    }
-  ]
-}
 
 // Helper to get a project and all its descendants recursively
 const getProjectAndChildren = (projectId: string): string[] => {
@@ -424,132 +164,16 @@ const getProjectAndChildren = (projectId: string): string[] => {
   return ids
 }
 
-// Helper function to check if a project and its children have active tasks
-const projectHasActiveTasks = (projectId: string): boolean => {
-  try {
-    // Get all project IDs including children recursively
-    const projectIds = getProjectAndChildren(projectId)
-
-    // Check if any filtered tasks (active tasks only) belong to this project or its children
-    const tasks = boardFilteredTasks.value
-    return tasks.some(task => projectIds.includes(task.projectId || '1'))
-  } catch (error) {
-    console.error('BoardView.projectHasActiveTasks: Error checking project tasks:', error)
-    return false
-  }
-}
-
-// COMPREHENSIVE SWIMLANE FILTERING: Only show projects that have filtered tasks for BOTH smart views AND project selection
+// Get projects to display - respect active project filter but always show projects for smart views
 const projectsWithTasks = computed(() => {
-  try {
-    // Get all projects from store
-    let allProjects = taskStore.projects || []
-    const activeSmartView = taskStore.activeSmartView
-    const activeProjectId = taskStore.activeProjectId
-
-    console.log('🔥 BoardView.projectsWithTasks: STARTING COMPREHENSIVE FILTERING')
-    console.log('🔥 BoardView.projectsWithTasks: All projects from store:', allProjects.length)
-    console.log('🔥 BoardView.projectsWithTasks: Active smart view:', activeSmartView)
-    console.log('🔥 BoardView.projectsWithTasks: Active project ID:', activeProjectId)
-
-    // Validate that projects is an array
-    if (!Array.isArray(allProjects)) {
-      console.warn('🔥 BoardView.projectsWithTasks: taskStore.projects is not an array:', allProjects)
-      allProjects = []
-    }
-
-    // If no projects exist, create a default project
-    if (allProjects.length === 0) {
-      console.log('🔥 BoardView.projectsWithTasks: No projects found, creating default project')
-      allProjects = [{
-        id: 'default',
-        name: 'Default Project',
-        description: 'Default project for kanban board',
-        color: '#3b82f6',
-        parentId: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }]
-    }
-
-    // Get project IDs that actually have filtered tasks (this respects BOTH smart view AND project filtering)
-    const filteredTasks = taskStore.filteredTasks || []
-    console.log('🔥 BoardView.projectsWithTasks: Total filtered tasks available:', filteredTasks.length)
-
-    const projectIdsWithTasks = new Set(
-      filteredTasks.map(task => task.projectId || 'uncategorized')
-    )
-    console.log('🔥 BoardView.projectsWithTasks: Project IDs with filtered tasks:', Array.from(projectIdsWithTasks))
-
-    let projectsToShow = []
-
-    // COMPREHENSIVE FILTERING LOGIC
-    if (activeSmartView && activeSmartView !== 'all') {
-      // SMART VIEW ACTIVE: Only show projects that have tasks matching the smart view
-      console.log('🔥🔥🔥 SMART VIEW ACTIVE - Only showing projects with tasks matching:', activeSmartView)
-
-      projectsToShow = allProjects.filter(project => {
-        const hasTasks = projectIdsWithTasks.has(project.id)
-        console.log(`🔥 BoardView.projectsWithTasks: Project "${project.name}" (${project.id}) has smart view tasks: ${hasTasks}`)
-        return hasTasks
-      })
-
-      console.log('🔥 BoardView.projectsWithTasks: SMART VIEW - Returning', projectsToShow.length, 'projects with smart view tasks')
-
-    } else if (activeProjectId) {
-      // PROJECT SELECTION ACTIVE: Show selected project + children that have tasks
-      console.log('🔥🔥🔥 PROJECT SELECTION ACTIVE - Only showing selected project + children with tasks:', activeProjectId)
-
-      // Get all related project IDs (selected project + children)
-      const allRelatedProjectIds = getProjectAndChildren(activeProjectId)
-      console.log('🔥 BoardView.projectsWithTasks: Related project IDs (selected + children):', allRelatedProjectIds)
-
-      projectsToShow = allProjects.filter(project => {
-        const isRelated = allRelatedProjectIds.includes(project.id)
-        const hasTasks = projectIdsWithTasks.has(project.id)
-        const shouldShow = isRelated && hasTasks
-        console.log(`🔥 BoardView.projectsWithTasks: Project "${project.name}" (${project.id}) - Related: ${isRelated}, Has tasks: ${hasTasks}, Should show: ${shouldShow}`)
-        return shouldShow
-      })
-
-      console.log('🔥 BoardView.projectsWithTasks: PROJECT SELECTION - Returning', projectsToShow.length, 'related projects with tasks')
-
-    } else {
-      // NO FILTERS ACTIVE: Show all projects (preserve existing behavior)
-      console.log('🔥 BoardView.projectsWithTasks: NO FILTERS ACTIVE - Returning all', allProjects.length, 'projects')
-      projectsToShow = allProjects
-    }
-
-    // Handle uncategorized tasks special case
-    if (projectIdsWithTasks.has('uncategorized') && projectsToShow.length === 0) {
-      console.log('🔥 BoardView.projectsWithTasks: Only uncategorized tasks exist, creating default project')
-      projectsToShow = [{
-        id: 'default',
-        name: 'Default Project',
-        description: 'Default project for uncategorized tasks',
-        color: '#3b82f6',
-        parentId: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }]
-    }
-
-    console.log('🔥 BoardView.projectsWithTasks: FINAL - Returning', projectsToShow.length, 'projects to display')
-    return projectsToShow
-
-  } catch (error) {
-    console.error('🔥 BoardView.projectsWithTasks: Error getting projects:', error)
-    // Ultimate fallback - return default project
-    return [{
-      id: 'default',
-      name: 'Default Project',
-      description: 'Default project for kanban board',
-      color: '#3b82f6',
-      parentId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }]
+  // If a specific project is selected, show that project AND its children
+  if (taskStore.activeProjectId) {
+    const projectIds = getProjectAndChildren(taskStore.activeProjectId)
+    return taskStore.projects.filter(project => projectIds.includes(project.id))
   }
+
+  // For smart views (today, week) or no filter, show all projects
+  return taskStore.projects
 })
 
 // Total displayed tasks (uses centralized counter for consistency)
@@ -568,52 +192,13 @@ const totalDisplayedTasks = computed(() => {
   }
 })
 
-// Filtered tasks specifically for Board View
-// Uses taskStore.filteredTasks directly when smart views are active to avoid double filtering
-const boardFilteredTasks = computed(() => {
-  try {
-    // Validate input from taskStore
-    const storeTasks = taskStore.filteredTasks
-    console.log('🚨 BoardView.boardFilteredTasks: taskStore.filteredTasks =', storeTasks)
-    console.log('🚨 BoardView.boardFilteredTasks: taskStore.filteredTasks.length =', storeTasks?.length)
-    console.log('🚨 BoardView.boardFilteredTasks: activeSmartView =', taskStore.activeSmartView)
-
-    if (!Array.isArray(storeTasks)) {
-      console.warn('🚨 BoardView.boardFilteredTasks: taskStore.filteredTasks is not an array:', storeTasks)
-      return []
-    }
-
-    console.log('🚨 BoardView.boardFilteredTasks: Input tasks count:', storeTasks.length)
-
-    // When smart views are active, use filteredTasks directly to avoid double filtering
-    if (taskStore.activeSmartView) {
-      console.log('🚨 BoardView.boardFilteredTasks: Using smart view filtered tasks directly:', storeTasks.length, 'tasks')
-      return storeTasks
-    }
-
-    // For regular views (no smart filter), use the existing filter logic
-    const filtered = filterTasksForRegularViews(storeTasks, taskStore.activeSmartView)
-    console.log('🚨 BoardView.boardFilteredTasks: After filterTasksForRegularViews:', filtered?.length)
-
-    // Validate result
-    if (!Array.isArray(filtered)) {
-      console.warn('🚨 BoardView.boardFilteredTasks: filterTasksForRegularViews did not return an array:', filtered)
-      return []
-    }
-
-    return filtered
-  } catch (error) {
-    console.error('🚨 BoardView.boardFilteredTasks: Error filtering tasks:', error)
-    return []
-  }
-})
-
-// Note: uncategorizedTaskCount removed - now using unified sidebar My Tasks Smart View
-
 // Edit modal state
 const showEditModal = ref(false)
 const selectedTask = ref<Task | null>(null)
 
+// Quick Task Create Modal state
+const showQuickTaskCreate = ref(false)
+const pendingTaskStatus = ref<string>('planned')
 
 // Context menu state
 const showContextMenu = ref(false)
@@ -621,43 +206,18 @@ const contextMenuX = ref(0)
 const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null)
 
-// Group context menu state
-const showGroupContextMenu = ref(false)
-const groupContextMenuX = ref(0)
-const groupContextMenuY = ref(0)
-const contextMenuProject = ref<Project | null>(null)
-
 // Confirmation modal state
 const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
 
-// Project modal state
-const showProjectModal = ref(false)
-const selectedProject = ref<Project | null>(null)
-const parentProjectId = ref<string | null>(null)
-
-// Project delete confirmation state
-const showProjectDeleteConfirmModal = ref(false)
-const projectToDelete = ref<Project | null>(null)
-
 // Task management methods
 const handleAddTask = (status: string) => {
-  // Create new task immediately with the specified status
-  const newTask = taskStore.createTaskWithUndo({
-    title: 'New Task',
-    description: '',
-    status: status,
-    priority: 'medium'
-  })
+  // Store the status for when the task is created
+  pendingTaskStatus.value = status
 
-  // Open TaskEditModal for editing
-  if (newTask) {
-    selectedTask.value = newTask
-    showEditModal.value = true
-    console.log('Opening task edit modal for status:', status)
-  } else {
-    console.error('Failed to create new task')
-  }
+  // Open quick task create modal instead of creating task directly
+  showQuickTaskCreate.value = true
+  console.log('Opening task creation modal for status:', status)
 }
 
 const handleSelectTask = (taskId: string) => {
@@ -683,6 +243,37 @@ const closeEditModal = () => {
   selectedTask.value = null
 }
 
+// Quick Task Create Modal handlers
+const closeQuickTaskCreate = () => {
+  showQuickTaskCreate.value = false
+  pendingTaskStatus.value = 'planned'
+}
+
+const handleQuickTaskCreate = async (title: string, description: string) => {
+  console.log('🎯 Creating task with title:', title, 'and status:', pendingTaskStatus.value)
+
+  try {
+    // Create new task with user-provided title and stored status (now async)
+    const newTask = await taskStore.createTaskWithUndo({
+      title: title,
+      description: description,
+      status: pendingTaskStatus.value as any,
+      projectId: taskStore.activeProjectId || undefined // No default project - tasks go to Uncategorized
+    })
+
+    // Close the quick create modal
+    closeQuickTaskCreate()
+
+    if (newTask) {
+      console.log('✅ Successfully created task:', newTask.title)
+    } else {
+      console.error('❌ Failed to create new task')
+    }
+  } catch (error) {
+    console.error('❌ Error creating task:', error)
+    closeQuickTaskCreate()
+  }
+}
 
 // Context menu handlers
 const handleContextMenu = (event: MouseEvent, task: Task) => {
@@ -699,192 +290,12 @@ const closeContextMenu = () => {
   contextMenuTask.value = null
 }
 
-const closeAllContextMenus = () => {
-  console.log('🔍 [BoardView] closeAllContextMenus called')
+const handleAddSubtaskFromMenu = async (taskId: string) => {
   try {
-    closeContextMenu()
-    closeGroupContextMenu()
-    console.log('✅ [BoardView] All context menus closed')
+    await taskStore.createSubtaskWithUndo(taskId, { title: 'New Subtask' })
   } catch (error) {
-    console.error('❌ [BoardView] Error closing context menus:', error)
+    console.error('❌ Error creating subtask:', error)
   }
-}
-
-const handleBoardClick = (event: MouseEvent) => {
-  // Only close context menus on left clicks (button === 0)
-  // Right clicks (button === 2) should not close context menus
-  if (event.button === 0) {
-    closeAllContextMenus()
-  }
-}
-
-// Group context menu handlers
-const handleGroupContextMenu = (event: MouseEvent, project: Project) => {
-  console.log('🔍 [BoardView] handleGroupContextMenu called')
-  console.log('🔍 [BoardView] Event:', event)
-  console.log('🔍 [BoardView] Project:', project)
-  console.log('🔍 [BoardView] Event coords:', event.clientX, event.clientY)
-
-  try {
-    groupContextMenuX.value = event.clientX
-    groupContextMenuY.value = event.clientY
-    contextMenuProject.value = project
-    showGroupContextMenu.value = true
-    console.log('✅ [BoardView] Group context menu state set successfully')
-    console.log('🔍 [BoardView] showGroupContextMenu:', showGroupContextMenu.value)
-    console.log('🔍 [BoardView] contextMenuProject:', contextMenuProject.value?.name)
-  } catch (error) {
-    console.error('❌ [BoardView] Error in handleGroupContextMenu:', error)
-    console.error('❌ [BoardView] Error details:', error.stack)
-  }
-}
-
-const closeGroupContextMenu = () => {
-  showGroupContextMenu.value = false
-  contextMenuProject.value = null
-}
-
-// Project action handlers
-const handleEditProject = (project: Project) => {
-  // Open the project modal with the selected project
-  selectedProject.value = project
-  showProjectModal.value = true
-}
-
-const handleDeleteProject = (project: Project) => {
-  // Show confirmation modal for project deletion
-  projectToDelete.value = project
-  showProjectDeleteConfirmModal.value = true
-}
-
-const handleCreateSubProject = (parentProject: Project) => {
-  // Open project modal with parent pre-selected
-  parentProjectId.value = parentProject.id
-  selectedProject.value = null
-  showProjectModal.value = true
-}
-
-const handleCreateTaskInProject = (projectId: string) => {
-  // Create a task in the specified project
-  taskStore.createTaskWithUndo({
-    title: 'New Task',
-    projectId: projectId,
-    status: 'planned'
-  })
-}
-
-const handleHideProjectTasks = (projectId: string) => {
-  // Hide all tasks in the project by moving them to a "hidden" status
-  const projectTasks = taskStore.tasks.filter(task => task.projectId === projectId && task.status !== 'done')
-  if (projectTasks.length > 0) {
-    const taskIds = projectTasks.map(task => task.id)
-    taskStore.bulkUpdateTasksWithUndo(taskIds, { status: 'backlog' })
-  }
-}
-
-const handleChangeViewType = (projectId: string, viewType: 'status' | 'date' | 'priority') => {
-  // Update the project's view type
-  taskStore.updateProject(projectId, { viewType })
-}
-
-const handleExpandCollapseAll = (projectId: string, isExpanded: boolean) => {
-  // Store collapse state in localStorage or a separate state management
-  const collapseKey = `project-collapse-${projectId}`
-  localStorage.setItem(collapseKey, (!isExpanded).toString())
-  // Force a reactivity update if needed by emitting an event
-  window.dispatchEvent(new CustomEvent('project-collapse-changed', {
-    detail: { projectId, collapsed: !isExpanded }
-  }))
-}
-
-const handleSortProjectTasks = (projectId: string) => {
-  // Sort tasks in the project by priority and due date
-  const projectTasks = taskStore.tasks.filter(task => task.projectId === projectId)
-  if (projectTasks.length > 0) {
-    // Sort by priority first, then by due date
-    const sortedTasks = [...projectTasks].sort((a, b) => {
-      const priorityOrder = { high: 3, medium: 2, low: 1 }
-      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 0
-      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 0
-
-      if (aPriority !== bPriority) {
-        return bPriority - aPriority // Higher priority first
-      }
-
-      // Then by due date (earlier dates first)
-      if (a.dueDate && b.dueDate) {
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-      }
-      if (a.dueDate && !b.dueDate) return -1
-      if (!a.dueDate && b.dueDate) return 1
-      return 0
-    })
-
-    // For now, just log the sort order - actual reordering would need more complex state management
-    console.log('Sorted tasks for project:', projectId, sortedTasks.map(t => t.title))
-  }
-}
-
-const handleArchiveProject = (projectId: string) => {
-  // Archive the project by marking it as archived (add archived field to project)
-  const project = taskStore.projects.find(p => p.id === projectId)
-  if (project) {
-    // For now, just mark all tasks as done to "archive" them
-    const projectTasks = taskStore.tasks.filter(task => task.projectId === projectId && task.status !== 'done')
-    if (projectTasks.length > 0) {
-      const taskIds = projectTasks.map(task => task.id)
-      taskStore.bulkUpdateTasksWithUndo(taskIds, { status: 'done' })
-    }
-
-    // TODO: Add archived field to Project interface and update project
-    console.log('Archived project:', project.name)
-  }
-}
-
-// Helper methods
-const getProjectTaskCount = (projectId: string | null | undefined): number => {
-  if (!projectId) return 0
-  return taskStore.tasks.filter(task => task.projectId === projectId).length
-}
-
-const isProjectExpanded = (projectId: string | null | undefined): boolean => {
-  // This would need to be stored in state - for now return true
-  return true
-}
-
-// Modal handlers
-const closeProjectModal = () => {
-  showProjectModal.value = false
-  selectedProject.value = null
-  parentProjectId.value = null
-}
-
-const handleProjectCreated = (project: Project) => {
-  console.log('Project created:', project)
-  closeProjectModal()
-}
-
-const handleProjectUpdated = (project: Project) => {
-  console.log('Project updated:', project)
-  closeProjectModal()
-}
-
-const confirmDeleteProject = () => {
-  if (projectToDelete.value) {
-    // Delete the project and move tasks to default project
-    taskStore.deleteProject(projectToDelete.value.id)
-    projectToDelete.value = null
-    showProjectDeleteConfirmModal.value = false
-  }
-}
-
-const cancelDeleteProject = () => {
-  projectToDelete.value = null
-  showProjectDeleteConfirmModal.value = false
-}
-
-const handleAddSubtaskFromMenu = (taskId: string) => {
-  taskStore.createSubtaskWithUndo(taskId, { title: 'New Subtask' })
 }
 
 // Confirmation modal handlers
@@ -893,10 +304,14 @@ const handleConfirmDelete = (taskId: string) => {
   showConfirmModal.value = true
 }
 
-const confirmDeleteTask = () => {
+const confirmDeleteTask = async () => {
   if (taskToDelete.value) {
-    taskStore.deleteTaskWithUndo(taskToDelete.value)
-    taskToDelete.value = null
+    try {
+      await taskStore.deleteTaskWithUndo(taskToDelete.value)
+      taskToDelete.value = null
+    } catch (error) {
+      console.error('❌ Error deleting task:', error)
+    }
   }
   showConfirmModal.value = false
 }
@@ -906,9 +321,13 @@ const cancelDeleteTask = () => {
   showConfirmModal.value = false
 }
 
-const handleMoveTask = (taskId: string, newStatus: string) => {
-  taskStore.moveTaskWithUndo(taskId, newStatus as any)
-  console.log('Moved task:', taskId, 'to', newStatus)
+const handleMoveTask = async (taskId: string, newStatus: string) => {
+  try {
+    await taskStore.moveTaskWithUndo(taskId, newStatus as any)
+    console.log('Moved task:', taskId, 'to', newStatus)
+  } catch (error) {
+    console.error('❌ Error moving task:', error)
+  }
 }
 
 // Debug function to test toggle functionality
@@ -983,10 +402,6 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
     console.error('🔧 BoardView: Error toggling Today filter:', error)
   }
 }
-
-// Note: handleToggleUncategorizedFilter removed - now using unified sidebar My Tasks Smart View
-
-// Note: handleStartQuickSort removed - Quick Sort is now available from sidebar My Tasks Smart View
 </script>
 
 <style scoped>
@@ -1231,8 +646,6 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 
-/* Note: Uncategorized Filter CSS removed - now using unified sidebar My Tasks Smart View */
-
 /* Status Filters - Board View */
 .status-filters {
   display: flex;
@@ -1293,15 +706,12 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
 .kanban-scroll-container {
   flex: 1;
   overflow-y: auto;
-  overflow-x: auto; /* Enable horizontal scrolling within Kanban only */
+  overflow-x: visible; /* Allow horizontal scrolling in inner containers */
   min-height: 0; /* Critical: allows flexbox shrinking */
   padding-bottom: 2rem;
+  /* Add containment to prevent child scroll from affecting parent */
+  contain: layout style;
   position: relative;
-  /* Ensure horizontal scroll doesn't propagate to parent */
-  contain: layout paint;
-  /* Custom scrollbar styling for better UX */
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-medium) transparent;
 }
 
 /* KANBAN BOARD */
@@ -1311,7 +721,8 @@ const handleToggleTodayFilter = (event: MouseEvent) => {
   gap: var(--space-3);
   padding: var(--space-6) 0;
   width: 100%;
-  /* Let swimlanes determine width, but contain within scroll container */
+  max-width: 100%;
+  overflow: hidden;
   /* Ensure swimlanes can scroll horizontally within their containers */
   isolation: isolate;
 }

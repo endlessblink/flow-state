@@ -105,7 +105,28 @@ const emit = defineEmits<{
   updated: [group: CanvasSection]
 }>()
 
-const canvasStore = useCanvasStore()
+// Try to get canvas store, fallback to mock for Storybook environment
+let canvasStore: any
+try {
+  canvasStore = useCanvasStore()
+} catch (error) {
+  console.warn('🔧 GroupModal: Canvas store not available, using mock for Storybook', error)
+  // Mock canvas store for Storybook environment
+  canvasStore = {
+    sections: [],
+    createSection: (section: any) => {
+      const newSection = {
+        ...section,
+        id: `section-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      }
+      console.log('🔧 Storybook Canvas Store: Created section', newSection)
+      return newSection
+    },
+    updateSection: (id: string, updates: any) => {
+      console.log('🔧 Storybook Canvas Store: Updated section', id, updates)
+    }
+  }
+}
 const nameInput = ref()
 
 const isEditing = computed(() => !!props.group)
@@ -168,7 +189,7 @@ const saveGroup = () => {
       color: groupData.value.color
     })
 
-    const updatedGroup = canvasStore.sections.find(s => s.id === props.group!.id)
+    const updatedGroup = canvasStore.sections.find((s: { id: string }) => s.id === props.group!.id)
     if (updatedGroup) {
       emit('updated', updatedGroup)
     }

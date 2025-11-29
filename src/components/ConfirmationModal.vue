@@ -131,6 +131,16 @@ const handleAfterOpen = () => {
   text-align: left;
 }
 
+/* Center the main modal message content */
+:deep(.modal-description) {
+  text-align: center !important;
+}
+
+/* Keep details list left-aligned for readability */
+.modal-details .details-list {
+  text-align: left;
+}
+
 .details-title {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);

@@ -1,0 +1,157 @@
+// Task type definitions for Pomo-Flow
+// These types are extracted from src/stores/tasks.ts for centralization and reuse
+
+export interface Subtask {
+  id: string
+  parentTaskId: string
+  title: string
+  description: string
+  completedPomodoros: number
+  isCompleted: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface TaskInstance {
+  id?: string
+  taskId?: string
+  scheduledDate: string
+  scheduledTime?: string
+  duration?: number
+  completedPomodoros?: number
+  status?: 'scheduled' | 'completed' | 'skipped'
+  isRecurring?: boolean
+  isLater?: boolean
+  pomodoroTracking?: {
+    completed: number
+    total: number
+  }
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+export interface NotificationPreferences {
+  enabled: boolean
+  timing: number // minutes before due date
+  sound: boolean
+  vibration: boolean
+}
+
+export interface TaskRecurrence {
+  pattern: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  interval: number
+  daysOfWeek?: number[] // 0-6 (Sunday-Saturday)
+  endDate?: string
+  maxOccurrences?: number
+  isEnabled?: boolean // Whether recurrence is currently active
+  generatedInstances?: any[] // Generated recurring task instances (compatibility)
+}
+
+export interface RecurringTaskInstance {
+  id: string
+  parentTaskId: string
+  scheduledDate: string
+  scheduledTime?: string
+  duration?: number // Duration in minutes
+  status: 'scheduled' | 'completed' | 'skipped'
+  originalTaskId: string
+  isGenerated: boolean // True for generated instances, false for manually created
+  isModified?: boolean // True if this instance was modified from the pattern
+  isSkipped?: boolean // True if this instance is skipped due to exception
+  isLater?: boolean // True if this instance is scheduled for a later period
+  recurrenceExceptionId?: string // Link to the exception if this is an exception
+  createdAt: Date
+}
+
+export interface Task {
+  id: string
+  title: string
+  description: string
+  status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
+  priority: 'low' | 'medium' | 'high' | null
+  progress: number
+  completedPomodoros: number
+  subtasks: Subtask[]
+  dueDate: string // Simplified: Single date field - when this task needs to be completed by
+  estimatedDuration?: number // in minutes
+  // Legacy scheduling fields (for backward compatibility)
+  scheduledDate?: string // YYYY-MM-DD format for legacy support
+  scheduledTime?: string // HH:MM format for legacy time support
+  // Task classification and planning
+  isUncategorized?: boolean // true if task has no project assigned
+  estimatedPomodoros?: number // Estimated pomodoro sessions
+  projectId: string
+  parentTaskId?: string | null // For nested tasks - null means root-level task
+  createdAt: Date
+  updatedAt: Date
+  // Canvas workflow fields
+  canvasPosition?: { x: number; y: number }
+  isInInbox?: boolean // True if not yet positioned on canvas
+  dependsOn?: string[] // Task IDs this depends on
+  tags?: string[] // Task labels for categorization and filtering
+  connectionTypes?: { [targetTaskId: string]: 'sequential' | 'blocker' | 'reference' }
+  // Recurrence and notification fields
+  recurrence?: TaskRecurrence // Recurrence pattern and generated instances
+  notificationPreferences?: NotificationPreferences // Notification settings for this task
+  recurringInstances?: RecurringTaskInstance[] // Generated recurring task instances (for backwards compatibility)
+  instances?: TaskInstance[] // Calendar instances for scheduled tasks
+}
+
+export interface Project {
+  id: string
+  name: string
+  color: string | string[] // Support both hex and emoji colors
+  colorType: 'hex' | 'emoji'
+  emoji?: string // For emoji-based colors
+  viewType: 'status' | 'date' | 'priority' // Kanban view type for this project
+  parentId?: string | null // For nested projects
+  createdAt: Date
+}
+
+// Type aliases and utility types
+export type TaskStatus = Task['status']
+export type TaskPriority = Task['priority']
+export type ProjectViewType = Project['viewType']
+
+// Calendar event types (used by calendar composables)
+export interface CalendarEvent {
+  id: string // instanceId
+  taskId: string
+  instanceId: string
+  title: string
+  startTime: Date
+  endTime: Date
+  duration: number
+  startSlot: number
+  slotSpan: number
+  color: string
+  column: number
+  totalColumns: number
+  isDueDate: boolean // Whether this represents a task due date
+}
+
+export interface WeekEvent extends CalendarEvent {
+  dayIndex: number
+}
+
+// Task creation types
+export interface CreateTaskData {
+  title: string
+  description?: string
+  projectId?: string
+  status?: TaskStatus
+  priority?: TaskPriority
+  dueDate?: string
+  estimatedDuration?: number
+  estimatedPomodoros?: number
+  parentTaskId?: string | null
+}
+
+export interface UpdateTaskData extends Partial<CreateTaskData> {
+  id: string
+  progress?: number
+  completedPomodoros?: number
+  canvasPosition?: { x: number; y: number }
+  dependsOn?: string[]
+  connectionTypes?: { [targetTaskId: string]: 'sequential' | 'blocker' | 'reference' }
+}

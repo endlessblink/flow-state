@@ -28,7 +28,9 @@
   },
   "smart_views": {
     "today": "היום",
-    "weekend": "סוף השבוע"
+    "week": "השבוע",
+    "uncategorized_tasks": "משימות לא מסווגגות",
+    "all_active_tasks": "כל המשימות הפעילות"
   },
   "task": {
     "title": "כותרת המשימה",
@@ -60,19 +62,19 @@
     "auto": "זיהוי אוטומטי"
   },
   "auth": {
-    "email": "אימייל",
-    "emailPlaceholder": "הזן את האימייל שלך",
-    "password": "סיסמה",
-    "passwordPlaceholder": "הזן את הסיסמה שלך",
-    "forgotPassword": "שכחת סיסמה?",
-    "or": "או",
-    "noAccount": "אין לך חשבון?",
-    "signUp": "צור חשבון",
-    "signIn": "התחבר",
-    "signingIn": "מתחבר...",
     "login": {
       "title": "התחברות",
-      "subtitle": "ברוך שובך! התחבר כדי לגשת למשימות שלך"
+      "subtitle": "ברוך שובך! התחבר כדי לגשת למשימות שלך",
+      "email": "אימייל",
+      "emailPlaceholder": "הזן את האימייל שלך",
+      "password": "סיסמה",
+      "passwordPlaceholder": "הזן את הסיסמה שלך",
+      "forgotPassword": "שכחת סיסמה?",
+      "or": "או",
+      "noAccount": "אין לך חשבון?",
+      "signUp": "צור חשבון",
+      "signIn": "התחבר",
+      "signingIn": "מתחבר..."
     }
   }
 }

@@ -29,7 +29,26 @@
     </div>
 
     <!-- Title -->
-    <div class="task-title" :class="taskTitleClasses">{{ task?.title || 'Untitled Task' }}</div>
+    <div class="task-title" :class="titleAlignmentClasses">{{ task?.title || 'Untitled Task' }}</div>
+
+    <!-- Description (if available) -->
+    <div v-if="task?.description" class="task-description" :class="titleAlignmentClasses">
+      <div
+        class="description-content"
+        :class="{ 'expanded': isDescriptionExpanded || !isDescriptionLong }"
+      >
+        {{ task.description }}
+      </div>
+      <button
+        v-if="isDescriptionLong"
+        @click.stop="toggleDescriptionExpanded"
+        class="description-toggle"
+        :aria-expanded="isDescriptionExpanded"
+        aria-label="Show more description"
+      >
+        {{ isDescriptionExpanded ? 'Show less' : 'Show more' }}
+      </button>
+    </div>
 
     <!-- Metadata -->
     <div class="task-metadata">
@@ -37,6 +56,30 @@
       <span v-if="task?.dueDate" class="due-date-badge" title="Due Date">
         <Calendar :size="12" />
         {{ task.dueDate }}
+      </span>
+      <span
+        class="project-emoji-badge"
+        :class="[`project-visual--${projectVisual.type}`, { 'project-visual--colored': projectVisual.type === 'css-circle' }]"
+        :title="`Project: ${taskStore.getProjectDisplayName(task?.projectId)}`"
+      >
+        <!-- Emoji rendering using ProjectEmojiIcon for consistency -->
+        <ProjectEmojiIcon
+          v-if="projectVisual.type === 'emoji'"
+          :emoji="projectVisual.content"
+          size="md"
+        />
+        <!-- CSS Circle for colored projects -->
+        <div
+          v-else-if="projectVisual.type === 'css-circle'"
+          class="project-css-circle"
+          :style="{ '--project-color': projectVisual.color }"
+        ></div>
+        <!-- Default fallback (folder icon) -->
+        <ProjectEmojiIcon
+          v-else
+          emoji="📁"
+          size="md"
+        />
       </span>
       <span v-if="showSchedule && hasSchedule" class="schedule-badge" title="Scheduled">
         📅
@@ -65,9 +108,11 @@ import { ref, computed } from 'vue'
 import { Handle, Position, useVueFlow } from '@vue-flow/core'
 import { Calendar, Timer } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTimerStore } from '@/stores/timer'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 interface Props {
   task: Task
@@ -103,12 +148,28 @@ const emit = defineEmits<{
 
 const { startDrag, endDrag } = useDragAndDrop()
 const timerStore = useTimerStore()
+const taskStore = useTaskStore()
 
-// Hebrew alignment support
-const { getHebrewTextClasses } = useHebrewAlignment()
+// Hebrew text alignment support
+const { getAlignmentClasses } = useHebrewAlignment()
+const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task?.title || ''))
 
 // Track local dragging state to prevent visual artifacts
 const isNodeDragging = ref(false)
+
+// Description expansion state
+const isDescriptionExpanded = ref(false)
+const DESCRIPTION_MAX_LENGTH = 100
+
+// Check if description is long enough for truncation
+const isDescriptionLong = computed(() => {
+  return props.task?.description && props.task.description.length > DESCRIPTION_MAX_LENGTH
+})
+
+// Toggle description expansion
+const toggleDescriptionExpanded = () => {
+  isDescriptionExpanded.value = !isDescriptionExpanded.value
+}
 
 // Check if we're in a Vue Flow context (works in CanvasView, but not in Storybook)
 const isInVueFlowContext = computed(() => {
@@ -132,22 +193,21 @@ const statusLabel = computed(() => {
     done: 'Done',
     backlog: 'Back'
   }
-  return labels[props.task.status] || 'Unknown'
+  return (labels as any)[props.task.status] || 'Unknown'
 })
 
 const hasSchedule = computed(() =>
   props.task?.instances && props.task.instances.length > 0
 )
 
+// Project visual indicator (emoji or colored dot)
+const projectVisual = computed(() =>
+  taskStore.getProjectVisual(props.task?.projectId)
+)
+
 // Check if this task has an active timer
 const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
-})
-
-// Hebrew text alignment for task title
-const taskTitleClasses = computed(() => {
-  const title = props.task?.title || ''
-  return getHebrewTextClasses(title)
 })
 
 // Drag handler with proper state management
@@ -229,8 +289,9 @@ const handleDragEnd = () => {
   outline: none !important;
   border-radius: var(--radius-xl);
   padding: var(--space-6);
-  min-width: 240px;
-  max-width: 300px;
+  min-width: 280px;
+  max-width: 420px;
+  width: auto;
   position: relative;
   transition: all var(--duration-normal) var(--spring-smooth);
   cursor: grab;
@@ -422,7 +483,7 @@ body.dragging-active .task-node .vue-flow__handle {
 }
 
 .priority-medium .priority-indicator {
-  background: var(--color-work);
+  background: var(--color-priority-medium);
   box-shadow: var(--priority-medium-glow);
 }
 
@@ -584,7 +645,15 @@ body.dragging-active .task-node .vue-flow__handle {
   margin-top: var(--space-1);
   line-height: 1.4;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
   text-shadow: 0 1px 2px var(--shadow-subtle);
+  /* Allow multi-line titles with graceful truncation */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-height: 3.6em; /* 3 lines at 1.4 line-height */
 }
 
 .task-metadata {
@@ -592,11 +661,69 @@ body.dragging-active .task-node .vue-flow__handle {
   gap: var(--space-2);
   align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-start;
+  /* Allow horizontal scrolling if badges overflow */
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.task-metadata::-webkit-scrollbar {
+  height: 3px;
+}
+
+.task-metadata::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-metadata::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: var(--radius-full);
+}
+
+.task-description {
+  margin-bottom: var(--space-3);
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.description-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.description-content:not(.expanded) {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-height: 2.8em; /* 2 lines at 1.4 line-height */
+}
+
+.description-toggle {
+  background: none;
+  border: none;
+  color: var(--brand-primary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  padding: var(--space-1) 0;
+  margin-top: var(--space-1);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-fast) ease;
+}
+
+.description-toggle:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
 }
 
 .status-badge,
 .due-date-badge,
-.duration-badge {
+.duration-badge,
+.project-emoji-badge {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
@@ -611,6 +738,68 @@ body.dragging-active .task-node .vue-flow__handle {
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-emoji-badge {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-border-subtle);
+  color: var(--text-secondary);
+}
+
+.project-emoji {
+  font-size: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-emoji.project-css-circle {
+  /* CSS circle with enhanced glow for canvas visibility */
+  width: var(--project-indicator-size-md); /* 8px for TaskNode canvas visibility */
+  height: var(--project-indicator-size-md);
+  border-radius: 50%;
+  background: var(--project-color);
+  box-shadow:
+    var(--project-indicator-glow-strong), /* Strong glow for canvas visibility */
+    var(--project-indicator-shadow-inset);
+  border: 1px solid var(--project-indicator-border);
+  backdrop-filter: var(--project-indicator-backdrop);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  position: relative;
+  transform: translateZ(0); /* Hardware acceleration */
+}
+
+.project-emoji.project-css-circle::after {
+  content: '';
+  position: absolute;
+  inset: -3px; /* Larger glow area for canvas */
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--project-color) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--spring-smooth);
+  pointer-events: none;
+}
+
+.project-emoji-badge:hover .project-emoji.project-css-circle {
+  transform: translateZ(0) scale(1.15); /* Slightly larger scale for canvas */
+  box-shadow:
+    0 0 16px var(--project-color),
+    0 0 32px var(--project-color),
+    var(--project-indicator-shadow-inset);
+}
+
+.project-emoji-badge:hover .project-emoji.project-css-circle::after {
+  opacity: 0.4; /* Stronger glow for canvas interactions */
+}
+
+.project-emoji-badge.project-visual--colored {
+  /* Enhanced background for colored dots */
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
 }
 
 .schedule-badge {

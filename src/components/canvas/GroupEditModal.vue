@@ -60,7 +60,7 @@
                 :key="layout.value"
                 class="layout-btn"
                 :class="{ active: formData.layout === layout.value }"
-                @click="formData.layout = layout.value"
+                @click="formData.layout = layout.value as any"
               >
                 <component :is="layout.icon" :size="16" />
                 <span>{{ layout.label }}</span>
@@ -175,7 +175,7 @@ watch(() => props.section, (newSection) => {
   if (newSection) {
     formData.name = newSection.name || ''
     formData.color = newSection.color || '#6366f1'
-    formData.layout = newSection.layout || 'grid'
+    formData.layout = (newSection.layout || 'grid') as any
     formData.isCollapsed = newSection.isCollapsed || false
     formData.isVisible = newSection.isVisible !== false
   } else {
@@ -382,13 +382,13 @@ watch(() => props.isVisible, (visible) => {
 }
 
 .btn-primary {
-  background: var(--brand-primary);
+  background: transparent;
   border-color: var(--brand-primary);
-  color: white;
+  color: var(--brand-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--brand-primary-hover);
-  border-color: var(--brand-primary-hover);
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary);
 }
 </style>

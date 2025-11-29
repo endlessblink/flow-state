@@ -138,7 +138,7 @@ export const Closed: Story = {
         <div style="padding: 20px; text-align: center;">
           <h3>Search Modal (Closed)</h3>
           <p>Click the button below to open the search modal</p>
-          <button @click="$event => console.log('Open search')" style="margin-top: 20px; padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;">
+          <button @click="$event => console.log('Open search')" style="margin-top: 20px; padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;">
             Open Search (Ctrl+K)
           </button>
         </div>
@@ -332,7 +332,7 @@ export const InteractiveDemo: Story = {
             <div style="display: flex; gap: 12px;">
               <button
                 @click="openSearch"
-                style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;"
+                style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8"></circle>

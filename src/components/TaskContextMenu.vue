@@ -41,9 +41,9 @@
         <button class="icon-btn sun-icon" @click="setDueDate('tomorrow')" title="Tomorrow">
           <Sun :size="16" :stroke-width="1.5" class="sun-stroke" />
         </button>
-        <!-- This Week with Calendar icon (blue) -->
-        <button class="icon-btn calendar-icon" @click="setDueDate('week')" title="This Week">
-          <Calendar :size="16" :stroke-width="1.5" class="calendar-stroke" />
+        <!-- Weekend with Moon icon (cool purple) -->
+        <button class="icon-btn moon-icon" @click="setDueDate('weekend')" title="This Weekend">
+          <Moon :size="16" :stroke-width="1.5" class="moon-stroke" />
         </button>
         <!-- Next Week with Arrow icon (blue) -->
         <button class="icon-btn next-week-icon" @click="setDueDate('nextweek')" title="Next Week">
@@ -221,11 +221,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted, watch, inject } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import type { Task } from '@/stores/tasks'
 import { Calendar, Sun, Moon, ArrowRight, MoreHorizontal, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
+import type { FocusModeState } from '@/composables/useFocusMode'
 
 interface Props {
   isVisible: boolean
@@ -246,16 +248,17 @@ const emit = defineEmits<{
   clearSelection: []
   setPriority: [priority: 'low' | 'medium' | 'high']
   setStatus: [status: 'planned' | 'in_progress' | 'done']
-  setDueDate: [dateType: 'today' | 'tomorrow' | 'week' | 'nextweek']
+  setDueDate: [dateType: 'today' | 'tomorrow' | 'weekend' | 'nextweek']
   enterFocusMode: []
   deleteSelected: []
 }>()
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const router = useRouter()
 
 // Optional focus mode injection - uses Symbol from useFocusMode.ts
-const focusModeState = inject(FOCUS_MODE_KEY, null)
+const focusModeState = inject<FocusModeState | null>(FOCUS_MODE_KEY, null)
 const enterFocusMode = focusModeState?.enterFocusMode || null
 
 const menuRef = ref<HTMLElement | null>(null)
@@ -341,12 +344,12 @@ const handleEdit = () => {
   emit('close')
 }
 
-const setDueDate = (dateType: string) => {
+const setDueDate = async (dateType: string) => {
   if (!currentTask.value) return
 
   if (isBatchOperation.value) {
     // Emit for batch operations in InboxPanel
-    emit('setDueDate', dateType as 'today' | 'tomorrow' | 'week' | 'nextweek')
+    emit('setDueDate', dateType as 'today' | 'tomorrow' | 'weekend' | 'nextweek')
     emit('close')
     return
   }
@@ -363,9 +366,10 @@ const setDueDate = (dateType: string) => {
       dueDate = new Date(today)
       dueDate.setDate(today.getDate() + 1)
       break
-    case 'week':
+    case 'weekend':
       dueDate = new Date(today)
-      dueDate.setDate(today.getDate() + 7)
+      const daysUntilSaturday = (6 - today.getDay()) % 7 || 7
+      dueDate.setDate(today.getDate() + daysUntilSaturday)
       break
     case 'nextweek':
       dueDate = new Date(today)
@@ -376,7 +380,11 @@ const setDueDate = (dateType: string) => {
       const currentDate = currentTask.value.dueDate
       const newDate = prompt('Set due date (MM/DD/YYYY):', currentDate)
       if (newDate && newDate !== currentDate) {
-        taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: newDate })
+        try {
+          await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: newDate })
+        } catch (error) {
+          console.error('❌ Error updating task due date:', error)
+        }
       }
       emit('close')
       return
@@ -385,28 +393,40 @@ const setDueDate = (dateType: string) => {
   }
 
   if (dueDate) {
-    const formattedDate = dueDate.toLocaleDateString()
-    taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
+    try {
+      const formattedDate = dueDate.toLocaleDateString()
+      await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
+    } catch (error) {
+      console.error('❌ Error setting due date:', error)
+    }
   }
   emit('close')
 }
 
-const setPriority = (priority: 'high' | 'medium' | 'low') => {
+const setPriority = async (priority: 'high' | 'medium' | 'low') => {
   if (isBatchOperation.value) {
     // Emit for batch operations in InboxPanel
     emit('setPriority', priority)
   } else if (currentTask.value) {
-    taskStore.updateTaskWithUndo(currentTask.value.id, { priority })
+    try {
+      await taskStore.updateTaskWithUndo(currentTask.value.id, { priority })
+    } catch (error) {
+      console.error('❌ Error setting priority:', error)
+    }
   }
   emit('close')
 }
 
-const setStatus = (status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold') => {
+const setStatus = async (status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold') => {
   if (isBatchOperation.value) {
     // Emit for batch operations in InboxPanel
     emit('setStatus', status as 'planned' | 'in_progress' | 'done')
   } else if (currentTask.value) {
-    taskStore.updateTaskWithUndo(currentTask.value.id, { status })
+    try {
+      await taskStore.updateTaskWithUndo(currentTask.value.id, { status })
+    } catch (error) {
+      console.error('❌ Error setting status:', error)
+    }
   }
   emit('close')
 }
@@ -433,8 +453,7 @@ const startTaskNow = () => {
     timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
 
     // Navigate to calendar view if not already there
-    const router = inject('router', null)
-    if (router && router.currentRoute.value.name !== 'calendar') {
+    if (router.currentRoute.value.name !== 'calendar') {
       router.push('/calendar')
     }
 
@@ -453,15 +472,19 @@ const startTimer = () => {
   emit('close')
 }
 
-const duplicateTask = () => {
+const duplicateTask = async () => {
   if (currentTask.value && !isBatchOperation.value) {
-    const duplicate = taskStore.createTaskWithUndo({
-      title: currentTask.value.title + ' (Copy)',
-      description: currentTask.value.description,
-      status: currentTask.value.status,
-      priority: currentTask.value.priority
-    })
-    console.log('Duplicated task:', duplicate.title)
+    try {
+      const duplicate = await taskStore.createTaskWithUndo({
+        title: currentTask.value.title + ' (Copy)',
+        description: currentTask.value.description,
+        status: currentTask.value.status,
+        priority: currentTask.value.priority
+      })
+      console.log('Duplicated task:', duplicate.title)
+    } catch (error) {
+      console.error('❌ Error duplicating task:', error)
+    }
   }
   emit('close')
 }

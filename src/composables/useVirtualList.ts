@@ -128,8 +128,8 @@ export const useVirtualList = <T = any>(
 
   // Scroll handling
   const handleScroll = useThrottleFn((event: Event) => {
-    const target = event.target as HTMLElement
-    const newScrollTop = target === window ? window.scrollY : target.scrollTop
+    const target = event.target as any
+    const newScrollTop = target === window ? (window as any).scrollY : (target as HTMLElement).scrollTop
 
     // Determine scroll direction
     scrollDirection.value = newScrollTop > lastScrollTop ? 'down' : 'up'
@@ -282,7 +282,7 @@ export const useVirtualList = <T = any>(
 
     // Add scroll listener
     if (typeof scrollElement === 'string') {
-      const element = document.querySelector(scrollElement) as HTMLElement
+      const element = document.querySelector(scrollElement) as any as HTMLElement
       if (element) {
         element.addEventListener('scroll', handleScroll, { passive: true })
       }
@@ -304,7 +304,7 @@ export const useVirtualList = <T = any>(
 
     // Remove scroll listener
     if (typeof scrollElement === 'string') {
-      const element = document.querySelector(scrollElement) as HTMLElement
+      const element = document.querySelector(scrollElement) as any as HTMLElement
       if (element) {
         element.removeEventListener('scroll', handleScroll)
       }

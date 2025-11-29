@@ -23,8 +23,8 @@ export function generateTestTasks(count: number = 60) {
       progress: status === 'done' ? 100 : (status === 'in_progress' ? 50 : 0),
       dueDate: new Date(Date.now() + (i * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
       completedPomodoros: Math.floor(Math.random() * 5),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
       subtasks: [],
       dependsOn: [],
       tags: ['test', 'performance']

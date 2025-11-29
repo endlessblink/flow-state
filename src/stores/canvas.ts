@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import type { Task } from './tasks'
+import { isSmartGroup, getSmartGroupType, getSmartGroupDate, type SmartGroupType } from '@/composables/useTaskSmartGroups'
+
+// Task store import for safe sync functionality
+let taskStore: any = null
 
 export interface SectionFilter {
   priorities?: ('low' | 'medium' | 'high')[]
@@ -60,6 +64,12 @@ export interface CanvasState {
   selectionRect: { x: number; y: number; width: number; height: number } | null
   selectionMode: 'rectangle' | 'lasso' | 'click'
   isSelecting: boolean
+  // Vue Flow integration properties
+  nodes: any[] // Vue Flow nodes
+  edges: any[] // Vue Flow edges
+  // Additional state properties
+  zoomHistory: { zoom: number; timestamp: number }[]
+  multiSelectActive: boolean
 }
 
 export const useCanvasStore = defineStore('canvas', () => {
@@ -88,6 +98,10 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Store for collapsed task positions to restore on expand
   const collapsedTaskPositions = ref<Map<string, TaskPosition[]>>(new Map())
 
+  // Vue Flow integration properties
+  const nodes = ref<any[]>([])
+  const edges = ref<any[]>([])
+
   // Computed property for collapsed task counts
   const getCollapsedTaskCount = (sectionId: string) => {
     const tasks = collapsedTaskPositions.value.get(sectionId)
@@ -96,6 +110,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Multi-selection state
   const multiSelectMode = ref(false)
+  const multiSelectActive = ref(false)
   const selectionRect = ref<{ x: number; y: number; width: number; height: number } | null>(null)
   const selectionMode = ref<'rectangle' | 'lasso' | 'click'>('rectangle')
   const isSelecting = ref(false)
@@ -118,8 +133,126 @@ export const useCanvasStore = defineStore('canvas', () => {
   })
 
   // Zoom history for undo/redo functionality
-  const zoomHistory = ref<Array<{x: number, y: number, zoom: number, timestamp: number}>>([])
+  const zoomHistory = ref<Array<{zoom: number, timestamp: number}>>([])
   const maxZoomHistory = 50 // Maximum history entries to keep
+
+  // Safe Task Sync Functionality
+  const syncTasksToCanvas = (tasks: Task[]) => {
+    try {
+      console.log('🔄 Safely syncing tasks to canvas:', tasks.length)
+
+      // Create task nodes only for tasks that should appear on canvas
+      // Tasks in inbox (isInInbox: true) should NOT appear on canvas
+      const taskNodes = tasks
+        .filter(task => !task.isInInbox && task.canvasPosition)
+        .map(task => ({
+          id: task.id,
+          type: 'task',
+          position: task.canvasPosition || { x: 100, y: 100 },
+          data: {
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            progress: task.progress,
+            dueDate: task.dueDate,
+            projectId: task.projectId,
+            task: task // Full task object reference
+          },
+          draggable: true
+        }))
+
+      // Filter out existing non-task nodes, keep them
+      const nonTaskNodes = nodes.value.filter(node => node.type !== 'task')
+
+      // Merge task nodes with existing non-task nodes
+      nodes.value = [...nonTaskNodes, ...taskNodes]
+
+      console.log('✅ Canvas sync completed:', taskNodes.length, 'task nodes created (excluded inbox tasks)')
+    } catch (error) {
+      console.error('❌ Canvas sync failed:', error)
+      // Continue - don't crash app
+    }
+  }
+
+  // Initialize task store when available and set up reactive watcher
+  const initializeTaskSync = () => {
+    try {
+      // Lazy load task store to avoid initialization race condition
+      import('./tasks').then(({ useTaskStore }) => {
+        taskStore = useTaskStore()
+
+        console.log('🔗 Task store connected, setting up safe sync watcher')
+
+        // Set up reactive watcher with safety guards for task deletions
+        watch(() => taskStore.tasks?.value, (newTasks, oldTasks) => {
+          if (newTasks && Array.isArray(newTasks)) {
+            console.log('🔄 Tasks changed, safely syncing to canvas:', newTasks.length)
+
+            // If tasks were deleted, immediately remove them from canvas nodes
+            if (oldTasks && Array.isArray(oldTasks) && newTasks.length < oldTasks.length) {
+              const deletedTaskIds = oldTasks
+                .filter(oldTask => !newTasks.some(newTask => newTask.id === oldTask.id))
+                .map(deletedTask => deletedTask.id)
+
+              if (deletedTaskIds.length > 0) {
+                console.log('🗑️ Tasks deleted, removing from canvas:', deletedTaskIds)
+                // Immediately remove deleted task nodes from canvas
+                nodes.value = nodes.value.filter(node =>
+                  !deletedTaskIds.includes(node.id) || node.type !== 'task'
+                )
+              }
+            }
+
+            syncTasksToCanvas(newTasks)
+          }
+        }, { deep: true, immediate: false, flush: 'sync' })
+
+        // Initial sync if tasks are already available
+        if (taskStore.tasks?.value && Array.isArray(taskStore.tasks.value)) {
+          console.log('🚀 Initial sync for existing tasks:', taskStore.tasks.value.length)
+          syncTasksToCanvas(taskStore.tasks.value)
+        }
+      }).catch(error => {
+        console.error('❌ Failed to load task store:', error)
+      })
+    } catch (error) {
+      console.error('❌ Task sync initialization failed:', error)
+    }
+  }
+
+  // Initialize task sync after database is properly ready instead of using hard timeout
+  const initializeWhenDatabaseReady = async () => {
+    try {
+      console.log('🔄 [CANVAS] Waiting for database to be ready before initializing task sync...')
+
+      // Wait for database to be ready using proper check
+      const maxWaitTime = 5000
+      const checkInterval = 100
+      let attempts = 0
+      const maxAttempts = maxWaitTime / checkInterval
+
+      while (!db.isReady?.value && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, checkInterval))
+        attempts++
+      }
+
+      if (db.isReady?.value) {
+        console.log('✅ [CANVAS] Database is ready, initializing task sync...')
+        initializeTaskSync()
+      } else {
+        console.warn('⚠️ [CANVAS] Database not ready after timeout, initializing anyway...')
+        initializeTaskSync()
+      }
+    } catch (error) {
+      console.error('❌ [CANVAS] Failed to wait for database ready:', error)
+      // Fallback: try to initialize anyway after a longer delay
+      setTimeout(initializeTaskSync, 1000)
+    }
+  }
+
+  // Initialize when database is ready instead of using arbitrary setTimeout
+  initializeWhenDatabaseReady()
 
   // Actions
   const setViewport = (x: number, y: number, zoom: number) => {
@@ -127,8 +260,8 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   // Zoom management functions
-  const saveZoomToHistory = (x: number, y: number, zoom: number) => {
-    const entry = { x, y, zoom, timestamp: Date.now() }
+  const saveZoomToHistory = (zoom: number) => {
+    const entry = { zoom, timestamp: Date.now() }
     zoomHistory.value.push(entry)
 
     // Limit history size
@@ -138,7 +271,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const setViewportWithHistory = (x: number, y: number, zoom: number) => {
-    saveZoomToHistory(x, y, zoom)
+    saveZoomToHistory(zoom)
     setViewport(x, y, zoom)
   }
 
@@ -421,7 +554,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     return allTasks.filter(task => {
       // Priority filter
-      if (section.filters!.priorities && !section.filters!.priorities.includes(task.priority)) {
+      if (section.filters!.priorities && task.priority && !section.filters!.priorities.includes(task.priority)) {
         return false
       }
 
@@ -452,6 +585,18 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Check if task matches section criteria (for auto-collect)
   const taskMatchesSection = (task: Task, section: CanvasSection): boolean => {
+    // Handle smart groups (Today, Tomorrow, etc.) - these are custom sections with smart group names
+    if (section.type === 'custom' && isSmartGroup(section.name)) {
+      const smartGroupType = getSmartGroupType(section.name)
+      if (!smartGroupType) return false
+
+      // For smart groups, check if task has the corresponding due date
+      const expectedDate = getSmartGroupDate(smartGroupType)
+      if (!expectedDate) return false // "Later" group has no specific date
+
+      return task.dueDate === expectedDate
+    }
+
     // Smart sections match by propertyValue
     if (section.type === 'priority' && section.propertyValue) {
       return task.priority === section.propertyValue
@@ -465,7 +610,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Custom sections match by filters
     if (section.filters) {
-      if (section.filters.priorities && !section.filters.priorities.includes(task.priority)) {
+      if (section.filters.priorities && task.priority && !section.filters.priorities.includes(task.priority)) {
         return false
       }
       if (section.filters.statuses && !section.filters.statuses.includes(task.status)) {
@@ -487,12 +632,17 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
-  // Auto-save sections to IndexedDB (debounced)
+  // Auto-save sections to PouchDB via SaveQueueManager (Chief Architect conflict prevention)
   let sectionsSaveTimer: ReturnType<typeof setTimeout> | null = null
   watch(sections, (newSections) => {
     if (sectionsSaveTimer) clearTimeout(sectionsSaveTimer)
-    sectionsSaveTimer = setTimeout(() => {
-      db.save(DB_KEYS.CANVAS, newSections)
+    sectionsSaveTimer = setTimeout(async () => {
+      try {
+        await db.save(DB_KEYS.CANVAS, newSections)
+        console.log('📋 Canvas sections auto-saved via SaveQueueManager')
+      } catch (error) {
+        console.error('❌ Canvas auto-save failed:', error)
+      }
     }, 1000)
   }, { deep: true, flush: 'post' })
 
@@ -613,6 +763,11 @@ export const useCanvasStore = defineStore('canvas', () => {
       return allTasks.filter(task => isTaskLogicallyInSection(task, section))
     }
 
+    // For smart groups (Today, Tomorrow, etc.), include ALL matching tasks regardless of position
+    if (section.type === 'custom' && isSmartGroup(section.name)) {
+      return allTasks.filter(task => isTaskLogicallyInSection(task, section))
+    }
+
     // For custom sections, include both geometrically contained and logically matching tasks
     return allTasks.filter(task => {
       const isInside = isTaskInSection(task, section)
@@ -699,22 +854,35 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Load canvas state from IndexedDB
   const loadFromDatabase = async () => {
-    const savedSections = await db.load<CanvasSection[]>(DB_KEYS.CANVAS)
-    if (savedSections && savedSections.length > 0) {
-      sections.value = savedSections
-      console.log(`📂 Loaded ${sections.value.length} canvas sections from IndexedDB`)
+    try {
+      // Wait for database to be ready before loading
+      if (db.isLoading.value) {
+        await new Promise<void>((resolve) => {
+          const unwatch = watch(db.isLoading, (loading) => {
+            if (!loading) {
+              unwatch()
+              resolve()
+            }
+          }, { immediate: true })
+        })
+      }
+
+      if (!db.isReady.value) {
+        console.warn('⚠️ Database not ready, skipping canvas load')
+        return
+      }
+
+      const savedSections = await db.load<CanvasSection[]>(DB_KEYS.CANVAS)
+      if (savedSections && savedSections.length > 0) {
+        sections.value = savedSections
+        console.log(`📂 Loaded ${sections.value.length} canvas sections from IndexedDB`)
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load canvas from database:', error)
     }
   }
 
-  // Auto-save canvas state when sections change (debounced)
-  let canvasSaveTimer: ReturnType<typeof setTimeout> | null = null
-  watch(sections, (newSections) => {
-    if (canvasSaveTimer) clearTimeout(canvasSaveTimer)
-    canvasSaveTimer = setTimeout(() => {
-      db.save(DB_KEYS.CANVAS, newSections)
-    }, 1000)
-  }, { deep: true, flush: 'post' })
-
+  
   // Undo/Redo enabled actions - simplified to avoid circular dependencies
   const undoRedoEnabledActions = () => {
     // Create local references to ensure proper closure access
@@ -733,7 +901,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Section actions with undo/redo
       createSectionWithUndo: async (section: Omit<CanvasSection, 'id'>) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.createSection(section)
         } catch (error) {
@@ -743,16 +912,15 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       updateSectionWithUndo: async (sectionId: string, updates: Partial<CanvasSection>) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           if (actions && typeof actions.updateSection === 'function') {
             return await actions.updateSection(sectionId, updates)
           } else {
-            console.debug('Undo/Redo updateSection function not available, using direct update')
             return localUpdateSection(sectionId, updates)
           }
         } catch (error) {
-          console.error('Failed to use undo/redo for section update:', error)
           return localUpdateSection(sectionId, updates)
         }
       },
@@ -763,7 +931,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       toggleSectionVisibilityWithUndo: async (sectionId: string) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.toggleSectionVisibility(sectionId)
         } catch (error) {
@@ -773,7 +942,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       toggleSectionCollapseWithUndo: async (sectionId: string) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.toggleSectionCollapse(sectionId)
         } catch (error) {
@@ -785,7 +955,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Viewport actions with undo/redo
       setViewportWithUndo: async (x: number, y: number, zoom: number) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.setViewport(x, y, zoom)
         } catch (error) {
@@ -797,7 +968,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Selection actions with undo/redo
       selectNodesWithUndo: async (nodeIds: string[]) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.selectNodes(nodeIds)
         } catch (error) {
@@ -807,7 +979,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       toggleNodeSelectionWithUndo: async (nodeId: string) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.toggleNodeSelection(nodeId)
         } catch (error) {
@@ -817,7 +990,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       clearSelectionWithUndo: async () => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.clearSelection()
         } catch (error) {
@@ -829,7 +1003,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Connection actions with undo/redo
       toggleConnectModeWithUndo: async () => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.toggleConnectMode()
         } catch (error) {
@@ -839,7 +1014,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       startConnectionWithUndo: async (nodeId: string) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.startConnection(nodeId)
         } catch (error) {
@@ -849,7 +1025,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       clearConnectionWithUndo: async () => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.clearConnection()
         } catch (error) {
@@ -861,7 +1038,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Task position actions with undo/redo
       updateTaskPositionWithUndo: async (taskId: string, position: { x: number; y: number }) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.updateTaskPosition(taskId, position)
         } catch (error) {
@@ -873,7 +1051,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Bulk actions with undo/redo
       bulkUpdateTasksWithUndo: async (taskIds: string[], updates: Partial<any>) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.bulkUpdateTasks(taskIds, updates)
         } catch (error) {
@@ -883,7 +1062,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       bulkDeleteTasksWithUndo: async (taskIds: string[]) => {
         try {
-          const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+          const useUnifiedUndoRedo = await getUndoRedoComposable()
           const actions = useUnifiedUndoRedo()
           return actions.bulkDeleteTasks(taskIds)
         } catch (error) {
@@ -905,7 +1085,10 @@ export const useCanvasStore = defineStore('canvas', () => {
     showSectionGuides,
     snapToSections,
     collapsedTaskPositions,
+    nodes,
+    edges,
     multiSelectMode,
+    multiSelectActive,
     selectionRect,
     selectionMode,
     isSelecting,
@@ -973,6 +1156,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     getMagneticSnapPosition,
     getTaskCountInSection,
     getCollapsedTaskCount,
+
+    // Task synchronization
+    syncTasksToCanvas,
 
     // Undo/Redo enabled actions
     ...undoRedoEnabledActions()

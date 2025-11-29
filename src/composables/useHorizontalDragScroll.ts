@@ -61,6 +61,35 @@ export function useHorizontalDragScroll(
   const lastX = ref(0)
   const animationFrameId = ref<number>()
 
+  // Comprehensive drag intent detection - FIXED: Check BEFORE preventDefault
+  const detectDragIntent = (target: HTMLElement, clientX: number, clientY: number): boolean => {
+    // Check for draggable elements (from mapping documentation)
+    const draggableElement = target.closest<HTMLElement>(
+      '.draggable, [data-draggable="true"], [draggable="true"], .task-card, .inbox-task-card, ' +
+      '[data-inbox-task="true"], .vuedraggable, .vue-flow__node, .vue-flow__handle, ' +
+      '.calendar-event, .time-slot, .week-event, .month-event'
+    )
+
+    if (draggableElement) {
+      console.log('🎯 [HorizontalDragScroll] Detected drag intent, allowing drag-and-drop')
+      return true
+    }
+
+    // Check for interactive elements within draggable components
+    const interactiveElement = target.closest<HTMLElement>(
+      'button, input, textarea, select, [role="button"], .draggable-handle, ' +
+      '.status-icon-button, .task-title, .card-header, .metadata-badges, .card-actions, .task-item-mini, ' +
+      '.resize-handle, .event-content, .event-actions'
+    )
+
+    if (interactiveElement) {
+      console.log('🔘 [HorizontalDragScroll] Detected interactive element, allowing interaction')
+      return true
+    }
+
+    return false
+  }
+
   // Momentum scrolling
   const applyMomentum = () => {
     if (!scrollContainer.value) return
@@ -75,113 +104,14 @@ export function useHorizontalDragScroll(
     }
   }
 
-  // Smart drag intention detection
-  const detectDragIntent = (target: HTMLElement, clientX: number, clientY: number): boolean => {
-    // Check if target or any ancestor is draggable
-    const draggableElement = target.closest<HTMLElement>(
-      '.draggable, [data-draggable="true"], [draggable="true"], .task-card, .inbox-task-card, [data-inbox-task="true"], .vuedraggable, ' +
-      '.vue-flow__node, .vue-flow__handle'
-    )
-
-    if (draggableElement) {
-            return true
-    }
-
-    // Check for drag handles and interactive elements within task cards
-    const interactiveElement = target.closest<HTMLElement>(
-      'button, input, textarea, select, [role="button"], .draggable-handle, ' +
-      '.status-icon-button, .task-title, .card-header, .metadata-badges, .card-actions, .task-item-mini'
-    )
-
-    if (interactiveElement) {
-      // Only consider it interactive if it's within a task card, drag context, OR Vue Flow canvas
-      const withinDragContext = interactiveElement.closest<HTMLElement>('.task-card, .inbox-task-card, .vuedraggable, .kanban-swimlane, .vue-flow__pane, .vue-flow__viewport')
-      if (withinDragContext) {
-        console.log('🎯 [HorizontalDragScroll] Detected interactive element in drag context, allowing normal interaction:', {
-          element: target.tagName,
-          classes: target.className,
-          interactiveType: interactiveElement.tagName + '.' + interactiveElement.className,
-          context: withinDragContext.className
-        })
-        return true
-      }
-    }
-
-    // Special case: Check if we're within a Vue Flow canvas (Canvas view)
-    const withinVueFlow = target.closest<HTMLElement>('.vue-flow__pane, .vue-flow__viewport, .vue-flow__container')
-    if (withinVueFlow) {
-      console.log('🎯 [HorizontalDragScroll] Detected Vue Flow canvas interaction, allowing Vue Flow drag operations:', {
-        element: target.tagName,
-        classes: target.className,
-        vueFlowContext: withinVueFlow.className
-      })
-      return true
-    }
-
-    return false
-  }
-
-  // Start drag
+  // Start drag (only called after drag intent check passes)
   const handleStart = (clientX: number, clientY: number, target: HTMLElement) => {
     if (!scrollContainer.value) return
-
-    // Enhanced check for draggable elements (task cards, etc.)
-    const isDraggableElement =
-      target?.closest('.draggable') ||
-      target?.closest('[data-draggable="true"]') ||
-      target?.closest('.task-card') ||
-      target?.closest('[draggable="true"]') ||
-      target?.closest('.vue-flow__node') ||
-      target?.closest('.vue-flow__handle') ||
-      target?.classList.contains('task-card') ||
-      target?.getAttribute('draggable') === 'true' ||
-      // Task card child elements - allow drags from within task cards
-      target?.closest('.card-header') ||
-      target?.closest('.status-icon-button') ||
-      target?.closest('.task-title') ||
-      target?.closest('.metadata-badges') ||
-      target?.closest('.card-actions') ||
-      target?.closest('.task-item-mini')
-
-    if (isDraggableElement) {
-      // Determine which selector matched for better debugging
-      let matchedSelector = 'unknown'
-      if (target?.classList.contains('task-card')) matchedSelector = 'task-card (direct)'
-      else if (target?.closest('.task-card')) matchedSelector = 'task-card (ancestor)'
-      else if (target?.closest('.draggable')) matchedSelector = '.draggable'
-      else if (target?.closest('[data-draggable="true"]')) matchedSelector = '[data-draggable="true"]'
-      else if (target?.closest('[draggable="true"]')) matchedSelector = '[draggable="true"]'
-      else if (target?.closest('.vue-flow__node')) matchedSelector = '.vue-flow__node'
-      else if (target?.closest('.vue-flow__handle')) matchedSelector = '.vue-flow__handle'
-      else if (target?.closest('.card-header')) matchedSelector = '.card-header'
-      else if (target?.closest('.status-icon-button')) matchedSelector = '.status-icon-button'
-      else if (target?.closest('.task-title')) matchedSelector = '.task-title'
-      else if (target?.closest('.metadata-badges')) matchedSelector = '.metadata-badges'
-      else if (target?.closest('.card-actions')) matchedSelector = '.card-actions'
-      else if (target?.closest('.task-item-mini')) matchedSelector = '.task-item-mini'
-      else if (target?.getAttribute('draggable') === 'true') matchedSelector = 'draggable attribute'
-
-      console.log('🔄 [HorizontalDragScroll] Ignoring drag on draggable element:', {
-        element: target.tagName,
-        classes: target.className,
-        matchedSelector: matchedSelector,
-        closestTaskCard: !!target?.closest('.task-card'),
-        hasDraggableAttr: target?.getAttribute('draggable') === 'true',
-        isTaskCard: target?.classList.contains('task-card')
-      })
-      return // Don't interfere with existing drag-drop
-    }
 
     // Check if target is within our scroll container
     if (!scrollContainer.value.contains(target)) {
       return // Only handle events within our container
     }
-
-    // Log scroll container dimensions for debugging
-    console.log('🔄 [HorizontalDragScroll] Container scrollWidth:', scrollContainer.value.scrollWidth)
-    console.log('🔄 [HorizontalDragScroll] Container clientWidth:', scrollContainer.value.clientWidth)
-    console.log('🔄 [HorizontalDragScroll] Can scroll horizontally:',
-      scrollContainer.value.scrollWidth > scrollContainer.value.clientWidth)
 
     isDragging.value = true
     startX.value = clientX
@@ -195,10 +125,10 @@ export function useHorizontalDragScroll(
       cancelAnimationFrame(animationFrameId.value)
     }
 
-    // Set cursor and prevent text selection (only for scroll operations)
+    // Set cursor and prevent text selection
     scrollContainer.value.style.cursor = dragCursor
     scrollContainer.value.style.userSelect = 'none'
-    // Note: touchAction will be set only when we actually start scrolling in handleMove
+    scrollContainer.value.style.touchAction = 'pan-x'
 
     onDragStart?.()
   }
@@ -231,14 +161,6 @@ export function useHorizontalDragScroll(
     // Prevent default browser behavior and stop propagation
     e.preventDefault()
     e.stopPropagation()
-
-    // Additional containment: ensure no body-level scrolling during ACTIVE scrolling
-    if (Math.abs(deltaX) >= threshold) {
-      document.body.style.overflowX = 'hidden'
-      document.body.style.touchAction = 'pan-y'
-      // Also set touch action on scroll container only when actively scrolling
-      scrollContainer.value.style.touchAction = 'pan-x'
-    }
   }
 
   // End drag
@@ -259,10 +181,6 @@ export function useHorizontalDragScroll(
       e.stopPropagation()
     }
 
-    // Restore body overflow settings
-    document.body.style.overflowX = ''
-    document.body.style.touchAction = ''
-
     // Start momentum scrolling if we have velocity
     if (Math.abs(velocity.value) > 0.5) {
       isScrolling.value = true
@@ -274,28 +192,19 @@ export function useHorizontalDragScroll(
 
   // Mouse events
   const handleMouseDown = (e: MouseEvent) => {
-    const target = e.target as HTMLElement
-
-    // Check if we're within a task card first - if so, don't even process drag detection
-    const withinTaskCard = target.closest('.task-card, .inbox-task-card')
-
-    if (withinTaskCard) {
-            return // Don't interfere at all - let task card handle its own drag-and-drop
+    // FIXED: Check for draggable elements BEFORE calling preventDefault()
+    const shouldAllowDrag = detectDragIntent(e.target as HTMLElement, e.clientX, e.clientY)
+    if (shouldAllowDrag) {
+      // Don't interfere with drag operations - let them proceed naturally
+      return
     }
 
-    // Only process scroll logic if we're not within a task card
-        const isDragIntent = detectDragIntent(target, e.clientX, e.clientY)
-
-    if (isDragIntent) {
-            return // Don't interfere - let drag-and-drop handle this
-    }
-
-    // Only interfere with scroll events if no drag intent detected and not in task card
-        e.preventDefault()
+    // Only prevent default for non-draggable interactions (horizontal scrolling)
+    e.preventDefault()
     e.stopPropagation()
-    handleStart(e.clientX, e.clientY, target)
+    handleStart(e.clientX, e.clientY, e.target as HTMLElement)
 
-    // Add global listeners ONLY when scroll drag starts (not for regular drag-and-drop)
+    // Add global listeners when drag starts
     if (isDragging.value && scrollContainer.value) {
       const container = scrollContainer.value as any
       document.addEventListener('mousemove', container._globalMouseMoveHandler)
@@ -321,6 +230,15 @@ export function useHorizontalDragScroll(
   const handleTouchStart = (e: TouchEvent) => {
     if (!touchEnabled) return
     const touch = e.touches[0]
+
+    // FIXED: Check for draggable elements BEFORE calling preventDefault()
+    const shouldAllowDrag = detectDragIntent(e.target as HTMLElement, touch.clientX, touch.clientY)
+    if (shouldAllowDrag) {
+      // Don't interfere with drag operations - let them proceed naturally
+      return
+    }
+
+    // Only prevent default for non-draggable interactions (horizontal scrolling)
     e.preventDefault()
     e.stopPropagation()
     handleStart(touch.clientX, touch.clientY, e.target as HTMLElement)

@@ -22,10 +22,10 @@ describe('TaskStore', () => {
   })
 
   describe('Task CRUD Operations', () => {
-    it('creates a task with default values', () => {
+    it('creates a task with default values', async () => {
       const store = useTaskStore()
 
-      const task = store.createTask({
+      const task = await store.createTask({
         title: 'Test Task'
       })
 
@@ -39,10 +39,10 @@ describe('TaskStore', () => {
       expect(task.projectId).toBe('1')
     })
 
-    it('creates a task with scheduled date and time as instance', () => {
+    it('creates a task with scheduled date and time as instance', async () => {
       const store = useTaskStore()
 
-      const task = store.createTask({
+      const task = await store.createTask({
         title: 'Scheduled Task',
         scheduledDate: '2025-10-11',
         scheduledTime: '14:00',

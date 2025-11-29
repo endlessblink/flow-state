@@ -35,35 +35,87 @@ export function useSidebarManagement() {
   // Platform detection
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
-  // Helper function to filter out synthetic My Tasks project
-  const filterOutSyntheticMyTasks = (project: any) => {
-    // Exclude synthetic My Tasks project with multiple criteria for robustness
-    return project.id !== '1' &&
-           project.name !== 'My Tasks' &&
-           !(project.color === '#3b82f6' && project.colorType === 'hex' && project.viewType === 'status')
+  // Helper function to filter projects for sidebar display
+  const filterSidebarProjects = (projects: any[]) => {
+    console.log('🔍 filterSidebarProjects input:', projects.length, 'projects')
+
+    // FIX: More robust filtering logic
+    const filtered = projects.filter(p => {
+      if (!p) return false // Remove null/undefined projects
+
+      if (!p.id) {
+        console.log('❌ Filtering out project without ID:', p)
+        return false // Remove projects without ID
+      }
+
+      // Keep ALL real projects, filter out only synthetic ones
+      const isSynthetic = p.id.startsWith('synthetic')
+      if (isSynthetic) {
+        console.log('❌ Filtering out synthetic project:', p.id)
+        return false
+      }
+
+      // FIX: Additional validation for real projects
+      if (!p.name || p.name.trim() === '') {
+        console.log('❌ Filtering out project without valid name:', p.id)
+        return false
+      }
+
+      console.log('✅ Keeping real project:', p.id, p.name)
+      return true
+    })
+
+    console.log('🔍 filterSidebarProjects output:', filtered.length, 'projects')
+
+    // If no real projects exist, show default "My Tasks" project
+    if (filtered.length === 0) {
+      console.log('⚠️ No real projects found, showing default "My Tasks" project')
+      return [{
+        id: '1',
+        name: 'My Tasks',
+        color: undefined,
+        colorType: undefined,
+        emoji: '🪣',
+        viewType: 'status',
+        createdAt: new Date()
+      }]
+    }
+
+    return filtered
   }
 
   // Computed Properties for Project Hierarchy
-  // Show all root projects regardless of task count (but exclude the synthetic My Tasks project)
+  // Use centralized rootProjects from task store
   const rootProjects = computed(() => {
-    return taskStore.projects
-      .filter(p => !p.parentId) // Only root projects
-      .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
-      // Note: No longer filtering by active tasks - show all projects
+    const result = taskStore.rootProjects || []
+    console.log('🔍 [useSidebarManagement] rootProjects computed:', {
+      length: result.length,
+      firstProject: result[0]?.name || 'none',
+      taskStoreRootProjects: taskStore.rootProjects
+    })
+    return result
   })
 
   const getChildren = (parentId: string) => {
-    return taskStore.projects
-      .filter(p => p.parentId === parentId)
-      .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
-      // Note: No longer filtering by active tasks - show all child projects
+    try {
+      const allProjects = Array.isArray(taskStore.projects) ? taskStore.projects : []
+      const childrenOnly = allProjects.filter(p => p && p.id && p.parentId === parentId)
+      return filterSidebarProjects(childrenOnly) // Exclude synthetic projects
+    } catch (error) {
+      console.error('❌ Error in getChildren computation:', error)
+      return []
+    }
   }
 
   const hasChildren = (projectId: string) => {
-    return taskStore.projects
-      .filter(p => p.parentId === projectId)
-      .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
-      .length > 0 // Check if there are any child projects
+    try {
+      const allProjects = Array.isArray(taskStore.projects) ? taskStore.projects : []
+      const childrenOnly = allProjects.filter(p => p && p.id && p.parentId === projectId)
+      return filterSidebarProjects(childrenOnly).length > 0 // Check if there are any child projects
+    } catch (error) {
+      console.error('❌ Error in hasChildren computation:', error)
+      return false
+    }
   }
 
   // Smart View Counts
@@ -73,34 +125,32 @@ export function useSidebarManagement() {
     today.setHours(0, 0, 0, 0)
 
     return taskStore.tasks.filter(task => {
-      // Exclude done tasks from today count - CRITICAL FIX
+      // Exclude done tasks from today count (matches filteredTasks logic)
       if (task.status === 'done') {
         return false
       }
 
-      // Check if task is due today (simplified - no more complex instance system)
-      if (task.dueDate === todayStr) {
+      // Check if task is due today (matches filteredTasks logic)
+      if (task.dueDate && task.dueDate === todayStr) {
         return true
       }
 
-      // Fallback to legacy scheduledDate - tasks scheduled for today
-      if (task.scheduledDate === todayStr) {
+      // Check if task has instances scheduled for today (matches filteredTasks logic)
+      if (task.instances && task.instances.length > 0) {
+        const hasTodayInstance = task.instances.some(inst =>
+          inst && inst.scheduledDate === todayStr
+        )
+        if (hasTodayInstance) {
+          return true
+        }
+      }
+
+      // Check legacy scheduled date for today (matches filteredTasks logic)
+      if (task.scheduledDate && task.scheduledDate === todayStr) {
         return true
       }
 
-      // Tasks created today
-      const taskCreatedDate = new Date(task.createdAt)
-      taskCreatedDate.setHours(0, 0, 0, 0)
-      if (taskCreatedDate.getTime() === today.getTime()) {
-        return true
-      }
-
-      // Tasks due today
-      if (task.dueDate === todayStr) {
-        return true
-      }
-
-      // Tasks currently in progress
+      // Tasks currently in progress (matches filteredTasks logic)
       if (task.status === 'in_progress') {
         return true
       }
@@ -110,28 +160,61 @@ export function useSidebarManagement() {
   })
 
   const weekTaskCount = computed(() => {
-    // Calculate tasks for the next 7 days using same logic as store
+    // Calculate tasks for the current week (today through Sunday) using same logic as store
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const todayStr = today.toISOString().split('T')[0]
+
+    // Calculate end of current week (Sunday)
     const weekEnd = new Date(today)
-    weekEnd.setDate(weekEnd.getDate() + 7)
+    const dayOfWeek = today.getDay()
+    const daysUntilSunday = (7 - dayOfWeek) % 7 || 7 // If today is Sunday (0), daysUntilSunday = 7
+    weekEnd.setDate(today.getDate() + daysUntilSunday)
     const weekEndStr = weekEnd.toISOString().split('T')[0]
 
     return taskStore.tasks.filter(task => {
-      // Exclude done tasks from week count - CRITICAL FIX (matches today filter)
+      // Exclude done tasks from week count (matches filteredTasks logic)
       if (task.status === 'done') {
         return false
       }
 
-      // Check if task is due within the week (simplified - no more complex instance system)
-      if (!task.dueDate) return false
-      return task.dueDate >= todayStr && task.dueDate < weekEndStr
+      // Include tasks due within the current week (today through Sunday)
+      if (task.dueDate && task.dueDate >= todayStr && task.dueDate <= weekEndStr) {
+        return true
+      }
+
+      // Check if task has instances scheduled within the week (matches filteredTasks logic)
+      if (task.instances && task.instances.length > 0) {
+        const hasWeekInstance = task.instances.some(inst =>
+          inst && inst.scheduledDate >= todayStr && inst.scheduledDate <= weekEndStr
+        )
+        if (hasWeekInstance) {
+          return true
+        }
+      }
+
+      // Check legacy scheduled dates within the week (matches filteredTasks logic)
+      if (task.scheduledDate && task.scheduledDate >= todayStr && task.scheduledDate <= weekEndStr) {
+        return true
+      }
+
+      // Tasks currently in progress (matches filteredTasks logic)
+      if (task.status === 'in_progress') {
+        return true
+      }
+
+      return false
     }).length
   })
 
   // Above My Tasks task count - counts all non-done tasks
   const aboveMyTasksCount = computed(() => {
+    // Use the centralized counter from task store for consistency
+    if (taskStore && typeof taskStore.nonDoneTaskCount === 'number') {
+      return taskStore.nonDoneTaskCount
+    }
+
+    // Fallback to manual filtering
     return taskStore.tasks.filter(task => {
       // Count all tasks that are not marked as done
       // This matches the "above_my_tasks" smart view logic
@@ -175,7 +258,7 @@ export function useSidebarManagement() {
         title: newTaskTitle.value.trim(),
         description: '',
         status: 'planned',
-        projectId: '1' // Default project
+        projectId: null // ✅ FIXED: Use null instead of forbidden '1'
       })
       newTaskTitle.value = ''
     }

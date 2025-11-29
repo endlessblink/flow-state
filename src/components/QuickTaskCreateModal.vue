@@ -18,7 +18,8 @@
           id="task-title-input"
           ref="titleInput"
           v-model="taskTitle"
-          class="form-input"
+          :class="['form-input', titleAlignmentClasses]"
+          :style="titleAlignmentStyles"
           type="text"
           placeholder="Enter task title..."
           maxlength="200"
@@ -36,7 +37,8 @@
         <textarea
           id="task-description-input"
           v-model="taskDescription"
-          class="form-textarea"
+          :class="['form-textarea', descriptionAlignmentClasses]"
+          :style="descriptionAlignmentStyles"
           rows="3"
           placeholder="Add a description..."
           maxlength="500"
@@ -70,9 +72,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {
   isOpen: boolean
@@ -94,6 +97,15 @@ const titleInput = ref<HTMLInputElement>()
 // Form state
 const taskTitle = ref('')
 const taskDescription = ref('')
+
+// Hebrew alignment
+const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
+
+// Computed properties for Hebrew text alignment
+const titleAlignmentClasses = computed(() => getAlignmentClasses(taskTitle.value))
+const titleAlignmentStyles = computed(() => applyInputAlignment(taskTitle.value))
+const descriptionAlignmentClasses = computed(() => getAlignmentClasses(taskDescription.value))
+const descriptionAlignmentStyles = computed(() => applyInputAlignment(taskDescription.value))
 
 // Handle after open to focus the title input
 const handleAfterOpen = () => {

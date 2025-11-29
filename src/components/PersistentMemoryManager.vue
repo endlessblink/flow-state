@@ -122,7 +122,7 @@
             @change="handleFileImport"
             style="display: none"
           />
-          <BaseButton @click="$refs.fileInput.click()">
+          <BaseButton @click="($refs.fileInput as any).click()">
             <Upload :size="16" />
             Choose File
           </BaseButton>

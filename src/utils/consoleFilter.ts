@@ -9,7 +9,8 @@
 
 // Helper function to check if task diagnostics should be logged
 export const shouldLogTaskDiagnostics = () => {
-  return import.meta.env.DEV // Always enable in development for debugging kanban issue
+  return import.meta.env.DEV &&
+         localStorage.getItem('DEV_LOG_TASK_DIAGNOSTICS') === 'true'
 }
 
 interface LogToggles {
@@ -28,7 +29,7 @@ interface LogToggles {
 }
 
 // Store original console methods
-const originalConsole = {
+export const originalConsole = {
   log: console.log,
   warn: console.warn,
   error: console.error,
@@ -40,7 +41,7 @@ const originalConsole = {
 let logToggles: LogToggles = {
   timer: false,
   tabUpdate: false,
-  taskFiltering: true, // Enable to debug kanban board issue
+  taskFiltering: false,
   taskUpdates: false,
   undoSystem: false,
   undoOperations: false,
@@ -63,7 +64,7 @@ export function loadLogToggles(): LogToggles {
       }
     }
   } catch (e) {
-    originalConsole.error('Failed to load log toggles:', e)
+    console.error('Failed to load log toggles:', e)
   }
   return logToggles
 }
@@ -77,7 +78,7 @@ export function saveLogToggles(toggles: LogToggles): void {
   localStorage.setItem('dev-log-toggles', JSON.stringify(toggles))
 
   // Debug confirmation
-  originalConsole.log('🔧 Log toggles saved:', JSON.stringify(toggles))
+  console.log('🔧 Log toggles saved:', JSON.stringify(toggles))
 }
 
 // Check if a log message should be filtered
@@ -86,7 +87,7 @@ function shouldFilter(message: string): boolean {
 
   // Debug: Log current toggle states (only for DevLogController messages)
   if (msg.includes('🔧 DevLogController') || msg.includes('📊 All logs')) {
-    originalConsole.log('🔍 Current toggle states:', JSON.stringify(logToggles))
+    console.log('🔍 Current toggle states:', JSON.stringify(logToggles))
   }
 
   // Timer logs
@@ -227,7 +228,7 @@ export function getLogToggles(): LogToggles {
       }
     }
   } catch (e) {
-    originalConsole.error('Failed to get log toggles:', e)
+    console.error('Failed to get log toggles:', e)
   }
   return { ...logToggles }
 }

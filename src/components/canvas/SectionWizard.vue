@@ -40,7 +40,7 @@
               v-for="type in sectionTypes"
               :key="type.value"
               :class="['section-type-card', { selected: wizardData.type === type.value }]"
-              @click="selectType(type.value)"
+              @click="selectType(type.value as any)"
             >
               <component :is="type.icon" :size="32" :stroke-width="1.5" class="type-icon" />
               <h3 class="type-title">{{ type.label }}</h3>
@@ -114,12 +114,12 @@
               v-for="project in projects"
               :key="project.id"
               :class="['property-option', { selected: wizardData.propertyValue === project.id }]"
-              @click="selectPropertyValue(project.id, project.name, project.color)"
+              @click="selectPropertyValue(project.id as any, project.name, project.color as string)"
             >
-              <div class="option-badge" :style="{ backgroundColor: project.color }"></div>
+              <div class="option-badge" :style="{ backgroundColor: project.color as string }"></div>
               <div class="option-content">
                 <div class="option-label">{{ project.name }}</div>
-                <div class="option-description">{{ project.description || 'No description' }}</div>
+                <div class="option-description">Project section for organizing tasks</div>
               </div>
             </button>
           </div>

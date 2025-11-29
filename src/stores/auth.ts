@@ -1,19 +1,41 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut as firebaseSignOut,
-  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
-  updateProfile as firebaseUpdateProfile,
-  updatePassword as firebaseUpdatePassword,
-  onAuthStateChanged,
-  type User
-} from 'firebase/auth'
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, type Timestamp } from 'firebase/firestore'
-import { auth, db, waitForFirebase } from '@/config/firebase'
+// ⚠️ Firebase disabled for stability
+// import {
+//   signInWithEmailAndPassword,
+//   createUserWithEmailAndPassword,
+//   signInWithPopup,
+//   GoogleAuthProvider,
+//   signOut as firebaseSignOut,
+//   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
+//   updateProfile as firebaseUpdateProfile,
+//   updatePassword as firebaseUpdatePassword,
+//   onAuthStateChanged,
+//   type User
+// } from 'firebase/auth'
+// import { doc, getDoc, setDoc, updateDoc, serverTimestamp, type Timestamp } from 'firebase/firestore'
+// import { auth, db, waitForFirebase } from '@/config/firebase'
+
+// Mock type definitions for Firebase compatibility
+type User = any
+type Timestamp = any
+const auth: any = null
+const db: any = null
+const waitForFirebase: any = () => Promise.resolve(false)
+const serverTimestamp: any = () => new Date()
+const doc: any = () => ({})
+const getDoc: any = () => Promise.resolve(null)
+const setDoc: any = () => Promise.resolve()
+const updateDoc: any = () => Promise.resolve()
+const createUserWithEmailAndPassword: any = () => Promise.reject(new Error('Firebase disabled'))
+const signInWithEmailAndPassword: any = () => Promise.reject(new Error('Firebase disabled'))
+const signInWithPopup: any = () => Promise.reject(new Error('Firebase disabled'))
+const GoogleAuthProvider: any = class {}
+const firebaseSignOut: any = () => Promise.resolve()
+const firebaseSendPasswordResetEmail: any = () => Promise.reject(new Error('Firebase disabled'))
+const firebaseUpdateProfile: any = () => Promise.reject(new Error('Firebase disabled'))
+const firebaseUpdatePassword: any = () => Promise.reject(new Error('Firebase disabled'))
+const onAuthStateChanged: any = () => () => {}
 
 /**
  * User profile data stored in Firestore
@@ -137,37 +159,12 @@ export const useAuthStore = defineStore('auth', () => {
       return
     }
 
-    console.log('🔐 Initializing Firebase Auth listener...')
+    console.log('⚠️ Firebase Auth disabled - running without authentication')
 
-    onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        console.log('✅ User authenticated:', firebaseUser.email)
-        user.value = firebaseUser
+    // Firebase Auth disabled - no listener needed
+    console.log('👤 Running in local-only mode - no authentication')
 
-        // Load user profile from Firestore
-        await loadUserProfile(firebaseUser.uid)
-
-        // Update last login time
-        await updateLastLogin(firebaseUser.uid)
-      } else {
-        console.log('👤 No user authenticated')
-        user.value = null
-        profile.value = null
-
-        // Auto-open auth modal if not authenticated
-        // Import at runtime to avoid circular dependency
-        const { useUIStore } = await import('@/stores/ui')
-        const uiStore = useUIStore()
-
-        if (!uiStore.authModalOpen) {
-          console.log('🔐 Auto-opening auth modal for unauthenticated user')
-          uiStore.openAuthModal('login', '/')
-        }
-      }
-
-      isLoading.value = false
-    })
-
+    isLoading.value = false
     authListenerInitialized.value = true
   }
 

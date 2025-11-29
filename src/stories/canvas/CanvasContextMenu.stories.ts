@@ -218,13 +218,13 @@ export const WithSelectedTasks: Story = {
           </button>
           <button
             @click="updateSelectedCount(2)"
-            style="padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
+            style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 14px;"
           >
             Select 2 Tasks (Alignment)
           </button>
           <button
             @click="updateSelectedCount(3)"
-            style="padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
+            style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 14px;"
           >
             Select 3+ Tasks (Distribution)
           </button>
@@ -347,19 +347,19 @@ export const WithGroupContext: Story = {
           </button>
           <button
             @click="switchGroup({ id: 'group-1', name: 'Development Tasks' })"
-            style="padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
+            style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 14px;"
           >
             Development Tasks
           </button>
           <button
             @click="switchGroup({ id: 'group-2', name: 'Design Work' })"
-            style="padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
+            style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 14px;"
           >
             Design Work
           </button>
           <button
             @click="switchGroup({ id: 'group-3', name: 'Planning' })"
-            style="padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
+            style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 14px;"
           >
             Planning
           </button>
@@ -464,7 +464,7 @@ export const FullFeatured: Story = {
 
         <button
           @click="toggleMenu"
-          style="padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 32px;"
+          style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; margin-bottom: 32px;"
         >
           {{ isVisible ? 'Hide Menu' : 'Show Menu' }}
         </button>

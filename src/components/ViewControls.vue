@@ -51,7 +51,7 @@
       <CustomSelect
         :model-value="sortBy"
         :options="sortOptions"
-        @update:model-value="$emit('update:sortBy', $event)"
+        @update:model-value="$emit('update:sortBy', $event as any)"
       />
     </div>
 
@@ -60,7 +60,7 @@
       <CustomSelect
         :model-value="filterStatus"
         :options="filterOptions"
-        @update:model-value="$emit('update:filterStatus', $event)"
+        @update:model-value="$emit('update:filterStatus', $event as any)"
       />
     </div>
   </div>
@@ -83,13 +83,14 @@ interface Props {
 
 defineProps<Props>()
 
-defineEmits<{
-  'update:viewType': [value: ViewType]
-  'update:density': [value: DensityType]
-  'update:sortBy': [value: string]
-  'update:filterStatus': [value: string]
-  expandAll: []
-  collapseAll: []
+// Use explicit function signature to avoid emit type inference issues
+const emit = defineEmits<{
+  (e: 'update:viewType', value: ViewType): void
+  (e: 'update:density', value: DensityType): void
+  (e: 'update:sortBy', value: string): void
+  (e: 'update:filterStatus', value: string): void
+  (e: 'expandAll'): void
+  (e: 'collapseAll'): void
 }>()
 
 const densityOptions = [

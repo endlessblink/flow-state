@@ -8,16 +8,16 @@
       :title="getTriggerTitle()"
     >
       <div v-if="activeProject" class="project-indicator">
-        <div
+        <ProjectEmojiIcon
           v-if="activeProject.colorType === 'emoji' && activeProject.emoji"
+          :emoji="activeProject.emoji"
+          size="xs"
           class="project-emoji"
-        >
-          {{ activeProject.emoji }}
-        </div>
+        />
         <div
           v-else-if="activeProject.color"
           class="project-color"
-          :style="{ backgroundColor: activeProject.color }"
+          :style="{ backgroundColor: Array.isArray(activeProject.color) ? activeProject.color[0] : activeProject.color }"
         ></div>
       </div>
       <div v-else class="all-projects-icon">
@@ -67,16 +67,16 @@
             @click="selectProject(project.id)"
           >
             <div class="project-indicator">
-              <div
+              <ProjectEmojiIcon
                 v-if="project.colorType === 'emoji' && project.emoji"
+                :emoji="project.emoji"
+                size="xs"
                 class="project-emoji"
-              >
-                {{ project.emoji }}
-              </div>
+              />
               <div
                 v-else-if="project.color"
                 class="project-color"
-                :style="{ backgroundColor: project.color }"
+                :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }"
               ></div>
             </div>
 
@@ -105,6 +105,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { ChevronDown, ListTodo, Check } from 'lucide-vue-next'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 const taskStore = useTaskStore()
 const isOpen = ref(false)
@@ -116,31 +117,9 @@ const activeProject = computed(() => {
   return taskStore.getProjectById(activeProjectId.value)
 })
 
-// Helper function to check if a project and its children have active tasks
-const projectHasActiveTasks = (projectId: string): boolean => {
-  // Helper function to get all child project IDs recursively
-  const getChildProjectIds = (parentId: string): string[] => {
-    const ids = [parentId]
-    const childProjects = taskStore.projects.filter(p => p.parentId === parentId)
-    childProjects.forEach(child => {
-      ids.push(...getChildProjectIds(child.id))
-    })
-    return ids
-  }
-
-  // Get all project IDs including children recursively
-  const projectIds = getChildProjectIds(projectId)
-
-  // Check if any filtered tasks (active tasks only) belong to this project or its children
-  return taskStore.filteredTasks.some(task => projectIds.includes(task.projectId || '1'))
-}
-
 // Sort projects: root level first, then nested, alphabetically within each level
-// UPDATED: Only show projects that have active (non-done) tasks
 const sortedProjects = computed(() => {
-  const projects = [...taskStore.projects].filter(project =>
-    projectHasActiveTasks(project.id)
-  )
+  const projects = [...taskStore.projects]
 
   return projects.sort((a, b) => {
     // Root projects come first
@@ -172,7 +151,7 @@ const selectProject = (projectId: string | null) => {
 
 const getTriggerLabel = () => {
   if (!activeProjectId.value) return 'All Projects'
-  return taskStore.getProjectDisplayName(activeProjectId.value)
+  return activeProject.value?.name || 'Unknown Project'
 }
 
 const getTriggerTitle = () => {
@@ -189,8 +168,7 @@ const getNestedName = (project: Project) => {
 }
 
 const getProjectTaskCount = (projectId: string): number => {
-  // Count only active (non-done) tasks using filteredTasks
-  const directTasks = taskStore.filteredTasks.filter(task => task.projectId === projectId).length
+  const directTasks = taskStore.tasks.filter(task => task.projectId === projectId).length
   const childProjects = taskStore.projects.filter(p => p.parentId === projectId)
   const childTasks = childProjects.reduce((sum, child) => sum + getProjectTaskCount(child.id), 0)
   return directTasks + childTasks

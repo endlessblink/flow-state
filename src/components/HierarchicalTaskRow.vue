@@ -52,11 +52,14 @@
       <div class="task-row__title">
         <span
           class="task-row__title-text"
-          :class="{
-            'task-row__title-text--completed': task.status === 'done',
-            'task-row__title-text--hover': isHovered,
-            'task-row__title-text--selected': selected
-          }"
+          :class="[
+            titleAlignmentClasses,
+            {
+              'task-row__title-text--completed': task.status === 'done',
+              'task-row__title-text--hover': isHovered,
+              'task-row__title-text--selected': selected
+            }
+          ]"
           :title="task.title"
         >
           {{ task.title }}
@@ -70,6 +73,34 @@
           }"
         >
           {{ completedSubtaskCount }}/{{ childTasks.length }}
+        </span>
+      </div>
+
+      <!-- Project Emoji -->
+      <div class="task-row__project">
+        <span
+          class="project-emoji-badge"
+          :class="[`project-visual--${projectVisual.type}`, { 'project-visual--colored': projectVisual.type === 'css-circle' }]"
+          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+        >
+          <!-- Emoji rendering using ProjectEmojiIcon for consistency -->
+          <ProjectEmojiIcon
+            v-if="projectVisual.type === 'emoji'"
+            :emoji="projectVisual.content"
+            size="xs"
+          />
+          <!-- CSS Circle for colored projects -->
+          <div
+            v-else-if="projectVisual.type === 'css-circle'"
+            class="project-css-circle"
+            :style="{ '--project-color': projectVisual.color }"
+          ></div>
+          <!-- Default fallback (folder icon) -->
+          <ProjectEmojiIcon
+            v-else
+            emoji="📁"
+            size="xs"
+          />
         </span>
       </div>
 
@@ -97,8 +128,7 @@
           :class="{
             'task-row__priority-badge--high': task.priority === 'high',
             'task-row__priority-badge--medium': task.priority === 'medium',
-            'task-row__priority-badge--low': task.priority === 'low',
-            'task-row__priority-badge--urgent': task.priority === 'urgent'
+            'task-row__priority-badge--low': task.priority === 'low'
           }"
           @click.stop="cyclePriority(task.id, task.priority)"
           title="Click to change priority"
@@ -169,7 +199,7 @@
           @edit="$emit('edit', $event)"
           @contextMenu="$emit('contextMenu', $event, childTask)"
           @toggleExpand="$emit('toggleExpand', $event)"
-          @moveTask="$emit('moveTask', $event.taskId, $event.targetProjectId, $event.targetParentId)"
+          @moveTask="(taskId, targetProjectId, targetParentId) => $emit('moveTask', taskId, targetProjectId, targetParentId)"
         />
       </div>
     </template>
@@ -183,6 +213,8 @@ import { useTaskStore } from '@/stores/tasks'
 import { Calendar, Play, Edit, Copy } from 'lucide-vue-next'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import DoneToggle from '@/components/DoneToggle.vue'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 interface Props {
   task: Task
@@ -211,6 +243,11 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 const { startDrag, endDrag } = useDragAndDrop()
+
+// Hebrew text alignment support
+const { getAlignmentClasses } = useHebrewAlignment()
+const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task.title))
+
 const isDragging = ref(false)
 const isDropTarget = ref(false)
 const isMobile = ref(false)
@@ -267,6 +304,11 @@ const isOverdue = computed(() => {
   dueDate.setHours(0, 0, 0, 0)
   return dueDate < today
 })
+
+// Project visual indicator (emoji or colored dot)
+const projectVisual = computed(() =>
+  taskStore.getProjectVisual(props.task.projectId)
+)
 
 const toggleExpanded = () => {
   if (hasSubtasks.value) {
@@ -340,12 +382,12 @@ const formatPriority = (priority: string): string => {
 
 // Interactive methods for inline editing
 const updateTaskStatus = (taskId: string, status: string) => {
-  emit('updateTask', taskId, { status })
+  emit('updateTask', taskId, { status: status as Task['status'] })
 }
 
 const cyclePriority = (taskId: string, currentPriority?: string) => {
-  const priorities = ['low', 'medium', 'high', 'urgent']
-  const currentIndex = priorities.indexOf(currentPriority || 'medium')
+  const priorities = ['low', 'medium', 'high'] as const
+  const currentIndex = priorities.indexOf((currentPriority || 'medium') as typeof priorities[number])
   const nextIndex = (currentIndex + 1) % priorities.length
   emit('updateTask', taskId, { priority: priorities[nextIndex] })
 }
@@ -364,7 +406,7 @@ const handleTouchStart = (event: TouchEvent) => {
   if (!isMobile.value) return
 
   const touch = event.touches[0]
-  const rect = event.currentTarget?.getBoundingClientRect()
+  const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect()
   if (rect) {
     touchFeedbackStyle.value = {
       left: `${touch.clientX - rect.left}px`,
@@ -564,8 +606,8 @@ onUnmounted(() => {
 /* Table-style task row matching TaskTable exactly */
 .task-row {
   display: grid;
-  grid-template-columns: 40px 1fr 120px 100px 120px 100px 100px;
-  grid-template-areas: "done title status priority due progress actions";
+  grid-template-columns: 40px 1fr 40px 120px 100px 120px 100px 100px;
+  grid-template-areas: "done title project status priority due progress actions";
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
@@ -591,8 +633,8 @@ onUnmounted(() => {
 
 /* Mobile optimizations */
 .hierarchical-task-row--mobile .task-row {
-  grid-template-columns: 40px 1fr;
-  grid-template-areas: "done title";
+  grid-template-columns: 40px 1fr 40px;
+  grid-template-areas: "done title project";
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
 }
@@ -632,6 +674,97 @@ onUnmounted(() => {
 .task-row__title-text--completed {
   text-decoration: line-through;
   color: var(--text-tertiary);
+}
+
+/* Project Emoji Cell - Enhanced to match canvas implementation */
+.task-row__project {
+  grid-area: project;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Enhanced project indicator styles matching canvas implementation */
+.project-emoji-badge {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--spring-smooth) ease;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 4px var(--shadow-subtle);
+}
+
+.project-emoji-badge:hover {
+  background: var(--brand-bg-subtle-hover);
+  border-color: var(--brand-border);
+  transform: translateY(-1px) translateZ(0);
+  box-shadow: 0 4px 8px var(--shadow-subtle);
+}
+
+.project-emoji {
+  font-size: var(--project-indicator-size-md); /* 24px to match canvas */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateZ(0); /* Hardware acceleration */
+  transition: all var(--spring-smooth) ease;
+}
+
+.project-emoji.project-css-circle {
+  width: var(--project-indicator-size-md); /* 24px to match canvas */
+  height: var(--project-indicator-size-md); /* 24px to match canvas */
+  border-radius: 50%;
+  background: var(--project-color);
+  box-shadow: var(--project-indicator-shadow-inset);
+  position: relative;
+  font-size: var(--project-indicator-font-size-md); /* Proper font scaling */
+  color: white;
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--spring-smooth) ease;
+  backdrop-filter: var(--project-indicator-backdrop);
+  /* Enhanced glow to match canvas */
+  box-shadow:
+    var(--project-indicator-shadow-inset),
+    var(--project-indicator-glow-strong);
+}
+
+.project-emoji-badge:hover .project-emoji.project-css-circle {
+  transform: translateZ(0) scale(1.15); /* Match canvas scaling */
+  box-shadow:
+    var(--project-indicator-shadow-inset),
+    0 0 16px var(--project-color),
+    0 0 32px var(--project-color);
+}
+
+/* Add radial gradient glow effect like canvas */
+.project-emoji-badge:hover .project-emoji.project-css-circle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    var(--project-color) 0%,
+    transparent 70%
+  );
+  opacity: 0.3;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.project-emoji-badge.project-visual--colored {
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
 }
 
 /* Subtask count */
@@ -698,13 +831,13 @@ onUnmounted(() => {
 }
 
 .task-row__priority-badge--high {
-  background-color: var(--color-error-alpha-10);
-  color: var(--color-error);
+  background-color: var(--priority-high-bg);
+  color: var(--color-priority-high);
 }
 
 .task-row__priority-badge--medium {
-  background-color: var(--color-warning-alpha-10);
-  color: var(--color-warning);
+  background-color: var(--color-priority-medium-bg);
+  color: var(--color-priority-medium);
 }
 
 .task-row__priority-badge--low {

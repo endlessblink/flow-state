@@ -1,8 +1,14 @@
+<!--
+TODO: RESTORE I18N - This component has hardcoded English due to Vue i18n error
+Originally: const { t } = useI18n()
+Error: "Unexpected return type in composer" at line 5
+Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
+-->
 <template>
   <div class="language-settings">
     <!-- Language Selection -->
     <div class="setting-group">
-      <h3 class="setting-title">{{ $t('settings.language') }}</h3>
+      <h3 class="setting-title">Language</h3>
       <div class="language-options">
         <button
           v-for="lang in availableLanguages"
@@ -22,7 +28,7 @@
 
     <!-- Text Direction -->
     <div class="setting-group">
-      <h3 class="setting-title">{{ $t('settings.direction') }}</h3>
+      <h3 class="setting-title">Text Direction</h3>
       <div class="direction-options">
         <button
           v-for="option in directionOptions"
@@ -50,14 +56,14 @@
 
     <!-- Current Status -->
     <div class="setting-group">
-      <h3 class="setting-title">{{ $t('settings.general') }}</h3>
+      <h3 class="setting-title">General Settings</h3>
       <div class="status-info">
         <div class="status-item">
-          <span class="status-label">{{ $t('settings.language') }}:</span>
+          <span class="status-label">Language:</span>
           <span class="status-value">{{ currentLanguage.nativeName }}</span>
         </div>
         <div class="status-item">
-          <span class="status-label">{{ $t('settings.direction') }}:</span>
+          <span class="status-label">Text Direction:</span>
           <span class="status-value">{{ currentDirectionLabel }}</span>
         </div>
         <div class="status-item">
@@ -71,7 +77,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
@@ -89,33 +94,32 @@ interface DirectionOption {
   icon: typeof ChevronLeft
 }
 
-const { t } = useI18n()
 const uiStore = useUIStore()
 const { direction, isRTL, directionPreference } = useDirection()
 
 // Available languages
-const availableLanguages = computed<Language[]>(() => uiStore.availableLanguages)
+const availableLanguages = computed(() => uiStore.availableLanguages as Language[])
 
 // Current language
-const currentLanguage = computed<Language>(() => uiStore.currentLanguage)
+const currentLanguage = computed(() => uiStore.currentLanguage as Language)
 
 // Direction options
 const directionOptions = computed<DirectionOption[]>(() => [
   {
     value: 'auto',
-    label: t('settings.auto'),
+    label: 'Auto',
     description: 'Automatically detect from language',
     icon: ChevronLeft
   },
   {
     value: 'ltr',
-    label: t('settings.ltr'),
+    label: 'LTR',
     description: 'Left to right text direction',
     icon: ChevronLeft
   },
   {
     value: 'rtl',
-    label: t('settings.rtl'),
+    label: 'RTL',
     description: 'Right to left text direction',
     icon: ChevronRight
   }

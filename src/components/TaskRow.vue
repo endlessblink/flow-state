@@ -3,11 +3,14 @@
     class="task-row"
     :class="[
       `task-row--${density}`,
-      { 'task-row--selected': selected, 'task-row--anchor': isAnchorRow }
+      { 'task-row--selected': selected, 'task-row--anchor': isAnchorRow },
+      `priority-${task.priority || 'none'}`
     ]"
     @click="$emit('select', task.id)"
     @contextmenu.prevent="$emit('contextMenu', $event, task)"
   >
+    <!-- Priority Indicator -->
+    <div v-if="task.priority" class="priority-indicator"></div>
     <!-- Checkbox -->
     <div class="task-row__checkbox" @click.stop>
       <input
@@ -20,7 +23,40 @@
 
     <!-- Title (flexible, main focus) -->
     <div class="task-row__title">
-      <span class="task-row__title-text">{{ task.title }}</span>
+      <span class="task-row__title-text" :class="getAlignmentClasses(task.title)">{{ task.title }}</span>
+    </div>
+
+    <!-- Project Visual -->
+    <div class="task-row__project">
+      <span
+        class="project-emoji-badge"
+        :class="[`project-visual--${projectVisual.type}`, { 'project-visual--colored': projectVisual.type === 'css-circle' }]"
+        :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+      >
+        <!-- Emoji visual indicator -->
+        <ProjectEmojiIcon
+          v-if="projectVisual.type === 'emoji'"
+          :emoji="projectVisual.content"
+          size="xs"
+          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+          class="project-emoji"
+        />
+        <!-- CSS circle visual indicator -->
+        <span
+          v-else-if="projectVisual.type === 'css-circle'"
+          class="project-emoji project-css-circle"
+          :style="{ '--project-color': projectVisual.color }"
+          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+        ></span>
+        <!-- Default fallback (folder icon) -->
+        <ProjectEmojiIcon
+          v-else
+          emoji="📁"
+          size="xs"
+          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+          class="project-emoji"
+        />
+      </span>
     </div>
 
     <!-- Due Date -->
@@ -28,18 +64,6 @@
       <Calendar v-if="task.dueDate" :size="14" class="task-row__icon" />
       <span v-if="task.dueDate" :class="getDueDateClass()">
         {{ formatDueDate(task.dueDate) }}
-      </span>
-      <span v-else class="task-row__empty">-</span>
-    </div>
-
-    <!-- Priority Badge -->
-    <div class="task-row__priority">
-      <span
-        v-if="task.priority"
-        class="task-row__badge"
-        :class="`task-row__badge--${task.priority}`"
-      >
-        {{ task.priority }}
       </span>
       <span v-else class="task-row__empty">-</span>
     </div>
@@ -61,7 +85,7 @@
         {{ tag }}
       </span>
       <span v-if="hasMoreTags" class="task-row__tag-more">
-        +{{ task.tags.length - maxVisibleTags }}
+        +{{ (task.tags?.length || 0) - maxVisibleTags }}
       </span>
     </div>
 
@@ -87,9 +111,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Task } from '@/stores/tasks'
+import { useTaskStore, type Task } from '@/stores/tasks'
 import { Calendar, Play, Edit } from 'lucide-vue-next'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { DensityType } from '@/components/ViewControls.vue'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {
   task: Task
@@ -99,6 +125,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const taskStore = useTaskStore()
 
 defineEmits<{
   select: [taskId: string]
@@ -107,6 +134,9 @@ defineEmits<{
   edit: [taskId: string]
   contextMenu: [event: MouseEvent, task: Task]
 }>()
+
+// Hebrew text alignment support
+const { getAlignmentClasses } = useHebrewAlignment()
 
 // ADHD-friendly: Every 5th row gets visual anchor
 const isAnchorRow = computed(() => (props.rowIndex + 1) % 5 === 0)
@@ -118,6 +148,11 @@ const visibleTags = computed(() =>
 )
 const hasMoreTags = computed(() =>
   (props.task.tags?.length || 0) > maxVisibleTags
+)
+
+// Project visual indicator (emoji or colored dot)
+const projectVisual = computed(() =>
+  taskStore.getProjectVisual(props.task.projectId)
 )
 
 // Due date formatting and coloring
@@ -163,9 +198,10 @@ const formatStatus = (status: string): string => {
 /* Base Row - 32px height optimized for scanning */
 .task-row {
   display: grid;
-  grid-template-columns: 40px 1fr 100px 80px 100px 140px 80px;
-  grid-template-areas: "checkbox title due priority status tags actions";
+  grid-template-columns: 40px 1fr 40px 100px 100px 140px 80px;
+  grid-template-areas: "checkbox title project due status tags actions";
   height: 32px;
+  position: relative; /* Needed for absolute positioned priority indicator */
   padding: 0 var(--space-3);
   align-items: center;
   gap: var(--space-2);
@@ -242,6 +278,99 @@ const formatStatus = (status: string): string => {
   display: block;
 }
 
+/* Project Emoji Cell - Enhanced to match canvas implementation */
+.task-row__project {
+  grid-area: project;
+  display: grid;
+  place-items: center; /* Perfect centering with CSS Grid */
+  transform: translateZ(0); /* Hardware acceleration */
+  will-change: transform;
+}
+
+/* Enhanced project indicator styles matching canvas implementation */
+.project-emoji-badge {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--spring-smooth) ease;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 4px var(--shadow-subtle);
+}
+
+.project-emoji-badge:hover {
+  background: var(--brand-bg-subtle-hover);
+  border-color: var(--brand-border);
+  transform: translateY(-1px) translateZ(0);
+  box-shadow: 0 4px 8px var(--shadow-subtle);
+}
+
+.project-emoji {
+  font-size: var(--project-indicator-size-md); /* 24px to match canvas */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateZ(0); /* Hardware acceleration */
+  transition: all var(--spring-smooth) ease;
+}
+
+.project-emoji.project-css-circle {
+  width: var(--project-indicator-size-md); /* 24px to match canvas */
+  height: var(--project-indicator-size-md); /* 24px to match canvas */
+  border-radius: 50%;
+  background: var(--project-color);
+  box-shadow: var(--project-indicator-shadow-inset);
+  position: relative;
+  font-size: var(--project-indicator-font-size-md); /* Proper font scaling */
+  color: white;
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--spring-smooth) ease;
+  backdrop-filter: var(--project-indicator-backdrop);
+  /* Enhanced glow to match canvas */
+  box-shadow:
+    var(--project-indicator-shadow-inset),
+    var(--project-indicator-glow-strong);
+}
+
+.project-emoji-badge:hover .project-emoji.project-css-circle {
+  transform: translateZ(0) scale(1.15); /* Match canvas scaling */
+  box-shadow:
+    var(--project-indicator-shadow-inset),
+    0 0 16px var(--project-color),
+    0 0 32px var(--project-color);
+}
+
+/* Add radial gradient glow effect like canvas */
+.project-emoji-badge:hover .project-emoji.project-css-circle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    var(--project-color) 0%,
+    transparent 70%
+  );
+  opacity: 0.3;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.project-emoji-badge.project-visual--colored {
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+}
+
+
 /* Due Date Cell */
 .task-row__due-date {
   grid-area: due;
@@ -271,35 +400,49 @@ const formatStatus = (status: string): string => {
   color: var(--color-info);
 }
 
-/* Priority Badge */
-.task-row__priority {
-  grid-area: priority;
+/* Priority Indicator - 5px stripe matching canvas */
+.priority-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: 0 4px 8px var(--shadow-md);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* Removed debugging background - priority indicators should now work correctly */
 }
 
-.task-row__badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
-  white-space: nowrap;
+.priority-high .priority-indicator {
+  background: var(--color-priority-high);
+  box-shadow: var(--priority-high-glow);
 }
 
-.task-row__badge--high {
-  background-color: var(--color-error-alpha-10);
-  color: var(--color-error);
+.priority-medium .priority-indicator {
+  background: var(--color-priority-medium);
+  box-shadow: var(--priority-medium-glow);
 }
 
-.task-row__badge--medium {
-  background-color: var(--color-warning-alpha-10);
-  color: var(--color-warning);
+.priority-low .priority-indicator {
+  background: var(--color-priority-low);
+  box-shadow: var(--priority-low-glow);
 }
 
-.task-row__badge--low {
-  background-color: var(--blue-bg-light);
-  color: var(--color-info);
+.timer-active .priority-indicator {
+  background: var(--brand-primary) !important;
+  box-shadow: 0 0 12px var(--brand-primary) !important;
+  animation: priorityPulse 2s ease-in-out infinite;
+}
+
+@keyframes priorityPulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px var(--brand-primary);
+  }
+  50% {
+    box-shadow: 0 2px 12px var(--brand-primary), 0 0 16px rgba(59, 130, 246, 0.4);
+  }
 }
 
 /* Status Badge */

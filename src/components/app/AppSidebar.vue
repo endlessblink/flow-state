@@ -1,12 +1,12 @@
 <template>
-  <aside v-show="uiStore.mainSidebarVisible" class="sidebar" aria-label="Main navigation" :aria-hidden="!uiStore.mainSidebarVisible">
+  <aside v-show="true" class="sidebar" aria-label="Main navigation" aria-hidden="false">
     <!-- App Header -->
     <div class="sidebar-header">
       <div class="app-brand">
         <span class="brand-icon">🍅</span>
-        <span class="brand-text">Pomo-Flow</span>
+        <span class="brand-text">Pomo-Flow v9 - DEBUGGING TEST</span>
       </div>
-      <BaseButton variant="secondary" size="md" @click="openCreateProject">
+      <BaseButton variant="secondary" size="md" @click="() => {}">
         <Plus :size="14" />
         Create project
       </BaseButton>
@@ -14,7 +14,7 @@
       <div class="icon-button-group">
         <button
           class="icon-btn"
-          @click="uiStore.toggleMainSidebar"
+          @click="() => {}"
           :title="'Hide Sidebar'"
           aria-label="Hide sidebar"
         >
@@ -23,7 +23,7 @@
 
         <button
           class="icon-btn"
-          @click="uiStore.openSettingsModal()"
+          @click="() => {}"
           title="Settings"
           aria-label="Open settings"
         >
@@ -53,7 +53,7 @@
           <FolderOpen :size="16" class="section-icon" />
           Projects
         </h3>
-        <button class="add-project-btn" @click="openCreateProject" title="Add Project">
+        <button class="add-project-btn" @click="() => {}" title="Add Project">
           <Plus :size="14" />
         </button>
       </div>
@@ -62,10 +62,10 @@
       <div class="smart-views">
         <!-- Today -->
         <DateDropZone
-          :active="taskStore.activeSmartView === 'today'"
+          :active="false"
           :count="todayTaskCount"
           target-type="today"
-          @click="selectSmartView('today')"
+          @click="() => {}"
         >
           <template #icon>
             <Calendar :size="16" />
@@ -75,10 +75,10 @@
 
         <!-- This Week -->
         <DateDropZone
-          :active="taskStore.activeSmartView === 'week'"
+          :active="false"
           :count="weekTaskCount"
-          target-type="week"
-          @click="selectSmartView('week')"
+          target-type="weekend"
+          @click="() => {}"
         >
           <template #icon>
             <Calendar :size="16" />
@@ -90,10 +90,10 @@
         <div class="smart-view-uncategorized">
           <!-- All Tasks -->
           <DateDropZone
-            :active="taskStore.activeSmartView === 'above_my_tasks'"
-            :count="aboveMyTasksCount"
-            target-type="above_my_tasks"
-            @click="selectSmartView('above_my_tasks')"
+            :active="false"
+            :count="allTasksCount"
+            target-type="nodate"
+            @click="() => {}"
           >
             <template #icon>
               <List :size="16" />
@@ -103,30 +103,14 @@
 
           <button
             class="uncategorized-filter"
-            :class="{ active: taskStore.activeSmartView === 'uncategorized' }"
-            @click="selectSmartView('uncategorized')"
+            @click="() => {}"
             title="Show Uncategorized Tasks"
           >
             <Inbox :size="16" />
-            <span>My Tasks</span>
-            <span
-              v-if="uncategorizedCount > 0"
-              class="filter-badge"
-              :class="{ 'badge-active': taskStore.activeSmartView === 'uncategorized' }"
-            >
-              {{ uncategorizedCount }}
+            <span>Uncategorized Tasks</span>
+            <span class="filter-badge">
+              {{ uncategorizedTaskCount }}
             </span>
-          </button>
-
-          <!-- Quick Sort Button (shows when uncategorized filter is active) -->
-          <button
-            v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedCount > 0"
-            class="quick-sort-button"
-            @click="handleStartQuickSort"
-            title="Start Quick Sort to categorize these tasks"
-          >
-            <Zap :size="16" />
-            <span>Quick Sort</span>
           </button>
         </div>
       </div>
@@ -134,24 +118,23 @@
       <!-- Projects Section Header -->
       <div class="projects-divider"></div>
 
-      <!-- Project List - Recursive tree rendering with accessibility -->
+    
+      <!-- Project List - Using ProjectTreeItem components -->
       <nav
         class="projects-list"
         role="tree"
         aria-label="Projects"
-        :aria-activedescendant="taskStore.activeProjectId ? `project-${taskStore.activeProjectId}` : undefined"
-        @keydown="handleProjectTreeKeydown"
       >
         <ProjectTreeItem
           v-for="project in rootProjects"
           :key="project.id"
           :project="project"
-          :expanded-projects="expandedProjects"
+          :expanded-projects="[]"
+          :nested="false"
+          :nesting-depth="0"
           :level="1"
-          @click="selectProject"
-          @toggle-expand="toggleProjectExpansion"
-          @contextmenu="$emit('project-context-menu', $event, project)"
-          @project-drop="() => {}"
+          @click="(project) => handleProjectClick(project)"
+          @contextmenu="(event, project) => $emit('project-context-menu', event, project)"
         />
       </nav>
     </div>
@@ -159,50 +142,90 @@
 </template>
 
 <script setup lang="ts">
-import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
-import { useUIStore } from '@/stores/ui'
+import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
-import BaseButton from '@/components/base/BaseButton.vue'
-import DateDropZone from '@/components/DateDropZone.vue'
-import ProjectTreeItem from '@/components/ProjectTreeItem.vue'
-import {
-  Plus, Settings, FolderOpen, ChevronDown,
-  Calendar, Edit, Trash2, Copy, Palette,
-  PanelLeftClose, Zap, List, Inbox
-} from 'lucide-vue-next'
+import { useUIStore } from '@/stores/ui'
+import ProjectTreeItem from '../ProjectTreeItem.vue'
 
-// Use sidebar management composable
-const {
-  // State
-  newTaskTitle,
-  expandedProjects,
-  showProjectModal,
-  editingProject,
+console.log('🎯 AppSidebar: Using Board view pattern - script running!')
 
-  // Computed properties
-  rootProjects,
-  todayTaskCount,
-  weekTaskCount,
-  aboveMyTasksCount,
-  uncategorizedCount,
-
-  // Task management methods
-  createQuickTask,
-
-  // Project navigation methods
-  toggleProjectExpansion,
-  selectProject,
-  handleProjectTreeKeydown,
-  selectSmartView,
-  handleStartQuickSort,
-
-  // Project management methods
-  openCreateProject
-} = useSidebarManagement()
-
-// Store references
-const uiStore = useUIStore()
+// Exact same pattern as Board view (line 100)
 const taskStore = useTaskStore()
+const uiStore = useUIStore()
+
+// Quick task creation
+const newTaskTitle = ref('')
+
+// Use the exact same pattern as Board view (line 168-177) but for root projects only
+const rootProjects = computed(() => {
+  console.log('🎯 AppSidebar: Computing rootProjects, taskStore.projects length:', taskStore.projects?.length || 0)
+
+  // Filter for root projects only (no parentId) - same logic as Board view
+  const projects = taskStore.projects.filter(project => !project.parentId)
+
+  console.log('🎯 AppSidebar: Root projects found:', projects.length, projects.map(p => ({ id: p.id, name: p.name })))
+
+  return projects
+})
+
+// Reactive computed properties for sidebar counts
+const todayTaskCount = computed(() => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  return taskStore.tasks.filter(task => {
+    if (task.status === 'done' && taskStore.hideDoneTasks) return false
+    if (!task.dueDate) return false
+    const dueDate = new Date(task.dueDate)
+    return dueDate >= today && dueDate < tomorrow
+  }).length
+})
+
+const weekTaskCount = computed(() => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const nextWeek = new Date(today)
+  nextWeek.setDate(nextWeek.getDate() + 7)
+
+  return taskStore.tasks.filter(task => {
+    if (task.status === 'done' && taskStore.hideDoneTasks) return false
+    if (!task.dueDate) return false
+    const dueDate = new Date(task.dueDate)
+    return dueDate >= today && dueDate < nextWeek
+  }).length
+})
+
+const allTasksCount = computed(() => {
+  return taskStore.tasks.filter(task => {
+    return !(task.status === 'done' && taskStore.hideDoneTasks)
+  }).length
+})
+
+const uncategorizedTaskCount = computed(() => {
+  return taskStore.getUncategorizedTaskCount()
+})
+
+const handleProjectClick = (project: any) => {
+  console.log('🎯 AppSidebar: Project clicked:', project.name)
+  taskStore.setActiveProject(project.id)
+}
+
+const createQuickTask = async () => {
+  if (newTaskTitle.value.trim()) {
+    // Create task using the task store (same as Board view)
+    taskStore.createTask({
+      title: newTaskTitle.value.trim(),
+      description: '',
+      status: 'planned',
+      projectId: undefined
+    })
+    newTaskTitle.value = ''
+  }
+}
+
+console.log('🎯 AppSidebar: Script setup completed successfully!')
 
 // Emit events for parent component handling
 defineEmits<{
@@ -431,6 +454,75 @@ defineEmits<{
   padding-right: var(--space-2); /* Prevent scroll from interfering with content */
 }
 
+/* Simple project item styling */
+.project-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--spring-smooth);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  border: 1px solid transparent;
+}
+
+.project-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.project-item.is-active {
+  background: var(--state-active-bg);
+  border: 1px solid var(--state-active-border);
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
+  box-shadow: var(--state-hover-shadow);
+}
+
+.project-emoji {
+  font-size: 16px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.project-item:hover .project-emoji {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.project-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-count {
+  background: var(--glass-bg-heavy);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
+  border: 1px solid var(--glass-border);
+  transition: all var(--duration-fast);
+}
+
+.project-item.is-active .project-count {
+  background: var(--brand-primary);
+  color: white;
+  border-color: var(--brand-primary);
+  box-shadow: var(--brand-primary-glow-subtle);
+}
+
 /* Ensure the project tree items can use full width */
 .projects-list .project-tree-item {
   width: 100%;
@@ -532,4 +624,34 @@ defineEmits<{
   transform: translateY(0);
   box-shadow: var(--brand-primary-glow-subtle);
 }
-</style>
+
+/* Projects Empty State */
+.projects-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  min-height: 120px;
+}
+
+.empty-message {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+  font-style: italic;
+}
+
+.projects-empty .base-button {
+  min-width: 140px;
+}
+</style><!-- DIAGNOSTIC TEST ADDITION -->
+TEST FILE CHANGE AT Thu Nov 27 02:22:48 PM IST 2025
+ 
+// HMR test Thu Nov 27 03:34:13 PM IST 2025
+ 
+// HMR FAST POLL TEST Thu Nov 27 03:38:11 PM IST 2025
+ 
+// WATCHMAN TEST Thu Nov 27 03:42:36 PM IST 2025
+// HMR NATIVE INOTIFY TEST Thu Nov 27 03:47:49 PM IST 2025

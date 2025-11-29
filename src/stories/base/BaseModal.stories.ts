@@ -234,10 +234,10 @@ export const CustomFooter: Story = {
             <button style="flex: 1; padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">
               Save Draft
             </button>
-            <button style="flex: 1; padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;">
+            <button style="flex: 1; padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;">
               Publish
             </button>
-            <button style="flex: 1; padding: 8px 16px; background: var(--color-navigation); color: white; border: none; border-radius: 6px; cursor: pointer;">
+            <button style="flex: 1; padding: 8px 16px; background: transparent; border: 1px solid var(--color-navigation); color: var(--color-navigation); border-radius: 6px; cursor: pointer;">
               Schedule
             </button>
           </div>

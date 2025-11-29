@@ -267,7 +267,7 @@ export const WithSlots: Story = {
           <template #footer>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 12px; color: var(--text-muted);">Updated 2h ago</span>
-              <button style="padding: 6px 12px; background: var(--brand-primary); color: white; border: none; border-radius: var(--radius-md); font-size: 12px; cursor: pointer;">
+              <button style="padding: 6px 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: var(--radius-md); font-size: 12px; cursor: pointer;">
                 View
               </button>
             </div>

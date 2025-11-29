@@ -5,7 +5,6 @@
 
 import { ref, computed, watch } from 'vue'
 import type {
-  RecurrencePattern,
   RecurrenceRule,
   RecurrenceEndCondition,
   RecurrenceException,
@@ -14,6 +13,7 @@ import type {
   RecurrenceValidationResult,
   NotificationPreferences
 } from '@/types/recurrence'
+import { RecurrencePattern, EndCondition } from '@/types/recurrence'
 import {
   generateRecurringInstances,
   validateRecurrenceRule,
@@ -32,10 +32,10 @@ export function useTaskRecurrence(taskId: string) {
   // Computed properties
   const isEnabled = computed(() => recurrence.value?.isEnabled ?? false)
   const hasGeneratedInstances = computed(() =>
-    recurrence.value?.generatedInstances.length > 0
+    (recurrence.value?.generatedInstances?.length || 0) > 0
   )
   const nextInstance = computed(() => {
-    if (!recurrence.value?.generatedInstances.length) return null
+    if (!recurrence.value?.generatedInstances?.length) return null
     const today = formatDateKey(new Date())
     const futureInstances = recurrence.value.generatedInstances
       .filter(instance => instance.scheduledDate >= today)
@@ -69,7 +69,7 @@ export function useTaskRecurrence(taskId: string) {
         pattern: RecurrencePattern.NONE
       },
       endCondition: {
-        type: 'never'
+        type: EndCondition.NEVER
       },
       exceptions: [],
       generatedInstances: []
@@ -126,7 +126,7 @@ export function useTaskRecurrence(taskId: string) {
         break
 
       default:
-        recurrence.value.rule = { pattern }
+        recurrence.value.rule = { pattern, customRule: '' }
     }
 
     // Clear validation error
@@ -158,7 +158,7 @@ export function useTaskRecurrence(taskId: string) {
   /**
    * Set end condition
    */
-  const setEndCondition = (type: 'never' | 'after_count' | 'on_date', value?: string | number) => {
+  const setEndCondition = (type: EndCondition, value?: string | number) => {
     if (!recurrence.value) {
       recurrence.value = initializeRecurrence()
     }

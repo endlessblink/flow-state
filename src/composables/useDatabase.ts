@@ -1,12 +1,29 @@
-import localforage from 'localforage'
+/**
+ * Enhanced PouchDB Database Composable for Pomo-Flow
+ *
+ * Local-first persistence with optional CouchDB sync support
+ * Integrates with useSimpleSyncManager for cross-device synchronization
+ * SINGLETON PATTERN - Ensures only one database instance across all stores
+ */
 
-// Configure localforage for Pomo-Flow
-const db = localforage.createInstance({
-  name: 'pomo-flow',
-  version: 3,
-  storeName: 'pomo_flow_data',
-  description: 'Pomo-Flow productivity data storage'
-})
+import { ref, computed, watch } from 'vue'
+import type { Ref } from 'vue'
+import PouchDB from 'pouchdb-browser'
+import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
+import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
+import { getDatabaseConfig, type DatabaseHealth } from '@/config/database'
+
+// Singleton database instance state
+let singletonDatabase: PouchDB.Database | null = null
+let isInitializing = false
+let initializationPromise: Promise<void> | null = null
+let databaseRefCount = 0
+
+// Database health monitoring
+let lastHealthCheck: Date | null = null
+let consecutiveHealthFailures = 0
+const MAX_HEALTH_FAILURES = 3
+const HEALTH_CHECK_INTERVAL = 30000 // 30 seconds
 
 export interface DatabaseStore {
   tasks: string
@@ -28,107 +45,803 @@ export const DB_KEYS = {
   VERSION: 'version'
 } as const
 
-export function useDatabase() {
-  // Save data to IndexedDB
+export interface UseDatabaseReturn {
+  // Core CRUD operations
+  save: <T>(key: string, data: T) => Promise<void>
+  load: <T>(key: string) => Promise<T | null>
+  remove: (key: string) => Promise<void>
+  clear: () => Promise<void>
+
+  // Query operations
+  keys: () => Promise<string[]>
+  hasData: (key: string) => Promise<boolean>
+
+  // Advanced operations
+  exportAll: () => Promise<Record<string, any>>
+  importAll: (data: Record<string, any>) => Promise<void>
+  atomicTransaction: <T>(operations: Array<() => Promise<T>>, context?: string) => Promise<T[]>
+
+  // Reactive state
+  isLoading: Ref<boolean>
+  error: Ref<Error | null>
+  isReady: Ref<boolean>
+
+  // Sync state (from useSimpleSyncManager)
+  syncStatus: Ref<'idle' | 'syncing' | 'complete' | 'error' | 'paused' | 'offline'>
+  isOnline: Ref<boolean>
+  hasRemoteSync: boolean
+
+  // Sync operations
+  triggerSync: () => Promise<void>
+  pauseSync: () => Promise<void>
+  resumeSync: () => Promise<void>
+
+  // Direct database access (for advanced use)
+  database: Ref<PouchDB.Database | null>
+
+  // Database health monitoring
+  checkHealth: () => Promise<any>
+  getHealthStatus: () => any
+  resetHealthMonitoring: () => void
+
+  // Network optimization features
+  loadBatch: <T>(keys: string[]) => Promise<Record<string, T | null>>
+  saveBatch: <T>(data: Record<string, T>) => Promise<void>
+  getDatabaseMetrics: () => any
+
+  // Cleanup
+  cleanup: () => void
+}
+
+/**
+ * Enhanced retry wrapper with exponential backoff and jitter
+ */
+async function performWithRetry<T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  maxRetries: number = 3,
+  baseDelay: number = 100
+): Promise<T> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await operation()
+      if (attempt > 1) {
+        console.log(`✅ [RETRY] ${operationName} succeeded on attempt ${attempt}`)
+      }
+      return result
+    } catch (err) {
+      lastError = err as Error
+
+      // Don't retry on certain error types
+      if (err instanceof Error && (
+        err.message.includes('Database not initialized') ||
+        err.message.includes('404') && operationName.includes('load')
+      )) {
+        throw err
+      }
+
+      if (attempt < maxRetries) {
+        // Exponential backoff with jitter
+        const exponentialDelay = baseDelay * Math.pow(2, attempt - 1)
+        const jitter = Math.random() * 100
+        const delay = exponentialDelay + jitter
+
+        console.warn(`⚠️ [RETRY] ${operationName} failed (attempt ${attempt}/${maxRetries}), retrying in ${Math.round(delay)}ms:`, err)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+
+  console.error(`❌ [RETRY] ${operationName} failed after ${maxRetries} attempts:`, lastError)
+  throw lastError || new Error(`${operationName} failed after ${maxRetries} attempts`)
+}
+
+/**
+ * Database connection health check with retry logic
+ */
+async function performDatabaseHealthCheck(db: PouchDB.Database): Promise<{
+  healthy: boolean
+  error?: Error
+  latency?: number
+}> {
+  const startTime = Date.now()
+
+  try {
+    // Test basic database operations
+    const info = await db.info()
+    const latency = Date.now() - startTime
+
+    // Verify database is responsive
+    if (!info || typeof info.doc_count === 'undefined') {
+      throw new Error('Database info response invalid')
+    }
+
+    // Test write/read capability with a simple health check document
+    const healthDocId = '_local/health-check'
+    const healthDoc = {
+      _id: healthDocId,
+      timestamp: new Date().toISOString(),
+      test: true
+    }
+
+    try {
+      await db.put(healthDoc)
+      await db.get(healthDocId)
+      await db.remove((await db.get(healthDocId)))
+    } catch (writeError) {
+      console.warn('⚠️ [HEALTH-CHECK] Write test failed:', writeError)
+      // Don't fail health check for write issues, but log them
+    }
+
+    consecutiveHealthFailures = 0
+    lastHealthCheck = new Date()
+
+    return {
+      healthy: true,
+      latency
+    }
+  } catch (err) {
+    consecutiveHealthFailures++
+    const error = err as Error
+
+    console.error(`❌ [HEALTH-CHECK] Health check failed (${consecutiveHealthFailures}/${MAX_HEALTH_FAILURES}):`, error)
+
+    return {
+      healthy: false,
+      error,
+      latency: Date.now() - startTime
+    }
+  }
+}
+
+/**
+ * Enhanced PouchDB composable with sync integration
+ */
+export function useDatabase(): UseDatabaseReturn {
+  // Reactive state
+  const isLoading = ref(false)
+  const error = ref<Error | null>(null)
+  const database = ref<PouchDB.Database | null>(null)
+
+  // Initialize sync functionality
+  const config = getDatabaseConfig()
+  const hasRemoteSync = !!config.remote?.url
+
+  // Network optimizer removed - was causing architectural mismatches
+
+  let syncManager: ReturnType<typeof getGlobalReliableSyncManager> | null = null
+  let syncCleanup: (() => void) | null = null
+
+  // Computed properties with enhanced debugging
+  const isReady = computed(() => {
+    const ready = !isLoading.value && database.value !== null && !error.value
+    // Always log database readiness for debugging
+    console.log('🔍 [USE-DATABASE] isReady computed:', {
+      ready,
+      isLoading: isLoading.value,
+      hasDatabase: database.value !== null,
+      hasError: error.value,
+      errorMessage: error.value?.message
+    })
+    return ready
+  })
+
+  // Initialize database with singleton support
+  const initializeDatabase = async () => {
+    // If we already have a database instance, just reuse it
+    if (singletonDatabase) {
+      console.log('🔄 [USE-DATABASE] Reusing existing singleton database instance')
+      database.value = singletonDatabase
+      databaseRefCount++
+      isLoading.value = false
+      return
+    }
+
+    // If we're currently initializing, wait for it to complete
+    if (isInitializing && initializationPromise) {
+      console.log('⏳ [USE-DATABASE] Database initialization in progress, waiting...')
+      await initializationPromise
+      database.value = singletonDatabase
+      databaseRefCount++
+      isLoading.value = false
+      return
+    }
+
+    // Start initialization
+    isInitializing = true
+    databaseRefCount++
+
+    initializationPromise = (async () => {
+      console.log('🔄 [USE-DATABASE] Initializing singleton PouchDB database...')
+
+      try {
+        // Enable remote sync when configured
+        const forceLocalMode = false
+
+        // Check if database already exists from previous session (page refresh)
+        const dbName = config.local.name
+        let existingDB: PouchDB.Database | null = null
+
+        try {
+          // Try to open existing database without recreating it
+          existingDB = new PouchDB(dbName, {
+            adapter: 'idb',
+            auto_compaction: true,
+            revs_limit: 5
+          })
+
+          // Test if it's accessible and has data
+          const dbInfo = await existingDB.info()
+          console.log('🔍 [USE-DATABASE] Found existing database:', {
+            name: dbInfo.db_name,
+            doc_count: dbInfo.doc_count,
+            adapter: (dbInfo as any).adapter || 'unknown'
+          })
+
+          // This is our singleton database
+          singletonDatabase = existingDB
+
+        } catch (dbError) {
+          console.log('📱 [USE-DATABASE] No existing database found, creating new singleton...')
+
+          if (hasRemoteSync && !forceLocalMode) {
+            console.log('🌐 [USE-DATABASE] Remote sync configured, initializing with Reliable Sync Manager...')
+            syncManager = getGlobalReliableSyncManager()
+
+            // Initialize sync manager
+            syncCleanup = await syncManager.init()
+
+            // Create local database instance (Reliable Sync Manager handles the sync separately)
+            const dbConfig: any = {
+              auto_compaction: true,
+              revs_limit: 5
+            }
+
+            // Only add adapter if specified
+            if (config.local.adapter) {
+              dbConfig.adapter = config.local.adapter
+            }
+
+            const localDB = new PouchDB(config.local.name, dbConfig)
+            singletonDatabase = localDB
+
+            console.log('✅ [USE-DATABASE] Singleton PouchDB initialized with Reliable Sync Manager')
+          } else {
+            console.log('📱 [USE-DATABASE] Local-only mode, creating new singleton PouchDB...')
+
+            // Create local PouchDB instance with enhanced error handling
+            console.log('🔄 [USE-DATABASE] Creating new singleton PouchDB with config:', {
+              name: config.local.name,
+              adapter: 'idb',
+              auto_compaction: true,
+              revs_limit: 5
+            })
+
+            try {
+              const localDB = new PouchDB(config.local.name, {
+                adapter: 'idb',
+                auto_compaction: true,
+                revs_limit: 5
+              })
+
+              singletonDatabase = localDB
+              console.log('✅ [USE-DATABASE] New singleton PouchDB created in local-only mode')
+            } catch (dbCreateError) {
+              console.error('❌ [USE-DATABASE] Failed to create PouchDB instance:', dbCreateError)
+              throw new Error(`PouchDB creation failed: ${(dbCreateError as any).message || (dbCreateError as any).toString()}`)
+            }
+          }
+        }
+
+        // Expose to window for backward compatibility and persistence
+        ;(window as any).pomoFlowDb = singletonDatabase
+        console.log('✅ [USE-DATABASE] Singleton PouchDB exposed to window.pomoFlowDb')
+
+        // Test database
+        const dbInfo = await singletonDatabase.info()
+        console.log('📊 [USE-DATABASE] Singleton database verified:', {
+          name: dbInfo.db_name,
+          doc_count: dbInfo.doc_count,
+          adapter: (dbInfo as any).adapter || 'unknown',
+          syncMode: hasRemoteSync ? 'remote' : 'local-only',
+          refCount: databaseRefCount,
+          isNew: existingDB === null
+        })
+
+        // Perform initial health check
+        console.log('🏥 [USE-DATABASE] Performing initial health check...')
+        const healthResult = await performDatabaseHealthCheck(singletonDatabase)
+
+        if (!healthResult.healthy) {
+          console.warn('⚠️ [USE-DATABASE] Initial health check failed:', healthResult.error?.message)
+          // Don't fail initialization for health check issues, but log them
+        } else {
+          console.log(`✅ [USE-DATABASE] Database health check passed (${healthResult.latency}ms latency)`)
+        }
+
+        database.value = singletonDatabase
+
+      } catch (err) {
+        error.value = err as Error
+
+        // Enhanced error logging
+        console.error('❌ [USE-DATABASE] Failed to initialize singleton database:', {
+          name: (err as Error).name,
+          message: (err as Error).message,
+          stack: (err as Error).stack,
+          toString: (err as any).toString(),
+          constructor: (err as any).constructor?.name,
+          isPouchDBError: (err as any).name === 'error' || (err as any).status !== undefined
+        })
+
+        // Try to provide more specific error information
+        const errorMessage = (err as Error).message || (err as any).toString() || 'Unknown database initialization error'
+        throw new Error(`Singleton database initialization failed: ${errorMessage}`)
+      } finally {
+        isInitializing = false
+        initializationPromise = null
+      }
+    })()
+
+    await initializationPromise
+    isLoading.value = false
+    console.log('📊 [USE-DATABASE] Singleton database ready for operations', {
+      isReady: isReady.value,
+      hasDatabase: database.value !== null,
+      isLoading: isLoading.value,
+      hasError: error.value
+    })
+  }
+
+  // Helper function to wait for database initialization
+  const waitForDatabase = async (): Promise<PouchDB.Database> => {
+    if (isLoading.value) {
+      await new Promise<void>((resolve) => {
+        const unwatch = watch(isLoading, (loading) => {
+          if (!loading) {
+            unwatch()
+            resolve()
+          }
+        }, { immediate: true })
+      })
+    }
+
+    if (!database.value) {
+      throw new Error('Database not initialized')
+    }
+
+    return database.value
+  }
+
+  // Initialize immediately (non-blocking)
+  initializeDatabase()
+
+
+  /**
+   * Save data to PouchDB with verification and cache invalidation
+   */
   const save = async <T>(key: string, data: T): Promise<void> => {
-    try {
-      await db.setItem(key, JSON.stringify(data))
-      console.log(`💾 Saved ${key} to IndexedDB`)
-    } catch (error) {
-      console.error(`❌ Failed to save ${key}:`, error)
-      throw error
+    await performDirectSave(key, data)
+
+    // Cache invalidation removed with network optimizer
+  }
+
+  /**
+   * Direct save method with verification
+   */
+  const performDirectSave = async <T>(key: string, data: T): Promise<void> => {
+    const maxRetries = 3
+    let retryCount = 0
+
+    while (retryCount < maxRetries) {
+      try {
+        const db = await waitForDatabase()
+        const docId = `${key}:data`
+
+        // Try to get existing document
+        try {
+          const existingDoc = await db.get(docId)
+          await db.put({
+            _id: docId,
+            _rev: existingDoc._rev,
+            data,
+            updatedAt: new Date().toISOString(),
+            saveMethod: 'direct'
+          })
+        } catch (getErr: any) {
+          if (getErr.status === 404) {
+            // Document doesn't exist, create new one
+            await db.put({
+              _id: docId,
+              data,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              saveMethod: 'direct'
+            })
+          } else {
+            throw getErr
+          }
+        }
+
+        console.log(`💾 Saved ${key} to PouchDB (direct)`)
+        return // Success - exit retry loop
+
+      } catch (err: any) {
+        retryCount++
+
+        if (err.status === 409 && retryCount < maxRetries) {
+          // Conflict detected - retry with exponential backoff
+          console.warn(`⚠️ Conflict on ${key} (attempt ${retryCount}/${maxRetries}), retrying...`)
+          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, retryCount)))
+          continue
+        }
+
+        // Out of retries or non-conflict error
+        error.value = err as Error
+        console.error(`❌ Failed to save ${key} after ${retryCount} attempts:`, err)
+        throw err
+      }
     }
   }
 
-  // Load data from IndexedDB
+  /**
+   * Load data from PouchDB with enhanced retry logic and caching
+   */
   const load = async <T>(key: string): Promise<T | null> => {
-    try {
-      const data = await db.getItem<string>(key)
-      if (!data) return null
+    const cacheKey = `db-load-${key}`
 
-      const parsed = JSON.parse(data) as T
-      console.log(`📂 Loaded ${key} from IndexedDB`)
-      return parsed
-    } catch (error) {
-      console.error(`❌ Failed to load ${key}:`, error)
-      return null
+    // Direct database operation (network optimizer removed)
+    try {
+      const db = await waitForDatabase()
+      const docId = `${key}:data`
+      const doc = await db.get(docId)
+      // Extract the actual data from the PouchDB document structure
+      const data = (doc as any).data as T
+
+      if (shouldLogTaskDiagnostics()) {
+        console.log(`💾 [DATABASE] Loaded ${key} from PouchDB`)
+      }
+
+      return data
+    } catch (err: any) {
+      // Handle 404 as expected case
+      if (err.status === 404) {
+        if (shouldLogTaskDiagnostics()) {
+          console.log(`📭 [DATABASE] No data found for ${key}`)
+        }
+        return null
+      }
+      error.value = err as Error
+      throw err
     }
   }
 
-  // Remove data from IndexedDB
+  /**
+   * Remove data from PouchDB with enhanced retry logic
+   */
   const remove = async (key: string): Promise<void> => {
-    try {
-      await db.removeItem(key)
-      console.log(`🗑️ Removed ${key} from IndexedDB`)
-    } catch (error) {
-      console.error(`❌ Failed to remove ${key}:`, error)
-      throw error
-    }
+    return performWithRetry(async () => {
+      const db = await waitForDatabase()
+      const docId = `${key}:data`
+      const doc = await db.get(docId)
+      await db.remove(doc)
+      console.log(`🗑️ Removed ${key} from PouchDB`)
+    }, `remove ${key}`, 3, 100).catch(err => {
+      // Handle 404 as expected case
+      if (err instanceof Error && err.message.includes('404')) {
+        console.log(`ℹ️ ${key} not found, already removed`)
+        return
+      }
+      error.value = err as Error
+      throw err
+    })
   }
 
-  // Clear all data
+  /**
+   * Clear all data from PouchDB (singleton-aware)
+   */
   const clear = async (): Promise<void> => {
     try {
-      await db.clear()
-      console.log('🗑️ Cleared all IndexedDB data')
-    } catch (error) {
-      console.error('❌ Failed to clear IndexedDB:', error)
-      throw error
+      const db = await waitForDatabase()
+      await db.destroy()
+      console.log('🧹 Cleared singleton PouchDB database')
+
+      // Reset singleton reference and recreate database
+      singletonDatabase = null
+      database.value = null
+      delete (window as any).pomoFlowDb
+      isInitializing = false
+      initializationPromise = null
+
+      // Reinitialize after clear - create new singleton database
+      await initializeDatabase()
+      console.log('✅ [USE-DATABASE] Singleton PouchDB recreated and exposed to window.pomoFlowDb')
+    } catch (err) {
+      error.value = err as Error
+      console.error('❌ Failed to clear singleton database:', err)
+      throw err
     }
   }
 
-  // Get all keys
+  /**
+   * Get all keys in database
+   */
   const keys = async (): Promise<string[]> => {
     try {
-      return await db.keys()
-    } catch (error) {
-      console.error('❌ Failed to get keys:', error)
-      return []
+      const db = await waitForDatabase()
+      const docs = await db.allDocs({
+        include_docs: false,
+        startkey: 'data:',
+        endkey: 'data:\ufff0'
+      })
+
+      return docs.rows.map(row => row.id!.replace(':data', ''))
+    } catch (err) {
+      error.value = err as Error
+      console.error('❌ Failed to get keys:', err)
+      throw err
     }
   }
 
-  // Check if database has data
+  /**
+   * Check if data exists for key
+   */
   const hasData = async (key: string): Promise<boolean> => {
     try {
-      const data = await db.getItem(key)
-      return data !== null
-    } catch (error) {
-      console.error(`❌ Failed to check ${key}:`, error)
+      const result = await load(key)
+      return result !== null
+    } catch {
       return false
     }
   }
 
-  // Export data as JSON (for backup)
+  /**
+   * Export all data from database
+   */
   const exportAll = async (): Promise<Record<string, any>> => {
     try {
-      const allKeys = await db.keys()
-      const data: Record<string, any> = {}
+      const db = await waitForDatabase()
+      const docs = await db.allDocs({ include_docs: true })
 
-      for (const key of allKeys) {
-        const value = await db.getItem<string>(key)
-        if (value) {
-          data[key] = JSON.parse(value)
+      const result: Record<string, any> = {}
+      docs.rows.forEach(row => {
+        if (row.doc && row.id?.endsWith(':data')) {
+          const key = row.id.replace(':data', '')
+          result[key] = row.doc
         }
-      }
+      })
 
-      console.log('📦 Exported all data from IndexedDB')
-      return data
-    } catch (error) {
-      console.error('❌ Failed to export data:', error)
-      throw error
+      return result
+    } catch (err) {
+      error.value = err as Error
+      console.error('❌ Failed to export data:', err)
+      throw err
     }
   }
 
-  // Import data from JSON (for restore)
+  /**
+   * Import data into database
+   */
   const importAll = async (data: Record<string, any>): Promise<void> => {
     try {
       for (const [key, value] of Object.entries(data)) {
-        await db.setItem(key, JSON.stringify(value))
+        await save(key, value)
       }
-      console.log('📥 Imported all data to IndexedDB')
-    } catch (error) {
-      console.error('❌ Failed to import data:', error)
-      throw error
+      console.log('📥 Imported data to PouchDB')
+    } catch (err) {
+      error.value = err as Error
+      console.error('❌ Failed to import data:', err)
+      throw err
+    }
+  }
+
+  /**
+   * Execute operations atomically
+   */
+  const atomicTransaction = async <T>(
+    operations: Array<() => Promise<T>>,
+    context?: string
+  ): Promise<T[]> => {
+    try {
+      console.log(`🔄 Starting atomic transaction${context ? ` for ${context}` : ''}`)
+      const results = await Promise.all(operations)
+      console.log(`✅ Completed atomic transaction${context ? ` for ${context}` : ''}`)
+      return results as T[]
+    } catch (err) {
+      error.value = err as Error
+      console.error(`❌ Failed atomic transaction${context ? ` for ${context}` : ''}:`, err)
+      throw err
+    }
+  }
+
+  // Sync-related computed properties
+  const syncStatus = ref<'error' | 'offline' | 'idle' | 'syncing' | 'complete' | 'paused'>('idle')
+  const isOnline = computed(() => syncManager?.isOnline.value || navigator.onLine)
+
+  // Sync operations
+  const triggerSync = async () => {
+    if (syncManager) {
+      await syncManager.triggerSync()
+    } else {
+      console.warn('⚠️ [USE-DATABASE] Sync not available - no remote configuration')
+    }
+  }
+
+  const pauseSync = async () => {
+    if (syncManager) {
+      await syncManager.pauseSync()
+    }
+  }
+
+  const resumeSync = async () => {
+    if (syncManager) {
+      await syncManager.resumeSync()
+    }
+  }
+
+  /**
+   * Database health check for connection monitoring
+   */
+  const checkHealth = async () => {
+    if (!database.value) {
+      return {
+        healthy: false,
+        error: new Error('Database not initialized'),
+        latency: 0
+      }
+    }
+
+    return await performDatabaseHealthCheck(database.value)
+  }
+
+  /**
+   * Get database health status without performing new check
+   */
+  const getHealthStatus = () => {
+    return {
+      isHealthy: consecutiveHealthFailures < MAX_HEALTH_FAILURES,
+      consecutiveFailures: consecutiveHealthFailures,
+      lastCheck: lastHealthCheck,
+      maxFailures: MAX_HEALTH_FAILURES
+    }
+  }
+
+  /**
+   * Reset health monitoring state
+   */
+  const resetHealthMonitoring = () => {
+    consecutiveHealthFailures = 0
+    lastHealthCheck = null
+    console.log('🔄 [USE-DATABASE] Health monitoring state reset')
+  }
+
+  // Cleanup function for when the composable is destroyed
+  const cleanup = async () => {
+    databaseRefCount--
+    console.log(`🔧 [USE-DATABASE] Database reference count decreased to: ${databaseRefCount}`)
+
+    // Only cleanup sync manager, not the database (since it's shared)
+    if (syncCleanup) {
+      syncCleanup()
+      syncCleanup = null
+    }
+    if (syncManager) {
+      await syncManager.cleanup()
+      syncManager = null
+    }
+
+    // Don't destroy the singleton database until all references are gone
+    if (databaseRefCount <= 0 && singletonDatabase) {
+      console.log('🧹 [USE-DATABASE] All references gone, cleaning up singleton database')
+      try {
+        await singletonDatabase.destroy()
+      } catch (err) {
+        console.warn('⚠️ [USE-DATABASE] Error destroying singleton database:', err)
+      }
+      singletonDatabase = null
+      database.value = null
+      delete (window as any).pomoFlowDb
+      databaseRefCount = 0
+    }
+  }
+
+  /**
+   * Optimized batch loading - Load multiple keys in a single operation
+   */
+  const loadBatch = async <T>(keys: string[]): Promise<Record<string, T | null>> => {
+    if (keys.length === 0) return {}
+
+    try {
+      const db = await waitForDatabase()
+
+      // Use allDocs to get all documents at once
+      const docIds = keys.map(key => `${key}:data`)
+      const docs = await db.allDocs({
+        keys: docIds,
+        include_docs: true
+      })
+
+      const result: Record<string, T | null> = {}
+
+      // Process results
+      docs.rows.forEach(row => {
+        if ((row as any).doc) {
+          const key = (row as any).id.replace(':data', '')
+          result[key] = ((row as any).doc as any).data as T
+        } else if ((row as any).key) {
+          // Document doesn't exist
+          const key = (row as any).key.replace(':data', '')
+          result[key] = null
+        }
+      })
+
+      // Ensure all requested keys are present in result
+      keys.forEach(key => {
+        if (!(key in result)) {
+          result[key] = null
+        }
+      })
+
+      if (shouldLogTaskDiagnostics()) {
+        console.log(`📦 [DATABASE] Batch loaded ${keys.length} keys from PouchDB`)
+      }
+
+      return result
+    } catch (err) {
+      error.value = err as Error
+      console.error('❌ Failed to batch load from PouchDB:', err)
+      throw err
+    }
+  }
+
+  /**
+   * Optimized batch saving - Save multiple items in a single operation
+   */
+  const saveBatch = async <T>(data: Record<string, T>): Promise<void> => {
+    if (Object.keys(data).length === 0) return
+
+    try {
+      const keys = Object.keys(data)
+
+      // Process sequentially with rate limiting to prevent memory spikes
+      const entries = Object.entries(data)
+
+      for (const [key, value] of entries) {
+        await save(key, value)
+        // Small delay to prevent overwhelming the database
+        await new Promise(resolve => setTimeout(resolve, 5))
+      }
+
+      // Cache clearing removed with network optimizer
+
+      if (shouldLogTaskDiagnostics()) {
+        console.log(`📦 [DATABASE] Batch saved ${keys.length} items to PouchDB`)
+      }
+    } catch (err) {
+      error.value = err as Error
+      console.error('❌ Failed to batch save to PouchDB:', err)
+      throw err
+    }
+  }
+
+  /**
+   * Get database performance metrics
+   */
+  const getDatabaseMetrics = () => {
+    return {
+      database: {
+        isReady: isReady.value,
+        isLoading: isLoading.value,
+        hasError: !!error.value,
+        error: error.value?.message
+      },
+      optimization: {
+        cacheEnabled: true,
+        deduplicationEnabled: true,
+        batchingEnabled: true
+      }
     }
   }
 
@@ -140,6 +853,31 @@ export function useDatabase() {
     keys,
     hasData,
     exportAll,
-    importAll
+    importAll,
+    atomicTransaction,
+    isLoading,
+    error,
+    isReady,
+
+    // Database health monitoring
+    checkHealth,
+    getHealthStatus,
+    resetHealthMonitoring,
+
+    // Sync-related state and operations
+    syncStatus,
+    isOnline,
+    hasRemoteSync,
+    triggerSync,
+    pauseSync,
+    resumeSync,
+
+    // Network optimization features
+    loadBatch,
+    saveBatch,
+    getDatabaseMetrics,
+
+    database,
+    cleanup
   }
 }

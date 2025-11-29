@@ -114,7 +114,7 @@ const cyclePriority = () => {
   else priority.value = 'low'
 }
 
-const handleCreate = () => {
+const handleCreate = async () => {
   if (!taskTitle.value.trim()) return
 
   // Format date as YYYY-MM-DD for calendar matching
@@ -123,13 +123,13 @@ const handleCreate = () => {
 
   console.log('Creating task with schedule:', { schedDate, schedTime, duration: duration.value })
 
-  const task = taskStore.createTask({
+  const task = await taskStore.createTask({
     title: taskTitle.value.trim(),
     description: taskDescription.value.trim(),
     priority: priority.value,
     status: 'planned',
     estimatedDuration: duration.value,
-    projectId: projectId.value || taskStore.projects[0]?.id || '1',
+    projectId: projectId.value || undefined, // No default project - tasks go to Uncategorized if no project selected
     instances: [{
       id: `instance-${Date.now()}`,
       scheduledDate: schedDate,

@@ -240,7 +240,7 @@ export const TopLeft: Story = {
             v-for="pos in positions"
             :key="pos.label"
             @click="showMenuAt(pos)"
-            style="padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
+            style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 14px;"
           >
             {{ pos.label }}
           </button>
@@ -327,7 +327,7 @@ export const Hidden: Story = {
 
         <button
           @click="toggleMenu"
-          style="padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 32px;"
+          style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; margin-bottom: 32px;"
         >
           {{ isVisible ? 'Hide Menu' : 'Show Menu' }}
         </button>

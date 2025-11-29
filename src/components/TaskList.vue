@@ -9,7 +9,7 @@
           class="project-expand-icon"
           :class="{ 'project-expand-icon--expanded': expandedProjects.has(project.id) }"
         />
-        <span class="project-emoji">{{ project.emoji || '📁' }}</span>
+        <ProjectEmojiIcon :emoji="project.emoji || '📁'" size="xs" />
         <span class="project-name">{{ project.name }}</span>
         <span class="project-task-count">{{ project.tasks.length }}</span>
       </div>
@@ -50,6 +50,7 @@ import { ref, computed } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import HierarchicalTaskRow from '@/components/HierarchicalTaskRow.vue'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { Inbox, ChevronRight } from 'lucide-vue-next'
 
 interface Props {
@@ -80,7 +81,7 @@ const projectGroups = computed(() => {
   const groups = new Map<string, Task[]>()
 
   props.tasks.forEach(task => {
-    const projectId = task.projectId || '1'
+    const projectId = task.projectId || '' // Use empty string for uncategorized tasks
     if (!groups.has(projectId)) {
       groups.set(projectId, [])
     }
@@ -94,7 +95,7 @@ const projectGroups = computed(() => {
 
     return {
       id: projectId,
-      name: taskStore.getProjectDisplayName(projectId),
+      name: project?.name || 'Unknown Project',
       emoji: project?.emoji,
       tasks: tasks,
       parentTasks: parentTasks
@@ -199,11 +200,6 @@ defineExpose({
 
 .project-expand-icon--expanded {
   transform: rotate(90deg);
-}
-
-.project-emoji {
-  font-size: var(--text-base);
-  flex-shrink: 0;
 }
 
 .project-name {

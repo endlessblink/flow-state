@@ -1,7 +1,7 @@
-// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2025-10-23T07:06:00Z - V9 - CREATE TASK UNDO FIX
+// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2025-11-08T16:49:00Z - V10 - SIMPLE BACKUP SYSTEM
 
-// Initialize console filtering FIRST (before any other imports that might log)
-import './utils/consoleFilter'
+// TEMPORARILY DISABLED: Causes chrome is not defined error in browser
+// import './utils/consoleFilter'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -9,81 +9,63 @@ import router from './router'
 import App from './App.vue'
 import i18n from './i18n'
 
-// Design system (order matters)
-// Note: design-tokens.css moved to App.vue for better HMR support
+// Design system - Tailwind CSS must be imported here for Vite to process @tailwind directives
 import './assets/styles.css'
+
+// Initialize static resource cache for CSS and other assets
+import { staticResourceCache } from './composables/useStaticResourceCache'
+
+// Preload critical CSS files with static resource cache
+const preloadCriticalResources = async () => {
+  try {
+    await staticResourceCache.preloadResources([
+      { url: '/src/assets/styles.css', priority: 'high' }
+    ])
+    console.log('✅ [MAIN.TS] Critical CSS resources preloaded')
+  } catch (error) {
+    console.warn('⚠ [MAIN.TS] Failed to preload CSS resources:', error)
+  }
+}
+
+preloadCriticalResources()
 
 // Initialize global error handler
 import './utils/errorHandler'
 
-// Initialize Firebase
-import './config/firebase'
+// Initialize security systems
+import { useSecurityHeaderManager } from './utils/securityHeaderManager'
+import { useCSPManager } from './utils/cspManager'
+import { useSecurityMonitor } from './utils/securityMonitor'
 
-// Initialize authentication
-import { useAuthStore } from './stores/auth'
-
-// Initialize undo/redo keyboard shortcuts (using simple version to avoid circular dependencies)
-import { initGlobalKeyboardShortcuts } from './utils/globalKeyboardHandlerSimple'
-
-// Naive UI - will configure with custom theme
-const meta = document.createElement('meta')
-meta.name = 'naive-ui-style'
-document.head.appendChild(meta)
+// Initialize local-first authentication system
+import { useLocalAuthStore } from './stores/local-auth'
+console.log('✅ Using local-first authentication system')
 
 const app = createApp(App)
-const pinia = createPinia()
 
-app.use(pinia)
+app.use(createPinia())
 app.use(router)
 app.use(i18n)
 
-// Initialize authentication listener (must be after Pinia is installed, but before mount)
-console.log('🔵 [MAIN.TS] About to initialize auth store...')
-const authStore = useAuthStore()
-console.log('🔵 [MAIN.TS] Auth store created, calling initAuthListener()...')
+// Global error handler for extension compatibility
+app.config.errorHandler = (err, vm, info) => {
+  const errorStr = String(err);
 
-// Initialize auth listener asynchronously
-authStore.initAuthListener()
-  .then(() => {
-    console.log('✅ [MAIN.TS] Auth listener initialized successfully')
-  })
-  .catch((error) => {
-    console.warn('⚠️ [MAIN.TS] Auth listener initialization failed:', error)
-  })
-  .finally(() => {
-    console.log('🔵 [MAIN.TS] initAuthListener() completed')
-  })
-
-// Initialize undo/redo system after mounting
-const mountedApp = app.mount('#root')
-
-// Initialize global keyboard shortcuts
-console.log('🎯 [MAIN.TS] About to initialize global keyboard shortcuts...')
-initGlobalKeyboardShortcuts({
-  enabled: true,
-  preventDefault: true,
-  ignoreInputs: true,
-  ignoreModals: true
-}).then(() => {
-  console.log('✅ [MAIN.TS] Global keyboard shortcuts initialized successfully')
-}).catch(error => {
-  console.error('❌ [MAIN.TS] Failed to initialize global keyboard shortcuts:', error)
-})
-
-// Add global keyboard event diagnostics to track all keyboard events
-console.log('🔍 [MAIN.TS] Setting up global keyboard event diagnostics...')
-window.addEventListener('keydown', (event) => {
-  // Only log Shift+1-5 events to avoid console spam
-  if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && event.key >= '1' && event.key <= '5') {
-    console.log('🔍 [MAIN.TS] GLOBAL: Shift+' + event.key + ' detected at document level:', {
-      eventPhase: event.eventPhase,
-      target: event.target,
-      currentTarget: event.currentTarget,
-      timestamp: new Date().toISOString(),
-      bubbles: event.bubbles,
-      cancelable: event.cancelable
-    })
+  // Extension errors: log silently, don't crash
+  if (errorStr.match(/chrome is not defined|browser is not defined/i)) {
+    console.warn('🔌 Extension compatibility detected:', errorStr);
+    return; // Don't propagate - app continues
   }
-}, true) // Use capture phase to see events before any other handlers
 
-export default mountedApp
+  // Real application errors: log normally
+  console.error('App error:', err, info);
+};
+
+// Handle unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  if (String(event.reason).includes('chrome is not defined')) {
+    event.preventDefault(); // Don't crash the app
+  }
+});
+
+app.mount('#app')

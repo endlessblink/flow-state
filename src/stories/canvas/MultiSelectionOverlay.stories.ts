@@ -300,7 +300,7 @@ export const InteractiveDemo: Story = {
           <div style="position: absolute; top: var(--space-4); left: var(--space-4); background: var(--bg-secondary); border: 1px solid var(--border-primary); border-radius: var(--radius-lg); padding: var(--space-3); box-shadow: 0 4px 12px var(--shadow-strong); pointer-events: auto; min-width: 300px;">
             <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3);">
               <span style="font-size: var(--text-xs); font-weight: var(--font-medium); color: var(--text-secondary); min-width: 80px;">Mode:</span>
-              <button style="display: flex; align-items: center; gap: var(--space-1); background: var(--brand-primary); border: none; color: white; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;">
+              <button style="display: flex; align-items: center; gap: var(--space-1); background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;">
                 Rectangle
               </button>
             </div>
@@ -319,7 +319,7 @@ export const InteractiveDemo: Story = {
               <span style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">{{ selectedNodeIds.length }} selected</span>
 
               <div style="position: relative;">
-                <button @click="handleBulkAction('updateStatus', { nodeIds: selectedNodeIds, status: 'done' })" style="display: flex; align-items: center; gap: var(--space-1); background: var(--brand-primary); border: none; color: white; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;">
+                <button @click="handleBulkAction('updateStatus', { nodeIds: selectedNodeIds, status: 'done' })" style="display: flex; align-items: center; gap: var(--space-1); background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;">
                   Mark Done
                 </button>
               </div>

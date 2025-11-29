@@ -1,11 +1,11 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 
-interface FocusElement extends HTMLElement {
+interface FocusableElement extends HTMLElement {
   focus: () => void
 }
 
-interface FocusableElement {
-  element: FocusElement
+interface FocusableItem {
+  element: FocusableElement
   group?: string
   priority?: number
 }
@@ -28,8 +28,8 @@ export function useFocusManagement(options: {
   } = options
 
   // Refs
-  const containerRef = ref<FocusElement>()
-  const previousActiveElement = ref<FocusElement | null>(null)
+  const containerRef = ref<FocusableElement>()
+  const previousActiveElement = ref<FocusableElement | null>(null)
   const focusableElements = ref<FocusableElement[]>([])
 
   // State
@@ -54,7 +54,7 @@ export function useFocusManagement(options: {
       '[contenteditable="true"]'
     ].join(', ')
 
-    return Array.from(element.querySelectorAll(selector)) as FocusableElement[]
+    return Array.from(element.querySelectorAll(selector)).filter(el => el instanceof HTMLElement) as FocusableElement[]
   }
 
   /**
@@ -110,7 +110,7 @@ export function useFocusManagement(options: {
    * Save current active element for restoration later
    */
   const saveActiveElement = (): void => {
-    previousActiveElement.value = document.activeElement as FocusElement
+    previousActiveElement.value = document.activeElement as FocusableElement
   }
 
   /**
@@ -333,7 +333,7 @@ export function useFocusManagement(options: {
   /**
    * Find next focusable element from current position
    */
-  const findNextFocusable = (currentElement: Element): FocusElement | null => {
+  const findNextFocusable = (currentElement: Element): FocusableElement | null => {
     const allFocusable = getFocusableElements(document.body)
     const currentIndex = allFocusable.findIndex(el => el === currentElement)
 
@@ -346,7 +346,7 @@ export function useFocusManagement(options: {
   /**
    * Find previous focusable element from current position
    */
-  const findPreviousFocusable = (currentElement: Element): FocusElement | null => {
+  const findPreviousFocusable = (currentElement: Element): FocusableElement | null => {
     const allFocusable = getFocusableElements(document.body)
     const currentIndex = allFocusable.findIndex(el => el === currentElement)
 
@@ -436,7 +436,7 @@ export function useModalFocus(options: {
   })
 
   const openModal = (): void => {
-    if (containerRef.value) {
+    if (containerRef?.value) {
       focusManager.containerRef.value = containerRef.value
       focusManager.saveActiveElement()
 
@@ -468,7 +468,7 @@ export function useListNavigation(options: {
   onSelect?: (item: any, index: number) => void
   loop?: boolean
   orientation?: 'vertical' | 'horizontal'
-} = {}) {
+}) {
   const { items, onSelect, loop = true, orientation = 'vertical' } = options
 
   const focusedIndex = ref(-1)

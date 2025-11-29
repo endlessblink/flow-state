@@ -14,7 +14,7 @@
         <button
           v-for="mode in selectionModes"
           :key="mode.value"
-          @click="setSelectionMode(mode.value)"
+          @click="setSelectionMode(mode.value as any)"
           class="mode-btn"
           :class="{ active: selectionMode === mode.value }"
           :title="mode.description"

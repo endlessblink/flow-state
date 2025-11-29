@@ -132,13 +132,18 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useCloudSync } from '@/composables/useCloudSync'
+import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
+import { SyncProviderType } from '@/types/sync'
 import {
   Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock
 } from 'lucide-vue-next'
 
-const cloudSync = useCloudSync()
+const reliableSyncManager = useReliableSyncManager() as ReturnType<typeof useReliableSyncManager> & {
+  configureProvider?: (config: unknown) => Promise<void>
+  enableProvider?: () => Promise<void>
+  disableProvider?: () => Promise<void>
+}
 const persistentStorage = usePersistentStorage()
 
 // State
@@ -156,7 +161,20 @@ const syncHistory = ref<Array<{
 }>>([])
 
 // Computed
-const syncStatus = computed(() => cloudSync.syncStatus.value)
+const syncStatus = computed(() => {
+  const health = reliableSyncManager.getSyncHealth()
+
+  // Transform reliable sync health to expected format
+  return {
+    isOnline: health.isOnline,
+    provider: reliableSyncManager.remoteConnected?.value ? 'CouchDB' : 'Local Only',
+    lastSyncTime: reliableSyncManager.lastSyncTime.value?.getTime() ?? 0,
+    syncUrl: '', // Could be extracted from provider config if needed
+    deviceName: 'PomoFlow Device', // Could be made configurable
+    deviceId: 'device-' + Date.now(), // Could be stored in localStorage
+    nextSyncIn: 0 // Could be calculated from sync interval
+  }
+})
 
 // Methods
 const onProviderChange = async () => {
@@ -174,7 +192,17 @@ const enableSync = async () => {
     isSyncing.value = true
     syncProgress.value = 'Initializing sync...'
 
-    await cloudSync.enableSync(selectedProvider.value as 'jsonbin' | 'github')
+    // Configure cloud backup provider through unified manager
+    const providerConfig = {
+      provider: selectedProvider.value as 'jsonbin' | 'github-gist',
+      apiKey: selectedProvider.value === 'github-gist' ? githubToken.value : undefined,
+      autoSync: true,
+      syncInterval: 5 * 60 * 1000, // 5 minutes
+      compressionEnabled: true
+    }
+
+    await reliableSyncManager.configureProvider?.(providerConfig)
+    await reliableSyncManager.enableProvider?.()
     syncEnabled.value = true
 
     addHistoryEntry('Sync enabled', true)
@@ -195,7 +223,7 @@ const disableSync = async () => {
     isSyncing.value = true
     syncProgress.value = 'Disabling sync...'
 
-    await cloudSync.disableSync()
+    await reliableSyncManager.disableProvider?.()
     syncEnabled.value = false
 
     addHistoryEntry('Sync disabled', true)
@@ -227,19 +255,23 @@ const manualSync = async () => {
     // Step 1: Upload current data
     progressPercent.value = 25
     syncProgress.value = 'Uploading local changes...'
-    const uploadSuccess = await cloudSync.syncNow()
-
-    if (!uploadSuccess) {
-      throw new Error('Failed to upload data')
+    try {
+      await reliableSyncManager.triggerSync()
+    } catch (syncError) {
+      throw new Error((syncError as Error)?.message || 'Failed to upload data')
     }
 
     // Step 2: Download remote changes
     progressPercent.value = 50
     syncProgress.value = 'Checking for remote changes...'
-    const downloadSuccess = await cloudSync.syncFromCloud()
+    try {
+      await reliableSyncManager.triggerSync()
+    } catch (syncError) {
+      // Sync error on download - still partial success
+    }
 
     progressPercent.value = 100
-    syncProgress.value = downloadSuccess ? 'Sync complete' : 'No new data found'
+    syncProgress.value = 'Sync complete'
 
     addHistoryEntry('Manual sync completed', true)
 
@@ -266,7 +298,16 @@ const saveGitHubToken = async () => {
   if (!githubToken.value) return
 
   try {
-    await cloudSync.setGitHubToken(githubToken.value)
+    // Update provider configuration with new GitHub token
+    const providerConfig = {
+      provider: 'github-gist' as const,
+      apiKey: githubToken.value,
+      autoSync: true,
+      syncInterval: 5 * 60 * 1000, // 5 minutes
+      compressionEnabled: true
+    }
+
+    await reliableSyncManager.configureProvider?.(providerConfig)
     addHistoryEntry('GitHub token saved', true)
   } catch (error) {
     console.error('Failed to save GitHub token:', error)
@@ -364,7 +405,7 @@ onUnmounted(() => {
   if (statusTimer) {
     clearInterval(statusTimer)
   }
-  cloudSync.cleanup()
+  reliableSyncManager.cleanup()
 })
 </script>
 

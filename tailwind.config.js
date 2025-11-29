@@ -4,7 +4,7 @@ module.exports = {
     './src/**/*.{js,ts,jsx,tsx}',
     './index.html',
   ],
-  darkMode: ['class', '[data-theme="dark"]'],
+  darkMode: ['class', '.dark-theme'], // Use class-based dark mode with dark-theme class
   theme: {
     extend: {
       // Import design tokens into Tailwind

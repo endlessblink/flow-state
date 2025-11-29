@@ -1,271 +1,249 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
-    <div class="modal-content" @click.stop @submit.prevent>
-      <div class="modal-header">
-        <h2 class="modal-title">Edit Task</h2>
-        <button class="close-btn" @click="$emit('close')">
-          <X :size="16" />
+  <BaseModal
+    :is-open="isOpen"
+    title="Edit Task"
+    size="lg"
+    :show-footer="false"
+    @close="$emit('close')"
+  >
+    <!-- Task Details Section -->
+    <section class="form-section">
+      <h3 class="section-title">Task Details</h3>
+
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input
+          ref="titleInput"
+          v-model="editedTask.title"
+          class="form-input"
+          type="text"
+          placeholder="Enter task title..."
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea
+          v-model="editedTask.description"
+          class="form-textarea"
+          rows="3"
+          placeholder="Describe what needs to be done..."
+        ></textarea>
+      </div>
+
+      <!-- Compact Metadata Bar (ClickUp-inspired) -->
+      <div class="metadata-bar">
+        <div class="metadata-field" title="Due date - When this task must be completed by">
+          <Calendar :size="14" />
+          <input
+            v-model="editedTask.dueDate"
+            type="date"
+            class="inline-input"
+            placeholder="Due date"
+          />
+        </div>
+
+        <div class="metadata-field" title="Scheduled for - When you plan to work on this task">
+          <CalendarClock :size="14" />
+          <input
+            v-model="editedTask.scheduledDate"
+            type="date"
+            class="inline-input"
+            placeholder="Schedule"
+            @change="handleScheduledDateChange"
+          />
+        </div>
+
+        <div class="metadata-field">
+          <Clock :size="14" />
+          <input
+            v-model="editedTask.scheduledTime"
+            type="time"
+            class="inline-input"
+            :disabled="!editedTask.scheduledDate"
+          />
+        </div>
+
+        <div class="metadata-field">
+          <TimerReset :size="14" />
+          <input
+            v-model.number="editedTask.estimatedDuration"
+            type="number"
+            min="15"
+            step="15"
+            class="inline-input"
+            placeholder="60m"
+          />
+        </div>
+
+        <div class="metadata-field">
+          <component :is="priorityIcon" :size="14" :class="priorityIconClass" />
+          <select v-model="editedTask.priority" class="inline-select">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+
+        <div class="metadata-field">
+          <component :is="statusIcon" :size="14" :class="statusIconClass" />
+          <select v-model="editedTask.status" class="inline-select">
+            <option value="planned">Planned</option>
+            <option value="in_progress">Active</option>
+            <option value="done">✓</option>
+            <option value="backlog">Backlog</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dependencies Section (Collapsible) -->
+    <section v-if="dependencies.length > 0" class="form-section collapsible">
+      <button @click="showDependencies = !showDependencies" class="section-toggle" type="button">
+        <ChevronDown :size="14" :class="['chevron-icon', { rotated: showDependencies }]" />
+        <h3 class="section-title">Dependencies ({{ dependencies.length }})</h3>
+      </button>
+      <div v-show="showDependencies" class="section-content">
+        <div class="dependencies-list">
+          <div v-for="depTask in dependencies" :key="depTask.id" class="dependency-item">
+            <div class="dependency-icon">🔗</div>
+            <div class="dependency-info">
+              <div class="dependency-title">{{ depTask.title }}</div>
+              <div class="dependency-status" :class="`status-${depTask.status}`">
+                {{ depTask.status === 'done' ? '✓ Complete' : '⏳ Pending' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Subtasks Section (Collapsible) -->
+    <section class="form-section collapsible">
+      <div class="section-toggle-wrapper">
+        <button @click="showSubtasks = !showSubtasks" class="section-toggle" type="button">
+          <ChevronDown :size="14" :class="['chevron-icon', { rotated: showSubtasks }]" />
+          <h3 class="section-title">Subtasks ({{ editedTask.subtasks?.length || 0 }})</h3>
+        </button>
+        <button v-if="showSubtasks" class="inline-add-btn" @click="addSubtask" type="button">
+          <Plus :size="12" />
         </button>
       </div>
 
-      <div class="modal-body">
-        <!-- Task Details Section -->
-        <section class="form-section">
-          <h3 class="section-title">Task Details</h3>
-
-          <div class="form-group">
-            <label class="form-label">Title</label>
-            <input
-              ref="titleInput"
-              v-model="editedTask.title"
-              class="form-input"
-              type="text"
-              placeholder="Enter task title..."
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea
-              ref="descriptionTextarea"
-              v-model="editedTask.description"
-              class="form-textarea"
-              rows="3"
-              placeholder="Describe what needs to be done..."
-            ></textarea>
-          </div>
-
-          <!-- Compact Metadata Bar (ClickUp-inspired) -->
-          <div class="metadata-bar">
-            <div class="metadata-field" title="Due date - When this task must be completed by">
-              <Calendar :size="14" />
-              <input
-                v-model="editedTask.dueDate"
-                type="date"
-                class="inline-input"
-                placeholder="Due date"
-              />
-            </div>
-
-            
-            <div class="metadata-field">
-              <TimerReset :size="14" />
-              <input
-                v-model.number="editedTask.estimatedDuration"
-                type="number"
-                min="15"
-                step="15"
-                class="inline-input"
-                placeholder="60m"
-              />
-            </div>
-
-            <div class="metadata-field">
-              <component
-                :is="priorityIcon || AlertCircle"
-                :size="14"
-                :class="priorityIconClass"
-              />
-              <select v-model="editedTask.priority" class="inline-select">
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-
-            <div class="metadata-field">
-              <component
-                :is="statusIcon || Circle"
-                :size="14"
-                :class="statusIconClass"
-              />
-              <select v-model="editedTask.status" class="inline-select">
-                <option value="planned">Planned</option>
-                <option value="in_progress">Active</option>
-                <option value="done">✓</option>
-                <option value="backlog">Backlog</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
-        <!-- Dependencies Section (Collapsible) -->
-        <section v-if="dependencies.length > 0" class="form-section collapsible">
-          <button @click="showDependencies = !showDependencies" class="section-toggle" type="button">
-            <ChevronDown :size="14" :class="['chevron-icon', { rotated: showDependencies }]" />
-            <h3 class="section-title">Dependencies ({{ dependencies.length }})</h3>
+      <div v-show="showSubtasks" class="section-content">
+        <div v-if="!editedTask.subtasks || editedTask.subtasks.length === 0" class="empty-subtasks">
+          <span class="empty-message">No subtasks yet</span>
+          <button class="add-first-subtask" @click="addSubtask" type="button">
+            <Plus :size="16" />
+            Add your first subtask
           </button>
-          <div v-show="showDependencies" class="section-content">
-            <div class="dependencies-list">
-              <div v-for="depTask in dependencies" :key="depTask.id" class="dependency-item">
-                <div class="dependency-icon">🔗</div>
-                <div class="dependency-info">
-                  <div class="dependency-title">{{ depTask.title }}</div>
-                  <div class="dependency-status" :class="`status-${depTask.status}`">
-                    {{ depTask.status === 'done' ? '✓ Complete' : '⏳ Pending' }}
-                  </div>
-                </div>
+        </div>
+
+        <div v-else class="subtasks-list">
+          <div
+            v-for="subtask in (editedTask.subtasks || [])"
+            :key="subtask.id"
+            class="subtask-item"
+          >
+            <div class="subtask-content">
+              <div class="subtask-header">
+                <input
+                  v-model="subtask.title"
+                  class="subtask-title-input"
+                  placeholder="Subtask title..."
+                />
+                <button
+                  class="delete-subtask-btn"
+                  @click="deleteSubtask(subtask.id)"
+                  title="Delete subtask"
+                  type="button"
+                >
+                  <Trash2 :size="14" />
+                </button>
+              </div>
+              <textarea
+                v-model="subtask.description"
+                class="subtask-description-input"
+                rows="2"
+                placeholder="Subtask description..."
+              ></textarea>
+              <div class="subtask-stats">
+                <span class="pomodoro-count">🍅 {{ subtask.completedPomodoros }} sessions</span>
+                <label class="completed-checkbox">
+                  <input
+                    type="checkbox"
+                    v-model="subtask.isCompleted"
+                    @change="updateSubtaskCompletion(subtask)"
+                  />
+                  <span class="checkbox-label">Completed</span>
+                </label>
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </div>
+    </section>
 
-        <!-- Subtasks Section (Collapsible) -->
-        <section class="form-section collapsible">
-          <div class="section-toggle-wrapper">
-            <button @click="showSubtasks = !showSubtasks" class="section-toggle" type="button">
-              <ChevronDown :size="14" :class="['chevron-icon', { rotated: showSubtasks }]" />
-              <h3 class="section-title">Subtasks ({{ editedTask.subtasks?.length || 0 }})</h3>
-            </button>
-            <button v-if="showSubtasks" class="inline-add-btn" @click="addSubtask" type="button">
-              <Plus :size="12" />
-            </button>
-          </div>
-
-          <div v-show="showSubtasks" class="section-content">
-            <div v-if="!editedTask.subtasks || editedTask.subtasks.length === 0" class="empty-subtasks">
-              <span class="empty-message">No subtasks yet</span>
-              <button class="add-first-subtask" @click="addSubtask" type="button">
-                <Plus :size="16" />
-                Add your first subtask
-              </button>
-            </div>
-
-            <div v-else class="subtasks-list">
-              <div
-                v-for="subtask in (editedTask.subtasks || [])"
-                :key="subtask.id"
-                class="subtask-item"
-              >
-                <div class="subtask-content">
-                  <div class="subtask-header">
-                    <input
-                      v-model="subtask.title"
-                      class="subtask-title-input"
-                      placeholder="Subtask title..."
-                    />
-                    <button
-                      class="delete-subtask-btn"
-                      @click="deleteSubtask(subtask.id)"
-                      title="Delete subtask"
-                      type="button"
-                    >
-                      <Trash2 :size="14" />
-                    </button>
-                  </div>
-                  <textarea
-                    v-model="subtask.description"
-                    class="subtask-description-input"
-                    rows="2"
-                    placeholder="Subtask description..."
-                  ></textarea>
-                  <div class="subtask-stats">
-                    <span class="pomodoro-count">🍅 {{ subtask.completedPomodoros }} sessions</span>
-                    <label class="completed-checkbox">
-                      <input
-                        type="checkbox"
-                        v-model="subtask.isCompleted"
-                        @change="updateSubtaskCompletion(subtask)"
-                      />
-                      <span class="checkbox-label">Completed</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Recurrence Section (Collapsible) -->
-        <section class="form-section collapsible">
-          <button @click="showRecurrence = !showRecurrence" class="section-toggle" type="button">
-            <ChevronDown :size="14" :class="['chevron-icon', { rotated: showRecurrence }]" />
-            <h3 class="section-title">Recurrence</h3>
-          </button>
-          <div v-show="showRecurrence" class="section-content">
-            <!-- RecurrencePatternSelector temporarily disabled due to error -->
-            <div class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">
-              Recurrence feature temporarily disabled
-            </div>
-          </div>
-        </section>
-
-        <!-- Notifications Section (Collapsible) -->
-        <section class="form-section collapsible">
-          <button @click="showNotifications = !showNotifications" class="section-toggle" type="button">
-            <ChevronDown :size="14" :class="['chevron-icon', { rotated: showNotifications }]" />
-            <h3 class="section-title">Notifications</h3>
-          </button>
-          <div v-show="showNotifications" class="section-content">
-            <NotificationPreferences
-              :task-id="editedTask.id"
-              :initial-preferences="editedTask.notificationPreferences"
-              @preferences-changed="handleNotificationPreferencesChange"
-            />
-          </div>
-        </section>
-
-        <!-- Pomodoro Sessions Section (Collapsible) -->
-        <section class="form-section collapsible">
-          <div class="section-toggle-wrapper">
-            <button @click="showPomodoros = !showPomodoros" class="section-toggle" type="button">
-              <ChevronDown :size="14" :class="['chevron-icon', { rotated: showPomodoros }]" />
-              <h3 class="section-title">Pomodoro Sessions ({{ totalTaskPomodoros }})</h3>
-            </button>
-            <button
-              v-if="showPomodoros && totalTaskPomodoros > 0"
-              @click="resetPomodoros"
-              class="reset-pomodoros-btn-inline"
-              title="Reset all pomodoro counts"
-              type="button"
-            >
-              Reset
-            </button>
-          </div>
-
-          <div v-show="showPomodoros" class="section-content">
-            <div class="pomodoro-stats">
-              <div class="stat-item">
-                <span class="stat-value">{{ editedTask.completedPomodoros }}</span>
-                <span class="stat-label">Task Sessions</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ totalSubtaskPomodoros }}</span>
-                <span class="stat-label">Subtask Sessions</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ totalTaskPomodoros }}</span>
-                <span class="stat-label">Total Sessions</span>
-              </div>
-            </div>
-          </div>
-        </section>
+    <!-- Pomodoro Sessions Section (Collapsible) -->
+    <section class="form-section collapsible">
+      <div class="section-toggle-wrapper">
+        <button @click="showPomodoros = !showPomodoros" class="section-toggle" type="button">
+          <ChevronDown :size="14" :class="['chevron-icon', { rotated: showPomodoros }]" />
+          <h3 class="section-title">Pomodoro Sessions ({{ totalTaskPomodoros }})</h3>
+        </button>
+        <button
+          v-if="showPomodoros && totalTaskPomodoros > 0"
+          @click="resetPomodoros"
+          class="reset-pomodoros-btn-inline"
+          title="Reset all pomodoro counts"
+          type="button"
+        >
+          Reset
+        </button>
       </div>
 
-      <div class="modal-footer">
-        <button class="cancel-btn" @click="emit('close')">
+      <div v-show="showPomodoros" class="section-content">
+        <div class="pomodoro-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ editedTask.completedPomodoros }}</span>
+            <span class="stat-label">Task Sessions</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ totalSubtaskPomodoros }}</span>
+            <span class="stat-label">Subtask Sessions</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ totalTaskPomodoros }}</span>
+            <span class="stat-label">Total Sessions</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Custom Footer -->
+    <template #footer>
+      <div class="modal-actions">
+        <BaseButton variant="secondary" @click="emit('close')">
           Cancel
-        </button>
-        <button class="save-btn" @click="saveTask">
+        </BaseButton>
+        <BaseButton variant="primary" @click="saveTask">
           Save Changes
-        </button>
+        </BaseButton>
       </div>
-    </div>
-  </div>
+    </template>
+  </BaseModal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useTaskStore, formatDateKey } from '@/stores/tasks'
+import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import type { Task, Subtask } from '@/stores/tasks'
-import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
-import { useNotificationStore } from '@/stores/notifications'
-// import RecurrencePatternSelector from '@/components/recurrence/RecurrencePatternSelector.vue' // Temporarily disabled due to error
-import NotificationPreferences from '@/components/notifications/NotificationPreferences.vue'
 import {
-  X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
-  Calendar, TimerReset, ChevronDown
+  Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
+  Calendar, CalendarClock, Clock, TimerReset, ChevronDown
 } from 'lucide-vue-next'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
 
 interface Props {
   isOpen: boolean
@@ -279,12 +257,8 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 
-// Hebrew alignment support
-const { shouldAlignRight, applyInputAlignment } = useHebrewAlignment()
-
 // Template refs
 const titleInput = ref<HTMLInputElement>()
-const descriptionTextarea = ref<HTMLTextAreaElement>()
 
 // Keyboard shortcuts
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -317,7 +291,9 @@ const editedTask = ref<Task>({
   completedPomodoros: 0,
   subtasks: [],
   dueDate: '',
-    estimatedDuration: 60,
+  scheduledDate: '',
+  scheduledTime: '09:00',
+  estimatedDuration: 60,
   projectId: '1',
   createdAt: new Date(),
   updatedAt: new Date()
@@ -327,8 +303,6 @@ const editedTask = ref<Task>({
 const showDependencies = ref(false)
 const showSubtasks = ref(true) // Expanded by default if has subtasks
 const showPomodoros = ref(false)
-const showRecurrence = ref(false)
-const showNotifications = ref(false)
 
 // Watch for task changes
 watch(() => props.task, (newTask) => {
@@ -349,19 +323,6 @@ watch(() => props.task, (newTask) => {
         titleInput.value.select() // Select the default text so user can type over it
       }
     })
-  }
-}, { immediate: true })
-
-// Hebrew text alignment watchers
-watch(() => editedTask.value.title, (newTitle) => {
-  if (titleInput.value && newTitle) {
-    applyInputAlignment(titleInput.value, newTitle)
-  }
-}, { immediate: true })
-
-watch(() => editedTask.value.description, (newDescription) => {
-  if (descriptionTextarea.value && newDescription) {
-    applyInputAlignment(descriptionTextarea.value, newDescription)
   }
 }, { immediate: true })
 
@@ -387,9 +348,9 @@ const totalTaskPomodoros = computed(() =>
 // Dynamic icon and class for priority
 const priorityIcon = computed(() => {
   switch (editedTask.value.priority) {
-    case 'low': return Flag || AlertCircle
-    case 'high': return Zap || AlertCircle
-    default: return AlertCircle || Circle
+    case 'low': return Flag
+    case 'high': return Zap
+    default: return AlertCircle
   }
 })
 
@@ -404,11 +365,11 @@ const priorityIconClass = computed(() => {
 // Dynamic icon and class for status
 const statusIcon = computed(() => {
   switch (editedTask.value.status) {
-    case 'planned': return Circle || AlertCircle
-    case 'in_progress': return PlayCircle || Circle
-    case 'done': return CheckCircle || Circle
-    case 'backlog': return Archive || Circle
-    default: return Circle || AlertCircle
+    case 'planned': return Circle
+    case 'in_progress': return PlayCircle
+    case 'done': return CheckCircle
+    case 'backlog': return Archive
+    default: return Circle
   }
 })
 
@@ -423,6 +384,11 @@ const statusIconClass = computed(() => {
 })
 
 // Methods
+const handleScheduledDateChange = () => {
+  if (editedTask.value.scheduledDate && !editedTask.value.scheduledTime) {
+    editedTask.value.scheduledTime = '09:00'
+  }
+}
 
 const addSubtask = () => {
   const newSubtask: Subtask = {
@@ -473,34 +439,50 @@ const resetPomodoros = () => {
   })
 }
 
-const handleRecurrenceChange = (recurrenceData: any) => {
-  editedTask.value.recurrence = recurrenceData
-}
-
-const handleNotificationPreferencesChange = (preferences: any) => {
-  editedTask.value.notificationPreferences = preferences
-}
-
 const saveTask = () => {
   if (!props.task) return
 
-  // DEBUG: Track task state before update (simplified - no more complex instance system)
-  const originalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  console.log('🔍 DEBUG: BEFORE UPDATE - Task:', originalTask?.title)
-  console.log('🔍 DEBUG: BEFORE UPDATE - Task dueDate:', originalTask?.dueDate)
-  
-  // CRITICAL FIX: Include instances in the update to preserve them
-  const updates: any = {
+  // Update main task
+  taskStore.updateTaskWithUndo(editedTask.value.id, {
     title: editedTask.value.title,
     description: editedTask.value.description,
     status: editedTask.value.status,
     priority: editedTask.value.priority,
     dueDate: editedTask.value.dueDate,
+    scheduledDate: editedTask.value.scheduledDate,
+    scheduledTime: editedTask.value.scheduledTime,
     estimatedDuration: editedTask.value.estimatedDuration
-  }
+  })
 
-  // Update main task
-  taskStore.updateTaskWithUndo(editedTask.value.id, updates)
+  // Handle task instances for calendar
+  if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {
+    // Check if task already has instances
+    const existingInstances = taskStore.getTaskInstances(props.task)
+    const sameDayInstance = existingInstances.find(
+      inst => inst.scheduledDate === editedTask.value.scheduledDate
+    )
+
+    if (sameDayInstance) {
+      // Update existing instance
+      taskStore.updateTaskInstanceWithUndo(editedTask.value.id, sameDayInstance.id, {
+        scheduledTime: editedTask.value.scheduledTime,
+        duration: editedTask.value.estimatedDuration || 60
+      })
+    } else {
+      // Create new instance
+      taskStore.createTaskInstanceWithUndo(editedTask.value.id, {
+        scheduledDate: editedTask.value.scheduledDate,
+        scheduledTime: editedTask.value.scheduledTime,
+        duration: editedTask.value.estimatedDuration || 60
+      })
+    }
+  } else {
+    // Remove all instances if no scheduled date
+    const existingInstances = taskStore.getTaskInstances(props.task)
+    existingInstances.forEach(instance => {
+      taskStore.deleteTaskInstanceWithUndo(editedTask.value.id, instance.id)
+    })
+  }
 
   // Update subtasks
   const originalSubtasks = props.task.subtasks || []
@@ -524,108 +506,15 @@ const saveTask = () => {
     }
   })
 
-  // DEBUG: Final state check (simplified - no more complex instance system)
-  const finalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-  console.log('🔍 DEBUG: FINAL STATE - Task:', finalTask?.title)
-  console.log('🔍 DEBUG: FINAL STATE - Task.dueDate:', finalTask?.dueDate)
-
   emit('close')
 }
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0; /* RTL: direction-agnostic positioning */
-  background: var(--overlay-bg);
+.modal-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-modal);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  animation: fadeIn var(--duration-normal) var(--spring-smooth);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.modal-content {
-  background: linear-gradient(
-    135deg,
-    var(--border-medium) 0%,
-    var(--glass-bg-heavy) 100%
-  );
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius-2xl);
-  box-shadow:
-    var(--shadow-2xl),
-    var(--shadow-2xl),
-    inset 0 2px 0 var(--glass-border-hover);
-  width: 90%;
-  max-width: 650px;
-  max-height: 85vh;
-  overflow-y: auto;
-  animation: slideUp var(--duration-normal) var(--spring-gentle);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-5);
-  border-bottom: 1px solid var(--glass-bg-heavy);
-  background: linear-gradient(
-    180deg,
-    var(--glass-bg-tint) 0%,
-    transparent 100%
-  );
-}
-
-.modal-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.close-btn {
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-btn:hover {
-  background: var(--glass-border);
-  border-color: var(--glass-border-medium);
-  color: var(--text-primary);
-  transform: scale(1.05);
-}
-
-.modal-body {
-  padding: var(--space-4) var(--space-5);
+  justify-content: flex-end;
+  gap: var(--space-3);
 }
 
 .form-section {
@@ -1287,147 +1176,5 @@ const saveTask = () => {
   color: var(--text-muted);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  padding: var(--space-5) var(--space-6);
-  border-top: 1px solid var(--glass-bg-heavy);
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--glass-bg-weak) 100%
-  );
-}
-
-.cancel-btn {
-  background: var(--glass-bg-tint);
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-}
-
-.cancel-btn:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--border-secondary);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-}
-
-.save-btn {
-  background: linear-gradient(
-    135deg,
-    var(--calendar-today-badge-start) 0%,
-    var(--calendar-today-badge-end) 100%
-  );
-  border: 1px solid var(--purple-border-medium);
-  color: white;
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  transition: all var(--duration-normal) var(--spring-bounce);
-  box-shadow: 0 4px 12px var(--purple-border-light);
-}
-
-.save-btn:hover {
-  background: linear-gradient(
-    135deg,
-    var(--calendar-today-badge-start) 0%,
-    var(--calendar-today-badge-end) 100%
-  );
-  transform: translateY(-2px);
-  box-shadow:
-    var(--purple-shadow-strong);
-}
-
-/* Dark theme */
-:root.dark-theme .modal-content {
-  background: var(--surface-secondary);
-}
-
-:root.dark-theme .modal-header {
-  border-bottom-color: var(--border-subtle);
-}
-
-:root.dark-theme .modal-title {
-  color: var(--text-primary);
-}
-
-:root.dark-theme .close-btn {
-  color: var(--text-muted);
-}
-
-:root.dark-theme .close-btn:hover {
-  background: var(--surface-tertiary);
-  color: var(--text-secondary);
-}
-
-:root.dark-theme .section-title {
-  color: var(--text-secondary);
-}
-
-:root.dark-theme .form-label {
-  color: var(--text-muted);
-}
-
-:root.dark-theme .form-input,
-:root.dark-theme .form-textarea,
-:root.dark-theme .form-select {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
-  color: var(--text-primary);
-}
-
-:root.dark-theme .form-input:focus,
-:root.dark-theme .form-textarea:focus,
-:root.dark-theme .form-select:focus {
-  border-color: var(--brand-primary);
-  box-shadow: var(--purple-glow-focus);
-}
-
-:root.dark-theme .subtask-item {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
-}
-
-:root.dark-theme .subtask-title-input,
-:root.dark-theme .subtask-description-input {
-  background: var(--surface-secondary);
-  border-color: var(--border-medium);
-  color: var(--text-primary);
-}
-
-:root.dark-theme .stat-item {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
-}
-
-:root.dark-theme .stat-label,
-:root.dark-theme .pomodoro-count,
-:root.dark-theme .checkbox-label {
-  color: var(--text-muted);
-}
-
-:root.dark-theme .cancel-btn {
-  border-color: var(--border-medium);
-  color: var(--text-muted);
-}
-
-:root.dark-theme .cancel-btn:hover {
-  background: var(--surface-tertiary);
-  color: var(--text-secondary);
-}
-
-:root.dark-theme .modal-footer {
-  border-top-color: var(--border-subtle);
 }
 </style>

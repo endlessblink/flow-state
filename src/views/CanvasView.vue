@@ -4660,26 +4660,17 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
 // Initialize on mount
 
 // Clean up stale Vue Flow DOM nodes that don't correspond to actual tasks
+// DISABLED: This function was causing all nodes to be removed due to:
+// 1. Direct DOM manipulation bypasses Vue Flow's reactivity system
+// 2. node.getAttribute('data-nodeid') returns null before Vue Flow renders
+// 3. Vue Flow manages its own DOM - manual cleanup breaks rendering
+// See: https://vueflow.dev/guide/node.html - "Vue Flow does not know that the node was removed"
+// Fix date: 2025-11-29
 const cleanupStaleNodes = () => {
-  console.log('🧹 Cleaning up stale Vue Flow nodes...')
-
-  const taskNodeElements = document.querySelectorAll('.vue-flow__node-taskNode')
-  let removedCount = 0
-
-  taskNodeElements.forEach(node => {
-    const nodeId = node.getAttribute('data-nodeid')
-    const taskExists = taskStore.tasks.some(t => t.id === nodeId)
-
-    if (!taskExists) {
-      console.log(`Removing stale node: ${nodeId || 'unknown'}`)
-      node.remove()
-      removedCount++
-    }
-  })
-
-  if (removedCount > 0) {
-    console.log(`✅ Removed ${removedCount} stale Vue Flow nodes`)
-  }
+  console.log('🧹 [DISABLED] Stale node cleanup skipped - Vue Flow manages its own DOM')
+  // Vue Flow handles DOM cleanup internally. Manual node.remove() calls
+  // bypass the reactivity system and cause rendering failures.
+  // If cleanup is truly needed, use: const { removeNodes } = useVueFlow()
 }
 
 onMounted(async () => {

@@ -1,0 +1,47 @@
+
+Running 7 tests using 7 workers
+
+Page load time: 1358ms
+Canvas view loaded but no Vue Flow elements found (may be loading state)
+  ✓  2 [chromium] › tests/e2e-comprehensive-functionality.spec.ts:74:3 › Pomo-Flow Comprehensive E2E Tests › Canvas view functionality (6.8s)
+Found 29 calendar elements
+  ✘  5 [chromium] › tests/e2e-comprehensive-functionality.spec.ts:103:3 › Pomo-Flow Comprehensive E2E Tests › Calendar view functionality (7.7s)
+  ✓  7 [chromium] › tests/e2e-comprehensive-functionality.spec.ts:10:3 › Pomo-Flow Comprehensive E2E Tests › Complete task lifecycle workflow (8.8s)
+  ✓  6 [chromium] › tests/e2e-comprehensive-functionality.spec.ts:204:3 › Pomo-Flow Comprehensive E2E Tests › Error handling and edge cases (9.1s)
+Memory increase: 0.00MB
+  ✓  1 [chromium] › tests/e2e-comprehensive-functionality.spec.ts:167:3 › Pomo-Flow Comprehensive E2E Tests › Performance and loading (9.8s)
+Task found in /canvas view
+  ✓  3 [chromium] › tests/e2e-comprehensive-functionality.spec.ts:54:3 › Pomo-Flow Comprehensive E2E Tests › View navigation and data consistency (12.2s)
+Task found in /calendar view
+  ✓  4 [chromium] › tests/e2e-comprehensive-functionality.spec.ts:132:3 › Pomo-Flow Comprehensive E2E Tests › Task management across views (12.6s)
+
+
+  1) [chromium] › tests/e2e-comprehensive-functionality.spec.ts:103:3 › Pomo-Flow Comprehensive E2E Tests › Calendar view functionality 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThan[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: > [32m0[39m
+    Received:   [31m0[39m
+
+      120 |       // Look for calendar grid
+      121 |       const calendarGrid = page.locator('.vc-weeks, .vc-days, [class*="grid"], [class*="week"]');
+    > 122 |       expect(await calendarGrid.count()).toBeGreaterThan(0);
+          |                                          ^
+      123 |     } else {
+      124 |       console.log('Calendar view loaded but no calendar elements found');
+      125 |     }
+        at /home/noam/my-projects/Development/My-Dev/Productivity/pomo-flow/tests/e2e-comprehensive-functionality.spec.ts:122:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/e2e-comprehensive-function-faba2-Calendar-view-functionality-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/e2e-comprehensive-function-faba2-Calendar-view-functionality-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/e2e-comprehensive-function-faba2-Calendar-view-functionality-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e-comprehensive-functionality.spec.ts:103:3 › Pomo-Flow Comprehensive E2E Tests › Calendar view functionality 
+  6 passed (13.3s)

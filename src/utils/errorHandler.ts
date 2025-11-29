@@ -1,5 +1,38 @@
 import { useCopy } from '@/composables/useCopy'
 
+// Error severity levels for categorizing impact
+export enum ErrorSeverity {
+  INFO = 'info',       // Informational, no action needed
+  WARNING = 'warning', // Something went wrong but app continues
+  ERROR = 'error',     // Operation failed but app stable
+  CRITICAL = 'critical' // App may be unstable, user action needed
+}
+
+// Error categories for routing and filtering
+export enum ErrorCategory {
+  DATABASE = 'database',     // IndexedDB, PouchDB, localStorage
+  NETWORK = 'network',       // API calls, sync, fetch
+  VALIDATION = 'validation', // Input validation, schema errors
+  STATE = 'state',           // Pinia store, reactive state
+  COMPONENT = 'component',   // Vue component lifecycle
+  SYNC = 'sync',             // Cross-tab, device sync
+  UNKNOWN = 'unknown'        // Unclassified errors
+}
+
+// Structured error report for unified handling
+export interface ErrorReport {
+  id: string
+  severity: ErrorSeverity
+  category: ErrorCategory
+  message: string
+  userMessage?: string       // User-friendly message
+  error?: Error | string     // Original error
+  context?: Record<string, unknown>
+  timestamp: Date
+  stack?: string
+  retryable?: boolean
+}
+
 export interface ErrorInfo {
   message: string
   source?: string
@@ -12,10 +45,181 @@ export interface ErrorInfo {
 export class GlobalErrorHandler {
   private static instance: GlobalErrorHandler
   private errors: ErrorInfo[] = []
+  private reports: ErrorReport[] = []
   private maxErrors = 100
+  private maxReports = 200
 
   private constructor() {
     this.setupGlobalHandlers()
+  }
+
+  /**
+   * Report a structured error with severity and category
+   * This is the primary method for unified error handling
+   */
+  report(options: {
+    error?: Error | string
+    message?: string
+    severity?: ErrorSeverity
+    category?: ErrorCategory
+    context?: Record<string, unknown>
+    userMessage?: string
+    retryable?: boolean
+    showNotification?: boolean
+  }): ErrorReport {
+    const {
+      error,
+      message,
+      severity = ErrorSeverity.ERROR,
+      category = ErrorCategory.UNKNOWN,
+      context,
+      userMessage,
+      retryable = false,
+      showNotification = true
+    } = options
+
+    // Extract message from error or use provided message
+    const errorMessage = message ||
+      (error instanceof Error ? error.message : String(error || 'Unknown error'))
+
+    // Extract stack trace
+    const stack = error instanceof Error ? error.stack : undefined
+
+    const report: ErrorReport = {
+      id: `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      severity,
+      category,
+      message: errorMessage,
+      userMessage,
+      error,
+      context,
+      timestamp: new Date(),
+      stack,
+      retryable
+    }
+
+    // Store the report
+    this.addReport(report)
+
+    // Log to console with appropriate level
+    this.logToConsole(report)
+
+    // Show notification based on severity
+    if (showNotification && severity !== ErrorSeverity.INFO) {
+      this.showReportNotification(report)
+    }
+
+    return report
+  }
+
+  private addReport(report: ErrorReport) {
+    this.reports.unshift(report)
+    if (this.reports.length > this.maxReports) {
+      this.reports = this.reports.slice(0, this.maxReports)
+    }
+  }
+
+  private logToConsole(report: ErrorReport) {
+    const prefix = `[${report.category.toUpperCase()}]`
+    const contextStr = report.context ? ` | Context: ${JSON.stringify(report.context)}` : ''
+
+    switch (report.severity) {
+      case ErrorSeverity.INFO:
+        console.info(`ℹ️ ${prefix} ${report.message}${contextStr}`)
+        break
+      case ErrorSeverity.WARNING:
+        console.warn(`⚠️ ${prefix} ${report.message}${contextStr}`)
+        break
+      case ErrorSeverity.ERROR:
+        console.error(`❌ ${prefix} ${report.message}${contextStr}`)
+        if (report.stack) console.error(report.stack)
+        break
+      case ErrorSeverity.CRITICAL:
+        console.error(`🚨 CRITICAL ${prefix} ${report.message}${contextStr}`)
+        if (report.stack) console.error(report.stack)
+        break
+    }
+  }
+
+  private showReportNotification(report: ErrorReport) {
+    const colors = {
+      [ErrorSeverity.INFO]: '#3b82f6',     // Blue
+      [ErrorSeverity.WARNING]: '#f59e0b',  // Amber
+      [ErrorSeverity.ERROR]: '#ef4444',    // Red
+      [ErrorSeverity.CRITICAL]: '#dc2626'  // Dark red
+    }
+
+    const notification = document.createElement('div')
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${colors[report.severity]};
+      color: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 10001;
+      max-width: 400px;
+      font-family: system-ui, -apple-system, sans-serif;
+    `
+
+    const headerDiv = document.createElement('div')
+    headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;'
+
+    const titleDiv = document.createElement('div')
+    titleDiv.style.cssText = 'font-weight: 600; font-size: 14px;'
+    titleDiv.textContent = report.severity === ErrorSeverity.CRITICAL
+      ? '🚨 Critical Error'
+      : report.severity === ErrorSeverity.WARNING
+        ? '⚠️ Warning'
+        : '❌ Error'
+
+    const closeButton = document.createElement('button')
+    closeButton.style.cssText = 'background: none; border: none; color: white; cursor: pointer; font-size: 18px;'
+    closeButton.textContent = '×'
+    closeButton.onclick = () => notification.remove()
+
+    headerDiv.appendChild(titleDiv)
+    headerDiv.appendChild(closeButton)
+
+    const messageDiv = document.createElement('div')
+    messageDiv.style.cssText = 'font-size: 13px; margin-bottom: 8px; opacity: 0.95;'
+    messageDiv.textContent = report.userMessage || report.message
+
+    const categoryDiv = document.createElement('div')
+    categoryDiv.style.cssText = 'font-size: 11px; opacity: 0.7;'
+    categoryDiv.textContent = `Category: ${report.category}`
+
+    notification.appendChild(headerDiv)
+    notification.appendChild(messageDiv)
+    notification.appendChild(categoryDiv)
+
+    document.body.appendChild(notification)
+
+    // Auto-dismiss based on severity
+    const timeout = report.severity === ErrorSeverity.CRITICAL ? 15000 : 8000
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.remove()
+      }
+    }, timeout)
+  }
+
+  getReports(): ErrorReport[] {
+    return [...this.reports]
+  }
+
+  getReportsByCategory(category: ErrorCategory): ErrorReport[] {
+    return this.reports.filter(r => r.category === category)
+  }
+
+  getReportsBySeverity(severity: ErrorSeverity): ErrorReport[] {
+    return this.reports.filter(r => r.severity === severity)
+  }
+
+  clearReports() {
+    this.reports = []
   }
 
   static getInstance(): GlobalErrorHandler {

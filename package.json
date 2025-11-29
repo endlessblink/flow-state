@@ -107,7 +107,11 @@
     "node-version": "node --version",
     "check-engines": "node --version && npm --version",
     "type-check:watch": "concurrently -n \"VUE,TSC\" -c \"magenta,blue\" --kill-others-on-fail \"vue-tsc --noEmit --watch\" \"tsc --noEmit --watch --pretty\"",
-    "type-check:track": "chokidar 'src/**/*.ts' 'src/**/*.vue' --command 'tsc --noEmit --pretty > .typescript-errors.log 2>&1 || true' --initial --silent"
+    "type-check:track": "chokidar 'src/**/*.ts' 'src/**/*.vue' --command 'tsc --noEmit --pretty > .typescript-errors.log 2>&1 || true' --initial --silent",
+    "conflict:analyze": "node scripts/analyze-conflicts.cjs",
+    "conflict:baseline": "node scripts/analyze-conflicts.cjs > docs/conflict-systems-resolution/baseline-$(date +%Y%m%d).txt",
+    "conflict:hooks": "bash scripts/install-git-hooks.sh",
+    "test:conflict-system": "vitest run --testNamePattern='conflict|Conflict'"
   },
   "keywords": [
     "productivity",

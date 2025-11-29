@@ -172,8 +172,26 @@ const projectsWithTasks = computed(() => {
     return taskStore.projects.filter(project => projectIds.includes(project.id))
   }
 
-  // For smart views (today, week) or no filter, show all projects
-  return taskStore.projects
+  // Get real projects
+  const projects = [...taskStore.projects]
+
+  // Add virtual "Uncategorized" project if there are uncategorized tasks
+  const hasUncategorizedTasks = taskStore.filteredTasks.some(
+    t => !t.projectId || t.projectId === 'uncategorized'
+  )
+
+  if (hasUncategorizedTasks) {
+    projects.push({
+      id: 'uncategorized',
+      name: 'Uncategorized',
+      color: '#6B7280',
+      colorType: 'hex' as const,
+      viewType: 'status' as const,
+      createdAt: new Date()
+    })
+  }
+
+  return projects
 })
 
 // Total displayed tasks (uses centralized counter for consistency)

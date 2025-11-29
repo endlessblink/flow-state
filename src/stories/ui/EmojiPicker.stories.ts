@@ -44,7 +44,7 @@ export const Closed: Story = {
       <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
         <h3>EmojiPicker (Closed)</h3>
         <p>Click the button below to open the emoji picker</p>
-        <button @click="() => console.log('Open picker')" style="margin-top: 20px; padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;">
+        <button @click="() => console.log('Open picker')" style="margin-top: 20px; padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;">
           😊 Open Emoji Picker
         </button>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
@@ -250,7 +250,7 @@ export const InteractiveDemo: Story = {
         <div style="display: flex; gap: 12px; margin-bottom: 30px;">
           <button
             @click="openPicker"
-            style="padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 16px;"
           >
             😊 Choose Emoji/Color
           </button>
@@ -336,7 +336,7 @@ export const AllVariants: Story = {
             <p style="margin: 0 0 20px 0; color: var(--text-secondary);">Browse productivity-focused emojis with search</p>
             <button
               @click="showEmojiPicker = true"
-              style="width: 100%; padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;"
+              style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
             >
               📝 Open Emoji Picker
             </button>
@@ -348,7 +348,7 @@ export const AllVariants: Story = {
             <p style="margin: 0 0 20px 0; color: var(--text-secondary);">Choose from predefined project colors</p>
             <button
               @click="showColorPicker = true"
-              style="width: 100%; padding: 12px; background: var(--color-navigation); color: white; border: none; border-radius: 6px; cursor: pointer;"
+              style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--color-navigation); color: var(--color-navigation); border-radius: 6px; cursor: pointer;"
             >
               🎨 Open Color Picker
             </button>

@@ -23,7 +23,7 @@
           v-if="isDropdownOpen"
           class="user-dropdown"
           role="menu"
-          :style="dropdownStyle"
+          :style="dropdownStyle as any"
         >
           <!-- User Info -->
           <div class="dropdown-header">
@@ -86,7 +86,7 @@ const displayName = computed(() => {
 })
 
 const dropdownStyle = computed(() => {
-  if (!wrapperRef.value) return {}
+  if (!wrapperRef.value) return { position: undefined, top: undefined, left: undefined }
 
   const rect = wrapperRef.value.getBoundingClientRect()
   return {

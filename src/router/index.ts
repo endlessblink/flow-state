@@ -1,14 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { useUIStore } from '@/stores/ui'
-import BoardView from '@/views/BoardView.vue'
-import CalendarView from '@/views/CalendarView.vue'
-import CalendarViewVueCal from '@/views/CalendarViewVueCal.vue'
-import CanvasView from '@/views/CanvasView.vue'
-import CatalogView from '@/views/CatalogView.vue'
-import FocusView from '@/views/FocusView.vue'
-import QuickSortView from '@/views/QuickSortView.vue'
+import { useLocalAuthStore } from '@/stores/local-auth'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -16,25 +8,25 @@ const router = createRouter({
     {
       path: '/',
       name: 'board',
-      component: BoardView,
-      meta: { requiresAuth: true }
+      component: () => import('@/views/BoardView.vue'),
+      meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
       path: '/calendar',
       name: 'calendar',
-      component: CalendarView,
+      component: () => import('@/views/CalendarView.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/canvas',
       name: 'canvas',
-      component: CanvasView,
-      meta: { requiresAuth: true }
+      component: () => import('@/views/CanvasView.vue'),
+      meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
       path: '/calendar-test',
       name: 'calendar-test',
-      component: CalendarViewVueCal,
+      component: () => import('@/views/CalendarViewVueCal.vue'),
       meta: { requiresAuth: true }
     },
     {
@@ -42,37 +34,40 @@ const router = createRouter({
       name: 'design-system',
       beforeEnter() {
         window.open('http://localhost:6006', '_blank')
-      }
+        return false
+      },
+      redirect: '/'
+    },
+    {
+      path: '/tasks',
+      name: 'all-tasks',
+      component: () => import('@/views/AllTasksView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/catalog',
       name: 'catalog',
-      component: CatalogView,
-      meta: { requiresAuth: true }
+      component: () => import('@/views/AllTasksView.vue'),
+      meta: { requiresAuth: false } // Temporarily disabled for development to match other views
     },
     {
       path: '/quick-sort',
       name: 'quick-sort',
-      component: QuickSortView,
+      component: () => import('@/views/QuickSortView.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/focus/:taskId',
       name: 'focus',
-      component: FocusView,
+      component: () => import('@/views/FocusView.vue'),
       meta: { requiresAuth: true }
     },
-    {
-      path: '/today',
-      name: 'today',
-      component: () => import('@/mobile/views/TodayView.vue'),
-      meta: { requiresAuth: true }
+      {
+      path: '/keyboard-test',
+      name: 'keyboard-test',
+      component: () => import('@/components/KeyboardDeletionTest.vue')
     },
-    {
-      path: '/mobile',
-      redirect: '/today'
-    },
-    // TODO: Add other views when implemented
+      // TODO: Add other views when implemented
     // {
     //   path: '/todo',
     //   name: 'todo',
@@ -81,57 +76,23 @@ const router = createRouter({
   ]
 })
 
-// Global navigation guard for authentication
-router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  const authStore = useAuthStore()
-  const uiStore = useUIStore()
+// Local authentication guard
+router.beforeEach(async (to, from, next) => {
+  const authStore = useLocalAuthStore()
 
-  console.log('🛣️ Router guard check:', {
-    path: to.fullPath,
-    requiresAuth: to.matched.some(record => record.meta.requiresAuth),
-    isAuthenticated: authStore.isAuthenticated,
-    isLoading: authStore.isLoading,
-    modalOpen: uiStore.authModalOpen
-  })
+  // Ensure local user is initialized
+  if (!authStore.isInitialized) {
+    await authStore.initializeLocalUser()
+  }
 
   // Check if route requires authentication
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-
-  if (requiresAuth) {
-    // Wait for auth to initialize if it's still loading
-    if (authStore.isLoading) {
-      console.log('⏳ Auth still loading, waiting...')
-      // Wait for auth state to be determined
-      const maxWaitTime = 5000 // 5 seconds max
-      const startTime = Date.now()
-
-      while (authStore.isLoading && Date.now() - startTime < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-      console.log('✅ Auth loading complete, isAuthenticated:', authStore.isAuthenticated)
-    }
-
-    if (!authStore.isAuthenticated) {
-      console.log('🔒 User not authenticated, checking if modal should open')
-      // Only open modal if it's not already open (prevent duplicate opens)
-      if (!uiStore.authModalOpen) {
-        console.log('📂 Opening auth modal')
-        uiStore.openAuthModal('login', to.fullPath)
-      } else {
-        console.log('⚠️ Auth modal already open, skipping')
-      }
-      // Allow navigation to continue (user can see the app but modal will be open)
-      next()
-    } else {
-      console.log('✅ User authenticated, allowing navigation')
-      // User is authenticated, allow navigation
-      next()
-    }
-  } else {
-    console.log('🌐 Route does not require auth, allowing navigation')
-    // Route doesn't require authentication, allow navigation
-    next()
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    console.log('🛣️ Route requires authentication - initializing local user')
+    await authStore.initializeLocalUser()
   }
+
+  // Allow navigation - local auth is always available once initialized
+  next()
 })
 
 export default router

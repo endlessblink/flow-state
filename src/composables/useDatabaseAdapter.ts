@@ -126,13 +126,12 @@ export interface SyncStatus {
 /**
  * Database adapter factory
  * Returns the appropriate adapter based on configuration
+ *
+ * Note: Firebase has been removed from this project.
+ * Available adapters: Supabase (future), PocketBase (future)
  */
-export function createDatabaseAdapter(provider: 'firebase' | 'supabase' | 'pocketbase' = 'firebase'): DatabaseAdapter {
+export function createDatabaseAdapter(provider: 'supabase' | 'pocketbase'): DatabaseAdapter {
   switch (provider) {
-    case 'firebase':
-      // Lazy load Firebase adapter to avoid bundling unused providers
-      return new (require('./adapters/FirebaseAdapter').FirebaseAdapter)()
-
     case 'supabase':
       // Future implementation
       throw new Error('Supabase adapter not yet implemented')
@@ -149,9 +148,9 @@ export function createDatabaseAdapter(provider: 'firebase' | 'supabase' | 'pocke
 /**
  * Composable for database operations with abstraction
  *
- * Usage:
+ * Usage (when adapters are implemented):
  * ```ts
- * const { adapter, sync, status } = useDatabaseAdapter('firebase')
+ * const { adapter, syncConfig } = useDatabaseAdapter('supabase')
  *
  * // Save task to cloud
  * await adapter.tasks.saveTask(userId, task)
@@ -164,8 +163,10 @@ export function createDatabaseAdapter(provider: 'firebase' | 'supabase' | 'pocke
  *   console.log('Tasks updated:', tasks)
  * })
  * ```
+ *
+ * Note: Firebase has been removed. Supabase and PocketBase adapters are planned for future implementation.
  */
-export function useDatabaseAdapter(provider: 'firebase' | 'supabase' | 'pocketbase' = 'firebase', config: Partial<SyncConfig> = {}) {
+export function useDatabaseAdapter(provider: 'supabase' | 'pocketbase', config: Partial<SyncConfig> = {}) {
   const adapter = createDatabaseAdapter(provider)
   const syncConfig = { ...DEFAULT_SYNC_CONFIG, ...config }
 

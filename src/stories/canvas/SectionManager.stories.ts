@@ -34,7 +34,7 @@ export const EmptyState: Story = {
         <div style="width: 300px; background: var(--surface-secondary); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h4 style="margin: 0; font-size: 16px; font-weight: bold; color: var(--text-primary);">Canvas Sections</h4>
-            <button style="display: flex; align-items: center; gap: 6px; background: var(--brand-primary); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+            <button style="display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
               <span style="font-size: 16px;">+</span> Add Section
             </button>
           </div>
@@ -71,7 +71,7 @@ export const WithSections: Story = {
         <div style="width: 300px; background: var(--surface-secondary); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h4 style="margin: 0; font-size: 16px; font-weight: bold; color: var(--text-primary);">Canvas Sections</h4>
-            <button style="display: flex; align-items: center; gap: 6px; background: var(--brand-primary); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+            <button style="display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
               <span style="font-size: 16px;">+</span> Add Section
             </button>
           </div>

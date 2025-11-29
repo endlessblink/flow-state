@@ -204,7 +204,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useTaskRecurrence } from '@/composables/useTaskRecurrence'
-import type { RecurrencePattern, EndCondition } from '@/types/recurrence'
+import { RecurrencePattern, EndCondition  } from '@/types/recurrence'
 import { formatDateKey, parseDateKey } from '@/stores/tasks'
 
 interface Props {
@@ -239,7 +239,7 @@ const interval = ref(1)
 const selectedWeekdays = ref<number[]>([])
 const dayOfMonth = ref(new Date().getDate())
 const selectedMonth = ref(new Date().getMonth() + 1)
-const endType = ref<EndCondition>('never')
+const endType = ref<EndCondition>(EndCondition.NEVER)
 const occurrenceCount = ref(10)
 const endDate = ref('')
 

@@ -118,7 +118,7 @@ export const SynchronousError: Story = {
         <div style="margin-top: 24px; text-align: center;">
           <button
             @click="retry"
-            style="padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer;"
           >
             Retry Error
           </button>

@@ -69,7 +69,7 @@
               title="Select All (Ctrl+A)"
               aria-label="Select all items"
             >
-              <SelectAll :size="14" />
+              <CheckSquare :size="14" />
             </button>
 
             <button
@@ -114,7 +114,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Check, Minus, SelectAll, GitCompare, X } from 'lucide-vue-next'
+import { Check, Minus, CheckSquare, GitCompare, X } from 'lucide-vue-next'
 
 interface Props {
   selected?: boolean

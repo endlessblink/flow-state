@@ -18,6 +18,23 @@
 
       <!-- Task Metadata -->
       <div class="task-metadata">
+        <!-- Project Indicator -->
+        <div class="metadata-item">
+          <span
+            class="project-emoji-badge"
+            :class="[`project-visual--${projectVisual.type}`, { 'project-visual--colored': projectVisual.type === 'css-circle' }]"
+            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+          >
+            <span
+              class="project-emoji"
+              :class="{ 'project-css-circle': projectVisual.type === 'css-circle' }"
+              :style="projectVisual.type === 'css-circle' ? { '--project-color': projectVisual.color } : {}"
+            >
+              {{ projectVisual.content }}
+            </span>
+          </span>
+        </div>
+
         <div class="metadata-item">
           <Calendar :size="16" />
           <span>{{ formattedDueDate }}</span>
@@ -87,11 +104,41 @@
 
           <!-- Quick Date Shortcuts -->
           <div class="quick-date-shortcuts">
-            <button class="quick-date-btn" @click.stop="setToday">Today</button>
-            <button class="quick-date-btn" @click.stop="setTomorrow">Tomorrow</button>
-            <button class="quick-date-btn" @click.stop="setWeekend">Weekend</button>
-            <button class="quick-date-btn" @click.stop="setNextWeek">Next Week</button>
-            <button class="quick-date-btn clear-btn" @click.stop="clearDate">Clear</button>
+            <button
+              class="quick-date-btn"
+              :class="{ active: isToday }"
+              @click.stop="setToday"
+            >
+              Today
+            </button>
+            <button
+              class="quick-date-btn"
+              :class="{ active: isTomorrow }"
+              @click.stop="setTomorrow"
+            >
+              Tomorrow
+            </button>
+            <button
+              class="quick-date-btn"
+              :class="{ active: isWeekend }"
+              @click.stop="setWeekend"
+            >
+              Weekend
+            </button>
+            <button
+              class="quick-date-btn"
+              :class="{ active: isNextWeek }"
+              @click.stop="setNextWeek"
+            >
+              Next Week
+            </button>
+            <button
+              class="quick-date-btn clear-btn"
+              :class="{ active: hasNoDate }"
+              @click.stop="clearDate"
+            >
+              Clear
+            </button>
           </div>
         </div>
 
@@ -137,14 +184,15 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useTaskStore, type Task } from '@/stores/tasks'
 import { Calendar, Flag, ListTodo, Timer, ArrowRight, ArrowLeft, CheckCircle, Trash2, Edit } from 'lucide-vue-next'
-import type { Task } from '@/types/tasks'
 
 interface Props {
   task: Task
 }
 
 const props = defineProps<Props>()
+const taskStore = useTaskStore()
 
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
@@ -152,6 +200,11 @@ const emit = defineEmits<{
   markDoneAndDelete: []
   editTask: []
 }>()
+
+// Project visual indicator (emoji or colored dot)
+const projectVisual = computed(() =>
+  taskStore.getProjectVisual(props.task.projectId)
+)
 
 // Date picker ref
 const dateInputRef = ref<HTMLInputElement | null>(null)
@@ -179,7 +232,7 @@ const formattedDueDate = computed(() => {
 
 const completedSubtasks = computed(() => {
   if (!props.task.subtasks) return 0
-  return props.task.subtasks.filter((s) => s.completed).length
+  return props.task.subtasks.filter((s) => s.isCompleted).length
 })
 
 // Due date value for input (in YYYY-MM-DD format)
@@ -189,6 +242,67 @@ const dueDateValue = computed(() => {
   if (isNaN(date.getTime())) return ''
   // Format as YYYY-MM-DD for date input
   return date.toISOString().split('T')[0]
+})
+
+// Date detection computed properties for active states
+const isToday = computed(() => {
+  if (!props.task.dueDate) return false
+  const taskDate = new Date(props.task.dueDate)
+  if (isNaN(taskDate.getTime())) return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  taskDate.setHours(0, 0, 0, 0)
+
+  return taskDate.getTime() === today.getTime()
+})
+
+const isTomorrow = computed(() => {
+  if (!props.task.dueDate) return false
+  const taskDate = new Date(props.task.dueDate)
+  if (isNaN(taskDate.getTime())) return false
+
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
+  taskDate.setHours(0, 0, 0, 0)
+
+  return taskDate.getTime() === tomorrow.getTime()
+})
+
+const isWeekend = computed(() => {
+  if (!props.task.dueDate) return false
+  const taskDate = new Date(props.task.dueDate)
+  if (isNaN(taskDate.getTime())) return false
+
+  const today = new Date()
+  const dayOfWeek = today.getDay()
+  const daysUntilSaturday = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7
+  const saturday = new Date()
+  saturday.setDate(today.getDate() + daysUntilSaturday)
+  saturday.setHours(0, 0, 0, 0)
+  taskDate.setHours(0, 0, 0, 0)
+
+  return taskDate.getTime() === saturday.getTime()
+})
+
+const isNextWeek = computed(() => {
+  if (!props.task.dueDate) return false
+  const taskDate = new Date(props.task.dueDate)
+  if (isNaN(taskDate.getTime())) return false
+
+  const nextMonday = new Date()
+  const dayOfWeek = nextMonday.getDay()
+  const daysUntilNextMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek
+  nextMonday.setDate(nextMonday.getDate() + daysUntilNextMonday)
+  nextMonday.setHours(0, 0, 0, 0)
+  taskDate.setHours(0, 0, 0, 0)
+
+  return taskDate.getTime() === nextMonday.getTime()
+})
+
+const hasNoDate = computed(() => {
+  return !props.task.dueDate || props.task.dueDate === ''
 })
 
 // Task editing functions
@@ -400,6 +514,94 @@ function handleSwipeEnd() {
   text-transform: capitalize;
 }
 
+/* Enhanced project indicator styles matching canvas implementation */
+.project-emoji-badge {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--spring-smooth) ease;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 4px var(--shadow-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-emoji-badge:hover {
+  background: var(--brand-bg-subtle-hover);
+  border-color: var(--brand-border);
+  transform: translateY(-1px) translateZ(0);
+  box-shadow: 0 4px 8px var(--shadow-subtle);
+}
+
+.project-emoji {
+  font-size: var(--project-indicator-size-md); /* 24px to match canvas */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateZ(0); /* Hardware acceleration */
+  transition: all var(--spring-smooth) ease;
+  /* Noto Color Emoji for consistent colorful emoji rendering */
+  font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "EmojiSymbols", system-ui, sans-serif;
+}
+
+.project-emoji.project-css-circle {
+  width: var(--project-indicator-size-md); /* 24px to match canvas */
+  height: var(--project-indicator-size-md); /* 24px to match canvas */
+  border-radius: 50%;
+  background: var(--project-color);
+  box-shadow: var(--project-indicator-shadow-inset);
+  position: relative;
+  font-size: var(--project-indicator-font-size-md); /* Proper font scaling */
+  color: white;
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--spring-smooth) ease;
+  backdrop-filter: var(--project-indicator-backdrop);
+  /* Enhanced glow to match canvas */
+  box-shadow:
+    var(--project-indicator-shadow-inset),
+    var(--project-indicator-glow-strong);
+}
+
+.project-emoji-badge:hover .project-emoji.project-css-circle {
+  transform: translateZ(0) scale(1.15); /* Match canvas scaling */
+  box-shadow:
+    var(--project-indicator-shadow-inset),
+    0 0 16px var(--project-color),
+    0 0 32px var(--project-color);
+}
+
+/* Add radial gradient glow effect like canvas */
+.project-emoji-badge:hover .project-emoji.project-css-circle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    var(--project-color) 0%,
+    transparent 70%
+  );
+  opacity: 0.3;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.project-emoji-badge.project-visual--colored {
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+}
+
 .swipe-indicator {
   position: absolute;
   top: 50%;
@@ -562,6 +764,22 @@ function handleSwipeEnd() {
   color: var(--danger);
 }
 
+.quick-date-btn.active {
+  background: var(--brand-gradient);
+  border-color: var(--brand-primary);
+  color: var(--bg-primary);
+  font-weight: var(--font-semibold);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--brand-primary-alpha-20);
+}
+
+.quick-date-btn.clear-btn.active {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--bg-primary);
+  font-weight: var(--font-semibold);
+}
+
 /* Action Buttons Group */
 .action-buttons-group {
   display: flex;
@@ -601,47 +819,47 @@ function handleSwipeEnd() {
 
 /* Mark as Done Button */
 .mark-done-btn {
-  background: var(--success-bg);
-  border: 1px solid var(--success-muted);
-  color: var(--success);
+  background: transparent;
+  border: 1px solid var(--color-success);
+  color: var(--color-success);
 }
 
 .mark-done-btn:hover {
-  background: var(--success);
-  color: var(--bg-primary);
-  border-color: var(--success);
+  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--color-success);
+  color: var(--color-success);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--state-hover-shadow);
 }
 
 /* Edit Button */
 .edit-btn {
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
 }
 
 .edit-btn:hover {
-  background: var(--brand-primary);
-  color: var(--bg-primary);
+  background: rgba(78, 205, 196, 0.08);
   border-color: var(--brand-primary);
+  color: var(--brand-primary);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--state-hover-shadow);
 }
 
 /* Delete Button */
 .delete-btn {
-  background: var(--danger-bg);
-  border: 1px solid var(--danger-muted);
-  color: var(--danger);
+  background: transparent;
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
 }
 
 .delete-btn:hover {
-  background: var(--danger);
-  color: var(--bg-primary);
-  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--state-hover-shadow);
 }
 
 /* Reduce motion for accessibility */

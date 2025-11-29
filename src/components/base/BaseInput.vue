@@ -66,7 +66,7 @@ const inputId = computed(() => props.id || `input-${Math.random().toString(36).s
 const slots = useSlots()
 
 // Hebrew alignment support
-const { shouldAlignRight, getTextAlignment, getTextDirection } = useHebrewAlignment()
+const { shouldAlignRight, getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
 
 const localValue = computed({
   get: () => props.modelValue,
@@ -76,52 +76,19 @@ const localValue = computed({
 // Computed properties for Hebrew text alignment
 const inputText = computed(() => String(localValue.value || ''))
 const hasHebrew = computed(() => shouldAlignRight(inputText.value))
-const textAlignment = computed(() => getTextAlignment(inputText.value))
-const textDirection = computed(() => getTextDirection(inputText.value))
+const alignmentClasses = computed(() => getAlignmentClasses(inputText.value))
+const alignmentStyles = computed(() => applyInputAlignment(inputText.value))
 
 // Dynamic classes for Hebrew alignment
 const inputClasses = computed(() => [
   'base-input',
   { 'has-prefix': slots.prefix, 'has-suffix': slots.suffix },
-  {
-    'hebrew-input': hasHebrew.value,
-    'hebrew-text': hasHebrew.value,
-    'text-align-right': hasHebrew.value
-  }
+  alignmentClasses.value
 ])
 
 // Dynamic styles for Hebrew alignment
-const inputStyles = computed(() => {
-  if (hasHebrew.value) {
-    return {
-      textAlign: 'right',
-      direction: 'rtl'
-    }
-  }
-  return {}
-})
+const inputStyles = computed(() => alignmentStyles.value)
 
-// Watch for value changes to apply alignment
-watch(localValue, (newValue) => {
-  if (inputRef.value && newValue) {
-    applyHebrewAlignment(inputRef.value, String(newValue))
-  }
-}, { immediate: true })
-
-// Apply Hebrew alignment to input element
-const applyHebrewAlignment = (element: HTMLInputElement, text: string) => {
-  if (!element) return
-
-  if (shouldAlignRight(text)) {
-    element.style.textAlign = 'right'
-    element.style.direction = 'rtl'
-    element.classList.add('hebrew-input', 'hebrew-text')
-  } else {
-    element.style.textAlign = ''
-    element.style.direction = ''
-    element.classList.remove('hebrew-input', 'hebrew-text')
-  }
-}
 
 // Expose focus method
 defineExpose({

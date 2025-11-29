@@ -1,5 +1,5 @@
-import { computed, type Ref } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
+import { computed, ref, type Ref } from 'vue'
+import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
 
 export interface WeekDay {
@@ -22,6 +22,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
   const { getPriorityColor, getDateString } = useCalendarEventHelpers()
 
   const workingHours = Array.from({ length: 17 }, (_, i) => i + 6) // 6 AM to 10 PM
+  const dragMode = ref<string | null>(null)
 
   // Get week start (Monday)
   const getWeekStart = (date: Date): Date => {
@@ -60,12 +61,40 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
     weekDays.value.forEach((day, dayIndex) => {
       const dayEvents: WeekEvent[] = []
 
-      // FIXED: No longer automatically create calendar events for tasks due on this day
-      // Tasks should only appear in calendar inbox until manually scheduled by user
-      // Calendar events are now created only through explicit user action (drag & drop)
+      // Use filtered tasks to respect active status filter
+      taskStore.filteredTasks.forEach(task => {
+        const instances = getTaskInstances(task)
 
-      // Note: dayEvents array will be populated by manual scheduling actions only
-      // Tasks with dueDate but no explicit scheduling will stay in the inbox
+        instances
+          .filter(instance => instance.scheduledDate === day.dateString)
+          .forEach(instance => {
+            const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
+            const duration = instance.duration || task.estimatedDuration || 30
+
+            // Only show if within working hours
+            if (hour >= 6 && hour < 23) {
+              const startTime = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
+              const endTime = new Date(startTime.getTime() + duration * 60000)
+
+              dayEvents.push({
+                id: instance.id,
+                taskId: task.id,
+                instanceId: instance.id,
+                title: task.title,
+                startTime,
+                endTime,
+                duration,
+                startSlot: (hour - 6) * 2 + (minute === 30 ? 1 : 0),
+                slotSpan: Math.ceil(duration / 30),
+                color: getPriorityColor(task.priority),
+                column: 0,
+                totalColumns: 1,
+                dayIndex,
+                isDueDate: false
+              })
+            }
+          })
+      })
 
       // Calculate overlapping positions for this day
       eventsByDay[dayIndex] = calculateOverlappingPositions(dayEvents)
@@ -247,13 +276,14 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
   }
 
   const handleWeekEventMouseDown = (event: MouseEvent, calendarEvent: WeekEvent) => {
+    // Only handle mouse down for resize handles, let HTML5 drag handle dragging
+    // Don't interfere with dragstart events
     if (event.shiftKey) {
-      return // Enable HTML5 drag for sidebar unscheduling
+      dragMode.value = 'shift'
+      return
     }
-
-    event.preventDefault()
-    event.stopPropagation()
-    startWeekDrag(event, calendarEvent)
+    // Let HTML5 drag events handle the dragging - don't block them
+    // Remove preventDefault and stopPropagation to allow drag events
   }
 
   // Week resize handlers

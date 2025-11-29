@@ -36,7 +36,7 @@ export const MenuVariant: Story = {
       <div style="width: 800px; height: 600px; display: flex; align-items: center; justify-content: center; background: var(--surface-primary); border-radius: var(--radius-xl);">
         <button
           @click="isVisible = !isVisible"
-          style="padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer;"
+          style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer;"
         >
           {{ isVisible ? 'Hide Menu' : 'Show Menu' }}
         </button>
@@ -132,55 +132,55 @@ export const AutoPositioning: Story = {
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; height: 100%;">
           <button
             @click="showAt(100, 100)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; height: fit-content;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; height: fit-content;"
           >
             Top-Left
           </button>
           <button
             @click="showAt(400, 100)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; height: fit-content;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; height: fit-content;"
           >
             Top-Center
           </button>
           <button
             @click="showAt(700, 100)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; height: fit-content;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; height: fit-content;"
           >
             Top-Right
           </button>
           <button
             @click="showAt(100, 300)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; align-self: center;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; align-self: center;"
           >
             Middle-Left
           </button>
           <button
             @click="showAt(400, 300)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; align-self: center;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; align-self: center;"
           >
             Center
           </button>
           <button
             @click="showAt(700, 300)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; align-self: center;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; align-self: center;"
           >
             Middle-Right
           </button>
           <button
             @click="showAt(100, 500)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; align-self: end;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; align-self: end;"
           >
             Bottom-Left
           </button>
           <button
             @click="showAt(400, 500)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; align-self: end;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; align-self: end;"
           >
             Bottom-Center
           </button>
           <button
             @click="showAt(700, 500)"
-            style="padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer; align-self: end;"
+            style="padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer; align-self: end;"
           >
             Bottom-Right
           </button>

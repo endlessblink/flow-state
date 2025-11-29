@@ -31,7 +31,6 @@
   --blue-400: 217, 91%, 65%;
   --green-500: 142, 76%, 36%;
   --red-500: 0, 84%, 60%;
-  --yellow-500: 38, 92%, 50%;
   --purple-500: 271, 76%, 53%;
 
   /* ===== TIER 2: SEMANTIC TOKENS (Theme-aware) ===== */
@@ -76,6 +75,10 @@
   --brand-primary: hsl(var(--teal-500));
   --brand-hover: hsl(var(--teal-400));
   --brand-active: hsl(174, 62%, 53%);
+
+  /* Legacy color alias for compatibility */
+  --color-primary: var(--brand-primary);
+  --color-primary-hover: var(--brand-hover);
 
   /* ===== SPACING SCALE ===== */
   /* Based on 0.25rem (4px) base unit */
@@ -130,6 +133,10 @@
   --content-padding: var(--space-12);             /* 48px - Main content area padding */
   --card-padding: var(--space-4);                 /* 16px - Card/panel padding */
 
+  /* Sidebar width sizing */
+  --sidebar-width-normal: 280px;                  /* 280px - Normal sidebar width */
+  --sidebar-width-collapsed: 0px;                  /* 0px - Collapsed sidebar width */
+
   /* Kanban-specific sizing */
   --kanban-column-min-height: 12.5rem;            /* 200px - Minimum column height */
   --kanban-column-width: 22.5rem;                 /* 360px - Standard column width */
@@ -145,11 +152,16 @@
 
   /* TaskCard-specific sizing */
   --task-card-min-height: 2.5rem;                 /* 40px - Compact card height */
-  --task-card-min-width: 20rem;                   /* 320px - Minimum card width */
+  --task-card-min-width: 18rem;                   /* 288px - Reduced to fit kanban columns (360px) */
+  --task-card-max-width: 24rem;                   /* 384px - Maximum card width for content readability */
+  --task-card-responsive-width: auto;             /* Responsive width that adapts to content */
   --task-card-icon-size: 1.25rem;                 /* 20px - Status icon size */
   --task-card-checkbox-size: 1rem;                 /* 16px - Checkbox size */
   --task-card-font-size-xs: 0.625rem;             /* 10px - Extra small font */
   --task-card-padding-xs: 0.125rem;               /* 2px - Extra small padding */
+  --task-card-badge-max-width: 6rem;              /* 96px - Maximum badge width before truncation */
+  --task-card-title-max-lines: 2;                 /* Maximum title lines before truncation */
+  --task-card-content-spacing: 0.5rem;            /* 8px - Spacing for content areas */
   --task-card-selection-offset: -0.125rem;        /* -2px - Selection border offset */
   --task-card-selection-border: 0.125rem;         /* 2px - Selection border width */
   --task-card-border-width: 0.0625rem;            /* 1px - Standard border width */
@@ -256,13 +268,21 @@
 
   /* Priority backgrounds for calendar events */
   --priority-high-bg: rgba(239, 68, 68, 0.3);
-  --priority-medium-bg: rgba(16, 185, 129, 0.3);
+  --priority-medium-bg: rgba(245, 158, 11, 0.3);
   --priority-low-bg: rgba(59, 130, 246, 0.3);
 
   /* Priority indicator glows */
   --priority-high-glow: 0 4px 8px rgba(239, 68, 68, 0.3), 0 0 12px rgba(239, 68, 68, 0.2);
-  --priority-medium-glow: 0 4px 8px rgba(16, 185, 129, 0.3), 0 0 12px rgba(16, 185, 129, 0.2);
+  --priority-medium-glow: 0 4px 8px rgba(245, 158, 11, 0.3), 0 0 12px rgba(245, 158, 11, 0.2);
   --priority-low-glow: 0 4px 8px rgba(59, 130, 246, 0.3), 0 0 12px rgba(59, 130, 246, 0.2);
+
+  /* Alpha variants for priority colors */
+  --color-warning-alpha-10: rgba(245, 158, 11, 0.1);
+  --color-error-alpha-10: rgba(239, 68, 68, 0.1);
+
+  /* Additional priority background variants */
+  --color-priority-medium-bg-subtle: rgba(245, 158, 11, 0.05);
+  --color-priority-medium-border-medium: rgba(245, 158, 11, 0.3);
 
   /* Calendar-Specific Tokens */
   /* Purple - Calendar UI elements (filters, badges) */
@@ -400,9 +420,58 @@
 
   /* Status Indicators */
   --color-success: hsl(var(--green-500));
-  --color-warning: hsl(var(--yellow-500));
+  --color-warning: var(--color-priority-medium); /* Use medium priority orange instead of yellow */
   --color-danger: hsl(var(--red-500));
   --color-info: hsl(var(--blue-500));
+
+  /* ===== PROJECT INDICATOR SYSTEM ===== */
+  /* Container sizes for consistent emoji/colored dot rendering */
+  --project-indicator-size-xs: 16px;   /* Ultra-compact - minimal UI */
+  --project-indicator-size-sm: 20px;   /* Standard - TaskCard, TaskRow, TaskTable */
+  --project-indicator-size-md: 24px;   /* Large - TaskNode, canvas */
+  --project-indicator-size-lg: 32px;   /* Prominent - featured displays */
+
+  /* Emoji sizing within containers */
+  --project-emoji-size-xs: 12px;     /* Emoji within 16px container */
+  --project-emoji-size-sm: 14px;     /* Emoji within 20px container - standard */
+  --project-emoji-size-md: 18px;     /* Emoji within 24px container */
+  --project-emoji-size-lg: 24px;     /* Emoji within 32px container */
+
+  /* CSS circle dot sizes (for colored dots fallback) */
+  --project-circle-size-xs: 6px;     /* Small dot for ultra-compact */
+  --project-circle-size-sm: 7px;     /* Standard dot for regular components */
+  --project-circle-size-md: 8px;     /* Larger dot for canvas visibility */
+  --project-circle-size-lg: 12px;    /* Prominent dot for featured displays */
+
+  /* Glow intensity variations */
+  --project-indicator-glow-subtle: 0 0 6px currentColor, 0 0 12px currentColor;
+  --project-indicator-glow-medium: 0 0 8px currentColor, 0 0 16px currentColor;
+  --project-indicator-glow-strong: 0 0 12px currentColor, 0 0 24px currentColor;
+
+  /* Enhanced glass morphism effects */
+  --project-indicator-border: rgba(255, 255, 255, 0.3);
+  --project-indicator-shadow-inset: inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  --project-indicator-backdrop: blur(2px) saturate(150%);
+
+  /* Emoji-specific styling */
+  --project-emoji-font-stack: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "EmojiSymbols", system-ui, sans-serif;
+  --project-emoji-rendering: optimizeLegibility;
+  --project-emoji-smoothing: antialiased;
+  --project-emoji-sharpness: -webkit-optimize-contrast, crisp-edges;
+
+  /* SVG-specific effects */
+  --project-svg-filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+  --project-svg-transition: all var(--duration-fast) var(--spring-smooth);
+
+  /* Container spacing and padding */
+  --project-indicator-padding: 0;
+  --project-indicator-margin: 0;
+  --project-indicator-gap: var(--space-2);
+
+  /* Brand colors for project indicators */
+  --brand-bg-subtle: rgba(78, 205, 196, 0.1);
+  --brand-border-subtle: rgba(78, 205, 196, 0.2);
+  --brand-primary-glow: 0 0 16px rgba(78, 205, 196, 0.4);
 
   /* Context Menu Tokens */
   --bg-hover: var(--surface-hover);
@@ -690,6 +759,70 @@
   }
 }
 
+/* ===== HEBREW/RTL TEXT SUPPORT ===== */
+
+/* Hebrew text alignment classes */
+.hebrew-text {
+  unicode-bidi: plaintext;
+}
+
+.text-align-right {
+  text-align: right !important;
+}
+
+.direction-rtl {
+  direction: rtl !important;
+}
+
+.hebrew-input {
+  text-align: right;
+  direction: rtl;
+  unicode-bidi: plaintext;
+}
+
+/* RTL/LTR document direction support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .text-align-start {
+  text-align: right;
+}
+
+[dir="rtl"] .text-align-end {
+  text-align: left;
+}
+
+[dir="ltr"] .text-align-start {
+  text-align: left;
+}
+
+[dir="ltr"] .text-align-end {
+  text-align: right;
+}
+
+/* ===== GLOBAL EMOJI STYLING ===== */
+
+/* Ensure consistent colorful emoji rendering across all components */
+.project-emoji,
+.project-emoji-icon,
+[class*="project-emoji"],
+[class*="-emoji"] {
+  /* Noto Color Emoji for consistent colorful emoji rendering */
+  font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "EmojiSymbols", system-ui, sans-serif;
+  /* Enhanced emoji rendering */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  /* Ensure proper emoji display */
+  font-style: normal;
+  font-weight: normal;
+  -webkit-text-stroke-width: 0;
+  -webkit-text-stroke-color: transparent;
+}
+
 /* ===== DESIGN SYSTEM DOCUMENTATION (in comments) ===== */
 
 /*
@@ -729,87 +862,4 @@ WHEN TO USE WHAT:
 - Typography: var(--text-*) + var(--font-*)
 */
 
-/* ===== GLOBAL OVERFLOW POLICIES ===== */
-/* Prevent unwanted horizontal scrolling throughout the app */
-
-/* Root level overflow containment */
-html, body {
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-/* Allow horizontal scrolling only in designated areas */
-.horizontal-scroll-container {
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
-/* Ensure proper scroll containment in scrollable areas */
-.scroll-contained {
-  overflow-x: auto;
-  overflow-y: visible;
-  contain: layout paint;
-}
-
-/* ===== HEBREW TEXT ALIGNMENT SYSTEM ===== */
-
-/* Hebrew content right-alignment - overrides document direction */
-.hebrew-text,
-.hebrew-content,
-.text-align-right {
-  text-align: right !important;
-  direction: rtl !important;
-}
-
-/* Force Hebrew alignment in LTR mode */
-[dir="ltr"] .hebrew-text,
-[dir="ltr"] .hebrew-content,
-[dir="ltr"] .text-align-right {
-  text-align: right !important;
-  direction: rtl !important;
-}
-
-/* Ensure Hebrew alignment in RTL mode as well */
-[dir="rtl"] .hebrew-text,
-[dir="rtl"] .hebrew-content,
-[dir="rtl"] .text-align-right {
-  text-align: right !important;
-  direction: rtl !important;
-}
-
-/* Hebrew-specific input styling */
-.hebrew-input {
-  text-align: right !important;
-  direction: rtl !important;
-}
-
-/* Apply Hebrew alignment to specific components */
-.hebrew-task-title,
-.hebrew-task-description,
-.hebrew-input-field {
-  text-align: right !important;
-  direction: rtl !important;
-}
-
-/* Handle mixed Hebrew/English content with unicode-bidi */
-.hebrew-mixed-content {
-  text-align: right !important;
-  direction: rtl !important;
-  unicode-bidi: plaintext;
-}
-
-/* Force right alignment for any element containing Hebrew */
-*:has(.hebrew-indicator) {
-  text-align: right !important;
-  direction: rtl !important;
-}
-
-/* Hebrew text indicators for dynamic detection */
-.hebrew-indicator {
-  /* Hidden class used for detection */
-  display: none;
-}
-
-/* ===== END HEBREW TEXT ALIGNMENT ===== */
-
-/* Cache bust: 1761553952 */
+/* Cache bust: 1761553951 */

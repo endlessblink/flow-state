@@ -12,7 +12,7 @@ const MockCloudSyncSettings = {
           <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">Connected to cloud service</p>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
             <span style="font-size: 13px;">Last sync: 2 minutes ago</span>
-            <button style="padding: 6px 12px; background: var(--brand-primary); color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Sync Now</button>
+            <button style="padding: 6px 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 4px; font-size: 12px; cursor: pointer;">Sync Now</button>
           </div>
         </div>
         <div style="padding: 16px; background: var(--surface-tertiary); border-radius: 8px; border: 1px solid var(--border-medium);">
@@ -69,7 +69,7 @@ export const Closed: Story = {
         <div style="padding: 20px; text-align: center;">
           <h3>Settings Modal (Closed)</h3>
           <p>Click the button below to open the settings</p>
-          <button @click="$event => console.log('Open settings')" style="margin-top: 20px; padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;">
+          <button @click="$event => console.log('Open settings')" style="margin-top: 20px; padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;">
             ⚙️ Open Settings
           </button>
         </div>
@@ -392,7 +392,7 @@ export const InteractiveDemo: Story = {
             <h1 style="margin: 0;">Interactive Settings Demo</h1>
             <button
               @click="openSettings"
-              style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;"
+              style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -475,7 +475,7 @@ export const InteractiveDemo: Story = {
                 </span>
                 <button
                   @click="syncNow"
-                  style="padding: 6px 12px; background: var(--brand-primary); color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;"
+                  style="padding: 6px 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 4px; font-size: 12px; cursor: pointer;"
                   :disabled="syncStatus === 'syncing'"
                 >
                   {{ syncStatus === 'syncing' ? 'Syncing...' : 'Sync Now' }}

@@ -44,9 +44,12 @@
             backgroundColor: projectData.colorType === 'hex' ? projectData.color : 'transparent'
           }"
         >
-          <span v-if="projectData.colorType === 'emoji' && projectData.emoji" class="preview-emoji">
-            {{ projectData.emoji }}
-          </span>
+          <ProjectEmojiIcon
+          v-if="projectData.colorType === 'emoji' && projectData.emoji"
+          :emoji="projectData.emoji"
+          size="sm"
+          class="preview-emoji"
+        />
         </div>
         <button
           class="change-icon-btn"
@@ -70,7 +73,7 @@
         <BaseButton
           variant="primary"
           @click="saveProject"
-          :disabled="!projectData.name.trim()"
+          :disabled="!projectData?.name?.trim()"
         >
           {{ isEditing ? 'Save Changes' : 'Create Project' }}
         </BaseButton>
@@ -96,6 +99,7 @@ import BaseModal from '@/components/base/BaseModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import EmojiPicker from './EmojiPicker.vue'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 interface Props {
   isOpen: boolean
@@ -208,12 +212,12 @@ watch(() => props.isOpen, async (isOpen) => {
 })
 
 const saveProject = () => {
-  if (!projectData.value.name.trim()) return
+  if (!projectData?.value?.name?.trim()) return
 
   if (isEditing.value && props.project) {
     // Update existing project using store method
     taskStore.updateProject(props.project.id, {
-      name: projectData.value.name.trim(),
+      name: projectData?.value?.name?.trim() || '',
       color: projectData.value.color,
       colorType: projectData.value.colorType,
       emoji: projectData.value.emoji,
@@ -227,7 +231,7 @@ const saveProject = () => {
   } else {
     // Create new project
     const newProject = taskStore.createProject({
-      name: projectData.value.name.trim(),
+      name: projectData?.value?.name?.trim() || '',
       color: projectData.value.color,
       colorType: projectData.value.colorType,
       emoji: projectData.value.emoji,

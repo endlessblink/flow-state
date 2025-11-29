@@ -68,6 +68,13 @@ export class SimpleGlobalKeyboardHandler {
   private shouldIgnoreElement(target: Element): boolean {
     const element = target as HTMLElement
 
+    // 🔧 FIX: Allow Enter key events on quick task input to pass through
+    // Check if this is the quick task input field
+    if (element.classList.contains('task-input') ||
+        element.closest('.quick-add-input')) {
+      return false // Don't block - allow @keydown.enter to work
+    }
+
     // Check if we're in an input field and ignoreInputs is true
     if (this.ignoreInputs) {
       const tagName = element.tagName?.toLowerCase()

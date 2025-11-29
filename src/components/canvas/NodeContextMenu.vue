@@ -221,11 +221,11 @@ const submenuTimeout = ref<number | null>(null)
 const submenuPosition = ref({ flipHorizontal: false, adjustVertical: 0 })
 
 const menuPosition = computed(() => ({
-  position: 'fixed',
+  position: 'fixed' as const,
   left: `${props.x}px`,
   top: `${props.y}px`,
   zIndex: 99999
-}))
+}) as any)
 
 // Determine node type
 const isTaskNode = computed(() => {

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
+import { ref, defineComponent } from 'vue'
 import GroupModal from '@/components/GroupModal.vue'
 
 const meta = {

@@ -14,7 +14,7 @@ export interface CalendarEvent {
   color: string
   column: number
   totalColumns: number
-  isUnscheduled?: boolean // Flag to distinguish unscheduled inbox tasks
+  isDueDate: boolean // Whether this represents a task due date
 }
 
 /**
@@ -116,7 +116,7 @@ export function useCalendarEventHelpers() {
       return 'var(--glass-bg-heavy)' // Emoji projects don't have colors
     }
 
-    return project.color || 'var(--glass-bg-heavy)'
+    return Array.isArray(project.color) ? project.color[0] : project.color || 'var(--glass-bg-heavy)'
   }
 
   const getProjectEmoji = (event: CalendarEvent): string => {
@@ -126,7 +126,8 @@ export function useCalendarEventHelpers() {
   }
 
   const getProjectName = (event: CalendarEvent): string => {
-    return taskStore.getProjectDisplayName(event.extendedProps?.projectId || null)
+    const project = getTaskProject(event)
+    return project?.name || 'Unknown Project'
   }
 
   return {

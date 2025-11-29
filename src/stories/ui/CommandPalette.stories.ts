@@ -74,7 +74,7 @@ export const Closed: Story = {
         <p>Press Ctrl+K or Cmd+K to open the command palette</p>
         <button
           @click="args.isOpen = true"
-          style="margin-top: 20px; padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;"
+          style="margin-top: 20px; padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
         >
           ⚡ Open Command Palette
         </button>
@@ -253,7 +253,7 @@ export const InteractiveDemo: Story = {
         <div style="display: flex; gap: 12px; margin-bottom: 30px;">
           <button
             @click="exposeCommandPalette"
-            style="padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
           >
             ⚡ Open Palette (Ctrl+K)
           </button>
@@ -396,7 +396,7 @@ export const ProductivityWorkflow: Story = {
             <div style="display: flex; gap: 8px; margin-top: 16px;">
               <button
                 @click="runScenario(index)"
-                style="flex: 1; padding: 8px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer;"
+                style="flex: 1; padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
               >
                 ▶️ Demo
               </button>
@@ -499,7 +499,7 @@ export const AllVariants: Story = {
             <div style="display: flex; gap: 12px;">
               <button
                 @click="showQuickDemo = true"
-                style="flex: 1; padding: 12px 16px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer;"
+                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer;"
               >
                 ⚡ Demo
               </button>
@@ -518,7 +518,7 @@ export const AllVariants: Story = {
             <div style="display: flex; gap: 12px;">
               <button
                 @click="showFullDemo = true"
-                style="flex: 1; padding: 12px 16px; background: var(--color-navigation); color: white; border: none; border-radius: 8px; cursor: pointer;"
+                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid var(--color-navigation); color: var(--color-navigation); border-radius: 8px; cursor: pointer;"
               >
                 ⚙️ Demo
               </button>
@@ -537,7 +537,7 @@ export const AllVariants: Story = {
             <div style="display: flex; gap: 12px;">
               <button
                 @click="showWorkflowDemo = true"
-                style="flex: 1; padding: 12px 16px; background: var(--color-break); color: white; border: none; border-radius: 8px; cursor: pointer;"
+                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid var(--color-break); color: var(--color-break); border-radius: 8px; cursor: pointer;"
               >
                 🚀 Demo
               </button>

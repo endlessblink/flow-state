@@ -150,6 +150,8 @@ import {
   Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2,
   LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3, Sparkles
 } from 'lucide-vue-next'
+import { useContextMenuEvents } from '@/composables/useContextMenuEvents'
+import { useContextMenuPositioning } from '@/composables/useContextMenuPositioning'
 
 interface Props {
   isVisible: boolean
@@ -191,37 +193,29 @@ const showLayoutSubmenu = ref(false)
 const submenuTimeout = ref<number | null>(null)
 const submenuPosition = ref({ flipHorizontal: false, adjustVertical: 0 })
 
-const menuPosition = computed(() => {
-  console.log('🔧 CanvasContextMenu - Positioning menu at:', props.x, props.y, 'Visible:', props.isVisible)
-  return {
-    position: 'fixed',
-    left: `${props.x}px`,
-    top: `${props.y}px`,
-    zIndex: 999999
-  }
+// Use unified positioning system
+const { menuPosition, updatePosition } = useContextMenuPositioning({
+  x: props.x,
+  y: props.y,
+  menuRef,
+  isVisible: props.isVisible,
+  offset: { x: 0, y: 0 },
+  viewportPadding: 16
 })
 
-// Close menu on click outside
-const handleClickOutside = (event: MouseEvent) => {
-  if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
-    emit('close')
-  }
-}
+// Use unified event handling
+useContextMenuEvents({
+  isVisible: props.isVisible,
+  menuRef,
+  closeCallback: () => emit('close'),
+  preventCloseOnMenuClick: true
+})
 
-// Close menu on Escape key
-const handleEscape = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
-    emit('close')
-  }
-}
-
-watch(() => props.isVisible, (visible) => {
-  if (visible) {
-    document.addEventListener('click', handleClickOutside)
-    document.addEventListener('keydown', handleEscape)
-  } else {
-    document.removeEventListener('click', handleClickOutside)
-    document.removeEventListener('keydown', handleEscape)
+// Watch for visibility changes to update positioning
+watch(() => props.isVisible, async (isVisible) => {
+  if (isVisible) {
+    await nextTick()
+    updatePosition()
   }
 })
 
@@ -335,10 +329,7 @@ const handleArrangeInGrid = () => {
   emit('close')
 }
 
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
-  document.removeEventListener('keydown', handleEscape)
-})
+// Cleanup handled by useContextMenuEvents composable
 </script>
 
 <style scoped>
@@ -349,8 +340,11 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   padding: var(--space-2) 0;
-  min-width: 240px;
-  z-index: 999999 !important;
+  min-width: 200px;
+  max-width: 320px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: var(--z-popover);
   animation: menuSlideIn var(--duration-fast) var(--spring-bounce);
 }
 
@@ -482,8 +476,11 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   padding: var(--space-2) 0;
-  min-width: 200px;
-  z-index: 100000;
+  min-width: 180px;
+  max-width: 280px;
+  max-height: 60vh;
+  overflow-y: auto;
+  z-index: var(--z-popover);
   pointer-events: auto;
   animation: submenuSlideIn var(--duration-fast) ease-out;
 }

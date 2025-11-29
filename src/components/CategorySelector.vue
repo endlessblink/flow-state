@@ -27,9 +27,12 @@
         </span>
 
         <!-- Project Emoji or Color Dot -->
-        <span v-if="node.project.colorType === 'emoji' && node.project.emoji" class="project-emoji">
-          {{ node.project.emoji }}
-        </span>
+        <ProjectEmojiIcon
+          v-if="node.project.colorType === 'emoji' && node.project.emoji"
+          :emoji="node.project.emoji"
+          size="xs"
+          class="project-emoji"
+        />
         <span v-else class="color-dot" :style="{ background: getColorValue(node.project.color) }"></span>
 
         <!-- Project Name -->
@@ -62,6 +65,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import type { Project } from '@/stores/tasks'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 interface Props {
   maxShortcuts?: number
@@ -249,7 +253,7 @@ onUnmounted(() => {
 
 .create-new-button:hover {
   border-color: var(--brand-primary) !important;
-  background: var(--glass-bg-medium) !important;
+  background: var(--brand-bg) !important;
   color: var(--brand-primary);
 }
 

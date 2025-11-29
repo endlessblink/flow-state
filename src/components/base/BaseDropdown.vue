@@ -122,7 +122,7 @@ const displayValue = computed(() => {
     if (selected.length === 1) return selected[0].label
     return `${selected.length} selected`
   } else {
-    return selectedOption.value ? selectedOption.value.label : props.placeholder
+    return selectedOption.value && !Array.isArray(selectedOption.value) ? selectedOption.value.label : props.placeholder
   }
 })
 

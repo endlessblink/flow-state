@@ -16,12 +16,12 @@
       :project-id="project.id"
       :has-children="hasChildren"
       :expanded="isExpanded"
-      :color-dot="project.color"
+      :color-dot="Array.isArray(project.color) ? project.color[0] : project.color"
       :color-type="project.colorType"
       :emoji="project.emoji"
       :count="getProjectTaskCount(project.id)"
       :nested="nested"
-      :style="{ '--nesting-indent': `${Math.min(nestingDepth * 12, 32)}px` }"
+      :style="{ '--nesting-indent': `${nestingDepth * 14}px` }"
       :aria-expanded="hasChildren ? isExpanded : undefined"
       :aria-level="level"
       :tabindex="taskStore.activeProjectId === project.id ? 0 : -1"
@@ -43,7 +43,7 @@
         v-if="hasChildren && isExpanded"
         class="nested-children"
         role="group"
-        :style="{ '--nesting-indent': `${Math.min((nestingDepth + 1) * 12, 32)}px` }"
+        :style="{ '--nesting-indent': `${(nestingDepth + 1) * 14}px` }"
       >
         <ProjectTreeItem
           v-for="child in children"
@@ -98,7 +98,7 @@ const hasChildren = computed(() => {
 
 // Check if this project is expanded
 const isExpanded = computed(() => {
-  return props.expandedProjects.includes(props.project.id)
+  return Array.isArray(props.expandedProjects) && props.expandedProjects.includes(props.project.id)
 })
 
 // Get children of this project
@@ -132,13 +132,13 @@ const getProjectTaskCount = (projectId: string): number => {
   // Get all child project IDs for this project tree
   const allChildProjectIds = getChildProjectIds(projectId)
 
-  // Count tasks that belong to this project tree (excluding done tasks globally)
+  // Count tasks that belong to this project tree
   const projectTasks = taskStore.tasks.filter(task => {
     // Only count tasks that belong to this project tree
     if (!allChildProjectIds.includes(task.projectId)) return false
 
-    // CRITICAL: Counters should NEVER show done tasks, regardless of settings
-    if (task.status === 'done') return false
+    // Respect hideDoneTasks setting for consistency with sidebar counts
+    if (taskStore.hideDoneTasks && task.status === 'done') return false
 
     return true
   })
@@ -154,7 +154,8 @@ const getProjectTaskCount = (projectId: string): number => {
 }
 
 .nested-children {
-  /* Eliminate compound padding - let BaseNavItem handle all indentation */
+  /* Dynamic indentation based on nesting level */
+  padding-left: calc(var(--nesting-indent, 20px) + var(--space-2));
   margin-top: var(--space-1);
   display: flex;
   flex-direction: column;

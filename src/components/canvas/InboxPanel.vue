@@ -91,7 +91,7 @@
       <InboxTimeFilters
         :tasks="baseInboxTasks"
         :active-filter="activeTimeFilter"
-        @filter-changed="activeTimeFilter = $event"
+        @filter-changed="activeTimeFilter = $event as any"
       />
     </div>
 
@@ -197,7 +197,7 @@ const contextMenuTask = ref<any>(null) // Task that was right-clicked
 // Get ONLY inbox tasks (tasks without canvas position, excluding done tasks)
 const baseInboxTasks = computed(() =>
   taskStore.filteredTasks.filter(task =>
-    (task.isInInbox || !task.canvasPosition) && task.status !== 'done'
+    !task.canvasPosition && task.isInInbox !== false && task.status !== 'done'
   )
 )
 
@@ -500,11 +500,11 @@ const handleEnterFocusMode = () => {
 }
 
 const handleDeleteSelected = () => {
-  const { deleteTasksWithUndo } = useUnifiedUndoRedo()
+  const { deleteTaskWithUndo } = useUnifiedUndoRedo()
   const tasksToDelete = Array.from(selectedTaskIds.value)
 
   if (tasksToDelete.length > 0) {
-    deleteTasksWithUndo(tasksToDelete)
+    tasksToDelete.forEach(taskId => deleteTaskWithUndo(taskId))
     selectedTaskIds.value.clear()
   }
 
@@ -528,8 +528,8 @@ const handleEdit = (taskId: string) => {
 }
 
 const handleConfirmDelete = (taskId: string) => {
-  const { deleteTasksWithUndo } = useUnifiedUndoRedo()
-  deleteTasksWithUndo([taskId])
+  const { deleteTaskWithUndo } = useUnifiedUndoRedo()
+  deleteTaskWithUndo(taskId)
   selectedTaskIds.value.delete(taskId)
   closeContextMenu()
 }
@@ -547,162 +547,231 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .inbox-panel {
-  @apply bg-white/10 backdrop-blur-md rounded-lg border border-white/20 h-full flex flex-col overflow-hidden;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  height: 100%;
+  width: 320px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .inbox-panel.collapsed {
-  @apply min-w-12;
+  width: 3rem;
+  min-width: 3rem;
 }
 
 .inbox-header {
-  @apply flex items-center gap-2 p-3 border-b border-white/10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .collapse-btn {
-  @apply p-1 rounded hover:bg-white/10 transition-colors flex-shrink-0;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.collapse-btn:hover {
+  background: var(--surface-hover);
 }
 
 .inbox-title {
-  @apply text-white font-medium text-sm flex-1;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.875rem;
+  flex: 1;
 }
 
 .quick-add {
-  @apply p-3 border-b border-white/10;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .brain-dump {
-  @apply p-3 border-b border-white/10 space-y-3;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .batch-actions {
-  @apply flex items-center justify-between p-2 bg-white/5 border-b border-white/10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2);
+  background: var(--glass-bg-light);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .selected-count {
-  @apply text-white/70 text-xs font-medium;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .inbox-tasks {
-  @apply flex-1 overflow-y-auto p-2 space-y-2;
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0; /* Important for flexbox to respect parent bounds */
 }
 
 .inbox-task-card {
-  @apply bg-white/5 border border-white/10 rounded-lg p-3 cursor-pointer relative;
-  @apply hover:bg-white/10 hover:border-white/20 transition-all duration-200;
-  @apply select-none;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.inbox-task-card:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
 }
 
 .inbox-task-card.selected {
-  @apply bg-blue-500/20 border-blue-400/50;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(96, 165, 250, 0.5);
 }
 
 .inbox-task-card.timer-active {
-  @apply bg-orange-500/10 border-orange-400/50;
+  background: rgba(251, 146, 60, 0.1);
+  border-color: rgba(251, 146, 60, 0.5);
 }
 
 .selection-indicator {
-  @apply absolute top-2 left-2 w-2 h-2 bg-blue-400 rounded-full;
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  width: 0.5rem;
+  height: 0.5rem;
+  background: rgb(96, 165, 250);
+  border-radius: 50%;
 }
 
 .priority-stripe {
-  @apply absolute left-0 top-0 bottom-0 w-1;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0.25rem;
 }
 
 .priority-stripe-high {
-  @apply bg-red-400;
+  background: var(--color-priority-high);
 }
 
 .priority-stripe-medium {
-  @apply bg-yellow-400;
+  background: var(--color-priority-medium);
 }
 
 .priority-stripe-low {
-  @apply bg-blue-400;
+  background: var(--color-priority-low);
 }
 
 .priority-stripe-null {
-  @apply bg-gray-400;
+  background: rgb(156, 163, 175);
 }
 
 .timer-indicator {
-  @apply absolute top-2 right-2 text-orange-400;
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  color: rgb(251, 146, 60);
 }
 
 .task-content {
-  @apply pl-3;
+  padding-left: var(--space-3);
 }
 
 .task-title {
-  @apply text-white text-sm font-medium mb-1 leading-tight;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: var(--space-1);
+  line-height: 1.25;
 }
 
 .task-meta {
-  @apply flex items-center gap-2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .duration-badge {
-  @apply text-white/50 text-xs;
+  color: var(--text-muted);
+  font-size: 0.75rem;
 }
 
 /* Collapsed state adjustments */
 .inbox-panel.collapsed .inbox-header {
-  @apply justify-center;
+  justify-content: center;
 }
 
 .collapsed-badges-container {
-  @apply flex flex-col items-center gap-1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
   margin-top: var(--space-2);
   width: 100%;
   overflow: visible;
 }
 
 .dual-badges {
-  @apply flex flex-col items-center gap-1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .dual-badges .total-count {
-  @apply opacity-70;
+  opacity: 0.7;
 }
 
 .dual-badges .filtered-count {
-  @apply scale-90;
+  transform: scale(0.9);
 }
 
 .inbox-panel.collapsed .quick-add,
 .inbox-panel.collapsed .brain-dump,
 .inbox-panel.collapsed .batch-actions,
 .inbox-panel.collapsed .inbox-tasks {
-  @apply hidden;
+  display: none;
 }
 
 /* Scrollbar styling */
 .inbox-tasks::-webkit-scrollbar {
-  @apply w-2;
+  width: 0.5rem;
 }
 
 .inbox-tasks::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background: transparent;
 }
 
 .inbox-tasks::-webkit-scrollbar-thumb {
-  @apply bg-white/20 rounded-full;
+  background: var(--glass-border);
+  border-radius: 9999px;
 }
 
 .inbox-tasks::-webkit-scrollbar-thumb:hover {
-  @apply bg-white/30;
-}
-
-/* Dark theme support */
-@media (prefers-color-scheme: dark) {
-  .inbox-panel {
-    @apply bg-gray-900/50 border-gray-700/50;
-  }
-
-  .inbox-task-card {
-    @apply bg-gray-800/50 border-gray-700/50;
-    @apply hover:bg-gray-800/70 hover:border-gray-600/50;
-  }
+  background: var(--glass-border-hover);
 }
 
 /* Animation for collapse/expand */
@@ -721,4 +790,3 @@ onBeforeUnmount(() => {
   }
 }
 </style>
-

@@ -75,7 +75,7 @@ const taskInputRef = ref<HTMLInputElement | null>(null)
 const projectOptions = computed(() => [
   { label: 'Project', value: '' },
   ...taskStore.projects.map(project => ({
-    label: project.emoji ? `${project.emoji} ${project.name}` : project.name,
+    label: taskStore.getProjectDisplayName(project.id),
     value: project.id
   }))
 ])

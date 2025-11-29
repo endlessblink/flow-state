@@ -67,7 +67,7 @@
             <div class="result-content">
               <div class="result-title" v-html="highlightMatch(project.name)"></div>
               <div class="result-meta">
-                <span class="project-color" :style="{ backgroundColor: project.color }"></span>
+                <span class="project-color" :style="{ backgroundColor: project.color as string }"></span>
                 <span>{{ getTaskCountForProject(project.id) }} tasks</span>
               </div>
             </div>

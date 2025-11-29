@@ -1,8 +1,14 @@
+<!--
+TODO: RESTORE I18N - This component has hardcoded English due to Vue i18n error
+Originally: const { t } = useI18n()
+Error: "Unexpected return type in composer" at line 89:33
+Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
+-->
 <template>
   <div class="login-form">
     <div class="form-header">
-      <h2 class="form-title">{{ safeT('auth.login.title', 'Sign In') }}</h2>
-      <p class="form-subtitle">{{ safeT('auth.login.subtitle', 'Welcome back! Sign in to access your tasks') }}</p>
+      <h2 class="form-title">Sign In</h2>
+      <p class="form-subtitle">Welcome back to your productivity hub</p>
     </div>
 
     <form @submit.prevent="handleSubmit" class="auth-form">
@@ -16,8 +22,8 @@
       <BaseInput
         v-model="email"
         type="email"
-        :label="safeT('auth.email', 'Email')"
-        :placeholder="safeT('auth.emailPlaceholder', 'Enter your email')"
+        label="Email"
+        placeholder="Enter your email"
         required
         :disabled="isLoading"
         @keydown.enter="handleSubmit"
@@ -30,8 +36,8 @@
         <BaseInput
           v-model="password"
           :type="showPassword ? 'text' : 'password'"
-          :label="safeT('auth.password', 'Password')"
-          :placeholder="safeT('auth.passwordPlaceholder', 'Enter your password')"
+          label="Password"
+          placeholder="Enter your password"
           required
           :disabled="isLoading"
           @keydown.enter="handleSubmit"
@@ -61,7 +67,7 @@
           class="forgot-password-link"
           :disabled="isLoading"
         >
-          {{ safeT('auth.forgotPassword', 'Forgot password?') }}
+          Forgot Password?
         </button>
       </div>
 
@@ -75,12 +81,12 @@
         class="submit-button"
         data-testid="login-button"
       >
-        {{ isLoading ? safeT('auth.signingIn', 'Signing in...') : safeT('auth.signIn', 'Sign In') }}
+        {{ isLoading ? 'Signing In...' : 'Sign In' }}
       </BaseButton>
 
       <!-- Divider -->
       <div class="divider">
-        <span>{{ safeT('auth.or', 'or') }}</span>
+        <span>or</span>
       </div>
 
       <!-- Google Sign-In (will be separate component) -->
@@ -89,7 +95,7 @@
       <!-- Sign Up Link -->
       <div class="form-footer">
         <span class="footer-text">
-          {{ safeT('auth.noAccount', "Don't have an account?") }}
+          Don't have an account?
         </span>
         <button
           type="button"
@@ -97,7 +103,7 @@
           class="switch-mode-link"
           :disabled="isLoading"
         >
-          {{ safeT('auth.signUp', 'Sign Up') }}
+          Sign Up
         </button>
       </div>
     </form>
@@ -106,7 +112,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -125,20 +130,6 @@ interface Emits {
 }
 
 const emit = defineEmits<Emits>()
-
-// ===== i18n Setup =====
-const { t } = useI18n()
-
-// Safe translation function with fallbacks
-const safeT = (key: string, fallback?: string): string => {
-  try {
-    const result = t(key)
-    return typeof result === 'string' ? result : fallback || key
-  } catch (error) {
-    console.warn(`Translation error for key: ${key}`, error)
-    return fallback || key
-  }
-}
 
 // ===== State =====
 const authStore = useAuthStore()

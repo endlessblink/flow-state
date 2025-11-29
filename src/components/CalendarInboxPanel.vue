@@ -14,9 +14,9 @@
 
     <!-- Collapsed state task count indicators positioned under arrow -->
     <div v-if="isCollapsed" class="collapsed-badges-container">
-      <!-- Show dual count when filter is active, single count when in default state -->
+      <!-- Show dual count when filter is active, single count when no filter -->
       <BaseBadge
-        v-if="currentFilter === 'unscheduled'"
+        v-if="currentFilter === 'allTasks'"
         variant="count"
         size="sm"
         rounded
@@ -75,22 +75,64 @@
         <p class="empty-subtext">All tasks are scheduled</p>
       </div>
 
-      <!-- Task Cards -->
-      <div
-        v-for="task in inboxTasks"
-        :key="task.id"
-        class="inbox-task-card"
-        draggable="true"
-        @click="handleTaskClick($event, task)"
-        @dblclick="handleTaskDoubleClick(task)"
-        @contextmenu.prevent="handleTaskContextMenu($event, task)"
-        @dragstart="handleDragStart($event, task)"
-      >
+      <!-- Task Cards with native HTML5 drag-drop (NOT vuedraggable - per PomoFlow spec) -->
+      <div class="inbox-task-list">
+        <div
+          v-for="task in inboxTasks"
+          :key="task.id"
+          class="inbox-task-card"
+          draggable="true"
+          @dragstart="onDragStart($event, task)"
+          @dragend="onDragEnd"
+          :class="{ 'is-dragging': draggingTaskId === task.id }"
+          @click="handleTaskClick($event, task)"
+          @dblclick="handleTaskDoubleClick(task)"
+          @contextmenu.prevent="handleTaskContextMenu($event, task)"
+        >
         <div class="priority-stripe" :class="`priority-stripe-${task.priority}`"></div>
+
+        <!-- Timer Active Badge -->
+        <div v-if="isTimerActive(task.id)" class="timer-indicator" title="Timer Active">
+          <Timer :size="12" />
+        </div>
+
         <div class="task-content">
           <div class="task-title">{{ task.title }}</div>
-          <div class="task-meta">
-            <span class="task-project">{{ getProjectName(task.projectId) }}</span>
+
+          <!-- Enhanced metadata section -->
+          <div class="task-metadata">
+            <!-- Status badge -->
+            <span class="status-badge">{{ statusLabel(task.status) }}</span>
+
+            <!-- Due date badge -->
+            <span v-if="task.dueDate" class="due-date-badge" title="Due Date">
+              <Calendar :size="12" />
+              {{ task.dueDate }}
+            </span>
+
+            <!-- Project visual indicator -->
+            <span
+              class="project-emoji-badge"
+              :class="[`project-visual--${projectVisual(task.projectId).type}`, { 'project-visual--colored': projectVisual(task.projectId).type === 'css-circle' }]"
+              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+            >
+              <ProjectEmojiIcon
+                v-if="projectVisual(task.projectId).type === 'emoji'"
+                :emoji="projectVisual(task.projectId).content"
+                size="sm"
+                :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+              />
+              <span
+                v-else-if="projectVisual(task.projectId).type === 'css-circle'"
+                class="project-emoji project-css-circle"
+                :style="{ '--project-color': projectVisual(task.projectId).color }"
+              >
+                {{ projectVisual(task.projectId).content }}
+              </span>
+              <span v-else class="project-emoji">{{ projectVisual(task.projectId).content }}</span>
+            </span>
+
+            <!-- Duration badge -->
             <span v-if="task.estimatedDuration" class="duration-badge">
               {{ task.estimatedDuration }}m
             </span>
@@ -112,6 +154,7 @@
           >
             <Edit2 :size="12" />
           </button>
+          </div>
         </div>
       </div>
     </div>
@@ -135,9 +178,10 @@ import { ref, computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import {
-  ChevronLeft, ChevronRight, Play, Edit2, Plus
+  ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar
 } from 'lucide-vue-next'
 import BaseBadge from '@/components/base/BaseBadge.vue'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
@@ -146,6 +190,7 @@ const timerStore = useTimerStore()
 const isCollapsed = ref(false)
 const newTaskTitle = ref('')
 const currentFilter = ref('unscheduled')
+const draggingTaskId = ref<string | null>(null)
 
 // Filter options
 const filterOptions = [
@@ -171,53 +216,46 @@ const inboxTasks = computed(() => {
   // Calendar inbox should work independently of smart view filtering
   const allTasks = taskStore.tasks
 
-  
+
   const filtered = allTasks.filter(task => {
-    // Helper function to normalize date to YYYY-MM-DD format
-    const normalizeDate = (dateStr: string | undefined | null): string | null => {
-      if (!dateStr) return null
-
-      try {
-        // Handle YYYY-MM-DD format
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-          return dateStr
-        }
-
-        // Handle DD/MM/YYYY format
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-          const [day, month, year] = dateStr.split('/')
-          return `${year}-${month}-${day}`
-        }
-
-        // Try to parse as date and format
-        const date = new Date(dateStr)
-        if (!isNaN(date.getTime())) {
-          return date.toISOString().split('T')[0]
-        }
-      } catch (error) {
-        console.warn('Failed to normalize date:', dateStr, error)
-      }
-
-      return null
-    }
-
-    // SIMPLIFIED: Check if task is in inbox (not scheduled on calendar)
-    // More permissive inbox logic - include tasks unless explicitly marked as not in inbox
-    const isInInbox = task.isInInbox !== false
-
-    // Get normalized due date
-    const normalizedDueDate = normalizeDate(task.dueDate)
+    // Calculate task properties
+    const hasInstances = task.instances && task.instances.length > 0
+    const hasLegacySchedule = task.scheduledDate && task.scheduledTime
+    // FIXED: Calendar inbox shows all non-done tasks, regardless of isInInbox flag
+    // The isInInbox flag is for the main inbox view, but calendar should show
+    // all tasks that could be scheduled (dropped onto the calendar)
+    const isNotDone = task.status !== 'done'
+    const isInInbox = isNotDone // For calendar purposes, all non-done tasks are "in inbox"
 
     // Filter logic based on current selection
     let passesFilter = false
     switch (currentFilter.value) {
       case 'today': {
         const todayStr = new Date().toISOString().split('T')[0]
-        passesFilter = normalizedDueDate === todayStr && isInInbox
+
+        // Check if task is due today (support both legacy dueDate and instances system)
+        const isDueToday = task.dueDate === todayStr ||
+          !!(task.instances && task.instances.some(instance =>
+            instance.scheduledDate === todayStr
+          ))
+
+        // Show tasks that are due today and are in inbox state
+        passesFilter = isDueToday && isInInbox
+
+        // Debug: Log detailed today filter reasoning
+        console.log(`[CalendarInboxPanel] Today filter for "${task.title}":`, {
+          taskDueDate: task.dueDate,
+          todayStr,
+          isDueToday,
+          hasInstances,
+          instances: task.instances,
+          isInInbox,
+          passesFilter
+        })
         break
       }
       case 'unscheduled':
-        passesFilter = !normalizedDueDate && isInInbox
+        passesFilter = !hasInstances && isInInbox
         break
       case 'notOnCanvas':
         passesFilter = !task.canvasPosition && isInInbox
@@ -229,14 +267,14 @@ const inboxTasks = computed(() => {
         passesFilter = isInInbox
         break
       default:
-        passesFilter = !normalizedDueDate && isInInbox
+        passesFilter = !hasInstances && isInInbox
     }
 
     // Debug: Log filter reasoning
     console.log(`🔍 [${currentFilter.value}] Task "${task.title}":`, {
       passesFilter,
-      originalDueDate: task.dueDate,
-      normalizedDueDate,
+      hasInstances,
+      hasLegacySchedule,
       status: task.status,
       canvasPosition: !!task.canvasPosition,
       isInInbox
@@ -247,6 +285,26 @@ const inboxTasks = computed(() => {
 
   console.log(`🔍 DEBUG [${currentFilter.value}]: ${filtered.length} tasks in inbox:`, filtered.map(t => t.title))
   return filtered
+})
+
+// Computed properties for task visual enhancements
+const projectVisual = computed(() => (projectId: string) =>
+  taskStore.getProjectVisual(projectId)
+)
+
+const isTimerActive = computed(() => (taskId: string) => {
+  return timerStore.isTimerActive && timerStore.currentTaskId === taskId
+})
+
+const statusLabel = computed(() => (status: string) => {
+  const labels: Record<string, string> = {
+    planned: 'Plan',
+    in_progress: 'Active',
+    done: 'Done',
+    backlog: 'Back',
+    on_hold: 'Hold'
+  }
+  return labels[status] || 'Unknown'
 })
 
 // Methods
@@ -270,7 +328,14 @@ const addTask = () => {
 }
 
 const handleTaskClick = (event: MouseEvent, task: Task) => {
-  // Allow friction-free dragging
+  // IMPORTANT: Don't handle clicks if a drag operation is in progress
+  // This prevents interference with drag-drop functionality
+  if (draggingTaskId.value) {
+    console.log('🚫 Task click ignored - drag operation in progress')
+    return
+  }
+
+  // Allow friction-free dragging - no other click handling needed
 }
 
 const handleTaskDoubleClick = (task: Task) => {
@@ -293,39 +358,77 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
   }))
 }
 
-const handleDragStart = (event: DragEvent, task: Task) => {
-  if (!event.dataTransfer) return
+// Native HTML5 Drag-Drop handlers (per PomoFlow Development Prompt)
+// DO NOT use vuedraggable for calendar grid - Native HTML5 + data attributes is simpler
 
-  // DEBUG LOG: Track task drag from inbox
-  console.log(`🚀 INBOX DRAG START: Task "${task.title}" (ID: ${task.id})`)
-  console.log(`🚀 INBOX DRAG START: Task inbox status:`, task.isInInbox)
-  console.log(`🚀 INBOX DRAG START: Task instances:`, task.instances?.length || 0)
+const onDragStart = (e: DragEvent, task: Task) => {
+  if (!e.dataTransfer) return
 
-  // Match canvas panel drag data format exactly
+  draggingTaskId.value = task.id
+  e.dataTransfer.effectAllowed = 'move'
+
+  // Set global drag state for fallback mechanism (when dataTransfer is not available)
+  ;(window as any).__draggingTaskId = task.id
+  document.documentElement.setAttribute('data-dragging-task-id', task.id)
+
+  // Include taskId explicitly for handleDrop compatibility
   const dragData = {
-    taskIds: [task.id], // Array format for consistency
-    fromInbox: true,
-    taskId: task.id, // Single task ID for backward compatibility
-    title: task.title,
+    ...task,
+    taskId: task.id, // Explicit taskId for calendar drop handler
     source: 'calendar-inbox'
   }
+  e.dataTransfer.setData('application/json', JSON.stringify(dragData))
 
-  // Set multiple data formats for cross-browser compatibility
-  const dataString = JSON.stringify(dragData)
-  event.dataTransfer.setData('application/json', dataString)
-  event.dataTransfer.setData('text/plain', dataString)
-  event.dataTransfer.effectAllowed = 'move'
-  event.dataTransfer.dropEffect = 'move'
+  // Create a custom drag image for better visual feedback
+  const dragElement = e.target as HTMLElement
+  if (dragElement) {
+    // Find the task card container (not just the text within)
+    const taskCard = dragElement.closest('.inbox-task-card') || dragElement
 
-  // Visual feedback
-  if (event.target instanceof HTMLElement) {
-    event.target.style.opacity = '0.5'
-    setTimeout(() => {
-      if (event.target instanceof HTMLElement) {
-        event.target.style.opacity = '1'
-      }
-    }, 100)
+    // Create a clone for the drag image
+    const dragImage = taskCard.cloneNode(true) as HTMLElement
+    dragImage.style.opacity = '0.9'
+    dragImage.style.transform = 'rotate(-3deg)'
+    dragImage.style.maxWidth = '250px'
+    dragImage.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)'
+    dragImage.style.borderRadius = '8px'
+    dragImage.style.backgroundColor = 'var(--surface-tertiary)'
+    dragImage.style.border = '2px solid var(--brand-primary)'
+
+    // Temporarily add to body to create image
+    document.body.appendChild(dragImage)
+
+    // Set the drag image
+    try {
+      e.dataTransfer.setDragImage(dragImage, 20, 20)
+      console.log('✅ [CalendarInboxDrag] Custom drag image set successfully')
+
+      // Remove the temporary element after a short delay
+      setTimeout(() => {
+        if (document.body.contains(dragImage)) {
+          document.body.removeChild(dragImage)
+        }
+      }, 100)
+    } catch (error) {
+      console.warn('⚠️ [CalendarInboxDrag] Could not set custom drag image, using default:', error)
+      // Fallback: use the original element
+      e.dataTransfer.setDragImage(taskCard, 20, 20)
+    }
   }
+
+  console.log(`[Drag] Started dragging: "${task.title}" (ID: ${task.id})`)
+  console.log(`[Drag] Task inbox status:`, task.isInInbox)
+  console.log(`[Drag] Task instances:`, task.instances?.length || 0)
+}
+
+const onDragEnd = () => {
+  draggingTaskId.value = null
+
+  // Clean up global drag state
+  delete (window as any).__draggingTaskId
+  document.documentElement.removeAttribute('data-dragging-task-id')
+
+  console.log('[Drag] Drag ended')
 }
 
 const handleStartTimer = (task: Task) => {
@@ -363,6 +466,8 @@ const handleQuickAddTask = () => {
   gap: var(--space-4);
   overflow: visible;
   transition: width var(--duration-normal) var(--spring-smooth), padding var(--duration-normal);
+  position: relative;
+  z-index: 100;
   /* Clean solid background matching target design */
   background: var(--surface-secondary);
   border: 1px solid var(--border-subtle);
@@ -578,6 +683,7 @@ const handleQuickAddTask = () => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  z-index: 100;
 }
 
 .inbox-task-card:last-child {
@@ -590,7 +696,11 @@ const handleQuickAddTask = () => {
   backdrop-filter: var(--state-active-glass);
   transform: translateY(-2px) scale(1.01);
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-  z-index: 10;
+  z-index: 100;
+}
+
+.inbox-task-card.is-dragging {
+  z-index: 1000;
 }
 
 /* Hover state: Enhanced visibility */
@@ -606,28 +716,60 @@ const handleQuickAddTask = () => {
   position: absolute;
   top: 0;
   left: 0;
-  width: 3px;
-  height: 100%;
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  right: 0;
+  height: 5px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 4px 8px var(--shadow-md);
+  margin: 0;
+  padding: 0;
 }
 
 .priority-stripe.priority-high {
-  background: linear-gradient(180deg, var(--color-priority-high) 0%, #ff6b6b 100%);
-  box-shadow: 0 0 6px rgba(255, 107, 107, 0.3);
+  background: var(--color-priority-high);
+  box-shadow: var(--priority-high-glow);
 }
 
 .priority-stripe.priority-medium {
-  background: linear-gradient(180deg, var(--color-priority-medium) 0%, #feca57 100%);
-  box-shadow: 0 0 6px rgba(254, 202, 87, 0.3);
+  background: var(--color-priority-medium);
+  box-shadow: var(--priority-medium-glow);
 }
 
 .priority-stripe.priority-low {
-  background: linear-gradient(180deg, var(--color-priority-low) 0%, #48dbfb 100%);
-  box-shadow: 0 0 6px rgba(72, 219, 251, 0.3);
+  background: var(--color-priority-low);
+  box-shadow: var(--priority-low-glow);
 }
 
 .priority-stripe.priority-none {
   background: var(--glass-bg-heavy);
+}
+
+/* Timer Active Badge */
+.timer-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  background: var(--brand-primary);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px var(--brand-primary);
+  animation: timerPulse 2s ease-in-out infinite;
+  z-index: 5;
+}
+
+@keyframes timerPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px var(--brand-primary);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 2px 16px var(--brand-primary);
+  }
 }
 
 .task-content {
@@ -644,7 +786,8 @@ const handleQuickAddTask = () => {
   color: var(--text-primary);
   line-height: var(--leading-tight);
   transition: color var(--duration-normal);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
+  margin-top: var(--space-1);
   word-wrap: break-word;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -653,26 +796,103 @@ const handleQuickAddTask = () => {
   -webkit-box-orient: vertical;
 }
 
-.task-meta {
+.task-metadata {
   display: flex;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--space-1_5);
   align-items: center;
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   transition: opacity var(--duration-normal);
 }
 
-.task-project {
-  background: var(--glass-bg-heavy);
-  padding: 1px var(--space-2);
-  border-radius: var(--radius-sm);
+/* Enhanced metadata badges */
+.status-badge,
+.due-date-badge,
+.duration-badge,
+.project-emoji-badge {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-elevated);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
   font-weight: var(--font-medium);
+  box-shadow: 0 2px 4px var(--shadow-subtle);
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 120px;
+}
+
+.status-badge {
+  background: var(--glass-bg-heavy);
+  color: var(--text-muted);
+}
+
+.due-date-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .duration-badge {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-1);
+}
+
+/* Project visual badge styles */
+.project-emoji-badge {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.project-emoji-badge:hover {
+  background: var(--brand-bg-subtle-hover);
+  border-color: var(--brand-border);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px var(--shadow-subtle);
+}
+
+.project-emoji {
+  font-size: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-emoji.project-css-circle {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--project-color, var(--color-primary));
+  box-shadow: var(--project-indicator-shadow);
+  position: relative;
+  font-size: 8px;
+  color: white;
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast) ease;
+}
+
+.project-emoji-badge:hover .project-emoji.project-css-circle {
+  transform: scale(1.2);
+  box-shadow: 0 0 8px var(--project-color);
+}
+
+.project-emoji-badge.project-visual--colored {
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
 }
 
 .task-actions {
@@ -765,5 +985,30 @@ const handleQuickAddTask = () => {
 .inbox-tasks {
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
+}
+
+/* Native HTML5 drag-drop container (per PomoFlow spec) */
+.inbox-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 50px;
+}
+
+/* Drag state for inbox task cards - native HTML5 */
+.inbox-task-card.is-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  transform: scale(0.98);
+  border: 2px dashed var(--brand-primary) !important;
+  background: var(--state-selected-bg) !important;
+}
+
+.inbox-task-card[draggable="true"] {
+  cursor: grab;
+}
+
+.inbox-task-card[draggable="true"]:active {
+  cursor: grabbing;
 }
 </style>

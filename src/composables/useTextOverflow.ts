@@ -1,101 +1,73 @@
-import { ref, watch, nextTick, onUnmounted, type Ref } from 'vue'
-
 /**
- * Composable for detecting text overflow and showing tooltips only when needed
- * Uses the Range API for precise overflow detection
+ * Text Overflow Composable
+ *
+ * Provides reactive text overflow detection and truncation functionality
+ * for UI components that need to handle overflowing text with tooltips.
  */
-export function useTextOverflow(elementRef: Ref<HTMLElement | null>, text: Ref<string> | string) {
+
+import { ref, computed, watch, nextTick, type Ref } from 'vue'
+
+export function useTextOverflow(elementRef?: Ref<HTMLElement | null>, textRef?: Ref<string>) {
   const isOverflowing = ref(false)
   const showTooltip = ref(false)
+  let tooltipTimeout: number | null = null
 
-  const checkOverflow = () => {
-    const element = elementRef.value
+  /**
+   * Check if the element is overflowing
+   */
+  const checkOverflow = async () => {
+    const element = elementRef?.value || null
     if (!element) return
 
-    try {
-      // Create a Range to measure the actual text width
-      const range = document.createRange()
-      range.selectNodeContents(element)
+    await nextTick()
 
-      const textRect = range.getBoundingClientRect()
-      const elementRect = element.getBoundingClientRect()
+    // Compare scrollWidth/Height with clientWidth/Height
+    const isHorizontallyOverflowing = element.scrollWidth > element.clientWidth
+    const isVerticallyOverflowing = element.scrollHeight > element.clientHeight
 
-      // Check if text width exceeds element width with sub-pixel precision
-      const isTextOverflowing = textRect.width > elementRect.width + 1 // Add 1px tolerance
-      isOverflowing.value = isTextOverflowing
-    } catch (error) {
-      // Fallback to scrollWidth comparison if Range API fails
-      isOverflowing.value = element.scrollWidth > element.clientWidth
-    }
+    isOverflowing.value = isHorizontallyOverflowing || isVerticallyOverflowing
   }
 
-  // Watch for text changes and element ref changes
-  watch(
-    [elementRef, typeof text === 'object' ? text : () => text],
-    () => {
-      // Use nextTick to ensure DOM is updated
-      nextTick(() => {
-        checkOverflow()
-      })
-    },
-    { immediate: true, flush: 'post' }
-  )
-
-  // Check on window resize (with debouncing)
-  let resizeTimeout: NodeJS.Timeout
-  const handleResize = () => {
-    clearTimeout(resizeTimeout)
-    resizeTimeout = setTimeout(checkOverflow, 100)
-  }
-
-  // Set up resize observer for more reliable detection
-  let resizeObserver: ResizeObserver | null = null
-
-  if (typeof ResizeObserver !== 'undefined') {
-    resizeObserver = new ResizeObserver(handleResize)
-
-    watch(elementRef, (element) => {
-      if (resizeObserver) {
-        if (element) {
-          resizeObserver.observe(element)
-        } else {
-          resizeObserver.disconnect()
-        }
-      }
-    }, { immediate: true })
-  } else {
-    // Fallback to window resize listener
-    window.addEventListener('resize', handleResize)
-
-    // Cleanup on unmount
-    onUnmounted(() => {
-      window.removeEventListener('resize', handleResize)
-      clearTimeout(resizeTimeout)
-    })
-  }
-
-  // Cleanup
-  onUnmounted(() => {
-    if (resizeObserver) {
-      resizeObserver.disconnect()
-    }
-    clearTimeout(resizeTimeout)
-  })
-
-  // Tooltip interaction handlers
+  /**
+   * Handle mouse enter - show tooltip after delay if overflowing
+   */
   const handleMouseEnter = () => {
+    checkOverflow()
+
     if (isOverflowing.value) {
-      showTooltip.value = true
+      // Clear any existing timeout
+      if (tooltipTimeout) {
+        clearTimeout(tooltipTimeout)
+      }
+
+      // Show tooltip after a short delay
+      tooltipTimeout = setTimeout(() => {
+        showTooltip.value = true
+      }, 300) as any
     }
   }
 
+  /**
+   * Handle mouse leave - hide tooltip
+   */
   const handleMouseLeave = () => {
+    if (tooltipTimeout) {
+      clearTimeout(tooltipTimeout)
+      tooltipTimeout = null
+    }
     showTooltip.value = false
   }
 
+  // Watch for element changes
+  if (elementRef) {
+    watch(elementRef, () => {
+      checkOverflow()
+    })
+  }
+
   return {
-    isOverflowing,
-    showTooltip,
+    isOverflowing: computed(() => isOverflowing.value),
+    showTooltip: computed(() => showTooltip.value),
     checkOverflow,
     handleMouseEnter,
     handleMouseLeave

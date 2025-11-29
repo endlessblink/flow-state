@@ -1,6 +1,6 @@
 <template>
   <div class="task-table" :class="`task-table--${density}`">
-    <!-- Table Header -->
+    <!-- Table Header with Bulk Actions -->
     <div class="table-header">
       <div class="header-cell checkbox-cell">
         <input
@@ -10,12 +10,38 @@
           @change="toggleSelectAll"
         />
       </div>
-      <div class="header-cell title-cell">Task</div>
-      <div class="header-cell status-cell">Status</div>
-      <div class="header-cell priority-cell">Priority</div>
-      <div class="header-cell due-date-cell">Due Date</div>
-      <div class="header-cell progress-cell">Progress</div>
-      <div class="header-cell actions-cell">Actions</div>
+
+      <!-- Bulk Actions Bar -->
+      <div v-if="selectedTasks.length > 0" class="bulk-actions-bar" :colspan="7">
+        <span class="selection-count">{{ selectedTasks.length }} task{{ selectedTasks.length !== 1 ? 's' : '' }} selected</span>
+        <div class="bulk-actions-buttons">
+          <button
+            @click="handleDeleteSelected"
+            class="bulk-action-btn delete-btn"
+            title="Delete selected tasks (Ctrl+Delete)"
+          >
+            <Trash2 :size="14" />
+            Delete Selected
+          </button>
+          <button
+            @click="clearSelection"
+            class="bulk-action-btn clear-btn"
+            title="Clear selection"
+          >
+            <X :size="14" />
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <template v-else>
+        <div class="header-cell title-cell">Task</div>
+        <div class="header-cell project-cell">Project</div>
+        <div class="header-cell status-cell">Status</div>
+        <div class="header-cell due-date-cell">Due Date</div>
+        <div class="header-cell progress-cell">Progress</div>
+        <div class="header-cell actions-cell">Actions</div>
+      </template>
     </div>
 
     <!-- Table Rows -->
@@ -23,10 +49,15 @@
       v-for="task in tasks"
       :key="task.id"
       class="table-row"
-      :class="{ 'row-selected': selectedTasks.includes(task.id) }"
+      :class="{
+        'row-selected': selectedTasks.includes(task.id),
+        [`priority-${task.priority || 'none'}`]: true
+      }"
       @click="$emit('select', task.id)"
       @contextmenu.prevent="$emit('contextMenu', $event, task)"
     >
+    <!-- Priority Indicator -->
+    <div v-if="task.priority" class="priority-indicator"></div>
       <div class="table-cell checkbox-cell" @click.stop>
         <input
           type="checkbox"
@@ -46,15 +77,47 @@
           class="inline-edit"
           autofocus
         />
-        <span v-else @dblclick="startEdit(task.id, 'title')">
+        <span v-else @dblclick="startEdit(task.id, 'title')" :class="getTextAlignmentClasses(task.title)">
           {{ task.title }}
+        </span>
+      </div>
+
+      <div class="table-cell project-cell">
+        <span
+          class="project-emoji-badge"
+          :class="[`project-visual--${getProjectVisual(task).type}`, { 'project-visual--colored': getProjectVisual(task).type === 'css-circle' }]"
+          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+        >
+          <!-- Emoji visual indicator -->
+          <ProjectEmojiIcon
+            v-if="getProjectVisual(task).type === 'emoji'"
+            :emoji="getProjectVisual(task).content"
+            size="xs"
+            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+            class="project-emoji"
+          />
+          <!-- CSS circle visual indicator -->
+          <span
+            v-else-if="getProjectVisual(task).type === 'css-circle'"
+            class="project-emoji project-css-circle"
+            :style="{ '--project-color': getProjectVisual(task).color }"
+            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+          ></span>
+          <!-- Default fallback (folder icon) -->
+          <ProjectEmojiIcon
+            v-else
+            emoji="📁"
+            size="xs"
+            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+            class="project-emoji"
+          />
         </span>
       </div>
 
       <div class="table-cell status-cell">
         <select
           :value="task.status"
-          @change="updateTaskStatus(task.id, ($event.target as HTMLSelectElement).value)"
+          @change="updateTaskStatus(task.id, ($event.target as HTMLSelectElement).value as Task['status'])"
           class="status-select"
         >
           <option value="planned">To Do</option>
@@ -63,16 +126,6 @@
           <option value="backlog">Backlog</option>
           <option value="on_hold">On Hold</option>
         </select>
-      </div>
-
-      <div class="table-cell priority-cell">
-        <span
-          class="priority-badge"
-          :class="`priority-${task.priority || 'medium'}`"
-          @click.stop="cyclePriority(task.id, task.priority)"
-        >
-          {{ task.priority || 'medium' }}
-        </span>
       </div>
 
       <div class="table-cell due-date-cell">
@@ -117,10 +170,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { Task } from '@/stores/tasks'
-import { Play, Edit, Calendar, Inbox } from 'lucide-vue-next'
+import { useTaskStore } from '@/stores/tasks'
+import { Play, Edit, Calendar, Inbox, Trash2, X } from 'lucide-vue-next'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { DensityType } from '@/components/ViewControls.vue'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
+import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 
 interface Props {
   tasks: Task[]
@@ -128,6 +185,15 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const taskStore = useTaskStore()
+
+// Hebrew text alignment support
+const { getAlignmentClasses } = useHebrewAlignment()
+
+// Helper function to get alignment classes for any text
+const getTextAlignmentClasses = (text: string) => {
+  return getAlignmentClasses(text)
+}
 
 const emit = defineEmits<{
   select: [taskId: string]
@@ -166,6 +232,11 @@ const toggleTaskSelect = (taskId: string) => {
   }
 }
 
+// Helper function to get project visual for a task
+const getProjectVisual = (task: Task) => {
+  return taskStore.getProjectVisual(task.projectId)
+}
+
 const startEdit = (taskId: string, field: string) => {
   editingTaskId.value = taskId
   editingField.value = field
@@ -182,16 +253,52 @@ const cancelEdit = () => {
   editingField.value = null
 }
 
-const updateTaskStatus = (taskId: string, status: string) => {
+const updateTaskStatus = (taskId: string, status: Task['status']) => {
   emit('updateTask', taskId, { status })
 }
 
-const cyclePriority = (taskId: string, currentPriority?: string) => {
-  const priorities = ['low', 'medium', 'high']
-  const currentIndex = priorities.indexOf(currentPriority || 'medium')
-  const nextIndex = (currentIndex + 1) % priorities.length
-  emit('updateTask', taskId, { priority: priorities[nextIndex] })
+// Bulk delete functionality
+const { deleteTaskWithUndo } = useUnifiedUndoRedo()
+
+const handleDeleteSelected = () => {
+  if (selectedTasks.value.length === 0) return
+
+  const count = selectedTasks.value.length
+  const confirmMessage = `Delete ${count} selected task${count !== 1 ? 's' : ''}? This action can be undone.`
+
+  if (confirm(confirmMessage)) {
+    // Delete tasks one by one to maintain undo functionality
+    selectedTasks.value.forEach(taskId => {
+      deleteTaskWithUndo(taskId)
+    })
+    clearSelection()
+  }
 }
+
+const clearSelection = () => {
+  selectedTasks.value = []
+}
+
+// Keyboard shortcuts
+const handleKeyDown = (event: KeyboardEvent) => {
+  // Ctrl+Delete for bulk delete
+  if (event.ctrlKey && event.key === 'Delete') {
+    event.preventDefault()
+    handleDeleteSelected()
+  }
+  // Escape to clear selection
+  else if (event.key === 'Escape') {
+    clearSelection()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <style scoped>
@@ -205,7 +312,7 @@ const cyclePriority = (taskId: string, currentPriority?: string) => {
 
 .table-header {
   display: grid;
-  grid-template-columns: 40px 1fr 120px 100px 120px 100px 100px;
+  grid-template-columns: 40px 1fr 80px 120px 120px 100px 100px;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background-color: var(--surface-tertiary);
@@ -215,10 +322,75 @@ const cyclePriority = (taskId: string, currentPriority?: string) => {
   color: var(--text-secondary);
 }
 
+/* Bulk Actions Bar */
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-primary-alpha-10);
+  border: 1px solid var(--color-primary-alpha-30);
+  border-radius: var(--radius-md);
+  grid-column: 2 / -1;
+  margin: var(--space-2) 0;
+  backdrop-filter: var(--glass-backdrop);
+}
+
+.selection-count {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-primary);
+}
+
+.bulk-actions-buttons {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.bulk-action-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  border: 1px solid transparent;
+}
+
+.bulk-action-btn.delete-btn {
+  background-color: var(--error-bg-light);
+  color: var(--color-error);
+  border-color: var(--error-border-subtle);
+}
+
+.bulk-action-btn.delete-btn:hover {
+  background-color: var(--error-bg);
+  color: white;
+  border-color: var(--color-error);
+  transform: translateY(-1px);
+}
+
+.bulk-action-btn.clear-btn {
+  background-color: var(--surface-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+
+.bulk-action-btn.clear-btn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
 .table-row {
   display: grid;
-  grid-template-columns: 40px 1fr 120px 100px 120px 100px 100px;
+  grid-template-columns: 40px 1fr 80px 120px 120px 100px 100px;
   gap: var(--space-2);
+  position: relative; /* Needed for absolute positioned priority indicator */
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
   transition: background-color var(--duration-fast) ease;
@@ -268,6 +440,104 @@ const cyclePriority = (taskId: string, currentPriority?: string) => {
   color: var(--text-primary);
 }
 
+.project-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Enhanced project indicator styles matching canvas implementation */
+.project-emoji-badge {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--spring-smooth) ease;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 4px var(--shadow-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-emoji-badge:hover {
+  background: var(--brand-bg-subtle-hover);
+  border-color: var(--brand-border);
+  transform: translateY(-1px) translateZ(0);
+  box-shadow: 0 4px 8px var(--shadow-subtle);
+}
+
+.project-emoji {
+  font-size: var(--project-indicator-size-md); /* 24px to match canvas */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateZ(0); /* Hardware acceleration */
+  transition: all var(--spring-smooth) ease;
+}
+
+.project-emoji.project-css-circle {
+  width: var(--project-indicator-size-md); /* 24px to match canvas */
+  height: var(--project-indicator-size-md); /* 24px to match canvas */
+  border-radius: 50%;
+  background: var(--project-color);
+  box-shadow: var(--project-indicator-shadow-inset);
+  position: relative;
+  font-size: var(--project-indicator-font-size-md); /* Proper font scaling */
+  color: white;
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--spring-smooth) ease;
+  backdrop-filter: var(--project-indicator-backdrop);
+  /* Enhanced glow to match canvas */
+  box-shadow:
+    var(--project-indicator-shadow-inset),
+    var(--project-indicator-glow-strong);
+}
+
+.project-emoji-badge:hover .project-emoji.project-css-circle {
+  transform: translateZ(0) scale(1.15); /* Match canvas scaling */
+  box-shadow:
+    var(--project-indicator-shadow-inset),
+    0 0 16px var(--project-color),
+    0 0 32px var(--project-color);
+}
+
+/* Add radial gradient glow effect like canvas */
+.project-emoji-badge:hover .project-emoji.project-css-circle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    var(--project-color) 0%,
+    transparent 70%
+  );
+  opacity: 0.3;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.project-emoji-badge.project-visual--colored {
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+}
+
+.project-emoji:hover {
+  background: var(--brand-bg-light);
+  border-color: var(--brand-border);
+  color: var(--text-primary);
+}
+
 .inline-edit {
   width: 100%;
   padding: var(--space-1) var(--space-2);
@@ -289,32 +559,48 @@ const cyclePriority = (taskId: string, currentPriority?: string) => {
   cursor: pointer;
 }
 
-.priority-badge {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: transform var(--duration-fast) ease;
+/* Priority Indicator - 5px stripe matching canvas */
+.priority-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: 0 4px 8px var(--shadow-md);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.priority-badge:hover {
-  transform: scale(1.05);
+.priority-high .priority-indicator {
+  background: var(--color-priority-high);
+  box-shadow: var(--priority-high-glow);
 }
 
-.priority-low {
-  background-color: var(--blue-bg-light);
-  color: var(--color-info);
+.priority-medium .priority-indicator {
+  background: var(--color-priority-medium);
+  box-shadow: var(--priority-medium-glow);
 }
 
-.priority-medium {
-  background-color: var(--color-warning-alpha-10);
-  color: var(--color-warning);
+.priority-low .priority-indicator {
+  background: var(--color-priority-low);
+  box-shadow: var(--priority-low-glow);
 }
 
-.priority-high {
-  background-color: var(--color-error-alpha-10);
-  color: var(--color-error);
+.timer-active .priority-indicator {
+  background: var(--brand-primary) !important;
+  box-shadow: 0 0 12px var(--brand-primary) !important;
+  animation: priorityPulse 2s ease-in-out infinite;
+}
+
+@keyframes priorityPulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px var(--brand-primary);
+  }
+  50% {
+    box-shadow: 0 2px 12px var(--brand-primary), 0 0 16px rgba(59, 130, 246, 0.4);
+  }
 }
 
 .due-date {

@@ -402,6 +402,16 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 }
 
+// Handle Escape key separately for template reference
+const handleEscape = (event: KeyboardEvent) => {
+  if (props.disabled) return
+
+  if (isDragging.value) {
+    event.preventDefault()
+    endDragOperation(event as any)
+  }
+}
+
 const handleArrowKey = (direction: 'up' | 'down' | 'left' | 'right') => {
   if (props.disabled || !props.showKeyboardNavigation) return
 

@@ -627,7 +627,7 @@ onUnmounted(() => {
   inset-inline-end: -4px; /* RTL: check sparkle position */
   width: 4px;
   height: 4px;
-  background: white;
+  background: var(--surface-elevated);
   border-radius: 50%;
   opacity: 0;
   animation: sparkle 3s ease-in-out infinite;
@@ -1144,19 +1144,19 @@ onUnmounted(() => {
 @media (prefers-contrast: high) {
   .done-toggle__button {
     background: rgba(255, 255, 255, 0.95) !important;
-    border: 2px solid #000 !important;
-    color: #000 !important;
+    border: 2px solid var(--text-primary) !important;
+    color: var(--text-primary) !important;
   }
 
   .done-toggle__button:focus-visible {
-    outline: 3px solid #000;
+    outline: 3px solid var(--text-primary);
     outline-offset: 3px;
   }
 
   .done-toggle__button--completed {
     background: #000 !important;
     color: #fff !important;
-    border-color: #000 !important;
+    border-color: var(--text-primary) !important;
   }
 
   .done-toggle__hints {

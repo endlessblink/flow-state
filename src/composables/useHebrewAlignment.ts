@@ -1,119 +1,107 @@
-import { computed, ref } from 'vue'
-
 /**
- * Composable for detecting and handling Hebrew text alignment
+ * Hebrew Text Alignment Composable
  *
- * Provides utilities to:
- * - Detect Hebrew characters in text
- * - Apply right-alignment for Hebrew content
- * - Handle mixed Hebrew/English text consistently
- * - Force right-alignment regardless of document direction
+ * Provides Hebrew Unicode detection and right-alignment functionality
+ * for dynamic text alignment in Vue 3 components.
+ *
+ * Features:
+ * - Hebrew Unicode detection (\u0590-\u05FF)
+ * - Dynamic class application (hebrew-text, text-align-right, direction-rtl)
+ * - Force right-alignment for Hebrew content regardless of document direction
+ * - Mixed text support: "משימה Task meeting" → right-aligned
+ * - Real-time Hebrew detection and alignment as user types
+ * - Works in both LTR and RTL document modes
  */
+
+import { computed, ref, type Ref } from 'vue'
+
 export function useHebrewAlignment() {
   // Hebrew Unicode range detection
-  const HEBREW_UNICODE_REGEX = /[\u0590-\u05FF]/
+  const HEBREW_UNICODE_RANGE = /[\u0590-\u05FF]/
 
   /**
-   * Detect if text contains Hebrew characters
+   * Check if text contains any Hebrew characters
+   * @param text - Text to check for Hebrew content
+   * @returns boolean - True if Hebrew characters are detected
    */
   const containsHebrew = (text: string): boolean => {
-    if (!text || typeof text !== 'string') return false
-    return HEBREW_UNICODE_REGEX.test(text)
+    return HEBREW_UNICODE_RANGE.test(text)
   }
 
   /**
-   * Determine if text should be right-aligned
-   * Returns true if text contains Hebrew characters
+   * Determine if text should be right-aligned based on Hebrew content
+   * @param text - Text to analyze
+   * @returns boolean - True if text should be right-aligned
    */
   const shouldAlignRight = (text: string): boolean => {
+    if (!text || text.trim() === '') return false
     return containsHebrew(text)
   }
 
   /**
    * Generate CSS classes for Hebrew text alignment
+   * @param text - Text to analyze
+   * @returns object - CSS classes object for dynamic binding
    */
-  const getHebrewTextClasses = (text: string): Record<string, boolean> => {
+  const getAlignmentClasses = (text: string) => {
+    const hasHebrew = shouldAlignRight(text)
+
     return {
-      'hebrew-text': shouldAlignRight(text),
-      'text-align-right': shouldAlignRight(text),
-      'direction-rtl': shouldAlignRight(text)
+      'hebrew-text': hasHebrew,
+      'text-align-right': hasHebrew,
+      'direction-rtl': hasHebrew
     }
   }
 
   /**
-   * Get text alignment style for Hebrew content
+   * Apply appropriate text alignment styles
+   * @param text - Text to analyze
+   * @returns object - Style object for inline styling
    */
-  const getTextAlignment = (text: string): 'right' | 'start' => {
-    return shouldAlignRight(text) ? 'right' : 'start'
+  const applyInputAlignment = (text: string) => {
+    const hasHebrew = shouldAlignRight(text)
+
+    return {
+      textAlign: (hasHebrew ? 'right' : 'left') as 'left' | 'right' | 'center' | 'justify',
+      direction: (hasHebrew ? 'rtl' : 'ltr') as 'ltr' | 'rtl'
+    }
   }
 
   /**
-   * Get text direction for Hebrew content
+   * Reactive alignment based on text content
+   * @param textRef - Vue ref containing text content
+   * @returns computed object with reactive alignment properties
    */
-  const getTextDirection = (text: string): 'rtl' | 'auto' => {
-    return shouldAlignRight(text) ? 'rtl' : 'auto'
-  }
-
-  /**
-   * Reactive version for dynamic text content
-   */
-  const createHebrewAlignment = (text: () => string) => {
+  const createReactiveAlignment = (textRef: Ref<string>) => {
     return computed(() => {
-      const currentText = text()
+      const text = textRef.value || ''
+      const hasHebrew = shouldAlignRight(text)
+
       return {
-        containsHebrew: containsHebrew(currentText),
-        shouldAlignRight: shouldAlignRight(currentText),
-        textAlignment: getTextAlignment(currentText),
-        textDirection: getTextDirection(currentText),
-        classes: getHebrewTextClasses(currentText)
+        shouldAlignRight: hasHebrew,
+        classes: {
+          'hebrew-text': hasHebrew,
+          'text-align-right': hasHebrew,
+          'direction-rtl': hasHebrew
+        },
+        styles: {
+          textAlign: hasHebrew ? 'right' : 'left',
+          direction: hasHebrew ? 'rtl' : 'ltr'
+        }
       }
     })
   }
 
-  /**
-   * Apply Hebrew alignment to input element
-   */
-  const applyInputAlignment = (element: HTMLElement, text: string): void => {
-    if (!element) return
-
-    if (shouldAlignRight(text)) {
-      element.style.textAlign = 'right'
-      element.style.direction = 'rtl'
-    } else {
-      element.style.textAlign = ''
-      element.style.direction = ''
-    }
-  }
-
-  /**
-   * Force right-alignment for Hebrew content in any context
-   * This overrides the document direction when Hebrew is detected
-   */
-  const forceHebrewAlignment = (text: string) => {
-    return {
-      style: shouldAlignRight(text) ? {
-        textAlign: 'right',
-        direction: 'rtl'
-      } : {},
-      class: shouldAlignRight(text) ? 'hebrew-content' : ''
-    }
-  }
-
   return {
-    // Detection methods
+    // Core functions
     containsHebrew,
     shouldAlignRight,
 
-    // Style generation
-    getHebrewTextClasses,
-    getTextAlignment,
-    getTextDirection,
-    forceHebrewAlignment,
+    // Style application
+    getAlignmentClasses,
+    applyInputAlignment,
 
     // Reactive helpers
-    createHebrewAlignment,
-
-    // DOM manipulation
-    applyInputAlignment
+    createReactiveAlignment
   }
 }

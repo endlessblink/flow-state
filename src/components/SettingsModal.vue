@@ -63,7 +63,7 @@
               <input
                 type="checkbox"
                 :checked="timerStore.settings.autoStartBreaks"
-                @change="updateSetting('autoStartBreaks', $event.target.checked)"
+                @change="updateSetting('autoStartBreaks', ($event.target as HTMLInputElement).checked)"
               >
               <span class="toggle-slider"></span>
               Auto-start breaks
@@ -75,7 +75,7 @@
               <input
                 type="checkbox"
                 :checked="timerStore.settings.autoStartPomodoros"
-                @change="updateSetting('autoStartPomodoros', $event.target.checked)"
+                @change="updateSetting('autoStartPomodoros', ($event.target as HTMLInputElement).checked)"
               >
               <span class="toggle-slider"></span>
               Auto-start work sessions
@@ -92,7 +92,7 @@
               <input
                 type="checkbox"
                 :checked="showDoneColumn"
-                @change="updateShowDoneColumn($event.target.checked)"
+                @change="updateShowDoneColumn(($event.target as HTMLInputElement).checked)"
               >
               <span class="toggle-slider"></span>
               Show "Done" column
@@ -112,7 +112,7 @@
               <input
                 type="checkbox"
                 :checked="timerStore.settings.playNotificationSounds"
-                @change="updateSetting('playNotificationSounds', $event.target.checked)"
+                @change="updateSetting('playNotificationSounds', ($event.target as HTMLInputElement).checked)"
               >
               <span class="toggle-slider"></span>
               Sound effects
@@ -138,6 +138,11 @@
         <section class="settings-section">
           <CloudSyncSettings />
         </section>
+
+        <!-- Data Protection & Emergency Recovery -->
+        <section class="settings-section">
+          <EmergencyRecovery />
+        </section>
       </div>
     </div>
   </div>
@@ -151,6 +156,7 @@ import { useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
 import CloudSyncSettings from './CloudSyncSettings.vue'
 import LanguageSettings from './settings/LanguageSettings.vue'
+import EmergencyRecovery from './EmergencyRecovery.vue'
 
 interface Props {
   isOpen: boolean

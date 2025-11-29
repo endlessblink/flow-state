@@ -3,8 +3,10 @@
  * Core logic for generating and managing recurring task instances
  */
 
-import type {
+import {
   RecurrencePattern,
+} from '@/types/recurrence'
+import type {
   RecurrenceRule,
   RecurrenceEndCondition,
   RecurrenceException,
@@ -96,7 +98,7 @@ export function getNextOccurrence(currentDate: Date, rule: RecurrenceRule): Date
       const targetDays = weeklyRule.weekdays.sort()
 
       // Find the next target day
-      let nextDay = targetDays.find(day => day > currentDayOfWeek)
+      let nextDay = targetDays.find((day: any) => day > currentDayOfWeek)
       if (nextDay === undefined) {
         // Wrap to next week
         nextDay = targetDays[0]
@@ -332,9 +334,9 @@ export function generateRecurrencePreview(
 export function isDateInRecurrence(date: Date, rule: RecurrenceRule, startDate: Date): boolean {
   // Simple check - in a real implementation, you'd want to work backwards from the date
   // to see if it could be generated from the start date with the given rule
-  const instances = generateRecurrenceInstances('temp', rule, { type: 'never' }, [], startDate)
+  const instances = generateRecurringInstances('temp', rule, { type: 'on_date', date: new Date().toISOString().split('T')[0] } as RecurrenceEndCondition, [], startDate)
   const dateStr = formatDateKey(date)
-  return instances.some(instance => instance.scheduledDate === dateStr)
+  return instances.some((instance: any) => instance.scheduledDate === dateStr)
 }
 
 /**

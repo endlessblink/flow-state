@@ -173,12 +173,24 @@ class PersistentStorage {
 
       request.onsuccess = () => {
         const db = request.result
-        const transaction = db.transaction(['storage'], 'readwrite')
-        const store = transaction.objectStore('storage')
+        // Ensure the storage object store exists before creating transaction
+        if (!db.objectStoreNames.contains('storage')) {
+          console.error('Storage object store not found in IndexedDB')
+          resolve(false)
+          return
+        }
 
-        const putRequest = store.put(data, key)
-        putRequest.onsuccess = () => resolve(true)
-        putRequest.onerror = () => resolve(false)
+        try {
+          const transaction = db.transaction(['storage'], 'readwrite')
+          const store = transaction.objectStore('storage')
+
+          const putRequest = store.put(data, key)
+          putRequest.onsuccess = () => resolve(true)
+          putRequest.onerror = () => resolve(false)
+        } catch (error) {
+          console.error('IndexedDB transaction error:', error)
+          resolve(false)
+        }
       }
     })
   }
@@ -267,8 +279,8 @@ class PersistentStorage {
         timestamp: Date.now(),
         version: '1.0',
         metadata: {
-          totalTasks: tasks?.length || 0,
-          totalProjects: projects?.length || 0,
+          totalTasks: (Array.isArray(tasks) ? tasks.length : 0),
+          totalProjects: (Array.isArray(projects) ? projects.length : 0),
           backupSource: 'pomo-flow-persistent-storage'
         }
       }

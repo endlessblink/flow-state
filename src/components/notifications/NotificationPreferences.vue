@@ -101,7 +101,7 @@
           <label class="flex items-center">
             <input
               type="checkbox"
-              v-model="preferences.doNotDisturb.enabled"
+              v-model="(preferences.doNotDisturb as any)?.enabled"
               @change="handleChange"
               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
@@ -109,19 +109,19 @@
               Enable Do Not Disturb
             </span>
           </label>
-          <div v-if="preferences.doNotDisturb.enabled" class="ml-6 space-y-2">
+          <div v-if="(preferences.doNotDisturb as any)?.enabled" class="ml-6 space-y-2">
             <label class="flex items-center">
               <span class="text-sm text-gray-700 dark:text-gray-300 mr-2">From</span>
               <input
                 type="time"
-                :value="formatTime(preferences.doNotDisturb.startHour)"
+                :value="formatTime((preferences.doNotDisturb as any)?.startHour)"
                 @input="handleDNDStartChange"
                 class="px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
               <span class="ml-2 text-sm text-gray-700 dark:text-gray-300 mr-2">to</span>
               <input
                 type="time"
-                :value="formatTime(preferences.doNotDisturb.endHour)"
+                :value="formatTime((preferences.doNotDisturb as any)?.endHour)"
                 @input="handleDNDEndChange"
                 class="px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
@@ -265,14 +265,18 @@ const handleReminderTimesChange = () => {
 const handleDNDStartChange = (event: Event) => {
   const target = event.target as HTMLInputElement
   const [hours] = target.value.split(':').map(Number)
-  preferences.value.doNotDisturb.startHour = hours
+  if (preferences.value.doNotDisturb) {
+    preferences.value.doNotDisturb.startHour = hours
+  }
   emitChange()
 }
 
 const handleDNDEndChange = (event: Event) => {
   const target = event.target as HTMLInputElement
   const [hours] = target.value.split(':').map(Number)
-  preferences.value.doNotDisturb.endHour = hours
+  if (preferences.value.doNotDisturb) {
+    preferences.value.doNotDisturb.endHour = hours
+  }
   emitChange()
 }
 

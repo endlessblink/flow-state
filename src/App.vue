@@ -3,7 +3,7 @@
     <n-global-style />
     <n-message-provider>
   <!-- PROFESSIONAL PROJECT MANAGEMENT SYSTEM - CODOMO STYLE -->
-  <div class="app" :dir="direction">
+  <div class="app" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }" :dir="direction">
     <!-- LEFT SIDEBAR NAVIGATION -->
     <Transition name="sidebar-slide">
       <aside v-show="uiStore.mainSidebarVisible" class="sidebar" aria-label="Main navigation" :aria-hidden="!uiStore.mainSidebarVisible">
@@ -13,7 +13,7 @@
           <span class="brand-icon">🍅</span>
           <span class="brand-text">Pomo-Flow</span>
         </div>
-        <BaseButton variant="secondary" size="md" @click="openCreateProject">
+        <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
           <Plus :size="14" />
           Create project
         </BaseButton>
@@ -39,18 +39,15 @@
         </div>
       </div>
 
-      <!-- Quick Task Creation -->
-      <div class="quick-add-section">
-        <div class="quick-add-input">
-          <Plus :size="16" class="add-icon" />
-          <input
-            v-model="newTaskTitle"
-            type="text"
-            placeholder="Add a task..."
-            class="task-input"
-            @keyup.enter="createQuickTask"
-          />
-        </div>
+      <!-- Quick Task Creation - REBUILT -->
+      <div class="quick-task-section">
+        <input
+          ref="quickTaskRef"
+          type="text"
+          class="quick-task-input"
+          placeholder="Quick add task (Enter)..."
+          @keydown.enter.prevent="createQuickTask"
+        />
       </div>
 
       <!-- Project & Task Management -->
@@ -60,7 +57,7 @@
             <FolderOpen :size="16" class="section-icon" />
             Projects
           </h3>
-          <button class="add-project-btn" @click="openCreateProject" title="Add Project">
+          <button class="add-project-btn" @click="sidebar.openCreateProject" title="Add Project">
             <Plus :size="14" />
           </button>
         </div>
@@ -72,7 +69,6 @@
             :active="taskStore.activeSmartView === 'today'"
             :count="todayTaskCount"
             target-type="today"
-            data-testid="view-today"
             @click="selectSmartView('today')"
           >
             <template #icon>
@@ -85,8 +81,7 @@
           <DateDropZone
             :active="taskStore.activeSmartView === 'week'"
             :count="weekTaskCount"
-            target-type="week"
-            data-testid="view-week"
+            target-type="today"
             @click="selectSmartView('week')"
           >
             <template #icon>
@@ -101,7 +96,7 @@
             <DateDropZone
               :active="taskStore.activeSmartView === 'above_my_tasks'"
               :count="aboveMyTasksCount"
-              target-type="above_my_tasks"
+              target-type="nodate"
               @click="selectSmartView('above_my_tasks')"
             >
               <template #icon>
@@ -117,7 +112,7 @@
               title="Show Uncategorized Tasks"
             >
               <Inbox :size="16" />
-              <span>My Tasks</span>
+              <span>Uncategorized Tasks</span>
               <span
                 v-if="uncategorizedCount > 0"
                 class="filter-badge"
@@ -152,18 +147,19 @@
           @keydown="handleProjectTreeKeydown"
         >
           <ProjectTreeItem
-            v-for="project in rootProjects"
+            v-for="project in taskStore.projects.filter(p => !p.parentId)"
             :key="project.id"
             :project="project"
-            :expanded-projects="expandedProjects"
+            :expanded-projects="sidebar.expandedProjects.value || []"
             :level="1"
-            @click="selectProject"
-            @toggle-expand="toggleProjectExpansion"
+            @click="sidebar.selectProject"
+            @toggle-expand="sidebar.toggleProjectExpansion"
             @contextmenu="handleProjectContextMenu"
             @project-drop="() => {}"
           />
         </nav>
-      </div>
+
+        </div>
       </aside>
     </Transition>
 
@@ -181,15 +177,141 @@
     <!-- MAIN CONTENT AREA -->
     <main class="main-content" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }">
 
-      <!-- APP HEADER (Extracted Component) -->
-      <AppHeader />
+      <!-- PROJECT TITLE AND TIMER -->
+      <div class="header-section">
+        <!-- USER PROFILE (Left side) - Firebase Auth disabled -->
+        <div class="user-profile-container">
+          <!-- UserProfile v-if="authStore.isAuthenticated" /-->
+          <!-- ⚠️ User profile disabled - Firebase authentication offline -->
+        </div>
+
+        <div class="page-title">
+          <h1 class="title-main">{{ pageTitleInfo.main }}</h1>
+          <span v-if="pageTitleInfo.filter" class="title-filter">
+            <template v-if="typeof pageTitleInfo.filter === 'object' && pageTitleInfo.filter.type === 'project'">
+              <!-- Emoji Indicator -->
+              <ProjectEmojiIcon
+                v-if="pageTitleInfo.filter.project?.colorType === 'emoji'"
+                :emoji="pageTitleInfo.filter.project.emoji || ''"
+                size="sm"
+                :title="`Project: ${pageTitleInfo.filter.project.name}`"
+                class="project-emoji-header"
+              />
+              <!-- Color Indicator -->
+              <span
+                v-else
+                class="project-color-header"
+                :style="{ backgroundColor: Array.isArray(pageTitleInfo.filter.project?.color) ? pageTitleInfo.filter.project.color[0] : pageTitleInfo.filter.project?.color }"
+              ></span>
+              {{ pageTitleInfo.filter.project?.name }}
+            </template>
+            <template v-else-if="typeof pageTitleInfo.filter === 'object' && pageTitleInfo.filter.type === 'smart-view'">
+              <!-- Smart View Emoji Indicator -->
+              <ProjectEmojiIcon
+                v-if="pageTitleInfo.filter.emoji"
+                :emoji="pageTitleInfo.filter.emoji"
+                size="sm"
+                :title="`Smart View: ${pageTitleInfo.filter.name}`"
+                class="project-emoji-header"
+              />
+              {{ pageTitleInfo.filter.name }}
+            </template>
+            <template v-else>
+              {{ pageTitleInfo.filter }}
+            </template>
+          </span>
+        </div>
+
+        <!-- INTEGRATED CONTROL PANEL: Clock + Timer -->
+        <div class="control-panel">
+          <!-- TIME DISPLAY - ADHD Feature #4 -->
+          <div class="time-display-container">
+            <TimeDisplay />
+          </div>
+
+          <!-- POMODORO TIMER DISPLAY -->
+          <div class="timer-container">
+          <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
+            <div class="timer-icon">
+              <!-- Animated emoticons when timer is active -->
+              <span v-if="timerStore.isTimerActive && !timerStore.currentSession?.isBreak" class="timer-emoticon active">🍅</span>
+              <span v-else-if="timerStore.isTimerActive && timerStore.currentSession?.isBreak" class="timer-emoticon active">🧎</span>
+              <!-- Static icons when timer is inactive -->
+              <Timer v-else :size="20" :stroke-width="1.5" class="timer-stroke" />
+            </div>
+            <div class="timer-info">
+              <div class="timer-time">{{ timerStore.displayTime }}</div>
+              <!-- Always render task name div to prevent layout shift -->
+              <div class="timer-task">{{ timerStore.currentTaskName || '&nbsp;' }}</div>
+            </div>
+            <div class="timer-controls">
+              <div v-if="!timerStore.currentSession" class="timer-start-options">
+                <button
+                  class="timer-btn timer-start"
+                  @click="startQuickTimer"
+                  title="Start 25-min work timer"
+                >
+                  <Play :size="16" />
+                </button>
+                <button
+                  class="timer-btn timer-break"
+                  @click="startShortBreak"
+                  title="Start 5-min break"
+                >
+                  <Coffee :size="16" :stroke-width="1.5" class="coffee-stroke" />
+                </button>
+                <button
+                  class="timer-btn timer-break"
+                  @click="startLongBreak"
+                  title="Start 15-min long break"
+                >
+                  <User :size="16" :stroke-width="1.5" class="meditation-stroke" />
+                </button>
+              </div>
+
+              <button
+                v-else-if="timerStore.isPaused"
+                class="timer-btn timer-resume"
+                @click="timerStore.resumeTimer"
+                title="Resume timer"
+              >
+                <Play :size="16" />
+              </button>
+
+              <button
+                v-else-if="timerStore.isTimerActive"
+                class="timer-btn timer-pause"
+                @click="timerStore.pauseTimer"
+                title="Pause timer"
+              >
+                <Pause :size="16" />
+              </button>
+
+              <button
+                v-if="timerStore.currentSession"
+                class="timer-btn timer-stop"
+                @click="timerStore.stopTimer"
+                title="Stop timer"
+              >
+                <Square :size="16" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SYNC STATUS INDICATOR -->
+        <div class="sync-status-container">
+          <SyncStatus />
+        </div>
+        </div>
+      </div>
 
       <!-- VIEW TABS AND CONTROLS -->
       <div class="content-header">
         <div class="view-tabs">
-          <router-link to="/" class="view-tab" active-class="active" data-testid="view-board">Board</router-link>
-          <router-link to="/calendar" class="view-tab" active-class="active" data-testid="view-calendar">Calendar</router-link>
-          <router-link to="/canvas" class="view-tab" active-class="active" data-testid="view-canvas">Canvas</router-link>
+          <router-link to="/" class="view-tab" active-class="active">Board</router-link>
+          <router-link to="/calendar" class="view-tab" active-class="active">Calendar</router-link>
+          <router-link to="/canvas" class="view-tab" active-class="active">Canvas</router-link>
           <router-link to="/catalog" class="view-tab" active-class="active">Catalog</router-link>
           <router-link to="/quick-sort" class="view-tab" active-class="active">
             Quick Sort
@@ -199,16 +321,12 @@
 
       </div>
 
-      <!-- ROUTER VIEW FOR DIFFERENT VIEWS -->
+      <!-- ROUTER VIEW FOR DIFFERENT VIEWS - ErrorBoundary removed for debugging -->
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <div class="view-wrapper">
-            <ErrorBoundary
-              :fallback-message="`The ${$route.name} view encountered an error. You can try reloading or switch to another view.`"
-              @error="handleViewError"
-            >
-              <component :is="Component" />
-            </ErrorBoundary>
+            <!-- DEBUG: ErrorBoundary temporarily removed to expose navigation errors -->
+            <component :is="Component" />
           </div>
         </transition>
       </router-view>
@@ -222,9 +340,9 @@
 
     <!-- PROJECT MODAL -->
     <ProjectModal
-      :isOpen="showProjectModal"
-      :project="editingProject"
-      @close="showProjectModal = false"
+      :isOpen="sidebar.showProjectModal.value"
+      :project="sidebar.editingProject.value"
+      @close="sidebar.showProjectModal.value = false"
     />
 
     <!-- TASK EDIT MODAL -->
@@ -242,8 +360,11 @@
       :task="contextMenuTask"
       :compactMode="uiStore.boardDensity === 'ultrathin'"
       @close="closeTaskContextMenu"
-      @edit="openEditTask"
-      @confirmDelete="(taskId, instanceId, isCalendarEvent) => handleContextMenuDelete(taskId, instanceId, isCalendarEvent)"
+      @edit="(taskId: string) => {
+        const task = taskStore.tasks.find(t => t.id === taskId)
+        if (task) openEditTask(task)
+      }"
+      @confirmDelete="handleContextMenuDelete"
     />
 
     <!-- PROJECT CONTEXT MENU -->
@@ -274,13 +395,13 @@
       @selectProject="handleSearchSelectProject"
     />
 
-    <!-- TASK EDIT MODAL -->
-    <TaskEditModal
-      :is-open="showEditModal"
-      :task="selectedTask"
-      @close="closeEditModal"
+    <!-- QUICK TASK CREATE MODAL -->
+    <QuickTaskCreateModal
+      :isOpen="showQuickTaskCreate"
+      :loading="false"
+      @cancel="closeQuickTaskCreate"
+      @create="handleQuickTaskCreate"
     />
-
 
     <!-- COMMAND PALETTE - ADHD Feature #1 (Cmd+K) -->
     <CommandPalette ref="commandPaletteRef" />
@@ -291,8 +412,10 @@
     <!-- DEV LOG CONTROLLER - Interactive log filter (DEV only) -->
     <DevLogController v-if="isDev" />
 
-    <!-- AUTHENTICATION MODAL -->
-    <AuthModal />
+    
+    <!-- AUTHENTICATION MODAL - Firebase Auth disabled -->
+    <!-- AuthModal /-->
+    <!-- ⚠️ Authentication disabled - Firebase authentication offline -->
 
     </div>
     </n-message-provider>
@@ -306,14 +429,16 @@ import '@/assets/design-tokens.css'
 import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme } from 'naive-ui'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useTimerStore } from '@/stores/timer'
-import { useTaskStore, formatDateKey } from '@/stores/tasks'
+import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
-import { useAuthStore } from '@/stores/auth'
+// ⚠️ Firebase Auth disabled for stability
+// import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
 import { useTheme } from '@/composables/useTheme'
 import { useDirection } from '@/i18n/useDirection'
 import { useRouter } from 'vue-router'
+import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 // 🚨 FORCE CACHE BREAKER - UNDO SINGLETON V3 - 2025-10-22T22:58:00Z
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
@@ -323,11 +448,14 @@ import { useFavicon } from '@/composables/useFavicon'
 import { useBrowserTab } from '@/composables/useBrowserTab'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import DateDropZone from '@/components/DateDropZone.vue'
 import ProjectTreeItem from '@/components/ProjectTreeItem.vue'
-import CommandPalette from '@/components/CommandPalette.vue'
-import AppHeader from '@/components/app/AppHeader.vue'
+import { createLazyModal } from '@/composables/useLazyComponent'
+const CommandPalette = createLazyModal(() => import('@/components/CommandPalette.vue'))
+import TimeDisplay from '@/components/TimeDisplay.vue'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
+import SyncStatus from '@/components/SyncStatus.vue'
 import FaviconManager from '@/components/FaviconManager.vue'
 import DevLogController from '@/components/DevLogController.vue'
 import SettingsModal from '@/components/SettingsModal.vue'
@@ -337,12 +465,15 @@ import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
 import SearchModal from '@/components/SearchModal.vue'
-import AuthModal from '@/components/auth/AuthModal.vue'
+import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
+// ⚠️ Firebase Auth components disabled for stability
+// import AuthModal from '@/components/auth/AuthModal.vue'
+// import UserProfile from '@/components/auth/UserProfile.vue'
 import type { Task, Project } from '@/stores/tasks'
 import {
-  Plus, Settings,
+  Play, Pause, Square, Plus, Settings,
   Inbox, Bell, FileText, Archive,
-  FolderOpen, ChevronDown,
+  Coffee, User, Timer, FolderOpen, ChevronDown,
   Clock, Flag, Calendar, Edit, Trash2, Copy, Palette,
   PanelLeft, PanelLeftClose, Zap, List
 } from 'lucide-vue-next'
@@ -352,9 +483,19 @@ const timerStore = useTimerStore()
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
-const authStore = useAuthStore()
+// ⚠️ Firebase Auth disabled - using placeholder
+// const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const router = useRouter()
+
+// Initialize sidebar management composable
+const sidebar = useSidebarManagement()
+
+// Placeholder auth store for local mode
+const authStore = {
+  isAuthenticated: ref(false),
+  isLoading: ref(false)
+}
 
 // RTL/LTR direction support
 const { direction, isRTL } = useDirection()
@@ -367,8 +508,8 @@ const undoHistory = getUndoSystem()
 
 
 
-// Theme management - using new cohesive design system
-const { isDarkMode, toggleTheme, initializeTheme } = useTheme()
+// Theme management simplified to dark-only mode
+// const { isDarkMode, toggleTheme, initializeTheme } = useTheme() // DISABLED: Dark mode set by default in index.html
 
 // Progressive Disclosure - ADHD Feature #2 (disabled by default)
 // Focus Mode - ADHD Feature Phase 2
@@ -396,14 +537,11 @@ console.log('🍅 DEBUG: Browser tab composable initialized:', {
   }
 })
 
-// Task management state
-const newTaskTitle = ref('')
-const showCreateProject = ref(false)
-const expandedProjects = ref<string[]>([]) // For nested project expand/collapse
-
-// Project management state
-const showProjectModal = ref(false)
-const editingProject = ref<Project | null>(null)
+// Using sidebar composable state instead of local state
+// const showCreateProject = sidebar.showCreateProject
+// const expandedProjects = sidebar.expandedProjects
+// const showProjectModal = sidebar.showProjectModal
+// const editingProject = sidebar.editingProject
 
 // Task editing state
 const showTaskEditModal = ref(false)
@@ -430,10 +568,8 @@ const confirmDetails = ref<string[]>([])
 // Search modal state
 const showSearchModal = ref(false)
 
-// Task Edit Modal state
-const showEditModal = ref(false)
-const selectedTask = ref<any>(null)
-
+// Quick Task Create Modal state
+const showQuickTaskCreate = ref(false)
 
 // Command Palette ref
 const commandPaletteRef = ref<{ open: () => void; close: () => void } | null>(null)
@@ -442,39 +578,8 @@ const commandPaletteRef = ref<{ open: () => void; close: () => void } | null>(nu
 // Platform detection
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
-// Note: Removed project filtering functions - projects now always visible regardless of task count
-// Smart filters only affect main board content, not sidebar project visibility
-
-// Helper function to filter out synthetic My Tasks project
-const filterOutSyntheticMyTasks = (project: any) => {
-  // Exclude synthetic My Tasks project with multiple criteria for robustness
-  return project.id !== '1' &&
-         project.name !== 'My Tasks' &&
-         !(project.color === '#3b82f6' && project.colorType === 'hex' && project.viewType === 'status')
-}
-
-// Computed Properties for Project Hierarchy
-// Show all root projects regardless of task count (but exclude the synthetic My Tasks project)
-const rootProjects = computed(() => {
-  return taskStore.projects
-    .filter(p => !p.parentId) // Only root projects
-    .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
-    // Note: No longer filtering by active tasks - show all projects
-})
-
-const getChildren = (parentId: string) => {
-  return taskStore.projects
-    .filter(p => p.parentId === parentId)
-    .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
-    // Note: No longer filtering by active tasks - show all child projects
-}
-
-const hasChildren = (projectId: string) => {
-  return taskStore.projects
-    .filter(p => p.parentId === projectId)
-    .filter(filterOutSyntheticMyTasks) // Exclude synthetic My Tasks project
-    .length > 0 // Check if there are any child projects
-}
+// Note: Using useSidebarManagement composable for project filtering
+// This ensures consistent project filtering across the application
 
 // Smart View Counts
 const todayTaskCount = computed(() => {
@@ -482,37 +587,55 @@ const todayTaskCount = computed(() => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  return taskStore.tasks.filter(task => {
+  return (Array.isArray(taskStore.tasks) ? taskStore.tasks : []).filter(task => {
+    // CRITICAL NULL CHECK: Ensure task exists and has required properties
+    if (!task || typeof task !== 'object') {
+      console.warn('Invalid task object found:', task)
+      return false
+    }
+
     // Exclude done tasks from today count - CRITICAL FIX
     if (task.status === 'done') {
       return false
     }
 
-    // Check if task is due today (simplified - no more complex instance system)
-    if (task.dueDate === todayStr) {
-      return true
-    }
+    try {
+      // Check instances first (new format) - tasks scheduled for today
+      const instances = getTaskInstances(task)
+      if (instances && instances.length > 0) {
+        if (instances.some(inst => inst && inst.scheduledDate === todayStr)) {
+          return true
+        }
+      }
 
-    // Fallback to legacy scheduledDate - tasks scheduled for today
-    if (task.scheduledDate === todayStr) {
-      return true
-    }
+      // Fallback to legacy scheduledDate - tasks scheduled for today
+      if (task.scheduledDate === todayStr) {
+        return true
+      }
 
-    // Tasks created today
-    const taskCreatedDate = new Date(task.createdAt)
-    taskCreatedDate.setHours(0, 0, 0, 0)
-    if (taskCreatedDate.getTime() === today.getTime()) {
-      return true
-    }
+      // Tasks created today
+      if (task.createdAt) {
+        const taskCreatedDate = new Date(task.createdAt)
+        if (!isNaN(taskCreatedDate.getTime())) {
+          taskCreatedDate.setHours(0, 0, 0, 0)
+          if (taskCreatedDate.getTime() === today.getTime()) {
+            return true
+          }
+        }
+      }
 
-    // Tasks due today
-    if (task.dueDate === todayStr) {
-      return true
-    }
+      // Tasks due today
+      if (task.dueDate === todayStr) {
+        return true
+      }
 
-    // Tasks currently in progress
-    if (task.status === 'in_progress') {
-      return true
+      // Tasks currently in progress
+      if (task.status === 'in_progress') {
+        return true
+      }
+    } catch (error) {
+      console.error('Error processing task in todayTaskCount:', error, task)
+      return false
     }
 
     return false
@@ -528,21 +651,43 @@ const weekTaskCount = computed(() => {
   weekEnd.setDate(weekEnd.getDate() + 7)
   const weekEndStr = weekEnd.toISOString().split('T')[0]
 
-  return taskStore.tasks.filter(task => {
+  return (Array.isArray(taskStore.tasks) ? taskStore.tasks : []).filter(task => {
+    // CRITICAL NULL CHECK: Ensure task exists and has required properties
+    if (!task || typeof task !== 'object') {
+      console.warn('Invalid task object found in weekTaskCount:', task)
+      return false
+    }
+
     // Exclude done tasks from week count - CRITICAL FIX (matches today filter)
     if (task.status === 'done') {
       return false
     }
 
-    // Check if task is due within the week (simplified - no more complex instance system)
-    if (!task.dueDate) return false
-    return task.dueDate >= todayStr && task.dueDate < weekEndStr
+    try {
+      // Check instances first (new format)
+      const instances = getTaskInstances(task)
+      if (instances && instances.length > 0) {
+        return instances.some(inst => inst && inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
+      }
+      // Fallback to legacy scheduledDate
+      if (!task.scheduledDate) return false
+      return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+    } catch (error) {
+      console.error('Error processing task in weekTaskCount:', error, task)
+      return false
+    }
   }).length
 })
 
 // Above My Tasks task count - counts all non-done tasks
 const aboveMyTasksCount = computed(() => {
-  return taskStore.tasks.filter(task => {
+  return (Array.isArray(taskStore.tasks) ? taskStore.tasks : []).filter(task => {
+    // CRITICAL NULL CHECK: Ensure task exists and has required properties
+    if (!task || typeof task !== 'object') {
+      console.warn('Invalid task object found in aboveMyTasksCount:', task)
+      return false
+    }
+
     // Count all tasks that are not marked as done
     // This matches the "above_my_tasks" smart view logic
     return task.status !== 'done'
@@ -552,71 +697,216 @@ const aboveMyTasksCount = computed(() => {
 
 // Uncategorized task count for Quick Sort badge
 const uncategorizedCount = computed(() => {
-  // Use the exact same logic as the store's uncategorized filter for consistency
-  const filteredTasks = taskStore.tasks.filter(task => {
-    // Apply same filtering logic as uncategorized smart view in taskStore.filteredTasks
-    // Check isUncategorized flag first
-    if (task.isUncategorized === true) {
-      return true
-    }
-
-    // Backward compatibility: also treat tasks without proper project assignment as uncategorized
-    if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
-      return true
-    }
-
-    return false
-  })
-
-  // Apply the same hideDoneTasks logic as the task store
-  const finalCount = taskStore.hideDoneTasks
-    ? filteredTasks.filter(task => task.status !== 'done').length
-    : filteredTasks.length
-
-  return finalCount
+  return taskStore.getUncategorizedTaskCount()
 })
 
-// Theme toggle - using new cohesive design system
-const toggleDarkMode = () => {
-  toggleTheme()
+// Route name to display title mapping
+const routeNameToTitle = {
+  'board': 'Board',
+  'calendar': 'Calendar',
+  'canvas': 'Canvas',
+  'catalog': 'Task Catalog',
+  'all-tasks': 'All Tasks',
+  'quick-sort': 'Quick Sort',
+  'focus': 'Focus',
+  'today': 'Today',
+  'calendar-test': 'Calendar Test',
+  'keyboard-test': 'Keyboard Test',
+  'yjs-test': 'YJS Test',
+  'design-system': 'Design System'
 }
 
-// Task management methods
-const createQuickTask = async () => {
-  if (newTaskTitle.value.trim()) {
-    // Use the unified undo system
-    const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-    const undoRedoActions = useUnifiedUndoRedo()
-    undoRedoActions.createTaskWithUndo({
-      title: newTaskTitle.value.trim(),
-      description: '',
-      status: 'planned',
-      projectId: '1' // Default project
-    })
-    newTaskTitle.value = ''
+// Define proper types for page title info
+interface FilterContext {
+  type?: string
+  name: string
+  emoji?: string
+  smartView?: string
+  project?: Project
+}
+
+interface PageTitleInfo {
+  main: string
+  filter: string | FilterContext
+}
+
+// Dynamic page title with hierarchical display and smart defaults
+const pageTitleInfo = computed<PageTitleInfo>(() => {
+  // Get current route name for main title
+  const currentRouteName = router.currentRoute.value.name as string
+  const mainTitle = routeNameToTitle[currentRouteName as keyof typeof routeNameToTitle] || 'Board'
+
+  // Determine filter context with priority order:
+  // 1. Explicit smart views (highest priority)
+  // 2. Selected projects
+  // 3. Route-based defaults (fallback to ensure context is always shown)
+  let filterContext: string | FilterContext = ''
+
+  // Priority 1: Check for active smart views
+  if (taskStore.activeSmartView === 'today') {
+    filterContext = {
+      type: 'smart-view',
+      name: 'Today',
+      emoji: '📅',
+      smartView: 'today'
+    }
+  } else if (taskStore.activeSmartView === 'week') {
+    filterContext = {
+      type: 'smart-view',
+      name: 'This Week',
+      emoji: '📆',
+      smartView: 'week'
+    }
+  } else if (taskStore.activeSmartView === 'uncategorized') {
+    filterContext = {
+      type: 'smart-view',
+      name: 'Uncategorized Tasks',
+      emoji: '🪣',
+      smartView: 'uncategorized'
+    }
+  } else if (taskStore.activeSmartView === 'above_my_tasks') {
+    filterContext = {
+      type: 'smart-view',
+      name: 'All Active Tasks',
+      emoji: '📋',
+      smartView: 'above_my_tasks'
+    }
   }
+  // Priority 2: Check for selected projects
+  else if (taskStore.activeProjectId) {
+    const project = taskStore.projects.find(p => p.id === taskStore.activeProjectId)
+    if (project) {
+      filterContext = {
+        type: 'project',
+        name: project.name,
+        project: project
+      }
+    }
+  }
+  // Priority 3: Route-based smart defaults (ensure context is never empty)
+  else {
+    // Apply smart defaults based on current route
+    switch (currentRouteName) {
+      case 'board':
+        filterContext = 'All Tasks'
+        break
+      case 'calendar':
+        filterContext = 'This Week'
+        break
+      case 'canvas':
+        filterContext = 'Full Workspace'
+        break
+      case 'catalog':
+      case 'all-tasks':
+        filterContext = 'Task Library'
+        break
+      case 'quick-sort':
+        filterContext = 'Uncategorized Tasks'
+        break
+      case 'focus':
+        filterContext = 'Focused Work'
+        break
+      case 'today':
+        filterContext = "Today's Schedule"
+        break
+      default:
+        filterContext = 'All Tasks'
+        break
+    }
+  }
+
+  return {
+    main: mainTitle,
+    filter: filterContext
+  }
+})
+
+
+// Backward compatibility
+const pageTitle = computed(() => {
+  const info = pageTitleInfo.value
+  return info.filter || info.main
+})
+
+// Theme toggle removed - app now uses dark mode only
+
+// Timer methods
+const startQuickTimer = () => {
+  console.log('🍅 DEBUG: startQuickTimer called - starting general timer')
+  // Start a general 25-minute timer (no specific task)
+  timerStore.startTimer('general')
 }
 
-// Task Edit Modal handlers
-const closeEditModal = () => {
-  showEditModal.value = false
-  selectedTask.value = null
+const startShortBreak = () => {
+  console.log('🍅 DEBUG: startShortBreak called - starting short break timer')
+  // Start a 5-minute break timer
+  timerStore.startTimer('short-break', timerStore.settings.shortBreakDuration, true)
+}
+
+const startLongBreak = () => {
+  console.log('🍅 DEBUG: startLongBreak called - starting long break timer')
+  // Start a 15-minute long break timer
+  timerStore.startTimer('long-break', timerStore.settings.longBreakDuration, true)
+}
+
+// Quick Task - REBUILT
+const quickTaskRef = ref<HTMLInputElement | null>(null)
+
+const createQuickTask = async () => {
+  const input = quickTaskRef.value
+  if (!input) return
+
+  const title = input.value.trim()
+  if (!title) return
+
+  await taskStore.createTask({
+    title,
+    description: '',
+    status: 'planned',
+    projectId: undefined
+  })
+
+  input.value = ''
+}
+
+
+
+// Quick Task Create Modal handlers
+const closeQuickTaskCreate = () => {
+  showQuickTaskCreate.value = false
+}
+
+const handleQuickTaskCreate = async (title: string, description: string) => {
+  console.log('🎯 Creating quick task with title:', title)
+
+  // DIRECT FIX: Call taskStore.createTask() directly instead of using undo system
+  // The undo system seems to have issues, but taskStore.createTask() works perfectly
+  try {
+    const newTask = await taskStore.createTask({
+      title: title,
+      description: description,
+      status: 'planned',
+      projectId: undefined // No default project - tasks go to Uncategorized
+    })
+
+    // Close the quick create modal
+    closeQuickTaskCreate()
+
+    if (newTask) {
+      console.log('✅ Successfully created quick task:', newTask.title)
+    } else {
+      console.error('❌ Failed to create new quick task')
+    }
+  } catch (error) {
+    console.error('❌ Error creating quick task:', error)
+    closeQuickTaskCreate() // Still close modal on error
+  }
 }
 
 // Project Navigation Methods
-const toggleProjectExpansion = (projectId: string) => {
-  const index = expandedProjects.value.indexOf(projectId)
-  if (index > -1) {
-    expandedProjects.value.splice(index, 1)
-  } else {
-    expandedProjects.value.push(projectId)
-  }
-}
-
-const selectProject = (project: Project) => {
-  taskStore.setActiveProject(project.id)
-  taskStore.setSmartView(null)
-}
+// Using sidebar composable functions instead of local implementations
+// const toggleProjectExpansion = sidebar.toggleProjectExpansion
+// const selectProject = sidebar.selectProject
 
 // Keyboard navigation for project tree
 const handleProjectTreeKeydown = (event: KeyboardEvent) => {
@@ -679,8 +969,8 @@ const navigateToPreviousProject = () => {
 const expandCurrentProject = () => {
   const currentProjectId = taskStore.activeProjectId
   if (currentProjectId && hasProjectChildren(currentProjectId)) {
-    if (!expandedProjects.value.includes(currentProjectId)) {
-      expandedProjects.value.push(currentProjectId)
+    if (!sidebar.expandedProjects.value.includes(currentProjectId)) {
+      sidebar.expandedProjects.value.push(currentProjectId)
     }
   }
 }
@@ -690,9 +980,9 @@ const collapseCurrentProjectOrNavigateToParent = () => {
   if (!currentProjectId) return
 
   // If project has children and is expanded, collapse it
-  if (hasProjectChildren(currentProjectId) && expandedProjects.value.includes(currentProjectId)) {
-    const index = expandedProjects.value.indexOf(currentProjectId)
-    expandedProjects.value.splice(index, 1)
+  if (hasProjectChildren(currentProjectId) && sidebar.expandedProjects.value.includes(currentProjectId)) {
+    const index = sidebar.expandedProjects.value.indexOf(currentProjectId)
+    sidebar.expandedProjects.value.splice(index, 1)
   } else {
     // Otherwise, navigate to parent if exists
     const project = taskStore.getProjectById(currentProjectId)
@@ -707,7 +997,7 @@ const activateCurrentProject = () => {
   if (currentProjectId) {
     const project = taskStore.getProjectById(currentProjectId)
     if (project) {
-      selectProject(project)
+      sidebar.selectProject(project)
     }
   }
 }
@@ -735,7 +1025,7 @@ const getFlattenedProjectList = () => {
       if (!project.parentId) { // Only include root projects initially
         result.push(project)
 
-        if (expandedProjects.value.includes(project.id)) {
+        if (sidebar.expandedProjects.value.includes(project.id)) {
           const children = taskStore.projects.filter(p => p.parentId === project.id)
           result.push(...flatten(children, level + 1))
         }
@@ -767,7 +1057,7 @@ const getProjectTaskCount = (projectId: string) => {
   // Include tasks from child projects recursively
   const countTasksRecursive = (pid: string): number => {
     const directTasks = taskStore.tasks.filter(task => task.projectId === pid).length
-    const children = getChildren(pid)
+    const children = sidebar.getChildren(pid)
     const childTasks = children.reduce((sum, child) => sum + countTasksRecursive(child.id), 0)
     return directTasks + childTasks
   }
@@ -822,35 +1112,15 @@ const startTaskTimer = (taskId: string) => {
 
 
 const addTaskToProject = (projectId: string) => {
-  // Create new task immediately with default values
-  const newTask = taskStore.createTask({
-    title: 'New Task',
-    description: '',
-    status: 'planned',
-    priority: 'medium',
-    projectId: projectId
-  })
-
-  // Open TaskEditModal for editing
-  if (newTask) {
-    selectedTask.value = newTask
-    showEditModal.value = true
-    console.log('Opening task edit modal for project:', projectId)
-  } else {
-    console.error('Failed to create new task')
-  }
+  // Open quick task create modal instead of creating task directly
+  showQuickTaskCreate.value = true
+  console.log('Opening task creation modal for project:', projectId)
 }
 
 // Project management methods
-const openCreateProject = () => {
-  editingProject.value = null
-  showProjectModal.value = true
-}
-
-const openEditProject = (project: Project) => {
-  editingProject.value = project
-  showProjectModal.value = true
-}
+// Using sidebar composable functions instead of local implementations
+const openCreateProject = sidebar.openCreateProject
+const openEditProject = sidebar.openEditProject
 
 const handleProjectContextMenu = (event: MouseEvent, project: Project) => {
   event.preventDefault()
@@ -899,6 +1169,13 @@ const projectContextMenuItems = computed<ContextMenuItem[]>(() => {
 })
 
 const duplicateProject = async (project: Project) => {
+  // Ensure project is defined before proceeding
+  if (!project || !project.id) {
+    console.error('❌ duplicateProject called with invalid project:', project)
+    showProjectContextMenu.value = false
+    return
+  }
+
   // Use the task store directly for projects (not part of undo system)
   taskStore.createProject({
     name: `${project.name} (Copy)`,
@@ -912,6 +1189,12 @@ const duplicateProject = async (project: Project) => {
 }
 
 const confirmDeleteProject = (project: Project) => {
+  // Ensure project is defined before proceeding
+  if (!project || !project.id) {
+    console.error('❌ confirmDeleteProject called with invalid project:', project)
+    return
+  }
+
   const taskCount = taskStore.tasks.filter(t => t.projectId === project.id).length
   const childCount = taskStore.projects.filter(p => p.parentId === project.id).length
 
@@ -946,7 +1229,7 @@ const confirmDeleteTask = async (task: Task) => {
     // Use the unified undo system
     const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
     const undoRedoActions = useUnifiedUndoRedo()
-    undoRedoActions.deleteTaskWithUndo(task.id)
+    await undoRedoActions.deleteTaskWithUndo(task.id)
   }
   showConfirmModal.value = true
 }
@@ -1015,7 +1298,7 @@ const handleDeleteSelectedTasks = () => {
     const canvasStore = useCanvasStore()
 
     // Add canvas-selected task nodes (filter out section nodes)
-    const canvasTaskIds = canvasStore.selectedNodeIds.filter(nodeId => {
+    const canvasTaskIds = canvasStore.selectedNodeIds.filter((nodeId: string) => {
       const task = taskStore.tasks.find(t => t.id === nodeId)
       return !!task
     })
@@ -1059,7 +1342,7 @@ const handleDeleteSelectedTasks = () => {
       console.log('🔧 App.vue: About to delete task with undo command:', taskId)
 
       // Use the unified undo system for direct deletion
-      undoHistory.deleteTaskWithUndo(taskId)
+      await undoHistory.deleteTaskWithUndo(taskId)
 
       console.log('🔧 App.vue: Delete command executed for task:', taskId)
       console.log('🔧 App.vue: Undo stack size after deletion:', undoHistory.undoCount.value)
@@ -1096,10 +1379,9 @@ const handleRedo = async () => {
   console.log('🎹 Can redo:', undoHistory.canRedo.value)
 
   try {
-    const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-    const undoRedoActions = useUnifiedUndoRedo()
-    await undoRedoActions.redo()
-    console.log('✅ Redo successful - task should be deleted again')
+    // FIXED: Use the same undoHistory instance for consistency
+    await undoHistory.redo()
+    console.log('✅ Redo successful - task should be restored again')
     console.log('🎹 Redo stack size after redo:', undoHistory.redoCount.value)
     // You could add a toast notification here if you have one
   } catch (error) {
@@ -1119,6 +1401,13 @@ const viewRouteMap = {
 // Helper function to check if element should ignore keyboard shortcuts
 const shouldIgnoreElement = (target: HTMLElement | null): boolean => {
   if (!target) return false
+
+  // 🔧 FIX: Allow Enter key events on quick task input to pass through
+  // Check if this is the quick task input field
+  if (target.classList.contains('quick-task-input') ||
+      target.closest('.quick-task-section')) {
+    return false // Don't block - allow @keydown.enter to work
+  }
 
   // Check if target is an input, textarea, or contenteditable
   if (target.tagName === 'INPUT' ||
@@ -1191,6 +1480,23 @@ const handleKeydown = (event: KeyboardEvent) => {
       ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z')) {
     event.preventDefault()
     handleRedo()
+  }
+
+  // Ctrl+E (or Cmd+E) to edit selected task
+  if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
+    event.preventDefault()
+    // Open edit modal if exactly one task is selected
+    if (taskStore.selectedTaskIds.length === 1) {
+      const task = taskStore.tasks.find(t => t.id === taskStore.selectedTaskIds[0])
+      if (task) {
+        console.log('✏️ [APP.VUE] Ctrl+E: Opening edit modal for task:', task.title)
+        openEditTask(task)
+      }
+    } else if (taskStore.selectedTaskIds.length === 0) {
+      console.log('⚠️ [APP.VUE] Ctrl+E: No task selected')
+    } else {
+      console.log('⚠️ [APP.VUE] Ctrl+E: Multiple tasks selected, cannot edit')
+    }
   }
 
   // Shift+1-5 for view switching
@@ -1273,23 +1579,34 @@ const handleGlobalTaskContextMenu = (event: CustomEvent) => {
   handleTaskContextMenu(mouseEvent, task)
 }
 
-// Initialize theme and app
+// Initialize app (theme already set to dark in index.html)
 onMounted(async () => {
-  // Initialize cohesive theme system
-  initializeTheme()
-
   // Load UI state from localStorage
   uiStore.loadState()
 
-  // Load data from IndexedDB
+  // Load data from PouchDB
   await taskStore.loadFromDatabase()
   await canvasStore.loadFromDatabase()
 
-  // Initialize notification system for recurring tasks and reminders
-  await notificationStore.initializeNotifications()
+  // Wait for database to be fully ready before initializing notifications
+  // Database is ready if we can load tasks successfully
+  if (taskStore.tasks.length >= 0) {
+    try {
+      // Initialize notification system for recurring tasks and reminders
+      await notificationStore.initializeNotifications()
+    } catch (error) {
+      console.warn('⚠️ Notification system initialization failed:', error)
+    }
+  } else {
+    console.warn('⚠️ Database not ready, skipping notification initialization')
+  }
 
-  // Request notification permission for timer
-  timerStore.requestNotificationPermission()
+  // Request notification permission for timer (wrapped in try-catch for user gesture requirement)
+  try {
+    await timerStore.requestNotificationPermission()
+  } catch (error) {
+    console.warn('⚠️ Timer notification permission request failed:', error)
+  }
 
   // Listen for task edit requests
   window.addEventListener('open-task-edit', handleOpenTaskEdit as EventListener)
@@ -1328,37 +1645,43 @@ onUnmounted(() => {
     hsl(260, 20%, 14%) 75%,
     hsl(220, 13%, 11%) 100%
   );
+  /* CRITICAL FIX: Ensure root container has explicit dimensions */
+  width: 100vw;
+  height: 100vh;
   min-height: 100vh;
   font-family: var(--font-sans);
   color: var(--text-primary);
   /* Use CSS Grid for flexible sidebar layout */
   display: grid;
-  grid-template-columns: minmax(280px, 320px) 1fr;
+  grid-template-columns: minmax(240px, 340px) 1fr;
   position: relative;
   overflow-x: hidden; /* Prevent horizontal overflow at root level */
   overflow-y: visible; /* Allow vertical scrolling */
-  /* Force border removal with !important */
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  /* Remove any inherited margins or padding that might cause borders */
-  margin: 0 !important;
-  padding: 0 !important;
-  /* Ensure no positioning artifacts */
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  /* Remove any border-like styling */
-  border-radius: 0 !important;
-  border-image: none !important;
-  border-style: none !important;
-  border-width: 0 !important;
+  /* Ensure no borders are applied to the main app container */
+  border: none;
+  outline: none;
+  box-shadow: none;
+  /* Smooth transition for grid layout changes */
+  transition: grid-template-columns 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* When sidebar is hidden, collapse the first column */
 .app.sidebar-hidden {
-  grid-template-columns: 0 1fr;
+  grid-template-columns: 0fr 1fr;
+}
+
+/* Ensure sidebar and main content stay in correct grid columns */
+.sidebar {
+  grid-column: 1;
+}
+
+.main-content {
+  grid-column: 2;
+}
+
+/* When sidebar is hidden, explicitly collapse sidebar column */
+.app.sidebar-hidden .sidebar {
+  grid-column: 1 / span 0;
 }
 
 /* Animated gradient overlay */
@@ -1658,59 +1981,27 @@ onUnmounted(() => {
 
 /* Sidebar footer removed - Settings moved to header */
 
-/* Task Management Sidebar */
-.quick-add-section {
-  padding: var(--sidebar-quickadd-padding-y) var(--sidebar-quickadd-padding-x);
-  border-bottom: 1px solid var(--border-subtle);
+/* Task Management Sidebar - REBUILT */
+.quick-task-section {
+  padding: 8px;
+  background: var(--glass-bg-soft);
+  border-radius: 8px;
 }
 
-.quick-add-input {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3) var(--space-4);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-md);
-}
-
-.quick-add-input:focus-within {
-  border-color: var(--calendar-creating-border);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
-  box-shadow:
-    var(--calendar-creating-bg),
-    var(--shadow-lg);
-}
-
-.add-icon {
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.task-input {
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
+.quick-task-input {
   width: 100%;
-  outline: none;
+  padding: 10px;
+  background: var(--glass-bg-tint);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
 }
 
-.task-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.7;
+.quick-task-input:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-light);
 }
 
 .task-management-section {
@@ -1965,11 +2256,14 @@ onUnmounted(() => {
 .main-content {
   /* Grid column automatically takes remaining space */
   background: transparent;
-  padding: var(--space-10) var(--space-12); /* RTL: increased padding for less cramped feel */
+  padding: var(--space-10) var(--space-12) 0; /* RTL: increased padding for less cramped feel, removed bottom padding */
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  /* CRITICAL FIX: Ensure main content has explicit dimensions */
+  width: 100%;
+  height: 100%;
   min-height: 100vh;
   max-height: 100vh;
   overflow-x: hidden; /* Prevent horizontal overflow from affecting main layout */
@@ -1981,7 +2275,10 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
-/* When sidebar is hidden, content expands naturally via flexbox */
+/* Main content when sidebar is hidden - reduce left padding to utilize full width */
+.main-content.sidebar-hidden {
+  padding: var(--space-10) var(--space-6) 0; /* Reduce left padding to utilize full sidebar space */
+}
 
 /* BREADCRUMB */
 .breadcrumb {
@@ -2022,6 +2319,14 @@ onUnmounted(() => {
   pointer-events: none;
   position: relative;
   z-index: 5; /* Above canvas but events pass through */
+}
+
+/* SYNC STATUS CONTAINER */
+.sync-status-container {
+  pointer-events: auto; /* Re-enable events for sync status interaction */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* INTEGRATED CONTROL PANEL - Unified Clock + Timer Container */
@@ -2070,6 +2375,56 @@ onUnmounted(() => {
   pointer-events: auto;
 }
 
+/* Hierarchical page title display */
+.page-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 0;
+  line-height: 1.2;
+
+  /* Re-enable pointer events for text selection */
+  pointer-events: auto;
+}
+
+.title-main {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.title-filter {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  margin: 0;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Project visual indicators in header */
+.project-emoji-header {
+  font-size: 1.2em;
+  line-height: 1;
+  margin-right: 2px;
+}
+
+.project-color-header {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: middle;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+/* Backward compatibility */
 .project-title {
   font-size: var(--text-3xl);
   font-weight: var(--font-semibold);
@@ -2292,7 +2647,13 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: visible;
   padding-inline-end: var(--space-2); /* RTL: scrollbar spacing */
+  /* CRITICAL FIX: Ensure view wrapper has explicit dimensions for Vue Flow */
+  width: 100%;
+  height: 100%;
   min-height: 0; /* Critical: allows flex child to shrink */
+  /* Ensure the container has non-zero dimensions */
+  min-width: 1px;
+  min-height: 1px;
 }
 
 /* Custom scrollbar styling */
@@ -2371,6 +2732,7 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
+  text-decoration: none;
 }
 
 .view-tab:hover {
@@ -2787,6 +3149,14 @@ onUnmounted(() => {
   color: var(--text-subtle);
 }
 
+.dark-theme .title-main {
+  color: var(--text-primary);
+}
+
+.dark-theme .title-filter {
+  color: var(--text-secondary);
+}
+
 .dark-theme .project-title {
   color: var(--text-primary);
 }
@@ -2826,31 +3196,20 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
-/* Dark theme for task management sidebar */
-.dark-theme .quick-add-section {
-  border-bottom-color: var(--border-subtle);
+/* Dark theme for task management sidebar - REBUILT */
+.dark-theme .quick-task-section {
+  background: var(--glass-bg-soft);
 }
 
-.dark-theme .quick-add-input {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
-}
-
-.dark-theme .quick-add-input:focus-within {
-  border-color: var(--color-navigation);
-  box-shadow: var(--purple-glow-focus);
-}
-
-.dark-theme .add-icon {
-  color: var(--text-muted);
-}
-
-.dark-theme .task-input {
+.dark-theme .quick-task-input {
+  background: var(--glass-bg-tint);
+  border-color: var(--glass-border);
   color: var(--text-primary);
 }
 
-.dark-theme .task-input::placeholder {
-  color: var(--text-subtle);
+.dark-theme .quick-task-input:focus {
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-light);
 }
 
 .dark-theme .task-management-section {

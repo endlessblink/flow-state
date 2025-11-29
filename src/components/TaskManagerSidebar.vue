@@ -5,7 +5,7 @@
       <div class="header-title">
         <ListTodo :size="16" :stroke-width="1.5" class="header-icon" />
         <span class="title-text">Tasks</span>
-        <span class="task-count-badge">{{ filteredTasks.length }}</span>
+        <span class="task-count-badge">{{ visibleTaskCount }}</span>
       </div>
       <button class="add-task-btn" @click="$emit('addTask')" title="Add new task">
         <Plus :size="16" :stroke-width="1.5" />
@@ -26,55 +26,6 @@
           @blur="searchFocused = false"
         />
         <div class="search-shortcut" v-if="!searchQuery">⌘K</div>
-      </div>
-
-      <div class="filter-tabs">
-        <button
-          v-for="filter in filters"
-          :key="filter.key"
-          class="filter-tab icon-only"
-          :class="{ active: activeFilter === filter.key }"
-          @click="activeFilter = filter.key"
-          :title="filter.label"
-        >
-          <Inbox v-if="filter.key === 'all'" :size="16" />
-          <Clock v-else-if="filter.key === 'unscheduled'" :size="16" />
-          <Calendar v-else-if="filter.key === 'scheduled'" :size="16" />
-        </button>
-
-        <!-- Status Filters -->
-        <button
-          class="filter-tab icon-only status-filter"
-          :class="{ active: taskStore.activeStatusFilter === null }"
-          @click="taskStore.setActiveStatusFilter(null)"
-          title="All Statuses"
-        >
-          <ListTodo :size="16" />
-        </button>
-        <button
-          class="filter-tab icon-only status-filter"
-          :class="{ active: taskStore.activeStatusFilter === 'planned' }"
-          @click="taskStore.setActiveStatusFilter('planned')"
-          title="Planned"
-        >
-          <Calendar :size="16" />
-        </button>
-        <button
-          class="filter-tab icon-only status-filter"
-          :class="{ active: taskStore.activeStatusFilter === 'in_progress' }"
-          @click="taskStore.setActiveStatusFilter('in_progress')"
-          title="In Progress"
-        >
-          <Play :size="16" />
-        </button>
-        <button
-          class="filter-tab icon-only status-filter"
-          :class="{ active: taskStore.activeStatusFilter === 'done' }"
-          @click="taskStore.setActiveStatusFilter('done')"
-          title="Completed"
-        >
-          <Check :size="16" />
-        </button>
       </div>
     </div>
 
@@ -126,7 +77,10 @@
                   <span v-if="task.scheduledDate" class="scheduled-badge" title="Scheduled">
                     <Clock :size="12" :stroke-width="1.5" />
                   </span>
-                                    <span class="priority-badge" :class="task.priority" v-if="task.priority !== 'medium'">
+                  <span v-if="getTaskInstances(task).length > 0" class="instance-badge" :title="`${getTaskInstances(task).length} calendar instance(s)`">
+                    {{ getTaskInstances(task).length }}×
+                  </span>
+                  <span class="priority-badge" :class="task.priority" v-if="task.priority !== 'medium'">
                     <Flag :size="12" :stroke-width="1.5" />
                   </span>
                   <span v-if="taskStore.hasNestedTasks(task.id)" class="children-badge" :title="`${taskStore.getTaskChildren(task.id).length} nested task(s)`">
@@ -194,7 +148,10 @@
                     <span v-if="childTask.scheduledDate" class="scheduled-badge" title="Scheduled">
                       <Clock :size="12" :stroke-width="1.5" />
                     </span>
-                                        <span class="priority-badge" :class="childTask.priority" v-if="childTask.priority !== 'medium'">
+                    <span v-if="getTaskInstances(childTask).length > 0" class="instance-badge" :title="`${getTaskInstances(childTask).length} calendar instance(s)`">
+                      {{ getTaskInstances(childTask).length }}×
+                    </span>
+                    <span class="priority-badge" :class="childTask.priority" v-if="childTask.priority !== 'medium'">
                       <Flag :size="12" :stroke-width="1.5" />
                     </span>
                   </div>
@@ -253,13 +210,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
+import { ref, computed, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import {
   ListTodo, Plus, Search, Clock, Flag, Timer, Calendar,
-  Play, Edit, Inbox, ChevronRight, Check
+  Edit, Inbox, ChevronRight, Check, Play
 } from 'lucide-vue-next'
+
+const route = useRoute()
+const hideStatusFilters = computed(() => route.name === 'canvas')
 
 defineEmits<{
   addTask: []
@@ -268,12 +229,21 @@ defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
+const router = useRouter()
 
 // Search and filtering
 const searchQuery = ref('')
 const activeFilter = ref('all')
 const isDragOver = ref(false)
 const searchFocused = ref(false)
+
+// Check if we're in canvas view (where FilterControls component provides status filtering)
+const isCanvasView = ref(false)
+
+// Watch route changes to update canvas view detection
+watch(() => router.currentRoute.value.name, (newName) => {
+  isCanvasView.value = newName === 'canvas'
+}, { immediate: true })
 
 // Hierarchical task state
 const expandedTasks = ref<Set<string>>(new Set())
@@ -319,6 +289,17 @@ const filteredTasks = computed(() => {
   return tasks
 })
 
+// Context-aware task count - shows appropriate count based on current view
+const visibleTaskCount = computed(() => {
+  // For Calendar view, use calendar-aware task counting to match Calendar display
+  if (route.name === 'calendar') {
+    return taskStore.calendarFilteredTasks.length
+  }
+
+  // For Board and Canvas views, use the broader filteredTasks count
+  return filteredTasks.value.length
+})
+
 // Root tasks (tasks without parentTaskId) from filtered tasks
 const rootTasks = computed(() => {
   return filteredTasks.value.filter(task => !task.parentTaskId)
@@ -346,10 +327,7 @@ const handleDragStart = (event: DragEvent, task: Task) => {
     event.dataTransfer.setData('application/json', JSON.stringify({
       type: 'task',
       taskId: task.id,
-      taskIds: [task.id], // For batch operation compatibility
-      title: task.title,
-      fromInbox: true,
-      source: 'sidebar'
+      title: task.title
     }))
     event.dataTransfer.effectAllowed = 'move'
   }
@@ -582,24 +560,6 @@ const handleDrop = (event: DragEvent) => {
   color: white;
   font-weight: var(--font-semibold);
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-/* Status filters - visual separation from schedule filters */
-.filter-tab.status-filter {
-  border-inline-start: 1px solid var(--glass-border); /* RTL: border at start */
-  margin-inline-start: 2px; /* RTL: margin at start */
-  padding-inline-start: 3px; /* RTL: padding at start */
-}
-
-.filter-tab.status-filter:hover {
-  background: var(--glass-bg-heavy);
-  border-inline-start-color: var(--brand-primary); /* RTL: border color at start */
-}
-
-.filter-tab.status-filter.active {
-  background: var(--brand-primary-bg-subtle);
-  border-inline-start-color: var(--brand-primary-border-medium); /* RTL: border color at start */
-  color: var(--brand-primary);
 }
 
 .task-list {

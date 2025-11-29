@@ -5,13 +5,13 @@
     'scrolling': isScrolling
   }">
     <!-- Swimlane Header (fixed, not scrollable) -->
-    <div class="swimlane-header" @click="toggleCollapse" @contextmenu.prevent.stop="handleGroupContextMenu">
+    <div class="swimlane-header" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
       <div class="header-content">
         <button class="collapse-btn">
           <ChevronDown v-if="!isCollapsed" :size="16" />
           <ChevronRight v-if="isCollapsed" :size="16" />
         </button>
-        <div class="project-indicator" :style="{ backgroundColor: project.color }"></div>
+        <div class="project-indicator" :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }"></div>
         <h3 class="project-name">{{ project.name }}</h3>
         <span class="task-count">{{ totalTasks }} tasks</span>
 
@@ -45,8 +45,17 @@
           @dragleave="handleColumnDragLeave"
         >
           <div class="column-header-mini">
-            <span class="column-title-mini">{{ column.label }}</span>
-            <span class="column-count">{{ getTasksByStatus(column.key).length }}</span>
+            <div class="header-left-mini">
+              <span class="column-title-mini">{{ column.label }}</span>
+              <span class="column-count">{{ getTasksByStatus(column.key).length }}</span>
+            </div>
+            <button
+              class="add-task-btn-mini"
+              @click="handleAddTask(column.key)"
+              :title="`Add task to ${column.label}`"
+            >
+              <Plus :size="12" />
+            </button>
           </div>
           <draggable
             v-model="localTasks.status[column.key]"
@@ -88,8 +97,17 @@
             @dragleave="handleColumnDragLeave"
           >
           <div class="column-header-mini">
-            <span class="column-title-mini">{{ column.label }}</span>
-            <span class="column-count">{{ getTasksByDate(column.key).length }}</span>
+            <div class="header-left-mini">
+              <span class="column-title-mini">{{ column.label }}</span>
+              <span class="column-count">{{ getTasksByDate(column.key).length }}</span>
+            </div>
+            <button
+              class="add-task-btn-mini"
+              @click="handleAddTask(column.key)"
+              :title="`Add task to ${column.label}`"
+            >
+              <Plus :size="12" />
+            </button>
           </div>
           <draggable
             v-model="localTasks.date[column.key]"
@@ -180,11 +198,12 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
-import type { Task, Project } from '@/stores/tasks'
-import { useTaskStore, parseDateKey, formatDateKey } from '@/stores/tasks'
-import { ChevronDown, ChevronRight, Calendar } from 'lucide-vue-next'
+import type { Task, Project, RecurringTaskInstance } from '@/stores/tasks'
+import { useTaskStore, parseDateKey, formatDateKey, getTaskInstances } from '@/stores/tasks'
+import { ChevronDown, ChevronRight, Calendar, Plus } from 'lucide-vue-next'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import { useHorizontalDragScroll } from '@/composables/useHorizontalDragScroll'
+import { shouldUseSmartGroupLogic, getSmartGroupType } from '@/composables/useTaskSmartGroups'
 
 interface Props {
   project: Project
@@ -200,6 +219,7 @@ const emit = defineEmits<{
   startTimer: [taskId: string]
   editTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
+  addTask: [statusOrDateKey: string]
   contextMenu: [event: MouseEvent, task: Task]
   groupContextMenu: [event: MouseEvent, project: Project]
 }>()
@@ -334,8 +354,23 @@ const getTasksByDate = (dateColumn: string) => {
   const afterNextWeekStart = addDays(nextWeekEnd, 1)
 
   const result = props.tasks.filter(task => {
-    // Simple check: use task.dueDate directly (no more complex instance system)
-    const taskDueDate = task.dueDate ? parseDateKey(task.dueDate) : null
+    const instances = getTaskInstances(task)
+
+    // Pre-compute task classification for consistency across columns
+    const taskCreatedDate = new Date(task.createdAt)
+    taskCreatedDate.setHours(0, 0, 0, 0)
+    const oneDayAgo = new Date(today)
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1)
+    const isCreatedToday = taskCreatedDate.getTime() === today.getTime()
+    const isDueToday = task.dueDate === todayStr
+    const isInProgress = task.status === 'in_progress'
+    const isOverdueByDate = task.dueDate && task.dueDate < todayStr
+    const hasPastInstance = instances.length > 0 && instances.some(instance => {
+      const instanceDate = parseDateKey(instance.scheduledDate)
+      return instanceDate && instanceDate < today
+    })
+    const isOldAndUnscheduled = taskCreatedDate < oneDayAgo && instances.length === 0 &&
+                               !task.dueDate && task.status !== 'backlog'
 
     // Check for overdue tasks first (highest priority)
     if (dateColumn === 'overdue') {
@@ -344,77 +379,62 @@ const getTasksByDate = (dateColumn: string) => {
         return false
       }
 
-      // Check if task has a past due date
-      if (taskDueDate && taskDueDate < today) {
-        return true
-      }
-
-      // Check if task is old (created more than 1 day ago) and has no date
-      const taskCreatedDate = new Date(task.createdAt)
-      taskCreatedDate.setHours(0, 0, 0, 0)
-      const oneDayAgo = new Date(today)
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1)
-
-      // Include tasks that are at least 1 day old, have no date, and are not in backlog
-      if (taskCreatedDate < oneDayAgo && !task.dueDate && task.status !== 'backlog') {
-        return true
-      }
-
-      return false
+      // Task is overdue if it has a past due date OR a past instance OR is old and unscheduled
+      return isOverdueByDate || hasPastInstance || isOldAndUnscheduled
     }
 
-    // For tasks without due date, check additional criteria
-    if (!task.dueDate) {
-      // Check if task was created today (for today column)
+    // For tasks without instances, check additional criteria
+    if (instances.length === 0) {
+      // Check if task matches today criteria (but is not already classified as overdue)
       if (dateColumn === 'today') {
-        const taskCreatedDate = new Date(task.createdAt)
-        taskCreatedDate.setHours(0, 0, 0, 0)
-        if (taskCreatedDate.getTime() === today.getTime()) {
-          return true
-        }
-
-        // Check if task is in progress
-        if (task.status === 'in_progress') {
-          return true
-        }
+        // Task belongs in Today if created today OR due today OR in progress
+        // But NOT if it's already overdue (handled above)
+        return (isCreatedToday || isDueToday || isInProgress) && !isOverdueByDate
       }
 
       // Check if task has no scheduled date for noDate column
       if (dateColumn === 'noDate') {
-        // Only include in noDate if it doesn't match today criteria
-        const taskCreatedDate = new Date(task.createdAt)
-        taskCreatedDate.setHours(0, 0, 0, 0)
-        const isCreatedToday = taskCreatedDate.getTime() === today.getTime()
-        const isInProgress = task.status === 'in_progress'
-
-        return !isCreatedToday && !isInProgress
+        // Only include in noDate if it doesn't match today criteria AND isn't overdue
+        return !isCreatedToday && !isDueToday && !isInProgress && !isOverdueByDate
       }
 
       return false
     }
 
-    // For tasks with due dates, use simple date comparison
-    if (taskDueDate) {
+    // For tasks with instances, use the original logic with later flag support
+    return instances.some(instance => {
+      // Check for later flag first
+      if (instance.isLater) {
+        return dateColumn === 'later'
+      }
+
+      const instanceDate = parseDateKey(instance.scheduledDate)
+      if (!instanceDate) return false
+
+      // Past dates go to overdue column (but we already handled overdue above)
+      if (instanceDate < today) {
+        return dateColumn === 'overdue'
+      }
+
       switch (dateColumn) {
         case 'inbox':
-          // New tasks without specific scheduling (shouldn't have due date for inbox)
-          return false
+          // New tasks without specific scheduling
+          // Include tasks that are unscheduled and not completed
+          return !task.dueDate && task.status !== 'done' && task.status !== 'in_progress'
         case 'today':
-          return isSameDay(taskDueDate, today)
+          return isSameDay(instanceDate, today)
         case 'tomorrow':
-          return isSameDay(taskDueDate, tomorrow) && !(taskDueDate >= weekendStart && taskDueDate <= weekendEnd)
+          return isSameDay(instanceDate, tomorrow) && !(instanceDate >= weekendStart && instanceDate <= weekendEnd)
         case 'thisWeek':
           // Include this weekend and next week
-          return (taskDueDate >= weekendStart && taskDueDate <= weekendEnd) ||
-                 (taskDueDate >= nextWeekStart && taskDueDate <= nextWeekEnd)
+          return (instanceDate >= weekendStart && instanceDate <= weekendEnd) ||
+                 (instanceDate >= nextWeekStart && instanceDate <= nextWeekEnd)
         case 'later':
-          return taskDueDate >= afterNextWeekStart
+          return instanceDate >= afterNextWeekStart && !instance.isLater
         default:
           return false
       }
-    }
-
-    return false
+    })
   })
 
   // Include completed tasks in noDate column (Todoist-style)
@@ -447,30 +467,59 @@ const totalTasks = computed(() => {
   return nonDoneCount
 })
 
+// Type definitions for indexed access
+interface StatusTasks {
+  planned: Task[]
+  in_progress: Task[]
+  backlog: Task[]
+  on_hold: Task[]
+  done: Task[]
+  [key: string]: Task[] // Index signature for dynamic access
+}
+
+interface DateTasks {
+  overdue: Task[]
+  inbox: Task[]
+  today: Task[]
+  tomorrow: Task[]
+  thisWeek: Task[]
+  later: Task[]
+  noDate: Task[]
+  [key: string]: Task[] // Index signature for dynamic access
+}
+
+interface PriorityTasks {
+  high: Task[]
+  medium: Task[]
+  low: Task[]
+  no_priority: Task[]
+  [key: string]: Task[] // Index signature for dynamic access
+}
+
 // Local reactive copies for drag-drop using refs for proper vuedraggable reactivity
 const localTasks = ref({
   status: {
-    planned: [],
-    in_progress: [],
-    backlog: [],
-    on_hold: [],
-    done: []
-  },
+    planned: [] as Task[],
+    in_progress: [] as Task[],
+    backlog: [] as Task[],
+    on_hold: [] as Task[],
+    done: [] as Task[]
+  } as StatusTasks,
   date: {
-    overdue: [],
-    inbox: [],
-    today: [],
-    tomorrow: [],
-    thisWeek: [],
-    later: [],
-    noDate: []
-  },
+    overdue: [] as Task[],
+    inbox: [] as Task[],
+    today: [] as Task[],
+    tomorrow: [] as Task[],
+    thisWeek: [] as Task[],
+    later: [] as Task[],
+    noDate: [] as Task[]
+  } as DateTasks,
   priority: {
-    high: [],
-    medium: [],
-    low: [],
-    no_priority: []
-  }
+    high: [] as Task[],
+    medium: [] as Task[],
+    low: [] as Task[],
+    no_priority: [] as Task[]
+  } as PriorityTasks
 })
 
 // Function to update localTasks from props
@@ -521,6 +570,10 @@ const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
 }
 
+const handleAddTask = (statusOrDateKey: string) => {
+  emit('addTask', statusOrDateKey)
+}
+
 const handleGroupContextMenu = (event: MouseEvent) => {
   console.log('🔍 [KanbanSwimlane] handleGroupContextMenu called')
   console.log('🔍 [KanbanSwimlane] Event:', event)
@@ -531,7 +584,7 @@ const handleGroupContextMenu = (event: MouseEvent) => {
     console.log('✅ [KanbanSwimlane] groupContextMenu event emitted successfully')
   } catch (error) {
     console.error('❌ [KanbanSwimlane] Error emitting groupContextMenu:', error)
-    console.error('❌ [KanbanSwimlane] Error details:', error.stack)
+    console.error('❌ [KanbanSwimlane] Error details:', error instanceof Error ? error.stack : String(error))
   }
 }
 
@@ -593,7 +646,20 @@ const handleDragChange = (event: any, viewType: string, columnKey: string) => {
     if (viewType === 'status') {
       emit('moveTask', task.id, columnKey as Task['status'])
     } else if (viewType === 'date') {
-      taskStore.moveTaskToDate(task.id, columnKey)
+      // Check if this is a smart group (today, tomorrow, etc.)
+      if (shouldUseSmartGroupLogic(columnKey)) {
+        const smartGroupType = getSmartGroupType(columnKey)
+        if (smartGroupType) {
+          // Use smart group logic - set dueDate but keep in inbox
+          taskStore.moveTaskToSmartGroup(task.id, smartGroupType)
+        } else {
+          // Fallback to original behavior
+          taskStore.moveTaskToDate(task.id, columnKey)
+        }
+      } else {
+        // Regular calendar date - use original scheduling logic
+        taskStore.moveTaskToDate(task.id, columnKey)
+      }
     } else if (viewType === 'priority') {
       taskStore.moveTaskToPriority(task.id, columnKey as any)
     }
@@ -876,9 +942,37 @@ watch(() => props.tasks, () => {
   top: 0;
   z-index: 10;
   background: var(--surface-primary);
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(16px);
+}
+
+.header-left-mini {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.add-task-btn-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--brand-primary);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.add-task-btn-mini:hover {
+  background: var(--brand-primary-hover);
+  transform: scale(1.05);
+}
+
+.add-task-btn-mini:active {
+  transform: scale(0.95);
 }
 
 .column-title-mini {

@@ -4,50 +4,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
-
-export interface Subtask {
-  id: string
-  parentTaskId: string
-  title: string
-  description: string
-  completedPomodoros: number
-  isCompleted: boolean
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface Task {
-  id: string
-  title: string
-  description: string
-  status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
-  priority: 'low' | 'medium' | 'high' | null
-  progress: number
-  completedPomodoros: number
-  subtasks: Subtask[]
-  dueDate: string // Simplified: Single date field - when this task needs to be completed by
-  estimatedDuration?: number
-  projectId: string
-  parentTaskId?: string | null
-  createdAt: Date
-  updatedAt: Date
-  canvasPosition?: { x: number; y: number }
-  isInInbox?: boolean
-  isUncategorized?: boolean
-  dependsOn?: string[]
-  connectionTypes?: { [targetTaskId: string]: 'sequential' | 'blocker' | 'reference' }
-}
-
-export interface Project {
-  id: string
-  name: string
-  color: string | string[]
-  colorType: 'hex' | 'emoji'
-  emoji?: string
-  viewType: 'status' | 'date' | 'priority'
-  parentId?: string | null
-  createdAt: Date
-}
+import type { Task, TaskInstance, Subtask, Project } from '@/types/tasks'
 
 export const useTaskCoreStore = defineStore('taskCore', () => {
   // State
@@ -63,11 +20,6 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
   // Task CRUD operations
   const createTask = (taskData: Partial<Task>): Task => {
     const now = new Date()
-
-    // Determine if task should be uncategorized
-    const hasProjectId = taskData.projectId && taskData.projectId !== '1' && taskData.projectId !== 'default'
-    const isUncategorized = taskData.isUncategorized !== undefined ? taskData.isUncategorized : !hasProjectId
-
     const task: Task = {
       id: uuidv4(),
       title: taskData.title || '',
@@ -78,12 +30,14 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
       completedPomodoros: taskData.completedPomodoros || 0,
       subtasks: taskData.subtasks || [],
       dueDate: taskData.dueDate || '',
+      scheduledDate: taskData.scheduledDate,
+      scheduledTime: taskData.scheduledTime,
       estimatedDuration: taskData.estimatedDuration,
-      projectId: hasProjectId ? taskData.projectId! : null,
+      instances: taskData.instances || [],
+      projectId: taskData.projectId || 'default',
       parentTaskId: taskData.parentTaskId || null,
       canvasPosition: taskData.canvasPosition,
       isInInbox: taskData.isInInbox || false,
-      isUncategorized: isUncategorized,
       dependsOn: taskData.dependsOn || [],
       connectionTypes: taskData.connectionTypes || {},
       createdAt: now,
@@ -127,6 +81,9 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
 
   // Project CRUD operations
   const createProject = (projectData: Partial<Project>): Project => {
+    console.log('🚨 [DEBUG] taskCore.ts createProject called with:', projectData)
+    console.trace('🚨 [DEBUG] Call stack for taskCore createProject')
+
     const project: Project = {
       id: uuidv4(),
       name: projectData.name || 'New Project',
@@ -139,6 +96,7 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
     }
 
     projects.value.push(project)
+    console.log('🚨 [DEBUG] taskCore project added. Total projects:', projects.value.length)
     return project
   }
 
@@ -273,5 +231,5 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
   }
 })
 
-// Export types for use in other modules
-export type { Task, Project, Subtask, TaskInstance }
+// Re-export Task interface for other modules that import it
+export type { Task, TaskInstance, Subtask, Project } from '@/types/tasks'

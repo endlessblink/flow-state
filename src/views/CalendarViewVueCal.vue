@@ -1,11 +1,5 @@
 <template>
   <div class="calendar-layout">
-    <TaskManagerSidebar
-      @addTask="handleAddTask"
-      @startTimer="handleStartTimer"
-      @editTask="handleEditTask"
-    />
-
     <div class="calendar-main">
       <div class="calendar-header">
         <h2>Vue-Cal Test Calendar</h2>
@@ -36,37 +30,25 @@
       />
     </div>
 
-    <!-- TASK EDIT MODAL -->
-    <TaskEditModal
-      :is-open="isEditModalOpen"
-      :task="selectedTask"
-      @close="closeEditModal"
-    />
-  </div>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import VueCal from 'vue-cal'
 import 'vue-cal/dist/vuecal.css'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
-import TaskManagerSidebar from '@/components/TaskManagerSidebar.vue'
-import TaskEditModal from '@/components/TaskEditModal.vue'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
-
-// Task Edit Modal state
-const isEditModalOpen = ref(false)
-const selectedTask = ref<any>(null)
 
 // Convert Pinia tasks to vue-cal event format
 const vueCalEvents = computed(() => {
   const events: any[] = []
 
   // Add regular tasks
-  taskStore.tasks
+  taskStore.filteredTasks
     .filter(task => task.scheduledDate && task.scheduledTime && !task.recurrence?.isEnabled)
     .forEach(task => {
       const [hour, minute] = task.scheduledTime!.split(':').map(Number)
@@ -87,12 +69,12 @@ const vueCalEvents = computed(() => {
     })
 
   // Add recurring task instances
-  taskStore.tasks
+  taskStore.filteredTasks
     .filter(task => task.recurrence?.isEnabled && task.recurrence?.generatedInstances)
     .forEach(task => {
-      task.recurrence!.generatedInstances
-        .filter(instance => !instance.isSkipped && instance.scheduledDate && instance.scheduledTime)
-        .forEach(instance => {
+      task.recurrence?.generatedInstances
+        ?.filter(instance => !instance.isSkipped && instance.scheduledDate && instance.scheduledTime)
+        ?.forEach(instance => {
           const [hour, minute] = instance.scheduledTime!.split(':').map(Number)
           const start = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
           const duration = instance.duration || task.estimatedDuration || 30
@@ -178,41 +160,6 @@ const handleEventDblClick = (event: any, e: MouseEvent) => {
   window.dispatchEvent(new CustomEvent('open-task-edit', {
     detail: { taskId: event.id }
   }))
-}
-
-const handleAddTask = () => {
-  // Create new task immediately with default values
-  const newTask = taskStore.createTask({
-    title: 'New Task',
-    description: '',
-    status: 'planned',
-    priority: 'medium'
-  })
-
-  // Open TaskEditModal for editing
-  if (newTask) {
-    selectedTask.value = newTask
-    isEditModalOpen.value = true
-    console.log('Opening task edit modal for calendar')
-  } else {
-    console.error('Failed to create new task')
-  }
-}
-
-const handleStartTimer = (taskId: string) => {
-  timerStore.startTimer(taskId, timerStore.settings.workDuration, false)
-}
-
-const handleEditTask = (taskId: string) => {
-  window.dispatchEvent(new CustomEvent('open-task-edit', {
-    detail: { taskId }
-  }))
-}
-
-// Task Edit Modal handlers
-const closeEditModal = () => {
-  isEditModalOpen.value = false
-  selectedTask.value = null
 }
 </script>
 

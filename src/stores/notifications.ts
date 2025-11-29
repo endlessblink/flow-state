@@ -43,15 +43,21 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   // Computed
   const activeNotifications = computed(() =>
-    scheduledNotifications.value.filter(n => !n.isShown && !n.isDismissed)
+    Array.isArray(scheduledNotifications.value)
+      ? scheduledNotifications.value.filter(n => !n.isShown && !n.isDismissed)
+      : []
   )
 
   const pendingNotifications = computed(() =>
-    scheduledNotifications.value.filter(n => !n.isShown && n.scheduledTime <= new Date())
+    Array.isArray(scheduledNotifications.value)
+      ? scheduledNotifications.value.filter(n => !n.isShown && n.scheduledTime <= new Date())
+      : []
   )
 
   const snoozedNotifications = computed(() =>
-    scheduledNotifications.value.filter(n => n.snoozedUntil && n.snoozedUntil > new Date())
+    Array.isArray(scheduledNotifications.value)
+      ? scheduledNotifications.value.filter(n => n.snoozedUntil && n.snoozedUntil > new Date())
+      : []
   )
 
   /**
@@ -68,17 +74,25 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const loadScheduledNotifications = async () => {
     try {
+      // Check if database is ready before loading
+      if (!db.isReady?.value) {
+        console.warn('⚠️ Database not ready, skipping notification load')
+        return
+      }
+
       const saved = await db.load<ScheduledNotification[]>(DB_KEYS.NOTIFICATIONS)
       if (saved) {
         scheduledNotifications.value = saved
       }
     } catch (error) {
-      console.error('Error loading notifications:', error)
+      console.warn('⚠️ Error loading notifications:', error)
+      // Don't fail the entire initialization if notifications can't load
     }
   }
 
   /**
-   * Check and request notification permission
+   * Check current notification permission status
+   * Note: Does NOT request permission - must be done in user event handler
    */
   const checkNotificationPermission = async (): Promise<boolean> => {
     if (!('Notification' in window)) {
@@ -92,10 +106,34 @@ export const useNotificationStore = defineStore('notifications', () => {
       return true
     }
 
+    isPermissionGranted.value = (Notification.permission as any) === 'granted'
+    return isPermissionGranted.value
+  }
+
+  /**
+   * Request notification permission (must be called from user event handler)
+   */
+  const requestNotificationPermission = async (): Promise<boolean> => {
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications')
+      return false
+    }
+
+    if (Notification.permission === 'granted') {
+      isPermissionGranted.value = true
+      return true
+    }
+
     if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission()
-      isPermissionGranted.value = permission === 'granted'
-      return isPermissionGranted.value
+      try {
+        const permission = await Notification.requestPermission()
+        isPermissionGranted.value = permission === 'granted'
+        return isPermissionGranted.value
+      } catch (error) {
+        console.warn('⚠️ Notification permission request failed:', error)
+        isPermissionGranted.value = false
+        return false
+      }
     }
 
     isPermissionGranted.value = false
@@ -131,6 +169,13 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const checkAndShowNotifications = async () => {
     const now = new Date()
+
+    // CRITICAL FIX: Ensure scheduledNotifications.value is an array
+    if (!Array.isArray(scheduledNotifications.value)) {
+      console.warn('⚠️ scheduledNotifications.value is not an array, resetting to empty array')
+      scheduledNotifications.value = []
+    }
+
     const readyNotifications = scheduledNotifications.value.filter(n =>
       !n.isShown &&
       !n.isDismissed &&
@@ -184,18 +229,14 @@ export const useNotificationStore = defineStore('notifications', () => {
         icon: '/favicon.ico',
         badge: '/favicon.ico',
         tag: notification.id,
-        requireInteraction: true,
-        actions: [
-          { action: 'snooze', title: 'Snooze' },
-          { action: 'dismiss', title: 'Dismiss' }
-        ]
-      })
+        requireInteraction: true
+      } as any)
 
       browserNotification.onclick = () => {
         browserNotification.close()
         // Focus the window and navigate to the task
         window.focus()
-        // TODO: Navigate to the specific task
+        // NOTE: Task navigation requires integration with view routing system
       }
 
       browserNotification.onclose = () => {
@@ -253,8 +294,11 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Schedule notifications for recurring task instances
    */
   const scheduleRecurringTaskNotifications = async (taskId: string) => {
-    const task = taskStore.tasks.find(t => t.id === taskId)
-    if (!task?.recurrence?.isEnabled || !task.notificationPreferences?.isEnabled) return
+    // CRITICAL FIX: Ensure taskStore.tasks is an array before calling .find()
+    const task = Array.isArray(taskStore.tasks)
+      ? taskStore.tasks.find(t => t.id === taskId)
+      : undefined
+    if (!task?.recurrence?.isEnabled || !task.notificationPreferences?.enabled) return
 
     const prefs = task.notificationPreferences
     const instances = task.recurrence.generatedInstances || []
@@ -267,7 +311,7 @@ export const useNotificationStore = defineStore('notifications', () => {
         task.title,
         instance.scheduledDate,
         instance.scheduledTime,
-        prefs
+        prefs as any
       )
     }
   }
@@ -291,7 +335,11 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Remove all notifications for a task
    */
   const removeTaskNotifications = async (taskId: string) => {
-    scheduledNotifications.value = scheduledNotifications.value.filter(n => n.taskId !== taskId)
+    if (Array.isArray(scheduledNotifications.value)) {
+      scheduledNotifications.value = scheduledNotifications.value.filter(n => n.taskId !== taskId)
+    } else {
+      scheduledNotifications.value = []
+    }
     await saveScheduledNotifications()
   }
 
@@ -326,11 +374,14 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Check and schedule notifications for all tasks
    */
   const checkAndScheduleTaskNotifications = async () => {
-    const tasks = taskStore.tasks.filter(t =>
-      t.dueDate &&
-      t.notificationPreferences?.isEnabled &&
-      new Date(t.dueDate) > new Date()
-    )
+    // CRITICAL FIX: Ensure taskStore.tasks is an array before calling .filter()
+    const tasks = Array.isArray(taskStore.tasks)
+      ? taskStore.tasks.filter(t =>
+          t.dueDate &&
+          t.notificationPreferences?.enabled &&
+          new Date(t.dueDate) > new Date()
+        )
+      : []
 
     for (const task of tasks) {
       // Check if notifications are already scheduled for this task
@@ -342,7 +393,7 @@ export const useNotificationStore = defineStore('notifications', () => {
           task.title,
           task.dueDate,
           undefined, // TODO: Add time field to tasks
-          task.notificationPreferences
+          task.notificationPreferences as any
         )
       }
 
@@ -370,9 +421,13 @@ export const useNotificationStore = defineStore('notifications', () => {
   const cleanupOldNotifications = async () => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
-    scheduledNotifications.value = scheduledNotifications.value.filter(n =>
-      n.createdAt > sevenDaysAgo || !n.isDismissed
-    )
+    if (Array.isArray(scheduledNotifications.value)) {
+      scheduledNotifications.value = scheduledNotifications.value.filter(n =>
+        n.createdAt > sevenDaysAgo || !n.isDismissed
+      )
+    } else {
+      scheduledNotifications.value = []
+    }
 
     await saveScheduledNotifications()
   }
@@ -382,16 +437,16 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const updateDefaultPreferences = async (preferences: Partial<NotificationPreferences>) => {
     defaultPreferences.value = { ...defaultPreferences.value, ...preferences }
-    // TODO: Save to localStorage or database
+    // NOTE: Persistence to be implemented when notification preferences are finalized
   }
 
   /**
    * Get notification statistics
    */
   const getNotificationStats = () => {
-    const total = scheduledNotifications.value.length
-    const shown = scheduledNotifications.value.filter(n => n.isShown).length
-    const dismissed = scheduledNotifications.value.filter(n => n.isDismissed).length
+    const total = Array.isArray(scheduledNotifications.value) ? scheduledNotifications.value.length : 0
+    const shown = Array.isArray(scheduledNotifications.value) ? scheduledNotifications.value.filter(n => n.isShown).length : 0
+    const dismissed = Array.isArray(scheduledNotifications.value) ? scheduledNotifications.value.filter(n => n.isDismissed).length : 0
     const pending = pendingNotifications.value.length
 
     return {
@@ -419,6 +474,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     // Methods
     initializeNotifications,
     checkNotificationPermission,
+    requestNotificationPermission,
     scheduleTaskNotifications,
     scheduleRecurringTaskNotifications,
     removeTaskNotifications,

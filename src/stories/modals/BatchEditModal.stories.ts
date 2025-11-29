@@ -21,10 +21,6 @@ const meta = {
       control: 'boolean',
       description: 'Whether the modal is open',
     },
-    taskIds: {
-      control: 'object',
-      description: 'Array of task IDs to edit',
-    },
   },
 } satisfies Meta<typeof BatchEditModal>
 
@@ -33,15 +29,11 @@ type Story = StoryObj<typeof meta>
 
 // Basic batch edit modal
 export const Default: Story = {
-  args: {
-    isOpen: true,
-    taskIds: ['1', '2', '3'],
-  },
-  render: (args) => ({
+  render: () => ({
     components: { BatchEditModal },
     setup() {
-      const isOpen = ref(args.isOpen)
-      const taskIds = ref(args.taskIds)
+      const isOpen = ref(true)
+      const taskIds = ref(['1', '2', '3'])
 
       // Mock task data for display
       const selectedTasks = ref([
@@ -75,7 +67,7 @@ export const Default: Story = {
         <div style="display: flex; gap: 16px; margin-bottom: 24px;">
           <button
             @click="isOpen = !isOpen"
-            style="padding: 12px 24px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; cursor: pointer;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer;"
           >
             {{ isOpen ? 'Close Modal' : 'Open Modal' }}
           </button>

@@ -50,7 +50,7 @@
         <h3
           :id="`task-title-${task.id}`"
           class="task-title"
-          :class="{ 'completed-title': task.progress === 100 }"
+          :class="[titleAlignmentClasses, { 'completed-title': task.progress === 100 }]"
         >
           {{ task.title }}
         </h3>
@@ -83,6 +83,38 @@
             <span v-if="density !== 'ultrathin'">{{ (task.priority || 'medium').charAt(0).toUpperCase() }}</span>
           </span>
 
+          <!-- Project visual indicator (emoji, SVG, or CSS circle) -->
+          <div class="meta-badge project-visual-container"
+               :class="{ 'project-visual-container--emoji': projectVisual.type === 'emoji' }"
+               :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+               role="status">
+            <!-- SVG/Native Emoji for projects with emoji -->
+            <ProjectEmojiIcon
+              v-if="projectVisual.type === 'emoji'"
+              :emoji="projectVisual.content"
+              size="sm"
+              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+            />
+
+            <!-- CSS Circle for projects with color -->
+            <div
+              v-else-if="projectVisual.type === 'css-circle'"
+              class="project-css-circle"
+              :style="{ '--project-color': projectVisual.color }"
+              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+              role="img"
+              :aria-label="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+            ></div>
+
+            <!-- Default fallback (folder icon) -->
+            <ProjectEmojiIcon
+              v-else-if="projectVisual.type === 'default'"
+              emoji="📁"
+              size="sm"
+              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+            />
+          </div>
+
           <!-- Subtasks badge -->
           <span v-if="task.subtasks && task.subtasks.length > 0"
                 class="meta-badge subtasks-badge"
@@ -98,11 +130,11 @@
           <span v-if="hasDependencies"
                 class="meta-badge dependency-badge"
                 :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
-                :title="`Dependencies: ${task.dependsOn.length}`"
-                :aria-label="`${task.dependsOn.length} dependencies`"
+                :title="`Dependencies: ${task.dependsOn?.length || 0}`"
+                :aria-label="`${task.dependsOn?.length || 0} dependencies`"
                 role="status">
             <Link :size="10" aria-hidden="true" />
-            <span v-if="density !== 'ultrathin'">{{ task.dependsOn.length }}</span>
+            <span v-if="density !== 'ultrathin'">{{ task.dependsOn?.length || 0 }}</span>
           </span>
 
           <!-- Pomodoro sessions badge -->
@@ -159,6 +191,8 @@ import { Play, Edit, Calendar, Check, List, Link, CalendarDays, Loader, CheckCir
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
 import { useTaskStore } from '@/stores/tasks'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 interface Props {
   task: Task
@@ -189,6 +223,10 @@ const { startDrag, endDrag } = useDragAndDrop()
 
 // Task store for selection state
 const taskStore = useTaskStore()
+
+// Hebrew text alignment support
+const { getAlignmentClasses } = useHebrewAlignment()
+const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task.title))
 
 // Check if this task is selected
 const isSelected = computed(() => {
@@ -243,7 +281,13 @@ const handleKeydown = (event: KeyboardEvent) => {
     case ' ':
       event.preventDefault()
       isPressed.value = true
-      handleCardClick()
+      // Create a synthetic mouse event for keyboard activation
+      const syntheticEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      })
+      handleCardClick(syntheticEvent)
       setTimeout(() => {
         isPressed.value = false
       }, 150)
@@ -321,6 +365,11 @@ const completedSubtasks = computed(() =>
   props.task.subtasks?.filter(st => st.isCompleted).length || 0
 )
 
+// Project visual indicator (emoji or colored dot)
+const projectVisual = computed(() =>
+  taskStore.getProjectVisual(props.task.projectId)
+)
+
 // Status-based color class for status icon
 const statusColorClass = computed(() => {
   const status = props.task.status || 'backlog'
@@ -342,7 +391,7 @@ const statusTooltip = computed(() => {
 
 // Cycle through status instead of toggle completion
 const cycleStatus = () => {
-  const statusCycle = ['planned', 'in_progress', 'done', 'backlog', 'on_hold']
+  const statusCycle: Task['status'][] = ['planned', 'in_progress', 'done', 'backlog', 'on_hold']
   const currentStatus = props.task.status || 'backlog'
   const currentIndex = statusCycle.indexOf(currentStatus)
   const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length]
@@ -372,7 +421,9 @@ const cycleStatus = () => {
   position: relative;
   min-height: var(--task-card-min-height); /* Compact height like Todoist */
   min-width: var(--task-card-min-width); /* Wider cards for single-line layout */
+  max-width: var(--task-card-max-width); /* Constrain maximum width for layout stability */
   width: 100%;
+  box-sizing: border-box; /* Include padding and borders in width calculation */
 }
 
 .task-card:hover {
@@ -523,9 +574,16 @@ const cycleStatus = () => {
   margin: 0 0 var(--space-1) 0;
   line-height: var(--leading-tight);
   word-wrap: break-word;
+  overflow-wrap: break-word;
   hyphens: auto;
   flex: 1;
-  min-width: 120px; /* Ensure minimum width for title */
+  min-width: 140px; /* Ensure minimum width for title */
+  /* Allow multi-line titles with graceful truncation */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-height: 2.4em; /* 2 lines at 1.2 line-height */
 }
 
 .task-title.completed-title {
@@ -536,10 +594,28 @@ const cycleStatus = () => {
 /* Metadata badges (compact inline style) */
 .metadata-badges {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: var(--space-1);
   align-items: center;
-  overflow: hidden;
+  justify-content: flex-start;
+  /* Allow horizontal scrolling if badges overflow */
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+  min-height: 20px;
+}
+
+.metadata-badges::-webkit-scrollbar {
+  height: 2px;
+}
+
+.metadata-badges::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.metadata-badges::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: var(--radius-full);
 }
 
 /* Icon-only badge styles for ultrathin mode */
@@ -586,7 +662,7 @@ const cycleStatus = () => {
 }
 
 .priority-badge.priority-medium {
-  color: var(--color-warning);
+  color: var(--color-priority-medium);
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
@@ -620,6 +696,116 @@ const cycleStatus = () => {
   color: var(--text-muted);
   background: var(--surface-hover);
   border: 1px solid var(--border-subtle);
+}
+
+/* Enhanced project visual indicators */
+/* ===== PROJECT VISUAL INDICATOR SYSTEM ===== */
+.project-visual-container {
+  /* Perfect centering with CSS Grid - eliminates baseline issues */
+  display: grid;
+  place-items: center;
+  position: relative;
+  width: var(--project-indicator-size-sm); /* 20px standard container */
+  height: var(--project-indicator-size-sm);
+  /* Base styling - minimal to let ProjectEmojiIcon control appearance */
+  color: var(--text-secondary);
+  /* Smooth transitions */
+  transition: all var(--duration-fast) var(--spring-smooth);
+  /* Performance optimization */
+  transform: translateZ(0);
+  will-change: transform;
+  /* Prevent text selection */
+  user-select: none;
+}
+
+/* For CSS circles (not emojis), add background and border styling */
+.project-visual-container:has(.project-css-circle) {
+  background: var(--surface-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+}
+
+/* Hover effects - only for containers with CSS circles */
+.project-visual-container:has(.project-css-circle):hover {
+  background: var(--surface-hover);
+  border-color: var(--border-medium);
+  transform: scale(1.05);
+}
+
+/* Emoji-specific styling is now handled by ProjectEmojiIcon variant="plain" */
+/* No override needed since ProjectEmojiIcon defaults to plain (no background/border) */
+
+/* CSS Circle for colored projects with perfect centering */
+.project-css-circle {
+  /* Size using design tokens - proper 7px circle in 20px container */
+  width: var(--project-circle-size-sm);
+  height: var(--project-circle-size-sm);
+  /* Perfect circle shape */
+  border-radius: 50%;
+  /* Dynamic color from CSS custom property */
+  background: var(--project-color);
+  /* Enhanced glass morphism effects */
+  box-shadow:
+    var(--project-indicator-glow-subtle),
+    var(--project-indicator-shadow-inset);
+  border: 1px solid var(--project-indicator-border);
+  backdrop-filter: var(--project-indicator-backdrop);
+  /* Positioning for perfect centering within container */
+  margin: auto;
+  /* Smooth animations */
+  transition: all var(--duration-fast) var(--spring-smooth);
+  transform: translateZ(0); /* Hardware acceleration */
+  /* Prevent pointer events on parent during hover */
+  pointer-events: auto;
+}
+
+/* Glow effect on hover for colored dots */
+.project-visual-container:hover .project-css-circle {
+  transform: translateZ(0) scale(1.1);
+  box-shadow:
+    var(--project-indicator-glow-medium),
+    var(--project-indicator-shadow-inset);
+}
+
+/* Larger glow animation for colored dots */
+.project-visual-container:hover .project-css-circle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--project-color) 0%, transparent 70%);
+  opacity: 0.4;
+  pointer-events: none;
+  animation: projectGlow 2s ease-in-out infinite;
+}
+
+@keyframes projectGlow {
+  0%, 100% {
+    opacity: 0.2;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+/* Legacy support - remove old unused styles */
+.project-visual-badge,
+.project-visual-badge.project-visual--colored,
+.project-visual,
+.project-visual.project-emoji,
+.project-visual.project-css-circle,
+.project-visual.project-css-circle::after,
+.project-visual-badge:hover .project-visual.project-css-circle,
+.project-visual-badge:hover .project-visual.project-css-circle::after,
+.project-emoji-badge,
+.project-emoji {
+  /* All styles moved to project-visual-container or ProjectEmojiIcon component */
 }
 
 /* Compact action buttons */

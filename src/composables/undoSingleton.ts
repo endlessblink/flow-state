@@ -1,7 +1,7 @@
 // Undo System Singleton - Ensures shared instance across the entire application
 // This solves initialization order issues between App.vue and globalKeyboardHandlerSimple.ts
 
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
 import { useTaskStore } from '@/stores/tasks'
 
@@ -29,9 +29,10 @@ function initializeRefHistory() {
   const taskStore = useTaskStore()
   unifiedState = ref([...taskStore.tasks])
 
-  // Create the SINGLE useManualRefHistory instance
+  // Create the SINGLE useManualRefHistory instance with proper VueUse configuration
   refHistoryInstance = useManualRefHistory(unifiedState, {
-    capacity: 50
+    capacity: 50,
+    clone: true
   })
 
   // Extract all the reactive properties
@@ -72,6 +73,136 @@ function initializeRefHistory() {
   console.log('✅ SINGLE refHistory instance created and shared across app')
 }
 
+// ✅ FIXED - Functions defined at module level (outside return object)
+const performUndo = () => {
+  if (!refHistoryInstance || !unifiedState) return false
+  console.log('🔄 Executing undo with SHARED refHistory instance...')
+  refHistoryInstance.undo()
+
+  // After undo, unifiedState.value now contains the previous state
+  // Restore it to the task store
+  const previousState = unifiedState.value
+  if (previousState && Array.isArray(previousState)) {
+    const taskStore = useTaskStore()
+    console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for:', previousState.length, 'tasks')
+    console.log('🔄 [VUE-REACTIVITY-FIX] Previous state sample:', previousState.slice(0, 2))
+
+    // Use the new store action that uses $patch internally
+    taskStore.restoreState(previousState)
+
+    console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
+    return true
+  }
+  return false
+}
+
+const performRedo = () => {
+  if (!refHistoryInstance || !unifiedState) return false
+  console.log('🔄 Executing redo with SHARED refHistory instance...')
+  refHistoryInstance.redo()
+
+  // After redo, unifiedState.value now contains the next state
+  // Restore it to the task store
+  const nextState = unifiedState.value
+  if (nextState && Array.isArray(nextState)) {
+    const taskStore = useTaskStore()
+    console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for redo:', nextState.length, 'tasks')
+    console.log('🔄 [VUE-REACTIVITY-FIX] Next state sample:', nextState.slice(0, 2))
+
+    // Use the new store action that uses $patch internally
+    taskStore.restoreState(nextState)
+
+    console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
+    return true
+  }
+  return false
+}
+
+const saveState = (description?: string) => {
+  if (!refHistoryInstance) return false
+  try {
+    const taskStore = useTaskStore()
+    // FIXED: Use raw tasks, not filteredTasks to prevent state synchronization issues
+    unifiedState.value = [...taskStore.tasks]
+    commit()
+    console.log(`💾 State saved: ${description || 'Operation'}. History length: ${refHistoryInstance.history.value.length}`)
+    return true
+  } catch (error) {
+    console.error('❌ Failed to save state:', error)
+    return false
+  }
+}
+
+const deleteTaskWithUndo = async (taskId: string) => {
+  console.log('🗑️ deleteTaskWithUndo called for:', taskId)
+  const taskStore = useTaskStore()
+
+  const taskToDelete = taskStore.tasks.find(t => t.id === taskId)
+  if (!taskToDelete) {
+    console.warn('⚠️ Task not found for deletion:', taskId)
+    return
+  }
+
+  console.log(`🗑️ Deleting task: ${taskToDelete.title}`)
+
+  // FIXED: Use proper VueUse pattern - save state before operation
+  saveState('Before task deletion')
+
+  try {
+    // Perform the deletion
+    await taskStore.deleteTask(taskId)
+    console.log(`✅ Task deleted. Current tasks count: ${taskStore.tasks.length}`)
+
+    // FIXED: Save state after operation
+    await nextTick()
+    saveState('After task deletion')
+  } catch (error) {
+    console.error('❌ deleteTaskWithUndo failed:', error)
+    throw error
+  }
+}
+
+const updateTaskWithUndo = async (taskId: string, updates: any) => {
+  console.log('✏️ updateTaskWithUndo called for:', taskId, updates)
+  const taskStore = useTaskStore()
+
+  const taskToUpdate = taskStore.tasks.find(t => t.id === taskId)
+  if (!taskToUpdate) {
+    console.warn('⚠️ Task not found for update:', taskId)
+    return
+  }
+
+  console.log(`✏️ Updating task: ${taskToUpdate.title}`)
+
+  // FIXED: Use proper VueUse pattern - save state before operation
+  saveState('Before task update')
+
+  // Perform the update
+  taskStore.updateTask(taskId, updates)
+  console.log(`✅ Task updated: ${taskId}`)
+
+  // FIXED: Save state after operation
+  await nextTick()
+  saveState('After task update')
+}
+
+const createTaskWithUndo = async (taskData: any) => {
+  console.log('➕ createTaskWithUndo called with:', taskData)
+
+  // FIXED: Use proper VueUse pattern - save state before operation
+  saveState('Before task creation')
+
+  // Create the task
+  const taskStore = useTaskStore()
+  const newTask = await taskStore.createTask(taskData)
+  console.log(`✅ Task created: ${newTask.title}`)
+
+  // FIXED: Save state after operation
+  await nextTick()
+  saveState('After task creation')
+  return newTask
+}
+
 /**
  * Get the global undo system functions that use the shared refHistory instance
  */
@@ -84,10 +215,7 @@ export function getUndoSystem() {
     console.log('🔍 [DEBUG] refHistoryInstance already exists, reusing it')
   }
 
-  const taskStore = useTaskStore()
-
-  // Create the complete undo system object with all operations
-  const undoSystem = {
+  return {
     canUndo,
     canRedo,
     undoCount,
@@ -95,151 +223,17 @@ export function getUndoSystem() {
     history,
 
     // Standard undo/redo operations
-    undo: () => {
-      if (!refHistoryInstance || !unifiedState) return false
-      console.log('🔄 Executing undo with SHARED refHistory instance...')
-      refHistoryInstance.undo()
+    undo: performUndo,
+    redo: performRedo,
 
-      // After undo, unifiedState.value now contains the previous state
-      // Restore it to the task store
-      const previousState = unifiedState.value
-      if (previousState && Array.isArray(previousState)) {
-        console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for:', previousState.length, 'tasks')
-        console.log('🔄 [VUE-REACTIVITY-FIX] Previous state sample:', previousState.slice(0, 2))
-
-        // Use the new store action that uses $patch internally
-        taskStore.restoreState(previousState)
-
-        console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
-        return true
-      }
-      return false
-    },
-
-    redo: () => {
-      if (!refHistoryInstance || !unifiedState) return false
-      console.log('🔄 Executing redo with SHARED refHistory instance...')
-      refHistoryInstance.redo()
-
-      // After redo, unifiedState.value now contains the next state
-      // Restore it to the task store
-      const nextState = unifiedState.value
-      if (nextState && Array.isArray(nextState)) {
-        console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for redo:', nextState.length, 'tasks')
-        console.log('🔄 [VUE-REACTIVITY-FIX] Next state sample:', nextState.slice(0, 2))
-
-        // Use the new store action that uses $patch internally
-        taskStore.restoreState(nextState)
-
-        console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
-        return true
-      }
-      return false
-    },
-
-    // State management for task operations
-    saveStateBefore: (description?: string) => {
-      if (!refHistoryInstance) return false
-      try {
-        const taskStore = useTaskStore()
-        unifiedState.value = [...taskStore.tasks]
-        commit()
-        console.log(`💾 State saved BEFORE change: ${description || 'Before operation'}. History length: ${refHistoryInstance.history.value.length}`)
-        return true
-      } catch (error) {
-        console.error('❌ Failed to save state before change:', error)
-        return false
-      }
-    },
-
-    saveStateAfter: (description?: string) => {
-      if (!refHistoryInstance) return false
-      try {
-        const taskStore = useTaskStore()
-        unifiedState.value = [...taskStore.tasks]
-        commit()
-        console.log(`💾 State saved AFTER change: ${description || 'After operation'}. History length: ${refHistoryInstance.history.value.length}`)
-        return true
-      } catch (error) {
-        console.error('❌ Failed to save state after change:', error)
-        return false
-      }
-    },
+    // FIXED: Unified state management using VueUse pattern
+    saveState,               // Use unified saveState function instead of before/after
 
     // Task operations that use the shared refHistory
-    deleteTaskWithUndo: (taskId: string) => {
-      console.log('🗑️ [SINGLETON-V3-22:58] deleteTaskWithUndo called for:', taskId)
-
-      // Save state BEFORE deletion
-      const globalUndo = getUndoSystem()
-      globalUndo.saveStateBefore('Before task deletion')
-
-      // Perform the deletion
-      const task = taskStore.tasks.find(t => t.id === taskId)
-      if (task) {
-        console.log(`🗑️ Deleting task: ${task.title}`)
-        taskStore.deleteTask(taskId)
-        console.log(`✅ Task deleted. Current tasks count: ${taskStore.tasks.length}`)
-      }
-
-      // Save state AFTER deletion
-      globalUndo.saveStateAfter('After task deletion')
-    },
-
-    updateTaskWithUndo: (taskId: string, updates: any) => {
-      console.log('✏️ updateTaskWithUndo called for:', taskId, updates)
-
-      // Save state BEFORE update
-      const globalUndo = getUndoSystem()
-      globalUndo.saveStateBefore('Before task update')
-
-      // Perform the update
-      taskStore.updateTask(taskId, updates)
-      console.log(`✅ Task updated: ${taskId}`)
-
-      // Save state AFTER update
-      globalUndo.saveStateAfter('After task update')
-    },
-
-    createTaskWithUndo: (taskData: any) => {
-      console.log('➕ [SINGLETON] createTaskWithUndo called with:', taskData)
-
-      // Save state BEFORE creation
-      const globalUndo = getUndoSystem()
-      globalUndo.saveStateBefore('Before task creation')
-
-      // Create the task
-      const newTask = taskStore.createTask(taskData)
-      console.log(`✅ Task created: ${newTask.title}`)
-
-      // Save state AFTER creation
-      globalUndo.saveStateAfter('After task creation')
-      return newTask
-    },
-
-    moveTaskWithUndo: (taskId: string, newStatus: string) => {
-      console.log('📍 [SINGLETON] moveTaskWithUndo called for:', taskId, 'to:', newStatus)
-
-      // Save state BEFORE move
-      const globalUndo = getUndoSystem()
-      globalUndo.saveStateBefore('Before task move')
-
-      // Perform the move
-      taskStore.moveTask(taskId, newStatus)
-      console.log(`✅ Task moved: ${taskId} to ${newStatus}`)
-
-      // Save state AFTER move
-      globalUndo.saveStateAfter('After task move')
-    }
+    deleteTaskWithUndo,
+    updateTaskWithUndo,
+    createTaskWithUndo
   }
-
-  // Update the global window object to include ALL operations
-  if (typeof window !== 'undefined') {
-    (window as any).__pomoFlowUndoSystem = undoSystem
-    console.log('✅ Global undo system updated with complete task operations')
-  }
-
-  return undoSystem
 }
 
 /**

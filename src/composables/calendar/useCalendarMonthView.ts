@@ -1,5 +1,5 @@
 import { computed, type Ref } from 'vue'
-import { useTaskStore, formatDateKey } from '@/stores/tasks'
+import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
 
 export interface MonthDay {
@@ -47,27 +47,29 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
           return task.status === statusFilter.value
         })
         .forEach(task => {
-          // FIXED: Only show unscheduled inbox tasks in today's cell - no auto-scheduling
-          // Calendar events are now created only through explicit user action (drag & drop)
-          const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
+          const instances = getTaskInstances(task)
+          instances
+            .filter(instance => instance.scheduledDate === dateString)
+            .forEach(instance => {
+              const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
+              const duration = instance.duration || task.estimatedDuration || 30
 
-          // FIXED: Unscheduled inbox tasks - show in today's cell only (no auto-scheduling)
-          if (isInInbox && dateString === today) {
-            dayEvents.push({
-              id: `unscheduled-${task.id}`,
-              taskId: task.id,
-              title: task.title,
-              startTime: new Date(`${dateString}T08:00:00`),
-              endTime: new Date(new Date(`${dateString}T08:00:00`).getTime() + 30 * 60000),
-              duration: 30,
-              startSlot: 0,
-              slotSpan: 0,
-              color: getPriorityColor(task.priority),
-              column: 0,
-              totalColumns: 1,
-              isUnscheduled: true
+              dayEvents.push({
+                id: instance.id,
+                taskId: task.id,
+                instanceId: instance.id,
+                title: task.title,
+                startTime: new Date(`${instance.scheduledDate}T${instance.scheduledTime}`),
+                endTime: new Date(new Date(`${instance.scheduledDate}T${instance.scheduledTime}`).getTime() + duration * 60000),
+                duration,
+                startSlot: 0,
+                slotSpan: 0,
+                color: getPriorityColor(task.priority),
+                column: 0,
+                totalColumns: 1,
+                isDueDate: false
+              })
             })
-          }
         })
 
       days.push({
@@ -110,6 +112,11 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
     })
   }
 
+  const handleMonthDragEnd = (event: DragEvent) => {
+    // Cleanup any drag states
+    // Currently no specific cleanup needed for month view
+  }
+
   const handleMonthDayClick = (dateString: string, viewMode: Ref<'day' | 'week' | 'month'>) => {
     // Switch to Day view for the clicked date
     const [year, month, day] = dateString.split('-').map(Number)
@@ -123,6 +130,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
     // Drag handlers
     handleMonthDragStart,
     handleMonthDrop,
+    handleMonthDragEnd,
     handleMonthDayClick
   }
 }

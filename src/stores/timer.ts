@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useTaskStore } from './tasks'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
+import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 export interface PomodoroSession {
   id: string
@@ -39,7 +40,14 @@ export const useTimerStore = defineStore('timer', () => {
       const saved = await db.load(DB_KEYS.SETTINGS)
       return saved || defaultSettings
     } catch (error) {
-      console.log('Failed to load settings from PouchDB:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.WARNING,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to load timer settings from PouchDB',
+        error: error as Error,
+        context: { operation: 'loadSettings' },
+        showNotification: false // Silent - using defaults
+      })
       return defaultSettings
     }
   }
@@ -297,7 +305,14 @@ watch(completedSessions, (newSessions) => {
       try {
         await Notification.requestPermission()
       } catch (error) {
-        console.warn('⚠️ Timer notification permission request failed - must be called from user gesture:', error)
+        errorHandler.report({
+          severity: ErrorSeverity.WARNING,
+          category: ErrorCategory.COMPONENT,
+          message: 'Timer notification permission request failed - must be called from user gesture',
+          error: error as Error,
+          context: { operation: 'requestNotificationPermission' },
+          showNotification: false
+        })
         return false
       }
     }
@@ -328,7 +343,14 @@ watch(completedSessions, (newSessions) => {
       oscillator.start(audioContext.currentTime)
       oscillator.stop(audioContext.currentTime + 0.3)
     } catch (error) {
-      console.log('Audio not available:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.INFO,
+        category: ErrorCategory.COMPONENT,
+        message: 'Audio not available for timer start sound',
+        error: error as Error,
+        context: { operation: 'playStartSound' },
+        showNotification: false // Non-critical
+      })
     }
   }
 
@@ -355,7 +377,14 @@ watch(completedSessions, (newSessions) => {
       oscillator.start(audioContext.currentTime)
       oscillator.stop(audioContext.currentTime + 0.6)
     } catch (error) {
-      console.log('Audio not available:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.INFO,
+        category: ErrorCategory.COMPONENT,
+        message: 'Audio not available for timer end sound',
+        error: error as Error,
+        context: { operation: 'playEndSound' },
+        showNotification: false // Non-critical
+      })
     }
   }
 
@@ -377,7 +406,14 @@ watch(completedSessions, (newSessions) => {
         await db.remove('pomo-flow-timer-session')
       }
     } catch (error) {
-      console.log('Failed to save timer session to PouchDB:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.WARNING,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to save timer session to PouchDB',
+        error: error as Error,
+        context: { operation: 'saveTimerSession' },
+        showNotification: false // Non-critical for timer state
+      })
     }
   }
 
@@ -414,7 +450,14 @@ watch(completedSessions, (newSessions) => {
         }
       }
     } catch (error) {
-      console.log('Failed to load timer session from PouchDB:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.WARNING,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to load timer session from PouchDB',
+        error: error as Error,
+        context: { operation: 'loadTimerSession' },
+        showNotification: false // Non-critical - timer starts fresh
+      })
     }
   }
 
@@ -442,7 +485,15 @@ watch(completedSessions, (newSessions) => {
       // Load timer session from PouchDB
       await loadTimerSession()
     } catch (error) {
-      console.warn('⚠️ Timer store initialization failed:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.STATE,
+        message: 'Timer store initialization failed',
+        error: error as Error,
+        context: { operation: 'initializeStore', store: 'timer' },
+        showNotification: true,
+        userMessage: 'Timer features may be limited'
+      })
     }
   }
 

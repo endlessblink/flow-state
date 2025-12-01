@@ -426,44 +426,108 @@ A comprehensive dual-tool competing systems analysis has identified **4,776+ com
 - ✅ Analyzer scripts integrated
 - ✅ Team notified of plan
 
-#### **Phase 1: Error Handling Consolidation (Week 1-2, 2-3 hours)**
-**Objective**: Centralize error handling across 70 files. LOWEST RISK, IMMEDIATE VALUE
+#### **Phase 1: Error Handling Consolidation - STRATEGIC MINIMUM APPROACH**
+**Objective**: Centralize error handling in critical files. LOW RISK, IMMEDIATE VALUE
 
-**Why Start Here:**
-- Only 2-3 hours effort
-- Affects non-critical paths first
-- Easy to test and rollback
-- Improves app reliability immediately
+**Status**: 🟡 STRATEGIC MINIMUM (Option B) - December 1, 2025
 
-**Implementation:**
-- **1.1 Create ErrorHandler Service** (1.5 hours)
-  - Singleton error management service
-  - Unified error message formatting
-  - Centralized error logging
-  - Integration with notifications store
+**Approach Decision**: Strategic minimum migration focusing on core infrastructure, deferring remaining 119 files for organic migration over time.
 
-- **1.2 Update Components** (1 hour)
-  - Migrate 10 high-priority files to ErrorHandler
-  - Replace scattered console.error calls
-  - Standardize error handling patterns
+---
 
-- **1.3 Test & Verify** (30 min)
-  - Unit tests for ErrorHandler
-  - Integration testing
-  - Manual verification of error display
+##### **✅ COMPLETED (Infrastructure + Core Files)**
 
-**Critical Files:**
-- `src/services/unified-task-service.ts`
-- `src/composables/useDatabase.ts`
-- `src/composables/useFirestore.ts`
-- `src/stores/tasks.ts`
+| Item | Status | Commit | Lines/Locations |
+|------|--------|--------|-----------------|
+| Enhanced `errorHandler.ts` with severity/category enums | ✅ Done | `3587126` | ~150 lines added |
+| Created `useErrorHandler.ts` composable | ✅ Done | `3587126` | ~100 lines |
+| Migrated `useDatabase.ts` | ✅ Done | `ce43402` | 13 error locations |
+| Migrated `tasks.ts` store | ✅ Done | `bb7bfdc` | 10 error locations |
+| Migrated `canvas.ts` store | ✅ Done | `7b7392b` | 6 error locations |
 
-**Success Criteria:**
-- ✅ All 70 error handling files migrated
-- ✅ Tests pass 100%
-- ✅ No console.error in production code
+**Total Migrated**: 3 core files, ~29 error locations
+
+---
+
+##### **🟡 STRATEGIC MINIMUM - High Priority Files (Remaining)**
+
+These files should be migrated next for 80% coverage:
+
+| File | Occurrences | Priority | Status |
+|------|-------------|----------|--------|
+| `src/views/CanvasView.vue` | 171 | Critical | ⏳ Pending |
+| `src/composables/useReliableSyncManager.ts` | 67 | High | ⏳ Pending |
+| `src/components/sync/ConflictResolutionDialog.vue` | 45 | High | ⏳ Pending |
+| `src/composables/usePersistentStorage.ts` | 38 | High | ⏳ Pending |
+| `src/utils/RobustBackupSystem.ts` | 35 | High | ⏳ Pending |
+| `src/stores/timer.ts` | 28 | High | ⏳ Pending |
+| `src/stores/ui.ts` | 22 | High | ⏳ Pending |
+| `src/views/BoardView.vue` | 19 | Medium | ⏳ Pending |
+| `src/views/CalendarView.vue` | 18 | Medium | ⏳ Pending |
+| `src/stores/notifications.ts` | 15 | Medium | ⏳ Pending |
+
+**Subtotal**: 10 files, ~458 additional occurrences (27% of total)
+
+---
+
+##### **🔵 DEFERRED FOR ORGANIC MIGRATION (Circle Back Later)**
+
+**119 remaining files** (~1,239 occurrences) deferred for organic migration:
+- Migrate when touching files for other reasons
+- New code should use `errorHandler.report()` pattern
+- No enforcement mechanism (ESLint rule not added yet)
+
+**Key Deferred Files** (for reference):
+- View components (AllTasksView, FocusView, QuickSortView)
+- Non-critical composables (useCalendar*, useDraggable*, etc.)
+- Utility functions with error handling
+- Test files and storybook stories
+
+**Why Deferred**:
+- Low immediate user impact
+- Can be migrated incrementally
+- Allows focus on higher-priority work
+- Reduces context-switching overhead
+
+---
+
+##### **📋 MIGRATION PATTERN (For Future Reference)**
+
+**BEFORE (Inconsistent):**
+```typescript
+try {
+  await saveData()
+} catch (error) {
+  console.error('Save failed:', error)
+}
+```
+
+**AFTER (Unified):**
+```typescript
+import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+
+try {
+  await saveData()
+} catch (error) {
+  errorHandler.report({
+    error,
+    severity: ErrorSeverity.ERROR,
+    category: ErrorCategory.DATABASE,
+    context: { operation: 'saveData' },
+    userMessage: 'Failed to save your changes'
+  })
+}
+```
+
+---
+
+##### **Success Criteria (Strategic Minimum)**
+- ✅ Core infrastructure created (errorHandler.ts, useErrorHandler.ts)
+- ✅ 3 critical files migrated (useDatabase, tasks, canvas stores)
+- ⏳ 10 high-priority files migrated (458 occurrences)
+- 🔵 119 files deferred for organic migration
 - ✅ Build succeeds
-- ✅ Analyzer shows 0 error handling conflicts
+- ✅ Tests pass
 
 #### **Phase 2: Calendar System Consolidation (Week 2-3, 4-5 hours)**
 **Objective**: Unify 6 calendar files into single useCalendar() composable.

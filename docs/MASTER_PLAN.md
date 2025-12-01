@@ -69,8 +69,9 @@ Removed the broken CSS rule (5 lines). The correct CSS rules already existed and
 | Drag inside calendar | ✅ WORKING |
 | Drag from inbox to calendar | ✅ WORKING |
 | Resize handles in DOM | ✅ WORKING |
-| Resize handles appear on hover | ⚠️ Needs manual test |
-| Resize functionality | ❌ Still not working (user reported) |
+| Resize handles appear on hover | ✅ FIXED (Session 2) |
+| Resize functionality called | ✅ FIXED (Session 2) |
+| Actual resize operation | ⚠️ Needs manual testing |
 
 ### **Documentation**
 - **SOP Created**: `docs/🐛 debug/sop/calendar-drag-inside-calendar/calendar-drag-fix-2025-12-01.md`

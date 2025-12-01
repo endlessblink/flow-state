@@ -1,6 +1,6 @@
 import { computed, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
-import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
+import { useCalendarCore, type CalendarEvent } from '@/composables/useCalendarCore'
 
 export interface MonthDay {
   dateString: string
@@ -16,7 +16,7 @@ export interface MonthDay {
  */
 export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
-  const { getPriorityColor, getDateString } = useCalendarEventHelpers()
+  const core = useCalendarCore()
 
   // Month days computation
   const monthDays = computed<MonthDay[]>(() => {
@@ -31,13 +31,13 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
     startDate.setDate(startDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
 
     const days: MonthDay[] = []
-    const today = getDateString(new Date())
+    const today = core.getDateString(new Date())
 
     for (let i = 0; i < 42; i++) { // 6 weeks × 7 days
       const date = new Date(startDate)
       date.setDate(date.getDate() + i)
 
-      const dateString = getDateString(date)
+      const dateString = core.getDateString(date)
 
       // Get events for this day
       const dayEvents: CalendarEvent[] = []
@@ -64,7 +64,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
                 duration,
                 startSlot: 0,
                 slotSpan: 0,
-                color: getPriorityColor(task.priority),
+                color: core.getPriorityColor(task.priority),
                 column: 0,
                 totalColumns: 1,
                 isDueDate: false

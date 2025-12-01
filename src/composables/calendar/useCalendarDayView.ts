@@ -1,6 +1,6 @@
 import { ref, computed, nextTick, type Ref, type ComputedRef } from 'vue'
 import { useTaskStore, formatDateKey } from '@/stores/tasks'
-import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
+import { useCalendarCore, type CalendarEvent } from '@/composables/useCalendarCore'
 
 export interface TimeSlot {
   id: string
@@ -21,23 +21,11 @@ export interface DragGhost {
  * Day view specific logic for calendar
  * Handles event computation, drag-and-drop, resizing, and time slots
  */
-// Helper function to snap time to 15-minute intervals
-function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: number } {
-  const totalMinutes = hour * 60 + minute
-
-  // Round to nearest 15-minute interval
-  const snappedMinutes = Math.round(totalMinutes / 15) * 15
-
-  // Convert back to hour and minute
-  const snappedHour = Math.floor(snappedMinutes / 60)
-  const snappedMinute = snappedMinutes % 60
-
-  return { hour: snappedHour, minute: snappedMinute }
-}
+// snapTo15Minutes function moved to useCalendarCore.ts
 
 export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
-  const { getPriorityColor, getDateString } = useCalendarEventHelpers()
+  const core = useCalendarCore()
 
   const hours = Array.from({ length: 24 }, (_, i) => i)
 
@@ -156,7 +144,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
               duration,
               startSlot,
               slotSpan,
-              color: getPriorityColor(task.priority),
+              color: core.getPriorityColor(task.priority),
               column: 0,
               totalColumns: 1,
               isDueDate: false
@@ -172,7 +160,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
 
       // Calculate overlapping positions with error handling
       try {
-        const positionedEvents = calculateOverlappingPositions(events)
+        const positionedEvents = core.calculateOverlappingPositions(events)
         return positionedEvents
       } catch (positionError) {
         console.warn('Error calculating overlapping positions:', positionError)
@@ -210,76 +198,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     return slot.slotIndex === event.startSlot
   }
 
-  // Calculate overlapping event positions
-  const calculateOverlappingPositions = (events: CalendarEvent[]): CalendarEvent[] => {
-    if (events.length === 0) return events
-
-    const sorted = [...events].sort((a, b) => a.startSlot - b.startSlot)
-
-    // Find groups of overlapping events
-    const groups: CalendarEvent[][] = []
-    let currentGroup: CalendarEvent[] = []
-
-    sorted.forEach((event, index) => {
-      if (index === 0) {
-        currentGroup.push(event)
-        return
-      }
-
-      // Check if this event overlaps with any event in current group
-      const overlapsWithGroup = currentGroup.some(existing =>
-        event.startSlot < existing.startSlot + existing.slotSpan &&
-        event.startSlot + event.slotSpan > existing.startSlot
-      )
-
-      if (overlapsWithGroup) {
-        currentGroup.push(event)
-      } else {
-        groups.push(currentGroup)
-        currentGroup = [event]
-      }
-    })
-
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup)
-    }
-
-    // Assign columns within each group
-    groups.forEach(group => {
-      const columns: CalendarEvent[][] = []
-
-      group.forEach(event => {
-        let placed = false
-
-        for (let i = 0; i < columns.length; i++) {
-          const column = columns[i]
-          const hasCollision = column.some(existing =>
-            event.startSlot < existing.startSlot + existing.slotSpan &&
-            event.startSlot + event.slotSpan > existing.startSlot
-          )
-
-          if (!hasCollision) {
-            column.push(event)
-            event.column = i
-            placed = true
-            break
-          }
-        }
-
-        if (!placed) {
-          columns.push([event])
-          event.column = columns.length - 1
-        }
-      })
-
-      const totalColumns = columns.length
-      group.forEach(event => {
-        event.totalColumns = totalColumns
-      })
-    })
-
-    return sorted
-  }
+  // calculateOverlappingPositions function moved to useCalendarCore.ts
 
   // Event styling
   const getEventStyle = (event: CalendarEvent) => {
@@ -439,7 +358,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
       }
 
       // Calculate snapped time with 15-minute precision
-      const snappedTime = snapTo15Minutes(slot.hour, slot.minute)
+      const snappedTime = core.snapTo15Minutes(slot.hour, slot.minute)
       const timeStr = `${snappedTime.hour.toString().padStart(2, '0')}:${snappedTime.minute.toString().padStart(2, '0')}`
 
       // DEBUG LOG: Track task drop on calendar
@@ -778,7 +697,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
 
           if (newStartTime >= 0) {
             // Snap new start time to 15-minute intervals
-            const snappedTime = snapTo15Minutes(
+            const snappedTime = core.snapTo15Minutes(
               Math.floor(newStartTime / 60),
               newStartTime % 60
             )

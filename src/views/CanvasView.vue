@@ -190,7 +190,11 @@
         </div>
 
         <!-- Inbox Sidebar - Always visible for debugging -->
-        <InboxPanel />
+        <UnifiedInboxPanel
+        context="canvas"
+        :show-brain-dump="true"
+        :start-collapsed="true"
+      />
 
         <!-- Always show VueFlow canvas, even when empty -->
         <div>
@@ -541,7 +545,7 @@ import { shouldUseSmartGroupLogic, getSmartGroupType } from '@/composables/useTa
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
-import InboxPanel from '@/components/canvas/InboxPanel.vue'
+import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import BatchEditModal from '@/components/BatchEditModal.vue'
@@ -1754,6 +1758,33 @@ const isVueFlowMounted = ref(false)
 // ✅ VueFlow component reference
 const vueFlowRef = ref(null)
 
+// 🔧 ROUND 3 FIX: Sync guards to prevent race conditions
+const isCanvasSyncing = ref(false)
+const lastSyncTime = ref(0)
+
+const safeSyncNodes = () => {
+  const now = Date.now()
+  // Throttle sync to prevent race conditions
+  if (now - lastSyncTime.value < 500) {
+    console.log('🚫 [syncNodes] Throttled - skipping rapid sync call')
+    return
+  }
+
+  if (isCanvasSyncing.value) {
+    console.log('🚫 [syncNodes] Already syncing - skipping duplicate call')
+    return
+  }
+
+  isCanvasSyncing.value = true
+  lastSyncTime.value = now
+
+  try {
+    syncNodes()
+  } finally {
+    isCanvasSyncing.value = false
+  }
+}
+
 // Sync nodes from store with parent-child relationships and collapsible sections
 const syncNodes = () => {
   try {
@@ -1803,13 +1834,53 @@ const syncNodes = () => {
   // Safety check: ensure filteredTasks is an array
   const safeFilteredTasks = Array.isArray(filteredTasks.value) ? filteredTasks.value : []
 
-  // 🎯 FIXED: Only show tasks that are EXPLICITLY on canvas
-  // Tasks must have BOTH:
-  // 1. isInInbox === false (explicitly moved to canvas)
-  // 2. canvasPosition (has a position on canvas)
-  // This prevents tasks from showing on canvas until dragged from inbox
-  safeFilteredTasks
-    .filter(task => task && task.id && task.isInInbox === false && task.canvasPosition)
+  // 🔧 ROUND 3 FIX: Validate and normalize task canvas state before filtering
+  // This prevents inconsistent states that cause tasks to disappear
+  const validatedTasks = safeFilteredTasks.map(task => {
+    const normalizedTask = { ...task }
+
+    // Ensure isInInbox is properly set based on canvasPosition
+    if (normalizedTask.isInInbox === undefined) {
+      normalizedTask.isInInbox = !normalizedTask.canvasPosition
+    }
+
+    // Validate canvasPosition coordinates
+    if (normalizedTask.canvasPosition) {
+      if (typeof normalizedTask.canvasPosition.x !== 'number' ||
+          typeof normalizedTask.canvasPosition.y !== 'number') {
+        console.warn(`⚠️ [syncNodes] Invalid canvasPosition for task ${task.id}:`, normalizedTask.canvasPosition)
+        normalizedTask.canvasPosition = undefined
+        normalizedTask.isInInbox = true
+      }
+    }
+
+    return normalizedTask
+  })
+
+  // 🔧 ROUND 3 FIX: Enhanced debug logging for canvas task filtering
+  console.log('🔍 [syncNodes] Canvas task filtering analysis:', {
+    totalTasks: safeFilteredTasks.length,
+    tasksWithInboxFalse: safeFilteredTasks.filter(t => t.isInInbox === false).length,
+    tasksWithCanvasPosition: safeFilteredTasks.filter(t => t.canvasPosition).length,
+    tasksWithBoth: safeFilteredTasks.filter(t => t.isInInbox === false && t.canvasPosition).length,
+    filteredOutTasks: safeFilteredTasks.filter(t =>
+      t && t.id && !(
+        (t.isInInbox === false && t.canvasPosition) ||
+        (t.canvasPosition && t.canvasPosition.x !== undefined && t.canvasPosition.y !== undefined)
+      )
+    ).map(t => ({ id: t.id, title: t.title.substring(0, 30), isInInbox: t.isInInbox, hasCanvasPos: !!t.canvasPosition }))
+  })
+
+  // 🔧 ROUND 3 FIX: Show tasks that have valid canvas positions OR are explicitly on canvas
+  // This prevents tasks from disappearing due to inconsistent state during transitions
+  // Logic: Tasks appear if they EITHER (are explicitly moved to canvas) OR (have valid canvas position)
+  validatedTasks
+    .filter(task => task && task.id && (
+      // Tasks explicitly moved to canvas (both conditions met)
+      (task.isInInbox === false && task.canvasPosition) ||
+      // Tasks with valid canvas position (handles legacy/inconsistent states)
+      (task.canvasPosition && task.canvasPosition.x !== undefined && task.canvasPosition.y !== undefined)
+    ))
     .forEach((task, index) => {
       // 🎯 FIXED: Handle positioning for tasks with and without canvasPosition
       let position

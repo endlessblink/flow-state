@@ -2,7 +2,12 @@
 <div class="calendar-layout">
     <!-- Calendar Inbox Panel -->
     <Transition name="sidebar-slide">
-      <CalendarInboxPanel v-show="uiStore.secondarySidebarVisible" />
+      <UnifiedInboxPanel
+        v-show="uiStore.secondarySidebarVisible"
+        context="calendar"
+        :show-brain-dump="true"
+        :start-collapsed="false"
+      />
     </Transition>
 
     <!-- Task Edit Modal -->
@@ -500,7 +505,7 @@ import { useCalendarEventHelpers } from '@/composables/calendar/useCalendarEvent
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
-import CalendarInboxPanel from '@/components/CalendarInboxPanel.vue'
+import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
@@ -1846,19 +1851,36 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   position: relative;
   z-index: 1; /* Below calendar events to allow drag and resize interactions */
   transition: all var(--duration-fast) var(--spring-smooth);
-  pointer-events: auto !important; /* Allow drag and drop interactions */
-  cursor: crosshair !important; /* Indicate drop targets */
+  cursor: crosshair; /* Indicate drop targets */
 }
 
-/* Allow pointer events on time slot when it doesn't contain calendar events */
+/* Empty slots still capture events for drag-drop */
 .time-slot:empty,
 .time-slot:not(:has(.slot-task)) {
   pointer-events: auto;
 }
 
-/* Allow pointer events for drag-drop operations */
-.events-layer.drag-active .time-slot {
+/* CRITICAL: Slots with tasks let events pass through to children */
+.time-slot:has(.slot-task) {
+  pointer-events: none;
+}
+
+/* Ensure task elements can receive events */
+.time-slot:has(.slot-task) .slot-task {
   pointer-events: auto;
+}
+
+/* Allow pointer events for drag-drop operations */
+.events-layer.drag-active .time-slot,
+.slots-container.drag-active .time-slot {
+  pointer-events: auto;
+}
+
+/* Override during drag operations to maintain drop functionality */
+.time-slot.drag-over,
+.time-slot.creating {
+  pointer-events: auto !important;
+  cursor: crosshair !important;
 }
 
 .time-slot:hover {

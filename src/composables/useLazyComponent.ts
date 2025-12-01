@@ -203,7 +203,7 @@ export function createHoverPreloadComponent(
 // Predefined lazy loaders for commonly used heavy components
 export const LazyComponents = {
   TaskEditModal: () => createLazyModal(() => import('@/components/TaskEditModal.vue')),
-  CalendarInboxPanel: () => createLazyComponent(() => import('@/components/CalendarInboxPanel.vue')),
+  UnifiedInboxPanel: () => createLazyComponent(() => import('@/components/base/UnifiedInboxPanel.vue')),
   ForensicVerificationDashboard: () => createLazyDashboard(() => import('@/components/ForensicVerificationDashboard.vue')),
   MultiSelectToggle: () => createLazyComponent(() => import('@/components/MultiSelectToggle.vue')),
   HierarchicalTaskRow: () => createLazyComponent(() => import('@/components/HierarchicalTaskRow.vue')),

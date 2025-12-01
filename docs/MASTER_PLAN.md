@@ -94,7 +94,7 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 
 | Priority | Claim | Reality Check | Status |
 |----------|-------|---------------|--------|
-| ❓ **UNVERIFIED** | **"My Tasks" removal complete** | "My Tasks" view still exists in stable version (AllTasksView.vue) | **NEEDS VERIFICATION** |
+| ✅ **VERIFIED** | **"My Tasks" removal complete** | Synthetic project removed, tasks use `projectId: null` (commit `fc7dde1`) | **COMPLETE Dec 1, 2025** |
 | ❓ **UNVERIFIED** | **Smart view filtering fixed** | No evidence of filtering system fixes in stable version | **NEEDS VERIFICATION** |
 | ❓ **UNVERIFIED** | **Calendar drag-drop fixed** | No evidence of calendar drag fixes in stable version | **NEEDS VERIFICATION** |
 | ✅ **VERIFIED** | **Core application working** | All 7 views render with real data in stable version | **WORKING** |
@@ -114,6 +114,12 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 - ✅ **Database**: IndexedDB persistence with LocalForage
 - ✅ **Design System**: Glass morphism with Tailwind CSS + custom tokens
 - ✅ **Development Ecosystem**: 71 specialized skills, testing infrastructure
+
+### **Known Issues (To Fix Later)**
+
+| Issue | File | Description | Priority |
+|-------|------|-------------|----------|
+| Calendar E2E test CSS selector failure | `tests/e2e-comprehensive-functionality.spec.ts:122` | Test looks for `.vc-weeks, .vc-days, [class*="grid"], [class*="week"]` but finds 0 elements. Calendar view loads but specific grid selectors don't match current DOM structure. | LOW |
 
 ---
 

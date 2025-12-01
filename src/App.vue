@@ -66,7 +66,7 @@
         <div class="smart-views">
           <!-- Today -->
           <DateDropZone
-            :active="taskStore.activeSmartView === 'today'"
+            :active="taskStore.activeSmartViews.has('today')"
             :count="todayTaskCount"
             target-type="today"
             @click="selectSmartView('today')"
@@ -79,7 +79,7 @@
 
           <!-- This Week -->
           <DateDropZone
-            :active="taskStore.activeSmartView === 'week'"
+            :active="taskStore.activeSmartViews.has('week')"
             :count="weekTaskCount"
             target-type="today"
             @click="selectSmartView('week')"
@@ -94,7 +94,7 @@
           <div class="smart-view-uncategorized">
             <!-- All Active Tasks -->
             <DateDropZone
-              :active="taskStore.activeSmartView === 'all_active'"
+              :active="taskStore.activeSmartViews.size === 0 && taskStore.activeProjectIds.size === 0"
               :count="allActiveCount"
               target-type="nodate"
               @click="selectSmartView('all_active')"
@@ -107,7 +107,7 @@
 
             <button
               class="uncategorized-filter"
-              :class="{ active: taskStore.activeSmartView === 'uncategorized' }"
+              :class="{ active: taskStore.activeSmartViews.has('uncategorized') }"
               @click="selectSmartView('uncategorized')"
               title="Show Uncategorized Tasks"
             >
@@ -116,7 +116,7 @@
               <span
                 v-if="uncategorizedCount > 0"
                 class="filter-badge"
-                :class="{ 'badge-active': taskStore.activeSmartView === 'uncategorized' }"
+                :class="{ 'badge-active': taskStore.activeSmartViews.has('uncategorized') }"
               >
                 {{ uncategorizedCount }}
               </span>
@@ -1044,12 +1044,14 @@ const hasProjectChildren = (projectId: string) => {
 
 
 const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active') => {
-  // For 'all_active' and 'uncategorized', clear project filter since these are meant to show
-  // tasks across ALL projects (replacing project-based filtering)
-  if (view === 'all_active' || view === 'uncategorized') {
-    taskStore.setActiveProject(null)
+  // For 'all_active', clear ALL filters since it's meant to show everything
+  if (view === 'all_active') {
+    taskStore.clearAllFilters()
+    return
   }
-  taskStore.setSmartView(view)
+
+  // For other views, toggle them on/off
+  taskStore.toggleSmartView(view)
 }
 
 // Start Quick Sort from uncategorized view

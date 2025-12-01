@@ -25,7 +25,7 @@
         <option value="today">Today</option>
         <option value="week">This Week</option>
         <option value="uncategorized">Uncategorized</option>
-        <option value="above_my_tasks">Above My Tasks</option>
+        <option value="all_active">All Active</option>
         <option value="unscheduled">Unscheduled</option>
       </select>
     </div>
@@ -86,7 +86,7 @@ const updateProjectFilter = (event: Event) => {
 
 const updateSmartView = (event: Event) => {
   const target = event.target as HTMLSelectElement
-  const view = target.value as 'today' | 'week' | 'uncategorized' | 'above_my_tasks' | 'unscheduled' | null
+  const view = target.value as 'today' | 'week' | 'uncategorized' | 'all_active' | 'unscheduled' | null
   taskStore.setSmartView(view)
 }
 

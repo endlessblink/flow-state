@@ -86,9 +86,9 @@
           This Week
         </DateDropZone>
 
-        <!-- Uncategorized Tasks (My Tasks) -->
+        <!-- Uncategorized Tasks Section -->
         <div class="smart-view-uncategorized">
-          <!-- All Tasks -->
+          <!-- All Active Tasks -->
           <DateDropZone
             :active="false"
             :count="allTasksCount"

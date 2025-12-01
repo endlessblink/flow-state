@@ -2,7 +2,7 @@
 // Single source of truth for all smart view filtering logic
 import type { Task } from '@/types/tasks'
 
-export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'above_my_tasks' | null
+export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null
 
 /**
  * Centralized smart view filtering composable

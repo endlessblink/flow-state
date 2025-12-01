@@ -1793,13 +1793,6 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   cursor: crosshair !important; /* Indicate drop targets */
 }
 
-/* Allow pointer events to pass through time slots when hovering over resize handles */
-.time-slot:hover .resize-handle {
-  pointer-events: auto;
-  position: relative;
-  z-index: 10;
-}
-
 /* Allow pointer events on time slot when it doesn't contain calendar events */
 .time-slot:empty,
 .time-slot:not(:has(.slot-task)) {

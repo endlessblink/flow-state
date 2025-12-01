@@ -43,7 +43,7 @@ const createMockTask = (id: string, title: string, priority: Task['priority'] = 
   subtasks: [],
   dueDate: '2024-12-25',
   estimatedDuration: 60,
-  projectId: '1',
+  projectId: null,
   parentTaskId: null,
   createdAt: new Date(),
   updatedAt: new Date(),

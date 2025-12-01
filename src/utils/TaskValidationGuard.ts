@@ -3,16 +3,18 @@
  * Multi-layer protection system to prevent invalid task data assignment
  *
  * This prevents:
- * - projectId: '1' assignment (the main issue we're solving)
- * - Invalid project IDs
+ * - Invalid project IDs (reserved keywords)
  * - Data corruption during task creation
  * - Undefined/null data issues
+ *
+ * Note: projectId: '1' is treated as legacy uncategorized (backward compatible)
  */
 
 import type { Task } from '@/types/tasks'
 
 export class TaskValidationGuard {
-  private static readonly FORBIDDEN_PROJECT_IDS = new Set(['1', 'default', 'my-tasks', 'My Tasks']);
+  // Reserved keywords that shouldn't be used as project IDs (legacy '1' is allowed for backward compat)
+  private static readonly FORBIDDEN_PROJECT_IDS = new Set(['default', 'my-tasks', 'My Tasks']);
   private static readonly VALIDATION_KEY = 'task-validation-failures';
 
   /**

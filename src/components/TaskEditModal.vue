@@ -307,7 +307,7 @@ const editedTask = ref<Task>({
   scheduledDate: '',
   scheduledTime: '09:00',
   estimatedDuration: 60,
-  projectId: '1',
+  projectId: null,
   createdAt: new Date(),
   updatedAt: new Date()
 })

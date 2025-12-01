@@ -320,7 +320,35 @@ The "My Tasks" permanent filter creates unnecessary complexity by forcing a synt
 - **Testing**: Phased approach with verification after each step
 - **User Experience**: Smart views always available, clear CTAs
 
-**Status**: Implementation ready - Full 6-phase plan complete with safety measures
+### **🔄 ROLLBACK CAPABILITY (Established Dec 1, 2025)**
+
+**Git Tag Created**: `v2.2.0-pre-mytasks-removal`
+**Branch**: `phase-1-error-handling`
+**Last Commit**: `4b21a27` (docs: Mark canvas fixes and Phase 1 as complete)
+
+**Rollback Commands**:
+```bash
+# Option 1: Revert to tag (recommended)
+git checkout v2.2.0-pre-mytasks-removal
+
+# Option 2: Hard reset to tag (destructive)
+git reset --hard v2.2.0-pre-mytasks-removal
+
+# Option 3: Cherry-pick specific rollback
+git revert <commit-hash>
+```
+
+**Database Rollback**:
+- IndexedDB data preserved (tasks with `projectId: '1'` will still work)
+- Migration is non-destructive (converts `'1'` → `null`, doesn't delete)
+- Manual recovery: Set `projectId: '1'` back on tasks if needed
+
+**Verification Before Rollback**:
+1. Check `npm run build` succeeds
+2. Check tasks display correctly in all views
+3. Check project filtering works
+
+**Status**: ✅ ROLLBACK READY - Implementation can proceed safely
 
 ---
 

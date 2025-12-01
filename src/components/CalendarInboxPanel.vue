@@ -310,7 +310,7 @@ const statusLabel = computed(() => (status: string) => {
 // Methods
 const getProjectName = (projectId: string) => {
   const project = taskStore.getProjectById(projectId)
-  return project?.name || 'My Tasks'
+  return project?.name || 'Uncategorized'
 }
 
 const addTask = () => {
@@ -320,7 +320,7 @@ const addTask = () => {
     title: newTaskTitle.value.trim(),
     description: '',
     status: 'planned',
-    projectId: '1', // Default project
+    projectId: null, // Uncategorized
     isInInbox: true
   })
 

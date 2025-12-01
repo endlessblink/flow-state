@@ -2029,11 +2029,12 @@ resourceManager.addWatcher(
 
 // FIX: Watch for isInInbox changes - triggers sync when tasks move between inbox and canvas
 // This was missing and caused tasks dragged from inbox to not appear until refresh
+// Using flush: 'post' to ensure sync runs after Vue has processed all reactive updates
 resourceManager.addWatcher(
   watch(() => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })), () => {
     console.log('🔄 [WATCHER] isInInbox changed - triggering high priority sync')
     batchedSyncNodes('high')
-  }, { deep: true })
+  }, { deep: true, flush: 'post' })
 )
 
 // Watch for canvas store selection changes and sync with Vue Flow nodes - FIXED to prevent disconnection

@@ -567,7 +567,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const currentView = ref('board')
   const selectedTaskIds = ref<string[]>([])
   const activeProjectId = ref<string | null>(null) // null = show all projects
-  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'above_my_tasks' | null>(null)
+  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null>(null)
   const activeStatusFilter = ref<string | null>(null) // null = show all statuses, 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   const hideDoneTasks = ref(false) // Global setting to hide done tasks across all views (disabled by default to show completed tasks for logging)
 
@@ -1513,14 +1513,8 @@ export const useTaskStore = defineStore('tasks', () => {
     const unscheduled = baseTasks.filter(task => isUnscheduledTask(task)).length
     const inProgress = baseTasks.filter(task => isInProgressTask(task)).length
 
-    // 'above_my_tasks' is project-based, needs special handling
-    let aboveMyTasks = 0
-    const aboveMyTasksProject = projects.value.find(p => p.name?.toLowerCase().includes('above my tasks'))
-    if (aboveMyTasksProject) {
-      const allChildProjects = getChildProjects(aboveMyTasksProject.id)
-      const allChildIds = [...allChildProjects.map(p => p.id), aboveMyTasksProject.id]
-      aboveMyTasks = baseTasks.filter(task => allChildIds.includes(task.projectId)).length
-    }
+    // 'all_active' counts all non-done tasks (previously 'above_my_tasks')
+    const allActive = baseTasks.filter(task => task.status !== 'done').length
 
     // 'all' is just the total of base tasks (respecting project filter)
     const all = baseTasks.length
@@ -1531,7 +1525,7 @@ export const useTaskStore = defineStore('tasks', () => {
       uncategorized,
       unscheduled,
       inProgress,
-      aboveMyTasks,
+      allActive,
       all
     }
   })
@@ -2209,7 +2203,7 @@ export const useTaskStore = defineStore('tasks', () => {
     persistFilters()
   }
 
-  const setSmartView = (view: 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'above_my_tasks' | null) => {
+  const setSmartView = (view: 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null) => {
     activeSmartView.value = view
     persistFilters()
   }
@@ -2303,16 +2297,13 @@ export const useTaskStore = defineStore('tasks', () => {
   const deleteProject = (projectId: string) => {
     const projectIndex = projects.value.findIndex(p => p.id === projectId)
     if (projectIndex !== -1) {
-      // Don't allow deletion of the default project
-      if (projectId === '1') {
-        console.warn('Cannot delete the default project')
-        return
-      }
+      // REMOVED: "My Tasks" protection - no more default project with ID '1'
 
-      // Move all tasks from this project to the default project
+      // Move all tasks from this project to uncategorized (null)
       tasks.value.forEach(task => {
         if (task.projectId === projectId) {
-          task.projectId = '1'
+          task.projectId = null
+          task.isUncategorized = true
           task.updatedAt = new Date()
         }
       })

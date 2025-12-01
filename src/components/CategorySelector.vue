@@ -93,7 +93,7 @@ interface CategoryNode {
 
 // Build nested category tree
 const categoryTree = computed<CategoryNode[]>(() => {
-  const allProjects = taskStore.projects.filter(p => p.id !== '1') // Exclude "My Tasks"
+  const allProjects = taskStore.projects // All user-created projects
 
   function buildTree(parentId: string | null | undefined, depth = 0): CategoryNode[] {
     return allProjects

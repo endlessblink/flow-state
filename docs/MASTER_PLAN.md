@@ -10,52 +10,59 @@
 
 ## 🔧 **ACTIVE SESSION: Canvas View Fixes (Dec 1, 2025)**
 
-### **Issues Being Fixed**
+### **ROOT CAUSES IDENTIFIED (via Systematic Debugging)**
 
-#### Issue #1: Tasks Not Appearing on Canvas (CRITICAL)
-- **Status**: ROOT CAUSE IDENTIFIED - Ready to fix
-- **File**: `src/views/CanvasView.vue` line 1809
-- **Problem**: Filter `!task.isInInbox` is too strict - most tasks have `isInInbox: true` in database
-- **Evidence**: Browser evaluate showed only 1 of 21 tasks has `isInInbox: false`
+#### Issue #1: Inbox↔Canvas Transfers Require Refresh (CRITICAL)
+- **Status**: ROOT CAUSE CONFIRMED - Missing Vue Watcher
+- **File**: `src/views/CanvasView.vue` around line 2023-2026
+- **Problem**: No watcher monitors `isInInbox` property changes
 
-**Fix Required** (one line change):
+**Reactivity chain broken:**
+1. `handleDrop()` updates `isInInbox: false` via `updateTaskWithUndo()`
+2. Task store updates successfully
+3. **NO watcher fires** - only `canvasPosition` is watched, not `isInInbox`
+4. `syncNodes()` never executes → no visual update
+5. Page refresh causes remount → watchers fire → UI updates
+
+**Fix Required - Add watcher after line 2026:**
 ```typescript
-// Current (broken):
-.filter(task => task && task.id && !task.isInInbox)
-
-// Fixed:
-.filter(task => task && task.id && (task.canvasPosition || task.isInInbox !== true))
+watch(() => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })), () => {
+  batchedSyncNodes('high')
+}, { deep: true })
 ```
 
-**Rationale**:
-- Tasks with `canvasPosition` should ALWAYS show on canvas (they were placed there)
-- Tasks with `isInInbox === true` AND no canvasPosition go to inbox
-- Tasks with `isInInbox === undefined` or `false` should show (backward compatibility)
+#### Issue #2: Drag Position Doesn't Persist (CRITICAL)
+- **Status**: ROOT CAUSE CONFIRMED - Race Condition
+- **File**: `src/views/CanvasView.vue` line 2553-2555
+- **Problem**: `nextTick` clears `isNodeDragging` guard too soon
 
-#### Issue #2: Tasks Can't Be Moved on Canvas
-- **Status**: LIKELY RELATED TO ISSUE #1
-- **User report**: "The task that does appear on the canvas - sticks to its position"
-- **Analysis**: After drag completes, `syncNodes` filters out task due to `isInInbox` flag
-- **Same fix as Issue #1 should resolve this**
+**Race Condition Sequence:**
+1. `handleNodeDragStop` saves ABSOLUTE position to store
+2. `canvasPosition` watcher fires IMMEDIATELY, calls `batchedSyncNodes('low')`
+3. `nextTick(() => { isNodeDragging = false })` runs - guard clears
+4. Batched `syncNodes` now passes guard, executes
+5. `syncNodes` converts ABSOLUTE → RELATIVE position (lines 1855-1857)
+6. Node appears to "jump back" to wrong position!
 
-#### Issue #3: Tasks Dragged from Inbox Don't Appear
-- **Status**: SAME ROOT CAUSE AS ISSUE #1
-- **Problem**: When task is dragged from inbox, it still has `isInInbox: true`
-- **Same fix should resolve this**
+**Fix Required - Change nextTick to setTimeout:**
+```typescript
+setTimeout(() => { isNodeDragging.value = false }, 50)
+```
 
 ### **Implementation Steps**
-1. ✅ Identify root cause in syncNodes filter
-2. ⏳ Apply one-line fix to CanvasView.vue:1809
-3. ⏳ Verify with Playwright - tasks appear on canvas
-4. ⏳ Test drag functionality - tasks can be moved
-5. ⏳ Test inbox drag - tasks appear after drag from inbox
+1. ✅ Systematic debugging identified TWO distinct root causes
+2. ✅ Fix task filtering - tasks now appear on canvas (commit `a3e7559`)
+   - Changed filter from `!task.isInInbox` to `(task.canvasPosition || task.isInInbox !== true)`
+   - Verified: 2 nodes showing, status HEALTHY
+3. ⏳ Add missing `isInInbox` watcher (after line 2026)
+4. ⏳ Fix race condition: `nextTick` → `setTimeout(..., 50)`
+5. ⏳ Verify with Playwright - all operations work without refresh
 
 ### **Previously Completed (This Session)**
-- ✅ Context menu positioning made reactive (useContextMenuPositioning.ts)
-- ✅ Context menu events made reactive (useContextMenuEvents.ts)
+- ✅ Context menu positioning made reactive
+- ✅ Context menu events made reactive
 - ✅ Node drag guard added (isNodeDragging flag)
-- ✅ Delete key functionality verified (moves to inbox)
-- ✅ Shift+Delete functionality verified (permanent delete)
+- ✅ Delete/Shift+Delete key functionality verified
 
 ---
 

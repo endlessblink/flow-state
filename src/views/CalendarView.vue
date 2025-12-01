@@ -154,8 +154,8 @@
                 'dragging': isDragging && draggedEventId === calEvent.id,
                 'is-hovered': hoveredEventId === calEvent.id
               }"
-              @mouseenter="hoveredEventId = calEvent.id"
-              @mouseleave="hoveredEventId = null"
+              @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
+              @mouseleave="handleSlotTaskMouseLeave()"
               :data-duration="calEvent.duration"
               :data-task-id="calEvent.taskId"
               draggable="true"
@@ -232,6 +232,19 @@
                   @mousedown.stop="startResize($event, calEvent, 'bottom')"
                   title="Drag to change duration"
                 ></div>
+
+                <!-- Resize Preview Overlay - shows projected size during drag -->
+                <div
+                  v-if="resizePreview?.isResizing && resizePreview.taskId === calEvent.taskId"
+                  class="resize-preview-overlay"
+                  :style="{
+                    height: `${Math.ceil(resizePreview.previewDuration / 30) * 30}px`,
+                    top: resizePreview.direction === 'top' ? 'auto' : '0',
+                    bottom: resizePreview.direction === 'top' ? '0' : 'auto'
+                  }"
+                >
+                  <span class="preview-duration">{{ resizePreview.previewDuration }}min</span>
+                </div>
               </template>
 
               <!-- Continuation indicator for non-primary slots -->
@@ -608,10 +621,18 @@ const selectedCalendarEvents = ref<any[]>([])
 // Hover state for slot tasks - used to show resize handles (draggable elements have inconsistent :hover)
 const hoveredEventId = ref<string | null>(null)
 
+// Methods for hover tracking (inline handlers don't work reliably with draggable elements)
+const handleSlotTaskMouseEnter = (eventId: string) => {
+  hoveredEventId.value = eventId
+}
+const handleSlotTaskMouseLeave = () => {
+  hoveredEventId.value = null
+}
+
 // Destructure commonly used items from composables
 const { hours, timeSlots, calendarEvents, dragGhost, dragMode, getEventStyle, getGhostStyle,
         isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd,
-        handleEventMouseDown, startResize, getTasksForSlot, isTaskPrimarySlot } = dayView
+        handleEventMouseDown, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot } = dayView
 
 const { workingHours, weekDays, weekEvents, getWeekEventStyle, handleWeekEventMouseDown,
         handleWeekDragOver, handleWeekDrop, startWeekResize, isCurrentWeekTimeCell } = weekView
@@ -1712,16 +1733,43 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
 }
 
 /* Use both :hover and .is-hovered class for resize handle visibility
-   The .is-hovered class is set via JS because draggable elements have inconsistent :hover behavior */
+   The .is-hovered class is set via JS because draggable elements have inconsistent :hover behavior
+   transition: none is required to prevent the transition from blocking immediate opacity change */
 .slot-task.is-primary:hover .resize-handle,
 .slot-task.is-primary.is-hovered .resize-handle {
-  opacity: 1;
-  pointer-events: auto;
-  background: rgba(99, 102, 241, 0.4);
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  background: rgba(99, 102, 241, 0.4) !important;
+  transition: none !important;
 }
 
 .resize-handle:hover {
   background: rgba(99, 102, 241, 0.7) !important;
+}
+
+/* Resize Preview Overlay - shows projected size during resize drag */
+.resize-preview-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(99, 102, 241, 0.15);
+  border: 2px dashed rgba(99, 102, 241, 0.6);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+
+.resize-preview-overlay .preview-duration {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(99, 102, 241, 0.9);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
 }
 
 /* Ghost preview for drag operations - inline version */

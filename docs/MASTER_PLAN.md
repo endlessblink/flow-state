@@ -1,10 +1,42 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 1, 2025
-**Version**: 2.5 (Test Infrastructure Fixed)
-**Status**: ✅ Canvas fixes, Phase 1 Error Handling, My Tasks removal, Test infrastructure (18/18 E2E pass)
-**Current Branch**: phase-1-error-handling
+**Version**: 2.7 (Technical Debt Fresh Analysis + Calendar Consolidation)
+**Status**: ✅ Canvas fixes, Phase 1 Error Handling, My Tasks removal, Test infrastructure (18/18 E2E pass), All features VERIFIED via Playwright
+**Current Branch**: master (merged Dec 1, 2025 - v2.5.0-phase1-complete)
 **Baseline**: stable-working-version directory (v2.0-comprehensive-checkpoint-2025-11-15)
+
+---
+
+## ✅ **COMPLETED: Sidebar Filters Fix (Dec 1, 2025)**
+
+### **Problem**
+1. Sidebar filter buttons did not clear project filter when clicked
+2. "All Active" / "Uncategorized Tasks" should disable project filtering when clicked
+
+### **Root Cause**
+The actual sidebar is in `src/App.vue` (not AppSidebar.vue). The `selectSmartView` function only called `setSmartView()` but did NOT clear the project filter for 'all_active' and 'uncategorized'.
+
+### **Fix Applied**
+Modified `src/App.vue` line 1046-1053:
+```typescript
+const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active') => {
+  if (view === 'all_active' || view === 'uncategorized') {
+    taskStore.setActiveProject(null)  // Clear project filter
+  }
+  taskStore.setSmartView(view)
+}
+```
+
+### **Verification Results**
+| Test | Result |
+|------|--------|
+| Build passes | ✅ |
+| Click "All Active" clears project filter | ✅ |
+| Click "Uncategorized" clears project filter | ✅ |
+| Today/This Week keep project filter | ✅ |
+
+### **Status**: ✅ COMPLETE - Awaiting user verification
 
 ---
 
@@ -45,7 +77,7 @@ Removed the broken CSS rule (5 lines). The correct CSS rules already existed and
 
 ---
 
-## 🔧 **IN PROGRESS: Canvas View Deep Debug (Dec 1, 2025)**
+## ✅ **COMPLETED: Canvas View Deep Debug (Dec 1, 2025)**
 
 ### **User-Reported Issues**
 1. Can't delete tasks from canvas
@@ -155,6 +187,24 @@ if (section.type === 'priority' || section.type === 'status' || section.type ===
 5. Delete key on selected task → Should move to inbox
 6. Shift+Delete on selected task → Should permanently delete
 
+### **Verification Results (Dec 1, 2025)**
+
+| Test | Result | Evidence |
+|------|--------|----------|
+| Build compiles | ✅ PASS | Built in 7.46s, no errors |
+| Tasks stay in inbox | ✅ PASS | Canvas shows 0 nodes, inbox shows 14 tasks |
+| No console errors | ✅ PASS | No errors in browser console |
+| Vue Flow Status | ✅ PASS | Status: HEALTHY |
+
+**Screenshot**: `.playwright-mcp/canvas-fix-verified-dec1.png`
+
+**Files Modified**:
+- `src/stores/taskCore.ts` - Line 40: Fixed `isInInbox` default (true instead of false)
+- `src/components/CalendarInboxPanel.vue` - Line 228: Respect actual `task.isInInbox` property
+- `src/stores/canvas.ts` - Lines 148, 767-784: Added explicit `isInInbox === false` checks
+- `src/components/canvas/CanvasContextMenu.vue` - Added "Move to Inbox" and "Delete" options for tasks
+- `src/views/CanvasView.vue` - Added handlers for new context menu actions
+
 ---
 
 ## 🏗️ **Current System Architecture (Stable v2.0)**
@@ -186,14 +236,16 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 | Priority | Claim | Reality Check | Status |
 |----------|-------|---------------|--------|
 | ✅ **VERIFIED** | **"My Tasks" removal complete** | Synthetic project removed, tasks use `projectId: null` (commit `fc7dde1`) | **COMPLETE Dec 1, 2025** |
-| ❓ **UNVERIFIED** | **Smart view filtering fixed** | No evidence of filtering system fixes in stable version | **NEEDS VERIFICATION** |
+| ✅ **VERIFIED** | **Smart view filtering fixed** | All Active/Uncategorized now clear project filter (Dec 1, 2025) | **COMPLETE** |
 | ✅ **PARTIAL** | **Calendar drag-drop fixed** | Drag inside calendar works (Dec 1, 2025 fix), resize still needs work | **PARTIAL - SOP: `docs/🐛 debug/sop/calendar-drag-inside-calendar/`** |
 | ✅ **VERIFIED** | **Core application working** | All 7 views render with real data in stable version | **WORKING** |
 | ✅ **VERIFIED** | **Database persistence** | IndexedDB via LocalForage functional in stable version | **WORKING** |
 | ✅ **VERIFIED** | **Canvas system** | Vue Flow integration with 155,207 lines of code | **WORKING** |
 | ✅ **VERIFIED** | **Build system** | Production builds working in stable version | **WORKING** |
-| ❓ **UNVERIFIED** | **Navigation tabs** | Claims of 5 working tabs (reality: 7 views) | **NEEDS VERIFICATION** |
-| ❓ **UNVERIFIED** | **Kanban add buttons** | Claims of fixes not confirmed in stable version | **NEEDS VERIFICATION** |
+| ✅ **VERIFIED** | **Navigation tabs** | All 5 tabs work: Board, Calendar, Canvas (3 nodes), Catalog (3 tasks), Quick Sort | **VERIFIED Dec 1, 2025** |
+| ✅ **VERIFIED** | **Kanban add buttons** | Modal opens correctly when clicking add buttons | **VERIFIED Dec 1, 2025** |
+| ✅ **VERIFIED** | **Calendar drag-drop** | Inbox→Calendar drag works (task scheduled with 30min duration) | **VERIFIED Dec 1, 2025** |
+| ✅ **VERIFIED** | **Smart view filtering** | Today filter correctly shows tasks due today | **VERIFIED Dec 1, 2025** |
 
 ### **Known Working Features (Stable Version Evidence)**
 - ✅ **Vue 3 + TypeScript Application**: Complete productivity app with 292,859 lines of code
@@ -475,17 +527,17 @@ git revert <commit-hash>
 
 ---
 
-## 🚀 **NEW INITIATIVE: PomoFlow Technical Debt Consolidation Master Plan**
+## 🚀 **ACTIVE INITIATIVE: PomoFlow Technical Debt Consolidation Master Plan**
 
-**Date**: November 29, 2025
-**Status**: 🔄 ANALYSIS COMPLETE - Ready for Implementation Planning
+**Date**: November 29, 2025 → **Fresh Analysis**: December 1, 2025
+**Status**: 🔄 PHASE 2 IN PROGRESS - Calendar Consolidation
 **Priority**: HIGH - System stability and development efficiency improvement
-**Scope**: 4,776+ competing systems detected across 25 conflict categories
-**Timeline**: 6-8 weeks (25-40 hours total effort)
+**Scope**: 1,200+ competing systems detected across 6 major categories
+**Timeline**: 6-8 weeks (49-69 hours total effort)
 
 ### **Executive Summary & Strategic Imperative**
 
-A comprehensive dual-tool competing systems analysis has identified **4,776+ competing systems** across the Pomo-Flow codebase, representing significant technical debt that impacts system stability, development velocity, and maintainability.
+A comprehensive fresh analysis (Dec 1, 2025) has identified **1,200+ competing systems** across the Pomo-Flow codebase, representing significant technical debt that impacts system stability, development velocity, and maintainability.
 
 **Strategic Importance:**
 - **System Stability**: Eliminate conflicting implementations that cause bugs and inconsistencies
@@ -508,43 +560,49 @@ A comprehensive dual-tool competing systems analysis has identified **4,776+ com
 - **🔗 Cross-Validation**: Overlapping patterns identified and confidence-boosted
 - **📊 Integrated Reporting**: Combined insights with prioritized action items
 
-#### **Severity Breakdown**
-| Severity | Conflict Count | Primary Categories | Priority | Effort |
-|----------|---------------|-------------------|----------|--------|
-| **HIGH** | 600+ | Database Layer, Validation Systems, Calendar Logic | IMMEDIATE | 14-22 hours |
-| **MEDIUM** | 3,500+ | State Management, Error Handling, Async Patterns | HIGH | 8-12 hours |
-| **LOW** | 600+ | Utility Functions, Naming Conventions, Documentation | MEDIUM | 3-6 hours |
+#### **Fresh Analysis Results (Dec 1, 2025)**
 
-#### **Top Conflict Categories**
-1. **Database Layer (574 conflicts)**
-   - Multiple API endpoint patterns across stores and services
-   - Inconsistent data access patterns between components
-   - Duplicate database connection and transaction logic
-   - Conflicting persistence strategies (PouchDB vs IndexedDB)
+| Category | Conflicts | Files | Severity | Effort | Status |
+|----------|-----------|-------|----------|--------|--------|
+| **Database/Persistence** | 320+ | 22 | HIGH | 12-18 hrs | 🔵 Planned |
+| **Error Handling** | 249 | 68 | HIGH | 14-22 hrs | ✅ Phase 1 Done (45 migrated) |
+| **Calendar Systems** | 180+ | 6 | HIGH | 4-5 hrs | 🔄 **IN PROGRESS** |
+| **Drag-and-Drop** | 150+ | 21 | MEDIUM | 5-6 hrs | 🔵 Planned |
+| **State Management** | 200+ | 52 | MEDIUM | 6-8 hrs | 🔵 Planned |
+| **Validation** | 100+ | 25+ | MEDIUM | 8-10 hrs | 🔵 Planned |
 
-2. **Validation Systems (4,199 conflicts)**
-   - Multiple validation frameworks and custom validators
-   - Inconsistent error message patterns and internationalization
-   - Duplicate form validation logic across components
-   - Conflicting validation rule definitions
+#### **Critical Duplicate Systems Discovered**
 
-3. **Calendar Implementations (6 files, HIGH severity)**
-   - Multiple date calculation implementations
-   - Inconsistent month navigation logic
-   - Timezone handling variations
-   - Duplicate event rendering patterns
+1. **Database/Persistence (320+ conflicts, 22 files)**
+   - **4 Competing Sync Systems**: useReliableSyncManager (925 lines), useCrossTabSync (595 lines), useCouchDBSync (280 lines), useCrossTabSyncIntegration (310 lines)
+   - **4 Competing Backup Systems**: useAutoBackup, useSimpleBackup, useBackupManager, RobustBackupSystem
+   - **3 Persistence Patterns**: PouchDB singleton, LocalForage wrapper, Store-based IndexedDB
 
-4. **Drag-and-Drop Systems (18 files, HIGH severity)**
-   - Multiple D&D libraries (VueDraggable, HTML5 API, custom implementations)
-   - Inconsistent drag behavior across views
-   - Duplicate drop validation logic
-   - Incompatible event handling patterns
+2. **Calendar Implementations (180+ conflicts, 6 files)** ← **CONSOLIDATING NOW**
+   - `useCalendarMonthView.ts` (120+ lines)
+   - `useCalendarWeekView.ts` (150+ lines)
+   - `useCalendarDayView.ts` (200+ lines)
+   - `useCalendarEventHelpers.ts` (100+ lines)
+   - `useCalendarDragCreate.ts` (100+ lines)
+   - `CalendarView.vue` (1,800+ lines with duplicates)
+   - **Issues**: 3 different week-start calculations, duplicate date formatting, separate drag handlers per view
 
-5. **Error Handling Patterns (70 files, MEDIUM severity)**
-   - Inconsistent error message formatting
-   - Multiple error logging approaches
-   - Duplicate user notification systems
-   - No centralized error state management
+3. **State Management (200+ conflicts, 52 files)**
+   - **2 Competing Canvas Stores**: `canvas.ts` (1,182 lines) AND `taskCanvas.ts` (491 lines) with DUPLICATE CanvasSection interfaces!
+   - **Duplicate Filters**: todayTasks computed in 4+ locations, activeTasks in 6+ locations
+   - **Duplicate Computed Properties**: 200+ across stores and components
+
+4. **Drag-and-Drop (150+ conflicts, 21 files)**
+   - HTML5 Native API (9 files)
+   - useDragAndDrop composable (partially used)
+   - Vue Flow drag system (canvas-specific)
+   - Custom canvas handlers
+   - **Issues**: Inconsistent data formats, no centralized validation
+
+5. **Error Handling (249 remaining console.error calls)**
+   - 84.7% still using `console.error` (249/294)
+   - 15.3% migrated to `errorHandler.report()` (45/294)
+   - **High Priority Deferred**: CanvasView.vue (171), useReliableSyncManager.ts (67)
 
 ### **5-Phase Strategic Implementation Plan**
 

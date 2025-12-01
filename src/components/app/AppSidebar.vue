@@ -62,10 +62,10 @@
       <div class="smart-views">
         <!-- Today -->
         <DateDropZone
-          :active="false"
+          :active="activeSmartView === 'today'"
           :count="todayTaskCount"
           target-type="today"
-          @click="() => {}"
+          @click="handleSmartViewClick('today')"
         >
           <template #icon>
             <Calendar :size="16" />
@@ -75,10 +75,10 @@
 
         <!-- This Week -->
         <DateDropZone
-          :active="false"
+          :active="activeSmartView === 'week'"
           :count="weekTaskCount"
           target-type="weekend"
-          @click="() => {}"
+          @click="handleSmartViewClick('week')"
         >
           <template #icon>
             <Calendar :size="16" />
@@ -90,10 +90,10 @@
         <div class="smart-view-uncategorized">
           <!-- All Active Tasks -->
           <DateDropZone
-            :active="false"
+            :active="activeSmartView === null && activeProjectId === null"
             :count="allTasksCount"
             target-type="nodate"
-            @click="() => {}"
+            @click="handleAllTasksClick"
           >
             <template #icon>
               <List :size="16" />
@@ -103,7 +103,8 @@
 
           <button
             class="uncategorized-filter"
-            @click="() => {}"
+            :class="{ active: activeSmartView === 'uncategorized' }"
+            @click="handleUncategorizedClick"
             title="Show Uncategorized Tasks"
           >
             <Inbox :size="16" />
@@ -175,9 +176,33 @@ const weekTaskCount = computed(() => taskStore.smartViewTaskCounts.week)
 const allTasksCount = computed(() => taskStore.smartViewTaskCounts.all)
 const uncategorizedTaskCount = computed(() => taskStore.smartViewTaskCounts.uncategorized)
 
+// Active filter state from store
+const activeSmartView = computed(() => taskStore.activeSmartView)
+const activeProjectId = computed(() => taskStore.activeProjectId)
+
 const handleProjectClick = (project: any) => {
   console.log('🎯 AppSidebar: Project clicked:', project.name)
   taskStore.setActiveProject(project.id)
+}
+
+// Smart view click handlers
+const handleSmartViewClick = (view: 'today' | 'week') => {
+  console.log('🎯 AppSidebar: Smart view clicked:', view)
+  taskStore.setSmartView(view)
+}
+
+// "All Tasks" clears all filters
+const handleAllTasksClick = () => {
+  console.log('🎯 AppSidebar: All Tasks clicked - clearing all filters')
+  taskStore.setActiveProject(null)
+  taskStore.setSmartView(null)
+}
+
+// "Uncategorized Tasks" clears project filter and sets uncategorized view
+const handleUncategorizedClick = () => {
+  console.log('🎯 AppSidebar: Uncategorized clicked - clearing project filter')
+  taskStore.setActiveProject(null)
+  taskStore.setSmartView('uncategorized')
 }
 
 const createQuickTask = async () => {

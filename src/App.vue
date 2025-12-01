@@ -1044,6 +1044,11 @@ const hasProjectChildren = (projectId: string) => {
 
 
 const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active') => {
+  // For 'all_active' and 'uncategorized', clear project filter since these are meant to show
+  // tasks across ALL projects (replacing project-based filtering)
+  if (view === 'all_active' || view === 'uncategorized') {
+    taskStore.setActiveProject(null)
+  }
   taskStore.setSmartView(view)
 }
 

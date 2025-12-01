@@ -57,6 +57,17 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
   const draggedEventId = ref<string | null>(null)
   const activeDropSlot = ref<number | null>(null)
 
+  // Resize preview state - shows visual feedback during resize without updating store
+  const resizePreview = ref<{
+    taskId: string
+    direction: 'top' | 'bottom'
+    originalDuration: number
+    originalStartSlot: number
+    previewDuration: number
+    previewStartTime: string
+    isResizing: boolean
+  } | null>(null)
+
   // Generate time slots for current day
   const timeSlots = computed<TimeSlot[]>(() => {
     const slots: TimeSlot[] = []
@@ -707,7 +718,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     console.log('✅ [CalendarDrag] Drag end cleanup completed')
   }
 
-  // Event resizing
+  // Event resizing - uses preview state during drag, commits on mouseup
   const startResize = (event: MouseEvent, calendarEvent: CalendarEvent, direction: 'top' | 'bottom') => {
     event.preventDefault()
     event.stopPropagation() // Prevent drag events from interfering
@@ -721,9 +732,27 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     // Get current time information
     const [currentHour, currentMinute] = calendarEvent.startTime.toTimeString().slice(0, 5).split(':').map(Number)
     const currentStartTime = currentHour * 60 + currentMinute
+    const originalTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
+
+    // Initialize resize preview state
+    resizePreview.value = {
+      taskId: calendarEvent.taskId,
+      direction,
+      originalDuration,
+      originalStartSlot,
+      previewDuration: originalDuration,
+      previewStartTime: originalTimeStr,
+      isResizing: true
+    }
+
+    // Track final values to commit on mouseup
+    let finalDuration = originalDuration
+    let finalStartTime = originalTimeStr
 
     const handleMouseMove = (e: MouseEvent) => {
       requestAnimationFrame(() => {
+        if (!resizePreview.value) return
+
         const deltaY = e.clientY - startY
         const deltaSlots = Math.round(deltaY / SLOT_HEIGHT)
 
@@ -736,25 +765,11 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
           const deltaMinutes = deltaSlots * 30
           newDuration = Math.max(MIN_DURATION, originalDuration + deltaMinutes)
 
-          console.log(`🔄 [CalendarResize] Bottom resize: duration ${originalDuration} → ${newDuration}`)
+          // Update preview state only (NOT the store)
+          resizePreview.value.previewDuration = newDuration
+          finalDuration = newDuration
 
-          // Update task duration
-          taskStore.updateTask(calendarEvent.taskId, {
-            estimatedDuration: newDuration
-          })
-
-          // Update instance if present
-          const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
-          if (task?.instances && task.instances.length > 0) {
-            const todayInstance = task.instances.find(instance =>
-              instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
-            )
-            if (todayInstance && todayInstance.id) {
-              taskStore.updateTaskInstance(calendarEvent.taskId, todayInstance.id, {
-                duration: newDuration
-              })
-            }
-          }
+          console.log(`🔄 [CalendarResize] Bottom preview: duration ${originalDuration} → ${newDuration}`)
 
         } else {
           // Resize from top - change start time and maintain end time
@@ -776,35 +791,66 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
             const actualNewStartTime = newStartHour * 60 + newStartMinute
             newDuration = Math.max(MIN_DURATION, currentEndTime - actualNewStartTime)
 
-            console.log(`🔄 [CalendarResize] Top resize: start ${currentHour}:${currentMinute.toString().padStart(2, '0')} → ${newStartHour}:${newStartMinute.toString().padStart(2, '0')}, duration ${originalDuration} → ${newDuration}`)
-
-            // Update both start time and duration
             const newTimeStr = `${newStartHour.toString().padStart(2, '0')}:${newStartMinute.toString().padStart(2, '0')}`
-            taskStore.updateTask(calendarEvent.taskId, {
-              scheduledTime: newTimeStr,
-              estimatedDuration: newDuration
-            })
 
-            // Update instance if present
-            const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
-            if (task?.instances && task.instances.length > 0) {
-              const todayInstance = task.instances.find(instance =>
-                instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
-              )
-              if (todayInstance && todayInstance.id) {
-                taskStore.updateTaskInstance(calendarEvent.taskId, todayInstance.id, {
-                  scheduledTime: newTimeStr,
-                  duration: newDuration
-                })
-              }
-            }
+            // Update preview state only (NOT the store)
+            resizePreview.value.previewDuration = newDuration
+            resizePreview.value.previewStartTime = newTimeStr
+            finalDuration = newDuration
+            finalStartTime = newTimeStr
+
+            console.log(`🔄 [CalendarResize] Top preview: start ${originalTimeStr} → ${newTimeStr}, duration ${originalDuration} → ${newDuration}`)
           }
         }
       })
     }
 
     const handleMouseUp = () => {
-      console.log('🏁 [CalendarResize] Resize completed')
+      console.log('🏁 [CalendarResize] Resize completed - committing to store')
+
+      // Commit final values to store
+      if (direction === 'bottom') {
+        taskStore.updateTask(calendarEvent.taskId, {
+          estimatedDuration: finalDuration
+        })
+
+        // Update instance if present
+        const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
+        if (task?.instances && task.instances.length > 0) {
+          const todayInstance = task.instances.find(instance =>
+            instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
+          )
+          if (todayInstance && todayInstance.id) {
+            taskStore.updateTaskInstance(calendarEvent.taskId, todayInstance.id, {
+              duration: finalDuration
+            })
+          }
+        }
+      } else {
+        // Top resize - update both start time and duration
+        taskStore.updateTask(calendarEvent.taskId, {
+          scheduledTime: finalStartTime,
+          estimatedDuration: finalDuration
+        })
+
+        // Update instance if present
+        const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
+        if (task?.instances && task.instances.length > 0) {
+          const todayInstance = task.instances.find(instance =>
+            instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
+          )
+          if (todayInstance && todayInstance.id) {
+            taskStore.updateTaskInstance(calendarEvent.taskId, todayInstance.id, {
+              scheduledTime: finalStartTime,
+              duration: finalDuration
+            })
+          }
+        }
+      }
+
+      // Clear preview state
+      resizePreview.value = null
+
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
@@ -815,7 +861,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     console.log('🚀 [CalendarResize] Resize started', {
       taskId: calendarEvent.taskId,
       direction,
-      originalTime: `${currentHour}:${currentMinute.toString().padStart(2, '0')}`,
+      originalTime: originalTimeStr,
       originalDuration
     })
   }
@@ -850,6 +896,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     handleEventMouseDown,
 
     // Resize handlers
-    startResize
+    startResize,
+    resizePreview
   }
 }

@@ -168,44 +168,12 @@ const rootProjects = computed(() => {
   return projects
 })
 
-// Reactive computed properties for sidebar counts
-const todayTaskCount = computed(() => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  return taskStore.tasks.filter(task => {
-    if (task.status === 'done' && taskStore.hideDoneTasks) return false
-    if (!task.dueDate) return false
-    const dueDate = new Date(task.dueDate)
-    return dueDate >= today && dueDate < tomorrow
-  }).length
-})
-
-const weekTaskCount = computed(() => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const nextWeek = new Date(today)
-  nextWeek.setDate(nextWeek.getDate() + 7)
-
-  return taskStore.tasks.filter(task => {
-    if (task.status === 'done' && taskStore.hideDoneTasks) return false
-    if (!task.dueDate) return false
-    const dueDate = new Date(task.dueDate)
-    return dueDate >= today && dueDate < nextWeek
-  }).length
-})
-
-const allTasksCount = computed(() => {
-  return taskStore.tasks.filter(task => {
-    return !(task.status === 'done' && taskStore.hideDoneTasks)
-  }).length
-})
-
-const uncategorizedTaskCount = computed(() => {
-  return taskStore.getUncategorizedTaskCount()
-})
+// CENTRALIZED TASK COUNTS - Using store's unified count system
+// These counts now respect combined filters (smart view + project filter)
+const todayTaskCount = computed(() => taskStore.smartViewTaskCounts.today)
+const weekTaskCount = computed(() => taskStore.smartViewTaskCounts.week)
+const allTasksCount = computed(() => taskStore.smartViewTaskCounts.all)
+const uncategorizedTaskCount = computed(() => taskStore.smartViewTaskCounts.uncategorized)
 
 const handleProjectClick = (project: any) => {
   console.log('🎯 AppSidebar: Project clicked:', project.name)

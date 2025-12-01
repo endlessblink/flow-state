@@ -5,9 +5,9 @@
  * to handle large datasets (1000+ nodes) without blocking the UI.
  */
 
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, readonly, type Ref } from 'vue'
 import { useThrottleFn, useDebounceFn } from '@vueuse/core'
-import type { Node, Edge } from '@braks/vueflow'
+import type { Node, Edge } from '@vue-flow/core'
 
 export interface ProgressiveLoadingConfig {
   /** Enable progressive loading */
@@ -162,6 +162,17 @@ export function useCanvasProgressiveLoading(
   const movementVector = ref({ x: 0, y: 0 })
   const movementHistory = ref<Array<{ x: number; y: number; timestamp: number }>>([])
 
+  // Utility function to get numeric node dimensions
+  const getNodeWidth = (node: Node): number => {
+    if (typeof node.width === 'number') return node.width
+    return 200 // default width
+  }
+
+  const getNodeHeight = (node: Node): number => {
+    if (typeof node.height === 'number') return node.height
+    return 100 // default height
+  }
+
   // Utility functions
   const calculateNodePriority = (node: Node, viewport: typeof viewportBounds.value): number => {
     if (!finalConfig.enablePriorityLoading) return 1
@@ -169,13 +180,14 @@ export function useCanvasProgressiveLoading(
     let priority = 1
 
     // Priority based on node type
-    if (finalConfig.priorityNodeTypes.includes(node.type || '')) {
+    const nodeType = node.type || ''
+    if (finalConfig.priorityNodeTypes.includes(nodeType as 'task' | 'section' | 'milestone')) {
       priority += 2
     }
 
     // Priority based on distance to viewport center
-    const nodeCenterX = node.position.x + (node.width || 200) / 2
-    const nodeCenterY = node.position.y + (node.height || 100) / 2
+    const nodeCenterX = node.position.x + getNodeWidth(node) / 2
+    const nodeCenterY = node.position.y + getNodeHeight(node) / 2
     const viewportCenterX = viewport.x + viewport.width / 2
     const viewportCenterY = viewport.y + viewport.height / 2
 
@@ -262,7 +274,7 @@ export function useCanvasProgressiveLoading(
     let currentEdgeBatch: Edge[] = []
 
     for (const edge of edges) {
-      if (currentEdgeBatch.length >= adaptiveBatchSize * 2) {
+      if (currentEdgeBatch.length >= adaptiveBatchSize.value * 2) {
         edgeBatches.push(currentEdgeBatch)
         currentEdgeBatch = []
       }
@@ -387,7 +399,7 @@ export function useCanvasProgressiveLoading(
     metrics.value.totalTime = performance.now() - metrics.value.totalTime
   }
 
-  const loadProgressively = async (nodes: Node[], edges: Node[]) => {
+  const loadProgressively = async (nodes: Node[], edges: Edge[]) => {
     if (!finalConfig.enabled) {
       // Load everything at once if disabled
       loadedNodes.value = nodes

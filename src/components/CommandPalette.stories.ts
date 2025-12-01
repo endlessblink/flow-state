@@ -40,10 +40,7 @@ const meta = {
     }
   },
   argTypes: {
-    isOpen: {
-      control: 'boolean',
-      description: 'Whether the command palette is open'
-    }
+    // Component uses methods (open/close) instead of props for visibility
   }
 } satisfies Meta<typeof CommandPalette>
 

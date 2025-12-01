@@ -667,11 +667,11 @@ const weekTaskCount = computed(() => {
       // Check instances first (new format)
       const instances = getTaskInstances(task)
       if (instances && instances.length > 0) {
-        return instances.some(inst => inst && inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
+        return instances.some(inst => inst && inst.scheduledDate >= todayStr && inst.scheduledDate <= weekEndStr)
       }
       // Fallback to legacy scheduledDate
       if (!task.scheduledDate) return false
-      return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
+      return task.scheduledDate >= todayStr && task.scheduledDate <= weekEndStr
     } catch (error) {
       console.error('Error processing task in weekTaskCount:', error, task)
       return false

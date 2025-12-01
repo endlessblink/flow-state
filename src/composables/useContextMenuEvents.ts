@@ -6,26 +6,31 @@
  * - Proper click-outside detection
  * - Event cleanup to prevent memory leaks
  * - Prevented premature menu closure
+ *
+ * FIXED (2025-11-29): Now accepts reactive isVisible via refs or getters
  */
 
-import { onMounted, onUnmounted, nextTick } from 'vue'
+import { onMounted, onUnmounted, nextTick, type Ref, isRef, toValue } from 'vue'
 
 export interface useContextMenuEventsOptions {
-  isVisible: boolean
+  isVisible: boolean | Ref<boolean> | (() => boolean)
   menuRef: { value: HTMLElement | null }
   closeCallback: () => void
   preventCloseOnMenuClick?: boolean
 }
 
 export function useContextMenuEvents(options: useContextMenuEventsOptions) {
-  const { isVisible, menuRef, closeCallback, preventCloseOnMenuClick = true } = options
+  const { menuRef, closeCallback, preventCloseOnMenuClick = true } = options
+
+  // Helper to get current visibility (works with boolean, ref, or getter)
+  const getIsVisible = () => toValue(options.isVisible)
 
   let clickHandler: (event: MouseEvent) => void
   let keyHandler: (event: KeyboardEvent) => void
   let contextMenuHandler: (event: MouseEvent) => void
 
   const handleClickOutside = (event: MouseEvent) => {
-    if (!isVisible || !menuRef.value) return
+    if (!getIsVisible() || !menuRef.value) return
 
     // Check if click is inside the menu
     const target = event.target as Node
@@ -38,7 +43,7 @@ export function useContextMenuEvents(options: useContextMenuEventsOptions) {
   }
 
   const handleKeyEscape = (event: KeyboardEvent) => {
-    if (!isVisible) return
+    if (!getIsVisible()) return
 
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -47,7 +52,7 @@ export function useContextMenuEvents(options: useContextMenuEventsOptions) {
   }
 
   const handleContextMenu = (event: MouseEvent) => {
-    if (!isVisible) return
+    if (!getIsVisible()) return
 
     // Prevent new context menu when one is already open
     event.preventDefault()

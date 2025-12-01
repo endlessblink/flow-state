@@ -193,19 +193,19 @@ const showLayoutSubmenu = ref(false)
 const submenuTimeout = ref<number | null>(null)
 const submenuPosition = ref({ flipHorizontal: false, adjustVertical: 0 })
 
-// Use unified positioning system
+// Use unified positioning system with reactive getters
 const { menuPosition, updatePosition } = useContextMenuPositioning({
-  x: props.x,
-  y: props.y,
+  x: () => props.x,
+  y: () => props.y,
   menuRef,
-  isVisible: props.isVisible,
+  isVisible: () => props.isVisible,
   offset: { x: 0, y: 0 },
   viewportPadding: 16
 })
 
-// Use unified event handling
+// Use unified event handling with reactive getter
 useContextMenuEvents({
-  isVisible: props.isVisible,
+  isVisible: () => props.isVisible,
   menuRef,
   closeCallback: () => emit('close'),
   preventCloseOnMenuClick: true

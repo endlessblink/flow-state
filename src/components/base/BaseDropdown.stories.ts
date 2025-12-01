@@ -81,10 +81,10 @@ export const Default: Story = {
     options: basicOptions,
     placeholder: 'Choose an option'
   },
-  render: (args) => ({
+  render: (args: { modelValue?: string | string[] }) => ({
     components: { BaseDropdown },
     setup() {
-      const value = ref(args.modelValue)
+      const value = ref(args.modelValue ?? '')
       return { args, value }
     },
     template: `
@@ -134,10 +134,10 @@ export const MultipleSelection: Story = {
     placeholder: 'Select statuses',
     multiple: true
   },
-  render: (args) => ({
+  render: (args: { modelValue?: string | string[] }) => ({
     components: { BaseDropdown },
     setup() {
-      const value = ref(args.modelValue)
+      const value = ref(args.modelValue ?? [])
       return { args, value }
     },
     template: `

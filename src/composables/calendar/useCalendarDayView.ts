@@ -1,4 +1,4 @@
-import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import { ref, computed, nextTick, type Ref, type ComputedRef } from 'vue'
 import { useTaskStore, formatDateKey } from '@/stores/tasks'
 import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
 
@@ -404,7 +404,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     // Keep ghost visible, only hide on drop
   }
 
-  const handleDrop = (event: DragEvent, slot: TimeSlot) => {
+  const handleDrop = async (event: DragEvent, slot: TimeSlot) => {
     event.preventDefault()
 
     const data = event.dataTransfer?.getData('application/json')
@@ -448,18 +448,33 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
           scheduledTime: timeStr
         })
 
-        // Also update existing instance if present
+        // Update instance directly on the reactive task object for immediate Vue reactivity
         if (task?.instances && task.instances.length > 0) {
-          const todayInstance = task.instances.find(instance =>
-            instance && instance.scheduledDate === currentDate.value.toISOString().split('T')[0]
+          // Find the instance being dragged (could be from any date, not just today)
+          const instanceToUpdate = task.instances.find(instance =>
+            instance && instance.id
           )
-          if (todayInstance && todayInstance.id) {
-            taskStore.updateTaskInstance(taskId, todayInstance.id, {
+          if (instanceToUpdate) {
+            // Direct mutation triggers Vue reactivity
+            instanceToUpdate.scheduledDate = slot.date
+            instanceToUpdate.scheduledTime = timeStr
+            console.log(`🎯 CALENDAR DROP: Updated task instance ${instanceToUpdate.id} directly to ${slot.date} at ${timeStr}`)
+
+            // Also update via store for persistence
+            taskStore.updateTaskInstance(taskId, instanceToUpdate.id, {
               scheduledDate: slot.date,
               scheduledTime: timeStr
             })
           }
         }
+
+        // Force Vue to recompute calendar events
+        await nextTick()
+        nextTick().then(() => {
+          // Trigger calendarEvents recomputation
+          calendarEvents.value
+          console.log('🔄 [CalendarDrag] Forced calendarEvents recomputation after drop')
+        })
       } else {
         // Drag from inbox or other sources
         // Create task instance and update task to remove from inbox

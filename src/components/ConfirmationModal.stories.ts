@@ -26,7 +26,7 @@ const meta = {
       description: 'Confirmation message'
     },
     details: {
-      control: 'array',
+      control: 'object',
       description: 'List of items that will be affected'
     },
     confirmText: {

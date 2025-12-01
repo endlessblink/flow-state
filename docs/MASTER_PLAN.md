@@ -49,13 +49,13 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 ### **Known Working Features (Stable Version Evidence)**
 - ✅ **Vue 3 + TypeScript Application**: Complete productivity app with 292,859 lines of code
 - ✅ **Task Management**: CRUD operations, projects, subtasks, priorities, due dates
-- ✅ **State Management**: 4 Pinia stores (tasks, canvas, timer, UI)
+- ✅ **State Management**: 12 Pinia stores (tasks, canvas, timer, UI, auth, local-auth, notifications, quickSort, taskCanvas, taskCore, taskScheduler, theme)
 - ✅ **Canvas System**: Vue Flow integration with drag-drop, sections, multi-selection
 - ✅ **Calendar Functionality**: Time-based scheduling with vue-cal integration
 - ✅ **Pomodoro Timer**: Session management with work/break cycles
 - ✅ **Database**: IndexedDB persistence with LocalForage
 - ✅ **Design System**: Glass morphism with Tailwind CSS + custom tokens
-- ✅ **Development Ecosystem**: 64 specialized skills, testing infrastructure
+- ✅ **Development Ecosystem**: 71 specialized skills, testing infrastructure
 
 ---
 
@@ -66,7 +66,7 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 - **Database**: IndexedDB via LocalForage (PouchDB wrapper)
 - **UI**: naive-ui + Tailwind CSS + vue-cal + Vue Flow
 - **Testing**: Playwright (E2E) + Vitest (Unit) + Storybook
-- **Build**: Vite 7.1.10
+- **Build**: Vite 7.2.4
 
 ### **Store Architecture (4 Main Stores)**
 1. **Tasks Store** (`src/stores/tasks.ts` - 121,685 bytes)
@@ -154,10 +154,10 @@ npm run storybook   # Component documentation (port 6006)
 - **Emergency Rollback**: Commit `82d2a74` (backup before rollback from broken Windows→Linux migration)
 
 ### **Key Resources**
-- **Stable Version**: `stable-working-version/` directory (v2.0-comprehensive-checkpoint-2025-11-15)
 - **Current Guidelines**: `.claude/CLAUDE.md` - Development requirements and patterns
-- **Skills Registry**: 42 specialized development skills available
-- **Backup**: Current MASTER_PLAN.md backup created Nov 29, 2025
+- **Skills Registry**: 71 specialized development skills available
+- **Main Documentation**: `CLAUDE.md` (root) - Primary development guide
+- **README**: `README.md` - Project overview
 
 ### **Verification Mandate**
 **CRITICAL**: All success claims require:
@@ -715,7 +715,8 @@ A comprehensive dual-tool competing systems analysis has identified **4,776+ com
 
 ---
 
-**Version**: 2.0 (Stable Working Version - Nov 15-16, 2025)
-**Status**: 🟢 STABLE + 🚀 TECHNICAL DEBT INITIATIVE - Based on verified working checkpoint
+**Version**: 2.2 (Updated Dec 1, 2025)
+**Status**: 🟢 STABLE + 🚀 TECHNICAL DEBT INITIATIVE
 **Approach**: Evidence-based development with systematic technical debt resolution
+**Last Verified**: December 1, 2025 - Documentation synced with actual codebase (12 stores, 56 composables, 71 skills, Vite 7.2.4)
 

@@ -160,12 +160,12 @@ const filterTasks = (filterKey: string) => {
         // Check instances first
         if (task.instances && task.instances.length > 0) {
           return task.instances.some(inst =>
-            inst.scheduledDate >= todayWeek && inst.scheduledDate < weekEndStr
+            inst.scheduledDate >= todayWeek && inst.scheduledDate <= weekEndStr
           )
         }
         // Fallback to legacy scheduledDate
         if (!task.scheduledDate) return false
-        return task.scheduledDate >= todayWeek && task.scheduledDate < weekEndStr
+        return task.scheduledDate >= todayWeek && task.scheduledDate <= weekEndStr
 
       case 'noDate':
         // Tasks without any scheduled date

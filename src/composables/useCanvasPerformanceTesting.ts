@@ -5,9 +5,22 @@
  * for canvas operations with 1000+ nodes.
  */
 
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted, type Ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
-import type { Node, Edge } from '@braks/vueflow'
+import type { Node, Edge } from '@vue-flow/core'
+
+// Chrome-specific performance.memory interface
+interface PerformanceMemory {
+  usedJSHeapSize: number
+  jsHeapSizeLimit: number
+  totalJSHeapSize: number
+}
+
+declare global {
+  interface Performance {
+    memory?: PerformanceMemory
+  }
+}
 
 export interface PerformanceTestConfig {
   /** Enable automated performance testing */
@@ -161,14 +174,14 @@ export function useCanvasPerformanceTesting(
   const interactionTests = ref<Array<{ type: string; latency: number; timestamp: number }>>([])
   const memorySnapshots = ref<Array<{ timestamp: number; usage: number }>>([])
 
-  // Session tracking
-  const sessionId = ref(generateSessionId())
-  const testStartTime = ref(0)
-
-  // Utility functions
+  // Utility functions - declare before usage
   const generateSessionId = (): string => {
     return `perf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
+
+  // Session tracking
+  const sessionId = ref(generateSessionId())
+  const testStartTime = ref(0)
 
   const getCurrentMemoryUsage = (): number => {
     if (performance.memory) {

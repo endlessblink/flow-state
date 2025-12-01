@@ -1681,41 +1681,38 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   border-radius: var(--radius-sm);
 }
 
-/* Resize handle for primary slots only */
+/* Resize handles for day view tasks */
 .resize-handle {
   position: absolute;
-  bottom: 0;
+  left: 0;
   right: 0;
-  width: 16px;
-  height: 16px;
-  background: rgba(99, 102, 241, 0.8);
+  height: 8px;
+  background: transparent;
   cursor: ns-resize;
-  border-radius: var(--radius-sm) 0 var(--radius-lg) 0;
-  opacity: 0.6;
+  z-index: 20;
+  opacity: 0;
   transition: all var(--duration-fast);
-  pointer-events: auto;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.resize-handle.resize-top {
+  top: 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.resize-handle.resize-bottom {
+  bottom: 0;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
 .slot-task.is-primary:hover .resize-handle {
   opacity: 1;
   pointer-events: auto;
-  background: var(--brand-primary);
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
+  background: rgba(99, 102, 241, 0.4);
 }
 
 .resize-handle:hover {
-  opacity: 1 !important;
-  background: var(--accent-primary-hover);
-  pointer-events: auto !important;
-}
-
-/* Ensure resize handles are clickable when visible */
-.slot-task.is-primary:hover .resize-handle {
-  opacity: 0.8 !important;
-  pointer-events: auto !important;
+  background: rgba(99, 102, 241, 0.7) !important;
 }
 
 /* Ghost preview for drag operations - inline version */
@@ -2082,65 +2079,6 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
 .calendar-event .priority-stripe.priority-low {
   background: linear-gradient(180deg, var(--color-priority-low) 0%, #48dbfb 100%);
   box-shadow: 0 0 8px rgba(72, 219, 251, 0.3);
-}
-
-.resize-handle {
-  position: absolute;
-  inset-inline: 0; /* RTL: full width resize handle */
-  height: 24px;
-  background: transparent;
-  cursor: ns-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  z-index: 20;
-  opacity: 0;
-  pointer-events: auto;
-}
-
-.calendar-event:hover .resize-handle {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.resize-handle.resize-top {
-  top: -12px;
-}
-
-.resize-handle.resize-bottom {
-  bottom: -12px;
-}
-
-.resize-handle:hover {
-  background: var(--glass-border);
-}
-
-.resize-handle::after {
-  content: '';
-  width: 24px;
-  height: 3px;
-  background: var(--glass-handle);
-  border-radius: var(--radius-xs);
-  transition: all var(--transition-fast);
-}
-
-.resize-handle:hover::after {
-  background: var(--brand-primary);
-  height: 4px;
-  width: 32px;
-}
-
-.calendar-event[data-duration="30"] .resize-handle {
-  height: 8px;
-}
-
-.calendar-event[data-duration="30"] .resize-handle.resize-top {
-  top: 0;
-}
-
-.calendar-event[data-duration="30"] .resize-handle.resize-bottom {
-  bottom: 0;
 }
 
 /* 30-minute tasks: horizontal layout */

@@ -10,7 +10,7 @@ import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import PouchDB from 'pouchdb-browser'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
-import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
+// import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager' // REMOVED - Per master plan sync consolidation
 import { getDatabaseConfig, type DatabaseHealth } from '@/config/database'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
@@ -228,7 +228,8 @@ export function useDatabase(): UseDatabaseReturn {
 
   // Network optimizer removed - was causing architectural mismatches
 
-  let syncManager: ReturnType<typeof getGlobalReliableSyncManager> | null = null
+  // let syncManager: ReturnType<typeof getGlobalReliableSyncManager> | null = null // REMOVED - Per master plan sync consolidation
+  let syncManager: any = null // Simplified type for removed sync manager
   let syncCleanup: (() => void) | null = null
 
   // Computed properties with enhanced debugging
@@ -305,10 +306,10 @@ export function useDatabase(): UseDatabaseReturn {
 
           if (hasRemoteSync && !forceLocalMode) {
             console.log('🌐 [USE-DATABASE] Remote sync configured, initializing with Reliable Sync Manager...')
-            syncManager = getGlobalReliableSyncManager()
+            // syncManager = getGlobalReliableSyncManager() // REMOVED - Per master plan sync consolidation
 
-            // Initialize sync manager
-            syncCleanup = await syncManager.init()
+            // Initialize sync manager - REMOVED
+            // syncCleanup = await syncManager.init()
 
             // Create local database instance (Reliable Sync Manager handles the sync separately)
             const dbConfig: any = {

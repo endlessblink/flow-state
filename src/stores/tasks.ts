@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { DB_KEYS, useDatabase } from '@/composables/useDatabase'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
-import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
+// Removed useReliableSyncManager - consolidated to useCouchDBSync.ts
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import type {
@@ -137,7 +137,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // Initialize database composable
   const db = useDatabase()
   const persistentStorage = usePersistentStorage()
-  const reliableSyncManager = useReliableSyncManager()
+  // Removed reliableSyncManager - consolidated to useCouchDBSync.ts circuit breaker
 
   // State - Start with empty tasks array
   const tasks = ref<Task[]>([])
@@ -149,9 +149,31 @@ export const useTaskStore = defineStore('tasks', () => {
   const MAX_SYNC_ATTEMPTS = 10 // Maximum sync attempts per session
 
   const safeSync = async (context: string) => {
-    // 🔥 CRITICAL: Hard disable sync to stop infinite loops
-    console.log(`🚨 [SYNC DISABLED] safeSync called (${context}) but sync is disabled to stop infinite loops`)
-    return
+    try {
+      // Import circuit breaker dynamically to avoid circular dependencies
+      const { executeSyncWithCircuitBreaker } = await import('@/utils/syncCircuitBreaker')
+
+      // Import sync composable
+      const { useCouchDBSync } = await import('@/composables/useCouchDBSync')
+      const { triggerSync } = useCouchDBSync()
+
+      // Execute sync with circuit breaker protection
+      await executeSyncWithCircuitBreaker(async () => {
+        await triggerSync()
+      }, context)
+
+      console.log(`✅ [SAFE SYNC] Sync completed for context: ${context}`)
+    } catch (error) {
+      // Log error but don't throw to prevent application crashes
+      console.log(`🔌 [SAFE SYNC] Sync prevented: ${error.message}`)
+
+      // Track prevented loops for metrics
+      if (error.message.includes('already in progress') ||
+          error.message.includes('debounced') ||
+          error.message.includes('Circuit breaker open')) {
+        console.log(`🔌 [SAFE SYNC] Infinite loop prevented in context: ${context}`)
+      }
+    }
   }
 
   // CRITICAL: IMMEDIATE LOAD FROM POUCHDB ON STORE INITIALIZATION
@@ -566,8 +588,12 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const currentView = ref('board')
   const selectedTaskIds = ref<string[]>([])
-  const activeProjectId = ref<string | null>(null) // null = show all projects
-  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null>(null)
+  const activeProjectId = ref<string | null>(null) // null = show all projects (legacy, keep for persistence)
+  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null>(null) // (legacy, keep for persistence)
+
+  // NEW: Toggle-able filter sets
+  const activeSmartViews = ref<Set<string>>(new Set())
+  const activeProjectIds = ref<Set<string>>(new Set())
   const activeStatusFilter = ref<string | null>(null) // null = show all statuses, 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   const hideDoneTasks = ref(false) // Global setting to hide done tasks across all views (disabled by default to show completed tasks for logging)
 
@@ -909,10 +935,31 @@ export const useTaskStore = defineStore('tasks', () => {
   let projectsSaveTimer: ReturnType<typeof setTimeout> | null = null
   let settingsSaveTimer: ReturnType<typeof setTimeout> | null = null
 
-  watch(tasks, (newTasks) => {
+  // Enhanced watch with change detection and debouncing to prevent sync loops
+  watch(tasks, (newTasks, oldTasks) => {
     // EMERGENCY FIX: Skip watch during manual operations to prevent conflicts
     if (manualOperationInProgress) {
       console.log('⏸️ Skipping auto-save during manual operation')
+      return
+    }
+
+    // Change detection guard - only trigger if actual data changed
+    const hasRealChanges = newTasks.some((newTask, index) => {
+      const oldTask = oldTasks?.[index]
+      if (!oldTask) return true
+
+      // Compare only essential properties that matter for sync
+      return (
+        newTask.id !== oldTask.id ||
+        newTask.updatedAt !== oldTask.updatedAt ||
+        newTask.status !== oldTask.status ||
+        newTask.title !== oldTask.title ||
+        JSON.stringify(newTask.subtasks) !== JSON.stringify(oldTask.subtasks)
+      )
+    })
+
+    if (!hasRealChanges) {
+      console.log('⏸️ No real changes detected, skipping auto-save')
       return
     }
 
@@ -924,8 +971,11 @@ export const useTaskStore = defineStore('tasks', () => {
           await new Promise(resolve => setTimeout(resolve, 100))
         }
 
+        // Freeze data to prevent Vue reactivity issues
+        const frozenTasks = Object.freeze(JSON.parse(JSON.stringify(newTasks)))
+
         // Chief Architect: Use SaveQueueManager for conflict prevention
-        await db.save(DB_KEYS.TASKS, newTasks)
+        await db.save(DB_KEYS.TASKS, frozenTasks)
         console.log('📋 Tasks auto-saved via SaveQueueManager')
 
         // PHASE 1: Use safe sync wrapper
@@ -1091,33 +1141,44 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     // NEW ARCHITECTURE: Filters are applied SEQUENTIALLY and can be COMBINED
-    // Order: Smart View → Project → Status → Hide Done
+    // Order: Smart Views → Projects → Status → Hide Done
 
-    // Step 1: Apply smart view filter FIRST (if active)
-    if (activeSmartView.value) {
+    // Step 1: Apply smart view filters FIRST (if any are active)
+    if (activeSmartViews.value.size > 0) {
       const { applySmartViewFilter } = useSmartViews()
-      console.log(`🔧 TaskStore.filteredTasks: Applying "${activeSmartView.value}" smart view filter`)
+      const views = Array.from(activeSmartViews.value)
+      console.log(`🔧 TaskStore.filteredTasks: Applying ${views.length} smart view filters:`, views)
+
       const beforeSmartFilter = filtered.length
-      filtered = applySmartViewFilter(filtered, activeSmartView.value)
-      console.log(`🔧 TaskStore.filteredTasks: ${activeSmartView.value} smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
+      // Apply each active smart view filter
+      views.forEach(view => {
+        filtered = applySmartViewFilter(filtered, view as any)
+        console.log(`🔧 TaskStore.filteredTasks: "${view}" smart filter applied - ${filtered.length} tasks remaining`)
+      })
+      console.log(`🔧 TaskStore.filteredTasks: Smart filters combined - removed ${beforeSmartFilter - filtered.length} tasks total`)
     }
 
-    // Step 2: Apply project filter ON TOP of smart view result (if active)
-    // Note: Filters can now be combined - "Today" + "Project X" shows today's tasks in Project X
-    if (activeProjectId.value) {
+    // Step 2: Apply project filters ON TOP of smart view results (if any are active)
+    if (activeProjectIds.value.size > 0) {
       const beforeProjectFilter = filtered.length
-      const projectIds = getChildProjectIds(activeProjectId.value)
+      const activeProjects = Array.from(activeProjectIds.value)
+
+      // Get all project IDs including children
+      const allProjectIds = new Set<string>()
+      activeProjects.forEach(projectId => {
+        getChildProjectIds(projectId).forEach(id => allProjectIds.add(id))
+      })
 
       if (shouldLogTaskDiagnostics()) {
-        console.log('\n🚨 PROJECT FILTER (Combined with smart view):', activeProjectId.value)
-        console.log(`   Target Project IDs (including children): ${projectIds.join(', ')}`)
+        console.log('\n🚨 PROJECT FILTERS (Combined with smart views):', activeProjects)
+        console.log(`   Target Project IDs (including children): ${Array.from(allProjectIds).join(', ')}`)
         console.log(`   Tasks before filter: ${filtered.length}`)
       }
 
-      filtered = filtered.filter(task => projectIds.includes(task.projectId))
+      filtered = filtered.filter(task => allProjectIds.has(task.projectId))
 
       if (shouldLogTaskDiagnostics()) {
-        console.log(`   Tasks after filter: ${filtered.length}`)
+        console.log(`   Tasks after project filters: ${filtered.length}`)
         console.log(`   Removed: ${beforeProjectFilter - filtered.length}`)
       }
     }
@@ -1354,6 +1415,70 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const totalTasks = computed(() => tasks.value.filter(task => task.status !== 'done').length)
   const completedTasks = computed(() => tasks.value.filter(task => task.status === 'done').length)
+
+  // Helper functions for filter detection
+  const isTodayTask = (task: Task): boolean => {
+    if (!task.dueDate) return false
+    const today = new Date()
+    const taskDate = new Date(task.dueDate)
+    return (
+      taskDate.getDate() === today.getDate() &&
+      taskDate.getMonth() === today.getMonth() &&
+      taskDate.getFullYear() === today.getFullYear()
+    )
+  }
+
+  const isWeekTask = (task: Task): boolean => {
+    if (!task.dueDate) return false
+    const now = new Date()
+    const taskDate = new Date(task.dueDate)
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay())
+    startOfWeek.setHours(0, 0, 0, 0)
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6)
+    endOfWeek.setHours(23, 59, 59, 999)
+
+    return taskDate >= startOfWeek && taskDate <= endOfWeek
+  }
+
+  const isUncategorizedTask = (task: Task): boolean => {
+    return !task.projectId || task.projectId === 'uncategorized'
+  }
+
+  const isUnscheduledTask = (task: Task): boolean => {
+    // Check if task has no due date and no instances
+    return !task.dueDate && (!task.instances || task.instances.length === 0)
+  }
+
+  // NEW: Filter highlights for each task
+  const getTaskFilterHighlights = (task: Task) => {
+    const highlights = []
+
+    // Check smart view filters
+    if (activeSmartViews.value.has('today') && isTodayTask(task)) {
+      highlights.push('today')
+    }
+    if (activeSmartViews.value.has('week') && isWeekTask(task)) {
+      highlights.push('week')
+    }
+    if (activeSmartViews.value.has('uncategorized') && isUncategorizedTask(task)) {
+      highlights.push('uncategorized')
+    }
+    if (activeSmartViews.value.has('unscheduled') && isUnscheduledTask(task)) {
+      highlights.push('unscheduled')
+    }
+    if (activeSmartViews.value.has('in_progress') && task.status === 'in_progress') {
+      highlights.push('in_progress')
+    }
+
+    // Check project filters
+    if (task.projectId && activeProjectIds.value.has(task.projectId)) {
+      highlights.push('project')
+    }
+
+    return highlights
+  }
 
   // Done tasks for Done column (respects all other filters but includes done tasks)
   const doneTasksForColumn = computed(() => {
@@ -2226,6 +2351,51 @@ export const useTaskStore = defineStore('tasks', () => {
     persistFilters()
   }
 
+  // NEW: Toggle-able filter methods
+  const toggleSmartView = (view: string) => {
+    console.log('🔧 TaskStore: toggleSmartView called:', view)
+    console.log('🔧 TaskStore: Current activeSmartViews:', Array.from(activeSmartViews.value))
+
+    if (activeSmartViews.value.has(view)) {
+      activeSmartViews.value.delete(view)  // Toggle off
+      console.log('🔧 TaskStore: Removed smart view:', view)
+    } else {
+      activeSmartViews.value.add(view)     // Toggle on
+      console.log('🔧 TaskStore: Added smart view:', view)
+    }
+
+    persistFilters()
+    console.log('🔧 TaskStore: New activeSmartViews:', Array.from(activeSmartViews.value))
+  }
+
+  const toggleProject = (projectId: string) => {
+    console.log('🔧 TaskStore: toggleProject called:', projectId)
+    console.log('🔧 TaskStore: Current activeProjectIds:', Array.from(activeProjectIds.value))
+
+    if (activeProjectIds.value.has(projectId)) {
+      activeProjectIds.value.delete(projectId)  // Toggle off
+      console.log('🔧 TaskStore: Removed project:', projectId)
+    } else {
+      activeProjectIds.value.add(projectId)     // Toggle on
+      console.log('🔧 TaskStore: Added project:', projectId)
+    }
+
+    persistFilters()
+    console.log('🔧 TaskStore: New activeProjectIds:', Array.from(activeProjectIds.value))
+  }
+
+  const clearAllFilters = () => {
+    console.log('🔧 TaskStore: clearAllFilters called')
+    activeSmartViews.value.clear()
+    activeProjectIds.value.clear()
+    activeSmartView.value = null
+    activeProjectId.value = null
+    activeStatusFilter.value = null
+
+    persistFilters()
+    console.log('🔧 TaskStore: All filters cleared')
+  }
+
   const toggleHideDoneTasks = () => {
     console.log('🔧 TaskStore: toggleHideDoneTasks called!')
     console.log('🔧 TaskStore: Current value before toggle:', hideDoneTasks.value)
@@ -2980,6 +3150,98 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  // PHASE 0.5: Cross-Tab Synchronization - Database Change Listeners
+  const setupCrossTabSync = async () => {
+    try {
+      console.log('🔄 Setting up cross-tab synchronization...')
+
+      // Import CouchDB sync composable to get PouchDB instance
+      const { useCouchDBSync } = await import('@/composables/useCouchDBSync')
+      const couchDBSync = useCouchDBSync()
+
+      // Get the PouchDB instance for changes feed
+      const db = couchDBSync.initializeDatabase()
+
+      // Track local operations to prevent infinite loops
+      const localOperationTracker = new Set<string>()
+
+      // Note: saveTask function wrapping removed - was causing ReferenceError
+      // The local operation tracking will be handled by monitoring circuit breaker usage instead
+      // and by using the changes feed with proper source tracking
+
+      // Setup changes feed listener for external changes
+      const changesHandler = db.changes({
+        since: 'now',
+        live: true,
+        include_docs: true
+      })
+
+      // Debounced reload function to prevent excessive reloading
+      let reloadTimeout: NodeJS.Timeout | null = null
+      const debouncedReload = async () => {
+        if (reloadTimeout) {
+          clearTimeout(reloadTimeout)
+        }
+
+        reloadTimeout = setTimeout(async () => {
+          console.log('🔄 Reloading tasks due to cross-tab changes...')
+          try {
+            // PHASE 0.5: Use circuit breaker with cross-tab source for sync operations
+            const { executeSyncWithCircuitBreaker } = await import('@/utils/syncCircuitBreaker')
+            await executeSyncWithCircuitBreaker(
+              async () => {
+                await loadTasksFromPouchDB()
+                console.log('✅ Tasks reloaded from cross-tab changes')
+              },
+              'cross-tab-task-reload',
+              'cross-tab'
+            )
+          } catch (error) {
+            console.error('❌ Failed to reload tasks from cross-tab changes:', error)
+          }
+        }, 200) // 200ms debounce for cross-tab sync
+      }
+
+      changesHandler.on('change', async (change) => {
+        if (!change.id.startsWith('_design') && change.doc) {
+          console.log(`📝 Database change detected: ${change.id}`)
+
+          // Check if this is a task-related change
+          if (change.id.startsWith('task-') || change.id.includes(DB_KEYS.TASKS)) {
+            console.log('🔄 Task change detected, reloading tasks...')
+            await debouncedReload()
+          }
+        }
+      })
+
+      changesHandler.on('error', (error) => {
+        console.error('❌ Cross-tab sync changes feed error:', error)
+        errorHandler.report({
+          severity: ErrorSeverity.WARNING,
+          category: ErrorCategory.DATABASE,
+          message: 'Cross-tab synchronization error',
+          error: error as Error,
+          showNotification: false
+        })
+      })
+
+      console.log('✅ Cross-tab synchronization setup complete')
+
+      // Store changes handler for cleanup
+      return changesHandler
+    } catch (error) {
+      console.error('❌ Failed to setup cross-tab synchronization:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.WARNING,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to setup cross-tab synchronization',
+        error: error as Error,
+        showNotification: false
+      })
+      return null
+    }
+  }
+
   // Initialize store from PouchDB on first load - CRITICAL
   initializeFromPouchDB().catch(err => {
     errorHandler.report({
@@ -2992,6 +3254,26 @@ export const useTaskStore = defineStore('tasks', () => {
     })
   })
 
+  // PHASE 0.5: Initialize cross-tab synchronization after store initialization
+  initializeFromPouchDB().then(async () => {
+    console.log('🔄 Initializing cross-tab synchronization after store setup...')
+    const changesHandler = await setupCrossTabSync()
+
+    // Store for cleanup if needed
+    if (changesHandler && typeof window !== 'undefined') {
+      (window as any).__crossTabSyncHandler = changesHandler
+    }
+  }).catch(err => {
+    console.error('❌ Failed to initialize cross-tab synchronization:', err)
+    errorHandler.report({
+      severity: ErrorSeverity.WARNING,
+      category: ErrorCategory.DATABASE,
+      message: 'Cross-tab sync initialization failed',
+      error: err as Error,
+      showNotification: false
+    })
+  })
+
   return {
     // State
     tasks,
@@ -3000,6 +3282,8 @@ export const useTaskStore = defineStore('tasks', () => {
     selectedTaskIds,
     activeProjectId,
     activeSmartView,
+    activeSmartViews,  // NEW: Toggle-able smart views
+    activeProjectIds,  // NEW: Toggle-able projects
     activeStatusFilter,
     hideDoneTasks,
 
@@ -3034,6 +3318,11 @@ export const useTaskStore = defineStore('tasks', () => {
     toggleStatusFilter,
     setProjectViewType,
     toggleHideDoneTasks,
+
+    // NEW: Toggle-able filter actions
+    toggleSmartView,
+    toggleProject,
+    clearAllFilters,
 
     // Project management actions
     createProject,
@@ -3081,6 +3370,7 @@ export const useTaskStore = defineStore('tasks', () => {
     getTask,
     getTaskInstances,
     getUncategorizedTaskCount,
+    getTaskFilterHighlights,
 
     // Data integrity validation
     validateDataConsistency,

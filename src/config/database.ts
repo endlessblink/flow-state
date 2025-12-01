@@ -104,10 +104,10 @@ export const getDatabaseConfig = (): DatabaseConfig => {
       batchesLimit: 10
     },
     sync: {
-      live: false, // 🔥 CRISIS FIX: Disabled to stop infinite sync loops
-      retry: false, // 🔥 CRISIS FIX: Disabled to stop resource drain
-      timeout: 30000,
-      heartBeat: 10000
+      live: true, // 🔧 PHASE 0 FIX: Re-enabled with circuit breaker protection for cross-tab sync
+      retry: false, // Keep disabled - manual retry only to prevent infinite loops
+      timeout: 10000, // Reduced from 30s to 10s for faster timeout
+      heartBeat: 30000 // Increased from 10s to 30s to reduce frequency
     }
   }
 }

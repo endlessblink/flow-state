@@ -221,11 +221,11 @@ const inboxTasks = computed(() => {
     // Calculate task properties
     const hasInstances = task.instances && task.instances.length > 0
     const hasLegacySchedule = task.scheduledDate && task.scheduledTime
-    // FIXED: Calendar inbox shows all non-done tasks, regardless of isInInbox flag
-    // The isInInbox flag is for the main inbox view, but calendar should show
-    // all tasks that could be scheduled (dropped onto the calendar)
+    // FIXED: Calendar inbox must respect actual task.isInInbox property
+    // Tasks on canvas (isInInbox: false) should NOT appear in inbox
     const isNotDone = task.status !== 'done'
-    const isInInbox = isNotDone // For calendar purposes, all non-done tasks are "in inbox"
+    const isActuallyInInbox = task.isInInbox !== false  // Respect actual property value
+    const isInInbox = isNotDone && isActuallyInInbox  // Must be not done AND in inbox
 
     // Filter logic based on current selection
     let passesFilter = false

@@ -463,6 +463,8 @@
       @createSection="createSection"
       @editGroup="editGroup"
       @deleteGroup="deleteGroup"
+      @moveToInbox="moveSelectedTasksToInbox"
+      @deleteTasks="deleteSelectedTasks"
       @alignLeft="alignLeft"
       @alignRight="alignRight"
       @alignTop="alignTop"
@@ -3275,6 +3277,60 @@ const deleteGroup = (section: any) => {
     canvasStore.deleteSectionWithUndo(section.id)
     syncNodes() // Refresh VueFlow to show changes
   }
+  closeCanvasContextMenu()
+}
+
+// Task context menu handlers - Move selected tasks to inbox
+const moveSelectedTasksToInbox = async () => {
+  const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !id.startsWith('section-'))
+  console.log('📥 Moving tasks to inbox:', selectedNodeIds)
+
+  if (selectedNodeIds.length === 0) return
+
+  for (const nodeId of selectedNodeIds) {
+    try {
+      await undoHistory.updateTaskWithUndo(nodeId, {
+        isInInbox: true,
+        canvasPosition: undefined
+      })
+      console.log(`📥 Task ${nodeId} moved to inbox`)
+    } catch (error) {
+      console.error(`❌ Failed to move task ${nodeId} to inbox:`, error)
+    }
+  }
+
+  canvasStore.setSelectedNodes([])
+  batchedSyncNodes('high')
+  closeCanvasContextMenu()
+}
+
+// Task context menu handlers - Delete selected tasks permanently
+const deleteSelectedTasks = async () => {
+  const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !id.startsWith('section-'))
+  console.log('🗑️ Deleting tasks:', selectedNodeIds)
+
+  if (selectedNodeIds.length === 0) return
+
+  const confirmMessage = selectedNodeIds.length > 1
+    ? `Delete ${selectedNodeIds.length} tasks permanently? This cannot be undone.`
+    : 'Delete this task permanently? This cannot be undone.'
+
+  if (!confirm(confirmMessage)) {
+    closeCanvasContextMenu()
+    return
+  }
+
+  for (const nodeId of selectedNodeIds) {
+    try {
+      await undoHistory.deleteTaskWithUndo(nodeId)
+      console.log(`🗑️ Task ${nodeId} deleted`)
+    } catch (error) {
+      console.error(`❌ Failed to delete task ${nodeId}:`, error)
+    }
+  }
+
+  canvasStore.setSelectedNodes([])
+  batchedSyncNodes('high')
   closeCanvasContextMenu()
 }
 

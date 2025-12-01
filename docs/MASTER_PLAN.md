@@ -45,61 +45,115 @@ Removed the broken CSS rule (5 lines). The correct CSS rules already existed and
 
 ---
 
-## ✅ **COMPLETED SESSION: Canvas View Fixes (Dec 1, 2025)**
+## 🔧 **IN PROGRESS: Canvas View Deep Debug (Dec 1, 2025)**
 
-### **ROOT CAUSES IDENTIFIED (via Systematic Debugging)**
+### **User-Reported Issues**
+1. Can't delete tasks from canvas
+2. Tasks appear BOTH in canvas AND canvas inbox (duplicates)
+3. Tasks appear automatically on canvas instead of being in inbox until dragged
 
-#### Issue #1: Inbox↔Canvas Transfers Require Refresh (CRITICAL)
-- **Status**: ROOT CAUSE CONFIRMED - Missing Vue Watcher
-- **File**: `src/views/CanvasView.vue` around line 2023-2026
-- **Problem**: No watcher monitors `isInInbox` property changes
+### **DEEP DEBUG INVESTIGATION RESULTS**
 
-**Reactivity chain broken:**
-1. `handleDrop()` updates `isInInbox: false` via `updateTaskWithUndo()`
-2. Task store updates successfully
-3. **NO watcher fires** - only `canvasPosition` is watched, not `isInInbox`
-4. `syncNodes()` never executes → no visual update
-5. Page refresh causes remount → watchers fire → UI updates
+After systematic investigation with 3 parallel Explore agents, **true root causes** identified:
 
-**Fix Required - Add watcher after line 2026:**
+---
+
+#### **Issue #1: Tasks Appearing in BOTH Canvas AND Inbox (DUPLICATES)**
+
+**Root Cause**: Semantic conflict in `CalendarInboxPanel.vue` line 228
+
 ```typescript
-watch(() => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })), () => {
-  batchedSyncNodes('high')
-}, { deep: true })
+// PROBLEM: Redefines isInInbox to mean "any non-done task"
+const isInInbox = isNotDone  // Ignores actual task.isInInbox property!
 ```
 
-#### Issue #2: Drag Position Doesn't Persist (CRITICAL)
-- **Status**: ROOT CAUSE CONFIRMED - Race Condition
-- **File**: `src/views/CanvasView.vue` line 2553-2555
-- **Problem**: `nextTick` clears `isNodeDragging` guard too soon
+**The Duplicate Scenario:**
+1. Task dragged to canvas → `canvasPosition` set, `task.isInInbox = false`
+2. Canvas shows it (has `canvasPosition` → passes filter)
+3. CalendarInboxPanel shows it too (line 228 treats ALL non-done tasks as "in inbox")
 
-**Race Condition Sequence:**
-1. `handleNodeDragStop` saves ABSOLUTE position to store
-2. `canvasPosition` watcher fires IMMEDIATELY, calls `batchedSyncNodes('low')`
-3. `nextTick(() => { isNodeDragging = false })` runs - guard clears
-4. Batched `syncNodes` now passes guard, executes
-5. `syncNodes` converts ABSOLUTE → RELATIVE position (lines 1855-1857)
-6. Node appears to "jump back" to wrong position!
-
-**Fix Required - Change nextTick to setTimeout:**
+**Fix Required** (`CalendarInboxPanel.vue` line 228):
 ```typescript
-setTimeout(() => { isNodeDragging.value = false }, 50)
+// BEFORE (wrong):
+const isInInbox = isNotDone
+
+// AFTER (correct):
+const isInInbox = task.isInInbox !== false && isNotDone
 ```
 
-### **Implementation Steps**
-1. ✅ Systematic debugging identified TWO distinct root causes
-2. ✅ Fix task filtering - tasks now appear on canvas (commit `a3e7559`)
-   - Changed filter from `!task.isInInbox` to `(task.canvasPosition || task.isInInbox !== true)`
-   - Verified: 2 nodes showing, status HEALTHY
-3. ✅ Add missing `isInInbox` watcher (lines 2030-2037) - ALREADY IMPLEMENTED
-4. ✅ Fix race condition: `setTimeout(..., 50)` (lines 2565-2567) - ALREADY IMPLEMENTED
-5. ✅ Verified with Playwright - 2 nodes showing, status HEALTHY
+---
 
-### **Previously Completed (This Session)**
-- ✅ Context menu positioning made reactive
-- ✅ Context menu events made reactive
-- ✅ Node drag guard added (isNodeDragging flag)
-- ✅ Delete/Shift+Delete key functionality verified
+#### **Issue #2: Tasks Auto-Appearing on Canvas (Instead of Inbox)**
+
+**Root Cause #1**: WRONG default in `taskCore.ts` line 40
+```typescript
+// PROBLEM: Defaults to FALSE instead of TRUE
+isInInbox: taskData.isInInbox || false,  // ❌ New tasks marked as NOT in inbox!
+```
+
+**Root Cause #2**: Smart sections bypass inbox check (`canvas.ts` lines 767-776)
+```typescript
+// Smart sections collect ALL tasks matching criteria, ignoring isInInbox
+if (section.type === 'priority' || section.type === 'status' || section.type === 'project') {
+  return allTasks.filter(task => isTaskLogicallyInSection(task, section))
+  // Missing: && task.isInInbox === false
+}
+```
+
+**Root Cause #3**: Undefined bypass (`canvas.ts` line 148)
+- `!undefined` evaluates to `true`, letting tasks pass filter when `isInInbox` is undefined
+
+**Fixes Required:**
+1. `taskCore.ts` line 40: Change `|| false` to `!== false`
+2. `canvas.ts` lines 767-776: Add `task.isInInbox === false` check to smart sections
+
+---
+
+#### **Issue #3: Can't Delete Tasks from Canvas**
+
+**Root Cause #1**: Context menu lacks delete for task nodes
+- `CanvasContextMenu.vue` only shows delete for **section nodes**, not tasks
+
+**Root Cause #2**: Users don't know about `Shift+Delete`
+- `Delete` key: Moves task to inbox (not permanent delete)
+- `Shift+Delete`: Permanently deletes task
+
+**Root Cause #3**: Silent failures in delete flow
+- `tasks.ts` line 1775: Returns silently if task not found
+
+**Fixes Required:**
+1. Add delete option to context menu for task nodes
+2. Improve user feedback on delete failures
+
+---
+
+### **IMPLEMENTATION PLAN**
+
+| Priority | File | Line | Change |
+|----------|------|------|--------|
+| P0 | `taskCore.ts` | 40 | Change `\|\| false` to `!== false` |
+| P0 | `CalendarInboxPanel.vue` | 228 | Respect actual `task.isInInbox` value |
+| P1 | `canvas.ts` | 767-776 | Add `isInInbox === false` check to smart sections |
+| P1 | `CanvasContextMenu.vue` | - | Add delete action for task nodes |
+| P2 | `tasks.ts` | 1775 | Add user feedback on delete failure |
+
+---
+
+### **Previously Completed Fixes (Still Valid)**
+
+| Fix | Status | File | Line |
+|-----|--------|------|------|
+| isInInbox watcher | ✅ Keep | `CanvasView.vue` | ~2030 |
+| setTimeout drag guard | ✅ Keep | `CanvasView.vue` | ~2562 |
+| Filter logic fix | ✅ Done | `CanvasView.vue` | ~1809 |
+
+### **Testing Checklist**
+1. Create new task → Should appear in inbox, NOT on canvas
+2. Drag task from inbox to canvas → Should appear on canvas immediately
+3. Task should NOT appear in both → Check inbox panel AND canvas
+4. Right-click task on canvas → Should see delete option
+5. Delete key on selected task → Should move to inbox
+6. Shift+Delete on selected task → Should permanently delete
 
 ---
 

@@ -1,6 +1,7 @@
 import { ref, computed, nextTick, type Ref, type ComputedRef } from 'vue'
 import { useTaskStore, formatDateKey } from '@/stores/tasks'
 import { useCalendarCore, type CalendarEvent } from '@/composables/useCalendarCore'
+import { useCalendarDrag, type DragGhost as UnifiedDragGhost } from '@/composables/calendar/useCalendarDrag'
 
 export interface TimeSlot {
   id: string
@@ -10,12 +11,7 @@ export interface TimeSlot {
   date: string
 }
 
-export interface DragGhost {
-  visible: boolean
-  title: string
-  duration: number
-  slotIndex: number
-}
+// DragGhost is now imported from useCalendarDrag as UnifiedDragGhost
 
 /**
  * Day view specific logic for calendar
@@ -29,21 +25,17 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
 
   const hours = Array.from({ length: 24 }, (_, i) => i)
 
-  // Drag ghost state
-  const dragGhost = ref<DragGhost>({
-    visible: false,
-    title: '',
-    duration: 30,
-    slotIndex: 0
-  })
+  // Use unified drag system
+  const drag = useCalendarDrag()
+  const { dragGhost, activeDropTarget } = drag
 
-  // Drag mode state - enable dragging by default
-  const dragMode = ref<'none' | 'shift'>('shift')
-
-  // Drag state for visual feedback
+  // Create local refs for backward compatibility
   const isDragging = ref(false)
   const draggedEventId = ref<string | null>(null)
   const activeDropSlot = ref<number | null>(null)
+
+  // Drag mode state - enable dragging by default (kept for resize compatibility)
+  const dragMode = ref<'none' | 'shift'>('shift')
 
   // Resize preview state - shows visual feedback during resize without updating store
   const resizePreview = ref<{
@@ -330,9 +322,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     }
   }
 
-  const handleDragLeave = () => {
-    // Keep ghost visible, only hide on drop
-  }
+  // handleDragLeave now comes from unified drag system
+  // This prevents the "handleDragLeave is not a function" error
 
   const handleDrop = async (event: DragEvent, slot: TimeSlot) => {
     event.preventDefault()
@@ -789,14 +780,18 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     hours,
     timeSlots,
     calendarEvents,
-    dragGhost,
-    dragMode,
 
     // Slot-based rendering (tasks inside slots)
     getTasksForSlot,
     isTaskPrimarySlot,
 
-    // Drag state for visual feedback
+    // Unified drag system
+    dragState: drag.dragState,
+    dragGhost: drag.dragGhost,
+    activeDropTarget: drag.activeDropTarget,
+
+    // Legacy compatibility refs
+    dragMode,
     isDragging,
     draggedEventId,
     activeDropSlot,
@@ -805,17 +800,21 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     getEventStyle,
     getGhostStyle,
 
-    // Drag handlers
-    handleDragEnter,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
+    // Unified drag handlers
+    startDrag: drag.startDrag,
+    handleDragEnter: drag.handleDragEnter,
+    handleDragOver: drag.handleDragOver,
+    handleDrop: drag.handleDrop,
+    handleDragEnd: drag.handleDragEnd,
+    handleDragLeave: drag.handleDragLeave,
+
+    // Resize handlers (keep existing for now)
+    startResize,
+    resizePreview,
+
+    // Legacy drag handlers for backward compatibility (to be removed after full migration)
     handleEventDragStart,
     handleEventDragEnd,
-    handleEventMouseDown,
-
-    // Resize handlers
-    startResize,
-    resizePreview
+    handleEventMouseDown
   }
 }

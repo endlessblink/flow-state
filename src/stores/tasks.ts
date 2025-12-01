@@ -1725,6 +1725,24 @@ export const useTaskStore = defineStore('tasks', () => {
         }
       }
 
+      // 7. 🔧 ROUND 3 FIX: Handle explicit inbox state changes
+      if ('isInInbox' in updates) {
+        const newInInbox = updates.isInInbox
+        const oldInInbox = task.isInInbox
+
+        // Task moved to canvas (isInInbox = false) but no position specified
+        if (newInInbox === false && !updates.canvasPosition && !task.canvasPosition) {
+          updates.canvasPosition = { x: 100, y: 100 } // Default position
+          console.log(`Task "${task.title}" moved to canvas without position - assigned default position`)
+        }
+
+        // Task moved to inbox (isInInbox = true) should clear canvas position
+        if (newInInbox === true && updates.canvasPosition === undefined) {
+          updates.canvasPosition = undefined
+          console.log(`Task "${task.title}" moved to inbox - cleared canvas position`)
+        }
+      }
+
       // Apply the updates
       tasks.value[taskIndex] = {
         ...task,

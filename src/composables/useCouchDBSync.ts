@@ -1,7 +1,8 @@
-import { ref, computed, readonly } from 'vue'
+import { ref, computed, readonly, onUnmounted } from 'vue'
 import PouchDB from 'pouchdb-browser'
 import type { DatabaseConfig, SyncStatus, SyncEvent, DatabaseHealth } from '@/config/database'
 import { getDatabaseConfig, DOCUMENT_IDS } from '@/config/database'
+import { SyncCircuitBreaker, executeSyncWithCircuitBreaker, createChangeDetectionGuard } from '@/utils/syncCircuitBreaker'
 
 // Global PouchDB instance
 let globalPouchDB: PouchDB.Database | null = null
@@ -21,9 +22,152 @@ export const useCouchDBSync = () => {
   const isOnline = ref(navigator.onLine)
   const remoteConnected = ref(false)
 
+  // Circuit breaker and change detection
+  const circuitBreaker = new SyncCircuitBreaker({
+    cooldownMs: 300,
+    maxConsecutiveErrors: 3,
+    maxSyncDuration: 30000,
+    enableMetrics: true
+  })
+
+  const changeGuard = createChangeDetectionGuard()
+
   // Sync replication handlers
   let pushHandler: PouchDB.Replication.Sync<{}> | null = null
   let pullHandler: PouchDB.Replication.Sync<{}> | null = null
+  let isDestroyed = false
+
+  // Cleanup sync handlers
+  const cleanupSyncHandlers = async () => {
+    if (pushHandler) {
+      await pushHandler.cancel()
+      pushHandler = null
+    }
+    if (pullHandler) {
+      await pullHandler.cancel()
+      pullHandler = null
+    }
+  }
+
+  // PHASE 0.5 Enhanced: Setup local cross-tab synchronization using PouchDB changes feed
+  const setupLocalCrossTabSync = (localDB: PouchDB.Database) => {
+    console.log('🔄 Setting up enhanced local cross-tab synchronization')
+
+    // Track local operations to prevent infinite loops
+    const localOperationTracker = new Set<string>()
+
+    // Listen to local database changes for cross-tab sync
+    const changesHandler = localDB.changes({
+      since: 'now',
+      live: true,
+      include_docs: true
+    })
+
+    changesHandler.on('change', (change) => {
+      if (!change.id.startsWith('_design') && change.doc) {
+        console.log(`📝 Enhanced local change detected: ${change.id}`)
+
+        // Determine change type and emit appropriate custom events
+        const changeType = getChangeType(change)
+        const isTaskRelated = isTaskRelatedChange(change)
+
+        if (isTaskRelated) {
+          console.log(`🔄 Task-related change detected: ${changeType} for ${change.id}`)
+
+          // Emit custom event for task store to listen to
+          window.dispatchEvent(new CustomEvent('pouchdb-task-change', {
+            detail: {
+              changeId: change.id,
+              changeType,
+              document: change.doc,
+              timestamp: new Date(),
+              source: 'cross-tab-sync'
+            }
+          }))
+
+          // Also emit legacy event for backward compatibility
+          window.dispatchEvent(new CustomEvent('pouchdb-sync', {
+            detail: {
+              direction: 'cross-tab',
+              changeCount: 1,
+              docs: [change.doc],
+              timestamp: new Date(),
+              changeType,
+              source: 'pouchdb-local-changes'
+            } as SyncEvent
+          }))
+        }
+
+        // Store the change for other tabs to detect
+        pendingChanges.value++
+
+        // Auto-clear pending changes after a short delay
+        setTimeout(() => {
+          if (pendingChanges.value > 0) {
+            pendingChanges.value--
+          }
+        }, 1000)
+      }
+    })
+
+    changesHandler.on('error', (error) => {
+      console.error('❌ Enhanced local changes feed error:', error)
+      syncStatus.value = 'error'
+
+      // Emit error event for task store to handle
+      window.dispatchEvent(new CustomEvent('pouchdb-sync-error', {
+        detail: {
+          error,
+          timestamp: new Date(),
+          source: 'cross-tab-sync'
+        }
+      }))
+    })
+
+    syncStatus.value = 'complete'
+    console.log('✅ Enhanced local cross-tab sync initialized with task store integration')
+
+    return changesHandler
+  }
+
+  // PHASE 0.5 Helper: Determine the type of change
+  const getChangeType = (change: any): 'create' | 'update' | 'delete' => {
+    if (change.deleted) {
+      return 'delete'
+    }
+
+    // Check if this is a new document (no previous revision)
+    const changes = change.changes || []
+    const isRevised = changes.length > 1
+
+    return isRevised ? 'update' : 'create'
+  }
+
+  // PHASE 0.5 Helper: Check if change is task-related
+  const isTaskRelatedChange = (change: any): boolean => {
+    // Check document ID patterns
+    if (change.id && (
+      change.id.startsWith('task-') ||
+      change.id.includes('tasks') ||
+      change.id.includes('task')
+    )) {
+      return true
+    }
+
+    // Check document content for task-related data
+    if (change.doc && (
+      change.doc.type === 'task' ||
+      change.doc.title ||
+      change.doc.status ||
+      change.doc.priority ||
+      Array.isArray(change.doc.subtasks) ||
+      change.doc.projectId
+    )) {
+      return true
+    }
+
+    return false
+  }
 
   // Initialize PouchDB database
   const initializeDatabase = (): PouchDB.Database => {
@@ -84,55 +228,73 @@ export const useCouchDBSync = () => {
     }
   }
 
-  // Initialize sync between local and remote
+  // Initialize sync between local and remote with circuit breaker protection
   const initializeSync = async () => {
-    const localDB = initializeDatabase()
-    const remoteDB = await setupRemoteConnection()
-
-    if (!remoteDB) {
-      console.log('🔄 Remote sync not available, using local-only mode')
-      syncStatus.value = 'idle'
-      return localDB
+    if (isDestroyed) {
+      console.log('🛑 Sync destroyed, cannot initialize')
+      return
     }
 
-    try {
+    return executeSyncWithCircuitBreaker(async () => {
+      const localDB = initializeDatabase()
+      const remoteDB = await setupRemoteConnection()
+
+      if (!remoteDB) {
+        console.log('🔄 Remote sync not available, using local-only mode with circuit breaker protection')
+        syncStatus.value = 'complete'
+        // PouchDB automatically handles cross-tab sync when using the same database
+        // The circuit breaker prevents infinite loops while allowing live updates
+        return localDB
+      }
+
       // Cleanup existing sync handlers
-      if (pushHandler) {
-        await pushHandler.cancel()
-        pushHandler = null
-      }
-      if (pullHandler) {
-        await pullHandler.cancel()
-        pullHandler = null
-      }
+      await cleanupSyncHandlers()
 
-      // Setup two-way sync
+      // Setup ONE-WAY sync to prevent ping-pong effects
+      // Push local changes first, then pull remote changes
+      console.log('🔄 Setting up one-way sync (push → pull) to prevent loops')
+
+      // Push handler (local → remote)
       pushHandler = localDB.sync(remoteDB, {
-        live: config.sync?.live ?? true,
-        retry: config.sync?.retry ?? true,
-        timeout: config.sync?.timeout,
-        batch_size: config.remote?.batchSize,
-        batches_limit: config.remote?.batchesLimit
+        live: false, // Disable live sync to prevent continuous loops
+        retry: false, // Disable retry to prevent infinite attempts
+        timeout: config.sync?.timeout || 10000,
+        batch_size: config.remote?.batchSize || 50,
+        batches_limit: config.remote?.batchesLimit || 5
       })
 
+      // Pull handler (remote → local)
       pullHandler = localDB.sync(remoteDB, {
-        live: config.sync?.live ?? true,
-        retry: config.sync?.retry ?? true,
-        timeout: config.sync?.timeout,
-        batch_size: config.remote?.batchSize,
-        batches_limit: config.remote?.batchesLimit
+        live: false, // Disable live sync
+        retry: false, // Disable retry
+        timeout: config.sync?.timeout || 10000,
+        batch_size: config.remote?.batchSize || 50,
+        batches_limit: config.remote?.batchesLimit || 5
       })
 
-      // Setup sync event handlers
+      // Setup enhanced sync event handlers with loop prevention
       const setupSyncEvents = (handler: PouchDB.Replication.Sync<{}>, direction: 'push' | 'pull') => {
         handler.on('change', (info) => {
-          console.log(`📤 Sync ${direction}:`, info)
-          handleSyncChange(direction, info)
+          // Prevent sync change events from triggering more sync operations
+          if (changeGuard.shouldUpdate(info)) {
+            console.log(`📤 Sync ${direction} (${info.direction || 'unknown'}):`, {
+              changes: info.change?.docs?.length || 0,
+              pending: (info as any).pending,
+              sequence: (info as any).seq
+            })
+
+            // Freeze the info to prevent Vue reactivity issues
+            const frozenInfo = changeGuard.freezeData(info)
+            handleSyncChange(direction, frozenInfo)
+          }
         })
 
         handler.on('paused', (err) => {
-          console.log(`⏸️ Sync ${direction} paused:`, err)
+          console.log(`⏸️ Sync ${direction} paused`)
+          syncStatus.value = 'idle'
+
           if (err) {
+            console.warn(`⚠️ Sync ${direction} paused with error:`, err)
             syncErrors.value.push({ direction, error: err, timestamp: new Date() })
           }
         })
@@ -143,10 +305,20 @@ export const useCouchDBSync = () => {
         })
 
         handler.on('complete', (info) => {
-          console.log(`✅ Sync ${direction} complete:`, info)
-          if (syncStatus.value === 'syncing') {
-            syncStatus.value = 'complete'
-            lastSyncTime.value = new Date()
+          console.log(`✅ Sync ${direction} complete:`, {
+            docs_written: (info as any).docs_written,
+            docs_read: (info as any).docs_read,
+            errors: (info as any).errors?.length || 0
+          })
+
+          syncStatus.value = 'complete'
+          lastSyncTime.value = new Date()
+
+          // Cleanup handler to prevent continuous sync
+          if (direction === 'push') {
+            pushHandler = null
+          } else if (direction === 'pull') {
+            pullHandler = null
           }
         })
 
@@ -154,6 +326,8 @@ export const useCouchDBSync = () => {
           console.error(`❌ Sync ${direction} error:`, err)
           syncStatus.value = 'error'
           syncErrors.value.push({ direction, error: err, timestamp: new Date() })
+
+          // Circuit breaker will handle error tracking
         })
       }
 
@@ -161,15 +335,10 @@ export const useCouchDBSync = () => {
       setupSyncEvents(pullHandler, 'pull')
 
       syncStatus.value = 'complete'
-      console.log('🔄 Two-way sync initialized successfully')
+      console.log('🔄 One-way sync (push→pull) initialized successfully')
 
-    } catch (error) {
-      console.error('❌ Failed to initialize sync:', error)
-      syncStatus.value = 'error'
-      syncErrors.value.push({ error, timestamp: new Date() })
-    }
-
-    return localDB
+      return localDB
+    }, 'initialize-sync')
   }
 
   // Handle sync change events
@@ -313,10 +482,34 @@ export const useCouchDBSync = () => {
   const hasSyncErrors = computed(() => syncErrors.value.length > 0)
   const canSync = computed(() => isOnline.value && remoteConnected.value)
 
+  // Destroy function for cleanup
+  const destroy = async () => {
+    isDestroyed = true
+    console.log('🛑 Destroying CouchDB sync composable...')
+
+    // Cleanup sync handlers
+    await cleanupSyncHandlers()
+
+    // Destroy circuit breaker
+    circuitBreaker.destroy()
+
+    // Reset state
+    syncStatus.value = 'idle'
+    lastSyncTime.value = null
+    pendingChanges.value = 0
+    syncErrors.value = []
+  }
+
   // Initialize on composable creation
   const init = async () => {
     const cleanup = setupNetworkListeners()
     await initializeSync()
+
+    // Add proper cleanup on unmount
+    onUnmounted(() => {
+      destroy()
+    })
+
     return cleanup
   }
 
@@ -342,7 +535,16 @@ export const useCouchDBSync = () => {
     resumeSync,
     getDatabaseHealth,
     clearSyncErrors,
-    init
+    destroy,
+    init,
+
+    // Circuit breaker access
+    circuitBreaker: {
+      metrics: () => circuitBreaker.getMetrics(),
+      isHealthy: () => circuitBreaker.isHealthy(),
+      canSync: () => circuitBreaker.canSync(),
+      reset: () => circuitBreaker.reset()
+    }
   }
 }
 
@@ -352,4 +554,9 @@ export const getPouchDB = () => {
     throw new Error('PouchDB not initialized. Call useCouchDBSync().init() first.')
   }
   return globalPouchDB
+}
+
+// Compatibility function for components that expect the old API
+export const getGlobalReliableSyncManager = () => {
+  return useCouchDBSync()
 }

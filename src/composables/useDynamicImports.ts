@@ -38,12 +38,12 @@ export const IMPORT_CONFIG = {
     timeout: 3000
   },
 
-  // Sync system imports (consolidated - only ReliableSyncManager remains)
-  useReliableSyncManager: {
-    path: () => import('@/composables/useReliableSyncManager'),
-    preload: true, // Critical for sync functionality
-    timeout: 5000
-  },
+  // Sync system imports (consolidated - ReliableSyncManager removed - file no longer exists)
+  // useReliableSyncManager: {
+  //   path: () => import('@/composables/useReliableSyncManager'),
+  //   preload: true, // Critical for sync functionality
+  //   timeout: 5000
+  // },
 
   // UI component imports
   SyncStatusIndicator: {
@@ -310,11 +310,11 @@ export const getUndoRedoComposable = async () => {
   return module.useUnifiedUndoRedo || module
 }
 
-// Sync manager with caching (consolidated)
-export const getSyncManager = async () => {
-  const module = await dynamicImportManager.import('useReliableSyncManager')
-  return module.getGlobalReliableSyncManager || module
-}
+// Sync manager with caching (consolidated - ReliableSyncManager removed)
+// export const getSyncManager = async () => {
+//   const module = await dynamicImportManager.import('useReliableSyncManager')
+//   return module.getGlobalReliableSyncManager || module
+// }
 
 // Store imports with caching
 export const getTasksStore = async () => {

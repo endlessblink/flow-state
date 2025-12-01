@@ -2,9 +2,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useCanvasStore } from '@/stores/canvas'
-import { ConflictResolver } from '@/utils/conflictResolver'
-import type { ConflictInfo } from '@/types/conflicts'
-import type { ConflictResolutionStrategy } from '@/types/sync'
+// import { ConflictResolver } from '@/utils/conflictResolver' // TEMPORARILY DISABLED - Module missing
+// import type { ConflictInfo } from '@/types/conflicts'
+// import type { ConflictResolutionStrategy } from '@/types/sync'
 // CrossTabSaveCoordinator removed - Phase 2 simplification
 import CrossTabPerformance from '@/utils/CrossTabPerformance'
 import CrossTabBrowserCompatibility from '@/utils/CrossTabBrowserCompatibility'
@@ -47,7 +47,7 @@ const messageQueue = ref<CrossTabMessage[]>([])
 const lastProcessedTimestamp = ref(0)
 const isProcessing = ref(false)
 const pendingLocalOperations = ref<Map<string, any>>(new Map())
-const conflictResolver = new ConflictResolver('cross-tab-sync')
+// const conflictResolver = new ConflictResolver('cross-tab-sync') // TEMPORARILY DISABLED - Module missing
 // saveCoordinator removed - Phase 2 simplification
 const performanceMonitor = new CrossTabPerformance()
 const browserCompatibility = new CrossTabBrowserCompatibility()
@@ -211,8 +211,9 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
 
     if (conflicts.length > 0) {
       console.log(`⚠️ Detected ${conflicts.length} task conflicts, resolving...`)
-      const resolutions = await (conflictResolver as any).resolveConflict(conflicts)
-      await applyConflictResolutions(resolutions as any, operation, taskStore)
+      // const resolutions = await (conflictResolver as any).resolveConflict(conflicts) // TEMPORARILY DISABLED - Module missing
+      // await applyConflictResolutions(resolutions as any, operation, taskStore) // TEMPORARILY DISABLED
+      console.warn('🚨 Conflict resolution temporarily disabled - conflictResolver module missing')
       return
     }
 
@@ -275,8 +276,8 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
 }
 
 // Detect conflicts between remote operation and pending local operations
-const detectTaskConflicts = async (remoteOperation: TaskOperation, taskStore: any): Promise<ConflictInfo[]> => {
-  const conflicts: ConflictInfo[] = []
+const detectTaskConflicts = async (remoteOperation: TaskOperation, taskStore: any): Promise<any[]> => {
+  const conflicts: any[] = [] // Using any[] temporarily instead of ConflictInfo[]
 
   if (!remoteOperation.taskId) return conflicts
 
@@ -299,7 +300,7 @@ const detectTaskConflicts = async (remoteOperation: TaskOperation, taskStore: an
 }
 
 // Apply conflict resolutions
-const applyConflictResolutions = async (resolutions: ConflictInfo[], remoteOperation: TaskOperation, taskStore: any) => {
+const applyConflictResolutions = async (resolutions: any[], remoteOperation: TaskOperation, taskStore: any) => { // Using any[] temporarily instead of ConflictInfo[]
   for (const resolution of resolutions) {
     switch ((resolution as any).resolution) {
       case 'local_wins':

@@ -267,8 +267,12 @@ export function useSidebarManagement() {
   }
 
   const selectProject = (project: any) => {
-    taskStore.setActiveProject(project.id)
-    taskStore.setSmartView(null)
+    // Toggle project selection - if already selected, deselect it
+    if (taskStore.activeProjectId === project.id) {
+      taskStore.setActiveProject(null)
+    } else {
+      taskStore.toggleProject(project.id)
+    }
   }
 
   // Keyboard navigation for project tree

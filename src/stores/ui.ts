@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch, computed } from 'vue'
+import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // Temporarily remove i18n to fix setup function error
 // import { useI18n } from 'vue-i18n'
 // import { useDirection } from '@/i18n/useDirection'
@@ -184,7 +185,14 @@ export const useUIStore = defineStore('ui', () => {
           directionPreference.value = state.directionPreference
         }
       } catch (error) {
-        console.warn('Failed to load UI state from localStorage:', error)
+        errorHandler.report({
+          severity: ErrorSeverity.WARNING,
+          category: ErrorCategory.STATE,
+          message: 'Failed to load UI state from localStorage',
+          error: error as Error,
+          context: { operation: 'loadState', store: 'ui' },
+          showNotification: false // Non-critical - using defaults
+        })
       }
     }
   }

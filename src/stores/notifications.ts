@@ -6,6 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
+import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import type {
   ScheduledNotification,
   NotificationPreferences,
@@ -76,7 +77,13 @@ export const useNotificationStore = defineStore('notifications', () => {
     try {
       // Check if database is ready before loading
       if (!db.isReady?.value) {
-        console.warn('⚠️ Database not ready, skipping notification load')
+        errorHandler.report({
+          severity: ErrorSeverity.INFO,
+          category: ErrorCategory.DATABASE,
+          message: 'Database not ready, skipping notification load',
+          context: { operation: 'loadScheduledNotifications' },
+          showNotification: false
+        })
         return
       }
 
@@ -85,8 +92,14 @@ export const useNotificationStore = defineStore('notifications', () => {
         scheduledNotifications.value = saved
       }
     } catch (error) {
-      console.warn('⚠️ Error loading notifications:', error)
-      // Don't fail the entire initialization if notifications can't load
+      errorHandler.report({
+        severity: ErrorSeverity.WARNING,
+        category: ErrorCategory.DATABASE,
+        message: 'Error loading notifications',
+        error: error as Error,
+        context: { operation: 'loadScheduledNotifications' },
+        showNotification: false // Don't fail the entire initialization
+      })
     }
   }
 
@@ -96,7 +109,13 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const checkNotificationPermission = async (): Promise<boolean> => {
     if (!('Notification' in window)) {
-      console.warn('This browser does not support notifications')
+      errorHandler.report({
+        severity: ErrorSeverity.INFO,
+        category: ErrorCategory.COMPONENT,
+        message: 'This browser does not support notifications',
+        context: { operation: 'checkNotificationPermission' },
+        showNotification: false
+      })
       isPermissionGranted.value = false
       return false
     }
@@ -115,7 +134,13 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const requestNotificationPermission = async (): Promise<boolean> => {
     if (!('Notification' in window)) {
-      console.warn('This browser does not support notifications')
+      errorHandler.report({
+        severity: ErrorSeverity.INFO,
+        category: ErrorCategory.COMPONENT,
+        message: 'This browser does not support notifications',
+        context: { operation: 'requestNotificationPermission' },
+        showNotification: false
+      })
       return false
     }
 
@@ -130,7 +155,14 @@ export const useNotificationStore = defineStore('notifications', () => {
         isPermissionGranted.value = permission === 'granted'
         return isPermissionGranted.value
       } catch (error) {
-        console.warn('⚠️ Notification permission request failed:', error)
+        errorHandler.report({
+          severity: ErrorSeverity.WARNING,
+          category: ErrorCategory.COMPONENT,
+          message: 'Notification permission request failed',
+          error: error as Error,
+          context: { operation: 'requestNotificationPermission' },
+          showNotification: false
+        })
         isPermissionGranted.value = false
         return false
       }
@@ -172,7 +204,13 @@ export const useNotificationStore = defineStore('notifications', () => {
 
     // CRITICAL FIX: Ensure scheduledNotifications.value is an array
     if (!Array.isArray(scheduledNotifications.value)) {
-      console.warn('⚠️ scheduledNotifications.value is not an array, resetting to empty array')
+      errorHandler.report({
+        severity: ErrorSeverity.WARNING,
+        category: ErrorCategory.STATE,
+        message: 'scheduledNotifications.value is not an array, resetting to empty array',
+        context: { operation: 'checkAndShowNotifications', type: typeof scheduledNotifications.value },
+        showNotification: false
+      })
       scheduledNotifications.value = []
     }
 
@@ -244,7 +282,14 @@ export const useNotificationStore = defineStore('notifications', () => {
       }
 
     } catch (error) {
-      console.error('Error showing notification:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.COMPONENT,
+        message: 'Error showing browser notification',
+        error: error as Error,
+        context: { operation: 'showNotification', notificationId: notification.id },
+        showNotification: false // Don't show a notification about failed notification
+      })
     }
   }
 
@@ -411,7 +456,14 @@ export const useNotificationStore = defineStore('notifications', () => {
     try {
       await db.save(DB_KEYS.NOTIFICATIONS, scheduledNotifications.value)
     } catch (error) {
-      console.error('Error saving notifications:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Error saving notifications to database',
+        error: error as Error,
+        context: { operation: 'saveScheduledNotifications', count: scheduledNotifications.value?.length },
+        showNotification: false
+      })
     }
   }
 

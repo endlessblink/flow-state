@@ -41,3 +41,16 @@ firebase-debug.log
 
 # Private planning documents (keep local only, do not push to GitHub)
 /plan.md
+
+# Document-sync generated files
+system_state.json
+code_features_report.md
+doc_verification_report.md
+docs_update_plan.md
+verification_results.json
+
+# Playwright MCP screenshots
+.playwright-mcp/
+
+# Test results (generated)
+test-results/

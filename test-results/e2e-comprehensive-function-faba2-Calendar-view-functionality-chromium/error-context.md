@@ -1,0 +1,430 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary "Main navigation" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: 🍅
+        - generic [ref=e9]: Pomo-Flow
+      - button "Create project" [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]:
+          - img [ref=e12]
+          - text: Create project
+      - generic [ref=e13]:
+        - button "Hide sidebar" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+        - button "Open settings" [ref=e18] [cursor=pointer]:
+          - img [ref=e19]
+    - textbox "Quick add task (Enter)..." [ref=e23]
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - heading "Projects" [level=3] [ref=e26]:
+          - img [ref=e27]
+          - text: Projects
+        - button "Add Project" [ref=e29] [cursor=pointer]:
+          - img [ref=e30]
+      - generic [ref=e31]:
+        - generic [ref=e32] [cursor=pointer]:
+          - img [ref=e34]
+          - generic [ref=e36]: Today
+          - generic [ref=e37]: "14"
+        - generic [ref=e38] [cursor=pointer]:
+          - img [ref=e40]
+          - generic [ref=e42]: This Week
+          - generic [ref=e43]: "0"
+        - generic [ref=e44]:
+          - generic [ref=e45] [cursor=pointer]:
+            - img [ref=e47]
+            - generic [ref=e48]: All Tasks
+            - generic [ref=e49]: "14"
+          - button "Uncategorized Tasks 22" [ref=e50] [cursor=pointer]:
+            - img [ref=e51]
+            - generic [ref=e54]: Uncategorized Tasks
+            - generic [ref=e55]: "22"
+      - tree "Projects"
+  - main [ref=e57]:
+    - generic:
+      - generic [ref=e58]:
+        - heading "Board" [level=1] [ref=e59]
+        - generic [ref=e60]: All Tasks
+      - generic [ref=e61]:
+        - generic [ref=e64]:
+          - generic [ref=e65]: 16:12
+          - generic [ref=e66]: Sat, 11/29
+        - generic [ref=e68]:
+          - img [ref=e70]
+          - generic [ref=e74]: 20:00
+          - generic [ref=e77]:
+            - button "Start 25-min work timer" [ref=e78] [cursor=pointer]:
+              - img [ref=e79]
+            - button "Start 5-min break" [ref=e81] [cursor=pointer]:
+              - img [ref=e82]
+            - button "Start 15-min long break" [ref=e85] [cursor=pointer]:
+              - img [ref=e86]
+        - generic [ref=e90]:
+          - img [ref=e92]
+          - generic [ref=e95]: Local Only
+          - img [ref=e97]
+    - generic [ref=e101]:
+      - link "Board" [ref=e102] [cursor=pointer]:
+        - /url: "#/"
+      - link "Calendar" [ref=e103] [cursor=pointer]:
+        - /url: "#/calendar"
+      - link "Canvas" [ref=e104] [cursor=pointer]:
+        - /url: "#/canvas"
+      - link "Catalog" [ref=e105] [cursor=pointer]:
+        - /url: "#/catalog"
+      - link "Quick Sort 22" [ref=e106] [cursor=pointer]:
+        - /url: "#/quick-sort"
+        - text: Quick Sort
+        - generic [ref=e107]: "22"
+    - generic [ref=e108]:
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - heading "Kanban Board" [level=2] [ref=e111]
+          - generic [ref=e112]: 22 tasks
+        - generic [ref=e113]:
+          - generic [ref=e114]:
+            - combobox [ref=e116] [cursor=pointer]:
+              - option "All Projects" [selected]
+            - combobox [ref=e118] [cursor=pointer]:
+              - option "All Tasks" [selected]
+              - option "Today"
+              - option "This Week"
+              - option "Uncategorized"
+              - option "Above My Tasks"
+              - option "Unscheduled"
+            - combobox [ref=e120] [cursor=pointer]:
+              - option "All Status" [selected]
+              - option "Planned"
+              - option "In Progress"
+              - option "Done"
+              - option "Backlog"
+              - option "On Hold"
+            - generic [ref=e121]:
+              - checkbox "Hide Done" [ref=e122] [cursor=pointer]
+              - generic [ref=e123] [cursor=pointer]: Hide Done
+            - button "Clear" [ref=e124] [cursor=pointer]
+          - button "Show Done column" [ref=e125] [cursor=pointer]:
+            - img [ref=e126]
+      - generic [ref=e130]:
+        - generic [ref=e132] [cursor=pointer]:
+          - button [ref=e133]:
+            - img [ref=e134]
+          - heading "Uncategorized" [level=3] [ref=e137]
+          - generic [ref=e138]: 14 tasks
+          - combobox [ref=e140]:
+            - option "Status" [selected]
+            - option "Date"
+            - option "Priority"
+        - generic [ref=e142]:
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e145]:
+                - generic [ref=e146]: Planned
+                - generic [ref=e147]: "13"
+              - button "Add task to Planned" [ref=e148] [cursor=pointer]:
+                - img [ref=e149]
+            - generic [ref=e150]:
+              - 'button "Task: Medium priority task - test completion circle, pending, priority medium" [ref=e151] [cursor=pointer]':
+                - generic [ref=e152]:
+                  - button "Mark as in-progress" [ref=e153]:
+                    - img [ref=e154]
+                  - generic [ref=e156]:
+                    - heading "Medium priority task - test completion circle" [level=3] [ref=e157]
+                    - group "Task metadata" [ref=e158]:
+                      - 'status "Due date: 2025-11-29" [ref=e159]':
+                        - img [ref=e160]
+                        - generic [ref=e162]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e163]':
+                        - generic [ref=e165]: M
+                      - 'status "Project: Uncategorized" [ref=e166]':
+                        - 'img "Project: Uncategorized" [ref=e167]':
+                          - generic [ref=e168]: 📁
+                  - group "Task actions" [ref=e169]:
+                    - button "Start Pomodoro timer for this task" [ref=e170]:
+                      - img [ref=e171]
+                    - button "Edit this task" [ref=e173]:
+                      - img [ref=e174]
+              - 'button "Task: Low priority task - test completion circle, pending, priority low" [ref=e178] [cursor=pointer]':
+                - generic [ref=e179]:
+                  - button "Mark as in-progress" [ref=e180]:
+                    - img [ref=e181]
+                  - generic [ref=e183]:
+                    - heading "Low priority task - test completion circle" [level=3] [ref=e184]
+                    - group "Task metadata" [ref=e185]:
+                      - 'status "Due date: 2025-11-29" [ref=e186]':
+                        - img [ref=e187]
+                        - generic [ref=e189]: 2025-11-29
+                      - 'status "Priority: low" [ref=e190]':
+                        - generic [ref=e192]: L
+                      - 'status "Project: Uncategorized" [ref=e193]':
+                        - 'img "Project: Uncategorized" [ref=e194]':
+                          - generic [ref=e195]: 📁
+                  - group "Task actions" [ref=e196]:
+                    - button "Start Pomodoro timer for this task" [ref=e197]:
+                      - img [ref=e198]
+                    - button "Edit this task" [ref=e200]:
+                      - img [ref=e201]
+              - 'button "Task: No priority task - test completion circle, pending, priority medium" [ref=e205] [cursor=pointer]':
+                - generic [ref=e206]:
+                  - button "Mark as in-progress" [ref=e207]:
+                    - img [ref=e208]
+                  - generic [ref=e210]:
+                    - heading "No priority task - test completion circle" [level=3] [ref=e211]
+                    - group "Task metadata" [ref=e212]:
+                      - 'status "Due date: 2025-11-29" [ref=e213]':
+                        - img [ref=e214]
+                        - generic [ref=e216]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e217]':
+                        - generic [ref=e219]: M
+                      - 'status "Project: Uncategorized" [ref=e220]':
+                        - 'img "Project: Uncategorized" [ref=e221]':
+                          - generic [ref=e222]: 📁
+                  - group "Task actions" [ref=e223]:
+                    - button "Start Pomodoro timer for this task" [ref=e224]:
+                      - img [ref=e225]
+                    - button "Edit this task" [ref=e227]:
+                      - img [ref=e228]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e232] [cursor=pointer]':
+                - generic [ref=e233]:
+                  - button "Mark as in-progress" [ref=e234]:
+                    - img [ref=e235]
+                  - generic [ref=e237]:
+                    - heading "Test Task" [level=3] [ref=e238]
+                    - group "Task metadata" [ref=e239]:
+                      - 'status "Due date: 2025-11-29" [ref=e240]':
+                        - img [ref=e241]
+                        - generic [ref=e243]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e244]':
+                        - generic [ref=e246]: M
+                      - 'status "Project: Uncategorized" [ref=e247]':
+                        - 'img "Project: Uncategorized" [ref=e248]':
+                          - generic [ref=e249]: 📁
+                  - group "Task actions" [ref=e250]:
+                    - button "Start Pomodoro timer for this task" [ref=e251]:
+                      - img [ref=e252]
+                    - button "Edit this task" [ref=e254]:
+                      - img [ref=e255]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e259] [cursor=pointer]':
+                - generic [ref=e260]:
+                  - button "Mark as in-progress" [ref=e261]:
+                    - img [ref=e262]
+                  - generic [ref=e264]:
+                    - heading "Test Task" [level=3] [ref=e265]
+                    - group "Task metadata" [ref=e266]:
+                      - 'status "Due date: 2025-11-29" [ref=e267]':
+                        - img [ref=e268]
+                        - generic [ref=e270]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e271]':
+                        - generic [ref=e273]: M
+                      - 'status "Project: Uncategorized" [ref=e274]':
+                        - 'img "Project: Uncategorized" [ref=e275]':
+                          - generic [ref=e276]: 📁
+                  - group "Task actions" [ref=e277]:
+                    - button "Start Pomodoro timer for this task" [ref=e278]:
+                      - img [ref=e279]
+                    - button "Edit this task" [ref=e281]:
+                      - img [ref=e282]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e286] [cursor=pointer]':
+                - generic [ref=e287]:
+                  - button "Mark as in-progress" [ref=e288]:
+                    - img [ref=e289]
+                  - generic [ref=e291]:
+                    - heading "Test Task" [level=3] [ref=e292]
+                    - group "Task metadata" [ref=e293]:
+                      - 'status "Due date: 2025-11-29" [ref=e294]':
+                        - img [ref=e295]
+                        - generic [ref=e297]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e298]':
+                        - generic [ref=e300]: M
+                      - 'status "Project: Uncategorized" [ref=e301]':
+                        - 'img "Project: Uncategorized" [ref=e302]':
+                          - generic [ref=e303]: 📁
+                  - group "Task actions" [ref=e304]:
+                    - button "Start Pomodoro timer for this task" [ref=e305]:
+                      - img [ref=e306]
+                    - button "Edit this task" [ref=e308]:
+                      - img [ref=e309]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e313] [cursor=pointer]':
+                - generic [ref=e314]:
+                  - button "Mark as in-progress" [ref=e315]:
+                    - img [ref=e316]
+                  - generic [ref=e318]:
+                    - heading "Test Task" [level=3] [ref=e319]
+                    - group "Task metadata" [ref=e320]:
+                      - 'status "Due date: 2025-11-29" [ref=e321]':
+                        - img [ref=e322]
+                        - generic [ref=e324]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e325]':
+                        - generic [ref=e327]: M
+                      - 'status "Project: Uncategorized" [ref=e328]':
+                        - 'img "Project: Uncategorized" [ref=e329]':
+                          - generic [ref=e330]: 📁
+                  - group "Task actions" [ref=e331]:
+                    - button "Start Pomodoro timer for this task" [ref=e332]:
+                      - img [ref=e333]
+                    - button "Edit this task" [ref=e335]:
+                      - img [ref=e336]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e340] [cursor=pointer]':
+                - generic [ref=e341]:
+                  - button "Mark as in-progress" [ref=e342]:
+                    - img [ref=e343]
+                  - generic [ref=e345]:
+                    - heading "Test Task" [level=3] [ref=e346]
+                    - group "Task metadata" [ref=e347]:
+                      - 'status "Due date: 2025-11-29" [ref=e348]':
+                        - img [ref=e349]
+                        - generic [ref=e351]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e352]':
+                        - generic [ref=e354]: M
+                      - 'status "Project: Uncategorized" [ref=e355]':
+                        - 'img "Project: Uncategorized" [ref=e356]':
+                          - generic [ref=e357]: 📁
+                  - group "Task actions" [ref=e358]:
+                    - button "Start Pomodoro timer for this task" [ref=e359]:
+                      - img [ref=e360]
+                    - button "Edit this task" [ref=e362]:
+                      - img [ref=e363]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e367] [cursor=pointer]':
+                - generic [ref=e368]:
+                  - button "Mark as in-progress" [ref=e369]:
+                    - img [ref=e370]
+                  - generic [ref=e372]:
+                    - heading "Test Task" [level=3] [ref=e373]
+                    - group "Task metadata" [ref=e374]:
+                      - 'status "Due date: 2025-11-29" [ref=e375]':
+                        - img [ref=e376]
+                        - generic [ref=e378]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e379]':
+                        - generic [ref=e381]: M
+                      - 'status "Project: Uncategorized" [ref=e382]':
+                        - 'img "Project: Uncategorized" [ref=e383]':
+                          - generic [ref=e384]: 📁
+                  - group "Task actions" [ref=e385]:
+                    - button "Start Pomodoro timer for this task" [ref=e386]:
+                      - img [ref=e387]
+                    - button "Edit this task" [ref=e389]:
+                      - img [ref=e390]
+              - 'button "Task: sdfgsdfg, pending, priority medium" [ref=e394] [cursor=pointer]':
+                - generic [ref=e395]:
+                  - button "Mark as in-progress" [ref=e396]:
+                    - img [ref=e397]
+                  - generic [ref=e399]:
+                    - heading "sdfgsdfg" [level=3] [ref=e400]
+                    - group "Task metadata" [ref=e401]:
+                      - 'status "Due date: 2025-11-29" [ref=e402]':
+                        - img [ref=e403]
+                        - generic [ref=e405]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e406]':
+                        - generic [ref=e408]: M
+                      - 'status "Project: Uncategorized" [ref=e409]':
+                        - 'img "Project: Uncategorized" [ref=e410]':
+                          - generic [ref=e411]: 📁
+                  - group "Task actions" [ref=e412]:
+                    - button "Start Pomodoro timer for this task" [ref=e413]:
+                      - img [ref=e414]
+                    - button "Edit this task" [ref=e416]:
+                      - img [ref=e417]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e421] [cursor=pointer]':
+                - generic [ref=e422]:
+                  - button "Mark as in-progress" [ref=e423]:
+                    - img [ref=e424]
+                  - generic [ref=e426]:
+                    - heading "Test Task" [level=3] [ref=e427]
+                    - group "Task metadata" [ref=e428]:
+                      - 'status "Due date: 2025-11-29" [ref=e429]':
+                        - img [ref=e430]
+                        - generic [ref=e432]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e433]':
+                        - generic [ref=e435]: M
+                      - 'status "Project: Uncategorized" [ref=e436]':
+                        - 'img "Project: Uncategorized" [ref=e437]':
+                          - generic [ref=e438]: 📁
+                  - group "Task actions" [ref=e439]:
+                    - button "Start Pomodoro timer for this task" [ref=e440]:
+                      - img [ref=e441]
+                    - button "Edit this task" [ref=e443]:
+                      - img [ref=e444]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e448] [cursor=pointer]':
+                - generic [ref=e449]:
+                  - button "Mark as in-progress" [ref=e450]:
+                    - img [ref=e451]
+                  - generic [ref=e453]:
+                    - heading "Test Task" [level=3] [ref=e454]
+                    - group "Task metadata" [ref=e455]:
+                      - 'status "Due date: 2025-11-29" [ref=e456]':
+                        - img [ref=e457]
+                        - generic [ref=e459]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e460]':
+                        - generic [ref=e462]: M
+                      - 'status "Project: Uncategorized" [ref=e463]':
+                        - 'img "Project: Uncategorized" [ref=e464]':
+                          - generic [ref=e465]: 📁
+                  - group "Task actions" [ref=e466]:
+                    - button "Start Pomodoro timer for this task" [ref=e467]:
+                      - img [ref=e468]
+                    - button "Edit this task" [ref=e470]:
+                      - img [ref=e471]
+              - 'button "Task: Test Task, pending, priority medium" [ref=e475] [cursor=pointer]':
+                - generic [ref=e476]:
+                  - button "Mark as in-progress" [ref=e477]:
+                    - img [ref=e478]
+                  - generic [ref=e480]:
+                    - heading "Test Task" [level=3] [ref=e481]
+                    - group "Task metadata" [ref=e482]:
+                      - 'status "Due date: 2025-11-29" [ref=e483]':
+                        - img [ref=e484]
+                        - generic [ref=e486]: 2025-11-29
+                      - 'status "Priority: medium" [ref=e487]':
+                        - generic [ref=e489]: M
+                      - 'status "Project: Uncategorized" [ref=e490]':
+                        - 'img "Project: Uncategorized" [ref=e491]':
+                          - generic [ref=e492]: 📁
+                  - group "Task actions" [ref=e493]:
+                    - button "Start Pomodoro timer for this task" [ref=e494]:
+                      - img [ref=e495]
+                    - button "Edit this task" [ref=e497]:
+                      - img [ref=e498]
+          - generic [ref=e502]:
+            - generic [ref=e503]:
+              - generic [ref=e504]:
+                - generic [ref=e505]: In Progress
+                - generic [ref=e506]: "1"
+              - button "Add task to In Progress" [ref=e507] [cursor=pointer]:
+                - img [ref=e508]
+            - 'button "Task: Implement enhanced resize handles for custom groups, pending, priority medium" [ref=e510] [cursor=pointer]':
+              - generic [ref=e511]:
+                - button "Mark as done" [ref=e512]:
+                  - img [ref=e513]
+                - generic [ref=e518]:
+                  - heading "Implement enhanced resize handles for custom groups" [level=3] [ref=e519]
+                  - group "Task metadata" [ref=e520]:
+                    - 'status "Due date: 2025-11-29" [ref=e521]':
+                      - img [ref=e522]
+                      - generic [ref=e524]: 2025-11-29
+                    - 'status "Priority: medium" [ref=e525]':
+                      - generic [ref=e527]: M
+                    - 'status "Project: Uncategorized" [ref=e528]':
+                      - 'img "Project: Uncategorized" [ref=e529]':
+                        - generic [ref=e530]: 📁
+                - group "Task actions" [ref=e531]:
+                  - button "Start Pomodoro timer for this task" [ref=e532]:
+                    - img [ref=e533]
+                  - button "Edit this task" [ref=e535]:
+                    - img [ref=e536]
+          - generic [ref=e541]:
+            - generic [ref=e542]:
+              - generic [ref=e543]: Backlog
+              - generic [ref=e544]: "0"
+            - button "Add task to Backlog" [ref=e545] [cursor=pointer]:
+              - img [ref=e546]
+          - generic [ref=e549]:
+            - generic [ref=e550]:
+              - generic [ref=e551]: On Hold
+              - generic [ref=e552]: "0"
+            - button "Add task to On Hold" [ref=e553] [cursor=pointer]:
+              - img [ref=e554]
+  - button "🔧" [ref=e556] [cursor=pointer]
+```

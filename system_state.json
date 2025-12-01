@@ -1,0 +1,646 @@
+{
+  "tech_stack": {
+    "package.json": {
+      "framework": "Vue.js",
+      "dependencies": {
+        "@types/pouchdb": "^6.4.2",
+        "@vue-flow/background": "^1.3.2",
+        "@vue-flow/controls": "^1.1.3",
+        "@vue-flow/core": "^1.47.0",
+        "@vue-flow/minimap": "^1.5.4",
+        "@vue-flow/node-resizer": "^1.5.0",
+        "@vueuse/core": "^10.11.1",
+        "@vueuse/gesture": "^2.0.0",
+        "chokidar": "^4.0.3",
+        "crypto-js": "^4.2.0",
+        "date-fns": "^3.6.0",
+        "lucide-vue-next": "^0.294.0",
+        "naive-ui": "^2.43.1",
+        "pinia": "^2.1.7",
+        "pouchdb": "^7.2.2",
+        "pouchdb-browser": "^9.0.0",
+        "uuid": "^9.0.1",
+        "vue": "^3.4.0",
+        "vue-cal": "^4.10.2",
+        "vue-i18n": "^9.14.5",
+        "vue-router": "^4.2.5",
+        "vuedraggable": "^4.1.0"
+      },
+      "dev_dependencies": {
+        "@intlify/unplugin-vue-i18n": "^11.0.1",
+        "@storybook/addon-a11y": "^8.6.14",
+        "@storybook/addon-docs": "^8.6.14",
+        "@storybook/addon-onboarding": "^8.6.14",
+        "@storybook/vue3-vite": "^8.6.14",
+        "@tailwindcss/aspect-ratio": "^0.4.2",
+        "@tailwindcss/forms": "^0.5.7",
+        "@tailwindcss/typography": "^0.5.10",
+        "@types/crypto-js": "^4.2.2",
+        "@types/node": "^24.8.1",
+        "@types/uuid": "^9.0.7",
+        "@typescript-eslint/eslint-plugin": "^6.14.0",
+        "@typescript-eslint/parser": "^6.14.0",
+        "@vitejs/plugin-vue": "^6.0.2",
+        "@vitest/browser": "3.2.4",
+        "@vitest/coverage-v8": "3.2.4",
+        "@vue/eslint-config-typescript": "^12.0.0",
+        "autoprefixer": "^10.4.16",
+        "chokidar-cli": "^3.0.0",
+        "concurrently": "^9.2.1",
+        "dotenv": "^17.2.3",
+        "eslint": "^8.55.0",
+        "eslint-plugin-vue": "^9.19.2",
+        "nodemon": "^3.1.11",
+        "postcss": "^8.4.32",
+        "storybook": "^8.6.14",
+        "tailwindcss": "^3.4.0",
+        "tsc-watch": "^7.2.0",
+        "typescript": "^5.9.3",
+        "vite": "^7.2.4",
+        "vite-plugin-node-polyfills": "^0.24.0",
+        "vitest": "^3.2.4",
+        "vue-tsc": "^3.1.5"
+      },
+      "scripts": {
+        "dev": "vite --host 0.0.0.0 --port 5546",
+        "kill": "bash kill-pomo.sh",
+        "build": "npx vite build --mode production",
+        "preview": "vite preview",
+        "tauri": "tauri",
+        "test": "vitest",
+        "test:watch": "vitest --ui",
+        "test:safety": "vitest run tests/safety/",
+        "watch:ts": "nodemon --watch src --ext ts,vue --exec \"npx tsc --noEmit --skipLibCheck\"",
+        "lint": "eslint src --max-warnings 0",
+        "lint:fix": "eslint src --fix",
+        "validate:imports": "node scripts/validate-imports.js",
+        "validate:css": "node scripts/validate-css.js",
+        "validate:dependencies": "vitest run tests/safety/dependencies.test.ts",
+        "validate:all": "npm run validate:imports && npm run validate:css && npm run validate:dependencies && npm run lint",
+        "validate:root": "bash scripts/validate-root-structure.sh",
+        "validate:file-organization": "node scripts/file-organizer.cjs stats",
+        "validate:comprehensive": "npm run validate:root && npm run validate:file-organization && npm run validate:all",
+        "file:organize": "node scripts/file-organizer.cjs organize",
+        "file:organize:all": "node scripts/file-organizer.cjs organize . && node scripts/file-organizer.cjs organize scripts && node scripts/file-organizer.cjs organize .claude",
+        "file:watch": "node scripts/file-organizer.cjs watch",
+        "file:stats": "node scripts/file-organizer.cjs stats",
+        "file:cleanup": "bash scripts/cleanup-system-files.sh && npm run file:organize",
+        "file:install-hooks": "bash scripts/install-git-hooks.sh",
+        "file:uninstall-hooks": "rm -f .git/hooks/pre-commit .git/hooks/pre-commit.backup",
+        "generate-tokens": "node scripts/generate-tokens.js",
+        "storybook": "storybook dev -p 6006",
+        "build-storybook": "storybook build",
+        "skills:telemetry-report": "node scripts/skills-telemetry.cjs report",
+        "skills:telemetry-export": "node scripts/skills-telemetry.cjs export",
+        "skills:telemetry-reset": "node scripts/skills-telemetry.cjs reset",
+        "skills:telemetry-status": "node scripts/skills-telemetry.cjs status",
+        "skills:telemetry-analyze": "node scripts/skills-telemetry.cjs analyze",
+        "skills:init-instrumentation": "echo '\u2705 Skill telemetry infrastructure initialized' && echo '\ud83d\udcca Data will be collected to: docs/skill-telemetry/usage-events.jsonl' && echo '\ud83d\udd27 Set SKILLS_TELEMETRY_ENABLED=false to disable collection'",
+        "skills:consolidation-analyze": "node scripts/skill-consolidation-analyzer.cjs",
+        "skills:consolidation-execute": "node scripts/skill-consolidation-executor.cjs",
+        "telemetry:health": "node scripts/verify-telemetry-system.cjs",
+        "telemetry:watch": "node scripts/telemetry-watch.cjs",
+        "telemetry:daily": "node scripts/daily-telemetry-summary.cjs",
+        "consolidation:check-progress": "node scripts/phase-progress-checker.cjs",
+        "consolidation:sync-tasks": "node scripts/sync-consolidation-to-markdown.cjs",
+        "catalog:generate": "node scripts/update-skill-catalog.cjs",
+        "catalog:update": "node scripts/update-skill-catalog.cjs",
+        "catalog:docs": "node scripts/build-documentation-graph.cjs",
+        "skill-logs": "node .claude/skill-logger.js",
+        "skill-logs:recent": "node .claude/skill-logger.js recent",
+        "skill-logs:metrics": "node .claude/skill-logger.js metrics",
+        "skill-logs:analyze": "node .claude/utils/log-analyzer.js patterns",
+        "skill-logs:performance": "node .claude/utils/log-analyzer.js performance",
+        "skill-logs:export": "node .claude/utils/log-analyzer.js export json 7",
+        "skill-logs:cleanup": "node .claude/skill-logger.js cleanup",
+        "skill-logs:server": "node .claude/mcp-logging-server/server.js",
+        "skill-logs:start": "node start-skill-monitoring-simple.js",
+        "skill-logs:dashboard": "node start-dashboard-server.js",
+        "skill-logs:monitor": "node simple-skill-monitor.js",
+        "skill-monitor": "node simple-skill-monitor.js",
+        "skill-dashboard": "node simple-skill-monitor.js",
+        "skill-monitor:full": "node start-skill-monitoring-simple.js",
+        "skills:dashboard": "cd .claude/skills-management && npm run dev -- --port 6008",
+        "backup-tasks": "node scripts/backup-tasks.cjs",
+        "restore-tasks": "node scripts/restore-tasks.cjs",
+        "checkpoint": "bash scripts/checkpoint-with-backup.sh",
+        "backups:list": "node scripts/restore-tasks.cjs --list",
+        "backups:validate": "node scripts/restore-tasks.cjs",
+        "clean:preview": "node scripts/clean-root.js --dry-run",
+        "clean:tests": "node scripts/clean-root.js --type=tests",
+        "clean:builds": "node scripts/clean-root.js --type=builds",
+        "clean:cache": "node scripts/clean-root.js --type=cache",
+        "clean:dev": "node scripts/clean-root.js --type=dev",
+        "clean:all": "node scripts/clean-root.js --type=all",
+        "clean:organize": "node scripts/comprehensive-root-cleanup.js",
+        "test:user-flows": "node .claude/skills/user-flow-testing-skills/run-skill.mjs",
+        "test:task-flows": "npx playwright test tests/user-flows/task-management.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs",
+        "test:timer-flows": "npx playwright test tests/user-flows/timer-workflows.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs",
+        "test:navigation-flows": "npx playwright test tests/user-flows/navigation.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs",
+        "test:canvas-flows": "npx playwright test tests/user-flows/canvas-interactions.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs",
+        "test:calendar-flows": "npx playwright test tests/user-flows/calendar-operations.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs",
+        "test:advanced-flows": "npx playwright test tests/user-flows/advanced-features.spec.js --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs",
+        "test:user-flows:debug": "npx playwright test tests/user-flows/ --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs --debug",
+        "test:user-flows:ui": "npx playwright test tests/user-flows/ --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs --ui",
+        "test:user-flows:report": "npx playwright test tests/user-flows/ --config=.claude/skills/user-flow-testing-skills/config/playwright.config.cjs --reporter=html",
+        "tm:status": "cat task-management/00-START.md",
+        "kanban": "open task-management/kanban-ui.html",
+        "tm:ui": "open task-management/kanban-ui.html",
+        "tm:kanban": "vim task-management/kanban.md",
+        "tm:ideas": "vim task-management/ideas.md",
+        "tm:roadmap": "vim task-management/planning/ROADMAP.md",
+        "tm:arch": "vim task-management/planning/ARCHITECTURE.md",
+        "tm:archive": "vim task-management/archive.md",
+        "mcp:setup": "bash scripts/check-wsl2-swap.sh && node scripts/validate-mcp-startup.cjs",
+        "mcp:cleanup": "bash scripts/cleanup-mcp-zombies.sh",
+        "mcp:check-health": "bash scripts/check-wsl2-swap.sh",
+        "mcp:monitor": "node src/mcp-health-monitor.cjs",
+        "mcp:monitor:watch": "nodemon --watch src src/mcp-health-monitor.cjs",
+        "mcp:crash-monitor": "node src/mcp-crash-monitor-fixed.cjs start",
+        "mcp:crash-check": "node src/mcp-crash-monitor-fixed.cjs check",
+        "mcp:crash-report": "node src/mcp-crash-monitor-fixed.cjs report",
+        "mcp:crash-analysis": "node scripts/analyze-mcp-crashes.cjs",
+        "mcp:restart": "bash scripts/cleanup-mcp-zombies.sh && bash scripts/check-wsl2-swap.sh",
+        "node-version": "node --version",
+        "check-engines": "node --version && npm --version",
+        "type-check:watch": "concurrently -n \"VUE,TSC\" -c \"magenta,blue\" --kill-others-on-fail \"vue-tsc --noEmit --watch\" \"tsc --noEmit --watch --pretty\"",
+        "type-check:track": "chokidar 'src/**/*.ts' 'src/**/*.vue' --command 'tsc --noEmit --pretty > .typescript-errors.log 2>&1 || true' --initial --silent",
+        "conflict:analyze": "node scripts/analyze-conflicts.cjs",
+        "conflict:baseline": "node scripts/analyze-conflicts.cjs > docs/conflict-systems-resolution/baseline-$(date +%Y%m%d).txt",
+        "conflict:hooks": "bash scripts/install-git-hooks.sh",
+        "test:conflict-system": "vitest run --testNamePattern='conflict|Conflict'"
+      },
+      "engines": {
+        "node": ">=20.19.0",
+        "npm": ">=10.0.0"
+      },
+      "bundler": "Vite"
+    },
+    "package-lock.json": {
+      "lockfile_version": 3,
+      "dependencies_count": 0,
+      "packages_count": 890
+    }
+  },
+  "project_structure": {
+    "src": {
+      "files": [
+        "mcp-health-monitor.cjs",
+        "mcp-crash-monitor.cjs",
+        "main.ts",
+        "main.ts.backup",
+        "App.vue"
+      ],
+      "subdirectories": [
+        "config",
+        "database",
+        "router",
+        "stores",
+        "utils",
+        "i18n",
+        "skills",
+        "stories",
+        "components",
+        "views",
+        "test",
+        "types",
+        "assets",
+        "services",
+        "composables"
+      ],
+      "file_count": 5,
+      "subdir_count": 15
+    },
+    "public": {
+      "files": [
+        "check-styles.html",
+        "user-backup.json",
+        "task-recovery.html",
+        "restore-backup.html",
+        "tasks.json"
+      ],
+      "subdirectories": [],
+      "file_count": 5,
+      "subdir_count": 0
+    },
+    "tests": {
+      "files": [
+        "mcp-dashboard.html",
+        "debug-undo-redo-errors.spec.ts",
+        "storybook-color-capture.spec.ts",
+        "e2e-task-linking.spec.ts",
+        "e2e-comprehensive-functionality.spec.ts",
+        "inspect-border-alignment.spec.ts",
+        "verify-layout.spec.ts",
+        "canvas-resize-debug.spec.ts",
+        "canvas-load-debug.spec.ts",
+        "e2e-task-linking-simple.spec.ts",
+        "groups-vs-sections-phase1.spec.ts",
+        "inspect-canvas-toolbar.spec.ts",
+        "verify-storybook-v2.spec.ts",
+        "simple-kanban-check.spec.ts",
+        "storybook-color-stories.spec.ts",
+        "app-header-core.spec.ts",
+        "app-header-extraction.spec.ts",
+        "skill-dashboard.html",
+        "app-header-smoke.spec.ts",
+        "reproduce-user-errors.spec.ts"
+      ],
+      "subdirectories": [
+        "screenshots",
+        "integration",
+        "utils",
+        "unit",
+        "phase2",
+        "manual",
+        "safety",
+        "debug"
+      ],
+      "file_count": 40,
+      "subdir_count": 8
+    },
+    "docs": {
+      "files": [
+        "MASTER_PLAN.md"
+      ],
+      "subdirectories": [
+        "reports",
+        "conflict-systems-resolution",
+        "archive",
+        "\ud83d\udc1b debug"
+      ],
+      "file_count": 1,
+      "subdir_count": 4
+    }
+  },
+  "architecture": {
+    "api_endpoints": [
+      "POST /mcp/skill-usage",
+      "GET /api/metrics",
+      "GET /api/events",
+      "GET /api/sessions",
+      "GET /api/skill-router",
+      "GET /api/usage-summary",
+      "GET /health",
+      "POST /api/enable-mcp-logging",
+      "CUSTOMELEMENT my-element",
+      "IMPORT [^"
+    ],
+    "database_usage": [
+      "couchdb",
+      "firebase",
+      "postgresql",
+      "mysql",
+      "sqlite",
+      "redis",
+      "mongodb",
+      "supabase"
+    ],
+    "auth_methods": [
+      "Session",
+      "JWT",
+      "Cognito",
+      "OAuth",
+      "Basic Auth",
+      "API Key",
+      "Firebase Auth",
+      "Auth0"
+    ],
+    "state_management": [
+      "Pinia",
+      "Vuex",
+      "Context API",
+      "Recoil",
+      "Redux",
+      "MobX",
+      "Zustand",
+      "Valtio",
+      "Jotai"
+    ],
+    "testing_framework": [
+      "Vitest",
+      "Playwright",
+      "Jest",
+      "Mocha",
+      "Unittest",
+      "Jasmine",
+      "Pytest",
+      "Cypress",
+      "Testing Library"
+    ],
+    "deployment_config": [
+      "node_modules/highlight.js/lib/languages/puppet.js",
+      ".claude/skills-management/node_modules/highlight.js/es/languages/dockerfile.js",
+      ".claude/skills-management/node_modules/highlight.js/es/languages/puppet.js",
+      ".claude/skills-management/node_modules/highlight.js/lib/languages/puppet.js",
+      ".claude/skills-management/node_modules/@vicons/tabler/Helmet.d.ts",
+      "node_modules/highlight.js/es/languages/puppet.js.js",
+      ".claude/skills-management/node_modules/highlight.js/es/languages/puppet.js.js",
+      ".claude/skills-management/node_modules/@vicons/tabler/Helmet.js",
+      ".claude/skills-management/node_modules/@vicons/tabler/lib/Helmet.d.ts",
+      ".claude/skills-management/node_modules/highlight.js/lib/languages/puppet.js.js",
+      "node_modules/highlight.js/lib/languages/puppet.js.js",
+      "node_modules/highlight.js/es/languages/puppet.js",
+      "node_modules/highlight.js/lib/languages/dockerfile.js",
+      "node_modules/highlight.js/es/languages/dockerfile.js",
+      ".claude/skills-management/node_modules/@vicons/tabler/es/Helmet.d.ts",
+      ".claude/skills-management/node_modules/highlight.js/es/languages/dockerfile.js.js",
+      "node_modules/highlight.js/es/languages/dockerfile.js.js",
+      ".claude/skills-management/node_modules/@vicons/tabler/es/Helmet.js",
+      ".claude/skills-management/node_modules/highlight.js/lib/languages/dockerfile.js",
+      ".claude/skills-management/node_modules/@vicons/tabler/lib/Helmet.js",
+      "node_modules/highlight.js/lib/languages/dockerfile.js.js",
+      ".claude/skills-management/node_modules/highlight.js/lib/languages/dockerfile.js.js"
+    ]
+  },
+  "dependencies": {},
+  "features": [
+    {
+      "name": "A0e",
+      "file": "node_modules/@vitest/browser/dist/client/__vitest__/assets/index-D_ryMEPs.js",
+      "type": "general"
+    },
+    {
+      "name": "A11yParameters",
+      "file": "node_modules/@storybook/addon-a11y/dist/preview.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "A11yParameters",
+      "file": "node_modules/@storybook/addon-a11y/dist/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "A11yTest",
+      "file": "node_modules/@storybook/addon-a11y/dist/preview.d.ts",
+      "type": "testing"
+    },
+    {
+      "name": "ACMRandom",
+      "file": "node_modules/leveldown/deps/snappy/snappy/snappy-test.h",
+      "type": "general"
+    },
+    {
+      "name": "AMPMMidnightParser",
+      "file": ".claude/skills-management/node_modules/date-fns/parse/_lib/parsers/AMPMMidnightParser.js",
+      "type": "general"
+    },
+    {
+      "name": "AMPMMidnightParser",
+      "file": ".claude/skills-management/node_modules/date-fns/parse/_lib/parsers/AMPMMidnightParser.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AMPMMidnightParser",
+      "file": "node_modules/naive-ui/node_modules/date-fns/parse/_lib/parsers/AMPMMidnightParser.js",
+      "type": "general"
+    },
+    {
+      "name": "AMPMMidnightParser",
+      "file": "node_modules/naive-ui/node_modules/date-fns/parse/_lib/parsers/AMPMMidnightParser.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AMPMMidnightParser",
+      "file": "node_modules/date-fns/parse/_lib/parsers/AMPMMidnightParser.js",
+      "type": "general"
+    },
+    {
+      "name": "AMPMMidnightParser",
+      "file": "node_modules/date-fns/parse/_lib/parsers/AMPMMidnightParser.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AMPMParser",
+      "file": ".claude/skills-management/node_modules/date-fns/parse/_lib/parsers/AMPMParser.js",
+      "type": "general"
+    },
+    {
+      "name": "AMPMParser",
+      "file": ".claude/skills-management/node_modules/date-fns/parse/_lib/parsers/AMPMParser.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AMPMParser",
+      "file": "node_modules/naive-ui/node_modules/date-fns/parse/_lib/parsers/AMPMParser.js",
+      "type": "general"
+    },
+    {
+      "name": "AMPMParser",
+      "file": "node_modules/naive-ui/node_modules/date-fns/parse/_lib/parsers/AMPMParser.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AMPMParser",
+      "file": "node_modules/date-fns/parse/_lib/parsers/AMPMParser.js",
+      "type": "general"
+    },
+    {
+      "name": "AMPMParser",
+      "file": "node_modules/date-fns/parse/_lib/parsers/AMPMParser.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "API",
+      "file": "node_modules/eslint-plugin-vue/lib/rules/component-api-style.js",
+      "type": "api"
+    },
+    {
+      "name": "APIs",
+      "file": "node_modules/react-dom/cjs/react-dom-server-legacy.browser.development.js",
+      "type": "api"
+    },
+    {
+      "name": "APIs",
+      "file": "node_modules/react-dom/cjs/react-dom-server.edge.development.js",
+      "type": "api"
+    },
+    {
+      "name": "APIs",
+      "file": "node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js",
+      "type": "api"
+    },
+    {
+      "name": "APIs",
+      "file": "node_modules/react-dom/cjs/react-dom-server.node.development.js",
+      "type": "api"
+    },
+    {
+      "name": "APIs",
+      "file": "node_modules/react-dom/cjs/react-dom-server.browser.development.js",
+      "type": "api"
+    },
+    {
+      "name": "APIs",
+      "file": "node_modules/react-dom/cjs/react-dom-server.bun.development.js",
+      "type": "api"
+    },
+    {
+      "name": "AProps",
+      "file": ".claude/skills-management/node_modules/naive-ui/lib/typography/src/a.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AProps",
+      "file": ".claude/skills-management/node_modules/naive-ui/es/typography/src/a.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AProps",
+      "file": "node_modules/naive-ui/lib/typography/src/a.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AProps",
+      "file": "node_modules/naive-ui/es/typography/src/a.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIAAbstractRole",
+      "file": "node_modules/@types/aria-query/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIACompositeWidgetRole",
+      "file": "node_modules/@vitest/browser/aria-role.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIADocumentStructureRole",
+      "file": "node_modules/@vitest/browser/aria-role.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIALandmarkRole",
+      "file": "node_modules/@vitest/browser/aria-role.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIALiveRegionRole",
+      "file": "node_modules/@vitest/browser/aria-role.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIAPropertyDefinition",
+      "file": "node_modules/@types/aria-query/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIAPropertyMap",
+      "file": "node_modules/@types/aria-query/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIARole",
+      "file": "node_modules/@vitest/browser/aria-role.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIARoleDefinition",
+      "file": "node_modules/@types/aria-query/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIARoleDefinitionKey",
+      "file": "node_modules/@types/aria-query/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIARoleRelation",
+      "file": "node_modules/@types/aria-query/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIARoleRelationConcept",
+      "file": "node_modules/@types/aria-query/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIARoleRelationConceptAttribute",
+      "file": "node_modules/@types/aria-query/index.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIAUncategorizedRole",
+      "file": "node_modules/@vitest/browser/aria-role.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIAWidgetRole",
+      "file": "node_modules/@vitest/browser/aria-role.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARIAWindowRole",
+      "file": "node_modules/@vitest/browser/aria-role.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "ARRAY",
+      "file": "node_modules/@ungap/structured-clone/esm/types.js",
+      "type": "general"
+    },
+    {
+      "name": "AST",
+      "file": ".claude/skills-management/node_modules/minimatch/dist/commonjs/ast.js",
+      "type": "general"
+    },
+    {
+      "name": "AST",
+      "file": ".claude/skills-management/node_modules/minimatch/dist/commonjs/ast.d.ts",
+      "type": "general"
+    },
+    {
+      "name": "AST",
+      "file": ".claude/skills-management/node_modules/minimatch/dist/commonjs/index.js",
+      "type": "general"
+    },
+    {
+      "name": "AST",
+      "file": ".claude/skills-management/node_modules/minimatch/dist/esm/ast.js",
+      "type": "general"
+    },
+    {
+      "name": "AST",
+      "file": ".claude/skills-management/node_modules/minimatch/dist/esm/ast.d.ts",
+      "type": "general"
+    }
+  ],
+  "configuration": {
+    ".env": {
+      "file_size": 126,
+      "keys_count": 1,
+      "lines": 5
+    },
+    ".env.example": {
+      "file_size": 594,
+      "keys_count": 9,
+      "lines": 17
+    },
+    "tsconfig.json": {
+      "file_size": 963,
+      "keys_count": 23,
+      "lines": 37
+    },
+    "vite.config.ts": {
+      "file_size": 1548,
+      "keys_count": 1,
+      "lines": 67
+    },
+    "tailwind.config.js": {
+      "file_size": 22225,
+      "keys_count": 265,
+      "lines": 593
+    },
+    "postcss.config.js": {
+      "file_size": 80,
+      "keys_count": 0,
+      "lines": 6
+    }
+  },
+  "scan_metadata": {
+    "timestamp": "2025-11-29T16:57:08.256740",
+    "root_directory": "/home/noam/my-projects/Development/My-Dev/Productivity/pomo-flow",
+    "scanner_version": "1.0.0"
+  }
+}

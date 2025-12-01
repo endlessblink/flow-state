@@ -167,11 +167,9 @@ const getNestedName = (project: Project) => {
   return hierarchy.map(p => p.name).join(' / ')
 }
 
+// Use centralized count that respects active filters (smart view, status, hideDone)
 const getProjectTaskCount = (projectId: string): number => {
-  const directTasks = taskStore.tasks.filter(task => task.projectId === projectId).length
-  const childProjects = taskStore.projects.filter(p => p.parentId === projectId)
-  const childTasks = childProjects.reduce((sum, child) => sum + getProjectTaskCount(child.id), 0)
-  return directTasks + childTasks
+  return taskStore.getProjectTaskCount(projectId)
 }
 
 // Handle click outside to close dropdown

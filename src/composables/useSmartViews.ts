@@ -2,7 +2,7 @@
 // Single source of truth for all smart view filtering logic
 import type { Task } from '@/types/tasks'
 
-export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | null
+export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'above_my_tasks' | null
 
 /**
  * Centralized smart view filtering composable
@@ -11,34 +11,48 @@ export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in
 export const useSmartViews = () => {
 
   /**
+   * Get local date string (YYYY-MM-DD) - avoids timezone issues with toISOString()
+   */
+  const getLocalDateString = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  /**
    * Check if a task is due today
    */
   const isTodayTask = (task: Task): boolean => {
     if (task.status === 'done') return false
 
-    const todayStr = new Date().toISOString().split('T')[0]
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayStr = getLocalDateString(today)
 
-    // Check if task is due today
+    // Check if task is due today (compare date strings directly for consistency)
     if (task.dueDate) {
-      const dueDate = new Date(task.dueDate)
-      if (!isNaN(dueDate.getTime()) && dueDate.toISOString().split('T')[0] === todayStr) {
+      // dueDate is stored as YYYY-MM-DD string, compare directly
+      if (task.dueDate === todayStr) {
         return true
       }
     }
 
     // Check if task has instances scheduled for today
     if (task.instances && task.instances.length > 0) {
-      return task.instances.some(inst => {
+      if (task.instances.some(inst => {
         if (!inst || !inst.scheduledDate) return false
-        const instanceDate = new Date(inst.scheduledDate)
-        return !isNaN(instanceDate.getTime()) && instanceDate.toISOString().split('T')[0] === todayStr
-      })
+        // scheduledDate is stored as YYYY-MM-DD string, compare directly
+        return inst.scheduledDate === todayStr
+      })) {
+        return true
+      }
     }
 
     // Check legacy scheduled date for today
     if (task.scheduledDate) {
-      const scheduledDate = new Date(task.scheduledDate)
-      if (!isNaN(scheduledDate.getTime()) && scheduledDate.toISOString().split('T')[0] === todayStr) {
+      // scheduledDate is stored as YYYY-MM-DD string, compare directly
+      if (task.scheduledDate === todayStr) {
         return true
       }
     }
@@ -46,6 +60,17 @@ export const useSmartViews = () => {
     // Tasks currently in progress should be included in today filter
     if (task.status === 'in_progress') {
       return true
+    }
+
+    // NEW: Include tasks created today (for new tasks that haven't been scheduled yet)
+    if (task.createdAt) {
+      const createdDate = new Date(task.createdAt)
+      if (!isNaN(createdDate.getTime())) {
+        createdDate.setHours(0, 0, 0, 0)
+        if (createdDate.getTime() === today.getTime()) {
+          return true
+        }
+      }
     }
 
     return false
@@ -59,14 +84,14 @@ export const useSmartViews = () => {
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const todayStr = today.toISOString().split('T')[0]
+    const todayStr = getLocalDateString(today)
 
     // Calculate end of current week (Sunday)
     const weekEnd = new Date(today)
     const dayOfWeek = today.getDay()
     const daysUntilSunday = (7 - dayOfWeek) % 7 || 7 // If today is Sunday (0), daysUntilSunday = 7
     weekEnd.setDate(today.getDate() + daysUntilSunday)
-    const weekEndStr = weekEnd.toISOString().split('T')[0]
+    const weekEndStr = getLocalDateString(weekEnd)
 
     // Include tasks due within the current week (today through Sunday)
     if (task.dueDate) {
@@ -105,6 +130,18 @@ export const useSmartViews = () => {
     // Tasks currently in progress should be included in week filter
     if (task.status === 'in_progress') {
       return true
+    }
+
+    // Include tasks created today (for new tasks that haven't been scheduled yet)
+    // This ensures consistency with isTodayTask - tasks created today appear in both Today and This Week
+    if (task.createdAt) {
+      const createdDate = new Date(task.createdAt)
+      if (!isNaN(createdDate.getTime())) {
+        createdDate.setHours(0, 0, 0, 0)
+        if (createdDate.getTime() === today.getTime()) {
+          return true
+        }
+      }
     }
 
     return false

@@ -34,7 +34,9 @@ export function useCalendarDragCreate() {
   // Handle mouse down on time slots
   const handleSlotMouseDown = (event: MouseEvent, slot: TimeSlot) => {
     // Prevent if clicking on an event or resize handle
+    // Check both old (.calendar-event) and new (.slot-task) class names for compatibility
     if ((event.target as HTMLElement).closest('.calendar-event')) return
+    if ((event.target as HTMLElement).closest('.slot-task')) return
     if ((event.target as HTMLElement).classList.contains('resize-handle')) return
     if (event.button !== 0) return // Only left mouse button
 

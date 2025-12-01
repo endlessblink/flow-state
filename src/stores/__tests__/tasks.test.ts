@@ -56,9 +56,9 @@ describe('TaskStore', () => {
       expect(task.instances?.[0].duration).toBe(60)
     })
 
-    it('updates a task', () => {
+    it('updates a task', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Original' })
+      const task = await store.createTask({ title: 'Original' })
 
       store.updateTask(task.id, {
         title: 'Updated',
@@ -70,9 +70,9 @@ describe('TaskStore', () => {
       expect(updatedTask?.status).toBe('in_progress')
     })
 
-    it('deletes a task', () => {
+    it('deletes a task', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'To Delete' })
+      const task = await store.createTask({ title: 'To Delete' })
 
       expect(store.tasks.length).toBe(1)
 
@@ -81,9 +81,9 @@ describe('TaskStore', () => {
       expect(store.tasks.length).toBe(0)
     })
 
-    it('moves a task to different status', () => {
+    it('moves a task to different status', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Task', status: 'planned' })
+      const task = await store.createTask({ title: 'Task', status: 'planned' })
 
       store.moveTask(task.id, 'in_progress')
 
@@ -91,9 +91,9 @@ describe('TaskStore', () => {
       expect(movedTask?.status).toBe('in_progress')
     })
 
-    it('auto-archives completed tasks (removes from canvas)', () => {
+    it('auto-archives completed tasks (removes from canvas)', async () => {
       const store = useTaskStore()
-      const task = store.createTask({
+      const task = await store.createTask({
         title: 'Task',
         status: 'in_progress',
         canvasPosition: { x: 100, y: 100 },
@@ -110,9 +110,9 @@ describe('TaskStore', () => {
   })
 
   describe('Task Instance Management', () => {
-    it('creates a task instance', () => {
+    it('creates a task instance', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Test Task' })
+      const task = await store.createTask({ title: 'Test Task' })
 
       const instance = store.createTaskInstance(task.id, {
         scheduledDate: '2025-10-15',
@@ -129,9 +129,9 @@ describe('TaskStore', () => {
       expect(updatedTask?.instances?.length).toBe(1)
     })
 
-    it('updates a task instance', () => {
+    it('updates a task instance', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Test Task' })
+      const task = await store.createTask({ title: 'Test Task' })
       const instance = store.createTaskInstance(task.id, {
         scheduledDate: '2025-10-15',
         scheduledTime: '10:00'
@@ -150,9 +150,9 @@ describe('TaskStore', () => {
       expect(updatedInstance?.duration).toBe(90)
     })
 
-    it('deletes a task instance', () => {
+    it('deletes a task instance', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Test Task' })
+      const task = await store.createTask({ title: 'Test Task' })
       const instance = store.createTaskInstance(task.id, {
         scheduledDate: '2025-10-15',
         scheduledTime: '10:00'
@@ -168,9 +168,9 @@ describe('TaskStore', () => {
       expect(updatedTask?.instances?.length).toBe(0)
     })
 
-    it('supports multiple instances of same task', () => {
+    it('supports multiple instances of same task', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Recurring Task' })
+      const task = await store.createTask({ title: 'Recurring Task' })
 
       store.createTaskInstance(task.id, {
         scheduledDate: '2025-10-15',
@@ -221,10 +221,10 @@ describe('TaskStore', () => {
       expect(updated?.color).toBe('#00ff00')
     })
 
-    it('deletes a project and moves tasks to default project', () => {
+    it('deletes a project and moves tasks to default project', async () => {
       const store = useTaskStore()
       const project = store.createProject({ name: 'To Delete' })
-      const task = store.createTask({ title: 'Task', projectId: project.id })
+      const task = await store.createTask({ title: 'Task', projectId: project.id })
 
       store.deleteProject(project.id)
 
@@ -290,11 +290,11 @@ describe('TaskStore', () => {
       const project2 = store.createProject({ name: 'Project 2' })
 
       // Create tasks with delays to ensure unique IDs
-      const task1 = store.createTask({ title: 'Task 1', projectId: project1.id })
+      const task1 = await store.createTask({ title: 'Task 1', projectId: project1.id })
       await new Promise(resolve => setTimeout(resolve, 2))
-      const task2 = store.createTask({ title: 'Task 2', projectId: project1.id })
+      const task2 = await store.createTask({ title: 'Task 2', projectId: project1.id })
       await new Promise(resolve => setTimeout(resolve, 2))
-      const task3 = store.createTask({ title: 'Task 3', projectId: project2.id })
+      const task3 = await store.createTask({ title: 'Task 3', projectId: project2.id })
 
       // Verify unique IDs
       expect(task1.id).not.toBe(task2.id)
@@ -341,9 +341,9 @@ describe('TaskStore', () => {
   })
 
   describe('Subtask Management', () => {
-    it('creates a subtask', () => {
+    it('creates a subtask', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Parent Task' })
+      const task = await store.createTask({ title: 'Parent Task' })
 
       const subtask = store.createSubtask(task.id, {
         title: 'Subtask 1'
@@ -356,9 +356,9 @@ describe('TaskStore', () => {
       expect(updatedTask?.subtasks.length).toBe(1)
     })
 
-    it('updates a subtask', () => {
+    it('updates a subtask', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Parent Task' })
+      const task = await store.createTask({ title: 'Parent Task' })
       const subtask = store.createSubtask(task.id, { title: 'Original' })
 
       if (subtask) {
@@ -370,9 +370,9 @@ describe('TaskStore', () => {
       expect(updatedSubtask?.title).toBe('Updated')
     })
 
-    it('deletes a subtask', () => {
+    it('deletes a subtask', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Parent Task' })
+      const task = await store.createTask({ title: 'Parent Task' })
       const subtask = store.createSubtask(task.id, { title: 'Subtask' })
 
       if (subtask) {
@@ -483,54 +483,54 @@ describe('TaskStore', () => {
   })
 
   describe('Computed Properties', () => {
-    it('groups tasks by status correctly', () => {
+    it('groups tasks by status correctly', async () => {
       const store = useTaskStore()
 
-      store.createTask({ title: 'Planned 1', status: 'planned' })
-      store.createTask({ title: 'Planned 2', status: 'planned' })
-      store.createTask({ title: 'In Progress', status: 'in_progress' })
-      store.createTask({ title: 'Done', status: 'done' })
+      await store.createTask({ title: 'Planned 1', status: 'planned' })
+      await store.createTask({ title: 'Planned 2', status: 'planned' })
+      await store.createTask({ title: 'In Progress', status: 'in_progress' })
+      await store.createTask({ title: 'Done', status: 'done' })
 
       expect(store.tasksByStatus.planned.length).toBe(2)
       expect(store.tasksByStatus.in_progress.length).toBe(1)
       expect(store.tasksByStatus.done.length).toBe(1)
     })
 
-    it('calculates total tasks correctly', () => {
+    it('calculates total tasks correctly', async () => {
       const store = useTaskStore()
 
-      store.createTask({ title: 'Task 1' })
-      store.createTask({ title: 'Task 2' })
-      store.createTask({ title: 'Task 3' })
+      await store.createTask({ title: 'Task 1' })
+      await store.createTask({ title: 'Task 2' })
+      await store.createTask({ title: 'Task 3' })
 
       expect(store.totalTasks).toBe(3)
     })
 
-    it('calculates completed tasks correctly', () => {
+    it('calculates completed tasks correctly', async () => {
       const store = useTaskStore()
 
-      store.createTask({ title: 'Task 1', status: 'done' })
-      store.createTask({ title: 'Task 2', status: 'done' })
-      store.createTask({ title: 'Task 3', status: 'planned' })
+      await store.createTask({ title: 'Task 1', status: 'done' })
+      await store.createTask({ title: 'Task 2', status: 'done' })
+      await store.createTask({ title: 'Task 3', status: 'planned' })
 
       expect(store.completedTasks).toBe(2)
     })
 
-    it('calculates total pomodoros correctly', () => {
+    it('calculates total pomodoros correctly', async () => {
       const store = useTaskStore()
 
-      store.createTask({ title: 'Task 1', completedPomodoros: 5 })
-      store.createTask({ title: 'Task 2', completedPomodoros: 3 })
-      store.createTask({ title: 'Task 3', completedPomodoros: 2 })
+      await store.createTask({ title: 'Task 1', completedPomodoros: 5 })
+      await store.createTask({ title: 'Task 2', completedPomodoros: 3 })
+      await store.createTask({ title: 'Task 3', completedPomodoros: 2 })
 
       expect(store.totalPomodoros).toBe(10)
     })
   })
 
   describe('Date Movement', () => {
-    it('moves task to today', () => {
+    it('moves task to today', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Task' })
+      const task = await store.createTask({ title: 'Task' })
       const today = new Date().toISOString().split('T')[0]
 
       store.moveTaskToDate(task.id, 'today')
@@ -540,9 +540,9 @@ describe('TaskStore', () => {
       expect(updatedTask?.instances?.[0].scheduledDate).toBe(today)
     })
 
-    it('moves task to later', () => {
+    it('moves task to later', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Task' })
+      const task = await store.createTask({ title: 'Task' })
 
       store.moveTaskToDate(task.id, 'later')
 
@@ -551,9 +551,9 @@ describe('TaskStore', () => {
       expect(updatedTask?.instances?.[0].isLater).toBe(true)
     })
 
-    it('clears all instances when moved to no date', () => {
+    it('clears all instances when moved to no date', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Task' })
+      const task = await store.createTask({ title: 'Task' })
 
       store.createTaskInstance(task.id, {
         scheduledDate: '2025-10-15',
@@ -568,9 +568,9 @@ describe('TaskStore', () => {
   })
 
   describe('Priority Movement', () => {
-    it('updates task priority', () => {
+    it('updates task priority', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Task', priority: 'low' })
+      const task = await store.createTask({ title: 'Task', priority: 'low' })
 
       store.moveTaskToPriority(task.id, 'high')
 
@@ -578,9 +578,9 @@ describe('TaskStore', () => {
       expect(updatedTask?.priority).toBe('high')
     })
 
-    it('removes priority with no_priority', () => {
+    it('removes priority with no_priority', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Task', priority: 'high' })
+      const task = await store.createTask({ title: 'Task', priority: 'high' })
 
       store.moveTaskToPriority(task.id, 'no_priority')
 
@@ -594,9 +594,9 @@ describe('TaskStore', () => {
       const store = useTaskStore()
 
       // Create tasks with slight delay to ensure unique IDs
-      const task1 = store.createTask({ title: 'Task 1' })
+      const task1 = await store.createTask({ title: 'Task 1' })
       await new Promise(resolve => setTimeout(resolve, 2)) // 2ms delay
-      const task2 = store.createTask({ title: 'Task 2' })
+      const task2 = await store.createTask({ title: 'Task 2' })
 
       // Verify tasks have unique IDs
       expect(task1.id).not.toBe(task2.id)
@@ -621,9 +621,9 @@ describe('TaskStore', () => {
       expect(store.selectedTaskIds.length).toBe(0)
     })
 
-    it('prevents duplicate selections', () => {
+    it('prevents duplicate selections', async () => {
       const store = useTaskStore()
-      const task = store.createTask({ title: 'Task' })
+      const task = await store.createTask({ title: 'Task' })
 
       store.selectTask(task.id)
       store.selectTask(task.id) // Try to select same task again

@@ -25,13 +25,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Canvas & Visualization
 - **Vue Flow** (@vue-flow/core) for node-based canvas interactions
-- **Konva** and vue-konva for advanced canvas rendering
 - **Vuedraggable** for drag-and-drop functionality
 
 ### Data & Storage
 - **IndexedDB** via LocalForage for client-side persistence
-- **YJS** for collaborative editing capabilities
-- **WebSocket** integration for real-time features
+- **PouchDB** for database operations
 
 ### Development Tools
 - **Vitest** for unit testing
@@ -77,42 +75,40 @@ npm run storybook
 npm run build-storybook
 ```
 
-### Mobile Development (Capacitor)
-```bash
-# Build and sync for mobile
-npm run build:mobile
-
-# Run on Android
-npm run mobile:run:android
-
-# Run on iOS
-npm run mobile:run:ios
-```
-
 ## Project Architecture
 
 ### High-Level Structure
 ```
 src/
-├── views/              # Main application views
-│   ├── BoardView.vue   # Kanban board with swimlanes
-│   ├── CalendarView.vue # Time-based task scheduling
-│   ├── CanvasView.vue  # Free-form task organization
-│   └── CatalogView.vue # Master task catalog
-├── components/         # Reusable UI components
-│   ├── base/          # Base components (Button, Modal, etc.)
-│   ├── canvas/        # Canvas-specific components
-│   └── kanban/        # Kanban board components
-├── stores/            # Pinia state management
-├── composables/       # Vue 3 composables
-├── assets/            # Static assets and styles
-└── utils/             # Utility functions
+├── views/                    # Main application views (7 total)
+│   ├── AllTasksView.vue      # Comprehensive task list
+│   ├── BoardView.vue         # Kanban board with swimlanes
+│   ├── CalendarView.vue      # Time-based task scheduling
+│   ├── CalendarViewVueCal.vue # Alternative calendar (vue-cal)
+│   ├── CanvasView.vue        # Free-form task organization
+│   ├── FocusView.vue         # Dedicated Pomodoro interface
+│   └── QuickSortView.vue     # Priority-based sorting
+├── components/               # Reusable UI components
+│   ├── app/                  # App-level components
+│   ├── auth/                 # Authentication components
+│   ├── base/                 # Base components (Button, Modal, etc.)
+│   ├── canvas/               # Canvas-specific components
+│   ├── kanban/               # Kanban board components
+│   ├── notifications/        # Notification components
+│   ├── recurrence/           # Recurring task components
+│   ├── settings/             # Settings components
+│   ├── sync/                 # Sync-related components
+│   └── ui/                   # General UI components
+├── stores/                   # Pinia state management (12 stores)
+├── composables/              # Vue 3 composables (56 files)
+├── assets/                   # Static assets and styles
+└── utils/                    # Utility functions
 ```
 
 ## State Management (Pinia Stores)
 
 ### Task Store (`src/stores/tasks.ts`)
-**Largest store (1786 lines)** - Central task management with:
+**Largest store (3000 lines)** - Central task management with:
 - Task CRUD operations with undo/redo support
 - Project hierarchy with nesting support
 - Task instances system for calendar scheduling
@@ -121,7 +117,7 @@ src/
 - Backward compatibility with legacy scheduled fields
 
 ### Canvas Store (`src/stores/canvas.ts`)
-**Second largest (974 lines)** - Canvas-specific state:
+**Second largest (1166 lines)** - Canvas-specific state:
 - Vue Flow integration for node-based canvas
 - Section management (priority, status, project sections)
 - Collapsible sections with data preservation
@@ -130,7 +126,7 @@ src/
 - Viewport controls and zoom management
 
 ### Timer Store (`src/stores/timer.ts`)
-**Pomodoro timer functionality (539 lines)**:
+**Pomodoro timer functionality (483 lines)**:
 - Session management with work/break cycles
 - Settings persistence in localStorage
 - Browser notification integration
@@ -138,12 +134,22 @@ src/
 - Session history tracking
 
 ### UI Store (`src/stores/ui.ts`)
-Application UI state:
+Application UI state (234 lines):
 - Sidebar visibility states
 - Theme management integration
 - Modal and overlay controls
 - Board density settings
 - Active view management
+
+### Additional Stores
+- **auth.ts** (515 lines) - Authentication state
+- **local-auth.ts** (302 lines) - Local authentication
+- **notifications.ts** (488 lines) - Notification management
+- **quickSort.ts** (214 lines) - Quick sort view state
+- **taskCanvas.ts** (491 lines) - Canvas task state
+- **taskCore.ts** (234 lines) - Core task utilities
+- **taskScheduler.ts** (359 lines) - Task scheduling
+- **theme.ts** (138 lines) - Theme management
 
 ## Key Composables
 
@@ -160,12 +166,6 @@ Application UI state:
 - Type-safe generic save/load operations
 - Error handling and data validation
 - Performance optimizations with debounced writes
-
-### Canvas Undo History (`src/composables/useCanvasUndoHistory.ts`)
-Canvas-specific undo/redo:
-- Section and task position tracking
-- Visual state preservation
-- Canvas layout history management
 
 ## Task Management System
 
@@ -367,7 +367,7 @@ Located in `src/assets/design-tokens.css`:
 - Shadow and border radius libraries
 
 ### Tailwind Configuration
-**Extensive customization** (514 lines):
+**Extensive customization** (`tailwind.config.js`, 592 lines):
 - Custom color palette mapped to design tokens
 - Component classes (`.task-base`, `.btn`, etc.)
 - Canvas-specific utilities
@@ -457,23 +457,6 @@ git commit -m "feat: description"
 - **Vue DevTools Performance** - Profile component updates
 - **Bundle Analysis** - `npm run build` and analyze output
 
-## Mobile Development (Capacitor)
-
-### Configuration
-- **Capacitor 7** for native mobile app generation
-- **Haptics** and **local notifications** integration
-- **Platform-specific builds** for iOS and Android
-
-### Mobile Commands
-```bash
-# Sync web assets to native projects
-npm run mobile:sync
-
-# Run on specific platforms
-npm run mobile:run:android
-npm run mobile:run:ios
-```
-
 ## Common Issues & Solutions
 
 ### **Task Creation Not Working**
@@ -505,13 +488,6 @@ npm run mobile:run:ios
 ### Project Documentation
 **⚠️ CRITICAL FILES - DO NOT DELETE - Keep these files updated as the project evolves:**
 
-- **`plan.md`** (root) - Product roadmap and implementation phases
-  - ⚠️ **NEVER DELETE** - Master product roadmap tracked in git
-  - Update when completing phases or changing priorities
-  - Add new features and their implementation status
-  - Document architectural decisions and their rationale
-  - Backup copy maintained at `.agent/tasks-prd-plans/plan.md`
-
 - **`CLAUDE.md`** (this file) - Development guidance for Claude Code
   - Update when adding new patterns, gotchas, or best practices
   - Document new major features and their architecture
@@ -527,7 +503,7 @@ npm run mobile:run:ios
 3. **Store Logic** - Add to existing stores or create new if needed
 4. **Types** - Add TypeScript interfaces near implementation
 5. **Tests** - Create corresponding test files
-6. **Documentation** - Update `plan.md` phase status and `CLAUDE.md` if introducing new patterns
+6. **Documentation** - Update `CLAUDE.md` if introducing new patterns
 
 ### Naming Conventions
 - **Components**: PascalCase (TaskCard.vue, CalendarView.vue)
@@ -538,6 +514,6 @@ npm run mobile:run:ios
 
 ---
 
-**Last Updated**: October 22, 2025
-**Framework Version**: Vue 3.4.0, Vite 7.1.10, TypeScript 5.9.3
+**Last Updated**: December 1, 2025
+**Framework Version**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3
 **Development Focus**: Productivity application with advanced task management and Pomodoro integration

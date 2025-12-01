@@ -784,6 +784,7 @@ const isConnecting = ref(false)
 // Node change handling state
 const isHandlingNodeChange = ref(false)
 const isSyncing = ref(false)
+const isNodeDragging = ref(false) // FIXED: Guard against syncNodes during drag operations
 
 // Loading states for operations
 const operationLoading = ref({
@@ -1560,7 +1561,8 @@ resourceManager.setNodeBatcher(nodeUpdateBatcher)
 // Optimized sync functions using the batching system
 const batchedSyncNodes = (priority: 'high' | 'normal' | 'low' = 'normal') => {
   nodeUpdateBatcher.schedule(() => {
-    if (!isHandlingNodeChange.value && !isSyncing.value) {
+    // FIXED: Also check isNodeDragging to prevent sync during drag operations
+    if (!isHandlingNodeChange.value && !isSyncing.value && !isNodeDragging.value) {
       syncNodes()
     }
   }, priority)
@@ -1802,8 +1804,9 @@ const syncNodes = () => {
   // 🎯 FIXED: Show ALL tasks in canvas, not just those with canvasPosition
   // OLD: Only process tasks that ALREADY have canvas positions
   // NEW: Process all tasks, assign default positions to those without canvasPosition
+  // 🔧 FIXED (2025-12-01): Filter out inbox tasks - they should not appear on canvas
   safeFilteredTasks
-    .filter(task => task && task.id) // ✅ Process ALL tasks (not just those with canvasPosition)
+    .filter(task => task && task.id && !task.isInInbox) // ✅ Process tasks not in inbox
     .forEach((task, index) => {
       // 🎯 FIXED: Handle positioning for tasks with and without canvasPosition
       let position
@@ -2392,6 +2395,9 @@ const withVueFlowErrorBoundary = (handlerName: string, handler: Function, option
 const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: any) => {
   const { node } = event
 
+  // FIXED: Set drag guard to prevent syncNodes during drag
+  isNodeDragging.value = true
+
   if (node.id.startsWith('section-')) {
     const sectionId = node.id.replace('section-', '')
     const section = canvasStore.sections.find(s => s.id === sectionId)
@@ -2541,6 +2547,12 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
       })
     }
   }
+
+  // FIXED: Clear drag guard after position is saved
+  // Use nextTick to ensure store update has propagated before allowing syncNodes
+  nextTick(() => {
+    isNodeDragging.value = false
+  })
 })
 
 // Handle node drag - Vue Flow handles parent-child automatically now

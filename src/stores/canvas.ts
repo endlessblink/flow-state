@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import type { Task } from './tasks'
 import { isSmartGroup, getSmartGroupType, getSmartGroupDate, type SmartGroupType } from '@/composables/useTaskSmartGroups'
+import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 // Task store import for safe sync functionality
 let taskStore: any = null
@@ -170,7 +171,13 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       console.log('✅ Canvas sync completed:', taskNodes.length, 'task nodes created (excluded inbox tasks)')
     } catch (error) {
-      console.error('❌ Canvas sync failed:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.COMPONENT,
+        message: 'Canvas sync failed',
+        error: error as Error,
+        showNotification: false // Non-critical, canvas will recover
+      })
       // Continue - don't crash app
     }
   }

@@ -66,7 +66,8 @@ const basicItems = [
   {
     id: 'separator1',
     label: '',
-    separator: true
+    separator: true,
+    action: () => {}
   },
   {
     id: 'favorite',
@@ -83,7 +84,8 @@ const basicItems = [
   {
     id: 'separator2',
     label: '',
-    separator: true
+    separator: true,
+    action: () => {}
   },
   {
     id: 'delete',
@@ -215,7 +217,8 @@ export const MenuWithoutIcons: Story = {
       {
         id: 'separator1',
         label: '',
-        separator: true
+        separator: true,
+        action: () => {}
       },
       {
         id: 'help',

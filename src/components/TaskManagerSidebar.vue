@@ -220,7 +220,8 @@ import {
 } from 'lucide-vue-next'
 
 const route = useRoute()
-const hideStatusFilters = computed(() => route.name === 'canvas')
+// Status filters now shown consistently across all views (including canvas)
+const hideStatusFilters = computed(() => false)
 
 defineEmits<{
   addTask: []

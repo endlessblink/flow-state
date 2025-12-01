@@ -437,7 +437,7 @@ watch(completedSessions, (newSessions) => {
     try {
       // Load settings from PouchDB
       const loadedSettings = await loadSettings()
-      settings.value = { ...defaultSettings, ...loadedSettings }
+      settings.value = { ...defaultSettings, ...(loadedSettings as typeof defaultSettings) }
 
       // Load timer session from PouchDB
       await loadTimerSession()

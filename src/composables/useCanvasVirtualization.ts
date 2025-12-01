@@ -5,9 +5,9 @@
  * for handling large canvases with 1000+ nodes efficiently.
  */
 
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, readonly, type Ref } from 'vue'
 import { useThrottleFn, useDebounceFn } from '@vueuse/core'
-import type { Node, Edge, ViewportTransform } from '@braks/vueflow'
+import type { Node, Edge, ViewportTransform } from '@vue-flow/core'
 
 export interface VirtualizationConfig {
   /** Maximum nodes to render in viewport */
@@ -117,10 +117,21 @@ export function useCanvasVirtualization(
   const lastFrameTime = ref(performance.now())
   const fpsHistory = ref<number[]>([])
 
+  // Utility function to get numeric node dimensions
+  const getNodeWidth = (node: Node): number => {
+    if (typeof node.width === 'number') return node.width
+    return 200 // default width
+  }
+
+  const getNodeHeight = (node: Node): number => {
+    if (typeof node.height === 'number') return node.height
+    return 100 // default height
+  }
+
   // Utility functions
   const getNodeBounds = (node: Node) => {
-    const width = node.width || 200
-    const height = node.height || 100
+    const width = getNodeWidth(node)
+    const height = getNodeHeight(node)
     return {
       x: node.position.x,
       y: node.position.y,

@@ -5,9 +5,9 @@
  * including level-of-detail rendering, lazy loading, and memory management.
  */
 
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, readonly, type Ref } from 'vue'
 import { useThrottleFn, useDebounceFn } from '@vueuse/core'
-import type { Node } from '@braks/vueflow'
+import type { Node } from '@vue-flow/core'
 
 export interface RenderingConfig {
   /** Enable level-of-detail rendering */
@@ -150,12 +150,23 @@ export function useCanvasRenderingOptimization(
   const lazyLoadQueue = ref<Set<string>>(new Set())
   const lazyLoadTimer = ref<number | null>(null)
 
+  // Utility function to get numeric node dimensions
+  const getNodeWidth = (node: Node): number => {
+    if (typeof node.width === 'number') return node.width
+    return 200 // default width
+  }
+
+  const getNodeHeight = (node: Node): number => {
+    if (typeof node.height === 'number') return node.height
+    return 100 // default height
+  }
+
   // Utility functions
   const calculateLODLevel = (node: Node, bounds: typeof viewportBounds.value): number => {
     if (!finalConfig.enableLOD) return 1
 
-    const nodeCenterX = node.position.x + (node.width || 200) / 2
-    const nodeCenterY = node.position.y + (node.height || 100) / 2
+    const nodeCenterX = node.position.x + getNodeWidth(node) / 2
+    const nodeCenterY = node.position.y + getNodeHeight(node) / 2
     const viewportCenterX = bounds.x + bounds.width / 2
     const viewportCenterY = bounds.y + bounds.height / 2
 
@@ -173,8 +184,8 @@ export function useCanvasRenderingOptimization(
 
   const isNodeInViewport = (node: Node, bounds: typeof viewportBounds.value): boolean => {
     const buffer = 100 / bounds.zoom // 100px buffer adjusted for zoom
-    const nodeRight = node.position.x + (node.width || 200)
-    const nodeBottom = node.position.y + (node.height || 100)
+    const nodeRight = node.position.x + getNodeWidth(node)
+    const nodeBottom = node.position.y + getNodeHeight(node)
     const viewportRight = bounds.x + bounds.width
     const viewportBottom = bounds.y + bounds.height
 
@@ -398,10 +409,8 @@ export function useCanvasRenderingOptimization(
     nodeState.isLoaded = true
     nodeState.lastRenderTime = performance.now()
 
-    const state = nodeStates.value.get(nodeId)
-    if (state) {
-      state.lazyLoadedNodes++
-    }
+    // Increment lazy loaded nodes in metrics
+    renderingMetrics.value.lazyLoadedNodes++
   }
 
   // Core rendering optimization
@@ -480,8 +489,8 @@ export function useCanvasRenderingOptimization(
           boundingBox: {
             x: node.position.x,
             y: node.position.y,
-            width: node.width || 200,
-            height: node.height || 100
+            width: getNodeWidth(node),
+            height: getNodeHeight(node)
           }
         }
       }

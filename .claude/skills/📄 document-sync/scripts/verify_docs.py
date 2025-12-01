@@ -253,7 +253,7 @@ class DocumentationVerifier:
             })
 
         # Inline code
-        for match in re.findinditer(r'`([^`\n]+)`', content):
+        for match in re.finditer(r'`([^`\n]+)`', content):
             code = match.group(1).strip()
             if len(code) > 2:  # Filter out very short matches
                 code_blocks.append({
@@ -314,6 +314,13 @@ class DocumentationVerifier:
             "confirmed_claims": [],
             "recommendations": []
         }
+
+        # Initialize variables used in trust score calculation
+        missing_endpoints = set()
+        missing_frameworks = set()
+        missing_tech = set()
+        missing_files = set()
+        existing_files = set()
 
         # Check API endpoints
         doc_endpoints = set(doc_analysis.get("api_endpoints", []))

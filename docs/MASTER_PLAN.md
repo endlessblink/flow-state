@@ -1,8 +1,8 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 1, 2025
-**Version**: 2.4 (Calendar Drag Fix)
-**Status**: ✅ Canvas fixes, Phase 1 Error Handling, My Tasks removal, Calendar drag-inside-calendar fix complete
+**Version**: 2.5 (Test Infrastructure Fixed)
+**Status**: ✅ Canvas fixes, Phase 1 Error Handling, My Tasks removal, Test infrastructure (18/18 E2E pass)
 **Current Branch**: phase-1-error-handling
 **Baseline**: stable-working-version directory (v2.0-comprehensive-checkpoint-2025-11-15)
 
@@ -156,28 +156,33 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 
 | Issue | File | Description | Priority |
 |-------|------|-------------|----------|
-| Calendar E2E test CSS selector failure | `tests/e2e-comprehensive-functionality.spec.ts:122` | Test looks for `.vc-weeks, .vc-days, [class*="grid"], [class*="week"]` but finds 0 elements. Calendar view loads but specific grid selectors don't match current DOM structure. | LOW |
+| *(No known issues currently)* | - | - | - |
 
 ---
 
-## 🔧 **IN PROGRESS: Fix Test Infrastructure (Dec 1, 2025)**
+## ✅ **COMPLETED: Fix Test Infrastructure (Dec 1, 2025)**
 
-**Status**: 🔄 IN PROGRESS
+**Status**: ✅ COMPLETE - Commit `ff16e3d`
 **Priority**: HIGH - Enables reliable CI/CD
 
-### **Issues to Fix**
+### **Issues Fixed**
 1. **Syntax errors in phase2/*.spec.ts files**:
-   - `comparison-tests.spec.ts:262` - Unterminated string (backtick/quote mismatch)
-   - `edge-cases.spec.ts:422` - Unterminated string
-   - `migration-validation.spec.ts:576` - Unexpected token (try/catch issue)
+   - ✅ `comparison-tests.spec.ts:262` - Fixed unterminated string
+   - ✅ `edge-cases.spec.ts:422` - Fixed unterminated string
+   - ✅ `migration-validation.spec.ts:575` - Fixed missing parenthesis
 
 2. **Calendar E2E selector mismatch**:
-   - `e2e-comprehensive-functionality.spec.ts:122` - CSS selectors don't match DOM
+   - ✅ `e2e-comprehensive-functionality.spec.ts` - Updated to match actual DOM:
+     - Changed route from `/calendar` to `/#/calendar`
+     - Added heading check (`h1:has-text("Calendar")`)
+     - Added navigation button checks
+     - Added time slot regex check
+     - Added view switcher checks
 
-### **Success Criteria**
+### **Results**
 - ✅ All syntax errors fixed
 - ✅ `npx playwright test` runs without parse errors
-- ✅ Core E2E tests pass (17+ tests)
+- ✅ **18/18 core E2E tests pass**
 
 ---
 

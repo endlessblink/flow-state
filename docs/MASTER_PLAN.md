@@ -1,10 +1,61 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: November 29, 2025
-**Version**: 2.0 (Stable Working Version - Nov 15-16, 2025)
-**Status**: 🟢 STABLE - Based on verified working checkpoint
-**Current Branch**: ui/fix-kanban-add-task-buttons (WIP)
+**Last Updated**: December 1, 2025
+**Version**: 2.1 (Canvas View Fixes In Progress)
+**Status**: 🟡 ACTIVE DEVELOPMENT - Canvas View fixes
+**Current Branch**: phase-1-error-handling
 **Baseline**: stable-working-version directory (v2.0-comprehensive-checkpoint-2025-11-15)
+
+---
+
+## 🔧 **ACTIVE SESSION: Canvas View Fixes (Dec 1, 2025)**
+
+### **Issues Being Fixed**
+
+#### Issue #1: Tasks Not Appearing on Canvas (CRITICAL)
+- **Status**: ROOT CAUSE IDENTIFIED - Ready to fix
+- **File**: `src/views/CanvasView.vue` line 1809
+- **Problem**: Filter `!task.isInInbox` is too strict - most tasks have `isInInbox: true` in database
+- **Evidence**: Browser evaluate showed only 1 of 21 tasks has `isInInbox: false`
+
+**Fix Required** (one line change):
+```typescript
+// Current (broken):
+.filter(task => task && task.id && !task.isInInbox)
+
+// Fixed:
+.filter(task => task && task.id && (task.canvasPosition || task.isInInbox !== true))
+```
+
+**Rationale**:
+- Tasks with `canvasPosition` should ALWAYS show on canvas (they were placed there)
+- Tasks with `isInInbox === true` AND no canvasPosition go to inbox
+- Tasks with `isInInbox === undefined` or `false` should show (backward compatibility)
+
+#### Issue #2: Tasks Can't Be Moved on Canvas
+- **Status**: LIKELY RELATED TO ISSUE #1
+- **User report**: "The task that does appear on the canvas - sticks to its position"
+- **Analysis**: After drag completes, `syncNodes` filters out task due to `isInInbox` flag
+- **Same fix as Issue #1 should resolve this**
+
+#### Issue #3: Tasks Dragged from Inbox Don't Appear
+- **Status**: SAME ROOT CAUSE AS ISSUE #1
+- **Problem**: When task is dragged from inbox, it still has `isInInbox: true`
+- **Same fix should resolve this**
+
+### **Implementation Steps**
+1. ✅ Identify root cause in syncNodes filter
+2. ⏳ Apply one-line fix to CanvasView.vue:1809
+3. ⏳ Verify with Playwright - tasks appear on canvas
+4. ⏳ Test drag functionality - tasks can be moved
+5. ⏳ Test inbox drag - tasks appear after drag from inbox
+
+### **Previously Completed (This Session)**
+- ✅ Context menu positioning made reactive (useContextMenuPositioning.ts)
+- ✅ Context menu events made reactive (useContextMenuEvents.ts)
+- ✅ Node drag guard added (isNodeDragging flag)
+- ✅ Delete key functionality verified (moves to inbox)
+- ✅ Shift+Delete functionality verified (permanent delete)
 
 ---
 

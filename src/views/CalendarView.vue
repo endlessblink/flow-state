@@ -144,89 +144,92 @@
           >
             <!-- Tasks rendered INSIDE the slot (slot-based architecture) -->
             <div
-              v-for="event in getTasksForSlot(slot)"
-              :key="`${event.id}-${slot.slotIndex}`"
+              v-for="calEvent in getTasksForSlot(slot)"
+              :key="`${calEvent.id}-${slot.slotIndex}`"
               class="slot-task"
               :class="{
-                'is-primary': isTaskPrimarySlot(slot, event),
-                'is-continuation': !isTaskPrimarySlot(slot, event),
-                'timer-active-event': timerStore.currentTaskId === event.taskId,
-                'dragging': isDragging && draggedEventId === event.id
+                'is-primary': isTaskPrimarySlot(slot, calEvent),
+                'is-continuation': !isTaskPrimarySlot(slot, calEvent),
+                'timer-active-event': timerStore.currentTaskId === calEvent.taskId,
+                'dragging': isDragging && draggedEventId === calEvent.id,
+                'is-hovered': hoveredEventId === calEvent.id
               }"
-              :data-duration="event.duration"
-              :data-task-id="event.taskId"
+              @mouseenter="hoveredEventId = calEvent.id"
+              @mouseleave="hoveredEventId = null"
+              :data-duration="calEvent.duration"
+              :data-task-id="calEvent.taskId"
               draggable="true"
-              @dragstart="handleEventDragStart($event, event)"
-              @dragend="handleEventDragEnd($event, event)"
-              @click="handleEventClick($event, event)"
-              @dblclick="handleEventDblClick(event)"
-              @contextmenu.prevent="handleEventContextMenu($event, event)"
+              @dragstart="handleEventDragStart($event, calEvent)"
+              @dragend="handleEventDragEnd($event, calEvent)"
+              @click="handleEventClick($event, calEvent)"
+              @dblclick="handleEventDblClick(calEvent)"
+              @contextmenu.prevent="handleEventContextMenu($event, calEvent)"
             >
               <!-- Only show full content in primary slot -->
-              <template v-if="isTaskPrimarySlot(slot, event)">
+              <template v-if="isTaskPrimarySlot(slot, calEvent)">
                 <!-- Project Stripe -->
                 <div
-                  v-if="getProjectVisual(event).type === 'emoji'"
+                  v-if="getProjectVisual(calEvent).type === 'emoji'"
                   class="project-stripe project-emoji-stripe"
-                  :title="`Project: ${getProjectName(event)}`"
+                  :title="`Project: ${getProjectName(calEvent)}`"
                 >
                   <ProjectEmojiIcon
-                    :emoji="getProjectVisual(event).content"
+                    :emoji="getProjectVisual(calEvent).content"
                     size="xs"
-                    :title="`Project: ${getProjectName(event)}`"
+                    :title="`Project: ${getProjectName(calEvent)}`"
                     class="project-emoji"
                   />
                 </div>
                 <div
                   v-else
                   class="project-stripe project-color-stripe"
-                  :style="{ backgroundColor: getProjectColor(event) }"
-                  :title="`Project: ${getProjectName(event)}`"
+                  :style="{ backgroundColor: getProjectColor(calEvent) }"
+                  :title="`Project: ${getProjectName(calEvent)}`"
                 ></div>
 
                 <!-- Priority Stripe -->
                 <div
                   class="priority-stripe"
-                  :class="`priority-${getPriorityClass(event)}`"
-                  :title="`Priority: ${getPriorityLabel(event)}`"
+                  :class="`priority-${getPriorityClass(calEvent)}`"
+                  :title="`Priority: ${getPriorityLabel(calEvent)}`"
                 ></div>
 
                 <!-- Task Content -->
                 <div class="task-content">
                   <div class="task-header">
-                    <div class="task-title">{{ event.title }}</div>
+                    <div class="task-title">{{ calEvent.title }}</div>
                     <div class="task-actions">
                       <div
                         class="status-indicator"
-                        :class="`status-${getTaskStatus(event)}`"
-                        @click.stop="cycleTaskStatus($event, event)"
-                        :title="`Status: ${getStatusLabel(event)} (click to change)`"
+                        :class="`status-${getTaskStatus(calEvent)}`"
+                        @click.stop="cycleTaskStatus($event, calEvent)"
+                        :title="`Status: ${getStatusLabel(calEvent)} (click to change)`"
                       >
-                        {{ getStatusIcon(getTaskStatus(event)) }}
+                        {{ getStatusIcon(getTaskStatus(calEvent)) }}
                       </div>
                       <button
                         class="remove-from-calendar-btn"
-                        @click.stop="handleRemoveFromCalendar(event)"
+                        @click.stop="handleRemoveFromCalendar(calEvent)"
                         title="Remove from calendar (move to inbox)"
                       >
                         ✕
                       </button>
                     </div>
                   </div>
-                  <div class="task-duration">{{ event.duration }}min</div>
+                  <div class="task-duration">{{ calEvent.duration }}min</div>
                 </div>
 
                 <!-- Resize Handle (top for changing start time) -->
                 <div
                   class="resize-handle resize-top"
-                  @mousedown.stop="startResize($event, event, 'top')"
+                  @mousedown.stop="startResize($event, calEvent, 'top')"
                   title="Drag to change start time"
                 ></div>
 
                 <!-- Resize Handle (bottom for changing duration) -->
                 <div
                   class="resize-handle resize-bottom"
-                  @mousedown.stop="startResize($event, event, 'bottom')"
+                  @mousedown.stop="startResize($event, calEvent, 'bottom')"
                   title="Drag to change duration"
                 ></div>
               </template>
@@ -601,6 +604,9 @@ const taskToDelete = ref<string | null>(null)
 
 // Calendar event selection state for keyboard operations - now supports multi-select
 const selectedCalendarEvents = ref<any[]>([])
+
+// Hover state for slot tasks - used to show resize handles (draggable elements have inconsistent :hover)
+const hoveredEventId = ref<string | null>(null)
 
 // Destructure commonly used items from composables
 const { hours, timeSlots, calendarEvents, dragGhost, dragMode, getEventStyle, getGhostStyle,
@@ -1705,7 +1711,10 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
-.slot-task.is-primary:hover .resize-handle {
+/* Use both :hover and .is-hovered class for resize handle visibility
+   The .is-hovered class is set via JS because draggable elements have inconsistent :hover behavior */
+.slot-task.is-primary:hover .resize-handle,
+.slot-task.is-primary.is-hovered .resize-handle {
   opacity: 1;
   pointer-events: auto;
   background: rgba(99, 102, 241, 0.4);

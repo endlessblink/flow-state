@@ -144,8 +144,9 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       // Create task nodes only for tasks that should appear on canvas
       // Tasks in inbox (isInInbox: true) should NOT appear on canvas
+      // FIXED: Use explicit check (isInInbox === false) to avoid undefined bypass
       const taskNodes = tasks
-        .filter(task => !task.isInInbox && task.canvasPosition)
+        .filter(task => task.isInInbox === false && task.canvasPosition)
         .map(task => ({
           id: task.id,
           type: 'task',
@@ -765,14 +766,22 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const getTasksInSectionBounds = (section: CanvasSection, allTasks: Task[]): Task[] => {
-    // For smart sections (priority, status, project), include ALL matching tasks regardless of position
+    // For smart sections (priority, status, project), include matching tasks that are ON CANVAS
+    // FIXED: Only include tasks with isInInbox === false (explicitly on canvas)
     if (section.type === 'priority' || section.type === 'status' || section.type === 'project') {
-      return allTasks.filter(task => isTaskLogicallyInSection(task, section))
+      return allTasks.filter(task =>
+        isTaskLogicallyInSection(task, section) &&
+        task.isInInbox === false  // Only tasks explicitly on canvas
+      )
     }
 
-    // For smart groups (Today, Tomorrow, etc.), include ALL matching tasks regardless of position
+    // For smart groups (Today, Tomorrow, etc.), include matching tasks that are ON CANVAS
+    // FIXED: Only include tasks with isInInbox === false (explicitly on canvas)
     if (section.type === 'custom' && isSmartGroup(section.name)) {
-      return allTasks.filter(task => isTaskLogicallyInSection(task, section))
+      return allTasks.filter(task =>
+        isTaskLogicallyInSection(task, section) &&
+        task.isInInbox === false  // Only tasks explicitly on canvas
+      )
     }
 
     // For custom sections, include both geometrically contained and logically matching tasks

@@ -60,6 +60,31 @@
       <span class="menu-text">Create Section (Smart)</span>
     </button>
 
+    <!-- Task-specific options (when tasks are selected) -->
+    <template v-if="hasSelectedTasks && selectedCount >= 1 && !contextSection">
+      <div class="menu-divider"></div>
+
+      <!-- Move to Inbox -->
+      <button
+        class="menu-item"
+        @click="handleMoveToInbox"
+      >
+        <Inbox :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Move to Inbox</span>
+        <span class="menu-shortcut">Del</span>
+      </button>
+
+      <!-- Delete Task(s) -->
+      <button
+        class="menu-item danger"
+        @click="handleDeleteTasks"
+      >
+        <Trash2 :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Delete {{ selectedCount > 1 ? `${selectedCount} Tasks` : 'Task' }}</span>
+        <span class="menu-shortcut">Shift+Del</span>
+      </button>
+    </template>
+
     <!-- Layout Submenu (2+ tasks) -->
     <template v-if="selectedCount >= 2">
       <div class="menu-divider"></div>
@@ -147,7 +172,7 @@ import {
   PlusCircle, Group, AlignLeft, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd,
   AlignHorizontalJustifyCenter, AlignVerticalJustifyStart,
   AlignVerticalJustifyEnd, AlignVerticalJustifyCenter,
-  Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2,
+  Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2, Inbox,
   LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3, Sparkles
 } from 'lucide-vue-next'
 import { useContextMenuEvents } from '@/composables/useContextMenuEvents'
@@ -174,6 +199,8 @@ const emit = defineEmits<{
   createSection: []
   editGroup: [section: any]
   deleteGroup: [section: any]
+  moveToInbox: []
+  deleteTasks: []
   alignLeft: []
   alignRight: []
   alignTop: []
@@ -255,6 +282,20 @@ const handleCreateSection = () => {
   console.log('✨ CanvasContextMenu: Create Section button clicked!')
   console.log('✨ CanvasContextMenu: Emitting createSection event (will open wizard)')
   emit('createSection')
+  emit('close')
+}
+
+// Handle move to inbox
+const handleMoveToInbox = () => {
+  console.log('📥 CanvasContextMenu: Move to Inbox clicked')
+  emit('moveToInbox')
+  emit('close')
+}
+
+// Handle delete tasks
+const handleDeleteTasks = () => {
+  console.log('🗑️ CanvasContextMenu: Delete Tasks clicked')
+  emit('deleteTasks')
   emit('close')
 }
 
@@ -399,6 +440,16 @@ const handleArrangeInGrid = () => {
 .menu-text {
   flex: 1;
   font-weight: var(--font-normal);
+}
+
+.menu-shortcut {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--surface-tertiary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  margin-left: auto;
 }
 
 .menu-divider {

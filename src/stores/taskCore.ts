@@ -37,7 +37,7 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
       projectId: taskData.projectId || 'default',
       parentTaskId: taskData.parentTaskId || null,
       canvasPosition: taskData.canvasPosition,
-      isInInbox: taskData.isInInbox || false,
+      isInInbox: taskData.isInInbox !== false,  // Default to true - new tasks go to inbox
       dependsOn: taskData.dependsOn || [],
       connectionTypes: taskData.connectionTypes || {},
       createdAt: now,

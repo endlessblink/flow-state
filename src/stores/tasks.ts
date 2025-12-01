@@ -14,6 +14,7 @@ import type {
 // Import all types from central location - no local redefinitions
 import type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
 import { useSmartViews } from '@/composables/useSmartViews'
+import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 // Re-export types for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance }
@@ -215,7 +216,15 @@ export const useTaskStore = defineStore('tasks', () => {
         }
       }
     } catch (error) {
-      console.error('❌ Failed to load tasks from PouchDB:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to load tasks from PouchDB',
+        error: error as Error,
+        context: { operation: 'loadTasksFromPouchDB' },
+        showNotification: true,
+        userMessage: 'Failed to load tasks. Attempting recovery from backup.'
+      })
 
       // Check localStorage for backup before creating sample tasks
       const userBackup = localStorage.getItem('pomo-flow-user-backup')
@@ -558,9 +567,60 @@ export const useTaskStore = defineStore('tasks', () => {
   const currentView = ref('board')
   const selectedTaskIds = ref<string[]>([])
   const activeProjectId = ref<string | null>(null) // null = show all projects
-  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | null>(null)
+  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'above_my_tasks' | null>(null)
   const activeStatusFilter = ref<string | null>(null) // null = show all statuses, 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   const hideDoneTasks = ref(false) // Global setting to hide done tasks across all views (disabled by default to show completed tasks for logging)
+
+  // Filter persistence
+  const FILTER_STORAGE_KEY = 'pomo-flow-filters'
+
+  interface PersistedFilterState {
+    activeProjectId: string | null
+    activeSmartView: typeof activeSmartView.value
+    activeStatusFilter: string | null
+    hideDoneTasks: boolean
+  }
+
+  // Load persisted filters on store initialization
+  const loadPersistedFilters = () => {
+    try {
+      const saved = localStorage.getItem(FILTER_STORAGE_KEY)
+      if (saved) {
+        const state: PersistedFilterState = JSON.parse(saved)
+        // Validate project still exists before restoring
+        if (state.activeProjectId && !projects.value.find(p => p.id === state.activeProjectId)) {
+          state.activeProjectId = null
+        }
+        activeProjectId.value = state.activeProjectId
+        activeSmartView.value = state.activeSmartView
+        activeStatusFilter.value = state.activeStatusFilter
+        hideDoneTasks.value = state.hideDoneTasks
+        console.log('🔧 Filter state loaded from localStorage:', state)
+      }
+    } catch (error) {
+      console.warn('Failed to load persisted filters:', error)
+    }
+  }
+
+  // Debounced persist function
+  let persistTimeout: ReturnType<typeof setTimeout> | null = null
+  const persistFilters = () => {
+    if (persistTimeout) clearTimeout(persistTimeout)
+    persistTimeout = setTimeout(() => {
+      const state: PersistedFilterState = {
+        activeProjectId: activeProjectId.value,
+        activeSmartView: activeSmartView.value,
+        activeStatusFilter: activeStatusFilter.value,
+        hideDoneTasks: hideDoneTasks.value
+      }
+      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
+      console.log('🔧 Filter state persisted to localStorage:', state)
+    }, 500)
+  }
+
+  // Load filters (will be called after projects are loaded)
+  // Note: Delayed to ensure projects are available for validation
+  setTimeout(() => loadPersistedFilters(), 100)
 
   // Import tasks from JSON file (for migration from external storage)
   const importTasksFromJSON = async (jsonFilePath?: string) => {
@@ -871,7 +931,15 @@ export const useTaskStore = defineStore('tasks', () => {
         // PHASE 1: Use safe sync wrapper
         await safeSync('tasks-auto-save')
       } catch (error) {
-        console.error('❌ Tasks auto-save failed:', error)
+        errorHandler.report({
+          severity: ErrorSeverity.ERROR,
+          category: ErrorCategory.DATABASE,
+          message: 'Tasks auto-save failed',
+          error: error as Error,
+          context: { taskCount: newTasks?.length },
+          showNotification: true,
+          userMessage: 'Failed to save tasks. Your changes may not be persisted.'
+        })
       }
     }, 1000) // Debounce 1 second for better performance
   }, { deep: true, flush: 'post' })
@@ -939,7 +1007,14 @@ export const useTaskStore = defineStore('tasks', () => {
         // PHASE 1: Use safe sync wrapper
         await safeSync('projects-auto-save')
       } catch (error) {
-        console.error('❌ Projects auto-save failed:', error)
+        errorHandler.report({
+          severity: ErrorSeverity.ERROR,
+          category: ErrorCategory.DATABASE,
+          message: 'Projects auto-save failed',
+          error: error as Error,
+          context: { projectCount: newProjects?.length },
+          showNotification: false // Less critical than tasks
+        })
       }
     }, 1000) // Debounce 1 second
   }, { deep: true, flush: 'post' })
@@ -1015,67 +1090,36 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log('🚨 TaskStore.filteredTasks: After initial assignment:', filtered.length, 'tasks')
     }
 
-    // CRITICAL FIX: Apply smart view filter FIRST when active
-    // Smart views should override project filters to fix kanban board issue
-    if (activeSmartView.value) {
-      if (shouldLogTaskDiagnostics()) {
-        console.log('🔥🔥🔥 CRITICAL FIX: Smart view active, applying BEFORE project filter:', activeSmartView.value)
-        console.log('🔥 Smart views override project filters to fix kanban board issue')
-      }
+    // NEW ARCHITECTURE: Filters are applied SEQUENTIALLY and can be COMBINED
+    // Order: Smart View → Project → Status → Hide Done
 
-      // Apply smart view filter first (will be handled in the smart view section below)
-      // Project filter will be skipped when smart view is active
-    } else {
-      // Apply project filter only when NO smart view is active
-      if (activeProjectId.value) {
-        const beforeProjectFilter = filtered.length
-        const projectIds = getChildProjectIds(activeProjectId.value)
-
-        if (shouldLogTaskDiagnostics()) {
-          // 🚨 DIAGNOSTIC LOGGING - DELETE AFTER DEBUGGING
-          console.log('\n🚨🚨🚨 PROJECT FILTER DIAGNOSTIC (No Smart View Active) 🚨🚨🚨')
-          console.log(`   Active Project ID: ${activeProjectId.value} (type: ${typeof activeProjectId.value})`)
-          console.log(`   Target Project IDs (including children): ${projectIds.join(', ')}`)
-          console.log(`   Tasks before filter: ${filtered.length}`)
-
-          // Log task details BEFORE filtering
-          console.log('\n   TASKS BEFORE FILTERING:')
-          filtered.forEach((task, idx) => {
-            const matches = projectIds.includes(task.projectId)
-            const looseMatches = projectIds.some(pid => pid == task.projectId)
-            const strictType = typeof task.projectId
-            console.log(`     [${idx}] "${task.title.substring(0, 40)}"`)
-            console.log(`          projectId: ${task.projectId} (type: ${strictType})`)
-            console.log(`          Strict match (includes): ${matches ? '✅' : '❌'}`)
-            console.log(`          Loose match (==): ${looseMatches ? '✅' : '❌'}`)
-          })
-        }
-
-        filtered = filtered.filter(task => projectIds.includes(task.projectId))
-
-        if (shouldLogTaskDiagnostics()) {
-          console.log(`\n   Tasks after filter: ${filtered.length}`)
-          console.log(`   Removed: ${beforeProjectFilter - filtered.length}`)
-          if (filtered.length === 0 && beforeProjectFilter > 0) {
-            console.log('\n   ⚠️  WARNING: Filtered to 0 tasks but had tasks before!')
-            console.log('   This means NO task.projectId matched any target project ID')
-            console.log('   Possible causes:')
-            console.log('     1. Type mismatch (string vs number)')
-            console.log('     2. Task is in child project with different ID')
-            console.log('     3. Null/undefined projectId values')
-          }
-          console.log('🚨🚨🚨 END DIAGNOSTIC 🚨🚨🚨\n')
-        }
-      }
-    }
-
-    // Apply smart view filter using centralized system
+    // Step 1: Apply smart view filter FIRST (if active)
     if (activeSmartView.value) {
       const { applySmartViewFilter } = useSmartViews()
       console.log(`🔧 TaskStore.filteredTasks: Applying "${activeSmartView.value}" smart view filter`)
       const beforeSmartFilter = filtered.length
       filtered = applySmartViewFilter(filtered, activeSmartView.value)
       console.log(`🔧 TaskStore.filteredTasks: ${activeSmartView.value} smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
+    }
+
+    // Step 2: Apply project filter ON TOP of smart view result (if active)
+    // Note: Filters can now be combined - "Today" + "Project X" shows today's tasks in Project X
+    if (activeProjectId.value) {
+      const beforeProjectFilter = filtered.length
+      const projectIds = getChildProjectIds(activeProjectId.value)
+
+      if (shouldLogTaskDiagnostics()) {
+        console.log('\n🚨 PROJECT FILTER (Combined with smart view):', activeProjectId.value)
+        console.log(`   Target Project IDs (including children): ${projectIds.join(', ')}`)
+        console.log(`   Tasks before filter: ${filtered.length}`)
+      }
+
+      filtered = filtered.filter(task => projectIds.includes(task.projectId))
+
+      if (shouldLogTaskDiagnostics()) {
+        console.log(`   Tasks after filter: ${filtered.length}`)
+        console.log(`   Removed: ${beforeProjectFilter - filtered.length}`)
+      }
     }
 
     // Apply status filter (NEW GLOBAL STATUS FILTER)
@@ -1209,7 +1253,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
                 // SIMPLIFIED: Check if nested task is due within the week
                 if (!task.dueDate) return false
-                return task.dueDate >= todayStr && task.dueDate < weekEndStr
+                return task.dueDate >= todayStr && task.dueDate <= weekEndStr
               } catch (error) {
                 console.warn('TaskStore.filteredTasks: Error in week filter for nested task:', error, task)
                 return false
@@ -1360,170 +1404,67 @@ export const useTaskStore = defineStore('tasks', () => {
     tasks.value.reduce((sum, task) => sum + task.completedPomodoros, 0)
   )
 
-  // Calendar-aware task filtering - includes both scheduled and unscheduled inbox tasks
+  // Calendar-aware task filtering - UNIFIED with filteredTasks
+  // Uses filteredTasks as base, adds calendar-specific enhancements
   const calendarFilteredTasks = computed(() => {
-    // Safety check: ensure tasks array exists and is iterable
-    if (!tasks.value || !Array.isArray(tasks.value)) {
-      console.warn('TaskStore.calendarFilteredTasks: tasks array not initialized, returning empty array')
-      return []
-    }
-
     if (shouldLogTaskDiagnostics()) {
       console.log('🚨 TaskStore.calendarFilteredTasks: === COMPUTING CALENDAR FILTERED TASKS ===')
-      console.log('🚨 TaskStore.calendarFilteredTasks: Total tasks available:', tasks.value.length)
-      console.log('🚨 TaskStore.calendarFilteredTasks: activeProjectId:', activeProjectId.value)
-      console.log('🚨 TaskStore.calendarFilteredTasks: activeSmartView:', activeSmartView.value)
-      console.log('🚨 TaskStore.calendarFilteredTasks: activeStatusFilter:', activeStatusFilter.value)
+      console.log('🚨 TaskStore.calendarFilteredTasks: Using unified filteredTasks as base')
     }
 
-    // Use the same base filtering as filteredTasks to maintain consistency
-    let filtered = tasks.value
+    // Start with the unified filteredTasks (already has smart view + project + status + hideDone filters applied)
+    let filtered = [...filteredTasks.value]
 
-    // Apply project filter first (including child projects) - same as filteredTasks
-    if (activeProjectId.value) {
-      const getChildProjectIds = (projectId: string): string[] => {
-        const ids = [projectId]
-        const childProjects = projects.value.filter(p => p.parentId === projectId)
-        childProjects.forEach(child => {
-          ids.push(...getChildProjectIds(child.id))
-        })
-        return ids
-      }
-
-      const projectIds = getChildProjectIds(activeProjectId.value)
-      filtered = filtered.filter(task => projectIds.includes(task.projectId))
-    }
-
-    // Apply smart view filter (same logic as filteredTasks)
+    // CALENDAR-SPECIFIC ENHANCEMENT: For "today" smart view, also include unscheduled inbox tasks
+    // This is the only calendar-specific behavior that differs from filteredTasks
     if (activeSmartView.value === 'today') {
-      const todayStr = new Date().toISOString().split('T')[0]
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      // Find unscheduled inbox tasks that should appear in calendar's today view
+      const additionalInboxTasks = tasks.value.filter(task => {
+        // Skip if task is already in filtered results
+        if (filtered.some(t => t.id === task.id)) return false
 
-      filtered = filtered.filter(task => {
-        // Exclude done tasks from today filter by default
+        // Skip done tasks
         if (task.status === 'done') return false
 
-        // Check instances first (new format) - tasks scheduled for today
-        try {
-          const instances = getTaskInstances(task)
-          if (Array.isArray(instances) && instances.length > 0) {
-            if (instances.some(inst => {
-              if (!inst || !inst.scheduledDate) return false
-              const instanceDate = new Date(inst.scheduledDate)
-              if (!isNaN(instanceDate.getTime()) && formatDateKey(instanceDate) === todayStr) {
-                return true
-              }
-              return false
-            })) return true
-          }
-        } catch (error) {
-          console.warn('TaskStore.calendarFilteredTasks: Error getting task instances in today filter:', error, task)
-        }
+        // Must be in inbox (not on canvas, not explicitly excluded)
+        const isInInbox = task.isInInbox !== false && !task.canvasPosition
 
-        // Fallback to legacy scheduledDate - tasks scheduled for today
-        if (task.scheduledDate) {
-          try {
-            const scheduledDate = new Date(task.scheduledDate)
-            if (!isNaN(scheduledDate.getTime()) && formatDateKey(scheduledDate) === todayStr) {
-              return true
-            }
-          } catch (error) {
-            console.warn('TaskStore.calendarFilteredTasks: Error processing scheduledDate in today filter:', error, task.scheduledDate)
-          }
-        }
-
-        // Tasks due today
-        if (task.dueDate) {
-          try {
-            const taskDueDate = new Date(task.dueDate)
-            if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) {
-              return true
-            }
-          } catch (error) {
-            console.warn('TaskStore.calendarFilteredTasks: Error processing dueDate in today filter:', error, task.dueDate)
-          }
-        }
-
-        // Tasks currently in progress should be included in today filter
-        if (task.status === 'in_progress') {
-          return true
-        }
-
-        // CALENDAR-SPECIFIC: Include unscheduled inbox tasks for today
-        const isInInbox = task.isInInbox !== false && !task.canvasPosition && (task.status as any) !== 'done'
+        // Must be unscheduled
         const hasInstances = task.instances && task.instances.length > 0
         const hasLegacySchedule = task.scheduledDate && task.scheduledTime
+        const isUnscheduled = !hasInstances && !hasLegacySchedule
 
-        if (!hasInstances && !hasLegacySchedule && isInInbox) {
-          console.log(`🚨 TaskStore.calendarFilteredTasks: Including unscheduled inbox task "${task.title}" for today`)
+        // Apply project filter if active
+        if (activeProjectId.value) {
+          const getChildProjectIds = (projectId: string): string[] => {
+            const ids = [projectId]
+            const childProjects = projects.value.filter(p => p.parentId === projectId)
+            childProjects.forEach(child => {
+              ids.push(...getChildProjectIds(child.id))
+            })
+            return ids
+          }
+          const projectIds = getChildProjectIds(activeProjectId.value)
+          if (!projectIds.includes(task.projectId)) return false
+        }
+
+        // Apply status filter if active
+        if (activeStatusFilter.value && task.status !== activeStatusFilter.value) return false
+
+        if (isInInbox && isUnscheduled) {
+          console.log(`🚨 TaskStore.calendarFilteredTasks: Adding unscheduled inbox task "${task.title}" to today view`)
           return true
         }
 
         return false
       })
 
-    } else if (activeSmartView.value === 'week') {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const todayStr = today.toISOString().split('T')[0]
-      const weekEnd = new Date(today)
-      weekEnd.setDate(weekEnd.getDate() + 7)
-      const weekEndStr = weekEnd.toISOString().split('T')[0]
-
-      filtered = filtered.filter(task => {
-        // Check instances first (new format)
-        const instances = getTaskInstances(task)
-        if (instances.length > 0) {
-          return instances.some(inst => inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr)
-        }
-        // Fallback to legacy scheduledDate
-        if (!task.scheduledDate) return false
-        return task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr
-      })
-
-    } else if (activeSmartView.value === 'uncategorized') {
-      filtered = filtered.filter(task => {
-        // New logic: check isUncategorized flag first
-        if (task.isUncategorized === true) {
-          return true
-        }
-
-        // Fallback: check if project is undefined or null
-        // REMOVED: projectId === '1' check - My Tasks concept removed
-        if (!task.projectId) {
-          return true
-        }
-
-        return false
-      })
-
-    } else if (activeSmartView.value === 'above_my_tasks') {
-      const aboveMyTasksProject = projects.value.find(p => p.name?.toLowerCase().includes('above my tasks'))
-      if (aboveMyTasksProject) {
-        const allChildProjects = getChildProjects(aboveMyTasksProject.id)
-        const allChildIds = allChildProjects.map(p => p.id)
-        allChildIds.push(aboveMyTasksProject.id)
-
-        filtered = filtered.filter(task => allChildIds.includes(task.projectId))
-      }
-    }
-
-    // Apply status filter if set
-    if (activeStatusFilter.value) {
-      filtered = filtered.filter(task => task.status === activeStatusFilter.value)
-    }
-
-    // Apply hide done tasks filter if enabled
-    if (hideDoneTasks.value) {
-      filtered = filtered.filter(task => task.status !== 'done')
+      // Add the additional inbox tasks
+      filtered = [...filtered, ...additionalInboxTasks]
     }
 
     if (shouldLogTaskDiagnostics()) {
       console.log(`🚨 TaskStore.calendarFilteredTasks: Final calendar filtered tasks: ${filtered.length}`)
-      filtered.forEach(task => {
-        console.log(`🚨 TaskStore.calendarFilteredTasks:   - "${task.title}" (Status: ${task.status}, Inbox: ${task.isInInbox}, Instances: ${task.instances?.length || 0})`)
-      })
       console.log('🚨 TaskStore.calendarFilteredTasks: === END CALENDAR FILTERED TASKS ===')
     }
 
@@ -1536,6 +1477,97 @@ export const useTaskStore = defineStore('tasks', () => {
     // This ensures we use the exact same logic that excludes done tasks globally
     return filteredTasks.value.length
   })
+
+  // CENTRALIZED TASK COUNTS - Single source of truth for sidebar counts
+  // These counts respect the active project filter (if set) to show relevant counts
+  // Updated: Fixed timezone bug using local date strings
+  const smartViewTaskCounts = computed(() => {
+    const { isTodayTask, isWeekTask, isUncategorizedTask, isUnscheduledTask, isInProgressTask } = useSmartViews()
+
+    // Get the base tasks - either all tasks or project-filtered tasks
+    let baseTasks = tasks.value
+
+    // If project filter is active, show counts within that project only
+    if (activeProjectId.value) {
+      const getChildProjectIds = (projectId: string): string[] => {
+        const ids = [projectId]
+        const childProjects = projects.value.filter(p => p.parentId === projectId)
+        childProjects.forEach(child => {
+          ids.push(...getChildProjectIds(child.id))
+        })
+        return ids
+      }
+      const projectIds = getChildProjectIds(activeProjectId.value)
+      baseTasks = baseTasks.filter(task => projectIds.includes(task.projectId))
+    }
+
+    // Apply hideDoneTasks if enabled (except for specific views that handle it internally)
+    if (hideDoneTasks.value) {
+      baseTasks = baseTasks.filter(task => task.status !== 'done')
+    }
+
+    // Calculate counts for each smart view
+    const today = baseTasks.filter(task => isTodayTask(task)).length
+    const week = baseTasks.filter(task => isWeekTask(task)).length
+    const uncategorized = baseTasks.filter(task => isUncategorizedTask(task)).length
+    const unscheduled = baseTasks.filter(task => isUnscheduledTask(task)).length
+    const inProgress = baseTasks.filter(task => isInProgressTask(task)).length
+
+    // 'above_my_tasks' is project-based, needs special handling
+    let aboveMyTasks = 0
+    const aboveMyTasksProject = projects.value.find(p => p.name?.toLowerCase().includes('above my tasks'))
+    if (aboveMyTasksProject) {
+      const allChildProjects = getChildProjects(aboveMyTasksProject.id)
+      const allChildIds = [...allChildProjects.map(p => p.id), aboveMyTasksProject.id]
+      aboveMyTasks = baseTasks.filter(task => allChildIds.includes(task.projectId)).length
+    }
+
+    // 'all' is just the total of base tasks (respecting project filter)
+    const all = baseTasks.length
+
+    return {
+      today,
+      week,
+      uncategorized,
+      unscheduled,
+      inProgress,
+      aboveMyTasks,
+      all
+    }
+  })
+
+  // Helper to get count for a specific project (respecting active filters)
+  const getProjectTaskCount = (projectId: string): number => {
+    const getChildProjectIds = (id: string): string[] => {
+      const ids = [id]
+      const childProjects = projects.value.filter(p => p.parentId === id)
+      childProjects.forEach(child => {
+        ids.push(...getChildProjectIds(child.id))
+      })
+      return ids
+    }
+
+    const projectIds = getChildProjectIds(projectId)
+    let projectTasks = tasks.value.filter(task => projectIds.includes(task.projectId))
+
+    // Apply smart view filter if active
+    if (activeSmartView.value) {
+      const { applySmartViewFilter } = useSmartViews()
+      projectTasks = applySmartViewFilter(projectTasks, activeSmartView.value)
+    }
+
+    // Apply status filter if active
+    if (activeStatusFilter.value) {
+      projectTasks = projectTasks.filter(task => task.status === activeStatusFilter.value)
+    }
+
+    // Apply hideDoneTasks if enabled
+    if (hideDoneTasks.value) {
+      projectTasks = projectTasks.filter(task => task.status !== 'done')
+    }
+
+    return projectTasks.length
+  }
 
   // Root projects - projects without parentId (for AppSidebar)
   const rootProjects = computed(() => {
@@ -1775,7 +1807,14 @@ export const useTaskStore = defineStore('tasks', () => {
       }, 2000) // 2 second delay to avoid conflicts
 
     } catch (error) {
-      console.error('❌ Task deletion failed:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Task deletion failed',
+        error: error as Error,
+        context: { taskId, taskTitle: deletedTask?.title },
+        showNotification: false // Will retry first
+      })
 
       // Simple retry mechanism
       try {
@@ -1783,7 +1822,15 @@ export const useTaskStore = defineStore('tasks', () => {
         await db.save(DB_KEYS.TASKS, tasks.value)
         console.log('✅ Retry successful')
       } catch (retryError) {
-        console.error('💀 Retry failed - task deletion could not be completed:', retryError)
+        errorHandler.report({
+          severity: ErrorSeverity.ERROR,
+          category: ErrorCategory.DATABASE,
+          message: 'Task deletion retry failed',
+          error: retryError as Error,
+          context: { taskId, taskTitle: deletedTask?.title },
+          showNotification: true,
+          userMessage: 'Failed to delete task. Please try again.'
+        })
 
         // Restore task in memory if both attempts failed
         tasks.value.splice(taskIndex, 0, deletedTask)
@@ -2156,16 +2203,15 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Project and view filtering
+  // Note: Smart views and project filters can now be combined (no longer mutually exclusive)
   const setActiveProject = (projectId: string | null) => {
     activeProjectId.value = projectId
-    activeSmartView.value = null // Clear smart view when selecting a project
+    persistFilters()
   }
 
-  const setSmartView = (view: 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | null) => {
+  const setSmartView = (view: 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'above_my_tasks' | null) => {
     activeSmartView.value = view
-    if (view) {
-      activeProjectId.value = null // Clear project filter when using smart view
-    }
+    persistFilters()
   }
 
   const toggleHideDoneTasks = () => {
@@ -2173,6 +2219,7 @@ export const useTaskStore = defineStore('tasks', () => {
     console.log('🔧 TaskStore: Current value before toggle:', hideDoneTasks.value)
 
     hideDoneTasks.value = !hideDoneTasks.value
+    persistFilters()
 
     console.log('🔧 TaskStore: New value after toggle:', hideDoneTasks.value)
     console.log('🔧 TaskStore: toggleHideDoneTasks completed successfully')
@@ -2184,6 +2231,7 @@ export const useTaskStore = defineStore('tasks', () => {
     console.log('🔧 TaskStore: Setting status filter from:', activeStatusFilter.value, 'to:', status)
 
     activeStatusFilter.value = status
+    persistFilters()
 
     console.log('🔧 TaskStore: Status filter updated to:', activeStatusFilter.value)
     console.log('🔧 TaskStore: setActiveStatusFilter completed successfully')
@@ -2749,13 +2797,26 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // CRITICAL DATA VALIDATION - Prevent catastrophic data loss
     if (!Array.isArray(newTasks)) {
-      console.error('❌ [DATA-LOSS-PREVENTION] restoreState: newTasks is not an array, aborting to prevent data loss')
+      errorHandler.report({
+        severity: ErrorSeverity.CRITICAL,
+        category: ErrorCategory.STATE,
+        message: 'restoreState: newTasks is not an array',
+        context: { type: typeof newTasks },
+        showNotification: true,
+        userMessage: 'Undo operation failed - invalid data format'
+      })
       return
     }
 
     if (newTasks.length === 0 && tasks.value.length > 0) {
-      console.error('❌ [DATA-LOSS-PREVENTION] restoreState: Attempting to restore empty array while current store has', tasks.value.length, 'tasks. ABORTING to prevent data loss!')
-      console.error('💡 [DATA-LOSS-PREVENTION] This indicates corrupted undo history or empty state snapshot')
+      errorHandler.report({
+        severity: ErrorSeverity.CRITICAL,
+        category: ErrorCategory.STATE,
+        message: 'restoreState: Blocked attempt to restore empty array',
+        context: { currentTaskCount: tasks.value.length, newTaskCount: 0 },
+        showNotification: true,
+        userMessage: 'Undo blocked to prevent data loss'
+      })
       return
     }
 
@@ -2765,8 +2826,14 @@ export const useTaskStore = defineStore('tasks', () => {
     )
 
     if (invalidTasks.length > 0) {
-      console.error('❌ [DATA-LOSS-PREVENTION] restoreState: Found', invalidTasks.length, 'invalid task objects. Aborting to prevent data corruption.')
-      console.error('💡 Invalid tasks sample:', invalidTasks.slice(0, 3))
+      errorHandler.report({
+        severity: ErrorSeverity.CRITICAL,
+        category: ErrorCategory.STATE,
+        message: 'restoreState: Found invalid task objects',
+        context: { invalidCount: invalidTasks.length, sampleIds: invalidTasks.slice(0, 3).map(t => t?.id) },
+        showNotification: true,
+        userMessage: 'Undo blocked - corrupted task data detected'
+      })
       return
     }
 
@@ -2795,8 +2862,15 @@ export const useTaskStore = defineStore('tasks', () => {
         console.error('⚠️ [DATA-LOSS-PREVENTION] Warning: After restore, task count went from', backupTasks.length, 'to 0. This may indicate a problem.')
       }
     } catch (error) {
-      console.error('❌ Failed to restore state:', error)
-      console.error('🔄 [EMERGENCY-RECOVERY] Restoring from backup due to restore failure')
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.STATE,
+        message: 'Failed to restore state',
+        error: error as Error,
+        context: { taskCount: newTasks.length, backupCount: backupTasks.length },
+        showNotification: true,
+        userMessage: 'Undo failed. Restoring from backup.'
+      })
       // Emergency restore from backup
       tasks.value = backupTasks
       try {
@@ -2804,7 +2878,14 @@ export const useTaskStore = defineStore('tasks', () => {
         await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, tasks.value)
         console.log('✅ [EMERGENCY-RECOVERY] Successfully restored from backup')
       } catch (backupError) {
-        console.error('💥 [CRITICAL] Emergency backup restore also failed:', backupError)
+        errorHandler.report({
+          severity: ErrorSeverity.CRITICAL,
+          category: ErrorCategory.STATE,
+          message: 'Emergency backup restore also failed',
+          error: backupError as Error,
+          showNotification: true,
+          userMessage: 'Critical error: Could not restore data. Please refresh the page.'
+        })
       }
     }
   }
@@ -2878,15 +2959,29 @@ export const useTaskStore = defineStore('tasks', () => {
 
       console.log('✅ Store initialized from PouchDB successfully (with "My Tasks" migration)')
     } catch (error) {
-      console.error('⚠️ Store initialization failed:', error)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Store initialization failed',
+        error: error as Error,
+        showNotification: true,
+        userMessage: 'Failed to load your tasks. Please refresh the page.'
+      })
       // Continue with empty state if initialization fails
     }
   }
 
   // Initialize store from PouchDB on first load - CRITICAL
-  initializeFromPouchDB().catch(err =>
-    console.error('❌ Store initialization error:', err)
-  )
+  initializeFromPouchDB().catch(err => {
+    errorHandler.report({
+      severity: ErrorSeverity.CRITICAL,
+      category: ErrorCategory.DATABASE,
+      message: 'Store initialization error',
+      error: err as Error,
+      showNotification: true,
+      userMessage: 'Critical: Task system failed to initialize. Please refresh.'
+    })
+  })
 
   return {
     // State
@@ -2910,7 +3005,11 @@ export const useTaskStore = defineStore('tasks', () => {
     completedTasks,
     totalPomodoros,
     nonDoneTaskCount,
+    smartViewTaskCounts,
     rootProjects,
+
+    // Centralized count helpers
+    getProjectTaskCount,
 
     // Original actions (without undo/redo - for internal use)
     createTask,

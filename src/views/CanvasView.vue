@@ -1857,30 +1857,25 @@ const syncNodes = () => {
     return normalizedTask
   })
 
-  // 🔧 ROUND 3 FIX: Enhanced debug logging for canvas task filtering
-  console.log('🔍 [syncNodes] Canvas task filtering analysis:', {
-    totalTasks: safeFilteredTasks.length,
-    tasksWithInboxFalse: safeFilteredTasks.filter(t => t.isInInbox === false).length,
-    tasksWithCanvasPosition: safeFilteredTasks.filter(t => t.canvasPosition).length,
-    tasksWithBoth: safeFilteredTasks.filter(t => t.isInInbox === false && t.canvasPosition).length,
-    filteredOutTasks: safeFilteredTasks.filter(t =>
-      t && t.id && !(
-        (t.isInInbox === false && t.canvasPosition) ||
-        (t.canvasPosition && t.canvasPosition.x !== undefined && t.canvasPosition.y !== undefined)
-      )
-    ).map(t => ({ id: t.id, title: t.title.substring(0, 30), isInInbox: t.isInInbox, hasCanvasPos: !!t.canvasPosition }))
+  // 🚨 ROUND 4 EMERGENCY DEBUGGING: Comprehensive task analysis
+  console.log('🚨 [EMERGENCY] Canvas Task Analysis:', {
+    totalTasks: validatedTasks.length,
+    tasksWithCanvasPos: validatedTasks.filter(t => t.canvasPosition).length,
+    tasksInInbox: validatedTasks.filter(t => t.isInInbox !== false).length,
+    tasksWithBoth: validatedTasks.filter(t => t.isInInbox === false && t.canvasPosition).length,
+    sampleTask: validatedTasks[0] ? {
+      id: validatedTasks[0].id,
+      title: validatedTasks[0].title,
+      canvasPosition: validatedTasks[0].canvasPosition,
+      isInInbox: validatedTasks[0].isInInbox
+    } : 'NO TASKS FOUND'
   })
 
-  // 🔧 ROUND 3 FIX: Show tasks that have valid canvas positions OR are explicitly on canvas
-  // This prevents tasks from disappearing due to inconsistent state during transitions
-  // Logic: Tasks appear if they EITHER (are explicitly moved to canvas) OR (have valid canvas position)
+  // 🚨 ROUND 4 EMERGENCY FIX: Show ALL tasks to restore canvas functionality
+  // COMPLEX FILTER WAS CAUSING COMPLETE CANVAS FAILURE
+  // TEMPORARILY show all tasks to identify the root cause
   validatedTasks
-    .filter(task => task && task.id && (
-      // Tasks explicitly moved to canvas (both conditions met)
-      (task.isInInbox === false && task.canvasPosition) ||
-      // Tasks with valid canvas position (handles legacy/inconsistent states)
-      (task.canvasPosition && task.canvasPosition.x !== undefined && task.canvasPosition.y !== undefined)
-    ))
+    .filter(task => task && task.id)  // EMERGENCY: ONLY filter by existence, no canvas logic
     .forEach((task, index) => {
       // 🎯 FIXED: Handle positioning for tasks with and without canvasPosition
       let position
@@ -1957,6 +1952,18 @@ const syncNodes = () => {
 
   nodes.value = validNodes
   console.log(`🔄 [SYNC] Updated nodes: ${validNodes.length} valid nodes`)
+
+  // 🚨 ROUND 4 EMERGENCY DEBUGGING: Vue Flow state analysis
+  console.log('🚨 [EMERGENCY] Vue Flow State:', {
+    nodesCount: nodes.value.length,
+    edgesCount: edges.value.length,
+    sampleNode: nodes.value[0] ? {
+      id: nodes.value[0].id,
+      type: nodes.value[0].type,
+      position: nodes.value[0].position,
+      data: nodes.value[0].data?.title || 'No title'
+    } : 'NO NODES'
+  })
 
   // Clean up any stale Vue Flow DOM nodes after sync
   nextTick(() => {

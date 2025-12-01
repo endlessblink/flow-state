@@ -6,7 +6,8 @@
       { 'completed': task.progress === 100 },
       { 'focused': isFocused },
       { 'selected': isSelected },
-      density ? `task-card--${density}` : ''
+      density ? `task-card--${density}` : '',
+      ...filterHighlightClasses
     ]"
     :tabindex="disabled ? -1 : 0"
     role="button"
@@ -387,6 +388,12 @@ const statusTooltip = computed(() => {
     'on_hold': 'Mark as planned'
   }
   return statusLabels[status] || 'Change status'
+})
+
+// Filter highlighting classes
+const filterHighlightClasses = computed(() => {
+  const highlights = taskStore.getTaskFilterHighlights(props.task)
+  return highlights.map(highlight => `filter-highlight-${highlight}`)
 })
 
 // Cycle through status instead of toggle completion

@@ -5,14 +5,14 @@
     role="treeitem"
     :aria-expanded="hasChildren ? isExpanded : undefined"
     :aria-level="level"
-    :aria-selected="taskStore.activeProjectId === project.id"
+    :aria-selected="taskStore.activeProjectIds.has(project.id)"
     :aria-label="project.name"
     :id="`project-${project.id}`"
     tabindex="-1"
   >
     <!-- The project itself -->
     <BaseNavItem
-      :active="taskStore.activeProjectId === project.id"
+      :active="taskStore.activeProjectIds.has(project.id)"
       :project-id="project.id"
       :has-children="hasChildren"
       :expanded="isExpanded"
@@ -24,7 +24,7 @@
       :style="{ '--nesting-indent': `${nestingDepth * 14}px` }"
       :aria-expanded="hasChildren ? isExpanded : undefined"
       :aria-level="level"
-      :tabindex="taskStore.activeProjectId === project.id ? 0 : -1"
+      :tabindex="taskStore.activeProjectIds.has(project.id) ? 0 : -1"
       @click="handleProjectClick(project)"
       @toggle-expand="toggleExpand"
       @contextmenu.prevent="$emit('contextmenu', $event, project)"

@@ -42,21 +42,24 @@
       </div>
     </div>
 
-    <!-- Smart Filter Bar -->
-    <div v-if="!isCollapsed" class="smart-filters">
+    <!-- Smart Filter Bar - Horizontal Compact Tabs -->
+    <div v-if="!isCollapsed" class="smart-filters-horizontal">
       <button
         v-for="filter in smartFilters"
         :key="filter.key"
-        :class="['filter-pill', { active: activeFilter === filter.key }]"
+        :class="['filter-tab', { active: activeFilter === filter.key }]"
         @click="activeFilter = filter.key as any"
         :title="filter.description"
+        :aria-label="`${filter.label}: ${filter.count} tasks`"
+        role="tab"
+        :aria-selected="activeFilter === filter.key"
       >
         <span class="filter-icon">{{ filter.icon }}</span>
         <span class="filter-label">{{ filter.label }}</span>
         <BaseBadge
           variant="count"
-          size="xs"
-          :class="{ 'filter-count-active': activeFilter === filter.key }"
+          size="sm"
+          :class="{ 'count-active': activeFilter === filter.key }"
         >
           {{ filter.count }}
         </BaseBadge>
@@ -660,50 +663,89 @@ onBeforeUnmount(() => {
   transform: scale(0.9);
 }
 
-.smart-filters {
+/* Horizontal Compact Tabs */
+.smart-filters-horizontal {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3);
+  gap: var(--space-1_5);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.filter-pill {
+.smart-filters-horizontal::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-tab {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  justify-content: flex-start;
+  gap: var(--space-1_5);
+  min-width: auto;
+  max-width: none;
+  height: 40px;
+  padding: var(--space-1_5) var(--space-2);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all 0.2s ease;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
+  position: relative;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.filter-pill:hover {
+.filter-tab:hover {
   background: var(--glass-bg-medium);
   border-color: var(--glass-border-hover);
   color: var(--text-primary);
   transform: translateY(-1px);
 }
 
-.filter-pill.active {
+.filter-tab.active {
   background: var(--state-active-bg);
   border-color: var(--state-active-border);
   color: var(--text-primary);
   box-shadow: var(--state-hover-shadow);
 }
 
+.filter-tab .base-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 10px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.filter-tab .count-active {
+  background: var(--text-primary) !important;
+  color: var(--surface-primary) !important;
+}
+
 .filter-icon {
   font-size: var(--text-base);
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .filter-label {
-  flex: 1;
+  font-size: var(--text-xs);
+  line-height: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .filter-count-active {
@@ -1071,7 +1113,7 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-.unified-inbox-panel.collapsed .smart-filters,
+.unified-inbox-panel.collapsed .smart-filters-horizontal,
 .unified-inbox-panel.collapsed .quick-add,
 .unified-inbox-panel.collapsed .brain-dump-toggle,
 .unified-inbox-panel.collapsed .brain-dump,

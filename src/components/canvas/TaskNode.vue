@@ -11,7 +11,8 @@
       'selected': isSelected,
       'multi-select-mode': multiSelectMode,
       'is-dragging': isNodeDragging,
-      'is-connecting': isConnecting
+      'is-connecting': isConnecting,
+      ...filterHighlightClasses
     }"
     :draggable="!isConnecting"
     @dragstart="handleDragStart"
@@ -208,6 +209,15 @@ const projectVisual = computed(() =>
 // Check if this task has an active timer
 const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
+})
+
+// Filter highlighting classes
+const filterHighlightClasses = computed(() => {
+  const highlights = taskStore.getTaskFilterHighlights(props.task)
+  return highlights.reduce((classes, highlight) => {
+    classes[`filter-highlight-${highlight}`] = true
+    return classes
+  }, {} as Record<string, boolean>)
 })
 
 // Drag handler with proper state management

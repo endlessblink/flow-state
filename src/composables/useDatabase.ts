@@ -12,6 +12,7 @@ import PouchDB from 'pouchdb-browser'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getDatabaseConfig, type DatabaseHealth } from '@/config/database'
+import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 // Singleton database instance state
 let singletonDatabase: PouchDB.Database | null = null
@@ -134,8 +135,17 @@ async function performWithRetry<T>(
     }
   }
 
-  console.error(`❌ [RETRY] ${operationName} failed after ${maxRetries} attempts:`, lastError)
-  throw lastError || new Error(`${operationName} failed after ${maxRetries} attempts`)
+  const finalError = lastError || new Error(`${operationName} failed after ${maxRetries} attempts`)
+  errorHandler.report({
+    severity: ErrorSeverity.ERROR,
+    category: ErrorCategory.DATABASE,
+    message: `${operationName} failed after ${maxRetries} attempts`,
+    error: finalError,
+    context: { operationName, maxRetries },
+    retryable: false,
+    showNotification: false // Don't spam notifications for retried operations
+  })
+  throw finalError
 }
 
 /**
@@ -186,7 +196,14 @@ async function performDatabaseHealthCheck(db: PouchDB.Database): Promise<{
     consecutiveHealthFailures++
     const error = err as Error
 
-    console.error(`❌ [HEALTH-CHECK] Health check failed (${consecutiveHealthFailures}/${MAX_HEALTH_FAILURES}):`, error)
+    errorHandler.report({
+      severity: consecutiveHealthFailures >= MAX_HEALTH_FAILURES ? ErrorSeverity.CRITICAL : ErrorSeverity.WARNING,
+      category: ErrorCategory.DATABASE,
+      message: `Database health check failed (${consecutiveHealthFailures}/${MAX_HEALTH_FAILURES})`,
+      error,
+      context: { consecutiveHealthFailures, maxFailures: MAX_HEALTH_FAILURES },
+      showNotification: consecutiveHealthFailures >= MAX_HEALTH_FAILURES
+    })
 
     return {
       healthy: false,
@@ -366,18 +383,21 @@ export function useDatabase(): UseDatabaseReturn {
       } catch (err) {
         error.value = err as Error
 
-        // Enhanced error logging
-        console.error('❌ [USE-DATABASE] Failed to initialize singleton database:', {
-          name: (err as Error).name,
-          message: (err as Error).message,
-          stack: (err as Error).stack,
-          toString: (err as any).toString(),
-          constructor: (err as any).constructor?.name,
-          isPouchDBError: (err as any).name === 'error' || (err as any).status !== undefined
+        // Report through unified error handler
+        const errorMessage = (err as Error).message || (err as any).toString() || 'Unknown database initialization error'
+        errorHandler.report({
+          severity: ErrorSeverity.CRITICAL,
+          category: ErrorCategory.DATABASE,
+          message: 'Failed to initialize database',
+          userMessage: 'Database initialization failed. Please refresh the page.',
+          error: err as Error,
+          context: {
+            name: (err as Error).name,
+            isPouchDBError: (err as any).name === 'error' || (err as any).status !== undefined
+          },
+          showNotification: true
         })
 
-        // Try to provide more specific error information
-        const errorMessage = (err as Error).message || (err as any).toString() || 'Unknown database initialization error'
         throw new Error(`Singleton database initialization failed: ${errorMessage}`)
       } finally {
         isInitializing = false
@@ -480,7 +500,14 @@ export function useDatabase(): UseDatabaseReturn {
 
         // Out of retries or non-conflict error
         error.value = err as Error
-        console.error(`❌ Failed to save ${key} after ${retryCount} attempts:`, err)
+        errorHandler.report({
+          severity: ErrorSeverity.ERROR,
+          category: ErrorCategory.DATABASE,
+          message: `Failed to save ${key} after ${retryCount} attempts`,
+          error: err as Error,
+          context: { key, retryCount, isConflict: err.status === 409 },
+          showNotification: true
+        })
         throw err
       }
     }
@@ -514,6 +541,14 @@ export function useDatabase(): UseDatabaseReturn {
         return null
       }
       error.value = err as Error
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: `Failed to load ${key} from database`,
+        error: err as Error,
+        context: { key },
+        showNotification: false // Don't show for load errors, let caller handle
+      })
       throw err
     }
   }
@@ -560,7 +595,13 @@ export function useDatabase(): UseDatabaseReturn {
       console.log('✅ [USE-DATABASE] Singleton PouchDB recreated and exposed to window.pomoFlowDb')
     } catch (err) {
       error.value = err as Error
-      console.error('❌ Failed to clear singleton database:', err)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to clear database',
+        error: err as Error,
+        showNotification: true
+      })
       throw err
     }
   }
@@ -580,7 +621,13 @@ export function useDatabase(): UseDatabaseReturn {
       return docs.rows.map(row => row.id!.replace(':data', ''))
     } catch (err) {
       error.value = err as Error
-      console.error('❌ Failed to get keys:', err)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to get database keys',
+        error: err as Error,
+        showNotification: false
+      })
       throw err
     }
   }
@@ -616,7 +663,13 @@ export function useDatabase(): UseDatabaseReturn {
       return result
     } catch (err) {
       error.value = err as Error
-      console.error('❌ Failed to export data:', err)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to export data',
+        error: err as Error,
+        showNotification: true
+      })
       throw err
     }
   }
@@ -632,7 +685,13 @@ export function useDatabase(): UseDatabaseReturn {
       console.log('📥 Imported data to PouchDB')
     } catch (err) {
       error.value = err as Error
-      console.error('❌ Failed to import data:', err)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to import data',
+        error: err as Error,
+        showNotification: true
+      })
       throw err
     }
   }
@@ -651,7 +710,14 @@ export function useDatabase(): UseDatabaseReturn {
       return results as T[]
     } catch (err) {
       error.value = err as Error
-      console.error(`❌ Failed atomic transaction${context ? ` for ${context}` : ''}:`, err)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: `Failed atomic transaction${context ? ` for ${context}` : ''}`,
+        error: err as Error,
+        context: { transactionContext: context },
+        showNotification: true
+      })
       throw err
     }
   }
@@ -791,7 +857,14 @@ export function useDatabase(): UseDatabaseReturn {
       return result
     } catch (err) {
       error.value = err as Error
-      console.error('❌ Failed to batch load from PouchDB:', err)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to batch load from database',
+        error: err as Error,
+        context: { keyCount: keys.length },
+        showNotification: false
+      })
       throw err
     }
   }
@@ -821,7 +894,14 @@ export function useDatabase(): UseDatabaseReturn {
       }
     } catch (err) {
       error.value = err as Error
-      console.error('❌ Failed to batch save to PouchDB:', err)
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Failed to batch save to database',
+        error: err as Error,
+        context: { itemCount: Object.keys(data).length },
+        showNotification: true
+      })
       throw err
     }
   }

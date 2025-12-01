@@ -419,7 +419,7 @@ test.describe('Phase 2: Edge Cases - Enhanced Composables', () => {
   test.describe('Error Recovery', () => {
     test('should recover from task creation errors', async ({ page }) => {
       // Try to create task with invalid data
-      await page.fill('[data-testid="quick-task-input"] '') // Empty title
+      await page.fill('[data-testid="quick-task-input"]', '') // Empty title
       await page.press('[data-testid="quick-task-input"]', 'Enter')
       await page.waitForTimeout(500)
 

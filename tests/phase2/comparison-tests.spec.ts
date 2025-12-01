@@ -259,7 +259,7 @@ test.describe('Phase 2: Side-by-Side Comparison - Main Branch vs Worktree', () =
 
     for (const scenario of taskScenarios) {
       // Create task in main branch
-      await mainBranchPage.fill('[data-testid="quick-task-input"]`, `${scenario.name} - Main`)
+      await mainBranchPage.fill('[data-testid="quick-task-input"]', `${scenario.name} - Main`)
       await mainBranchPage.press('[data-testid="quick-task-input"]', 'Enter')
       await mainBranchPage.waitForTimeout(500)
 

@@ -102,26 +102,33 @@ test.describe('Pomo-Flow Comprehensive E2E Tests', () => {
 
   test('Calendar view functionality', async ({ page }) => {
     // Navigate to calendar view
-    await page.goto('http://localhost:5546/calendar');
+    await page.goto('http://localhost:5546/#/calendar');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
-    // Look for calendar elements
-    const calendarElements = page.locator('.calendar, [class*="calendar"], .vc-container, [class*="vc-"]');
-    const calendarCount = await calendarElements.count();
+    // Look for calendar heading
+    const calendarHeading = page.locator('h1:has-text("Calendar"), h2:has-text("Calendar")');
+    const headingCount = await calendarHeading.count();
 
-    if (calendarCount > 0) {
-      console.log(`Found ${calendarCount} calendar elements`);
+    if (headingCount > 0) {
+      console.log('Calendar view heading found');
 
-      // Look for date navigation
-      const dateNavigation = page.locator('.vc-nav-header, [class*="nav"], [class*="header"]');
+      // Look for date navigation (Previous/Next Day buttons)
+      const dateNavigation = page.locator('button:has-text("Previous Day"), button:has-text("Next Day"), button:has-text("Today")');
       expect(await dateNavigation.count()).toBeGreaterThan(0);
 
-      // Look for calendar grid
-      const calendarGrid = page.locator('.vc-weeks, .vc-days, [class*="grid"], [class*="week"]');
-      expect(await calendarGrid.count()).toBeGreaterThan(0);
+      // Look for time slots (12 AM, 1 AM, etc.) - indicates calendar grid loaded
+      const timeSlots = page.locator('text=/^\\d{1,2} [AP]M$/');
+      expect(await timeSlots.count()).toBeGreaterThan(0);
+
+      // Look for view switcher (Day/Week/Month buttons)
+      const viewSwitcher = page.locator('button:has-text("Day"), button:has-text("Week"), button:has-text("Month")');
+      expect(await viewSwitcher.count()).toBeGreaterThan(0);
     } else {
-      console.log('Calendar view loaded but no calendar elements found');
+      console.log('Calendar view loaded but no heading found - checking for alternative elements');
+      // Fallback: check for any calendar-related content
+      const calendarContent = page.locator('[class*="calendar"], [class*="inbox"]');
+      expect(await calendarContent.count()).toBeGreaterThan(0);
     }
 
     // Calendar should load without critical errors

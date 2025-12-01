@@ -1,10 +1,47 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 1, 2025
-**Version**: 2.3 (My Tasks Removal Complete)
-**Status**: ✅ Canvas fixes, Phase 1 Error Handling, My Tasks removal complete
+**Version**: 2.4 (Calendar Drag Fix)
+**Status**: ✅ Canvas fixes, Phase 1 Error Handling, My Tasks removal, Calendar drag-inside-calendar fix complete
 **Current Branch**: phase-1-error-handling
 **Baseline**: stable-working-version directory (v2.0-comprehensive-checkpoint-2025-11-15)
+
+---
+
+## ✅ **COMPLETED SESSION: Calendar Drag Inside Calendar Fix (Dec 1, 2025)**
+
+### **Problem**
+Calendar daily view had broken functionality:
+1. Resize handles not appearing on hover over calendar tasks
+2. Dragging tasks within calendar (e.g., 9:00 AM → 2:00 PM) not working
+3. Drag from inbox to calendar not working
+
+### **Root Cause**
+A CSS rule at `src/views/CalendarView.vue` lines 1796-1801 was setting `position: relative` on resize handles when hovering `.time-slot`, which broke the `position: absolute` positioning needed for resize handles to appear at the top/bottom of tasks.
+
+```css
+/* BROKEN RULE - REMOVED */
+.time-slot:hover .resize-handle {
+  pointer-events: auto;
+  position: relative;  /* ← THIS BROKE EVERYTHING */
+  z-index: 10;
+}
+```
+
+### **Fix Applied**
+Removed the broken CSS rule (5 lines). The correct CSS rules already existed and now work properly.
+
+### **Results**
+| Feature | Status |
+|---------|--------|
+| Drag inside calendar | ✅ WORKING |
+| Drag from inbox to calendar | ✅ WORKING |
+| Resize handles in DOM | ✅ WORKING |
+| Resize handles appear on hover | ⚠️ Needs manual test |
+| Resize functionality | ❌ Still not working (user reported) |
+
+### **Documentation**
+- **SOP Created**: `docs/🐛 debug/sop/calendar-drag-inside-calendar/calendar-drag-fix-2025-12-01.md`
 
 ---
 
@@ -96,7 +133,7 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 |----------|-------|---------------|--------|
 | ✅ **VERIFIED** | **"My Tasks" removal complete** | Synthetic project removed, tasks use `projectId: null` (commit `fc7dde1`) | **COMPLETE Dec 1, 2025** |
 | ❓ **UNVERIFIED** | **Smart view filtering fixed** | No evidence of filtering system fixes in stable version | **NEEDS VERIFICATION** |
-| ❓ **UNVERIFIED** | **Calendar drag-drop fixed** | No evidence of calendar drag fixes in stable version | **NEEDS VERIFICATION** |
+| ✅ **PARTIAL** | **Calendar drag-drop fixed** | Drag inside calendar works (Dec 1, 2025 fix), resize still needs work | **PARTIAL - SOP: `docs/🐛 debug/sop/calendar-drag-inside-calendar/`** |
 | ✅ **VERIFIED** | **Core application working** | All 7 views render with real data in stable version | **WORKING** |
 | ✅ **VERIFIED** | **Database persistence** | IndexedDB via LocalForage functional in stable version | **WORKING** |
 | ✅ **VERIFIED** | **Canvas system** | Vue Flow integration with 155,207 lines of code | **WORKING** |
@@ -120,6 +157,27 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 | Issue | File | Description | Priority |
 |-------|------|-------------|----------|
 | Calendar E2E test CSS selector failure | `tests/e2e-comprehensive-functionality.spec.ts:122` | Test looks for `.vc-weeks, .vc-days, [class*="grid"], [class*="week"]` but finds 0 elements. Calendar view loads but specific grid selectors don't match current DOM structure. | LOW |
+
+---
+
+## 🔧 **IN PROGRESS: Fix Test Infrastructure (Dec 1, 2025)**
+
+**Status**: 🔄 IN PROGRESS
+**Priority**: HIGH - Enables reliable CI/CD
+
+### **Issues to Fix**
+1. **Syntax errors in phase2/*.spec.ts files**:
+   - `comparison-tests.spec.ts:262` - Unterminated string (backtick/quote mismatch)
+   - `edge-cases.spec.ts:422` - Unterminated string
+   - `migration-validation.spec.ts:576` - Unexpected token (try/catch issue)
+
+2. **Calendar E2E selector mismatch**:
+   - `e2e-comprehensive-functionality.spec.ts:122` - CSS selectors don't match DOM
+
+### **Success Criteria**
+- ✅ All syntax errors fixed
+- ✅ `npx playwright test` runs without parse errors
+- ✅ Core E2E tests pass (17+ tests)
 
 ---
 

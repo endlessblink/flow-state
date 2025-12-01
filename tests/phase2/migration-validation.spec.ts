@@ -572,7 +572,7 @@ test.describe('Phase 2: Migration Validation - Data Migration & Backward Compati
             tasks: [
               { id: 'corrupted-1', title: undefined, projectId: 'invalid' }
             ]
-          })
+          }))
         } catch (error) {
           console.log('Handled corrupted data scenario')
         }

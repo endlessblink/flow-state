@@ -87,7 +87,11 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
       })
 
       // Calculate overlapping positions for this day
-      eventsByDay[dayIndex] = core.calculateOverlappingPositions(dayEvents)
+      const positionedEvents = core.calculateOverlappingPositions(dayEvents)
+      eventsByDay[dayIndex] = positionedEvents.map(event => ({
+        ...event,
+        dayIndex
+      }))
     })
 
     // Flatten all events into a single array

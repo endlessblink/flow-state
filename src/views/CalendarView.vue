@@ -141,10 +141,10 @@
             :data-hour="slot.hour"
             :data-minute="slot.minute"
             :data-time="formatSlotTime(slot)"
-            @dragover.prevent="onDragOver($event, slot)"
-                @dragenter.prevent="onDragEnter($event, slot)"
-            @dragleave="onDragLeave"
-            @drop.prevent="onDropSlot($event, slot)"
+            @dragover.prevent="dayView.handleDragOver($event, timeSlotToDropTarget(slot))"
+                @dragenter.prevent="dayView.handleDragEnter($event, timeSlotToDropTarget(slot))"
+            @dragleave="dayView.handleDragLeave"
+            @drop.prevent="dayView.handleDrop($event, timeSlotToDropTarget(slot))"
             @mousedown="dragCreate.handleSlotMouseDown($event, slot)"
           >
             <!-- Tasks rendered INSIDE the slot (slot-based architecture) -->
@@ -172,66 +172,19 @@
             >
               <!-- Only show full content in primary slot -->
               <template v-if="isTaskPrimarySlot(slot, calEvent)">
-                <!-- Project Stripe -->
-                <div
-                  v-if="getProjectVisual(calEvent).type === 'emoji'"
-                  class="project-stripe project-emoji-stripe"
-                  :title="`Project: ${getProjectName(calEvent)}`"
-                >
-                  <ProjectEmojiIcon
-                    :emoji="getProjectVisual(calEvent).content"
-                    size="xs"
-                    :title="`Project: ${getProjectName(calEvent)}`"
-                    class="project-emoji"
-                  />
-                </div>
-                <div
-                  v-else
-                  class="project-stripe project-color-stripe"
-                  :style="{ backgroundColor: getProjectColor(calEvent) }"
-                  :title="`Project: ${getProjectName(calEvent)}`"
-                ></div>
-
-                <!-- Priority Stripe -->
-                <div
-                  class="priority-stripe"
-                  :class="`priority-${getPriorityClass(calEvent)}`"
-                  :title="`Priority: ${getPriorityLabel(calEvent)}`"
-                ></div>
-
-                <!-- Task Content -->
-                <div class="task-content">
-                  <div class="task-header">
-                    <div class="task-title">{{ calEvent.title }}</div>
-                    <div class="task-actions">
-                      <div
-                        class="status-indicator"
-                        :class="`status-${getTaskStatus(calEvent)}`"
-                        @click.stop="cycleTaskStatus($event, calEvent)"
-                        :title="`Status: ${getStatusLabel(calEvent)} (click to change)`"
-                      >
-                        {{ getStatusIcon(getTaskStatus(calEvent)) }}
-                      </div>
-                      <button
-                        class="remove-from-calendar-btn"
-                        @click.stop="handleRemoveFromCalendar(calEvent)"
-                        title="Remove from calendar (move to inbox)"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                  <div class="task-duration">{{ calEvent.duration }}min</div>
+                <!-- CLEAN CALENDAR-ONLY DISPLAY - Hide all visual clutter -->
+                <div class="calendar-task-content">
+                  <div class="calendar-task-title">{{ calEvent.title }}</div>
                 </div>
 
-                <!-- Resize Handle (top for changing start time) -->
+                <!-- Resize Handle (top for changing start time) - Keep for functionality -->
                 <div
                   class="resize-handle resize-top"
                   @mousedown.stop="startResize($event, calEvent, 'top')"
                   title="Drag to change start time"
                 ></div>
 
-                <!-- Resize Handle (bottom for changing duration) -->
+                <!-- Resize Handle (bottom for changing duration) - Keep for functionality -->
                 <div
                   class="resize-handle resize-bottom"
                   @mousedown.stop="startResize($event, calEvent, 'bottom')"
@@ -602,6 +555,14 @@ const dayView = useCalendarDayView(currentDate, statusFilter)
 const weekView = useCalendarWeekView(currentDate, statusFilter)
 const monthView = useCalendarMonthView(currentDate, statusFilter)
 
+// Helper function to convert TimeSlot to DropTarget for unified drag system
+const timeSlotToDropTarget = (slot: any) => ({
+  type: 'time-slot' as const,
+  date: slot.date,
+  time: `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`,
+  slotIndex: slot.slotIndex
+})
+
 // Reactive current time for time indicator
 const currentTime = ref(new Date())
 let timeUpdateInterval: NodeJS.Timeout | null = null
@@ -694,50 +655,8 @@ const formatSlotTime = (slot: any) => {
   return `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
 }
 
-// Native HTML5 Drag-Drop handlers for inbox → calendar (per PomoFlow Development Prompt)
-// CRITICAL: @dragover.prevent is required or @drop never fires
-// These wrap the composable handlers with proper event handling
-const onDragOver = (e: DragEvent, slot: any) => {
-  // CRITICAL: preventDefault() already called by @dragover.prevent modifier
-  // BUT we must set dropEffect to validate this as a drop target
-  if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = 'move'
-  }
-
-  console.log('🔄 [CalendarDrag] onDragOver - drop target validated for slot:', slot.slotIndex)
-
-  // Call the existing handler from composable
-  handleDragOver(e, slot)
-}
-
-const onDragEnter = (e: DragEvent, slot: any) => {
-  // CRITICAL: preventDefault() already called by @dragenter.prevent modifier
-  // Set dropEffect to validate this as a drop target
-  if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = 'move'
-  }
-
-  console.log('📍 [CalendarDrag] onDragEnter - slot entered:', slot.slotIndex)
-
-  // Track active drop slot for visual feedback (handled by composable)
-  handleDragEnter(e, slot)
-}
-
-const onDragLeave = () => {
-  handleDragLeave()
-}
-
-const onDropSlot = (e: DragEvent, slot: any) => {
-  // CRITICAL: preventDefault() already called by @drop.prevent modifier
-  // BUT be explicit for clarity and add stopPropagation
-  e.preventDefault()
-  e.stopPropagation()
-
-  console.log('🎯 [CalendarDrag] onDropSlot called for slot:', slot.slotIndex)
-
-  // Use existing handleDrop from composable
-  handleDrop(e, slot)
-}
+// Unified drag handlers are now used directly from dayView composable
+// This eliminates duplicate wrapper methods and centralizes drag logic
 
 // ✅ CAPTURE PHASE HANDLERS
 const handleDragEnterCapture = (e: DragEvent) => {
@@ -747,7 +666,7 @@ const handleDragEnterCapture = (e: DragEvent) => {
   const idx = parseInt(slot.getAttribute('data-slot-index') || '-1')
   if (idx === -1) return
   const slotObj = timeSlots.value[idx]
-  if (slotObj) handleDragEnter(e, slotObj)
+  if (slotObj) dayView.handleDragEnter(e, timeSlotToDropTarget(slotObj))
 }
 
 const handleDragOverCapture = (e: DragEvent) => {
@@ -761,7 +680,7 @@ const handleDragOverCapture = (e: DragEvent) => {
   const slotObj = timeSlots.value[idx]
   if (slotObj) {
     activeDropSlot.value = idx
-    handleDragOver(e, slotObj)
+    dayView.handleDragOver(e, timeSlotToDropTarget(slotObj))
   }
 }
 
@@ -785,7 +704,7 @@ const handleDropCapture = (e: DragEvent) => {
   if (idx === -1) return
   activeDropSlot.value = null
   const slotObj = timeSlots.value[idx]
-  if (slotObj) handleDrop(e, slotObj)
+  if (slotObj) dayView.handleDrop(e, timeSlotToDropTarget(slotObj))
 }
 
 // Scroll synchronization
@@ -1682,6 +1601,25 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+/* Clean calendar-specific task styling */
+.calendar-task-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 20px;
+}
+
+.calendar-task-title {
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  flex: 1;
 }
 
 .task-title {

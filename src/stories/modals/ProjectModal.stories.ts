@@ -15,10 +15,10 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-// Real production project example - matches the default project from the store
-const realProject: Project = {
-  id: '1',
-  name: 'My Tasks',
+// Example project for stories
+const exampleProject: Project = {
+  id: 'example-project-1',
+  name: 'Work Tasks',
   color: '#3b82f6',
   colorType: 'hex',
   viewType: 'status',
@@ -36,7 +36,7 @@ export const Create: Story = {
 export const Edit: Story = {
   args: {
     isOpen: true,
-    project: realProject,
+    project: exampleProject,
   },
 }
 
@@ -44,7 +44,7 @@ export const EditWithEmoji: Story = {
   args: {
     isOpen: true,
     project: {
-      ...realProject,
+      ...exampleProject,
       name: 'Personal Goals',
       colorType: 'emoji',
       emoji: '🎯',

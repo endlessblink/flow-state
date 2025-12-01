@@ -138,12 +138,9 @@ interface ProjectNode {
   depth: number
 }
 
-// Available parent projects (excludes "My Tasks", current project, and descendants to prevent circular nesting)
+// Available parent projects (excludes current project and descendants to prevent circular nesting)
 const availableParentProjects = computed<ProjectNode[]>(() => {
   const allProjects = taskStore.projects.filter(p => {
-    // Exclude "My Tasks"
-    if (p.id === '1') return false
-
     // Exclude current project when editing
     if (isEditing.value && props.project && p.id === props.project.id) return false
 

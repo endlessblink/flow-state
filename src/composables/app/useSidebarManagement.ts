@@ -67,18 +67,9 @@ export function useSidebarManagement() {
 
     console.log('🔍 filterSidebarProjects output:', filtered.length, 'projects')
 
-    // If no real projects exist, show default "My Tasks" project
+    // No projects is valid - user can have uncategorized tasks without any projects
     if (filtered.length === 0) {
-      console.log('⚠️ No real projects found, showing default "My Tasks" project')
-      return [{
-        id: '1',
-        name: 'My Tasks',
-        color: undefined,
-        colorType: undefined,
-        emoji: '🪣',
-        viewType: 'status',
-        createdAt: new Date()
-      }]
+      console.log('ℹ️ No projects found - tasks will be uncategorized')
     }
 
     return filtered
@@ -207,8 +198,8 @@ export function useSidebarManagement() {
     }).length
   })
 
-  // Above My Tasks task count - counts all non-done tasks
-  const aboveMyTasksCount = computed(() => {
+  // All Active task count - counts all non-done tasks
+  const allActiveCount = computed(() => {
     // Use the centralized counter from task store for consistency
     if (taskStore && typeof taskStore.nonDoneTaskCount === 'number') {
       return taskStore.nonDoneTaskCount
@@ -217,7 +208,7 @@ export function useSidebarManagement() {
     // Fallback to manual filtering
     return taskStore.tasks.filter(task => {
       // Count all tasks that are not marked as done
-      // This matches the "above_my_tasks" smart view logic
+      // This matches the "all_active" smart view logic
       return task.status !== 'done'
     }).length
   })
@@ -232,8 +223,9 @@ export function useSidebarManagement() {
         return true
       }
 
-      // Backward compatibility: also treat tasks without proper project assignment as uncategorized
-      if (!task.projectId || task.projectId === '' || task.projectId === null || task.projectId === '1') {
+      // Backward compatibility: treat tasks without proper project assignment as uncategorized
+      // REMOVED: projectId === '1' check - "My Tasks" concept removed
+      if (!task.projectId || task.projectId === '' || task.projectId === null) {
         return true
       }
 
@@ -413,7 +405,7 @@ export function useSidebarManagement() {
     return taskStore.projects.some(p => p.parentId === projectId)
   }
 
-  const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'above_my_tasks') => {
+  const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active') => {
     taskStore.setSmartView(view)
   }
 
@@ -468,7 +460,7 @@ export function useSidebarManagement() {
     rootProjects,
     todayTaskCount,
     weekTaskCount,
-    aboveMyTasksCount,
+    allActiveCount,
     uncategorizedCount,
 
     // Task management methods

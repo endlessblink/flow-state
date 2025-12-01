@@ -90,19 +90,19 @@
             This Week
           </DateDropZone>
 
-          <!-- Uncategorized Tasks (My Tasks) -->
+          <!-- Uncategorized Tasks -->
           <div class="smart-view-uncategorized">
-            <!-- All Tasks -->
+            <!-- All Active Tasks -->
             <DateDropZone
-              :active="taskStore.activeSmartView === 'above_my_tasks'"
-              :count="aboveMyTasksCount"
+              :active="taskStore.activeSmartView === 'all_active'"
+              :count="allActiveCount"
               target-type="nodate"
-              @click="selectSmartView('above_my_tasks')"
+              @click="selectSmartView('all_active')"
             >
               <template #icon>
                 <List :size="16" />
               </template>
-              All Tasks
+              All Active
             </DateDropZone>
 
             <button
@@ -679,17 +679,17 @@ const weekTaskCount = computed(() => {
   }).length
 })
 
-// Above My Tasks task count - counts all non-done tasks
-const aboveMyTasksCount = computed(() => {
+// All Active task count - counts all non-done tasks
+const allActiveCount = computed(() => {
   return (Array.isArray(taskStore.tasks) ? taskStore.tasks : []).filter(task => {
     // CRITICAL NULL CHECK: Ensure task exists and has required properties
     if (!task || typeof task !== 'object') {
-      console.warn('Invalid task object found in aboveMyTasksCount:', task)
+      console.warn('Invalid task object found in allActiveCount:', task)
       return false
     }
 
     // Count all tasks that are not marked as done
-    // This matches the "above_my_tasks" smart view logic
+    // This matches the "all_active" smart view logic
     return task.status !== 'done'
   }).length
 })
@@ -764,12 +764,12 @@ const pageTitleInfo = computed<PageTitleInfo>(() => {
       emoji: '🪣',
       smartView: 'uncategorized'
     }
-  } else if (taskStore.activeSmartView === 'above_my_tasks') {
+  } else if (taskStore.activeSmartView === 'all_active') {
     filterContext = {
       type: 'smart-view',
       name: 'All Active Tasks',
       emoji: '📋',
-      smartView: 'above_my_tasks'
+      smartView: 'all_active'
     }
   }
   // Priority 2: Check for selected projects
@@ -1043,7 +1043,7 @@ const hasProjectChildren = (projectId: string) => {
 }
 
 
-const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'above_my_tasks') => {
+const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active') => {
   taskStore.setSmartView(view)
 }
 
@@ -1200,7 +1200,7 @@ const confirmDeleteProject = (project: Project) => {
 
   const details: string[] = []
   if (taskCount > 0) {
-    details.push(`${taskCount} task${taskCount > 1 ? 's' : ''} will move to "My Tasks"`)
+    details.push(`${taskCount} task${taskCount > 1 ? 's' : ''} will become uncategorized`)
   }
   if (childCount > 0) {
     details.push(`${childCount} child project${childCount > 1 ? 's' : ''} will be un-nested`)

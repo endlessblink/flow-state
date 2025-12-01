@@ -32,7 +32,7 @@ const createTask = (id: string, title: string, scheduledDate?: string, dueDate?:
   subtasks: [],
   dueDate,
   estimatedDuration: 60,
-  projectId: '1',
+  projectId: null,
   parentTaskId: null,
   createdAt: new Date(),
   updatedAt: new Date(),

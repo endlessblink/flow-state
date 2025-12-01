@@ -118,7 +118,7 @@ const createTask = async () => {
     description: '',
     status: 'planned',
     priority: priority.value,
-    projectId: selectedProject.value || taskStore.activeProjectId || '1'
+    projectId: selectedProject.value || taskStore.activeProjectId || null
   }
 
   if (dueDate.value) {
@@ -144,7 +144,7 @@ const createAndContinue = async () => {
     description: '',
     status: 'planned',
     priority: priority.value,
-    projectId: selectedProject.value || taskStore.activeProjectId || '1'
+    projectId: selectedProject.value || taskStore.activeProjectId || null
   }
 
   if (dueDate.value) {

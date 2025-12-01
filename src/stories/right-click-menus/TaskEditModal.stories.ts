@@ -27,7 +27,7 @@ const realTask: Task = {
   subtasks: [],
   dueDate: '2024-12-25',
   estimatedDuration: 120,
-  projectId: '1',
+  projectId: null,
   parentTaskId: null,
   createdAt: new Date(),
   updatedAt: new Date(),

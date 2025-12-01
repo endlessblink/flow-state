@@ -1803,14 +1803,13 @@ const syncNodes = () => {
   // Safety check: ensure filteredTasks is an array
   const safeFilteredTasks = Array.isArray(filteredTasks.value) ? filteredTasks.value : []
 
-  // 🎯 FIXED: Show ALL tasks in canvas, not just those with canvasPosition
-  // OLD: Only process tasks that ALREADY have canvas positions
-  // NEW: Process all tasks, assign default positions to those without canvasPosition
-  // 🔧 FIXED (2025-12-01): Show tasks that have canvasPosition OR are not explicitly in inbox
-  // Tasks with canvasPosition should ALWAYS show (they were placed on canvas)
-  // Tasks with isInInbox === true AND no canvasPosition go to inbox panel
+  // 🎯 FIXED: Only show tasks that are EXPLICITLY on canvas
+  // Tasks must have BOTH:
+  // 1. isInInbox === false (explicitly moved to canvas)
+  // 2. canvasPosition (has a position on canvas)
+  // This prevents tasks from showing on canvas until dragged from inbox
   safeFilteredTasks
-    .filter(task => task && task.id && (task.canvasPosition || task.isInInbox !== true))
+    .filter(task => task && task.id && task.isInInbox === false && task.canvasPosition)
     .forEach((task, index) => {
       // 🎯 FIXED: Handle positioning for tasks with and without canvasPosition
       let position
@@ -4061,6 +4060,10 @@ const handleKeyDown = async (event: KeyboardEvent) => {
   console.log(`🎯 All ${selectedNodes.length} operations completed. Final undo count: ${undoHistory.undoCount}`)
 
   canvasStore.setSelectedNodes([])
+
+  // 🔧 FIXED: Wait for Vue reactivity to propagate task store changes before syncing
+  // Without this, syncNodes() runs before the task updates are reflected in the computed properties
+  await nextTick()
   syncNodes() // Refresh VueFlow to show changes
 }
 
@@ -4218,6 +4221,12 @@ const handleDrop = async (event: DragEvent) => {
     }
 
     console.log('✅ [CANVAS] handleDrop completed successfully')
+
+    // 🔧 FIXED: Force immediate sync after drop to show task on canvas
+    // Without this, the task doesn't appear until a refresh
+    await nextTick()
+    syncNodes()
+    console.log('🔄 [CANVAS] Forced syncNodes after drop')
 
   } catch (error) {
     console.error('💥 [CANVAS] Critical error in handleDrop:', error)
@@ -4822,17 +4831,11 @@ onMounted(async () => {
         console.log('[Zoom Debug] Zoom limits re-enforced after delay')
       }
 
-      // Auto-center viewport on tasks after Vue Flow is fully initialized
-      // This prevents the canvas from starting in a blank area
-      const centerTimerId = setTimeout(() => {
-        if (nodes.value.length > 0) {
-          console.log('[Canvas Init] Auto-centering viewport on tasks')
-          fitView()
-        } else {
-          console.log('[Canvas Init] No nodes to center on, keeping default viewport')
-        }
-      }, 200)
-      resourceManager.addTimer(centerTimerId as unknown as number)
+      // 🔧 DISABLED: Auto-centering was zooming in on tasks unexpectedly
+      // Users reported this was confusing as it would zoom to a single task
+      // The canvas now starts at the default viewport { zoom: 1, x: 0, y: 0 }
+      // Users can press 'F' to fitView manually if needed
+      console.log('[Canvas Init] Using default viewport (auto-center disabled)')
     }, 1000)
     resourceManager.addTimer(zoomTimerId as unknown as number)
 

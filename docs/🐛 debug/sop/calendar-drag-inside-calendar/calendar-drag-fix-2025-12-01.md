@@ -1,7 +1,7 @@
 # SOP: Calendar Drag Inside Calendar Fix
 
 **Date:** December 1, 2025
-**Status:** Partial Fix (Drag working, Resize still needs work)
+**Status:** Hover & Visibility Fixed, Resize Handler Working (Needs Manual Testing)
 **Affected Files:** `src/views/CalendarView.vue`, `src/composables/calendar/useCalendarDayView.ts`
 
 ---
@@ -239,8 +239,71 @@ When drag/resize is working, you should see these logs:
 
 ---
 
+## Additional Fixes (Session 2 - December 1, 2025)
+
+### Issue: CSS `:hover` Not Triggering on Draggable Elements
+
+The CSS `:hover` pseudo-class is unreliable on elements with `draggable="true"`. The resize handles weren't becoming visible even though the CSS rule was correct.
+
+### Root Cause: Multiple Issues
+
+1. **Variable Naming Collision**: In the template v-for loop, `event` was used as the loop variable, conflicting with JavaScript's `$event`
+2. **Inline Event Handlers**: Inline handlers like `@mouseenter="hoveredEventId = event.id"` weren't working reliably
+3. **CSS Transition Blocking**: The `transition: all var(--duration-fast)` on resize handles was preventing immediate opacity changes
+
+### Fixes Applied
+
+#### 1. Variable Rename (lines 147-235)
+Changed `event` to `calEvent` in the v-for loop to avoid naming collision:
+```vue
+v-for="calEvent in getTasksForSlot(slot)"
+```
+
+#### 2. Method-Based Hover Handlers (lines 611-617)
+Added explicit methods instead of inline handlers:
+```typescript
+const handleSlotTaskMouseEnter = (eventId: string) => {
+  hoveredEventId.value = eventId
+}
+const handleSlotTaskMouseLeave = () => {
+  hoveredEventId.value = null
+}
+```
+
+#### 3. CSS Transition Fix (lines 1722-1731)
+Added `!important` and disabled transitions on hover:
+```css
+.slot-task.is-primary:hover .resize-handle,
+.slot-task.is-primary.is-hovered .resize-handle {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  background: rgba(99, 102, 241, 0.4) !important;
+  transition: none !important;  /* Critical - prevents transition from blocking */
+}
+```
+
+### Verification Results (Session 2)
+
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| Vue mouseenter handler | ✅ Working | `is-hovered` class added on mouseenter event |
+| Resize handle opacity | ✅ Working | Changes from 0 to 1 when `is-hovered` class added |
+| Resize handle pointer-events | ✅ Working | Changes from `none` to `auto` |
+| startResize() called | ✅ Working | Console shows "Resize started" and "Resize completed" |
+
+### What Needs Manual Testing
+
+The resize functionality uses `requestAnimationFrame` which doesn't work well with Playwright synthetic events. Manual testing required to verify:
+- Bottom resize handle drag extends duration
+- Top resize handle drag changes start time
+
+---
+
 ## Change Log
 
 | Date | Change | Result |
 |------|--------|--------|
 | 2025-12-01 | Removed broken `.time-slot:hover .resize-handle` CSS rule | Drag within calendar now works |
+| 2025-12-01 | Fixed variable naming collision (`event` → `calEvent`) | Vue event handlers work correctly |
+| 2025-12-01 | Added method-based hover handlers | Hover tracking now reliable |
+| 2025-12-01 | Added `transition: none !important` to hover state | Resize handles now visible instantly |

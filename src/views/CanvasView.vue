@@ -1804,9 +1804,11 @@ const syncNodes = () => {
   // 🎯 FIXED: Show ALL tasks in canvas, not just those with canvasPosition
   // OLD: Only process tasks that ALREADY have canvas positions
   // NEW: Process all tasks, assign default positions to those without canvasPosition
-  // 🔧 FIXED (2025-12-01): Filter out inbox tasks - they should not appear on canvas
+  // 🔧 FIXED (2025-12-01): Show tasks that have canvasPosition OR are not explicitly in inbox
+  // Tasks with canvasPosition should ALWAYS show (they were placed on canvas)
+  // Tasks with isInInbox === true AND no canvasPosition go to inbox panel
   safeFilteredTasks
-    .filter(task => task && task.id && !task.isInInbox) // ✅ Process tasks not in inbox
+    .filter(task => task && task.id && (task.canvasPosition || task.isInInbox !== true))
     .forEach((task, index) => {
       // 🎯 FIXED: Handle positioning for tasks with and without canvasPosition
       let position
@@ -2022,6 +2024,15 @@ resourceManager.addWatcher(
 resourceManager.addWatcher(
   watch(() => taskStore.tasks.map(t => ({ id: t.id, canvasPosition: t.canvasPosition })), () => {
     batchedSyncNodes('low')
+  }, { deep: true })
+)
+
+// FIX: Watch for isInInbox changes - triggers sync when tasks move between inbox and canvas
+// This was missing and caused tasks dragged from inbox to not appear until refresh
+resourceManager.addWatcher(
+  watch(() => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })), () => {
+    console.log('🔄 [WATCHER] isInInbox changed - triggering high priority sync')
+    batchedSyncNodes('high')
   }, { deep: true })
 )
 
@@ -2549,10 +2560,11 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
   }
 
   // FIXED: Clear drag guard after position is saved
-  // Use nextTick to ensure store update has propagated before allowing syncNodes
-  nextTick(() => {
+  // Use setTimeout instead of nextTick to prevent race condition where syncNodes
+  // runs before position is fully persisted, causing position to reset
+  setTimeout(() => {
     isNodeDragging.value = false
-  })
+  }, 50)
 })
 
 // Handle node drag - Vue Flow handles parent-child automatically now

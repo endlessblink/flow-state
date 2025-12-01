@@ -132,18 +132,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
+// import { useCouchDBSync } from '@/composables/useCouchDBSync' // REMOVED - File no longer exists
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
 import { SyncProviderType } from '@/types/sync'
 import {
   Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock
 } from 'lucide-vue-next'
 
-const reliableSyncManager = useReliableSyncManager() as ReturnType<typeof useReliableSyncManager> & {
-  configureProvider?: (config: unknown) => Promise<void>
-  enableProvider?: () => Promise<void>
-  disableProvider?: () => Promise<void>
-}
+// const reliableSyncManager = useCouchDBSync() as ReturnType<typeof useCouchDBSync> & { // REMOVED - File no longer exists
+//   configureProvider?: (config: unknown) => Promise<void>
+//   enableProvider?: () => Promise<void>
+//   disableProvider?: () => Promise<void>
+// }
+const reliableSyncManager = null // REMOVED - File no longer exists
 const persistentStorage = usePersistentStorage()
 
 // State

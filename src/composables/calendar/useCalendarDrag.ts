@@ -52,6 +52,62 @@ export function useCalendarDrag() {
 
   const activeDropTarget = ref<DropTarget | null>(null)
 
+  // === DOCUMENT-LEVEL DRAG TRACKING ===
+  // Provides smooth ghost positioning by tracking mouse position during drag
+
+  let documentDragHandler: ((e: DragEvent) => void) | null = null
+
+  /**
+   * Calculate slot index from mouse Y position relative to slots container
+   * @param clientY - Mouse Y position in viewport coordinates
+   * @returns slot index (0-47 for 24 hours * 2 slots/hour)
+   */
+  const calculateSlotFromMouseY = (clientY: number): number => {
+    const container = document.querySelector('.slots-container') as HTMLElement
+    if (!container) return dragGhost.value.slotIndex // Keep current if no container
+
+    const rect = container.getBoundingClientRect()
+    const scrollTop = container.scrollTop || 0
+    const SLOT_HEIGHT = 30
+
+    // Calculate Y position relative to container content (accounting for scroll)
+    const relativeY = clientY - rect.top + scrollTop
+
+    // Calculate slot index and clamp to valid range (0-47)
+    const slotIndex = Math.floor(relativeY / SLOT_HEIGHT)
+    return Math.max(0, Math.min(47, slotIndex))
+  }
+
+  /**
+   * Start document-level drag tracking for smooth ghost updates
+   */
+  const startDocumentDragTracking = () => {
+    if (documentDragHandler) return // Already tracking
+
+    documentDragHandler = (e: DragEvent) => {
+      if (!dragGhost.value.visible) return
+
+      // Update ghost slot position based on mouse Y
+      const newSlotIndex = calculateSlotFromMouseY(e.clientY)
+      if (newSlotIndex !== dragGhost.value.slotIndex) {
+        dragGhost.value.slotIndex = newSlotIndex
+      }
+    }
+
+    // Use capture phase to ensure we get the event even over non-drop-target elements
+    document.addEventListener('dragover', documentDragHandler, { capture: true, passive: true })
+  }
+
+  /**
+   * Stop document-level drag tracking
+   */
+  const stopDocumentDragTracking = () => {
+    if (documentDragHandler) {
+      document.removeEventListener('dragover', documentDragHandler, { capture: true })
+      documentDragHandler = null
+    }
+  }
+
   // === COMMON DRAG HANDLERS ===
 
   /**
@@ -136,6 +192,8 @@ export function useCalendarDrag() {
         slotIndex: target.slotIndex,
         taskId: dragData.taskId
       }
+      // Start document-level tracking for smooth ghost updates
+      startDocumentDragTracking()
     }
 
     console.log('📥 [UnifiedDrag] Drag enter:', { target, dragData })
@@ -274,6 +332,8 @@ export function useCalendarDrag() {
    * Cleanup drag state and visual feedback
    */
   const handleDragEnd = () => {
+    // Stop document-level tracking
+    stopDocumentDragTracking()
     console.log('🏁 [UnifiedDrag] Drag ended')
     clearDragState()
   }
@@ -421,6 +481,9 @@ export function useCalendarDrag() {
    * Clear all drag state
    */
   const clearDragState = () => {
+    // Ensure tracking is stopped
+    stopDocumentDragTracking()
+
     dragState.value = {
       isDragging: false,
       draggedTaskId: null,

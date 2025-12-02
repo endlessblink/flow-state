@@ -1,10 +1,79 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 3, 2025 12:15 AM
-**Version**: 3.7.0 (Technical Debt Cleanup Complete)
-**Status**: 🟢 STABLE - App verified working, 17,500 lines of dead code removed
+**Last Updated**: December 3, 2025 12:30 AM
+**Version**: 3.8.0 (Competing Systems Analysis Complete)
+**Status**: 🟢 STABLE - App verified working, competing systems identified for consolidation
 **Current Branch**: master
-**Baseline**: Debug logs gated behind DEV flag, bundle size reduced 12KB, all backup files deleted
+**Baseline**: Debug logs gated, 4 backup system conflicts detected, 3 virtualization conflicts detected
+
+---
+
+## 📋 **SESSION SUMMARY: December 3, 2025 (Early Morning - Competing Systems Detection)**
+
+### ✅ **COMPLETED THIS SESSION**
+
+1. **Restored 🔍 detect-competing-systems Skill** ✅
+   - Recovered from git commit `704cba8`
+   - 18 files restored including analysis engine, patterns, examples
+   - Location: `.claude/skills/🔍-detect-competing-systems/`
+
+2. **Comprehensive Competing Systems Analysis** ✅
+   - Analyzed all Pinia stores, composables, and utility files
+   - Identified **2 HIGH severity** and **2 MEDIUM severity** conflicts
+   - Generated prioritized consolidation roadmap
+
+### 🔴 **HIGH SEVERITY CONFLICTS DETECTED**
+
+#### 1. Backup Systems (4 Competing Implementations)
+| File | Purpose | Storage Target |
+|------|---------|----------------|
+| `useBackupManager.ts` | RobustBackupSystem wrapper | IndexedDB |
+| `useSimpleBackup.ts` | Object-based export | IndexedDB |
+| `useAutoBackup.ts` | Auto scheduling | localStorage |
+| `useBackupRestoration.ts` | Window API integration | Multiple |
+
+**Problem**: 4 different backup interfaces, duplicate scheduling logic, inconsistent data structures
+**Recommendation**: Consolidate into single `useBackupSystem.ts`
+**Effort**: 4-6 hours
+
+#### 2. Virtual List Systems (3 Competing Implementations)
+| File | Purpose | Overlap |
+|------|---------|---------|
+| `useVirtualList.ts` | Custom implementation | 80% overlap with ↓ |
+| `useVirtualScrolling.ts` | VueUse wrapper | 80% overlap with ↑ |
+| `useCanvasVirtualization.ts` | Canvas-specific | Keep (different domain) |
+
+**Problem**: First two have 80% code similarity with different APIs
+**Recommendation**: Merge into single implementation
+**Effort**: 2-3 hours
+
+### 🟡 **MEDIUM SEVERITY CONFLICTS DETECTED**
+
+#### 3. Sidebar Filtering Logic Duplication
+- `src/stores/tasks.ts:1223` → `filteredTasks` computed
+- `src/composables/app/useSidebarManagement.ts:119-237` → Duplicates logic
+- **Evidence**: 8 comments say "matches filteredTasks logic"
+- **Effort**: 1-2 hours
+
+#### 4. VueFlow State Composables (3 Related)
+- `useVueFlowStateManager.ts`
+- `useVueFlowStability.ts`
+- `useVueFlowErrorHandling.ts`
+- **Status**: Review needed for overlap
+- **Effort**: 1-2 hours
+
+### ✅ **EXEMPTIONS (Intentional Patterns)**
+- `auth.ts` + `local-auth.ts` → Different auth strategies (Firebase vs local-first)
+- Calendar composables → Well-organized by view type
+- Drag-and-drop systems → Different contexts need different implementations
+
+### 📊 **Consolidation Priority**
+```
+1. [HIGH]   Backup Systems      → 4-6 hrs → Eliminate 4→1 implementations
+2. [HIGH]   Virtual Lists       → 2-3 hrs → Merge 2 overlapping files
+3. [MEDIUM] Sidebar Filtering   → 1-2 hrs → Extract shared predicates
+4. [MEDIUM] VueFlow State       → 1-2 hrs → Review for consolidation
+```
 
 ---
 
@@ -888,11 +957,11 @@ A comprehensive dual-tool competing systems analysis has identified **4,776+ com
 - **🔗 Cross-Validation**: Overlapping patterns identified and confidence-boosted
 - **📊 Integrated Reporting**: Combined insights with prioritized action items
 
-#### **Severity Breakdown**
+#### **Severity Breakdown** *(Updated Dec 3, 2025)*
 | Severity | Conflict Count | Primary Categories | Priority | Effort |
 |----------|---------------|-------------------|----------|--------|
-| **HIGH** | 600+ | Database Layer, Validation Systems, Calendar Logic | IMMEDIATE | 14-22 hours |
-| **MEDIUM** | 3,500+ | State Management, Error Handling, Async Patterns | HIGH | 8-12 hours |
+| **HIGH** | 600+ | Database Layer, Validation Systems, Calendar Logic, **🆕 Backup Systems, Virtual Lists** | IMMEDIATE | 14-22 hours |
+| **MEDIUM** | 3,500+ | State Management, Error Handling, Async Patterns, **🆕 Sidebar Filtering** | HIGH | 8-12 hours |
 | **LOW** | 600+ | Utility Functions, Naming Conventions, Documentation | MEDIUM | 3-6 hours |
 
 #### **Top Conflict Categories**
@@ -925,6 +994,27 @@ A comprehensive dual-tool competing systems analysis has identified **4,776+ com
    - Multiple error logging approaches
    - Duplicate user notification systems
    - No centralized error state management
+
+6. **🆕 Backup Systems (4 files, HIGH severity)** - *Detected Dec 3, 2025*
+   - `useBackupManager.ts` - RobustBackupSystem wrapper with auto-save intervals
+   - `useSimpleBackup.ts` - Object-based export with different interface
+   - `useAutoBackup.ts` - localStorage history with own scheduling
+   - `useBackupRestoration.ts` - Window API integration
+   - **Impact**: Confusing APIs, duplicate scheduling, inconsistent data structures
+   - **Recommendation**: Consolidate into single `useBackupSystem.ts` (4-6 hours)
+
+7. **🆕 Virtual List Systems (3 files, HIGH severity)** - *Detected Dec 3, 2025*
+   - `useVirtualList.ts` - Custom implementation (80% overlap)
+   - `useVirtualScrolling.ts` - VueUse wrapper (80% overlap)
+   - `useCanvasVirtualization.ts` - Canvas-specific (keep separate)
+   - **Impact**: Duplicate code, different APIs for same functionality
+   - **Recommendation**: Merge first two into single implementation (2-3 hours)
+
+8. **🆕 Sidebar Filtering Duplication (MEDIUM severity)** - *Detected Dec 3, 2025*
+   - `tasks.ts:1223` has `filteredTasks` computed
+   - `useSidebarManagement.ts:119-237` duplicates the same logic
+   - 8 comments explicitly say "matches filteredTasks logic"
+   - **Recommendation**: Extract shared filtering predicates (1-2 hours)
 
 ### **5-Phase Strategic Implementation Plan**
 

@@ -522,7 +522,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, watchEffect, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useThrottleFn, useDebounceFn, useMagicKeys, useWindowSize, watchPausable } from '@vueuse/core'
 import { Eye, EyeOff, Filter, X, Plus, Inbox } from 'lucide-vue-next'
 import { VueFlow, useVueFlow, useNodesInitialized, PanOnScrollMode } from '@vue-flow/core'
@@ -2262,6 +2262,30 @@ resourceManager.addWatcher(
     }
   }, { immediate: true })
 )
+
+// 🔧 PERPLEXITY FIX (Dec 3, 2025): watchEffect to catch initial task loading from PouchDB
+// PROBLEM: watch() fires BEFORE tasks load, then doesn't fire again when tasks populate
+// SOLUTION: watchEffect automatically tracks taskStore.tasks and fires on ANY change
+// This catches the initial load timing that watch() misses
+watchEffect(() => {
+  // Only sync when Vue Flow is ready
+  if (!isVueFlowReady.value) {
+    debugLog('⏳ [WATCHEFFECT] Vue Flow not ready, skipping sync')
+    return
+  }
+
+  // Track taskStore.tasks - fires on initial load AND changes
+  const taskCount = taskStore.tasks?.length ?? 0
+  const tasksWithCanvasPos = taskStore.tasks?.filter(t => t.canvasPosition && !t.isInInbox).length ?? 0
+
+  console.log(`📋 [WATCHEFFECT] Tasks changed: total=${taskCount}, withCanvasPos=${tasksWithCanvasPos}`)
+
+  // Only sync if there are tasks with canvas positions that should be shown
+  if (tasksWithCanvasPos > 0) {
+    console.log('📋 [WATCHEFFECT] Triggering sync for canvas tasks')
+    batchedSyncNodes('high')
+  }
+})
 
 // 🚀 REMOVED: Auto-positioning watcher that was forcing all tasks onto canvas
 // OLD: watch(filteredTasks, () => { throttledSyncNodes() }, { deep: true })

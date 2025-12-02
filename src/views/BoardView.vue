@@ -82,6 +82,10 @@
 </template>
 
 <script setup lang="ts">
+// Debug logging control - only logs in development, silent in production builds
+const DEBUG_BOARD = import.meta.env.DEV
+const debugLog = (...args: unknown[]) => DEBUG_BOARD && console.log(...args)
+
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -235,7 +239,7 @@ const handleAddTask = (status: string) => {
 
   // Open quick task create modal instead of creating task directly
   showQuickTaskCreate.value = true
-  console.log('Opening task creation modal for status:', status)
+  debugLog('Opening task creation modal for status:', status)
 }
 
 const handleSelectTask = (taskId: string) => {
@@ -245,7 +249,7 @@ const handleSelectTask = (taskId: string) => {
 const handleStartTimer = (taskId: string) => {
   // Start a 25-minute work timer for the specific task
   timerStore.startTimer(taskId, timerStore.settings.workDuration, false)
-  console.log('Started timer for task:', taskId)
+  debugLog('Started timer for task:', taskId)
 }
 
 const handleEditTask = (taskId: string) => {
@@ -268,7 +272,7 @@ const closeQuickTaskCreate = () => {
 }
 
 const handleQuickTaskCreate = async (title: string, description: string) => {
-  console.log('🎯 Creating task with title:', title, 'and status:', pendingTaskStatus.value)
+  debugLog('🎯 Creating task with title:', title, 'and status:', pendingTaskStatus.value)
 
   try {
     // Create new task with user-provided title and stored status (now async)
@@ -283,7 +287,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
     closeQuickTaskCreate()
 
     if (newTask) {
-      console.log('✅ Successfully created task:', newTask.title)
+      debugLog('✅ Successfully created task:', newTask.title)
     } else {
       console.error('❌ Failed to create new task')
     }
@@ -295,12 +299,12 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
 
 // Context menu handlers
 const handleContextMenu = (event: MouseEvent, task: Task) => {
-  console.log('Context menu triggered for task:', task.title, 'at position:', event.clientX, event.clientY)
+  debugLog('Context menu triggered for task:', task.title, 'at position:', event.clientX, event.clientY)
   contextMenuX.value = event.clientX
   contextMenuY.value = event.clientY
   contextMenuTask.value = task
   showContextMenu.value = true
-  console.log('Context menu should be visible:', showContextMenu.value)
+  debugLog('Context menu should be visible:', showContextMenu.value)
 }
 
 const closeContextMenu = () => {
@@ -342,7 +346,7 @@ const cancelDeleteTask = () => {
 const handleMoveTask = async (taskId: string, newStatus: string) => {
   try {
     await taskStore.moveTaskWithUndo(taskId, newStatus as any)
-    console.log('Moved task:', taskId, 'to', newStatus)
+    debugLog('Moved task:', taskId, 'to', newStatus)
   } catch (error) {
     console.error('❌ Error moving task:', error)
   }
@@ -352,13 +356,13 @@ const handleMoveTask = async (taskId: string, newStatus: string) => {
 const handleToggleDoneTasks = (event: MouseEvent) => {
   // Prevent event bubbling that might interfere with other click handlers
   event.stopPropagation()
-  console.log('🔧 BoardView: Toggle button clicked!')
-  console.log('🔧 BoardView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
+  debugLog('🔧 BoardView: Toggle button clicked!')
+  debugLog('🔧 BoardView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
 
   try {
     taskStore.toggleHideDoneTasks()
-    console.log('🔧 BoardView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
-    console.log('🔧 BoardView: Method call successful')
+    debugLog('🔧 BoardView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
+    debugLog('🔧 BoardView: Method call successful')
   } catch (error) {
     console.error('🔧 BoardView: Error calling toggleHideDoneTasks:', error)
   }
@@ -368,14 +372,14 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
 const handleToggleDoneColumn = (event: MouseEvent) => {
   // Prevent event bubbling
   event.stopPropagation()
-  console.log('🔧 BoardView: Done column toggle clicked!')
-  console.log('🔧 BoardView: Current showDoneColumn value:', showDoneColumn.value)
-  console.log('🔧 BoardView: Available done tasks:', taskStore.tasks.filter(t => t.status === 'done').length)
+  debugLog('🔧 BoardView: Done column toggle clicked!')
+  debugLog('🔧 BoardView: Current showDoneColumn value:', showDoneColumn.value)
+  debugLog('🔧 BoardView: Available done tasks:', taskStore.tasks.filter(t => t.status === 'done').length)
 
   try {
     // Toggle the local state
     showDoneColumn.value = !showDoneColumn.value
-    console.log('🔧 BoardView: Toggled to new value:', showDoneColumn.value)
+    debugLog('🔧 BoardView: Toggled to new value:', showDoneColumn.value)
 
     // Save to localStorage
     saveKanbanSettings()
@@ -385,8 +389,8 @@ const handleToggleDoneColumn = (event: MouseEvent) => {
       detail: { showDoneColumn: showDoneColumn.value }
     }))
 
-    console.log('🔧 BoardView: Settings saved and event dispatched')
-    console.log('🔧 BoardView: Done column should now be', showDoneColumn.value ? 'VISIBLE' : 'HIDDEN')
+    debugLog('🔧 BoardView: Settings saved and event dispatched')
+    debugLog('🔧 BoardView: Done column should now be', showDoneColumn.value ? 'VISIBLE' : 'HIDDEN')
   } catch (error) {
     console.error('🔧 BoardView: Error toggling Done column:', error)
   }
@@ -398,23 +402,23 @@ const saveKanbanSettings = () => {
     showDoneColumn: showDoneColumn.value
   }
   localStorage.setItem('pomo-flow-kanban-settings', JSON.stringify(settings))
-  console.log('🔧 BoardView: Kanban settings saved:', settings)
+  debugLog('🔧 BoardView: Kanban settings saved:', settings)
 }
 
 // Toggle Today filter
 const handleToggleTodayFilter = (event: MouseEvent) => {
   event.stopPropagation()
-  console.log('🔧 BoardView: Today filter toggle clicked!')
-  console.log('🔧 BoardView: Current activeSmartView:', taskStore.activeSmartView)
+  debugLog('🔧 BoardView: Today filter toggle clicked!')
+  debugLog('🔧 BoardView: Current activeSmartView:', taskStore.activeSmartView)
 
   try {
     // Toggle between 'today' and null
     if (taskStore.activeSmartView === 'today') {
       taskStore.setSmartView(null)
-      console.log('🔧 BoardView: Cleared Today filter')
+      debugLog('🔧 BoardView: Cleared Today filter')
     } else {
       taskStore.setSmartView('today')
-      console.log('🔧 BoardView: Activated Today filter')
+      debugLog('🔧 BoardView: Activated Today filter')
     }
   } catch (error) {
     console.error('🔧 BoardView: Error toggling Today filter:', error)

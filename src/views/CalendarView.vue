@@ -447,6 +447,10 @@
 </template>
 
 <script setup lang="ts">
+// Debug logging control - only logs in development, silent in production builds
+const DEBUG_CALENDAR = import.meta.env.DEV
+const debugLog = (...args: unknown[]) => DEBUG_CALENDAR && console.log(...args)
+
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -485,8 +489,8 @@ const showRecordingPanel = ref(false)
 
 // Debug function to inventory all tasks with their statuses
 const debugTaskInventory = () => {
-  console.log('🚨 CALENDAR VIEW: === TASK INVENTORY DEBUG ===')
-  console.log('🚨 CALENDAR VIEW: Total tasks in store:', taskStore.tasks.length)
+  debugLog('🚨 CALENDAR VIEW: === TASK INVENTORY DEBUG ===')
+  debugLog('🚨 CALENDAR VIEW: Total tasks in store:', taskStore.tasks.length)
 
   const tasksByStatus = {
     planned: taskStore.tasks.filter(t => t.status === 'planned'),
@@ -496,31 +500,31 @@ const debugTaskInventory = () => {
     'on_hold': taskStore.tasks.filter(t => t.status === 'on_hold')
   }
 
-  console.log('🚨 CALENDAR VIEW: Tasks by status:')
+  debugLog('🚨 CALENDAR VIEW: Tasks by status:')
   Object.entries(tasksByStatus).forEach(([status, tasks]) => {
-    console.log(`🚨 CALENDAR VIEW:   ${status}: ${tasks.length} tasks`)
+    debugLog(`🚨 CALENDAR VIEW:   ${status}: ${tasks.length} tasks`)
     tasks.forEach(task => {
-      console.log(`🚨 CALENDAR VIEW:     - "${task.title}" (ID: ${task.id})`)
+      debugLog(`🚨 CALENDAR VIEW:     - "${task.title}" (ID: ${task.id})`)
       const instances = taskStore.getTaskInstances(task)
       if (instances.length > 0) {
-        console.log(`🚨 CALENDAR VIEW:       Instances: ${instances.map(i => `${i.scheduledDate} ${i.scheduledTime}`).join(', ')}`)
+        debugLog(`🚨 CALENDAR VIEW:       Instances: ${instances.map(i => `${i.scheduledDate} ${i.scheduledTime}`).join(', ')}`)
       }
     })
   })
 
-  console.log('🚨 CALENDAR VIEW: Current filtered tasks:', taskStore.filteredTasks.length)
-  console.log('🚨 CALENDAR VIEW: Current calendar events:', calendarEvents.value.length)
-  console.log('🚨 CALENDAR VIEW: === END TASK INVENTORY ===')
+  debugLog('🚨 CALENDAR VIEW: Current filtered tasks:', taskStore.filteredTasks.length)
+  debugLog('🚨 CALENDAR VIEW: Current calendar events:', calendarEvents.value.length)
+  debugLog('🚨 CALENDAR VIEW: === END TASK INVENTORY ===')
 }
 
 // Status filter change handler using global TaskStore
 const handleStatusFilterChange = (event: MouseEvent, newFilter: 'planned' | 'in_progress' | 'done' | null) => {
   // Prevent event bubbling that might interfere with other click handlers
   event.stopPropagation()
-  console.log('🚨 CALENDAR VIEW: Status filter button clicked!')
-  console.log('🚨 CALENDAR VIEW: Previous filter:', statusFilter.value)
-  console.log('🚨 CALENDAR VIEW: New filter:', newFilter)
-  console.log('🚨 CALENDAR VIEW: Event target:', event.target)
+  debugLog('🚨 CALENDAR VIEW: Status filter button clicked!')
+  debugLog('🚨 CALENDAR VIEW: Previous filter:', statusFilter.value)
+  debugLog('🚨 CALENDAR VIEW: New filter:', newFilter)
+  debugLog('🚨 CALENDAR VIEW: Event target:', event.target)
 
   // Show task inventory before filter change
   debugTaskInventory()
@@ -528,20 +532,20 @@ const handleStatusFilterChange = (event: MouseEvent, newFilter: 'planned' | 'in_
   // Use global TaskStore method to set status filter
   taskStore.setActiveStatusFilter(newFilter)
 
-  console.log('🚨 CALENDAR VIEW: Filter updated via TaskStore, current value:', statusFilter.value)
-  console.log('🚨 CALENDAR VIEW: Task store filteredTasks count:', taskStore.filteredTasks.length)
+  debugLog('🚨 CALENDAR VIEW: Filter updated via TaskStore, current value:', statusFilter.value)
+  debugLog('🚨 CALENDAR VIEW: Task store filteredTasks count:', taskStore.filteredTasks.length)
 
   // Force Vue reactivity check
   nextTick(() => {
-    console.log('🚨 CALENDAR VIEW: After nextTick, filter value:', statusFilter.value)
-    console.log('🚨 CALENDAR VIEW: Task store filteredTasks count after tick:', taskStore.filteredTasks.length)
-    console.log('🚨 CALENDAR VIEW: Calendar events after filter:', calendarEvents.value.length)
+    debugLog('🚨 CALENDAR VIEW: After nextTick, filter value:', statusFilter.value)
+    debugLog('🚨 CALENDAR VIEW: Task store filteredTasks count after tick:', taskStore.filteredTasks.length)
+    debugLog('🚨 CALENDAR VIEW: Calendar events after filter:', calendarEvents.value.length)
 
     // Show which calendar events passed the filter
-    console.log('🚨 CALENDAR VIEW: Calendar events after filter:')
+    debugLog('🚨 CALENDAR VIEW: Calendar events after filter:')
     calendarEvents.value.forEach(event => {
       const task = taskStore.tasks.find(t => t.id === event.taskId)
-      console.log(`🚨 CALENDAR VIEW:   - "${event.title}" (Status: ${task?.status}, Task ID: ${event.taskId})`)
+      debugLog(`🚨 CALENDAR VIEW:   - "${event.title}" (Status: ${task?.status}, Task ID: ${event.taskId})`)
     })
   })
 }
@@ -635,7 +639,7 @@ const handleVueDraggableAdd = (evt: any) => {
     const targetDate = new Date(currentDate.value)
     targetDate.setHours(slot.hour, slot.minute, 0, 0)
 
-    console.log(`📅 [Calendar] vuedraggable: Scheduling task ${taskId} to ${targetDate.toISOString()}`)
+    debugLog(`📅 [Calendar] vuedraggable: Scheduling task ${taskId} to ${targetDate.toISOString()}`)
     taskStore.updateTaskWithUndo(taskId, { scheduledDate: targetDate.toISOString() })
   }
 
@@ -645,7 +649,7 @@ const handleVueDraggableAdd = (evt: any) => {
 
 const handleVueDraggableChange = (evt: any) => {
   // Optional: handle change events for debugging
-  console.log('[Calendar] vuedraggable change:', evt)
+  debugLog('[Calendar] vuedraggable change:', evt)
 }
 
 // Helper to format slot time for data attribute
@@ -835,7 +839,7 @@ onMounted(() => {
     calendarEl.addEventListener('dragover', (e: Event) => handleDragOverCapture(e as DragEvent), true)
     calendarEl.addEventListener('dragleave', (e: Event) => handleDragLeaveCapture(e as DragEvent), true)
     calendarEl.addEventListener('drop', (e: Event) => handleDropCapture(e as DragEvent), true)
-    console.log('✅ [CalendarDrag] Capture phase listeners attached to .calendar-main')
+    debugLog('✅ [CalendarDrag] Capture phase listeners attached to .calendar-main')
   } else {
     console.error('❌ [CalendarDrag] .calendar-main element not found for capture listeners')
   }
@@ -860,7 +864,7 @@ onUnmounted(() => {
   if (calendarEl) {
     // Note: Can't remove arrow functions added with addEventListener
     // This is expected - the capture phase listeners will persist until page unload
-    console.log('✅ [CalendarDrag] Capture phase listeners cleanup skipped (arrow functions persist)')
+    debugLog('✅ [CalendarDrag] Capture phase listeners cleanup skipped (arrow functions persist)')
   }
 })
 
@@ -1032,7 +1036,7 @@ const cancelDeleteTask = () => {
 
 // Task modal handlers
 const handleTaskCreated = (task: Task) => {
-  console.log('Task created:', task)
+  debugLog('Task created:', task)
   dragCreate.showQuickCreateModal.value = false
   dragCreate.resetCreateDrag()
 }
@@ -1058,7 +1062,7 @@ const handleEventContextMenu = (mouseEvent: MouseEvent, calendarEvent: any) => {
 
 // Remove task from calendar timeline and move to inbox
 const handleRemoveFromCalendar = (calendarEvent: any) => {
-  console.log(`🗑️ Removing task "${calendarEvent.title}" from calendar`)
+  debugLog(`🗑️ Removing task "${calendarEvent.title}" from calendar`)
 
   // Find the task
   const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
@@ -1070,7 +1074,7 @@ const handleRemoveFromCalendar = (calendarEvent: any) => {
   // Use the unscheduleTask method to remove from calendar and move to inbox
   taskStore.unscheduleTask(task.id)
 
-  console.log(`✅ Task "${task.title}" removed from calendar and moved to inbox`)
+  debugLog(`✅ Task "${task.title}" removed from calendar and moved to inbox`)
 }
 
 // Calendar event selection for keyboard operations - now supports multi-select
@@ -1078,7 +1082,7 @@ const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: any) => {
   const eventElement = mouseEvent.currentTarget as HTMLElement
   const isCtrlOrCmd = mouseEvent.ctrlKey || mouseEvent.metaKey
 
-  console.log('🖱️ Calendar event click:', {
+  debugLog('🖱️ Calendar event click:', {
     eventId: calendarEvent.id,
     eventTitle: calendarEvent.title,
     isCtrlMultiSelect: isCtrlOrCmd,
@@ -1089,7 +1093,7 @@ const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: any) => {
   // IMPORTANT: Don't handle clicks if a drag operation is in progress
   // This prevents interference with drag-drop functionality
   if (isDragging.value) {
-    console.log('🚫 Click ignored - drag operation in progress')
+    debugLog('🚫 Click ignored - drag operation in progress')
     return
   }
 
@@ -1099,23 +1103,23 @@ const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: any) => {
 
     if (index > -1) {
       // Remove from selection
-      console.log('🖱️ Removing from multi-select:', calendarEvent.title)
+      debugLog('🖱️ Removing from multi-select:', calendarEvent.title)
       selectedCalendarEvents.value.splice(index, 1)
       eventElement.classList.remove('selected')
     } else {
       // Add to selection
-      console.log('🖱️ Adding to multi-select:', calendarEvent.title)
+      debugLog('🖱️ Adding to multi-select:', calendarEvent.title)
       selectedCalendarEvents.value.push(calendarEvent)
       eventElement.classList.add('selected')
     }
   } else {
     // Single select: clear previous and select only this
-    console.log('🖱️ Single select (clearing previous):', calendarEvent.title)
+    debugLog('🖱️ Single select (clearing previous):', calendarEvent.title)
 
     // Check if clicking same event (toggle deselect)
     if (selectedCalendarEvents.value.length === 1 && selectedCalendarEvents.value[0].id === calendarEvent.id) {
       // Deselect
-      console.log('🖱️ Deselecting event:', calendarEvent.title)
+      debugLog('🖱️ Deselecting event:', calendarEvent.title)
       selectedCalendarEvents.value = []
       eventElement.classList.remove('selected')
     } else {
@@ -1143,14 +1147,14 @@ const handleKeyDown = (event: KeyboardEvent) => {
   event.preventDefault()
   event.stopPropagation()
 
-  console.log('🗑️ Calendar Delete: Removing', selectedCalendarEvents.value.length, 'selected tasks')
+  debugLog('🗑️ Calendar Delete: Removing', selectedCalendarEvents.value.length, 'selected tasks')
 
   // Remove each selected calendar event
   selectedCalendarEvents.value.forEach(calendarEvent => {
     const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
     if (!task) return
 
-    console.log('🗑️ Calendar Delete: Removing calendar instance and moving task to inbox:', task.title)
+    debugLog('🗑️ Calendar Delete: Removing calendar instance and moving task to inbox:', task.title)
 
     // Use the same unschedule logic as the "Remove from Calendar" button
     // This preserves canvas position and ensures consistent behavior
@@ -1173,13 +1177,13 @@ const handleMonthDayClick = (dateString: string) => {
 const handleToggleDoneTasks = (event: MouseEvent) => {
   // Prevent event bubbling that might interfere with other click handlers
   event.stopPropagation()
-  console.log('🔧 CalendarView: Toggle button clicked!')
-  console.log('🔧 CalendarView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
+  debugLog('🔧 CalendarView: Toggle button clicked!')
+  debugLog('🔧 CalendarView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
 
   try {
     taskStore.toggleHideDoneTasks()
-    console.log('🔧 CalendarView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
-    console.log('🔧 CalendarView: Method call successful')
+    debugLog('🔧 CalendarView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
+    debugLog('🔧 CalendarView: Method call successful')
   } catch (error) {
     console.error('🔧 CalendarView: Error calling toggleHideDoneTasks:', error)
   }
@@ -1833,9 +1837,12 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   pointer-events: auto;
 }
 
-/* CRITICAL: Slots with tasks let events pass through to children */
+/* CRITICAL: Slots with tasks let events pass through to children
+   Also elevate stacking context so multi-slot tasks render ABOVE subsequent time-slots */
 .time-slot:has(.slot-task) {
   pointer-events: none;
+  position: relative;
+  z-index: 10; /* Elevate above subsequent time-slots for full-surface drag */
 }
 
 /* Ensure task elements can receive events */

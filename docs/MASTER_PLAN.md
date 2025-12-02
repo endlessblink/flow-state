@@ -1,10 +1,82 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 1, 2025
-**Version**: 3.0 (Phase 0 Sync Crisis Resolution - CRITICAL PRIORITY)
-**Status**: 🚨 PHASE 0 ACTIVE - Sync infinite loops crisis resolution in progress
+**Last Updated**: December 2, 2025 1:00 PM
+**Version**: 3.4.8 (Sync Initialization Fixes)
+**Status**: 🟡 SYNC FIXES COMMITTED - Testing required
 **Current Branch**: master
-**Baseline**: Sync system in crisis mode - all sync functionality disabled due to infinite loops
+**Last Commit**: `f20a9f9` - fix: Resolve sync initialization errors and Vue lifecycle violations
+**Baseline**: Phase 1.4 sync fixes committed - ready for user verification
+
+---
+
+## 🚨 IMMEDIATE ISSUES (From Console Logs - December 2, 2025)
+
+### Console Errors Identified
+```
+❌ [DATABASE] Failed to load hide_done_tasks from database
+Error: Database not initialized at waitForDatabase (useDatabase.ts:271)
+
+[Vue warn]: onUnmounted is called when there is no active component instance
+
+❌ Sync push error: CustomPouchError
+ERR_INCOMPLETE_CHUNKED_ENCODING from CouchDB
+```
+
+### Root Causes Diagnosed
+1. **Database Initialization Race Condition**
+   - Task store calls `loadFromDatabase()` before database is ready
+   - `waitForDatabase()` throws "Database not initialized"
+   - File: `src/composables/useDatabase.ts:430-447`
+
+2. **Vue Lifecycle Violation**
+   - `onUnmounted()` called inside async `init()` function
+   - Must be called synchronously during component setup
+   - File: `src/composables/useCouchDBSync.ts:702-704`
+
+3. **CouchDB Network Issues**
+   - `ERR_INCOMPLETE_CHUNKED_ENCODING` from 84.46.253.137:5984
+   - Sync push failing with CustomPouchError
+   - May be server timeout or network instability
+
+### Required Fixes
+- [x] **Fix 1**: Move `onUnmounted` out of async block in useCouchDBSync.ts ✅ DONE
+- [x] **Fix 2**: Add auto-enable in `triggerSync()` for race condition ✅ DONE (Dec 2, 2025)
+- [x] **Fix 3**: Update misleading "CRISIS FIX" console message ✅ DONE
+- [ ] **Fix 4**: Clear IndexedDB to resolve corruption errors
+- [ ] **Fix 5**: Test cross-browser sync after IndexedDB reset
+
+### Phase 1.4 Fixes Applied (December 2, 2025)
+1. **Race Condition Fix**: `triggerSync()` now auto-enables progressive sync when remote connection succeeds
+   - File: `src/composables/useCouchDBSync.ts:540-556`
+   - When `wasDisconnected && remoteConnected.value && syncMode.value === 'disabled'`, auto-enables sync
+
+2. **Console Message Fix**: Updated misleading "CRISIS FIX: Syncing DISABLED" to accurate status
+   - File: `src/config/database.ts:89-90`
+   - Now shows: `✅ [DATABASE CONFIG] Sync ENABLED with live=true, circuit breaker protection active`
+
+3. **Console Verification**: Auto-enable now triggers correctly:
+   ```
+   🚀 [AUTO-SYNC] CouchDB server connected, auto-enabling progressive sync...
+   🚀 [PHASE 1.3] Starting progressive sync enablement...
+   🏥 [PHASE 1.3] Sync health: 100.0% (healthy)
+   ```
+
+4. **Database Load Race Condition Fix** (December 2, 2025 12:50 PM)
+   - File: `src/stores/tasks.ts:958-970`
+   - Changed from `db.load()` to direct `dbInstance.get()` to avoid race with `database.value`
+   - Prevents "Database not initialized" error when loading hide_done_tasks setting
+
+5. **Vue Lifecycle Fix** (December 2, 2025 12:45 PM)
+   - File: `src/composables/useCouchDBSync.ts:722-725`
+   - Removed `onUnmounted()` from async `init()` function (must be called synchronously during setup)
+   - Cleanup now handled via returned cleanup function from `init()`
+
+### Remaining Issue: IndexedDB Corruption
+The local IndexedDB has errors preventing sync:
+- `Database has a global failure UnknownError: Failed to read large IndexedDB value`
+- `Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing`
+
+**Solution**: Clear browser storage for localhost:5546, then let it re-sync from CouchDB (which has 8 documents)
 
 ---
 
@@ -30,29 +102,29 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 
 **Note**: "CatalogView" mentioned in some documentation does not exist in the stable version.
 
-### **🚨 CRITICAL: Sync Crisis Assessment**
+### **🟡 SYNC STATUS: Phase 0-1 Progress**
 
-**CURRENT STATUS**: All sync functionality is **DISABLED** due to infinite loops causing system instability and data corruption.
+**CURRENT STATUS**: 🔴 Sync logs show "active" but **CROSS-BROWSER SYNC NOT WORKING** - Chrome/Zen don't sync.
 
-| Priority | Sync Component | Status | Issue |
+| Priority | Sync Component | Status | Notes |
 |----------|----------------|--------|-------|
-| 🔴 **CRITICAL** | **safeSync() function** | **DISABLED** | Infinite loops in tasks.ts:152 |
-| 🔴 **CRITICAL** | **useReliableSyncManager.ts** | **DISABLED** | Multiple infinite loop points (lines 219, 384, 444) |
-| 🔴 **CRITICAL** | **Database live sync** | **DISABLED** | Config disabled in database.ts:107 |
-| 🔴 **CRITICAL** | **Auto-retry mechanism** | **DISABLED** | Prevents infinite sync attempts |
-| 🟡 **HIGH** | **useCouchDBSync.ts** | **INTACT** | Primary system but disabled due to conflicts |
+| ✅ **RESOLVED** | **Circuit Breaker** | **WORKING** | 300ms debouncing, health monitoring |
+| ✅ **RESOLVED** | **Sync Consolidation** | **COMPLETE** | Single `useCouchDBSync.ts` system |
+| ✅ **RESOLVED** | **Conflict Resolution** | **WORKING** | Last-write-wins with logging |
+| ✅ **RESOLVED** | **Remote Connection** | **CONNECTED** | CouchDB at 84.46.253.137:5984 |
+| 🟡 **VERIFY** | **Auto-Enable Live Sync** | **IN CODE** | Lines 677-683 - needs runtime check |
 
-### **Architecture Conflicts**
-- **3 Competing Sync Systems** causing circular dependencies:
-  1. `useCouchDBSync.ts` - Full CouchDB integration (chosen primary)
-  2. `useReliableSyncManager.ts` - Advanced sync system (to be removed)
-  3. `useDatabase.ts` - Database layer with sync capabilities (to be cleaned)
+### **Architecture (Consolidated)**
+- **Single System**: `useCouchDBSync.ts` is now the only sync system
+- **Removed**: `useCrossTabSync.ts`, `useReliableSyncManager.ts`, related utilities
+- **One-Time Sync**: Works - `initializeSync()` successfully syncs on startup
+- **Live Sync**: Infrastructure ready but **never auto-enabled**
 
-### **Impact**
-- **No cross-device synchronization** possible
-- **Contabo CouchDB server** ready but unusable
-- **Data corruption risk** if sync re-enabled without fixes
-- **Performance degradation** from infinite loops in previous attempts
+### **Current Impact**
+- ✅ **CouchDB server connected** and reachable
+- ✅ **One-time sync works** - `{ok: true, docs_read: 3, docs_written: 3}`
+- ❌ **Cross-browser sync NOT working** - live sync never starts
+- ❌ **Different task counts between browsers** - no real-time updates
 
 ### **Verified Working Features (Unaffected by Sync Crisis)**
 | Component | Status | Notes |
@@ -429,6 +501,24 @@ The "My Tasks" permanent filter creates unnecessary complexity by forcing a synt
 - ✅ Updated template to use unified drag handlers directly
 - ✅ Maintained clean separation: dragCreate for task creation, unified system for movement
 - ✅ Updated status: COEXISTING SYSTEMS (not conflicting - different concerns)
+
+**✅ Step 1.5: COMPLETED - Fixed Calendar Drag Ghost Preview Bugs** (✅ Dec 2, 2025)
+- ✅ **Ghost Position Fix**: Changed ghost positioning from non-functional `gridRow` to absolute `top`/`height`
+  - Root cause: `.slots-container` was missing `display: grid`, making `gridRow` ineffective
+  - Solution: Use `top: ${slotIndex * 30}px` and `height: ${slots * 30}px` with `position: absolute`
+- ✅ **Stuck Ghost Fix**: Added global `dragend` listener to clear ghost when drag ends from inbox
+  - Root cause: Inbox drag's `dragend` fired on inbox element, not calendar - ghost never hidden
+  - Solution: `document.addEventListener('dragend', handleGlobalDragEnd)` in CalendarView.vue
+- ✅ **Duplicate Drop Fix**: Removed capture phase handlers that caused `handleDrop` to execute twice
+  - Root cause: Both capture phase (DOM) and bubble phase (Vue template) handlers called `handleDrop()`
+  - Solution: Removed `handleDragEnterCapture`, `handleDropCapture`, etc. - Vue handlers sufficient
+- ✅ **Resize Preview Upward Fix**: Fixed visual artifacts when resizing task upward (top handle)
+  - Root cause: Top resize used `bottom: 0` anchoring, causing preview to grow downward visually
+  - Solution: Use negative `top` offset: `top: -((newDuration - originalDuration) / 30 * 30)px`
+  - Preview now extends upward correctly when dragging top resize handle
+- ✅ **Files Modified**:
+  - `src/views/CalendarView.vue` (template + CSS + global dragend handler + resize preview fix)
+  - `src/composables/calendar/useCalendarDayView.ts` (drag image timeout increased 100ms→500ms)
 
 **Step 2: Migrate Week View to Unified Drag** (1-2 hours)
 - Replace duplicate drag handlers in `useCalendarWeekView.ts` (lines 118-282)
@@ -966,6 +1056,29 @@ Users lacked visual feedback to understand which tasks were affected by active f
 
 ---
 
+## ✅ **BUG FIX COMPLETED: "This Week" Counter Showing 0**
+
+**Implementation Date**: December 2, 2025
+**Status**: ✅ COMPLETED & VERIFIED
+**Priority**: MEDIUM - Counter accuracy fix
+**Effort**: ~15 minutes
+
+### **Problem Solved**
+The "This Week" filter counter in the sidebar was showing 0, but when clicked, the filter correctly selected several tasks.
+
+### **Root Cause**
+App.vue's `weekTaskCount` computed (lines 647-681) used `scheduledDate` while the store's `isWeekTask()` uses `dueDate`. The store already provides `smartViewTaskCounts.week` with correct logic.
+
+### **Solution**
+1. Changed `:count="weekTaskCount"` to `:count="taskStore.smartViewTaskCounts.week"` in App.vue:84
+2. Removed unused `weekTaskCount` computed property
+
+### **Verification**
+- Counter shows 2, filter shows 2 tasks - matches correctly
+- SOP: `/docs/🐛 debug/sop/sidebar-counter-fixes/this-week-counter-fix-2025-12-02.md`
+
+---
+
 ## 🚨 **CRITICAL: Phase 0.5 - Cross-Tab Synchronization Fix (IMMEDIATE - 2-3 days)**
 
 **Date**: December 1, 2025
@@ -1121,7 +1234,318 @@ This fix builds upon the circuit breaker and sync consolidation completed in Pha
 
 ---
 
-**Version**: 3.0.1 (December 1, 2025 - Phase 0.5 Cross-Tab Sync Fix)
-**Status**: 🚨 PHASE 0.5 ACTIVE - Cross-tab synchronization fix in progress
-**Approach**: Evidence-based development with comprehensive rollback protection and user verification requirements
+## 🚀 **PHASE 1: Cross-Browser Synchronization Fix (ACTIVE IMPLEMENTATION)**
+
+**Date**: December 1, 2025
+**Status**: 🔴 ACTIVE - Cross-browser sync implementation in progress
+**Priority**: CRITICAL - User-confirmed cross-browser synchronization failure
+**User Confirmation**: Tasks sync between same-browser tabs but NOT between different browsers (Zen vs Chrome Dev)
+
+### **Problem Statement**
+**Phase 0.5 achieved**: Same-browser cross-tab synchronization working within 500ms
+**Phase 1 Goal**: Extend synchronization success across different browsers for true cross-platform compatibility
+
+**User-Confirmed Issues**:
+- "When I use the app in zen browser it doesn't synchronize at all with chrome dev browsers"
+- "Between the browsers you open there is a difference of one task"
+- Same-browser tabs work correctly, but cross-browser isolation remains
+
+### **Root Cause Analysis**
+1. **Browser Storage Isolation**: IndexedDB and localStorage are isolated per browser context
+2. **Multiple Competing Sync Systems**: 3 sync systems causing conflicts and race conditions
+3. **Sync Configuration Disabled**: Live sync and retry disabled in crisis fixes
+4. **Version Conflicts**: Mixed PouchDB versions causing instability
+
+### **Progressive Implementation Strategy**
+
+#### **Phase 1.1: Safety Preparation & Backup (2 hours)** - ✅ COMPLETED
+**Objective**: Add comprehensive safety monitoring before enabling live sync
+- ✅ **Enhanced Circuit Breaker**: Health monitoring and automatic rollback
+- ✅ **Conflict Resolution System**: Last-write-wins strategy with operation logging
+- ✅ **Sync Status Dashboard**: Real-time monitoring for sync health and conflicts
+- ✅ **Comprehensive Backups**: Automated backups before any changes
+
+**Files Created/Modified**:
+- `src/utils/syncCircuitBreaker.ts` - Enhanced with health monitoring
+- `src/utils/conflictResolver.ts` - NEW - Conflict resolution logic
+- `src/components/SyncHealthDashboard.vue` - Enhanced monitoring UI
+
+#### **Phase 1.2: Sync System Consolidation (3 hours)** - ✅ COMPLETED
+**Objective**: Remove competing systems and consolidate to CouchDB-only approach
+- ✅ **Remove useCrossTabSync.ts**: Eliminated localStorage-based approach (browser-isolated)
+- ✅ **Consolidate useCouchDBSync.ts**: Made single source of truth for all sync
+- ✅ **Fix Version Conflicts**: Standardized PouchDB versions and types
+- ✅ **Update useDatabase.ts**: Removed singleton conflicts, delegated to CouchDB sync
+
+**Files Changed** (December 2, 2025):
+- REMOVED: `src/composables/useCrossTabSync.ts`, `useCrossTabSyncIntegration.ts`
+- REMOVED: `src/utils/CrossTabPerformance.ts`, `CrossTabBrowserCompatibility.ts`
+- UPDATED: `src/composables/useCouchDBSync.ts` - Enabled live bidirectional sync
+- UPDATED: `src/composables/useDatabase.ts` - Delegated sync to useCouchDBSync
+
+#### **Phase 1.3: Progressive Live Sync Enablement (4 hours)** - ✅ CODE COMPLETE
+**Objective**: Enable full CouchDB sync with safety monitoring
+- ✅ **Read-Only Sync First**: Implemented `enableProgressiveSync()` with read-only pull first
+- ✅ **Conflict Detection**: Integrated `globalConflictResolver` with sync flow
+- ✅ **Gradual Write Enable**: Progressive mode enables writes after conflict rate check
+- ✅ **Performance Optimization**: Health score monitoring, conflict rate tracking
+- ✅ **AUTO-ENABLE CODE**: Added at lines 677-683 in `useCouchDBSync.ts`
+
+**🟢 CODE VERIFIED (December 2, 2025)**:
+Auto-enable code EXISTS in `useCouchDBSync.ts` at lines 677-683:
+```typescript
+if (remoteConnected.value) {
+  console.log('🚀 [AUTO-SYNC] CouchDB server connected, auto-enabling progressive sync...')
+  const success = await enableProgressiveSync()
+  if (success) {
+    console.log('✅ [AUTO-SYNC] Progressive sync enabled - cross-browser sync active!')
+```
+
+**Next Step**: Runtime verification - check for `[AUTO-SYNC]` console messages on startup.
+
+**Files Modified** (December 2, 2025):
+- `src/composables/useCouchDBSync.ts` - Added Phase 1.3 progressive sync methods:
+  - `enableProgressiveSync()` - Read-only → write-enabled progression
+  - `handleSyncConflict()` - Conflict resolution with last-write-wins
+  - `monitorSyncHealth()` - Real-time health monitoring
+  - `getProgressiveSyncStatus()` - Sync mode and health reporting
+- `src/components/SyncHealthDashboard.vue` - Updated to use new progressive sync API
+
+#### **Phase 1.4: Cross-Browser Validation (3 hours)** - 🟡 READY FOR TESTING
+**Objective**: Comprehensive testing across all browsers
+**Status**: Auto-enable code in place - verify runtime behavior then test cross-browser
+- 🟡 **VERIFY FIRST**: Check console for `[AUTO-SYNC]` messages on startup
+- 🔄 **Browser Matrix Testing**: Chrome, Chrome Dev, Zen, Firefox, Safari, Edge
+- 🔄 **Conflict Resolution Testing**: Concurrent operations across browsers
+- 🔄 **Performance Validation**: Ensure no UI blocking during cross-browser sync
+- 🔄 **Recovery Testing**: Automatic recovery from network failures
+
+### **Critical Implementation Files**
+1. **`src/utils/syncCircuitBreaker.ts`** - Enhanced monitoring and health checks
+2. **`src/utils/conflictResolver.ts`** - NEW - Conflict resolution logic
+3. **`src/components/SyncDashboard.vue`** - NEW - Real-time monitoring
+4. **`src/composables/useCrossTabSync.ts`** - REMOVE (browser-isolated)
+5. **`src/composables/useCouchDBSync.ts`** - Consolidate and enhance
+6. **`package.json`** - Fix PouchDB version conflicts
+
+### **Success Criteria**
+- ✅ Tasks created in Zen appear in Chrome Dev within 5 seconds
+- ✅ Tasks updated in Chrome Dev sync to Zen automatically
+- ✅ 1-task difference eliminated between all browsers
+- ✅ Zero data loss during cross-browser operations
+- ✅ Automatic conflict resolution for concurrent edits
+- ✅ Recovery from network interruptions without data corruption
+
+### **Risk Mitigation**
+- **Data Safety**: Comprehensive backups before any sync changes
+- **Transaction-Based Operations**: Atomic database changes
+- **Rollback Procedures**: Emergency rollback with single command
+- **Performance Monitoring**: Sync latency and resource usage tracking
+- **Browser Compatibility**: Feature detection and graceful degradation
+
+### **Timeline**
+| Phase | Duration | Status | Success Criteria |
+|-------|----------|--------|-----------------|
+| **Phase 1.1** | 2 hours | ✅ COMPLETED | Enhanced safety systems |
+| **Phase 1.2** | 3 hours | ✅ COMPLETED | Competing systems removed |
+| **Phase 1.3** | 4 hours | ✅ CODE COMPLETE | Auto-enable code at lines 677-683 |
+| **Phase 1.4** | 3 hours | 🟡 READY | Runtime verification then cross-browser testing |
+| **Total** | **12 hours** | **🟡 VERIFY** | **Check `[AUTO-SYNC]` console messages** |
+
+### **🟡 NEXT STEP: Runtime Verification**
+The auto-enable code EXISTS at lines 677-683 in `useCouchDBSync.ts`. Verify at runtime that `[AUTO-SYNC]` messages appear in console, then proceed to Phase 1.4 cross-browser testing.
+
+---
+
+## 🚀 **NEW INITIATIVE: GPU Performance Optimization**
+
+**Date**: December 1, 2025
+**Status**: ✅ PHASE 1 COMPLETE - 35% GPU reduction achieved (52% → 34%)
+**Priority**: HIGH - Performance Impact and User Experience
+**GPU Usage**: Before: 52% → After: 34% (RTX 4070 Ti - 1.2GB/12GB memory)
+**Timeline**: Phase 1 Complete, Phase 2-3 Optional
+**Safety Level**: ✅ Safe - All optimizations are reversible and non-destructive
+
+### **✅ Phase 1 Results (Completed December 1, 2025)**
+
+**Performance Improvements Achieved:**
+- ✅ **GPU Utilization**: Reduced from 52% to 34% (35% improvement)
+- ✅ **Visual Quality**: Preserved with no degradation
+- ✅ **Build Status**: Successful with no errors
+- ✅ **Frame Rate**: Maintained smooth 60fps performance
+
+**Files Created/Modified:**
+| File | Change | Description |
+|------|--------|-------------|
+| `src/utils/animationBatcher.ts` | ✅ NEW | Global RAF batching system |
+| `src/components/canvas/TaskNode.vue` | ✅ Modified | Smart will-change declarations |
+| `src/composables/useCanvasPerformanceTesting.ts` | ✅ Modified | Reduced monitoring frequency |
+| `src/views/CanvasView.vue` | ✅ Modified | Integrated animation batcher |
+
+**Technical Implementation:**
+1. **Global Animation Batcher**: Consolidated multiple RAF calls into single animation loop
+2. **Conditional GPU Acceleration**: `will-change` only applied during dragging/multi-select
+3. **Optimized Performance Monitoring**: Reduced collection frequency (5s → 15s)
+
+### **Problem Analysis (Reference)**
+Root cause analysis identified intensive GPU operations from:
+
+1. **Heavy Glass Morphism Effects** (Critical Impact)
+   - Multiple backdrop-filter layers throughout the application
+   - Each UI element has separate glass morphism rendering
+   - `backdrop-filter: blur(16px) saturate(180%)` applied extensively
+
+2. **Vue Flow Canvas Operations** (Critical Impact)
+   - Excessive requestAnimationFrame usage
+   - Complex node rendering with individual transforms
+   - Continuous performance monitoring loops
+
+3. **Individual Node Hardware Acceleration** (Medium-High Impact)
+   - Per-node `will-change: transform` declarations
+   - Each task node using separate GPU layers
+   - Multiple animation states (hover, drag, connection)
+
+### **3-Phase Implementation Strategy**
+
+#### **Phase 1: Performance-First Optimizations (2-3 hours) - Maintain Visual Quality**
+
+**1.1 Optimize requestAnimationFrame Usage**
+- Batch multiple RAF calls into single animation loops
+- Implement frame rate limiting for non-critical animations
+- Remove redundant performance monitoring during active use
+
+**1.2 Smart GPU Layer Management**
+- Implement conditional `will-change` based on actual animation needs
+- Group static elements to reduce GPU layer count
+- Use `transform: translateZ(0)` only when necessary
+
+**1.3 Selective Glass Morphism Optimization**
+- Maintain visual quality for active/focused elements
+- Reduce blur complexity for background elements
+- Implement progressive blur levels based on element importance
+
+#### **Phase 2: Intelligent Rendering System (4-6 hours)**
+
+**2.1 Canvas View Optimization**
+- Implement viewport-based rendering (only render visible nodes)
+- Use Vue Flow's built-in virtualization for large datasets
+- Optimize connection line rendering with canvas paths instead of DOM elements
+
+**2.2 Dynamic Quality Adjustment**
+- Monitor frame rate and automatically adjust effects intensity
+- Implement "performance mode" for battery/system preservation
+- Smart throttling of animations during high CPU/GPU usage
+
+#### **Phase 3: Advanced Optimizations (2-3 hours)**
+
+**3.1 CSS Containment Implementation**
+- Use `contain: layout paint` for complex components
+- Implement component isolation to prevent reflow cascades
+- Optimize style recalculation patterns
+
+**3.2 Memory and GPU Resource Management**
+- Implement proper cleanup for off-screen elements
+- Use object pooling for frequently created/destroyed elements
+- Optimize texture usage in canvas operations
+
+### **Critical Files for Implementation**
+- `src/assets/design-tokens.css` - Glass morphism optimization
+- `src/components/canvas/TaskNode.vue` - Smart GPU acceleration
+- `src/views/CanvasView.vue` - RAF batching and viewport rendering
+- `src/assets/styles.css` - Filter highlighting optimization
+- `src/composables/useCanvasPerformanceTesting.ts` - Performance monitoring optimization
+
+### **Expected Performance Improvements**
+- **GPU Usage Reduction**: 40-60% decrease in GPU utilization (target: <20% during normal use)
+- **Memory Usage**: 20-30% reduction in GPU memory consumption
+- **Frame Rate**: Consistent 60fps during normal operations
+- **Battery Life**: Improved laptop battery performance
+- **Visual Quality**: No perceptible degradation during normal use
+
+### **Success Metrics**
+- ✅ GPU utilization < 20% during normal use
+- ✅ Consistent 60fps performance
+- ✅ No perceptible visual quality degradation
+- ✅ Improved battery life on laptops
+- ✅ Active elements maintain full glass morphism quality
+
+### **Risk Assessment**
+- **Low Risk**: RAF batching (well-established), Smart will-change (safe conditional)
+- **Medium Risk**: Glass morphism changes (requires visual testing), Canvas viewport (thorough testing)
+- **Mitigation**: Feature flags, gradual rollout, performance baselines, rollback capability
+
+---
+
+---
+
+## 🎯 **CRITICAL FIX: Canvas Drag Vue Flow Sync (December 2, 2025)**
+
+**Status**: 🟡 ALL FIXES APPLIED - AWAITING USER VERIFICATION
+**Priority**: CRITICAL - Blocking canvas functionality
+**Implementation**: ✅ ALL 6 FIXES COMPLETE (December 2, 2025)
+**Verification**: User testing required
+
+### **Problem Solved**
+Tasks dragged from inbox to canvas were disappearing due to multiple issues:
+1. ✅ Manual memoization breaking Vue reactivity - FIXED (lines 655-711)
+2. ✅ Emergency filter showing ALL tasks on canvas - FIXED (lines 1862-1882)
+3. ✅ Source validation rejecting canvas/inbox sources - FIXED (line 4311)
+4. ✅ TaskId extraction missing fallback for `id` property - FIXED (line 4284)
+5. ✅ DOM selector using wrong attribute - FIXED (line 4229 - changed to `data-id`)
+6. ✅ Verification using `nodes.value` instead of `getNodes.value` - FIXED (line 4215)
+7. ✅ **Simplified verification to trust task store** - FIXED (lines 4467-4492) - Previous verification was causing false-positive rollbacks due to Vue Flow timing issues
+
+### **Root Cause #1: Manual Memoization**
+Fixed by removing hash-based caching that only checked task IDs.
+
+### **Root Cause #2: Emergency Filter Showing All Tasks (NEW FIX)**
+The syncNodes function had an "emergency fix" that was showing ALL tasks:
+
+**Before (Broken):**
+```typescript
+validatedTasks
+  .filter(task => task && task.id)  // EMERGENCY: Shows ALL tasks!
+```
+
+**After (Fixed - December 2, 2025):**
+```typescript
+validatedTasks
+  .filter(task => {
+    if (!task || !task.id) return false
+    if (!task.canvasPosition) return false  // Must have canvas position
+    if (typeof task.canvasPosition.x !== 'number') return false
+    if (typeof task.canvasPosition.y !== 'number') return false
+    if (task.isInInbox === true) return false  // Must not be in inbox
+    return true
+  })
+```
+
+### **All Fixes Applied (December 2, 2025)**
+
+1. ✅ **Memoization removed** (lines 655-711)
+2. ✅ **Direct store access in syncNodes** (line 1817)
+3. ✅ **Validation accepts 'canvas' source** (line 4308)
+4. ✅ **syncNodes filter fixed** (lines 1862-1882) - Only shows tasks with canvasPosition
+
+### **Verification Protocol**
+1. Start dev server: `npm run dev`
+2. Open Canvas view at http://localhost:5546
+3. Verify inbox tasks stay in inbox panel (not on canvas)
+4. Drag a task from inbox to canvas
+5. Task should appear where you dropped it
+6. Task should no longer be in inbox panel
+7. **Expected Console**:
+   - `🔄 [syncNodes] Using DIRECT STORE ACCESS - task count: X`
+   - `Task moved to canvas - removed from inbox`
+
+### **Previous Test Results (v3.3.1 - Before Filter Fix)**
+**Playwright automation (December 2, 2025):**
+- ✅ Task dragged from inbox to canvas successfully
+- ✅ Inbox count: 14 → 13
+- ✅ Canvas position: `translate(32px, 368px)`
+- ✅ Vue Flow sync: `tasksWithCanvasPos: 0 → 1`
+
+**Version**: 3.3.2 (December 2, 2025 - syncNodes Filter Restored)
+**Status**: 🟡 AWAITING USER VERIFICATION - Filter fix needs testing
+**Approach**: Evidence-based development with comprehensive rollback protection
 

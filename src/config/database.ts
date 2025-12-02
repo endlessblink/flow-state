@@ -76,39 +76,48 @@ export const prodDatabaseConfig: DatabaseConfig = {
 export const getDatabaseConfig = (): DatabaseConfig => {
   const isDevelopment = import.meta.env.DEV
 
-  // DEBUG: Force remote sync configuration regardless of env vars
-  console.log('🔧 [DATABASE CONFIG] FORCING REMOTE SYNC CONFIGURATION')
+  // Check if CouchDB URL is explicitly configured via environment variable
+  const couchdbUrl = import.meta.env.VITE_COUCHDB_URL
+  const couchdbUsername = import.meta.env.VITE_COUCHDB_USERNAME
+  const couchdbPassword = import.meta.env.VITE_COUCHDB_PASSWORD
 
-  // Override environment variables that aren't loading properly
-  const couchdbUrl = import.meta.env.VITE_COUCHDB_URL || 'http://84.46.253.137:5984/pomoflow-tasks'
-  const couchdbUsername = import.meta.env.VITE_COUCHDB_USERNAME || 'admin'
-  const couchdbPassword = import.meta.env.VITE_COUCHDB_PASSWORD || 'pomoflow-2024'
+  // Only enable remote sync if VITE_COUCHDB_URL is explicitly set in .env
+  // This prevents CORS errors when no properly configured CouchDB is available
+  if (couchdbUrl && couchdbUsername && couchdbPassword) {
+    console.log('🔧 [DATABASE CONFIG] Remote sync ENABLED via environment variables')
+    console.log('🔧 [DATABASE CONFIG] Using URL:', couchdbUrl)
 
-  console.log('🔧 [DATABASE CONFIG] Using URL:', couchdbUrl)
+    return {
+      local: {
+        name: 'pomoflow-app-dev'
+      },
+      remote: {
+        url: couchdbUrl,
+        auth: {
+          username: couchdbUsername,
+          password: couchdbPassword
+        },
+        batchSize: 100,
+        batchesLimit: 10
+      },
+      sync: {
+        live: true,
+        retry: false, // Keep disabled - manual retry only to prevent infinite loops
+        timeout: 10000,
+        heartBeat: 30000
+      }
+    }
+  }
 
-  // CRISIS FIX: Disable sync to stop infinite conflict loops (Phase 0.0.2)
-  console.log('🚨 [DATABASE CONFIG] CRISIS FIX: Syncing DISABLED to stop infinite loops')
+  // Local-only mode (no remote sync = no CORS errors)
+  console.log('📱 [DATABASE CONFIG] Local-only mode - no remote CouchDB configured')
+  console.log('📱 [DATABASE CONFIG] To enable sync, set VITE_COUCHDB_URL, VITE_COUCHDB_USERNAME, VITE_COUCHDB_PASSWORD in .env')
 
-  // Return sync-DISABLED config for crisis stabilization
   return {
     local: {
       name: 'pomoflow-app-dev'
-    },
-    remote: {
-      url: couchdbUrl,
-      auth: {
-        username: couchdbUsername,
-        password: couchdbPassword
-      },
-      batchSize: 100,
-      batchesLimit: 10
-    },
-    sync: {
-      live: true, // 🔧 PHASE 0 FIX: Re-enabled with circuit breaker protection for cross-tab sync
-      retry: false, // Keep disabled - manual retry only to prevent infinite loops
-      timeout: 10000, // Reduced from 30s to 10s for faster timeout
-      heartBeat: 30000 // Increased from 10s to 30s to reduce frequency
     }
+    // No remote config = no CORS errors
   }
 }
 
@@ -134,10 +143,13 @@ export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error' | 'paused'
 
 // Sync event types
 export interface SyncEvent {
-  direction: 'push' | 'pull'
+  direction: 'push' | 'pull' | 'cross-tab'
   changeCount: number
   docs: any[]
   errors?: any[]
+  timestamp?: Date
+  changeType?: 'create' | 'update' | 'delete'
+  source?: string
 }
 
 // Database health check interface

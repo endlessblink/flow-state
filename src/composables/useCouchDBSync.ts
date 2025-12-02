@@ -1,51 +1,89 @@
-import { ref, computed, readonly, onUnmounted } from 'vue'
+import { ref, computed, readonly } from 'vue'
 import PouchDB from 'pouchdb-browser'
 import type { DatabaseConfig, SyncStatus, SyncEvent, DatabaseHealth } from '@/config/database'
 import { getDatabaseConfig, DOCUMENT_IDS } from '@/config/database'
-import { SyncCircuitBreaker, executeSyncWithCircuitBreaker, createChangeDetectionGuard } from '@/utils/syncCircuitBreaker'
+import { SyncCircuitBreaker, executeSyncWithCircuitBreaker, createChangeDetectionGuard, globalSyncCircuitBreaker } from '@/utils/syncCircuitBreaker'
+import { globalConflictResolver } from '@/utils/conflictResolver'
 
 // Global PouchDB instance
 let globalPouchDB: PouchDB.Database | null = null
 
+// ============================================================================
+// SINGLETON REACTIVE STATE
+// These refs are shared across ALL useCouchDBSync() calls to ensure consistent
+// state management. Previously, each call created new refs causing sync failures.
+// ============================================================================
+const globalSyncStatus = ref<SyncStatus>('idle')
+const globalLastSyncTime = ref<Date | null>(null)
+const globalPendingChanges = ref(0)
+const globalSyncErrors = ref<any[]>([])
+const globalIsOnline = ref(navigator.onLine)
+const globalRemoteConnected = ref(false)
+
+// Phase 1.3: Progressive sync state (singleton)
+const globalSyncMode = ref<'disabled' | 'read-only' | 'write-enabled'>('disabled')
+const globalConflictCount = ref(0)
+const globalSyncHealthScore = ref(100)
+const globalIsProgressiveSyncReady = ref(false)
+
+// Singleton circuit breaker
+const globalCircuitBreakerInstance = new SyncCircuitBreaker({
+  cooldownMs: 300,
+  maxConsecutiveErrors: 3,
+  maxSyncDuration: 30000,
+  enableMetrics: true
+})
+
+const globalChangeGuard = createChangeDetectionGuard()
+
+// Track if init has been called to prevent multiple initializations
+let globalInitialized = false
+let globalInitPromise: Promise<() => void> | null = null
+
+// Singleton sync replication handlers
+let globalPushHandler: PouchDB.Replication.Sync<{}> | null = null
+let globalPullHandler: PouchDB.Replication.Sync<{}> | null = null
+let globalIsDestroyed = false
+
 /**
  * CouchDB Sync Composable
  * Handles two-way synchronization between local PouchDB and remote CouchDB
+ *
+ * IMPORTANT: All state is SINGLETON - shared across all useCouchDBSync() calls
  */
 export const useCouchDBSync = () => {
   const config = getDatabaseConfig()
 
-  // Reactive state
-  const syncStatus = ref<SyncStatus>('idle')
-  const lastSyncTime = ref<Date | null>(null)
-  const pendingChanges = ref(0)
-  const syncErrors = ref<any[]>([])
-  const isOnline = ref(navigator.onLine)
-  const remoteConnected = ref(false)
+  // Use singleton state (aliased for backward compatibility)
+  const syncStatus = globalSyncStatus
+  const lastSyncTime = globalLastSyncTime
+  const pendingChanges = globalPendingChanges
+  const syncErrors = globalSyncErrors
+  const isOnline = globalIsOnline
+  const remoteConnected = globalRemoteConnected
 
-  // Circuit breaker and change detection
-  const circuitBreaker = new SyncCircuitBreaker({
-    cooldownMs: 300,
-    maxConsecutiveErrors: 3,
-    maxSyncDuration: 30000,
-    enableMetrics: true
-  })
+  // Phase 1.3: Progressive sync state (singleton aliases)
+  const syncMode = globalSyncMode
+  const conflictCount = globalConflictCount
+  const syncHealthScore = globalSyncHealthScore
+  const isProgressiveSyncReady = globalIsProgressiveSyncReady
 
-  const changeGuard = createChangeDetectionGuard()
+  // Use singleton circuit breaker and change guard
+  const circuitBreaker = globalCircuitBreakerInstance
+  const changeGuard = globalChangeGuard
 
-  // Sync replication handlers
-  let pushHandler: PouchDB.Replication.Sync<{}> | null = null
-  let pullHandler: PouchDB.Replication.Sync<{}> | null = null
-  let isDestroyed = false
+  // Use singleton replication handlers (aliased for backward compatibility)
+  // NOTE: These are module-level singletons, not function-scoped
 
-  // Cleanup sync handlers
+  // Cleanup sync handlers (uses global handlers)
   const cleanupSyncHandlers = async () => {
-    if (pushHandler) {
-      await pushHandler.cancel()
-      pushHandler = null
+    if (globalPushHandler) {
+      await globalPushHandler.cancel()
+      globalPushHandler = null
     }
-    if (pullHandler) {
-      await pullHandler.cancel()
-      pullHandler = null
+    if (globalPullHandler) {
+      await globalPullHandler.cancel()
+      globalPullHandler = null
     }
   }
 
@@ -169,6 +207,128 @@ export const useCouchDBSync = () => {
     return false
   }
 
+  // Phase 1.3: Handle PouchDB conflicts during sync
+  const handleSyncConflict = async (localDoc: any, remoteDoc: any, context: string) => {
+    console.log(`⚔️ [PHASE 1.3] Handling sync conflict: ${context}`)
+
+    try {
+      // Use global conflict resolver with last-write-wins strategy
+      const result = await globalConflictResolver.resolveConflict(
+        localDoc,
+        remoteDoc,
+        context,
+        'last-write-wins'
+      )
+
+      conflictCount.value++
+      globalSyncCircuitBreaker.recordConflict(context, {
+        localRev: localDoc?._rev,
+        remoteRev: remoteDoc?._rev,
+        resolution: result.record.resolution
+      })
+
+      // Emit conflict event for monitoring dashboard
+      window.dispatchEvent(new CustomEvent('sync-conflict-resolved', {
+        detail: {
+          context,
+          resolution: result.record.resolution,
+          confidence: result.confidence,
+          timestamp: Date.now()
+        }
+      }))
+
+      return result.resolved
+    } catch (error) {
+      console.error(`❌ [PHASE 1.3] Conflict resolution failed: ${context}`, error)
+      throw error
+    }
+  }
+
+  // Phase 1.3: Monitor sync health and update reactive state
+  const monitorSyncHealth = () => {
+    const healthReport = globalSyncCircuitBreaker.getHealthReport()
+    syncHealthScore.value = healthReport.score
+    isProgressiveSyncReady.value = healthReport.isReadyForProgressiveSync
+
+    console.log(`🏥 [PHASE 1.3] Sync health: ${healthReport.score.toFixed(1)}% (${healthReport.overall})`)
+
+    return healthReport
+  }
+
+  // Phase 1.3: Enable progressive sync (read-only first)
+  const enableProgressiveSync = async () => {
+    console.log('🚀 [PHASE 1.3] Starting progressive sync enablement...')
+
+    // Step 1: Check health before enabling
+    const healthReport = monitorSyncHealth()
+
+    if (healthReport.score < 50) {
+      console.warn(`⚠️ [PHASE 1.3] Health too low for progressive sync: ${healthReport.score}%`)
+      syncMode.value = 'disabled'
+      return false
+    }
+
+    // Step 2: Start with read-only sync
+    console.log('📖 [PHASE 1.3] Enabling read-only sync...')
+    syncMode.value = 'read-only'
+
+    try {
+      const localDB = initializeDatabase()
+      const remoteDB = await setupRemoteConnection()
+
+      if (!remoteDB) {
+        console.warn('⚠️ [PHASE 1.3] No remote connection, staying in read-only mode')
+        return false
+      }
+
+      // Pull changes from remote first (read-only)
+      console.log('📥 [PHASE 1.3] Pulling changes from remote (read-only sync)...')
+      await localDB.replicate.from(remoteDB, {
+        timeout: 15000,
+        batch_size: 50
+      })
+
+      console.log('✅ [PHASE 1.3] Read-only sync complete, monitoring for conflicts...')
+
+      // Step 3: Monitor conflict rate for 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      const conflictRate = globalSyncCircuitBreaker.getConflictRate()
+      console.log(`📊 [PHASE 1.3] Conflict rate: ${conflictRate.toFixed(2)}%`)
+
+      if (conflictRate > 5) {
+        console.warn(`⚠️ [PHASE 1.3] High conflict rate (${conflictRate.toFixed(2)}%), staying read-only`)
+        return false
+      }
+
+      // Step 4: Enable write-enabled sync
+      console.log('✍️ [PHASE 1.3] Enabling write-enabled sync...')
+      syncMode.value = 'write-enabled'
+
+      // NOTE: initializeSync() is already called in init() before enableProgressiveSync()
+      // No need to call it again - just update the mode flag
+
+      console.log('✅ [PHASE 1.3] Progressive sync fully enabled!')
+      isProgressiveSyncReady.value = true
+      return true
+
+    } catch (error) {
+      console.error('❌ [PHASE 1.3] Progressive sync enablement failed:', error)
+      syncMode.value = 'disabled'
+      return false
+    }
+  }
+
+  // Phase 1.3: Get progressive sync status
+  const getProgressiveSyncStatus = () => ({
+    mode: syncMode.value,
+    healthScore: syncHealthScore.value,
+    conflictCount: conflictCount.value,
+    isReady: isProgressiveSyncReady.value,
+    conflictRate: globalSyncCircuitBreaker.getConflictRate(),
+    recommendations: globalSyncCircuitBreaker.getHealthReport().recommendations
+  })
+
   // Initialize PouchDB database
   const initializeDatabase = (): PouchDB.Database => {
     if (globalPouchDB) {
@@ -230,7 +390,7 @@ export const useCouchDBSync = () => {
 
   // Initialize sync between local and remote with circuit breaker protection
   const initializeSync = async () => {
-    if (isDestroyed) {
+    if (globalIsDestroyed) {
       console.log('🛑 Sync destroyed, cannot initialize')
       return
     }
@@ -250,27 +410,26 @@ export const useCouchDBSync = () => {
       // Cleanup existing sync handlers
       await cleanupSyncHandlers()
 
-      // Setup ONE-WAY sync to prevent ping-pong effects
-      // Push local changes first, then pull remote changes
-      console.log('🔄 Setting up one-way sync (push → pull) to prevent loops')
+      // 🔧 PHASE 1.2 FIX: Enable live bidirectional sync for cross-browser synchronization
+      // Use circuit breaker protection to prevent infinite loops
+      const liveSync = config.sync?.live ?? true // Enable live sync by default for cross-browser
+      const retrySync = config.sync?.retry ?? false // Keep retry disabled for safety
 
-      // Push handler (local → remote)
-      pushHandler = localDB.sync(remoteDB, {
-        live: false, // Disable live sync to prevent continuous loops
-        retry: false, // Disable retry to prevent infinite attempts
+      console.log(`🔄 Setting up ${liveSync ? 'LIVE' : 'one-time'} bidirectional sync for cross-browser support`)
+      console.log(`📊 Sync config: live=${liveSync}, retry=${retrySync}, timeout=${config.sync?.timeout || 10000}ms`)
+
+      // Bidirectional sync handler (local ↔ remote) for cross-browser sync
+      globalPushHandler = localDB.sync(remoteDB, {
+        live: liveSync, // 🔧 PHASE 1.2: Enable live sync from config
+        retry: retrySync, // Keep retry disabled to prevent infinite attempts
         timeout: config.sync?.timeout || 10000,
         batch_size: config.remote?.batchSize || 50,
         batches_limit: config.remote?.batchesLimit || 5
       })
 
-      // Pull handler (remote → local)
-      pullHandler = localDB.sync(remoteDB, {
-        live: false, // Disable live sync
-        retry: false, // Disable retry
-        timeout: config.sync?.timeout || 10000,
-        batch_size: config.remote?.batchSize || 50,
-        batches_limit: config.remote?.batchesLimit || 5
-      })
+      // For live sync, we only need one bidirectional handler (not separate push/pull)
+      // The .sync() method handles both directions automatically
+      globalPullHandler = null // Not needed for bidirectional sync
 
       // Setup enhanced sync event handlers with loop prevention
       const setupSyncEvents = (handler: PouchDB.Replication.Sync<{}>, direction: 'push' | 'pull') => {
@@ -316,9 +475,9 @@ export const useCouchDBSync = () => {
 
           // Cleanup handler to prevent continuous sync
           if (direction === 'push') {
-            pushHandler = null
+            globalPushHandler = null
           } else if (direction === 'pull') {
-            pullHandler = null
+            globalPullHandler = null
           }
         })
 
@@ -331,11 +490,12 @@ export const useCouchDBSync = () => {
         })
       }
 
-      setupSyncEvents(pushHandler, 'push')
-      setupSyncEvents(pullHandler, 'pull')
+      // Setup sync events for the bidirectional handler
+      setupSyncEvents(globalPushHandler, 'push') // 'push' is a misnomer now - it's bidirectional
+      // pullHandler is null - no separate pull needed for bidirectional sync
 
       syncStatus.value = 'complete'
-      console.log('🔄 One-way sync (push→pull) initialized successfully')
+      console.log('✅ LIVE bidirectional sync initialized for cross-browser support')
 
       return localDB
     }, 'initialize-sync')
@@ -366,12 +526,33 @@ export const useCouchDBSync = () => {
       return
     }
 
+    // Track if remote was previously disconnected
+    const wasDisconnected = !remoteConnected.value
+
     const localDB = initializeDatabase()
     const remoteDB = await setupRemoteConnection()
 
     if (!remoteDB) {
       console.warn('⚠️ Cannot trigger sync: no remote connection')
       return
+    }
+
+    // 🔧 PHASE 1.4 FIX: Auto-enable progressive sync when connection succeeds for the first time
+    // This fixes the race condition where init() fails but later connection succeeds
+    if (wasDisconnected && remoteConnected.value && syncMode.value === 'disabled') {
+      console.log('🚀 [TRIGGER-SYNC] Remote connection established! Auto-enabling progressive sync for cross-browser support...')
+      try {
+        const success = await enableProgressiveSync()
+        if (success) {
+          console.log('✅ [TRIGGER-SYNC] Progressive sync enabled - cross-browser sync active!')
+          syncMode.value = 'write-enabled'
+        } else {
+          console.warn('⚠️ [TRIGGER-SYNC] Progressive sync not fully enabled - proceeding with one-time sync')
+        }
+      } catch (error) {
+        console.error('❌ [TRIGGER-SYNC] Failed to auto-enable progressive sync:', error)
+        // Continue with one-time sync as fallback
+      }
     }
 
     try {
@@ -394,13 +575,13 @@ export const useCouchDBSync = () => {
 
   // Pause sync
   const pauseSync = async () => {
-    if (pushHandler) {
-      await pushHandler.cancel()
-      pushHandler = null
+    if (globalPushHandler) {
+      await globalPushHandler.cancel()
+      globalPushHandler = null
     }
-    if (pullHandler) {
-      await pullHandler.cancel()
-      pullHandler = null
+    if (globalPullHandler) {
+      await globalPullHandler.cancel()
+      globalPullHandler = null
     }
     syncStatus.value = 'paused'
     console.log('⏸️ Sync paused')
@@ -484,7 +665,7 @@ export const useCouchDBSync = () => {
 
   // Destroy function for cleanup
   const destroy = async () => {
-    isDestroyed = true
+    globalIsDestroyed = true
     console.log('🛑 Destroying CouchDB sync composable...')
 
     // Cleanup sync handlers
@@ -500,17 +681,50 @@ export const useCouchDBSync = () => {
     syncErrors.value = []
   }
 
-  // Initialize on composable creation
+  // Initialize on composable creation (SINGLETON - only runs once globally)
   const init = async () => {
-    const cleanup = setupNetworkListeners()
-    await initializeSync()
+    // SINGLETON CHECK: If already initialized, return cached promise
+    if (globalInitialized && globalInitPromise) {
+      console.log('🔄 [SYNC-INIT] Already initialized, reusing existing sync connection')
+      return globalInitPromise
+    }
 
-    // Add proper cleanup on unmount
-    onUnmounted(() => {
-      destroy()
-    })
+    // Mark as initializing and create the init promise
+    globalInitialized = true
 
-    return cleanup
+    globalInitPromise = (async () => {
+      console.log('🚀 [SYNC-INIT] First initialization - setting up CouchDB sync...')
+      const cleanup = setupNetworkListeners()
+      await initializeSync()
+
+      // AUTO-ENABLE: If remote CouchDB is connected, enable progressive sync for cross-browser support
+      console.log(`🔍 [SYNC-INIT] Remote connected status: ${remoteConnected.value}`)
+      if (remoteConnected.value) {
+        console.log('🚀 [AUTO-SYNC] CouchDB server connected, auto-enabling progressive sync for cross-browser support...')
+        try {
+          const success = await enableProgressiveSync()
+          if (success) {
+            console.log('✅ [AUTO-SYNC] Progressive sync enabled - cross-browser sync active!')
+            syncMode.value = 'write-enabled'
+          } else {
+            console.warn('⚠️ [AUTO-SYNC] Progressive sync not fully enabled - check health status')
+          }
+        } catch (error) {
+          console.error('❌ [AUTO-SYNC] Failed to auto-enable progressive sync:', error)
+        }
+      } else {
+        console.log('📱 [AUTO-SYNC] No remote CouchDB connection detected yet - will retry on network events')
+      }
+
+      return cleanup
+    })()
+
+    // NOTE: onUnmounted was removed from here because it must be called during
+    // synchronous component setup, not inside an async function.
+    // Cleanup is handled via the returned cleanup function from init().
+    // Components should store and call this cleanup function on unmount.
+
+    return globalInitPromise
   }
 
   return {
@@ -521,6 +735,12 @@ export const useCouchDBSync = () => {
     syncErrors: readonly(syncErrors),
     isOnline: readonly(isOnline),
     remoteConnected: readonly(remoteConnected),
+
+    // Phase 1.3: Progressive sync state
+    syncMode: readonly(syncMode),
+    conflictCount: readonly(conflictCount),
+    syncHealthScore: readonly(syncHealthScore),
+    isProgressiveSyncReady: readonly(isProgressiveSyncReady),
 
     // Computed
     isSyncing: readonly(isSyncing),
@@ -538,12 +758,26 @@ export const useCouchDBSync = () => {
     destroy,
     init,
 
+    // Phase 1.3: Progressive sync methods
+    enableProgressiveSync,
+    getProgressiveSyncStatus,
+    handleSyncConflict,
+    monitorSyncHealth,
+
     // Circuit breaker access
     circuitBreaker: {
       metrics: () => circuitBreaker.getMetrics(),
       isHealthy: () => circuitBreaker.isHealthy(),
       canSync: () => circuitBreaker.canSync(),
       reset: () => circuitBreaker.reset()
+    },
+
+    // Phase 1.3: Conflict resolver access
+    conflictResolver: {
+      statistics: () => globalConflictResolver.getStatistics(),
+      auditLog: (limit?: number) => globalConflictResolver.getAuditLog(limit),
+      isReady: () => globalConflictResolver.isReadyForCrossBrowserSync(),
+      clear: () => globalConflictResolver.clearAuditLog()
     }
   }
 }

@@ -181,12 +181,30 @@ export const useTaskStore = defineStore('tasks', () => {
     try {
       console.log('📂 Loading tasks from PouchDB on store init...')
 
-      // Wait for database to be ready using modern composable
-      while (!db.isReady?.value) {
+      // FIX: Use window.pomoFlowDb directly with timeout instead of infinite wait for db.isReady
+      let attempts = 0
+      while (!(window as any).pomoFlowDb && attempts < 50) {
         await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
       }
 
-      const loadedTasks = await db.load<Task[]>(DB_KEYS.TASKS)
+      const dbInstance = (window as any).pomoFlowDb
+      if (!dbInstance) {
+        console.warn('⚠️ PouchDB not available for task loading, continuing with empty tasks')
+        return
+      }
+
+      // Load tasks directly from PouchDB
+      let loadedTasks: Task[] | null = null
+      try {
+        const doc = await dbInstance.get('tasks:data')
+        loadedTasks = doc?.data || null
+      } catch (err: any) {
+        if (err.status !== 404) {
+          console.warn('⚠️ Error loading tasks:', err)
+        }
+        loadedTasks = null
+      }
 
       if (loadedTasks && Array.isArray(loadedTasks)) {
         tasks.value = loadedTasks
@@ -501,12 +519,30 @@ export const useTaskStore = defineStore('tasks', () => {
     try {
       console.log('📂 Loading projects from PouchDB on store init...')
 
-      // Wait for database to be ready using modern composable
-      while (!db.isReady?.value) {
+      // FIX: Use window.pomoFlowDb directly with timeout instead of infinite wait for db.isReady
+      let attempts = 0
+      while (!(window as any).pomoFlowDb && attempts < 50) {
         await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
       }
 
-      const loadedProjects = await db.load<Project[]>(DB_KEYS.PROJECTS)
+      const dbInstance = (window as any).pomoFlowDb
+      if (!dbInstance) {
+        console.warn('⚠️ PouchDB not available for project loading, continuing with empty projects')
+        return
+      }
+
+      // Load projects directly from PouchDB
+      let loadedProjects: Project[] | null = null
+      try {
+        const doc = await dbInstance.get('projects:data')
+        loadedProjects = doc?.data || null
+      } catch (err: any) {
+        if (err.status !== 404) {
+          console.warn('⚠️ Error loading projects:', err)
+        }
+        loadedProjects = null
+      }
       if (!loadedProjects) {
         console.log('ℹ️ No projects in PouchDB, creating and saving default project')
         // Save default project to database
@@ -919,11 +955,19 @@ export const useTaskStore = defineStore('tasks', () => {
     // Projects are now loaded exclusively by the main database composable (see loadProjectsFromPouchDB function)
 
     // Load hide done tasks setting (defaults to false to show completed tasks for logging)
-    const savedHideDoneTasks = await db.load<boolean>(DB_KEYS.HIDE_DONE_TASKS)
-    if (savedHideDoneTasks !== null) {
-      hideDoneTasks.value = savedHideDoneTasks
+    // FIX: Use dbInstance directly instead of db.load() to avoid race condition with database.value
+    try {
+      const doc = await dbInstance.get('hide_done_tasks:data')
+      if (doc && 'data' in doc) {
+        hideDoneTasks.value = (doc as any).data
+        console.log('✅ Loaded hide_done_tasks setting:', hideDoneTasks.value)
+      }
+    } catch (error: any) {
+      // Document doesn't exist (404) or other error - keep default value
+      if (error.status !== 404) {
+        console.warn('⚠️ Could not load hide_done_tasks setting:', error.message)
+      }
     }
-    // If no saved setting exists, keep the default value of false (show done tasks)
 
   
     // Test safe sync once
@@ -2360,6 +2404,12 @@ export const useTaskStore = defineStore('tasks', () => {
       activeSmartViews.value.delete(view)  // Toggle off
       console.log('🔧 TaskStore: Removed smart view:', view)
     } else {
+      // Make 'today' and 'week' mutually exclusive
+      if (view === 'today') {
+        activeSmartViews.value.delete('week')
+      } else if (view === 'week') {
+        activeSmartViews.value.delete('today')
+      }
       activeSmartViews.value.add(view)     // Toggle on
       console.log('🔧 TaskStore: Added smart view:', view)
     }
@@ -3243,36 +3293,30 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Initialize store from PouchDB on first load - CRITICAL
-  initializeFromPouchDB().catch(err => {
-    errorHandler.report({
-      severity: ErrorSeverity.CRITICAL,
-      category: ErrorCategory.DATABASE,
-      message: 'Store initialization error',
-      error: err as Error,
-      showNotification: true,
-      userMessage: 'Critical: Task system failed to initialize. Please refresh.'
-    })
-  })
+  // FIX: Chain .then() and .catch() on a SINGLE call to avoid race condition
+  initializeFromPouchDB()
+    .then(async () => {
+      // PHASE 0.5: Initialize cross-tab synchronization after store initialization
+      console.log('🔄 Initializing cross-tab synchronization after store setup...')
+      const changesHandler = await setupCrossTabSync()
 
-  // PHASE 0.5: Initialize cross-tab synchronization after store initialization
-  initializeFromPouchDB().then(async () => {
-    console.log('🔄 Initializing cross-tab synchronization after store setup...')
-    const changesHandler = await setupCrossTabSync()
-
-    // Store for cleanup if needed
-    if (changesHandler && typeof window !== 'undefined') {
-      (window as any).__crossTabSyncHandler = changesHandler
-    }
-  }).catch(err => {
-    console.error('❌ Failed to initialize cross-tab synchronization:', err)
-    errorHandler.report({
-      severity: ErrorSeverity.WARNING,
-      category: ErrorCategory.DATABASE,
-      message: 'Cross-tab sync initialization failed',
-      error: err as Error,
-      showNotification: false
+      // Store for cleanup if needed
+      if (changesHandler && typeof window !== 'undefined') {
+        (window as any).__crossTabSyncHandler = changesHandler
+      }
+      console.log('✅ Cross-browser sync listener active - will reload on remote changes')
     })
-  })
+    .catch(err => {
+      console.error('❌ Store initialization or cross-tab sync failed:', err)
+      errorHandler.report({
+        severity: ErrorSeverity.CRITICAL,
+        category: ErrorCategory.DATABASE,
+        message: 'Store initialization error',
+        error: err as Error,
+        showNotification: true,
+        userMessage: 'Critical: Task system failed to initialize. Please refresh.'
+      })
+    })
 
   return {
     // State

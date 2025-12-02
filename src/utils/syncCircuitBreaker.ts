@@ -18,6 +18,11 @@ export interface SyncMetrics {
   consecutiveErrors: number
   lastSyncTime: number
   isCurrentlyActive: boolean
+  // Phase 1: Enhanced health monitoring
+  conflictCount: number
+  rollbackCount: number
+  healthScore: number // 0-100
+  lastHealthCheck: number
 }
 
 export type SyncSource = 'local' | 'remote' | 'cross-tab'
@@ -33,6 +38,12 @@ export interface SyncCircuitBreakerConfig {
     remote: number
     'cross-tab': number
   }
+  // Phase 1: Health monitoring and auto-rollback
+  enableHealthMonitoring?: boolean
+  healthCheckInterval?: number
+  autoRollbackThreshold?: number // health score below this triggers rollback
+  maxConflictRate?: number // max conflicts per 100 operations
+  enableProgressiveSync?: boolean
 }
 
 export class SyncCircuitBreaker {
@@ -41,6 +52,10 @@ export class SyncCircuitBreaker {
   private syncInProgress = false
   private isDestroyed = false
   private performanceHistory: number[] = []
+  // Phase 1: Health monitoring
+  private healthCheckTimer?: NodeJS.Timeout
+  private conflictHistory: number[] = []
+  private rollbackTriggered = false
 
   constructor(config: Partial<SyncCircuitBreakerConfig> = {}) {
     this.config = {
@@ -55,6 +70,12 @@ export class SyncCircuitBreaker {
         'cross-tab': 200, // Cross-tab sync is faster, shorter cooldown
         ...config.contextCooldowns
       },
+      // Phase 1: Health monitoring defaults
+      enableHealthMonitoring: true,
+      healthCheckInterval: 30000, // 30 seconds
+      autoRollbackThreshold: 30, // Rollback if health < 30%
+      maxConflictRate: 5, // Max 5 conflicts per 100 operations
+      enableProgressiveSync: false, // Disabled by default
       ...config
     }
 
@@ -65,7 +86,17 @@ export class SyncCircuitBreaker {
       averageDuration: 0,
       consecutiveErrors: 0,
       lastSyncTime: 0,
-      isCurrentlyActive: false
+      isCurrentlyActive: false,
+      // Phase 1: Enhanced health metrics
+      conflictCount: 0,
+      rollbackCount: 0,
+      healthScore: 100,
+      lastHealthCheck: Date.now()
+    }
+
+    // Phase 1: Start health monitoring if enabled
+    if (this.config.enableHealthMonitoring) {
+      this.startHealthMonitoring()
     }
   }
 
@@ -243,6 +274,13 @@ export class SyncCircuitBreaker {
   destroy(): void {
     this.isDestroyed = true
     this.syncInProgress = false
+
+    // Phase 1: Clean up health monitoring
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer)
+      this.healthCheckTimer = undefined
+    }
+
     console.log(`🛑 [CIRCUIT BREAKER] Destroyed - no more sync operations allowed`)
   }
 
@@ -266,6 +304,212 @@ export class SyncCircuitBreaker {
     context: string
   ): (...args: T) => Promise<R> {
     return (...args: T) => this.executeSync(() => fn(...args), context)
+  }
+
+  // Phase 1: Health Monitoring & Auto-Rollback Methods
+
+  /**
+   * Phase 1: Start health monitoring timer
+   */
+  private startHealthMonitoring(): void {
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer)
+    }
+
+    this.healthCheckTimer = setInterval(() => {
+      this.performHealthCheck()
+    }, this.config.healthCheckInterval)
+
+    console.log(`🏥 [CIRCUIT BREAKER] Health monitoring started (interval: ${this.config.healthCheckInterval}ms)`)
+  }
+
+  /**
+   * Phase 1: Perform comprehensive health check
+   */
+  private performHealthCheck(): void {
+    const now = Date.now()
+    this.metrics.lastHealthCheck = now
+
+    // Calculate health score based on multiple factors
+    let healthScore = 100
+
+    // Factor 1: Success rate (40% weight)
+    const successRate = this.metrics.attempts > 0 ? (this.metrics.successes / this.metrics.attempts) * 100 : 100
+    healthScore -= (100 - successRate) * 0.4
+
+    // Factor 2: Error rate (30% weight)
+    const errorRate = this.metrics.attempts > 0 ? (this.metrics.consecutiveErrors / this.metrics.attempts) * 100 : 0
+    healthScore -= errorRate * 0.3
+
+    // Factor 3: Conflict rate (20% weight)
+    const conflictRate = this.metrics.attempts > 0 ? (this.metrics.conflictCount / this.metrics.attempts) * 100 : 0
+    healthScore -= Math.min(conflictRate, this.config.maxConflictRate!) * 0.2
+
+    // Factor 4: Performance (10% weight)
+    if (this.metrics.averageDuration > 5000) { // 5 seconds is slow
+      healthScore -= 10
+    }
+
+    // Ensure health score stays within bounds
+    this.metrics.healthScore = Math.max(0, Math.min(100, healthScore))
+
+    console.log(`🏥 [CIRCUIT BREAKER] Health check: ${this.metrics.healthScore.toFixed(1)}% (success: ${successRate.toFixed(1)}%, errors: ${errorRate.toFixed(1)}%, conflicts: ${conflictRate.toFixed(1)}%)`)
+
+    // Auto-rollback if health is critically low
+    if (this.metrics.healthScore < this.config.autoRollbackThreshold! && !this.rollbackTriggered) {
+      this.triggerAutoRollback()
+    }
+  }
+
+  /**
+   * Phase 1: Trigger automatic rollback due to poor health
+   */
+  private triggerAutoRollback(): void {
+    this.rollbackTriggered = true
+    this.metrics.rollbackCount++
+
+    console.warn(`🚨 [CIRCUIT BREAKER] AUTO-ROLLBACK TRIGGERED - Health: ${this.metrics.healthScore.toFixed(1)}% < ${this.config.autoRollbackThreshold}%`)
+
+    // Emit rollback event for monitoring systems
+    this.emitHealthEvent('auto-rollback', {
+      healthScore: this.metrics.healthScore,
+      metrics: this.metrics,
+      timestamp: Date.now()
+    })
+
+    // Temporarily disable aggressive sync to prevent further damage
+    this.config.cooldownMs = Math.max(this.config.cooldownMs * 2, 1000)
+    this.config.maxConsecutiveErrors = Math.max(this.config.maxConsecutiveErrors - 1, 1)
+
+    console.log(`🛡️ [CIRCUIT BREAKER] Protective measures activated - cooldown increased to ${this.config.cooldownMs}ms`)
+  }
+
+  /**
+   * Phase 1: Record a conflict event
+   */
+  recordConflict(context: string, details?: any): void {
+    this.metrics.conflictCount++
+    this.conflictHistory.push(Date.now())
+
+    // Keep only last 50 conflicts for rate calculation
+    if (this.conflictHistory.length > 50) {
+      this.conflictHistory.shift()
+    }
+
+    console.warn(`⚠️ [CIRCUIT BREAKER] Conflict recorded: ${context} (total: ${this.metrics.conflictCount})`, details)
+
+    // Emit conflict event for monitoring
+    this.emitHealthEvent('conflict', {
+      context,
+      details,
+      conflictCount: this.metrics.conflictCount,
+      timestamp: Date.now()
+    })
+  }
+
+  /**
+   * Phase 1: Get conflict rate per 100 operations
+   */
+  getConflictRate(): number {
+    return this.metrics.attempts > 0 ? (this.metrics.conflictCount / this.metrics.attempts) * 100 : 0
+  }
+
+  /**
+   * Phase 1: Check if system is healthy enough for progressive sync
+   */
+  isReadyForProgressiveSync(): boolean {
+    return this.metrics.healthScore >= 70 && // Good health
+           this.getConflictRate() < this.config.maxConflictRate! && // Low conflict rate
+           this.metrics.consecutiveErrors === 0 // No recent errors
+  }
+
+  /**
+   * Phase 1: Enable progressive sync mode
+   */
+  enableProgressiveSync(): void {
+    if (!this.isReadyForProgressiveSync()) {
+      throw new Error(`System not ready for progressive sync - Health: ${this.metrics.healthScore}%, Conflicts: ${this.getConflictRate()}%`)
+    }
+
+    this.config.enableProgressiveSync = true
+    console.log(`🚀 [CIRCUIT BREAKER] Progressive sync enabled - Health: ${this.metrics.healthScore}%`)
+
+    this.emitHealthEvent('progressive-sync-enabled', {
+      healthScore: this.metrics.healthScore,
+      conflictRate: this.getConflictRate(),
+      timestamp: Date.now()
+    })
+  }
+
+  /**
+   * Phase 1: Disable progressive sync mode
+   */
+  disableProgressiveSync(): void {
+    this.config.enableProgressiveSync = false
+    console.log(`🛑 [CIRCUIT BREAKER] Progressive sync disabled`)
+
+    this.emitHealthEvent('progressive-sync-disabled', {
+      healthScore: this.metrics.healthScore,
+      timestamp: Date.now()
+    })
+  }
+
+  /**
+   * Phase 1: Emit health events for monitoring systems
+   */
+  private emitHealthEvent(event: string, data: any): void {
+    // Emit custom event for monitoring dashboard
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sync-circuit-breaker-health', {
+        detail: { event, data }
+      }))
+    }
+  }
+
+  /**
+   * Phase 1: Get comprehensive health report
+   */
+  getHealthReport(): {
+    overall: 'healthy' | 'warning' | 'critical'
+    score: number
+    metrics: SyncMetrics
+    recommendations: string[]
+    isReadyForProgressiveSync: boolean
+  } {
+    const health = this.metrics.healthScore
+    let overall: 'healthy' | 'warning' | 'critical'
+    let recommendations: string[] = []
+
+    if (health >= 80) {
+      overall = 'healthy'
+      recommendations.push('System operating normally')
+    } else if (health >= 50) {
+      overall = 'warning'
+      recommendations.push('Monitor system closely')
+      if (this.getConflictRate() > this.config.maxConflictRate!) {
+        recommendations.push('Consider reducing sync frequency')
+      }
+    } else {
+      overall = 'critical'
+      recommendations.push('Immediate attention required')
+      recommendations.push('Consider disabling sync temporarily')
+    }
+
+    if (this.metrics.consecutiveErrors > 0) {
+      recommendations.push('Address consecutive sync errors')
+    }
+
+    if (this.metrics.averageDuration > 5000) {
+      recommendations.push('Optimize sync performance')
+    }
+
+    return {
+      overall,
+      score: health,
+      metrics: { ...this.metrics },
+      recommendations,
+      isReadyForProgressiveSync: this.isReadyForProgressiveSync()
+    }
   }
 }
 

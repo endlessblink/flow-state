@@ -10,7 +10,8 @@ import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import PouchDB from 'pouchdb-browser'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
-// import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager' // REMOVED - Per master plan sync consolidation
+// 🔧 PHASE 1.2: Consolidated sync using useCouchDBSync as single source of truth
+import { useCouchDBSync } from '@/composables/useCouchDBSync'
 import { getDatabaseConfig, type DatabaseHealth } from '@/config/database'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
@@ -228,8 +229,8 @@ export function useDatabase(): UseDatabaseReturn {
 
   // Network optimizer removed - was causing architectural mismatches
 
-  // let syncManager: ReturnType<typeof getGlobalReliableSyncManager> | null = null // REMOVED - Per master plan sync consolidation
-  let syncManager: any = null // Simplified type for removed sync manager
+  // 🔧 PHASE 1.2: Use useCouchDBSync as single source of truth for sync operations
+  let couchDBSync: ReturnType<typeof useCouchDBSync> | null = null
   let syncCleanup: (() => void) | null = null
 
   // Computed properties with enhanced debugging
@@ -301,31 +302,40 @@ export function useDatabase(): UseDatabaseReturn {
           // This is our singleton database
           singletonDatabase = existingDB
 
+          // 🔧 PHASE 1.4 FIX (Part 1): Expose database to window IMMEDIATELY
+          // This prevents race condition where stores timeout waiting for pomoFlowDb
+          ;(window as any).pomoFlowDb = singletonDatabase
+          console.log('✅ [USE-DATABASE] Singleton PouchDB exposed to window.pomoFlowDb (early)')
+
+          // 🔧 PHASE 1.4 FIX (Part 2): Initialize CouchDB sync even for existing databases
+          // Previously, couchDBSync.init() was only called for NEW databases,
+          // which meant cross-browser sync never started on subsequent page loads!
+          // This runs AFTER exposing to window so stores can initialize in parallel
+          if (hasRemoteSync && !forceLocalMode) {
+            console.log('🌐 [USE-DATABASE] Existing DB found - initializing CouchDB sync for cross-browser support...')
+            couchDBSync = useCouchDBSync()
+            const cleanupFn = await couchDBSync.init()
+            syncCleanup = () => cleanupFn()
+            console.log('✅ [USE-DATABASE] CouchDB sync initialized for existing database')
+          }
+
         } catch (dbError) {
           console.log('📱 [USE-DATABASE] No existing database found, creating new singleton...')
 
           if (hasRemoteSync && !forceLocalMode) {
-            console.log('🌐 [USE-DATABASE] Remote sync configured, initializing with Reliable Sync Manager...')
-            // syncManager = getGlobalReliableSyncManager() // REMOVED - Per master plan sync consolidation
+            console.log('🌐 [USE-DATABASE] Remote sync configured, initializing with CouchDB sync...')
 
-            // Initialize sync manager - REMOVED
-            // syncCleanup = await syncManager.init()
+            // 🔧 PHASE 1.2: Use useCouchDBSync as single source of truth
+            couchDBSync = useCouchDBSync()
 
-            // Create local database instance (Reliable Sync Manager handles the sync separately)
-            const dbConfig: any = {
-              auto_compaction: true,
-              revs_limit: 5
-            }
+            // Initialize the CouchDB sync - this sets up live bidirectional sync
+            const cleanupFn = await couchDBSync.init()
+            syncCleanup = () => cleanupFn()
 
-            // Only add adapter if specified
-            if (config.local.adapter) {
-              dbConfig.adapter = config.local.adapter
-            }
+            // Get the database from CouchDB sync (it creates its own PouchDB instance)
+            singletonDatabase = couchDBSync.initializeDatabase()
 
-            const localDB = new PouchDB(config.local.name, dbConfig)
-            singletonDatabase = localDB
-
-            console.log('✅ [USE-DATABASE] Singleton PouchDB initialized with Reliable Sync Manager')
+            console.log('✅ [USE-DATABASE] Singleton PouchDB initialized with CouchDB sync for cross-browser support')
           } else {
             console.log('📱 [USE-DATABASE] Local-only mode, creating new singleton PouchDB...')
 
@@ -418,6 +428,13 @@ export function useDatabase(): UseDatabaseReturn {
 
   // Helper function to wait for database initialization
   const waitForDatabase = async (): Promise<PouchDB.Database> => {
+    // FIX: Also wait for singleton initialization promise (race condition fix)
+    // This handles the case where initializeDatabase() has started but isLoading is still false
+    if (initializationPromise) {
+      console.log('⏳ [USE-DATABASE] waitForDatabase: Waiting for initialization promise...')
+      await initializationPromise
+    }
+
     if (isLoading.value) {
       await new Promise<void>((resolve) => {
         const unwatch = watch(isLoading, (loading) => {
@@ -429,12 +446,21 @@ export function useDatabase(): UseDatabaseReturn {
       })
     }
 
+    // FIX: Fallback to singleton if local ref isn't set yet
+    if (!database.value && singletonDatabase) {
+      console.log('🔄 [USE-DATABASE] waitForDatabase: Using singleton fallback')
+      database.value = singletonDatabase
+    }
+
     if (!database.value) {
       throw new Error('Database not initialized')
     }
 
     return database.value
   }
+
+  // Set loading BEFORE starting initialization (race condition fix)
+  isLoading.value = true
 
   // Initialize immediately (non-blocking)
   initializeDatabase()
@@ -723,28 +749,28 @@ export function useDatabase(): UseDatabaseReturn {
     }
   }
 
-  // Sync-related computed properties
-  const syncStatus = ref<'error' | 'offline' | 'idle' | 'syncing' | 'complete' | 'paused'>('idle')
-  const isOnline = computed(() => syncManager?.isOnline.value || navigator.onLine)
+  // 🔧 PHASE 1.2: Sync-related computed properties using couchDBSync
+  const syncStatus = computed(() => couchDBSync?.syncStatus.value || 'idle')
+  const isOnline = computed(() => couchDBSync?.isOnline.value || navigator.onLine)
 
-  // Sync operations
+  // 🔧 PHASE 1.2: Sync operations delegated to couchDBSync
   const triggerSync = async () => {
-    if (syncManager) {
-      await syncManager.triggerSync()
+    if (couchDBSync) {
+      await couchDBSync.triggerSync()
     } else {
       console.warn('⚠️ [USE-DATABASE] Sync not available - no remote configuration')
     }
   }
 
   const pauseSync = async () => {
-    if (syncManager) {
-      await syncManager.pauseSync()
+    if (couchDBSync) {
+      await couchDBSync.pauseSync()
     }
   }
 
   const resumeSync = async () => {
-    if (syncManager) {
-      await syncManager.resumeSync()
+    if (couchDBSync) {
+      await couchDBSync.resumeSync()
     }
   }
 
@@ -789,14 +815,14 @@ export function useDatabase(): UseDatabaseReturn {
     databaseRefCount--
     console.log(`🔧 [USE-DATABASE] Database reference count decreased to: ${databaseRefCount}`)
 
-    // Only cleanup sync manager, not the database (since it's shared)
+    // 🔧 PHASE 1.2: Cleanup CouchDB sync, not the database (since it's shared)
     if (syncCleanup) {
       syncCleanup()
       syncCleanup = null
     }
-    if (syncManager) {
-      await syncManager.cleanup()
-      syncManager = null
+    if (couchDBSync) {
+      await couchDBSync.destroy()
+      couchDBSync = null
     }
 
     // Don't destroy the singleton database until all references are gone

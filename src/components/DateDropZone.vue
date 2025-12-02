@@ -3,6 +3,7 @@
     :class="[
       'date-drop-zone',
       {
+        'is-active': active,
         'is-drag-target': isDragTarget,
         'is-drag-valid': isDragValid,
         'is-drag-invalid': isDragTarget && !isDragValid && isDragging
@@ -188,11 +189,11 @@ const calculateTargetDate = (): string => {
 }
 
 .date-drop-zone.is-active {
-  background: var(--state-active-bg);
-  border: 1px solid var(--state-active-border);
+  background: var(--state-selected-bg);
+  border: 1px solid var(--state-selected-border);
   backdrop-filter: var(--state-active-glass);
   color: var(--state-active-text);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+  box-shadow: var(--state-selected-shadow), var(--state-selected-glow);
 }
 
 .zone-icon {

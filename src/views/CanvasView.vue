@@ -4328,9 +4328,10 @@ const handleDrop = async (event: DragEvent) => {
 
         // 🔧 STEP 4: Use Vue Flow's addNodes API (PERPLEXITY recommendation)
         // This directly adds the node to Vue Flow's internal state
+        // 🐛 BUG FIX: Changed type from 'task' to 'taskNode' to match registered node types
         addNodes({
           id: currentTaskId,
-          type: 'task',
+          type: 'taskNode',  // Must match nodeTypes registration (line 1388-1391)
           position: verified.canvasPosition,
           data: { task: verified }
         })

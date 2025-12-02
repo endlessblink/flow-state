@@ -10,7 +10,7 @@ export interface LogEntry {
   id: string
   timestamp: Date
   level: 'debug' | 'info' | 'warn' | 'error' | 'critical'
-  category: 'sync' | 'network' | 'database' | 'performance' | 'security' | 'user'
+  category: 'sync' | 'network' | 'database' | 'performance' | 'security' | 'user' | 'monitoring'
   message: string
   data?: any
   userId?: string

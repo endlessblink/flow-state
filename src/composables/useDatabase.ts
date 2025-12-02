@@ -1,3 +1,7 @@
+// Debug logging control
+const DEBUG_DB = import.meta.env.DEV
+const debugLog = (...args: unknown[]) => DEBUG_DB && console.log(...args)
+
 /**
  * Enhanced PouchDB Database Composable for Pomo-Flow
  *
@@ -110,7 +114,7 @@ async function performWithRetry<T>(
     try {
       const result = await operation()
       if (attempt > 1) {
-        console.log(`✅ [RETRY] ${operationName} succeeded on attempt ${attempt}`)
+        debugLog(`✅ [RETRY] ${operationName} succeeded on attempt ${attempt}`)
       }
       return result
     } catch (err) {
@@ -237,7 +241,7 @@ export function useDatabase(): UseDatabaseReturn {
   const isReady = computed(() => {
     const ready = !isLoading.value && database.value !== null && !error.value
     // Always log database readiness for debugging
-    console.log('🔍 [USE-DATABASE] isReady computed:', {
+    debugLog('🔍 [USE-DATABASE] isReady computed:', {
       ready,
       isLoading: isLoading.value,
       hasDatabase: database.value !== null,
@@ -251,7 +255,7 @@ export function useDatabase(): UseDatabaseReturn {
   const initializeDatabase = async () => {
     // If we already have a database instance, just reuse it
     if (singletonDatabase) {
-      console.log('🔄 [USE-DATABASE] Reusing existing singleton database instance')
+      debugLog('🔄 [USE-DATABASE] Reusing existing singleton database instance')
       database.value = singletonDatabase
       databaseRefCount++
       isLoading.value = false
@@ -260,7 +264,7 @@ export function useDatabase(): UseDatabaseReturn {
 
     // If we're currently initializing, wait for it to complete
     if (isInitializing && initializationPromise) {
-      console.log('⏳ [USE-DATABASE] Database initialization in progress, waiting...')
+      debugLog('⏳ [USE-DATABASE] Database initialization in progress, waiting...')
       await initializationPromise
       database.value = singletonDatabase
       databaseRefCount++
@@ -273,7 +277,7 @@ export function useDatabase(): UseDatabaseReturn {
     databaseRefCount++
 
     initializationPromise = (async () => {
-      console.log('🔄 [USE-DATABASE] Initializing singleton PouchDB database...')
+      debugLog('🔄 [USE-DATABASE] Initializing singleton PouchDB database...')
 
       try {
         // Enable remote sync when configured
@@ -293,7 +297,7 @@ export function useDatabase(): UseDatabaseReturn {
 
           // Test if it's accessible and has data
           const dbInfo = await existingDB.info()
-          console.log('🔍 [USE-DATABASE] Found existing database:', {
+          debugLog('🔍 [USE-DATABASE] Found existing database:', {
             name: dbInfo.db_name,
             doc_count: dbInfo.doc_count,
             adapter: (dbInfo as any).adapter || 'unknown'
@@ -305,25 +309,25 @@ export function useDatabase(): UseDatabaseReturn {
           // 🔧 PHASE 1.4 FIX (Part 1): Expose database to window IMMEDIATELY
           // This prevents race condition where stores timeout waiting for pomoFlowDb
           ;(window as any).pomoFlowDb = singletonDatabase
-          console.log('✅ [USE-DATABASE] Singleton PouchDB exposed to window.pomoFlowDb (early)')
+          debugLog('✅ [USE-DATABASE] Singleton PouchDB exposed to window.pomoFlowDb (early)')
 
           // 🔧 PHASE 1.4 FIX (Part 2): Initialize CouchDB sync even for existing databases
           // Previously, couchDBSync.init() was only called for NEW databases,
           // which meant cross-browser sync never started on subsequent page loads!
           // This runs AFTER exposing to window so stores can initialize in parallel
           if (hasRemoteSync && !forceLocalMode) {
-            console.log('🌐 [USE-DATABASE] Existing DB found - initializing CouchDB sync for cross-browser support...')
+            debugLog('🌐 [USE-DATABASE] Existing DB found - initializing CouchDB sync for cross-browser support...')
             couchDBSync = useCouchDBSync()
             const cleanupFn = await couchDBSync.init()
             syncCleanup = () => cleanupFn()
-            console.log('✅ [USE-DATABASE] CouchDB sync initialized for existing database')
+            debugLog('✅ [USE-DATABASE] CouchDB sync initialized for existing database')
           }
 
         } catch (dbError) {
-          console.log('📱 [USE-DATABASE] No existing database found, creating new singleton...')
+          debugLog('📱 [USE-DATABASE] No existing database found, creating new singleton...')
 
           if (hasRemoteSync && !forceLocalMode) {
-            console.log('🌐 [USE-DATABASE] Remote sync configured, initializing with CouchDB sync...')
+            debugLog('🌐 [USE-DATABASE] Remote sync configured, initializing with CouchDB sync...')
 
             // 🔧 PHASE 1.2: Use useCouchDBSync as single source of truth
             couchDBSync = useCouchDBSync()
@@ -335,12 +339,12 @@ export function useDatabase(): UseDatabaseReturn {
             // Get the database from CouchDB sync (it creates its own PouchDB instance)
             singletonDatabase = couchDBSync.initializeDatabase()
 
-            console.log('✅ [USE-DATABASE] Singleton PouchDB initialized with CouchDB sync for cross-browser support')
+            debugLog('✅ [USE-DATABASE] Singleton PouchDB initialized with CouchDB sync for cross-browser support')
           } else {
-            console.log('📱 [USE-DATABASE] Local-only mode, creating new singleton PouchDB...')
+            debugLog('📱 [USE-DATABASE] Local-only mode, creating new singleton PouchDB...')
 
             // Create local PouchDB instance with enhanced error handling
-            console.log('🔄 [USE-DATABASE] Creating new singleton PouchDB with config:', {
+            debugLog('🔄 [USE-DATABASE] Creating new singleton PouchDB with config:', {
               name: config.local.name,
               adapter: 'idb',
               auto_compaction: true,
@@ -355,7 +359,7 @@ export function useDatabase(): UseDatabaseReturn {
               })
 
               singletonDatabase = localDB
-              console.log('✅ [USE-DATABASE] New singleton PouchDB created in local-only mode')
+              debugLog('✅ [USE-DATABASE] New singleton PouchDB created in local-only mode')
             } catch (dbCreateError) {
               console.error('❌ [USE-DATABASE] Failed to create PouchDB instance:', dbCreateError)
               throw new Error(`PouchDB creation failed: ${(dbCreateError as any).message || (dbCreateError as any).toString()}`)
@@ -365,11 +369,11 @@ export function useDatabase(): UseDatabaseReturn {
 
         // Expose to window for backward compatibility and persistence
         ;(window as any).pomoFlowDb = singletonDatabase
-        console.log('✅ [USE-DATABASE] Singleton PouchDB exposed to window.pomoFlowDb')
+        debugLog('✅ [USE-DATABASE] Singleton PouchDB exposed to window.pomoFlowDb')
 
         // Test database
         const dbInfo = await singletonDatabase.info()
-        console.log('📊 [USE-DATABASE] Singleton database verified:', {
+        debugLog('📊 [USE-DATABASE] Singleton database verified:', {
           name: dbInfo.db_name,
           doc_count: dbInfo.doc_count,
           adapter: (dbInfo as any).adapter || 'unknown',
@@ -379,14 +383,14 @@ export function useDatabase(): UseDatabaseReturn {
         })
 
         // Perform initial health check
-        console.log('🏥 [USE-DATABASE] Performing initial health check...')
+        debugLog('🏥 [USE-DATABASE] Performing initial health check...')
         const healthResult = await performDatabaseHealthCheck(singletonDatabase)
 
         if (!healthResult.healthy) {
           console.warn('⚠️ [USE-DATABASE] Initial health check failed:', healthResult.error?.message)
           // Don't fail initialization for health check issues, but log them
         } else {
-          console.log(`✅ [USE-DATABASE] Database health check passed (${healthResult.latency}ms latency)`)
+          debugLog(`✅ [USE-DATABASE] Database health check passed (${healthResult.latency}ms latency)`)
         }
 
         database.value = singletonDatabase
@@ -418,7 +422,7 @@ export function useDatabase(): UseDatabaseReturn {
 
     await initializationPromise
     isLoading.value = false
-    console.log('📊 [USE-DATABASE] Singleton database ready for operations', {
+    debugLog('📊 [USE-DATABASE] Singleton database ready for operations', {
       isReady: isReady.value,
       hasDatabase: database.value !== null,
       isLoading: isLoading.value,
@@ -431,7 +435,7 @@ export function useDatabase(): UseDatabaseReturn {
     // FIX: Also wait for singleton initialization promise (race condition fix)
     // This handles the case where initializeDatabase() has started but isLoading is still false
     if (initializationPromise) {
-      console.log('⏳ [USE-DATABASE] waitForDatabase: Waiting for initialization promise...')
+      debugLog('⏳ [USE-DATABASE] waitForDatabase: Waiting for initialization promise...')
       await initializationPromise
     }
 
@@ -448,7 +452,7 @@ export function useDatabase(): UseDatabaseReturn {
 
     // FIX: Fallback to singleton if local ref isn't set yet
     if (!database.value && singletonDatabase) {
-      console.log('🔄 [USE-DATABASE] waitForDatabase: Using singleton fallback')
+      debugLog('🔄 [USE-DATABASE] waitForDatabase: Using singleton fallback')
       database.value = singletonDatabase
     }
 
@@ -512,7 +516,7 @@ export function useDatabase(): UseDatabaseReturn {
           }
         }
 
-        console.log(`💾 Saved ${key} to PouchDB (direct)`)
+        debugLog(`💾 Saved ${key} to PouchDB (direct)`)
         return // Success - exit retry loop
 
       } catch (err: any) {
@@ -555,7 +559,7 @@ export function useDatabase(): UseDatabaseReturn {
       const data = (doc as any).data as T
 
       if (shouldLogTaskDiagnostics()) {
-        console.log(`💾 [DATABASE] Loaded ${key} from PouchDB`)
+        debugLog(`💾 [DATABASE] Loaded ${key} from PouchDB`)
       }
 
       return data
@@ -563,7 +567,7 @@ export function useDatabase(): UseDatabaseReturn {
       // Handle 404 as expected case
       if (err.status === 404) {
         if (shouldLogTaskDiagnostics()) {
-          console.log(`📭 [DATABASE] No data found for ${key}`)
+          debugLog(`📭 [DATABASE] No data found for ${key}`)
         }
         return null
       }
@@ -589,11 +593,11 @@ export function useDatabase(): UseDatabaseReturn {
       const docId = `${key}:data`
       const doc = await db.get(docId)
       await db.remove(doc)
-      console.log(`🗑️ Removed ${key} from PouchDB`)
+      debugLog(`🗑️ Removed ${key} from PouchDB`)
     }, `remove ${key}`, 3, 100).catch(err => {
       // Handle 404 as expected case
       if (err instanceof Error && err.message.includes('404')) {
-        console.log(`ℹ️ ${key} not found, already removed`)
+        debugLog(`ℹ️ ${key} not found, already removed`)
         return
       }
       error.value = err as Error
@@ -608,7 +612,7 @@ export function useDatabase(): UseDatabaseReturn {
     try {
       const db = await waitForDatabase()
       await db.destroy()
-      console.log('🧹 Cleared singleton PouchDB database')
+      debugLog('🧹 Cleared singleton PouchDB database')
 
       // Reset singleton reference and recreate database
       singletonDatabase = null
@@ -619,7 +623,7 @@ export function useDatabase(): UseDatabaseReturn {
 
       // Reinitialize after clear - create new singleton database
       await initializeDatabase()
-      console.log('✅ [USE-DATABASE] Singleton PouchDB recreated and exposed to window.pomoFlowDb')
+      debugLog('✅ [USE-DATABASE] Singleton PouchDB recreated and exposed to window.pomoFlowDb')
     } catch (err) {
       error.value = err as Error
       errorHandler.report({
@@ -709,7 +713,7 @@ export function useDatabase(): UseDatabaseReturn {
       for (const [key, value] of Object.entries(data)) {
         await save(key, value)
       }
-      console.log('📥 Imported data to PouchDB')
+      debugLog('📥 Imported data to PouchDB')
     } catch (err) {
       error.value = err as Error
       errorHandler.report({
@@ -731,9 +735,9 @@ export function useDatabase(): UseDatabaseReturn {
     context?: string
   ): Promise<T[]> => {
     try {
-      console.log(`🔄 Starting atomic transaction${context ? ` for ${context}` : ''}`)
+      debugLog(`🔄 Starting atomic transaction${context ? ` for ${context}` : ''}`)
       const results = await Promise.all(operations)
-      console.log(`✅ Completed atomic transaction${context ? ` for ${context}` : ''}`)
+      debugLog(`✅ Completed atomic transaction${context ? ` for ${context}` : ''}`)
       return results as T[]
     } catch (err) {
       error.value = err as Error
@@ -807,13 +811,13 @@ export function useDatabase(): UseDatabaseReturn {
   const resetHealthMonitoring = () => {
     consecutiveHealthFailures = 0
     lastHealthCheck = null
-    console.log('🔄 [USE-DATABASE] Health monitoring state reset')
+    debugLog('🔄 [USE-DATABASE] Health monitoring state reset')
   }
 
   // Cleanup function for when the composable is destroyed
   const cleanup = async () => {
     databaseRefCount--
-    console.log(`🔧 [USE-DATABASE] Database reference count decreased to: ${databaseRefCount}`)
+    debugLog(`🔧 [USE-DATABASE] Database reference count decreased to: ${databaseRefCount}`)
 
     // 🔧 PHASE 1.2: Cleanup CouchDB sync, not the database (since it's shared)
     if (syncCleanup) {
@@ -827,7 +831,7 @@ export function useDatabase(): UseDatabaseReturn {
 
     // Don't destroy the singleton database until all references are gone
     if (databaseRefCount <= 0 && singletonDatabase) {
-      console.log('🧹 [USE-DATABASE] All references gone, cleaning up singleton database')
+      debugLog('🧹 [USE-DATABASE] All references gone, cleaning up singleton database')
       try {
         await singletonDatabase.destroy()
       } catch (err) {
@@ -878,7 +882,7 @@ export function useDatabase(): UseDatabaseReturn {
       })
 
       if (shouldLogTaskDiagnostics()) {
-        console.log(`📦 [DATABASE] Batch loaded ${keys.length} keys from PouchDB`)
+        debugLog(`📦 [DATABASE] Batch loaded ${keys.length} keys from PouchDB`)
       }
 
       return result
@@ -917,7 +921,7 @@ export function useDatabase(): UseDatabaseReturn {
       // Cache clearing removed with network optimizer
 
       if (shouldLogTaskDiagnostics()) {
-        console.log(`📦 [DATABASE] Batch saved ${keys.length} items to PouchDB`)
+        debugLog(`📦 [DATABASE] Batch saved ${keys.length} items to PouchDB`)
       }
     } catch (err) {
       error.value = err as Error

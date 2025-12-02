@@ -1,0 +1,261 @@
+name: Detect Competing Systems
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+
+jobs:
+  detect-competing-systems:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci
+        # Install the skill dependencies if any
+        if [ -f ".claude-skills/detect-competing-systems/package.json" ]; then
+          cd .claude-skills/detect-competing-systems && npm ci
+        fi
+
+    - name: Run competing systems analysis
+      run: |
+        echo "🔍 Running competing systems analysis..."
+        node .claude-skills/detect-competing-systems/analysis-engine.js \
+          --reportFormat=json \
+          --outputFile=competing-systems-report.json \
+          --threshold=0.75 || {
+            echo "❌ Analysis failed"
+            exit 1
+          }
+
+    - name: Analyze results
+      run: |
+        echo "📊 Analyzing results..."
+        node -e "
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('competing-systems-report.json', 'utf8'));
+
+          console.log('=== COMPETING SYSTEMS ANALYSIS ===');
+          console.log('Total conflicts:', report.summary.total);
+          console.log('HIGH severity:', report.summary.bySeverity.HIGH || 0);
+          console.log('MEDIUM severity:', report.summary.bySeverity.MEDIUM || 0);
+          console.log('LOW severity:', report.summary.bySeverity.LOW || 0);
+          console.log('');
+
+          if (report.conflicts.length > 0) {
+            console.log('🔍 CONFLICTS BY TYPE:');
+            const byType = {};
+            report.conflicts.forEach(conflict => {
+              byType[conflict.type] = (byType[conflict.type] || 0) + 1;
+            });
+            Object.entries(byType).forEach(([type, count]) => {
+              console.log('  ' + type + ':', count);
+            });
+            console.log('');
+
+            const highConflicts = report.conflicts.filter(c => c.severity === 'HIGH');
+            if (highConflicts.length > 0) {
+              console.log('🚨 HIGH SEVERITY CONFLICTS:');
+              highConflicts.forEach(conflict => {
+                console.log('  ❌ ' + conflict.subtype);
+                console.log('     Files: ' + conflict.files.map(f => f.path).join(', '));
+                console.log('     Impact: ' + conflict.estimatedEffort + ' to fix');
+                console.log('');
+              });
+            }
+          } else {
+            console.log('✅ No competing systems detected!');
+          }
+
+          // Set GitHub outputs
+          const highCount = report.conflicts.filter(c => c.severity === 'HIGH').length;
+          const mediumCount = report.conflicts.filter(c => c.severity === 'MEDIUM').length;
+          const lowCount = report.conflicts.filter(c => c.severity === 'LOW').length;
+
+          console.log('::set-output name=high-conflicts::' + highCount);
+          console.log('::set-output name=medium-conflicts::' + mediumCount);
+          console.log('::set-output name=low-conflicts::' + lowCount);
+          console.log('::set-output name=total-conflicts::' + report.conflicts.length);
+        "
+
+    - name: Upload analysis report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: competing-systems-report
+        path: competing-systems-report.json
+        retention-days: 30
+
+    - name: Generate summary report
+      run: |
+        node -e "
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('competing-systems-report.json', 'utf8'));
+
+          const summary = fs.readFileSync('competing-systems-report.json', 'utf8');
+
+          let markdown = '# 🔍 Competing Systems Analysis Report\n\n';
+          markdown += '## Summary\n\n';
+          markdown += '| Metric | Count |\n';
+          markdown += '|--------|-------|\n';
+          markdown += '| Total Conflicts | ' + report.summary.total + ' |\n';
+          markdown += '| HIGH Severity | ' + (report.summary.bySeverity.HIGH || 0) + ' |\n';
+          markdown += '| MEDIUM Severity | ' + (report.summary.bySeverity.MEDIUM || 0) + ' |\n';
+          markdown += '| LOW Severity | ' + (report.summary.bySeverity.LOW || 0) + ' |\n\n';
+
+          if (report.conflicts.length > 0) {
+            markdown += '## Conflicts by Category\n\n';
+            const byType = {};
+            report.conflicts.forEach(conflict => {
+              byType[conflict.type] = (byType[conflict.type] || 0) + 1;
+            });
+
+            Object.entries(byType).forEach(([type, count]) => {
+              markdown += '- **' + type + '**: ' + count + ' conflict(s)\n';
+            });
+            markdown += '\n';
+
+            const highConflicts = report.conflicts.filter(c => c.severity === 'HIGH');
+            if (highConflicts.length > 0) {
+              markdown += '## 🚨 High Severity Conflicts\n\n';
+              highConflicts.forEach(conflict => {
+                markdown += '### ' + conflict.subtype + '\n\n';
+                markdown += '**Type:** ' + conflict.type + '\n';
+                markdown += '**Files:** ' + conflict.files.length + ' files involved\n';
+                markdown += '**Estimated Effort:** ' + conflict.estimatedEffort + '\n';
+                markdown += '**Risk:** ' + conflict.risk + '\n';
+                markdown += '**Description:** ' + conflict.description + '\n\n';
+                markdown += '**Files:**\n';
+                conflict.files.forEach(file => {
+                  markdown += '- ' + file.path + '\n';
+                });
+                markdown += '\n';
+                markdown += '**Recommendation:** ' + conflict.recommendation + '\n\n';
+                markdown += '---\n\n';
+              });
+            }
+
+            markdown += '## 📊 Impact Assessment\n\n';
+            const totalEffort = report.conflicts.reduce((sum, c) => {
+              const hours = parseInt(c.estimatedEffort) || 1;
+              return sum + hours;
+            }, 0);
+
+            markdown += '- **Total estimated effort to resolve:** ' + totalEffort + ' hours\n';
+            markdown += '- **Average similarity:** ' + Math.round(report.metrics.averageSimilarity * 100) + '%\n';
+            markdown += '- **Total conflicts to address:** ' + report.conflicts.length + '\n\n';
+
+            markdown += '## 🔧 Recommended Actions\n\n';
+            markdown += report.recommendations.map(rec =>
+              '- ' + rec.action + ': ' + rec.details + '\n'
+            ).join('');
+          } else {
+            markdown += '## ✅ No Conflicts Detected\n\n';
+            markdown += 'Great! No competing systems were found in your codebase.\n\n';
+            markdown += '### What this means:\n';
+            markdown += '- No duplicate stores or composables detected\n';
+            markdown += '- Consistent architectural patterns\n';
+            markdown += '- No redundant implementations found\n';
+            markdown += '- Good separation of concerns\n\n';
+            markdown += '### Keep it up by:\n';
+            markdown += '- Running this analysis regularly\n';
+            markdown += '- Following the established patterns\n';
+            markdown += '- Reviewing new code for potential conflicts\n';
+          }
+
+          fs.writeFileSync('COMPETING_SYSTEMS_REPORT.md', markdown);
+        "
+
+    - name: Upload Markdown report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: competing-systems-markdown-report
+        path: COMPETING_SYSTEMS_REPORT.md
+        retention-days: 30
+
+    - name: Comment on PR (if applicable)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          let comment = '';
+          try {
+            const report = JSON.parse(fs.readFileSync('competing-systems-report.json', 'utf8'));
+            const markdown = fs.readFileSync('COMPETING_SYSTEMS_REPORT.md', 'utf8');
+
+            const highCount = report.conflicts.filter(c => c.severity === 'HIGH').length;
+            const totalCount = report.conflicts.length;
+
+            if (highCount > 0) {
+              comment = '## 🚨 Competing Systems Detected\n\n';
+              comment += 'This PR introduces **' + highCount + ' high severity** conflicts that should be resolved before merging.\n\n';
+              comment += '### Quick Stats\n';
+              comment += '- Total conflicts: ' + totalCount + '\n';
+              comment += '- High severity: ' + highCount + '\n';
+              comment += '- Medium severity: ' + (report.conflicts.filter(c => c.severity === 'MEDIUM').length) + '\n\n';
+              comment += '### 🔍 View Details\n';
+              comment += '- Download the [full analysis report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed information\n';
+              comment += '- Check the [markdown report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for summaries and recommendations\n\n';
+              comment += '### 📋 Next Steps\n';
+              comment += '1. Review the conflicts and their impact\n';
+              comment += '2. Follow the recommendations in the report\n';
+              comment += '3. Test your changes thoroughly\n';
+              comment += '4. Update this PR when conflicts are resolved\n\n';
+              comment += '---\n\n';
+              comment += markdown;
+            } else if (totalCount > 0) {
+              comment = '## ⚠️ Minor Competing Systems Detected\n\n';
+              comment += 'This PR introduces **' + totalCount + '** conflicts, but none are high severity. Consider addressing them for better code quality.\n\n';
+              comment += '[View the full analysis report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n';
+            } else {
+              comment = '## ✅ No Competing Systems Detected\n\n';
+              comment += 'Great! This PR doesn\'t introduce any competing systems. 🎉\n\n';
+            }
+          } catch (error) {
+            console.log('Could not read analysis report:', error.message);
+            comment = '## ⚠️ Analysis Report Not Available\n\n';
+            comment += 'The competing systems analysis report could not be generated or read. Please check the workflow logs.\n';
+          }
+
+          if (comment) {
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+
+    - name: Check for blocking conflicts
+      run: |
+        high_conflicts=$(node -e "
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('competing-systems-report.json', 'utf8'));
+          const highCount = report.conflicts.filter(c => c.severity === 'HIGH').length;
+          console.log(highCount);
+        ")
+
+        if [ "$high_conflicts" -gt 0 ]; then
+          echo "❌ Blocking conflicts detected ($high_conflicts HIGH severity conflicts)"
+          echo "Please resolve these conflicts before merging"
+          exit 1
+        else
+          echo "✅ No blocking conflicts detected"
+        fi

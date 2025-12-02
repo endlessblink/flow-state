@@ -1,0 +1,843 @@
+{
+  "version": "2.0.0",
+  "lastUpdated": "2025-11-28",
+  "description": "Comprehensive pattern library for detecting competing systems in Vue 3 + TypeScript + Pinia projects",
+  "categories": {
+    "pinia_stores": {
+      "description": "Pinia store conflicts and state management duplication",
+      "patterns": [
+        {
+          "id": "duplicate_store",
+          "name": "Duplicate Pinia Store",
+          "description": "Two or more stores managing the same data domain",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Similar store names (TaskStore, TaskListStore, WorkflowStore)",
+              "Overlapping state properties (tasks, items, data, entities)",
+              "Duplicate getter/computed logic",
+              "Similar action names (add, create, save, update, remove, delete)",
+              "Same API endpoints in fetch actions"
+            ],
+            "filePatterns": ["src/stores/**/*.ts", "src/stores/**/*.js"],
+            "similarityThreshold": 0.80,
+            "codePatterns": [
+              "defineStore\\('[^']*'[^}]*}",
+              "\\b(add|create|save|update|remove|delete)\\b.*async",
+              "\\b(get|fetch|load)\\b.*\\{",
+              "computed\\(\\).*=>",
+              "\\$patch",
+              "\\$reset"
+            ]
+          },
+          "recommendation": "Consolidate into single store with computed properties for different views",
+          "estimatedEffort": "2-4 hours",
+          "risk": "Medium"
+        },
+        {
+          "id": "duplicate_computed",
+          "name": "Duplicate Computed Values",
+          "description": "Same computed value defined in multiple stores",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Same getter name in different stores",
+              "Identical filtering logic",
+              "Same derived calculations",
+              "Similar computed property implementations"
+            ],
+            "similarityThreshold": 0.90,
+            "codePatterns": [
+              "computed\\(\\)\\s*=>\\s*[^\\n]*\\.filter\\(",
+              "computed\\(\\)\\s*=>\\s*[^\\n]*\\.sort\\(",
+              "computed\\(\\)\\s*=>\\s*[^\\n]*\\.map\\("
+            ]
+          },
+          "recommendation": "Extract to shared utility function or keep in primary store",
+          "estimatedEffort": "1 hour",
+          "risk": "Low"
+        },
+        {
+          "id": "overlapping_domain",
+          "name": "Overlapping Data Domain",
+          "description": "Stores managing related but not identical data domains",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Stores with related names (UserStore, ProfileStore)",
+              "Similar data structures with slight variations",
+              "Cross-store dependencies",
+              "Similar API patterns for related data"
+            ],
+            "similarityThreshold": 0.70,
+            "codePatterns": [
+              "defineStore\\('[^-]*(user|profile|auth)[^']*'",
+              "\\b(fetch|load)\\b.*\\{"
+            ]
+          },
+          "recommendation": "Merge related stores or establish clear domain boundaries",
+          "estimatedEffort": "2-3 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "composables": {
+      "description": "Composable duplication and overlapping functionality",
+      "patterns": [
+        {
+          "id": "duplicate_composable",
+          "name": "Duplicate Composable Logic",
+          "description": "Multiple composables with similar functionality",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Similar function names (useTask, useTaskData, useTaskManagement)",
+              "Identical reactive patterns",
+              "Similar hook patterns",
+              "Same return structure"
+            ],
+            "filePatterns": ["src/composables/**/*.ts", "src/hooks/**/*.ts"],
+            "similarityThreshold": 0.80,
+            "codePatterns": [
+              "export\\s+function\\s+(use\\w+)",
+              "ref\\(\\)",
+              "reactive\\(\\)",
+              "computed\\(\\)",
+              "watch\\(\\)",
+              "onMounted\\(\\)"
+            ]
+          },
+          "recommendation": "Merge into single composable with configuration options",
+          "estimatedEffort": "1-2 hours",
+          "risk": "Low"
+        },
+        {
+          "id": "form_handling_conflicts",
+          "name": "Multiple Form Handling Patterns",
+          "description": "Different approaches to form validation and state management",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Multiple form composables (useForm, useTaskForm, useSmartForm)",
+              "Duplicate validation logic",
+              "Different form state management approaches",
+              "Similar error handling patterns"
+            ],
+            "similarityThreshold": 0.75,
+            "codePatterns": [
+              "use\\w*[Ff]orm",
+              "validate\\w*",
+              "errors\\.",
+              "touched\\.",
+              "isValid"
+            ]
+          },
+          "recommendation": "Create unified form composable with flexible configuration",
+          "estimatedEffort": "4-6 hours",
+          "risk": "Medium"
+        },
+        {
+          "id": "reactive_pattern_conflicts",
+          "name": "Mixed Reactive Patterns",
+          "description": "Inconsistent use of reactive(), ref(), shallowReactive()",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Mixed reactive() and ref() in same file",
+              "Unnecessary shallowReactive() usage",
+              "Inconsistent reactive patterns across codebase",
+              "Class-based reactive state mixed with composables"
+            ],
+            "codePatterns": [
+              "reactive\\(\\{",
+              "ref\\(",
+              "shallowReactive\\(",
+              "class.*\\{.*reactive"
+            ]
+          },
+          "recommendation": "Standardize on consistent reactive patterns",
+          "estimatedEffort": "2-3 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "components": {
+      "description": "Component duplication and overlapping functionality",
+      "patterns": [
+        {
+          "id": "duplicate_components",
+          "name": "Duplicate Component Functionality",
+          "description": "Multiple components with similar functionality",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Similar component names (TaskCard, TaskItem, TaskTile)",
+              "Identical template structures",
+              "Similar prop interfaces",
+              "Duplicate event handling logic"
+            ],
+            "filePatterns": ["src/components/**/*.vue", "src/components/**/*.ts"],
+            "similarityThreshold": 0.80,
+            "codePatterns": [
+              "name\\s*:\\s*['\"]\\w*[Tt]ask",
+              "defineComponent",
+              "<template>",
+              "@\\w+",
+              "props\\s*:",
+              "emits\\s*:"
+            ]
+          },
+          "recommendation": "Consolidate into single configurable component",
+          "estimatedEffort": "3-5 hours",
+          "risk": "Medium"
+        },
+        {
+          "id": "similar_component_names",
+          "name": "Similar Component Names",
+          "description": "Components with confusingly similar names",
+          "severity": "LOW",
+          "detection": {
+            "indicators": [
+              "Components with names that differ by one character",
+              "Similar naming patterns",
+              "Potential naming conflicts"
+            ],
+            "similarityThreshold": 0.90,
+            "codePatterns": [
+              "name\\s*:\\s*['\"][\\w]*",
+              "export\\s+default\\s+\\w+"
+            ]
+          },
+          "recommendation": "Rename components for clarity or consolidate if duplicates",
+          "estimatedEffort": "30 minutes",
+          "risk": "Low"
+        },
+        {
+          "id": "slot_vs_prop_conflicts",
+          "name": "Inconsistent Content Patterns",
+          "description": "Mixed use of props vs slots for similar content",
+          "severity": "LOW",
+          "detection": {
+            "indicators": [
+              "Components using props for content that should use slots",
+              "Similar components using different content patterns",
+              "Inconsistent slot usage patterns"
+            ],
+            "codePatterns": [
+              "props\\s*:\\s*\\{[^}]*title[^}]*}",
+              "<slot[^>]*>",
+              "v-for.*props"
+            ]
+          },
+          "recommendation": "Establish consistent content patterns (props for config, slots for content)",
+          "estimatedEffort": "1-2 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "utilities": {
+      "description": "Utility function duplication and helper conflicts",
+      "patterns": [
+        {
+          "id": "duplicate_utilities",
+          "name": "Duplicate Utility Functions",
+          "description": "Same utility function implemented in multiple places",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Same function name in different files",
+              "Identical function signatures",
+              "Similar algorithm implementations",
+              "Duplicate formatting functions"
+            ],
+            "filePatterns": ["src/utils/**/*.ts", "src/helpers/**/*.ts", "src/lib/**/*.ts"],
+            "similarityThreshold": 0.85,
+            "codePatterns": [
+              "export\\s+(function|const)\\s+\\w+",
+              "function\\s+\\w+",
+              "=>\\s*\\{",
+              "\\b(format|parse|validate|transform)\\w*"
+            ]
+          },
+          "recommendation": "Consolidate into shared utility module",
+          "estimatedEffort": "1 hour",
+          "risk": "Low"
+        },
+        {
+          "id": "formatter_conflicts",
+          "name": "Data Formatting Conflicts",
+          "description": "Multiple formatters for same data types",
+          "severity": "LOW",
+          "detection": {
+            "indicators": [
+              "Multiple date formatters",
+              "Duplicate currency formatters",
+              "Different string formatting approaches",
+              "Similar formatting logic scattered across files"
+            ],
+            "similarityThreshold": 0.80,
+            "codePatterns": [
+              "\\b(format|formatDate|formatCurrency)\\w*",
+              "toLocaleString",
+              "Intl\\.",
+              "\\.\\w*\\(.*\\)"
+            ]
+          },
+          "recommendation": "Create centralized formatting utilities",
+          "estimatedEffort": "1-2 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "filtering_systems": {
+      "description": "Multiple filtering and search implementations",
+      "patterns": [
+        {
+          "id": "multiple_filter_implementations",
+          "name": "Multiple Filter Implementations",
+          "description": "Filtering logic implemented in multiple places",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Inline filtering in components",
+              "Filter composables with similar logic",
+              "Store-based filtering duplicates",
+              "Similar filter predicates"
+            ],
+            "similarityThreshold": 0.75,
+            "codePatterns": [
+              "\\.filter\\(",
+              "use\\w*[Ff]ilter",
+              "filtered\\w*",
+              "\\b(search|query)\\b"
+            ]
+          },
+          "recommendation": "Consolidate filtering logic into single composable or store",
+          "estimatedEffort": "3-4 hours",
+          "risk": "Medium"
+        }
+      ]
+    },
+    "calendar_systems": {
+      "description": "Calendar and date handling conflicts",
+      "patterns": [
+        {
+          "id": "duplicate_calendar_implementations",
+          "name": "Multiple Calendar Systems",
+          "description": "Different calendar implementations in same codebase",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Inline calendar logic in components",
+              "Calendar composables with different approaches",
+              "Store-based calendar calculations",
+              "Different date calculation methods"
+            ],
+            "similarityThreshold": 0.80,
+            "codePatterns": [
+              "\\b(calendar|date)\\w*",
+              "getDay\\(\\)",
+              "getMonth\\(\\)",
+              "getFullYear\\(\\)",
+              "new Date"
+            ]
+          },
+          "recommendation": "Consolidate into single calendar system",
+          "estimatedEffort": "4-5 hours",
+          "risk": "High"
+        }
+      ]
+    },
+    "drag_drop_systems": {
+      "description": "Drag and drop implementation conflicts",
+      "patterns": [
+        {
+          "id": "competing_dnd_libraries",
+          "name": "Multiple D&D Libraries",
+          "description": "Different drag-and-drop libraries or implementations",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Multiple D&D libraries imported",
+              "HTML5 API mixed with library usage",
+              "Different event handling patterns",
+              "Duplicate drag state management"
+            ],
+            "similarityThreshold": 0.90,
+            "codePatterns": [
+              "vuedraggable",
+              "@meili/vue-draggable-plus",
+              "draggable\\s*=",
+              "drag(start|end|over|drop)",
+              "@drag",
+              "dataTransfer"
+            ]
+          },
+          "recommendation": "Standardize on single D&D library or implementation",
+          "estimatedEffort": "8-12 hours",
+          "risk": "High"
+        }
+      ]
+    },
+    "database_systems": {
+      "description": "Database access and API conflicts",
+      "patterns": [
+        {
+          "id": "multiple_api_clients",
+          "name": "Multiple API Clients",
+          "description": "Different API fetching approaches in same codebase",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "fetch() mixed with axios usage",
+              "Different API client implementations",
+              "Duplicate endpoint configurations",
+              "Inconsistent error handling"
+            ],
+            "similarityThreshold": 0.75,
+            "codePatterns": [
+              "fetch\\(",
+              "axios\\.",
+              "@tanstack",
+              "apiClient",
+              "\\b(get|post|put|delete)\\("
+            ]
+          },
+          "recommendation": "Consolidate into single API layer",
+          "estimatedEffort": "4-5 hours",
+          "risk": "Medium"
+        },
+        {
+          "id": "duplicate_caching",
+          "name": "Competing Cache Strategies",
+          "description": "Multiple caching approaches for same data",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "localStorage mixed with sessionStorage",
+              "Multiple cache key strategies",
+              "Duplicate cache invalidation logic",
+              "Inconsistent cache TTL management"
+            ],
+            "similarityThreshold": 0.70,
+            "codePatterns": [
+              "localStorage",
+              "sessionStorage",
+              "cache",
+              "setItem|getItem",
+              "TTL|expires"
+            ]
+          },
+          "recommendation": "Standardize on unified caching strategy",
+          "estimatedEffort": "2-3 hours",
+          "risk": "Medium"
+        }
+      ]
+    },
+    "test_systems": {
+      "description": "Testing framework and pattern conflicts",
+      "patterns": [
+        {
+          "id": "multiple_testing_frameworks",
+          "name": "Multiple Test Frameworks",
+          "description": "Different testing frameworks used in same project",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Vitest mixed with Jest usage",
+              "Different test file patterns",
+              "Multiple assertion libraries",
+              "Inconsistent test setup"
+            ],
+            "similarityThreshold": 0.90,
+            "codePatterns": [
+              "import.*vitest",
+              "import.*jest",
+              "describe\\(",
+              "it\\(|test\\(",
+              "expect\\("
+            ]
+          },
+          "recommendation": "Standardize on single testing framework",
+          "estimatedEffort": "3-4 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "framework_conflicts": {
+      "description": "Framework integration and usage conflicts",
+      "patterns": [
+        {
+          "id": "mixed_authentication",
+          "name": "Inconsistent Authentication Patterns",
+          "description": "Different authentication approaches across components",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Route guards mixed with component auth checks",
+              "Multiple auth state management approaches",
+              "Inconsistent permission checking",
+              "Duplicate user session handling"
+            ],
+            "similarityThreshold": 0.75,
+            "codePatterns": [
+              "beforeEach",
+              "requiresAuth",
+              "isAuthenticated",
+              "auth\\.\\w+",
+              "permission"
+            ]
+          },
+          "recommendation": "Centralize authentication logic",
+          "estimatedEffort": "3-5 hours",
+          "risk": "High"
+        },
+        {
+          "id": "state_passing_conflicts",
+          "name": "Mixed State Access Patterns",
+          "description": "Inconsistent state passing strategies",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Props drilling mixed with provide/inject",
+              "Direct store access mixed with composables",
+              "Inconsistent state management patterns",
+              "Mixed reactive patterns"
+            ],
+            "similarityThreshold": 0.70,
+            "codePatterns": [
+              "provide\\(",
+              "inject\\(",
+              "props\\s*:",
+              "use\\w+Store",
+              "storeToRefs"
+            ]
+          },
+          "recommendation": "Establish clear state access guidelines",
+          "estimatedEffort": "2-4 hours",
+          "risk": "Medium"
+        }
+      ]
+    },
+    "legacy_conflicts": {
+      "description": "Legacy code vs new implementation conflicts",
+      "patterns": [
+        {
+          "id": "parallel_implementations",
+          "name": "Parallel Legacy Implementations",
+          "description": "Old and new implementations coexisting",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Legacy directory with duplicate of new directory",
+              "Old component alongside new component",
+              "Legacy API calls mixed with new ones",
+              "Deprecated patterns still in use"
+            ],
+            "filePatterns": ["src/legacy/**/*", "src/old/**/*", "**/*.legacy.*"],
+            "similarityThreshold": 0.80,
+            "codePatterns": [
+              "legacy",
+              "old",
+              "deprecated",
+              "// TODO: remove"
+            ]
+          },
+          "recommendation": "Complete migration and remove legacy code",
+          "estimatedEffort": "10-20 hours",
+          "risk": "Medium"
+        }
+      ]
+    },
+    "error_handling": {
+      "description": "Error handling pattern conflicts",
+      "patterns": [
+        {
+          "id": "inconsistent_error_handling",
+          "name": "Multiple Error Handling Strategies",
+          "description": "Different error handling approaches across codebase",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "try/catch with console.error in some places",
+              "Error stores in others",
+              "Toast notifications in some components",
+              "No error handling in others"
+            ],
+            "similarityThreshold": 0.70,
+            "codePatterns": [
+              "try\\s*\\{",
+              "catch\\s*\\(",
+              "console\\.error",
+              "error\\.",
+              "toast",
+              "notification"
+            ]
+          },
+          "recommendation": "Implement centralized error handling system",
+          "estimatedEffort": "3-5 hours",
+          "risk": "Medium"
+        }
+      ]
+    },
+    "validation": {
+      "description": "Validation logic duplication",
+      "patterns": [
+        {
+          "id": "duplicate_validation",
+          "name": "Duplicate Validation Logic",
+          "description": "Same validation rules in multiple places",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Email validation in multiple components",
+              "Duplicate form validation rules",
+              "Same business rules in different places",
+              "Inconsistent validation patterns"
+            ],
+            "similarityThreshold": 0.85,
+            "codePatterns": [
+              "validate\\w*",
+              "required",
+              "minLength|maxLength",
+              "pattern",
+              "@[^@]+@[^@]+"
+            ]
+          },
+          "recommendation": "Centralize validation logic in shared utilities",
+          "estimatedEffort": "2-3 hours",
+          "risk": "Medium"
+        }
+      ]
+    },
+    "type_definitions": {
+      "description": "Type definition duplication",
+      "patterns": [
+        {
+          "id": "duplicate_types",
+          "name": "Duplicate Type Definitions",
+          "description": "Same types defined in multiple places",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Task interface defined in multiple files",
+              "User type duplicated across modules",
+              "Similar type definitions with slight variations",
+              "Inconsistent type naming"
+            ],
+            "similarityThreshold": 0.90,
+            "codePatterns": [
+              "interface\\s+\\w+",
+              "type\\s+\\w+\\s*=",
+              "export.*interface",
+              "export.*type"
+            ]
+          },
+          "recommendation": "Consolidate types in single location",
+          "estimatedEffort": "1-2 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "async_patterns": {
+      "description": "Async operation pattern conflicts",
+      "patterns": [
+        {
+          "id": "mixed_async_patterns",
+          "name": "Inconsistent Async Patterns",
+          "description": "Mix of promises, callbacks, and async/await",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "Promise.then() mixed with async/await",
+              "Callback patterns in some places",
+              "Inconsistent error handling for async operations",
+              "Mixed async patterns in same file"
+            ],
+            "similarityThreshold": 0.75,
+            "codePatterns": [
+              "\\.then\\(",
+              "\\.catch\\(",
+              "async\\s+function",
+              "await\\s+",
+              "callback"
+            ]
+          },
+          "recommendation": "Standardize on async/await pattern",
+          "estimatedEffort": "2-3 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "naming_conventions": {
+      "description": "Inconsistent naming patterns",
+      "patterns": [
+        {
+          "id": "inconsistent_naming",
+          "name": "Naming Convention Conflicts",
+          "description": "Mixed naming styles across codebase",
+          "severity": "LOW",
+          "detection": {
+            "indicators": [
+              "camelCase mixed with snake_case",
+              "Inconsistent boolean naming",
+              "Mixed abbreviations and full words",
+              "Inconsistent file naming"
+            ],
+            "similarityThreshold": 0.70,
+            "codePatterns": [
+              "\\w+_\\w+",
+              "\\b(is|has|can)\\w*",
+              "get[A-Z]",
+              "\\w+Id"
+            ]
+          },
+          "recommendation": "Establish and enforce naming conventions",
+          "estimatedEffort": "1-2 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "constants": {
+      "description": "Constant and configuration duplication",
+      "patterns": [
+        {
+          "id": "duplicate_constants",
+          "name": "Constant Duplication",
+          "description": "Same configuration values in multiple places",
+          "severity": "MEDIUM",
+          "detection": {
+            "indicators": [
+              "API URLs defined in multiple files",
+              "Magic numbers scattered across codebase",
+              "Duplicate configuration objects",
+              "Inconsistent default values"
+            ],
+            "similarityThreshold": 0.80,
+            "codePatterns": [
+              "const\\s+\\w+\\s*=\\s*['\"]",
+              "const\\s+\\w+\\s*=\\s*\\d+",
+              "/api/",
+              "http",
+              "MAX_",
+              "DEFAULT_"
+            ]
+          },
+          "recommendation": "Centralize constants in configuration files",
+          "estimatedEffort": "1-2 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "notifications": {
+      "description": "Notification and toast conflicts",
+      "patterns": [
+        {
+          "id": "multiple_notification_systems",
+          "name": "Multiple Notification Systems",
+          "description": "Different notification approaches across application",
+          "severity": "LOW",
+          "detection": {
+            "indicators": [
+              "alert() mixed with toast libraries",
+              "Custom notification components",
+              "Store-based notifications mixed with local state",
+              "Inconsistent notification styling"
+            ],
+            "similarityThreshold": 0.75,
+            "codePatterns": [
+              "alert\\(",
+              "toast\\.",
+              "notification",
+              "showMessage",
+              "alert\\s*:"
+            ]
+          },
+          "recommendation": "Standardize on single notification system",
+          "estimatedEffort": "1-2 hours",
+          "risk": "Low"
+        }
+      ]
+    },
+    "side_effects": {
+      "description": "Side effects and lifecycle conflicts",
+      "patterns": [
+        {
+          "id": "duplicate_side_effects",
+          "name": "Duplicate Side Effects",
+          "description": "Same side effects implemented in multiple places",
+          "severity": "HIGH",
+          "detection": {
+            "indicators": [
+              "Data fetching in multiple components onMounted",
+              "Multiple event listeners for same events",
+              "Duplicate cleanup logic",
+              "Race conditions from parallel side effects"
+            ],
+            "similarityThreshold": 0.80,
+            "codePatterns": [
+              "onMounted\\(",
+              "onUnmounted\\(",
+              "addEventListener",
+              "fetch\\(",
+              "watch\\("
+            ]
+          },
+          "recommendation": "Consolidate side effects into single lifecycle owner",
+          "estimatedEffort": "4-6 hours",
+          "risk": "Medium"
+        }
+      ]
+    }
+  },
+  "exemptions": [
+    {
+      "name": "intentional_adapter_pattern",
+      "reason": "Adapter pattern for different APIs",
+      "pattern": "Multiple implementations of same interface",
+      "condition": "File contains 'Adapter' or implements same interface"
+    },
+    {
+      "name": "experimental_feature",
+      "reason": "Testing new implementation alongside existing",
+      "pattern": "Experimental or beta features",
+      "condition": "File path contains 'experimental', 'beta', or 'test'"
+    },
+    {
+      "name": "platform_specific",
+      "reason": "Different implementations for different platforms",
+      "pattern": "Platform-specific code paths",
+      "condition": "Code contains platform checks (browser, node, mobile)"
+    },
+    {
+      "name": "legacy_compatibility",
+      "reason": "Maintaining compatibility during migration",
+      "pattern": "Legacy code during migration period",
+      "condition": "File in legacy or deprecated folder with migration plan"
+    },
+    {
+      "name": "feature_variation",
+      "reason": "Intentional variations for different user needs",
+      "pattern": "Feature variations with different capabilities",
+      "condition": "Components have different prop interfaces or feature sets"
+    }
+  ],
+  "severityWeights": {
+    "HIGH": 3,
+    "MEDIUM": 2,
+    "LOW": 1
+  },
+  "configuration": {
+    "defaultSimilarityThreshold": 0.75,
+    "maxFileSize": 100000,
+    "excludePatterns": [
+      "node_modules",
+      ".git",
+      "dist",
+      "coverage",
+      "*.d.ts",
+      "*.test.*",
+      "*.spec.*"
+    ]
+  }
+}

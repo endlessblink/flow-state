@@ -1,0 +1,242 @@
+{
+  "version": "1.0.0",
+  "description": "Intentional patterns that look like conflicts but are legitimate",
+  "exemptions": [
+    {
+      "id": "adapter_pattern",
+      "name": "Adapter Pattern Implementation",
+      "reason": "Multiple implementations of same interface for different APIs",
+      "description": "Adapter classes that provide unified interface to different external services",
+      "pattern": {
+        "filePatterns": ["**/*Adapter.ts", "**/*Plugin.ts", "**/adapters/**/*"],
+        "codePatterns": ["class.*implements", "interface.*Adapter", "Adapter"],
+        "conditions": [
+          "Files contain 'Adapter' in name or implement same interface",
+          "Different external APIs being adapted",
+          "Consistent interface across implementations"
+        ]
+      },
+      "examples": [
+        "src/adapters/StorageAdapter.ts - LocalStorage vs IndexedDB vs Memory storage",
+        "src/adapters/PaymentAdapter.ts - Stripe vs PayPal vs Square integration",
+        "src/plugins/AuthPlugin.ts - Different authentication providers"
+      ]
+    },
+    {
+      "id": "experimental_feature",
+      "name": "Experimental Feature Implementation",
+      "reason": "Testing new implementation alongside existing one during development",
+      "description": "Parallel implementations during feature experimentation or A/B testing",
+      "pattern": {
+        "filePatterns": ["**/experimental/**/*", "**/beta/**/*", "**/*Experimental*", "**/*Beta*"],
+        "codePatterns": ["EXPERIMENTAL", "BETA_FEATURE", "experimental"],
+        "conditions": [
+          "Files in experimental or beta directories",
+          "Contains experimental feature flags",
+          "Clearly marked as temporary implementation"
+        ]
+      },
+      "examples": [
+        "src/components/experimental/NewTaskList.vue - Testing new UI approach",
+        "src/composables/useExperimentalFeature.ts - Beta feature composable",
+        "src/stores/ExperimentalStore.ts - A/B testing store implementation"
+      ]
+    },
+    {
+      "id": "platform_specific",
+      "name": "Platform-Specific Implementations",
+      "reason": "Different implementations required for different platforms or environments",
+      "description": "Code paths for web, mobile, electron, or different browser capabilities",
+      "pattern": {
+        "filePatterns": ["**/platform/**/*", "**/web/**/*", "**/mobile/**/*"],
+        "codePatterns": ["isMobile", "platform", "navigator.", "process."],
+        "conditions": [
+          "Platform detection logic",
+          "Different implementations for different runtimes",
+          "Feature availability checks"
+        ]
+      },
+      "examples": [
+        "src/platform/web/WebStorage.ts vs src/platform/mobile/MobileStorage.ts",
+        "src/utils/platform.ts - Platform detection utilities",
+        "src/components/AdaptiveLayout.vue - Different layouts for mobile vs desktop"
+      ]
+    },
+    {
+      "id": "legacy_migration",
+      "name": "Legacy Code Migration",
+      "reason": "Maintaining old implementation during gradual migration to new one",
+      "description": "Legacy code kept temporarily while migration is in progress",
+      "pattern": {
+        "filePatterns": ["**/legacy/**/*", "**/deprecated/**/*", "**/*Legacy*"],
+        "codePatterns": ["// TODO: remove", "// DEPRECATED", "LEGACY"],
+        "conditions": [
+          "Files in legacy or deprecated folders",
+          "Contains deprecation notices",
+          "Migration plan documented"
+        ]
+      },
+      "examples": [
+        "src/legacy/LegacyTaskManager.ts - Old task manager during migration",
+        "src/components/legacy/OldCalendar.vue - Legacy calendar component",
+        "src/deprecated/OldAPI.ts - Deprecated API client during migration"
+      ]
+    },
+    {
+      "id": "feature_variation",
+      "name": "Feature Variation Implementation",
+      "reason": "Intentionally different implementations for different user tiers or feature sets",
+      "description": "Different component variations based on user permissions, subscription tiers, or feature flags",
+      "pattern": {
+        "filePatterns": ["**/variations/**/*", "**/tiers/**/*", "**/*Basic*", "**/*Premium*"],
+        "codePatterns": ["isPremium", "hasFeature", "tier", "variation"],
+        "conditions": [
+          "Feature flag checks",
+          "User tier-based implementations",
+          "Different prop interfaces for different capabilities"
+        ]
+      },
+      "examples": [
+        "src/components/BasicTaskCard.vue vs src/components/PremiumTaskCard.vue",
+        "src/composables/useFeatureFlags.ts - Feature flag management",
+        "src/variations/TaskListVariations.ts - Different list implementations"
+      ]
+    },
+    {
+      "id": "testing_utilities",
+      "name": "Testing Utility Duplication",
+      "reason": "Similar test utilities needed for different testing contexts",
+      "description": "Testing helpers that have similar implementations but serve different testing purposes",
+      "pattern": {
+        "filePatterns": ["**/test/**/*", "**/__tests__/**/*", "**/*.test.*", "**/*.spec.*"],
+        "codePatterns": ["mock", "fixture", "test", "describe", "it"],
+        "conditions": [
+          "Files in test directories",
+          "Contains testing-specific code",
+          "Similar patterns for different test scenarios"
+        ]
+      },
+      "examples": [
+        "tests/unit/mockTaskStore.ts - Unit test mock",
+        "tests/integration/testTaskStore.ts - Integration test helper",
+        "tests/e2e/fixtures/taskFixtures.ts - E2E test fixtures"
+      ]
+    },
+    {
+      "id": "internationalization",
+      "name": "Locale-Specific Implementations",
+      "reason": "Different implementations required for different locales or languages",
+      "description": "Locale-specific formatters, validators, or UI adaptations",
+      "pattern": {
+        "filePatterns": ["**/i18n/**/*", "**/locales/**/*", "**/lang/**/*"],
+        "codePatterns": ["locale", "i18n", "format", "locale-specific"],
+        "conditions": [
+          "Locale-specific logic",
+          "Different formatting rules per locale",
+          "Language-specific adaptations"
+        ]
+      },
+      "examples": [
+        "src/i18n/formatters/dateFormatter.ts - Locale-specific date formatting",
+        "src/i18n/validators/phoneNumberValidator.ts - Country-specific phone validation",
+        "src/locales/en-US/formatters.ts vs src/locales/fr-FR/formatters.ts"
+      ]
+    },
+    {
+      "id": "performance_optimization",
+      "name": "Performance-Specific Implementations",
+      "reason": "Different implementations for performance optimization in different contexts",
+      "description": "Optimized versions of utilities for high-performance scenarios",
+      "pattern": {
+        "filePatterns": ["**/perf/**/*", "**/optimized/**/*", "**/*Fast*", "**/*Optimized*"],
+        "codePatterns": ["PERFORMANCE", "OPTIMIZED", "FAST_PATH"],
+        "conditions": [
+          "Performance-focused implementations",
+          "Optimized algorithms for specific scenarios",
+          "Clearly marked as performance variant"
+        ]
+      },
+      "examples": [
+        "src/utils/optimized/fastFilter.ts - Performance-optimized filtering",
+        "src/components/OptimizedVirtualList.vue - High-performance virtual scrolling",
+        "src/performance/cachedCalculations.ts - Memoized utility functions"
+      ]
+    },
+    {
+      "id": "development_tools",
+      "name": "Development Tool Variants",
+      "reason": "Different implementations for development vs production environments",
+      "description": "Development-specific variants or debugging tools that look like duplicates",
+      "pattern": {
+        "filePatterns": ["**/dev/**/*", "**/debug/**/*", "**/*Dev*", "**/*Debug*"],
+        "codePatterns": ["DEV_ONLY", "DEBUG", "development"],
+        "conditions": [
+          "Development-only code",
+          "Debug utilities",
+          "Environment-specific implementations"
+        ]
+      },
+      "examples": [
+        "src/dev/DebugTaskStore.ts - Development debugging store",
+        "src/utils/devLogger.ts - Development logging utility",
+        "src/components/DebugPanel.vue - Development debugging panel"
+      ]
+    }
+  ],
+  "generalExemptions": {
+    "filePatternExemptions": [
+      "*.story.vue",
+      "*.fixture.*",
+      "*.mock.*",
+      "*.test.*",
+      "*.spec.*",
+      "__tests__/**/*",
+      "stories/**/*",
+      "fixtures/**/*"
+    ],
+    "codePatternExemptions": [
+      "// TEMPORARY:",
+      "// TODO: merge with",
+      "// EXPERIMENTAL:",
+      "// FEATURE_FLAG:",
+      "// LEGACY: will be removed in"
+    ],
+    "namingExemptions": [
+      "*Test.*",
+      "*Mock.*",
+      "*Debug.*",
+      "*Dev.*",
+      "*Experimental.*",
+      "*Legacy.*",
+      "*Old.*",
+      "*V1*",
+      "*V2*"
+    ]
+  },
+  "guidelines": {
+    "whenToApplyExemptions": [
+      "Clearly documented purpose for multiple implementations",
+      "Migration plan documented for legacy code",
+      "Feature flags controlling different implementations",
+      "Platform or environment requirements",
+      "Performance-specific optimizations"
+    ],
+    "exemptionRequirements": [
+      "Clear documentation of why multiple implementations exist",
+      "Plan for consolidation (if applicable)",
+      "Consistent naming to indicate relationship",
+      "Comments explaining the purpose of each implementation"
+    ],
+    "warningIndicators": [
+      "No clear reason for duplication",
+      "No migration plan for legacy code",
+      "Inconsistent naming without clear relationship",
+      "No documentation of purpose"
+    ]
+  },
+  "configuration": {
+    "autoApplyExemptions": true,
+    "warnOnPotentialExemptions": true,
+    "requireDocumentationForExemptions": true
+  }
+}

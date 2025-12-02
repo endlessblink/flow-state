@@ -1,0 +1,216 @@
+{
+  "name": "competing-systems-detector",
+  "displayName": "Competing Systems Detector",
+  "description": "Detect and highlight competing systems, duplicate code, and architectural conflicts in Vue 3 projects",
+  "version": "2.0.0",
+  "publisher": "claude-code",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "vue",
+    "typescript",
+    "architecture",
+    "code-quality",
+    "conflicts",
+    "duplicate-code",
+    "pinia",
+    "composables"
+  ],
+  "activationEvents": [
+    "onLanguage:vue",
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "workspaceContains:**/.claude-skills/detect-competing-systems/**"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "competing-systems.detect",
+        "title": "Detect Competing Systems",
+        "category": "Competing Systems"
+      },
+      {
+        "command": "competing-systems.analyzeWorkspace",
+        "title": "Analyze Entire Workspace",
+        "category": "Competing Systems"
+      },
+      {
+        "command": "competing-systems.showReport",
+        "title": "Show Last Analysis Report",
+        "category": "Competing Systems"
+      },
+      {
+        "command": "competing-systems.configure",
+        "title": "Configure Detection Rules",
+        "category": "Competing Systems"
+      },
+      {
+        "command": "competing-systems.clearCache",
+        "title": "Clear Analysis Cache",
+        "category": "Competing Systems"
+      },
+      {
+        "command": "competing-systems.explainConflict",
+        "title": "Explain This Conflict",
+        "category": "Competing Systems"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "competing-systems.explainConflict",
+          "group": "competing-systems",
+          "when": "competingSystems.hasConflict"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "competing-systems.analyzeWorkspace",
+          "group": "competing-systems",
+          "when": "explorerResourceIsFolder"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "competing-systems.detect",
+          "when": "editorLangId == vue || editorLangId == typescript || editorLangId == javascript"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "competing-systems.detect",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "editorTextFocus && editorLangId =~ /vue|typescript|javascript/"
+      },
+      {
+        "command": "competing-systems.analyzeWorkspace",
+        "key": "ctrl+shift+alt+d",
+        "mac": "cmd+shift+alt+d"
+      }
+    ],
+    "configuration": {
+      "title": "Competing Systems Detector",
+      "properties": {
+        "competingSystems.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable competing systems detection"
+        },
+        "competingSystems.similarityThreshold": {
+          "type": "number",
+          "default": 0.75,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Similarity threshold for detecting duplicates"
+        },
+        "competingSystems.severityFilter": {
+          "type": "string",
+          "enum": ["all", "high", "medium", "low"],
+          "default": "medium",
+          "description": "Minimum severity level to highlight"
+        },
+        "competingSystems.excludePatterns": {
+          "type": "array",
+          "default": ["node_modules/**", "dist/**", "coverage/**"],
+          "description": "Glob patterns to exclude from analysis"
+        },
+        "competingSystems.analyzeOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run analysis automatically when files are saved"
+        },
+        "competingSystems.highlightConflicts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Highlight detected conflicts in the editor"
+        },
+        "competingSystems.showGutterIcons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show conflict indicators in the gutter"
+        },
+        "competingSystems.enableRealTimeAnalysis": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable real-time analysis as you type"
+        },
+        "competingSystems.maxFileSize": {
+          "type": "number",
+          "default": 100000,
+          "description": "Maximum file size to analyze (in bytes)"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "competing-systems",
+          "title": "Competing Systems",
+          "icon": "media/competing-systems.svg"
+        }
+      ]
+    },
+    "views": {
+      "competing-systems": [
+        {
+          "id": "competing-systems.conflicts",
+          "name": "Detected Conflicts",
+          "when": "competingSystems.hasResults"
+        },
+        {
+          "id": "competing-systems.categories",
+          "name": "Categories",
+          "when": "competingSystems.hasResults"
+        },
+        {
+          "id": "competing-systems.recommendations",
+          "name": "Recommendations",
+          "when": "competingSystems.hasResults"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "competing-systems.conflicts",
+        "contents": "No conflicts detected yet. Run 'Detect Competing Systems' to analyze your workspace."
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/claude-code-skills.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/anthropics/claude-code-skills/issues"
+  },
+  "homepage": "https://github.com/anthropics/claude-code-skills/tree/main/.claude-skills/detect-competing-systems"
+}

@@ -2125,6 +2125,7 @@ Deep code analysis revealed significant technical debt affecting maintainability
 ### **Commits**
 1. `5f5b71d` - refactor: Gate CanvasView debug logs behind DEV flag
 2. `210e9c0` - refactor: Gate debug logs and remove backup files
+3. `c9f247d` - refactor: Gate debug logs in App, CalendarView, BoardView
 
 ---
 

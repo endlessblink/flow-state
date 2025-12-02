@@ -118,8 +118,15 @@
 
         <!-- Slots Container - Tasks render INSIDE slots (no absolute positioning) -->
         <div class="slots-container" ref="timeGridRef">
-          <!-- Ghost Preview (only shown during inbox drag) -->
-          <div v-if="dragGhost.visible" class="ghost-preview-inline" :style="{ gridRow: `${dragGhost.slotIndex + 1} / span ${Math.ceil(dragGhost.duration / 30)}` }">
+          <!-- Ghost Preview (only shown during inbox drag) - uses absolute positioning for smooth tracking -->
+          <div v-if="dragGhost.visible" class="ghost-preview-inline" :style="{
+            position: 'absolute',
+            top: `${dragGhost.slotIndex * 30}px`,
+            height: `${Math.ceil(dragGhost.duration / 30) * 30}px`,
+            left: '4px',
+            right: '4px',
+            zIndex: 50
+          }">
             <div class="ghost-content">
               <div class="ghost-title">{{ dragGhost.title }}</div>
               <div class="ghost-duration">{{ dragGhost.duration }}min</div>
@@ -155,13 +162,10 @@
                 :class="{
                   'timer-active-event': timerStore.currentTaskId === calEvent.taskId,
                   'dragging': isDragging && draggedEventId === calEvent.id,
-                  'is-hovered': hoveredEventId === calEvent.id
+                  'is-hovered': hoveredEventId === calEvent.id,
+                  'has-overlap': calEvent.totalColumns > 1
                 }"
-                :style="{
-                  height: `${(calEvent.slotSpan * 30) - 4}px`,
-                  minHeight: `${(calEvent.slotSpan * 30) - 4}px`,
-                  zIndex: 10
-                }"
+                :style="getSlotTaskStyle(calEvent)"
                 @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
                 @mouseleave="handleSlotTaskMouseLeave()"
                 :data-duration="calEvent.duration"
@@ -647,6 +651,37 @@ const handleVueDraggableChange = (evt: any) => {
 // Helper to format slot time for data attribute
 const formatSlotTime = (slot: any) => {
   return `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
+}
+
+// Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
+const getSlotTaskStyle = (calEvent: any) => {
+  const baseHeight = (calEvent.slotSpan * 30) - 4
+
+  // If no overlap (totalColumns is 1 or undefined), use normal flow with full width
+  if (!calEvent.totalColumns || calEvent.totalColumns <= 1) {
+    return {
+      height: `${baseHeight}px`,
+      minHeight: `${baseHeight}px`,
+      zIndex: 10
+    }
+  }
+
+  // Calculate width and position for overlapping events (like Google Calendar)
+  const gapPercent = 1 // 1% gap between columns
+  const totalGaps = calEvent.totalColumns - 1
+  const availableWidth = 100 - (totalGaps * gapPercent)
+  const widthPercentage = availableWidth / calEvent.totalColumns
+  const leftPercentage = (widthPercentage + gapPercent) * (calEvent.column || 0)
+
+  return {
+    position: 'absolute' as const,
+    top: '2px',
+    height: `${baseHeight}px`,
+    minHeight: `${baseHeight}px`,
+    width: `calc(${widthPercentage}% - 4px)`,
+    left: `calc(${leftPercentage}% + 2px)`,
+    zIndex: 10 + (calEvent.column || 0) // Later columns render on top
+  }
 }
 
 // Unified drag handlers are now used directly from dayView composable
@@ -1558,6 +1593,11 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   padding-left: calc(var(--space-3) - 2px); /* Adjust for thicker left border */
 }
 
+/* Overlapping task positioning - switches to absolute when multiple tasks overlap */
+.slot-task.has-overlap {
+  margin: 0; /* Remove margin since position is calculated in getSlotTaskStyle */
+}
+
 /* Continuation slot shows minimal indicator */
 .slot-task:not(.is-primary) {
   opacity: 0.7;
@@ -1784,6 +1824,7 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   z-index: 1; /* Below calendar events to allow drag and resize interactions */
   transition: all var(--duration-fast) var(--spring-smooth);
   cursor: crosshair; /* Indicate drop targets */
+  overflow: visible; /* Allow absolutely positioned overlapping tasks to extend beyond slot */
 }
 
 /* Empty slots still capture events for drag-drop */

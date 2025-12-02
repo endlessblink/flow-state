@@ -1,10 +1,37 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 3, 2025 12:30 AM
-**Version**: 3.8.0 (Competing Systems Analysis Complete)
-**Status**: 🟢 STABLE - App verified working, competing systems identified for consolidation
+**Last Updated**: December 3, 2025 01:30 AM
+**Version**: 3.8.1 (Calendar Full-Surface Drag Fix)
+**Status**: 🟢 STABLE - Calendar drag from entire task surface now working
 **Current Branch**: master
-**Baseline**: Debug logs gated, 4 backup system conflicts detected, 3 virtualization conflicts detected
+**Baseline**: Debug logs gated, calendar drag improved, stability tests added
+
+---
+
+## 📋 **SESSION SUMMARY: December 3, 2025 (Night - Calendar Full-Surface Drag Fix)**
+
+### ✅ **ISSUE FIXED: Calendar Task Drag from Entire Surface**
+
+**Problem** (Solved): Users could only drag calendar tasks from the top edge (first 30px), not from the entire task surface
+**Root Cause** (Fixed): Multi-slot tasks extended visually into subsequent time-slots, but those sibling slots intercepted pointer events
+**Solution Applied**: Added `position: relative; z-index: 10;` to `.time-slot:has(.slot-task)` to elevate the stacking context
+
+### Technical Details
+| Aspect | Before | After |
+|--------|--------|-------|
+| Task z-index scope | Local to parent slot only | Elevated parent renders above siblings |
+| Drag from top 30px | ✅ Worked | ✅ Works |
+| Drag from middle | ❌ Intercepted by sibling slot | ✅ Works |
+| Drag from bottom | ❌ Intercepted by sibling slot | ✅ Works |
+
+### Files Modified
+- `src/views/CalendarView.vue` (lines 1840-1846) - CSS stacking context fix
+
+### SOP Documentation
+- `docs/🐛 debug/sop/calendar-full-surface-drag-2025-12-03/FIX.md`
+
+### Stability Tests Added
+- `e2e/calendar-drag-stability.spec.ts` - Playwright test for multi-slot drag behavior
 
 ---
 

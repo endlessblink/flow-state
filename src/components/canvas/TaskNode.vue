@@ -211,13 +211,10 @@ const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
 })
 
-// Filter highlighting classes
+// Filter highlighting classes - disabled per user request
 const filterHighlightClasses = computed(() => {
-  const highlights = taskStore.getTaskFilterHighlights(props.task)
-  return highlights.reduce((classes, highlight) => {
-    classes[`filter-highlight-${highlight}`] = true
-    return classes
-  }, {} as Record<string, boolean>)
+  // Task highlighting disabled - sidebar filters show selection, not task nodes
+  return {} as Record<string, boolean>
 })
 
 // Drag handler with proper state management

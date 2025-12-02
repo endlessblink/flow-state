@@ -390,10 +390,10 @@ const statusTooltip = computed(() => {
   return statusLabels[status] || 'Change status'
 })
 
-// Filter highlighting classes
+// Filter highlighting classes - disabled per user request
 const filterHighlightClasses = computed(() => {
-  const highlights = taskStore.getTaskFilterHighlights(props.task)
-  return highlights.map(highlight => `filter-highlight-${highlight}`)
+  // Task highlighting disabled - sidebar filters show selection, not task cards
+  return []
 })
 
 // Cycle through status instead of toggle completion

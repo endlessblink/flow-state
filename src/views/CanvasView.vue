@@ -523,7 +523,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useThrottleFn, useDebounceFn, useMagicKeys, useWindowSize } from '@vueuse/core'
+import { useThrottleFn, useDebounceFn, useMagicKeys, useWindowSize, watchPausable } from '@vueuse/core'
 import { Eye, EyeOff, Filter, X, Plus, Inbox } from 'lucide-vue-next'
 import { VueFlow, useVueFlow, useNodesInitialized, PanOnScrollMode } from '@vue-flow/core'
 import { useMessage } from 'naive-ui'
@@ -773,11 +773,10 @@ if (import.meta.env.DEV) {
 const isEditModalOpen = ref(false)
 const selectedTask = ref<Task | null>(null)
 
-// 🔧 WATCHER RACE CONDITION FIX (Dec 2, 2025): Guard flag to prevent watchers from
-// overwriting nodes.value during drop operations. When handleDrop updates tasks,
-// watchers detect the changes and call syncNodes() which rebuilds nodes from scratch,
-// erasing the direct node additions. This guard prevents that race condition.
-const isHandlingDrop = ref(false)
+// 🔧 PERPLEXITY FIX (Dec 2, 2025): Guard flag removed - now using watchPausable
+// The old guard flag approach failed because watchers still triggered and queued up.
+// Now we use watchPausable() at lines 2116 and 2128 which completely pauses watchers.
+// Pause/resume functions: pauseCanvasSync, resumeCanvasSync, pauseInboxSync, resumeInboxSync
 
 // Quick Task Create Modal state
 const isQuickTaskCreateOpen = ref(false)
@@ -2108,32 +2107,32 @@ resourceManager.addWatcher(
   }, { deep: true })
 )
 
-// CPU Optimization: Watch task position changes with smart batching (low priority - only visual)
-resourceManager.addWatcher(
-  watch(() => taskStore.tasks.map(t => ({ id: t.id, canvasPosition: t.canvasPosition })), () => {
-    // 🔧 CRITICAL FIX: Skip sync during drop operation to prevent overwriting manual node updates
-    if (isHandlingDrop.value) {
-      debugLog('⏭️ [WATCHER] canvasPosition changed but SKIPPING - drop in progress')
-      return
-    }
-    batchedSyncNodes('low')
-  }, { deep: true })
-)
+// 🔧 PERPLEXITY FIX (Dec 2, 2025): Use watchPausable instead of guard flag
+// This completely pauses the watcher during drop operations, preventing stale data sync
+// Previous guard flag approach failed because watchers still triggered and queued up
 
-// FIX: Watch for isInInbox changes - triggers sync when tasks move between inbox and canvas
-// This was missing and caused tasks dragged from inbox to not appear until refresh
+// Pausable watcher for canvasPosition changes (low priority - only visual)
+const { pause: pauseCanvasSync, resume: resumeCanvasSync, stop: stopCanvasSync } = watchPausable(
+  () => taskStore.tasks.map(t => ({ id: t.id, canvasPosition: t.canvasPosition })),
+  () => {
+    debugLog('🔄 [WATCHER] canvasPosition changed - triggering low priority sync')
+    batchedSyncNodes('low')
+  },
+  { deep: true }
+)
+resourceManager.addWatcher(stopCanvasSync)
+
+// Pausable watcher for isInInbox changes (high priority - affects inbox panel)
 // Using flush: 'post' to ensure sync runs after Vue has processed all reactive updates
-resourceManager.addWatcher(
-  watch(() => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })), () => {
-    // 🔧 CRITICAL FIX: Skip sync during drop operation to prevent overwriting manual node updates
-    if (isHandlingDrop.value) {
-      debugLog('⏭️ [WATCHER] isInInbox changed but SKIPPING - drop in progress')
-      return
-    }
+const { pause: pauseInboxSync, resume: resumeInboxSync, stop: stopInboxSync } = watchPausable(
+  () => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })),
+  () => {
     debugLog('🔄 [WATCHER] isInInbox changed - triggering high priority sync')
     batchedSyncNodes('high')
-  }, { deep: true, flush: 'post' })
+  },
+  { deep: true, flush: 'post' }
 )
+resourceManager.addWatcher(stopInboxSync)
 
 // Watch for canvas store selection changes and sync with Vue Flow nodes - FIXED to prevent disconnection
 // NOTE: Console logs reduced to fix 0-2 FPS issue
@@ -4230,14 +4229,15 @@ const handleConnect = withVueFlowErrorBoundary('handleConnect', (connection: any
 })
 
 // Handle drop from inbox or board - supports batch operations
+// 🔧 PERPLEXITY FIX (Dec 2, 2025): Uses watchPausable to completely pause watchers during drop
 const handleDrop = async (event: DragEvent) => {
-  debugLog('🎯 [CANVAS] handleDrop called - starting drag-drop operation')
+  debugLog('🎯 [CANVAS] handleDrop called - PAUSING watchers')
 
-  // 🔧 CRITICAL FIX (Dec 2, 2025): Set guard to prevent watchers from calling syncNodes
-  // during the drop operation. Without this, watchers detect task changes and call
-  // syncNodes() which overwrites our direct node additions, making tasks disappear.
-  isHandlingDrop.value = true
-  debugLog('🔒 [CANVAS] isHandlingDrop guard ENABLED - watchers will skip sync')
+  // 🔧 PERPLEXITY FIX: Completely pause watchers instead of using guard flag
+  // Guard flag still allowed watchers to trigger and queue up with stale data
+  pauseCanvasSync()
+  pauseInboxSync()
+  debugLog('⏸️ [CANVAS] Watchers PAUSED - no sync will occur during drop')
 
   try {
     event.preventDefault()
@@ -4256,7 +4256,9 @@ const handleDrop = async (event: DragEvent) => {
       return
     }
 
-    const { taskId, taskIds, fromInbox, source } = parsedData
+    // 🔧 PERPLEXITY FIX: Also check for 'id' as fallback (some drags use 'id' not 'taskId')
+    const { taskId, taskIds, fromInbox, source, id } = parsedData
+    const allTaskIds = taskIds || [taskId || id]
 
     // Accept various drag sources: board, sidebar, inbox variations, and canvas repositioning
     const isValidSource = fromInbox ||
@@ -4276,14 +4278,7 @@ const handleDrop = async (event: DragEvent) => {
     debugLog('✅ [CANVAS] Valid drag source accepted:', source)
 
     // Use VueFlow's built-in coordinate transformation to account for zoom and pan
-    let project
-    try {
-      const vueFlowHook = useVueFlow()
-      project = vueFlowHook.project
-    } catch (error) {
-      console.error('❌ [CANVAS] Failed to get VueFlow project function:', error)
-      return
-    }
+    const { project, addNodes } = useVueFlow()
 
     let canvasPosition
     try {
@@ -4296,67 +4291,76 @@ const handleDrop = async (event: DragEvent) => {
       return
     }
 
-    debugLog('📊 [CANVAS] Dropping at position:', canvasPosition)
+    debugLog('📍 [CANVAS] Browser coords:', event.clientX, event.clientY, '→ Canvas:', canvasPosition)
 
-    // Handle batch drop (multiple tasks)
-    if (taskIds && Array.isArray(taskIds)) {
-      debugLog('📋 [CANVAS] Processing batch drop of', taskIds.length, 'tasks')
+    // Process all tasks
+    for (let index = 0; index < allTaskIds.length; index++) {
+      const currentTaskId = allTaskIds[index]
+      if (!currentTaskId) continue
 
-      for (let index = 0; index < taskIds.length; index++) {
-        const id = taskIds[index]
-        try {
-          // Offset each task slightly to create a staggered layout
-          const offsetX = (index % 3) * 250 // 3 columns
-          const offsetY = Math.floor(index / 3) * 150 // Row height
-
-          await taskStore.updateTaskWithUndo(id, {
-            canvasPosition: { x: canvasPosition.x + offsetX, y: canvasPosition.y + offsetY },
-            isInInbox: false
-          })
-
-          debugLog('✅ [CANVAS] Successfully positioned task:', id)
-        } catch (error) {
-          console.error('❌ [CANVAS] Failed to position task:', id, error)
-          // Continue with other tasks even if one fails
-        }
-      }
-    }
-    // Handle single task drop (legacy/single select)
-    else if (taskId) {
-      debugLog('📝 [CANVAS] Processing single task drop:', taskId)
       try {
-        await taskStore.updateTaskWithUndo(taskId, {
-          canvasPosition: { x: canvasPosition.x, y: canvasPosition.y },
+        // Calculate position with offset for batch drops
+        const offsetX = (index % 3) * 250 // 3 columns
+        const offsetY = Math.floor(index / 3) * 150 // Row height
+        const position = {
+          x: canvasPosition.x + offsetX,
+          y: canvasPosition.y + offsetY
+        }
+
+        debugLog('📝 [CANVAS] Processing task:', currentTaskId, 'at position:', position)
+
+        // 🔧 STEP 1: Update store
+        await taskStore.updateTaskWithUndo(currentTaskId, {
+          canvasPosition: position,
           isInInbox: false
         })
-        debugLog('✅ [CANVAS] Successfully positioned single task:', taskId)
+
+        // 🔧 STEP 2: Wait for Vue to process the reactive update
+        await nextTick()
+
+        // 🔧 STEP 3: Verify task was updated in store (PERPLEXITY recommendation)
+        const verified = taskStore.tasks.find(t => t.id === currentTaskId)
+        if (!verified?.canvasPosition) {
+          console.error('❌ [CANVAS] Task update failed - not found in store:', currentTaskId)
+          continue
+        }
+        debugLog('✅ [CANVAS] Task verified in store with position:', verified.canvasPosition)
+
+        // 🔧 STEP 4: Use Vue Flow's addNodes API (PERPLEXITY recommendation)
+        // This directly adds the node to Vue Flow's internal state
+        addNodes({
+          id: currentTaskId,
+          type: 'task',
+          position: verified.canvasPosition,
+          data: { task: verified }
+        })
+        debugLog('🎯 [CANVAS] Node added to canvas via addNodes()')
+
+        // 🔧 STEP 5: Force save to PouchDB (bypasses broken change detection)
+        // The watcher's change detection fails due to Vue proxy comparison issues
+        await taskStore.forceSaveTask(currentTaskId)
+        debugLog('💾 [CANVAS] Task force-saved to PouchDB')
+
       } catch (error) {
-        console.error('❌ [CANVAS] Failed to position single task:', taskId, error)
+        console.error('❌ [CANVAS] Failed to position task:', currentTaskId, error)
+        // Continue with other tasks even if one fails
       }
     }
 
     debugLog('✅ [CANVAS] handleDrop completed successfully')
 
-    // 🔧 FIXED: Force immediate sync after drop to show task on canvas
-    // Without this, the task doesn't appear until a refresh
-    await nextTick()
-    syncNodes()
-    debugLog('🔄 [CANVAS] Forced syncNodes after drop')
-
   } catch (error) {
     console.error('💥 [CANVAS] Critical error in handleDrop:', error)
-
-    // Try to recover by notifying the user
-    try {
-      // You could show a user notification here
-      debugLog('🔧 [CANVAS] Attempting error recovery...')
-    } catch (recoveryError) {
-      console.error('💀 [CANVAS] Even error recovery failed:', recoveryError)
-    }
   } finally {
-    // 🔧 CRITICAL: Always clear the guard flag when done
-    isHandlingDrop.value = false
-    debugLog('🔓 [CANVAS] isHandlingDrop guard DISABLED - watchers will resume normal sync')
+    // 🔧 PERPLEXITY FIX: Resume watchers and force sync
+    resumeCanvasSync()
+    resumeInboxSync()
+    debugLog('▶️ [CANVAS] Watchers RESUMED')
+
+    // Force immediate sync to ensure consistency
+    await nextTick()
+    syncNodes()
+    debugLog('🔄 [CANVAS] Forced syncNodes after drop complete')
   }
 }
 

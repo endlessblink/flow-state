@@ -1,10 +1,58 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 2, 2025 7:30 PM
-**Version**: 3.6.6 (Calendar Side-by-Side & Drag Ghost Fix)
-**Status**: 🟢 CALENDAR FIXES APPLIED - Side-by-side tasks and drag ghost tracking working
+**Last Updated**: December 2, 2025 11:45 PM
+**Version**: 3.6.7 (Individual Task Storage Complete)
+**Status**: 🟡 TESTING REQUIRED - All legacy saves fixed, need cross-browser verification
 **Current Branch**: master
-**Baseline**: Calendar layout and drag improvements verified with Playwright
+**Baseline**: All task saves now use individual documents, `tasks:data` deleted from CouchDB
+
+---
+
+## 📋 **SESSION SUMMARY: December 2, 2025 (Night - Cross-Browser Sync Fix)**
+
+### ✅ **ISSUE FIXED: Legacy Save Calls No Longer Recreate `tasks:data`**
+
+**Problem** (Solved): Browser was loading correct task count, then resetting to wrong number after sync
+**Root Cause** (Fixed): 8 places in `tasks.ts` were calling `db.save(DB_KEYS.TASKS, ...)` which recreated the legacy `tasks:data` document, causing sync conflicts
+**Solution Applied**: All 8 locations now use individual task storage (`task-{id}` documents)
+
+### ℹ️ **NOTE: Projects Also Sync**
+Projects use CouchDB sync as well. If project sync issues occur, similar individual document approach may be needed.
+
+### Legacy Save Locations Fixed (tasks.ts):
+| Line | Function | Status |
+|------|----------|--------|
+| 100 | `clearTestTasks` | ✅ FIXED |
+| 278 | `loadTasksFromPouchDB` (sample tasks) | ✅ FIXED |
+| 1863 | `createTask` fallback | ✅ FIXED (removed fallback) |
+| 2072 | `deleteTask` fallback | ✅ FIXED (removed fallback) |
+| 2097 | `deleteTask` retry | ✅ FIXED |
+| 3172 | Undo/redo restore | ✅ FIXED |
+| 3210 | Emergency backup | ✅ FIXED |
+| 3258 | Migration save | ✅ FIXED |
+
+### ✅ **COMPLETED THIS SESSION**
+
+1. **Individual Task Storage Utility** ✅
+   - Created `src/utils/individualTaskStorage.ts`
+   - Each task stored as `task-{id}` document (prevents conflicts)
+   - Functions: `saveTask()`, `saveTasks()`, `deleteTask()`, `loadAllTasks()`, `migrateFromLegacyFormat()`
+
+2. **Task Store Load Updated** ✅
+   - `loadTasksFromPouchDB()` now loads from individual documents first
+   - Auto-migrates from legacy `tasks:data` if individual docs don't exist
+
+3. **Main Auto-Save Watcher Updated** ✅
+   - Line 1037-1079: Now uses `saveTasks()` for individual storage
+   - Includes `syncDeletedTasks()` cleanup
+
+4. **Timezone Fix Applied** ✅
+   - `useSmartViews.ts` - Fixed `createdAt` comparison to use string comparison
+
+### 🔴 **NEXT STEPS**
+1. Update remaining 8 legacy save locations to use individual storage
+2. Delete `tasks:data` from CouchDB (recreated by legacy saves)
+3. Test cross-browser sync
 
 ---
 

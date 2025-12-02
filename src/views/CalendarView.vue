@@ -147,51 +147,52 @@
             @drop.prevent="dayView.handleDrop($event, timeSlotToDropTarget(slot))"
             @mousedown="dragCreate.handleSlotMouseDown($event, slot)"
           >
-            <!-- Tasks rendered INSIDE the slot (slot-based architecture) -->
-            <div
-              v-for="calEvent in getTasksForSlot(slot)"
-              :key="`${calEvent.id}-${slot.slotIndex}`"
-              class="slot-task"
-              :class="{
-                'is-primary': isTaskPrimarySlot(slot, calEvent),
-                'is-continuation': !isTaskPrimarySlot(slot, calEvent),
-                'timer-active-event': timerStore.currentTaskId === calEvent.taskId,
-                'dragging': isDragging && draggedEventId === calEvent.id,
-                'is-hovered': hoveredEventId === calEvent.id
-              }"
-              @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
-              @mouseleave="handleSlotTaskMouseLeave()"
-              :data-duration="calEvent.duration"
-              :data-task-id="calEvent.taskId"
-              draggable="true"
-              @dragstart="handleEventDragStart($event, calEvent)"
-              @dragend="handleEventDragEnd($event, calEvent)"
-              @click="handleEventClick($event, calEvent)"
-              @dblclick="handleEventDblClick(calEvent)"
-              @contextmenu.prevent="handleEventContextMenu($event, calEvent)"
-            >
-              <!-- Only show full content in primary slot -->
-              <template v-if="isTaskPrimarySlot(slot, calEvent)">
-                <!-- CLEAN CALENDAR-ONLY DISPLAY - Hide all visual clutter -->
+            <!-- Tasks rendered INSIDE the slot - ONLY PRIMARY SLOTS (no continuation artifacts) -->
+            <template v-for="calEvent in getTasksForSlot(slot)" :key="`${calEvent.id}-${slot.slotIndex}`">
+              <div
+                v-if="isTaskPrimarySlot(slot, calEvent)"
+                class="slot-task is-primary"
+                :class="{
+                  'timer-active-event': timerStore.currentTaskId === calEvent.taskId,
+                  'dragging': isDragging && draggedEventId === calEvent.id,
+                  'is-hovered': hoveredEventId === calEvent.id
+                }"
+                :style="{
+                  height: `${(calEvent.slotSpan * 30) - 4}px`,
+                  minHeight: `${(calEvent.slotSpan * 30) - 4}px`,
+                  zIndex: 10
+                }"
+                @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
+                @mouseleave="handleSlotTaskMouseLeave()"
+                :data-duration="calEvent.duration"
+                :data-task-id="calEvent.taskId"
+                draggable="true"
+                @dragstart="handleEventDragStart($event, calEvent)"
+                @dragend="handleEventDragEnd($event, calEvent)"
+                @click="handleEventClick($event, calEvent)"
+                @dblclick="handleEventDblClick(calEvent)"
+                @contextmenu.prevent="handleEventContextMenu($event, calEvent)"
+              >
+                <!-- CLEAN CALENDAR-ONLY DISPLAY -->
                 <div class="calendar-task-content">
                   <div class="calendar-task-title">{{ calEvent.title }}</div>
                 </div>
 
-                <!-- Resize Handle (top for changing start time) - Keep for functionality -->
+                <!-- Resize Handle (top for changing start time) -->
                 <div
                   class="resize-handle resize-top"
                   @mousedown.stop="startResize($event, calEvent, 'top')"
                   title="Drag to change start time"
                 ></div>
 
-                <!-- Resize Handle (bottom for changing duration) - Keep for functionality -->
+                <!-- Resize Handle (bottom for changing duration) -->
                 <div
                   class="resize-handle resize-bottom"
                   @mousedown.stop="startResize($event, calEvent, 'bottom')"
                   title="Drag to change duration"
                 ></div>
 
-                <!-- Resize Preview Overlay - shows projected size during drag -->
+                <!-- Resize Preview Overlay -->
                 <div
                   v-if="resizePreview?.isResizing && resizePreview.taskId === calEvent.taskId"
                   class="resize-preview-overlay"
@@ -203,15 +204,8 @@
                 >
                   <span class="preview-duration">{{ resizePreview.previewDuration }}min</span>
                 </div>
-              </template>
-
-              <!-- Continuation indicator for non-primary slots -->
-              <template v-else>
-                <div class="continuation-indicator">
-                  <span class="continuation-line"></span>
-                </div>
-              </template>
-            </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>

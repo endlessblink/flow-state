@@ -5,7 +5,7 @@
  * Ensures consistent behavior across Canvas, Kanban, and Calendar views.
  */
 
-import type { Task } from '@/stores/taskCore'
+import type { Task } from '@/types/tasks'
 
 /**
  * Smart group definitions

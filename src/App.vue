@@ -423,6 +423,10 @@
 </template>
 
 <script setup lang="ts">
+// Debug logging control - only logs in development, silent in production builds
+const DEBUG_APP = import.meta.env.DEV
+const debugLog = (...args: unknown[]) => DEBUG_APP && console.log(...args)
+
 // Import design tokens first for better HMR support
 import '@/assets/design-tokens.css'
 
@@ -526,7 +530,7 @@ useFavicon()
 const browserTab = useBrowserTab()
 
 // Debug: Verify browser tab composable is initialized
-console.log('🍅 DEBUG: Browser tab composable initialized:', {
+debugLog('🍅 DEBUG: Browser tab composable initialized:', {
   isSupported: browserTab.isSupported,
   originalTitle: browserTab.originalTitle,
   methods: {
@@ -832,19 +836,19 @@ const pageTitle = computed(() => {
 
 // Timer methods
 const startQuickTimer = () => {
-  console.log('🍅 DEBUG: startQuickTimer called - starting general timer')
+  debugLog('🍅 DEBUG: startQuickTimer called - starting general timer')
   // Start a general 25-minute timer (no specific task)
   timerStore.startTimer('general')
 }
 
 const startShortBreak = () => {
-  console.log('🍅 DEBUG: startShortBreak called - starting short break timer')
+  debugLog('🍅 DEBUG: startShortBreak called - starting short break timer')
   // Start a 5-minute break timer
   timerStore.startTimer('short-break', timerStore.settings.shortBreakDuration, true)
 }
 
 const startLongBreak = () => {
-  console.log('🍅 DEBUG: startLongBreak called - starting long break timer')
+  debugLog('🍅 DEBUG: startLongBreak called - starting long break timer')
   // Start a 15-minute long break timer
   timerStore.startTimer('long-break', timerStore.settings.longBreakDuration, true)
 }
@@ -877,7 +881,7 @@ const closeQuickTaskCreate = () => {
 }
 
 const handleQuickTaskCreate = async (title: string, description: string) => {
-  console.log('🎯 Creating quick task with title:', title)
+  debugLog('🎯 Creating quick task with title:', title)
 
   // DIRECT FIX: Call taskStore.createTask() directly instead of using undo system
   // The undo system seems to have issues, but taskStore.createTask() works perfectly
@@ -893,7 +897,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
     closeQuickTaskCreate()
 
     if (newTask) {
-      console.log('✅ Successfully created quick task:', newTask.title)
+      debugLog('✅ Successfully created quick task:', newTask.title)
     } else {
       console.error('❌ Failed to create new quick task')
     }
@@ -1056,7 +1060,7 @@ const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active'
 
 // Start Quick Sort from uncategorized view
 const handleStartQuickSort = () => {
-  console.log('🔧 App: Starting Quick Sort from uncategorized view')
+  debugLog('🔧 App: Starting Quick Sort from uncategorized view')
   router.push({ name: 'quick-sort' })
 }
 
@@ -1097,8 +1101,8 @@ const handleTaskDragStart = (event: DragEvent, task: Task) => {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.dropEffect = 'move'
 
-    console.log('Drag started with data:', dataString)
-    console.log('Drag data types set:', ['application/json', 'text/plain', 'text'])
+    debugLog('Drag started with data:', dataString)
+    debugLog('Drag data types set:', ['application/json', 'text/plain', 'text'])
 
     // Add visual feedback
     if (event.target instanceof HTMLElement) {
@@ -1121,7 +1125,7 @@ const startTaskTimer = (taskId: string) => {
 const addTaskToProject = (projectId: string) => {
   // Open quick task create modal instead of creating task directly
   showQuickTaskCreate.value = true
-  console.log('Opening task creation modal for project:', projectId)
+  debugLog('Opening task creation modal for project:', projectId)
 }
 
 // Project management methods
@@ -1318,7 +1322,7 @@ const handleDeleteSelectedTasks = () => {
 
   if (selectedTaskIds.length === 0) {
     // No tasks selected, show a helpful message
-    console.log('Shift+Delete: No tasks selected. Please select tasks first.')
+    debugLog('Shift+Delete: No tasks selected. Please select tasks first.')
     return
   }
 
@@ -1342,23 +1346,23 @@ const handleDeleteSelectedTasks = () => {
 
   confirmAction.value = async () => {
     // Use the unified undo system for simplified deletion
-    console.log('🔧 App.vue: Starting deletion process, using unified undo system')
-    console.log('🔧 App.vue: Current undo stack size:', undoHistory.undoCount.value)
+    debugLog('🔧 App.vue: Starting deletion process, using unified undo system')
+    debugLog('🔧 App.vue: Current undo stack size:', undoHistory.undoCount.value)
 
     for (const taskId of selectedTaskIds) {
-      console.log('🔧 App.vue: About to delete task with undo command:', taskId)
+      debugLog('🔧 App.vue: About to delete task with undo command:', taskId)
 
       // Use the unified undo system for direct deletion
       await undoHistory.deleteTaskWithUndo(taskId)
 
-      console.log('🔧 App.vue: Delete command executed for task:', taskId)
-      console.log('🔧 App.vue: Undo stack size after deletion:', undoHistory.undoCount.value)
+      debugLog('🔧 App.vue: Delete command executed for task:', taskId)
+      debugLog('🔧 App.vue: Undo stack size after deletion:', undoHistory.undoCount.value)
     }
 
     // Clear selection after deletion
     taskStore.clearSelection()
 
-    console.log(`Deleted ${selectedTaskIds.length} tasks:`, selectedTaskIds)
+    debugLog(`Deleted ${selectedTaskIds.length} tasks:`, selectedTaskIds)
   }
 
   showConfirmModal.value = true
@@ -1366,14 +1370,14 @@ const handleDeleteSelectedTasks = () => {
 
 // Undo/Redo handlers
 const handleUndo = async () => {
-  console.log('🎹 Ctrl+Z keyboard shortcut detected in App.vue')
-  console.log('🎹 Current undo stack size:', undoHistory.undoCount.value)
-  console.log('🎹 Can undo:', undoHistory.canUndo.value)
+  debugLog('🎹 Ctrl+Z keyboard shortcut detected in App.vue')
+  debugLog('🎹 Current undo stack size:', undoHistory.undoCount.value)
+  debugLog('🎹 Can undo:', undoHistory.canUndo.value)
 
   try {
     await undoHistory.undo()
-    console.log('✅ Undo successful - task should be restored')
-    console.log('🎹 Undo stack size after undo:', undoHistory.undoCount.value)
+    debugLog('✅ Undo successful - task should be restored')
+    debugLog('🎹 Undo stack size after undo:', undoHistory.undoCount.value)
     // You could add a toast notification here if you have one
   } catch (error) {
     console.error('❌ Undo failed:', error)
@@ -1381,15 +1385,15 @@ const handleUndo = async () => {
 }
 
 const handleRedo = async () => {
-  console.log('🎹 Ctrl+Y keyboard shortcut detected in App.vue')
-  console.log('🎹 Current redo stack size:', undoHistory.redoCount.value)
-  console.log('🎹 Can redo:', undoHistory.canRedo.value)
+  debugLog('🎹 Ctrl+Y keyboard shortcut detected in App.vue')
+  debugLog('🎹 Current redo stack size:', undoHistory.redoCount.value)
+  debugLog('🎹 Can redo:', undoHistory.canRedo.value)
 
   try {
     // FIXED: Use the same undoHistory instance for consistency
     await undoHistory.redo()
-    console.log('✅ Redo successful - task should be restored again')
-    console.log('🎹 Redo stack size after redo:', undoHistory.redoCount.value)
+    debugLog('✅ Redo successful - task should be restored again')
+    debugLog('🎹 Redo stack size after redo:', undoHistory.redoCount.value)
     // You could add a toast notification here if you have one
   } catch (error) {
     console.error('❌ Redo failed:', error)
@@ -1433,7 +1437,7 @@ const shouldIgnoreElement = (target: HTMLElement | null): boolean => {
 // Keyboard shortcut handlers
 const handleKeydown = (event: KeyboardEvent) => {
   // Comprehensive logging for keyboard shortcut debugging
-  console.log('🎹 [APP.VUE] handleKeydown called:', {
+  debugLog('🎹 [APP.VUE] handleKeydown called:', {
     key: event.key,
     shiftKey: event.shiftKey,
     ctrlKey: event.ctrlKey,
@@ -1447,14 +1451,14 @@ const handleKeydown = (event: KeyboardEvent) => {
   // Check if we should ignore keyboard shortcuts
   const target = event.target as HTMLElement
   const shouldIgnore = shouldIgnoreElement(target)
-  console.log('🚫 [APP.VUE] shouldIgnoreElement result:', shouldIgnore, {
+  debugLog('🚫 [APP.VUE] shouldIgnoreElement result:', shouldIgnore, {
     targetElement: target,
     isInput: target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.contentEditable === 'true',
     isInModal: !!target?.closest('[role="dialog"], .modal, .n-modal')
   })
 
   if (shouldIgnore) {
-    console.log('❌ [APP.VUE] Keyboard shortcut blocked by shouldIgnoreElement')
+    debugLog('❌ [APP.VUE] Keyboard shortcut blocked by shouldIgnoreElement')
     return
   }
 
@@ -1496,18 +1500,18 @@ const handleKeydown = (event: KeyboardEvent) => {
     if (taskStore.selectedTaskIds.length === 1) {
       const task = taskStore.tasks.find(t => t.id === taskStore.selectedTaskIds[0])
       if (task) {
-        console.log('✏️ [APP.VUE] Ctrl+E: Opening edit modal for task:', task.title)
+        debugLog('✏️ [APP.VUE] Ctrl+E: Opening edit modal for task:', task.title)
         openEditTask(task)
       }
     } else if (taskStore.selectedTaskIds.length === 0) {
-      console.log('⚠️ [APP.VUE] Ctrl+E: No task selected')
+      debugLog('⚠️ [APP.VUE] Ctrl+E: No task selected')
     } else {
-      console.log('⚠️ [APP.VUE] Ctrl+E: Multiple tasks selected, cannot edit')
+      debugLog('⚠️ [APP.VUE] Ctrl+E: Multiple tasks selected, cannot edit')
     }
   }
 
   // Shift+1-5 for view switching
-  console.log('🔍 [APP.VUE] Checking Shift+1-5 condition:', {
+  debugLog('🔍 [APP.VUE] Checking Shift+1-5 condition:', {
     isShift: event.shiftKey,
     noCtrl: !event.ctrlKey,
     noMeta: !event.metaKey,
@@ -1518,30 +1522,30 @@ const handleKeydown = (event: KeyboardEvent) => {
 
   if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
     const key = event.key
-    console.log('🔢 [APP.VUE] Shift+number detected, key:', key, 'Checking range 1-5...')
+    debugLog('🔢 [APP.VUE] Shift+number detected, key:', key, 'Checking range 1-5...')
 
     if (key >= '1' && key <= '5') {
-      console.log('✅ [APP.VUE] Key', key, 'is in range 1-5. Looking up route...')
+      debugLog('✅ [APP.VUE] Key', key, 'is in range 1-5. Looking up route...')
       const route = viewRouteMap[key as keyof typeof viewRouteMap]
-      console.log('🗺️ [APP.VUE] Route lookup result:', { key, route, availableRoutes: viewRouteMap })
+      debugLog('🗺️ [APP.VUE] Route lookup result:', { key, route, availableRoutes: viewRouteMap })
 
       if (route) {
-        console.log('🚀 [APP.VUE] Route found! Attempting navigation to:', route)
-        console.log('📍 [APP.VUE] Current route before navigation:', router.currentRoute.value.path)
+        debugLog('🚀 [APP.VUE] Route found! Attempting navigation to:', route)
+        debugLog('📍 [APP.VUE] Current route before navigation:', router.currentRoute.value.path)
 
         event.preventDefault()
 
         try {
           router.push(route)
-          console.log('✅ [APP.VUE] Navigation command sent successfully to:', route)
+          debugLog('✅ [APP.VUE] Navigation command sent successfully to:', route)
         } catch (error) {
           console.error('❌ [APP.VUE] Navigation failed:', error)
         }
       } else {
-        console.log('❌ [APP.VUE] No route found for key:', key)
+        debugLog('❌ [APP.VUE] No route found for key:', key)
       }
     } else {
-      console.log('❌ [APP.VUE] Key', key, 'is not in range 1-5')
+      debugLog('❌ [APP.VUE] Key', key, 'is not in range 1-5')
     }
   }
 }
@@ -1552,7 +1556,7 @@ const handleSearchSelectTask = (task: Task) => {
 
 const handleSearchSelectProject = (project: Project) => {
   // TODO: Navigate to project view or filter by project
-  console.log('Selected project:', project)
+  debugLog('Selected project:', project)
 }
 
 // Error boundary handler
@@ -1566,7 +1570,7 @@ const handleProjectUnnest = (data: any) => {
   if (data.projectId) {
     // Remove parent relationship by setting parentId to null
     taskStore.updateProject(data.projectId, { parentId: null })
-    console.log(`Project "${data.title}" un-nested to root level`)
+    debugLog(`Project "${data.title}" un-nested to root level`)
   }
 }
 
@@ -1627,7 +1631,7 @@ onMounted(async () => {
   // Wait for auth to initialize, then check if user is authenticated
   // setTimeout(() => {
   //   if (!authStore.isLoading && !authStore.isAuthenticated && !uiStore.authModalOpen) {
-  //     console.log('🔐 [APP.VUE] Auto-opening auth modal - user not authenticated')
+  //     debugLog('🔐 [APP.VUE] Auto-opening auth modal - user not authenticated')
   //     uiStore.openAuthModal('login', '/')
   //   }
   // }, 1000) // Wait 1 second for auth to initialize

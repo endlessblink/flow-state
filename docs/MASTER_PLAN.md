@@ -1923,28 +1923,70 @@ Root cause analysis identified intensive GPU operations from:
 
 ---
 
-## 🎯 **CRITICAL FIX: Canvas Drag Vue Flow Sync (December 2, 2025)**
+## 🎯 **CRITICAL FIX: Canvas Drag Vue Flow Sync (December 2-3, 2025)**
 
-**Status**: 🟡 WATCHER RACE CONDITION FIX APPLIED - AWAITING USER VERIFICATION
-**Priority**: CRITICAL - Blocking canvas functionality
-**Implementation**: ✅ ALL 8 FIXES COMPLETE (December 2, 2025)
-**Verification**: User testing required
-**Last Updated**: December 2, 2025 (Afternoon Session)
+**Status**: 🟡 WATCHER TIMING FIX IN PROGRESS
+**Priority**: CRITICAL - Tasks not appearing on canvas after page refresh
+**Last Updated**: December 3, 2025
 
-### **Problem Solved**
-Tasks dragged from inbox to canvas were disappearing due to multiple issues:
-1. ✅ Manual memoization breaking Vue reactivity - FIXED (lines 655-711)
-2. ✅ Emergency filter showing ALL tasks on canvas - FIXED (lines 1862-1882)
-3. ✅ Source validation rejecting canvas/inbox sources - FIXED (line 4311)
-4. ✅ TaskId extraction missing fallback for `id` property - FIXED (line 4284)
-5. ✅ DOM selector using wrong attribute - FIXED (line 4229 - changed to `data-id`)
-6. ✅ Verification using `nodes.value` instead of `getNodes.value` - FIXED (line 4215)
-7. ✅ **Simplified verification to trust task store** - FIXED (lines 4467-4492) - Previous verification was causing false-positive rollbacks due to Vue Flow timing issues
-8. ✅ **WATCHER RACE CONDITION FIX** - FIXED (December 2, 2025 Afternoon) - Watchers were overwriting nodes.value during drop operations
+### **Current Problem (December 3)**
+Tasks dragged from inbox to canvas work in Playwright but not in manual testing. After page refresh, tasks are not visible on canvas even though inbox shows correct count (0).
 
-### **🚨 Root Cause #3: Watcher Race Condition (December 2, 2025 Afternoon)**
+### **🚨 ROOT CAUSE #4: Watcher Timing Issue (December 3, 2025)**
 
-**The True Bug**: When `handleDrop` updates task properties (canvasPosition, isInInbox), Vue watchers detect these changes and immediately call `syncNodes()` which rebuilds `nodes.value` from scratch, **OVERWRITING the direct node additions from handleDrop**.
+**The True Bug**: Vue watchers fire BEFORE tasks load from PouchDB.
+
+**Timeline WITHOUT fix:**
+```
+T+0  Canvas component mounts
+T+1  Watchers fire → syncNodes() runs → 0 nodes (tasks not loaded yet!)
+T+2  Tasks load from PouchDB → taskStore.tasks = [task1, task2...]
+T+3  Watchers ALREADY fired, don't fire again!
+T+4  ❌ Canvas stays empty forever
+```
+
+**Console Evidence:**
+- `📭 Canvas has no nodes - marking as ready (empty canvas)` ← Canvas initializes FIRST
+- `CanvasView mounted, tasks: 1` ← Tasks load AFTER (but watcher already fired!)
+
+**Why `watch()` fails:**
+- `watch()` only fires when properties CHANGE
+- Initial population from `[]` to `[tasks]` might miss timing
+- The `.map()` creates a new array reference which can miss reactivity
+
+**Why `watchEffect()` works:**
+- `watchEffect()` fires on ANY dependency change
+- Automatically tracks `taskStore.tasks` accesses
+- Catches initial population reliably
+
+### **Solution: Add watchEffect for task sync**
+
+**Changes to `src/views/CanvasView.vue`:**
+```typescript
+// ADD: watchEffect to catch initial task loading
+watchEffect(() => {
+  // Only sync when Vue Flow is ready
+  if (!isVueFlowReady.value) return
+
+  // Track taskStore.tasks - fires on initial load AND changes
+  if (taskStore.tasks && taskStore.tasks.length >= 0) {
+    console.log('📋 [WATCHEFFECT] Tasks changed, syncing...', taskStore.tasks.length)
+    batchedSyncNodes('high')
+  }
+})
+```
+
+### **Previous Fixes (December 2) - Still Valid**
+1. ✅ Manual memoization breaking Vue reactivity - FIXED
+2. ✅ Emergency filter showing ALL tasks on canvas - FIXED
+3. ✅ Source validation rejecting canvas/inbox sources - FIXED
+4. ✅ Node type 'task' → 'taskNode' - FIXED
+5. ✅ watchPausable for drop operations - FIXED
+6. ✅ debugLog infinite recursion - FIXED (tasks.ts, useDatabase.ts)
+
+### **Root Cause #3: Watcher Race Condition (December 2)**
+
+**The Bug**: When `handleDrop` updates task properties, Vue watchers immediately call `syncNodes()` which rebuilds `nodes.value` from scratch.
 
 **Race Condition Sequence**:
 1. User drops task on canvas
@@ -2046,8 +2088,12 @@ Deep code analysis revealed significant technical debt affecting maintainability
 |------|------------------------|------|
 | CanvasView.vue | 262 | DEBUG_CANVAS |
 | tasks.ts | 257 | DEBUG_TASKS |
+| App.vue | 46 | DEBUG_APP |
 | useCouchDBSync.ts | 42 | DEBUG_SYNC |
+| CalendarView.vue | 40 | DEBUG_CALENDAR |
 | useDatabase.ts | 38 | DEBUG_DB |
+| BoardView.vue | 23 | DEBUG_BOARD |
+| **Total** | **708** | |
 
 **Result:** Production builds are silent, debug output only in dev mode
 

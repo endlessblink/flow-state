@@ -4,6 +4,8 @@
       'date-drop-zone',
       {
         'is-active': active,
+        'is-active-azure': active && variant === 'azure',
+        'is-active-teal': active && variant === 'teal',
         'is-drag-target': isDragTarget,
         'is-drag-valid': isDragValid,
         'is-drag-invalid': isDragTarget && !isDragValid && isDragging
@@ -54,10 +56,12 @@ interface Props {
   active?: boolean
   count?: number
   targetType: 'today' | 'weekend' | 'tomorrow' | 'nodate'
+  variant?: 'azure' | 'teal'
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  active: false
+  active: false,
+  variant: 'azure'
 })
 
 const emit = defineEmits<{
@@ -188,12 +192,24 @@ const calculateTargetDate = (): string => {
   background: var(--surface-hover);
 }
 
+/* Base active state - shared styles */
 .date-drop-zone.is-active {
-  background: var(--state-selected-bg);
-  border: 1px solid var(--state-selected-border);
   backdrop-filter: var(--state-active-glass);
   color: var(--state-active-text);
+}
+
+/* Azure variant - for Today/This Week */
+.date-drop-zone.is-active-azure {
+  background: var(--state-selected-bg);
+  border: 1px solid var(--state-selected-border);
   box-shadow: var(--state-selected-shadow), var(--state-selected-glow);
+}
+
+/* Teal variant - for All Active/Uncategorized */
+.date-drop-zone.is-active-teal {
+  background: var(--state-active-bg);
+  border: 1px solid var(--state-active-border);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 
 .zone-icon {

@@ -93,6 +93,7 @@
             :active="activeSmartView === null && activeProjectId === null"
             :count="allTasksCount"
             target-type="nodate"
+            variant="teal"
             @click="handleAllTasksClick"
           >
             <template #icon>

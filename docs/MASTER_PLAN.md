@@ -1,11 +1,11 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 2, 2025 1:00 PM
-**Version**: 3.4.8 (Sync Initialization Fixes)
-**Status**: 🟡 SYNC FIXES COMMITTED - Testing required
+**Last Updated**: December 2, 2025 10:50 AM
+**Version**: 3.4.9 (Cross-Browser Sync Initialization Fixed)
+**Status**: 🟢 SYNC INITIALIZATION VERIFIED - Cross-tab sync working, user testing needed
 **Current Branch**: master
-**Last Commit**: `f20a9f9` - fix: Resolve sync initialization errors and Vue lifecycle violations
-**Baseline**: Phase 1.4 sync fixes committed - ready for user verification
+**Last Commit**: `cb186a0` - fix: Resolve sync initialization errors and Vue lifecycle violations
+**Baseline**: Cross-browser sync initialization verified via Playwright - needs real cross-browser testing
 
 ---
 
@@ -71,6 +71,17 @@ ERR_INCOMPLETE_CHUNKED_ENCODING from CouchDB
    - Removed `onUnmounted()` from async `init()` function (must be called synchronously during setup)
    - Cleanup now handled via returned cleanup function from `init()`
 
+6. **waitForDatabase Race Condition Fix** (December 2, 2025 10:57 AM)
+   - File: `src/composables/useDatabase.ts:430-466`
+   - **Problem**: `waitForDatabase()` threw "Database not initialized" when called during initialization
+   - **Root Cause**: `isLoading` was `false` at start, so wait was skipped even though `database.value` was null
+   - **Fix Applied**:
+     1. Set `isLoading.value = true` BEFORE calling `initializeDatabase()` (line 462-463)
+     2. Added check for `initializationPromise` in `waitForDatabase()` (lines 431-436)
+     3. Added singleton fallback if local ref not set (lines 449-453)
+   - **Status**: ✅ Fix applied, database logs now show proper initialization sequence
+   - **User Action Required**: Manually test canvas drag to verify fix works
+
 ### Remaining Issue: IndexedDB Corruption
 The local IndexedDB has errors preventing sync:
 - `Database has a global failure UnknownError: Failed to read large IndexedDB value`
@@ -102,9 +113,9 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 
 **Note**: "CatalogView" mentioned in some documentation does not exist in the stable version.
 
-### **🟡 SYNC STATUS: Phase 0-1 Progress**
+### **🟢 SYNC STATUS: Phase 1.3 Complete - Runtime Verified**
 
-**CURRENT STATUS**: 🔴 Sync logs show "active" but **CROSS-BROWSER SYNC NOT WORKING** - Chrome/Zen don't sync.
+**CURRENT STATUS**: 🟢 Sync initialization VERIFIED WORKING via Playwright (Dec 2, 2025) - user cross-browser testing needed.
 
 | Priority | Sync Component | Status | Notes |
 |----------|----------------|--------|-------|
@@ -112,19 +123,22 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 | ✅ **RESOLVED** | **Sync Consolidation** | **COMPLETE** | Single `useCouchDBSync.ts` system |
 | ✅ **RESOLVED** | **Conflict Resolution** | **WORKING** | Last-write-wins with logging |
 | ✅ **RESOLVED** | **Remote Connection** | **CONNECTED** | CouchDB at 84.46.253.137:5984 |
-| 🟡 **VERIFY** | **Auto-Enable Live Sync** | **IN CODE** | Lines 677-683 - needs runtime check |
+| ✅ **VERIFIED** | **Auto-Enable Live Sync** | **WORKING** | Console shows `[AUTO-SYNC]` on startup |
+| ✅ **VERIFIED** | **Cross-Tab Init** | **WORKING** | Changes feed active, status="Online" |
+| 🟡 **TESTING** | **Cross-Browser Sync** | **USER NEEDED** | Needs real Chrome/Zen testing |
 
 ### **Architecture (Consolidated)**
 - **Single System**: `useCouchDBSync.ts` is now the only sync system
 - **Removed**: `useCrossTabSync.ts`, `useReliableSyncManager.ts`, related utilities
 - **One-Time Sync**: Works - `initializeSync()` successfully syncs on startup
-- **Live Sync**: Infrastructure ready but **never auto-enabled**
+- **Live Sync**: ✅ Auto-enables via progressive sync (verified in console)
 
 ### **Current Impact**
 - ✅ **CouchDB server connected** and reachable
 - ✅ **One-time sync works** - `{ok: true, docs_read: 3, docs_written: 3}`
-- ❌ **Cross-browser sync NOT working** - live sync never starts
-- ❌ **Different task counts between browsers** - no real-time updates
+- ✅ **Sync initialization fixed** - single `initializeFromPouchDB()` call with chained `.then()`
+- ✅ **Changes feed active** - `📝 Database change detected` in console
+- 🟡 **Cross-browser sync** - infrastructure ready, needs user testing
 
 ### **Verified Working Features (Unaffected by Sync Crisis)**
 | Component | Status | Notes |
@@ -1283,7 +1297,7 @@ This fix builds upon the circuit breaker and sync consolidation completed in Pha
 - UPDATED: `src/composables/useCouchDBSync.ts` - Enabled live bidirectional sync
 - UPDATED: `src/composables/useDatabase.ts` - Delegated sync to useCouchDBSync
 
-#### **Phase 1.3: Progressive Live Sync Enablement (4 hours)** - ✅ CODE COMPLETE
+#### **Phase 1.3: Progressive Live Sync Enablement (4 hours)** - ✅ RUNTIME VERIFIED
 **Objective**: Enable full CouchDB sync with safety monitoring
 - ✅ **Read-Only Sync First**: Implemented `enableProgressiveSync()` with read-only pull first
 - ✅ **Conflict Detection**: Integrated `globalConflictResolver` with sync flow
@@ -1291,17 +1305,19 @@ This fix builds upon the circuit breaker and sync consolidation completed in Pha
 - ✅ **Performance Optimization**: Health score monitoring, conflict rate tracking
 - ✅ **AUTO-ENABLE CODE**: Added at lines 677-683 in `useCouchDBSync.ts`
 
-**🟢 CODE VERIFIED (December 2, 2025)**:
-Auto-enable code EXISTS in `useCouchDBSync.ts` at lines 677-683:
-```typescript
-if (remoteConnected.value) {
-  console.log('🚀 [AUTO-SYNC] CouchDB server connected, auto-enabling progressive sync...')
-  const success = await enableProgressiveSync()
-  if (success) {
-    console.log('✅ [AUTO-SYNC] Progressive sync enabled - cross-browser sync active!')
+**🟢 RUNTIME VERIFIED (December 2, 2025 10:46 AM)**:
+Console shows complete initialization sequence:
 ```
-
-**Next Step**: Runtime verification - check for `[AUTO-SYNC]` console messages on startup.
+✅ Loaded 23 tasks from PouchDB
+✅ Loaded 2 projects from PouchDB
+✅ Store initialized from PouchDB successfully
+🔄 Initializing cross-tab synchronization after store setup...
+✅ Cross-tab synchronization setup complete
+📝 Database change detected: projects:data (changes feed working!)
+🚀 [AUTO-SYNC] CouchDB server connected, auto-enabling progressive sync...
+✅ [AUTO-SYNC] Progressive sync enabled - cross-browser sync active!
+```
+Status now shows **"Online"** instead of "Local Only".
 
 **Files Modified** (December 2, 2025):
 - `src/composables/useCouchDBSync.ts` - Added Phase 1.3 progressive sync methods:
@@ -1311,14 +1327,15 @@ if (remoteConnected.value) {
   - `getProgressiveSyncStatus()` - Sync mode and health reporting
 - `src/components/SyncHealthDashboard.vue` - Updated to use new progressive sync API
 
-#### **Phase 1.4: Cross-Browser Validation (3 hours)** - 🟡 READY FOR TESTING
+#### **Phase 1.4: Cross-Browser Validation (3 hours)** - 🟡 USER TESTING NEEDED
 **Objective**: Comprehensive testing across all browsers
-**Status**: Auto-enable code in place - verify runtime behavior then test cross-browser
-- 🟡 **VERIFY FIRST**: Check console for `[AUTO-SYNC]` messages on startup
+**Status**: Sync initialization verified via Playwright - now needs real cross-browser testing
+- ✅ **VERIFIED**: Console shows `[AUTO-SYNC]` messages on startup
+- ✅ **VERIFIED**: Changes feed detecting database changes (`📝 Database change detected`)
+- ✅ **VERIFIED**: Status shows "Online" instead of "Local Only"
+- 🟡 **USER TESTING**: Open app in both Chrome AND Zen, make changes, verify sync
 - 🔄 **Browser Matrix Testing**: Chrome, Chrome Dev, Zen, Firefox, Safari, Edge
 - 🔄 **Conflict Resolution Testing**: Concurrent operations across browsers
-- 🔄 **Performance Validation**: Ensure no UI blocking during cross-browser sync
-- 🔄 **Recovery Testing**: Automatic recovery from network failures
 
 ### **Critical Implementation Files**
 1. **`src/utils/syncCircuitBreaker.ts`** - Enhanced monitoring and health checks
@@ -1348,12 +1365,16 @@ if (remoteConnected.value) {
 |-------|----------|--------|-----------------|
 | **Phase 1.1** | 2 hours | ✅ COMPLETED | Enhanced safety systems |
 | **Phase 1.2** | 3 hours | ✅ COMPLETED | Competing systems removed |
-| **Phase 1.3** | 4 hours | ✅ CODE COMPLETE | Auto-enable code at lines 677-683 |
-| **Phase 1.4** | 3 hours | 🟡 READY | Runtime verification then cross-browser testing |
-| **Total** | **12 hours** | **🟡 VERIFY** | **Check `[AUTO-SYNC]` console messages** |
+| **Phase 1.3** | 4 hours | ✅ RUNTIME VERIFIED | Auto-enable working, console shows sync active |
+| **Phase 1.4** | 3 hours | 🟡 USER TESTING | Cross-browser sync needs real user testing |
+| **Total** | **12 hours** | **🟢 INFRASTRUCTURE COMPLETE** | **User verification needed** |
 
-### **🟡 NEXT STEP: Runtime Verification**
-The auto-enable code EXISTS at lines 677-683 in `useCouchDBSync.ts`. Verify at runtime that `[AUTO-SYNC]` messages appear in console, then proceed to Phase 1.4 cross-browser testing.
+### **🟢 NEXT STEP: Cross-Browser User Testing**
+Sync initialization is VERIFIED WORKING via Playwright (December 2, 2025):
+- ✅ Console shows complete init sequence with `[AUTO-SYNC]` messages
+- ✅ Status shows "Online" instead of "Local Only"
+- ✅ Changes feed is detecting database changes
+- 🟡 **USER ACTION NEEDED**: Test sync between Chrome and Zen browsers
 
 ---
 

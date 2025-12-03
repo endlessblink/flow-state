@@ -157,8 +157,8 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     try {
       console.log(`[Backup] Creating ${type} backup...`)
 
-      // Get tasks from store
-      let tasks = taskStore.tasks || []
+      // Get tasks from store (use any[] to allow mock task filtering)
+      let tasks: any[] = taskStore.tasks || []
 
       // Validate tasks
       if (!Array.isArray(tasks)) {

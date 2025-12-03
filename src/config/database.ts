@@ -84,15 +84,24 @@ export const getDatabaseConfig = (): DatabaseConfig => {
   // Only enable remote sync if VITE_COUCHDB_URL is explicitly set in .env
   // This prevents CORS errors when no properly configured CouchDB is available
   if (couchdbUrl && couchdbUsername && couchdbPassword) {
+    // CRITICAL: PouchDB needs an absolute URL to recognize it as a remote database
+    // If the URL is relative (starts with /), prepend the current origin
+    // Otherwise PouchDB creates a local IndexedDB with the path as its name!
+    const isRelativeUrl = couchdbUrl.startsWith('/')
+    const absoluteUrl = isRelativeUrl
+      ? `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5546'}${couchdbUrl}`
+      : couchdbUrl
+
     console.log('🔧 [DATABASE CONFIG] Remote sync ENABLED via environment variables')
-    console.log('🔧 [DATABASE CONFIG] Using URL:', couchdbUrl)
+    console.log('🔧 [DATABASE CONFIG] Original URL:', couchdbUrl)
+    console.log('🔧 [DATABASE CONFIG] Absolute URL:', absoluteUrl)
 
     return {
       local: {
         name: 'pomoflow-app-dev'
       },
       remote: {
-        url: couchdbUrl,
+        url: absoluteUrl,
         auth: {
           username: couchdbUsername,
           password: couchdbPassword

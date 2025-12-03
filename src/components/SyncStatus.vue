@@ -428,55 +428,7 @@ const triggerManualSync = async () => {
   isManualSyncing.value = false
   syncProgress.value = 100
   progressText.value = 'Sync disabled for stability'
-  return
-
-  // Original code below is disabled
-  if (!canManualSync.value) return
-
-  isManualSyncing.value = true
-  syncStartTime.value = new Date()
-  syncProgress.value = 0
-  progressText.value = 'Starting sync...'
-  currentPhase.value = 'initialization'
-
-  try {
-    console.log('🔄 [SyncStatus] Triggering enhanced manual sync')
-
-    // Start progress tracking
-    const progressInterval = setInterval(() => {
-      if (syncProgress.value < 90) {
-        syncProgress.value += Math.random() * 10
-      }
-    }, 500)
-
-    await syncNow()
-
-    // Complete progress
-    syncProgress.value = 100
-    progressText.value = 'Sync completed successfully'
-
-    clearInterval(progressInterval)
-
-    logger.info('user', 'Manual sync triggered by user', {
-      duration: Date.now() - (syncStartTime.value?.getTime() || 0)
-    })
-
-  } catch (error) {
-    console.error('Manual sync failed:', error)
-    progressText.value = 'Sync failed'
-    syncProgress.value = 0
-
-    logger.error('user', 'Manual sync failed', {
-      error: (error as Error).message,
-      duration: Date.now() - (syncStartTime.value?.getTime() || 0)
-    })
-  } finally {
-    setTimeout(() => {
-      isManualSyncing.value = false
-      syncStartTime.value = null
-      currentPhase.value = ''
-    }, 1000)
-  }
+  // ⏭️ PHASE 1 STABILIZATION: Function exits early, no sync performed
 }
 
 // Enhanced methods for advanced functionality
@@ -570,33 +522,40 @@ const formatUptime = (ms: number): string => {
   return `${seconds}s`
 }
 
-const getErrorSummary = (errorMessage: string): string => {
+const getErrorSummary = (errorMessage: string | Error | unknown): string => {
   if (!errorMessage) return ''
 
+  // 🔧 FIX (Dec 3, 2025): Handle non-string error values
+  const message = typeof errorMessage === 'string'
+    ? errorMessage
+    : errorMessage instanceof Error
+      ? errorMessage.message
+      : String(errorMessage)
+
   // Common error patterns for user-friendly messages
-  if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+  if (message.includes('network') || message.includes('connection')) {
     return 'Network connection issue'
   }
-  if (errorMessage.includes('timeout')) {
+  if (message.includes('timeout')) {
     return 'Request timeout'
   }
-  if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
+  if (message.includes('unauthorized') || message.includes('401')) {
     return 'Authentication failed'
   }
-  if (errorMessage.includes('conflict')) {
+  if (message.includes('conflict')) {
     return 'Data conflict detected'
   }
-  if (errorMessage.includes('validation')) {
+  if (message.includes('validation')) {
     return 'Data validation error'
   }
-  if (errorMessage.includes('offline')) {
+  if (message.includes('offline')) {
     return 'Offline mode'
   }
 
   // For unknown errors, return first 30 characters
-  return errorMessage.length > 30
-    ? errorMessage.substring(0, 30) + '...'
-    : errorMessage
+  return message.length > 30
+    ? message.substring(0, 30) + '...'
+    : message
 }
 
 // Listen for sync events

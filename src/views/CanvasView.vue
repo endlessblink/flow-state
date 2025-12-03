@@ -669,7 +669,11 @@ const filteredTasksWithProjectFiltering = computed(() => {
       const currentTasks = taskStore.filteredTasks
 
       // Performance optimization: Only update if actually changed
-      const currentHash = currentTasks.map(t => t.id).join('|')
+      // 🔧 FIX (Dec 3, 2025): Include canvasPosition and isInInbox in hash
+      // Previously only used IDs, which caused stale cache when moving tasks to canvas
+      const currentHash = currentTasks.map(t =>
+        `${t.id}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}:${t.isInInbox ?? ''}`
+      ).join('|')
       if (currentHash === lastFilteredTasksHash && lastFilteredTasks.length > 0) {
         return lastFilteredTasks
       }
@@ -2260,6 +2264,16 @@ resourceManager.addWatcher(
       isVueFlowReady.value = true
       debugLog('✅ Empty canvas ready for interaction')
     }
+    // 🔧 FIX (Dec 3, 2025): Case 3 - Break chicken-and-egg timing issue
+    // PROBLEM: VueFlow has v-if="isCanvasReady" so it won't render until isCanvasReady=true
+    // BUT nodesInitialized only becomes true AFTER VueFlow renders and measures nodes
+    // RESULT: Canvas stuck until 3-second timeout because neither Case 1 nor Case 2 fires
+    // SOLUTION: Enable rendering when nodes exist, even if not yet initialized
+    else if (nodeCount > 0 && !initialized && !isCanvasReady.value) {
+      debugLog('🔄 [FIX] Nodes exist but pending initialization - enabling canvas rendering')
+      isCanvasReady.value = true
+      // Note: hasInitialFit and isVueFlowReady stay false until Case 1 fires after VueFlow renders
+    }
   }, { immediate: true })
 )
 
@@ -2276,7 +2290,10 @@ watchEffect(() => {
 
   // Track taskStore.tasks - fires on initial load AND changes
   const taskCount = taskStore.tasks?.length ?? 0
-  const tasksWithCanvasPos = taskStore.tasks?.filter(t => t.canvasPosition && !t.isInInbox).length ?? 0
+  // 🔧 FIX (Dec 3, 2025): Removed `&& !t.isInInbox` condition
+  // Tasks with canvasPosition should ALWAYS be rendered on canvas, regardless of isInInbox state
+  // The isInInbox flag controls inbox panel visibility, not canvas visibility
+  const tasksWithCanvasPos = taskStore.tasks?.filter(t => t.canvasPosition).length ?? 0
 
   console.log(`📋 [WATCHEFFECT] Tasks changed: total=${taskCount}, withCanvasPos=${tasksWithCanvasPos}`)
 
@@ -4382,10 +4399,12 @@ const handleDrop = async (event: DragEvent) => {
     resumeInboxSync()
     debugLog('▶️ [CANVAS] Watchers RESUMED')
 
-    // Force immediate sync to ensure consistency
+    // 🔧 FIX (Dec 3, 2025): REMOVED syncNodes() call here
+    // The addNodes() call above already added the node to Vue Flow
+    // Calling syncNodes() was overwriting it with stale filteredTasks data
+    // The resumed watchers will handle any future sync needs
     await nextTick()
-    syncNodes()
-    debugLog('🔄 [CANVAS] Forced syncNodes after drop complete')
+    debugLog('🔄 [CANVAS] Drop complete - nodes added via addNodes(), watchers resumed')
   }
 }
 

@@ -127,6 +127,12 @@ export class SyncCircuitBreaker {
     const cooldownMs = this.getContextAwareCooldown(source)
 
     if (timeSinceLastSync < cooldownMs) {
+      // For cross-tab operations, silently skip instead of throwing
+      if (source === 'cross-tab') {
+        console.log(`⏱️ [CIRCUIT BREAKER] Cross-tab sync debounced (${context}) - silently skipping`)
+        this.metrics.preventedLoops++
+        return undefined as T  // Silently skip
+      }
       console.log(`⏱️ [CIRCUIT BREAKER] Sync too soon (${context}, source: ${source}) - ${cooldownMs - timeSinceLastSync}ms remaining`)
       this.metrics.preventedLoops++
       throw new Error(`Sync debounced: ${context} (${cooldownMs - timeSinceLastSync}ms remaining)`)

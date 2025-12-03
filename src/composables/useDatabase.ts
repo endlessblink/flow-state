@@ -521,6 +521,23 @@ export function useDatabase(): UseDatabaseReturn {
 
       } catch (err: any) {
         retryCount++
+        const isConnectionClosing = err.message?.includes('connection is closing') ||
+                                    err.name === 'InvalidStateError'
+
+        // Handle connection closing error - reset singleton and retry
+        if (isConnectionClosing && retryCount < maxRetries) {
+          console.warn(`⚠️ [USE-DATABASE] Connection closing on ${key} (attempt ${retryCount}/${maxRetries}), resetting connection...`)
+          // Reset singleton to force reconnection
+          singletonDatabase = null
+          database.value = null
+          isInitializing = false
+          initializationPromise = null
+          // Wait and retry
+          await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
+          // Re-initialize
+          await initializeDatabase()
+          continue
+        }
 
         if (err.status === 409 && retryCount < maxRetries) {
           // Conflict detected - retry with exponential backoff
@@ -536,7 +553,7 @@ export function useDatabase(): UseDatabaseReturn {
           category: ErrorCategory.DATABASE,
           message: `Failed to save ${key} after ${retryCount} attempts`,
           error: err as Error,
-          context: { key, retryCount, isConflict: err.status === 409 },
+          context: { key, retryCount, isConflict: err.status === 409, isConnectionClosing },
           showNotification: true
         })
         throw err
@@ -548,40 +565,63 @@ export function useDatabase(): UseDatabaseReturn {
    * Load data from PouchDB with enhanced retry logic and caching
    */
   const load = async <T>(key: string): Promise<T | null> => {
-    const cacheKey = `db-load-${key}`
+    const maxRetries = 3
+    let retryCount = 0
 
-    // Direct database operation (network optimizer removed)
-    try {
-      const db = await waitForDatabase()
-      const docId = `${key}:data`
-      const doc = await db.get(docId)
-      // Extract the actual data from the PouchDB document structure
-      const data = (doc as any).data as T
+    while (retryCount < maxRetries) {
+      try {
+        const db = await waitForDatabase()
+        const docId = `${key}:data`
+        const doc = await db.get(docId)
+        // Extract the actual data from the PouchDB document structure
+        const data = (doc as any).data as T
 
-      if (shouldLogTaskDiagnostics()) {
-        debugLog(`💾 [DATABASE] Loaded ${key} from PouchDB`)
-      }
-
-      return data
-    } catch (err: any) {
-      // Handle 404 as expected case
-      if (err.status === 404) {
         if (shouldLogTaskDiagnostics()) {
-          debugLog(`📭 [DATABASE] No data found for ${key}`)
+          debugLog(`💾 [DATABASE] Loaded ${key} from PouchDB`)
         }
-        return null
+
+        return data
+      } catch (err: any) {
+        // Handle 404 as expected case
+        if (err.status === 404) {
+          if (shouldLogTaskDiagnostics()) {
+            debugLog(`📭 [DATABASE] No data found for ${key}`)
+          }
+          return null
+        }
+
+        retryCount++
+        const isConnectionClosing = err.message?.includes('connection is closing') ||
+                                    err.name === 'InvalidStateError'
+
+        // Handle connection closing error - reset singleton and retry
+        if (isConnectionClosing && retryCount < maxRetries) {
+          console.warn(`⚠️ [USE-DATABASE] Connection closing on load ${key} (attempt ${retryCount}/${maxRetries}), resetting connection...`)
+          // Reset singleton to force reconnection
+          singletonDatabase = null
+          database.value = null
+          isInitializing = false
+          initializationPromise = null
+          // Wait and retry
+          await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
+          // Re-initialize
+          await initializeDatabase()
+          continue
+        }
+
+        error.value = err as Error
+        errorHandler.report({
+          severity: ErrorSeverity.ERROR,
+          category: ErrorCategory.DATABASE,
+          message: `Failed to load ${key} from database`,
+          error: err as Error,
+          context: { key, retryCount, isConnectionClosing },
+          showNotification: false // Don't show for load errors, let caller handle
+        })
+        throw err
       }
-      error.value = err as Error
-      errorHandler.report({
-        severity: ErrorSeverity.ERROR,
-        category: ErrorCategory.DATABASE,
-        message: `Failed to load ${key} from database`,
-        error: err as Error,
-        context: { key },
-        showNotification: false // Don't show for load errors, let caller handle
-      })
-      throw err
     }
+    return null // Fallback (should not reach here)
   }
 
   /**

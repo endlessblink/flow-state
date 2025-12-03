@@ -1,7 +1,36 @@
 # CLAUDE.md
 
-# NEVER EVER CLAIM SUCCSESS THAT SOMETHING IS READY, DONE, READY FOR PRODUCTION ETC UNTILL THE USER CONFIRMS IT by actually testing or using the feature!!!!
+# NEVER EVER CLAIM SUCCESS THAT SOMETHING IS READY, DONE, READY FOR PRODUCTION ETC UNTIL THE USER CONFIRMS IT by actually testing or using the feature!!!!
 
+## Development Rules (MANDATORY)
+
+### 1. NEVER Claim Success Without Visual Proof
+- After ANY code change, you MUST test with Playwright before claiming it works
+- "It should work" is NOT acceptable - only "I tested it and here's the result"
+- If you can't test it, say "I made the change but YOU need to test it"
+
+### 2. KISS Principle - Simplicity Over Cleverness
+- Before adding any abstraction, ask: "Does the simple version work?"
+- If existing simple code works, don't "improve" it with complex patterns
+- Watchers, guards, and "smart" detection often break things - prefer direct operations
+- When fixing bugs, consider REMOVING code rather than ADDING more
+
+### 3. Don't Add Complexity Without Tests
+- No new watchers/computed properties without testing their edge cases
+- No conditional rendering guards without timeout fallbacks
+- If you add code that can deadlock, you've already failed
+
+### 4. When Debugging, Consider Simplifying
+- If the "fix" requires understanding 5 layers of abstraction, the real fix is removing layers
+- Prefer reverting to working code over patching broken code
+- Ask: "What was the last working version and what changed?"
+
+### 5. Direct Operations Over Reactive Magic
+- Prefer direct function calls over complex watchers
+- Prefer explicit saves over "smart" auto-save with change detection
+- Vue reactivity has gotchas - when in doubt, be explicit
+
+---
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

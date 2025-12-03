@@ -13,6 +13,10 @@ export const shouldLogTaskDiagnostics = () => {
          localStorage.getItem('DEV_LOG_TASK_DIAGNOSTICS') === 'true'
 }
 
+// Environment-based logging control
+const LOG_LEVEL = import.meta.env.VITE_LOG_LEVEL || (import.meta.env.PROD ? 'silent' : 'warn')
+const IS_SILENT = LOG_LEVEL === 'silent'
+
 interface LogToggles {
   timer: boolean
   tabUpdate: boolean
@@ -26,6 +30,13 @@ interface LogToggles {
   database: boolean
   cloudSync: boolean
   storage: boolean
+  // New categories
+  calendarDrag: boolean
+  canvasSync: boolean
+  memoryCleanup: boolean
+  validation: boolean
+  watchEffects: boolean
+  systemInit: boolean
 }
 
 // Store original console methods
@@ -51,6 +62,13 @@ let logToggles: LogToggles = {
   database: false,
   cloudSync: false,
   storage: false,
+  // New categories
+  calendarDrag: false,
+  canvasSync: false,
+  memoryCleanup: false,
+  validation: false,
+  watchEffects: false,
+  systemInit: false,
 }
 
 // Load saved preferences
@@ -83,12 +101,12 @@ export function saveLogToggles(toggles: LogToggles): void {
 
 // Check if a log message should be filtered
 function shouldFilter(message: string): boolean {
-  const msg = String(message)
-
-  // Debug: Log current toggle states (only for DevLogController messages)
-  if (msg.includes('🔧 DevLogController') || msg.includes('📊 All logs')) {
-    console.log('🔍 Current toggle states:', JSON.stringify(logToggles))
+  // In silent mode, filter ALL logs (console.error is not intercepted)
+  if (IS_SILENT) {
+    return true
   }
+
+  const msg = String(message)
 
   // Timer logs
   if (!logToggles.timer) {
@@ -163,14 +181,32 @@ function shouldFilter(message: string): boolean {
 
   if (!logToggles.taskNodeTimer && msg.includes('🍅 DEBUG TaskNode isTimerActive')) return true
 
-  // Database logs
+  // Database logs (comprehensive)
   if (!logToggles.database) {
-    if (msg.includes('📂 Loaded') ||
+    if (msg.includes('📂 Load') ||
         msg.includes('💾 Saved') ||
+        msg.includes('💾 Default project') ||
         msg.includes('📥 Successfully loaded') ||
         msg.includes('❌ Failed to load') ||
         msg.includes('💾 Save results') ||
-        msg.includes('🔄 Auto backup')) {
+        msg.includes('🔄 Auto backup') ||
+        msg.includes('[USE-DATABASE]') ||
+        msg.includes('PouchDB') ||
+        msg.includes('POUCHDB') ||
+        msg.includes('pouchdb') ||
+        msg.includes('Initializing store from') ||
+        msg.includes('Waiting for PouchDB') ||
+        msg.includes('[CIRCUIT BREAKER]') ||
+        msg.includes('[CONFLICT RESOLVER]') ||
+        msg.includes('[SYNC-INIT]') ||
+        msg.includes('[STATIC_CACHE]') ||
+        msg.includes('🗄️') ||
+        msg.includes('TASKS.TS LOADING') ||
+        msg.includes('Task store connected') ||
+        msg.includes('🛑 Cleared pending') ||
+        msg.includes('migration not needed') ||
+        msg.includes('Tasks auto-saved') ||
+        msg.includes('🔧 DEBUG:')) {
       return true
     }
   }
@@ -178,6 +214,100 @@ function shouldFilter(message: string): boolean {
   // Other logs
   if (!logToggles.cloudSync && (msg.includes('📴 Offline') || msg.includes('⚠️ Cloud sync') || msg.includes('💡 To enable cloud sync'))) return true
   if (!logToggles.storage && (msg.includes('📦 Available storage') || msg.includes('📁 File system'))) return true
+
+  // Calendar drag operations
+  if (!logToggles.calendarDrag) {
+    if (msg.includes('[CalendarDrag]') ||
+        msg.includes('[CalendarResize]') ||
+        msg.includes('CALENDAR DROP') ||
+        msg.includes('Ghost preview') ||
+        msg.includes('[useCalendarDayView]')) {
+      return true
+    }
+  }
+
+  // Canvas sync operations (comprehensive)
+  if (!logToggles.canvasSync) {
+    if (msg.includes('[CANVAS]') ||
+        msg.includes('Canvas sync') ||
+        msg.includes('Safely syncing tasks') ||
+        msg.includes('task nodes created') ||
+        msg.includes('[syncNodes]') ||
+        msg.includes('[syncEdges]') ||
+        msg.includes('[SYNC]') ||
+        msg.includes('[SAFE SYNC]') ||
+        msg.includes('[EMERGENCY]') ||
+        msg.includes('Canvas has no nodes') ||
+        msg.includes('Empty canvas ready') ||
+        msg.includes('CanvasView mounted') ||
+        msg.includes('Vue Flow component') ||
+        msg.includes('[VUE_FLOW') ||
+        msg.includes('[Zoom Debug]') ||
+        msg.includes('showSectionTypeDropdown') ||
+        msg.includes('Cross-tab sync')) {
+      return true
+    }
+  }
+
+  // Memory and cleanup logs
+  if (!logToggles.memoryCleanup) {
+    if (msg.includes('[MEMORY]') ||
+        msg.includes('[BATCH]') ||
+        msg.includes('[VUE_FLOW]') ||
+        msg.includes('[RESOURCE_MANAGER]') ||
+        msg.includes('[CLEANUP]')) {
+      return true
+    }
+  }
+
+  // Validation messages
+  if (!logToggles.validation) {
+    if (msg.includes('Validation failed') ||
+        msg.includes('Invalid node') ||
+        msg.includes('Invalid edge') ||
+        msg.includes('Insufficient nodes')) {
+      return true
+    }
+  }
+
+  // Vue watchEffect logs
+  if (!logToggles.watchEffects) {
+    if (msg.includes('[WATCHEFFECT]') ||
+        msg.includes('watchEffect') ||
+        msg.includes('Tasks changed:')) {
+      return true
+    }
+  }
+
+  // System initialization logs (comprehensive)
+  if (!logToggles.systemInit) {
+    if (msg.includes('[MAIN.TS]') ||
+        msg.includes('[DATABASE CONFIG]') ||
+        msg.includes('✅ Using local-first') ||
+        msg.includes('[SYSTEM]') ||
+        msg.includes('App initialized') ||
+        msg.includes('Welcome to Pomo-Flow') ||
+        msg.includes('Welcome back') ||
+        msg.includes('Production logger initialized') ||
+        msg.includes('tab visibility') ||
+        msg.includes('Tab visibility') ||
+        msg.includes('[SIDEBAR TOGGLE]') ||
+        msg.includes('[PROJECTS DEBUG]') ||
+        msg.includes('📊 Root projects') ||
+        msg.includes('📊 Child projects') ||
+        msg.includes('🍅 DEBUG:') ||
+        msg.includes('Browser tab composable') ||
+        msg.includes('DevLogController initialized') ||
+        msg.includes('refHistoryInstance') ||
+        msg.includes('[DEBUG] No refHistory') ||
+        msg.includes('Remote sync') ||
+        msg.includes('[AUTO-SYNC]') ||
+        msg.includes('All logs are HIDDEN') ||
+        msg.includes('Log toggles saved') ||
+        msg.includes('Current toggle states')) {
+      return true
+    }
+  }
 
   return false
 }
@@ -233,15 +363,37 @@ export function getLogToggles(): LogToggles {
   return { ...logToggles }
 }
 
-// Initialize on module load
-loadLogToggles()
-applyConsoleFiltering()
-
-// Expose to window for debugging
-if (import.meta.env.DEV) {
-  ;(window as any).consoleFilter = {
-    getToggles: getLogToggles,
-    saveToggles: saveLogToggles,
-    restore: restoreConsole,
+// Initialize console filtering - must be called explicitly from main.ts
+export function initialize(): void {
+  // SSR safety check
+  if (typeof window === 'undefined') {
+    return
   }
+
+  try {
+    loadLogToggles()
+    applyConsoleFiltering()
+
+    // Expose to window for debugging in development
+    if (import.meta.env.DEV) {
+      ;(window as any).consoleFilter = {
+        getToggles: getLogToggles,
+        saveToggles: saveLogToggles,
+        restore: restoreConsole,
+      }
+    }
+  } catch (e) {
+    originalConsole.warn('Console filter initialization failed:', e)
+  }
+}
+
+// Auto-initialize immediately when module loads (with safety guards)
+// This ensures filtering is active before any other modules log
+try {
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    loadLogToggles()
+    applyConsoleFiltering()
+  }
+} catch {
+  // Silently fail - initialize() will be called later as backup
 }

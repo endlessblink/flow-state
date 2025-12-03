@@ -4,7 +4,7 @@ const debugLog = (...args: unknown[]) => DEBUG_TASKS && console.log(...args)
 
 debugLog('🔥 TASKS.TS LOADING: This is the ORIGINAL tasks.ts file being loaded...')
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { DB_KEYS, useDatabase } from '@/composables/useDatabase'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
 // Removed useReliableSyncManager - consolidated to useCouchDBSync.ts
@@ -157,31 +157,9 @@ export const useTaskStore = defineStore('tasks', () => {
   const MAX_SYNC_ATTEMPTS = 10 // Maximum sync attempts per session
 
   const safeSync = async (context: string) => {
-    try {
-      // Import circuit breaker dynamically to avoid circular dependencies
-      const { executeSyncWithCircuitBreaker } = await import('@/utils/syncCircuitBreaker')
-
-      // Import sync composable
-      const { useCouchDBSync } = await import('@/composables/useCouchDBSync')
-      const { triggerSync } = useCouchDBSync()
-
-      // Execute sync with circuit breaker protection
-      await executeSyncWithCircuitBreaker(async () => {
-        await triggerSync()
-      }, context)
-
-      debugLog(`✅ [SAFE SYNC] Sync completed for context: ${context}`)
-    } catch (error) {
-      // Log error but don't throw to prevent application crashes
-      debugLog(`🔌 [SAFE SYNC] Sync prevented: ${error.message}`)
-
-      // Track prevented loops for metrics
-      if (error.message.includes('already in progress') ||
-          error.message.includes('debounced') ||
-          error.message.includes('Circuit breaker open')) {
-        debugLog(`🔌 [SAFE SYNC] Infinite loop prevented in context: ${context}`)
-      }
-    }
+    // ⏭️ PHASE 1 STABILIZATION: Sync disabled to prevent 30-second timeouts
+    debugLog(`⏭️ [SAFE SYNC] Sync DISABLED for stability (context: ${context})`)
+    return
   }
 
   // CRITICAL: IMMEDIATE LOAD FROM POUCHDB ON STORE INITIALIZATION
@@ -1036,9 +1014,19 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // Enhanced watch with change detection and debouncing to prevent sync loops
   watch(tasks, (newTasks, oldTasks) => {
+    // 🔧 CRITICAL FIX (Dec 3, 2025): Clear any pending auto-save timer FIRST
+    // This prevents stale data from being saved when manual operations are in progress.
+    // Previously, returning early left old timers running with outdated task data!
+    if (tasksSaveTimer) {
+      clearTimeout(tasksSaveTimer)
+      tasksSaveTimer = null
+      debugLog('🛑 Cleared pending auto-save timer')
+    }
+
     // EMERGENCY FIX: Skip watch during manual operations to prevent conflicts
-    if (manualOperationInProgress) {
-      debugLog('⏸️ Skipping auto-save during manual operation')
+    // 🔧 FIX 3 (Dec 3, 2025): Also skip during forceSaveTask to prevent race conditions
+    if (manualOperationInProgress || forceSaveInProgress) {
+      debugLog('⏸️ Skipping auto-save during manual/force operation (timer already cleared)')
       return
     }
 
@@ -1050,9 +1038,11 @@ export const useTaskStore = defineStore('tasks', () => {
       // Compare only essential properties that matter for sync
       // 🔧 FIX (Dec 2, 2025): Added isInInbox and canvasPosition to change detection
       // Without these, canvas drag operations were never persisted to database!
+      // 🔧 FIX 2 (Dec 3, 2025): Use getTime() for Date comparison
+      // Date objects compared with !== always differ (different object references)
       return (
         newTask.id !== oldTask.id ||
-        newTask.updatedAt !== oldTask.updatedAt ||
+        newTask.updatedAt?.getTime?.() !== oldTask.updatedAt?.getTime?.() ||
         newTask.status !== oldTask.status ||
         newTask.title !== oldTask.title ||
         JSON.stringify(newTask.subtasks) !== JSON.stringify(oldTask.subtasks) ||
@@ -1919,93 +1909,104 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
-    const taskIndex = tasks.value.findIndex(task => task.id === taskId)
-    if (taskIndex !== -1) {
-      const task = tasks.value[taskIndex]
+    // 🔧 FIX (Dec 3, 2025): Set manual operation flag to prevent watcher from
+    // saving stale data during update. This was missing and caused canvas drag
+    // positions to not persist (race condition with auto-save watcher).
+    manualOperationInProgress = true
 
-      // === COMPREHENSIVE STATE TRANSITION LOGIC ===
-      // This ensures tasks never end up in inconsistent states across canvas/calendar/inbox
+    try {
+      const taskIndex = tasks.value.findIndex(task => task.id === taskId)
+      if (taskIndex !== -1) {
+        const task = tasks.value[taskIndex]
 
-      // 1. Auto-archive: When task marked as done, remove from canvas and return to inbox
-      if (updates.status === 'done' && task.status !== 'done') {
-        updates.isInInbox = true
-        updates.canvasPosition = undefined
-        debugLog(`Task "${task.title}" marked done - returned to inbox, removed from canvas`)
-      }
+        // === COMPREHENSIVE STATE TRANSITION LOGIC ===
+        // This ensures tasks never end up in inconsistent states across canvas/calendar/inbox
 
-      // 2. Canvas Position Logic: Moving task TO canvas should remove from inbox
-      if (updates.canvasPosition && !task.canvasPosition) {
-        // Task is being positioned on canvas
-        updates.isInInbox = false
-        debugLog(`Task "${task.title}" moved to canvas - removed from inbox`)
-      }
-
-      // 3. Canvas Position Removal: If task removed from canvas and no calendar instances, return to inbox
-      if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || task.instances.length === 0)) {
-        updates.isInInbox = true
-        debugLog(`Task "${task.title}" removed from canvas with no instances - returned to inbox`)
-      }
-
-      // 4. Calendar Instance Logic: Adding instances should clear canvas position and remove from inbox
-      if (updates.instances && updates.instances.length > 0) {
-        updates.isInInbox = false
-        updates.canvasPosition = undefined
-        debugLog(`Task "${task.title}" given calendar instances - removed from inbox and canvas`)
-      }
-
-      // 5. Instance Removal: If all instances removed and no canvas position, return to inbox
-      if (updates.instances !== undefined && updates.instances.length === 0) {
-        if (task.instances && task.instances.length > 0 && !task.canvasPosition) {
+        // 1. Auto-archive: When task marked as done, remove from canvas and return to inbox
+        if (updates.status === 'done' && task.status !== 'done') {
           updates.isInInbox = true
-          debugLog(`Task "${task.title}" all instances removed - returned to inbox`)
-        }
-      }
-
-      // 6. CRITICAL FIX: Automatically manage isUncategorized flag when projectId changes
-      if ('projectId' in updates) {
-        const newProjectId = updates.projectId
-        const oldProjectId = task.projectId
-        const shouldBeUncategorized = !newProjectId || newProjectId === '' || newProjectId === null || newProjectId === '1'
-
-        if (shouldBeUncategorized !== (task.isUncategorized === true)) {
-          updates.isUncategorized = shouldBeUncategorized
-          debugLog(`Task "${task.title}" isUncategorized flag set to ${shouldBeUncategorized} (projectId: ${oldProjectId} → ${newProjectId})`)
-        }
-      }
-
-      // 7. 🔧 ROUND 3 FIX: Handle explicit inbox state changes
-      if ('isInInbox' in updates) {
-        const newInInbox = updates.isInInbox
-        const oldInInbox = task.isInInbox
-
-        // Task moved to canvas (isInInbox = false) but no position specified
-        if (newInInbox === false && !updates.canvasPosition && !task.canvasPosition) {
-          updates.canvasPosition = { x: 100, y: 100 } // Default position
-          debugLog(`Task "${task.title}" moved to canvas without position - assigned default position`)
-        }
-
-        // Task moved to inbox (isInInbox = true) should clear canvas position
-        if (newInInbox === true && updates.canvasPosition === undefined) {
           updates.canvasPosition = undefined
-          debugLog(`Task "${task.title}" moved to inbox - cleared canvas position`)
+          debugLog(`Task "${task.title}" marked done - returned to inbox, removed from canvas`)
         }
-      }
 
-      // Apply the updates
-      tasks.value[taskIndex] = {
-        ...task,
-        ...updates,
-        updatedAt: new Date()
-      }
+        // 2. Canvas Position Logic: Moving task TO canvas should remove from inbox
+        if (updates.canvasPosition && !task.canvasPosition) {
+          // Task is being positioned on canvas
+          updates.isInInbox = false
+          debugLog(`Task "${task.title}" moved to canvas - removed from inbox`)
+        }
 
-      // Debug log for state verification
-      const updatedTask = tasks.value[taskIndex]
-      debugLog(`🔄 Task "${updatedTask.title}" state updated:`, {
-        status: updatedTask.status,
-        isInInbox: updatedTask.isInInbox,
-        canvasPosition: updatedTask.canvasPosition,
-        instanceCount: updatedTask.instances?.length || 0
-      })
+        // 3. Canvas Position Removal: If task removed from canvas and no calendar instances, return to inbox
+        if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || task.instances.length === 0)) {
+          updates.isInInbox = true
+          debugLog(`Task "${task.title}" removed from canvas with no instances - returned to inbox`)
+        }
+
+        // 4. Calendar Instance Logic: Adding instances should clear canvas position and remove from inbox
+        if (updates.instances && updates.instances.length > 0) {
+          updates.isInInbox = false
+          updates.canvasPosition = undefined
+          debugLog(`Task "${task.title}" given calendar instances - removed from inbox and canvas`)
+        }
+
+        // 5. Instance Removal: If all instances removed and no canvas position, return to inbox
+        if (updates.instances !== undefined && updates.instances.length === 0) {
+          if (task.instances && task.instances.length > 0 && !task.canvasPosition) {
+            updates.isInInbox = true
+            debugLog(`Task "${task.title}" all instances removed - returned to inbox`)
+          }
+        }
+
+        // 6. CRITICAL FIX: Automatically manage isUncategorized flag when projectId changes
+        if ('projectId' in updates) {
+          const newProjectId = updates.projectId
+          const oldProjectId = task.projectId
+          const shouldBeUncategorized = !newProjectId || newProjectId === '' || newProjectId === null || newProjectId === '1'
+
+          if (shouldBeUncategorized !== (task.isUncategorized === true)) {
+            updates.isUncategorized = shouldBeUncategorized
+            debugLog(`Task "${task.title}" isUncategorized flag set to ${shouldBeUncategorized} (projectId: ${oldProjectId} → ${newProjectId})`)
+          }
+        }
+
+        // 7. 🔧 ROUND 3 FIX: Handle explicit inbox state changes
+        if ('isInInbox' in updates) {
+          const newInInbox = updates.isInInbox
+          const oldInInbox = task.isInInbox
+
+          // Task moved to canvas (isInInbox = false) but no position specified
+          if (newInInbox === false && !updates.canvasPosition && !task.canvasPosition) {
+            updates.canvasPosition = { x: 100, y: 100 } // Default position
+            debugLog(`Task "${task.title}" moved to canvas without position - assigned default position`)
+          }
+
+          // Task moved to inbox (isInInbox = true) should clear canvas position
+          if (newInInbox === true && updates.canvasPosition === undefined) {
+            updates.canvasPosition = undefined
+            debugLog(`Task "${task.title}" moved to inbox - cleared canvas position`)
+          }
+        }
+
+        // Apply the updates
+        tasks.value[taskIndex] = {
+          ...task,
+          ...updates,
+          updatedAt: new Date()
+        }
+
+        // Debug log for state verification
+        const updatedTask = tasks.value[taskIndex]
+        debugLog(`🔄 Task "${updatedTask.title}" state updated:`, {
+          status: updatedTask.status,
+          isInInbox: updatedTask.isInInbox,
+          canvasPosition: updatedTask.canvasPosition,
+          instanceCount: updatedTask.instances?.length || 0
+        })
+      }
+    } finally {
+      // 🔧 FIX (Dec 3, 2025): Always reset flag after update to allow watcher to resume
+      manualOperationInProgress = false
+      debugLog('🔓 [UPDATE-TASK] Update completed, manual operation flag cleared')
     }
   }
 
@@ -2013,6 +2014,8 @@ export const useTaskStore = defineStore('tasks', () => {
   // The watcher's change detection can fail due to Vue's reactive proxy behavior
   // This function directly saves to PouchDB without waiting for the debounced watcher
   const forceSaveTask = async (taskId: string): Promise<void> => {
+    // 🔧 FIX 3 (Dec 3, 2025): Set flag to prevent watcher interference
+    forceSaveInProgress = true
     try {
       const task = tasks.value.find(t => t.id === taskId)
       if (!task) {
@@ -2046,6 +2049,9 @@ export const useTaskStore = defineStore('tasks', () => {
     } catch (error) {
       console.error('❌ forceSaveTask failed:', error)
       throw error
+    } finally {
+      // 🔧 FIX 3 (Dec 3, 2025): Always reset flag
+      forceSaveInProgress = false
     }
   }
 
@@ -2073,6 +2079,8 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // Manual operation flag to prevent watch system conflicts
   let manualOperationInProgress = false
+  // 🔧 FIX 3 (Dec 3, 2025): Force save flag to prevent watcher interference during forceSaveTask
+  let forceSaveInProgress = false
 
   const deleteTask = async (taskId: string): Promise<void> => {
     debugLog('🗑️ [EMERGENCY-FIX] deleteTask called for:', taskId)
@@ -2998,7 +3006,8 @@ export const useTaskStore = defineStore('tasks', () => {
 
           debugLog(`📋 Before execution - undo count: ${undoHistory.undoCount.value}`)
 
-          const result = undoHistory.updateTaskWithUndo(taskId, updates)
+          // 🔧 FIX (Dec 3, 2025): Added missing await - this was causing canvasPosition to not persist
+          const result = await undoHistory.updateTaskWithUndo(taskId, updates)
           debugLog('✅ Task updated with undo successfully')
           debugLog(`✅ Undo count after update: ${undoHistory.undoCount.value}`)
           debugLog(`✅ Can undo: ${undoHistory.canUndo.value}`)
@@ -3022,7 +3031,8 @@ export const useTaskStore = defineStore('tasks', () => {
 
           debugLog(`📋 Before execution - undo count: ${undoHistory.undoCount.value}`)
 
-          const result = undoHistory.deleteTaskWithUndo(taskId)
+          // 🔧 FIX (Dec 3, 2025): Added missing await
+          const result = await undoHistory.deleteTaskWithUndo(taskId)
           debugLog('✅ Task deleted with undo successfully')
           debugLog(`✅ Undo count after deletion: ${undoHistory.undoCount.value}`)
           debugLog(`✅ Can undo: ${undoHistory.canUndo.value}`)
@@ -3446,15 +3456,14 @@ export const useTaskStore = defineStore('tasks', () => {
   // FIX: Chain .then() and .catch() on a SINGLE call to avoid race condition
   initializeFromPouchDB()
     .then(async () => {
-      // PHASE 0.5: Initialize cross-tab synchronization after store initialization
-      debugLog('🔄 Initializing cross-tab synchronization after store setup...')
-      const changesHandler = await setupCrossTabSync()
-
-      // Store for cleanup if needed
-      if (changesHandler && typeof window !== 'undefined') {
-        (window as any).__crossTabSyncHandler = changesHandler
-      }
-      debugLog('✅ Cross-browser sync listener active - will reload on remote changes')
+      // ⏭️ PHASE 1 STABILIZATION: Cross-tab sync disabled for stability
+      // This was causing 30000ms timeouts and freezing the app
+      debugLog('⏭️ Cross-tab sync DISABLED for stability')
+      // const changesHandler = await setupCrossTabSync()
+      // if (changesHandler && typeof window !== 'undefined') {
+      //   (window as any).__crossTabSyncHandler = changesHandler
+      // }
+      // debugLog('✅ Cross-browser sync listener active - will reload on remote changes')
     })
     .catch(err => {
       console.error('❌ Store initialization or cross-tab sync failed:', err)

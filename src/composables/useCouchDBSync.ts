@@ -260,67 +260,11 @@ export const useCouchDBSync = () => {
   }
 
   // Phase 1.3: Enable progressive sync (read-only first)
+  // ⏭️ PHASE 1 STABILIZATION: Progressive sync disabled for stability
   const enableProgressiveSync = async () => {
-    debugLog('🚀 [PHASE 1.3] Starting progressive sync enablement...')
-
-    // Step 1: Check health before enabling
-    const healthReport = monitorSyncHealth()
-
-    if (healthReport.score < 50) {
-      console.warn(`⚠️ [PHASE 1.3] Health too low for progressive sync: ${healthReport.score}%`)
-      syncMode.value = 'disabled'
-      return false
-    }
-
-    // Step 2: Start with read-only sync
-    debugLog('📖 [PHASE 1.3] Enabling read-only sync...')
-    syncMode.value = 'read-only'
-
-    try {
-      const localDB = initializeDatabase()
-      const remoteDB = await setupRemoteConnection()
-
-      if (!remoteDB) {
-        console.warn('⚠️ [PHASE 1.3] No remote connection, staying in read-only mode')
-        return false
-      }
-
-      // Pull changes from remote first (read-only)
-      debugLog('📥 [PHASE 1.3] Pulling changes from remote (read-only sync)...')
-      await localDB.replicate.from(remoteDB, {
-        timeout: 15000,
-        batch_size: 50
-      })
-
-      debugLog('✅ [PHASE 1.3] Read-only sync complete, monitoring for conflicts...')
-
-      // Step 3: Monitor conflict rate for 2 seconds
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      const conflictRate = globalSyncCircuitBreaker.getConflictRate()
-      debugLog(`📊 [PHASE 1.3] Conflict rate: ${conflictRate.toFixed(2)}%`)
-
-      if (conflictRate > 5) {
-        console.warn(`⚠️ [PHASE 1.3] High conflict rate (${conflictRate.toFixed(2)}%), staying read-only`)
-        return false
-      }
-
-      // Step 4: Enable write-enabled sync
-      debugLog('✍️ [PHASE 1.3] Enabling write-enabled sync...')
-      syncMode.value = 'write-enabled'
-
-      // NOTE: initializeSync() is already called in init() before enableProgressiveSync()
-      // No need to call it again - just update the mode flag
-
-      debugLog('✅ [PHASE 1.3] Progressive sync fully enabled!')
-      isProgressiveSyncReady.value = true
-      return true
-
-    } catch (error) {
-      console.error('❌ [PHASE 1.3] Progressive sync enablement failed:', error)
-      syncMode.value = 'disabled'
-      return false
-    }
+    debugLog('⏭️ [PHASE 1.3] Progressive sync DISABLED for stability')
+    return false
+    // Original progressive sync code removed for stabilization
   }
 
   // Phase 1.3: Get progressive sync status
@@ -355,6 +299,15 @@ export const useCouchDBSync = () => {
 
   // Setup remote PouchDB connection
   const setupRemoteConnection = async () => {
+    // ⏭️ PHASE 1 STABILIZATION: Remote sync DISABLED to prevent 30-second timeouts
+    // The CouchDB server at 84.46.253.137:5984 is refusing connections
+    // This forces local-only mode which is stable
+    debugLog('⏭️ Remote sync DISABLED for stability - using local-only mode')
+    remoteConnected.value = false
+    return null
+
+    // Original remote connection code disabled for stabilization:
+    /*
     if (!config.remote?.url) {
       debugLog('📱 No remote URL configured, using local-only mode')
       return null
@@ -390,6 +343,7 @@ export const useCouchDBSync = () => {
       remoteConnected.value = false
       return null
     }
+    */
   }
 
   // Initialize sync between local and remote with circuit breaker protection

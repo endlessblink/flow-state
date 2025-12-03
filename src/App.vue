@@ -97,6 +97,7 @@
               :active="taskStore.activeSmartViews.size === 0 && taskStore.activeProjectIds.size === 0"
               :count="allActiveCount"
               target-type="nodate"
+              variant="teal"
               @click="selectSmartView('all_active')"
             >
               <template #icon>

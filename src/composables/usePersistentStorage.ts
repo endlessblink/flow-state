@@ -154,19 +154,23 @@ class PersistentStorage {
 
   /**
    * IndexedDB operations
+   * NOTE: Version bumped to 3 to fix "Storage object store not found" error
    */
   private async saveToIndexedDB(key: string, data: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const request = indexedDB.open('pomo-flow-backup', 2)
+      // Version 3: Ensure 'storage' object store exists
+      const request = indexedDB.open('pomo-flow-backup', 3)
 
       request.onerror = () => {
         console.error('IndexedDB error:', request.error)
         resolve(false)
       }
 
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const db = request.result
+        // Always create 'storage' object store if it doesn't exist
         if (!db.objectStoreNames.contains('storage')) {
+          console.log('📦 Creating IndexedDB "storage" object store (v3 upgrade)')
           db.createObjectStore('storage')
         }
       }
@@ -175,7 +179,9 @@ class PersistentStorage {
         const db = request.result
         // Ensure the storage object store exists before creating transaction
         if (!db.objectStoreNames.contains('storage')) {
-          console.error('Storage object store not found in IndexedDB')
+          // This shouldn't happen after v3 upgrade, but handle gracefully
+          console.warn('⚠️ Storage object store not found - may need browser refresh')
+          db.close()
           resolve(false)
           return
         }
@@ -197,23 +203,39 @@ class PersistentStorage {
 
   private async loadFromIndexedDB(key: string): Promise<string | null> {
     return new Promise((resolve) => {
-      const request = indexedDB.open('pomo-flow-backup', 2)
+      // Version 3: Match saveToIndexedDB version
+      const request = indexedDB.open('pomo-flow-backup', 3)
 
       request.onerror = () => resolve(null)
+
+      request.onupgradeneeded = (event) => {
+        const db = request.result
+        // Ensure 'storage' object store exists on read too
+        if (!db.objectStoreNames.contains('storage')) {
+          console.log('📦 Creating IndexedDB "storage" object store (v3 upgrade on read)')
+          db.createObjectStore('storage')
+        }
+      }
 
       request.onsuccess = () => {
         const db = request.result
         if (!db.objectStoreNames.contains('storage')) {
+          db.close()
           resolve(null)
           return
         }
 
-        const transaction = db.transaction(['storage'], 'readonly')
-        const store = transaction.objectStore('storage')
+        try {
+          const transaction = db.transaction(['storage'], 'readonly')
+          const store = transaction.objectStore('storage')
 
-        const getRequest = store.get(key)
-        getRequest.onsuccess = () => resolve(getRequest.result || null)
-        getRequest.onerror = () => resolve(null)
+          const getRequest = store.get(key)
+          getRequest.onsuccess = () => resolve(getRequest.result || null)
+          getRequest.onerror = () => resolve(null)
+        } catch (error) {
+          console.error('IndexedDB load error:', error)
+          resolve(null)
+        }
       }
     })
   }

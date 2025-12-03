@@ -77,6 +77,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Check, X, HelpCircle } from 'lucide-vue-next'
 
 interface Props {
   value: any
@@ -92,10 +93,10 @@ const valuesEqual = computed(() => {
   return props.value === props.compareValue
 })
 
-function getBooleanIcon(value: any): string {
-  if (value === true) return 'svg-true'
-  if (value === false) return 'svg-false'
-  return 'svg-undefined'
+function getBooleanIcon(value: any) {
+  if (value === true) return Check
+  if (value === false) return X
+  return HelpCircle
 }
 
 function getBooleanIconClass(value: any): string {

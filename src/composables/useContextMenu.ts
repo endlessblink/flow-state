@@ -1,32 +1,39 @@
 /**
- * Context Menu Positioning Composable
+ * Unified Context Menu Composable
  *
- * Provides proper viewport boundary detection and positioning for context menus:
- * - Uses actual DOM measurements instead of estimates
- * - Handles all viewport edges with proper boundary detection
- * - Accounts for scroll position
- * - Provides smooth positioning adjustments
+ * Combines event handling and positioning for context menus:
+ * - Click-outside detection and Escape key handling
+ * - Viewport boundary detection and positioning
+ * - Proper event cleanup to prevent memory leaks
  *
- * FIXED (2025-11-29): Now accepts reactive x/y values via refs or getters
+ * Consolidated from useContextMenuEvents.ts and useContextMenuPositioning.ts
  */
 
-import { computed, nextTick, ref, watch, type Ref, isRef, toValue } from 'vue'
+import { computed, nextTick, ref, watch, onMounted, onUnmounted, type Ref, isRef, toValue } from 'vue'
 
-export interface useContextMenuPositioningOptions {
+export interface UseContextMenuOptions {
   x: number | Ref<number> | (() => number)
   y: number | Ref<number> | (() => number)
-  menuRef: { value: HTMLElement | null }
   isVisible: boolean | Ref<boolean> | (() => boolean)
+  menuRef: { value: HTMLElement | null }
+  closeCallback: () => void
   offset?: { x?: number; y?: number }
   viewportPadding?: number
+  preventCloseOnMenuClick?: boolean
 }
 
-export function useContextMenuPositioning(options: useContextMenuPositioningOptions) {
+export function useContextMenu(options: UseContextMenuOptions) {
   const {
     menuRef,
+    closeCallback,
     offset = { x: 2, y: 2 },
-    viewportPadding = 8
+    viewportPadding = 8,
+    preventCloseOnMenuClick = true
   } = options
+
+  // ============================================
+  // POSITIONING LOGIC
+  // ============================================
 
   // Store reactive versions of x, y, isVisible
   const currentX = ref(toValue(options.x))
@@ -45,8 +52,6 @@ export function useContextMenuPositioning(options: useContextMenuPositioningOpti
   }
 
   const isPositioning = ref(false)
-
-  // Trigger for forcing recalculation
   const recalcTrigger = ref(0)
 
   const menuPosition = computed(() => {
@@ -60,7 +65,7 @@ export function useContextMenuPositioning(options: useContextMenuPositioningOpti
       }
     }
 
-    // Start with the click position plus offset (default position)
+    // Start with the click position plus offset
     let left = currentX.value + (offset.x || 0)
     let top = currentY.value + (offset.y || 0)
 
@@ -69,43 +74,33 @@ export function useContextMenuPositioning(options: useContextMenuPositioningOpti
       const menu = menuRef.value
       const rect = menu.getBoundingClientRect()
 
-      // Get viewport dimensions
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
 
-      // Calculate if menu would overflow right edge
       const wouldOverflowRight = left + rect.width > viewportWidth - viewportPadding
-
-      // Calculate if menu would overflow bottom edge
       const wouldOverflowBottom = top + rect.height > viewportHeight - viewportPadding
 
       // Handle horizontal positioning
       if (wouldOverflowRight) {
-        // Try to position menu to the left of the click
         const leftPosition = currentX.value - rect.width - (offset.x || 0)
         if (leftPosition >= viewportPadding) {
-          // Left position works
           left = leftPosition
         } else {
-          // Neither left nor right position works, align to right edge with padding
           left = Math.max(viewportPadding, viewportWidth - rect.width - viewportPadding)
         }
       }
 
       // Handle vertical positioning
       if (wouldOverflowBottom) {
-        // Try to position menu above the click
         const topPosition = currentY.value - rect.height - (offset.y || 0)
         if (topPosition >= viewportPadding) {
-          // Top position works
           top = topPosition
         } else {
-          // Neither top nor bottom position works, align to bottom edge with padding
           top = Math.max(viewportPadding, viewportHeight - rect.height - viewportPadding)
         }
       }
 
-      // Final safety check - ensure menu doesn't go beyond viewport edges
+      // Final safety check
       left = Math.max(viewportPadding, Math.min(left, viewportWidth - rect.width - viewportPadding))
       top = Math.max(viewportPadding, Math.min(top, viewportHeight - rect.height - viewportPadding))
     }
@@ -116,7 +111,6 @@ export function useContextMenuPositioning(options: useContextMenuPositioningOpti
     }
   })
 
-  // Update x and y values (for when new coordinates are available)
   const setPosition = (newX: number, newY: number) => {
     currentX.value = newX
     currentY.value = newY
@@ -126,23 +120,82 @@ export function useContextMenuPositioning(options: useContextMenuPositioningOpti
     if (!currentIsVisible.value || !menuRef.value) return
 
     isPositioning.value = true
-
-    // Wait for DOM to be rendered before measuring
     await nextTick()
-
-    // Force re-calculation by incrementing the trigger
     recalcTrigger.value++
-
-    // Access the computed to trigger recalculation
     menuPosition.value
-
     isPositioning.value = false
   }
 
+  // ============================================
+  // EVENT HANDLING LOGIC
+  // ============================================
+
+  // Helper to get current visibility
+  const getIsVisible = () => toValue(options.isVisible)
+
+  let clickHandler: (event: MouseEvent) => void
+  let keyHandler: (event: KeyboardEvent) => void
+  let contextMenuHandler: (event: MouseEvent) => void
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (!getIsVisible() || !menuRef.value) return
+
+    const target = event.target as Node
+    if (menuRef.value.contains(target)) {
+      return // Click inside menu, don't close
+    }
+
+    closeCallback()
+  }
+
+  const handleKeyEscape = (event: KeyboardEvent) => {
+    if (!getIsVisible()) return
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeCallback()
+    }
+  }
+
+  const handleContextMenu = (event: MouseEvent) => {
+    if (!getIsVisible()) return
+    event.preventDefault()
+  }
+
+  onMounted(() => {
+    nextTick(() => {
+      clickHandler = handleClickOutside
+      document.addEventListener('click', clickHandler, true)
+
+      keyHandler = handleKeyEscape
+      document.addEventListener('keydown', keyHandler, true)
+
+      contextMenuHandler = handleContextMenu
+      document.addEventListener('contextmenu', contextMenuHandler, true)
+    })
+  })
+
+  onUnmounted(() => {
+    if (clickHandler) {
+      document.removeEventListener('click', clickHandler, true)
+    }
+    if (keyHandler) {
+      document.removeEventListener('keydown', keyHandler, true)
+    }
+    if (contextMenuHandler) {
+      document.removeEventListener('contextmenu', contextMenuHandler, true)
+    }
+  })
+
   return {
+    // Positioning
     menuPosition,
     updatePosition,
     setPosition,
-    isPositioning
+    isPositioning,
+    // Event handlers
+    handleClickOutside,
+    handleKeyEscape,
+    handleContextMenu
   }
 }

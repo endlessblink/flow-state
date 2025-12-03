@@ -194,7 +194,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ForensicLogger, BackupSnapshot } from '@/utils/forensicBackupLogger'
-import { useSimpleBackup } from '@/composables/useSimpleBackup'
+import { backupSystem } from '@/composables/useBackupSystem'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
 
@@ -228,7 +228,8 @@ interface TestResult {
 }
 
 const taskStore = useTaskStore()
-const simpleBackup = useSimpleBackup
+// Use unified backup system (legacy singleton for compatibility)
+const simpleBackup = backupSystem
 
 // Reactive state
 const isVerifying = ref(false)

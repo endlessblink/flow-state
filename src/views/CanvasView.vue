@@ -1763,6 +1763,13 @@ const vueFlowRef = ref(null)
 
 // Sync nodes from store with parent-child relationships and collapsible sections
 const syncNodes = () => {
+  // PHASE 3 FIX: Set syncing flag to prevent re-entry and infinite loops
+  if (isSyncing.value) {
+    console.log('⏭️ [SYNC] Skipping syncNodes - already syncing')
+    return
+  }
+  isSyncing.value = true
+
   try {
     const allNodes: Node[] = []
 
@@ -1895,6 +1902,9 @@ const syncNodes = () => {
     console.error('❌ Critical error in syncNodes():', error)
     // Attempt to recover by keeping existing nodes
     console.log('🔧 Recovery: Keeping existing nodes array unchanged')
+  } finally {
+    // PHASE 3 FIX: Always reset syncing flag
+    isSyncing.value = false
   }
 }
 

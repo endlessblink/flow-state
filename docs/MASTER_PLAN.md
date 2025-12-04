@@ -164,7 +164,7 @@ Comprehensive QA testing using Playwright MCP to test user flows through entire 
 | 1. QuickSort | ✅ DONE | LOW | Was already fixed in previous session |
 | 2. Sidebar Colors | ✅ DONE | LOW | Azure colors for Today/Week/Tasks filters in App.vue |
 | 3. Canvas Context Menu | ✅ DONE | MEDIUM | Fixed excessive height with CSS :not() selector |
-| 4. Unified Inbox | ⚠️ PARTIAL | MEDIUM | CalendarView uses UnifiedInboxPanel, CanvasView still uses old InboxPanel |
+| 4. Unified Inbox | ✅ DONE | MEDIUM | Both CalendarView and CanvasView now use UnifiedInboxPanel |
 
 ### **Implementation Details**
 1. **QuickSort**: Already using `useSmartViews().isUncategorizedTask()` - no change needed
@@ -176,7 +176,7 @@ Comprehensive QA testing using Playwright MCP to test user flows through entire 
 - `src/assets/design-tokens.css` - Filter color tokens (azure, azure-dark, blue)
 - `src/components/DateDropZone.vue` - filterColor prop + color-specific styles
 - `src/App.vue` - Filter color props on DateDropZone components (lines 65-109)
-- `src/views/CanvasView.vue` - Fixed context menu CSS (still uses old InboxPanel - TODO)
+- `src/views/CanvasView.vue` - Fixed context menu CSS, swapped to UnifiedInboxPanel ✅
 - `src/views/CalendarView.vue` - Swapped to UnifiedInboxPanel ✅
 
 ### **Plan File**
@@ -201,7 +201,7 @@ Three critical bugs reported after completing the feature restoration:
 | 1 | Tasks created on canvas disappear immediately | 🔴 CRITICAL | ✅ FIXED (commit `7644828`) |
 | 2 | Tasks from other views don't appear in canvas inbox | 🟠 HIGH | 🔍 Needs user verification (may be fixed by #1) |
 | 3 | Sidebar counters don't match displayed tasks | 🟡 MEDIUM | 📋 DEFERRED - complex fix needed |
-| 4 | Canvas uses separate InboxPanel instead of UnifiedInboxPanel | 🟡 MEDIUM | 🔧 TODO - consolidation needed |
+| 4 | Canvas uses separate InboxPanel instead of UnifiedInboxPanel | 🟡 MEDIUM | ✅ FIXED - consolidated |
 
 ### **Root Cause Analysis (Bug 1 - CRITICAL)**
 

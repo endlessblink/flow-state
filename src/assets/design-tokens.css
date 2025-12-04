@@ -255,6 +255,23 @@
   --state-hover-shadow: 0 8px 16px rgba(78, 205, 196, 0.25); /* Dramatic shadow */
   --state-hover-glow: 0 0 20px rgba(78, 205, 196, 0.20); /* Glow effect */
 
+  /* Filter Selection Colors - Distinct colors for sidebar filters */
+  --filter-today-bg: rgba(139, 92, 246, 0.15);      /* Purple */
+  --filter-today-border: rgba(139, 92, 246, 0.50);
+  --filter-today-glow: 0 0 16px rgba(139, 92, 246, 0.25);
+
+  --filter-week-bg: rgba(99, 102, 241, 0.15);       /* Indigo */
+  --filter-week-border: rgba(99, 102, 241, 0.50);
+  --filter-week-glow: 0 0 16px rgba(99, 102, 241, 0.25);
+
+  --filter-tasks-bg: rgba(59, 130, 246, 0.15);      /* Blue */
+  --filter-tasks-border: rgba(59, 130, 246, 0.50);
+  --filter-tasks-glow: 0 0 16px rgba(59, 130, 246, 0.25);
+
+  --filter-uncategorized-bg: rgba(245, 158, 11, 0.12); /* Orange */
+  --filter-uncategorized-border: rgba(245, 158, 11, 0.45);
+  --filter-uncategorized-glow: 0 0 16px rgba(245, 158, 11, 0.25);
+
   /* Selection State - Calendar events and interactive elements */
   --state-selected-bg: rgba(59, 130, 246, 0.20);    /* Blue tinted background for selection */
   --state-selected-border: rgba(59, 130, 246, 0.60); /* Bright blue border for selection */

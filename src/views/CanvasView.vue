@@ -4626,26 +4626,27 @@ const handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
 
   console.log(`[handleSectionTaskDrop] Task "${taskId}" dropped on section "${section.name}" (type: ${section.type})`)
 
-  // CRITICAL: Apply section properties for smart groups
-  // This ensures "Today", "Tomorrow", etc. sections work correctly
-  applySectionPropertiesToTask(taskId, section)
-
   // Calculate position within section
   const sectionRect = (event.target as HTMLElement).getBoundingClientRect()
   const x = sectionRect.left + (slot.position?.x || 20)
   const y = sectionRect.top + (slot?.y || 60)
 
-  // Update task position
-  // CRITICAL FIX: ALL tasks on canvas need isInInbox: false to be visible
-  // The canvas filter at line 1814 requires: isInInbox === false && canvasPosition
-  // Previously, smart groups kept isInInbox: true which caused tasks to vanish
+  // CRITICAL FIX (Dec 4, 2025): Set isInInbox and canvasPosition BEFORE applying section properties
+  // Why: applySectionPropertiesToTask calls moveTaskToSmartGroup which triggers syncNodes()
+  // Problem: If isInInbox is still true when syncNodes runs, the task gets filtered out
+  // Solution: Set isInInbox: false FIRST, then apply section properties (like dueDate for "Today")
   const updates: any = {
     canvasPosition: { x, y },
     isInInbox: false  // Required for canvas visibility - applies to ALL sections
   }
 
-  console.log(`[handleSectionTaskDrop] Applying updates for task "${taskId}":`, updates)
+  console.log(`[handleSectionTaskDrop] Setting canvas position and isInInbox FIRST for task "${taskId}":`, updates)
   taskStore.updateTaskWithUndo(taskId, updates)
+
+  // NOW apply section properties (dueDate, priority, status, etc.)
+  // This ensures "Today", "Tomorrow", etc. sections work correctly
+  // The task is already marked as not-in-inbox, so syncNodes won't filter it out
+  applySectionPropertiesToTask(taskId, section)
 }
 
 const handleSectionUpdate = (data: any) => {

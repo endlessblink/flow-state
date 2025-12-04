@@ -429,7 +429,7 @@
 // Import design tokens first for better HMR support
 import '@/assets/design-tokens.css'
 
-import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme, useMessage } from 'naive-ui'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
@@ -449,6 +449,7 @@ import { provideFocusMode } from '@/composables/useFocusMode'
 import { useSidebarToggle } from '@/composables/useSidebarToggle'
 import { useFavicon } from '@/composables/useFavicon'
 import { useBrowserTab } from '@/composables/useBrowserTab'
+import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
@@ -524,6 +525,9 @@ useSidebarToggle()
 
 // Favicon management - dynamic based on timer state
 useFavicon()
+
+// Safari ITP Protection - warn users about 7-day data deletion
+const itpProtection = useSafariITPProtection()
 
 // Browser tab management - dynamic tab titles and favicons
 const browserTab = useBrowserTab()
@@ -1614,6 +1618,25 @@ onMounted(async () => {
     await timerStore.requestNotificationPermission()
   } catch (error) {
     console.warn('⚠️ Timer notification permission request failed:', error)
+  }
+
+  // Safari ITP Protection - Check and warn about potential data deletion
+  try {
+    itpProtection.initialize()
+    if (itpProtection.shouldShowWarning.value) {
+      const warningMessage = itpProtection.warningMessage.value
+      if (warningMessage) {
+        // Log warning to console
+        console.warn('🍎 [Safari ITP]', warningMessage)
+        // Show toast notification (using console for now - minimal implementation)
+        // Future: integrate with notification system for toast display
+        itpProtection.markAsWarned()
+      }
+    }
+    // Record this app load as a user interaction (resets the 7-day counter)
+    itpProtection.recordInteraction()
+  } catch (error) {
+    console.warn('⚠️ Safari ITP check failed:', error)
   }
 
   // Listen for task edit requests

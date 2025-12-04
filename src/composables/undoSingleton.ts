@@ -75,7 +75,8 @@ function initializeRefHistory() {
 }
 
 // ✅ FIXED - Functions defined at module level (outside return object)
-const performUndo = () => {
+// FIX: Made async to properly await restoreState which is an async function
+const performUndo = async () => {
   if (!refHistoryInstance || !unifiedState) return false
   console.log('🔄 Executing undo with SHARED refHistory instance...')
   refHistoryInstance.undo()
@@ -88,8 +89,8 @@ const performUndo = () => {
     console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for:', previousState.length, 'tasks')
     console.log('🔄 [VUE-REACTIVITY-FIX] Previous state sample:', previousState.slice(0, 2))
 
-    // Use the new store action that uses $patch internally
-    taskStore.restoreState(previousState)
+    // FIX: Await the async restoreState to ensure it completes before returning
+    await taskStore.restoreState(previousState)
 
     console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
     return true
@@ -97,7 +98,8 @@ const performUndo = () => {
   return false
 }
 
-const performRedo = () => {
+// FIX: Made async to properly await restoreState which is an async function
+const performRedo = async () => {
   if (!refHistoryInstance || !unifiedState) return false
   console.log('🔄 Executing redo with SHARED refHistory instance...')
   refHistoryInstance.redo()
@@ -110,8 +112,8 @@ const performRedo = () => {
     console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for redo:', nextState.length, 'tasks')
     console.log('🔄 [VUE-REACTIVITY-FIX] Next state sample:', nextState.slice(0, 2))
 
-    // Use the new store action that uses $patch internally
-    taskStore.restoreState(nextState)
+    // FIX: Await the async restoreState to ensure it completes before returning
+    await taskStore.restoreState(nextState)
 
     console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
     return true

@@ -154,7 +154,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, readonly } from 'vue'
 import { AlertCircle, AlertTriangle, AlertCircle as Info, X, RefreshCw, Database, Wifi, Shield } from 'lucide-vue-next'
-import { useCouchDBSync } from '@/composables/useCouchDBSync'
+import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
 
 interface RecoveryAction {
@@ -178,7 +178,7 @@ interface SyncAlert {
   data?: any
 }
 
-const reliableSync = useCouchDBSync()
+const reliableSync = useReliableSyncManager()
 const logger = getLogger()
 
 // Reactive state
@@ -280,14 +280,12 @@ const getAlertIcon = (level: SyncAlert['level']) => {
 // Auto-alerts from sync system
 const setupAutoAlerts = () => {
   // Watch for sync errors
-  watch(() => reliableSync.syncErrors.value, (errors, oldErrors) => {
-    const error = errors[errors.length - 1] // Get latest error
-    const oldError = oldErrors[oldErrors.length - 1]
+  watch(() => reliableSync.error.value, (error, oldError) => {
     if (error && error !== oldError) {
       addAlert({
         level: 'critical',
         title: 'Sync Error',
-        message: error.error || error.message || 'Unknown sync error',
+        message: error,
         category: 'sync',
         persistent: true,
         recoveryActions: [
@@ -316,46 +314,45 @@ const setupAutoAlerts = () => {
     }
   })
 
-  // Watch for conflicts (not available in consolidated API)
-  // watch(() => reliableSync.conflicts.value, (conflicts, oldConflicts) => {
-  //   const newConflicts = conflicts.filter(c =>
-  //     !oldConflicts.some(oc => oc.documentId === c.documentId)
-  //   )
+  // Watch for conflicts
+  watch(() => reliableSync.conflicts.value, (conflicts, oldConflicts) => {
+    const newConflicts = conflicts.filter(c =>
+      !oldConflicts.some(oc => oc.documentId === c.documentId)
+    )
 
-    // Conflicts monitoring disabled - not available in consolidated API
-    // if (newConflicts.length > 0) {
-    //   addAlert({
-    //     level: 'warning',
-    //     title: `Sync Conflicts Detected`,
-    //     message: `${newConflicts.length} sync conflict(s) detected. Review the conflicts to ensure data consistency.`,
-    //     category: 'sync',
-    //     recoveryActions: [
-    //       {
-    //         id: 'view-conflicts',
-    //         label: 'View Conflicts',
-    //         type: 'primary',
-    //         action: () => {
-    //           // Would open conflict resolution UI
-    //           console.log('Open conflict resolution UI')
-    //         }
-    //       },
-    //       {
-    //         id: 'auto-resolve',
-    //         label: 'Auto-Resolve',
-    //         type: 'secondary',
-    //         action: () => {
-    //           // Trigger auto-resolution
-    //           newConflicts.forEach(conflict => {
-    //             if (conflict.autoResolvable) {
-    //               console.log('Auto-resolving conflict:', conflict.documentId)
-    //             }
-    //           })
-    //         }
-    //       }
-    //     ]
-    //   })
-    // }
-  // })
+    if (newConflicts.length > 0) {
+      addAlert({
+        level: 'warning',
+        title: `Sync Conflicts Detected`,
+        message: `${newConflicts.length} sync conflict(s) detected. Review the conflicts to ensure data consistency.`,
+        category: 'sync',
+        recoveryActions: [
+          {
+            id: 'view-conflicts',
+            label: 'View Conflicts',
+            type: 'primary',
+            action: () => {
+              // Would open conflict resolution UI
+              console.log('Open conflict resolution UI')
+            }
+          },
+          {
+            id: 'auto-resolve',
+            label: 'Auto-Resolve',
+            type: 'secondary',
+            action: () => {
+              // Trigger auto-resolution
+              newConflicts.forEach(conflict => {
+                if (conflict.autoResolvable) {
+                  console.log('Auto-resolving conflict:', conflict.documentId)
+                }
+              })
+            }
+          }
+        ]
+      })
+    }
+  })
 
   // Watch for offline status
   watch(() => reliableSync.isOnline.value, (isOnline, wasOnline) => {
@@ -372,15 +369,8 @@ const setupAutoAlerts = () => {
 
   // Monitor sync health
   const monitorSyncHealth = () => {
-    // Use getDatabaseHealth instead of getSyncHealth (consolidated API)
-    const health = {
-      isOnline: reliableSync.isOnline.value,
-      lastSyncTime: reliableSync.lastSyncTime.value,
-      pendingChanges: reliableSync.pendingChanges.value,
-      syncStatus: reliableSync.syncStatus.value,
-      remoteConnected: reliableSync.remoteConnected.value
-    }
-    const lastSuccessfulSync = health.lastSyncTime
+    const health = reliableSync.getSyncHealth()
+    const lastSuccessfulSync = (health as any).lastSuccessfulSync
 
     if (lastSuccessfulSync) {
       const timeSinceLastSync = Date.now() - lastSuccessfulSync.getTime()

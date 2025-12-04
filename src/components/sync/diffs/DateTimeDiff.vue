@@ -82,7 +82,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { AlertTriangle, Equal, ArrowLeftRight } from 'lucide-vue-next'
 
 interface Props {
   value: any
@@ -134,10 +133,10 @@ function formatDate(date: Date | null): string {
   return date.toLocaleString()
 }
 
-function getComparisonIcon() {
-  if (!localDate.value || !remoteDate.value) return AlertTriangle
-  if (localDate.value.getTime() === remoteDate.value.getTime()) return Equal
-  return ArrowLeftRight
+function getComparisonIcon(): string {
+  if (!localDate.value || !remoteDate.value) return 'svg-warning'
+  if (localDate.value.getTime() === remoteDate.value.getTime()) return 'svg-equal'
+  return 'svg-different'
 }
 
 function getComparisonIconClass(): string {

@@ -6,8 +6,7 @@
       { 'completed': task.progress === 100 },
       { 'focused': isFocused },
       { 'selected': isSelected },
-      density ? `task-card--${density}` : '',
-      ...filterHighlightClasses
+      density ? `task-card--${density}` : ''
     ]"
     :tabindex="disabled ? -1 : 0"
     role="button"
@@ -388,12 +387,6 @@ const statusTooltip = computed(() => {
     'on_hold': 'Mark as planned'
   }
   return statusLabels[status] || 'Change status'
-})
-
-// Filter highlighting classes - disabled per user request
-const filterHighlightClasses = computed(() => {
-  // Task highlighting disabled - sidebar filters show selection, not task cards
-  return []
 })
 
 // Cycle through status instead of toggle completion

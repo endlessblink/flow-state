@@ -1,571 +1,570 @@
 /**
- * Conflict Resolution System for Cross-Browser Synchronization
- *
- * Phase 1: Implements intelligent conflict resolution with:
- * - Last-write-wins strategy with timestamp comparison
- * - Operation logging for audit trails
- * - Field-level conflict detection and resolution
- * - User-configurable resolution strategies
- * - Integration with circuit breaker health monitoring
+ * Conflict Resolution System
+ * Resolves detected conflicts using multiple strategies: Last Write Wins, Smart Merge, etc.
  */
 
-export interface ConflictRecord {
-  id: string
-  timestamp: number
-  context: string
-  localDoc: any
-  remoteDoc: any
-  resolution: 'local' | 'remote' | 'merged'
-  resolvedAt: number
-  resolutionStrategy: string
-  fieldsInConflict: string[]
-}
-
-export interface ConflictResolutionStrategy {
-  name: string
-  description: string
-  resolve: (local: any, remote: any, context: string) => Promise<{
-    resolved: any
-    strategy: string
-    fieldsInConflict: string[]
-  }>
-}
-
-export interface ConflictResolverConfig {
-  defaultStrategy: 'last-write-wins' | 'local-priority' | 'remote-priority' | 'field-level'
-  enableAuditLog: boolean
-  maxAuditLogSize: number
-  autoResolveThreshold: number // Auto-resolve if conflict confidence > threshold
-}
+import { ConflictInfo, ConflictType, ResolutionResult, ResolutionType, DocumentVersion } from '@/types/conflicts'
 
 export class ConflictResolver {
-  private config: ConflictResolverConfig
-  private auditLog: ConflictRecord[] = []
-  private strategies: Map<string, ConflictResolutionStrategy> = new Map()
+  private deviceId: string
+  private resolutionHistory: ResolutionResult[] = []
 
-  constructor(config: Partial<ConflictResolverConfig> = {}) {
-    this.config = {
-      defaultStrategy: 'last-write-wins',
-      enableAuditLog: true,
-      maxAuditLogSize: 1000,
-      autoResolveThreshold: 0.8,
-      ...config
-    }
-
-    this.initializeStrategies()
+  constructor(deviceId: string) {
+    this.deviceId = deviceId
   }
 
   /**
-   * Initialize built-in conflict resolution strategies
+   * Resolve a conflict using the most appropriate strategy
    */
-  private initializeStrategies(): void {
-    // Last Write Wins Strategy
-    this.strategies.set('last-write-wins', {
-      name: 'Last Write Wins',
-      description: 'Uses the document with the most recent timestamp',
-      resolve: async (local: any, remote: any, context: string) => {
-        const localTime = this.extractTimestamp(local)
-        const remoteTime = this.extractTimestamp(remote)
+  async resolveConflict(conflict: ConflictInfo, customStrategy?: ResolutionType): Promise<ResolutionResult> {
+    console.log(`🔧 Resolving conflict: ${conflict.documentId} (${conflict.conflictType})`)
 
-        const winner = localTime >= remoteTime ? local : remote
-        const winnerName = localTime >= remoteTime ? 'local' : 'remote'
-
-        const fieldsInConflict = this.findConflictingFields(local, remote)
-
-        return {
-          resolved: { ...winner },
-          strategy: `last-write-wins (${winnerName} won)`,
-          fieldsInConflict
-        }
-      }
-    })
-
-    // Local Priority Strategy
-    this.strategies.set('local-priority', {
-      name: 'Local Priority',
-      description: 'Always prefers the local document',
-      resolve: async (local: any, remote: any, context: string) => {
-        const fieldsInConflict = this.findConflictingFields(local, remote)
-
-        return {
-          resolved: { ...local },
-          strategy: 'local-priority',
-          fieldsInConflict
-        }
-      }
-    })
-
-    // Remote Priority Strategy
-    this.strategies.set('remote-priority', {
-      name: 'Remote Priority',
-      description: 'Always prefers the remote document',
-      resolve: async (local: any, remote: any, context: string) => {
-        const fieldsInConflict = this.findConflictingFields(local, remote)
-
-        return {
-          resolved: { ...remote },
-          strategy: 'remote-priority',
-          fieldsInConflict
-        }
-      }
-    })
-
-    // Field-Level Strategy
-    this.strategies.set('field-level', {
-      name: 'Field Level Merge',
-      description: 'Merges fields individually, preferring most recent values',
-      resolve: async (local: any, remote: any, context: string) => {
-        const fieldsInConflict = this.findConflictingFields(local, remote)
-        const merged: any = { ...local }
-
-        for (const field of fieldsInConflict) {
-          const localFieldTime = this.extractFieldTimestamp(local, field)
-          const remoteFieldTime = this.extractFieldTimestamp(remote, field)
-
-          if (remoteFieldTime > localFieldTime) {
-            merged[field] = remote[field]
-          }
-        }
-
-        return {
-          resolved: merged,
-          strategy: 'field-level-merge',
-          fieldsInConflict
-        }
-      }
-    })
-
-    console.log(`🔧 [CONFLICT RESOLVER] Initialized with ${this.strategies.size} strategies`)
-  }
-
-  /**
-   * Resolve a conflict between local and remote documents
-   */
-  async resolveConflict(
-    local: any,
-    remote: any,
-    context: string,
-    strategy?: string
-  ): Promise<{
-    resolved: any
-    record: ConflictRecord
-    confidence: number
-  }> {
-    const conflictId = this.generateConflictId(context)
-    const startTime = Date.now()
-
-    console.log(`⚔️ [CONFLICT RESOLVER] Resolving conflict: ${context} (ID: ${conflictId})`)
+    const strategy = customStrategy || this.selectStrategy(conflict)
+    let result: ResolutionResult
 
     try {
-      // Use specified strategy or default
-      const strategyName = strategy || this.config.defaultStrategy
-      const resolutionStrategy = this.strategies.get(strategyName)
-
-      if (!resolutionStrategy) {
-        throw new Error(`Unknown conflict resolution strategy: ${strategyName}`)
+      switch (strategy) {
+        case ResolutionType.LAST_WRITE_WINS:
+          result = await this.resolveLastWriteWins(conflict)
+          break
+        case ResolutionType.PRESERVE_NON_DELETED:
+          result = await this.resolvePreserveNonDeleted(conflict)
+          break
+        case ResolutionType.SMART_MERGE:
+          result = await this.resolveSmartMerge(conflict)
+          break
+        case ResolutionType.LOCAL_WINS:
+          result = await this.resolveLocalWins(conflict)
+          break
+        case ResolutionType.REMOTE_WINS:
+          result = await this.resolveRemoteWins(conflict)
+          break
+        case ResolutionType.MANUAL:
+          result = await this.createManualResolution(conflict)
+          break
+        default:
+          throw new Error(`Unknown resolution strategy: ${strategy}`)
       }
 
-      // Execute resolution strategy
-      const result = await resolutionStrategy.resolve(local, remote, context)
+      // Add resolution metadata
+      result.metadata = {
+        ...result.metadata,
+        resolutionReason: `Auto-resolved using ${strategy} strategy`
+      } as any
 
-      // Calculate confidence in the resolution
-      const confidence = this.calculateResolutionConfidence(local, remote, result)
+      // Store in history
+      this.resolutionHistory.push(result)
 
-      // Create conflict record
-      const record: ConflictRecord = {
-        id: conflictId,
-        timestamp: startTime,
-        context,
-        localDoc: this.deepClone(local),
-        remoteDoc: this.deepClone(remote),
-        resolution: strategyName.includes('local') ? 'local' :
-                   strategyName.includes('remote') ? 'remote' : 'merged',
-        resolvedAt: Date.now(),
-        resolutionStrategy: result.strategy,
-        fieldsInConflict: result.fieldsInConflict
-      }
-
-      // Log to audit trail
-      if (this.config.enableAuditLog) {
-        this.addToAuditLog(record)
-      }
-
-      console.log(`✅ [CONFLICT RESOLVER] Conflict resolved: ${context} -> ${result.strategy} (${confidence.toFixed(2)} confidence)`)
-
-      return {
-        resolved: result.resolved,
-        record,
-        confidence
-      }
+      console.log(`✅ Conflict resolved: ${conflict.documentId} -> ${strategy} (${result.winner})`)
+      return result
 
     } catch (error) {
-      console.error(`❌ [CONFLICT RESOLVER] Failed to resolve conflict: ${context}`, error)
-
-      // Fallback to last-write-wins
-      const fallbackTime = this.extractTimestamp(local)
-      const remoteTime = this.extractTimestamp(remote)
-      const fallback = fallbackTime >= remoteTime ? local : remote
-      const fallbackName = fallbackTime >= remoteTime ? 'local' : 'remote'
-
-      const record: ConflictRecord = {
-        id: conflictId,
-        timestamp: startTime,
-        context,
-        localDoc: this.deepClone(local),
-        remoteDoc: this.deepClone(remote),
-        resolution: fallbackName as 'local' | 'remote',
-        resolvedAt: Date.now(),
-        resolutionStrategy: `fallback-last-write-wins (${fallbackName} won)`,
-        fieldsInConflict: this.findConflictingFields(local, remote)
-      }
-
-      return {
-        resolved: fallback,
-        record,
-        confidence: 0.5 // Low confidence for fallback
-      }
+      console.error(`❌ Failed to resolve conflict for ${conflict.documentId}:`, error)
+      throw error
     }
   }
 
   /**
-   * Detect if there's a conflict between two documents
+   * Select the best resolution strategy for a conflict
    */
-  detectConflict(local: any, remote: any): {
-    hasConflict: boolean
-    conflictType: 'none' | 'version' | 'field' | 'delete'
-    conflictingFields: string[]
-    confidence: number
-  } {
-    if (!local && !remote) {
-      return { hasConflict: false, conflictType: 'none', conflictingFields: [], confidence: 1.0 }
-    }
-
-    if (!local && remote) {
-      return { hasConflict: true, conflictType: 'delete', conflictingFields: [], confidence: 0.9 }
-    }
-
-    if (local && !remote) {
-      return { hasConflict: true, conflictType: 'delete', conflictingFields: [], confidence: 0.9 }
-    }
-
-    // Check version conflicts
-    const localVersion = this.extractVersion(local)
-    const remoteVersion = this.extractVersion(remote)
-
-    if (localVersion !== remoteVersion) {
-      const conflictingFields = this.findConflictingFields(local, remote)
-      return {
-        hasConflict: true,
-        conflictType: 'version',
-        conflictingFields,
-        confidence: Math.min(0.8, conflictingFields.length / 10)
+  private selectStrategy(conflict: ConflictInfo): ResolutionType {
+    // If conflict is marked as auto-resolvable, use appropriate strategy
+    if (conflict.autoResolvable) {
+      switch (conflict.conflictType) {
+        case ConflictType.EDIT_DELETE:
+          return ResolutionType.PRESERVE_NON_DELETED
+        case ConflictType.MERGE_CANDIDATES:
+          return ResolutionType.SMART_MERGE
+        case ConflictType.VERSION_MISMATCH:
+          return ResolutionType.LAST_WRITE_WINS
+        default:
+          return ResolutionType.LAST_WRITE_WINS
       }
     }
 
-    // Check field conflicts
-    const conflictingFields = this.findConflictingFields(local, remote)
-    if (conflictingFields.length > 0) {
-      return {
-        hasConflict: true,
-        conflictType: 'field',
-        conflictingFields,
-        confidence: Math.min(0.7, conflictingFields.length / 15)
-      }
+    // High severity conflicts require manual intervention
+    if (conflict.severity === 'high') {
+      return ResolutionType.MANUAL
     }
 
-    return { hasConflict: false, conflictType: 'none', conflictingFields: [], confidence: 1.0 }
+    // Medium severity conflicts use last write wins
+    if (conflict.severity === 'medium') {
+      return ResolutionType.LAST_WRITE_WINS
+    }
+
+    // Low severity conflicts can be smart merged
+    return ResolutionType.SMART_MERGE
   }
 
   /**
-   * Find fields that differ between two documents
+   * Last Write Wins resolution strategy
    */
-  private findConflictingFields(local: any, remote: any): string[] {
-    const conflicts: string[] = []
-
-    if (!local || !remote) return conflicts
-
-    const localKeys = new Set(Object.keys(local))
-    const remoteKeys = new Set(Object.keys(remote))
-
-    // Check for different values in common fields
-    for (const key of localKeys) {
-      if (remoteKeys.has(key)) {
-        const localValue = this.normalizeValue(local[key])
-        const remoteValue = this.normalizeValue(remote[key])
-
-        if (!this.deepEqual(localValue, remoteValue)) {
-          conflicts.push(key)
-        }
-      }
+  private async resolveLastWriteWins(conflict: ConflictInfo): Promise<ResolutionResult> {
+    // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
+    if (!conflict.localVersion) {
+      console.warn(`⚠️ Conflict missing localVersion for ${conflict.documentId}, using remote version`)
+      return await this.resolveRemoteWins(conflict)
     }
 
-    // Check for fields that exist in one but not the other
-    for (const key of localKeys) {
-      if (!remoteKeys.has(key) && local[key] !== undefined) {
-        conflicts.push(key)
-      }
+    if (!conflict.remoteVersion) {
+      console.warn(`⚠️ Conflict missing remoteVersion for ${conflict.documentId}, using local version`)
+      return await this.resolveLocalWins(conflict)
     }
 
-    for (const key of remoteKeys) {
-      if (!localKeys.has(key) && remote[key] !== undefined) {
-        conflicts.push(key)
-      }
+    if (!conflict.localVersion.updatedAt) {
+      console.warn(`⚠️ Conflict localVersion missing updatedAt for ${conflict.documentId}, using remote version`)
+      return await this.resolveRemoteWins(conflict)
     }
 
-    return conflicts
-  }
-
-  /**
-   * Extract timestamp from a document
-   */
-  private extractTimestamp(doc: any): number {
-    if (!doc) return 0
-
-    // Try various timestamp fields
-    const timestampFields = ['updatedAt', 'modifiedAt', 'lastModified', 'timestamp', '_rev']
-
-    for (const field of timestampFields) {
-      if (doc[field]) {
-        if (typeof doc[field] === 'string') {
-          return new Date(doc[field]).getTime()
-        }
-        if (typeof doc[field] === 'number') {
-          return doc[field]
-        }
-      }
+    if (!conflict.remoteVersion.updatedAt) {
+      console.warn(`⚠️ Conflict remoteVersion missing updatedAt for ${conflict.documentId}, using local version`)
+      return await this.resolveLocalWins(conflict)
     }
 
-    // Extract from PouchDB revision
-    if (doc._rev) {
-      const revMatch = doc._rev.match(/^\d+/)
-      if (revMatch) {
-        return parseInt(revMatch[0]) * 1000 // Convert revision to approximate timestamp
-      }
-    }
+    const localTime = new Date(conflict.localVersion.updatedAt).getTime()
+    const remoteTime = new Date(conflict.remoteVersion.updatedAt).getTime()
 
-    return 0
-  }
+    const winner = localTime > remoteTime ? conflict.localVersion : conflict.remoteVersion
+    const winnerDevice: string = winner === conflict.localVersion ? 'local' : 'remote'
 
-  /**
-   * Extract timestamp from a specific field
-   */
-  private extractFieldTimestamp(doc: any, field: string): number {
-    if (!doc || !doc[field]) return 0
+    console.log(`🏆 Last Write Wins: ${conflict.documentId} -> ${winnerDevice} (${winner.updatedAt})`)
 
-    // Check for field-specific timestamp
-    const timestampField = `${field}UpdatedAt`
-    if (doc[timestampField]) {
-      return new Date(doc[timestampField]).getTime()
-    }
-
-    // Fall back to document timestamp
-    return this.extractTimestamp(doc)
-  }
-
-  /**
-   * Extract version from a document
-   */
-  private extractVersion(doc: any): number {
-    if (!doc) return 0
-
-    if (doc._rev) {
-      const revMatch = doc._rev.match(/^\d+/)
-      if (revMatch) {
-        return parseInt(revMatch[0])
-      }
-    }
-
-    if (doc.version) {
-      return typeof doc.version === 'number' ? doc.version : parseInt(doc.version) || 0
-    }
-
-    return 0
-  }
-
-  /**
-   * Calculate confidence in a resolution
-   */
-  private calculateResolutionConfidence(
-    local: any,
-    remote: any,
-    result: { resolved: any; strategy: string; fieldsInConflict: string[] }
-  ): number {
-    let confidence = 0.5 // Base confidence
-
-    // Strategy-specific confidence adjustments
-    if (result.strategy.includes('last-write-wins')) {
-      confidence += 0.3
-    } else if (result.strategy.includes('field-level')) {
-      confidence += 0.2
-    }
-
-    // Fewer conflicting fields = higher confidence
-    const fieldCount = result.fieldsInConflict.length
-    if (fieldCount <= 2) {
-      confidence += 0.2
-    } else if (fieldCount <= 5) {
-      confidence += 0.1
-    }
-
-    // Timestamp difference confidence
-    const localTime = this.extractTimestamp(local)
-    const remoteTime = this.extractTimestamp(remote)
-    const timeDiff = Math.abs(localTime - remoteTime)
-
-    if (timeDiff > 60000) { // More than 1 minute difference
-      confidence += 0.1
-    }
-
-    return Math.min(1.0, confidence)
-  }
-
-  /**
-   * Normalize a value for comparison
-   */
-  private normalizeValue(value: any): any {
-    if (value === null || value === undefined) return undefined
-    if (typeof value === 'string') return value.trim()
-    if (typeof value === 'object' && value instanceof Date) {
-      return value.toISOString()
-    }
-    return value
-  }
-
-  /**
-   * Deep equality check
-   */
-  private deepEqual(a: any, b: any): boolean {
-    return JSON.stringify(this.normalizeValue(a)) === JSON.stringify(this.normalizeValue(b))
-  }
-
-  /**
-   * Deep clone an object
-   */
-  private deepClone(obj: any): any {
-    return JSON.parse(JSON.stringify(obj))
-  }
-
-  /**
-   * Generate conflict ID
-   */
-  private generateConflictId(context: string): string {
-    return `conflict-${context}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  }
-
-  /**
-   * Add conflict record to audit log
-   */
-  private addToAuditLog(record: ConflictRecord): void {
-    this.auditLog.unshift(record)
-
-    // Keep log size under limit
-    if (this.auditLog.length > this.config.maxAuditLogSize) {
-      this.auditLog = this.auditLog.slice(0, this.config.maxAuditLogSize)
-    }
-
-    // Emit event for monitoring
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('conflict-resolved', {
-        detail: { record }
-      }))
-    }
-  }
-
-  /**
-   * Get conflict resolution statistics
-   */
-  getStatistics(): {
-    totalConflicts: number
-    resolutionBreakdown: Record<string, number>
-    averageConfidence: number
-    recentConflicts: ConflictRecord[]
-    topConflictingContexts: Array<{ context: string; count: number }>
-  } {
-    const resolutionBreakdown: Record<string, number> = {}
-    let totalConfidence = 0
-    const contextCounts: Record<string, number> = {}
-
-    for (const record of this.auditLog) {
-      resolutionBreakdown[record.resolutionStrategy] = (resolutionBreakdown[record.resolutionStrategy] || 0) + 1
-      contextCounts[record.context] = (contextCounts[record.context] || 0) + 1
-    }
-
-    const recentConflicts = this.auditLog.slice(0, 10)
-    const topConflictingContexts = Object.entries(contextCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([context, count]) => ({ context, count }))
+    // Safe access to winner.data with null fallback
+    const winnerData = winner.data || {}
+    const preservedLocalFields = winnerDevice === 'local' ? Object.keys(winnerData) : []
+    const preservedRemoteFields = winnerDevice === 'remote' ? Object.keys(winnerData) : []
 
     return {
-      totalConflicts: this.auditLog.length,
-      resolutionBreakdown,
-      averageConfidence: this.auditLog.length > 0 ? totalConfidence / this.auditLog.length : 0,
-      recentConflicts,
-      topConflictingContexts
+      documentId: conflict.documentId,
+      resolutionType: ResolutionType.LAST_WRITE_WINS,
+      resolvedDocument: this.prepareResolvedDocument(winner, conflict),
+      winner: winner.deviceId,
+      timestamp: new Date(),
+      conflictData: conflict,
+      metadata: {
+        timeDifference: Math.abs(localTime - remoteTime),
+        mergedFields: [],
+        preservedLocalFields,
+        preservedRemoteFields
+      } as any
     }
   }
 
   /**
-   * Get full audit log
+   * Preserve Non-Deleted resolution strategy
    */
-  getAuditLog(limit?: number): ConflictRecord[] {
-    if (limit) {
-      return this.auditLog.slice(0, limit)
+  private async resolvePreserveNonDeleted(conflict: ConflictInfo): Promise<ResolutionResult> {
+    // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
+    if (!conflict.localVersion) {
+      console.warn(`⚠️ Conflict missing localVersion for ${conflict.documentId}, using remote version`)
+      return await this.resolveRemoteWins(conflict)
     }
-    return [...this.auditLog]
+
+    if (!conflict.remoteVersion) {
+      console.warn(`⚠️ Conflict missing remoteVersion for ${conflict.documentId}, using local version`)
+      return await this.resolveLocalWins(conflict)
+    }
+
+    const localDeleted = conflict.localVersion._deleted || false
+    const remoteDeleted = conflict.remoteVersion._deleted || false
+
+    let winner: DocumentVersion
+    let winnerDevice: string
+
+    if (localDeleted && !remoteDeleted) {
+      winner = conflict.remoteVersion
+      winnerDevice = 'remote'
+    } else if (!localDeleted && remoteDeleted) {
+      winner = conflict.localVersion
+      winnerDevice = 'local'
+    } else if (!localDeleted && !remoteDeleted) {
+      // Neither deleted, use last write wins
+      return this.resolveLastWriteWins(conflict)
+    } else {
+      // Both deleted - keep deleted
+      winner = { ...conflict.localVersion, data: {}, _deleted: true }
+      winnerDevice = 'both_deleted'
+    }
+
+    console.log(`🗑️ Edit-Delete Resolution: ${conflict.documentId} -> ${winnerDevice}`)
+
+    // Safe access to winner.data with fallback to empty object
+    const winnerData = winner.data || {}
+
+    return {
+      documentId: conflict.documentId,
+      resolutionType: ResolutionType.PRESERVE_NON_DELETED,
+      resolvedDocument: this.prepareResolvedDocument(winner, conflict),
+      winner: winner.deviceId,
+      timestamp: new Date(),
+      conflictData: conflict,
+      metadata: {
+        winnerDevice,
+        localDeleted,
+        remoteDeleted,
+        mergedFields: [],
+        preservedLocalFields: winnerDevice === 'local' ? Object.keys(winnerData) : [],
+        preservedRemoteFields: winnerDevice === 'remote' ? Object.keys(winnerData) : []
+      } as any
+    }
   }
 
   /**
-   * Clear audit log
+   * Smart Merge resolution strategy
    */
-  clearAuditLog(): void {
-    this.auditLog = []
-    console.log(`🗑️ [CONFLICT RESOLVER] Audit log cleared`)
+  private async resolveSmartMerge(conflict: ConflictInfo): Promise<ResolutionResult> {
+    console.log(`🤝 Smart Merge: ${conflict.documentId}`)
+
+    // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
+    if (!conflict.localVersion) {
+      console.warn(`⚠️ Conflict missing localVersion for ${conflict.documentId}, using remote version`)
+      return await this.resolveRemoteWins(conflict)
+    }
+
+    if (!conflict.remoteVersion) {
+      console.warn(`⚠️ Conflict missing remoteVersion for ${conflict.documentId}, using local version`)
+      return await this.resolveLocalWins(conflict)
+    }
+
+    // Safe access to data with fallback to empty objects
+    const localData = conflict.localVersion.data || {}
+    const remoteData = conflict.remoteVersion.data || {}
+
+    const merged = this.smartMergeData(localData, remoteData)
+    const mergedFields = this.getMergedFields(localData, remoteData)
+
+    // Create merged document with combined metadata
+    const mergedVersion: DocumentVersion = {
+      _id: conflict.documentId,
+      _rev: conflict.localVersion._rev, // Keep local revision
+      data: merged,
+      updatedAt: new Date().toISOString(),
+      deviceId: 'merged',
+      version: Math.max(conflict.localVersion.version, conflict.remoteVersion.version) + 1,
+      checksum: this.calculateChecksum(merged)
+    }
+
+    return {
+      documentId: conflict.documentId,
+      resolutionType: ResolutionType.SMART_MERGE,
+      resolvedDocument: this.prepareResolvedDocument(mergedVersion, conflict),
+      winner: 'merged',
+      timestamp: new Date(),
+      conflictData: conflict,
+      metadata: {
+        mergedFields,
+        preservedLocalFields: this.getPreservedFields(conflict.localVersion.data, merged),
+        preservedRemoteFields: this.getPreservedFields(conflict.remoteVersion.data, merged),
+        // mergeComplexity: this.assessMergeComplexity(conflict)
+      }
+    }
   }
 
   /**
-   * Check if resolver is ready for cross-browser sync
+   * Local Wins resolution strategy
    */
-  isReadyForCrossBrowserSync(): boolean {
-    const stats = this.getStatistics()
+  private async resolveLocalWins(conflict: ConflictInfo): Promise<ResolutionResult> {
+    console.log(`🏠 Local Wins: ${conflict.documentId}`)
 
-    // Ready if we have reasonable resolution success rate
-    const recentResolutions = this.auditLog.slice(0, 20)
-    if (recentResolutions.length === 0) return true // No conflicts yet
+    // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
+    if (!conflict.localVersion) {
+      console.error(`❌ resolveLocalWins called with null localVersion for ${conflict.documentId}`)
+      throw new Error('Local version cannot be null')
+    }
 
-    const avgConfidence = recentResolutions.reduce((sum, record) => {
-      // Calculate approximate confidence from resolution strategy
-      let confidence = 0.5
-      if (record.resolutionStrategy.includes('last-write-wins')) confidence += 0.3
-      if (record.resolutionStrategy.includes('field-level')) confidence += 0.2
+    // Safe access to data with fallback to empty object
+    const localData = conflict.localVersion.data || {}
 
-      return sum + confidence
-    }, 0) / recentResolutions.length
+    return {
+      documentId: conflict.documentId,
+      resolutionType: ResolutionType.LOCAL_WINS,
+      resolvedDocument: this.prepareResolvedDocument(conflict.localVersion, conflict),
+      winner: conflict.localVersion.deviceId || 'local',
+      timestamp: new Date(),
+      conflictData: conflict,
+      metadata: {
+        winnerDevice: 'local' as any,
+        mergedFields: [],
+        preservedLocalFields: Object.keys(localData),
+        preservedRemoteFields: []
+      } as any
+    }
+  }
 
-    return avgConfidence >= 0.6
+  /**
+   * Remote Wins resolution strategy
+   */
+  private async resolveRemoteWins(conflict: ConflictInfo): Promise<ResolutionResult> {
+    console.log(`🌐 Remote Wins: ${conflict.documentId}`)
+
+    // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
+    if (!conflict.remoteVersion) {
+      console.error(`❌ resolveRemoteWins called with null remoteVersion for ${conflict.documentId}`)
+      throw new Error('Remote version cannot be null')
+    }
+
+    // Safe access to data with fallback to empty object
+    const remoteData = conflict.remoteVersion.data || {}
+
+    return {
+      documentId: conflict.documentId,
+      resolutionType: ResolutionType.REMOTE_WINS,
+      resolvedDocument: this.prepareResolvedDocument(conflict.remoteVersion, conflict),
+      winner: conflict.remoteVersion.deviceId || 'remote',
+      timestamp: new Date(),
+      conflictData: conflict,
+      metadata: {
+        winnerDevice: 'remote' as any,
+        mergedFields: [],
+        preservedLocalFields: [],
+        preservedRemoteFields: Object.keys(remoteData)
+      } as any
+    }
+  }
+
+  /**
+   * Create Manual resolution placeholder
+   */
+  private async createManualResolution(conflict: ConflictInfo): Promise<ResolutionResult> {
+    console.log(`👤 Manual Resolution Required: ${conflict.documentId}`)
+
+    // For now, default to last write wins but mark as requiring manual review
+    const lastWriteResult = await this.resolveLastWriteWins(conflict)
+
+    return {
+      ...lastWriteResult,
+      resolutionType: ResolutionType.MANUAL,
+      metadata: {
+        ...lastWriteResult.metadata,
+        // requiresManualReview: true,
+        // autoResolvedWithFallback: true
+      } as any
+    }
+  }
+
+  /**
+   * Smart merge data from two versions
+   */
+  private smartMergeData(localData: any, remoteData: any): any {
+    const merged = { ...localData }
+
+    // Merge fields from remote that don't conflict
+    for (const [key, remoteValue] of Object.entries(remoteData)) {
+      const localValue = merged[key]
+
+      if (localValue === undefined) {
+        // Field only exists in remote
+        merged[key] = remoteValue
+        console.log(`🔄 Added remote field ${key}: ${remoteValue}`)
+      } else if (localValue !== remoteValue) {
+        // Field exists in both with different values
+        if (this.canMergeField(key, localValue, remoteValue)) {
+          merged[key] = this.mergeFieldValues(key, localValue, remoteValue)
+          console.log(`🤝 Merged field ${key}: ${localValue} + ${remoteValue} -> ${merged[key]}`)
+        } else {
+          // Keep local value for conflicting non-mergeable fields
+          console.log(`⚠️ Conflict in field ${key}, keeping local value: ${localValue}`)
+        }
+      }
+    }
+
+    return merged
+  }
+
+  /**
+   * Check if a specific field can be merged
+   */
+  private canMergeField(key: string, localValue: any, remoteValue: any): boolean {
+    // Never merge critical identifier fields
+    const criticalFields = ['id', 'title', 'name', '_id']
+    if (criticalFields.includes(key)) {
+      return false
+    }
+
+    // Merge arrays by concatenation
+    if (Array.isArray(localValue) && Array.isArray(remoteValue)) {
+      return true
+    }
+
+    // Merge objects by combining properties
+    if (typeof localValue === 'object' && typeof remoteValue === 'object' &&
+        localValue !== null && remoteValue !== null && !Array.isArray(localValue) && !Array.isArray(remoteValue)) {
+      return true
+    }
+
+    // Don't merge conflicting primitive values
+    return false
+  }
+
+  /**
+   * Merge values for a specific field
+   */
+  private mergeFieldValues(key: string, localValue: any, remoteValue: any): any {
+    // Merge arrays (concatenate and dedupe)
+    if (Array.isArray(localValue) && Array.isArray(remoteValue)) {
+      const merged = [...localValue, ...remoteValue]
+      return Array.from(new Set(merged)) // Remove duplicates
+    }
+
+    // Merge objects (combine properties, remote takes precedence)
+    if (typeof localValue === 'object' && typeof remoteValue === 'object' &&
+        localValue !== null && remoteValue !== null && !Array.isArray(localValue) && !Array.isArray(remoteValue)) {
+      return { ...localValue, ...remoteValue }
+    }
+
+    // Default: return remote value
+    return remoteValue
+  }
+
+  /**
+   * Get list of fields that were merged
+   */
+  private getMergedFields(localData: any, remoteData: any): string[] {
+    const merged: string[] = []
+
+    for (const [key, remoteValue] of Object.entries(remoteData)) {
+      const localValue = localData[key]
+
+      if (localValue !== undefined && localValue !== remoteValue && this.canMergeField(key, localValue, remoteValue)) {
+        merged.push(key)
+      }
+    }
+
+    return merged
+  }
+
+  /**
+   * Get fields preserved from a version in the final merged result
+   */
+  private getPreservedFields(sourceData: any, mergedData: any): string[] {
+    return Object.keys(sourceData).filter(key => mergedData[key] === sourceData[key])
+  }
+
+  /**
+   * Assess merge complexity for metadata
+   */
+  private assessMergeComplexity(conflict: ConflictInfo): 'simple' | 'moderate' | 'complex' {
+    // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
+    if (!conflict.localVersion || !conflict.localVersion.data) {
+      console.warn(`⚠️ Conflict missing localVersion.data for ${conflict.documentId}, assuming simple complexity`)
+      return 'simple'
+    }
+
+    if (!conflict.remoteVersion || !conflict.remoteVersion.data) {
+      console.warn(`⚠️ Conflict missing remoteVersion.data for ${conflict.documentId}, assuming simple complexity`)
+      return 'simple'
+    }
+
+    const localFieldCount = Object.keys(conflict.localVersion.data).length
+    const remoteFieldCount = Object.keys(conflict.remoteVersion.data).length
+
+    if (localFieldCount + remoteFieldCount < 10) {
+      return 'simple'
+    } else if (localFieldCount + remoteFieldCount < 25) {
+      return 'moderate'
+    } else {
+      return 'complex'
+    }
+  }
+
+  /**
+   * Prepare resolved document with conflict metadata
+   */
+  private prepareResolvedDocument(version: DocumentVersion, conflict: ConflictInfo): any {
+    // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
+    if (!version) {
+      console.error(`❌ prepareResolvedDocument called with null version for conflict ${conflict.documentId}`)
+      throw new Error('Document version cannot be null')
+    }
+
+    if (!conflict) {
+      console.error(`❌ prepareResolvedDocument called with null conflict`)
+      throw new Error('Conflict cannot be null')
+    }
+
+    // Safe access to version.data with fallback to empty object
+    const versionData = version.data || {}
+
+    const doc = {
+      ...versionData,
+      _id: version._id || conflict.documentId,
+      _rev: version._rev,
+      updatedAt: version.updatedAt || new Date().toISOString(),
+      version: version.version || 1,
+      deviceId: version.deviceId || 'unknown'
+    }
+
+    // Add conflict resolution metadata
+    if (version.deviceId !== 'merged') {
+      doc.conflictResolvedAt = new Date().toISOString()
+      doc.conflictResolutionType = conflict.conflictType || 'unknown'
+      doc.conflictSeverity = conflict.severity || 'unknown'
+    }
+
+    return doc
+  }
+
+  /**
+   * Calculate checksum for data
+   */
+  private calculateChecksum(data: any): string {
+    try {
+      const sortedData = JSON.stringify(data, Object.keys(data || {}).sort())
+      return btoa(sortedData).slice(0, 16)
+    } catch (error) {
+      console.warn('⚠️ Error calculating checksum:', error)
+      return Date.now().toString(36)
+    }
+  }
+
+  /**
+   * Get resolution history
+   */
+  getResolutionHistory(): ResolutionResult[] {
+    return [...this.resolutionHistory]
+  }
+
+  /**
+   * Get resolution statistics
+   */
+  getResolutionStats() {
+    const stats = {
+      total: this.resolutionHistory.length,
+      byType: {} as Record<ResolutionType, number>,
+      byConflictType: {} as Record<ConflictType, number>,
+      averageResolutionTime: 0,
+      successRate: 1.0
+    }
+
+    if (this.resolutionHistory.length === 0) {
+      return stats
+    }
+
+    // Count by resolution type
+    for (const resolution of this.resolutionHistory) {
+      stats.byType[resolution.resolutionType] = (stats.byType[resolution.resolutionType] || 0) + 1
+      stats.byConflictType[resolution.conflictData.conflictType] =
+        (stats.byConflictType[resolution.conflictData.conflictType] || 0) + 1
+    }
+
+    // Calculate average resolution time (placeholder - would need timing data)
+    stats.averageResolutionTime = 150 // ms placeholder
+
+    return stats
+  }
+
+  /**
+   * Clear resolution history
+   */
+  clearHistory(): void {
+    this.resolutionHistory = []
+    console.log('🧹 Conflict resolution history cleared')
+  }
+
+  /**
+   * Get device ID
+   */
+  getDeviceId(): string {
+    return this.deviceId
   }
 }
-
-/**
- * Global conflict resolver instance
- */
-export const globalConflictResolver = new ConflictResolver({
-  defaultStrategy: 'last-write-wins',
-  enableAuditLog: true,
-  maxAuditLogSize: 1000,
-  autoResolveThreshold: 0.8
-})
-
-/**
- * Utility function to resolve conflicts using global resolver
- */
-export const resolveConflict = async (
-  local: any,
-  remote: any,
-  context: string,
-  strategy?: string
-) => {
-  return globalConflictResolver.resolveConflict(local, remote, context, strategy)
-}
-
-export default ConflictResolver

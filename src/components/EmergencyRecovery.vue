@@ -138,10 +138,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import useBackupSystem, { type BackupData } from '@/composables/useBackupSystem'
+import { useAutoBackup } from '@/composables/useAutoBackup'
+import type { BackupData } from '@/composables/useAutoBackup'
 
-// Use unified backup system
-const backup = useBackupSystem()
+const autoBackup = useAutoBackup()
 const showDetails = ref(false)
 const showRestoreDialog = ref(false)
 const selectedBackup = ref<BackupData | null>(null)
@@ -149,14 +149,9 @@ const message = ref('')
 const messageType = ref<'success' | 'error' | 'warning'>('success')
 const fileInput = ref<HTMLInputElement>()
 
-// Computed - map to unified system
-const lastBackupTime = computed(() => backup.stats.value.lastBackupTime)
-const backupHistory = computed(() => backup.backupHistory.value)
-
-// Legacy compatibility object for template
-const autoBackup = {
-  isBackupEnabled: computed(() => backup.config.value.enabled)
-}
+// Computed
+const lastBackupTime = computed(() => autoBackup.lastBackupTime.value)
+const backupHistory = computed(() => autoBackup.backupHistory.value)
 
 // Methods
 const formatTime = (timestamp: number): string => {
@@ -174,7 +169,7 @@ const showMessage = (msg: string, type: 'success' | 'error' | 'warning' = 'succe
 
 const createManualBackup = async () => {
   try {
-    await backup.createBackup('manual')
+    await autoBackup.createManualBackup()
     showMessage('✅ Manual backup created successfully', 'success')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -182,9 +177,9 @@ const createManualBackup = async () => {
   }
 }
 
-const downloadLatestBackup = async () => {
+const downloadLatestBackup = () => {
   try {
-    await backup.downloadBackup()
+    autoBackup.downloadBackup()
     showMessage('💾 Backup downloaded successfully', 'success')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -192,9 +187,9 @@ const downloadLatestBackup = async () => {
   }
 }
 
-const downloadBackup = async (backupItem: BackupData) => {
+const downloadBackup = (backup: BackupData) => {
   try {
-    await backup.downloadBackup(backupItem)
+    autoBackup.downloadBackup(backup)
     showMessage('💾 Backup downloaded successfully', 'success')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -213,7 +208,7 @@ const handleFileUpload = async (event: Event) => {
   if (!file) return
 
   try {
-    await backup.restoreFromFile(file)
+    await autoBackup.restoreFromFile(file)
     showMessage('✅ Restored from file successfully', 'success')
 
     // Reset file input
@@ -224,8 +219,8 @@ const handleFileUpload = async (event: Event) => {
   }
 }
 
-const selectBackup = (backupItem: BackupData) => {
-  selectedBackup.value = backupItem
+const selectBackup = (backup: BackupData) => {
+  selectedBackup.value = backup
 }
 
 const closeRestoreDialog = () => {
@@ -237,7 +232,7 @@ const confirmRestore = async () => {
   if (!selectedBackup.value) return
 
   try {
-    await backup.restoreBackup(selectedBackup.value)
+    await autoBackup.restoreFromBackup(selectedBackup.value)
     showMessage('✅ Restored from backup successfully', 'success')
     closeRestoreDialog()
   } catch (error) {

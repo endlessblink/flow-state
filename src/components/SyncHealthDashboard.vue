@@ -95,74 +95,6 @@
         </div>
       </div>
 
-      <!-- Phase 1: Enhanced Monitoring Section -->
-      <div class="phase1-monitoring-section">
-        <div class="monitoring-header">
-          <h4 class="section-title">
-            <Heart :size="18" />
-            Phase 1: Cross-Browser Sync Health
-          </h4>
-        </div>
-        <div class="monitoring-grid">
-          <div class="monitoring-card circuit-breaker">
-            <div class="monitoring-label">Circuit Breaker</div>
-            <div class="monitoring-value" :class="`health-${circuitBreakerHealth.toLowerCase()}`">
-              {{ circuitBreakerHealth }}
-            </div>
-            <div class="monitoring-detail">
-              {{ healthReport.score }}% health | {{ circuitBreakerMetrics.consecutiveErrors }} errors
-            </div>
-          </div>
-
-          <div class="monitoring-card progressive-sync">
-            <div class="monitoring-label">Progressive Sync</div>
-            <div class="monitoring-value" :class="{
-              'active': isProgressiveSyncEnabled,
-              'ready': !isProgressiveSyncEnabled && healthReport.isReadyForProgressiveSync,
-              'not-ready': !healthReport.isReadyForProgressiveSync
-            }">
-              {{ progressiveSyncStatus }}
-            </div>
-            <div class="monitoring-detail">
-              {{ healthReport.isReadyForProgressiveSync ? 'System ready' : 'System not ready' }}
-            </div>
-          </div>
-
-          <div class="monitoring-card conflicts-rate">
-            <div class="monitoring-label">Conflict Rate</div>
-            <div class="monitoring-value" :class="{ 'has-conflicts': conflictStats.totalConflicts > 0 }">
-              {{ conflictRate }}%
-            </div>
-            <div class="monitoring-detail">
-              {{ conflictStats.totalConflicts }} total conflicts
-            </div>
-          </div>
-
-          <div class="monitoring-card rollback-count">
-            <div class="monitoring-label">Auto-Rollbacks</div>
-            <div class="monitoring-value" :class="{ 'has-rollbacks': circuitBreakerMetrics.rollbackCount > 0 }">
-              {{ circuitBreakerMetrics.rollbackCount }}
-            </div>
-            <div class="monitoring-detail">
-              Automatic rollbacks triggered
-            </div>
-          </div>
-        </div>
-
-        <!-- Phase 1 Recommendations -->
-        <div v-if="healthReport.recommendations.length > 0" class="recommendations-card">
-          <div class="recommendations-header">
-            <AlertCircle :size="16" />
-            <span>Health Recommendations</span>
-          </div>
-          <ul class="recommendations-list">
-            <li v-for="recommendation in healthReport.recommendations" :key="recommendation">
-              {{ recommendation }}
-            </li>
-          </ul>
-        </div>
-      </div>
-
       <!-- Detailed Sections -->
       <div class="details-sections">
         <!-- Sync Operations -->
@@ -272,26 +204,6 @@
           <Heart :size="16" />
           {{ isHealthCheckRunning ? 'Running...' : 'Run Health Check' }}
         </button>
-
-        <!-- Phase 1: Progressive Sync Controls -->
-        <button
-          v-if="!isProgressiveSyncEnabled && healthReport.isReadyForProgressiveSync"
-          @click="enableProgressiveSync"
-          class="action-btn phase1-ready"
-        >
-          <TrendingUp :size="16" />
-          Enable Progressive Sync
-        </button>
-
-        <button
-          v-if="isProgressiveSyncEnabled"
-          @click="disableProgressiveSync"
-          class="action-btn phase1-active"
-        >
-          <Shield :size="16" />
-          Disable Progressive Sync
-        </button>
-
         <button
           @click="triggerManualSync"
           class="action-btn"
@@ -300,16 +212,6 @@
           <RefreshCw :size="16" />
           Manual Sync
         </button>
-
-        <button
-          @click="resetCircuitBreaker"
-          class="action-btn"
-          :disabled="circuitBreakerMetrics.isCurrentlyActive"
-        >
-          <Activity :size="16" />
-          Reset Circuit Breaker
-        </button>
-
         <button
           @click="showAdvancedSettings"
           class="action-btn"
@@ -389,10 +291,8 @@ import {
   TrendingUp,
   Wifi
 } from 'lucide-vue-next'
-import { useCouchDBSync } from '@/composables/useCouchDBSync'
+import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
-import { globalSyncCircuitBreaker } from '@/utils/syncCircuitBreaker'
-import { globalConflictResolver } from '@/utils/conflictResolver'
 
 interface DashboardSettings {
   syncInterval: number
@@ -401,7 +301,7 @@ interface DashboardSettings {
   enableCompression: boolean
 }
 
-const reliableSync = useCouchDBSync()
+const reliableSync = useReliableSyncManager()
 const logger = getLogger()
 
 // Reactive state
@@ -422,13 +322,13 @@ const settings = ref<DashboardSettings>({
 const syncStatus = computed(() => reliableSync.syncStatus.value)
 const lastSyncTime = computed(() => reliableSync.lastSyncTime.value)
 const isSyncing = computed(() => reliableSync.isSyncing.value)
-const conflicts = computed(() => []) // Conflicts not available in consolidated API
-const resolvedConflicts = computed(() => 0) // Resolutions not available in consolidated API
+const conflicts = computed(() => reliableSync.conflicts.value)
+const resolvedConflicts = computed(() => reliableSync.resolutions.value.length)
 
-// Network metrics (fallback for consolidated API)
+// Network metrics
 const networkMetrics = computed(() => {
-  // Network optimizer not available in consolidated API
-  return {
+  const optimizer = reliableSync.networkOptimizer
+  return optimizer ? optimizer.getMetrics() : {
     currentCondition: { type: 'good', bandwidth: 1000000, latency: 100, reliability: 0.95 },
     averageBandwidth: 1000000,
     averageLatency: 100,
@@ -436,16 +336,15 @@ const networkMetrics = computed(() => {
   }
 })
 
-// Sync metrics (fallback for consolidated API)
+// Sync metrics
 const syncMetrics = computed(() => {
-  // Use circuit breaker metrics instead of direct metrics
-  const circuitMetrics = reliableSync.circuitBreaker.metrics()
+  const metrics = reliableSync.metrics.value
   return {
-    totalSyncs: 0, // Not tracked in consolidated API
-    successfulSyncs: 0,
-    failedSyncs: 0, // Not available in circuit breaker metrics
-    averageSyncTime: 0,
-    successRate: 1.0
+    totalSyncs: metrics.totalSyncs,
+    successfulSyncs: metrics.successfulSyncs,
+    failedSyncs: metrics.failedSyncs,
+    averageSyncTime: metrics.averageSyncTime,
+    successRate: metrics.totalSyncs > 0 ? metrics.successfulSyncs / metrics.totalSyncs : 1.0
   }
 })
 
@@ -457,53 +356,22 @@ const dataHealth = ref('Good')
 const recentOperations = ref<any[]>([])
 const recentErrors = ref<any[]>([])
 
-// Phase 1: Enhanced monitoring state
-const circuitBreakerMetrics = ref(globalSyncCircuitBreaker.getMetrics())
-const conflictStats = ref(globalConflictResolver.getStatistics())
-const healthReport = ref(globalSyncCircuitBreaker.getHealthReport())
-const isProgressiveSyncEnabled = ref(false)
-
 // Computed properties
 const overallHealthStatus = computed(() => {
-  // Phase 1: Use circuit breaker health score as primary indicator
-  const healthScore = healthReport.value.score
-  const circuitBreakerHealth = healthReport.value.overall
-  const conflictCount = conflictStats.value.totalConflicts
-  const isReadyForProgressive = healthReport.value.isReadyForProgressiveSync
+  if (!networkMetrics.value.currentCondition) return 'Unknown'
 
-  // Enhanced health calculation with Phase 1 metrics
-  if (circuitBreakerHealth === 'critical' || healthScore < 30) return 'Critical'
-  if (circuitBreakerHealth === 'warning' || healthScore < 50 || conflictCount > 10) return 'Degraded'
-  if (!isReadyForProgressive && conflictCount > 0) return 'Warning'
+  const condition = networkMetrics.value.currentCondition.type
+  const hasConflicts = conflicts.value.length > 0
+  const successRate = syncMetrics.value.successRate
+
+  if (condition === 'offline' || successRate < 0.7) return 'Unhealthy'
+  if (condition === 'poor' || hasConflicts || successRate < 0.9) return 'Degraded'
   return 'Healthy'
 })
 
 const overallHealthClass = computed(() => {
   const status = overallHealthStatus.value.toLowerCase()
   return `health-${status}`
-})
-
-// Phase 1: Enhanced computed properties
-const circuitBreakerHealth = computed(() => {
-  const metrics = circuitBreakerMetrics.value
-  const healthScore = healthReport.value.score
-
-  if (healthScore >= 80) return 'Excellent'
-  if (healthScore >= 60) return 'Good'
-  if (healthScore >= 40) return 'Fair'
-  return 'Poor'
-})
-
-const progressiveSyncStatus = computed(() => {
-  if (isProgressiveSyncEnabled.value) return 'Active'
-  if (healthReport.value.isReadyForProgressiveSync) return 'Ready'
-  return 'Not Ready'
-})
-
-const conflictRate = computed(() => {
-  return conflictStats.value.totalConflicts > 0 ?
-    ((conflictStats.value.totalConflicts / (circuitBreakerMetrics.value.attempts || 1)) * 100).toFixed(1) :
-    '0.0'
 })
 
 const displaySyncStatus = computed(() => {
@@ -618,8 +486,7 @@ const runHealthCheck = async () => {
 
 const triggerManualSync = async () => {
   try {
-    // Use triggerSync instead of throttledSync (consolidated API)
-    await reliableSync.triggerSync()
+    await reliableSync.throttledSync('high')
   } catch (error) {
     console.error('Manual sync failed:', error)
   }
@@ -693,68 +560,6 @@ const formatBandwidth = (bytes: number): string => {
   return `${size.toFixed(1)} ${units[unitIndex]}`
 }
 
-// Phase 1.3: Enhanced progressive sync methods
-const enableProgressiveSync = async () => {
-  try {
-    console.log('🚀 [DASHBOARD] Starting Phase 1.3 progressive sync enablement...')
-
-    // Use the new Phase 1.3 progressive sync method from composable
-    const success = await reliableSync.enableProgressiveSync()
-
-    if (success) {
-      isProgressiveSyncEnabled.value = true
-      logger.info('user', 'Phase 1.3 progressive sync enabled from dashboard')
-      console.log('✅ [DASHBOARD] Progressive sync fully enabled!')
-    } else {
-      console.warn('⚠️ [DASHBOARD] Progressive sync enablement returned false - staying in current mode')
-      logger.warn('monitoring', 'Progressive sync enablement incomplete')
-    }
-
-    // Update metrics after enablement
-    updatePhase1Metrics()
-  } catch (error) {
-    console.error('Failed to enable progressive sync:', error)
-    logger.error('monitoring', 'Failed to enable progressive sync', { error: (error as Error).message })
-  }
-}
-
-const disableProgressiveSync = () => {
-  try {
-    globalSyncCircuitBreaker.disableProgressiveSync()
-    isProgressiveSyncEnabled.value = false
-    logger.info('user', 'Progressive sync disabled from dashboard')
-
-    // Show success feedback
-    console.log('🛑 Progressive sync disabled successfully')
-
-    // Update metrics after disabling
-    updatePhase1Metrics()
-  } catch (error) {
-    console.error('Failed to disable progressive sync:', error)
-    logger.error('monitoring', 'Failed to disable progressive sync', { error: (error as Error).message })
-  }
-}
-
-const resetCircuitBreaker = () => {
-  try {
-    globalSyncCircuitBreaker.reset()
-    updatePhase1Metrics()
-    logger.info('user', 'Circuit breaker reset from dashboard')
-
-    console.log('🔄 Circuit breaker reset successfully')
-  } catch (error) {
-    console.error('Failed to reset circuit breaker:', error)
-    logger.error('monitoring', 'Failed to reset circuit breaker', { error: (error as Error).message })
-  }
-}
-
-const updatePhase1Metrics = () => {
-  circuitBreakerMetrics.value = globalSyncCircuitBreaker.getMetrics()
-  conflictStats.value = globalConflictResolver.getStatistics()
-  healthReport.value = globalSyncCircuitBreaker.getHealthReport()
-  isProgressiveSyncEnabled.value = globalSyncCircuitBreaker.isReadyForProgressiveSync()
-}
-
 // Lifecycle
 onMounted(() => {
   // Load saved settings
@@ -770,35 +575,15 @@ onMounted(() => {
   // Load initial data
   loadDashboardData()
 
-  // Phase 1: Load initial metrics
-  updatePhase1Metrics()
-
   // Set up periodic refresh
   const refreshInterval = setInterval(() => {
     if (!isMinimized.value) {
       loadDashboardData()
-      updatePhase1Metrics() // Phase 1: Update metrics on refresh
     }
   }, 30000) // Refresh every 30 seconds
 
-  // Phase 1: Set up event listeners for circuit breaker and conflict events
-  const circuitBreakerHandler = (event: CustomEvent) => {
-    console.log('🏥 Circuit breaker health event:', event.detail)
-    updatePhase1Metrics()
-  }
-
-  const conflictHandler = (event: CustomEvent) => {
-    console.log('⚔️ Conflict resolved event:', event.detail)
-    updatePhase1Metrics()
-  }
-
-  window.addEventListener('sync-circuit-breaker-health', circuitBreakerHandler as EventListener)
-  window.addEventListener('conflict-resolved', conflictHandler as EventListener)
-
   onUnmounted(() => {
     clearInterval(refreshInterval)
-    window.removeEventListener('sync-circuit-breaker-health', circuitBreakerHandler as EventListener)
-    window.removeEventListener('conflict-resolved', conflictHandler as EventListener)
   })
 })
 </script>
@@ -840,14 +625,6 @@ onMounted(() => {
 
 .health-unhealthy {
   @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300;
-}
-
-.health-critical {
-  @apply bg-red-200 text-red-900 dark:bg-red-800/50 dark:text-red-200;
-}
-
-.health-warning {
-  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300;
 }
 
 .header-controls {
@@ -1091,88 +868,5 @@ onMounted(() => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-/* Phase 1: Enhanced Monitoring Styles */
-.phase1-monitoring-section {
-  @apply bg-slate-50 dark:bg-slate-700/30 rounded-lg p-4 border border-slate-200 dark:border-slate-600 mb-6;
-}
-
-.monitoring-header {
-  @apply mb-4;
-}
-
-.monitoring-grid {
-  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4;
-}
-
-.monitoring-card {
-  @apply bg-white dark:bg-slate-700 rounded-lg p-3 border border-slate-200 dark:border-slate-600;
-}
-
-.monitoring-label {
-  @apply text-xs font-medium text-slate-600 dark:text-slate-400 mb-1;
-}
-
-.monitoring-value {
-  @apply text-lg font-bold text-slate-900 dark:text-slate-100 mb-1;
-}
-
-.monitoring-detail {
-  @apply text-xs text-slate-500 dark:text-slate-400;
-}
-
-.monitoring-value.health-excellent {
-  @apply text-green-600 dark:text-green-400;
-}
-
-.monitoring-value.health-good {
-  @apply text-blue-600 dark:text-blue-400;
-}
-
-.monitoring-value.health-fair {
-  @apply text-amber-600 dark:text-amber-400;
-}
-
-.monitoring-value.health-poor {
-  @apply text-red-600 dark:text-red-400;
-}
-
-.monitoring-value.active {
-  @apply text-green-600 dark:text-green-400;
-}
-
-.monitoring-value.ready {
-  @apply text-blue-600 dark:text-blue-400;
-}
-
-.monitoring-value.not-ready {
-  @apply text-slate-600 dark:text-slate-400;
-}
-
-.monitoring-value.has-conflicts,
-.monitoring-value.has-rollbacks {
-  @apply text-amber-600 dark:text-amber-400;
-}
-
-.recommendations-card {
-  @apply bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800;
-}
-
-.recommendations-header {
-  @apply flex items-center gap-2 text-sm font-medium text-blue-800 dark:text-blue-200 mb-2;
-}
-
-.recommendations-list {
-  @apply text-sm text-blue-700 dark:text-blue-300 space-y-1;
-  list-style-position: inside;
-}
-
-.action-btn.phase1-ready {
-  @apply bg-green-600 text-white hover:bg-green-700;
-}
-
-.action-btn.phase1-active {
-  @apply bg-blue-600 text-white hover:bg-blue-700;
 }
 </style>

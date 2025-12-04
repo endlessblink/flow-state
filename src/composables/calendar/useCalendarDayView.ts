@@ -1,7 +1,6 @@
 import { ref, computed, nextTick, type Ref, type ComputedRef } from 'vue'
 import { useTaskStore, formatDateKey } from '@/stores/tasks'
-import { useCalendarCore, type CalendarEvent } from '@/composables/useCalendarCore'
-import { useCalendarDrag, type DragGhost as UnifiedDragGhost } from '@/composables/calendar/useCalendarDrag'
+import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
 
 export interface TimeSlot {
   id: string
@@ -11,31 +10,52 @@ export interface TimeSlot {
   date: string
 }
 
-// DragGhost is now imported from useCalendarDrag as UnifiedDragGhost
+export interface DragGhost {
+  visible: boolean
+  title: string
+  duration: number
+  slotIndex: number
+}
 
 /**
  * Day view specific logic for calendar
  * Handles event computation, drag-and-drop, resizing, and time slots
  */
-// snapTo15Minutes function moved to useCalendarCore.ts
+// Helper function to snap time to 15-minute intervals
+function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: number } {
+  const totalMinutes = hour * 60 + minute
+
+  // Round to nearest 15-minute interval
+  const snappedMinutes = Math.round(totalMinutes / 15) * 15
+
+  // Convert back to hour and minute
+  const snappedHour = Math.floor(snappedMinutes / 60)
+  const snappedMinute = snappedMinutes % 60
+
+  return { hour: snappedHour, minute: snappedMinute }
+}
 
 export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
-  const core = useCalendarCore()
+  const { getPriorityColor, getDateString } = useCalendarEventHelpers()
 
   const hours = Array.from({ length: 24 }, (_, i) => i)
 
-  // Use unified drag system
-  const drag = useCalendarDrag()
-  const { dragGhost, activeDropTarget } = drag
+  // Drag ghost state
+  const dragGhost = ref<DragGhost>({
+    visible: false,
+    title: '',
+    duration: 30,
+    slotIndex: 0
+  })
 
-  // Create local refs for backward compatibility
+  // Drag mode state - enable dragging by default
+  const dragMode = ref<'none' | 'shift'>('shift')
+
+  // Drag state for visual feedback
   const isDragging = ref(false)
   const draggedEventId = ref<string | null>(null)
   const activeDropSlot = ref<number | null>(null)
-
-  // Drag mode state - enable dragging by default (kept for resize compatibility)
-  const dragMode = ref<'none' | 'shift'>('shift')
 
   // Resize preview state - shows visual feedback during resize without updating store
   const resizePreview = ref<{
@@ -136,7 +156,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
               duration,
               startSlot,
               slotSpan,
-              color: core.getPriorityColor(task.priority),
+              color: getPriorityColor(task.priority),
               column: 0,
               totalColumns: 1,
               isDueDate: false
@@ -152,7 +172,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
 
       // Calculate overlapping positions with error handling
       try {
-        const positionedEvents = core.calculateOverlappingPositions(events)
+        const positionedEvents = calculateOverlappingPositions(events)
         return positionedEvents
       } catch (positionError) {
         console.warn('Error calculating overlapping positions:', positionError)
@@ -190,7 +210,76 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     return slot.slotIndex === event.startSlot
   }
 
-  // calculateOverlappingPositions function moved to useCalendarCore.ts
+  // Calculate overlapping event positions
+  const calculateOverlappingPositions = (events: CalendarEvent[]): CalendarEvent[] => {
+    if (events.length === 0) return events
+
+    const sorted = [...events].sort((a, b) => a.startSlot - b.startSlot)
+
+    // Find groups of overlapping events
+    const groups: CalendarEvent[][] = []
+    let currentGroup: CalendarEvent[] = []
+
+    sorted.forEach((event, index) => {
+      if (index === 0) {
+        currentGroup.push(event)
+        return
+      }
+
+      // Check if this event overlaps with any event in current group
+      const overlapsWithGroup = currentGroup.some(existing =>
+        event.startSlot < existing.startSlot + existing.slotSpan &&
+        event.startSlot + event.slotSpan > existing.startSlot
+      )
+
+      if (overlapsWithGroup) {
+        currentGroup.push(event)
+      } else {
+        groups.push(currentGroup)
+        currentGroup = [event]
+      }
+    })
+
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup)
+    }
+
+    // Assign columns within each group
+    groups.forEach(group => {
+      const columns: CalendarEvent[][] = []
+
+      group.forEach(event => {
+        let placed = false
+
+        for (let i = 0; i < columns.length; i++) {
+          const column = columns[i]
+          const hasCollision = column.some(existing =>
+            event.startSlot < existing.startSlot + existing.slotSpan &&
+            event.startSlot + event.slotSpan > existing.startSlot
+          )
+
+          if (!hasCollision) {
+            column.push(event)
+            event.column = i
+            placed = true
+            break
+          }
+        }
+
+        if (!placed) {
+          columns.push([event])
+          event.column = columns.length - 1
+        }
+      })
+
+      const totalColumns = columns.length
+      group.forEach(event => {
+        event.totalColumns = totalColumns
+      })
+    })
+
+    return sorted
+  }
 
   // Event styling
   const getEventStyle = (event: CalendarEvent) => {
@@ -322,8 +411,9 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     }
   }
 
-  // handleDragLeave now comes from unified drag system
-  // This prevents the "handleDragLeave is not a function" error
+  const handleDragLeave = () => {
+    // Keep ghost visible, only hide on drop
+  }
 
   const handleDrop = async (event: DragEvent, slot: TimeSlot) => {
     event.preventDefault()
@@ -349,7 +439,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
       }
 
       // Calculate snapped time with 15-minute precision
-      const snappedTime = core.snapTo15Minutes(slot.hour, slot.minute)
+      const snappedTime = snapTo15Minutes(slot.hour, slot.minute)
       const timeStr = `${snappedTime.hour.toString().padStart(2, '0')}:${snappedTime.minute.toString().padStart(2, '0')}`
 
       // DEBUG LOG: Track task drop on calendar
@@ -688,7 +778,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
 
           if (newStartTime >= 0) {
             // Snap new start time to 15-minute intervals
-            const snappedTime = core.snapTo15Minutes(
+            const snappedTime = snapTo15Minutes(
               Math.floor(newStartTime / 60),
               newStartTime % 60
             )
@@ -780,18 +870,14 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     hours,
     timeSlots,
     calendarEvents,
+    dragGhost,
+    dragMode,
 
     // Slot-based rendering (tasks inside slots)
     getTasksForSlot,
     isTaskPrimarySlot,
 
-    // Unified drag system
-    dragState: drag.dragState,
-    dragGhost: drag.dragGhost,
-    activeDropTarget: drag.activeDropTarget,
-
-    // Legacy compatibility refs
-    dragMode,
+    // Drag state for visual feedback
     isDragging,
     draggedEventId,
     activeDropSlot,
@@ -800,21 +886,17 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
     getEventStyle,
     getGhostStyle,
 
-    // Unified drag handlers
-    startDrag: drag.startDrag,
-    handleDragEnter: drag.handleDragEnter,
-    handleDragOver: drag.handleDragOver,
-    handleDrop: drag.handleDrop,
-    handleDragEnd: drag.handleDragEnd,
-    handleDragLeave: drag.handleDragLeave,
-
-    // Resize handlers (keep existing for now)
-    startResize,
-    resizePreview,
-
-    // Legacy drag handlers for backward compatibility (to be removed after full migration)
+    // Drag handlers
+    handleDragEnter,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
     handleEventDragStart,
     handleEventDragEnd,
-    handleEventMouseDown
+    handleEventMouseDown,
+
+    // Resize handlers
+    startResize,
+    resizePreview
   }
 }

@@ -8,9 +8,6 @@ import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler
 // Task store import for safe sync functionality
 let taskStore: any = null
 
-// Deduplicate undo/redo warnings - only show once per session
-let undoWarningShown = false
-
 export interface SectionFilter {
   priorities?: ('low' | 'medium' | 'high')[]
   statuses?: Task['status'][]
@@ -152,7 +149,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         .filter(task => task.isInInbox === false && task.canvasPosition)
         .map(task => ({
           id: task.id,
-          type: 'taskNode',
+          type: 'task',
           position: task.canvasPosition || { x: 100, y: 100 },
           data: {
             title: task.title,
@@ -210,7 +207,7 @@ export const useCanvasStore = defineStore('canvas', () => {
                 console.log('🗑️ Tasks deleted, removing from canvas:', deletedTaskIds)
                 // Immediately remove deleted task nodes from canvas
                 nodes.value = nodes.value.filter(node =>
-                  !deletedTaskIds.includes(node.id) || node.type !== 'taskNode'
+                  !deletedTaskIds.includes(node.id) || node.type !== 'task'
                 )
               }
             }
@@ -925,7 +922,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.createSection(section)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return createSection(section)
         }
       },
@@ -955,7 +952,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.toggleSectionVisibility(sectionId)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localToggleSectionVisibility(sectionId)
         }
       },
@@ -966,7 +963,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.toggleSectionCollapse(sectionId)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localToggleSectionCollapse(sectionId)
         }
       },
@@ -979,7 +976,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.setViewport(x, y, zoom)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localSetViewport(x, y, zoom)
         }
       },
@@ -992,7 +989,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.selectNodes(nodeIds)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localSetSelectedNodes(nodeIds)
         }
       },
@@ -1003,7 +1000,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.toggleNodeSelection(nodeId)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localToggleNodeSelection(nodeId)
         }
       },
@@ -1014,7 +1011,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.clearSelection()
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localClearSelection()
         }
       },
@@ -1027,7 +1024,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.toggleConnectMode()
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localToggleConnectMode()
         }
       },
@@ -1038,7 +1035,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.startConnection(nodeId)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localStartConnection(nodeId)
         }
       },
@@ -1049,7 +1046,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.clearConnection()
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           return localClearConnection()
         }
       },
@@ -1062,7 +1059,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.updateTaskPosition(taskId, position)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           console.warn('updateTaskPosition not available without undo/redo system')
         }
       },
@@ -1075,7 +1072,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.bulkUpdateTasks(taskIds, updates)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           console.warn('bulkUpdateTasks not available without undo/redo system')
         }
       },
@@ -1086,7 +1083,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           const actions = useUnifiedUndoRedo()
           return actions.bulkDeleteTasks(taskIds)
         } catch (error) {
-          if (!undoWarningShown) { console.warn('Undo/Redo system not available, using direct updates'); undoWarningShown = true }
+          console.warn('Undo/Redo system not available, using direct updates:', error)
           console.warn('bulkDeleteTasks not available without undo/redo system')
         }
       }

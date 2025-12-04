@@ -54,3 +54,7 @@ verification_results.json
 
 # Test results (generated)
 test-results/
+playwright-report/data/
+
+# Debug images
+docs/.debug/

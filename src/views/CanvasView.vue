@@ -190,11 +190,7 @@
         </div>
 
         <!-- Inbox Sidebar - Always visible for debugging -->
-        <UnifiedInboxPanel
-        context="canvas"
-        :show-brain-dump="true"
-        :start-collapsed="true"
-      />
+        <InboxPanel />
 
         <!-- Always show VueFlow canvas, even when empty -->
         <div>
@@ -522,8 +518,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useThrottleFn, useDebounceFn, useMagicKeys, useWindowSize, watchPausable } from '@vueuse/core'
+import { ref, computed, watch, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useThrottleFn, useDebounceFn, useMagicKeys, useWindowSize } from '@vueuse/core'
 import { Eye, EyeOff, Filter, X, Plus, Inbox } from 'lucide-vue-next'
 import { VueFlow, useVueFlow, useNodesInitialized, PanOnScrollMode } from '@vue-flow/core'
 import { useMessage } from 'naive-ui'
@@ -545,7 +541,7 @@ import { shouldUseSmartGroupLogic, getSmartGroupType } from '@/composables/useTa
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
-import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
+import InboxPanel from '@/components/canvas/InboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import BatchEditModal from '@/components/BatchEditModal.vue'
@@ -563,10 +559,6 @@ import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/minimap/dist/style.css'
 // REMOVED: Library styles were forcing circular handles
 // import '@vue-flow/node-resizer/dist/style.css'
-
-// Debug logging control - only logs in development, silent in production builds
-const DEBUG_CANVAS = import.meta.env.DEV
-const debugLog = (...args: any[]) => DEBUG_CANVAS && console.log(...args)
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -669,11 +661,9 @@ const filteredTasksWithProjectFiltering = computed(() => {
       const currentTasks = taskStore.filteredTasks
 
       // Performance optimization: Only update if actually changed
-      // 🔧 FIX (Dec 3, 2025): Include canvasPosition and isInInbox in hash
-      // Previously only used IDs, which caused stale cache when moving tasks to canvas
-      const currentHash = currentTasks.map(t =>
-        `${t.id}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}:${t.isInInbox ?? ''}`
-      ).join('|')
+      // FIX: Include isInInbox and status in hash to detect property changes (not just ID changes)
+      // Validated by Perplexity: "Vue only knows about properties you check"
+      const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}`).join('|')
       if (currentHash === lastFilteredTasksHash && lastFilteredTasks.length > 0) {
         return lastFilteredTasks
       }
@@ -777,10 +767,6 @@ if (import.meta.env.DEV) {
 const isEditModalOpen = ref(false)
 const selectedTask = ref<Task | null>(null)
 
-// 🔧 PERPLEXITY FIX (Dec 2, 2025): Guard flag removed - now using watchPausable
-// The old guard flag approach failed because watchers still triggered and queued up.
-// Now we use watchPausable() at lines 2116 and 2128 which completely pauses watchers.
-// Pause/resume functions: pauseCanvasSync, resumeCanvasSync, pauseInboxSync, resumeInboxSync
 
 // Quick Task Create Modal state
 const isQuickTaskCreateOpen = ref(false)
@@ -904,7 +890,7 @@ const resourceManager = {
 
   // Clean up all resources
   cleanup() {
-    debugLog('🧹 [MEMORY] Cleaning up CanvasView resources...')
+    console.log('🧹 [MEMORY] Cleaning up CanvasView resources...')
 
     // Clean up watchers
     this.watchers.forEach(unwatch => {
@@ -965,30 +951,30 @@ const resourceManager = {
     if (this.nodeBatcher) {
       try {
         this.nodeBatcher.clear()
-        debugLog('🧹 [BATCH] Cleared node update batcher')
+        console.log('🧹 [BATCH] Cleared node update batcher')
       } catch (error) {
         console.warn('⚠️ [BATCH] Error clearing node update batcher:', error)
       }
       this.nodeBatcher = null
     }
 
-    debugLog('✅ [MEMORY] CanvasView resource cleanup completed')
+    console.log('✅ [MEMORY] CanvasView resource cleanup completed')
   },
 
   // Enhanced Vue Flow specific cleanup
   cleanupVueFlow() {
-    debugLog('🧹 [VUE_FLOW] Starting Vue Flow cleanup...')
+    console.log('🧹 [VUE_FLOW] Starting Vue Flow cleanup...')
 
     try {
       // Clear reactive arrays first
       if (typeof nodes !== 'undefined' && nodes.value && Array.isArray(nodes.value)) {
         nodes.value.length = 0
-        debugLog('🧹 [VUE_FLOW] Cleared nodes array')
+        console.log('🧹 [VUE_FLOW] Cleared nodes array')
       }
 
       if (typeof edges !== 'undefined' && edges.value && Array.isArray(edges.value)) {
         edges.value.length = 0
-        debugLog('🧹 [VUE_FLOW] Cleared edges array')
+        console.log('🧹 [VUE_FLOW] Cleared edges array')
       }
 
       // Clear Vue Flow instance
@@ -1003,13 +989,13 @@ const resourceManager = {
           this.vueFlowInstance.clearEdges()
         }
         this.vueFlowInstance = null
-        debugLog('🧹 [VUE_FLOW] Cleared Vue Flow instance')
+        console.log('🧹 [VUE_FLOW] Cleared Vue Flow instance')
       }
 
       // Clean up any remaining DOM elements
       const remainingNodes = document.querySelectorAll('.vue-flow__node, .vue-flow__edge, .vue-flow__controls, .vue-flow__panel')
       if (remainingNodes.length > 0) {
-        debugLog(`🧹 [VUE_FLOW] Removing ${remainingNodes.length} orphaned Vue Flow DOM elements`)
+        console.log(`🧹 [VUE_FLOW] Removing ${remainingNodes.length} orphaned Vue Flow DOM elements`)
         remainingNodes.forEach((node: any) => {
           if (node.parentNode) {
             node.parentNode.removeChild(node)
@@ -1027,7 +1013,7 @@ const resourceManager = {
       console.warn('⚠️ [VUE_FLOW] Error during Vue Flow cleanup:', error)
     }
 
-    debugLog('✅ [VUE_FLOW] Vue Flow cleanup completed')
+    console.log('✅ [VUE_FLOW] Vue Flow cleanup completed')
   },
 
   // Set Vue Flow ref for cleanup
@@ -1063,7 +1049,7 @@ const executeWithFeedback = async <T>(
 
 // System restart mechanism for critical failures
 const performSystemRestart = async () => {
-  debugLog('🔄 [SYSTEM] Performing critical system restart...')
+  console.log('🔄 [SYSTEM] Performing critical system restart...')
   setOperationLoading('loading', true)
   setOperationError('System Restart', 'Restarting application...', false)
 
@@ -1088,11 +1074,11 @@ const performSystemRestart = async () => {
     })
 
     // Reinitialize database connection
-    debugLog('🔄 [SYSTEM] Reinitializing database connection...')
+    console.log('🔄 [SYSTEM] Reinitializing database connection...')
     if (typeof window !== 'undefined' && (window as any).pomoFlowDb) {
       try {
         const dbInfo = await (window as any).pomoFlowDb.info()
-        debugLog('✅ [SYSTEM] Database connection verified:', {
+        console.log('✅ [SYSTEM] Database connection verified:', {
           name: dbInfo.db_name,
           doc_count: dbInfo.doc_count
         })
@@ -1103,13 +1089,13 @@ const performSystemRestart = async () => {
     }
 
     // Resync data
-    debugLog('🔄 [SYSTEM] Resynchronizing data...')
+    console.log('🔄 [SYSTEM] Resynchronizing data...')
     await nextTick()
     syncNodes()
     syncEdges()
 
     setOperationLoading('loading', false)
-    debugLog('✅ [SYSTEM] System restart completed successfully')
+    console.log('✅ [SYSTEM] System restart completed successfully')
 
     // Show success notification
     if (window.__notificationApi) {
@@ -1604,7 +1590,7 @@ const debouncedSyncEdges = () => batchedSyncEdges('normal')
 // Setup Vue Flow edge event handlers for proper disconnection functionality
 onEdgeClick((param: EdgeMouseEvent) => {
   const { event, edge } = param
-  debugLog('🔍 COMPOSABLE HANDLER - Raw parameters:', {
+  console.log('🔍 COMPOSABLE HANDLER - Raw parameters:', {
     event,
     edge,
     eventIsEvent: event instanceof Event,
@@ -1616,7 +1602,7 @@ onEdgeClick((param: EdgeMouseEvent) => {
   // Vue Flow sometimes doesn't pass the edge parameter, extract it from event
   const actualEdge = edge || (event as any).edge || (event as any).selected?.edge
 
-  debugLog('🖱️ Edge click detected:', {
+  console.log('🖱️ Edge click detected:', {
     shiftKey: event.shiftKey,
     edgeId: actualEdge?.id,
     source: actualEdge?.source,
@@ -1636,7 +1622,7 @@ onEdgeClick((param: EdgeMouseEvent) => {
     return
   }
 
-  debugLog('✅ Successfully extracted edge data from click event:', {
+  console.log('✅ Successfully extracted edge data from click event:', {
     id: actualEdge?.id,
     source: actualEdge?.source,
     target: actualEdge?.target
@@ -1648,7 +1634,7 @@ onEdgeClick((param: EdgeMouseEvent) => {
     event.stopPropagation()
     event.stopImmediatePropagation()
 
-    debugLog('🔗 Shift+click confirmed on edge - disconnecting immediately:', actualEdge?.id)
+    console.log('🔗 Shift+click confirmed on edge - disconnecting immediately:', actualEdge?.id)
 
     // Add edge to recently removed set to prevent recreation during sync
     recentlyRemovedEdges.value.add(actualEdge?.id)
@@ -1671,7 +1657,7 @@ onEdgeClick((param: EdgeMouseEvent) => {
       // Call syncEdges but it will now respect the recentlyRemovedEdges blocklist
       syncEdges()
 
-      debugLog('✅ Shift+click task dependencies updated:', {
+      console.log('✅ Shift+click task dependencies updated:', {
         taskId: targetTask.id,
         oldDependsOn: targetTask.dependsOn,
         newDependsOn: updatedDependsOn,
@@ -1683,7 +1669,7 @@ onEdgeClick((param: EdgeMouseEvent) => {
 
 onEdgeContextMenu((param: EdgeMouseEvent) => {
   const { event, edge } = param
-  debugLog('🖱️ Edge context menu detected (composable handler):', {
+  console.log('🖱️ Edge context menu detected (composable handler):', {
     event,
     edge,
     hasEdge: !!edge,
@@ -1705,7 +1691,7 @@ onEdgeContextMenu((param: EdgeMouseEvent) => {
     return
   }
 
-  debugLog('✅ Successfully extracted edge data from context menu event:', {
+  console.log('✅ Successfully extracted edge data from context menu event:', {
     id: actualEdge?.id,
     source: actualEdge?.source,
     target: actualEdge?.target
@@ -1722,7 +1708,7 @@ onEdgeContextMenu((param: EdgeMouseEvent) => {
   closeCanvasContextMenu()
   closeNodeContextMenu()
 
-  debugLog('✅ Edge context menu should be visible at:', {
+  console.log('✅ Edge context menu should be visible at:', {
     x: edgeContextMenuX.value,
     y: edgeContextMenuY.value,
     edgeId: actualEdge.id
@@ -1769,33 +1755,6 @@ const isVueFlowMounted = ref(false)
 
 // ✅ VueFlow component reference
 const vueFlowRef = ref(null)
-
-// 🔧 ROUND 3 FIX: Sync guards to prevent race conditions
-const isCanvasSyncing = ref(false)
-const lastSyncTime = ref(0)
-
-const safeSyncNodes = () => {
-  const now = Date.now()
-  // Throttle sync to prevent race conditions
-  if (now - lastSyncTime.value < 500) {
-    debugLog('🚫 [syncNodes] Throttled - skipping rapid sync call')
-    return
-  }
-
-  if (isCanvasSyncing.value) {
-    debugLog('🚫 [syncNodes] Already syncing - skipping duplicate call')
-    return
-  }
-
-  isCanvasSyncing.value = true
-  lastSyncTime.value = now
-
-  try {
-    syncNodes()
-  } finally {
-    isCanvasSyncing.value = false
-  }
-}
 
 // Sync nodes from store with parent-child relationships and collapsible sections
 const syncNodes = () => {
@@ -1846,48 +1805,13 @@ const syncNodes = () => {
   // Safety check: ensure filteredTasks is an array
   const safeFilteredTasks = Array.isArray(filteredTasks.value) ? filteredTasks.value : []
 
-  // 🔧 ROUND 3 FIX: Validate and normalize task canvas state before filtering
-  // This prevents inconsistent states that cause tasks to disappear
-  const validatedTasks = safeFilteredTasks.map(task => {
-    const normalizedTask = { ...task }
-
-    // Ensure isInInbox is properly set based on canvasPosition
-    if (normalizedTask.isInInbox === undefined) {
-      normalizedTask.isInInbox = !normalizedTask.canvasPosition
-    }
-
-    // Validate canvasPosition coordinates
-    if (normalizedTask.canvasPosition) {
-      if (typeof normalizedTask.canvasPosition.x !== 'number' ||
-          typeof normalizedTask.canvasPosition.y !== 'number') {
-        console.warn(`⚠️ [syncNodes] Invalid canvasPosition for task ${task.id}:`, normalizedTask.canvasPosition)
-        normalizedTask.canvasPosition = undefined
-        normalizedTask.isInInbox = true
-      }
-    }
-
-    return normalizedTask
-  })
-
-  // 🚨 ROUND 4 EMERGENCY DEBUGGING: Comprehensive task analysis
-  debugLog('🚨 [EMERGENCY] Canvas Task Analysis:', {
-    totalTasks: validatedTasks.length,
-    tasksWithCanvasPos: validatedTasks.filter(t => t.canvasPosition).length,
-    tasksInInbox: validatedTasks.filter(t => t.isInInbox !== false).length,
-    tasksWithBoth: validatedTasks.filter(t => t.isInInbox === false && t.canvasPosition).length,
-    sampleTask: validatedTasks[0] ? {
-      id: validatedTasks[0].id,
-      title: validatedTasks[0].title,
-      canvasPosition: validatedTasks[0].canvasPosition,
-      isInInbox: validatedTasks[0].isInInbox
-    } : 'NO TASKS FOUND'
-  })
-
-  // 🚨 ROUND 4 EMERGENCY FIX: Show ALL tasks to restore canvas functionality
-  // COMPLEX FILTER WAS CAUSING COMPLETE CANVAS FAILURE
-  // TEMPORARILY show all tasks to identify the root cause
-  validatedTasks
-    .filter(task => task && task.id)  // EMERGENCY: ONLY filter by existence, no canvas logic
+  // 🎯 FIXED: Only show tasks that are EXPLICITLY on canvas
+  // Tasks must have BOTH:
+  // 1. isInInbox === false (explicitly moved to canvas)
+  // 2. canvasPosition (has a position on canvas)
+  // This prevents tasks from showing on canvas until dragged from inbox
+  safeFilteredTasks
+    .filter(task => task && task.id && task.isInInbox === false && task.canvasPosition)
     .forEach((task, index) => {
       // 🎯 FIXED: Handle positioning for tasks with and without canvasPosition
       let position
@@ -1912,7 +1836,7 @@ const syncNodes = () => {
     })
 
     // 🔍 DEBUG: Log section filtering decision
-    debugLog('🔍 [syncNodes] Task filtering:', {
+    console.log('🔍 [syncNodes] Task filtering:', {
       taskId: task.id,
       taskTitle: task.title,
       sectionId: section?.id,
@@ -1963,19 +1887,7 @@ const syncNodes = () => {
   })
 
   nodes.value = validNodes
-  debugLog(`🔄 [SYNC] Updated nodes: ${validNodes.length} valid nodes`)
-
-  // 🚨 ROUND 4 EMERGENCY DEBUGGING: Vue Flow state analysis
-  debugLog('🚨 [EMERGENCY] Vue Flow State:', {
-    nodesCount: nodes.value.length,
-    edgesCount: edges.value.length,
-    sampleNode: nodes.value[0] ? {
-      id: nodes.value[0].id,
-      type: nodes.value[0].type,
-      position: nodes.value[0].position,
-      data: nodes.value[0].data?.title || 'No title'
-    } : 'NO NODES'
-  })
+  console.log(`🔄 [SYNC] Updated nodes: ${validNodes.length} valid nodes`)
 
   // Clean up any stale Vue Flow DOM nodes after sync
   nextTick(() => {
@@ -1988,7 +1900,7 @@ const syncNodes = () => {
   } catch (error) {
     console.error('❌ Critical error in syncNodes():', error)
     // Attempt to recover by keeping existing nodes
-    debugLog('🔧 Recovery: Keeping existing nodes array unchanged')
+    console.log('🔧 Recovery: Keeping existing nodes array unchanged')
   }
 }
 
@@ -2015,7 +1927,7 @@ const syncEdges = () => {
 
     const taskIds = new Set(tasks.map(t => t.id))
 
-    debugLog('🔄 syncEdges() called - recentlyRemovedEdges:', Array.from(recentlyRemovedEdges.value))
+    console.log('🔄 syncEdges() called - recentlyRemovedEdges:', Array.from(recentlyRemovedEdges.value))
 
     tasks.forEach(task => {
       if (task.dependsOn && task.dependsOn.length > 0) {
@@ -2038,7 +1950,7 @@ const syncEdges = () => {
 
           // Skip creating edge if it was recently removed by user action
           if (recentlyRemovedEdges.value.has(edgeId)) {
-            debugLog(`🚫 Skipping edge recreation (recently removed): ${edgeId}`)
+            console.log(`🚫 Skipping edge recreation (recently removed): ${edgeId}`)
             return
           }
 
@@ -2048,7 +1960,7 @@ const syncEdges = () => {
           // Only create edge if both source and target tasks exist and are on canvas
           if (sourceTask && targetTask &&
               sourceTask.canvasPosition && targetTask.canvasPosition) {
-            debugLog(`✅ Creating edge: ${edgeId}`)
+            console.log(`✅ Creating edge: ${edgeId}`)
             allEdges.push({
               id: edgeId,
               source: depId,
@@ -2079,12 +1991,12 @@ const syncEdges = () => {
       return true
     })
 
-    debugLog(`📊 syncEdges() complete - created ${validEdges.length} edges, blocked ${recentlyRemovedEdges.value.size} edges`)
+    console.log(`📊 syncEdges() complete - created ${validEdges.length} edges, blocked ${recentlyRemovedEdges.value.size} edges`)
     edges.value = validEdges
   } catch (error) {
     console.error('❌ Critical error in syncEdges():', error)
     // Attempt to recover by keeping existing edges
-    debugLog('🔧 Recovery: Keeping existing edges array unchanged')
+    console.log('🔧 Recovery: Keeping existing edges array unchanged')
   }
 }
 
@@ -2111,32 +2023,35 @@ resourceManager.addWatcher(
   }, { deep: true })
 )
 
-// 🔧 PERPLEXITY FIX (Dec 2, 2025): Use watchPausable instead of guard flag
-// This completely pauses the watcher during drop operations, preventing stale data sync
-// Previous guard flag approach failed because watchers still triggered and queued up
-
-// Pausable watcher for canvasPosition changes (low priority - only visual)
-const { pause: pauseCanvasSync, resume: resumeCanvasSync, stop: stopCanvasSync } = watchPausable(
-  () => taskStore.tasks.map(t => ({ id: t.id, canvasPosition: t.canvasPosition })),
-  () => {
-    debugLog('🔄 [WATCHER] canvasPosition changed - triggering low priority sync')
+// CPU Optimization: Watch task position changes with smart batching (low priority - only visual)
+resourceManager.addWatcher(
+  watch(() => taskStore.tasks.map(t => ({ id: t.id, canvasPosition: t.canvasPosition })), () => {
     batchedSyncNodes('low')
-  },
-  { deep: true }
+  }, { deep: true })
 )
-resourceManager.addWatcher(stopCanvasSync)
 
-// Pausable watcher for isInInbox changes (high priority - affects inbox panel)
+// FIX: Watch for isInInbox changes - triggers sync when tasks move between inbox and canvas
+// This was missing and caused tasks dragged from inbox to not appear until refresh
 // Using flush: 'post' to ensure sync runs after Vue has processed all reactive updates
-const { pause: pauseInboxSync, resume: resumeInboxSync, stop: stopInboxSync } = watchPausable(
-  () => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })),
-  () => {
-    debugLog('🔄 [WATCHER] isInInbox changed - triggering high priority sync')
+resourceManager.addWatcher(
+  watch(() => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })), () => {
+    console.log('🔄 [WATCHER] isInInbox changed - triggering high priority sync')
     batchedSyncNodes('high')
-  },
-  { deep: true, flush: 'post' }
+  }, { deep: true, flush: 'post' })
 )
-resourceManager.addWatcher(stopInboxSync)
+
+// FIX: Watch for task visual property changes (title, status, priority)
+// Using hash-based approach (validated by Perplexity as more efficient than deep:true on objects)
+// NO deep:true needed - single string comparison, zero garbage collection
+resourceManager.addWatcher(
+  watch(
+    () => taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}`).join('|'),
+    () => {
+      batchedSyncNodes('normal')
+    },
+    { flush: 'post' }
+  )
+)
 
 // Watch for canvas store selection changes and sync with Vue Flow nodes - FIXED to prevent disconnection
 // NOTE: Console logs reduced to fix 0-2 FPS issue
@@ -2173,12 +2088,12 @@ resourceManager.addWatcher(
 
 // Pre-alignment state validation function
 const validateAlignmentState = (minNodes: number = 2): { canProceed: boolean; reason?: string } => {
-  debugLog('🔍 Validating alignment state...')
-  debugLog(`  Vue Flow mounted: ${isVueFlowMounted.value}`)
-  debugLog(`  Vue Flow ready: ${isVueFlowReady.value}`)
-  debugLog(`  Canvas ready: ${isCanvasReady.value}`)
-  debugLog(`  Total nodes: ${nodes.value.length}`)
-  debugLog(`  Selected in store: ${canvasStore.selectedNodeIds.length}`)
+  console.log('🔍 Validating alignment state...')
+  console.log(`  Vue Flow mounted: ${isVueFlowMounted.value}`)
+  console.log(`  Vue Flow ready: ${isVueFlowReady.value}`)
+  console.log(`  Canvas ready: ${isCanvasReady.value}`)
+  console.log(`  Total nodes: ${nodes.value.length}`)
+  console.log(`  Selected in store: ${canvasStore.selectedNodeIds.length}`)
 
   // Check if Vue Flow component is mounted (this is now less restrictive than waiting for viewport centering)
   if (!isVueFlowMounted.value) {
@@ -2206,7 +2121,7 @@ const validateAlignmentState = (minNodes: number = 2): { canProceed: boolean; re
 
   // Check selection synchronization
   const vueFlowSelected = nodes.value.filter(n => (n as any).selected && n.type === 'taskNode')
-  debugLog(`  Selected in Vue Flow: ${vueFlowSelected.length}`)
+  console.log(`  Selected in Vue Flow: ${vueFlowSelected.length}`)
 
   if (vueFlowSelected.length < minNodes) {
     return {
@@ -2222,7 +2137,7 @@ const validateAlignmentState = (minNodes: number = 2): { canProceed: boolean; re
     matched: vueFlowSelected.filter(n => canvasStore.selectedNodeIds.includes(n.id)).length
   }
 
-  debugLog('  Selection sync info:', syncInfo)
+  console.log('  Selection sync info:', syncInfo)
 
   if (syncInfo.matched !== syncInfo.storeSelection) {
     return {
@@ -2231,7 +2146,7 @@ const validateAlignmentState = (minNodes: number = 2): { canProceed: boolean; re
     }
   }
 
-  debugLog('✅ Alignment state validation passed')
+  console.log('✅ Alignment state validation passed')
   return { canProceed: true }
 }
 
@@ -2245,7 +2160,7 @@ resourceManager.addWatcher(
 
     // Case 1: Nodes exist and are all initialized - center viewport
     if (initialized && nodeCount > 0) {
-      debugLog('✅ All nodes initialized with dimensions, auto-centering viewport')
+      console.log('✅ All nodes initialized with dimensions, auto-centering viewport')
       // Position viewport instantly (duration: 0 prevents visible animation/flash)
       vueFlowFitView({ padding: 0.2, duration: 0 })
       hasInitialFit.value = true
@@ -2253,56 +2168,19 @@ resourceManager.addWatcher(
       await nextTick()
       isCanvasReady.value = true
       isVueFlowReady.value = true
-      debugLog('✅ Canvas ready and centered on tasks')
-      debugLog('🎯 Vue Flow ready for alignment operations')
+      console.log('✅ Canvas ready and centered on tasks')
+      console.log('🎯 Vue Flow ready for alignment operations')
     }
     // Case 2: No nodes exist - still mark canvas as ready (empty canvas is valid)
     else if (nodeCount === 0 && !isCanvasReady.value) {
-      debugLog('📭 Canvas has no nodes - marking as ready (empty canvas)')
+      console.log('📭 Canvas has no nodes - marking as ready (empty canvas)')
       hasInitialFit.value = true
       isCanvasReady.value = true
       isVueFlowReady.value = true
-      debugLog('✅ Empty canvas ready for interaction')
-    }
-    // 🔧 FIX (Dec 3, 2025): Case 3 - Break chicken-and-egg timing issue
-    // PROBLEM: VueFlow has v-if="isCanvasReady" so it won't render until isCanvasReady=true
-    // BUT nodesInitialized only becomes true AFTER VueFlow renders and measures nodes
-    // RESULT: Canvas stuck until 3-second timeout because neither Case 1 nor Case 2 fires
-    // SOLUTION: Enable rendering when nodes exist, even if not yet initialized
-    else if (nodeCount > 0 && !initialized && !isCanvasReady.value) {
-      debugLog('🔄 [FIX] Nodes exist but pending initialization - enabling canvas rendering')
-      isCanvasReady.value = true
-      // Note: hasInitialFit and isVueFlowReady stay false until Case 1 fires after VueFlow renders
+      console.log('✅ Empty canvas ready for interaction')
     }
   }, { immediate: true })
 )
-
-// 🔧 PERPLEXITY FIX (Dec 3, 2025): watchEffect to catch initial task loading from PouchDB
-// PROBLEM: watch() fires BEFORE tasks load, then doesn't fire again when tasks populate
-// SOLUTION: watchEffect automatically tracks taskStore.tasks and fires on ANY change
-// This catches the initial load timing that watch() misses
-watchEffect(() => {
-  // Only sync when Vue Flow is ready
-  if (!isVueFlowReady.value) {
-    debugLog('⏳ [WATCHEFFECT] Vue Flow not ready, skipping sync')
-    return
-  }
-
-  // Track taskStore.tasks - fires on initial load AND changes
-  const taskCount = taskStore.tasks?.length ?? 0
-  // 🔧 FIX (Dec 3, 2025): Removed `&& !t.isInInbox` condition
-  // Tasks with canvasPosition should ALWAYS be rendered on canvas, regardless of isInInbox state
-  // The isInInbox flag controls inbox panel visibility, not canvas visibility
-  const tasksWithCanvasPos = taskStore.tasks?.filter(t => t.canvasPosition).length ?? 0
-
-  console.log(`📋 [WATCHEFFECT] Tasks changed: total=${taskCount}, withCanvasPos=${tasksWithCanvasPos}`)
-
-  // Only sync if there are tasks with canvas positions that should be shown
-  if (tasksWithCanvasPos > 0) {
-    console.log('📋 [WATCHEFFECT] Triggering sync for canvas tasks')
-    batchedSyncNodes('high')
-  }
-})
 
 // 🚀 REMOVED: Auto-positioning watcher that was forcing all tasks onto canvas
 // OLD: watch(filteredTasks, () => { throttledSyncNodes() }, { deep: true })
@@ -2357,7 +2235,7 @@ resourceManager.addWatcher(
 
 // Helper: Collect matching inbox tasks into a section
 const collectTasksForSection = (sectionId: string) => {
-  debugLog(`[Auto-Collect] 🧲 Magnet clicked for section: ${sectionId}`)
+  console.log(`[Auto-Collect] 🧲 Magnet clicked for section: ${sectionId}`)
 
   const section = canvasStore.sections.find(s => s.id === sectionId)
   if (!section) {
@@ -2365,7 +2243,7 @@ const collectTasksForSection = (sectionId: string) => {
     return
   }
 
-  debugLog(`[Auto-Collect] Section:`, {
+  console.log(`[Auto-Collect] Section:`, {
     name: section.name,
     type: section.type,
     propertyValue: section.propertyValue,
@@ -2377,7 +2255,7 @@ const collectTasksForSection = (sectionId: string) => {
     t.isInInbox === true && t.status !== 'done'
   ) : []
 
-  debugLog(`[Auto-Collect] Inbox has ${inboxTasks.length} tasks:`, inboxTasks.map(t => ({
+  console.log(`[Auto-Collect] Inbox has ${inboxTasks.length} tasks:`, inboxTasks.map(t => ({
     title: t.title,
     priority: t.priority,
     status: t.status
@@ -2386,16 +2264,16 @@ const collectTasksForSection = (sectionId: string) => {
   // Find tasks that match this section's criteria
   const matchingTasks = inboxTasks.filter(task => {
     const matches = canvasStore.taskMatchesSection(task, section)
-    debugLog(`[Auto-Collect]   "${task.title}": priority=${task.priority}, wants=${section.propertyValue}, match=${matches}`)
+    console.log(`[Auto-Collect]   "${task.title}": priority=${task.priority}, wants=${section.propertyValue}, match=${matches}`)
     return matches
   })
 
   if (matchingTasks.length === 0) {
-    debugLog(`[Auto-Collect] ⚠️ No matching tasks`)
+    console.log(`[Auto-Collect] ⚠️ No matching tasks`)
     return
   }
 
-  debugLog(`[Auto-Collect] ✓ Placing ${matchingTasks.length} tasks`)
+  console.log(`[Auto-Collect] ✓ Placing ${matchingTasks.length} tasks`)
 
   // Auto-place matching tasks in section
   matchingTasks.forEach((task, index) => {
@@ -2405,7 +2283,7 @@ const collectTasksForSection = (sectionId: string) => {
     const newX = x + 20 + (col * 220)
     const newY = y + 60 + (row * 120)
 
-    debugLog(`[Auto-Collect]   Placing "${task.title}" at (${newX}, ${newY})`)
+    console.log(`[Auto-Collect]   Placing "${task.title}" at (${newX}, ${newY})`)
 
     taskStore.updateTaskWithUndo(task.id, {
       canvasPosition: { x: newX, y: newY },
@@ -2428,7 +2306,7 @@ const getContainingSection = (taskX: number, taskY: number, taskWidth: number = 
     // This allows tasks positioned in the logical area to trigger property updates
     const detectionHeight = section.isCollapsed ? height : height
 
-    debugLog('[getContainingSection] Checking section:', {
+    console.log('[getContainingSection] Checking section:', {
       name: section.name,
       isCollapsed: section.isCollapsed,
       visualHeight: section.isCollapsed ? 80 : height,
@@ -2445,7 +2323,7 @@ const getContainingSection = (taskX: number, taskY: number, taskWidth: number = 
     )
 
     if (isInside) {
-      debugLog('[getContainingSection] ✓ Task is inside section:', section.name)
+      console.log('[getContainingSection] ✓ Task is inside section:', section.name)
     }
 
     return isInside
@@ -2468,7 +2346,7 @@ const isTaskInSectionBounds = (x: number, y: number, section: any, taskWidth: nu
 
 // Helper: Apply section properties to task
 const applySectionPropertiesToTask = (taskId: string, section: any) => {
-  debugLog('[applySectionPropertiesToTask] Called with:', {
+  console.log('[applySectionPropertiesToTask] Called with:', {
     taskId,
     sectionName: section.name,
     sectionType: section.type,
@@ -2496,13 +2374,13 @@ const applySectionPropertiesToTask = (taskId: string, section: any) => {
       if (shouldUseSmartGroupLogic(section.name)) {
         const smartGroupType = getSmartGroupType(section.name)
         if (smartGroupType) {
-          debugLog(`[applySectionPropertiesToTask] Detected smart group: ${smartGroupType}`)
+          console.log(`[applySectionPropertiesToTask] Detected smart group: ${smartGroupType}`)
 
           // Use smart group logic - set dueDate but keep in inbox
           taskStore.moveTaskToSmartGroup(taskId, smartGroupType)
-          debugLog(`[applySectionPropertiesToTask] Called moveTaskToSmartGroup for ${smartGroupType}`)
+          console.log(`[applySectionPropertiesToTask] Called moveTaskToSmartGroup for ${smartGroupType}`)
         } else {
-          debugLog('[applySectionPropertiesToTask] Smart group type not found, using fallback')
+          console.log('[applySectionPropertiesToTask] Smart group type not found, using fallback')
           // Fallback to old behavior if smart group detection fails
           taskStore.moveTaskToDate(taskId, section.propertyValue || section.name)
         }
@@ -2514,10 +2392,10 @@ const applySectionPropertiesToTask = (taskId: string, section: any) => {
   }
 
   if (Object.keys(updates).length > 0) {
-    debugLog('[applySectionPropertiesToTask] Applying updates:', updates)
+    console.log('[applySectionPropertiesToTask] Applying updates:', updates)
     taskStore.updateTaskWithUndo(taskId, updates)
   } else {
-    debugLog('[applySectionPropertiesToTask] No updates to apply')
+    console.log('[applySectionPropertiesToTask] No updates to apply')
   }
 }
 
@@ -2554,7 +2432,7 @@ const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (eve
 
     if (section) {
       // Just track the start position - Vue Flow will handle child dragging
-      debugLog(`Started dragging section: ${section.name}`)
+      console.log(`Started dragging section: ${section.name}`)
     }
   }
 })
@@ -2610,7 +2488,7 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
         })
       }
 
-      debugLog(`Section dragged to: (${node.position.x}, ${node.position.y}) with ${Array.isArray(filteredTasks.value) ? filteredTasks.value.filter(t => {
+      console.log(`Section dragged to: (${node.position.x}, ${node.position.y}) with ${Array.isArray(filteredTasks.value) ? filteredTasks.value.filter(t => {
         if (!t.canvasPosition) return false
         const taskSection = canvasStore.sections.find(s => {
           const { x, y, width, height } = s.position
@@ -2638,7 +2516,7 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
         // Check if task moved outside the original section
         const movedOutside = !isTaskInSectionBounds(absoluteX, absoluteY, section)
         if (movedOutside) {
-          debugLog(`Task ${node.id} moved outside section ${sectionId}`)
+          console.log(`Task ${node.id} moved outside section ${sectionId}`)
         }
       }
     } else {
@@ -2669,9 +2547,9 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
       checkY = node.position.y
     }
 
-    debugLog('[handleNodeDragStop] Checking containment with coordinates:', { checkX, checkY, hasParent: !!node.parentNode })
+    console.log('[handleNodeDragStop] Checking containment with coordinates:', { checkX, checkY, hasParent: !!node.parentNode })
     const containingSection = getContainingSection(checkX, checkY)
-    debugLog('[handleNodeDragStop] Found section:', containingSection ? { name: containingSection.name, type: containingSection.type, propertyValue: containingSection.propertyValue } : 'null')
+    console.log('[handleNodeDragStop] Found section:', containingSection ? { name: containingSection.name, type: containingSection.type, propertyValue: containingSection.propertyValue } : 'null')
 
     if (containingSection) {
       // Check if this is a timeline section (by name) even if it's a custom type
@@ -2680,10 +2558,10 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
 
       // Apply properties for non-custom sections OR custom sections with timeline names
       if (containingSection.type !== 'custom' || isTimelineSection) {
-        debugLog('[handleNodeDragStop] Applying properties for section:', containingSection.name)
+        console.log('[handleNodeDragStop] Applying properties for section:', containingSection.name)
         applySectionPropertiesToTask(node.id, containingSection)
       } else {
-        debugLog('[handleNodeDragStop] ⚠️ Skipping property application for custom section:', containingSection.name)
+        console.log('[handleNodeDragStop] ⚠️ Skipping property application for custom section:', containingSection.name)
       }
     }
 
@@ -2716,7 +2594,7 @@ const handleNodeDrag = (event: any) => {
     const sectionId = node.id.replace('section-', '')
     const section = canvasStore.sections.find(s => s.id === sectionId)
     if (section) {
-      debugLog(`Dragging section: ${section.name}`)
+      console.log(`Dragging section: ${section.name}`)
     }
   }
 }
@@ -2773,7 +2651,7 @@ const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes
 
 // Handle resize start with enhanced state tracking - FIXED to prevent coordinate conflicts
 const handleResizeStart = (event: any) => {
-  debugLog('🔧 Resize start:', event)
+  console.log('🔧 Resize start:', event)
   const node = event.node || event
 
   if (node && node.id && node.id.startsWith('section-')) {
@@ -2847,7 +2725,7 @@ const handleResize = (event: any) => {
 
 // Handle resize end with cleanup and validation - FIXED to prevent coordinate conflicts
 const handleResizeEnd = (event: any) => {
-  debugLog('🔧 Resize end:', event)
+  console.log('🔧 Resize end:', event)
   const node = event.node || event
 
   if (node && node.id && node.id.startsWith('section-')) {
@@ -2930,7 +2808,7 @@ const handleSectionResizeStart = ({ sectionId, event }: any) => {
       isDragging: false,
       resizeStartTime: Date.now()
     }
-    debugLog('🎬 [Resize] Started:', {
+    console.log('🎬 [Resize] Started:', {
       sectionId,
       startX: section.position.x,
       startY: section.position.y,
@@ -2953,7 +2831,7 @@ const handleSectionResize = ({ sectionId, event }: any) => {
 }
 
 const handleSectionResizeEnd = ({ sectionId, event }: any) => {
-  debugLog('🎯 [CanvasView] Section resize END:', {
+  console.log('🎯 [CanvasView] Section resize END:', {
     sectionId,
     eventKeys: event ? Object.keys(event) : [],
     rawEvent: event
@@ -2975,7 +2853,7 @@ const handleSectionResizeEnd = ({ sectionId, event }: any) => {
   const newX = vueFlowNode.position.x
   const newY = vueFlowNode.position.y
 
-  debugLog('📏 [CanvasView] Extracted from Vue Flow node:', {
+  console.log('📏 [CanvasView] Extracted from Vue Flow node:', {
     newX,
     newY,
     width,
@@ -2991,7 +2869,7 @@ const handleSectionResizeEnd = ({ sectionId, event }: any) => {
       const deltaX = newX - resizeState.value.startX
       const deltaY = newY - resizeState.value.startY
 
-      debugLog('📐 [CanvasView] Position delta:', {
+      console.log('📐 [CanvasView] Position delta:', {
         deltaX,
         deltaY,
         oldX: resizeState.value.startX,
@@ -3013,7 +2891,7 @@ const handleSectionResizeEnd = ({ sectionId, event }: any) => {
         }
       })
 
-      debugLog('✅ [CanvasView] Section position and dimensions persisted:', {
+      console.log('✅ [CanvasView] Section position and dimensions persisted:', {
         x: newX,
         y: newY,
         width: validatedWidth,
@@ -3022,7 +2900,7 @@ const handleSectionResizeEnd = ({ sectionId, event }: any) => {
 
       // If position changed significantly (more than 1px to avoid jitter), update child task positions
       if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-        debugLog('🔄 [CanvasView] Adjusting task positions by delta:', { deltaX, deltaY })
+        console.log('🔄 [CanvasView] Adjusting task positions by delta:', { deltaX, deltaY })
 
         // Find all tasks inside this section (geometric bounds check using ORIGINAL section bounds)
         const tasksInSection = Array.isArray(filteredTasks.value) ? filteredTasks.value.filter(task => {
@@ -3038,23 +2916,23 @@ const handleSectionResizeEnd = ({ sectionId, event }: any) => {
                  taskY <= resizeState.value.startY + resizeState.value.startHeight
         }) : []
 
-        debugLog(`📦 [CanvasView] Found ${tasksInSection.length} tasks to adjust`)
+        console.log(`📦 [CanvasView] Found ${tasksInSection.length} tasks to adjust`)
 
         // Update each task's absolute position by the delta
         tasksInSection.forEach(task => {
           const newTaskX = task.canvasPosition!.x + deltaX
           const newTaskY = task.canvasPosition!.y + deltaY
 
-          debugLog(`  📍 Adjusting task "${task.title}": (${task.canvasPosition!.x}, ${task.canvasPosition!.y}) → (${newTaskX}, ${newTaskY})`)
+          console.log(`  📍 Adjusting task "${task.title}": (${task.canvasPosition!.x}, ${task.canvasPosition!.y}) → (${newTaskX}, ${newTaskY})`)
 
           taskStore.updateTask(task.id, {
             canvasPosition: { x: newTaskX, y: newTaskY }
           })
         })
 
-        debugLog('✅ [CanvasView] Task absolute positions adjusted')
+        console.log('✅ [CanvasView] Task absolute positions adjusted')
       } else {
-        debugLog('⏭️  [CanvasView] Position delta too small, skipping task adjustment')
+        console.log('⏭️  [CanvasView] Position delta too small, skipping task adjustment')
       }
     } else {
       console.error('❌ [CanvasView] Section not found in store:', sectionId)
@@ -3102,12 +2980,12 @@ const handlePaneContextMenu = (event: MouseEvent) => {
     return
   }
 
-  debugLog('🎯 Right-click detected!', event.clientX, event.clientY)
+  console.log('🎯 Right-click detected!', event.clientX, event.clientY)
   event.preventDefault()
   canvasContextMenuX.value = event.clientX
   canvasContextMenuY.value = event.clientY
   showCanvasContextMenu.value = true
-  debugLog('📋 Context menu should be visible:', showCanvasContextMenu.value)
+  console.log('📋 Context menu should be visible:', showCanvasContextMenu.value)
 }
 
 // Handle right-click anywhere on canvas (fallback for areas between sections)
@@ -3130,12 +3008,12 @@ const handleCanvasRightClick = (event: MouseEvent) => {
   canvasContextMenuX.value = event.clientX
   canvasContextMenuY.value = event.clientY
   showCanvasContextMenu.value = true
-  debugLog('🎯 Canvas right-click at:', event.clientX, event.clientY)
+  console.log('🎯 Canvas right-click at:', event.clientX, event.clientY)
 }
 
 // Canvas context menu handlers
 const closeCanvasContextMenu = () => {
-  debugLog('🔧 CanvasView: Closing context menu, resetting canvasContextSection')
+  console.log('🔧 CanvasView: Closing context menu, resetting canvasContextSection')
   showCanvasContextMenu.value = false
   canvasContextSection.value = null // Reset context section so "Create Custom Group" appears
 }
@@ -3189,7 +3067,7 @@ const clearSelection = () => {
  */
 const createTaskHere = async () => {
   const functionName = 'createTaskHere'
-  debugLog(`📍 ${functionName}: Starting...`)
+  console.log(`📍 ${functionName}: Starting...`)
 
   try {
     // ✅ VALIDATION 1: Check viewport ref
@@ -3199,7 +3077,7 @@ const createTaskHere = async () => {
       throw new Error(msg)
     }
 
-    debugLog(`✅ ${functionName}: vueFlowViewport ready`)
+    console.log(`✅ ${functionName}: vueFlowViewport ready`)
 
     // ✅ VALIDATION 2: Check context menu coordinates
     if (typeof canvasContextMenuX.value !== 'number' ||
@@ -3209,7 +3087,7 @@ const createTaskHere = async () => {
       throw new Error(msg)
     }
 
-    debugLog(`✅ ${functionName}: Context menu coords valid: x=${canvasContextMenuX.value}, y=${canvasContextMenuY.value}`)
+    console.log(`✅ ${functionName}: Context menu coords valid: x=${canvasContextMenuX.value}, y=${canvasContextMenuY.value}`)
 
     // ✅ VALIDATION 3: Check DOM element exists
     const vueFlowElement = document.querySelector('.vue-flow')
@@ -3219,7 +3097,7 @@ const createTaskHere = async () => {
       throw new Error(msg)
     }
 
-    debugLog(`✅ ${functionName}: Vue Flow element found`)
+    console.log(`✅ ${functionName}: Vue Flow element found`)
 
     // ✅ VALIDATION 4: Check task store
     if (!taskStore) {
@@ -3234,14 +3112,14 @@ const createTaskHere = async () => {
       throw new Error(msg)
     }
 
-    debugLog(`✅ ${functionName}: Task store ready`)
+    console.log(`✅ ${functionName}: Task store ready`)
 
     // ✅ CALCULATE CANVAS COORDINATES
     const rect = vueFlowElement.getBoundingClientRect()
     const canvasX = (canvasContextMenuX.value - rect.left - viewport.value?.x) / viewport.value?.zoom
     const canvasY = (canvasContextMenuY.value - rect.top - viewport.value?.y) / viewport.value?.zoom
 
-    debugLog(`📐 ${functionName}: Calculated canvas position: x=${canvasX}, y=${canvasY}`)
+    console.log(`📐 ${functionName}: Calculated canvas position: x=${canvasX}, y=${canvasY}`)
 
     // ✅ VALIDATION 5: Coordinates are reasonable numbers
     if (!Number.isFinite(canvasX) || !Number.isFinite(canvasY)) {
@@ -3252,17 +3130,17 @@ const createTaskHere = async () => {
 
     // ✅ STORE POSITION FOR QUICK TASK CREATION (keeping existing workflow)
     quickTaskPosition.value = { x: canvasX, y: canvasY }
-    debugLog(`💾 ${functionName}: Position stored for quick task creation`)
+    console.log(`💾 ${functionName}: Position stored for quick task creation`)
 
     // ✅ CLOSE CONTEXT MENU
     closeCanvasContextMenu()
-    debugLog(`✅ ${functionName}: Context menu closed`)
+    console.log(`✅ ${functionName}: Context menu closed`)
 
     // ✅ OPEN QUICK TASK CREATE MODAL (keeping existing workflow)
     isQuickTaskCreateOpen.value = true
-    debugLog(`✅ ${functionName}: Quick task create modal opened`)
+    console.log(`✅ ${functionName}: Quick task create modal opened`)
 
-    debugLog(`✅ ${functionName}: Task creation setup completed successfully`)
+    console.log(`✅ ${functionName}: Task creation setup completed successfully`)
 
   } catch (error) {
     // ✅ COMPREHENSIVE ERROR LOGGING
@@ -3297,7 +3175,7 @@ const createTaskHere = async () => {
 }
 
 const createGroup = () => {
-  debugLog('🔧 CanvasView: createGroup function called!')
+  console.log('🔧 CanvasView: createGroup function called!')
 
   // Get the VueFlow element to calculate canvas coordinates
   const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
@@ -3312,7 +3190,7 @@ const createGroup = () => {
   const canvasY = (canvasContextMenuY.value - rect.top - viewport.value?.y) / viewport.value?.zoom
 
   // Debug logging
-  debugLog('🎯 Creating group at:', {
+  console.log('🎯 Creating group at:', {
     screenCoords: { x: canvasContextMenuX.value, y: canvasContextMenuY.value },
     viewport: { x: viewport.value?.x, y: viewport.value?.y, zoom: viewport.value?.zoom },
     canvasCoords: { x: canvasX, y: canvasY }
@@ -3321,17 +3199,17 @@ const createGroup = () => {
   // Set modal position for group creation using calculated coordinates
   groupModalPosition.value = { x: canvasX, y: canvasY }
   selectedGroup.value = null // Ensure we're in create mode
-  debugLog('🔧 CanvasView: Set groupModalPosition:', groupModalPosition.value)
-  debugLog('🔧 CanvasView: Set selectedGroup to null')
+  console.log('🔧 CanvasView: Set groupModalPosition:', groupModalPosition.value)
+  console.log('🔧 CanvasView: Set selectedGroup to null')
 
   // Close context menu first to prevent any interference
   closeCanvasContextMenu()
-  debugLog('🔧 CanvasView: Closed context menu')
+  console.log('🔧 CanvasView: Closed context menu')
 
   // Open group creation modal
-  debugLog('🔧 CanvasView: Setting isGroupModalOpen to true')
+  console.log('🔧 CanvasView: Setting isGroupModalOpen to true')
   isGroupModalOpen.value = true
-  debugLog('🔧 CanvasView: isGroupModalOpen is now:', isGroupModalOpen.value)
+  console.log('🔧 CanvasView: isGroupModalOpen is now:', isGroupModalOpen.value)
 }
 
 const closeGroupModal = () => {
@@ -3341,18 +3219,18 @@ const closeGroupModal = () => {
 }
 
 const handleGroupCreated = (group: any) => {
-  debugLog('Group created:', group)
+  console.log('Group created:', group)
   syncNodes() // Refresh VueFlow to show the new group
 }
 
 const handleGroupUpdated = (group: any) => {
-  debugLog('Group updated:', group)
+  console.log('Group updated:', group)
   syncNodes() // Refresh VueFlow to show the updated group
 }
 
 // Section Wizard handlers
 const createSection = () => {
-  debugLog('✨ CanvasView: createSection function called!')
+  console.log('✨ CanvasView: createSection function called!')
 
   // Get the VueFlow element to calculate canvas coordinates
   const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
@@ -3366,7 +3244,7 @@ const createSection = () => {
   const canvasX = (canvasContextMenuX.value - rect.left - viewport.value?.x) / viewport.value?.zoom
   const canvasY = (canvasContextMenuY.value - rect.top - viewport.value?.y) / viewport.value?.zoom
 
-  debugLog('✨ Creating section at:', {
+  console.log('✨ Creating section at:', {
     screenCoords: { x: canvasContextMenuX.value, y: canvasContextMenuY.value },
     viewport: { x: viewport.value?.x, y: viewport.value?.y, zoom: viewport.value?.zoom },
     canvasCoords: { x: canvasX, y: canvasY }
@@ -3374,16 +3252,16 @@ const createSection = () => {
 
   // Set wizard position using calculated coordinates
   sectionWizardPosition.value = { x: canvasX, y: canvasY }
-  debugLog('✨ CanvasView: Set sectionWizardPosition:', sectionWizardPosition.value)
+  console.log('✨ CanvasView: Set sectionWizardPosition:', sectionWizardPosition.value)
 
   // Close context menu first
   closeCanvasContextMenu()
-  debugLog('✨ CanvasView: Closed context menu')
+  console.log('✨ CanvasView: Closed context menu')
 
   // Open section wizard
-  debugLog('✨ CanvasView: Setting isSectionWizardOpen to true')
+  console.log('✨ CanvasView: Setting isSectionWizardOpen to true')
   isSectionWizardOpen.value = true
-  debugLog('✨ CanvasView: isSectionWizardOpen is now:', isSectionWizardOpen.value)
+  console.log('✨ CanvasView: isSectionWizardOpen is now:', isSectionWizardOpen.value)
 }
 
 const closeSectionWizard = () => {
@@ -3392,20 +3270,20 @@ const closeSectionWizard = () => {
 }
 
 const handleSectionCreated = (section: any) => {
-  debugLog('✨ Section created:', section)
+  console.log('✨ Section created:', section)
   syncNodes() // Refresh VueFlow to show the new section
 }
 
 // Group edit handlers
 const editGroup = (section: any) => {
-  debugLog('Editing group:', section)
+  console.log('Editing group:', section)
   selectedSectionForEdit.value = section
   isGroupEditModalOpen.value = true
   closeCanvasContextMenu()
 }
 
 const deleteGroup = (section: any) => {
-  debugLog('Deleting group:', section)
+  console.log('Deleting group:', section)
   if (!section) return
 
   const confirmMessage = `Delete "${section.name}" group? This will remove the group and all its settings.`
@@ -3419,7 +3297,7 @@ const deleteGroup = (section: any) => {
 // Task context menu handlers - Move selected tasks to inbox
 const moveSelectedTasksToInbox = async () => {
   const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !id.startsWith('section-'))
-  debugLog('📥 Moving tasks to inbox:', selectedNodeIds)
+  console.log('📥 Moving tasks to inbox:', selectedNodeIds)
 
   if (selectedNodeIds.length === 0) return
 
@@ -3429,7 +3307,7 @@ const moveSelectedTasksToInbox = async () => {
         isInInbox: true,
         canvasPosition: undefined
       })
-      debugLog(`📥 Task ${nodeId} moved to inbox`)
+      console.log(`📥 Task ${nodeId} moved to inbox`)
     } catch (error) {
       console.error(`❌ Failed to move task ${nodeId} to inbox:`, error)
     }
@@ -3443,7 +3321,7 @@ const moveSelectedTasksToInbox = async () => {
 // Task context menu handlers - Delete selected tasks permanently
 const deleteSelectedTasks = async () => {
   const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !id.startsWith('section-'))
-  debugLog('🗑️ Deleting tasks:', selectedNodeIds)
+  console.log('🗑️ Deleting tasks:', selectedNodeIds)
 
   if (selectedNodeIds.length === 0) return
 
@@ -3459,7 +3337,7 @@ const deleteSelectedTasks = async () => {
   for (const nodeId of selectedNodeIds) {
     try {
       await undoHistory.deleteTaskWithUndo(nodeId)
-      debugLog(`🗑️ Task ${nodeId} deleted`)
+      console.log(`🗑️ Task ${nodeId} deleted`)
     } catch (error) {
       console.error(`❌ Failed to delete task ${nodeId}:`, error)
     }
@@ -3476,7 +3354,7 @@ const closeGroupEditModal = () => {
 }
 
 const handleGroupEditSave = (updatedSection: any) => {
-  debugLog('Saving group edit:', updatedSection)
+  console.log('Saving group edit:', updatedSection)
   if (!updatedSection) return
 
   canvasStore.updateSectionWithUndo(updatedSection.id, updatedSection)
@@ -3486,7 +3364,7 @@ const handleGroupEditSave = (updatedSection: any) => {
 
 // Node context menu handlers (for sections)
 const handleNodeContextMenu = (event: any) => {
-  debugLog('Node context menu triggered for:', event.node.id, event.node)
+  console.log('Node context menu triggered for:', event.node.id, event.node)
 
   // Prevent default behavior and event bubbling for all nodes
   event.event.preventDefault()
@@ -3517,7 +3395,7 @@ const deleteNode = () => {
 
   if (selectedNode.value.id.startsWith('section-')) {
     const sectionId = selectedNode.value.id.replace('section-', '')
-    debugLog('Attempting to delete section:', sectionId)
+    console.log('Attempting to delete section:', sectionId)
     
     // Find the section
     const section = canvasStore.sections.find(s => s.id === sectionId)
@@ -3553,7 +3431,7 @@ const disconnectEdge = () => {
   const { source, target, id: edgeId } = selectedEdge.value
   const targetTask = taskStore.tasks.find(t => t.id === target)
 
-  debugLog('🔗 Disconnecting edge:', {
+  console.log('🔗 Disconnecting edge:', {
     edgeId,
     source,
     target,
@@ -3581,7 +3459,7 @@ const disconnectEdge = () => {
     // Call syncEdges but it will now respect the recentlyRemovedEdges blocklist
     syncEdges()
 
-    debugLog('✅ Task dependencies updated:', {
+    console.log('✅ Task dependencies updated:', {
       taskId: targetTask.id,
       oldDependsOn: targetTask.dependsOn,
       newDependsOn: updatedDependsOn,
@@ -3594,7 +3472,7 @@ const disconnectEdge = () => {
 
 // Edge event handler bridges
 const handleEdgeClick = (event: any) => {
-  debugLog('🖱️ Edge click triggered (component handler):', {
+  console.log('🖱️ Edge click triggered (component handler):', {
     edgeId: event.edge?.id,
     source: event.edge?.source,
     target: event.edge?.target
@@ -3608,7 +3486,7 @@ const handleEdgeClick = (event: any) => {
 }
 
 const handleEdgeContextMenu = (event: any) => {
-  debugLog('🖱️ Edge context menu triggered (component handler):', {
+  console.log('🖱️ Edge context menu triggered (component handler):', {
     edgeId: event.edge?.id,
     source: event.edge?.source,
     target: event.edge?.target,
@@ -3629,7 +3507,7 @@ const executeAlignmentOperation = (
   operation: (selectedNodes: any[]) => void,
   minNodes: number = 2
 ) => {
-  debugLog(`🔧 ${operationName}: Starting alignment operation`)
+  console.log(`🔧 ${operationName}: Starting alignment operation`)
 
   // Pre-alignment state validation
   const validation = validateAlignmentState(minNodes)
@@ -3639,15 +3517,15 @@ const executeAlignmentOperation = (
     return false
   }
 
-  debugLog(`🔧 ${operationName}: Total nodes in canvas:`, nodes.value.length)
-  debugLog(`🔧 ${operationName}: Selected node IDs from canvas store:`, canvasStore.selectedNodeIds)
+  console.log(`🔧 ${operationName}: Total nodes in canvas:`, nodes.value.length)
+  console.log(`🔧 ${operationName}: Selected node IDs from canvas store:`, canvasStore.selectedNodeIds)
 
   const selectedNodes = nodes.value.filter(n =>
     canvasStore.selectedNodeIds.includes(n.id) && n.type === 'taskNode'
   )
 
-  debugLog(`🔧 ${operationName}: Nodes matching selection criteria:`, selectedNodes.length)
-  debugLog(`🔧 ${operationName}: Selected node details:`, selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
+  console.log(`🔧 ${operationName}: Nodes matching selection criteria:`, selectedNodes.length)
+  console.log(`🔧 ${operationName}: Selected node details:`, selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
 
   if (selectedNodes.length < minNodes) {
     const errorMsg = `Need at least ${minNodes} selected tasks for ${operationName.toLowerCase()}, have ${selectedNodes.length}`
@@ -3665,7 +3543,7 @@ const executeAlignmentOperation = (
 
     // Show success feedback
     message.success(`Successfully aligned ${selectedNodes.length} tasks ${operationName.toLowerCase().replace('align ', '')}`)
-    debugLog(`✅ ${operationName}: Operation completed successfully`)
+    console.log(`✅ ${operationName}: Operation completed successfully`)
     return true
   } catch (error) {
     console.error(`❌ ${operationName}: Operation failed:`, error)
@@ -3678,11 +3556,11 @@ const executeAlignmentOperation = (
 const alignLeft = () => {
   executeAlignmentOperation('Align Left', (selectedNodes) => {
     const minX = Math.min(...selectedNodes.map(n => n.position.x))
-    debugLog(`🔧 Align Left: Calculated min X position:`, minX)
+    console.log(`🔧 Align Left: Calculated min X position:`, minX)
 
-    debugLog(`🔧 Align Left: Updating ${selectedNodes.length} task positions`)
+    console.log(`🔧 Align Left: Updating ${selectedNodes.length} task positions`)
     selectedNodes.forEach((node, index) => {
-      debugLog(`🔧 Align Left: Task ${index + 1}/${selectedNodes.length}:`, {
+      console.log(`🔧 Align Left: Task ${index + 1}/${selectedNodes.length}:`, {
         id: node.id,
         from: { x: node.position.x, y: node.position.y },
         to: { x: minX, y: node.position.y }
@@ -3698,16 +3576,16 @@ const alignLeft = () => {
 }
 
 const alignRight = () => {
-  debugLog('🔧 ALIGN RIGHT: Starting alignment operation')
-  debugLog('🔧 ALIGN RIGHT: Total nodes in canvas:', nodes.value.length)
-  debugLog('🔧 ALIGN RIGHT: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
+  console.log('🔧 ALIGN RIGHT: Starting alignment operation')
+  console.log('🔧 ALIGN RIGHT: Total nodes in canvas:', nodes.value.length)
+  console.log('🔧 ALIGN RIGHT: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
 
   const selectedNodes = nodes.value.filter(n =>
     canvasStore.selectedNodeIds.includes(n.id) && n.type === 'taskNode'
   )
 
-  debugLog('🔧 ALIGN RIGHT: Nodes matching selection criteria:', selectedNodes.length)
-  debugLog('🔧 ALIGN RIGHT: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
+  console.log('🔧 ALIGN RIGHT: Nodes matching selection criteria:', selectedNodes.length)
+  console.log('🔧 ALIGN RIGHT: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
 
   if (selectedNodes.length < 2) {
     console.warn('⚠️ ALIGN RIGHT: Insufficient nodes for alignment. Need at least 2, got', selectedNodes.length)
@@ -3722,11 +3600,11 @@ const alignRight = () => {
   }
 
   const maxX = Math.max(...selectedNodes.map(n => n.position.x))
-  debugLog('🔧 ALIGN RIGHT: Calculated max X position:', maxX)
+  console.log('🔧 ALIGN RIGHT: Calculated max X position:', maxX)
 
-  debugLog('🔧 ALIGN RIGHT: Updating', selectedNodes.length, 'task positions')
+  console.log('🔧 ALIGN RIGHT: Updating', selectedNodes.length, 'task positions')
   selectedNodes.forEach((node, index) => {
-    debugLog(`🔧 ALIGN RIGHT: Task ${index + 1}/${selectedNodes.length}:`, {
+    console.log(`🔧 ALIGN RIGHT: Task ${index + 1}/${selectedNodes.length}:`, {
       id: node.id,
       from: { x: node.position.x, y: node.position.y },
       to: { x: maxX, y: node.position.y }
@@ -3737,7 +3615,7 @@ const alignRight = () => {
     })
   })
 
-  debugLog('✅ ALIGN RIGHT: Alignment completed successfully')
+  console.log('✅ ALIGN RIGHT: Alignment completed successfully')
 
   // User feedback for successful alignment
   message.success(`Aligned ${selectedNodes.length} tasks to the right`)
@@ -3745,16 +3623,16 @@ const alignRight = () => {
 }
 
 const alignTop = () => {
-  debugLog('🔧 ALIGN TOP: Starting alignment operation')
-  debugLog('🔧 ALIGN TOP: Total nodes in canvas:', nodes.value.length)
-  debugLog('🔧 ALIGN TOP: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
+  console.log('🔧 ALIGN TOP: Starting alignment operation')
+  console.log('🔧 ALIGN TOP: Total nodes in canvas:', nodes.value.length)
+  console.log('🔧 ALIGN TOP: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
 
   const selectedNodes = nodes.value.filter(n =>
     canvasStore.selectedNodeIds.includes(n.id) && n.type === 'taskNode'
   )
 
-  debugLog('🔧 ALIGN TOP: Nodes matching selection criteria:', selectedNodes.length)
-  debugLog('🔧 ALIGN TOP: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
+  console.log('🔧 ALIGN TOP: Nodes matching selection criteria:', selectedNodes.length)
+  console.log('🔧 ALIGN TOP: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
 
   if (selectedNodes.length < 2) {
     console.warn('⚠️ ALIGN TOP: Insufficient nodes for alignment. Need at least 2, got', selectedNodes.length)
@@ -3769,11 +3647,11 @@ const alignTop = () => {
   }
 
   const minY = Math.min(...selectedNodes.map(n => n.position.y))
-  debugLog('🔧 ALIGN TOP: Calculated min Y position:', minY)
+  console.log('🔧 ALIGN TOP: Calculated min Y position:', minY)
 
-  debugLog('🔧 ALIGN TOP: Updating', selectedNodes.length, 'task positions')
+  console.log('🔧 ALIGN TOP: Updating', selectedNodes.length, 'task positions')
   selectedNodes.forEach((node, index) => {
-    debugLog(`🔧 ALIGN TOP: Task ${index + 1}/${selectedNodes.length}:`, {
+    console.log(`🔧 ALIGN TOP: Task ${index + 1}/${selectedNodes.length}:`, {
       id: node.id,
       from: { x: node.position.x, y: node.position.y },
       to: { x: node.position.x, y: minY }
@@ -3784,7 +3662,7 @@ const alignTop = () => {
     })
   })
 
-  debugLog('✅ ALIGN TOP: Alignment completed successfully')
+  console.log('✅ ALIGN TOP: Alignment completed successfully')
 
   // User feedback for successful alignment
   message.success(`Aligned ${selectedNodes.length} tasks to the top`)
@@ -3792,16 +3670,16 @@ const alignTop = () => {
 }
 
 const alignBottom = () => {
-  debugLog('🔧 ALIGN BOTTOM: Starting alignment operation')
-  debugLog('🔧 ALIGN BOTTOM: Total nodes in canvas:', nodes.value.length)
-  debugLog('🔧 ALIGN BOTTOM: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
+  console.log('🔧 ALIGN BOTTOM: Starting alignment operation')
+  console.log('🔧 ALIGN BOTTOM: Total nodes in canvas:', nodes.value.length)
+  console.log('🔧 ALIGN BOTTOM: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
 
   const selectedNodes = nodes.value.filter(n =>
     canvasStore.selectedNodeIds.includes(n.id) && n.type === 'taskNode'
   )
 
-  debugLog('🔧 ALIGN BOTTOM: Nodes matching selection criteria:', selectedNodes.length)
-  debugLog('🔧 ALIGN BOTTOM: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
+  console.log('🔧 ALIGN BOTTOM: Nodes matching selection criteria:', selectedNodes.length)
+  console.log('🔧 ALIGN BOTTOM: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
 
   if (selectedNodes.length < 2) {
     console.warn('⚠️ ALIGN BOTTOM: Insufficient nodes for alignment. Need at least 2, got', selectedNodes.length)
@@ -3816,11 +3694,11 @@ const alignBottom = () => {
   }
 
   const maxY = Math.max(...selectedNodes.map(n => n.position.y))
-  debugLog('🔧 ALIGN BOTTOM: Calculated max Y position:', maxY)
+  console.log('🔧 ALIGN BOTTOM: Calculated max Y position:', maxY)
 
-  debugLog('🔧 ALIGN BOTTOM: Updating', selectedNodes.length, 'task positions')
+  console.log('🔧 ALIGN BOTTOM: Updating', selectedNodes.length, 'task positions')
   selectedNodes.forEach((node, index) => {
-    debugLog(`🔧 ALIGN BOTTOM: Task ${index + 1}/${selectedNodes.length}:`, {
+    console.log(`🔧 ALIGN BOTTOM: Task ${index + 1}/${selectedNodes.length}:`, {
       id: node.id,
       from: { x: node.position.x, y: node.position.y },
       to: { x: node.position.x, y: maxY }
@@ -3831,7 +3709,7 @@ const alignBottom = () => {
     })
   })
 
-  debugLog('✅ ALIGN BOTTOM: Alignment completed successfully')
+  console.log('✅ ALIGN BOTTOM: Alignment completed successfully')
 
   // User feedback for successful alignment
   message.success(`Aligned ${selectedNodes.length} tasks to the bottom`)
@@ -3839,16 +3717,16 @@ const alignBottom = () => {
 }
 
 const alignCenterHorizontal = () => {
-  debugLog('🔧 ALIGN CENTER HORIZONTAL: Starting alignment operation')
-  debugLog('🔧 ALIGN CENTER HORIZONTAL: Total nodes in canvas:', nodes.value.length)
-  debugLog('🔧 ALIGN CENTER HORIZONTAL: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
+  console.log('🔧 ALIGN CENTER HORIZONTAL: Starting alignment operation')
+  console.log('🔧 ALIGN CENTER HORIZONTAL: Total nodes in canvas:', nodes.value.length)
+  console.log('🔧 ALIGN CENTER HORIZONTAL: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
 
   const selectedNodes = nodes.value.filter(n =>
     canvasStore.selectedNodeIds.includes(n.id) && n.type === 'taskNode'
   )
 
-  debugLog('🔧 ALIGN CENTER HORIZONTAL: Nodes matching selection criteria:', selectedNodes.length)
-  debugLog('🔧 ALIGN CENTER HORIZONTAL: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
+  console.log('🔧 ALIGN CENTER HORIZONTAL: Nodes matching selection criteria:', selectedNodes.length)
+  console.log('🔧 ALIGN CENTER HORIZONTAL: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
 
   if (selectedNodes.length < 2) {
     console.warn('⚠️ ALIGN CENTER HORIZONTAL: Insufficient nodes for alignment. Need at least 2, got', selectedNodes.length)
@@ -3863,11 +3741,11 @@ const alignCenterHorizontal = () => {
   }
 
   const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
-  debugLog('🔧 ALIGN CENTER HORIZONTAL: Calculated average X position:', avgX)
+  console.log('🔧 ALIGN CENTER HORIZONTAL: Calculated average X position:', avgX)
 
-  debugLog('🔧 ALIGN CENTER HORIZONTAL: Updating', selectedNodes.length, 'task positions')
+  console.log('🔧 ALIGN CENTER HORIZONTAL: Updating', selectedNodes.length, 'task positions')
   selectedNodes.forEach((node, index) => {
-    debugLog(`🔧 ALIGN CENTER HORIZONTAL: Task ${index + 1}/${selectedNodes.length}:`, {
+    console.log(`🔧 ALIGN CENTER HORIZONTAL: Task ${index + 1}/${selectedNodes.length}:`, {
       id: node.id,
       from: { x: node.position.x, y: node.position.y },
       to: { x: avgX, y: node.position.y }
@@ -3878,7 +3756,7 @@ const alignCenterHorizontal = () => {
     })
   })
 
-  debugLog('✅ ALIGN CENTER HORIZONTAL: Alignment completed successfully')
+  console.log('✅ ALIGN CENTER HORIZONTAL: Alignment completed successfully')
 
   // User feedback for successful alignment
   message.success(`Centered ${selectedNodes.length} tasks horizontally`)
@@ -3886,16 +3764,16 @@ const alignCenterHorizontal = () => {
 }
 
 const alignCenterVertical = () => {
-  debugLog('🔧 ALIGN CENTER VERTICAL: Starting alignment operation')
-  debugLog('🔧 ALIGN CENTER VERTICAL: Total nodes in canvas:', nodes.value.length)
-  debugLog('🔧 ALIGN CENTER VERTICAL: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
+  console.log('🔧 ALIGN CENTER VERTICAL: Starting alignment operation')
+  console.log('🔧 ALIGN CENTER VERTICAL: Total nodes in canvas:', nodes.value.length)
+  console.log('🔧 ALIGN CENTER VERTICAL: Selected node IDs from canvas store:', canvasStore.selectedNodeIds)
 
   const selectedNodes = nodes.value.filter(n =>
     canvasStore.selectedNodeIds.includes(n.id) && n.type === 'taskNode'
   )
 
-  debugLog('🔧 ALIGN CENTER VERTICAL: Nodes matching selection criteria:', selectedNodes.length)
-  debugLog('🔧 ALIGN CENTER VERTICAL: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
+  console.log('🔧 ALIGN CENTER VERTICAL: Nodes matching selection criteria:', selectedNodes.length)
+  console.log('🔧 ALIGN CENTER VERTICAL: Selected node details:', selectedNodes.map(n => ({ id: n.id, type: n.type, position: n.position })))
 
   if (selectedNodes.length < 2) {
     console.warn('⚠️ ALIGN CENTER VERTICAL: Insufficient nodes for alignment. Need at least 2, got', selectedNodes.length)
@@ -3910,11 +3788,11 @@ const alignCenterVertical = () => {
   }
 
   const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
-  debugLog('🔧 ALIGN CENTER VERTICAL: Calculated average Y position:', avgY)
+  console.log('🔧 ALIGN CENTER VERTICAL: Calculated average Y position:', avgY)
 
-  debugLog('🔧 ALIGN CENTER VERTICAL: Updating', selectedNodes.length, 'task positions')
+  console.log('🔧 ALIGN CENTER VERTICAL: Updating', selectedNodes.length, 'task positions')
   selectedNodes.forEach((node, index) => {
-    debugLog(`🔧 ALIGN CENTER VERTICAL: Task ${index + 1}/${selectedNodes.length}:`, {
+    console.log(`🔧 ALIGN CENTER VERTICAL: Task ${index + 1}/${selectedNodes.length}:`, {
       id: node.id,
       from: { x: node.position.x, y: node.position.y },
       to: { x: node.position.x, y: avgY }
@@ -3925,7 +3803,7 @@ const alignCenterVertical = () => {
     })
   })
 
-  debugLog('✅ ALIGN CENTER VERTICAL: Alignment completed successfully')
+  console.log('✅ ALIGN CENTER VERTICAL: Alignment completed successfully')
 
   // User feedback for successful alignment
   message.success(`Centered ${selectedNodes.length} tasks vertically`)
@@ -4132,12 +4010,12 @@ const handleKeyDown = async (event: KeyboardEvent) => {
   // Check if Shift key is pressed - full deletion
   const permanentDelete = event.shiftKey // Only Shift+Delete should permanently delete
 
-  debugLog('🗑️ Processing deletion for', selectedNodes.length, 'nodes:', selectedNodes.map(n => n.id))
+  console.log('🗑️ Processing deletion for', selectedNodes.length, 'nodes:', selectedNodes.map(n => n.id))
 
   // Process deletions sequentially to ensure proper undo/redo registration
   for (const node of selectedNodes) {
-    debugLog(`🎯 Processing node: ${node.id}`)
-    debugLog(`📊 Current undo count before operation: ${undoHistory.undoCount.value}`)
+    console.log(`🎯 Processing node: ${node.id}`)
+    console.log(`📊 Current undo count before operation: ${undoHistory.undoCount.value}`)
 
     if (node.id.startsWith('section-')) {
       // Sections are always permanently deleted
@@ -4152,28 +4030,28 @@ const handleKeyDown = async (event: KeyboardEvent) => {
 
       if (confirm(confirmMessage)) {
         await canvasStore.deleteSectionWithUndo(sectionId)
-        debugLog(`✅ Section deletion completed. Undo count: ${undoHistory.undoCount.value}`)
+        console.log(`✅ Section deletion completed. Undo count: ${undoHistory.undoCount.value}`)
       }
     } else if (permanentDelete) {
       // Shift+Delete: Remove task from system entirely
-      debugLog('🗑️ CanvasView: Shift+Delete detected for task:', node.id)
-      debugLog('🗑️ Before deleteTask - undo count:', undoHistory.undoCount.value)
-      debugLog('🗑️ Before deleteTask - can undo:', undoHistory.canUndo.value)
+      console.log('🗑️ CanvasView: Shift+Delete detected for task:', node.id)
+      console.log('🗑️ Before deleteTask - undo count:', undoHistory.undoCount.value)
+      console.log('🗑️ Before deleteTask - can undo:', undoHistory.canUndo.value)
 
       try {
         undoHistory.deleteTaskWithUndo(node.id)
-        debugLog('✅ deleteTask completed successfully')
-        debugLog('✅ After deleteTask - undo count:', undoHistory.undoCount.value)
-        debugLog('✅ After deleteTask - can undo:', undoHistory.canUndo.value)
-        debugLog('✅ After deleteTask - last action:', (undoHistory as any).lastAction?.value)
+        console.log('✅ deleteTask completed successfully')
+        console.log('✅ After deleteTask - undo count:', undoHistory.undoCount.value)
+        console.log('✅ After deleteTask - can undo:', undoHistory.canUndo.value)
+        console.log('✅ After deleteTask - last action:', (undoHistory as any).lastAction?.value)
       } catch (error) {
         console.error('❌ deleteTask failed:', error)
       }
     } else {
       // Delete: Remove from canvas only, move back to inbox, clear calendar scheduling
-      debugLog('📤 CanvasView: Delete detected for task:', node.id, '- moving to inbox with undo support')
-      debugLog('📤 Before updateTaskWithUndo - undo count:', undoHistory.undoCount.value)
-      debugLog('📤 Before updateTaskWithUndo - can undo:', undoHistory.canUndo.value)
+      console.log('📤 CanvasView: Delete detected for task:', node.id, '- moving to inbox with undo support')
+      console.log('📤 Before updateTaskWithUndo - undo count:', undoHistory.undoCount.value)
+      console.log('📤 Before updateTaskWithUndo - can undo:', undoHistory.canUndo.value)
 
       try {
         undoHistory.updateTaskWithUndo(node.id, {
@@ -4184,17 +4062,17 @@ const handleKeyDown = async (event: KeyboardEvent) => {
           scheduledTime: undefined
         })
 
-        debugLog('✅ updateTaskWithUndo completed successfully')
-        debugLog('✅ After updateTaskWithUndo - undo count:', undoHistory.undoCount.value)
-        debugLog('✅ After updateTaskWithUndo - can undo:', undoHistory.canUndo.value)
-        debugLog('✅ After updateTaskWithUndo - last action:', (undoHistory as any).lastAction?.value)
+        console.log('✅ updateTaskWithUndo completed successfully')
+        console.log('✅ After updateTaskWithUndo - undo count:', undoHistory.undoCount.value)
+        console.log('✅ After updateTaskWithUndo - can undo:', undoHistory.canUndo.value)
+        console.log('✅ After updateTaskWithUndo - last action:', (undoHistory as any).lastAction?.value)
       } catch (error) {
         console.error('❌ updateTaskWithUndo failed:', error)
       }
     }
   }
 
-  debugLog(`🎯 All ${selectedNodes.length} operations completed. Final undo count: ${undoHistory.undoCount}`)
+  console.log(`🎯 All ${selectedNodes.length} operations completed. Final undo count: ${undoHistory.undoCount}`)
 
   canvasStore.setSelectedNodes([])
 
@@ -4206,7 +4084,7 @@ const handleKeyDown = async (event: KeyboardEvent) => {
 
 // Handle connection start - set connection state to prevent context menus
 const handleConnectStart = (event: any) => {
-  debugLog('🔗 Connection started:', event)
+  console.log('🔗 Connection started:', event)
   isConnecting.value = true
 
   // Clear any existing context menus
@@ -4217,7 +4095,7 @@ const handleConnectStart = (event: any) => {
 
 // Handle connection end - clear connection state
 const handleConnectEnd = (event: any) => {
-  debugLog('🔗 Connection ended:', event)
+  console.log('🔗 Connection ended:', event)
   // Add a small delay to ensure all connection logic completes - using resourceManager
   const timerId = setTimeout(() => {
     isConnecting.value = false
@@ -4227,7 +4105,7 @@ const handleConnectEnd = (event: any) => {
 
 // Handle connection creation - creates task dependency
 const handleConnect = withVueFlowErrorBoundary('handleConnect', (connection: any) => {
-  debugLog('🔗 Connection attempt:', connection)
+  console.log('🔗 Connection attempt:', connection)
   const { source, target } = connection
 
   // Clear any existing context menus first
@@ -4237,13 +4115,13 @@ const handleConnect = withVueFlowErrorBoundary('handleConnect', (connection: any
 
   // Don't allow connections to/from sections
   if (source.startsWith('section-') || target.startsWith('section-')) {
-    debugLog('❌ Connection rejected: section involvement')
+    console.log('❌ Connection rejected: section involvement')
     return
   }
 
   // Don't allow self-connections
   if (source === target) {
-    debugLog('❌ Connection rejected: self-connection')
+    console.log('❌ Connection rejected: self-connection')
     return
   }
 
@@ -4256,29 +4134,22 @@ const handleConnect = withVueFlowErrorBoundary('handleConnect', (connection: any
     // Add dependency: target depends on source
     const dependsOn = targetTask.dependsOn || []
     if (!dependsOn.includes(source)) {
-      debugLog('✅ Creating dependency:', source, '→', target)
+      console.log('✅ Creating dependency:', source, '→', target)
       taskStore.updateTaskWithUndo(target, {
         dependsOn: [...dependsOn, source]
       })
       syncEdges() // Re-sync edges to show new connection
     } else {
-      debugLog('⚠️ Dependency already exists:', source, '→', target)
+      console.log('⚠️ Dependency already exists:', source, '→', target)
     }
   } else {
-    debugLog('❌ Connection rejected: missing tasks or canvas positions')
+    console.log('❌ Connection rejected: missing tasks or canvas positions')
   }
 })
 
 // Handle drop from inbox or board - supports batch operations
-// 🔧 PERPLEXITY FIX (Dec 2, 2025): Uses watchPausable to completely pause watchers during drop
 const handleDrop = async (event: DragEvent) => {
-  debugLog('🎯 [CANVAS] handleDrop called - PAUSING watchers')
-
-  // 🔧 PERPLEXITY FIX: Completely pause watchers instead of using guard flag
-  // Guard flag still allowed watchers to trigger and queue up with stale data
-  pauseCanvasSync()
-  pauseInboxSync()
-  debugLog('⏸️ [CANVAS] Watchers PAUSED - no sync will occur during drop')
+  console.log('🎯 [CANVAS] handleDrop called - starting drag-drop operation')
 
   try {
     event.preventDefault()
@@ -4297,29 +4168,22 @@ const handleDrop = async (event: DragEvent) => {
       return
     }
 
-    // 🔧 PERPLEXITY FIX: Also check for 'id' as fallback (some drags use 'id' not 'taskId')
-    const { taskId, taskIds, fromInbox, source, id } = parsedData
-    const allTaskIds = taskIds || [taskId || id]
+    const { taskId, taskIds, fromInbox, source } = parsedData
 
-    // Accept various drag sources: board, sidebar, inbox variations, and canvas repositioning
-    const isValidSource = fromInbox ||
-                          source === 'board' ||
-                          source === 'sidebar' ||
-                          source === 'unified-inbox-canvas' ||
-                          source === 'unified-inbox' ||
-                          source === 'inbox' ||
-                          source === 'canvas' ||
-                          (source && source.includes('unified-inbox'))
-
-    if (!isValidSource) {
-      debugLog('ℹ️ [CANVAS] Ignoring drag from unsupported source:', source)
+    if (!fromInbox && source !== 'board' && source !== 'sidebar') {
+      console.log('ℹ️ [CANVAS] Ignoring drag from unsupported source:', source)
       return
     }
 
-    debugLog('✅ [CANVAS] Valid drag source accepted:', source)
-
     // Use VueFlow's built-in coordinate transformation to account for zoom and pan
-    const { project, addNodes } = useVueFlow()
+    let project
+    try {
+      const vueFlowHook = useVueFlow()
+      project = vueFlowHook.project
+    } catch (error) {
+      console.error('❌ [CANVAS] Failed to get VueFlow project function:', error)
+      return
+    }
 
     let canvasPosition
     try {
@@ -4332,79 +4196,63 @@ const handleDrop = async (event: DragEvent) => {
       return
     }
 
-    debugLog('📍 [CANVAS] Browser coords:', event.clientX, event.clientY, '→ Canvas:', canvasPosition)
+    console.log('📊 [CANVAS] Dropping at position:', canvasPosition)
 
-    // Process all tasks
-    for (let index = 0; index < allTaskIds.length; index++) {
-      const currentTaskId = allTaskIds[index]
-      if (!currentTaskId) continue
+    // Handle batch drop (multiple tasks)
+    if (taskIds && Array.isArray(taskIds)) {
+      console.log('📋 [CANVAS] Processing batch drop of', taskIds.length, 'tasks')
 
-      try {
-        // Calculate position with offset for batch drops
-        const offsetX = (index % 3) * 250 // 3 columns
-        const offsetY = Math.floor(index / 3) * 150 // Row height
-        const position = {
-          x: canvasPosition.x + offsetX,
-          y: canvasPosition.y + offsetY
+      for (let index = 0; index < taskIds.length; index++) {
+        const id = taskIds[index]
+        try {
+          // Offset each task slightly to create a staggered layout
+          const offsetX = (index % 3) * 250 // 3 columns
+          const offsetY = Math.floor(index / 3) * 150 // Row height
+
+          await taskStore.updateTaskWithUndo(id, {
+            canvasPosition: { x: canvasPosition.x + offsetX, y: canvasPosition.y + offsetY },
+            isInInbox: false
+          })
+
+          console.log('✅ [CANVAS] Successfully positioned task:', id)
+        } catch (error) {
+          console.error('❌ [CANVAS] Failed to position task:', id, error)
+          // Continue with other tasks even if one fails
         }
-
-        debugLog('📝 [CANVAS] Processing task:', currentTaskId, 'at position:', position)
-
-        // 🔧 STEP 1: Update store
-        await taskStore.updateTaskWithUndo(currentTaskId, {
-          canvasPosition: position,
+      }
+    }
+    // Handle single task drop (legacy/single select)
+    else if (taskId) {
+      console.log('📝 [CANVAS] Processing single task drop:', taskId)
+      try {
+        await taskStore.updateTaskWithUndo(taskId, {
+          canvasPosition: { x: canvasPosition.x, y: canvasPosition.y },
           isInInbox: false
         })
-
-        // 🔧 STEP 2: Wait for Vue to process the reactive update
-        await nextTick()
-
-        // 🔧 STEP 3: Verify task was updated in store (PERPLEXITY recommendation)
-        const verified = taskStore.tasks.find(t => t.id === currentTaskId)
-        if (!verified?.canvasPosition) {
-          console.error('❌ [CANVAS] Task update failed - not found in store:', currentTaskId)
-          continue
-        }
-        debugLog('✅ [CANVAS] Task verified in store with position:', verified.canvasPosition)
-
-        // 🔧 STEP 4: Use Vue Flow's addNodes API (PERPLEXITY recommendation)
-        // This directly adds the node to Vue Flow's internal state
-        // 🐛 BUG FIX: Changed type from 'task' to 'taskNode' to match registered node types
-        addNodes({
-          id: currentTaskId,
-          type: 'taskNode',  // Must match nodeTypes registration (line 1388-1391)
-          position: verified.canvasPosition,
-          data: { task: verified }
-        })
-        debugLog('🎯 [CANVAS] Node added to canvas via addNodes()')
-
-        // 🔧 STEP 5: Force save to PouchDB (bypasses broken change detection)
-        // The watcher's change detection fails due to Vue proxy comparison issues
-        await taskStore.forceSaveTask(currentTaskId)
-        debugLog('💾 [CANVAS] Task force-saved to PouchDB')
-
+        console.log('✅ [CANVAS] Successfully positioned single task:', taskId)
       } catch (error) {
-        console.error('❌ [CANVAS] Failed to position task:', currentTaskId, error)
-        // Continue with other tasks even if one fails
+        console.error('❌ [CANVAS] Failed to position single task:', taskId, error)
       }
     }
 
-    debugLog('✅ [CANVAS] handleDrop completed successfully')
+    console.log('✅ [CANVAS] handleDrop completed successfully')
+
+    // 🔧 FIXED: Force immediate sync after drop to show task on canvas
+    // Without this, the task doesn't appear until a refresh
+    await nextTick()
+    syncNodes()
+    console.log('🔄 [CANVAS] Forced syncNodes after drop')
 
   } catch (error) {
     console.error('💥 [CANVAS] Critical error in handleDrop:', error)
-  } finally {
-    // 🔧 PERPLEXITY FIX: Resume watchers and force sync
-    resumeCanvasSync()
-    resumeInboxSync()
-    debugLog('▶️ [CANVAS] Watchers RESUMED')
 
-    // 🔧 FIX (Dec 3, 2025): REMOVED syncNodes() call here
-    // The addNodes() call above already added the node to Vue Flow
-    // Calling syncNodes() was overwriting it with stale filteredTasks data
-    // The resumed watchers will handle any future sync needs
-    await nextTick()
-    debugLog('🔄 [CANVAS] Drop complete - nodes added via addNodes(), watchers resumed')
+    // Try to recover by notifying the user
+    try {
+      // You could show a user notification here
+      console.log('🔧 [CANVAS] Attempting error recovery...')
+    } catch (recoveryError) {
+      console.error('💀 [CANVAS] Even error recovery failed:', recoveryError)
+    }
   }
 }
 
@@ -4502,14 +4350,14 @@ const zoomOut = () => {
     const currentZoom = viewport.value?.zoom
     let newZoom = Math.max(canvasStore.zoomConfig.minZoom, currentZoom - 0.1)
 
-    debugLog(`[Zoom Debug] Zoom out: ${currentZoom} -> ${newZoom}`)
-    debugLog(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
+    console.log(`[Zoom Debug] Zoom out: ${currentZoom} -> ${newZoom}`)
+    console.log(`[Zoom Debug] Min zoom allowed: ${canvasStore.zoomConfig.minZoom}`)
 
     // Force Vue Flow to respect our zoom limits by explicitly setting min zoom first
     const { setMinZoom } = useVueFlow()
     if (setMinZoom) {
       setMinZoom(canvasStore.zoomConfig.minZoom)
-      debugLog(`[Zoom Debug] Forcefully set minZoom to ${canvasStore.zoomConfig.minZoom}`)
+      console.log(`[Zoom Debug] Forcefully set minZoom to ${canvasStore.zoomConfig.minZoom}`)
     }
 
     // Use vueFlowZoomTo instead of vueFlowZoomOut to ensure we respect minZoom
@@ -4519,7 +4367,7 @@ const zoomOut = () => {
     const timerId = setTimeout(() => {
       const actualZoom = viewport.value?.zoom
       if (actualZoom > newZoom && Math.abs(actualZoom - newZoom) > 0.01) {
-        debugLog(`[Zoom Debug] Vue Flow ignored zoom request, forcing again: ${actualZoom} -> ${newZoom}`)
+        console.log(`[Zoom Debug] Vue Flow ignored zoom request, forcing again: ${actualZoom} -> ${newZoom}`)
         vueFlowZoomTo(newZoom, { duration: 0 })
       }
     }, 250)
@@ -4573,7 +4421,7 @@ const closeQuickTaskCreate = () => {
  */
 const handleQuickTaskCreate = async (title: string, description: string) => {
   const functionName = 'handleQuickTaskCreate'
-  debugLog(`📍 ${functionName}: Creating task with title: "${title}" at position:`, quickTaskPosition.value)
+  console.log(`📍 ${functionName}: Creating task with title: "${title}" at position:`, quickTaskPosition.value)
 
   try {
     // ✅ VALIDATION 1: Check task title
@@ -4583,7 +4431,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
       throw new Error(msg)
     }
 
-    debugLog(`✅ ${functionName}: Task title validation passed`)
+    console.log(`✅ ${functionName}: Task title validation passed`)
 
     // ✅ VALIDATION 2: Check position data
     if (!quickTaskPosition.value ||
@@ -4594,7 +4442,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
       throw new Error(msg)
     }
 
-    debugLog(`✅ ${functionName}: Position validation passed: x=${quickTaskPosition.value.x}, y=${quickTaskPosition.value.y}`)
+    console.log(`✅ ${functionName}: Position validation passed: x=${quickTaskPosition.value.x}, y=${quickTaskPosition.value.y}`)
 
     // ✅ VALIDATION 3: Check task store and method
     if (!taskStore) {
@@ -4609,7 +4457,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
       throw new Error(msg)
     }
 
-    debugLog(`✅ ${functionName}: Task store validation passed`)
+    console.log(`✅ ${functionName}: Task store validation passed`)
 
     // ✅ CREATE TASK DATA
     const newTaskData = {
@@ -4624,7 +4472,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
       status: 'planned'
     }
 
-    debugLog(`📝 ${functionName}: Creating task with data:`, newTaskData)
+    console.log(`📝 ${functionName}: Creating task with data:`, newTaskData)
 
     // ✅ VALIDATION 4: Task data integrity
     if (!newTaskData.title || !newTaskData.canvasPosition) {
@@ -4633,10 +4481,10 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
       throw new Error(msg)
     }
 
-    debugLog(`✅ ${functionName}: Task data validation passed`)
+    console.log(`✅ ${functionName}: Task data validation passed`)
 
     // ✅ CREATE TASK IN STORE (with error handling)
-    debugLog(`⏳ ${functionName}: Calling taskStore.createTaskWithUndo()...`)
+    console.log(`⏳ ${functionName}: Calling taskStore.createTaskWithUndo()...`)
 
     try {
       const newTask = await taskStore.createTaskWithUndo(newTaskData as Partial<Task>)
@@ -4645,11 +4493,11 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
         throw new Error('Task creation returned invalid task object')
       }
 
-      debugLog(`✅ ${functionName}: Task created successfully:`, newTask.id)
+      console.log(`✅ ${functionName}: Task created successfully:`, newTask.id)
 
       // ✅ CLOSE QUICK CREATE MODAL
       closeQuickTaskCreate()
-      debugLog(`✅ ${functionName}: Quick create modal closed`)
+      console.log(`✅ ${functionName}: Quick create modal closed`)
 
       // ✅ OPEN EDIT MODAL (optional)
       try {
@@ -4657,7 +4505,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
         // Use nextTick to ensure DOM has updated before opening modal
         nextTick(() => {
           isEditModalOpen.value = true
-          debugLog(`✅ ${functionName}: Edit modal opened for task:`, newTask.id)
+          console.log(`✅ ${functionName}: Edit modal opened for task:`, newTask.id)
         })
       } catch (modalError) {
         console.warn(`⚠️ ${functionName}: Could not open edit modal:`, modalError)
@@ -4673,7 +4521,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
         })
       }
 
-      debugLog(`✅ ${functionName}: Task creation workflow completed successfully`)
+      console.log(`✅ ${functionName}: Task creation workflow completed successfully`)
       return newTask
 
     } catch (storeError) {
@@ -4744,7 +4592,7 @@ const handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
 
   const { taskId, fromInbox } = JSON.parse(data)
 
-  debugLog(`[handleSectionTaskDrop] Task "${taskId}" dropped on section "${section.name}" (type: ${section.type})`)
+  console.log(`[handleSectionTaskDrop] Task "${taskId}" dropped on section "${section.name}" (type: ${section.type})`)
 
   // CRITICAL: Apply section properties for smart groups
   // This ensures "Today", "Tomorrow", etc. sections work correctly
@@ -4767,7 +4615,7 @@ const handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
     updates.isInInbox = false
   }
 
-  debugLog(`[handleSectionTaskDrop] Applying updates for task "${taskId}":`, updates)
+  console.log(`[handleSectionTaskDrop] Applying updates for task "${taskId}":`, updates)
   taskStore.updateTaskWithUndo(taskId, updates)
 }
 
@@ -4788,7 +4636,7 @@ const handleSectionActivate = (sectionId: string) => {
 }
 
 const handleSectionContextMenu = (event: MouseEvent, section: any) => {
-  debugLog('🎯 Section context menu triggered for:', section)
+  console.log('🎯 Section context menu triggered for:', section)
 
   // Prevent event from bubbling to Vue Flow's node context menu
   event.stopPropagation()
@@ -4806,20 +4654,20 @@ const handleSectionContextMenu = (event: MouseEvent, section: any) => {
   closeNodeContextMenu()
   closeEdgeContextMenu()
 
-  debugLog('📋 Section context menu should be visible:', showCanvasContextMenu.value)
+  console.log('📋 Section context menu should be visible:', showCanvasContextMenu.value)
 }
 
 // Multi-selection handlers - FIXED to preserve group connection
 
 const handleSelectionChange = withVueFlowErrorBoundary('handleSelectionChange', (selectedIds: string[]) => {
-  debugLog('🔄 VUE FLOW SELECTION CHANGE:')
-  debugLog('🔄 Selected IDs from Vue Flow:', selectedIds)
-  debugLog('🔄 Previous canvas store selection:', canvasStore.selectedNodeIds)
+  console.log('🔄 VUE FLOW SELECTION CHANGE:')
+  console.log('🔄 Selected IDs from Vue Flow:', selectedIds)
+  console.log('🔄 Previous canvas store selection:', canvasStore.selectedNodeIds)
 
   canvasStore.setSelectedNodes(selectedIds)
 
-  debugLog('🔄 Updated canvas store selection:', canvasStore.selectedNodeIds)
-  debugLog('🔄 Selection synchronization complete')
+  console.log('🔄 Updated canvas store selection:', canvasStore.selectedNodeIds)
+  console.log('🔄 Selection synchronization complete')
 })
 
 const handleBulkAction = (action: string, params: any) => {
@@ -4906,7 +4754,7 @@ const handleTaskSelect = (task: Task, multiSelect: boolean) => {
 }
 
 const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
-  debugLog('Task context menu:', task)
+  console.log('Task context menu:', task)
   // Emit custom event for App.vue to handle
   window.dispatchEvent(new CustomEvent('task-context-menu', {
     detail: { event, task }
@@ -4924,19 +4772,19 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
 // See: https://vueflow.dev/guide/node.html - "Vue Flow does not know that the node was removed"
 // Fix date: 2025-11-29
 const cleanupStaleNodes = () => {
-  debugLog('🧹 [DISABLED] Stale node cleanup skipped - Vue Flow manages its own DOM')
+  console.log('🧹 [DISABLED] Stale node cleanup skipped - Vue Flow manages its own DOM')
   // Vue Flow handles DOM cleanup internally. Manual node.remove() calls
   // bypass the reactivity system and cause rendering failures.
   // If cleanup is truly needed, use: const { removeNodes } = useVueFlow()
 }
 
 onMounted(async () => {
-  debugLog('CanvasView mounted, tasks:', taskStore.tasks.length)
-  debugLog('✅ showSectionTypeDropdown fix applied - handleClickOutside function removed')
+  console.log('CanvasView mounted, tasks:', taskStore.tasks.length)
+  console.log('✅ showSectionTypeDropdown fix applied - handleClickOutside function removed')
 
   // Set Vue Flow as mounted immediately (component is ready for operations)
   isVueFlowMounted.value = true
-  debugLog('🎯 Vue Flow component mounted and ready for operations')
+  console.log('🎯 Vue Flow component mounted and ready for operations')
 
   // Clean up any stale DOM nodes from previous sessions
   cleanupStaleNodes()
@@ -4968,7 +4816,7 @@ onMounted(async () => {
 
   // Explicitly enforce zoom limits after Vue Flow initializes
   nextTick(async () => {
-    debugLog('[Zoom Debug] Enforcing zoom limits after mount')
+    console.log('[Zoom Debug] Enforcing zoom limits after mount')
 
     // Get Vue Flow instance and enforce zoom configuration with error handling
     try {
@@ -4976,7 +4824,7 @@ onMounted(async () => {
       if (setMinZoom && setMaxZoom) {
         setMinZoom(0.05)  // 5% minimum
         setMaxZoom(4.0)  // 400% maximum
-        debugLog('[Zoom Debug] Vue Flow zoom limits explicitly set to 5%-400%')
+        console.log('[Zoom Debug] Vue Flow zoom limits explicitly set to 5%-400%')
       }
     } catch (error) {
       console.warn('⚠️ [VUE_FLOW] Failed to set zoom limits:', error)
@@ -4985,7 +4833,7 @@ onMounted(async () => {
     // Verify current zoom is within bounds
     const currentZoom = viewport.value?.zoom
     if (currentZoom < 0.05 || currentZoom > 4.0) {
-      debugLog(`[Zoom Debug] Current zoom ${currentZoom} out of bounds, resetting to 100%`)
+      console.log(`[Zoom Debug] Current zoom ${currentZoom} out of bounds, resetting to 100%`)
       vueFlowZoomTo(1.0, { duration: 0 })
     }
 
@@ -4995,20 +4843,20 @@ onMounted(async () => {
       if (setMinZoomAgain && setMaxZoomAgain) {
         setMinZoomAgain(0.05)
         setMaxZoomAgain(4.0)
-        debugLog('[Zoom Debug] Zoom limits re-enforced after delay')
+        console.log('[Zoom Debug] Zoom limits re-enforced after delay')
       }
 
       // 🔧 DISABLED: Auto-centering was zooming in on tasks unexpectedly
       // Users reported this was confusing as it would zoom to a single task
       // The canvas now starts at the default viewport { zoom: 1, x: 0, y: 0 }
       // Users can press 'F' to fitView manually if needed
-      debugLog('[Canvas Init] Using default viewport (auto-center disabled)')
+      console.log('[Canvas Init] Using default viewport (auto-center disabled)')
     }, 1000)
     resourceManager.addTimer(zoomTimerId as unknown as number)
 
     // Initialize Vue Flow stability systems for testing access
     if (typeof window !== 'undefined') {
-      debugLog('🔧 [VUE_FLOW] Initializing stability systems for testing...')
+      console.log('🔧 [VUE_FLOW] Initializing stability systems for testing...')
 
       // Make systems available globally for testing
       window.vueFlowStability = vueFlowStability
@@ -5019,21 +4867,21 @@ onMounted(async () => {
       // Initialize the systems
       try {
         await vueFlowStability.initialize()
-        debugLog('✅ [VUE_FLOW] Stability system initialized')
+        console.log('✅ [VUE_FLOW] Stability system initialized')
       } catch (error) {
         console.warn('⚠️ [VUE_FLOW] Stability system initialization failed:', error)
       }
 
       try {
         await vueFlowStateManager.initialize()
-        debugLog('✅ [VUE_FLOW] State manager initialized')
+        console.log('✅ [VUE_FLOW] State manager initialized')
       } catch (error) {
         console.warn('⚠️ [VUE_FLOW] State manager initialization failed:', error)
       }
 
       try {
         vueFlowErrorHandling.initialize()
-        debugLog('✅ [VUE_FLOW] Error handling initialized')
+        console.log('✅ [VUE_FLOW] Error handling initialized')
       } catch (error) {
         console.warn('⚠️ [VUE_FLOW] Error handling initialization failed:', error)
       }
@@ -5048,7 +4896,7 @@ onBeforeUnmount(() => {
   // Clean up zoom performance manager
   zoomPerformanceManager.cleanup()
 
-  debugLog('🧹 CanvasView resources cleaned up successfully')
+  console.log('🧹 CanvasView resources cleaned up successfully')
 })
 
 

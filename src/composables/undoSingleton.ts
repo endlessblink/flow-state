@@ -30,6 +30,7 @@ function initializeRefHistory() {
   unifiedState = ref([...taskStore.tasks])
 
   // Create the SINGLE useManualRefHistory instance with proper VueUse configuration
+  // NOTE: deep: true was intentionally removed for performance reasons (deep watchers issue)
   refHistoryInstance = useManualRefHistory(unifiedState, {
     capacity: 50,
     clone: true

@@ -862,7 +862,8 @@ const createQuickTask = async () => {
   const title = input.value.trim()
   if (!title) return
 
-  await taskStore.createTask({
+  // FIX: Use createTaskWithUndo to enable undo functionality
+  await taskStore.createTaskWithUndo({
     title,
     description: '',
     status: 'planned',
@@ -882,10 +883,9 @@ const closeQuickTaskCreate = () => {
 const handleQuickTaskCreate = async (title: string, description: string) => {
   console.log('🎯 Creating quick task with title:', title)
 
-  // DIRECT FIX: Call taskStore.createTask() directly instead of using undo system
-  // The undo system seems to have issues, but taskStore.createTask() works perfectly
+  // FIX: Use createTaskWithUndo to enable undo functionality
   try {
-    const newTask = await taskStore.createTask({
+    const newTask = await taskStore.createTaskWithUndo({
       title: title,
       description: description,
       status: 'planned',

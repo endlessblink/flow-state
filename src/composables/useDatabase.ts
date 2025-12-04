@@ -13,6 +13,7 @@ import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getDatabaseConfig, type DatabaseHealth } from '@/config/database'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { isQuotaExceededError, checkStorageQuota } from '@/utils/storageQuotaMonitor'
 
 // Singleton database instance state
 let singletonDatabase: PouchDB.Database | null = null
@@ -490,6 +491,34 @@ export function useDatabase(): UseDatabaseReturn {
 
       } catch (err: any) {
         retryCount++
+
+        // SAFETY: Handle QuotaExceededError gracefully (don't crash app)
+        if (isQuotaExceededError(err)) {
+          console.error(`🛑 [DATABASE] Storage quota exceeded while saving ${key}`)
+
+          // Check and log current quota status
+          const quotaState = await checkStorageQuota()
+
+          error.value = new Error('Storage quota exceeded')
+          errorHandler.report({
+            severity: ErrorSeverity.CRITICAL,
+            category: ErrorCategory.DATABASE,
+            message: 'Storage quota exceeded - cannot save data',
+            userMessage: 'Storage is full. Please export your data and delete old tasks to free up space.',
+            error: err as Error,
+            context: {
+              key,
+              quotaUsed: quotaState.percentUsed,
+              quotaUsage: quotaState.usage,
+              quotaLimit: quotaState.quota
+            },
+            showNotification: true
+          })
+
+          // Don't throw - graceful degradation allows app to continue
+          // User can still view data and export, just can't save new data
+          return
+        }
 
         if (err.status === 409 && retryCount < maxRetries) {
           // Conflict detected - retry with exponential backoff

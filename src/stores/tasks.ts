@@ -379,14 +379,24 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // Migrate tasks to set isInInbox based on canvas position
   const migrateInboxFlag = () => {
+    let migratedCount = 0
     tasks.value.forEach(task => {
-      // If isInInbox is undefined, set based on canvasPosition
-      if (task.isInInbox === undefined) {
-        // Task has canvas position = not in inbox
+      // FIX: If task has canvasPosition, it should NOT be in inbox (regardless of current isInInbox value)
+      // This fixes the issue where JSON import sets isInInbox: true even for positioned tasks
+      if (task.canvasPosition && task.isInInbox !== false) {
+        task.isInInbox = false
+        migratedCount++
+        console.log(`🔄 [INBOX_MIGRATION] Fixed task "${task.title}" - has canvasPosition, setting isInInbox: false`)
+      }
+      // If isInInbox is undefined and no position, default to inbox
+      else if (task.isInInbox === undefined) {
         // Task has no canvas position = in inbox
-        task.isInInbox = !task.canvasPosition
+        task.isInInbox = true
       }
     })
+    if (migratedCount > 0) {
+      console.log(`✅ [INBOX_MIGRATION] Fixed ${migratedCount} tasks with incorrect isInInbox values`)
+    }
   }
 
   // Migrate projects to add viewType field
@@ -671,6 +681,11 @@ export const useTaskStore = defineStore('tasks', () => {
         // Map project to projectId
         const projectId = jsonTask.project === 'pomo-flow' ? '1' : jsonTask.project || '1'
 
+      // FIX: Preserve canvasPosition if it exists in JSON, and set isInInbox based on position
+      const hasCanvasPosition = jsonTask.canvasPosition &&
+        typeof jsonTask.canvasPosition.x === 'number' &&
+        typeof jsonTask.canvasPosition.y === 'number'
+
       return {
           id: jsonTask.id,
           title: jsonTask.title,
@@ -684,8 +699,10 @@ export const useTaskStore = defineStore('tasks', () => {
           projectId,
           createdAt: new Date(jsonTask.created || jsonTask.createdAt || Date.now()),
           updatedAt: new Date(jsonTask.updated || jsonTask.createdAt || Date.now()),
-          isInInbox: true, // Start in inbox until positioned on canvas
-          instances: [], // No instances initially
+          // FIX: Use JSON value if available, otherwise default based on canvasPosition
+          canvasPosition: hasCanvasPosition ? jsonTask.canvasPosition : undefined,
+          isInInbox: hasCanvasPosition ? false : (jsonTask.isInInbox ?? true),
+          instances: jsonTask.instances || [], // Preserve instances if available
         }
       })
 
@@ -2041,13 +2058,9 @@ export const useTaskStore = defineStore('tasks', () => {
         return
     }
 
-    // Create updates object that preserves inbox status
+    // Create updates object - only set dueDate, let caller control isInInbox
     const updates: Partial<Task> = {
       dueDate: dueDate,
-      // Explicitly preserve inbox status
-      isInInbox: true,
-      // CRITICAL: Do NOT set instances array - keep task in inbox
-      // No updates.instances = []
     }
 
     console.log(`[Smart Groups] Applied ${smartGroupType} properties to task "${task.title}":`, {

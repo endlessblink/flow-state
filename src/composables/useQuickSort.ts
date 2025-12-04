@@ -1,35 +1,22 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useQuickSortStore } from '@/stores/quickSort'
+import { useSmartViews } from '@/composables/useSmartViews'
 import type { Task } from '@/types/tasks'
 import type { CategoryAction } from '@/stores/quickSort'
 
 export function useQuickSort() {
   const taskStore = useTaskStore()
   const quickSortStore = useQuickSortStore()
+  const { isUncategorizedTask } = useSmartViews()
 
   // State
   const currentIndex = ref(0)
 
   // Getters
+  // Fixed: Use direct filtering instead of mutating store state (antipattern)
   const uncategorizedTasks = computed<Task[]>(() => {
-    // Use the task store's uncategorized filtering logic for consistency
-    // Temporarily switch to uncategorized smart view to get the actual tasks
-    const originalSmartView = taskStore.activeSmartView
-    const originalProjectId = taskStore.activeProjectId
-
-    // Set filters to match uncategorized smart view behavior
-    taskStore.activeSmartView = 'uncategorized'
-    taskStore.activeProjectId = 'all' // Include all projects
-
-    // Get the filtered tasks
-    const tasks = taskStore.filteredTasks
-
-    // Restore original filters
-    taskStore.activeSmartView = originalSmartView
-    taskStore.activeProjectId = originalProjectId
-
-    return tasks
+    return taskStore.tasks.filter(task => isUncategorizedTask(task))
   })
 
   const currentTask = computed<Task | null>(() => {

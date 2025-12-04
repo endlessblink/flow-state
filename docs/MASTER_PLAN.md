@@ -74,27 +74,117 @@ resourceManager.addWatcher(
 
 ---
 
-## 🔜 **NEXT SESSION: Feature Restoration from Deprecated Version**
+## ✅ **COMPLETED: QA Issues Fix (Dec 4, 2025)**
 
-### **Objective**
-Restore features and design elements that were working in the deprecated version but may be missing or degraded in current version.
+### **Discovery Method**
+Comprehensive QA testing using Playwright MCP to test user flows through entire application.
 
-### **Areas to Investigate**
-1. **Design Elements** - Glass morphism, visual polish, animations
-2. **UI Components** - Modal styling, button designs, form elements
-3. **Interactions** - Hover states, transitions, micro-interactions
-4. **Canvas Features** - Context menus, section styling, node designs
+### **Issues Fixed**
 
-### **Approach**
-1. Compare current version with deprecated version screenshots/code
-2. Identify specific features/styles that regressed
-3. Port improvements incrementally with testing after each change
-4. Document each restoration in this file
+| # | Issue | Severity | Root Cause | Status |
+|---|-------|----------|------------|--------|
+| 1 | Canvas phantom click events | CRITICAL | `CanvasView.vue:3010` - event handler doesn't catch section headers | ✅ FIXED |
+| 2 | Canvas performance loop | CRITICAL | `CanvasView.vue:2006-2054` - 6 watchers with `deep:true` causing cascade | ✅ FIXED |
+| 3 | Quick Sort false completion | HIGH | `useQuickSort.ts:15-33` - mutates store state inside computed property | ✅ FIXED |
+| 4 | Inconsistent project naming | MEDIUM | `TaskList.vue:98` - hardcoded "Unknown Project" vs "Uncategorized" | ✅ FIXED |
+| 5 | Canvas shows 0 tasks after data reload | CRITICAL | `tasks.ts:381-389` - migration only ran for `isInInbox === undefined`, not `true` | ✅ FIXED |
 
-### **Safety Protocol**
-- One feature per commit
-- Test canvas after every change (avoid Dec 2-4 regression scenario)
-- Keep checkpoint `d41c834` as safe rollback point
+### **Issue 1: Canvas Phantom Click Events**
+**Problem**: Context menu appears automatically on page load; right-click on section headers triggers canvas-level context menu.
+
+**Root Cause**: `handleCanvasRightClick()` at line 3010 only checks for `.task-node` and `[data-id^="section-"]`, missing `.section-header` and `.canvas-section`.
+
+**Fix**: Expand selector check to include all section-related elements.
+
+### **Issue 2: Canvas Performance Loop**
+**Problem**: Hundreds of `[SYNC] Updated nodes` messages per second causing UI freezing.
+
+**Root Cause**: Six watchers with `{ deep: true }` at lines 2006, 2021, 2037 trigger `syncNodes` which mutates reactive state, causing re-triggers.
+
+**Fix**: Add proper debouncing, replace deep watchers with shallow comparisons, add `isSyncing` guard to prevent re-entry.
+
+### **Issue 3: Quick Sort False Completion**
+**Problem**: Shows "Amazing Work! You've sorted all your tasks!" when 22 uncategorized tasks exist.
+
+**Root Cause**: `uncategorizedTasks` computed property at lines 15-33 temporarily mutates store state (`activeSmartView`, `activeProjectId`) inside a computed property - an antipattern that causes reactivity issues.
+
+**Fix**: Replace store mutation approach with direct filtering that doesn't mutate state.
+
+### **Issue 4: Inconsistent Project Naming**
+**Problem**: Sidebar shows "Uncategorized Tasks" but TaskList shows "Unknown Project" for same tasks.
+
+**Root Cause**: `TaskList.vue:98` hardcodes `'Unknown Project'` instead of using `taskStore.getProjectDisplayName()`.
+
+**Fix**: Replace hardcoded fallback with store method or consistent "Uncategorized" string.
+
+### **Issue 5: Canvas Shows 0 Tasks After Data Reload (REGRESSION)**
+**Problem**: After database was emptied and tasks re-imported from JSON, canvas showed "0 nodes" despite 22 tasks loaded. Console showed `CanvasView mounted, tasks: 22` but `🔄 [SYNC] Updated nodes: 0 valid nodes`.
+
+**Root Cause Chain**:
+1. Database emptied (cause unknown - possibly browser data cleared)
+2. Tasks re-imported from `/public/tasks.json`
+3. JSON file had ALL tasks with `isInInbox: true` and NO `canvasPosition`
+4. `importTasksFromJSON()` at line 687 hardcoded `isInInbox: true`
+5. `migrateInboxFlag()` at lines 381-389 only ran when `isInInbox === undefined`, NOT when `true`
+6. Canvas filter at line 1814 requires `isInInbox === false && canvasPosition`
+7. All 22 tasks failed the filter → 0 nodes rendered
+
+**Fix (Two-Part)**:
+1. **Enhanced Migration** (`tasks.ts:381-400`): Now also fixes tasks where `canvasPosition` exists but `isInInbox !== false`
+2. **Smart Import** (`tasks.ts:684-707`): Preserves `canvasPosition` from JSON and sets `isInInbox` based on whether task has canvas position
+
+**Key Lesson**: Data-related issues can masquerade as code bugs. Always check actual data state in the database.
+
+### **Implementation Order (Safest)**
+1. **Issue 4** - Lowest risk, simple string changes
+2. **Issue 3** - Medium risk, isolated composable
+3. **Issue 1** - Medium risk, event handling
+4. **Issue 2** - Highest risk, affects core Canvas reactivity
+5. **Issue 5** - Data migration fix (applied after regression discovered)
+
+### **Files Modified**
+- `src/views/CanvasView.vue` - Issues 1, 2
+- `src/composables/useQuickSort.ts` - Issue 3
+- `src/components/TaskList.vue` - Issue 4
+- `src/composables/useCalendarCore.ts` - Issue 4
+- `src/composables/useCalendarEventHelpers.ts` - Issue 4
+- `src/components/ProjectFilterDropdown.vue` - Issue 4
+- `src/stores/tasks.ts` - Issue 5 (migrateInboxFlag + importTasksFromJSON)
+
+### **Plan File**
+`/home/noam/.claude/plans/dazzling-crafting-moth.md`
+
+---
+
+## ✅ **COMPLETED: Feature Restoration - 4 User-Reported Issues (Dec 4, 2025)**
+
+### **Status**
+| Fix | Status | Risk | Description |
+|-----|--------|------|-------------|
+| 1. QuickSort | ✅ DONE | LOW | Was already fixed in previous session |
+| 2. Sidebar Colors | ✅ DONE | LOW | Added purple/indigo/blue/orange filter colors |
+| 3. Canvas Context Menu | ✅ DONE | MEDIUM | Fixed task context menu + glass morphism styling |
+| 4. Unified Inbox | ✅ DONE | MEDIUM | Swapped to UnifiedInboxPanel in both views |
+
+### **Implementation Details**
+1. **QuickSort**: Already using `useSmartViews().isUncategorizedTask()` - no change needed
+2. **Sidebar Colors**: Added tokens to `design-tokens.css`, `filterColor` prop to `DateDropZone.vue`
+3. **Canvas Context Menu**: Updated `handleTaskContextMenu` to select task + show menu, glass morphism CSS
+4. **Unified Inbox**: Replaced `InboxPanel`/`CalendarInboxPanel` with `UnifiedInboxPanel` in both views
+
+### **Files Modified**
+- `src/assets/design-tokens.css` - Filter color tokens
+- `src/components/DateDropZone.vue` - filterColor prop + color-specific styles
+- `src/components/app/AppSidebar.vue` - Filter color assignments + uncategorized styling
+- `src/components/canvas/CanvasContextMenu.vue` - Glass morphism gradient styling
+- `src/views/CanvasView.vue` - Fixed handleTaskContextMenu, swapped to UnifiedInboxPanel
+- `src/views/CalendarView.vue` - Swapped to UnifiedInboxPanel
+
+### **Plan File**
+`/home/noam/.claude/plans/jolly-questing-hippo.md`
+
+### **Known Issue: Canvas Groups**
+Tasks behave unexpectedly when groups (e.g., "Today") are present on canvas - tasks inside groups become constrained/stuck. Needs investigation.
 
 ---
 
@@ -379,7 +469,7 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 
 | Issue | File | Description | Priority |
 |-------|------|-------------|----------|
-| *(No known issues currently)* | - | - | - |
+| **🚨 CRITICAL: Tasks "disappear" when dragged to "Today" group** | `CanvasView.vue:4611-4616`, `tasks.ts:2048`, `canvas.ts:149` | **ROOT CAUSE IDENTIFIED**: Task is NOT deleted - it's HIDDEN due to filter conflict. The flow: (1) Task on canvas has `isInInbox: false` (required to appear), (2) User drags to "Today" smart group section, (3) `moveTaskToSmartGroup()` sets `isInInbox: true` (line 2048 in tasks.ts), (4) Canvas filter EXCLUDES tasks where `isInInbox !== false` (line 149 in canvas.ts, line 1814 in CanvasView.vue), (5) Task vanishes from canvas view. **FIX**: When dropping to smart group section ON CANVAS, keep `isInInbox: false` since task should stay visible on canvas. The comment at line 4611 says "keep isInInbox: true for smart groups" but this contradicts canvas display requirements. | **P0 - CRITICAL** |
 
 ---
 
@@ -1163,8 +1253,137 @@ try {
 
 ---
 
-**Version**: 2.2 (Updated Dec 1, 2025)
-**Status**: 🟢 STABLE + 🚀 TECHNICAL DEBT INITIATIVE
+## 🛡️ **SYNC SAFETY ARCHITECTURE (Dec 4, 2025)**
+
+### **Why The Sync System Broke - Simple Explanation**
+
+**The "Nervous Observer" Problem:**
+
+Imagine 18 security cameras watching a room. Every time ANYTHING moves - even a dust particle - ALL cameras send alerts. Each alert triggers a recording, and each recording triggers more alerts. Soon you have thousands of alerts per second and the system crashes.
+
+**That's exactly what happened:**
+- The app had 18+ "watchers" monitoring every tiny change to tasks, canvas, and timer
+- When you edited ONE task, it triggered a cascade:
+  1. Save to local database
+  2. Sync to remote server
+  3. Broadcast to other browser tabs
+  4. Update the canvas display
+  5. ...which triggered MORE watchers, creating an infinite loop
+- The system got so overwhelmed it had to be **completely disabled**
+
+**The December 2-4, 2025 Crisis:**
+- Canvas drag-and-drop stopped working
+- Multiple failed recovery attempts
+- Root cause: 6 deep watchers in CanvasView.vue lines 2006, 2021, 2037 triggering infinite `syncNodes` re-entry loops
+
+---
+
+### **What's Different Now - The "Smart Mailroom" Approach**
+
+| Old Way (Broke) | New Way (Safe) |
+|-----------------|----------------|
+| Every change triggers immediate alerts everywhere | Changes go into a queue, processed in batches |
+| 18 watchers watching everything | Only watch what we need, when we need it |
+| No protection against storms | 100ms "cooldown" between broadcasts |
+| Every tab runs its own timer | ONE leader tab runs timer, others just display |
+| No way to stop a problem | Circuit breaker auto-stops if issues detected |
+
+**Simple Analogy:**
+- **Before:** 18 people shouting updates at once in a room → chaos
+- **After:** One person collects all updates, waits 1/10th of a second for more, then calmly announces them once
+
+---
+
+### **Key Safety Changes**
+
+1. **Message Batching** - Collect updates for 100ms before sending (like waiting for an elevator)
+2. **Deduplication** - Don't send the same update twice within 5 seconds
+3. **Leader Election** - Only one browser tab is "in charge" of the timer
+4. **Action-Based Sync** - Only sync when you explicitly save, not on every keystroke
+5. **Safety Nets** - Auto-disable if anything goes wrong, instant rollback to stable version
+
+---
+
+### **Online Verification**
+
+These patterns are validated against industry best practices:
+
+| Pattern | Source | Verification |
+|---------|--------|--------------|
+| Deep watchers are expensive | [Vue.js Official Docs](https://vuejs.org/guide/essentials/watchers.html) | Confirmed |
+| Use watchEffect() instead | [Vue Performance Tips](https://www.codecentric.de/wissens-hub/blog/vuejs-performance-tips-part-2) | Recommended |
+| PouchDB infinite loops are known issue | [GitHub Issue #1300](https://github.com/pouchdb/pouchdb/issues/1300) | Confirmed |
+| Cross-tab needs 100ms debounce | [MDN Blog](https://developer.mozilla.org/en-US/blog/exploring-the-broadcast-channel-api-for-cross-tab-communication/) | Recommended |
+| Deduplication TTL (5 seconds) | [react-broadcast-sync](https://www.npmjs.com/package/react-broadcast-sync) | Best Practice |
+
+---
+
+### **Implementation Steps (With Rollback Points)**
+
+**Step 1: Create Git Tag Before Changes**
+```bash
+git tag -a sync-safety-baseline -m "Pre-sync-safety baseline"
+```
+
+**Step 2: Cross-Tab Batching (MEDIUM RISK)**
+- Files: `src/composables/useCrossTabSync.ts`
+- Rollback: `git checkout sync-safety-baseline -- src/composables/useCrossTabSync.ts`
+
+**Step 3: Timer Leader Election (MEDIUM RISK)**
+- Files: `src/stores/timer.ts`
+- Rollback: `git checkout HEAD~1 -- src/stores/timer.ts`
+
+**Step 4: Replace Deep Watchers (HIGH RISK - Critical)**
+- Files: `src/stores/tasks.ts`, `src/stores/canvas.ts`
+- Rollback: `git checkout HEAD~1 -- src/stores/tasks.ts src/stores/canvas.ts`
+
+**Step 5: Unified Sync Queue (HIGH RISK)**
+- Files: NEW `src/utils/unifiedSyncQueue.ts`
+- Rollback: `git revert HEAD`
+
+**Step 6: Re-enable Sync (Only after all tests pass)**
+- Files: `src/config/database.ts`
+- Rollback: `git checkout HEAD~1 -- src/config/database.ts`
+
+---
+
+### **Safety Protocol**
+
+**Before Each Step:**
+1. `git status` - ensure clean working directory
+2. Create commit after each successful step
+3. Run `npm run build` - verify no TypeScript errors
+4. Run `npm run test` - verify no regressions
+
+**Rollback Triggers:**
+- Build fails
+- Tests fail
+- Circuit breaker health < 70%
+- Any infinite loop detected
+
+**Emergency Rollback:**
+```bash
+git checkout sync-safety-baseline
+npm run kill
+npm run dev
+```
+
+---
+
+### **Current Sync State**
+
+| System | Status | Notes |
+|--------|--------|-------|
+| CouchDB Remote Sync | ❌ DISABLED | Stopped to prevent infinite loops |
+| Cross-Tab Sync | ⚠️ NO DEBOUNCE | Can cause broadcast storms |
+| Timer Sync | ❌ NOT SYNCED | Each tab runs independent timer |
+| Deep Watchers | ⚠️ 18+ ACTIVE | Root cause of crisis |
+| Circuit Breaker | ✅ READY | Will auto-stop issues if re-enabled |
+
+---
+
+**Version**: 2.3 (Updated Dec 4, 2025)
+**Status**: 🟢 STABLE + 🚀 TECHNICAL DEBT INITIATIVE + 🛡️ SYNC SAFETY PLANNED
 **Approach**: Evidence-based development with systematic technical debt resolution
-**Last Verified**: December 1, 2025 - Documentation synced with actual codebase (12 stores, 56 composables, 71 skills, Vite 7.2.4)
+**Last Verified**: December 4, 2025 - Sync safety architecture documented with online verification
 

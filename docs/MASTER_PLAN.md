@@ -203,6 +203,7 @@ Three critical bugs reported after completing the feature restoration:
 | 3 | Sidebar counters don't match displayed tasks | 🟡 MEDIUM | 📋 DEFERRED - complex fix needed |
 | 4 | Canvas uses separate InboxPanel instead of UnifiedInboxPanel | 🟡 MEDIUM | ✅ FIXED - consolidated (commit `d8d8ab4`) |
 | 5 | Task disappears when moved from yesterday to Today group | 🔴 CRITICAL | ✅ FIXED - reordered operations in handleSectionTaskDrop |
+| 6 | Canvas VueFlow rendered off-screen after UnifiedInboxPanel | 🔴 CRITICAL | ✅ FIXED - CSS selector mismatch (commit `1f2f103`) |
 
 ### **Root Cause Analysis (Bug 1 - CRITICAL)**
 
@@ -238,6 +239,33 @@ User on "Today" smart view → Creates task on canvas → Task has no dueDate
 **Fix**: Reorder operations in `handleSectionTaskDrop()` at `CanvasView.vue:4621-4650`:
 - Set `isInInbox: false` and `canvasPosition` BEFORE calling `applySectionPropertiesToTask()`
 - Now when `syncNodes()` runs, task already has correct properties
+
+### **Root Cause Analysis (Bug 6 - CRITICAL)**
+
+**Problem**: After commit `d8d8ab4` (UnifiedInboxPanel consolidation), VueFlow rendered completely off-screen.
+
+**Root Cause**: CSS selector mismatch after component swap:
+- Old `InboxPanel` used class `.inbox-panel` → CSS had `position: absolute`
+- New `UnifiedInboxPanel` uses class `.unified-inbox-panel` → CSS didn't target it
+- Result: Inbox got `position: static`, took up full height (737.5px)
+- VueFlow pushed to `top: 961px` (exactly at viewport bottom, invisible)
+
+**DOM Analysis Evidence**:
+```javascript
+canvasDropZone: { top: 223.5, height: 737.5 }     // ✅ Correct
+canvasContainerWrapper: { top: 961 }              // ❌ Off-screen!
+vueFlow: { top: 961 }                             // ❌ Off-screen!
+node: { top: 1409 }                               // ❌ Way off-screen!
+```
+
+**Fix**: Added `.unified-inbox-panel` to CSS selector at `CanvasView.vue:5169-5170`:
+```css
+:deep(.inbox-panel),
+:deep(.unified-inbox-panel) {
+  position: absolute;
+  /* ... */
+}
+```
 
 ### **Safe Implementation Plan**
 
@@ -1468,13 +1496,14 @@ These patterns are validated against industry best practices:
 
 ### **Implementation Steps (With Checkpoint Commits)**
 
-| Phase | Name | Risk | Checkpoint Commit |
-|-------|------|------|-------------------|
-| 1 | Cross-Tab Batching | ⚠️ MEDIUM | `checkpoint: before cross-tab batching` |
-| 2 | Timer Leader Election | ⚠️ MEDIUM | `checkpoint: before timer leader election` |
-| 3 | Remove Deep Watchers | 🔴 HIGH | `checkpoint: before removing deep watchers` |
-| 4 | Unified Sync Queue | 🔴 HIGH | `checkpoint: before unified sync queue` |
-| 5 | Re-enable Live Sync | ⚠️ MEDIUM | `checkpoint: before re-enabling live sync` |
+| Phase | Name | Risk | Status | Commit |
+|-------|------|------|--------|--------|
+| 1 | Cross-Tab Batching | ⚠️ MEDIUM | ✅ COMPLETE | `6266272` |
+| 2 | Timer Leader Election | ⚠️ MEDIUM | ✅ COMPLETE | `d8d8ab4` |
+| 3 | Remove Deep Watchers | 🔴 HIGH | ✅ COMPLETE | `d8d8ab4` |
+| 4 | Unified Sync Queue | 🔴 HIGH | ✅ COMPLETE | `c9bb70a` |
+| 5 | Re-enable Live Sync | ⚠️ MEDIUM | ⏳ PENDING | - |
+| 6 | Canvas Layout Fix | 🟢 LOW | ✅ COMPLETE | `1f2f103` |
 
 **Phase 1: Cross-Tab Batching**
 ```bash

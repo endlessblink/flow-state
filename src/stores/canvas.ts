@@ -193,7 +193,9 @@ export const useCanvasStore = defineStore('canvas', () => {
         console.log('🔗 Task store connected, setting up safe sync watcher')
 
         // Set up reactive watcher with safety guards for task deletions
-        watch(() => taskStore.tasks?.value, (newTasks, oldTasks) => {
+        // CRITICAL FIX: Pinia auto-unwraps refs, so taskStore.tasks IS the array, NOT a ref!
+        // Using .value here returns undefined and breaks the entire canvas sync
+        watch(() => taskStore.tasks, (newTasks, oldTasks) => {
           if (newTasks && Array.isArray(newTasks)) {
             console.log('🔄 Tasks changed, safely syncing to canvas:', newTasks.length)
 
@@ -217,9 +219,10 @@ export const useCanvasStore = defineStore('canvas', () => {
         }, { deep: true, immediate: false, flush: 'sync' })
 
         // Initial sync if tasks are already available
-        if (taskStore.tasks?.value && Array.isArray(taskStore.tasks.value)) {
-          console.log('🚀 Initial sync for existing tasks:', taskStore.tasks.value.length)
-          syncTasksToCanvas(taskStore.tasks.value)
+        // CRITICAL FIX: taskStore.tasks is already the array (Pinia unwraps refs)
+        if (taskStore.tasks && Array.isArray(taskStore.tasks)) {
+          console.log('🚀 Initial sync for existing tasks:', taskStore.tasks.length)
+          syncTasksToCanvas(taskStore.tasks)
         }
       }).catch(error => {
         console.error('❌ Failed to load task store:', error)

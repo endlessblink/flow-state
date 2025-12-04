@@ -400,15 +400,9 @@ const formatTime = (date: Date) => {
 }
 
 const triggerManualSync = async () => {
-  // 🔥 CRITICAL: Disable manual sync to stop infinite loops
-  console.log('🚨 [SYNC DISABLED] SyncStatus triggerManualSync called but sync is disabled to stop infinite loops')
-  console.log('🚨 [SYNC DISABLED] Manual sync prevented - database operations working offline-only')
-  isManualSyncing.value = false
-  syncProgress.value = 100
-  progressText.value = 'Sync disabled for stability'
-  return
+  // SYNC RE-ENABLED: Safe after Phase 1 watcher fixes (Dec 2025)
+  console.log('🔄 [SyncStatus] Manual sync button clicked')
 
-  // Original code below is disabled
   if (!canManualSync.value) return
 
   isManualSyncing.value = true

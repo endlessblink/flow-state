@@ -95,7 +95,7 @@ const projectGroups = computed(() => {
 
     return {
       id: projectId,
-      name: project?.name || 'Unknown Project',
+      name: project?.name || 'Uncategorized',
       emoji: project?.emoji,
       tasks: tasks,
       parentTasks: parentTasks

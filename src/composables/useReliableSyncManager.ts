@@ -529,10 +529,13 @@ export const useReliableSyncManager = () => {
       // Step 3: Perform sync (CORE OPERATION)
       try {
         console.log('🔄 Step 3: Performing bidirectional sync...')
+        // Simple sync without filter - filter was causing infinite loop issues
+        // All documents will sync, which is fine for now
         const syncResult = await localDB!.sync(remoteDB!, {
           live: false,
           retry: false,
-          filter: isSyncableDocument
+          batch_size: 100,
+          batches_limit: 10
         })
         console.log('✅ Step 3 complete - sync result:', {
           push: syncResult.push?.docs_written || 0,

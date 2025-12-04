@@ -189,8 +189,8 @@
           </div>
         </div>
 
-        <!-- Inbox Sidebar - Always visible for debugging -->
-        <InboxPanel />
+        <!-- Inbox Sidebar - Using UnifiedInboxPanel for consistency with CalendarView -->
+        <UnifiedInboxPanel context="canvas" />
 
         <!-- Always show VueFlow canvas, even when empty -->
         <div>
@@ -541,7 +541,7 @@ import { shouldUseSmartGroupLogic, getSmartGroupType } from '@/composables/useTa
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
-import InboxPanel from '@/components/canvas/InboxPanel.vue'
+import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import BatchEditModal from '@/components/BatchEditModal.vue'
@@ -2528,6 +2528,17 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
         const movedOutside = !isTaskInSectionBounds(absoluteX, absoluteY, section)
         if (movedOutside) {
           console.log(`Task ${node.id} moved outside section ${sectionId}`)
+          // FIX: Clear parentNode to break Vue Flow parent-child relationship
+          // This prevents orphaned tasks from moving with their old section
+          // and prevents them from being deleted when the section is deleted
+          const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+          if (nodeIndex !== -1) {
+            nodes.value[nodeIndex] = {
+              ...nodes.value[nodeIndex],
+              parentNode: undefined,
+              position: { x: absoluteX, y: absoluteY }
+            }
+          }
         }
       }
     } else {
@@ -3299,6 +3310,16 @@ const deleteGroup = (section: any) => {
 
   const confirmMessage = `Delete "${section.name}" group? This will remove the group and all its settings.`
   if (confirm(confirmMessage)) {
+    // FIX: Clear parentNode for all tasks referencing this section BEFORE deleting
+    // This prevents Vue Flow from auto-deleting orphaned child nodes
+    const sectionNodeId = `section-${section.id}`
+    nodes.value = nodes.value.map(node => {
+      if (node.parentNode === sectionNodeId) {
+        console.log(`Orphaning task ${node.id} from deleted section ${section.id}`)
+        return { ...node, parentNode: undefined }
+      }
+      return node
+    })
     canvasStore.deleteSectionWithUndo(section.id)
     syncNodes() // Refresh VueFlow to show changes
   }

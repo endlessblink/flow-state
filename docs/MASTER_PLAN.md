@@ -164,7 +164,7 @@ Comprehensive QA testing using Playwright MCP to test user flows through entire 
 | 1. QuickSort | ✅ DONE | LOW | Was already fixed in previous session |
 | 2. Sidebar Colors | ✅ DONE | LOW | Azure colors for Today/Week/Tasks filters in App.vue |
 | 3. Canvas Context Menu | ✅ DONE | MEDIUM | Fixed excessive height with CSS :not() selector |
-| 4. Unified Inbox | ✅ DONE | MEDIUM | Swapped to UnifiedInboxPanel in both views |
+| 4. Unified Inbox | ⚠️ PARTIAL | MEDIUM | CalendarView uses UnifiedInboxPanel, CanvasView still uses old InboxPanel |
 
 ### **Implementation Details**
 1. **QuickSort**: Already using `useSmartViews().isUncategorizedTask()` - no change needed
@@ -176,8 +176,8 @@ Comprehensive QA testing using Playwright MCP to test user flows through entire 
 - `src/assets/design-tokens.css` - Filter color tokens (azure, azure-dark, blue)
 - `src/components/DateDropZone.vue` - filterColor prop + color-specific styles
 - `src/App.vue` - Filter color props on DateDropZone components (lines 65-109)
-- `src/views/CanvasView.vue` - Fixed context menu CSS, swapped to UnifiedInboxPanel
-- `src/views/CalendarView.vue` - Swapped to UnifiedInboxPanel
+- `src/views/CanvasView.vue` - Fixed context menu CSS (still uses old InboxPanel - TODO)
+- `src/views/CalendarView.vue` - Swapped to UnifiedInboxPanel ✅
 
 ### **Plan File**
 `/home/noam/.claude/plans/jolly-questing-hippo.md`
@@ -198,9 +198,10 @@ Three critical bugs reported after completing the feature restoration:
 
 | # | Bug | Severity | Status |
 |---|-----|----------|--------|
-| 1 | Tasks created on canvas disappear immediately | 🔴 CRITICAL | 🔧 FIX READY |
-| 2 | Tasks from other views don't appear in canvas inbox | 🟠 HIGH | 🔍 INVESTIGATING |
-| 3 | Sidebar counters don't match displayed tasks | 🟡 MEDIUM | 📋 DEFERRED |
+| 1 | Tasks created on canvas disappear immediately | 🔴 CRITICAL | ✅ FIXED (commit `7644828`) |
+| 2 | Tasks from other views don't appear in canvas inbox | 🟠 HIGH | 🔍 Needs user verification (may be fixed by #1) |
+| 3 | Sidebar counters don't match displayed tasks | 🟡 MEDIUM | 📋 DEFERRED - complex fix needed |
+| 4 | Canvas uses separate InboxPanel instead of UnifiedInboxPanel | 🟡 MEDIUM | 🔧 TODO - consolidation needed |
 
 ### **Root Cause Analysis (Bug 1 - CRITICAL)**
 
@@ -250,12 +251,13 @@ if (!taskStore.tasks || !Array.isArray(taskStore.tasks)) {
 const currentTasks = taskStore.tasks
 ```
 
-### **Testing Checklist**
-- [ ] Create task via canvas context menu → task appears immediately
-- [ ] Task stays visible when switching smart views
-- [ ] Drag from inbox to canvas still works
-- [ ] Build passes (`npm run build`)
-- [ ] No console errors or infinite loops
+### **Testing Checklist** (Bug 1 - Verified Dec 4, 2025)
+- [x] Create task via canvas context menu → task appears immediately ✅
+- [x] Node count increased from 3 to 4 after creation ✅
+- [x] Build passes (`npm run build`) ✅
+- [ ] Task stays visible when switching smart views (needs user verification)
+- [ ] Drag from inbox to canvas still works (needs user verification)
+- [ ] No console errors or infinite loops (needs user verification)
 
 ### **Rollback Plan**
 ```bash
@@ -1555,7 +1557,88 @@ npm run dev
 
 ---
 
-**Version**: 2.3 (Updated Dec 4, 2025)
+## 🛡️ **DATA SAFETY HARDENING (Dec 4, 2025)**
+
+### **Background**
+Data Safety Auditor skill detected 3 critical/high issues that could cause data loss. This section documents the ultra-safe implementation plan to address them.
+
+### **Issues Detected by Audit**
+
+| Issue | Severity | Current State | Impact |
+|-------|----------|---------------|--------|
+| Safari ITP 7-Day Expiration | CRITICAL | Safari detection exists, NO mitigation | ALL IndexedDB data deleted after 7 days |
+| QuotaExceededError Unhandled | CRITICAL | Quota functions exist, NO enforcement | App crashes when storage full |
+| PouchDB Conflict Detection | HIGH | Full system exists (1500+ lines), NOT ACTIVATED | Conflicting changes silently lost |
+
+### **Implementation Approach: READ-ONLY FIRST**
+
+**Safety Principles:**
+1. **Detection First** - Monitor issues before fixing
+2. **User Control** - All actions require user confirmation (no auto-cleanup, no auto-sync, no auto-resolution)
+3. **Graceful Degradation** - Errors caught, app continues working
+4. **Checkpoint Commits** - Rollback-ready at every step
+
+### **Implementation Order (Safest First)**
+
+| Order | Fix | Risk | Files |
+|-------|-----|------|-------|
+| 1 | Quota Monitoring utility | LOW | NEW: `src/utils/storageQuotaMonitor.ts` |
+| 2 | Quota Error Catch | LOW | `src/composables/useDatabase.ts` |
+| 3 | Safari ITP Detection | LOW | NEW: `src/utils/safariITPProtection.ts` |
+| 4 | Safari Warning Toast | LOW | `src/App.vue` |
+| 5 | Conflict Detection | LOW | `src/composables/useDatabase.ts` |
+| 6 | Conflict Warning Banner | LOW | NEW: `src/components/ConflictWarningBanner.vue` |
+
+### **Fix 1: Safari ITP 7-Day Expiration**
+
+**Problem**: Safari's Intelligent Tracking Prevention (ITP) deletes ALL IndexedDB data after 7 days without user interaction.
+
+**Solution** (User-initiated only):
+- Detect Safari browser (already exists in `CrossTabBrowserCompatibility.ts`)
+- Track last user interaction timestamp in localStorage
+- Show warning toast at 5 days, critical warning at 6 days
+- Provide manual "Sync Now" button - NO auto-sync
+
+**Rollback**: `git checkout main -- src/App.vue && rm src/utils/safariITPProtection.ts`
+
+### **Fix 2: QuotaExceededError Handling**
+
+**Problem**: When IndexedDB storage is full, app crashes instead of showing friendly error.
+
+**Solution** (Graceful degradation):
+- Add QuotaExceededError catch in `useDatabase.ts:performDirectSave()`
+- Show friendly error message via existing errorHandler
+- Display quota percentage in Settings
+- Warning banner when >80% - NO automatic cleanup
+
+**Rollback**: `git checkout main -- src/composables/useDatabase.ts && rm src/utils/storageQuotaMonitor.ts`
+
+### **Fix 3: PouchDB Conflict Detection**
+
+**Problem**: Full conflict resolution system exists (conflictDetector.ts, conflictResolver.ts) but `{ conflicts: true }` option NOT used in db.get() operations.
+
+**Solution** (Detection only, user resolves):
+- Add `{ conflicts: true }` to db.get() in load operations
+- Log conflicts found (don't auto-resolve)
+- Show conflict count in warning banner
+- User clicks to open existing ConflictResolutionDialog - NO auto-resolution
+
+**Rollback**: `git checkout main -- src/composables/useDatabase.ts && rm src/components/ConflictWarningBanner.vue`
+
+### **Success Criteria**
+
+- [ ] Safari ITP: Warning shown at 5+ days, no auto-sync
+- [ ] Quota: Error caught gracefully, app doesn't crash
+- [ ] Conflicts: Detected on load, user notified, no auto-resolution
+- [ ] Build passes after each step
+- [ ] No existing functionality broken
+
+### **Plan File**
+`/home/noam/.claude/plans/imperative-strolling-leaf.md`
+
+---
+
+**Version**: 2.4 (Updated Dec 4, 2025)
 **Status**: 🟢 STABLE + 🚀 TECHNICAL DEBT INITIATIVE + 🛡️ SYNC SAFETY PLANNED
 **Approach**: Evidence-based development with systematic technical debt resolution
 **Last Verified**: December 4, 2025 - Sync safety architecture documented with online verification

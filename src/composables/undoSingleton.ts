@@ -120,6 +120,15 @@ const performRedo = () => {
 
 const saveState = (description?: string) => {
   if (!refHistoryInstance) return false
+  // FIX: Add null check for commit function to prevent silent failures
+  if (!commit) {
+    console.error('❌ [UNDO] commit function not initialized - calling initializeRefHistory()')
+    initializeRefHistory()
+    if (!commit) {
+      console.error('❌ [UNDO] commit function still not initialized after retry')
+      return false
+    }
+  }
   try {
     const taskStore = useTaskStore()
     // FIXED: Use raw tasks, not filteredTasks to prevent state synchronization issues

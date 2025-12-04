@@ -1,8 +1,8 @@
 <template>
 <div class="calendar-layout">
-    <!-- Calendar Inbox Panel -->
+    <!-- Unified Inbox Panel -->
     <Transition name="sidebar-slide">
-      <CalendarInboxPanel v-show="uiStore.secondarySidebarVisible" />
+      <UnifiedInboxPanel v-show="uiStore.secondarySidebarVisible" context="calendar" />
     </Transition>
 
     <!-- Task Edit Modal -->
@@ -498,7 +498,7 @@ import { useCalendarEventHelpers } from '@/composables/calendar/useCalendarEvent
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
-import CalendarInboxPanel from '@/components/CalendarInboxPanel.vue'
+import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'

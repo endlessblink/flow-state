@@ -2,7 +2,9 @@
   <div
     :class="[
       'date-drop-zone',
+      `filter-${filterColor}`,
       {
+        'is-active': active,
         'is-drag-target': isDragTarget,
         'is-drag-valid': isDragValid,
         'is-drag-invalid': isDragTarget && !isDragValid && isDragging
@@ -53,10 +55,12 @@ interface Props {
   active?: boolean
   count?: number
   targetType: 'today' | 'weekend' | 'tomorrow' | 'nodate'
+  filterColor?: 'purple' | 'indigo' | 'blue' | 'orange' | 'teal'
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  active: false
+  active: false,
+  filterColor: 'teal'
 })
 
 const emit = defineEmits<{
@@ -187,12 +191,45 @@ const calculateTargetDate = (): string => {
   background: var(--surface-hover);
 }
 
-.date-drop-zone.is-active {
+/* Filter color-specific active states */
+.date-drop-zone.filter-purple.is-active {
+  background: var(--filter-today-bg);
+  border: 1px solid var(--filter-today-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--filter-today-glow);
+}
+
+.date-drop-zone.filter-indigo.is-active {
+  background: var(--filter-week-bg);
+  border: 1px solid var(--filter-week-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--filter-week-glow);
+}
+
+.date-drop-zone.filter-blue.is-active {
+  background: var(--filter-tasks-bg);
+  border: 1px solid var(--filter-tasks-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--filter-tasks-glow);
+}
+
+.date-drop-zone.filter-orange.is-active {
+  background: var(--filter-uncategorized-bg);
+  border: 1px solid var(--filter-uncategorized-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--filter-uncategorized-glow);
+}
+
+.date-drop-zone.filter-teal.is-active {
   background: var(--state-active-bg);
   border: 1px solid var(--state-active-border);
   backdrop-filter: var(--state-active-glass);
   color: var(--state-active-text);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+  box-shadow: var(--state-hover-glow);
 }
 
 .zone-icon {

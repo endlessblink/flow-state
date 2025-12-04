@@ -519,6 +519,8 @@ const onDragStart = (e: DragEvent, task: Task) => {
   const dragData = {
     ...task,
     taskId: task.id,
+    taskIds: [task.id],
+    fromInbox: true,
     source: `unified-inbox-${props.context}`
   }
   e.dataTransfer.setData('application/json', JSON.stringify(dragData))

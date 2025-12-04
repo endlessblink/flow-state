@@ -376,17 +376,27 @@ const handleArrangeInGrid = () => {
 <style scoped>
 .context-menu {
   position: fixed;
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-2) 0;
+  background: linear-gradient(
+    135deg,
+    var(--surface-primary) 0%,
+    var(--surface-secondary) 100%
+  );
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  border: 1px solid var(--glass-bg-medium);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 24px 48px var(--shadow-xl),
+    0 12px 24px var(--shadow-xl),
+    0 0 0 1px var(--glass-bg-medium),
+    inset 0 1px 0 var(--glass-border);
+  padding: var(--space-2);
   min-width: 200px;
   max-width: 320px;
   max-height: 80vh;
   overflow-y: auto;
   z-index: var(--z-popover);
-  animation: menuSlideIn var(--duration-fast) var(--spring-bounce);
+  animation: menuSlideIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes menuSlideIn {

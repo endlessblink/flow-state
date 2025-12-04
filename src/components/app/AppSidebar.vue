@@ -60,11 +60,12 @@
 
       <!-- Smart Views - Using DateDropZone for drag and drop functionality -->
       <div class="smart-views">
-        <!-- Today -->
+        <!-- Today - Purple highlight -->
         <DateDropZone
           :active="activeSmartView === 'today'"
           :count="todayTaskCount"
           target-type="today"
+          filter-color="purple"
           @click="handleSmartViewClick('today')"
         >
           <template #icon>
@@ -73,11 +74,12 @@
           Today
         </DateDropZone>
 
-        <!-- This Week -->
+        <!-- This Week - Indigo highlight -->
         <DateDropZone
           :active="activeSmartView === 'week'"
           :count="weekTaskCount"
           target-type="weekend"
+          filter-color="indigo"
           @click="handleSmartViewClick('week')"
         >
           <template #icon>
@@ -88,11 +90,12 @@
 
         <!-- Uncategorized Tasks Section -->
         <div class="smart-view-uncategorized">
-          <!-- All Active Tasks -->
+          <!-- All Active Tasks - Blue highlight -->
           <DateDropZone
             :active="activeSmartView === null && activeProjectId === null"
             :count="allTasksCount"
             target-type="nodate"
+            filter-color="blue"
             @click="handleAllTasksClick"
           >
             <template #icon>
@@ -558,11 +561,11 @@ defineEmits<{
 }
 
 .uncategorized-filter.active {
-  background: var(--brand-primary-bg-subtle);
-  border-color: var(--brand-primary-border-medium);
-  color: var(--brand-primary);
+  background: var(--filter-uncategorized-bg);
+  border-color: var(--filter-uncategorized-border);
+  color: rgb(245, 158, 11); /* Orange text */
   font-weight: var(--font-semibold);
-  box-shadow: var(--brand-primary-glow-subtle);
+  box-shadow: var(--filter-uncategorized-glow);
 }
 
 .uncategorized-filter .filter-badge {

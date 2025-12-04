@@ -714,6 +714,118 @@ Shows performance metrics when issues detected:
 
 ---
 
+## Canvas Auto-Update System (December 2025 Fix)
+
+### Problem Summary
+
+Prior to December 4, 2025, two canvas operations required page refresh:
+1. **Drag from inbox to canvas** - Tasks didn't appear immediately
+2. **Task edits on canvas** - Editing title/status/priority didn't update node visuals
+
+### Root Cause Analysis
+
+#### Issue 1: Cache Hash Bug (line ~664)
+
+The cache hash only used task IDs:
+
+```typescript
+// BEFORE (broken):
+const currentHash = currentTasks.map(t => t.id).join('|')
+```
+
+When a task's `isInInbox` changed from `true` to `false`:
+- The watcher at line ~2035 DID fire
+- But `filteredTasks` returned CACHED old task objects because hash hadn't changed
+- `syncNodes()` read old data → task didn't appear
+
+#### Issue 2: Missing Property Watcher
+
+Current watchers only tracked:
+- `canvasPosition` (line ~2026)
+- `isInInbox` (line ~2035)
+
+**Missing**: No watcher for `title`, `status`, `priority` changes.
+
+### Implemented Fixes
+
+#### Fix 1: Cache Hash Includes Mutable Properties
+
+```typescript
+// AFTER (fixed):
+const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}`).join('|')
+```
+
+**Why safe**: Only changes WHEN cache invalidates, doesn't add new sync mechanism.
+
+#### Fix 2: Hash-Based Task Property Watcher
+
+```typescript
+// Watch for task visual property changes (title, status, priority)
+// Using hash-based approach (validated by Perplexity as more efficient than deep:true)
+resourceManager.addWatcher(
+  watch(
+    () => taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}`).join('|'),
+    () => {
+      batchedSyncNodes('normal')
+    },
+    { flush: 'post' }  // No deep:true - more efficient!
+  )
+)
+```
+
+**Why this is safe (Perplexity-validated)**:
+- **No `deep: true`** - single string comparison instead of object traversal
+- **Zero garbage collection** - no new objects created each cycle
+- Uses `batchedSyncNodes('normal')` - respects all guards
+- Uses `flush: 'post'` - correct timing for Vue Flow updates
+- Registered with `resourceManager` - proper cleanup
+
+### Safety Patterns to Maintain
+
+| Pattern to Avoid | How We Avoid It |
+|------------------|-----------------|
+| `watch()` timing issues | Use `flush: 'post'` |
+| Deep watchers causing loops | Use **hash string** instead of `deep: true` |
+| Direct DOM manipulation | Don't touch DOM, use existing `batchedSyncNodes()` |
+| Competing sync operations | Don't add new sync paths, fix existing ones |
+| Bypassing guards | Use `batchedSyncNodes()` which respects all guards |
+
+### Testing Verification
+
+After implementing these fixes, verify:
+
+```bash
+# 1. Drag from inbox test
+# - Drag task from inbox panel to canvas
+# - EXPECTED: Task node appears immediately
+# - Console shows: "🔄 [WATCHER] isInInbox changed"
+
+# 2. Task property edit test
+# - Edit task title via double-click or modal
+# - EXPECTED: Title updates on canvas node immediately
+# - Change status/priority
+# - EXPECTED: Visual indicators update immediately
+
+# 3. No infinite loops
+# - CPU usage stays < 30% during idle
+# - No console spam
+```
+
+### Commit Reference
+
+**Restoration Checkpoint**: `d41c834` (December 4, 2025)
+- Message: "fix(canvas): Auto-update canvas without page refresh - restoration checkpoint"
+
+---
+
+## Related Documentation
+
+**CRITICAL - Read Before Modifying CanvasView.vue:**
+
+- **[Canvas Development Safety Guidelines](../canvas-development-safety-2025-12-04/README.md)** - Anti-patterns to avoid, safe patterns, and pre-flight checklist
+
+---
+
 ## Quick Reference Commands
 
 ```bash

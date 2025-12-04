@@ -53,13 +53,119 @@ const performanceMonitor = new CrossTabPerformance()
 const browserCompatibility = new CrossTabBrowserCompatibility()
 let isCompatibilityChecked = false
 
+// ========== PHASE 1: OUTGOING MESSAGE BATCHING (100ms) ==========
+// Queue outgoing messages for 100ms before sending (like waiting for an elevator)
+const pendingOutgoingMessages = new Map<string, Omit<CrossTabMessage, 'id' | 'timestamp' | 'tabId'>>()
+let outgoingFlushTimer: NodeJS.Timeout | null = null
+const OUTGOING_BATCH_DELAY_MS = 100
+
+// ========== PHASE 1: DEDUPLICATION WITH TTL (5 seconds) ==========
+// Don't send the same message twice within 5 seconds
+const recentlySentMessages = new Map<string, number>() // key -> timestamp
+const DEDUP_TTL_MS = 5000
+
+// Generate a deduplication key for a message
+const getMessageDedupeKey = (message: Omit<CrossTabMessage, 'id' | 'timestamp' | 'tabId'>): string => {
+  // Create key based on message type and relevant data
+  if (message.type === 'task_operation') {
+    const op = message.data as TaskOperation
+    return `task:${op.operation}:${op.taskId || op.taskIds?.join(',') || 'bulk'}`
+  }
+  if (message.type === 'canvas_change') {
+    const change = message.data as CanvasChange
+    return `canvas:${change.action}:${JSON.stringify(change.data).slice(0, 50)}`
+  }
+  if (message.type === 'ui_state_change') {
+    const change = message.data as UIStateChange
+    return `ui:${change.store}:${change.action}`
+  }
+  return `${message.type}:${Date.now()}`
+}
+
+// Check if message was recently sent (within TTL)
+const wasRecentlySent = (dedupeKey: string): boolean => {
+  const lastSent = recentlySentMessages.get(dedupeKey)
+  if (!lastSent) return false
+
+  const elapsed = Date.now() - lastSent
+  if (elapsed >= DEDUP_TTL_MS) {
+    // Expired, remove from cache
+    recentlySentMessages.delete(dedupeKey)
+    return false
+  }
+  return true
+}
+
+// Mark message as sent for deduplication
+const markAsSent = (dedupeKey: string): void => {
+  recentlySentMessages.set(dedupeKey, Date.now())
+
+  // Cleanup old entries periodically (every 10 messages)
+  if (recentlySentMessages.size > 50) {
+    const now = Date.now()
+    for (const [key, timestamp] of recentlySentMessages.entries()) {
+      if (now - timestamp >= DEDUP_TTL_MS) {
+        recentlySentMessages.delete(key)
+      }
+    }
+  }
+}
+
+// Queue a message for batched sending
+const queueOutgoingMessage = (message: Omit<CrossTabMessage, 'id' | 'timestamp' | 'tabId'>): void => {
+  const dedupeKey = getMessageDedupeKey(message)
+
+  // Check if recently sent (skip if duplicate within 5s)
+  if (wasRecentlySent(dedupeKey)) {
+    console.log(`🔄 [BATCH] Skipping duplicate message (sent within ${DEDUP_TTL_MS}ms):`, dedupeKey)
+    return
+  }
+
+  // Add to pending queue (latest wins for same key)
+  pendingOutgoingMessages.set(dedupeKey, message)
+
+  // Schedule flush if not already scheduled
+  if (!outgoingFlushTimer) {
+    outgoingFlushTimer = setTimeout(flushOutgoingMessages, OUTGOING_BATCH_DELAY_MS)
+  }
+}
+
+// Flush all pending outgoing messages
+const flushOutgoingMessages = (): void => {
+  outgoingFlushTimer = null
+
+  if (pendingOutgoingMessages.size === 0) return
+
+  const messagesToSend = Array.from(pendingOutgoingMessages.entries())
+  pendingOutgoingMessages.clear()
+
+  console.log(`📤 [BATCH] Flushing ${messagesToSend.length} messages after ${OUTGOING_BATCH_DELAY_MS}ms batch window`)
+
+  for (const [dedupeKey, message] of messagesToSend) {
+    // Send immediately (bypass batching)
+    sendMessageImmediately(message)
+    // Mark as sent for deduplication
+    markAsSent(dedupeKey)
+  }
+}
+
 // Generate unique tab ID
 const generateTabId = (): string => {
   return `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
-// Broadcast message to other tabs with performance monitoring
+// ========== PHASE 1: BATCHED BROADCAST (public API) ==========
+// This is the PUBLIC function - it queues messages for batching
 const broadcastMessage = (message: Omit<CrossTabMessage, 'id' | 'timestamp' | 'tabId'>) => {
+  if (typeof window === 'undefined') return
+
+  // Queue for batched sending (100ms window)
+  queueOutgoingMessage(message)
+}
+
+// ========== INTERNAL: Send message immediately (no batching) ==========
+// This is the INTERNAL function - used by flush to actually send
+const sendMessageImmediately = (message: Omit<CrossTabMessage, 'id' | 'timestamp' | 'tabId'>) => {
   if (typeof window === 'undefined') return
 
   // Check performance before broadcasting
@@ -577,6 +683,14 @@ export function useCrossTabSync() {
       clearTimeout(messageTimeout)
       messageTimeout = null
     }
+
+    // PHASE 1: Cleanup outgoing batch timer
+    if (outgoingFlushTimer) {
+      clearTimeout(outgoingFlushTimer)
+      outgoingFlushTimer = null
+    }
+    pendingOutgoingMessages.clear()
+    recentlySentMessages.clear()
 
     messageQueue.value = []
     pendingLocalOperations.value.clear()

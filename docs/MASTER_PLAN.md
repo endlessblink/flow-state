@@ -183,8 +183,12 @@ Comprehensive QA testing using Playwright MCP to test user flows through entire 
 ### **Plan File**
 `/home/noam/.claude/plans/jolly-questing-hippo.md`
 
-### **Known Issue: Canvas Groups**
-Tasks behave unexpectedly when groups (e.g., "Today") are present on canvas - tasks inside groups become constrained/stuck. Needs investigation.
+### **✅ FIXED: Canvas Groups (Dec 4, 2025)**
+~~Tasks behave unexpectedly when groups (e.g., "Today") are present on canvas - tasks inside groups become constrained/stuck.~~
+
+**Issues Fixed:**
+1. **Performance regression** - Creating sections caused infinite `syncNodes` loops (hundreds of messages/sec, UI freeze). Fixed by replacing `deep: true` watchers with string-based hash comparisons in `CanvasView.vue` lines 1994, 2014, 2025, 2039.
+2. **Tasks disappearing in smart groups** - Tasks vanished when dragged to Timeline sections like "Today". Fixed by always setting `isInInbox: false` for ALL sections in `handleSectionTaskDrop()` at line 4613-4618.
 
 ---
 
@@ -469,7 +473,9 @@ Based on stable-working-version analysis, the application contains **7 views**, 
 
 | Issue | File | Description | Priority |
 |-------|------|-------------|----------|
-| **🚨 CRITICAL: Tasks "disappear" when dragged to "Today" group** | `CanvasView.vue:4611-4616`, `tasks.ts:2048`, `canvas.ts:149` | **ROOT CAUSE IDENTIFIED**: Task is NOT deleted - it's HIDDEN due to filter conflict. The flow: (1) Task on canvas has `isInInbox: false` (required to appear), (2) User drags to "Today" smart group section, (3) `moveTaskToSmartGroup()` sets `isInInbox: true` (line 2048 in tasks.ts), (4) Canvas filter EXCLUDES tasks where `isInInbox !== false` (line 149 in canvas.ts, line 1814 in CanvasView.vue), (5) Task vanishes from canvas view. **FIX**: When dropping to smart group section ON CANVAS, keep `isInInbox: false` since task should stay visible on canvas. The comment at line 4611 says "keep isInInbox: true for smart groups" but this contradicts canvas display requirements. | **P0 - CRITICAL** |
+| ~~**🚨 CRITICAL: Tasks "disappear" when dragged to "Today" group**~~ | ~~`CanvasView.vue:4611-4616`~~ | **✅ FIXED (Dec 4, 2025)**: Changed `handleSectionTaskDrop()` to always set `isInInbox: false` for ALL sections including smart groups. Tasks now stay visible on canvas. | ~~**P0**~~ ✅ |
+| **Canvas inbox shows 0 tasks despite tasks existing** | `InboxPanel.vue`, `tasks.ts` | Inbox filters show 0 tasks when tasks exist - possible `isInInbox` flag inconsistency with legacy data. Sample tasks created fresh work correctly. | **P1** |
+| **IndexedDB version mismatch errors** | `usePersistentStorage.ts:130` | "The operation failed because the stored database is a higher version than the version requested" - needs proper DB migration | **P2** |
 
 ---
 

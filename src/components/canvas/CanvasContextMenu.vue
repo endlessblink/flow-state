@@ -175,7 +175,8 @@ import {
   Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2, Inbox,
   LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3, Sparkles
 } from 'lucide-vue-next'
-import { useContextMenu } from '@/composables/useContextMenu'
+import { useContextMenuEvents } from '@/composables/useContextMenuEvents'
+import { useContextMenuPositioning } from '@/composables/useContextMenuPositioning'
 
 interface Props {
   isVisible: boolean
@@ -219,15 +220,21 @@ const showLayoutSubmenu = ref(false)
 const submenuTimeout = ref<number | null>(null)
 const submenuPosition = ref({ flipHorizontal: false, adjustVertical: 0 })
 
-// Use unified context menu composable (positioning + event handling)
-const { menuPosition, updatePosition } = useContextMenu({
+// Use unified positioning system with reactive getters
+const { menuPosition, updatePosition } = useContextMenuPositioning({
   x: () => props.x,
   y: () => props.y,
   menuRef,
   isVisible: () => props.isVisible,
-  closeCallback: () => emit('close'),
   offset: { x: 0, y: 0 },
-  viewportPadding: 16,
+  viewportPadding: 16
+})
+
+// Use unified event handling with reactive getter
+useContextMenuEvents({
+  isVisible: () => props.isVisible,
+  menuRef,
+  closeCallback: () => emit('close'),
   preventCloseOnMenuClick: true
 })
 
@@ -363,7 +370,7 @@ const handleArrangeInGrid = () => {
   emit('close')
 }
 
-// Cleanup handled by useContextMenu composable
+// Cleanup handled by useContextMenuEvents composable
 </script>
 
 <style scoped>

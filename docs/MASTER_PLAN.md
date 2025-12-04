@@ -1,14 +1,104 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 4, 2025
-**Version**: 2.8 (Canvas Recovery + Calendar Incremental Rebuild)
-**Status**: ✅ Canvas WORKING (restored to Dec 1 checkpoint), Calendar needs incremental fixes
+**Version**: 3.0 (Canvas Auto-Update Complete)
+**Status**: ✅ Canvas WORKING with Auto-Update, 🔧 Feature Restoration Phase
 **Current Branch**: master
-**Baseline**: Checkpoint 9bf480c (Dec 1, 2025) - Canvas verified working
+**Baseline**: Checkpoint `d41c834` (Dec 4, 2025) - Canvas auto-update verified working
 
 ---
 
-## 🔧 **IN PROGRESS: Canvas Recovery & Calendar Rebuild (Dec 4, 2025)**
+## ✅ **COMPLETED: Canvas Auto-Update Fix (Dec 4, 2025)**
+
+### **Problem (SOLVED)**
+Two canvas operations didn't update automatically - users had to refresh to see changes:
+1. ~~**Drag from inbox to canvas** - Tasks didn't appear immediately~~ ✅ FIXED
+2. ~~**Task edits on canvas** - Editing title/status/priority didn't update node visuals~~ ✅ FIXED
+
+### **Root Cause Analysis (Validated by Perplexity Research)**
+
+| Issue | Root Cause | Location | Status |
+|-------|------------|----------|--------|
+| Inbox drag fails | Cache hash only used task IDs, not `isInInbox` | `CanvasView.vue` line ~664 | ✅ FIXED |
+| Task edits don't update | No watcher for title/status/priority changes | `CanvasView.vue` lines ~2024-2039 | ✅ FIXED |
+
+### **Fixes Applied**
+
+**Fix 1: Cache Hash Includes Mutable Properties**
+```typescript
+// BEFORE (broken):
+const currentHash = currentTasks.map(t => t.id).join('|')
+
+// AFTER (fixed):
+const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}`).join('|')
+```
+
+**Fix 2: Hash-Based Task Property Watcher**
+```typescript
+resourceManager.addWatcher(
+  watch(
+    () => taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}`).join('|'),
+    () => batchedSyncNodes('normal'),
+    { flush: 'post' }  // No deep:true - more efficient!
+  )
+)
+```
+
+### **Safety Validation (Perplexity-Confirmed)**
+
+| Question | Perplexity Answer | Verified |
+|----------|-------------------|----------|
+| Hash-based watcher safe from loops? | YES - callback doesn't modify source | ✅ |
+| Cache hash should include mutable props? | YES - Vue only knows about properties you check | ✅ |
+| `flush: 'post'` correct timing? | YES - allows Vue Flow to finish first | ✅ |
+
+### **Implementation Status**
+
+| Step | Status | Commit |
+|------|--------|--------|
+| Create git stash backup | ✅ Complete | - |
+| Fix 1: Cache hash | ✅ Complete | `d41c834` |
+| Test Fix 1 | ✅ PASS (Playwright) | - |
+| Fix 2: Property watcher | ✅ Complete | `d41c834` |
+| Test Fix 2 | ✅ PASS | - |
+| Documentation update | ✅ Complete | `d41c834` |
+
+### **Verification Evidence**
+- **Playwright Test**: Drag from inbox → task appeared immediately
+- **Console Log**: `🔄 [WATCHER] isInInbox changed - triggering high priority sync`
+- **Screenshot**: `.playwright-mcp/canvas-fix1-working.png`
+
+### **Documentation**
+- **SOP**: `docs/🐛 debug/sop/canvas-implementation/README.md` (updated with fix details)
+- **Plan File**: `/home/noam/.claude/plans/drifting-wiggling-naur.md`
+
+---
+
+## 🔜 **NEXT SESSION: Feature Restoration from Deprecated Version**
+
+### **Objective**
+Restore features and design elements that were working in the deprecated version but may be missing or degraded in current version.
+
+### **Areas to Investigate**
+1. **Design Elements** - Glass morphism, visual polish, animations
+2. **UI Components** - Modal styling, button designs, form elements
+3. **Interactions** - Hover states, transitions, micro-interactions
+4. **Canvas Features** - Context menus, section styling, node designs
+
+### **Approach**
+1. Compare current version with deprecated version screenshots/code
+2. Identify specific features/styles that regressed
+3. Port improvements incrementally with testing after each change
+4. Document each restoration in this file
+
+### **Safety Protocol**
+- One feature per commit
+- Test canvas after every change (avoid Dec 2-4 regression scenario)
+- Keep checkpoint `d41c834` as safe rollback point
+
+---
+
+## ✅ **COMPLETED: Canvas Recovery & Calendar Rebuild (Dec 4, 2025)**
 
 ### **What Happened (Dec 2-4)**
 After Dec 1 checkpoint, multiple commits broke canvas drag-drop functionality:

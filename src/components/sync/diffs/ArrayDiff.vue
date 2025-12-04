@@ -96,7 +96,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Plus, Minus, Check, Copy, Circle } from 'lucide-vue-next'
 
 interface Props {
   value: any
@@ -231,18 +230,18 @@ function getItemClass(item: DiffItem): string {
   }
 }
 
-function getItemIcon(item: DiffItem) {
+function getItemIcon(item: DiffItem): string {
   switch (item.type) {
     case 'added':
-      return Plus
+      return 'svg-added'
     case 'removed':
-      return Minus
+      return 'svg-removed'
     case 'unchanged':
-      return Check
+      return 'svg-unchanged'
     case 'duplicate':
-      return Copy
+      return 'svg-duplicate'
     default:
-      return Circle
+      return 'svg-default'
   }
 }
 

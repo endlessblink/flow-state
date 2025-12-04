@@ -63,12 +63,11 @@ export const useSmartViews = () => {
     }
 
     // NEW: Include tasks created today (for new tasks that haven't been scheduled yet)
-    // Use string comparison for timezone consistency across browsers
     if (task.createdAt) {
       const createdDate = new Date(task.createdAt)
       if (!isNaN(createdDate.getTime())) {
-        const createdDateStr = getLocalDateString(createdDate)
-        if (createdDateStr === todayStr) {
+        createdDate.setHours(0, 0, 0, 0)
+        if (createdDate.getTime() === today.getTime()) {
           return true
         }
       }
@@ -135,12 +134,11 @@ export const useSmartViews = () => {
 
     // Include tasks created today (for new tasks that haven't been scheduled yet)
     // This ensures consistency with isTodayTask - tasks created today appear in both Today and This Week
-    // Use string comparison for timezone consistency across browsers
     if (task.createdAt) {
       const createdDate = new Date(task.createdAt)
       if (!isNaN(createdDate.getTime())) {
-        const createdDateStr = getLocalDateString(createdDate)
-        if (createdDateStr === todayStr) {
+        createdDate.setHours(0, 0, 0, 0)
+        if (createdDate.getTime() === today.getTime()) {
           return true
         }
       }

@@ -1,8 +1,7 @@
 // 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2025-11-08T16:49:00Z - V10 - SIMPLE BACKUP SYSTEM
 
-// Console filter - initialize FIRST before any other imports to catch all logs
-import { initialize as initConsoleFilter } from './utils/consoleFilter'
-initConsoleFilter()
+// TEMPORARILY DISABLED: Causes chrome is not defined error in browser
+// import './utils/consoleFilter'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

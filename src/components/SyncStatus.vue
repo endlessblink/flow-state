@@ -283,7 +283,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { getGlobalReliableSyncManager } from '@/composables/useCouchDBSync'
+import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
 import { RefreshCw, Wifi, WifiOff, Cloud, CloudOff, AlertCircle, Pause, Play, Shield, Activity, Clock, Settings, Database, Trash2, Heart, Download } from 'lucide-vue-next'
 
@@ -305,47 +305,25 @@ const props = withDefaults(defineProps<Props>(), {
   showQueue: false
 })
 
-// Use the consolidated sync system via compatibility layer
 const reliableSync = getGlobalReliableSyncManager()
 
-// Extract properties from the consolidated API
-const syncStatus = reliableSync.syncStatus
-const error = computed(() => reliableSync.syncErrors.value[0] || null)
-const lastSyncTime = reliableSync.lastSyncTime
-const isSyncing = reliableSync.isSyncing
-const hasErrors = reliableSync.hasSyncErrors
-const conflicts = computed(() => []) // Conflicts handled differently in consolidated system
-const metrics = ref({}) // Metrics structure needs to be aligned
-const isOnline = reliableSync.isOnline
-const remoteConnected = reliableSync.remoteConnected
-const triggerSync = reliableSync.triggerSync
-const manualConflictResolution = () => console.warn('Manual conflict resolution not implemented in consolidated system')
-const getSyncHealth = reliableSync.getDatabaseHealth
-const getOfflineQueueStats = () => ({ length: reliableSync.pendingChanges.value, processing: false })
-const toggleSync = reliableSync.pauseSync // Using pause/resume instead of toggle
-
-// Create compatibility layer for syncHealth object
-const syncHealth = computed(() => ({
-  syncStatus: syncStatus.value || 'idle',
-  isOnline: isOnline.value,
-  lastSync: lastSyncTime.value,
-  uptime: Date.now() - (lastSyncTime.value?.getTime() || Date.now()),
-  conflictCount: conflicts.value.length,
-  resolutionCount: 0 // Not implemented in consolidated system
-}))
-
-// Create compatibility layer for queue stats
-const queueStats = computed(() => ({
-  length: reliableSync.pendingChanges.value,
-  processing: false,
-  oldestOperation: null // Not tracked in consolidated system
-}))
-
-// Create compatibility layer for metrics
-const syncMetrics = computed(() => ({
-  totalSyncs: 0, // Not tracked in consolidated system
-  averageSyncTime: 0 // Not tracked in consolidated system
-}))
+// Use reliable sync manager properties directly
+const {
+  syncStatus,
+  error,
+  lastSyncTime,
+  isSyncing,
+  hasErrors,
+  conflicts,
+  metrics,
+  isOnline,
+  remoteConnected,
+  triggerSync,
+  manualConflictResolution,
+  getSyncHealth,
+  getOfflineQueueStats,
+  toggleSync
+} = reliableSync
 
 // Alias for backward compatibility
 const activeConflicts = conflicts
@@ -354,14 +332,14 @@ const resolveConflict = manualConflictResolution
 const getHealth = getSyncHealth
 
 // Get queue stats for display
-const queueStatsComputed = computed(() => getOfflineQueueStats())
+const queueStats = computed(() => getOfflineQueueStats())
 
 // Reactive state
 const isManualSyncing = ref(false)
 const showDetailsPanel = ref(false)
 const lastValidation = ref<any>(null)
-const syncHealthComputed = computed(() => getSyncHealth())
-const syncMetricsComputed = computed(() => metrics.value)
+const syncHealth = computed(() => getSyncHealth())
+const syncMetrics = computed(() => metrics.value)
 
 // Enhanced sync state
 const showAdvancedMenu = ref(false)
@@ -428,7 +406,55 @@ const triggerManualSync = async () => {
   isManualSyncing.value = false
   syncProgress.value = 100
   progressText.value = 'Sync disabled for stability'
-  // ⏭️ PHASE 1 STABILIZATION: Function exits early, no sync performed
+  return
+
+  // Original code below is disabled
+  if (!canManualSync.value) return
+
+  isManualSyncing.value = true
+  syncStartTime.value = new Date()
+  syncProgress.value = 0
+  progressText.value = 'Starting sync...'
+  currentPhase.value = 'initialization'
+
+  try {
+    console.log('🔄 [SyncStatus] Triggering enhanced manual sync')
+
+    // Start progress tracking
+    const progressInterval = setInterval(() => {
+      if (syncProgress.value < 90) {
+        syncProgress.value += Math.random() * 10
+      }
+    }, 500)
+
+    await syncNow()
+
+    // Complete progress
+    syncProgress.value = 100
+    progressText.value = 'Sync completed successfully'
+
+    clearInterval(progressInterval)
+
+    logger.info('user', 'Manual sync triggered by user', {
+      duration: Date.now() - (syncStartTime.value?.getTime() || 0)
+    })
+
+  } catch (error) {
+    console.error('Manual sync failed:', error)
+    progressText.value = 'Sync failed'
+    syncProgress.value = 0
+
+    logger.error('user', 'Manual sync failed', {
+      error: (error as Error).message,
+      duration: Date.now() - (syncStartTime.value?.getTime() || 0)
+    })
+  } finally {
+    setTimeout(() => {
+      isManualSyncing.value = false
+      syncStartTime.value = null
+      currentPhase.value = ''
+    }, 1000)
+  }
 }
 
 // Enhanced methods for advanced functionality
@@ -438,8 +464,7 @@ const forceFullSync = async () => {
   syncProgress.value = 0
 
   try {
-    // const syncManager = getGlobalReliableSyncManager() // REMOVED - File no longer exists
-    const syncManager = null
+    const syncManager = getGlobalReliableSyncManager()
     if (syncManager && syncManager.throttledSync) {
       await syncManager.throttledSync('high')
     }
@@ -454,8 +479,7 @@ const clearSyncErrors = async () => {
   showAdvancedMenu.value = false
 
   try {
-    // const syncManager = getGlobalReliableSyncManager() // REMOVED - File no longer exists
-    const syncManager = null
+    const syncManager = getGlobalReliableSyncManager()
     if (syncManager && syncManager.clearSyncErrors) {
       await syncManager.clearSyncErrors()
     }
@@ -522,40 +546,33 @@ const formatUptime = (ms: number): string => {
   return `${seconds}s`
 }
 
-const getErrorSummary = (errorMessage: string | Error | unknown): string => {
+const getErrorSummary = (errorMessage: string): string => {
   if (!errorMessage) return ''
 
-  // 🔧 FIX (Dec 3, 2025): Handle non-string error values
-  const message = typeof errorMessage === 'string'
-    ? errorMessage
-    : errorMessage instanceof Error
-      ? errorMessage.message
-      : String(errorMessage)
-
   // Common error patterns for user-friendly messages
-  if (message.includes('network') || message.includes('connection')) {
+  if (errorMessage.includes('network') || errorMessage.includes('connection')) {
     return 'Network connection issue'
   }
-  if (message.includes('timeout')) {
+  if (errorMessage.includes('timeout')) {
     return 'Request timeout'
   }
-  if (message.includes('unauthorized') || message.includes('401')) {
+  if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
     return 'Authentication failed'
   }
-  if (message.includes('conflict')) {
+  if (errorMessage.includes('conflict')) {
     return 'Data conflict detected'
   }
-  if (message.includes('validation')) {
+  if (errorMessage.includes('validation')) {
     return 'Data validation error'
   }
-  if (message.includes('offline')) {
+  if (errorMessage.includes('offline')) {
     return 'Offline mode'
   }
 
   // For unknown errors, return first 30 characters
-  return message.length > 30
-    ? message.substring(0, 30) + '...'
-    : message
+  return errorMessage.length > 30
+    ? errorMessage.substring(0, 30) + '...'
+    : errorMessage
 }
 
 // Listen for sync events

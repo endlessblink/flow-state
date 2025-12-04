@@ -112,7 +112,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Plus, Minus, Edit2, Check, Circle } from 'lucide-vue-next'
 import ValueDisplay from '../ValueDisplay.vue'
 
 interface Props {
@@ -206,18 +205,18 @@ function getFieldClass(field: FieldDiff): string {
   }
 }
 
-function getFieldIcon(field: FieldDiff) {
+function getFieldIcon(field: FieldDiff): string {
   switch (field.status) {
     case 'added':
-      return Plus
+      return 'svg-added'
     case 'removed':
-      return Minus
+      return 'svg-removed'
     case 'changed':
-      return Edit2
+      return 'svg-changed'
     case 'unchanged':
-      return Check
+      return 'svg-unchanged'
     default:
-      return Circle
+      return 'svg-default'
   }
 }
 

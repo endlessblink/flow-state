@@ -5166,7 +5166,8 @@ onBeforeUnmount(() => {
 }
 
 /* InboxPanel positioning - overlays on left side of canvas */
-:deep(.inbox-panel) {
+:deep(.inbox-panel),
+:deep(.unified-inbox-panel) {
   position: absolute;
   left: 1rem;
   top: 1rem;

@@ -205,6 +205,20 @@ Three critical bugs reported after completing the feature restoration:
 | 5 | Task disappears when moved from yesterday to Today group | 🔴 CRITICAL | ✅ FIXED - reordered operations in handleSectionTaskDrop |
 | 6 | Canvas VueFlow rendered off-screen after UnifiedInboxPanel | 🔴 CRITICAL | ✅ FIXED - CSS selector mismatch (commit `1f2f103`) |
 
+### **✅ NEW FEATURE: Batch Selection & Delete (Dec 4, 2025)**
+
+Added multi-select capability to UnifiedInboxPanel (works in both Canvas and Calendar inboxes):
+
+**Features:**
+- **Ctrl+click** (Cmd+click on Mac) to select/deselect multiple tasks
+- **Selection bar** appears showing count with Delete and Clear buttons
+- **Batch delete** removes all selected tasks with undo support
+- **Drag multiple** selected tasks at once
+- **Context menu** includes selected task count for batch operations
+- **Escape key** clears selection
+
+**Location**: `src/components/base/UnifiedInboxPanel.vue`
+
 ### **Root Cause Analysis (Bug 1 - CRITICAL)**
 
 **Problem**: New tasks created via canvas context menu vanish immediately

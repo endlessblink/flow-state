@@ -961,26 +961,9 @@ export const useTaskStore = defineStore('tasks', () => {
     }, 1000) // Debounce 1 second for better performance
   }, { deep: true, flush: 'post' })
 
-  // DEBUG: Monitor projects array for debugging
-  watch(() => projects.value.map(p => ({ id: p.id, name: p.name, parentId: p.parentId })), (newProjects, oldProjects) => {
-    const changed = JSON.stringify(newProjects) !== JSON.stringify(oldProjects)
-    if (changed) {
-      console.log(`🔄 [PROJECTS DEBUG] Content changed. Total: ${newProjects.length}`)
-      newProjects.forEach((project, index) => {
-        console.log(`  📝 Project ${index + 1}: "${project.name}" (ID: ${project.id}, Parent: ${project.parentId})`)
-      })
-
-      // Debug helper function for detailed analysis
-      const analyzeProjects = () => {
-        const rootProjects = newProjects.filter(p => !p.parentId || p.parentId === 'undefined')
-        const childProjects = newProjects.filter(p => p.parentId && p.parentId !== 'undefined')
-        console.log(`  📊 Root projects (no parentId): ${rootProjects.length}`)
-        console.log(`  📊 Child projects (with parentId): ${childProjects.length}`)
-        return { rootProjects, childProjects }
-      }
-      analyzeProjects()
-    }
-  }, { deep: true, immediate: true })
+  // PHASE 3: DEBUG watcher removed - was causing unnecessary deep comparisons
+  // Original: watch(() => projects.value.map(...), ..., { deep: true, immediate: true })
+  // Removed to improve performance - debugging should use Vue DevTools instead
 
   // 🔧 CRITICAL: Fix project persistence to use PouchDB instead of IndexedDB
   watch(projects, (newProjects) => {

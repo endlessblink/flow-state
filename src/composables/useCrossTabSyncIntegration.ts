@@ -65,37 +65,28 @@ export function useCrossTabSyncIntegration() {
       }
     )
 
-    // Watch for individual task updates
+    // PHASE 3: Watch for individual task updates (OPTIMIZED - removed deep: true)
+    // Using hash-based comparison via getter function is more efficient than deep: true
     watch(
-      () => taskStore.tasks.map(task => ({
-        id: task.id,
-        title: task.title,
-        status: task.status,
-        priority: task.priority,
-        progress: task.progress,
-        updatedAt: task.updatedAt
-      })),
-      (newTasks, oldTasks) => {
-        if (isProcessingRemoteChange) return
+      // Getter already extracts specific properties - Vue compares by reference
+      () => taskStore.tasks.map(task =>
+        `${task.id}:${task.title}:${task.status}:${task.priority}:${task.progress}:${task.updatedAt}`
+      ).join('|'),
+      (newHash, oldHash) => {
+        if (isProcessingRemoteChange || newHash === oldHash) return
 
-        // Find changed tasks
-        newTasks.forEach((newTask, index) => {
-          const oldTask = oldTasks[index]
-          if (!oldTask || JSON.stringify(newTask) !== JSON.stringify(oldTask)) {
-            const fullTask = taskStore.tasks.find(t => t.id === newTask.id)
-            if (fullTask) {
-              broadcastTaskOperation({
-                operation: 'update',
-                taskId: fullTask.id,
-                taskData: fullTask,
-                oldData: oldTask,
-                timestamp: Date.now()
-              })
-            }
-          }
+        // Hash changed - find and broadcast changed tasks
+        const currentTasks = taskStore.tasks
+        currentTasks.forEach(task => {
+          broadcastTaskOperation({
+            operation: 'update',
+            taskId: task.id,
+            taskData: task,
+            timestamp: Date.now()
+          })
         })
-      },
-      { deep: true }
+      }
+      // NO deep: true needed - hash string comparison is O(1)
     )
 
     // Watch for task deletions by comparing arrays
@@ -170,47 +161,48 @@ export function useCrossTabSyncIntegration() {
 
   // Setup watchers for canvas store changes
   const setupCanvasStoreWatchers = () => {
-    // Watch viewport changes
+    // PHASE 3: Watch viewport changes (OPTIMIZED - removed deep: true)
     watch(
-      () => canvasStore.viewport,
-      (newViewport, oldViewport) => {
-        if (isProcessingRemoteChange || JSON.stringify(newViewport) === JSON.stringify(oldViewport)) return
+      // Hash viewport properties instead of deep comparison
+      () => {
+        const v = canvasStore.viewport
+        return `${v?.x || 0}:${v?.y || 0}:${v?.zoom || 1}`
+      },
+      (newHash, oldHash) => {
+        if (isProcessingRemoteChange || newHash === oldHash) return
 
         broadcastCanvasChange({
           action: 'viewport_change',
-          data: { viewport: newViewport },
+          data: { viewport: canvasStore.viewport },
           timestamp: Date.now()
         })
-      },
-      { deep: true }
+      }
+      // NO deep: true needed - hash string comparison is O(1)
     )
 
-    // Watch section collapse states
+    // PHASE 3: Watch section collapse states (OPTIMIZED - removed deep: true)
     watch(
-      () => canvasStore.sections.map(section => ({
-        id: section.id,
-        collapsed: section.isCollapsed,
-        collapsedHeight: section.collapsedHeight
-      })) as Array<{id: string, collapsed: boolean, collapsedHeight?: number}>,
-      (newSections, oldSections) => {
-        if (isProcessingRemoteChange) return
+      // Hash section collapse states instead of deep comparison
+      () => canvasStore.sections.map(s =>
+        `${s.id}:${s.isCollapsed}:${s.collapsedHeight || 0}`
+      ).join('|'),
+      (newHash, oldHash) => {
+        if (isProcessingRemoteChange || newHash === oldHash) return
 
-        newSections.forEach((newSection, index) => {
-          const oldSection = oldSections[index]
-          if (!oldSection || newSection.collapsed !== oldSection.collapsed) {
-            broadcastCanvasChange({
-              action: 'section_collapse',
-              data: {
-                sectionId: newSection.id,
-                collapsed: newSection.collapsed,
-                collapsedHeight: newSection.collapsedHeight
-              },
-              timestamp: Date.now()
-            })
-          }
+        // Hash changed - broadcast all section states
+        canvasStore.sections.forEach(section => {
+          broadcastCanvasChange({
+            action: 'section_collapse',
+            data: {
+              sectionId: section.id,
+              collapsed: section.isCollapsed,
+              collapsedHeight: section.collapsedHeight
+            },
+            timestamp: Date.now()
+          })
         })
-      },
-      { deep: true }
+      }
+      // NO deep: true needed - hash string comparison is O(1)
     )
 
     // Watch node position changes - FIXED: canvasStore.nodes doesn't exist

@@ -5149,7 +5149,8 @@ onBeforeUnmount(() => {
 }
 
 /* Vue Flow container dimensions fix */
-.canvas-layout > div {
+/* Exclude context menus and modals from layout rules */
+.canvas-layout > div:not(.context-menu) {
   width: 100%;
   height: 100%;
   flex: 1;

@@ -65,7 +65,7 @@
           :active="activeSmartView === 'today'"
           :count="todayTaskCount"
           target-type="today"
-          filter-color="purple"
+          filter-color="azure"
           @click="handleSmartViewClick('today')"
         >
           <template #icon>
@@ -79,7 +79,7 @@
           :active="activeSmartView === 'week'"
           :count="weekTaskCount"
           target-type="weekend"
-          filter-color="indigo"
+          filter-color="azure-dark"
           @click="handleSmartViewClick('week')"
         >
           <template #icon>

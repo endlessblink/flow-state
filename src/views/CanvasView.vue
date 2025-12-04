@@ -1835,17 +1835,6 @@ const syncNodes = () => {
       return taskX >= x && taskX <= x + width && taskY >= y && taskY <= y + height
     })
 
-    // 🔍 DEBUG: Log section filtering decision
-    console.log('🔍 [syncNodes] Task filtering:', {
-      taskId: task.id,
-      taskTitle: task.title,
-      sectionId: section?.id,
-      sectionName: section?.name,
-      sectionType: section?.type,
-      isCollapsed: section?.isCollapsed,
-      willBeFiltered: section?.isCollapsed
-    })
-
     // 🔧 FIXED: Show tasks in collapsed sections with different styling instead of hiding them completely
     // OLD: Skip tasks that are in collapsed sections - if (section && section.isCollapsed) return
     // NEW: Keep tasks visible even in collapsed sections
@@ -2002,11 +1991,16 @@ const syncEdges = () => {
 
 // CPU Optimization: Watch for filtered task changes with intelligent batching
 // NOTE: Console logs removed to fix 0-2 FPS issue (was causing 12,000+ logs/sec)
+// FIX: Using string-based hash instead of deep:true to prevent infinite loops
+// deep:true on task arrays causes cascading updates because it triggers on ANY nested property change
 resourceManager.addWatcher(
-  watch(filteredTasks, () => {
-    batchedSyncNodes('high')
-    batchedSyncEdges('high')
-  }, { deep: true })
+  watch(
+    () => filteredTasks.value.map(t => `${t.id}:${t.isInInbox}:${t.canvasPosition?.x}:${t.canvasPosition?.y}`).join('|'),
+    () => {
+      batchedSyncNodes('high')
+      batchedSyncEdges('high')
+    }
+  )
 )
 
 // CPU Optimization: Watch sections with smart batching
@@ -2017,27 +2011,40 @@ resourceManager.addWatcher(
 )
 
 // CPU Optimization: Watch section collapse state changes with high priority (affects layout)
+// FIX: Using string-based comparison instead of deep:true on object arrays to prevent infinite loops
 resourceManager.addWatcher(
-  watch(() => canvasStore.sections.map(s => ({ id: s.id, isCollapsed: s.isCollapsed })), () => {
-    batchedSyncNodes('high')
-  }, { deep: true })
+  watch(
+    () => canvasStore.sections.map(s => `${s.id}:${s.isCollapsed}`).join('|'),
+    () => {
+      batchedSyncNodes('high')
+    }
+  )
 )
 
 // CPU Optimization: Watch task position changes with smart batching (low priority - only visual)
+// FIX: Using string-based comparison instead of deep:true on object arrays
+// deep:true on map() results causes infinite loops because map() creates new object references
 resourceManager.addWatcher(
-  watch(() => taskStore.tasks.map(t => ({ id: t.id, canvasPosition: t.canvasPosition })), () => {
-    batchedSyncNodes('low')
-  }, { deep: true })
+  watch(
+    () => taskStore.tasks.map(t => `${t.id}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}`).join('|'),
+    () => {
+      batchedSyncNodes('low')
+    }
+  )
 )
 
 // FIX: Watch for isInInbox changes - triggers sync when tasks move between inbox and canvas
 // This was missing and caused tasks dragged from inbox to not appear until refresh
 // Using flush: 'post' to ensure sync runs after Vue has processed all reactive updates
+// FIX: Using string-based comparison instead of deep:true on object arrays to prevent infinite loops
 resourceManager.addWatcher(
-  watch(() => taskStore.tasks.map(t => ({ id: t.id, isInInbox: t.isInInbox })), () => {
-    console.log('🔄 [WATCHER] isInInbox changed - triggering high priority sync')
-    batchedSyncNodes('high')
-  }, { deep: true, flush: 'post' })
+  watch(
+    () => taskStore.tasks.map(t => `${t.id}:${t.isInInbox}`).join('|'),
+    () => {
+      batchedSyncNodes('high')
+    },
+    { flush: 'post' }
+  )
 )
 
 // FIX: Watch for task visual property changes (title, status, priority)
@@ -2189,11 +2196,10 @@ resourceManager.addWatcher(
 
 // CPU Optimization: Watch sections with batching
 // NOTE: Console log removed to fix 0-2 FPS issue
-resourceManager.addWatcher(
-  watch(sections, () => {
-    batchedSyncNodes('normal')
-  }, { deep: true })
-)
+// FIX: Removed duplicate section watcher that used deep:true causing infinite loops
+// Section changes are already handled by:
+// - Line 2008: watch(() => canvasStore.sections.map(s => s.id).join(','), ...) - section ID changes
+// - Line 2011: watch(() => canvasStore.sections.map(s => `${s.id}:${s.isCollapsed}`).join('|'), ...) - collapse changes
 
 // CPU Optimization: Debounced viewport watch to prevent excessive updates
 const debouncedViewportUpdate = useDebounceFn(() => {
@@ -4603,16 +4609,13 @@ const handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
   const x = sectionRect.left + (slot.position?.x || 20)
   const y = sectionRect.top + (slot?.y || 60)
 
-  // Update task position (but keep inbox status for smart groups)
+  // Update task position
+  // CRITICAL FIX: ALL tasks on canvas need isInInbox: false to be visible
+  // The canvas filter at line 1814 requires: isInInbox === false && canvasPosition
+  // Previously, smart groups kept isInInbox: true which caused tasks to vanish
   const updates: any = {
-    canvasPosition: { x, y }
-  }
-
-  // For smart groups, keep isInInbox: true
-  // For regular sections, set isInInbox: false
-  const isSmartGroup = shouldUseSmartGroupLogic(section.name)
-  if (!isSmartGroup) {
-    updates.isInInbox = false
+    canvasPosition: { x, y },
+    isInInbox: false  // Required for canvas visibility - applies to ALL sections
   }
 
   console.log(`[handleSectionTaskDrop] Applying updates for task "${taskId}":`, updates)

@@ -256,13 +256,13 @@
   --state-hover-glow: 0 0 20px rgba(78, 205, 196, 0.20); /* Glow effect */
 
   /* Filter Selection Colors - Distinct colors for sidebar filters */
-  --filter-today-bg: rgba(139, 92, 246, 0.15);      /* Purple */
-  --filter-today-border: rgba(139, 92, 246, 0.50);
-  --filter-today-glow: 0 0 16px rgba(139, 92, 246, 0.25);
+  --filter-today-bg: rgba(56, 189, 248, 0.15);      /* Azure/Sky Blue */
+  --filter-today-border: rgba(56, 189, 248, 0.50);
+  --filter-today-glow: 0 0 16px rgba(56, 189, 248, 0.25);
 
-  --filter-week-bg: rgba(99, 102, 241, 0.15);       /* Indigo */
-  --filter-week-border: rgba(99, 102, 241, 0.50);
-  --filter-week-glow: 0 0 16px rgba(99, 102, 241, 0.25);
+  --filter-week-bg: rgba(14, 165, 233, 0.15);       /* Azure/Sky Blue (darker) */
+  --filter-week-border: rgba(14, 165, 233, 0.50);
+  --filter-week-glow: 0 0 16px rgba(14, 165, 233, 0.25);
 
   --filter-tasks-bg: rgba(59, 130, 246, 0.15);      /* Blue */
   --filter-tasks-border: rgba(59, 130, 246, 0.50);

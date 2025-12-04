@@ -37,9 +37,50 @@
       </label>
       <select v-model="selectedProvider" @change="onProviderChange" :disabled="isSyncing" class="setting-select">
         <option value="">Disabled</option>
+        <option value="couchdb">CouchDB (Self-hosted, cross-device sync)</option>
         <option value="jsonbin">JSONBin (Free, no account needed)</option>
         <option value="github">GitHub Gist (Requires token)</option>
       </select>
+    </div>
+
+    <!-- CouchDB Configuration -->
+    <div v-if="selectedProvider === 'couchdb'" class="setting-group couchdb-config">
+      <label class="setting-label">
+        <span>CouchDB Server</span>
+        <span class="setting-description">Your CouchDB server URL and credentials</span>
+      </label>
+      <div class="couchdb-fields">
+        <input
+          v-model="couchdbUrl"
+          type="text"
+          placeholder="http://your-server:5984/database"
+          class="token-input"
+          :disabled="isSyncing"
+        />
+        <div class="couchdb-auth">
+          <input
+            v-model="couchdbUsername"
+            type="text"
+            placeholder="Username"
+            class="token-input"
+            :disabled="isSyncing"
+          />
+          <input
+            v-model="couchdbPassword"
+            type="password"
+            placeholder="Password"
+            class="token-input"
+            :disabled="isSyncing"
+          />
+        </div>
+        <button @click="saveCouchDBConfig" :disabled="!couchdbUrl || isSyncing" class="save-token-btn">
+          <Key :size="16" />
+          Save & Test Connection
+        </button>
+      </div>
+      <div v-if="couchdbConnectionStatus" class="connection-test-result" :class="couchdbConnectionStatus">
+        {{ couchdbConnectionMessage }}
+      </div>
     </div>
 
     <!-- GitHub Token Input -->
@@ -160,19 +201,37 @@ const syncHistory = ref<Array<{
   success: boolean
 }>>([])
 
+// CouchDB State
+const couchdbUrl = ref('http://84.46.253.137:5984/pomoflow-tasks')
+const couchdbUsername = ref('admin')
+const couchdbPassword = ref('pomoflow-2024')
+const couchdbConnectionStatus = ref<'success' | 'error' | ''>('')
+const couchdbConnectionMessage = ref('')
+
 // Computed
 const syncStatus = computed(() => {
   const health = reliableSyncManager.getSyncHealth()
 
-  // Transform reliable sync health to expected format
+  // Determine provider name based on selection
+  let providerName = 'Local Only'
+  if (selectedProvider.value === 'couchdb' && syncEnabled.value) {
+    providerName = 'CouchDB'
+  } else if (selectedProvider.value === 'jsonbin' && syncEnabled.value) {
+    providerName = 'JSONBin'
+  } else if (selectedProvider.value === 'github' && syncEnabled.value) {
+    providerName = 'GitHub Gist'
+  } else if (reliableSyncManager.remoteConnected?.value) {
+    providerName = 'CouchDB'
+  }
+
   return {
-    isOnline: health.isOnline,
-    provider: reliableSyncManager.remoteConnected?.value ? 'CouchDB' : 'Local Only',
+    isOnline: health.isOnline || (selectedProvider.value === 'couchdb' && couchdbConnectionStatus.value === 'success'),
+    provider: providerName,
     lastSyncTime: reliableSyncManager.lastSyncTime.value?.getTime() ?? 0,
-    syncUrl: '', // Could be extracted from provider config if needed
-    deviceName: 'PomoFlow Device', // Could be made configurable
-    deviceId: 'device-' + Date.now(), // Could be stored in localStorage
-    nextSyncIn: 0 // Could be calculated from sync interval
+    syncUrl: selectedProvider.value === 'couchdb' ? couchdbUrl.value : '',
+    deviceName: 'PomoFlow Device',
+    deviceId: localStorage.getItem('pomo-device-id') || 'device-' + Math.random().toString(36).substring(7),
+    nextSyncIn: 0
   }
 })
 
@@ -315,6 +374,45 @@ const saveGitHubToken = async () => {
   }
 }
 
+const saveCouchDBConfig = async () => {
+  if (!couchdbUrl.value) return
+
+  couchdbConnectionStatus.value = ''
+  couchdbConnectionMessage.value = ''
+
+  try {
+    // Test connection to CouchDB server
+    const testUrl = couchdbUrl.value.replace(/\/[^/]+$/, '') // Get base URL without database
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Basic ' + btoa(`${couchdbUsername.value}:${couchdbPassword.value}`)
+      }
+    })
+
+    if (response.ok) {
+      const serverInfo = await response.json()
+      couchdbConnectionStatus.value = 'success'
+      couchdbConnectionMessage.value = `✅ Connected to CouchDB ${serverInfo.version || ''}`
+
+      // Save config to localStorage
+      localStorage.setItem('pomo-couchdb-url', couchdbUrl.value)
+      localStorage.setItem('pomo-couchdb-username', couchdbUsername.value)
+      localStorage.setItem('pomo-couchdb-password', couchdbPassword.value)
+
+      syncEnabled.value = true
+      addHistoryEntry('CouchDB connected', true)
+    } else {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+  } catch (error) {
+    console.error('CouchDB connection test failed:', error)
+    couchdbConnectionStatus.value = 'error'
+    couchdbConnectionMessage.value = `❌ Connection failed: ${(error as Error).message}`
+    addHistoryEntry('CouchDB connection failed', false)
+  }
+}
+
 const copySyncUrl = async () => {
   if (!syncStatus.value.syncUrl) return
 
@@ -377,6 +475,20 @@ const loadSettings = () => {
   const savedToken = localStorage.getItem('github-token')
   if (savedToken) {
     githubToken.value = savedToken
+  }
+
+  // Load CouchDB settings
+  const savedCouchdbUrl = localStorage.getItem('pomo-couchdb-url')
+  if (savedCouchdbUrl) {
+    couchdbUrl.value = savedCouchdbUrl
+  }
+  const savedCouchdbUsername = localStorage.getItem('pomo-couchdb-username')
+  if (savedCouchdbUsername) {
+    couchdbUsername.value = savedCouchdbUsername
+  }
+  const savedCouchdbPassword = localStorage.getItem('pomo-couchdb-password')
+  if (savedCouchdbPassword) {
+    couchdbPassword.value = savedCouchdbPassword
   }
 }
 
@@ -764,6 +876,45 @@ onUnmounted(() => {
 
 .history-status.error {
   color: var(--danger);
+}
+
+/* CouchDB Configuration Styles */
+.couchdb-config {
+  margin-top: var(--space-2);
+}
+
+.couchdb-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.couchdb-auth {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.couchdb-auth .token-input {
+  flex: 1;
+}
+
+.connection-test-result {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+}
+
+.connection-test-result.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.connection-test-result.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .animate-spin {

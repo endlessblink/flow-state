@@ -653,12 +653,17 @@ let lastFilteredTasksHash = ''
 const filteredTasksWithProjectFiltering = computed(() => {
   return safeStoreOperation(
     () => {
-      if (!taskStore.filteredTasks || !Array.isArray(taskStore.filteredTasks)) {
-        console.warn('⚠️ taskStore.filteredTasks not available or not an array')
+      // CRITICAL FIX (Dec 4, 2025): Canvas uses raw tasks, NOT filteredTasks
+      // Why: filteredTasks applies smart view filters (Today, Week, etc.)
+      // Problem: Tasks created on canvas get filtered out if they don't match the active smart view
+      // Solution: Canvas should show ALL tasks with canvasPosition, regardless of smart view
+      // The canvas-specific filter at syncNodes() line 1814 still applies: isInInbox === false && canvasPosition
+      if (!taskStore.tasks || !Array.isArray(taskStore.tasks)) {
+        console.warn('⚠️ taskStore.tasks not available or not an array')
         return []
       }
 
-      const currentTasks = taskStore.filteredTasks
+      const currentTasks = taskStore.tasks
 
       // Performance optimization: Only update if actually changed
       // FIX: Include isInInbox and status in hash to detect property changes (not just ID changes)

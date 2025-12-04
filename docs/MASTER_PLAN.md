@@ -162,22 +162,21 @@ Comprehensive QA testing using Playwright MCP to test user flows through entire 
 | Fix | Status | Risk | Description |
 |-----|--------|------|-------------|
 | 1. QuickSort | ✅ DONE | LOW | Was already fixed in previous session |
-| 2. Sidebar Colors | 🔧 IN PROGRESS | LOW | Tokens added but prop not applying (shows teal instead of purple) |
-| 3. Canvas Context Menu | 🔧 IN PROGRESS | MEDIUM | Task menu works, but empty-canvas menu has excessive height |
+| 2. Sidebar Colors | ✅ DONE | LOW | Azure colors for Today/Week/Tasks filters in App.vue |
+| 3. Canvas Context Menu | ✅ DONE | MEDIUM | Fixed excessive height with CSS :not() selector |
 | 4. Unified Inbox | ✅ DONE | MEDIUM | Swapped to UnifiedInboxPanel in both views |
 
 ### **Implementation Details**
 1. **QuickSort**: Already using `useSmartViews().isUncategorizedTask()` - no change needed
-2. **Sidebar Colors**: Added tokens to `design-tokens.css`, `filterColor` prop to `DateDropZone.vue`
-3. **Canvas Context Menu**: Updated `handleTaskContextMenu` to select task + show menu, glass morphism CSS
+2. **Sidebar Colors**: Added tokens to `design-tokens.css`, `filterColor` prop to `DateDropZone.vue`, applied in `App.vue` (actual sidebar location)
+3. **Canvas Context Menu**: Fixed height issue at `CanvasView.vue:5153` - changed `.canvas-layout > div` to `.canvas-layout > div:not(.context-menu)`
 4. **Unified Inbox**: Replaced `InboxPanel`/`CalendarInboxPanel` with `UnifiedInboxPanel` in both views
 
 ### **Files Modified**
-- `src/assets/design-tokens.css` - Filter color tokens
+- `src/assets/design-tokens.css` - Filter color tokens (azure, azure-dark, blue)
 - `src/components/DateDropZone.vue` - filterColor prop + color-specific styles
-- `src/components/app/AppSidebar.vue` - Filter color assignments + uncategorized styling
-- `src/components/canvas/CanvasContextMenu.vue` - Glass morphism gradient styling
-- `src/views/CanvasView.vue` - Fixed handleTaskContextMenu, swapped to UnifiedInboxPanel
+- `src/App.vue` - Filter color props on DateDropZone components (lines 65-109)
+- `src/views/CanvasView.vue` - Fixed context menu CSS, swapped to UnifiedInboxPanel
 - `src/views/CalendarView.vue` - Swapped to UnifiedInboxPanel
 
 ### **Plan File**
@@ -189,6 +188,80 @@ Comprehensive QA testing using Playwright MCP to test user flows through entire 
 **Issues Fixed:**
 1. **Performance regression** - Creating sections caused infinite `syncNodes` loops (hundreds of messages/sec, UI freeze). Fixed by replacing `deep: true` watchers with string-based hash comparisons in `CanvasView.vue` lines 1994, 2014, 2025, 2039.
 2. **Tasks disappearing in smart groups** - Tasks vanished when dragged to Timeline sections like "Today". Fixed by always setting `isInInbox: false` for ALL sections in `handleSectionTaskDrop()` at line 4613-4618.
+
+---
+
+## 🚨 **IN PROGRESS: Canvas Task Visibility Bugs (Dec 4, 2025)**
+
+### **User-Reported Issues**
+Three critical bugs reported after completing the feature restoration:
+
+| # | Bug | Severity | Status |
+|---|-----|----------|--------|
+| 1 | Tasks created on canvas disappear immediately | 🔴 CRITICAL | 🔧 FIX READY |
+| 2 | Tasks from other views don't appear in canvas inbox | 🟠 HIGH | 🔍 INVESTIGATING |
+| 3 | Sidebar counters don't match displayed tasks | 🟡 MEDIUM | 📋 DEFERRED |
+
+### **Root Cause Analysis (Bug 1 - CRITICAL)**
+
+**Problem**: New tasks created via canvas context menu vanish immediately
+
+**Root Cause**: Canvas uses `taskStore.filteredTasks` which applies smart view filters!
+
+```
+User on "Today" smart view → Creates task on canvas → Task has no dueDate
+→ Task filtered out by applySmartViewFilter() → Task VANISHES
+```
+
+**Technical Details**:
+- `CanvasView.vue:653-682` - `filteredTasksWithProjectFiltering` uses `taskStore.filteredTasks`
+- `tasks.ts:1098-1102` - `applySmartViewFilter()` filters tasks by active smart view
+- Task creation at `CanvasView.vue:4469-4479` correctly sets `isInInbox: false` and `canvasPosition`
+- BUT task gets filtered out before `syncNodes()` can display it
+
+**Fix**: Change canvas to use `taskStore.tasks` (raw) instead of `taskStore.filteredTasks`
+- Canvas should show ALL tasks with `canvasPosition` regardless of smart view
+- The canvas-specific filter at line 1814 still applies: `isInInbox === false && canvasPosition`
+
+### **Safe Implementation Plan**
+
+**Safety Principles**:
+1. Single-line change in one file
+2. No architecture changes
+3. Explicit rollback checkpoint available (`d41c834`)
+4. Test before and after
+
+**Change Location**: `src/views/CanvasView.vue` lines 656-661
+
+**BEFORE**:
+```javascript
+if (!taskStore.filteredTasks || !Array.isArray(taskStore.filteredTasks)) {
+  return []
+}
+const currentTasks = taskStore.filteredTasks
+```
+
+**AFTER**:
+```javascript
+// Canvas uses raw tasks - smart view filters should NOT hide canvas tasks
+if (!taskStore.tasks || !Array.isArray(taskStore.tasks)) {
+  return []
+}
+const currentTasks = taskStore.tasks
+```
+
+### **Testing Checklist**
+- [ ] Create task via canvas context menu → task appears immediately
+- [ ] Task stays visible when switching smart views
+- [ ] Drag from inbox to canvas still works
+- [ ] Build passes (`npm run build`)
+- [ ] No console errors or infinite loops
+
+### **Rollback Plan**
+```bash
+# If fix causes issues:
+git checkout d41c834 -- src/views/CanvasView.vue
+```
 
 ---
 

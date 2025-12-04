@@ -64,11 +64,12 @@
 
         <!-- Smart Views - Using DateDropZone for drag and drop functionality -->
         <div class="smart-views">
-          <!-- Today -->
+          <!-- Today - Azure highlight -->
           <DateDropZone
             :active="taskStore.activeSmartView === 'today'"
             :count="todayTaskCount"
             target-type="today"
+            filter-color="azure"
             @click="selectSmartView('today')"
           >
             <template #icon>
@@ -77,11 +78,12 @@
             Today
           </DateDropZone>
 
-          <!-- This Week -->
+          <!-- This Week - Azure-dark highlight -->
           <DateDropZone
             :active="taskStore.activeSmartView === 'week'"
             :count="weekTaskCount"
             target-type="today"
+            filter-color="azure-dark"
             @click="selectSmartView('week')"
           >
             <template #icon>
@@ -92,11 +94,12 @@
 
           <!-- Uncategorized Tasks -->
           <div class="smart-view-uncategorized">
-            <!-- All Active Tasks -->
+            <!-- All Active Tasks - Blue highlight -->
             <DateDropZone
               :active="taskStore.activeSmartView === 'all_active'"
               :count="allActiveCount"
               target-type="nodate"
+              filter-color="blue"
               @click="selectSmartView('all_active')"
             >
               <template #icon>

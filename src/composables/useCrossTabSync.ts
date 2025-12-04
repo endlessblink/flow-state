@@ -12,10 +12,24 @@ import CrossTabBrowserCompatibility from '@/utils/CrossTabBrowserCompatibility'
 // Types for cross-tab messages
 export interface CrossTabMessage {
   id: string
-  type: 'task_operation' | 'ui_state_change' | 'canvas_change' | 'heartbeat'
+  type: 'task_operation' | 'ui_state_change' | 'canvas_change' | 'heartbeat' | 'timer_session'
   timestamp: number
   tabId: string
   data: any
+}
+
+// ========== PHASE 2: TIMER LEADER ELECTION ==========
+export interface TimerLeaderState {
+  leaderId: string          // Tab ID of the leader
+  lastHeartbeat: number     // Timestamp of last heartbeat
+  sessionState: any         // Current timer session (null if no session)
+}
+
+export interface TimerSessionSync {
+  action: 'claim_leadership' | 'heartbeat' | 'session_update' | 'session_stop'
+  leaderId: string
+  sessionState?: any
+  timestamp: number
 }
 
 export interface TaskOperation {
@@ -52,6 +66,189 @@ const conflictResolver = new ConflictResolver('cross-tab-sync')
 const performanceMonitor = new CrossTabPerformance()
 const browserCompatibility = new CrossTabBrowserCompatibility()
 let isCompatibilityChecked = false
+
+// ========== PHASE 2: TIMER LEADER ELECTION STATE ==========
+const timerLeaderState = ref<TimerLeaderState | null>(null)
+const isTimerLeader = ref(false)
+const TIMER_HEARTBEAT_INTERVAL_MS = 2000 // 2 seconds
+const TIMER_LEADER_TIMEOUT_MS = 5000 // 5 seconds - if no heartbeat, leader is dead
+let timerHeartbeatTimer: NodeJS.Timeout | null = null
+
+// Callbacks for timer state updates (set by timer store)
+let onTimerSessionUpdate: ((session: any) => void) | null = null
+let onBecomeLeader: (() => void) | null = null
+let onLoseLeadership: (() => void) | null = null
+
+// Check if current leader is still alive (heartbeat within timeout)
+const isLeaderAlive = (): boolean => {
+  if (!timerLeaderState.value) return false
+  const elapsed = Date.now() - timerLeaderState.value.lastHeartbeat
+  return elapsed < TIMER_LEADER_TIMEOUT_MS
+}
+
+// Claim timer leadership
+const claimTimerLeadership = (): boolean => {
+  // Only claim if no leader or leader is dead
+  if (timerLeaderState.value && isLeaderAlive() && timerLeaderState.value.leaderId !== currentTabId.value) {
+    console.log('🎯 [TIMER] Cannot claim leadership - another leader is alive:', timerLeaderState.value.leaderId)
+    return false
+  }
+
+  console.log('👑 [TIMER] Claiming timer leadership:', currentTabId.value)
+
+  timerLeaderState.value = {
+    leaderId: currentTabId.value,
+    lastHeartbeat: Date.now(),
+    sessionState: timerLeaderState.value?.sessionState || null
+  }
+  isTimerLeader.value = true
+
+  // Broadcast leadership claim
+  broadcastMessage({
+    type: 'timer_session',
+    data: {
+      action: 'claim_leadership',
+      leaderId: currentTabId.value,
+      sessionState: timerLeaderState.value.sessionState,
+      timestamp: Date.now()
+    } as TimerSessionSync
+  })
+
+  // Start heartbeat
+  startTimerHeartbeat()
+
+  // Notify callback
+  if (onBecomeLeader) {
+    onBecomeLeader()
+  }
+
+  return true
+}
+
+// Start timer heartbeat (only for leader)
+const startTimerHeartbeat = () => {
+  if (timerHeartbeatTimer) {
+    clearInterval(timerHeartbeatTimer)
+  }
+
+  timerHeartbeatTimer = setInterval(() => {
+    if (isTimerLeader.value && timerLeaderState.value) {
+      timerLeaderState.value.lastHeartbeat = Date.now()
+
+      // Broadcast heartbeat
+      broadcastMessage({
+        type: 'timer_session',
+        data: {
+          action: 'heartbeat',
+          leaderId: currentTabId.value,
+          sessionState: timerLeaderState.value.sessionState,
+          timestamp: Date.now()
+        } as TimerSessionSync
+      })
+    }
+  }, TIMER_HEARTBEAT_INTERVAL_MS)
+}
+
+// Stop timer heartbeat
+const stopTimerHeartbeat = () => {
+  if (timerHeartbeatTimer) {
+    clearInterval(timerHeartbeatTimer)
+    timerHeartbeatTimer = null
+  }
+}
+
+// Handle timer session message
+const handleTimerSessionMessage = (sync: TimerSessionSync) => {
+  switch (sync.action) {
+    case 'claim_leadership':
+      // Another tab claimed leadership
+      if (sync.leaderId !== currentTabId.value) {
+        console.log('👑 [TIMER] Another tab claimed leadership:', sync.leaderId)
+
+        // If we were leader, we lose it
+        if (isTimerLeader.value) {
+          console.log('😔 [TIMER] Lost leadership to:', sync.leaderId)
+          isTimerLeader.value = false
+          stopTimerHeartbeat()
+          if (onLoseLeadership) {
+            onLoseLeadership()
+          }
+        }
+
+        timerLeaderState.value = {
+          leaderId: sync.leaderId,
+          lastHeartbeat: sync.timestamp,
+          sessionState: sync.sessionState
+        }
+
+        // Update local timer state
+        if (sync.sessionState && onTimerSessionUpdate) {
+          onTimerSessionUpdate(sync.sessionState)
+        }
+      }
+      break
+
+    case 'heartbeat':
+      // Update leader heartbeat
+      if (timerLeaderState.value && sync.leaderId === timerLeaderState.value.leaderId) {
+        timerLeaderState.value.lastHeartbeat = sync.timestamp
+        timerLeaderState.value.sessionState = sync.sessionState
+
+        // Update local timer state for non-leaders
+        if (!isTimerLeader.value && sync.sessionState && onTimerSessionUpdate) {
+          onTimerSessionUpdate(sync.sessionState)
+        }
+      }
+      break
+
+    case 'session_update':
+      // Leader updated session state
+      if (timerLeaderState.value) {
+        timerLeaderState.value.sessionState = sync.sessionState
+        timerLeaderState.value.lastHeartbeat = sync.timestamp
+      }
+
+      // Update local timer for non-leaders
+      if (!isTimerLeader.value && onTimerSessionUpdate) {
+        onTimerSessionUpdate(sync.sessionState)
+      }
+      break
+
+    case 'session_stop':
+      // Leader stopped session
+      if (timerLeaderState.value) {
+        timerLeaderState.value.sessionState = null
+      }
+
+      // Update local timer for non-leaders
+      if (!isTimerLeader.value && onTimerSessionUpdate) {
+        onTimerSessionUpdate(null)
+      }
+      break
+  }
+}
+
+// Broadcast timer session update (only for leader)
+const broadcastTimerSession = (sessionState: any) => {
+  if (!isTimerLeader.value) {
+    console.warn('⚠️ [TIMER] Only leader can broadcast timer session')
+    return
+  }
+
+  if (timerLeaderState.value) {
+    timerLeaderState.value.sessionState = sessionState
+  }
+
+  broadcastMessage({
+    type: 'timer_session',
+    data: {
+      action: sessionState ? 'session_update' : 'session_stop',
+      leaderId: currentTabId.value,
+      sessionState,
+      timestamp: Date.now()
+    } as TimerSessionSync
+  })
+}
 
 // ========== PHASE 1: OUTGOING MESSAGE BATCHING (100ms) ==========
 // Queue outgoing messages for 100ms before sending (like waiting for an elevator)
@@ -272,6 +469,10 @@ const processMessageQueue = async () => {
             break
           case 'heartbeat':
             // Handle heartbeat if needed
+            break
+          case 'timer_session':
+            // PHASE 2: Handle timer session sync
+            handleTimerSessionMessage(message.data as TimerSessionSync)
             break
         }
 
@@ -692,6 +893,11 @@ export function useCrossTabSync() {
     pendingOutgoingMessages.clear()
     recentlySentMessages.clear()
 
+    // PHASE 2: Cleanup timer leader state
+    stopTimerHeartbeat()
+    isTimerLeader.value = false
+    timerLeaderState.value = null
+
     messageQueue.value = []
     pendingLocalOperations.value.clear()
 
@@ -759,6 +965,21 @@ export function useCrossTabSync() {
     broadcastCanvasChange,
     sendHeartbeat,
     trackLocalOperation,
+
+    // PHASE 2: Timer leadership
+    isTimerLeader,
+    timerLeaderState,
+    claimTimerLeadership,
+    broadcastTimerSession,
+    setTimerCallbacks: (callbacks: {
+      onSessionUpdate?: (session: any) => void
+      onBecomeLeader?: () => void
+      onLoseLeadership?: () => void
+    }) => {
+      onTimerSessionUpdate = callbacks.onSessionUpdate || null
+      onBecomeLeader = callbacks.onBecomeLeader || null
+      onLoseLeadership = callbacks.onLoseLeadership || null
+    },
 
     // Performance monitoring
     getPerformanceMetrics: () => performanceMonitor.getMetrics(),

@@ -220,8 +220,8 @@ export const useReliableSyncManager = () => {
     console.log('🚀 [SYNC] Initializing sync system...')
 
     try {
-      // Initialize the database connection
-      localDB = await couchDBSync.initializeDatabase()
+      // Initialize the database connection using internal function
+      localDB = initializeLocalDatabase()
       remoteDB = await setupRemoteConnection()
 
       if (!remoteDB) {
@@ -421,6 +421,21 @@ export const useReliableSyncManager = () => {
     if (syncStatus.value === 'syncing') {
       console.log('⏳ Sync already in progress')
       return
+    }
+
+    // CRITICAL FIX: Initialize sync if not already done
+    // This ensures localDB is set up before we try to use it
+    if (!localDB) {
+      console.log('🔄 [SYNC] Initializing sync system first...')
+      await initializeSync()
+
+      // Check if initialization failed
+      if (!localDB) {
+        console.error('❌ [SYNC] Failed to initialize - cannot proceed with sync')
+        syncStatus.value = 'error'
+        error.value = 'Failed to initialize database connection'
+        return
+      }
     }
 
     // Check network conditions before proceeding

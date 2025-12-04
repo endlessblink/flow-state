@@ -186,52 +186,28 @@ export function useBackupManager(config: Partial<BackupTriggerConfig> = {}) {
       console.log('🕐️ Auto-save interval set to', backupConfig.value.autoSaveInterval / 1000, 'seconds')
     }
 
-    // 2. Task store changes
-    const unwatchTasks = watch(
-      () => taskStore.$state.tasks,
+    // SYNC FIX: Consolidated single watcher instead of 4 separate deep watchers
+    // This prevents the "thundering herd" problem where all 4 watchers fire simultaneously
+    // and create cascading backup operations during sync
+    const unwatchAll = watch(
+      () => ({
+        // Track only essential change indicators (not full deep objects)
+        taskCount: taskStore.$state.tasks?.length || 0,
+        taskUpdates: taskStore.$state.tasks?.map(t => t.updatedAt).join(',') || '',
+        projectCount: taskStore.$state.projects?.length || 0,
+        sectionCount: canvasStore.sections?.length || 0,
+        sessionCount: timerStore.sessions?.length || 0
+      }),
       () => {
+        // Use debounced backup for all store changes
+        // This consolidates what was previously 4 separate triggers into 1
         if (backupConfig.value.throttleEvents) {
           throttledCreateBackup()
         } else {
           debouncedCreateBackup()
         }
       },
-      { deep: true }
-    )
-
-    // 3. Project store changes
-    const unwatchProjects = watch(
-      () => taskStore.$state.projects,
-      () => {
-        if (backupConfig.value.throttleEvents) {
-          throttledCreateBackup()
-        } else {
-          debouncedCreateBackup()
-        }
-      },
-      { deep: true }
-    )
-
-    // 4. Canvas store changes (important data changes)
-    const unwatchCanvas = watch(
-      () => [
-        canvasStore.nodes,
-        canvasStore.edges,
-        canvasStore.sections
-      ],
-      () => {
-        debouncedCreateBackup()
-      },
-      { deep: true }
-    )
-
-    // 5. Timer session changes
-    const unwatchTimer = watch(
-      () => timerStore.sessions,
-      () => {
-        debouncedCreateBackup()
-      },
-      { deep: true }
+      { deep: false } // Shallow watch on the computed object is sufficient
     )
 
     // Cleanup functions
@@ -244,10 +220,7 @@ export function useBackupManager(config: Partial<BackupTriggerConfig> = {}) {
         clearTimeout(backupDebounceTimer)
         backupDebounceTimer = null
       }
-      unwatchTasks()
-      unwatchProjects()
-      unwatchCanvas()
-      unwatchTimer()
+      unwatchAll()
     })
 
     console.log('✅ Automatic backup triggers setup completed')

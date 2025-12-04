@@ -214,14 +214,35 @@ export const useReliableSyncManager = () => {
 
   /**
    * Initialize sync with enhanced Phase 2 capabilities
+   * SYNC RE-ENABLED: Safe after Phase 1 watcher fixes (Dec 2025)
    */
   const initializeSync = async (): Promise<void> => {
-    // 🔥 CRITICAL: Hard disable sync to stop infinite loops
-    console.log('🚨 [SYNC DISABLED] initializeSync called but sync is disabled to stop infinite loops')
-    syncStatus.value = 'offline'
-    error.value = null
-    conflicts.value = []
-    return
+    console.log('🚀 [SYNC] Initializing sync system...')
+
+    try {
+      // Initialize the database connection
+      localDB = await couchDBSync.initializeDatabase()
+      remoteDB = await setupRemoteConnection()
+
+      if (!remoteDB) {
+        console.log('📱 No remote database available, running in offline mode')
+        syncStatus.value = 'offline'
+        return
+      }
+
+      // Initialize Phase 2 systems
+      await initializePhase2Systems()
+
+      syncStatus.value = 'idle'
+      error.value = null
+      conflicts.value = []
+
+      console.log('✅ [SYNC] Sync system initialized successfully')
+    } catch (initError) {
+      console.error('❌ [SYNC] Failed to initialize sync:', initError)
+      syncStatus.value = 'error'
+      error.value = (initError as Error).message
+    }
   }
 
   /**
@@ -377,14 +398,25 @@ export const useReliableSyncManager = () => {
     console.log(`✅ Auto-resolved ${resolved.length} conflicts`)
   }
 
+  // SYNC FIX: Throttle for manual sync to prevent rapid repeated calls
+  let lastManualSyncTime = 0
+  const MANUAL_SYNC_COOLDOWN = 5000 // 5 seconds minimum between manual syncs
+
   /**
    * Manual sync trigger with retry logic and validation
+   * SYNC RE-ENABLED: Safe after Phase 1 watcher fixes (Dec 2025)
    */
   const triggerSync = async (): Promise<void> => {
-    // 🔥 CRITICAL: Hard disable sync to stop infinite loops
-    console.log('🚨 [SYNC DISABLED] triggerSync called but sync is disabled to stop infinite loops')
-    console.log('🚨 [SYNC DISABLED] Manual sync prevented - database operations working offline-only')
-    return
+    // SYNC FIX: Throttle manual sync to prevent rapid calls
+    const now = Date.now()
+    if (now - lastManualSyncTime < MANUAL_SYNC_COOLDOWN) {
+      const remaining = Math.ceil((MANUAL_SYNC_COOLDOWN - (now - lastManualSyncTime)) / 1000)
+      console.log(`⏳ [SYNC] Manual sync throttled - wait ${remaining}s`)
+      return
+    }
+    lastManualSyncTime = now
+
+    console.log('🔄 [SYNC] Manual sync triggered')
 
     if (syncStatus.value === 'syncing') {
       console.log('⏳ Sync already in progress')
@@ -439,12 +471,10 @@ export const useReliableSyncManager = () => {
 
   /**
    * Perform reliable sync with all Phase 2 features
+   * SYNC RE-ENABLED: Safe after Phase 1 watcher fixes (Dec 2025)
    */
   const performReliableSync = async (): Promise<void> => {
-    // 🔥 CRITICAL: Hard disable sync to stop infinite loops
-    console.log('🚨 [SYNC DISABLED] performReliableSync called but sync is disabled to stop infinite loops')
-    console.log('🚨 [SYNC DISABLED] Auto sync prevented - database operations working offline-only')
-    return
+    console.log('🔄 [SYNC] Performing reliable sync...')
 
     const operationId = logger.startSyncOperation('full_sync')
 

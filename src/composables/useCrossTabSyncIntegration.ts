@@ -1,4 +1,5 @@
 import { watch } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useCanvasStore } from '@/stores/canvas'
@@ -218,8 +219,13 @@ export function useCrossTabSyncIntegration() {
     console.log('🔄 [CrossTab Sync] Skipping node position watcher - canvasStore.nodes not available (nodes managed by Vue Flow)')
   }
 
-  // Broadcast task operations
-  const broadcastTaskOperation = (operation: TaskOperation) => {
+  // SYNC FIX: Throttle constants to prevent broadcast storms
+  const TASK_BROADCAST_DELAY = 500    // 500ms debounce for task operations
+  const UI_BROADCAST_DELAY = 300      // 300ms debounce for UI changes
+  const CANVAS_BROADCAST_DELAY = 500  // 500ms debounce for canvas changes
+
+  // Broadcast task operations (internal, unthrottled)
+  const _broadcastTaskOperation = (operation: TaskOperation) => {
     if (!isIntegrationEnabled) return
 
     try {
@@ -234,8 +240,8 @@ export function useCrossTabSyncIntegration() {
     }
   }
 
-  // Broadcast UI state changes
-  const broadcastUIStateChange = (change: UIStateChange) => {
+  // Broadcast UI state changes (internal, unthrottled)
+  const _broadcastUIStateChange = (change: UIStateChange) => {
     if (!isIntegrationEnabled) return
 
     try {
@@ -246,8 +252,8 @@ export function useCrossTabSyncIntegration() {
     }
   }
 
-  // Broadcast canvas changes
-  const broadcastCanvasChange = (change: CanvasChange) => {
+  // Broadcast canvas changes (internal, unthrottled)
+  const _broadcastCanvasChange = (change: CanvasChange) => {
     if (!isIntegrationEnabled) return
 
     try {
@@ -257,6 +263,12 @@ export function useCrossTabSyncIntegration() {
       console.error('Failed to broadcast canvas change:', error)
     }
   }
+
+  // SYNC FIX: Throttled broadcast functions to prevent infinite loops
+  // These are used by watchers to prevent rapid successive broadcasts
+  const broadcastTaskOperation = useDebounceFn(_broadcastTaskOperation, TASK_BROADCAST_DELAY)
+  const broadcastUIStateChange = useDebounceFn(_broadcastUIStateChange, UI_BROADCAST_DELAY)
+  const broadcastCanvasChange = useDebounceFn(_broadcastCanvasChange, CANVAS_BROADCAST_DELAY)
 
   // Handle incoming remote changes by temporarily disabling broadcasting
   const handleRemoteChangeStart = () => {

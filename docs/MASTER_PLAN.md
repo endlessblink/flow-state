@@ -267,6 +267,35 @@ node: { top: 1409 }                               // ❌ Way off-screen!
 }
 ```
 
+### **Root Cause Analysis (Bug 3 - DEFERRED)**
+
+**Problem**: Sidebar counter shows X tasks, but view displays fewer tasks
+
+**Root Cause**: `smartViewTaskCounts` and `filteredTasks` handle nested done tasks differently:
+
+```javascript
+// Counter calculation (smartViewTaskCounts at tasks.ts:1484-1531):
+if (settings.hideDoneTasks) {
+  // excludes done tasks
+} else {
+  // INCLUDES nested done tasks ← COUNTED IN BADGE
+}
+
+// Display filtering (filteredTasks at tasks.ts:1056-1327):
+// Line 1170-1189: ALWAYS filters out nested done tasks ← NOT DISPLAYED
+```
+
+**Why Deferred**:
+- Display consistency issue, not functionality blocker
+- Fix requires aligning both functions carefully
+- Higher risk of regression in task filtering logic
+- Can be addressed when touching this code for other reasons
+
+**Future Fix Approach**:
+- Option A: Make `filteredTasks` respect `hideDoneTasks` setting for nested tasks
+- Option B: Make `smartViewTaskCounts` exclude nested done tasks to match display
+- Either way, both functions must use identical filtering logic
+
 ### **Safe Implementation Plan**
 
 **Safety Principles**:

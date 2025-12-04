@@ -47,6 +47,14 @@ export const DB_KEYS = {
   VERSION: 'version'
 } as const
 
+// Conflict detection state for data safety monitoring
+export interface DetectedConflict {
+  docId: string
+  count: number
+  revisions: string[]
+  detectedAt: Date
+}
+
 export interface UseDatabaseReturn {
   // Core CRUD operations
   save: <T>(key: string, data: T) => Promise<void>
@@ -67,6 +75,11 @@ export interface UseDatabaseReturn {
   isLoading: Ref<boolean>
   error: Ref<Error | null>
   isReady: Ref<boolean>
+
+  // Conflict detection (data safety)
+  detectedConflicts: Ref<DetectedConflict[]>
+  conflictCount: Ref<number>
+  clearConflicts: () => void
 
   // Sync state (from useSimpleSyncManager)
   syncStatus: Ref<'idle' | 'syncing' | 'complete' | 'error' | 'paused' | 'offline'>
@@ -222,6 +235,13 @@ export function useDatabase(): UseDatabaseReturn {
   const isLoading = ref(false)
   const error = ref<Error | null>(null)
   const database = ref<PouchDB.Database | null>(null)
+
+  // Conflict detection state (data safety)
+  const detectedConflicts = ref<DetectedConflict[]>([])
+  const conflictCount = computed(() => detectedConflicts.value.length)
+  const clearConflicts = () => {
+    detectedConflicts.value = []
+  }
 
   // Initialize sync functionality
   const config = getDatabaseConfig()
@@ -543,7 +563,7 @@ export function useDatabase(): UseDatabaseReturn {
   }
 
   /**
-   * Load data from PouchDB with enhanced retry logic and caching
+   * Load data from PouchDB with enhanced retry logic, caching, and conflict detection
    */
   const load = async <T>(key: string): Promise<T | null> => {
     const cacheKey = `db-load-${key}`
@@ -552,9 +572,27 @@ export function useDatabase(): UseDatabaseReturn {
     try {
       const db = await waitForDatabase()
       const docId = `${key}:data`
-      const doc = await db.get(docId)
+      // Request conflict info for data safety monitoring
+      const doc = await db.get(docId, { conflicts: true })
+
+      // Check for conflicts and log them (data safety feature)
+      const docWithConflicts = doc as any
+      if (docWithConflicts._conflicts && docWithConflicts._conflicts.length > 0) {
+        console.warn(`⚠️ [DATABASE] Document ${docId} has ${docWithConflicts._conflicts.length} conflicts`)
+        // Add to detected conflicts (don't auto-resolve - user must decide)
+        const existingConflict = detectedConflicts.value.find(c => c.docId === docId)
+        if (!existingConflict) {
+          detectedConflicts.value.push({
+            docId,
+            count: docWithConflicts._conflicts.length,
+            revisions: docWithConflicts._conflicts,
+            detectedAt: new Date()
+          })
+        }
+      }
+
       // Extract the actual data from the PouchDB document structure
-      const data = (doc as any).data as T
+      const data = docWithConflicts.data as T
 
       if (shouldLogTaskDiagnostics()) {
         console.log(`💾 [DATABASE] Loaded ${key} from PouchDB`)
@@ -967,6 +1005,11 @@ export function useDatabase(): UseDatabaseReturn {
     isLoading,
     error,
     isReady,
+
+    // Conflict detection (data safety)
+    detectedConflicts,
+    conflictCount,
+    clearConflicts,
 
     // Database health monitoring
     checkHealth,

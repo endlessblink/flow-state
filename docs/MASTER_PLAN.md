@@ -1,10 +1,10 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 4, 2025
-**Version**: 3.0 (Canvas Auto-Update Complete)
-**Status**: ✅ Canvas WORKING with Auto-Update, 🔧 Feature Restoration Phase
+**Version**: 3.1 (Sync Safety Architecture Complete)
+**Status**: ✅ Canvas WORKING, ✅ Sync Safety Phases 1-4 Complete, ⏳ Phase 5 Pending
 **Current Branch**: master
-**Baseline**: Checkpoint `d41c834` (Dec 4, 2025) - Canvas auto-update verified working
+**Baseline**: Checkpoint `1f2f103` (Dec 4, 2025) - Canvas layout fix after UnifiedInboxPanel
 
 ---
 
@@ -202,7 +202,7 @@ Three critical bugs reported after completing the feature restoration:
 | 2 | Tasks from other views don't appear in canvas inbox | 🟠 HIGH | 🔍 Needs user verification (may be fixed by #1) |
 | 3 | Sidebar counters don't match displayed tasks | 🟡 MEDIUM | 📋 DEFERRED - complex fix needed |
 | 4 | Canvas uses separate InboxPanel instead of UnifiedInboxPanel | 🟡 MEDIUM | ✅ FIXED - consolidated (commit `d8d8ab4`) |
-| 5 | Task disappears when moved from yesterday to Today group | 🔴 CRITICAL | 🔍 INVESTIGATING - race condition suspected |
+| 5 | Task disappears when moved from yesterday to Today group | 🔴 CRITICAL | ✅ FIXED - reordered operations in handleSectionTaskDrop |
 
 ### **Root Cause Analysis (Bug 1 - CRITICAL)**
 
@@ -224,6 +224,20 @@ User on "Today" smart view → Creates task on canvas → Task has no dueDate
 **Fix**: Change canvas to use `taskStore.tasks` (raw) instead of `taskStore.filteredTasks`
 - Canvas should show ALL tasks with `canvasPosition` regardless of smart view
 - The canvas-specific filter at line 1814 still applies: `isInInbox === false && canvasPosition`
+
+### **Root Cause Analysis (Bug 5 - CRITICAL)**
+
+**Problem**: Task disappears when dragged from inbox to "Today" smart group section
+
+**Root Cause**: Race condition in `handleSectionTaskDrop()`:
+1. `applySectionPropertiesToTask()` was called FIRST
+2. This triggered `moveTaskToSmartGroup()` → `syncNodes()`
+3. `syncNodes()` filter: `task.isInInbox === false && task.canvasPosition`
+4. Task still had `isInInbox: true` at this point → **FILTERED OUT**
+
+**Fix**: Reorder operations in `handleSectionTaskDrop()` at `CanvasView.vue:4621-4650`:
+- Set `isInInbox: false` and `canvasPosition` BEFORE calling `applySectionPropertiesToTask()`
+- Now when `syncNodes()` runs, task already has correct properties
 
 ### **Safe Implementation Plan**
 

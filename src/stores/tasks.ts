@@ -2827,20 +2827,26 @@ export const useTaskStore = defineStore('tasks', () => {
     // Emergency backup before making changes
     const backupTasks = [...tasks.value]
 
-    // Use atomic transaction for critical restore operations
+    // FIX: Set manual operation flag to prevent watchers from interfering with restore
+    manualOperationInProgress = true
+    console.log('🔄 [TASK-STORE] manualOperationInProgress set to TRUE for restore')
+
+    // FIX: Direct assignment instead of atomicTransaction (Promise.all runs in parallel which causes race conditions)
     try {
-      await db.atomicTransaction([
-        async () => {
-          // Use Pinia's $patch for proper reactivity
-          tasks.value = [...newTasks]
-          return db.save(DB_KEYS.TASKS, tasks.value)
-        },
-        async () => {
-          // Also save to persistent storage for redundancy
-          await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, tasks.value)
-          return
-        }
-      ], 'restore-state-undo-redo')
+      console.log('🔄 [TASK-STORE] BEFORE assignment: tasks.value.length =', tasks.value.length)
+
+      // Direct assignment - this should be synchronous
+      tasks.value = [...newTasks]
+
+      console.log('🔄 [TASK-STORE] AFTER assignment: tasks.value.length =', tasks.value.length)
+
+      // Save to database sequentially (not in parallel)
+      await db.save(DB_KEYS.TASKS, tasks.value)
+      console.log('🔄 [TASK-STORE] AFTER db.save: tasks.value.length =', tasks.value.length)
+
+      // Also save to persistent storage for redundancy
+      await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, tasks.value)
+      console.log('🔄 [TASK-STORE] AFTER persistentStorage.save: tasks.value.length =', tasks.value.length)
 
       console.log('🔄 [TASK-STORE] State restored successfully. Tasks now has', tasks.value.length, 'items')
 
@@ -2874,6 +2880,10 @@ export const useTaskStore = defineStore('tasks', () => {
           userMessage: 'Critical error: Could not restore data. Please refresh the page.'
         })
       }
+    } finally {
+      // FIX: Always clear the manual operation flag after restore
+      manualOperationInProgress = false
+      console.log('🔄 [TASK-STORE] manualOperationInProgress set to FALSE after restore')
     }
   }
 

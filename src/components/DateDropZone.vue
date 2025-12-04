@@ -55,7 +55,7 @@ interface Props {
   active?: boolean
   count?: number
   targetType: 'today' | 'weekend' | 'tomorrow' | 'nodate'
-  filterColor?: 'purple' | 'indigo' | 'blue' | 'orange' | 'teal'
+  filterColor?: 'azure' | 'azure-dark' | 'blue' | 'orange' | 'teal'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -192,7 +192,7 @@ const calculateTargetDate = (): string => {
 }
 
 /* Filter color-specific active states */
-.date-drop-zone.filter-purple.is-active {
+.date-drop-zone.filter-azure.is-active {
   background: var(--filter-today-bg);
   border: 1px solid var(--filter-today-border);
   backdrop-filter: var(--state-active-glass);
@@ -200,7 +200,7 @@ const calculateTargetDate = (): string => {
   box-shadow: var(--filter-today-glow);
 }
 
-.date-drop-zone.filter-indigo.is-active {
+.date-drop-zone.filter-azure-dark.is-active {
   background: var(--filter-week-bg);
   border: 1px solid var(--filter-week-border);
   backdrop-filter: var(--state-active-glass);

@@ -162,8 +162,8 @@ Comprehensive QA testing using Playwright MCP to test user flows through entire 
 | Fix | Status | Risk | Description |
 |-----|--------|------|-------------|
 | 1. QuickSort | ✅ DONE | LOW | Was already fixed in previous session |
-| 2. Sidebar Colors | ✅ DONE | LOW | Added purple/indigo/blue/orange filter colors |
-| 3. Canvas Context Menu | ✅ DONE | MEDIUM | Fixed task context menu + glass morphism styling |
+| 2. Sidebar Colors | 🔧 IN PROGRESS | LOW | Tokens added but prop not applying (shows teal instead of purple) |
+| 3. Canvas Context Menu | 🔧 IN PROGRESS | MEDIUM | Task menu works, but empty-canvas menu has excessive height |
 | 4. Unified Inbox | ✅ DONE | MEDIUM | Swapped to UnifiedInboxPanel in both views |
 
 ### **Implementation Details**
@@ -1253,6 +1253,58 @@ try {
 
 ---
 
+## ✅ **COMPLETED: CouchDB Sync Re-enablement (Dec 4, 2025)**
+
+### **Background**
+Cross-device sync was HARD-DISABLED due to infinite loop crisis caused by Vue watchers with `deep: true` triggering sync cascades.
+
+### **Phase 1: Vue Watcher Fixes (COMPLETE)**
+| File | Issue Fixed | Status |
+|------|-------------|--------|
+| `src/stores/tasks.ts` | Removed safeSync() from deep watchers | ✅ DONE |
+| `src/stores/canvas.ts` | Fixed Pinia auto-unwrap bug (`.value` removal) | ✅ DONE |
+| `src/composables/useCrossTabSyncIntegration.ts` | Added 500ms debounce to broadcasts | ✅ DONE |
+| `src/composables/useBackupManager.ts` | Consolidated 4 watchers to 1 shallow watcher | ✅ DONE |
+
+### **Phase 2: Hard-Disable Removal (COMPLETE)**
+| Location | Change | Status |
+|----------|--------|--------|
+| `useReliableSyncManager.ts:219-224` | Removed hard-disable in initializeSync() | ✅ DONE |
+| `useReliableSyncManager.ts:384-387` | Removed hard-disable, added 5s throttle | ✅ DONE |
+| `useReliableSyncManager.ts:444-446` | Removed hard-disable in performReliableSync() | ✅ DONE |
+| `tasks.ts:151-154` | Updated safeSync() with throttling | ✅ DONE |
+
+### **Phase 3: CouchDB UI Integration (COMPLETE)**
+Added CouchDB as sync provider option in Settings → Cloud Sync:
+- **File**: `src/components/CloudSyncSettings.vue`
+- **Features Added**:
+  - CouchDB option in provider dropdown
+  - Configuration fields (Server URL, Username, Password)
+  - Connection test with visual feedback
+  - Default values pre-populated for Contabo VPS
+
+### **Current Configuration**
+```typescript
+// Pre-populated defaults in CloudSyncSettings.vue
+couchdbUrl: 'http://84.46.253.137:5984/pomoflow-tasks'
+couchdbUsername: 'admin'
+couchdbPassword: 'pomoflow-2024'
+```
+
+### **How to Test Manual Sync**
+1. Open Settings → Cloud Sync
+2. Select "CouchDB (Self-hosted, cross-device sync)"
+3. Click "Save & Test Connection"
+4. If successful, click "Sync Now" to trigger manual sync
+
+### **Next Steps (Phase 4: Auto-Sync)**
+Once manual sync is validated:
+1. Update `src/config/database.ts` to set `live: true`, `retry: true`
+2. Monitor circuit breaker health score (must stay > 80%)
+3. Test cross-device sync (Linux ↔ Windows)
+
+---
+
 ## 🛡️ **SYNC SAFETY ARCHITECTURE (Dec 4, 2025)**
 
 ### **Why The Sync System Broke - Simple Explanation**
@@ -1318,31 +1370,61 @@ These patterns are validated against industry best practices:
 
 ---
 
-### **Implementation Steps (With Rollback Points)**
+### **Implementation Steps (With Checkpoint Commits)**
 
-**Step 1: Create Git Tag Before Changes**
+| Phase | Name | Risk | Checkpoint Commit |
+|-------|------|------|-------------------|
+| 1 | Cross-Tab Batching | ⚠️ MEDIUM | `checkpoint: before cross-tab batching` |
+| 2 | Timer Leader Election | ⚠️ MEDIUM | `checkpoint: before timer leader election` |
+| 3 | Remove Deep Watchers | 🔴 HIGH | `checkpoint: before removing deep watchers` |
+| 4 | Unified Sync Queue | 🔴 HIGH | `checkpoint: before unified sync queue` |
+| 5 | Re-enable Live Sync | ⚠️ MEDIUM | `checkpoint: before re-enabling live sync` |
+
+**Phase 1: Cross-Tab Batching**
 ```bash
-git tag -a sync-safety-baseline -m "Pre-sync-safety baseline"
+git add -A && git commit -m "checkpoint: before cross-tab batching"
 ```
-
-**Step 2: Cross-Tab Batching (MEDIUM RISK)**
 - Files: `src/composables/useCrossTabSync.ts`
-- Rollback: `git checkout sync-safety-baseline -- src/composables/useCrossTabSync.ts`
+- Change: Add 100ms debounce + 5s deduplication TTL
+- Test: Single tab only, verify messages batched
+- Rollback: `git checkout HEAD~1 -- src/composables/useCrossTabSync.ts`
 
-**Step 3: Timer Leader Election (MEDIUM RISK)**
-- Files: `src/stores/timer.ts`
-- Rollback: `git checkout HEAD~1 -- src/stores/timer.ts`
+**Phase 2: Timer Leader Election**
+```bash
+git add -A && git commit -m "checkpoint: before timer leader election"
+```
+- Files: `src/stores/timer.ts`, `src/composables/useCrossTabSync.ts`
+- Change: Only ONE tab runs timer, others display synced state
+- Test: Open 2 tabs, start timer, close leader tab, verify transfer
+- Rollback: `git checkout HEAD~1 -- src/stores/timer.ts src/composables/useCrossTabSync.ts`
 
-**Step 4: Replace Deep Watchers (HIGH RISK - Critical)**
-- Files: `src/stores/tasks.ts`, `src/stores/canvas.ts`
-- Rollback: `git checkout HEAD~1 -- src/stores/tasks.ts src/stores/canvas.ts`
+**Phase 3: Remove Deep Watchers (CRITICAL)**
+```bash
+git add -A && git commit -m "checkpoint: before removing deep watchers"
+```
+- Files:
+  - `src/stores/tasks.ts` (lines 959-983, 1034-1037)
+  - `src/composables/useCrossTabSyncIntegration.ts` (lines 95-98, 182-185, 210-213)
+- Change: Replace `watch(..., { deep: true })` with action-based sync
+- Test: CRUD operations, verify no infinite loops
+- Rollback: `git checkout HEAD~1 -- src/stores/tasks.ts src/composables/useCrossTabSyncIntegration.ts`
 
-**Step 5: Unified Sync Queue (HIGH RISK)**
-- Files: NEW `src/utils/unifiedSyncQueue.ts`
+**Phase 4: Unified Sync Queue**
+```bash
+git add -A && git commit -m "checkpoint: before unified sync queue"
+```
+- Files: NEW `src/utils/unifiedSyncQueue.ts`, updates to stores
+- Change: Single queue for ALL sync operations with coalescing
+- Test: Stress test with rapid operations
 - Rollback: `git revert HEAD`
 
-**Step 6: Re-enable Sync (Only after all tests pass)**
+**Phase 5: Re-enable Live Sync (Only after all tests pass)**
+```bash
+git add -A && git commit -m "checkpoint: before re-enabling live sync"
+```
 - Files: `src/config/database.ts`
+- Change: Set `live: true`, `retry: true`
+- Test: Full system test with CouchDB
 - Rollback: `git checkout HEAD~1 -- src/config/database.ts`
 
 ---
@@ -1377,8 +1459,20 @@ npm run dev
 | CouchDB Remote Sync | ❌ DISABLED | Stopped to prevent infinite loops |
 | Cross-Tab Sync | ⚠️ NO DEBOUNCE | Can cause broadcast storms |
 | Timer Sync | ❌ NOT SYNCED | Each tab runs independent timer |
-| Deep Watchers | ⚠️ 18+ ACTIVE | Root cause of crisis |
+| Deep Watchers | 🔴 20 ACTIVE | Root cause of crisis (verified Dec 4) |
 | Circuit Breaker | ✅ READY | Will auto-stop issues if re-enabled |
+
+**Deep Watchers by File (20 total):**
+| File | Count | Risk |
+|------|-------|------|
+| `useCrossTabSyncIntegration.ts` | 3 | 🔴 HIGH |
+| `stores/tasks.ts` | 3 | 🔴 HIGH |
+| `stores/timer.ts` | 3 | ⚠️ MEDIUM |
+| `useVueFlowStateManager.ts` | 3 | ⚠️ MEDIUM |
+| `useVueFlowStability.ts` | 2 | ⚠️ MEDIUM |
+| Canvas optimization files | 4 | LOW |
+| `useFavicon.ts` | 1 | LOW (harmless) |
+| `useTaskLifecycle.ts` | 1 | LOW |
 
 ---
 

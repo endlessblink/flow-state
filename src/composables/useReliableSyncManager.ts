@@ -592,6 +592,19 @@ export const useReliableSyncManager = () => {
       metrics.value.lastSyncTime = new Date()
       metrics.value.successfulSyncs++
 
+      // CRITICAL: Reload task store from synced database
+      // Without this, the UI won't show the synced data!
+      try {
+        console.log('🔄 Reloading task store from synced database...')
+        const { useTaskStore } = await import('@/stores/tasks')
+        const taskStore = useTaskStore()
+        await taskStore.loadFromDatabase()
+        console.log('✅ Task store reloaded with synced data')
+      } catch (reloadError) {
+        console.error('⚠️ Failed to reload task store after sync:', reloadError)
+        // Don't throw - sync was still successful, just reload failed
+      }
+
       // Complete sync operation logging
       ;(logger as any).completeSyncOperation(operationId, true)
 

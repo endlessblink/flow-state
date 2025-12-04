@@ -201,7 +201,8 @@ Three critical bugs reported after completing the feature restoration:
 | 1 | Tasks created on canvas disappear immediately | 🔴 CRITICAL | ✅ FIXED (commit `7644828`) |
 | 2 | Tasks from other views don't appear in canvas inbox | 🟠 HIGH | 🔍 Needs user verification (may be fixed by #1) |
 | 3 | Sidebar counters don't match displayed tasks | 🟡 MEDIUM | 📋 DEFERRED - complex fix needed |
-| 4 | Canvas uses separate InboxPanel instead of UnifiedInboxPanel | 🟡 MEDIUM | ✅ FIXED - consolidated |
+| 4 | Canvas uses separate InboxPanel instead of UnifiedInboxPanel | 🟡 MEDIUM | ✅ FIXED - consolidated (commit `d8d8ab4`) |
+| 5 | Task disappears when moved from yesterday to Today group | 🔴 CRITICAL | 🔍 INVESTIGATING - race condition suspected |
 
 ### **Root Cause Analysis (Bug 1 - CRITICAL)**
 

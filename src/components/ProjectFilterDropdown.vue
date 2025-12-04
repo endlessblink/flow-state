@@ -151,7 +151,7 @@ const selectProject = (projectId: string | null) => {
 
 const getTriggerLabel = () => {
   if (!activeProjectId.value) return 'All Projects'
-  return activeProject.value?.name || 'Unknown Project'
+  return activeProject.value?.name || 'Uncategorized'
 }
 
 const getTriggerTitle = () => {

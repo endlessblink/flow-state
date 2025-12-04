@@ -17,7 +17,7 @@ const mockTaskStore = {
   },
   getProjectDisplayName: (projectId: string) => {
     const project = mockTaskStore.projects.find(p => p.id === projectId)
-    return project ? project.name : 'Unknown Project'
+    return project ? project.name : 'Uncategorized'
   }
 }
 

@@ -148,7 +148,7 @@ export function useCalendarCore() {
 
   const getProjectName = (event: CalendarEvent): string => {
     const project = getTaskProject(event)
-    return project?.name || 'Unknown Project'
+    return project?.name || 'Uncategorized'
   }
 
   // === OVERLAP CALCULATION UTILITIES ===

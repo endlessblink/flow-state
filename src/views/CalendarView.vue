@@ -2,12 +2,7 @@
 <div class="calendar-layout">
     <!-- Calendar Inbox Panel -->
     <Transition name="sidebar-slide">
-      <UnifiedInboxPanel
-        v-show="uiStore.secondarySidebarVisible"
-        context="calendar"
-        :show-brain-dump="true"
-        :start-collapsed="false"
-      />
+      <CalendarInboxPanel v-show="uiStore.secondarySidebarVisible" />
     </Transition>
 
     <!-- Task Edit Modal -->
@@ -118,7 +113,7 @@
 
         <!-- Slots Container - Tasks render INSIDE slots (no absolute positioning) -->
         <div class="slots-container" ref="timeGridRef">
-          <!-- Ghost Preview (only shown during inbox drag) - uses absolute positioning for smooth tracking -->
+          <!-- Ghost Preview (only shown during inbox drag) - absolute positioning for smooth tracking -->
           <div v-if="dragGhost.visible" class="ghost-preview-inline" :style="{
             position: 'absolute',
             top: `${dragGhost.slotIndex * 30}px`,
@@ -148,10 +143,10 @@
             :data-hour="slot.hour"
             :data-minute="slot.minute"
             :data-time="formatSlotTime(slot)"
-            @dragover.prevent="dayView.handleDragOver($event, timeSlotToDropTarget(slot))"
-                @dragenter.prevent="dayView.handleDragEnter($event, timeSlotToDropTarget(slot))"
-            @dragleave="dayView.handleDragLeave"
-            @drop.prevent="dayView.handleDrop($event, timeSlotToDropTarget(slot))"
+            @dragover.prevent="onDragOver($event, slot)"
+                @dragenter.prevent="onDragEnter($event, slot)"
+            @dragleave="onDragLeave"
+            @drop.prevent="onDropSlot($event, slot)"
             @mousedown="dragCreate.handleSlotMouseDown($event, slot)"
           >
             <!-- Tasks rendered INSIDE the slot - ONLY PRIMARY SLOTS (no continuation artifacts) -->
@@ -162,10 +157,13 @@
                 :class="{
                   'timer-active-event': timerStore.currentTaskId === calEvent.taskId,
                   'dragging': isDragging && draggedEventId === calEvent.id,
-                  'is-hovered': hoveredEventId === calEvent.id,
-                  'has-overlap': calEvent.totalColumns > 1
+                  'is-hovered': hoveredEventId === calEvent.id
                 }"
-                :style="getSlotTaskStyle(calEvent)"
+                :style="{
+                  height: `${(calEvent.slotSpan * 30) - 4}px`,
+                  minHeight: `${(calEvent.slotSpan * 30) - 4}px`,
+                  zIndex: 10
+                }"
                 @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
                 @mouseleave="handleSlotTaskMouseLeave()"
                 :data-duration="calEvent.duration"
@@ -177,9 +175,56 @@
                 @dblclick="handleEventDblClick(calEvent)"
                 @contextmenu.prevent="handleEventContextMenu($event, calEvent)"
               >
-                <!-- CLEAN CALENDAR-ONLY DISPLAY -->
-                <div class="calendar-task-content">
-                  <div class="calendar-task-title">{{ calEvent.title }}</div>
+                <!-- Project Stripe -->
+                <div
+                  v-if="getProjectVisual(calEvent).type === 'emoji'"
+                  class="project-stripe project-emoji-stripe"
+                  :title="`Project: ${getProjectName(calEvent)}`"
+                >
+                  <ProjectEmojiIcon
+                    :emoji="getProjectVisual(calEvent).content"
+                    size="xs"
+                    :title="`Project: ${getProjectName(calEvent)}`"
+                    class="project-emoji"
+                  />
+                </div>
+                <div
+                  v-else
+                  class="project-stripe project-color-stripe"
+                  :style="{ backgroundColor: getProjectColor(calEvent) }"
+                  :title="`Project: ${getProjectName(calEvent)}`"
+                ></div>
+
+                <!-- Priority Stripe -->
+                <div
+                  class="priority-stripe"
+                  :class="`priority-${getPriorityClass(calEvent)}`"
+                  :title="`Priority: ${getPriorityLabel(calEvent)}`"
+                ></div>
+
+                <!-- Task Content -->
+                <div class="task-content">
+                  <div class="task-header">
+                    <div class="task-title">{{ calEvent.title }}</div>
+                    <div class="task-actions">
+                      <div
+                        class="status-indicator"
+                        :class="`status-${getTaskStatus(calEvent)}`"
+                        @click.stop="cycleTaskStatus($event, calEvent)"
+                        :title="`Status: ${getStatusLabel(calEvent)} (click to change)`"
+                      >
+                        {{ getStatusIcon(getTaskStatus(calEvent)) }}
+                      </div>
+                      <button
+                        class="remove-from-calendar-btn"
+                        @click.stop="handleRemoveFromCalendar(calEvent)"
+                        title="Remove from calendar (move to inbox)"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  <div class="task-duration">{{ calEvent.duration }}min</div>
                 </div>
 
                 <!-- Resize Handle (top for changing start time) -->
@@ -196,7 +241,7 @@
                   title="Drag to change duration"
                 ></div>
 
-                <!-- Resize Preview Overlay -->
+                <!-- Resize Preview Overlay - shows projected size during drag -->
                 <div
                   v-if="resizePreview?.isResizing && resizePreview.taskId === calEvent.taskId"
                   class="resize-preview-overlay"
@@ -447,10 +492,6 @@
 </template>
 
 <script setup lang="ts">
-// Debug logging control - only logs in development, silent in production builds
-const DEBUG_CALENDAR = import.meta.env.DEV
-const debugLog = (...args: unknown[]) => DEBUG_CALENDAR && console.log(...args)
-
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -460,7 +501,7 @@ import { useCalendarEventHelpers } from '@/composables/calendar/useCalendarEvent
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
-import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
+import CalendarInboxPanel from '@/components/CalendarInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
@@ -489,8 +530,8 @@ const showRecordingPanel = ref(false)
 
 // Debug function to inventory all tasks with their statuses
 const debugTaskInventory = () => {
-  debugLog('🚨 CALENDAR VIEW: === TASK INVENTORY DEBUG ===')
-  debugLog('🚨 CALENDAR VIEW: Total tasks in store:', taskStore.tasks.length)
+  console.log('🚨 CALENDAR VIEW: === TASK INVENTORY DEBUG ===')
+  console.log('🚨 CALENDAR VIEW: Total tasks in store:', taskStore.tasks.length)
 
   const tasksByStatus = {
     planned: taskStore.tasks.filter(t => t.status === 'planned'),
@@ -500,31 +541,31 @@ const debugTaskInventory = () => {
     'on_hold': taskStore.tasks.filter(t => t.status === 'on_hold')
   }
 
-  debugLog('🚨 CALENDAR VIEW: Tasks by status:')
+  console.log('🚨 CALENDAR VIEW: Tasks by status:')
   Object.entries(tasksByStatus).forEach(([status, tasks]) => {
-    debugLog(`🚨 CALENDAR VIEW:   ${status}: ${tasks.length} tasks`)
+    console.log(`🚨 CALENDAR VIEW:   ${status}: ${tasks.length} tasks`)
     tasks.forEach(task => {
-      debugLog(`🚨 CALENDAR VIEW:     - "${task.title}" (ID: ${task.id})`)
+      console.log(`🚨 CALENDAR VIEW:     - "${task.title}" (ID: ${task.id})`)
       const instances = taskStore.getTaskInstances(task)
       if (instances.length > 0) {
-        debugLog(`🚨 CALENDAR VIEW:       Instances: ${instances.map(i => `${i.scheduledDate} ${i.scheduledTime}`).join(', ')}`)
+        console.log(`🚨 CALENDAR VIEW:       Instances: ${instances.map(i => `${i.scheduledDate} ${i.scheduledTime}`).join(', ')}`)
       }
     })
   })
 
-  debugLog('🚨 CALENDAR VIEW: Current filtered tasks:', taskStore.filteredTasks.length)
-  debugLog('🚨 CALENDAR VIEW: Current calendar events:', calendarEvents.value.length)
-  debugLog('🚨 CALENDAR VIEW: === END TASK INVENTORY ===')
+  console.log('🚨 CALENDAR VIEW: Current filtered tasks:', taskStore.filteredTasks.length)
+  console.log('🚨 CALENDAR VIEW: Current calendar events:', calendarEvents.value.length)
+  console.log('🚨 CALENDAR VIEW: === END TASK INVENTORY ===')
 }
 
 // Status filter change handler using global TaskStore
 const handleStatusFilterChange = (event: MouseEvent, newFilter: 'planned' | 'in_progress' | 'done' | null) => {
   // Prevent event bubbling that might interfere with other click handlers
   event.stopPropagation()
-  debugLog('🚨 CALENDAR VIEW: Status filter button clicked!')
-  debugLog('🚨 CALENDAR VIEW: Previous filter:', statusFilter.value)
-  debugLog('🚨 CALENDAR VIEW: New filter:', newFilter)
-  debugLog('🚨 CALENDAR VIEW: Event target:', event.target)
+  console.log('🚨 CALENDAR VIEW: Status filter button clicked!')
+  console.log('🚨 CALENDAR VIEW: Previous filter:', statusFilter.value)
+  console.log('🚨 CALENDAR VIEW: New filter:', newFilter)
+  console.log('🚨 CALENDAR VIEW: Event target:', event.target)
 
   // Show task inventory before filter change
   debugTaskInventory()
@@ -532,20 +573,20 @@ const handleStatusFilterChange = (event: MouseEvent, newFilter: 'planned' | 'in_
   // Use global TaskStore method to set status filter
   taskStore.setActiveStatusFilter(newFilter)
 
-  debugLog('🚨 CALENDAR VIEW: Filter updated via TaskStore, current value:', statusFilter.value)
-  debugLog('🚨 CALENDAR VIEW: Task store filteredTasks count:', taskStore.filteredTasks.length)
+  console.log('🚨 CALENDAR VIEW: Filter updated via TaskStore, current value:', statusFilter.value)
+  console.log('🚨 CALENDAR VIEW: Task store filteredTasks count:', taskStore.filteredTasks.length)
 
   // Force Vue reactivity check
   nextTick(() => {
-    debugLog('🚨 CALENDAR VIEW: After nextTick, filter value:', statusFilter.value)
-    debugLog('🚨 CALENDAR VIEW: Task store filteredTasks count after tick:', taskStore.filteredTasks.length)
-    debugLog('🚨 CALENDAR VIEW: Calendar events after filter:', calendarEvents.value.length)
+    console.log('🚨 CALENDAR VIEW: After nextTick, filter value:', statusFilter.value)
+    console.log('🚨 CALENDAR VIEW: Task store filteredTasks count after tick:', taskStore.filteredTasks.length)
+    console.log('🚨 CALENDAR VIEW: Calendar events after filter:', calendarEvents.value.length)
 
     // Show which calendar events passed the filter
-    debugLog('🚨 CALENDAR VIEW: Calendar events after filter:')
+    console.log('🚨 CALENDAR VIEW: Calendar events after filter:')
     calendarEvents.value.forEach(event => {
       const task = taskStore.tasks.find(t => t.id === event.taskId)
-      debugLog(`🚨 CALENDAR VIEW:   - "${event.title}" (Status: ${task?.status}, Task ID: ${event.taskId})`)
+      console.log(`🚨 CALENDAR VIEW:   - "${event.title}" (Status: ${task?.status}, Task ID: ${event.taskId})`)
     })
   })
 }
@@ -556,14 +597,6 @@ const eventHelpers = useCalendarEventHelpers()
 const dayView = useCalendarDayView(currentDate, statusFilter)
 const weekView = useCalendarWeekView(currentDate, statusFilter)
 const monthView = useCalendarMonthView(currentDate, statusFilter)
-
-// Helper function to convert TimeSlot to DropTarget for unified drag system
-const timeSlotToDropTarget = (slot: any) => ({
-  type: 'time-slot' as const,
-  date: slot.date,
-  time: `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`,
-  slotIndex: slot.slotIndex
-})
 
 // Reactive current time for time indicator
 const currentTime = ref(new Date())
@@ -639,7 +672,7 @@ const handleVueDraggableAdd = (evt: any) => {
     const targetDate = new Date(currentDate.value)
     targetDate.setHours(slot.hour, slot.minute, 0, 0)
 
-    debugLog(`📅 [Calendar] vuedraggable: Scheduling task ${taskId} to ${targetDate.toISOString()}`)
+    console.log(`📅 [Calendar] vuedraggable: Scheduling task ${taskId} to ${targetDate.toISOString()}`)
     taskStore.updateTaskWithUndo(taskId, { scheduledDate: targetDate.toISOString() })
   }
 
@@ -649,7 +682,7 @@ const handleVueDraggableAdd = (evt: any) => {
 
 const handleVueDraggableChange = (evt: any) => {
   // Optional: handle change events for debugging
-  debugLog('[Calendar] vuedraggable change:', evt)
+  console.log('[Calendar] vuedraggable change:', evt)
 }
 
 // Helper to format slot time for data attribute
@@ -657,39 +690,50 @@ const formatSlotTime = (slot: any) => {
   return `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
 }
 
-// Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
-const getSlotTaskStyle = (calEvent: any) => {
-  const baseHeight = (calEvent.slotSpan * 30) - 4
-
-  // If no overlap (totalColumns is 1 or undefined), use normal flow with full width
-  if (!calEvent.totalColumns || calEvent.totalColumns <= 1) {
-    return {
-      height: `${baseHeight}px`,
-      minHeight: `${baseHeight}px`,
-      zIndex: 10
-    }
+// Native HTML5 Drag-Drop handlers for inbox → calendar (per PomoFlow Development Prompt)
+// CRITICAL: @dragover.prevent is required or @drop never fires
+// These wrap the composable handlers with proper event handling
+const onDragOver = (e: DragEvent, slot: any) => {
+  // CRITICAL: preventDefault() already called by @dragover.prevent modifier
+  // BUT we must set dropEffect to validate this as a drop target
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
   }
 
-  // Calculate width and position for overlapping events (like Google Calendar)
-  const gapPercent = 1 // 1% gap between columns
-  const totalGaps = calEvent.totalColumns - 1
-  const availableWidth = 100 - (totalGaps * gapPercent)
-  const widthPercentage = availableWidth / calEvent.totalColumns
-  const leftPercentage = (widthPercentage + gapPercent) * (calEvent.column || 0)
+  console.log('🔄 [CalendarDrag] onDragOver - drop target validated for slot:', slot.slotIndex)
 
-  return {
-    position: 'absolute' as const,
-    top: '2px',
-    height: `${baseHeight}px`,
-    minHeight: `${baseHeight}px`,
-    width: `calc(${widthPercentage}% - 4px)`,
-    left: `calc(${leftPercentage}% + 2px)`,
-    zIndex: 10 + (calEvent.column || 0) // Later columns render on top
-  }
+  // Call the existing handler from composable
+  handleDragOver(e, slot)
 }
 
-// Unified drag handlers are now used directly from dayView composable
-// This eliminates duplicate wrapper methods and centralizes drag logic
+const onDragEnter = (e: DragEvent, slot: any) => {
+  // CRITICAL: preventDefault() already called by @dragenter.prevent modifier
+  // Set dropEffect to validate this as a drop target
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  console.log('📍 [CalendarDrag] onDragEnter - slot entered:', slot.slotIndex)
+
+  // Track active drop slot for visual feedback (handled by composable)
+  handleDragEnter(e, slot)
+}
+
+const onDragLeave = () => {
+  handleDragLeave()
+}
+
+const onDropSlot = (e: DragEvent, slot: any) => {
+  // CRITICAL: preventDefault() already called by @drop.prevent modifier
+  // BUT be explicit for clarity and add stopPropagation
+  e.preventDefault()
+  e.stopPropagation()
+
+  console.log('🎯 [CalendarDrag] onDropSlot called for slot:', slot.slotIndex)
+
+  // Use existing handleDrop from composable
+  handleDrop(e, slot)
+}
 
 // ✅ CAPTURE PHASE HANDLERS
 const handleDragEnterCapture = (e: DragEvent) => {
@@ -699,7 +743,7 @@ const handleDragEnterCapture = (e: DragEvent) => {
   const idx = parseInt(slot.getAttribute('data-slot-index') || '-1')
   if (idx === -1) return
   const slotObj = timeSlots.value[idx]
-  if (slotObj) dayView.handleDragEnter(e, timeSlotToDropTarget(slotObj))
+  if (slotObj) handleDragEnter(e, slotObj)
 }
 
 const handleDragOverCapture = (e: DragEvent) => {
@@ -713,7 +757,7 @@ const handleDragOverCapture = (e: DragEvent) => {
   const slotObj = timeSlots.value[idx]
   if (slotObj) {
     activeDropSlot.value = idx
-    dayView.handleDragOver(e, timeSlotToDropTarget(slotObj))
+    handleDragOver(e, slotObj)
   }
 }
 
@@ -737,7 +781,7 @@ const handleDropCapture = (e: DragEvent) => {
   if (idx === -1) return
   activeDropSlot.value = null
   const slotObj = timeSlots.value[idx]
-  if (slotObj) dayView.handleDrop(e, timeSlotToDropTarget(slotObj))
+  if (slotObj) handleDrop(e, slotObj)
 }
 
 // Scroll synchronization
@@ -839,7 +883,7 @@ onMounted(() => {
     calendarEl.addEventListener('dragover', (e: Event) => handleDragOverCapture(e as DragEvent), true)
     calendarEl.addEventListener('dragleave', (e: Event) => handleDragLeaveCapture(e as DragEvent), true)
     calendarEl.addEventListener('drop', (e: Event) => handleDropCapture(e as DragEvent), true)
-    debugLog('✅ [CalendarDrag] Capture phase listeners attached to .calendar-main')
+    console.log('✅ [CalendarDrag] Capture phase listeners attached to .calendar-main')
   } else {
     console.error('❌ [CalendarDrag] .calendar-main element not found for capture listeners')
   }
@@ -864,7 +908,7 @@ onUnmounted(() => {
   if (calendarEl) {
     // Note: Can't remove arrow functions added with addEventListener
     // This is expected - the capture phase listeners will persist until page unload
-    debugLog('✅ [CalendarDrag] Capture phase listeners cleanup skipped (arrow functions persist)')
+    console.log('✅ [CalendarDrag] Capture phase listeners cleanup skipped (arrow functions persist)')
   }
 })
 
@@ -1036,7 +1080,7 @@ const cancelDeleteTask = () => {
 
 // Task modal handlers
 const handleTaskCreated = (task: Task) => {
-  debugLog('Task created:', task)
+  console.log('Task created:', task)
   dragCreate.showQuickCreateModal.value = false
   dragCreate.resetCreateDrag()
 }
@@ -1062,7 +1106,7 @@ const handleEventContextMenu = (mouseEvent: MouseEvent, calendarEvent: any) => {
 
 // Remove task from calendar timeline and move to inbox
 const handleRemoveFromCalendar = (calendarEvent: any) => {
-  debugLog(`🗑️ Removing task "${calendarEvent.title}" from calendar`)
+  console.log(`🗑️ Removing task "${calendarEvent.title}" from calendar`)
 
   // Find the task
   const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
@@ -1074,7 +1118,7 @@ const handleRemoveFromCalendar = (calendarEvent: any) => {
   // Use the unscheduleTask method to remove from calendar and move to inbox
   taskStore.unscheduleTask(task.id)
 
-  debugLog(`✅ Task "${task.title}" removed from calendar and moved to inbox`)
+  console.log(`✅ Task "${task.title}" removed from calendar and moved to inbox`)
 }
 
 // Calendar event selection for keyboard operations - now supports multi-select
@@ -1082,7 +1126,7 @@ const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: any) => {
   const eventElement = mouseEvent.currentTarget as HTMLElement
   const isCtrlOrCmd = mouseEvent.ctrlKey || mouseEvent.metaKey
 
-  debugLog('🖱️ Calendar event click:', {
+  console.log('🖱️ Calendar event click:', {
     eventId: calendarEvent.id,
     eventTitle: calendarEvent.title,
     isCtrlMultiSelect: isCtrlOrCmd,
@@ -1093,7 +1137,7 @@ const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: any) => {
   // IMPORTANT: Don't handle clicks if a drag operation is in progress
   // This prevents interference with drag-drop functionality
   if (isDragging.value) {
-    debugLog('🚫 Click ignored - drag operation in progress')
+    console.log('🚫 Click ignored - drag operation in progress')
     return
   }
 
@@ -1103,23 +1147,23 @@ const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: any) => {
 
     if (index > -1) {
       // Remove from selection
-      debugLog('🖱️ Removing from multi-select:', calendarEvent.title)
+      console.log('🖱️ Removing from multi-select:', calendarEvent.title)
       selectedCalendarEvents.value.splice(index, 1)
       eventElement.classList.remove('selected')
     } else {
       // Add to selection
-      debugLog('🖱️ Adding to multi-select:', calendarEvent.title)
+      console.log('🖱️ Adding to multi-select:', calendarEvent.title)
       selectedCalendarEvents.value.push(calendarEvent)
       eventElement.classList.add('selected')
     }
   } else {
     // Single select: clear previous and select only this
-    debugLog('🖱️ Single select (clearing previous):', calendarEvent.title)
+    console.log('🖱️ Single select (clearing previous):', calendarEvent.title)
 
     // Check if clicking same event (toggle deselect)
     if (selectedCalendarEvents.value.length === 1 && selectedCalendarEvents.value[0].id === calendarEvent.id) {
       // Deselect
-      debugLog('🖱️ Deselecting event:', calendarEvent.title)
+      console.log('🖱️ Deselecting event:', calendarEvent.title)
       selectedCalendarEvents.value = []
       eventElement.classList.remove('selected')
     } else {
@@ -1147,14 +1191,14 @@ const handleKeyDown = (event: KeyboardEvent) => {
   event.preventDefault()
   event.stopPropagation()
 
-  debugLog('🗑️ Calendar Delete: Removing', selectedCalendarEvents.value.length, 'selected tasks')
+  console.log('🗑️ Calendar Delete: Removing', selectedCalendarEvents.value.length, 'selected tasks')
 
   // Remove each selected calendar event
   selectedCalendarEvents.value.forEach(calendarEvent => {
     const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
     if (!task) return
 
-    debugLog('🗑️ Calendar Delete: Removing calendar instance and moving task to inbox:', task.title)
+    console.log('🗑️ Calendar Delete: Removing calendar instance and moving task to inbox:', task.title)
 
     // Use the same unschedule logic as the "Remove from Calendar" button
     // This preserves canvas position and ensures consistent behavior
@@ -1177,13 +1221,13 @@ const handleMonthDayClick = (dateString: string) => {
 const handleToggleDoneTasks = (event: MouseEvent) => {
   // Prevent event bubbling that might interfere with other click handlers
   event.stopPropagation()
-  debugLog('🔧 CalendarView: Toggle button clicked!')
-  debugLog('🔧 CalendarView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
+  console.log('🔧 CalendarView: Toggle button clicked!')
+  console.log('🔧 CalendarView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
 
   try {
     taskStore.toggleHideDoneTasks()
-    debugLog('🔧 CalendarView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
-    debugLog('🔧 CalendarView: Method call successful')
+    console.log('🔧 CalendarView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
+    console.log('🔧 CalendarView: Method call successful')
   } catch (error) {
     console.error('🔧 CalendarView: Error calling toggleHideDoneTasks:', error)
   }
@@ -1597,11 +1641,6 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   padding-left: calc(var(--space-3) - 2px); /* Adjust for thicker left border */
 }
 
-/* Overlapping task positioning - switches to absolute when multiple tasks overlap */
-.slot-task.has-overlap {
-  margin: 0; /* Remove margin since position is calculated in getSlotTaskStyle */
-}
-
 /* Continuation slot shows minimal indicator */
 .slot-task:not(.is-primary) {
   opacity: 0.7;
@@ -1639,25 +1678,6 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-}
-
-/* Clean calendar-specific task styling */
-.calendar-task-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 20px;
-}
-
-.calendar-task-title {
-  color: var(--text-primary);
-  font-weight: var(--font-medium);
-  font-size: var(--text-xs);
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  flex: 1;
 }
 
 .task-title {
@@ -1827,40 +1847,19 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   position: relative;
   z-index: 1; /* Below calendar events to allow drag and resize interactions */
   transition: all var(--duration-fast) var(--spring-smooth);
-  cursor: crosshair; /* Indicate drop targets */
-  overflow: visible; /* Allow absolutely positioned overlapping tasks to extend beyond slot */
+  pointer-events: auto !important; /* Allow drag and drop interactions */
+  cursor: crosshair !important; /* Indicate drop targets */
 }
 
-/* Empty slots still capture events for drag-drop */
+/* Allow pointer events on time slot when it doesn't contain calendar events */
 .time-slot:empty,
 .time-slot:not(:has(.slot-task)) {
   pointer-events: auto;
 }
 
-/* CRITICAL: Slots with tasks let events pass through to children
-   Also elevate stacking context so multi-slot tasks render ABOVE subsequent time-slots */
-.time-slot:has(.slot-task) {
-  pointer-events: none;
-  position: relative;
-  z-index: 10; /* Elevate above subsequent time-slots for full-surface drag */
-}
-
-/* Ensure task elements can receive events */
-.time-slot:has(.slot-task) .slot-task {
-  pointer-events: auto;
-}
-
 /* Allow pointer events for drag-drop operations */
-.events-layer.drag-active .time-slot,
-.slots-container.drag-active .time-slot {
+.events-layer.drag-active .time-slot {
   pointer-events: auto;
-}
-
-/* Override during drag operations to maintain drop functionality */
-.time-slot.drag-over,
-.time-slot.creating {
-  pointer-events: auto !important;
-  cursor: crosshair !important;
 }
 
 .time-slot:hover {

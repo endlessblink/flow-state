@@ -157,12 +157,10 @@
                 :class="{
                   'timer-active-event': timerStore.currentTaskId === calEvent.taskId,
                   'dragging': isDragging && draggedEventId === calEvent.id,
-                  'is-hovered': hoveredEventId === calEvent.id
+                  'is-hovered': hoveredEventId === calEvent.id,
+                  'has-overlap': calEvent.totalColumns > 1
                 }"
-                :style="{
-                  height: `${(calEvent.slotSpan * 30) - 4}px`,
-                  minHeight: `${(calEvent.slotSpan * 30) - 4}px`
-                }"
+                :style="getSlotTaskStyle(calEvent)"
                 @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
                 @mouseleave="handleSlotTaskMouseLeave()"
                 :data-duration="calEvent.duration"
@@ -647,6 +645,37 @@ const { formatHour, formatEventTime, getPriorityClass, getPriorityLabel,
 const getProjectVisual = (event: any) => {
   if (!event.projectId) return { type: 'default', content: '📁' }
   return taskStore.getProjectVisual(event.projectId)
+}
+
+// Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
+const getSlotTaskStyle = (calEvent: any) => {
+  const baseHeight = (calEvent.slotSpan * 30) - 4
+
+  // If no overlap (totalColumns is 1 or undefined), use normal flow with full width
+  if (!calEvent.totalColumns || calEvent.totalColumns <= 1) {
+    return {
+      height: `${baseHeight}px`,
+      minHeight: `${baseHeight}px`,
+      zIndex: 10
+    }
+  }
+
+  // Calculate width and position for overlapping events (like Google Calendar)
+  const gapPercent = 1 // 1% gap between columns
+  const totalGaps = calEvent.totalColumns - 1
+  const availableWidth = 100 - (totalGaps * gapPercent)
+  const widthPercentage = availableWidth / calEvent.totalColumns
+  const leftPercentage = (widthPercentage + gapPercent) * (calEvent.column || 0)
+
+  return {
+    position: 'absolute' as const,
+    top: '2px',
+    height: `${baseHeight}px`,
+    minHeight: `${baseHeight}px`,
+    width: `calc(${widthPercentage}% - 4px)`,
+    left: `calc(${leftPercentage}% + 2px)`,
+    zIndex: 10 + (calEvent.column || 0) // Later columns render on top
+  }
 }
 
 // vuedraggable integration for calendar time grid drop zone
@@ -1607,6 +1636,11 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 
+/* Overlapping tasks - remove margins when positioned absolutely */
+.slot-task.has-overlap {
+  margin: 0;
+}
+
 .slot-task.selected {
   background: var(--state-selected-bg);
   border: 2px solid var(--state-selected-border);
@@ -1848,6 +1882,7 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   transition: all var(--duration-fast) var(--spring-smooth);
   pointer-events: auto !important; /* Allow drag and drop interactions */
   cursor: crosshair !important; /* Indicate drop targets */
+  overflow: visible; /* Allow absolutely positioned children to extend beyond slot */
 }
 
 /* Allow pointer events on time slot when it doesn't contain calendar events */

@@ -669,7 +669,7 @@ const filteredTasksWithProjectFiltering = computed(() => {
       // We check for updatedAt existence and convert to timestamp or string to ensure uniqueness
       const currentHash = currentTasks.map(t => {
         const timestamp = t.updatedAt instanceof Date ? t.updatedAt.getTime() : t.updatedAt
-        return `${t.id}:${timestamp}`
+        return `${t.id}:${timestamp}:${t.isInInbox}:${t.canvasPosition ? 'pos' : 'nopos'}`
       }).join('|')
 
       if (currentHash === lastFilteredTasksHash && lastFilteredTasks.length > 0) {

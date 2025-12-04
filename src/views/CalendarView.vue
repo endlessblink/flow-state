@@ -161,8 +161,7 @@
                 }"
                 :style="{
                   height: `${(calEvent.slotSpan * 30) - 4}px`,
-                  minHeight: `${(calEvent.slotSpan * 30) - 4}px`,
-                  zIndex: 10
+                  minHeight: `${(calEvent.slotSpan * 30) - 4}px`
                 }"
                 @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
                 @mouseleave="handleSlotTaskMouseLeave()"
@@ -1581,9 +1580,9 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   scrollbar-color: var(--glass-border) transparent;
 }
 
-/* Slot tasks are normal flow children, NOT absolute positioned */
+/* Slot tasks - position relative within time-slots, overflow visible */
 .slot-task {
-  position: relative; /* NOT absolute - normal flow */
+  position: relative;
   margin: 2px 4px;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
@@ -1597,7 +1596,7 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
   cursor: grab;
   min-height: 24px;
   font-size: var(--text-xs);
-  z-index: 5; /* Above time slots to allow drag and resize interactions */
+  z-index: 5;
 }
 
 .slot-task:hover {
@@ -1855,6 +1854,14 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
 .time-slot:empty,
 .time-slot:not(:has(.slot-task)) {
   pointer-events: auto;
+}
+
+/* CRITICAL: Slots with tasks let events pass through to children
+   Also elevate stacking context so multi-slot tasks render ABOVE subsequent time-slots */
+.time-slot:has(.slot-task) {
+  pointer-events: none;
+  position: relative;
+  z-index: 10; /* Elevate above subsequent time-slots for full-surface drag */
 }
 
 /* Allow pointer events for drag-drop operations */

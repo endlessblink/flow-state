@@ -526,20 +526,48 @@ export const useReliableSyncManager = () => {
       // TODO: Re-enable once basic sync is working
       console.log('⏭️ Skipping backup, validation, and conflict detection for minimal sync')
 
-      // Step 3: Perform sync (CORE OPERATION)
+      // Step 3: Perform sync (CORE OPERATION) with timeout
+      // Using one-way PUSH first to avoid pulling 18k+ revisions
       try {
-        console.log('🔄 Step 3: Performing bidirectional sync...')
-        // Simple sync without filter - filter was causing infinite loop issues
-        // All documents will sync, which is fine for now
-        const syncResult = await localDB!.sync(remoteDB!, {
+        console.log('🔄 Step 3a: Pushing local changes to remote...')
+
+        // Push local → remote (fast, avoids pulling conflicts)
+        const pushPromise = localDB!.replicate.to(remoteDB!, {
           live: false,
           retry: false,
-          batch_size: 100,
-          batches_limit: 10
+          batch_size: 50,
+          batches_limit: 5
         })
+
+        // Add 15-second timeout for push
+        const pushTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Push timeout after 15 seconds')), 15000)
+        })
+
+        const pushResult = await Promise.race([pushPromise, pushTimeout]) as any
+        console.log('✅ Push complete:', pushResult.docs_written || 0, 'docs written')
+
+        // Step 3b: Pull only new changes (with smaller batch)
+        console.log('🔄 Step 3b: Pulling remote changes...')
+
+        const pullPromise = localDB!.replicate.from(remoteDB!, {
+          live: false,
+          retry: false,
+          batch_size: 10,
+          batches_limit: 2
+        })
+
+        // Add 15-second timeout for pull
+        const pullTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Pull timeout after 15 seconds')), 15000)
+        })
+
+        const pullResult = await Promise.race([pullPromise, pullTimeout]) as any
+        console.log('✅ Pull complete:', pullResult.docs_read || 0, 'docs read')
+
         console.log('✅ Step 3 complete - sync result:', {
-          push: syncResult.push?.docs_written || 0,
-          pull: syncResult.pull?.docs_read || 0
+          push: pushResult.docs_written || 0,
+          pull: pullResult.docs_read || 0
         })
       } catch (syncError) {
         console.error('❌ Sync operation failed:', syncError)

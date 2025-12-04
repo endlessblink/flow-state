@@ -2850,6 +2850,13 @@ export const useTaskStore = defineStore('tasks', () => {
 
       console.log('🔄 [TASK-STORE] State restored successfully. Tasks now has', tasks.value.length, 'items')
 
+      // DEBUG: Log canvas tasks after restore
+      const canvasTasks = tasks.value.filter(t => t.isInInbox === false && t.canvasPosition)
+      console.log(`🔍 [RESTORE-DEBUG] After restore: ${canvasTasks.length} tasks have canvas properties`)
+      canvasTasks.forEach(t => {
+        console.log(`   - ${t.title}: isInInbox=${t.isInInbox}, canvasPosition=${JSON.stringify(t.canvasPosition)}`)
+      })
+
       // Additional validation after restore
       if (tasks.value.length === 0 && backupTasks.length > 0) {
         console.error('⚠️ [DATA-LOSS-PREVENTION] Warning: After restore, task count went from', backupTasks.length, 'to 0. This may indicate a problem.')

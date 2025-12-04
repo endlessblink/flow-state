@@ -114,11 +114,24 @@ Call client"
         <p class="empty-subtext">{{ getEmptyMessage() }}</p>
       </div>
 
+      <!-- Selection Bar (shown when tasks are selected) -->
+      <div v-if="multiSelectMode" class="selection-bar">
+        <span class="selection-count">{{ selectedTaskIds.size }} selected</span>
+        <button @click="deleteSelectedTasks" class="selection-action delete-action" title="Delete selected tasks">
+          <Trash2 :size="14" />
+          Delete
+        </button>
+        <button @click="clearSelection" class="selection-action clear-action" title="Clear selection (Esc)">
+          <X :size="14" />
+          Clear
+        </button>
+      </div>
+
       <!-- Task Cards -->
       <div
         v-for="task in inboxTasks"
         :key="task.id"
-        class="task-card"
+        :class="['task-card', { selected: selectedTaskIds.has(task.id) }]"
         draggable="true"
         @dragstart="onDragStart($event, task)"
         @dragend="onDragEnd"
@@ -218,7 +231,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import {
   ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock,
-  Target, Calendar as CalendarIcon, Clipboard, Folder
+  Target, Calendar as CalendarIcon, Clipboard, Folder, Trash2, X
 } from 'lucide-vue-next'
 import BaseBadge from './BaseBadge.vue'
 import ProjectEmojiIcon from './ProjectEmojiIcon.vue'
@@ -251,6 +264,10 @@ const activeFilter = ref(props.defaultFilter)
 const brainDumpMode = ref(false)
 const brainDumpText = ref('')
 const draggingTaskId = ref<string | null>(null)
+
+// Multi-select state
+const selectedTaskIds = ref<Set<string>>(new Set())
+const multiSelectMode = computed(() => selectedTaskIds.value.size > 0)
 
 // Base inbox tasks (consistent data source)
 const baseInboxTasks = computed(() => {
@@ -487,7 +504,42 @@ const processBrainDump = () => {
 // Task interaction handlers
 const handleTaskClick = (event: MouseEvent, task: Task) => {
   if (draggingTaskId.value) return
-  // Minimal click handling - focus on drag-drop
+
+  const isMultiSelect = event.ctrlKey || event.metaKey
+
+  if (isMultiSelect) {
+    // Toggle selection for this task
+    if (selectedTaskIds.value.has(task.id)) {
+      selectedTaskIds.value.delete(task.id)
+    } else {
+      selectedTaskIds.value.add(task.id)
+    }
+    // Force reactivity update
+    selectedTaskIds.value = new Set(selectedTaskIds.value)
+  } else {
+    // Single click without modifier - clear selection
+    if (selectedTaskIds.value.size > 0) {
+      selectedTaskIds.value.clear()
+      selectedTaskIds.value = new Set()
+    }
+  }
+}
+
+// Clear selection when clicking outside or pressing Escape
+const clearSelection = () => {
+  selectedTaskIds.value.clear()
+  selectedTaskIds.value = new Set()
+}
+
+// Delete selected tasks
+const deleteSelectedTasks = () => {
+  if (selectedTaskIds.value.size === 0) return
+
+  const idsToDelete = Array.from(selectedTaskIds.value)
+  idsToDelete.forEach(id => {
+    taskStore.deleteTaskWithUndo(id)
+  })
+  clearSelection()
 }
 
 const handleTaskDoubleClick = (task: Task) => {
@@ -500,10 +552,24 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
   event.preventDefault()
   event.stopPropagation()
 
+  // If right-clicking on an unselected task while others are selected, select this one too
+  if (selectedTaskIds.value.size > 0 && !selectedTaskIds.value.has(task.id)) {
+    // Add this task to selection for batch operation
+    selectedTaskIds.value.add(task.id)
+    selectedTaskIds.value = new Set(selectedTaskIds.value)
+  }
+
+  // Pass selected task IDs for batch operations
+  const selectedIds = selectedTaskIds.value.size > 0
+    ? Array.from(selectedTaskIds.value)
+    : [task.id]
+
   window.dispatchEvent(new CustomEvent('task-context-menu', {
     detail: {
       event,
       task,
+      selectedIds,
+      selectedCount: selectedIds.length,
       instanceId: undefined,
       isCalendarEvent: false
     }
@@ -516,10 +582,17 @@ const onDragStart = (e: DragEvent, task: Task) => {
   draggingTaskId.value = task.id
   e.dataTransfer.effectAllowed = 'move'
 
+  // If dragging a selected task, include all selected tasks
+  // If dragging an unselected task, just drag that one
+  const taskIds = selectedTaskIds.value.has(task.id) && selectedTaskIds.value.size > 1
+    ? Array.from(selectedTaskIds.value)
+    : [task.id]
+
   const dragData = {
     ...task,
     taskId: task.id,
-    taskIds: [task.id],
+    taskIds: taskIds,
+    selectedCount: taskIds.length,
     fromInbox: true,
     source: `unified-inbox-${props.context}`
   }
@@ -556,13 +629,22 @@ const handleQuickAddTask = () => {
   }))
 }
 
+// Keyboard handler for Escape to clear selection
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && selectedTaskIds.value.size > 0) {
+    clearSelection()
+  }
+}
+
 // Lifecycle
 onMounted(() => {
-  // Component mounted
+  // Add keyboard listener for Escape
+  window.addEventListener('keydown', handleKeydown)
 })
 
 onBeforeUnmount(() => {
   // Cleanup
+  window.removeEventListener('keydown', handleKeydown)
   delete (window as any).__draggingTaskId
   document.documentElement.removeAttribute('data-dragging-task-id')
 })
@@ -913,6 +995,69 @@ onBeforeUnmount(() => {
 
 .task-card:hover .task-actions {
   opacity: 1;
+}
+
+/* Selection state */
+.task-card.selected {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  box-shadow: var(--shadow-md), 0 0 0 2px rgba(var(--primary-rgb, 79, 209, 197), 0.3);
+}
+
+.task-card.selected:hover {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+}
+
+/* Selection bar */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--state-active-bg);
+  border: 1px solid var(--state-active-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-2);
+}
+
+.selection-count {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.selection-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.selection-action.delete-action {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.selection-action.delete-action:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.selection-action.clear-action {
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
+}
+
+.selection-action.clear-action:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
 }
 
 .priority-stripe {

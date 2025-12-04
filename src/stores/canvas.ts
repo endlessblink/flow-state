@@ -122,6 +122,18 @@ export const useCanvasStore = defineStore('canvas', () => {
   const showDurationBadge = ref(true)
   const showScheduleBadge = ref(true)
 
+  // Sync trigger for external components (e.g., undo system) to request canvas refresh
+  const syncTrigger = ref(0)
+
+  /**
+   * Request a canvas sync from external code (like undo/redo system)
+   * CanvasView.vue watches this and calls syncNodes() when it changes
+   */
+  const requestSync = () => {
+    syncTrigger.value++
+    console.log('🔄 [CANVAS-STORE] Sync requested, trigger:', syncTrigger.value)
+  }
+
   // Zoom configuration
   const zoomConfig = ref({
     minZoom: 0.05, // 5% minimum zoom (down from 10%)
@@ -141,6 +153,13 @@ export const useCanvasStore = defineStore('canvas', () => {
   const syncTasksToCanvas = (tasks: Task[]) => {
     try {
       console.log('🔄 Safely syncing tasks to canvas:', tasks.length)
+
+      // DEBUG: Log all tasks with canvas-related properties
+      const tasksWithCanvasProps = tasks.filter(t => t.canvasPosition || t.isInInbox === false)
+      console.log('🔍 [CANVAS-SYNC-DEBUG] Tasks with canvas properties:', tasksWithCanvasProps.length)
+      tasksWithCanvasProps.forEach(t => {
+        console.log(`   - ${t.title}: isInInbox=${t.isInInbox}, canvasPosition=${JSON.stringify(t.canvasPosition)}`)
+      })
 
       // Create task nodes only for tasks that should appear on canvas
       // Tasks in inbox (isInInbox: true) should NOT appear on canvas
@@ -1178,6 +1197,10 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Task synchronization
     syncTasksToCanvas,
+
+    // External sync trigger (for undo/redo system)
+    syncTrigger,
+    requestSync,
 
     // Undo/Redo enabled actions
     ...undoRedoEnabledActions()

@@ -2052,6 +2052,20 @@ resourceManager.addWatcher(
   )
 )
 
+// FIX: Watch for sync requests from external systems (undo/redo)
+// This allows the undo system to trigger a canvas refresh after restoring tasks
+resourceManager.addWatcher(
+  watch(
+    () => canvasStore.syncTrigger,
+    (newTrigger) => {
+      if (newTrigger > 0) {
+        console.log('🔄 [CANVAS] Sync triggered by external request (undo/redo)')
+        syncNodes()
+      }
+    }
+  )
+)
+
 // FIX: Watch for task visual property changes (title, status, priority)
 // Using hash-based approach (validated by Perplexity as more efficient than deep:true on objects)
 // NO deep:true needed - single string comparison, zero garbage collection

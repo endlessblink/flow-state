@@ -4,6 +4,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
 import { useTaskStore } from '@/stores/tasks'
+import { useCanvasStore } from '@/stores/canvas'
 
 // Global singleton refHistory instance - created only ONCE
 let refHistoryInstance: ReturnType<typeof useManualRefHistory<any>> | null = null
@@ -89,10 +90,27 @@ const performUndo = async () => {
     console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for:', previousState.length, 'tasks')
     console.log('🔄 [VUE-REACTIVITY-FIX] Previous state sample:', previousState.slice(0, 2))
 
+    // DEBUG: Log canvas tasks being restored
+    const canvasTasks = previousState.filter((t: any) => t.isInInbox === false && t.canvasPosition)
+    console.log(`🔄 [UNDO-DEBUG] Restoring ${canvasTasks.length} canvas tasks:`,
+      canvasTasks.map((t: any) => ({ id: t.id, title: t.title, isInInbox: t.isInInbox, canvasPosition: t.canvasPosition }))
+    )
+
     // FIX: Await the async restoreState to ensure it completes before returning
     await taskStore.restoreState(previousState)
 
     console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
+
+    // FIX: Request canvas sync to refresh Vue Flow nodes after undo
+    // This ensures deleted canvas tasks are visually restored
+    try {
+      const canvasStore = useCanvasStore()
+      canvasStore.requestSync()
+      console.log('🔄 [UNDO] Requested canvas sync after restore')
+    } catch (error) {
+      console.warn('⚠️ [UNDO] Could not request canvas sync:', error)
+    }
+
     return true
   }
   return false
@@ -116,6 +134,16 @@ const performRedo = async () => {
     await taskStore.restoreState(nextState)
 
     console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
+
+    // FIX: Request canvas sync to refresh Vue Flow nodes after redo
+    try {
+      const canvasStore = useCanvasStore()
+      canvasStore.requestSync()
+      console.log('🔄 [REDO] Requested canvas sync after restore')
+    } catch (error) {
+      console.warn('⚠️ [REDO] Could not request canvas sync:', error)
+    }
+
     return true
   }
   return false
@@ -136,6 +164,13 @@ const saveState = (description?: string) => {
     const taskStore = useTaskStore()
     // FIXED: Use raw tasks, not filteredTasks to prevent state synchronization issues
     unifiedState.value = [...taskStore.tasks]
+
+    // DEBUG: Log canvas tasks being saved
+    const canvasTasks = taskStore.tasks.filter(t => t.isInInbox === false && t.canvasPosition)
+    console.log(`💾 [UNDO-DEBUG] Saving state with ${canvasTasks.length} canvas tasks:`,
+      canvasTasks.map(t => ({ id: t.id, title: t.title, isInInbox: t.isInInbox, canvasPosition: t.canvasPosition }))
+    )
+
     commit()
     console.log(`💾 State saved: ${description || 'Operation'}. History length: ${refHistoryInstance.history.value.length}`)
     return true

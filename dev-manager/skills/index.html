@@ -344,6 +344,7 @@
         let graphData = null;
         let graph = null;
         let selectedNode = null;
+        let hoveredNode = null;
 
         // Load data and initialize
         async function init() {
@@ -436,15 +437,15 @@
                 .warmupTicks(100)
                 .onEngineStop(() => graph.zoomToFit(400, 60));
 
-            // EXTREME repulsion - ensure no overlaps at all
-            graph.d3Force('charge', d3.forceManyBody().strength(-800).distanceMax(1200));
-            graph.d3Force('link').distance(200).strength(0.15);
+            // Moderate spacing - labels only show on hover so less space needed
+            graph.d3Force('charge', d3.forceManyBody().strength(-200).distanceMax(600));
+            graph.d3Force('link').distance(80).strength(0.3);
             // Center force to keep graph centered
             graph.d3Force('center', d3.forceCenter());
-            // Massive collision radius - labels can be 80px wide + node size
-            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 100).strength(1).iterations(10));
-            // Spread nodes outward significantly
-            graph.d3Force('radial', d3.forceRadial(600, 0, 0).strength(node => node.isCategory ? 0 : 0.2));
+            // Collision based on node size only (no label space needed since hover-only)
+            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 25).strength(1).iterations(5));
+            // Mild radial spread
+            graph.d3Force('radial', d3.forceRadial(250, 0, 0).strength(node => node.isCategory ? 0.1 : 0.08));
 
             // Custom node rendering with emojis inside circles
             graph.nodeCanvasObject((node, ctx, globalScale) => {
@@ -452,19 +453,22 @@
                 const nodeSize = getNodeSize(node);
                 const emojiSize = node.isCategory ? 18 / globalScale : 14 / globalScale;
 
+                const isHovered = hoveredNode && hoveredNode.id === node.id;
+                const isSelected = selectedNode && selectedNode.id === node.id;
+
                 // Draw node circle with slight transparency
                 ctx.beginPath();
                 ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI);
-                ctx.fillStyle = (node.color || COLORS.other) + 'cc'; // Add transparency
+                ctx.fillStyle = (node.color || COLORS.other) + (isHovered ? 'ff' : 'cc');
                 ctx.fill();
 
                 // Draw border
                 ctx.strokeStyle = node.color || COLORS.other;
-                ctx.lineWidth = 2 / globalScale;
+                ctx.lineWidth = (isHovered || isSelected ? 3 : 2) / globalScale;
                 ctx.stroke();
 
                 // Highlight selected node
-                if (selectedNode && selectedNode.id === node.id) {
+                if (isSelected) {
                     ctx.strokeStyle = '#22c55e';
                     ctx.lineWidth = 3 / globalScale;
                     ctx.stroke();
@@ -476,20 +480,30 @@
                 ctx.textBaseline = 'middle';
                 ctx.fillText(emoji, node.x, node.y);
 
-                // Draw label below node - ALWAYS show labels, larger font
-                const minLabelSize = 11; // Minimum label size in pixels
-                const labelFontSize = Math.max(minLabelSize, node.isCategory ? 14 / globalScale : 12 / globalScale);
-                ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#e2e8f0';
+                // Draw label - ONLY for category nodes, hovered, or selected
+                const showLabel = node.isCategory || isHovered || isSelected;
+                if (showLabel) {
+                    const minLabelSize = 12;
+                    const labelFontSize = Math.max(minLabelSize, node.isCategory ? 14 / globalScale : 13 / globalScale);
+                    ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
 
-                // Truncate label for non-category nodes - shorter to prevent overlaps
-                let label = node.title;
-                if (!node.isCategory && label.length > 18) {
-                    label = label.substring(0, 15) + '...';
+                    // Background for better readability on hover
+                    if (isHovered && !node.isCategory) {
+                        const label = node.title.length > 25 ? node.title.substring(0, 22) + '...' : node.title;
+                        const textWidth = ctx.measureText(label).width;
+                        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                        ctx.fillRect(node.x - textWidth/2 - 4, node.y + nodeSize + 2, textWidth + 8, labelFontSize + 4);
+                    }
+
+                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#ffffff';
+                    let label = node.title;
+                    if (!node.isCategory && label.length > 25) {
+                        label = label.substring(0, 22) + '...';
+                    }
+                    ctx.fillText(label, node.x, node.y + nodeSize + 4);
                 }
-                ctx.fillText(label, node.x, node.y + nodeSize + 4);
             });
         }
 
@@ -503,6 +517,9 @@
 
         function handleNodeHover(node) {
             document.body.style.cursor = node && !node.isCategory ? 'pointer' : 'default';
+            hoveredNode = node;
+            // Trigger re-render to show/hide label
+            if (graph) graph.nodeColor(graph.nodeColor());
         }
 
         function showDetailPanel(node) {

@@ -1715,11 +1715,17 @@ export const useTaskStore = defineStore('tasks', () => {
         console.log(`Task "${task.title}" removed from canvas with no instances - returned to inbox`)
       }
 
-      // 4. Calendar Instance Logic: Adding instances should clear canvas position and remove from inbox
+      // 4. Calendar Instance Logic: Adding instances should remove from inbox
+      // BUT preserve canvas position if task is already on canvas (Dec 5, 2025 fix)
+      // This prevents tasks from disappearing when user edits dueDate or other properties
       if (updates.instances && updates.instances.length > 0) {
         updates.isInInbox = false
-        updates.canvasPosition = undefined
-        console.log(`Task "${task.title}" given calendar instances - removed from inbox and canvas`)
+        // Only clear canvas position if task is NOT already on canvas
+        // Tasks already placed on canvas should stay there when instances are updated
+        if (!task.canvasPosition) {
+          updates.canvasPosition = undefined
+        }
+        console.log(`Task "${task.title}" given calendar instances - removed from inbox${task.canvasPosition ? ' (canvas position preserved)' : ''}`)
       }
 
       // 5. Instance Removal: If all instances removed and no canvas position, return to inbox

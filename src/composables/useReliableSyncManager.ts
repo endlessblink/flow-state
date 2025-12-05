@@ -527,11 +527,30 @@ export const useReliableSyncManager = () => {
       console.log('⏭️ Skipping backup, validation, and conflict detection for minimal sync')
 
       // Step 3: Perform sync (CORE OPERATION) with timeout
-      // Using one-way PUSH first to avoid pulling 18k+ revisions
+      // IMPORTANT: PULL FIRST to get authoritative remote data before pushing local changes
+      // This prevents stale local data from overwriting good remote data
       try {
-        console.log('🔄 Step 3a: Pushing local changes to remote...')
+        // Step 3a: Pull remote → local FIRST (get authoritative data)
+        console.log('🔄 Step 3a: Pulling remote changes FIRST (authoritative data)...')
 
-        // Push local → remote (fast, avoids pulling conflicts)
+        const pullPromise = localDB!.replicate.from(remoteDB!, {
+          live: false,
+          retry: false,
+          batch_size: 50,
+          batches_limit: 10
+        })
+
+        // Add 15-second timeout for pull
+        const pullTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Pull timeout after 15 seconds')), 15000)
+        })
+
+        const pullResult = await Promise.race([pullPromise, pullTimeout]) as any
+        console.log('✅ Pull complete:', pullResult.docs_read || 0, 'docs read')
+
+        // Step 3b: Push local → remote (send any local changes)
+        console.log('🔄 Step 3b: Pushing local changes to remote...')
+
         const pushPromise = localDB!.replicate.to(remoteDB!, {
           live: false,
           retry: false,
@@ -547,27 +566,9 @@ export const useReliableSyncManager = () => {
         const pushResult = await Promise.race([pushPromise, pushTimeout]) as any
         console.log('✅ Push complete:', pushResult.docs_written || 0, 'docs written')
 
-        // Step 3b: Pull only new changes (with smaller batch)
-        console.log('🔄 Step 3b: Pulling remote changes...')
-
-        const pullPromise = localDB!.replicate.from(remoteDB!, {
-          live: false,
-          retry: false,
-          batch_size: 10,
-          batches_limit: 2
-        })
-
-        // Add 15-second timeout for pull
-        const pullTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Pull timeout after 15 seconds')), 15000)
-        })
-
-        const pullResult = await Promise.race([pullPromise, pullTimeout]) as any
-        console.log('✅ Pull complete:', pullResult.docs_read || 0, 'docs read')
-
         console.log('✅ Step 3 complete - sync result:', {
-          push: pushResult.docs_written || 0,
-          pull: pullResult.docs_read || 0
+          pull: pullResult.docs_read || 0,
+          push: pushResult.docs_written || 0
         })
       } catch (syncError) {
         console.error('❌ Sync operation failed:', syncError)

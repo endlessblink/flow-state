@@ -105,12 +105,15 @@ export const useSmartViews = () => {
     }
 
     // Check if task has instances scheduled within the week
+    // FIX: Match isTodayTask pattern - only return true if match found, otherwise continue checking
     if (task.instances && task.instances.length > 0) {
       try {
-        return task.instances.some(inst => {
+        if (task.instances.some(inst => {
           if (!inst || !inst.scheduledDate) return false
           return inst.scheduledDate >= todayStr && inst.scheduledDate <= weekEndStr
-        })
+        })) {
+          return true
+        }
       } catch (error) {
         console.warn('Error processing task instances in week filter:', error, task.instances)
       }

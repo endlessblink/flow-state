@@ -470,14 +470,14 @@
                 .warmupTicks(80)
                 .onEngineStop(() => graph.zoomToFit(400, 50));
 
-            // Moderate spacing - labels only show on hover so less space needed
-            graph.d3Force('charge', d3.forceManyBody().strength(-180).distanceMax(500));
-            graph.d3Force('link').distance(70).strength(0.3);
+            // Strong spacing - labels always visible
+            graph.d3Force('charge', d3.forceManyBody().strength(-350).distanceMax(700));
+            graph.d3Force('link').distance(100).strength(0.25);
             graph.d3Force('center', d3.forceCenter());
-            // Collision based on node size
-            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 20).strength(1).iterations(4));
-            // Mild radial spread
-            graph.d3Force('radial', d3.forceRadial(200, 0, 0).strength(node => node.isCategory ? 0.1 : 0.06));
+            // Large collision radius for labels
+            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 45).strength(1).iterations(5));
+            // Spread nodes outward
+            graph.d3Force('radial', d3.forceRadial(300, 0, 0).strength(node => node.isCategory ? 0.05 : 0.1));
 
             // Custom node rendering with emojis
             graph.nodeCanvasObject((node, ctx, globalScale) => {
@@ -512,27 +512,27 @@
                 ctx.textBaseline = 'middle';
                 ctx.fillText(emoji, node.x, node.y);
 
-                // Draw label - ONLY for category nodes, hovered, or selected
-                const showLabel = node.isCategory || isHovered || isSelected;
-                if (showLabel) {
-                    const minLabelSize = 12;
-                    const labelFontSize = Math.max(minLabelSize, node.isCategory ? 14 / globalScale : 13 / globalScale);
-                    ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'top';
+                // ALWAYS draw labels - short for docs, full for categories
+                const minLabelSize = 11;
+                const labelFontSize = Math.max(minLabelSize, node.isCategory ? 14 / globalScale : 11 / globalScale);
+                ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
 
-                    // Background for better readability on hover
-                    if (isHovered && !node.isCategory) {
-                        const label = node.title.length > 25 ? node.title.substring(0, 22) + '...' : node.title;
-                        const textWidth = ctx.measureText(label).width;
-                        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-                        ctx.fillRect(node.x - textWidth/2 - 4, node.y + nodeSize + 2, textWidth + 8, labelFontSize + 4);
-                    }
-
-                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#ffffff';
+                // Background for hovered nodes for better readability
+                if (isHovered && !node.isCategory) {
+                    const fullLabel = node.title.length > 30 ? node.title.substring(0, 27) + '...' : node.title;
+                    const textWidth = ctx.measureText(fullLabel).width;
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+                    ctx.fillRect(node.x - textWidth/2 - 4, node.y + nodeSize + 1, textWidth + 8, labelFontSize + 6);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(fullLabel, node.x, node.y + nodeSize + 4);
+                } else {
+                    // Normal label - truncate short to prevent overlaps
+                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#cbd5e1';
                     let label = node.title;
-                    if (!node.isCategory && label.length > 25) {
-                        label = label.substring(0, 22) + '...';
+                    if (!node.isCategory && label.length > 14) {
+                        label = label.substring(0, 11) + '...';
                     }
                     ctx.fillText(label, node.x, node.y + nodeSize + 4);
                 }

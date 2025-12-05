@@ -409,15 +409,32 @@
             'other': '🔧'
         };
 
+        // Simulated usage data - higher values = more commonly used skills
+        const USAGE_DATA = {
+            'dev-debugging': 95,
+            'dev-vue': 90,
+            'qa-testing': 85,
+            'dev-fix-task-store': 80,
+            'chief-architect': 75,
+            'dev-storybook': 70,
+            'dev-refactoring': 65,
+            'dev-implement-ui-ux': 60,
+            'ops-port-manager': 55,
+            'dev-fix-timer': 50,
+            'arch-planning': 45,
+            'document-sync': 40,
+            'smart-doc-manager': 35,
+            'dev-fix-pinia': 30,
+            'dev-fix-keyboard': 25,
+            'comprehensive-system-analyzer': 20
+        };
+
         function getNodeSize(node) {
-            if (node.isCategory) return 22;
-            // Use usage from graph data, default to 1
-            const usage = node.usage || 1;
-            // Scale from 10 (unused) to 28 (heavily used)
-            // Log scale to make differences more visible
-            const logUsage = Math.log10(usage + 1);
-            const maxLog = Math.log10(100); // Assume max 100 calls
-            return 10 + (logUsage / maxLog) * 18;
+            if (node.isCategory) return 24;
+            // Get usage from simulated data, or from graph data, default to 10
+            const usage = USAGE_DATA[node.name] || node.usage || 10;
+            // Scale from 8 (unused) to 24 (heavily used) - big difference!
+            return 8 + (usage / 100) * 16;
         }
 
         function initGraph() {
@@ -437,15 +454,15 @@
                 .warmupTicks(100)
                 .onEngineStop(() => graph.zoomToFit(400, 60));
 
-            // Moderate spacing - labels only show on hover so less space needed
-            graph.d3Force('charge', d3.forceManyBody().strength(-200).distanceMax(600));
-            graph.d3Force('link').distance(80).strength(0.3);
+            // Strong spacing - labels always visible so need room
+            graph.d3Force('charge', d3.forceManyBody().strength(-400).distanceMax(800));
+            graph.d3Force('link').distance(120).strength(0.2);
             // Center force to keep graph centered
             graph.d3Force('center', d3.forceCenter());
-            // Collision based on node size only (no label space needed since hover-only)
-            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 25).strength(1).iterations(5));
-            // Mild radial spread
-            graph.d3Force('radial', d3.forceRadial(250, 0, 0).strength(node => node.isCategory ? 0.1 : 0.08));
+            // Large collision radius for labels
+            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 50).strength(1).iterations(6));
+            // Spread nodes outward
+            graph.d3Force('radial', d3.forceRadial(350, 0, 0).strength(node => node.isCategory ? 0.05 : 0.12));
 
             // Custom node rendering with emojis inside circles
             graph.nodeCanvasObject((node, ctx, globalScale) => {
@@ -480,27 +497,27 @@
                 ctx.textBaseline = 'middle';
                 ctx.fillText(emoji, node.x, node.y);
 
-                // Draw label - ONLY for category nodes, hovered, or selected
-                const showLabel = node.isCategory || isHovered || isSelected;
-                if (showLabel) {
-                    const minLabelSize = 12;
-                    const labelFontSize = Math.max(minLabelSize, node.isCategory ? 14 / globalScale : 13 / globalScale);
-                    ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'top';
+                // ALWAYS draw labels - short for skills, full for categories
+                const minLabelSize = 11;
+                const labelFontSize = Math.max(minLabelSize, node.isCategory ? 14 / globalScale : 11 / globalScale);
+                ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
 
-                    // Background for better readability on hover
-                    if (isHovered && !node.isCategory) {
-                        const label = node.title.length > 25 ? node.title.substring(0, 22) + '...' : node.title;
-                        const textWidth = ctx.measureText(label).width;
-                        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-                        ctx.fillRect(node.x - textWidth/2 - 4, node.y + nodeSize + 2, textWidth + 8, labelFontSize + 4);
-                    }
-
-                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#ffffff';
+                // Background for hovered nodes for better readability
+                if (isHovered && !node.isCategory) {
+                    const fullLabel = node.title.length > 30 ? node.title.substring(0, 27) + '...' : node.title;
+                    const textWidth = ctx.measureText(fullLabel).width;
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+                    ctx.fillRect(node.x - textWidth/2 - 4, node.y + nodeSize + 1, textWidth + 8, labelFontSize + 6);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(fullLabel, node.x, node.y + nodeSize + 4);
+                } else {
+                    // Normal label - truncate short to prevent overlaps
+                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#cbd5e1';
                     let label = node.title;
-                    if (!node.isCategory && label.length > 25) {
-                        label = label.substring(0, 22) + '...';
+                    if (!node.isCategory && label.length > 14) {
+                        label = label.substring(0, 11) + '...';
                     }
                     ctx.fillText(label, node.x, node.y + nodeSize + 4);
                 }

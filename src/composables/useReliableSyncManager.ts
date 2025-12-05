@@ -985,6 +985,134 @@ export const useReliableSyncManager = () => {
   }
 
   /**
+   * Start live (continuous) sync between local and remote
+   * This enables real-time sync across tabs/browsers
+   */
+  const startLiveSync = async (): Promise<boolean> => {
+    console.log('🔄 [LIVE SYNC] Starting live sync...')
+
+    // Ensure databases are initialized
+    if (!localDB || !remoteDB) {
+      console.log('🔄 [LIVE SYNC] Initializing databases first...')
+      await init()
+
+      if (!localDB || !remoteDB) {
+        console.error('❌ [LIVE SYNC] Failed to initialize databases')
+        return false
+      }
+    }
+
+    // Cancel any existing sync handler
+    if (syncHandler) {
+      console.log('🔄 [LIVE SYNC] Cancelling existing sync handler...')
+      try {
+        await syncHandler.cancel()
+      } catch (e) {
+        console.warn('⚠️ [LIVE SYNC] Error cancelling existing sync:', e)
+      }
+      syncHandler = null
+    }
+
+    try {
+      // Setup bidirectional live sync
+      syncHandler = localDB.sync(remoteDB, {
+        live: true,
+        retry: true,
+        batch_size: 50,
+        batches_limit: 10
+      })
+
+      // Setup event handlers
+      syncHandler.on('change', async (info: any) => {
+        console.log('📤 [LIVE SYNC] Change detected:', info.direction, info.change?.docs_written || info.change?.docs_read || 0, 'docs')
+
+        // Reload task store when we receive changes from remote
+        if (info.direction === 'pull' && (info.change?.docs_read || 0) > 0) {
+          try {
+            const { useTaskStore } = await import('@/stores/tasks')
+            const taskStore = useTaskStore()
+            await taskStore.loadFromDatabase()
+            console.log('✅ [LIVE SYNC] Task store reloaded after pull')
+          } catch (reloadError) {
+            console.error('⚠️ [LIVE SYNC] Failed to reload task store:', reloadError)
+          }
+        }
+
+        lastSyncTime.value = new Date()
+      })
+
+      syncHandler.on('paused', (err: any) => {
+        if (err) {
+          console.warn('⏸️ [LIVE SYNC] Paused with error:', err)
+          syncStatus.value = 'paused'
+        } else {
+          console.log('⏸️ [LIVE SYNC] Paused (waiting for changes)')
+          syncStatus.value = 'idle'
+        }
+      })
+
+      syncHandler.on('active', () => {
+        console.log('▶️ [LIVE SYNC] Active')
+        syncStatus.value = 'syncing'
+      })
+
+      syncHandler.on('denied', (err: any) => {
+        console.error('🚫 [LIVE SYNC] Denied:', err)
+        error.value = 'Sync denied: ' + (err?.message || 'Unknown error')
+      })
+
+      syncHandler.on('error', (err: any) => {
+        console.error('❌ [LIVE SYNC] Error:', err)
+        syncStatus.value = 'error'
+        error.value = err?.message || 'Sync error'
+      })
+
+      syncHandler.on('complete', (info: any) => {
+        console.log('✅ [LIVE SYNC] Complete:', info)
+        // Live sync shouldn't complete unless cancelled
+      })
+
+      console.log('✅ [LIVE SYNC] Live sync started successfully')
+      syncStatus.value = 'idle'
+      return true
+
+    } catch (syncError) {
+      console.error('❌ [LIVE SYNC] Failed to start live sync:', syncError)
+      syncStatus.value = 'error'
+      error.value = (syncError as Error).message
+      return false
+    }
+  }
+
+  /**
+   * Stop live sync
+   */
+  const stopLiveSync = async (): Promise<void> => {
+    console.log('🛑 [LIVE SYNC] Stopping live sync...')
+
+    if (syncHandler) {
+      try {
+        await syncHandler.cancel()
+        syncHandler = null
+        console.log('✅ [LIVE SYNC] Live sync stopped')
+      } catch (e) {
+        console.error('❌ [LIVE SYNC] Error stopping sync:', e)
+      }
+    } else {
+      console.log('ℹ️ [LIVE SYNC] No active sync to stop')
+    }
+
+    syncStatus.value = 'idle'
+  }
+
+  /**
+   * Check if live sync is active
+   */
+  const isLiveSyncActive = (): boolean => {
+    return syncHandler !== null
+  }
+
+  /**
    * Cleanup function
    */
   const cleanup = async (): Promise<void> => {
@@ -1062,6 +1190,11 @@ export const useReliableSyncManager = () => {
     toggleSync,
     throttledSync,
     cancelThrottledSync,
+
+    // Live Sync (continuous real-time sync)
+    startLiveSync,
+    stopLiveSync,
+    isLiveSyncActive,
 
     // Access to underlying systems for advanced usage
     conflictDetector,

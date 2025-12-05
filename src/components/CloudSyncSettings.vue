@@ -129,6 +129,29 @@
       </button>
     </div>
 
+    <!-- Live Sync Toggle -->
+    <div v-if="selectedProvider === 'couchdb' && syncEnabled" class="setting-group live-sync-toggle">
+      <label class="setting-label">
+        <span>Live Sync (Auto)</span>
+        <span class="setting-description">Automatically sync changes across tabs/browsers in real-time</span>
+      </label>
+      <div class="live-sync-controls">
+        <button
+          @click="toggleLiveSync"
+          :disabled="isSyncing"
+          class="action-btn"
+          :class="liveSyncActive ? 'danger' : 'success'"
+        >
+          <RefreshCw v-if="liveSyncActive" :size="16" class="animate-pulse" />
+          <Zap v-else :size="16" />
+          {{ liveSyncActive ? 'Stop Live Sync' : 'Start Live Sync' }}
+        </button>
+        <span v-if="liveSyncActive" class="live-sync-status">
+          🟢 Live sync active
+        </span>
+      </div>
+    </div>
+
     <!-- Device Info -->
     <div v-if="syncEnabled" class="device-info">
       <div class="info-header">
@@ -177,7 +200,7 @@ import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
 import { SyncProviderType } from '@/types/sync'
 import {
-  Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock
+  Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap
 } from 'lucide-vue-next'
 
 const reliableSyncManager = useReliableSyncManager() as ReturnType<typeof useReliableSyncManager> & {
@@ -207,6 +230,9 @@ const couchdbUsername = ref('admin')
 const couchdbPassword = ref('pomoflow-2024')
 const couchdbConnectionStatus = ref<'success' | 'error' | ''>('')
 const couchdbConnectionMessage = ref('')
+
+// Live Sync State
+const liveSyncActive = ref(false)
 
 // Computed
 const syncStatus = computed(() => {
@@ -422,6 +448,40 @@ const copySyncUrl = async () => {
   } catch (error) {
     console.error('Failed to copy URL:', error)
     addHistoryEntry('Failed to copy URL', false)
+  }
+}
+
+// Live Sync Toggle
+const toggleLiveSync = async () => {
+  if (liveSyncActive.value) {
+    // Stop live sync
+    try {
+      await reliableSyncManager.stopLiveSync()
+      liveSyncActive.value = false
+      addHistoryEntry('Live sync stopped', true)
+    } catch (error) {
+      console.error('Failed to stop live sync:', error)
+      addHistoryEntry('Failed to stop live sync', false)
+    }
+  } else {
+    // Start live sync
+    try {
+      isSyncing.value = true
+      syncProgress.value = 'Starting live sync...'
+      const success = await reliableSyncManager.startLiveSync()
+      if (success) {
+        liveSyncActive.value = true
+        addHistoryEntry('Live sync started', true)
+      } else {
+        addHistoryEntry('Failed to start live sync', false)
+      }
+    } catch (error) {
+      console.error('Failed to start live sync:', error)
+      addHistoryEntry('Failed to start live sync', false)
+    } finally {
+      isSyncing.value = false
+      syncProgress.value = ''
+    }
   }
 }
 
@@ -751,9 +811,50 @@ onUnmounted(() => {
   border-color: var(--danger);
 }
 
+.action-btn.success {
+  background: var(--success, #22c55e);
+  color: white;
+  border-color: var(--success, #22c55e);
+}
+
+.action-btn.success:hover:not(:disabled) {
+  background: var(--success-dark, #16a34a);
+}
+
 .action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Live Sync Toggle */
+.live-sync-toggle {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+}
+
+.live-sync-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.live-sync-status {
+  font-size: var(--text-sm);
+  color: var(--success, #22c55e);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse {
+  animation: pulse 1s ease-in-out infinite;
 }
 
 .device-info {

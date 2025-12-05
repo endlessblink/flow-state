@@ -380,6 +380,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // Migrate tasks to set isInInbox based on canvas position
   const migrateInboxFlag = () => {
     let migratedCount = 0
+    let orphanedCount = 0
     tasks.value.forEach(task => {
       // FIX: If task has canvasPosition, it should NOT be in inbox (regardless of current isInInbox value)
       // This fixes the issue where JSON import sets isInInbox: true even for positioned tasks
@@ -393,9 +394,25 @@ export const useTaskStore = defineStore('tasks', () => {
         // Task has no canvas position = in inbox
         task.isInInbox = true
       }
+
+      // FIX: Detect and repair ORPHANED tasks (invisible everywhere)
+      // An orphaned task has isInInbox: false but no canvas position and no calendar instances
+      const hasCanvasPosition = task.canvasPosition &&
+        typeof task.canvasPosition.x === 'number' &&
+        typeof task.canvasPosition.y === 'number'
+      const hasCalendarInstances = task.instances && task.instances.length > 0
+
+      if (task.isInInbox === false && !hasCanvasPosition && !hasCalendarInstances) {
+        console.log(`🔧 [INBOX_MIGRATION] Repairing ORPHANED task: "${task.title}" → restoring to inbox`)
+        task.isInInbox = true
+        orphanedCount++
+      }
     })
     if (migratedCount > 0) {
       console.log(`✅ [INBOX_MIGRATION] Fixed ${migratedCount} tasks with incorrect isInInbox values`)
+    }
+    if (orphanedCount > 0) {
+      console.log(`✅ [INBOX_MIGRATION] Repaired ${orphanedCount} ORPHANED tasks (were invisible everywhere)`)
     }
   }
 
@@ -1725,6 +1742,23 @@ export const useTaskStore = defineStore('tasks', () => {
         }
       }
 
+      // 7. FINAL SAFETY CHECK: Prevent orphaned tasks (invisible everywhere)
+      // After all transitions, verify task will be visible somewhere
+      const finalIsInInbox = updates.isInInbox !== undefined ? updates.isInInbox : task.isInInbox
+      const finalCanvasPosition = updates.canvasPosition !== undefined ? updates.canvasPosition : task.canvasPosition
+      const finalInstances = updates.instances !== undefined ? updates.instances : task.instances
+
+      const willHaveCanvasPosition = finalCanvasPosition &&
+        typeof finalCanvasPosition.x === 'number' &&
+        typeof finalCanvasPosition.y === 'number'
+      const willHaveCalendarInstances = finalInstances && finalInstances.length > 0
+
+      // If task would be orphaned (not visible anywhere), restore to inbox
+      if (finalIsInInbox === false && !willHaveCanvasPosition && !willHaveCalendarInstances) {
+        console.warn(`⚠️ [ORPHAN_PREVENTION] Task "${task.title}" would become orphaned - restoring to inbox`)
+        updates.isInInbox = true
+      }
+
       // Apply the updates
       tasks.value[taskIndex] = {
         ...task,
@@ -2418,9 +2452,11 @@ export const useTaskStore = defineStore('tasks', () => {
       return false
     })
 
-    // Apply hide done tasks filter
+    // Always exclude done tasks for uncategorized count
+    // This ensures uncategorized ≤ allActive (which always excludes done)
+    // Bug fix: Previously only excluded done when hideDoneTasks was true
     filteredTasks = filteredTasks.filter(task => {
-      if (hideDoneTasks.value && task.status === 'done') return false
+      if (task.status === 'done') return false
       return true
     })
 

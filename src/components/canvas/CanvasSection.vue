@@ -16,11 +16,55 @@
       <div class="section-title">
         <div class="section-color-indicator" :style="{ backgroundColor: section.color }"></div>
         <span class="section-name">{{ section.name }}</span>
+
+        <!-- Power Mode Indicator -->
+        <div
+          v-if="isPowerMode"
+          class="power-indicator"
+          :title="powerModeTooltip"
+        >
+          <Zap :size="12" class="power-icon" />
+        </div>
+
         <div class="section-count">{{ taskCount }}</div>
       </div>
-      
+
       <div class="section-controls">
-        <button 
+        <!-- Collect Button (for power groups) -->
+        <div v-if="isPowerMode" class="collect-wrapper">
+          <button
+            @click.stop="toggleCollectMenu"
+            class="control-btn collect-btn"
+            :class="{ 'has-matches': matchingInboxCount > 0 }"
+            :title="`Collect matching tasks (${matchingInboxCount} available)`"
+          >
+            <Magnet :size="14" />
+            <span v-if="matchingInboxCount > 0" class="collect-badge">{{ matchingInboxCount }}</span>
+          </button>
+
+          <!-- Collect Dropdown Menu -->
+          <div v-if="showCollectMenu" class="collect-menu" @click.stop>
+            <button class="collect-option" @click="handleCollect('move')">
+              Move {{ matchingInboxCount }} tasks here
+            </button>
+            <button class="collect-option" @click="handleCollect('highlight')">
+              Highlight matching tasks
+            </button>
+          </div>
+        </div>
+
+        <!-- Power Mode Toggle -->
+        <button
+          v-if="powerKeyword"
+          @click.stop="togglePowerMode"
+          class="control-btn"
+          :class="{ 'power-active': isPowerMode }"
+          :title="isPowerMode ? 'Disable power mode' : 'Enable power mode'"
+        >
+          <Zap :size="14" />
+        </button>
+
+        <button
           @click.stop="toggleCollapse"
           class="control-btn"
           :title="section.isCollapsed ? 'Expand' : 'Collapse'"
@@ -28,14 +72,14 @@
           <ChevronDown v-if="!section.isCollapsed" :size="14" />
           <ChevronRight v-else :size="14" />
         </button>
-        <button 
+        <button
           @click.stop="toggleVisibility"
           class="control-btn"
           title="Toggle Visibility"
         >
           <Eye :size="14" />
         </button>
-        <button 
+        <button
           @click.stop="startResize"
           class="control-btn"
           title="Resize Section"
@@ -100,10 +144,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { ChevronDown, ChevronRight, Eye, Maximize2, Archive } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Eye, Maximize2, Archive, Zap, Magnet } from 'lucide-vue-next'
 import type { CanvasSection, SectionFilter } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 
 interface Props {
   section: CanvasSection
@@ -128,9 +173,13 @@ const emit = defineEmits<{
   sectionUpdate: [section: CanvasSection]
   sectionActivate: [sectionId: string]
   sectionContextMenu: [event: MouseEvent, section: CanvasSection]
+  collectTasks: [sectionId: string, mode: 'move' | 'highlight']
 }>()
 
 const canvasStore = useCanvasStore()
+
+// Power group state
+const showCollectMenu = ref(false)
 
 const isDragging = ref(false)
 const isResizing = ref(false)
@@ -153,6 +202,40 @@ const headerStyle = computed(() => ({
 }))
 
 const taskCount = computed(() => props.tasks.length)
+
+// Power group computed properties
+const powerKeyword = computed((): PowerKeywordResult | null => {
+  // Use stored value if available, otherwise detect from name
+  if (props.section.powerKeyword !== undefined) {
+    return props.section.powerKeyword
+  }
+  return detectPowerKeyword(props.section.name)
+})
+
+const isPowerMode = computed(() => {
+  // Use stored value if explicitly set
+  if (props.section.isPowerMode !== undefined) {
+    return props.section.isPowerMode
+  }
+  // Otherwise, auto-detect from name
+  return powerKeyword.value !== null
+})
+
+const powerModeTooltip = computed(() => {
+  if (!powerKeyword.value) return ''
+  const categoryLabels = {
+    date: 'Sets due date',
+    priority: 'Sets priority',
+    status: 'Sets status'
+  }
+  return `Power Group: ${categoryLabels[powerKeyword.value.category]} to "${powerKeyword.value.displayName}"`
+})
+
+// Get count of matching tasks in inbox for collect button
+const matchingInboxCount = computed(() => {
+  if (!isPowerMode.value) return 0
+  return canvasStore.getMatchingTaskCount(props.section.id, props.tasks)
+})
 
 const taskSlots = computed(() => {
   const slots: TaskSlot[] = []
@@ -285,6 +368,26 @@ const handleContextMenu = (event: MouseEvent) => {
   emit('sectionContextMenu', event, props.section)
 }
 
+// Power mode methods
+const togglePowerMode = () => {
+  canvasStore.togglePowerMode(props.section.id)
+}
+
+const handleCollect = (mode: 'move' | 'highlight') => {
+  showCollectMenu.value = false
+  emit('collectTasks', props.section.id, mode)
+}
+
+const toggleCollectMenu = (event: MouseEvent) => {
+  event.stopPropagation()
+  showCollectMenu.value = !showCollectMenu.value
+}
+
+// Close collect menu when clicking outside
+const closeCollectMenu = () => {
+  showCollectMenu.value = false
+}
+
 // Cleanup
 onUnmounted(() => {
   document.removeEventListener('mousemove', handleMouseMove)
@@ -364,6 +467,96 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   min-width: 20px;
   text-align: center;
+}
+
+/* Power Mode Styles */
+.power-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--color-work) 0%, var(--color-priority-high) 100%);
+  border-radius: var(--radius-full);
+  animation: power-pulse 2s ease-in-out infinite;
+}
+
+.power-icon {
+  color: white;
+}
+
+@keyframes power-pulse {
+  0%, 100% { box-shadow: 0 0 4px var(--color-work); }
+  50% { box-shadow: 0 0 12px var(--color-work); }
+}
+
+.power-active {
+  background: var(--color-work) !important;
+  color: white !important;
+}
+
+.collect-wrapper {
+  position: relative;
+}
+
+.collect-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.collect-btn.has-matches {
+  background: var(--brand-primary);
+  color: white;
+}
+
+.collect-badge {
+  font-size: 10px;
+  font-weight: var(--font-bold);
+  background: white;
+  color: var(--brand-primary);
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  min-width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collect-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-1);
+  background: var(--surface-elevated);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.collect-option {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.collect-option:hover {
+  background: var(--surface-hover);
+}
+
+.collect-option:first-child {
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .section-controls {

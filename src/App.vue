@@ -470,6 +470,7 @@ import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 // ⚠️ Firebase Auth components disabled for stability
 // import AuthModal from '@/components/auth/AuthModal.vue'
 // import UserProfile from '@/components/auth/UserProfile.vue'
+import { initGlobalKeyboardShortcuts, destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import type { Task, Project } from '@/stores/tasks'
 import {
   Play, Pause, Square, Plus, Settings,
@@ -1556,6 +1557,9 @@ onMounted(async () => {
   // Listen for global new task request (Ctrl+N)
   window.addEventListener('global-new-task', handleGlobalNewTask)
 
+  // Initialize global keyboard shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+N)
+  await initGlobalKeyboardShortcuts()
+
   // Add keyboard shortcut listener for search
   window.addEventListener('keydown', handleKeydown)
 
@@ -1575,6 +1579,7 @@ onUnmounted(() => {
   window.removeEventListener('task-context-menu', handleGlobalTaskContextMenu as EventListener)
   window.removeEventListener('global-new-task', handleGlobalNewTask)
   window.removeEventListener('keydown', handleKeydown)
+  destroyGlobalKeyboardShortcuts()
 })
 </script>
 

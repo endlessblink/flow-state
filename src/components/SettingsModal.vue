@@ -103,6 +103,41 @@
           </p>
         </section>
 
+        <!-- Canvas Settings -->
+        <section class="settings-section">
+          <h3 class="section-title">🎨 Canvas Settings</h3>
+
+          <div class="setting-group">
+            <label class="setting-label">Power Group Behavior</label>
+            <p class="setting-description" style="margin-bottom: var(--space-2)">
+              When dropping tasks on power groups (Today, High Priority, etc.)
+            </p>
+            <div class="duration-options">
+              <button
+                class="duration-btn"
+                :class="{ active: uiStore.powerGroupOverrideMode === 'always' }"
+                @click="uiStore.setPowerGroupOverrideMode('always')"
+              >
+                Always update
+              </button>
+              <button
+                class="duration-btn"
+                :class="{ active: uiStore.powerGroupOverrideMode === 'only_empty' }"
+                @click="uiStore.setPowerGroupOverrideMode('only_empty')"
+              >
+                Only if empty
+              </button>
+              <button
+                class="duration-btn"
+                :class="{ active: uiStore.powerGroupOverrideMode === 'ask' }"
+                @click="uiStore.setPowerGroupOverrideMode('ask')"
+              >
+                Ask each time
+              </button>
+            </div>
+          </div>
+        </section>
+
         <!-- Interface Settings -->
         <section class="settings-section">
           <h3 class="section-title">🎨 Interface Settings</h3>
@@ -151,6 +186,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
+import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
 import { useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
@@ -168,6 +204,7 @@ defineEmits<{
 }>()
 
 const timerStore = useTimerStore()
+const uiStore = useUIStore()
 
 // Direction and locale management (now handled by LanguageSettings component)
 // const { direction, directionPreference, setDirection } = useDirection()

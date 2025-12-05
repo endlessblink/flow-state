@@ -31,11 +31,9 @@
 | 2 | Extend `CanvasSection` interface with power fields | DONE | `git checkout HEAD -- src/stores/canvas.ts` |
 | 3 | Add power group functions to canvas store | DONE | Same as step 2 |
 | 4 | Add `powerGroupOverrideMode` to UI store | DONE | `git checkout HEAD -- src/stores/ui.ts` |
-| 5 | Update `CanvasSection.vue` with power mode UI | PENDING | `git checkout HEAD -- src/components/canvas/CanvasSection.vue` |
-| 6 | Add settings dropdown for override mode | PENDING | `git checkout HEAD -- src/components/settings/` |
+| 5 | Update `CanvasSection.vue` with power mode UI | DONE | `git checkout HEAD -- src/components/canvas/CanvasSection.vue` |
+| 6 | Add settings dropdown for override mode | DONE | `git checkout HEAD -- src/components/SettingsModal.vue` |
 | 7 | Test with Playwright | PENDING | N/A |
-
-**Checkpoint Before**: Create before step 5 (UI changes)
 
 **Keywords Supported**:
 - Date: `today`, `tomorrow`, `this week`, `this weekend`, `later`
@@ -46,6 +44,8 @@
 - `src/composables/useTaskSmartGroups.ts` - Extended with power keywords
 - `src/stores/canvas.ts` - Power group functions + interface changes
 - `src/stores/ui.ts` - Override mode setting
+- `src/components/canvas/CanvasSection.vue` - Power mode UI (indicator, collect button, toggle)
+- `src/components/SettingsModal.vue` - Override mode dropdown in settings
 
 ---
 

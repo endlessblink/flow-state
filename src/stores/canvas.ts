@@ -790,19 +790,23 @@ export const useCanvasStore = defineStore('canvas', () => {
   const getTasksInSectionBounds = (section: CanvasSection, allTasks: Task[]): Task[] => {
     // For smart sections (priority, status, project), include matching tasks that are ON CANVAS
     // FIXED: Only include tasks with isInInbox === false (explicitly on canvas)
+    // FIXED Dec 5, 2025: Also check canvasPosition to match syncNodes() filter
     if (section.type === 'priority' || section.type === 'status' || section.type === 'project') {
       return allTasks.filter(task =>
         isTaskLogicallyInSection(task, section) &&
-        task.isInInbox === false  // Only tasks explicitly on canvas
+        task.isInInbox === false &&  // Only tasks explicitly on canvas
+        task.canvasPosition !== undefined  // Must have canvas position to be counted
       )
     }
 
     // For smart groups (Today, Tomorrow, etc.), include matching tasks that are ON CANVAS
     // FIXED: Only include tasks with isInInbox === false (explicitly on canvas)
+    // FIXED Dec 5, 2025: Also check canvasPosition to match syncNodes() filter
     if (section.type === 'custom' && isSmartGroup(section.name)) {
       return allTasks.filter(task =>
         isTaskLogicallyInSection(task, section) &&
-        task.isInInbox === false  // Only tasks explicitly on canvas
+        task.isInInbox === false &&  // Only tasks explicitly on canvas
+        task.canvasPosition !== undefined  // Must have canvas position to be counted
       )
     }
 

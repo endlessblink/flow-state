@@ -2528,13 +2528,13 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
     console.log('[handleNodeDragStop] Found section:', containingSection ? { name: containingSection.name, type: containingSection.type, propertyValue: containingSection.propertyValue } : 'null')
 
     if (containingSection) {
-      // Check if this is a timeline section (by name) even if it's a custom type
-      const isTimelineSection = containingSection.name.toLowerCase().includes('today') ||
-                                containingSection.name.toLowerCase().includes('weekend')
+      // FIX Dec 5, 2025: Use centralized smart group detection instead of incomplete inline check
+      // This ensures 'today', 'tomorrow', 'this week', 'this weekend', 'later' all work
+      const isSmartGroupSection = shouldUseSmartGroupLogic(containingSection.name)
 
-      // Apply properties for non-custom sections OR custom sections with timeline names
-      if (containingSection.type !== 'custom' || isTimelineSection) {
-        console.log('[handleNodeDragStop] Applying properties for section:', containingSection.name)
+      // Apply properties for non-custom sections OR custom sections that are smart groups
+      if (containingSection.type !== 'custom' || isSmartGroupSection) {
+        console.log('[handleNodeDragStop] Applying properties for section:', containingSection.name, 'isSmartGroup:', isSmartGroupSection)
         applySectionPropertiesToTask(node.id, containingSection)
       } else {
         console.log('[handleNodeDragStop] ⚠️ Skipping property application for custom section:', containingSection.name)
@@ -3264,18 +3264,44 @@ const deleteGroup = (section: any) => {
 
   const confirmMessage = `Delete "${section.name}" group? This will remove the group and all its settings.`
   if (confirm(confirmMessage)) {
-    // FIX: Clear parentNode for all tasks referencing this section BEFORE deleting
-    // This prevents Vue Flow from auto-deleting orphaned child nodes
     const sectionNodeId = `section-${section.id}`
-    nodes.value = nodes.value.map(node => {
+
+    // FIX Dec 5, 2025: Properly preserve tasks when deleting section
+    // Step 1: Find all task nodes that belong to this section
+    const taskNodesInSection = nodes.value.filter(
+      node => node.parentNode === sectionNodeId && !node.id.startsWith('section-')
+    )
+    console.log(`Found ${taskNodesInSection.length} tasks in section "${section.name}"`)
+
+    // Step 2: Remove ONLY the section node, preserve all task nodes
+    // Also clear parentNode for tasks that were in this section
+    nodes.value = nodes.value.filter(node => {
+      // Remove the section node itself
+      if (node.id === sectionNodeId) {
+        console.log(`Removing section node: ${sectionNodeId}`)
+        return false
+      }
+      // Keep all other nodes
+      return true
+    }).map(node => {
+      // Clear parentNode for tasks that were in the deleted section
       if (node.parentNode === sectionNodeId) {
-        console.log(`Orphaning task ${node.id} from deleted section ${section.id}`)
+        console.log(`Orphaning task ${node.id} - keeping on canvas without parent`)
         return { ...node, parentNode: undefined }
       }
       return node
     })
-    canvasStore.deleteSectionWithUndo(section.id)
-    syncNodes() // Refresh VueFlow to show changes
+
+    // Step 3: Delete section from store (this only removes section metadata, not tasks)
+    canvasStore.deleteSection(section.id)
+
+    // Step 4: Force sync to ensure tasks are properly displayed
+    // Use nextTick to ensure DOM updates first
+    nextTick(() => {
+      batchedSyncNodes('high')
+    })
+
+    console.log(`✅ Deleted section "${section.name}" - ${taskNodesInSection.length} tasks preserved`)
   }
   closeCanvasContextMenu()
 }

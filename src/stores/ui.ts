@@ -9,6 +9,14 @@ const UI_STATE_STORAGE_KEY = 'pomo-flow-ui-state'
 
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
+/**
+ * Power group override mode for canvas power groups
+ * - 'always': Always override task properties when dropped on power group
+ * - 'only_empty': Only set property if task doesn't have one
+ * - 'ask': Ask user each time when there's a conflict
+ */
+export type PowerGroupOverrideMode = 'always' | 'only_empty' | 'ask'
+
 export const useUIStore = defineStore('ui', () => {
   // RTL and i18n support - temporarily disabled to fix initialization
   // const { locale } = useI18n()
@@ -31,6 +39,9 @@ export const useUIStore = defineStore('ui', () => {
   const theme = ref<'light' | 'dark' | 'auto'>('dark')
   const sidebarCollapsed = ref(false) // Legacy compatibility property
   const activeView = ref<'board' | 'canvas' | 'calendar' | 'all-tasks'>('board')
+
+  // Power group settings
+  const powerGroupOverrideMode = ref<PowerGroupOverrideMode>('always')
 
   // Language and direction state
   const availableLanguages = [
@@ -101,6 +112,12 @@ export const useUIStore = defineStore('ui', () => {
     persistState()
   }
 
+  // Power group settings actions
+  const setPowerGroupOverrideMode = (mode: PowerGroupOverrideMode) => {
+    powerGroupOverrideMode.value = mode
+    persistState()
+  }
+
   // Auth modal actions
   const openAuthModal = (view: AuthModalView = 'login', redirectTo?: string) => {
     authModalView.value = view
@@ -158,7 +175,8 @@ export const useUIStore = defineStore('ui', () => {
       focusMode: focusMode.value,
       boardDensity: boardDensity.value,
       locale: locale.value,
-      directionPreference: directionPreference.value
+      directionPreference: directionPreference.value,
+      powerGroupOverrideMode: powerGroupOverrideMode.value
     }
     localStorage.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(state))
   }
@@ -183,6 +201,11 @@ export const useUIStore = defineStore('ui', () => {
           // Temporarily disabled direction setting
           // setDirection(state.directionPreference)
           directionPreference.value = state.directionPreference
+        }
+
+        // Load power group settings
+        if (state.powerGroupOverrideMode && ['always', 'only_empty', 'ask'].includes(state.powerGroupOverrideMode)) {
+          powerGroupOverrideMode.value = state.powerGroupOverrideMode
         }
       } catch (error) {
         errorHandler.report({
@@ -220,6 +243,9 @@ export const useUIStore = defineStore('ui', () => {
     availableLanguages,
     currentLanguage,
 
+    // Power group settings
+    powerGroupOverrideMode,
+
     // Actions
     toggleMainSidebar,
     toggleSecondarySidebar,
@@ -227,6 +253,7 @@ export const useUIStore = defineStore('ui', () => {
     showAllSidebars,
     hideAllSidebars,
     setBoardDensity,
+    setPowerGroupOverrideMode,
     openAuthModal,
     closeAuthModal,
     switchAuthView,

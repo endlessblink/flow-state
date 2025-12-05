@@ -1,8 +1,16 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import type { Task } from './tasks'
-import { isSmartGroup, getSmartGroupType, getSmartGroupDate, type SmartGroupType } from '@/composables/useTaskSmartGroups'
+import {
+  isSmartGroup,
+  getSmartGroupType,
+  getSmartGroupDate,
+  detectPowerKeyword,
+  isPowerGroup,
+  type SmartGroupType,
+  type PowerKeywordResult
+} from '@/composables/useTaskSmartGroups'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 // Task store import for safe sync functionality
@@ -29,9 +37,16 @@ export interface TaskPosition {
  * - **Groups** (`type: 'custom'`): Visual organization only, no property updates
  * - **Sections** (`type: 'priority'|'status'|'timeline'|'project'`): Smart automation, auto-updates task properties
  *
+ * **Power Groups**:
+ * Any section (including custom groups) can become a "power group" when its name
+ * contains special keywords like "Today", "High Priority", etc.
+ * Power groups can:
+ * 1. Auto-assign properties to dropped tasks (e.g., set dueDate to today)
+ * 2. Collect matching tasks from inbox with a "Collect" button
+ *
  * When a task is dragged into a Section, its properties (priority, status, dueDate, etc.)
  * are automatically updated based on the section's type and propertyValue.
- * Groups do not modify task properties.
+ * Groups do not modify task properties unless they are power groups.
  */
 export interface CanvasSection {
   id: string
@@ -46,6 +61,9 @@ export interface CanvasSection {
   propertyValue?: string | 'high' | 'medium' | 'low' | 'planned' | 'in_progress' | 'done' | 'backlog'
   autoCollect?: boolean // Auto-collect matching tasks from inbox
   collapsedHeight?: number // Store height when collapsed to restore on expand
+  // Power group fields
+  isPowerMode?: boolean // Whether power mode is enabled (auto-detected from name, can be toggled off)
+  powerKeyword?: PowerKeywordResult | null // Detected power keyword info
 }
 
 export interface CanvasState {
@@ -673,6 +691,248 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
+  // ============================================
+  // POWER GROUP FUNCTIONALITY
+  // ============================================
+
+  /**
+   * Toggle power mode for a section
+   * Power mode is auto-detected from name but can be manually disabled
+   */
+  const togglePowerMode = (sectionId: string) => {
+    const section = sections.value.find(s => s.id === sectionId)
+    if (section) {
+      // If power mode was undefined, detect from name first
+      if (section.isPowerMode === undefined) {
+        section.powerKeyword = detectPowerKeyword(section.name)
+        section.isPowerMode = section.powerKeyword !== null
+      }
+      // Toggle
+      section.isPowerMode = !section.isPowerMode
+      console.log(`⚡ Power mode ${section.isPowerMode ? 'enabled' : 'disabled'} for section "${section.name}"`)
+    }
+  }
+
+  /**
+   * Update section's power keyword detection (call when name changes)
+   */
+  const updateSectionPowerKeyword = (sectionId: string) => {
+    const section = sections.value.find(s => s.id === sectionId)
+    if (section) {
+      const newKeyword = detectPowerKeyword(section.name)
+      section.powerKeyword = newKeyword
+
+      // Auto-enable power mode if keyword detected (unless explicitly disabled)
+      if (newKeyword && section.isPowerMode !== false) {
+        section.isPowerMode = true
+        console.log(`⚡ Auto-enabled power mode for "${section.name}" (keyword: ${newKeyword.keyword})`)
+      }
+    }
+  }
+
+  /**
+   * Check if a section is a power group (has power mode enabled)
+   */
+  const isSectionPowerGroup = (section: CanvasSection): boolean => {
+    // If power mode is explicitly set, use that
+    if (section.isPowerMode !== undefined) {
+      return section.isPowerMode
+    }
+    // Otherwise, detect from name
+    return isPowerGroup(section.name)
+  }
+
+  /**
+   * Get the power keyword for a section
+   */
+  const getSectionPowerKeyword = (section: CanvasSection): PowerKeywordResult | null => {
+    if (section.powerKeyword !== undefined) {
+      return section.powerKeyword
+    }
+    return detectPowerKeyword(section.name)
+  }
+
+  /**
+   * Get matching tasks for a power group
+   * Returns tasks that match the power keyword criteria
+   */
+  const getMatchingTasksForPowerGroup = (section: CanvasSection, allTasks: Task[]): Task[] => {
+    const powerKeyword = getSectionPowerKeyword(section)
+    if (!powerKeyword) return []
+
+    return allTasks.filter(task => {
+      // Only consider inbox tasks for collection
+      if (task.isInInbox === false) return false
+
+      switch (powerKeyword.category) {
+        case 'date':
+          const expectedDate = getSmartGroupDate(powerKeyword.value as SmartGroupType)
+          if (!expectedDate) return false // "Later" has no date
+
+          // For "this week", use range check
+          if (powerKeyword.value === 'this week') {
+            if (!task.dueDate) return false
+            const today = new Date()
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+            return task.dueDate >= todayStr && task.dueDate <= expectedDate
+          }
+
+          return task.dueDate === expectedDate
+
+        case 'priority':
+          return task.priority === powerKeyword.value
+
+        case 'status':
+          return task.status === powerKeyword.value
+
+        default:
+          return false
+      }
+    })
+  }
+
+  /**
+   * Get count of matching tasks for a power group (for badge display)
+   */
+  const getMatchingTaskCount = (sectionId: string, allTasks: Task[]): number => {
+    const section = sections.value.find(s => s.id === sectionId)
+    if (!section || !isSectionPowerGroup(section)) return 0
+    return getMatchingTasksForPowerGroup(section, allTasks).length
+  }
+
+  /**
+   * Collect matching tasks into a power group
+   * @param sectionId - The section to collect tasks into
+   * @param mode - 'move' to relocate tasks, 'highlight' to just mark them
+   * @param allTasks - All available tasks
+   * @param updateTaskFn - Function to update a task (from task store)
+   * @returns The collected/highlighted task IDs
+   */
+  const collectMatchingTasks = async (
+    sectionId: string,
+    mode: 'move' | 'highlight',
+    allTasks: Task[],
+    updateTaskFn: (taskId: string, updates: Partial<Task>) => Promise<void>
+  ): Promise<string[]> => {
+    const section = sections.value.find(s => s.id === sectionId)
+    if (!section) {
+      console.warn(`Section ${sectionId} not found`)
+      return []
+    }
+
+    const matchingTasks = getMatchingTasksForPowerGroup(section, allTasks)
+    if (matchingTasks.length === 0) {
+      console.log(`📋 No matching tasks found for power group "${section.name}"`)
+      return []
+    }
+
+    console.log(`📋 Found ${matchingTasks.length} matching tasks for power group "${section.name}"`)
+
+    const collectedIds: string[] = []
+
+    if (mode === 'move') {
+      // Move tasks to canvas and position them in the section
+      const sectionBounds = section.position
+      const taskWidth = 220
+      const taskHeight = 100
+      const padding = 20
+      const headerHeight = 60
+      const cols = Math.max(1, Math.floor((sectionBounds.width - padding * 2) / (taskWidth + 10)))
+
+      for (let i = 0; i < matchingTasks.length; i++) {
+        const task = matchingTasks[i]
+        const col = i % cols
+        const row = Math.floor(i / cols)
+        const x = sectionBounds.x + padding + col * (taskWidth + 10)
+        const y = sectionBounds.y + headerHeight + padding + row * (taskHeight + 10)
+
+        await updateTaskFn(task.id, {
+          isInInbox: false,
+          canvasPosition: { x, y }
+        })
+
+        collectedIds.push(task.id)
+      }
+
+      console.log(`✅ Moved ${collectedIds.length} tasks to power group "${section.name}"`)
+    } else {
+      // Highlight mode - just return the IDs for UI to highlight
+      collectedIds.push(...matchingTasks.map(t => t.id))
+      console.log(`🔦 Highlighted ${collectedIds.length} matching tasks for power group "${section.name}"`)
+    }
+
+    return collectedIds
+  }
+
+  /**
+   * Apply power group properties to a task when dropped on the section
+   * @param task - The task being dropped
+   * @param section - The power group section
+   * @param overrideMode - How to handle existing properties
+   * @returns The updates to apply to the task
+   */
+  const getPowerGroupUpdates = (
+    task: Task,
+    section: CanvasSection,
+    overrideMode: 'always' | 'only_empty' | 'ask' = 'always'
+  ): Partial<Task> | 'ask' | null => {
+    if (!isSectionPowerGroup(section)) return null
+
+    const powerKeyword = getSectionPowerKeyword(section)
+    if (!powerKeyword) return null
+
+    const updates: Partial<Task> = {}
+
+    switch (powerKeyword.category) {
+      case 'date':
+        const newDate = getSmartGroupDate(powerKeyword.value as SmartGroupType)
+        if (newDate) {
+          if (overrideMode === 'always') {
+            updates.dueDate = newDate
+          } else if (overrideMode === 'only_empty') {
+            if (!task.dueDate) updates.dueDate = newDate
+          } else if (overrideMode === 'ask' && task.dueDate && task.dueDate !== newDate) {
+            return 'ask' // Signal that we need to ask user
+          } else {
+            updates.dueDate = newDate
+          }
+        }
+        break
+
+      case 'priority':
+        const newPriority = powerKeyword.value as 'high' | 'medium' | 'low'
+        if (overrideMode === 'always') {
+          updates.priority = newPriority
+        } else if (overrideMode === 'only_empty') {
+          if (!task.priority) updates.priority = newPriority
+        } else if (overrideMode === 'ask' && task.priority && task.priority !== newPriority) {
+          return 'ask'
+        } else {
+          updates.priority = newPriority
+        }
+        break
+
+      case 'status':
+        const newStatus = powerKeyword.value as Task['status']
+        if (overrideMode === 'always') {
+          updates.status = newStatus
+        } else if (overrideMode === 'only_empty') {
+          // Status always has a value, so only_empty doesn't make sense here
+          // Fall through to 'ask' behavior if different
+          if (task.status !== newStatus && overrideMode === 'only_empty') {
+            // Don't update - status is never "empty"
+          }
+        } else if (overrideMode === 'ask' && task.status !== newStatus) {
+          return 'ask'
+        } else {
+          updates.status = newStatus
+        }
+        break
+    }
+
+    return Object.keys(updates).length > 0 ? updates : null
+  }
+
   // Auto-save sections to PouchDB via SaveQueueManager (Chief Architect conflict prevention)
   let sectionsSaveTimer: ReturnType<typeof setTimeout> | null = null
   watch(sections, (newSections) => {
@@ -1168,6 +1428,17 @@ export const useCanvasStore = defineStore('canvas', () => {
     getTasksInSection,
     taskMatchesSection,
     toggleAutoCollect,
+
+    // Power group functions
+    togglePowerMode,
+    updateSectionPowerKeyword,
+    isSectionPowerGroup,
+    getSectionPowerKeyword,
+    getMatchingTasksForPowerGroup,
+    getMatchingTaskCount,
+    collectMatchingTasks,
+    getPowerGroupUpdates,
+
     initializeDefaultSections,
     createPrioritySection,
     createStatusSection,

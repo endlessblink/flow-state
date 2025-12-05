@@ -3,12 +3,16 @@
  *
  * Provides centralized logic for handling smart groups like "Today", "Tomorrow", etc.
  * Ensures consistent behavior across Canvas, Kanban, and Calendar views.
+ *
+ * POWER GROUPS:
+ * Groups with special keywords in their name automatically become "power groups"
+ * which can auto-assign properties to dropped tasks and collect matching tasks.
  */
 
 import type { Task } from '@/stores/taskCore'
 
 /**
- * Smart group definitions
+ * Smart group definitions (date-based)
  */
 export const SMART_GROUPS = {
   TODAY: 'today',
@@ -19,6 +23,123 @@ export const SMART_GROUPS = {
 } as const
 
 export type SmartGroupType = typeof SMART_GROUPS[keyof typeof SMART_GROUPS]
+
+/**
+ * Power keyword categories
+ */
+export type PowerKeywordCategory = 'date' | 'priority' | 'status'
+
+/**
+ * Priority keywords
+ */
+export const PRIORITY_KEYWORDS = {
+  HIGH: ['high priority', 'urgent', 'critical', 'important'],
+  MEDIUM: ['medium priority', 'normal priority'],
+  LOW: ['low priority']
+} as const
+
+/**
+ * Status keywords
+ */
+export const STATUS_KEYWORDS = {
+  DONE: ['done', 'completed', 'finished'],
+  IN_PROGRESS: ['in progress', 'working', 'active'],
+  BACKLOG: ['backlog', 'later'],
+  PLANNED: ['planned', 'todo', 'to do']
+} as const
+
+/**
+ * Result of power keyword detection
+ */
+export interface PowerKeywordResult {
+  keyword: string
+  category: PowerKeywordCategory
+  value: string
+  displayName: string
+}
+
+/**
+ * Detect power keyword in a group name
+ * Returns the detected keyword info or null if no power keyword found
+ */
+export function detectPowerKeyword(groupName: string): PowerKeywordResult | null {
+  const normalizedName = groupName.toLowerCase().trim()
+
+  // Check date keywords first (smart groups)
+  for (const [key, value] of Object.entries(SMART_GROUPS)) {
+    if (normalizedName.includes(value) || normalizedName === value) {
+      return {
+        keyword: value,
+        category: 'date',
+        value: value,
+        displayName: key.replace(/_/g, ' ').toLowerCase()
+          .split(' ')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+      }
+    }
+  }
+
+  // Check priority keywords
+  for (const [priority, keywords] of Object.entries(PRIORITY_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (normalizedName.includes(keyword)) {
+        return {
+          keyword,
+          category: 'priority',
+          value: priority.toLowerCase() as 'high' | 'medium' | 'low',
+          displayName: `${priority.charAt(0) + priority.slice(1).toLowerCase()} Priority`
+        }
+      }
+    }
+  }
+
+  // Check status keywords
+  for (const [status, keywords] of Object.entries(STATUS_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (normalizedName.includes(keyword)) {
+        return {
+          keyword,
+          category: 'status',
+          value: status.toLowerCase().replace(/_/g, '_') as Task['status'],
+          displayName: status.replace(/_/g, ' ').toLowerCase()
+            .split(' ')
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' ')
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Check if a group name contains any power keyword
+ */
+export function isPowerGroup(groupName: string): boolean {
+  return detectPowerKeyword(groupName) !== null
+}
+
+/**
+ * Get all power keywords for display/documentation
+ */
+export function getAllPowerKeywords(): { category: PowerKeywordCategory; keywords: string[] }[] {
+  return [
+    {
+      category: 'date',
+      keywords: Object.values(SMART_GROUPS)
+    },
+    {
+      category: 'priority',
+      keywords: Object.values(PRIORITY_KEYWORDS).flat()
+    },
+    {
+      category: 'status',
+      keywords: Object.values(STATUS_KEYWORDS).flat()
+    }
+  ]
+}
 
 /**
  * Check if a column/group name is a smart group

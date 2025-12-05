@@ -412,8 +412,6 @@
     <!-- FAVICON MANAGER - Dynamic favicon with timer progress -->
     <FaviconManager />
 
-    <!-- DEV LOG CONTROLLER - Interactive log filter (DEV only) -->
-    <DevLogController v-if="isDev" />
 
     
     <!-- AUTHENTICATION MODAL - Firebase Auth disabled -->
@@ -461,7 +459,6 @@ import TimeDisplay from '@/components/TimeDisplay.vue'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import SyncStatus from '@/components/SyncStatus.vue'
 import FaviconManager from '@/components/FaviconManager.vue'
-import DevLogController from '@/components/DevLogController.vue'
 import SettingsModal from '@/components/SettingsModal.vue'
 import ProjectModal from '@/components/ProjectModal.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'

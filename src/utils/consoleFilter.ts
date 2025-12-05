@@ -85,11 +85,6 @@ export function saveLogToggles(toggles: LogToggles): void {
 function shouldFilter(message: string): boolean {
   const msg = String(message)
 
-  // Debug: Log current toggle states (only for DevLogController messages)
-  if (msg.includes('🔧 DevLogController') || msg.includes('📊 All logs')) {
-    console.log('🔍 Current toggle states:', JSON.stringify(logToggles))
-  }
-
   // Timer logs
   if (!logToggles.timer) {
     if (msg.includes('🍅 DEBUG tabDisplayTime') ||

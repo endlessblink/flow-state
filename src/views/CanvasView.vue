@@ -102,17 +102,6 @@
       </div>
     </div>
 
-    <!-- Eye Toggle for Hide/Show Done Tasks (positioned above mini map) -->
-    <button
-      class="controls-eye-toggle"
-      @click="taskStore.toggleHideDoneTasks"
-      :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-    >
-      <EyeOff v-if="hideDoneTasks" :size="16" />
-      <Eye v-else :size="16" />
-    </button>
-
-    
   
     <!-- ================================================================= -->
     <!-- TEMPLATE ORGANIZATION - Phase 1 (Zero Risk)               -->
@@ -338,56 +327,6 @@
             </div>
           </div>
 
-      <!-- Vue Flow Stability & Performance Monitor (Development) -->
-      <div
-        v-if="vueFlowStability.hasErrors || vueFlowStability.isOverloaded"
-        class="vue-flow-stability-monitor"
-        :class="vueFlowStability.performanceStatus"
-      >
-        <div class="stability-header">
-          <span class="stability-title">Vue Flow Status</span>
-          <button
-            @click="vueFlowStability.attemptRecovery"
-            v-if="vueFlowStability.hasErrors"
-            class="recovery-btn"
-            title="Attempt Recovery"
-          >
-            🔄
-          </button>
-        </div>
-        <div class="stability-metrics">
-          <div class="metric">
-            <span class="metric-label">Nodes:</span>
-            <span class="metric-value">{{ vueFlowStability.performanceMetrics.value.nodeCount }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Edges:</span>
-            <span class="metric-value">{{ vueFlowStability.performanceMetrics.value.edgeCount }}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Render:</span>
-            <span class="metric-value">{{ Math.round(vueFlowStability.performanceMetrics.value.renderTime) }}ms</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Status:</span>
-            <span class="metric-value status" :class="vueFlowStability.performanceStatus.value">
-              {{ vueFlowStability.performanceStatus.value.toUpperCase() }}
-            </span>
-          </div>
-          <div v-if="vueFlowStability.performanceMetrics.value.memoryUsage" class="metric">
-            <span class="metric-label">Memory:</span>
-            <span class="metric-value">{{ Math.round(vueFlowStability.performanceMetrics.value.memoryUsage / 1024 / 1024) }}MB</span>
-          </div>
-          <div v-if="vueFlowStability.performanceMetrics.value.errorCount > 0" class="metric">
-            <span class="metric-label">Errors:</span>
-            <span class="metric-value error">{{ vueFlowStability.performanceMetrics.value.errorCount }}</span>
-          </div>
-          <div v-if="vueFlowStability.performanceMetrics.value.recoveryCount > 0" class="metric">
-            <span class="metric-label">Recoveries:</span>
-            <span class="metric-value recovery">{{ vueFlowStability.performanceMetrics.value.recoveryCount }}</span>
-          </div>
-        </div>
-      </div>
           </div>
         </div>
       </div>
@@ -5408,38 +5347,7 @@ onBeforeUnmount(() => {
 }
 
 /* Eye toggle for hiding/showing done tasks - positioned above left side of mini map */
-.controls-eye-toggle {
-  position: absolute;
-  bottom: 188px;
-  right: 198px;
-  width: 32px;
-  height: 32px;
-  background: var(--glass-border);
-  border: 1px solid var(--glass-border-strong);
-  border-radius: var(--radius-md);
-  backdrop-filter: blur(8px);
-  z-index: 1001;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-.controls-eye-toggle:hover {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border-medium);
-  color: var(--text-primary);
-  transform: scale(1.05);
-}
-
-.controls-eye-toggle:active {
-  transform: scale(0.95);
-}
-
-
-/* Eye toggle for hiding/showing done tasks - positioned relative to canvas container */
+/* Canvas filters container */
 .canvas-filters-container {
   position: absolute;
   top: 20px;
@@ -6103,139 +6011,6 @@ body.dragging-active .vue-flow__background {
 
 .vue-flow.canvas-ready {
   opacity: 1;
-}
-
-/* Vue Flow Stability Monitor */
-.vue-flow-stability-monitor {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 12px;
-  min-width: 200px;
-  z-index: 1000;
-  font-size: 12px;
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.stability-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.stability-title {
-  color: #fff;
-}
-
-.recovery-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  color: white;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 11px;
-  transition: all 0.2s;
-}
-
-.recovery-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.stability-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.metric {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 2px 0;
-}
-
-.metric-label {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 11px;
-}
-
-.metric-value {
-  font-weight: 500;
-  font-size: 11px;
-  color: #fff;
-}
-
-.metric-value.status {
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.metric-value.status.healthy {
-  background: rgba(34, 197, 94, 0.8);
-}
-
-.metric-value.status.slow {
-  background: rgba(251, 146, 60, 0.8);
-}
-
-.metric-value.status.overloaded {
-  background: rgba(239, 68, 68, 0.8);
-}
-
-.metric-value.status.error {
-  background: rgba(220, 38, 38, 0.8);
-  animation: pulse 2s infinite;
-}
-
-.metric-value.status.recovering {
-  background: rgba(59, 130, 246, 0.8);
-}
-
-.metric-value.error {
-  color: #f87171;
-  font-weight: 600;
-}
-
-.metric-value.recovery {
-  color: #60a5fa;
-  font-weight: 600;
-}
-
-/* Status-specific backgrounds */
-.vue-flow-stability-monitor.error {
-  border-color: rgba(239, 68, 68, 0.5);
-  background: rgba(127, 29, 29, 0.9);
-}
-
-.vue-flow-stability-monitor.overloaded {
-  border-color: rgba(251, 146, 60, 0.5);
-  background: rgba(124, 45, 18, 0.9);
-}
-
-.vue-flow-stability-monitor.slow {
-  border-color: rgba(251, 191, 36, 0.5);
-  background: rgba(120, 80, 15, 0.9);
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
 }
 
 </style>

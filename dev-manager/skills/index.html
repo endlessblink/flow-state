@@ -408,29 +408,15 @@
             'other': '🔧'
         };
 
-        // Simulated usage data - higher values for more commonly used skills
-        const USAGE_DATA = {
-            'dev-debugging': 85,
-            'dev-vue': 80,
-            'qa-testing': 75,
-            'dev-fix-task-store': 70,
-            'chief-architect': 65,
-            'dev-storybook': 60,
-            'dev-refactoring': 55,
-            'dev-implement-ui-ux': 50,
-            'ops-port-manager': 45,
-            'dev-fix-timer': 40,
-            'arch-planning': 35,
-            'document-sync': 30,
-            'smart-doc-manager': 25
-        };
-
         function getNodeSize(node) {
-            if (node.isCategory) return 18;
-            // Get usage or default to 20
-            const usage = USAGE_DATA[node.name] || 20;
-            // Scale from 8 to 16 based on usage (0-100)
-            return 8 + (usage / 100) * 8;
+            if (node.isCategory) return 22;
+            // Use usage from graph data, default to 1
+            const usage = node.usage || 1;
+            // Scale from 10 (unused) to 28 (heavily used)
+            // Log scale to make differences more visible
+            const logUsage = Math.log10(usage + 1);
+            const maxLog = Math.log10(100); // Assume max 100 calls
+            return 10 + (logUsage / maxLog) * 18;
         }
 
         function initGraph() {
@@ -450,15 +436,15 @@
                 .warmupTicks(100)
                 .onEngineStop(() => graph.zoomToFit(400, 60));
 
-            // ULTRA TIGHT clustering - very strong center force, weak repulsion
-            graph.d3Force('charge', d3.forceManyBody().strength(-15));
-            graph.d3Force('link').distance(12).strength(2);
-            // Strong center force to pull everything together
-            graph.d3Force('center', d3.forceCenter().strength(0.1));
-            // Tight collision detection
-            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 3).strength(0.8));
-            // Add radial force to bring categories to center
-            graph.d3Force('radial', d3.forceRadial(50, 0, 0).strength(node => node.isCategory ? 0.3 : 0.05));
+            // EXTREME repulsion - ensure no overlaps at all
+            graph.d3Force('charge', d3.forceManyBody().strength(-800).distanceMax(1200));
+            graph.d3Force('link').distance(200).strength(0.15);
+            // Center force to keep graph centered
+            graph.d3Force('center', d3.forceCenter());
+            // Massive collision radius - labels can be 80px wide + node size
+            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 100).strength(1).iterations(10));
+            // Spread nodes outward significantly
+            graph.d3Force('radial', d3.forceRadial(600, 0, 0).strength(node => node.isCategory ? 0 : 0.2));
 
             // Custom node rendering with emojis inside circles
             graph.nodeCanvasObject((node, ctx, globalScale) => {
@@ -498,10 +484,10 @@
                 ctx.textBaseline = 'top';
                 ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#e2e8f0';
 
-                // Truncate label for non-category nodes
+                // Truncate label for non-category nodes - shorter to prevent overlaps
                 let label = node.title;
-                if (!node.isCategory && label.length > 25) {
-                    label = label.substring(0, 22) + '...';
+                if (!node.isCategory && label.length > 18) {
+                    label = label.substring(0, 15) + '...';
                 }
                 ctx.fillText(label, node.x, node.y + nodeSize + 4);
             });

@@ -9,6 +9,7 @@ const path = require('path');
 
 const SKILLS_DIR = path.join(__dirname, '..', '.claude', 'skills');
 const OUTPUT_FILE = path.join(__dirname, '..', 'dev-manager', 'skills', 'graph-data.json');
+const METRICS_FILE = path.join(__dirname, '..', '.claude', 'logs', 'skill-metrics.json');
 
 // Category colors (matching dark theme)
 const CATEGORY_COLORS = {
@@ -75,6 +76,18 @@ function extractSkillInfo(skillPath) {
   return { title, description };
 }
 
+function loadUsageMetrics() {
+  try {
+    if (fs.existsSync(METRICS_FILE)) {
+      const content = fs.readFileSync(METRICS_FILE, 'utf-8');
+      return JSON.parse(content);
+    }
+  } catch (e) {
+    console.log('No metrics file found, using defaults');
+  }
+  return {};
+}
+
 function scanSkills() {
   const skills = [];
 
@@ -106,6 +119,7 @@ function generateGraphData() {
   console.log('Scanning skills folder...');
 
   const skills = scanSkills();
+  const metrics = loadUsageMetrics();
   console.log(`Found ${skills.length} skills with SKILL.md`);
 
   const nodes = [];
@@ -117,13 +131,18 @@ function generateGraphData() {
     const { title, description } = extractSkillInfo(skill.path);
     const category = getCategory(skill.name);
 
+    // Get usage from metrics - check both skill name and common variations
+    const skillMetrics = metrics[skill.name] || metrics[skill.name.replace(/^🔧-|-skill$/g, '')] || {};
+    const usage = skillMetrics.totalCalls || 0;
+
     const node = {
       id: `skill-${index}`,
       name: skill.name,
       title: title,
       description: description,
       category: category,
-      color: CATEGORY_COLORS[category] || CATEGORY_COLORS.other
+      color: CATEGORY_COLORS[category] || CATEGORY_COLORS.other,
+      usage: usage
     };
 
     nodes.push(node);

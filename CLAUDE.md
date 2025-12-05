@@ -493,6 +493,13 @@ git commit -m "feat: description"
   - Document new major features and their architecture
   - Keep technology stack and port information current
 
+- **`docs/MASTER_PLAN.md`** - Project roadmap, ideas, and active work tracking
+  - **Ideas Section**: When user says "add to ideas" or "I have an idea", add it here
+  - **Roadmap Section**: When user says "add to roadmap", add feature with priority
+  - **Active Work Section**: Track current implementation progress with steps and rollback commands
+  - When user says "process an idea" or "pick up from ideas", look here first
+  - Update status when features are completed or bugs are fixed
+
 - **`README.md`** - User-facing project overview
   - Update for major feature additions
   - Keep setup instructions accurate
@@ -514,6 +521,6 @@ git commit -m "feat: description"
 
 ---
 
-**Last Updated**: December 1, 2025
+**Last Updated**: December 5, 2025
 **Framework Version**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3
 **Development Focus**: Productivity application with advanced task management and Pomodoro integration

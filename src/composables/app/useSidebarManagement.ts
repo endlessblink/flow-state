@@ -194,6 +194,18 @@ export function useSidebarManagement() {
         return true
       }
 
+      // FIX (Dec 5, 2025): Include tasks created today (matches useSmartViews.isWeekTask)
+      // This ensures new tasks appear in "This Week" until scheduled
+      if (task.createdAt) {
+        const createdDate = new Date(task.createdAt)
+        if (!isNaN(createdDate.getTime())) {
+          createdDate.setHours(0, 0, 0, 0)
+          if (createdDate.getTime() === today.getTime()) {
+            return true
+          }
+        }
+      }
+
       return false
     }).length
   })

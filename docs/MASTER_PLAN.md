@@ -1,7 +1,7 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 5, 2025
-**Version**: 4.0 (Streamlined)
+**Version**: 4.1 (Added Ideas/Roadmap sections)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -42,6 +42,7 @@
 | ~~Keyboard shortcuts~~ | ✅ DONE (Dec 5) - Delete, Redo (Ctrl+Y), New Task (Ctrl+N) |
 | Technical debt Phase 3-5 | D&D, Database, Validation |
 | Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
+| Local AI assistant | Task breakdown, auto-categorize, daily planning. Hebrew required (Llama 3+, Claude/GPT-4 BYOK) |
 
 ---
 

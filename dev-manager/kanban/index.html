@@ -140,6 +140,10 @@
       display: flex;
       flex-direction: column;
       max-height: 100%;
+      /* Ensure consistent rendering across all columns */
+      isolation: isolate;
+      /* Prevent color shifts from scrolling layer promotion */
+      contain: layout style;
     }
 
     .column-header {
@@ -194,39 +198,52 @@
     .column-content {
       flex: 1;
       padding: 12px;
-      overflow-y: auto;
+      overflow-y: scroll;  /* Always show scrollbar for consistent rendering */
       display: flex;
       flex-direction: column;
       gap: 12px;
+      /* Force all columns onto same rendering path */
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     .task-card {
       background: #2a2a2a;
       border-left: 4px solid #2563eb;
-      padding: 16px;
+      padding: 16px 16px 20px 16px;  /* Extra padding at bottom */
       border-radius: 8px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background-color 0.2s, box-shadow 0.2s, border-left-color 0.2s;
       user-select: none;
-      min-height: 140px;
+      min-height: 160px;  /* Increased min-height */
       display: flex;
       flex-direction: column;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      /* Force ALL cards onto GPU layer for consistent rendering */
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      /* Allow content to flow naturally */
+      overflow: visible;
+      position: relative;
     }
 
     .task-card:hover {
       background: #333;
-      transform: translateY(-2px);
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
       border-left-color: #3b82f6;
+      transform: translateZ(0) translateY(-2px);  /* Keep GPU layer + lift effect */
     }
 
     .task-card:focus,
     .task-card:active,
     .task-card:focus-visible,
     .task-card:focus-within {
-      background: #2a2a2a !important;
-      outline: none !important;
-      box-shadow: none !important;
+      background: #2a2a2a;
+      outline: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      transform: translateZ(0);  /* Maintain GPU layer */
     }
 
     .task-card::selection,
@@ -293,17 +310,20 @@
 
     .task-footer {
       margin-top: auto;
-      padding-top: 8px;
+      padding-top: 12px;
       border-top: 1px solid #3a3a3a;
     }
 
     .task-meta {
       display: flex;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 4px;
       font-size: 10px;
       color: #808080;
-      margin-bottom: 8px;
+      margin-bottom: 16px;
       font-weight: 500;
+      padding-bottom: 14px;
     }
 
     .task-date, .task-tags {
@@ -960,11 +980,8 @@
       }
     }
 
-    // Ideas Kanban Renderer
+    // Ideas Kanban Renderer - Parses ideas.md
     async function renderIdeasKanban() {
-      const content = await loadTextFile(CONFIG.files.ideas);
-      const ideas = parseIdeasFile(content);
-
       const columns = {
         raw: document.getElementById('ideas-column-raw'),
         developing: document.getElementById('ideas-column-developing'),
@@ -975,24 +992,106 @@
       // Clear columns
       Object.values(columns).forEach(col => col.innerHTML = '');
 
-      // Populate columns
-      for (const [column, ideaList] of Object.entries(ideas)) {
-        if (ideaList.length === 0) {
-          columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No ideas</div></div>';
-        } else {
-          ideaList.forEach(idea => {
-            const card = createIdeaCard(idea);
-            columns[column].appendChild(card);
-          });
+      try {
+        const response = await fetch('/kanban/ideas.md');
+        const content = await response.text();
+        const ideas = parseIdeasMarkdown(content);
+
+        for (const [column, ideaList] of Object.entries(ideas)) {
+          if (ideaList.length === 0) {
+            columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">💭</div><div>No ideas yet</div></div>';
+          } else {
+            ideaList.forEach(idea => {
+              const card = document.createElement('div');
+              card.className = 'task-card';
+              card.innerHTML = `
+                <div class="task-header">
+                  <div class="task-id">${idea.id}</div>
+                  ${idea.priority ? `<div class="task-priority ${idea.priority.toLowerCase()}">${idea.priority}</div>` : ''}
+                </div>
+                <div class="task-title">${idea.title}</div>
+                ${idea.description ? `<div class="task-description">${idea.description}</div>` : ''}
+                <div class="task-footer">
+                  <div class="task-meta">
+                    <span class="task-date">📅 ${idea.captured || ''}</span>
+                    <span class="task-tags">${idea.tags || ''}</span>
+                  </div>
+                </div>
+              `;
+              columns[column].appendChild(card);
+            });
+          }
         }
+      } catch (error) {
+        console.error('Error loading ideas.md:', error);
+        Object.values(columns).forEach(col => {
+          col.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No ideas.md found</div></div>';
+        });
       }
     }
 
-    // Roadmap Kanban Renderer
-    async function renderRoadmapKanban() {
-      const content = await loadTextFile(CONFIG.files.roadmap);
-      const roadmap = parseRoadmapFile(content);
+    function parseIdeasMarkdown(content) {
+      const ideas = { raw: [], developing: [], ready: [], promoted: [] };
+      const lines = content.split('\n');
+      let currentSection = '';
+      let currentIdea = null;
 
+      for (const line of lines) {
+        const trimmed = line.trim();
+
+        // Section headers
+        if (trimmed.startsWith('## Raw Ideas')) currentSection = 'raw';
+        else if (trimmed.startsWith('## In Development')) currentSection = 'developing';
+        else if (trimmed.startsWith('## Ready for Review')) currentSection = 'ready';
+        else if (trimmed.startsWith('## Promoted')) currentSection = 'promoted';
+
+        // Idea headers (### IDEA-XXX | Title)
+        else if (trimmed.startsWith('### ') && currentSection) {
+          if (currentIdea) {
+            ideas[currentIdea.section].push(currentIdea);
+          }
+          const match = trimmed.match(/### (IDEA-\d+) \| (.+)/);
+          if (match) {
+            currentIdea = {
+              id: match[1],
+              title: match[2],
+              section: currentSection,
+              description: '',
+              priority: '',
+              tags: '',
+              captured: ''
+            };
+          }
+        }
+
+        // Metadata
+        else if (currentIdea && trimmed.startsWith('**Priority**:')) {
+          currentIdea.priority = trimmed.replace('**Priority**:', '').trim();
+        }
+        else if (currentIdea && trimmed.startsWith('**Tags**:')) {
+          currentIdea.tags = trimmed.replace('**Tags**:', '').trim();
+        }
+        else if (currentIdea && trimmed.startsWith('**Captured**:')) {
+          currentIdea.captured = trimmed.replace('**Captured**:', '').trim();
+        }
+
+        // Description (non-metadata lines after idea header)
+        else if (currentIdea && trimmed && !trimmed.startsWith('**') && !trimmed.startsWith('#')) {
+          if (currentIdea.description) currentIdea.description += ' ';
+          currentIdea.description += trimmed;
+        }
+      }
+
+      // Don't forget the last idea
+      if (currentIdea) {
+        ideas[currentIdea.section].push(currentIdea);
+      }
+
+      return ideas;
+    }
+
+    // Roadmap Kanban Renderer - Parses roadmap.md
+    async function renderRoadmapKanban() {
       const columns = {
         current: document.getElementById('roadmap-column-current'),
         next: document.getElementById('roadmap-column-next'),
@@ -1003,23 +1102,109 @@
       // Clear columns
       Object.values(columns).forEach(col => col.innerHTML = '');
 
-      // Populate columns
-      for (const [column, versionList] of Object.entries(roadmap)) {
-        if (versionList.length === 0) {
-          columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No versions</div></div>';
-        } else {
-          versionList.forEach(version => {
-            const card = createVersionCard(version);
-            columns[column].appendChild(card);
-          });
+      try {
+        const response = await fetch('/kanban/roadmap.md');
+        const content = await response.text();
+        const roadmap = parseRoadmapMarkdown(content);
+
+        for (const [column, items] of Object.entries(roadmap)) {
+          if (items.length === 0) {
+            columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">🗺️</div><div>Nothing planned</div></div>';
+          } else {
+            items.forEach(item => {
+              const card = document.createElement('div');
+              card.className = 'task-card';
+              card.innerHTML = `
+                <div class="task-header">
+                  <div class="task-id">${item.version || 'ROADMAP'}</div>
+                  ${item.priority ? `<div class="task-priority ${item.priority.toLowerCase()}">${item.priority}</div>` : ''}
+                </div>
+                <div class="task-title">${item.title}</div>
+                ${item.description ? `<div class="task-description">${item.description}</div>` : ''}
+                <div class="task-footer">
+                  <div class="task-meta">
+                    <span class="task-date">🎯 ${item.target || ''}</span>
+                    <span class="task-tags">${item.status || ''}</span>
+                  </div>
+                </div>
+              `;
+              columns[column].appendChild(card);
+            });
+          }
         }
+      } catch (error) {
+        console.error('Error loading roadmap.md:', error);
+        Object.values(columns).forEach(col => {
+          col.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No roadmap.md found</div></div>';
+        });
       }
     }
 
-    // Archive Kanban Renderer
+    function parseRoadmapMarkdown(content) {
+      const roadmap = { current: [], next: [], future: [], completed: [] };
+      const lines = content.split('\n');
+      let currentSection = '';
+      let currentItem = null;
+      let parentVersion = '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+
+        // Section headers
+        if (trimmed.startsWith('## Current Sprint')) { currentSection = 'current'; parentVersion = trimmed.match(/\((.*?)\)/)?.[1] || 'Current'; }
+        else if (trimmed.startsWith('## Next Sprint')) { currentSection = 'next'; parentVersion = trimmed.match(/\((.*?)\)/)?.[1] || 'Next'; }
+        else if (trimmed.startsWith('## Future')) { currentSection = 'future'; parentVersion = trimmed.match(/\((.*?)\)/)?.[1] || 'Future'; }
+        else if (trimmed.startsWith('## Completed')) { currentSection = 'completed'; parentVersion = trimmed.match(/\((.*?)\)/)?.[1] || 'Done'; }
+
+        // Item headers (### Title)
+        else if (trimmed.startsWith('### ') && currentSection) {
+          if (currentItem) {
+            roadmap[currentItem.section].push(currentItem);
+          }
+          currentItem = {
+            title: trimmed.replace('### ', ''),
+            section: currentSection,
+            version: parentVersion,
+            description: '',
+            priority: '',
+            status: '',
+            target: ''
+          };
+        }
+
+        // Metadata
+        else if (currentItem && trimmed.startsWith('**Priority**:')) {
+          currentItem.priority = trimmed.replace('**Priority**:', '').trim();
+        }
+        else if (currentItem && trimmed.startsWith('**Status**:')) {
+          currentItem.status = trimmed.replace('**Status**:', '').trim();
+        }
+        else if (currentItem && trimmed.startsWith('**Target**:')) {
+          currentItem.target = trimmed.replace('**Target**:', '').trim();
+        }
+        else if (currentItem && trimmed.startsWith('**Completed**:')) {
+          currentItem.target = '✅ ' + trimmed.replace('**Completed**:', '').trim();
+        }
+
+        // Description
+        else if (currentItem && trimmed && !trimmed.startsWith('**') && !trimmed.startsWith('#')) {
+          if (currentItem.description) currentItem.description += ' ';
+          currentItem.description += trimmed;
+        }
+      }
+
+      // Don't forget the last item
+      if (currentItem) {
+        roadmap[currentItem.section].push(currentItem);
+      }
+
+      return roadmap;
+    }
+
+    // Archive Kanban Renderer - Shows completed tasks from kanban.md
     async function renderArchiveKanban() {
-      const content = await loadTextFile(CONFIG.files.archive);
-      const archive = parseArchiveFile(content);
+      const tasks = await parseKanbanFile();
+      const completedTasks = tasks.done || [];
 
       const columns = {
         recent: document.getElementById('archive-column-recent'),
@@ -1031,23 +1216,83 @@
       // Clear columns
       Object.values(columns).forEach(col => col.innerHTML = '');
 
-      // Populate columns
-      for (const [column, taskList] of Object.entries(archive)) {
+      // Sort completed tasks into categories
+      const categorized = {
+        recent: [],
+        features: [],
+        bugs: [],
+        old: []
+      };
+
+      completedTasks.forEach(task => {
+        const tags = task.meta?.toLowerCase() || '';
+        const title = task.title?.toLowerCase() || '';
+
+        if (tags.includes('#bug') || tags.includes('#fix') || title.includes('fix')) {
+          categorized.bugs.push(task);
+        } else if (tags.includes('#feature') || title.includes('add') || title.includes('implement')) {
+          categorized.features.push(task);
+        } else {
+          // Check date - recent if within last 7 days
+          const createdMatch = task.meta?.match(/\*\*Created\*\*: (\d{4}-\d{2}-\d{2})/);
+          if (createdMatch) {
+            const taskDate = new Date(createdMatch[1]);
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            if (taskDate >= weekAgo) {
+              categorized.recent.push(task);
+            } else {
+              categorized.old.push(task);
+            }
+          } else {
+            categorized.recent.push(task);
+          }
+        }
+      });
+
+      // Render each category
+      for (const [column, taskList] of Object.entries(categorized)) {
         if (taskList.length === 0) {
           columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No tasks</div></div>';
         } else {
           taskList.forEach(task => {
-            const card = createTaskCard(task);
+            const card = document.createElement('div');
+            card.className = 'task-card';
+
+            const priorityMatch = task.meta?.match(/\*\*Priority\*\*: (\w+)/);
+            const priority = priorityMatch ? priorityMatch[1].toUpperCase() : '';
+            const priorityClass = priority.toLowerCase();
+
+            const tagsMatch = task.meta?.match(/\*\*Tags\*\*: (.+)/);
+            const tags = tagsMatch ? tagsMatch[1] : '';
+
+            const createdMatch = task.meta?.match(/\*\*Created\*\*: (.+?)(?:\s|$)/);
+            const created = createdMatch ? createdMatch[1] : '';
+
+            card.innerHTML = `
+              <div class="task-header">
+                <div class="task-id">${task.id}</div>
+                ${priority ? `<div class="task-priority ${priorityClass}">${priority}</div>` : ''}
+              </div>
+              <div class="task-title">${task.title}</div>
+              ${task.description ? `<div class="task-description">${task.description.split('\\n')[0]}</div>` : ''}
+              <div class="task-footer">
+                <div class="task-meta">
+                  <span class="task-date">📅 ${created}</span>
+                  ${tags ? `<span class="task-tags">${tags}</span>` : ''}
+                </div>
+              </div>
+            `;
             columns[column].appendChild(card);
           });
         }
       }
     }
 
-    // Status Kanban Renderer
+    // Status Kanban Renderer - Groups tasks by priority
     async function renderStatusKanban() {
-      const content = await loadTextFile(CONFIG.files.status);
-      const status = parseStatusFile(content);
+      const tasks = await parseKanbanFile();
+      const allTasks = [...(tasks.todo || []), ...(tasks.inProgress || []), ...(tasks.review || [])];
 
       const columns = {
         critical: document.getElementById('status-column-critical'),
@@ -1059,13 +1304,62 @@
       // Clear columns
       Object.values(columns).forEach(col => col.innerHTML = '');
 
-      // Populate columns
-      for (const [column, statusList] of Object.entries(status)) {
-        if (statusList.length === 0) {
-          columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No status items</div></div>';
+      // Sort tasks by priority
+      const byPriority = {
+        critical: [],
+        warning: [],
+        info: [],
+        success: []
+      };
+
+      allTasks.forEach(task => {
+        const priorityMatch = task.meta?.match(/\*\*Priority\*\*: (\w+)/i);
+        const priority = priorityMatch ? priorityMatch[1].toUpperCase() : 'MEDIUM';
+
+        if (priority === 'CRITICAL') {
+          byPriority.critical.push(task);
+        } else if (priority === 'HIGH') {
+          byPriority.warning.push(task);
+        } else if (priority === 'MEDIUM') {
+          byPriority.info.push(task);
         } else {
-          statusList.forEach(item => {
-            const card = createStatusCard(item);
+          byPriority.success.push(task);
+        }
+      });
+
+      // Render each priority level
+      for (const [column, taskList] of Object.entries(byPriority)) {
+        if (taskList.length === 0) {
+          columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No tasks</div></div>';
+        } else {
+          taskList.forEach(task => {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+
+            const tagsMatch = task.meta?.match(/\*\*Tags\*\*: (.+)/);
+            const tags = tagsMatch ? tagsMatch[1] : '';
+
+            const createdMatch = task.meta?.match(/\*\*Created\*\*: (.+?)(?:\s|$)/);
+            const created = createdMatch ? createdMatch[1] : '';
+
+            // Show which column the task is in
+            const statusMap = { todo: 'To Do', inProgress: 'In Progress', review: 'Review' };
+            const status = statusMap[task.column] || task.column;
+
+            card.innerHTML = `
+              <div class="task-header">
+                <div class="task-id">${task.id}</div>
+                <div class="task-priority" style="background: #4a5568;">${status}</div>
+              </div>
+              <div class="task-title">${task.title}</div>
+              ${task.description ? `<div class="task-description">${task.description.split('\\n')[0]}</div>` : ''}
+              <div class="task-footer">
+                <div class="task-meta">
+                  <span class="task-date">📅 ${created}</span>
+                  ${tags ? `<span class="task-tags">${tags}</span>` : ''}
+                </div>
+              </div>
+            `;
             columns[column].appendChild(card);
           });
         }

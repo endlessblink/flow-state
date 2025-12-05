@@ -133,11 +133,13 @@ Call client"
         :key="task.id"
         :class="['task-card', { selected: selectedTaskIds.has(task.id) }]"
         draggable="true"
+        tabindex="0"
         @dragstart="onDragStart($event, task)"
         @dragend="onDragEnd"
         @click="handleTaskClick($event, task)"
         @dblclick="handleTaskDoubleClick(task)"
         @contextmenu.prevent="handleTaskContextMenu($event, task)"
+        @keydown="handleTaskKeydown($event, task)"
       >
         <!-- Priority Stripe (top) -->
         <div class="priority-stripe" :class="`priority-${task.priority || 'none'}`"></div>
@@ -546,6 +548,24 @@ const handleTaskDoubleClick = (task: Task) => {
   window.dispatchEvent(new CustomEvent('open-task-edit', {
     detail: { taskId: task.id }
   }))
+}
+
+const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
+  // Handle Delete/Backspace key to delete task
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    event.preventDefault()
+    event.stopPropagation()
+    console.log('🗑️ Delete key pressed on inbox task:', task.id)
+
+    // If this task is selected along with others, delete all selected
+    if (selectedTaskIds.value.has(task.id) && selectedTaskIds.value.size > 1) {
+      deleteSelectedTasks()
+    } else {
+      // Single task deletion
+      taskStore.deleteTaskWithUndo(task.id)
+      selectedTaskIds.value.delete(task.id)
+    }
+  }
 }
 
 const handleTaskContextMenu = (event: MouseEvent, task: Task) => {

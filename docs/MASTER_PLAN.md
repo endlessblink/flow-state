@@ -33,19 +33,21 @@
 | Power Groups completion | P1 | Step 7 (testing) pending |
 | Smart Group bug fixes | P1 | Bugs 3, 7/9 |
 | Calendar resize fix | P2 | |
+| Mobile support | P2 | Responsive layout, touch interactions |
 
 ### Later
 | Feature | Notes |
 |---------|-------|
 | Auto-sync enablement | After multi-device testing |
-| Keyboard shortcuts | Delete, Redo, Space |
+| ~~Keyboard shortcuts~~ | ✅ DONE (Dec 5) - Delete, Redo (Ctrl+Y), New Task (Ctrl+N) |
 | Technical debt Phase 3-5 | D&D, Database, Validation |
+| Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
 
 ---
 
 ## Active Work
 
-### Power Groups Feature (IN PROGRESS)
+### Power Groups Feature (COMPLETE)
 
 **Goal**: Unify canvas groups into a single type where keywords trigger "power" behavior.
 
@@ -57,7 +59,16 @@
 | 4 | Add `powerGroupOverrideMode` to UI store | DONE | `git checkout HEAD -- src/stores/ui.ts` |
 | 5 | Update `CanvasSection.vue` with power mode UI | DONE | `git checkout HEAD -- src/components/canvas/CanvasSection.vue` |
 | 6 | Add settings dropdown for override mode | DONE | `git checkout HEAD -- src/components/SettingsModal.vue` |
-| 7 | Test with Playwright | PENDING | N/A |
+| 7 | Add power mode UI to `SectionNodeSimple.vue` | DONE | `git checkout HEAD -- src/components/canvas/SectionNodeSimple.vue` |
+| 8 | Test with Playwright | DONE | N/A |
+
+**Tested Dec 5, 2025**:
+- Created "Today" group - power mode auto-detected
+- Power indicator (lightning icon) visible in section header
+- Collect button shows matching task count
+- Dropdown menu with "Move tasks here" and "Highlight" options working
+- Task successfully moved from inbox to power group
+- Settings modal shows override mode dropdown
 
 **Keywords Supported**:
 - Date: `today`, `tomorrow`, `this week`, `this weekend`, `later`
@@ -68,7 +79,8 @@
 - `src/composables/useTaskSmartGroups.ts` - Extended with power keywords
 - `src/stores/canvas.ts` - Power group functions + interface changes
 - `src/stores/ui.ts` - Override mode setting
-- `src/components/canvas/CanvasSection.vue` - Power mode UI (indicator, collect button, toggle)
+- `src/components/canvas/CanvasSection.vue` - Power mode UI (not used in Vue Flow)
+- `src/components/canvas/SectionNodeSimple.vue` - Power mode UI (actual component)
 - `src/components/SettingsModal.vue` - Override mode dropdown in settings
 
 ---
@@ -137,6 +149,69 @@ if (savedLiveSync === 'true' && selectedProvider.value === 'couchdb') {
 **Files to modify**:
 - `src/components/CloudSyncSettings.vue` - Add persistence
 - Consider also auto-starting from `App.vue` for faster startup
+
+---
+
+## Dec 5, 2025 - Keyboard Shortcuts Implementation
+
+### Completed Features
+
+| Shortcut | Action | Location | Status |
+|----------|--------|----------|--------|
+| **Ctrl+N** | New Task (focus quick-add input) | Global | ✅ DONE |
+| **Ctrl+Z** | Undo | Global | ✅ Already working |
+| **Ctrl+Y** | Redo | Global | ✅ DONE |
+| **Ctrl+Shift+Z** | Redo (alternative) | Global | ✅ Already working |
+| **Delete** | Delete focused task | BoardView | ✅ DONE |
+| **Delete** | Delete focused task | Inbox Panel | ✅ DONE |
+
+### Files Modified
+
+1. **`src/utils/globalKeyboardHandlerSimple.ts`**
+   - Added Ctrl+N handler that dispatches `global-new-task` event
+   - Ctrl+Y was already implemented
+
+2. **`src/App.vue`**
+   - Added `initGlobalKeyboardShortcuts()` call in onMounted
+   - Added `global-new-task` event listener to focus quick task input
+   - Added cleanup in onUnmounted
+
+3. **`src/components/kanban/KanbanSwimlane.vue`**
+   - Added `deleteTask` emit to propagate Delete key from TaskCard
+
+4. **`src/views/BoardView.vue`**
+   - Added `@deleteTask="handleDeleteTask"` handler
+   - Shows confirmation dialog before deleting
+
+5. **`src/components/base/UnifiedInboxPanel.vue`**
+   - Added `tabindex="0"` to task cards for keyboard focus
+   - Added `@keydown="handleTaskKeydown"` handler
+   - Delete key deletes task directly with undo support
+
+6. **`src/components/canvas/InboxPanel.vue`**
+   - Same keyboard support added for consistency
+
+### Testing Results
+All shortcuts tested with Playwright MCP - all passed.
+
+---
+
+## 🔴 NEXT SESSION: Continue Quick Wins
+
+### Priority Tasks
+
+1. **C1 - Canvas Section Selection Dialog** (2h)
+   - Create `SectionSelectorDialog.vue` component
+   - Wire to `handleBulkAction()` in CanvasView.vue:4708-4710
+   - Allow moving selected tasks to different sections
+
+2. **D2 - Re-enable Backup Settings UI** (2h)
+   - Remove `disabled` attributes from buttons in `SimpleBackupSettings.vue`
+   - Wire to `useBackupRestoration` composable
+   - Test full backup/restore flow
+
+### Reference: Plan File Location
+Full implementation plan available at: `/home/noam/.claude/plans/encapsulated-drifting-cray.md`
 
 ---
 

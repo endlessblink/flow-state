@@ -112,10 +112,12 @@
           'timer-active': isTimerActive(task.id)
         }"
         draggable="true"
+        tabindex="0"
         @click="handleTaskClick($event, task)"
         @dblclick="handleTaskDoubleClick(task)"
         @contextmenu.prevent="handleTaskContextMenu($event, task)"
         @dragstart="handleDragStart($event, task)"
+        @keydown="handleTaskKeydown($event, task)"
       >
         <div v-if="selectedTaskIds.has(task.id)" class="selection-indicator" />
         <div :class="`priority-stripe priority-stripe-${task.priority}`"></div>
@@ -403,6 +405,22 @@ const handleTaskClick = (event: MouseEvent, task: any) => {
 const handleTaskDoubleClick = (task: any) => {
   // TODO: Implement task editing functionality
   console.log('Edit task:', task.id)
+}
+
+const handleTaskKeydown = (event: KeyboardEvent, task: any) => {
+  // Handle Delete/Backspace key to delete task
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    event.preventDefault()
+    console.log('🗑️ Delete key pressed on inbox task:', task.id)
+
+    // If this task is selected along with others, delete all selected
+    if (selectedTaskIds.value.has(task.id) && selectedTaskIds.value.size > 1) {
+      handleDeleteSelected()
+    } else {
+      // Single task deletion - use confirm delete for safety
+      handleConfirmDelete(task.id)
+    }
+  }
 }
 
 const handleTaskContextMenu = (event: MouseEvent, task: any) => {

@@ -19,6 +19,50 @@
         placeholder="Section name..."
         :disabled="isCollapsed"
       />
+
+      <!-- Power Mode Indicator -->
+      <div
+        v-if="isPowerMode && !isCollapsed"
+        class="power-indicator"
+        :title="powerModeTooltip"
+      >
+        <Zap :size="12" class="power-icon" />
+      </div>
+
+      <!-- Collect Button (for power groups) -->
+      <div v-if="isPowerMode && !isCollapsed" class="collect-wrapper">
+        <button
+          @click.stop="toggleCollectMenu"
+          class="collect-btn"
+          :class="{ 'has-matches': matchingInboxCount > 0 }"
+          :title="`Collect matching tasks (${matchingInboxCount} available)`"
+        >
+          <Magnet :size="12" />
+          <span v-if="matchingInboxCount > 0" class="collect-badge">{{ matchingInboxCount }}</span>
+        </button>
+
+        <!-- Collect Dropdown Menu -->
+        <div v-if="showCollectMenu" class="collect-menu" @click.stop>
+          <button class="collect-option" @click="handleCollect('move')">
+            Move {{ matchingInboxCount }} tasks here
+          </button>
+          <button class="collect-option" @click="handleCollect('highlight')">
+            Highlight matching tasks
+          </button>
+        </div>
+      </div>
+
+      <!-- Power Mode Toggle -->
+      <button
+        v-if="powerKeyword && !isCollapsed"
+        @click.stop="togglePowerMode"
+        class="power-toggle-btn"
+        :class="{ 'power-active': isPowerMode }"
+        :title="isPowerMode ? 'Disable power mode' : 'Enable power mode'"
+      >
+        <Zap :size="12" />
+      </button>
+
       <button
         v-if="section.type !== 'custom' && !isCollapsed"
         @click="toggleAutoCollect"
@@ -53,11 +97,12 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { ChevronDown, ChevronRight } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Zap, Magnet } from 'lucide-vue-next'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 
 interface SectionData {
   id: string
@@ -120,6 +165,46 @@ const sectionTypeLabel = computed(() => {
   return labels[props.data.type || 'custom']
 })
 
+// Power group state and computed properties
+const showCollectMenu = ref(false)
+
+const powerKeyword = computed((): PowerKeywordResult | null => {
+  // Get section from store to check for stored power keyword
+  const sectionData = canvasStore.sections.find(s => s.id === props.data.id)
+  if (sectionData?.powerKeyword !== undefined) {
+    return sectionData.powerKeyword
+  }
+  // Auto-detect from name
+  return detectPowerKeyword(props.data.name)
+})
+
+const isPowerMode = computed(() => {
+  const sectionData = canvasStore.sections.find(s => s.id === props.data.id)
+  // Use stored value if explicitly set
+  if (sectionData?.isPowerMode !== undefined) {
+    return sectionData.isPowerMode
+  }
+  // Otherwise, auto-detect from name
+  return powerKeyword.value !== null
+})
+
+const powerModeTooltip = computed(() => {
+  if (!powerKeyword.value) return ''
+  const categoryLabels = {
+    date: 'Sets due date',
+    priority: 'Sets priority',
+    status: 'Sets status'
+  }
+  return `Power Group: ${categoryLabels[powerKeyword.value.category]} to "${powerKeyword.value.displayName}"`
+})
+
+// Get count of matching tasks in inbox for collect button
+const matchingInboxCount = computed(() => {
+  if (!isPowerMode.value) return 0
+  const allTasks = taskStore.filteredTasks
+  return canvasStore.getMatchingTaskCount(props.data.id, allTasks)
+})
+
 // Watch for external name changes
 watch(() => props.data.name, (newName) => {
   sectionName.value = newName
@@ -143,6 +228,26 @@ const toggleAutoCollect = () => {
 
 const handleContextMenu = (event: MouseEvent) => {
   emit('contextMenu', event, props.data)
+}
+
+// Power mode functions
+const togglePowerMode = () => {
+  canvasStore.togglePowerMode(props.data.id)
+}
+
+const toggleCollectMenu = () => {
+  showCollectMenu.value = !showCollectMenu.value
+}
+
+const handleCollect = async (mode: 'move' | 'highlight') => {
+  showCollectMenu.value = false
+  const allTasks = taskStore.filteredTasks
+  await canvasStore.collectMatchingTasks(
+    props.data.id,
+    mode,
+    allTasks,
+    taskStore.updateTask.bind(taskStore)
+  )
 }
 
 // Resize event handlers
@@ -372,5 +477,130 @@ const handleResizeEnd = (event: any) => {
   border-right: 4px solid transparent;
   border-top: 4px solid var(--text-secondary);
   opacity: 0.3;
+}
+
+/* Power Mode Styles */
+.power-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--amber-bg-medium, rgba(245, 158, 11, 0.2));
+  color: var(--amber-text, #f59e0b);
+  flex-shrink: 0;
+}
+
+.power-icon {
+  animation: power-pulse 2s ease-in-out infinite;
+}
+
+@keyframes power-pulse {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.collect-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.collect-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  font-size: var(--text-xs);
+}
+
+.collect-btn:hover {
+  background: var(--glass-bg-heavy);
+  color: var(--text-primary);
+}
+
+.collect-btn.has-matches {
+  background: var(--blue-bg-medium, rgba(59, 130, 246, 0.2));
+  border-color: var(--blue-border-active, rgba(59, 130, 246, 0.4));
+  color: var(--blue-text, #3b82f6);
+}
+
+.collect-badge {
+  background: var(--blue-bg-medium, rgba(59, 130, 246, 0.3));
+  color: var(--blue-text, #3b82f6);
+  font-size: 9px;
+  font-weight: var(--font-bold);
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  min-width: 14px;
+  text-align: center;
+}
+
+.collect-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.collect-option {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.collect-option:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+}
+
+.power-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  flex-shrink: 0;
+}
+
+.power-toggle-btn:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-secondary);
+}
+
+.power-toggle-btn.power-active {
+  background: var(--amber-bg-medium, rgba(245, 158, 11, 0.2));
+  border-color: var(--amber-border-active, rgba(245, 158, 11, 0.4));
+  color: var(--amber-text, #f59e0b);
 }
 </style>

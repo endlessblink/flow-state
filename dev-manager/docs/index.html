@@ -264,6 +264,8 @@
             border-radius: 8px;
             padding: 0.75rem;
             z-index: 100;
+            max-height: calc(100% - 2rem);
+            overflow-y: auto;
         }
 
         .legend-title {
@@ -370,6 +372,26 @@
         let graphData = null;
         let graph = null;
         let selectedNode = null;
+        let hoveredNode = null;
+
+        // Category emojis
+        const CATEGORY_EMOJIS = {
+            'reports': '📊',
+            'conflict-systems-resolution': '⚔️',
+            'archive': '📦',
+            'debug': '🐛',
+            'guides': '📖',
+            'planning': '📋',
+            'reference': '📚',
+            'other': '📄'
+        };
+
+        function getNodeSize(node) {
+            if (node.isCategory) return 20;
+            // Larger nodes for important docs, smaller for archived
+            if (node.isArchived) return 8;
+            return 12;
+        }
 
         // Load data and initialize
         async function init() {
@@ -440,45 +462,79 @@
                 .nodeColor(node => node.color || COLORS.other)
                 .nodeVal(node => node.isCategory ? 20 : 6)
                 .nodeLabel(node => node.title)
-                .linkColor(() => 'rgba(148, 163, 184, 0.15)')
-                .linkWidth(1)
+                .linkColor(() => 'rgba(148, 163, 184, 0.2)')
+                .linkWidth(1.5)
                 .onNodeClick(handleNodeClick)
                 .onNodeHover(handleNodeHover)
-                .cooldownTicks(100)
-                .d3Force('charge', null)
-                .d3Force('center', null)
+                .cooldownTicks(150)
+                .warmupTicks(80)
                 .onEngineStop(() => graph.zoomToFit(400, 50));
 
-            // Add custom forces for better layout
-            graph.d3Force('charge', d3.forceManyBody().strength(-100));
-            graph.d3Force('link').distance(link => 50);
+            // Moderate spacing - labels only show on hover so less space needed
+            graph.d3Force('charge', d3.forceManyBody().strength(-180).distanceMax(500));
+            graph.d3Force('link').distance(70).strength(0.3);
+            graph.d3Force('center', d3.forceCenter());
+            // Collision based on node size
+            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 20).strength(1).iterations(4));
+            // Mild radial spread
+            graph.d3Force('radial', d3.forceRadial(200, 0, 0).strength(node => node.isCategory ? 0.1 : 0.06));
 
-            // Custom node rendering
+            // Custom node rendering with emojis
             graph.nodeCanvasObject((node, ctx, globalScale) => {
-                const label = node.title;
-                const fontSize = node.isCategory ? 12 / globalScale : 9 / globalScale;
-                const nodeSize = node.isCategory ? 10 : 5;
+                const emoji = CATEGORY_EMOJIS[node.category] || '📄';
+                const nodeSize = getNodeSize(node);
+                const emojiSize = node.isCategory ? 16 / globalScale : 12 / globalScale;
 
-                // Draw node circle
+                const isHovered = hoveredNode && hoveredNode.id === node.id;
+                const isSelected = selectedNode && selectedNode.id === node.id;
+
+                // Draw node circle with slight transparency
                 ctx.beginPath();
                 ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI);
-                ctx.fillStyle = node.color || COLORS.other;
+                ctx.fillStyle = (node.color || COLORS.other) + (isHovered ? 'ff' : 'cc');
                 ctx.fill();
 
+                // Draw border
+                ctx.strokeStyle = node.color || COLORS.other;
+                ctx.lineWidth = (isHovered || isSelected ? 3 : 2) / globalScale;
+                ctx.stroke();
+
                 // Highlight selected node
-                if (selectedNode && selectedNode.id === node.id) {
+                if (isSelected) {
                     ctx.strokeStyle = '#22c55e';
-                    ctx.lineWidth = 2 / globalScale;
+                    ctx.lineWidth = 3 / globalScale;
                     ctx.stroke();
                 }
 
-                // Draw label for category nodes or when zoomed in
-                if (node.isCategory || globalScale > 2) {
-                    ctx.font = `${node.isCategory ? 'bold ' : ''}${fontSize}px Sans-Serif`;
+                // Draw emoji inside the circle
+                ctx.font = `${emojiSize}px Sans-Serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(emoji, node.x, node.y);
+
+                // Draw label - ONLY for category nodes, hovered, or selected
+                const showLabel = node.isCategory || isHovered || isSelected;
+                if (showLabel) {
+                    const minLabelSize = 12;
+                    const labelFontSize = Math.max(minLabelSize, node.isCategory ? 14 / globalScale : 13 / globalScale);
+                    ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#94a3b8';
-                    ctx.fillText(label.substring(0, 25), node.x, node.y + nodeSize + fontSize);
+                    ctx.textBaseline = 'top';
+
+                    // Background for better readability on hover
+                    if (isHovered && !node.isCategory) {
+                        const label = node.title.length > 25 ? node.title.substring(0, 22) + '...' : node.title;
+                        const textWidth = ctx.measureText(label).width;
+                        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                        ctx.fillRect(node.x - textWidth/2 - 4, node.y + nodeSize + 2, textWidth + 8, labelFontSize + 4);
+                    }
+
+                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#ffffff';
+                    let label = node.title;
+                    if (!node.isCategory && label.length > 25) {
+                        label = label.substring(0, 22) + '...';
+                    }
+                    ctx.fillText(label, node.x, node.y + nodeSize + 4);
                 }
             });
         }
@@ -493,6 +549,9 @@
 
         function handleNodeHover(node) {
             document.body.style.cursor = node && !node.isCategory ? 'pointer' : 'default';
+            hoveredNode = node;
+            // Trigger re-render to show/hide label
+            if (graph) graph.nodeColor(graph.nodeColor());
         }
 
         function showDetailPanel(node) {

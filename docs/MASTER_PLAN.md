@@ -19,6 +19,30 @@
 
 ---
 
+## Ideas
+
+- (add rough ideas here)
+
+---
+
+## Roadmap
+
+### Near-term
+| Feature | Priority | Notes |
+|---------|----------|-------|
+| Power Groups completion | P1 | Step 7 (testing) pending |
+| Smart Group bug fixes | P1 | Bugs 3, 7/9 |
+| Calendar resize fix | P2 | |
+
+### Later
+| Feature | Notes |
+|---------|-------|
+| Auto-sync enablement | After multi-device testing |
+| Keyboard shortcuts | Delete, Redo, Space |
+| Technical debt Phase 3-5 | D&D, Database, Validation |
+
+---
+
 ## Active Work
 
 ### Power Groups Feature (IN PROGRESS)
@@ -80,10 +104,39 @@
 
 | Issue | Priority | Notes |
 |-------|----------|-------|
+| **Live sync lost on refresh** | P1-HIGH | See fix below |
 | IndexedDB version mismatch errors | P2 | Needs proper DB migration |
-| Auto-sync not enabled | P2 | Pending multi-device testing |
 | Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
 | QuotaExceededError unhandled | P2 | Functions exist, not enforced |
+
+### 🔴 NEXT SESSION: Live Sync Persistence Fix
+
+**Problem**: Live sync is lost when page refreshes. User must manually re-enable it each time.
+
+**Root Cause**: `liveSyncActive` state is not persisted to localStorage, and there's no auto-start on page load.
+
+**Fix Required** (in `CloudSyncSettings.vue`):
+
+1. **Save preference to localStorage** when toggling:
+```typescript
+// In toggleLiveSync()
+localStorage.setItem('pomo-live-sync-enabled', liveSyncActive.value ? 'true' : 'false')
+```
+
+2. **Load and auto-start on mount**:
+```typescript
+// In loadSettings() or onMounted
+const savedLiveSync = localStorage.getItem('pomo-live-sync-enabled')
+if (savedLiveSync === 'true' && selectedProvider.value === 'couchdb') {
+  // Auto-start live sync
+  await reliableSyncManager.startLiveSync()
+  liveSyncActive.value = true
+}
+```
+
+**Files to modify**:
+- `src/components/CloudSyncSettings.vue` - Add persistence
+- Consider also auto-starting from `App.vue` for faster startup
 
 ---
 

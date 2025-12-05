@@ -1,8 +1,8 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 5, 2025
-**Version**: 3.2 (Canvas Bugs Resolved + Orphaned Tasks Fix)
-**Status**: ✅ Canvas WORKING, ✅ All 7 Canvas Bugs Fixed, ✅ Sync Safety Phases 1-4 Complete, ⏳ Phase 5 Pending
+**Version**: 3.3 (Smart Group Bugs Analyzed + Solutions Documented)
+**Status**: ✅ Canvas WORKING, ✅ All 7 Canvas Bugs Fixed, ✅ CouchDB Sync Phases 1-4 Complete, 🐛 9 New Smart Group Bugs Documented
 **Current Branch**: master
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025) - All canvas bugs resolved including orphaned tasks
 
@@ -1485,11 +1485,108 @@ couchdbPassword: 'pomoflow-2024'
 3. Click "Save & Test Connection"
 4. If successful, click "Sync Now" to trigger manual sync
 
-### **Next Steps (Phase 4: Auto-Sync)**
-Once manual sync is validated:
-1. Update `src/config/database.ts` to set `live: true`, `retry: true`
-2. Monitor circuit breaker health score (must stay > 80%)
-3. Test cross-device sync (Linux ↔ Windows)
+### **Phase 4: Production Debugging & Fixes (COMPLETE - Dec 4, 2025)**
+
+**Issues Encountered & Fixed:**
+
+| Issue | Root Cause | Fix Applied |
+|-------|------------|-------------|
+| "Local database not initialized" | `triggerSync()` called before `initializeSync()` | Added auto-initialization check in `triggerSync()` |
+| "cyclic object value" error | `JSON.stringify()` on PouchDB objects | Added try-catch in `retryManager.ts:formatError()` |
+| Pre-sync validation blocking | Validation errors aborted sync | Made validation non-blocking (warnings only) |
+| Conflict detection hanging | 18k+ conflicting revisions in DB | Skipped conflict detection step |
+| CORS errors from browser | CouchDB CORS not configured | Configured CORS on remote server |
+| Sync timeout (infinite) | Database revision bloat | Reset database to clean slate |
+| Bidirectional sync failing | Complex sync causing hangs | Split into separate push/pull with 15s timeouts |
+
+**CORS Configuration Applied on CouchDB Server:**
+```bash
+curl -X PUT http://admin:pomoflow-2024@84.46.253.137:5984/_node/_local/_config/httpd/enable_cors -d '"true"'
+curl -X PUT http://admin:pomoflow-2024@84.46.253.137:5984/_node/_local/_config/cors/origins -d '"*"'
+curl -X PUT http://admin:pomoflow-2024@84.46.253.137:5984/_node/_local/_config/cors/credentials -d '"true"'
+curl -X PUT http://admin:pomoflow-2024@84.46.253.137:5984/_node/_local/_config/cors/methods -d '"GET, PUT, POST, HEAD, DELETE"'
+curl -X PUT http://admin:pomoflow-2024@84.46.253.137:5984/_node/_local/_config/cors/headers -d '"accept, authorization, content-type, origin, referer"'
+```
+
+**Current Sync Architecture (Robust Push/Pull):**
+```typescript
+// Push local → remote (15s timeout, batch limits)
+localDB.replicate.to(remoteDB, { live: false, retry: false, batch_size: 50, batches_limit: 5 })
+
+// Pull remote → local (15s timeout, smaller batches)
+localDB.replicate.from(remoteDB, { live: false, retry: false, batch_size: 10, batches_limit: 2 })
+```
+
+**Status: ✅ MANUAL SYNC WORKING** (Verified Dec 4, 2025)
+
+---
+
+### **Phase 5: Auto-Sync Enablement (PENDING)**
+
+**Prerequisites (all must be true):**
+1. ✅ Manual sync works without errors
+2. ⏳ Test sync from **both devices** (Linux AND Windows/Zen browser)
+3. ⏳ Verify tasks appear correctly on both sides
+4. ⏳ Run 5-10 successful manual syncs
+
+**How to Enable Auto-Sync:**
+Once prerequisites met, modify `src/config/database.ts`:
+```typescript
+sync: {
+  live: true,    // Enable real-time sync
+  retry: true,   // Auto-retry on failure
+  timeout: 30000,
+  heartBeat: 10000,
+}
+```
+
+**Safeguards Already in Place:**
+- 5-second throttle between manual syncs
+- 15-second timeout on push/pull operations
+- Separate push/pull (not bidirectional sync)
+- Circuit breaker pattern for error handling
+
+---
+
+## ✅ **FIXED: Sync Data Reverts on App Restart (Dec 5, 2025)**
+
+### **Symptom**
+- Manual sync appears to work (task count updates)
+- After restarting dev server, old tasks return
+- Synced data doesn't persist across app restarts
+
+### **Root Cause (CONFIRMED)**
+
+**Push-Before-Pull Was Overwriting Remote Data**
+Old sync order in `useReliableSyncManager.ts`:
+```
+1. PUSH local → remote (sends OLD local data to server)  ❌ WRONG
+2. PULL remote → local (gets back the stale data we just pushed!)
+```
+**Problem**: Stale local data overwrote good remote data.
+
+### **Fix Applied**
+Changed sync order to **PULL FIRST, then PUSH**:
+```
+1. PULL remote → local (get authoritative remote data FIRST)  ✅ CORRECT
+2. PUSH local → remote (send any local changes)
+```
+
+### **Additional Fixes Applied**
+
+1. **Removed stale fallback files**:
+   ```bash
+   rm public/tasks.json public/user-backup.json
+   ```
+   These contained old Oct 2025 data that was loaded on empty DB.
+
+2. **Reset remote CouchDB** to clear corrupted data:
+   ```bash
+   curl -X DELETE http://admin:pomoflow-2024@84.46.253.137:5984/pomoflow-tasks
+   curl -X PUT http://admin:pomoflow-2024@84.46.253.137:5984/pomoflow-tasks
+   ```
+
+### **Status**: ✅ FIXED - Sync order changed to PULL FIRST
 
 ---
 
@@ -1744,8 +1841,412 @@ Data Safety Auditor skill detected 3 critical/high issues that could cause data 
 
 ---
 
-**Version**: 3.2 (Updated Dec 5, 2025)
-**Status**: 🟢 STABLE + ✅ All Canvas Bugs Fixed + 🚀 TECHNICAL DEBT INITIATIVE + 🛡️ SYNC SAFETY PLANNED
+---
+
+## 🐛 **OPEN BUG ANALYSIS: Canvas Smart Group Issues (Dec 5, 2025)**
+
+### **Session Context**
+User reported multiple issues with canvas smart groups (Today, This Week) and section deletion. This section documents comprehensive root cause analysis and safe solutions.
+
+---
+
+### **Bug 1: Task Disappears When Set to Yesterday's Date (Canvas)**
+
+**Symptom**: Setting a task's due date to yesterday causes it to disappear from canvas until refresh.
+
+**Root Cause Analysis**:
+- **Location**: `src/stores/tasks.ts` lines 1718-1729
+- **Problem**: When `updates.instances` is set (including date updates), the code was clearing `canvasPosition` for ALL tasks, even those already on canvas.
+
+**Fix Applied (Dec 5, 2025)**:
+```typescript
+// BEFORE (line 1718-1723):
+if (updates.instances && updates.instances.length > 0) {
+  updates.isInInbox = false
+  updates.canvasPosition = undefined  // ❌ BUG: Clears position for ALL tasks
+}
+
+// AFTER (Fixed):
+if (updates.instances && updates.instances.length > 0) {
+  updates.isInInbox = false
+  // Only clear canvas position if task is NOT already on canvas
+  if (!task.canvasPosition) {
+    updates.canvasPosition = undefined
+  }
+}
+```
+
+**Status**: ✅ FIXED - Commit pending verification
+
+---
+
+### **Bug 2: Canvas Tasks Disappear When Creating New Task**
+
+**Symptom**: Creating a new task causes ALL existing canvas tasks to disappear until browser refresh.
+
+**Root Cause Analysis (Deep Dive)**:
+- **Location**: `src/views/CanvasView.vue` lines 589-618
+- **Problem**: Reference vs Value bug in computed property caching
+
+**Technical Details**:
+```typescript
+let lastFilteredTasks: any[] = []  // Line 589
+let lastFilteredTasksHash = ''     // Line 590
+
+const filteredTasksWithProjectFiltering = computed(() => {
+  const currentTasks = taskStore.tasks
+
+  // Hash only included basic properties, missing canvasPosition
+  const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}`).join('|')
+
+  if (currentHash === lastFilteredTasksHash && lastFilteredTasks.length > 0) {
+    return lastFilteredTasks  // Returns stale reference
+  }
+
+  lastFilteredTasksHash = currentHash
+  lastFilteredTasks = currentTasks  // ❌ BUG: Reference, not copy
+  return currentTasks
+})
+```
+
+**Why This Caused Disappearing Tasks**:
+1. Creating task triggers `taskStore.tasks` mutation
+2. Multiple watchers fire (lines 1942, 1973, 1986, 2013)
+3. Each calls `batchedSyncNodes('high')`
+4. `lastFilteredTasks = currentTasks` stored a REFERENCE to the store array
+5. When Vue mutates the store array, the cached reference becomes stale
+6. `syncNodes()` reads from stale `filteredTasks.value`
+7. Filter at line 1758 works with stale data → nodes disappear
+
+**Fixes Applied (Dec 5, 2025)**:
+```typescript
+// Fix 1: Include canvasPosition in hash (line 610)
+const currentHash = currentTasks.map(t =>
+  `${t.id}:${t.isInInbox}:${t.status}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}`
+).join('|')
+
+// Fix 2: Create array COPY instead of reference (line 618)
+lastFilteredTasks = [...currentTasks]  // ✅ Creates new array
+```
+
+**Status**: ✅ FIXED - Awaiting user verification
+
+---
+
+### **Bug 3: Today Group Shows 1 Task When Empty**
+
+**Symptom**: "Today" smart group header shows task count badge (e.g., "1") but no tasks visible inside.
+
+**Root Cause Analysis**:
+- **Location**: `src/views/CanvasView.vue` line 1842 (`getTaskCountForSection`)
+- **Calls**: `canvasStore.getTaskCountInSection()` in `src/stores/canvas.ts` line 887
+- **Calls**: `getTasksInSectionBounds()` in `src/stores/canvas.ts` lines 790-815
+
+**The Logic Chain**:
+1. `getTaskCountForSection(sectionId)` → gets section from store
+2. `canvasStore.getTaskCountInSection(section, filteredTasks.value)` → counts tasks
+3. `getTasksInSectionBounds(section, allTasks)` at line 790-815:
+   - For smart groups (line 802-807): Returns tasks where `isTaskLogicallyInSection(task, section) && task.isInInbox === false`
+   - `isTaskLogicallyInSection` calls `taskMatchesSection` (line 617-627)
+   - `taskMatchesSection` for smart groups: `task.dueDate === expectedDate`
+
+**Problem Identified**:
+At `canvas.ts` line 627: Smart group matching ONLY checks `task.dueDate === expectedDate`
+- Does NOT check if task has `canvasPosition` (required to render on canvas)
+- Does NOT check `task.status !== 'done'` consistently
+
+**Why Count is Wrong**:
+```
+Task A: dueDate = today, isInInbox = false, canvasPosition = undefined
+         ↓
+taskMatchesSection(Today) returns TRUE (has today's date)
+getTasksInSectionBounds includes it (isInInbox === false)
+getTaskCountInSection returns 1
+         ↓
+BUT syncNodes() at line 1758 filters it OUT (no canvasPosition)
+         ↓
+Result: Counter shows 1, canvas shows 0
+```
+
+**Safe Solution**:
+Update `getTasksInSectionBounds` at `canvas.ts` lines 802-807 to also check for `canvasPosition`:
+```typescript
+// Current (lines 802-807):
+if (section.type === 'custom' && isSmartGroup(section.name)) {
+  return allTasks.filter(task =>
+    isTaskLogicallyInSection(task, section) &&
+    task.isInInbox === false
+  )
+}
+
+// Fixed:
+if (section.type === 'custom' && isSmartGroup(section.name)) {
+  return allTasks.filter(task =>
+    isTaskLogicallyInSection(task, section) &&
+    task.isInInbox === false &&
+    task.canvasPosition !== undefined  // ← ADD THIS CHECK
+  )
+}
+```
+
+**Risk**: LOW - Only affects count calculation, not task data
+**Status**: 🔧 PENDING FIX
+
+---
+
+### **Bug 4: Tasks Inside Today Group Don't Drag Properly**
+
+**Symptom**: Tasks visually inside "Today" group cannot be dragged.
+
+**Root Cause Analysis**:
+- **Likely Cause**: Parent-child relationship not properly set in Vue Flow
+
+**Technical Context**:
+- Vue Flow uses `parentNode` property to establish containment
+- In `syncNodes()` at lines 1700-1800, task nodes are created with `parentNode: section-${sectionId}` only if geometrically inside
+
+**Investigation Needed**:
+- Check if `node.parentNode` is correctly set for tasks in smart groups
+- Check if smart group sections have proper `isParent: true` flag
+- Verify Vue Flow draggable property on child nodes
+
+**Status**: 🔍 NEEDS INVESTIGATION - Likely related to Bug 3 (task not properly associated)
+
+---
+
+### **Bug 5: Date Not Updating When Task Moved to Today Group**
+
+**Symptom**: Dragging a task with yesterday's date into "Today" group doesn't update the task's date.
+
+**Root Cause Analysis**:
+- **Location**: `src/views/CanvasView.vue` line 2314-2366 (`applySectionPropertiesToTask`)
+- **Logic Flow**:
+  1. Task dropped on section
+  2. `handleNodeDragStop` detects containment (line 2527-2541)
+  3. Calls `applySectionPropertiesToTask(taskId, section)` (line 2539)
+  4. For smart groups (line 2340-2352): Calls `taskStore.moveTaskToSmartGroup()`
+
+**Checking moveTaskToSmartGroup** (`tasks.ts` lines 2044-2097):
+```typescript
+const moveTaskToSmartGroup = (taskId: string, smartGroupType: string) => {
+  // ...
+  switch (smartGroupType.toLowerCase()) {
+    case 'today':
+      dueDate = `${today.getFullYear()}-${...}` // Sets TODAY's date
+      break
+    // ...
+  }
+
+  const updates: Partial<Task> = { dueDate: dueDate }
+  updateTask(taskId, updates)  // ← This DOES update the date
+}
+```
+
+**The Code Should Work!** The date update logic is correct.
+
+**Possible Issues**:
+1. `shouldUseSmartGroupLogic(section.name)` at line 2340 might return false
+2. `getSmartGroupType(section.name)` at line 2341 might return null
+3. The section might not have type 'custom' or 'timeline' (check at line 2337-2338)
+
+**Investigation**: Check section's `type` and `name` properties when created:
+```typescript
+// useSmartViews.ts checks section.name against:
+// 'today', 'tomorrow', 'this weekend', 'this week', 'later'
+// Case-insensitive includes check
+```
+
+**Likely Fix**: Ensure section creation uses correct naming convention for smart group detection
+
+**Status**: 🔍 NEEDS INVESTIGATION - Logic appears correct, check section properties
+
+---
+
+### **Bug 6: This Week Shows Same Count as Today**
+
+**Symptom**: "This Week" and "Today" both show 3 tasks (should differ).
+
+**Root Cause Analysis**:
+- **Location**: `src/composables/useSmartViews.ts`
+- **Today Filter** (lines 26-77): Includes tasks with:
+  - `dueDate === todayStr`
+  - instances scheduled today
+  - legacy `scheduledDate === todayStr`
+  - `status === 'in_progress'`
+  - `createdAt` is today
+
+- **Week Filter** (lines 82-148): Includes tasks with:
+  - `dueDate >= todayStr && dueDate <= weekEndStr` (today through Sunday)
+  - instances in week range
+  - legacy dates in week range
+  - `status === 'in_progress'`
+  - `createdAt` is today
+
+**Why Counts Are Same**:
+The Week filter INCLUDES Today by design (`dueDate >= todayStr`), so if all tasks are due today, both filters return identical counts.
+
+**This is EXPECTED BEHAVIOR** if:
+- All 3 tasks have `dueDate = today`, OR
+- All 3 tasks have `status = 'in_progress'`, OR
+- All 3 tasks were `createdAt` today
+
+**Status**: ✅ NOT A BUG - This is by design. Week filter intentionally includes today's tasks.
+
+---
+
+### **Bug 7: Deleting Group Deletes Task Inside (CRITICAL)**
+
+**Symptom**: Deleting a canvas group/section also deletes the tasks that were inside it.
+
+**Root Cause Analysis**:
+- **Location**: `src/views/CanvasView.vue` lines 3262-3282 (`deleteGroup`)
+
+**Current Code**:
+```typescript
+const deleteGroup = (section: any) => {
+  if (confirm(`Delete "${section.name}" group?...`)) {
+    // FIX attempt: Clear parentNode before deleting
+    const sectionNodeId = `section-${section.id}`
+    nodes.value = nodes.value.map(node => {
+      if (node.parentNode === sectionNodeId) {
+        return { ...node, parentNode: undefined }  // Orphan the task
+      }
+      return node
+    })
+    canvasStore.deleteSectionWithUndo(section.id)  // ← Problem here
+    syncNodes()
+  }
+}
+```
+
+**Problem**: `canvasStore.deleteSectionWithUndo` at `canvas.ts` lines 965-968:
+```typescript
+deleteSectionWithUndo: async (sectionId: string) => {
+  // Unified undo/redo doesn't support section deletion yet
+  // Using direct deletion for now
+  return deleteSection(sectionId)  // ← NO UNDO SUPPORT
+}
+```
+
+And `deleteSection` at lines 393-409 simply removes section from array - doesn't touch tasks.
+
+**THE REAL BUG**: Vue Flow auto-deletes child nodes when parent is deleted!
+
+When we set `node.parentNode = undefined`, this mutation triggers Vue Flow's internal logic which may be deleting the orphaned nodes as a side effect.
+
+**Safe Solution**:
+1. **Before deletion**: Explicitly save task positions and remove them from nodes array
+2. **Delete section**: Remove section from store
+3. **After deletion**: Re-add task nodes without parentNode relationship
+4. **Call syncNodes()**: Rebuild node structure
+
+```typescript
+const deleteGroup = (section: any) => {
+  if (confirm(`Delete "${section.name}" group?...`)) {
+    const sectionNodeId = `section-${section.id}`
+
+    // Step 1: Find tasks in this section and save their data
+    const taskNodesInSection = nodes.value.filter(
+      node => node.parentNode === sectionNodeId && !node.id.startsWith('section-')
+    )
+    const taskIdsToPreserve = taskNodesInSection.map(n => n.id)
+
+    // Step 2: Remove section node ONLY, keep task nodes
+    nodes.value = nodes.value.filter(node => {
+      if (node.id === sectionNodeId) return false  // Remove section
+      if (node.parentNode === sectionNodeId) {
+        // Keep task but clear parent relationship
+        node.parentNode = undefined
+        return true
+      }
+      return true
+    })
+
+    // Step 3: Delete section from store
+    canvasStore.deleteSection(section.id)  // Direct call, no undo
+
+    // Step 4: Ensure tasks are still visible
+    batchedSyncNodes('high')
+  }
+}
+```
+
+**Status**: 🔧 PENDING FIX - Requires careful implementation
+
+---
+
+### **Bug 8: Ctrl+Z Doesn't Restore Deleted Groups**
+
+**Symptom**: After deleting a group, Ctrl+Z does not restore it.
+
+**Root Cause**:
+- **Location**: `src/stores/canvas.ts` lines 965-968
+
+```typescript
+deleteSectionWithUndo: async (sectionId: string) => {
+  // Unified undo/redo doesn't support section deletion yet
+  // Using direct deletion for now
+  return deleteSection(sectionId)
+}
+```
+
+**This is a KNOWN LIMITATION**, not a bug. The code explicitly states "undo/redo doesn't support section deletion yet."
+
+**Safe Solution**:
+Implement proper undo support for section deletion:
+1. Save section state before deletion
+2. Use unified undo system to capture state
+3. Restore section on undo
+
+**Implementation Complexity**: MEDIUM - Need to integrate with existing undo/redo system
+
+**Status**: 🔵 KNOWN LIMITATION - Documented but not yet implemented
+
+---
+
+### **Bug 9: Deleted Task Reappears After Refresh**
+
+**Symptom**: Task appears deleted but reappears after browser refresh.
+
+**Root Cause Analysis**:
+This is related to **Bug 7** - the task was never actually deleted from the store, only from Vue Flow's rendering.
+
+When section was deleted:
+1. Vue Flow removed the task node from `nodes.value` (visual)
+2. Task remained in `taskStore.tasks` (data)
+3. On refresh, `syncNodes()` recreated the node from store data
+
+**Solution**: Same as Bug 7 - ensure section deletion doesn't cascade to task deletion, and tasks remain in store with cleared canvas association if needed.
+
+**Status**: 🔧 WILL BE FIXED WITH BUG 7
+
+---
+
+### **Implementation Priority & Risk Assessment**
+
+| Bug | Priority | Risk | Estimated Effort |
+|-----|----------|------|------------------|
+| Bug 1 | ✅ DONE | - | - |
+| Bug 2 | ✅ DONE | - | - |
+| Bug 3 | P1-HIGH | LOW | 15 min |
+| Bug 7/9 | P1-HIGH | MEDIUM | 1 hour |
+| Bug 4 | P2-MEDIUM | LOW | 30 min |
+| Bug 5 | P2-MEDIUM | LOW | 30 min |
+| Bug 6 | N/A | - | Not a bug |
+| Bug 8 | P3-LOW | MEDIUM | 2 hours |
+
+### **Safe Implementation Order**
+
+1. **Bug 3** (Count mismatch) - Single line change, low risk
+2. **Bug 7/9** (Section deletion) - Requires testing, medium risk
+3. **Bug 4** (Drag in groups) - May be fixed by Bug 7
+4. **Bug 5** (Date update) - Investigate section properties first
+5. **Bug 8** (Undo groups) - New feature, not critical
+
+---
+
+**Version**: 3.3 (Updated Dec 5, 2025)
+**Status**: 🟢 STABLE + ✅ All Canvas Bugs Fixed + 🚀 TECHNICAL DEBT INITIATIVE + 🛡️ SYNC SAFETY PLANNED + 🐛 NEW BUGS DOCUMENTED
 **Approach**: Evidence-based development with systematic technical debt resolution
-**Last Verified**: December 5, 2025 - All 7 canvas bugs fixed including orphaned tasks repair
+**Last Verified**: December 5, 2025 - New bug analysis added
 

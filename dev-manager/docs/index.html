@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation Graph</title>
+    <script src="https://unpkg.com/d3@7"></script>
+    <script src="https://unpkg.com/force-graph"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .header {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #f1f5f9;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 0.875rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .search-input::placeholder {
+            color: #64748b;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .toggle-checkbox {
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .stat-value {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .graph-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.25rem;
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 6px;
+            color: #e2e8f0;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: #3b82f6;
+        }
+
+        .detail-panel {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 280px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            display: none;
+            z-index: 100;
+        }
+
+        .detail-panel.visible {
+            display: block;
+        }
+
+        .detail-close {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .detail-close:hover {
+            color: #94a3b8;
+        }
+
+        .detail-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 0.5rem;
+            padding-right: 1.5rem;
+        }
+
+        .detail-path {
+            font-size: 0.75rem;
+            color: #64748b;
+            word-break: break-all;
+            margin-bottom: 0.75rem;
+            font-family: monospace;
+        }
+
+        .detail-category {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+        }
+
+        .detail-description {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.4;
+            margin-bottom: 0.75rem;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .detail-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .detail-btn-primary {
+            background: #3b82f6;
+            border: none;
+            color: white;
+        }
+
+        .detail-btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .detail-btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            color: #94a3b8;
+        }
+
+        .detail-btn-secondary:hover {
+            background: rgba(148, 163, 184, 0.1);
+            border-color: rgba(148, 163, 184, 0.5);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem;
+            z-index: 100;
+        }
+
+        .legend-title {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="title">
+                <span>📚</span>
+                <span>Documentation</span>
+            </div>
+
+            <div class="search-box">
+                <input type="text" class="search-input" id="search" placeholder="Search docs...">
+            </div>
+
+            <div class="toggle-group">
+                <label class="toggle-label">
+                    <input type="checkbox" class="toggle-checkbox" id="hideArchived" checked>
+                    <span>Hide archived</span>
+                </label>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <span>Active:</span>
+                    <span class="stat-value" id="activeCount">0</span>
+                </div>
+                <div class="stat">
+                    <span>Archived:</span>
+                    <span class="stat-value" id="archivedCount">0</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="graph-container">
+            <div id="graph"></div>
+
+            <div class="controls">
+                <button class="control-btn" id="zoomIn" title="Zoom in">+</button>
+                <button class="control-btn" id="zoomOut" title="Zoom out">−</button>
+                <button class="control-btn" id="zoomFit" title="Fit to view">⊡</button>
+            </div>
+
+            <div class="detail-panel" id="detailPanel">
+                <button class="detail-close" id="detailClose">×</button>
+                <div class="detail-title" id="detailTitle"></div>
+                <div class="detail-path" id="detailPath"></div>
+                <div class="detail-category" id="detailCategory"></div>
+                <div class="detail-description" id="detailDescription"></div>
+                <div class="detail-actions">
+                    <button class="detail-btn detail-btn-primary" id="openDoc">Open Doc</button>
+                    <button class="detail-btn detail-btn-secondary" id="copyPath">Copy Path</button>
+                </div>
+            </div>
+
+            <div class="legend">
+                <div class="legend-title">Categories</div>
+                <div class="legend-items" id="legendItems"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Category colors
+        const COLORS = {
+            'reports': '#f59e0b',
+            'conflict-systems-resolution': '#8b5cf6',
+            'archive': '#64748b',
+            'debug': '#ef4444',
+            'guides': '#10b981',
+            'planning': '#3b82f6',
+            'reference': '#06b6d4',
+            'other': '#94a3b8'
+        };
+
+        let graphData = null;
+        let graph = null;
+        let selectedNode = null;
+
+        // Load data and initialize
+        async function init() {
+            try {
+                const response = await fetch('/docs/graph-data.json?v=' + Date.now());
+                graphData = await response.json();
+
+                updateStats();
+                buildLegend();
+                initGraph();
+            } catch (error) {
+                console.error('Failed to load graph data:', error);
+                document.getElementById('graph').innerHTML =
+                    '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;">' +
+                    'Failed to load graph data. Run: npm run docs:graph</div>';
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('activeCount').textContent =
+                graphData.nodes.filter(n => !n.isArchived && !n.isCategory).length;
+            document.getElementById('archivedCount').textContent =
+                graphData.nodes.filter(n => n.isArchived && !n.isCategory).length;
+        }
+
+        function buildLegend() {
+            const categories = [...new Set(graphData.nodes.filter(n => !n.isCategory).map(n => n.category))];
+            const legendItems = document.getElementById('legendItems');
+            legendItems.innerHTML = '';
+
+            categories.forEach(cat => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-dot" style="background: ${COLORS[cat] || COLORS.other}"></div>
+                    <span>${cat.charAt(0).toUpperCase() + cat.slice(1).replace(/-/g, ' ')}</span>
+                `;
+                legendItems.appendChild(item);
+            });
+        }
+
+        function getFilteredData() {
+            const hideArchived = document.getElementById('hideArchived').checked;
+
+            let nodes = [...graphData.nodes];
+            let links = [...graphData.links];
+
+            if (hideArchived) {
+                const visibleIds = new Set(nodes.filter(n => !n.isArchived).map(n => n.id));
+                nodes = nodes.filter(n => !n.isArchived);
+                links = links.filter(l => {
+                    const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                    const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                    return visibleIds.has(sourceId) && visibleIds.has(targetId);
+                });
+            }
+
+            return { nodes, links };
+        }
+
+        function initGraph() {
+            const container = document.getElementById('graph');
+            const { nodes, links } = getFilteredData();
+
+            graph = ForceGraph()(container)
+                .graphData({ nodes, links })
+                .backgroundColor('#0f172a')
+                .nodeColor(node => node.color || COLORS.other)
+                .nodeVal(node => node.isCategory ? 20 : 6)
+                .nodeLabel(node => node.title)
+                .linkColor(() => 'rgba(148, 163, 184, 0.15)')
+                .linkWidth(1)
+                .onNodeClick(handleNodeClick)
+                .onNodeHover(handleNodeHover)
+                .cooldownTicks(100)
+                .d3Force('charge', null)
+                .d3Force('center', null)
+                .onEngineStop(() => graph.zoomToFit(400, 50));
+
+            // Add custom forces for better layout
+            graph.d3Force('charge', d3.forceManyBody().strength(-100));
+            graph.d3Force('link').distance(link => 50);
+
+            // Custom node rendering
+            graph.nodeCanvasObject((node, ctx, globalScale) => {
+                const label = node.title;
+                const fontSize = node.isCategory ? 12 / globalScale : 9 / globalScale;
+                const nodeSize = node.isCategory ? 10 : 5;
+
+                // Draw node circle
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI);
+                ctx.fillStyle = node.color || COLORS.other;
+                ctx.fill();
+
+                // Highlight selected node
+                if (selectedNode && selectedNode.id === node.id) {
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 2 / globalScale;
+                    ctx.stroke();
+                }
+
+                // Draw label for category nodes or when zoomed in
+                if (node.isCategory || globalScale > 2) {
+                    ctx.font = `${node.isCategory ? 'bold ' : ''}${fontSize}px Sans-Serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#94a3b8';
+                    ctx.fillText(label.substring(0, 25), node.x, node.y + nodeSize + fontSize);
+                }
+            });
+        }
+
+        function handleNodeClick(node) {
+            if (!node || node.isCategory) return;
+
+            selectedNode = node;
+            showDetailPanel(node);
+            graph.nodeColor(graph.nodeColor()); // Trigger re-render
+        }
+
+        function handleNodeHover(node) {
+            document.body.style.cursor = node && !node.isCategory ? 'pointer' : 'default';
+        }
+
+        function showDetailPanel(node) {
+            const panel = document.getElementById('detailPanel');
+            const title = document.getElementById('detailTitle');
+            const path = document.getElementById('detailPath');
+            const category = document.getElementById('detailCategory');
+            const description = document.getElementById('detailDescription');
+
+            title.textContent = node.title;
+            path.textContent = 'docs/' + node.path;
+            category.textContent = node.category.replace(/-/g, ' ');
+            category.style.background = node.color + '33';
+            category.style.color = node.color;
+            description.textContent = node.description || 'No description available';
+
+            panel.classList.add('visible');
+        }
+
+        function hideDetailPanel() {
+            document.getElementById('detailPanel').classList.remove('visible');
+            selectedNode = null;
+            if (graph) graph.nodeColor(graph.nodeColor());
+        }
+
+        function refreshGraph() {
+            if (!graph) return;
+            const { nodes, links } = getFilteredData();
+            graph.graphData({ nodes, links });
+            setTimeout(() => graph.zoomToFit(400, 50), 500);
+        }
+
+        // Event listeners
+        document.getElementById('hideArchived').addEventListener('change', refreshGraph);
+
+        document.getElementById('search').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            if (!graph) return;
+
+            graph.nodeColor(node => {
+                if (term && (node.title?.toLowerCase().includes(term) || node.path?.toLowerCase().includes(term))) {
+                    return '#22c55e'; // highlight green
+                }
+                return node.color || COLORS.other;
+            });
+        });
+
+        document.getElementById('zoomIn').addEventListener('click', () => {
+            graph.zoom(graph.zoom() * 1.5, 300);
+        });
+
+        document.getElementById('zoomOut').addEventListener('click', () => {
+            graph.zoom(graph.zoom() / 1.5, 300);
+        });
+
+        document.getElementById('zoomFit').addEventListener('click', () => {
+            graph.zoomToFit(400, 50);
+        });
+
+        document.getElementById('detailClose').addEventListener('click', hideDetailPanel);
+
+        document.getElementById('openDoc').addEventListener('click', () => {
+            if (selectedNode) {
+                // Open in new tab - construct path relative to project root
+                const docPath = '/docs/' + selectedNode.path;
+                window.open(docPath, '_blank');
+            }
+        });
+
+        document.getElementById('copyPath').addEventListener('click', () => {
+            if (selectedNode) {
+                const fullPath = 'docs/' + selectedNode.path;
+                navigator.clipboard.writeText(fullPath).then(() => {
+                    const btn = document.getElementById('copyPath');
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = 'Copy Path', 1500);
+                });
+            }
+        });
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

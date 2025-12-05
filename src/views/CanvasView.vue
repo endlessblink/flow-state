@@ -592,28 +592,29 @@ let lastFilteredTasksHash = ''
 const filteredTasksWithProjectFiltering = computed(() => {
   return safeStoreOperation(
     () => {
-      // CRITICAL FIX (Dec 4, 2025): Canvas uses raw tasks, NOT filteredTasks
-      // Why: filteredTasks applies smart view filters (Today, Week, etc.)
-      // Problem: Tasks created on canvas get filtered out if they don't match the active smart view
-      // Solution: Canvas should show ALL tasks with canvasPosition, regardless of smart view
-      // The canvas-specific filter at syncNodes() line 1814 still applies: isInInbox === false && canvasPosition
-      if (!taskStore.tasks || !Array.isArray(taskStore.tasks)) {
-        console.warn('⚠️ taskStore.tasks not available or not an array')
+      // FIX (Dec 5, 2025): Canvas now uses filteredTasks to respect sidebar smart view filters
+      // Previous behavior: Used raw taskStore.tasks which ignored sidebar filters entirely
+      // New behavior: Canvas respects Today, Week, etc. filters like Board and Calendar views
+      if (!taskStore.filteredTasks || !Array.isArray(taskStore.filteredTasks)) {
+        console.warn('⚠️ taskStore.filteredTasks not available or not an array')
         return []
       }
 
-      const currentTasks = taskStore.tasks
+      const currentTasks = taskStore.filteredTasks
 
       // Performance optimization: Only update if actually changed
-      // FIX: Include isInInbox and status in hash to detect property changes (not just ID changes)
-      // Validated by Perplexity: "Vue only knows about properties you check"
-      const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}`).join('|')
+      // FIX (Dec 5, 2025): Include dueDate and canvasPosition in hash for proper cache invalidation
+      // - dueDate: ensures filter updates when task dates change
+      // - canvasPosition: ensures syncNodes() filter at line 1758 works correctly
+      const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}`).join('|')
       if (currentHash === lastFilteredTasksHash && lastFilteredTasks.length > 0) {
         return lastFilteredTasks
       }
 
       lastFilteredTasksHash = currentHash
-      lastFilteredTasks = currentTasks
+      // FIX (Dec 5, 2025): Create array COPY, not reference
+      // Reference assignment caused stale data when multiple watchers fired simultaneously
+      lastFilteredTasks = [...currentTasks]
       return currentTasks
     },
     [], // Fallback: empty array

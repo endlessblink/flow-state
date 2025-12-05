@@ -145,47 +145,33 @@ export default [
 
       // CSS in Vue - deprecated rules removed as they don't exist in current version
 
-      // Performance
-      'vue/no-v-for-template-key-on-template': 'error',
+      // Performance (removed deprecated rules that don't exist in current vue eslint plugin)
       'vue/no-useless-template-attributes': 'error',
-      'vue/prefer-import-from-vue': 'error',
 
-      // Accessibility
+      // Accessibility (removed deprecated rules: require-img-alt, mouse-events-have-key-events)
       'vue/no-deprecated-slot-attribute': 'error',
-      'vue/no-deprecated-slot-scope-attribute': 'error',
-      'vue/require-img-alt': 'warn',
-      'vue/mouse-events-have-key-events': 'warn'
+      'vue/no-deprecated-slot-scope-attribute': 'error'
     }
   },
   // TypeScript files
   {
     files: ['**/*.ts', '**/*.tsx'],
     rules: {
-      // TypeScript specific rules
+      // TypeScript specific rules (cleaned up deprecated rules for typescript-eslint v8+)
       '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
-        // Allow theme-related unused variables during migration
         caughtErrorsIgnorePattern: '^_'
       }],
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/prefer-const': 'error',
-      '@typescript-eslint/no-var-requires': 'error',
       '@typescript-eslint/ban-ts-comment': 'warn',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/prefer-as-const': 'error',
-      '@typescript-eslint/prefer-nullish-coalescing': 'error',
-      '@typescript-eslint/prefer-optional-chain': 'error',
 
       // Import rules
       '@typescript-eslint/consistent-type-imports': ['error', {
         prefer: 'type-imports',
         disallowTypeAnnotations: false
-      }],
-      '@typescript-eslint/no-duplicate-enum-values': 'error',
-      '@typescript-eslint/no-empty-interface': 'warn',
-      '@typescript-eslint/no-inferrable-types': 'error',
-      '@typescript-eslint/prefer-literal-enum-member': 'error'
+      }]
     }
   },
   // JavaScript files

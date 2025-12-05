@@ -243,6 +243,8 @@
             border-radius: 8px;
             padding: 0.75rem;
             z-index: 100;
+            max-height: calc(100% - 2rem);
+            overflow-y: auto;
         }
 
         .legend-title {
@@ -406,6 +408,31 @@
             'other': '🔧'
         };
 
+        // Simulated usage data - higher values for more commonly used skills
+        const USAGE_DATA = {
+            'dev-debugging': 85,
+            'dev-vue': 80,
+            'qa-testing': 75,
+            'dev-fix-task-store': 70,
+            'chief-architect': 65,
+            'dev-storybook': 60,
+            'dev-refactoring': 55,
+            'dev-implement-ui-ux': 50,
+            'ops-port-manager': 45,
+            'dev-fix-timer': 40,
+            'arch-planning': 35,
+            'document-sync': 30,
+            'smart-doc-manager': 25
+        };
+
+        function getNodeSize(node) {
+            if (node.isCategory) return 18;
+            // Get usage or default to 20
+            const usage = USAGE_DATA[node.name] || 20;
+            // Scale from 8 to 16 based on usage (0-100)
+            return 8 + (usage / 100) * 8;
+        }
+
         function initGraph() {
             const container = document.getElementById('graph');
 
@@ -413,29 +440,31 @@
                 .graphData(graphData)
                 .backgroundColor('#0f172a')
                 .nodeColor(node => node.color || COLORS.other)
-                .nodeVal(node => node.isCategory ? 20 : 6)
+                .nodeVal(node => node.isCategory ? 25 : 8)
                 .nodeLabel(node => node.title)
-                .linkColor(() => 'rgba(148, 163, 184, 0.2)')
-                .linkWidth(1.5)
+                .linkColor(() => 'rgba(148, 163, 184, 0.25)')
+                .linkWidth(2)
                 .onNodeClick(handleNodeClick)
                 .onNodeHover(handleNodeHover)
-                .cooldownTicks(150)
-                .warmupTicks(50)
-                .onEngineStop(() => graph.zoomToFit(400, 80));
+                .cooldownTicks(200)
+                .warmupTicks(100)
+                .onEngineStop(() => graph.zoomToFit(400, 60));
 
-            // Very tight clustering - minimal charge repulsion and short links
-            graph.d3Force('charge', d3.forceManyBody().strength(-40));
-            graph.d3Force('link').distance(20);
-            // Add center force to keep graph centered
-            graph.d3Force('center', d3.forceCenter());
-            // Add collision detection to prevent overlap
-            graph.d3Force('collide', d3.forceCollide().radius(node => node.isCategory ? 18 : 12));
+            // ULTRA TIGHT clustering - very strong center force, weak repulsion
+            graph.d3Force('charge', d3.forceManyBody().strength(-15));
+            graph.d3Force('link').distance(12).strength(2);
+            // Strong center force to pull everything together
+            graph.d3Force('center', d3.forceCenter().strength(0.1));
+            // Tight collision detection
+            graph.d3Force('collide', d3.forceCollide().radius(node => getNodeSize(node) + 3).strength(0.8));
+            // Add radial force to bring categories to center
+            graph.d3Force('radial', d3.forceRadial(50, 0, 0).strength(node => node.isCategory ? 0.3 : 0.05));
 
             // Custom node rendering with emojis inside circles
             graph.nodeCanvasObject((node, ctx, globalScale) => {
                 const emoji = CATEGORY_EMOJIS[node.category] || '🔧';
-                const nodeSize = node.isCategory ? 14 : 10;
-                const emojiSize = node.isCategory ? 16 / globalScale : 12 / globalScale;
+                const nodeSize = getNodeSize(node);
+                const emojiSize = node.isCategory ? 18 / globalScale : 14 / globalScale;
 
                 // Draw node circle with slight transparency
                 ctx.beginPath();
@@ -461,16 +490,20 @@
                 ctx.textBaseline = 'middle';
                 ctx.fillText(emoji, node.x, node.y);
 
-                // Draw label below node (for category nodes always, others when zoomed)
-                if (node.isCategory || globalScale > 1.5) {
-                    const labelFontSize = node.isCategory ? 10 / globalScale : 8 / globalScale;
-                    ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'top';
-                    ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#94a3b8';
-                    const label = node.isCategory ? node.title : node.title.substring(0, 20);
-                    ctx.fillText(label, node.x, node.y + nodeSize + 2);
+                // Draw label below node - ALWAYS show labels, larger font
+                const minLabelSize = 11; // Minimum label size in pixels
+                const labelFontSize = Math.max(minLabelSize, node.isCategory ? 14 / globalScale : 12 / globalScale);
+                ctx.font = `${node.isCategory ? 'bold ' : ''}${labelFontSize}px Sans-Serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillStyle = node.isCategory ? '#f1f5f9' : '#e2e8f0';
+
+                // Truncate label for non-category nodes
+                let label = node.title;
+                if (!node.isCategory && label.length > 25) {
+                    label = label.substring(0, 22) + '...';
                 }
+                ctx.fillText(label, node.x, node.y + nodeSize + 4);
             });
         }
 

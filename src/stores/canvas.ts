@@ -624,6 +624,17 @@ export const useCanvasStore = defineStore('canvas', () => {
       const expectedDate = getSmartGroupDate(smartGroupType)
       if (!expectedDate) return false // "Later" group has no specific date
 
+      // FIX Dec 5, 2025: "This Week" needs range check, not exact match
+      // Week should include all tasks from today through end of week (Sunday)
+      if (smartGroupType === 'this week') {
+        if (!task.dueDate) return false
+        const today = new Date()
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        // task.dueDate should be >= today AND <= Sunday (expectedDate)
+        return task.dueDate >= todayStr && task.dueDate <= expectedDate
+      }
+
+      // For other smart groups (today, tomorrow, weekend), exact match is correct
       return task.dueDate === expectedDate
     }
 

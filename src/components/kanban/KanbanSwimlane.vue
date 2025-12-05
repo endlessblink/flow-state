@@ -77,6 +77,7 @@
                 @select="$emit('selectTask', $event)"
                 @startTimer="$emit('startTimer', $event)"
                 @edit="$emit('editTask', $event)"
+                @delete="$emit('deleteTask', $event)"
                 @contextMenu="(event, task) => $emit('contextMenu', event, task)"
                 class="task-item-mini"
               />
@@ -129,6 +130,7 @@
                 @select="$emit('selectTask', $event)"
                 @startTimer="$emit('startTimer', $event)"
                 @edit="$emit('editTask', $event)"
+                @delete="$emit('deleteTask', $event)"
                 @contextMenu="(event, task) => $emit('contextMenu', event, task)"
                 class="task-item-mini"
               />
@@ -172,6 +174,7 @@
                 @select="$emit('selectTask', $event)"
                 @startTimer="$emit('startTimer', $event)"
                 @edit="$emit('editTask', $event)"
+                @delete="$emit('deleteTask', $event)"
                 @contextMenu="(event, task) => $emit('contextMenu', event, task)"
                 class="task-item-mini"
               />
@@ -218,6 +221,7 @@ const emit = defineEmits<{
   selectTask: [taskId: string]
   startTimer: [taskId: string]
   editTask: [taskId: string]
+  deleteTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
   addTask: [statusOrDateKey: string]
   contextMenu: [event: MouseEvent, task: Task]

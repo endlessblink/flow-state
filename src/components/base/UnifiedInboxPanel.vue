@@ -629,10 +629,25 @@ const handleQuickAddTask = () => {
   }))
 }
 
-// Keyboard handler for Escape to clear selection
+// Keyboard handler for selection actions
 const handleKeydown = (event: KeyboardEvent) => {
+  // Don't handle if typing in an input field
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return
+  }
+
+  // Escape: Clear selection
   if (event.key === 'Escape' && selectedTaskIds.value.size > 0) {
     clearSelection()
+    return
+  }
+
+  // Delete or Backspace: Delete selected tasks
+  if ((event.key === 'Delete' || event.key === 'Backspace') && selectedTaskIds.value.size > 0) {
+    event.preventDefault()
+    deleteSelectedTasks()
+    return
   }
 }
 

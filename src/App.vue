@@ -430,7 +430,7 @@ import '@/assets/design-tokens.css'
 import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme, useMessage } from 'naive-ui'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useTimerStore } from '@/stores/timer'
-import { useTaskStore, getTaskInstances } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 // ⚠️ Firebase Auth disabled for stability
@@ -585,118 +585,22 @@ const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase
 // Note: Using useSidebarManagement composable for project filtering
 // This ensures consistent project filtering across the application
 
-// Smart View Counts
-const todayTaskCount = computed(() => {
-  const todayStr = new Date().toISOString().split('T')[0]
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+// ============================================================================
+// SMART VIEW COUNTS - FIX Dec 5, 2025
+// ============================================================================
+// PROBLEM: App.vue had duplicated count logic that was inconsistent with
+// the centralized useSmartViews composable used by taskStore.smartViewTaskCounts.
+//
+// ROOT CAUSE: weekTaskCount didn't check task.dueDate, only instances/scheduledDate
+// This caused "This Week: 0" in sidebar when tasks had dueDate but no scheduledDate.
+//
+// SOLUTION: Use centralized taskStore.smartViewTaskCounts which uses useSmartViews
+// composable for consistent filtering logic across the entire application.
+// ============================================================================
 
-  return (Array.isArray(taskStore.tasks) ? taskStore.tasks : []).filter(task => {
-    // CRITICAL NULL CHECK: Ensure task exists and has required properties
-    if (!task || typeof task !== 'object') {
-      console.warn('Invalid task object found:', task)
-      return false
-    }
-
-    // Exclude done tasks from today count - CRITICAL FIX
-    if (task.status === 'done') {
-      return false
-    }
-
-    try {
-      // Check instances first (new format) - tasks scheduled for today
-      const instances = getTaskInstances(task)
-      if (instances && instances.length > 0) {
-        if (instances.some(inst => inst && inst.scheduledDate === todayStr)) {
-          return true
-        }
-      }
-
-      // Fallback to legacy scheduledDate - tasks scheduled for today
-      if (task.scheduledDate === todayStr) {
-        return true
-      }
-
-      // Tasks created today
-      if (task.createdAt) {
-        const taskCreatedDate = new Date(task.createdAt)
-        if (!isNaN(taskCreatedDate.getTime())) {
-          taskCreatedDate.setHours(0, 0, 0, 0)
-          if (taskCreatedDate.getTime() === today.getTime()) {
-            return true
-          }
-        }
-      }
-
-      // Tasks due today
-      if (task.dueDate === todayStr) {
-        return true
-      }
-
-      // Tasks currently in progress
-      if (task.status === 'in_progress') {
-        return true
-      }
-    } catch (error) {
-      console.error('Error processing task in todayTaskCount:', error, task)
-      return false
-    }
-
-    return false
-  }).length
-})
-
-const weekTaskCount = computed(() => {
-  // Calculate tasks for the next 7 days using same logic as store
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayStr = today.toISOString().split('T')[0]
-  const weekEnd = new Date(today)
-  weekEnd.setDate(weekEnd.getDate() + 7)
-  const weekEndStr = weekEnd.toISOString().split('T')[0]
-
-  return (Array.isArray(taskStore.tasks) ? taskStore.tasks : []).filter(task => {
-    // CRITICAL NULL CHECK: Ensure task exists and has required properties
-    if (!task || typeof task !== 'object') {
-      console.warn('Invalid task object found in weekTaskCount:', task)
-      return false
-    }
-
-    // Exclude done tasks from week count - CRITICAL FIX (matches today filter)
-    if (task.status === 'done') {
-      return false
-    }
-
-    try {
-      // Check instances first (new format)
-      const instances = getTaskInstances(task)
-      if (instances && instances.length > 0) {
-        return instances.some(inst => inst && inst.scheduledDate >= todayStr && inst.scheduledDate <= weekEndStr)
-      }
-      // Fallback to legacy scheduledDate
-      if (!task.scheduledDate) return false
-      return task.scheduledDate >= todayStr && task.scheduledDate <= weekEndStr
-    } catch (error) {
-      console.error('Error processing task in weekTaskCount:', error, task)
-      return false
-    }
-  }).length
-})
-
-// All Active task count - counts all non-done tasks
-const allActiveCount = computed(() => {
-  return (Array.isArray(taskStore.tasks) ? taskStore.tasks : []).filter(task => {
-    // CRITICAL NULL CHECK: Ensure task exists and has required properties
-    if (!task || typeof task !== 'object') {
-      console.warn('Invalid task object found in allActiveCount:', task)
-      return false
-    }
-
-    // Count all tasks that are not marked as done
-    // This matches the "all_active" smart view logic
-    return task.status !== 'done'
-  }).length
-})
+const todayTaskCount = computed(() => taskStore.smartViewTaskCounts.today)
+const weekTaskCount = computed(() => taskStore.smartViewTaskCounts.week)
+const allActiveCount = computed(() => taskStore.smartViewTaskCounts.allActive)
 
 
 // Uncategorized task count for Quick Sort badge
@@ -879,6 +783,15 @@ const createQuickTask = async () => {
 // Quick Task Create Modal handlers
 const closeQuickTaskCreate = () => {
   showQuickTaskCreate.value = false
+}
+
+// Handler for global new task event (Ctrl+N)
+const handleGlobalNewTask = () => {
+  console.log('➕ Global new task shortcut triggered (Ctrl+N)')
+  // Focus the quick task input in the sidebar
+  if (quickTaskRef.value) {
+    quickTaskRef.value.focus()
+  }
 }
 
 const handleQuickTaskCreate = async (title: string, description: string) => {
@@ -1640,6 +1553,9 @@ onMounted(async () => {
   window.addEventListener('open-task-edit', handleOpenTaskEdit as EventListener)
   window.addEventListener('task-context-menu', handleGlobalTaskContextMenu as EventListener)
 
+  // Listen for global new task request (Ctrl+N)
+  window.addEventListener('global-new-task', handleGlobalNewTask)
+
   // Add keyboard shortcut listener for search
   window.addEventListener('keydown', handleKeydown)
 
@@ -1657,6 +1573,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('open-task-edit', handleOpenTaskEdit as EventListener)
   window.removeEventListener('task-context-menu', handleGlobalTaskContextMenu as EventListener)
+  window.removeEventListener('global-new-task', handleGlobalNewTask)
   window.removeEventListener('keydown', handleKeydown)
 })
 </script>

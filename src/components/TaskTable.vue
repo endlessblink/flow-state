@@ -281,8 +281,14 @@ const clearSelection = () => {
 
 // Keyboard shortcuts
 const handleKeyDown = (event: KeyboardEvent) => {
-  // Ctrl+Delete for bulk delete
-  if (event.ctrlKey && event.key === 'Delete') {
+  // Don't handle if typing in an input field
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return
+  }
+
+  // Delete or Backspace: Delete selected tasks (with or without Ctrl)
+  if ((event.key === 'Delete' || event.key === 'Backspace') && selectedTasks.value.length > 0) {
     event.preventDefault()
     handleDeleteSelected()
   }

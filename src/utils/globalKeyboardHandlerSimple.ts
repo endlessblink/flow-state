@@ -177,6 +177,25 @@ export class SimpleGlobalKeyboardHandler {
         event.stopPropagation()
       }
     }
+
+    // Handle Ctrl+N (New Task)
+    else if (hasModifier && key.toLowerCase() === 'n') {
+      console.log('➕ New Task shortcut detected (Ctrl+N)')
+      this.executeNewTask()
+
+      if (this.preventDefault) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+  }
+
+  /**
+   * Execute new task - dispatch custom event for App.vue to handle
+   */
+  private executeNewTask(): void {
+    console.log('➕ Dispatching global-new-task event')
+    window.dispatchEvent(new CustomEvent('global-new-task'))
   }
 
   /**

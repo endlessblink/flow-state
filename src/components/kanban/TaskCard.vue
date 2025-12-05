@@ -214,6 +214,7 @@ const emit = defineEmits<{
   select: [taskId: string]
   startTimer: [taskId: string]
   edit: [taskId: string]
+  delete: [taskId: string]
   contextMenu: [event: MouseEvent, task: Task]
   focus: [event: FocusEvent]
   blur: [event: FocusEvent]
@@ -315,6 +316,12 @@ const handleKeydown = (event: KeyboardEvent) => {
         event.preventDefault()
         emit('startTimer', props.task.id)
       }
+      break
+
+    case 'Delete':
+    case 'Backspace':
+      event.preventDefault()
+      emit('delete', props.task.id)
       break
   }
 }

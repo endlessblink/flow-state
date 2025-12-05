@@ -36,6 +36,7 @@
         @selectTask="handleSelectTask"
         @startTimer="handleStartTimer"
         @editTask="handleEditTask"
+        @deleteTask="handleDeleteTask"
         @moveTask="handleMoveTask"
         @addTask="handleAddTask"
         @contextMenu="handleContextMenu"
@@ -254,6 +255,12 @@ const handleEditTask = (taskId: string) => {
     selectedTask.value = task
     showEditModal.value = true
   }
+}
+
+const handleDeleteTask = (taskId: string) => {
+  // Show confirmation modal before deleting
+  taskToDelete.value = taskId
+  showConfirmModal.value = true
 }
 
 const closeEditModal = () => {

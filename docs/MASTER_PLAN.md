@@ -30,7 +30,7 @@
 ### Near-term
 | Feature | Priority | Notes |
 |---------|----------|-------|
-| Power Groups completion | P1 | Step 7 (testing) pending |
+| ~~Power Groups~~ | ~~P1~~ | ✅ DONE (Dec 5) - Auto-detect keywords, collect button, settings |
 | Smart Group bug fixes | P1 | Bugs 3, 7/9 |
 | Calendar resize fix | P2 | |
 | Mobile support | P2 | Responsive layout, touch interactions |

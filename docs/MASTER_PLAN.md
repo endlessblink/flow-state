@@ -14,8 +14,21 @@
 | **Calendar** | Partial - Resize/ghost preview issues remain |
 | **CouchDB Sync** | Phases 1-4 complete, manual sync working |
 | **Build** | Passing |
+| **GitHub CI** | ✅ Active - Build verification on push/PR |
 
 **Branch**: `master`
+
+### CI/CD Setup (Dec 6, 2025)
+
+**GitHub Actions workflow**: `.github/workflows/ci.yml`
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| `npm run build` | ✅ Active | Catches TS errors, broken imports, syntax issues |
+| `npm run lint` | ❌ Skipped | 2400+ errors need cleanup first |
+| `npm run test` | ❌ Skipped | 90 failures (mostly Storybook) need fixing |
+
+**Branch Protection**: Not enabled (solo developer, direct push workflow)
 
 ---
 
@@ -41,6 +54,8 @@
 | Auto-sync enablement | After multi-device testing |
 | ~~Keyboard shortcuts~~ | ✅ DONE (Dec 5) - Delete, Redo (Ctrl+Y), New Task (Ctrl+N) |
 | Technical debt Phase 3-5 | D&D, Database, Validation |
+| Lint cleanup | Fix 2400+ lint errors for easier refactoring & faster Claude Code editing |
+| Expand CI tests | Add lint + unit tests to GitHub Actions after cleanup |
 | Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
 | Local AI assistant | Task breakdown, auto-categorize, daily planning. Hebrew required (Llama 3+, Claude/GPT-4 BYOK) |
 
@@ -118,6 +133,7 @@
 | Issue | Priority | Notes |
 |-------|----------|-------|
 | **Live sync lost on refresh** | P1-HIGH | See fix below |
+| **This Week shows 0 when tasks exist** | P2 | Today=0 correct, but This Week=0 wrong when tasks scheduled for Friday (today is Saturday) |
 | IndexedDB version mismatch errors | P2 | Needs proper DB migration |
 | Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
 | QuotaExceededError unhandled | P2 | Functions exist, not enforced |

@@ -8,19 +8,19 @@ export const customTheme: Theme = {
   colorSecondary: '#8b5cf6',
 
   // App UI colors - completely dark
-  appBg: '#1a2332',
-  appContentBg: '#1a2332',
+  appBg: '#0d1117',
+  appContentBg: '#0d1117',
   appBorderColor: '#334155',
   appBorderRadius: 8,
 
   // Text colors - bright for contrast
   barTextColor: '#e2e8f0',
   barSelectedColor: '#3b82f6',
-  barBg: '#1a2332',
+  barBg: '#0d1117',
 
   // Input and button styling
-  inputBg: '#1a2332',
-  inputBorder: '#334155',
+  inputBg: '#0d1117',
+  inputBorder: '#21262d',
   inputTextColor: '#e2e8f0',
   inputBorderRadius: 6,
 
@@ -29,15 +29,15 @@ export const customTheme: Theme = {
   buttonTextColor: '#ffffff',
   buttonBorderRadius: 6,
 
-  // Preview and documentation styling - dark but slightly lighter
-  previewBg: '#1a2332',
+  // Preview and documentation styling - fully dark
+  previewBg: '#0d1117',
   previewTextColor: '#e2e8f0',
 
-  // Sidebar styling - dark
-  sidebarBg: '#1a2332',
+  // Sidebar styling - fully dark
+  sidebarBg: '#0d1117',
   sidebarTextColor: '#e2e8f0',
-  sidebarHoverBg: '#1e293b',
-  sidebarSelectedBg: '#1e293b',
+  sidebarHoverBg: '#161b22',
+  sidebarSelectedBg: '#161b22',
 
   // Typography
   fontBase: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',

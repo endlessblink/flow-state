@@ -252,25 +252,15 @@ export function useDatabase(): UseDatabaseReturn {
   let syncManager: ReturnType<typeof getGlobalReliableSyncManager> | null = null
   let syncCleanup: (() => void) | null = null
 
-  // Computed properties with enhanced debugging
+  // Computed properties
   const isReady = computed(() => {
-    const ready = !isLoading.value && database.value !== null && !error.value
-    // Always log database readiness for debugging
-    console.log('🔍 [USE-DATABASE] isReady computed:', {
-      ready,
-      isLoading: isLoading.value,
-      hasDatabase: database.value !== null,
-      hasError: error.value,
-      errorMessage: error.value?.message
-    })
-    return ready
+    return !isLoading.value && database.value !== null && !error.value
   })
 
   // Initialize database with singleton support
   const initializeDatabase = async () => {
     // If we already have a database instance, just reuse it
     if (singletonDatabase) {
-      console.log('🔄 [USE-DATABASE] Reusing existing singleton database instance')
       database.value = singletonDatabase
       databaseRefCount++
       isLoading.value = false
@@ -279,7 +269,6 @@ export function useDatabase(): UseDatabaseReturn {
 
     // If we're currently initializing, wait for it to complete
     if (isInitializing && initializationPromise) {
-      console.log('⏳ [USE-DATABASE] Database initialization in progress, waiting...')
       await initializationPromise
       database.value = singletonDatabase
       databaseRefCount++
@@ -292,112 +281,58 @@ export function useDatabase(): UseDatabaseReturn {
     databaseRefCount++
 
     initializationPromise = (async () => {
-      console.log('🔄 [USE-DATABASE] Initializing singleton PouchDB database...')
-
       try {
         // Enable remote sync when configured
         const forceLocalMode = false
 
         // Check if database already exists from previous session (page refresh)
         const dbName = config.local.name
-        let existingDB: PouchDB.Database | null = null
 
         try {
           // Try to open existing database without recreating it
-          existingDB = new PouchDB(dbName, {
+          const existingDB = new PouchDB(dbName, {
             adapter: 'idb',
             auto_compaction: true,
             revs_limit: 5
           })
 
-          // Test if it's accessible and has data
-          const dbInfo = await existingDB.info()
-          console.log('🔍 [USE-DATABASE] Found existing database:', {
-            name: dbInfo.db_name,
-            doc_count: dbInfo.doc_count,
-            adapter: (dbInfo as any).adapter || 'unknown'
-          })
-
-          // This is our singleton database
+          // Test if it's accessible
+          await existingDB.info()
           singletonDatabase = existingDB
 
-        } catch (dbError) {
-          console.log('📱 [USE-DATABASE] No existing database found, creating new singleton...')
-
+        } catch {
+          // No existing database, create new one
           if (hasRemoteSync && !forceLocalMode) {
-            console.log('🌐 [USE-DATABASE] Remote sync configured, initializing with Reliable Sync Manager...')
             syncManager = getGlobalReliableSyncManager()
-
-            // Initialize sync manager
             syncCleanup = await syncManager.init()
 
-            // Create local database instance (Reliable Sync Manager handles the sync separately)
             const dbConfig: any = {
               auto_compaction: true,
               revs_limit: 5
             }
 
-            // Only add adapter if specified
             if (config.local.adapter) {
               dbConfig.adapter = config.local.adapter
             }
 
-            const localDB = new PouchDB(config.local.name, dbConfig)
-            singletonDatabase = localDB
-
-            console.log('✅ [USE-DATABASE] Singleton PouchDB initialized with Reliable Sync Manager')
+            singletonDatabase = new PouchDB(config.local.name, dbConfig)
           } else {
-            console.log('📱 [USE-DATABASE] Local-only mode, creating new singleton PouchDB...')
-
-            // Create local PouchDB instance with enhanced error handling
-            console.log('🔄 [USE-DATABASE] Creating new singleton PouchDB with config:', {
-              name: config.local.name,
+            singletonDatabase = new PouchDB(config.local.name, {
               adapter: 'idb',
               auto_compaction: true,
               revs_limit: 5
             })
-
-            try {
-              const localDB = new PouchDB(config.local.name, {
-                adapter: 'idb',
-                auto_compaction: true,
-                revs_limit: 5
-              })
-
-              singletonDatabase = localDB
-              console.log('✅ [USE-DATABASE] New singleton PouchDB created in local-only mode')
-            } catch (dbCreateError) {
-              console.error('❌ [USE-DATABASE] Failed to create PouchDB instance:', dbCreateError)
-              throw new Error(`PouchDB creation failed: ${(dbCreateError as any).message || (dbCreateError as any).toString()}`)
-            }
           }
         }
 
-        // Expose to window for backward compatibility and persistence
+        // Expose to window for backward compatibility
         ;(window as any).pomoFlowDb = singletonDatabase
-        console.log('✅ [USE-DATABASE] Singleton PouchDB exposed to window.pomoFlowDb')
 
-        // Test database
-        const dbInfo = await singletonDatabase.info()
-        console.log('📊 [USE-DATABASE] Singleton database verified:', {
-          name: dbInfo.db_name,
-          doc_count: dbInfo.doc_count,
-          adapter: (dbInfo as any).adapter || 'unknown',
-          syncMode: hasRemoteSync ? 'remote' : 'local-only',
-          refCount: databaseRefCount,
-          isNew: existingDB === null
-        })
+        // Verify database is working
+        await singletonDatabase.info()
 
-        // Perform initial health check
-        console.log('🏥 [USE-DATABASE] Performing initial health check...')
-        const healthResult = await performDatabaseHealthCheck(singletonDatabase)
-
-        if (!healthResult.healthy) {
-          console.warn('⚠️ [USE-DATABASE] Initial health check failed:', healthResult.error?.message)
-          // Don't fail initialization for health check issues, but log them
-        } else {
-          console.log(`✅ [USE-DATABASE] Database health check passed (${healthResult.latency}ms latency)`)
-        }
+        // Perform initial health check (silent)
+        await performDatabaseHealthCheck(singletonDatabase)
 
         database.value = singletonDatabase
 
@@ -428,12 +363,6 @@ export function useDatabase(): UseDatabaseReturn {
 
     await initializationPromise
     isLoading.value = false
-    console.log('📊 [USE-DATABASE] Singleton database ready for operations', {
-      isReady: isReady.value,
-      hasDatabase: database.value !== null,
-      isLoading: isLoading.value,
-      hasError: error.value
-    })
   }
 
   // Helper function to wait for database initialization
@@ -506,7 +435,6 @@ export function useDatabase(): UseDatabaseReturn {
           }
         }
 
-        console.log(`💾 Saved ${key} to PouchDB (direct)`)
         return // Success - exit retry loop
 
       } catch (err: any) {
@@ -629,11 +557,9 @@ export function useDatabase(): UseDatabaseReturn {
       const docId = `${key}:data`
       const doc = await db.get(docId)
       await db.remove(doc)
-      console.log(`🗑️ Removed ${key} from PouchDB`)
     }, `remove ${key}`, 3, 100).catch(err => {
-      // Handle 404 as expected case
+      // Handle 404 as expected case (already removed)
       if (err instanceof Error && err.message.includes('404')) {
-        console.log(`ℹ️ ${key} not found, already removed`)
         return
       }
       error.value = err as Error
@@ -648,7 +574,6 @@ export function useDatabase(): UseDatabaseReturn {
     try {
       const db = await waitForDatabase()
       await db.destroy()
-      console.log('🧹 Cleared singleton PouchDB database')
 
       // Reset singleton reference and recreate database
       singletonDatabase = null
@@ -659,7 +584,6 @@ export function useDatabase(): UseDatabaseReturn {
 
       // Reinitialize after clear - create new singleton database
       await initializeDatabase()
-      console.log('✅ [USE-DATABASE] Singleton PouchDB recreated and exposed to window.pomoFlowDb')
     } catch (err) {
       error.value = err as Error
       errorHandler.report({
@@ -749,7 +673,6 @@ export function useDatabase(): UseDatabaseReturn {
       for (const [key, value] of Object.entries(data)) {
         await save(key, value)
       }
-      console.log('📥 Imported data to PouchDB')
     } catch (err) {
       error.value = err as Error
       errorHandler.report({
@@ -771,9 +694,7 @@ export function useDatabase(): UseDatabaseReturn {
     context?: string
   ): Promise<T[]> => {
     try {
-      console.log(`🔄 Starting atomic transaction${context ? ` for ${context}` : ''}`)
       const results = await Promise.all(operations)
-      console.log(`✅ Completed atomic transaction${context ? ` for ${context}` : ''}`)
       return results as T[]
     } catch (err) {
       error.value = err as Error
@@ -847,13 +768,11 @@ export function useDatabase(): UseDatabaseReturn {
   const resetHealthMonitoring = () => {
     consecutiveHealthFailures = 0
     lastHealthCheck = null
-    console.log('🔄 [USE-DATABASE] Health monitoring state reset')
   }
 
   // Cleanup function for when the composable is destroyed
   const cleanup = async () => {
     databaseRefCount--
-    console.log(`🔧 [USE-DATABASE] Database reference count decreased to: ${databaseRefCount}`)
 
     // Only cleanup sync manager, not the database (since it's shared)
     if (syncCleanup) {
@@ -867,11 +786,10 @@ export function useDatabase(): UseDatabaseReturn {
 
     // Don't destroy the singleton database until all references are gone
     if (databaseRefCount <= 0 && singletonDatabase) {
-      console.log('🧹 [USE-DATABASE] All references gone, cleaning up singleton database')
       try {
         await singletonDatabase.destroy()
-      } catch (err) {
-        console.warn('⚠️ [USE-DATABASE] Error destroying singleton database:', err)
+      } catch {
+        // Silent fail on cleanup
       }
       singletonDatabase = null
       database.value = null

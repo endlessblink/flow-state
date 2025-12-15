@@ -1,7 +1,7 @@
 // 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2025-11-08T16:49:00Z - V10 - SIMPLE BACKUP SYSTEM
 
-// TEMPORARILY DISABLED: Causes chrome is not defined error in browser
-// import './utils/consoleFilter'
+// Console filter - reduces log noise in development (toggle via localStorage)
+import './utils/consoleFilter'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -21,9 +21,8 @@ const preloadCriticalResources = async () => {
     await staticResourceCache.preloadResources([
       { url: '/src/assets/styles.css', priority: 'high' }
     ])
-    console.log('✅ [MAIN.TS] Critical CSS resources preloaded')
-  } catch (error) {
-    console.warn('⚠ [MAIN.TS] Failed to preload CSS resources:', error)
+  } catch {
+    // Silent fail - CSS will load normally
   }
 }
 
@@ -39,7 +38,6 @@ import { useSecurityMonitor } from './utils/securityMonitor'
 
 // Initialize local-first authentication system
 import { useLocalAuthStore } from './stores/local-auth'
-console.log('✅ Using local-first authentication system')
 
 const app = createApp(App)
 

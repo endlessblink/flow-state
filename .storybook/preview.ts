@@ -2,7 +2,8 @@ import type { Preview } from '@storybook/vue3'
 import type { App } from 'vue'
 import { setup } from '@storybook/vue3'
 import { createPinia } from 'pinia'
-import { themes } from 'storybook/theming'
+import customTheme from './theme'
+import i18n from '../src/i18n'
 
 // Design system (order matters - must match main.ts)
 import '../src/assets/design-tokens.css'
@@ -12,13 +13,14 @@ const pinia = createPinia()
 
 setup((app: App) => {
   app.use(pinia)
+  app.use(i18n)
 })
 
 const preview: Preview = {
   parameters: {
     layout: 'fullscreen',
     docs: {
-      theme: themes.dark,
+      theme: customTheme,
       story: {
         inline: true, // Better auto-height behavior
         height: 'auto', // Allow content to determine height
@@ -75,8 +77,8 @@ const preview: Preview = {
       if (typeof document !== 'undefined') {
         document.documentElement.classList.add('dark-theme')
         document.documentElement.style.colorScheme = 'dark'
-        document.documentElement.style.backgroundColor = '#1a2332'
-        document.body.style.backgroundColor = '#1a2332'
+        document.documentElement.style.backgroundColor = '#0d1117'
+        document.body.style.backgroundColor = '#0d1117'
         document.body.style.color = '#f0f6fc'
       }
       return story()

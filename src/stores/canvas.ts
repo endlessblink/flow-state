@@ -149,7 +149,6 @@ export const useCanvasStore = defineStore('canvas', () => {
    */
   const requestSync = () => {
     syncTrigger.value++
-    console.log('🔄 [CANVAS-STORE] Sync requested, trigger:', syncTrigger.value)
   }
 
   // Zoom configuration
@@ -170,15 +169,6 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Safe Task Sync Functionality
   const syncTasksToCanvas = (tasks: Task[]) => {
     try {
-      console.log('🔄 Safely syncing tasks to canvas:', tasks.length)
-
-      // DEBUG: Log all tasks with canvas-related properties
-      const tasksWithCanvasProps = tasks.filter(t => t.canvasPosition || t.isInInbox === false)
-      console.log('🔍 [CANVAS-SYNC-DEBUG] Tasks with canvas properties:', tasksWithCanvasProps.length)
-      tasksWithCanvasProps.forEach(t => {
-        console.log(`   - ${t.title}: isInInbox=${t.isInInbox}, canvasPosition=${JSON.stringify(t.canvasPosition)}`)
-      })
-
       // Create task nodes only for tasks that should appear on canvas
       // Tasks in inbox (isInInbox: true) should NOT appear on canvas
       // FIXED: Use explicit check (isInInbox === false) to avoid undefined bypass
@@ -206,8 +196,6 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       // Merge task nodes with existing non-task nodes
       nodes.value = [...nonTaskNodes, ...taskNodes]
-
-      console.log('✅ Canvas sync completed:', taskNodes.length, 'task nodes created (excluded inbox tasks)')
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.ERROR,
@@ -227,15 +215,10 @@ export const useCanvasStore = defineStore('canvas', () => {
       import('./tasks').then(({ useTaskStore }) => {
         taskStore = useTaskStore()
 
-        console.log('🔗 Task store connected, setting up safe sync watcher')
-
         // Set up reactive watcher with safety guards for task deletions
         // CRITICAL FIX: Pinia auto-unwraps refs, so taskStore.tasks IS the array, NOT a ref!
-        // Using .value here returns undefined and breaks the entire canvas sync
         watch(() => taskStore.tasks, (newTasks, oldTasks) => {
           if (newTasks && Array.isArray(newTasks)) {
-            console.log('🔄 Tasks changed, safely syncing to canvas:', newTasks.length)
-
             // If tasks were deleted, immediately remove them from canvas nodes
             if (oldTasks && Array.isArray(oldTasks) && newTasks.length < oldTasks.length) {
               const deletedTaskIds = oldTasks
@@ -243,8 +226,6 @@ export const useCanvasStore = defineStore('canvas', () => {
                 .map(deletedTask => deletedTask.id)
 
               if (deletedTaskIds.length > 0) {
-                console.log('🗑️ Tasks deleted, removing from canvas:', deletedTaskIds)
-                // Immediately remove deleted task nodes from canvas
                 nodes.value = nodes.value.filter(node =>
                   !deletedTaskIds.includes(node.id) || node.type !== 'task'
                 )
@@ -256,24 +237,20 @@ export const useCanvasStore = defineStore('canvas', () => {
         }, { deep: true, immediate: false, flush: 'sync' })
 
         // Initial sync if tasks are already available
-        // CRITICAL FIX: taskStore.tasks is already the array (Pinia unwraps refs)
         if (taskStore.tasks && Array.isArray(taskStore.tasks)) {
-          console.log('🚀 Initial sync for existing tasks:', taskStore.tasks.length)
           syncTasksToCanvas(taskStore.tasks)
         }
-      }).catch(error => {
-        console.error('❌ Failed to load task store:', error)
+      }).catch(() => {
+        // Silent fail - canvas will work without task sync
       })
-    } catch (error) {
-      console.error('❌ Task sync initialization failed:', error)
+    } catch {
+      // Silent fail - canvas will work without task sync
     }
   }
 
   // Initialize task sync after database is properly ready instead of using hard timeout
   const initializeWhenDatabaseReady = async () => {
     try {
-      console.log('🔄 [CANVAS] Waiting for database to be ready before initializing task sync...')
-
       // Wait for database to be ready using proper check
       const maxWaitTime = 5000
       const checkInterval = 100
@@ -285,15 +262,8 @@ export const useCanvasStore = defineStore('canvas', () => {
         attempts++
       }
 
-      if (db.isReady?.value) {
-        console.log('✅ [CANVAS] Database is ready, initializing task sync...')
-        initializeTaskSync()
-      } else {
-        console.warn('⚠️ [CANVAS] Database not ready after timeout, initializing anyway...')
-        initializeTaskSync()
-      }
-    } catch (error) {
-      console.error('❌ [CANVAS] Failed to wait for database ready:', error)
+      initializeTaskSync()
+    } catch {
       // Fallback: try to initialize anyway after a longer delay
       setTimeout(initializeTaskSync, 1000)
     }

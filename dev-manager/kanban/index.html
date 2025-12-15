@@ -203,33 +203,28 @@
     .column-content {
       flex: 1;
       padding: 12px;
+      padding-right: 4px;
       display: flex;
       flex-direction: column;
       gap: 12px;
-      overflow-y: auto;
+      overflow-y: scroll;
       min-height: 0;
     }
 
     .task-card {
       background: #2a2a2a;
       border-left: 4px solid #2563eb;
-      padding: 16px 16px 20px 16px;  /* Extra padding at bottom */
+      padding: 16px 16px 28px 16px;
       border-radius: 8px;
       cursor: pointer;
       transition: background-color 0.2s, box-shadow 0.2s, border-left-color 0.2s;
       user-select: none;
-      min-height: 160px;  /* Increased min-height */
       display: flex;
       flex-direction: column;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      /* Force ALL cards onto GPU layer for consistent rendering */
-      transform: translateZ(0);
-      backface-visibility: hidden;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      /* Allow content to flow naturally */
       overflow: visible;
       position: relative;
+      flex-shrink: 0;
     }
 
     .task-card:hover {
@@ -338,14 +333,15 @@
     /* Clear Progress Bar Design */
     .task-progress {
       width: 100%;
-      margin-top: 8px;
+      margin-top: auto;
+      padding-top: 8px;
     }
 
     .progress-label {
       font-size: 9px;
       font-weight: 600;
       color: #808080;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -364,7 +360,7 @@
       font-weight: 600;
       color: #60a5fa;
       text-align: right;
-      margin-top: 2px;
+      margin-top: 6px;
     }
 
     .task-progress-bar {

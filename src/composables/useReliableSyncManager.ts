@@ -3,7 +3,7 @@
  * Enhanced sync manager with conflict detection, resolution, retry logic, and validation
  */
 
-import { ref, computed } from 'vue'
+import { ref, computed, triggerRef } from 'vue'
 import PouchDB from 'pouchdb-browser'
 import { ConflictDetector } from '@/utils/conflictDetector'
 import { ConflictResolver } from '@/utils/conflictResolver'
@@ -51,10 +51,14 @@ export const useReliableSyncManager = () => {
   // Phase 1 reactive state (keep existing)
   const syncStatus = ref<SyncStatus>('idle')
   const error = ref<string | null>(null)
-  const lastSyncTime = ref<Date | null>(null)
+  // Initialize lastSyncTime from localStorage for persistence across page reloads
+  const storedLastSync = localStorage.getItem('pomoflow_lastSyncTime')
+  const lastSyncTime = ref<Date | null>(storedLastSync ? new Date(storedLastSync) : null)
   const pendingChanges = ref(0)
   const isOnline = ref(navigator.onLine)
   const remoteConnected = ref(false)
+  // Flag that remains true after first successful connection - stored in localStorage for persistence
+  const hasConnectedEver = ref(localStorage.getItem('pomoflow_hasConnectedEver') === 'true')
 
   // Phase 2 reactive state
   const conflicts = ref<ConflictInfo[]>([])
@@ -190,6 +194,10 @@ export const useReliableSyncManager = () => {
           update_seq: info.update_seq
         })
         remoteConnected.value = true
+        hasConnectedEver.value = true
+        localStorage.setItem('pomoflow_hasConnectedEver', 'true')  // Persist to localStorage
+        triggerRef(remoteConnected)
+        console.log('🔌 [REMOTE] Set remoteConnected=true, hasConnectedEver=true (saved to localStorage)')
         return remoteDB
       } catch (connectionError) {
         console.warn('⚠️ Remote connection test failed:', connectionError)
@@ -284,6 +292,7 @@ export const useReliableSyncManager = () => {
         if (syncStatus.value === 'syncing') {
           syncStatus.value = 'complete'
           lastSyncTime.value = new Date()
+          localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())  // Persist to localStorage
           metrics.value.lastSyncTime = new Date()
           metrics.value.successfulSyncs++
         }
@@ -540,9 +549,9 @@ export const useReliableSyncManager = () => {
           batches_limit: 10
         })
 
-        // Add 15-second timeout for pull
+        // Add 60-second timeout for pull
         const pullTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Pull timeout after 15 seconds')), 15000)
+          setTimeout(() => reject(new Error('Pull timeout after 60 seconds')), 60000)
         })
 
         const pullResult = await Promise.race([pullPromise, pullTimeout]) as any
@@ -558,9 +567,9 @@ export const useReliableSyncManager = () => {
           batches_limit: 5
         })
 
-        // Add 15-second timeout for push
+        // Add 60-second timeout for push
         const pushTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Push timeout after 15 seconds')), 15000)
+          setTimeout(() => reject(new Error('Push timeout after 60 seconds')), 60000)
         })
 
         const pushResult = await Promise.race([pushPromise, pushTimeout]) as any
@@ -580,8 +589,17 @@ export const useReliableSyncManager = () => {
       console.log('⏭️ Skipping post-sync validation')
 
       // Success - update metrics and status
+      console.log('🔧 [SYNC SUCCESS] Setting syncStatus=complete, remoteConnected=true')
+      console.log('🔧 [SYNC SUCCESS] Before: syncStatus=', syncStatus.value, 'remoteConnected=', remoteConnected.value)
       syncStatus.value = 'complete'
+      remoteConnected.value = true  // Ensure UI shows Synced/Online status
+      hasConnectedEver.value = true
+      localStorage.setItem('pomoflow_hasConnectedEver', 'true')  // Persist to localStorage
+      triggerRef(syncStatus)
+      triggerRef(remoteConnected)
+      console.log('🔧 [SYNC SUCCESS] After: syncStatus=', syncStatus.value, 'remoteConnected=', remoteConnected.value, '(refs triggered)')
       lastSyncTime.value = new Date()
+      localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())  // Persist to localStorage
       metrics.value.lastSyncTime = new Date()
       metrics.value.successfulSyncs++
 
@@ -1039,6 +1057,7 @@ export const useReliableSyncManager = () => {
         }
 
         lastSyncTime.value = new Date()
+        localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())  // Persist to localStorage
       })
 
       syncHandler.on('paused', (err: any) => {
@@ -1074,6 +1093,9 @@ export const useReliableSyncManager = () => {
 
       console.log('✅ [LIVE SYNC] Live sync started successfully')
       syncStatus.value = 'idle'
+      remoteConnected.value = true  // Set remoteConnected so UI shows Online/Synced
+      hasConnectedEver.value = true
+      localStorage.setItem('pomoflow_hasConnectedEver', 'true')  // Persist to localStorage
       return true
 
     } catch (syncError) {
@@ -1163,6 +1185,7 @@ export const useReliableSyncManager = () => {
     pendingChanges,
     isOnline,
     remoteConnected,
+    hasConnectedEver,  // Persistent flag for UI - true after first successful connection
 
     // Computed properties for component usage
     isSyncing,
@@ -1214,15 +1237,34 @@ export const useReliableSyncManager = () => {
 
 /**
  * Global reliable sync manager instance
+ * Using window object to prevent Vite module duplication from creating multiple "singletons"
  */
-let globalReliableSyncManager: ReturnType<typeof useReliableSyncManager> | null = null
+declare global {
+  interface Window {
+    __pomoFlowSyncManager?: ReturnType<typeof useReliableSyncManager>
+  }
+}
+
+// Fallback for SSR or non-browser environments
+let fallbackSyncManager: ReturnType<typeof useReliableSyncManager> | null = null
 
 /**
  * Get or create the global reliable sync manager instance
+ * Uses window object to ensure true singleton across Vite chunks
  */
 export const getGlobalReliableSyncManager = () => {
-  if (!globalReliableSyncManager) {
-    globalReliableSyncManager = useReliableSyncManager()
+  // Use window for browser, fallback for SSR
+  if (typeof window !== 'undefined') {
+    if (!window.__pomoFlowSyncManager) {
+      console.log('🔧 [SYNC MANAGER] Creating TRUE global singleton on window')
+      window.__pomoFlowSyncManager = useReliableSyncManager()
+    }
+    return window.__pomoFlowSyncManager
   }
-  return globalReliableSyncManager
+
+  // Fallback for non-browser environments
+  if (!fallbackSyncManager) {
+    fallbackSyncManager = useReliableSyncManager()
+  }
+  return fallbackSyncManager
 }

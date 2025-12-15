@@ -1,9 +1,9 @@
 import { addons } from 'storybook/manager-api'
-import { themes } from 'storybook/theming'
+import customTheme from './theme'
 
 // Configure Storybook manager UI to use dark theme with organized sidebar
 addons.setConfig({
-  theme: themes.dark,
+  theme: customTheme,
 
   sidebar: {
     showRoots: false, // Makes top-level categories collapsible folders (not all-caps roots)

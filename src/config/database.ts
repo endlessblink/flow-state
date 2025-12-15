@@ -74,22 +74,13 @@ export const prodDatabaseConfig: DatabaseConfig = {
 
 // Get configuration based on environment
 export const getDatabaseConfig = (): DatabaseConfig => {
-  const isDevelopment = import.meta.env.DEV
-
-  // DEBUG: Force remote sync configuration regardless of env vars
-  console.log('🔧 [DATABASE CONFIG] FORCING REMOTE SYNC CONFIGURATION')
-
-  // Override environment variables that aren't loading properly
+  // CouchDB remote sync configuration
   const couchdbUrl = import.meta.env.VITE_COUCHDB_URL || 'http://84.46.253.137:5984/pomoflow-tasks'
   const couchdbUsername = import.meta.env.VITE_COUCHDB_USERNAME || 'admin'
   const couchdbPassword = import.meta.env.VITE_COUCHDB_PASSWORD || 'pomoflow-2024'
 
-  console.log('🔧 [DATABASE CONFIG] Using URL:', couchdbUrl)
+  console.log('🔧 [DATABASE CONFIG] URL:', couchdbUrl)
 
-  // CRISIS FIX: Disable sync to stop infinite conflict loops (Phase 0.0.2)
-  console.log('🚨 [DATABASE CONFIG] CRISIS FIX: Syncing DISABLED to stop infinite loops')
-
-  // Return sync-DISABLED config for crisis stabilization
   return {
     local: {
       name: 'pomoflow-app-dev'
@@ -104,8 +95,8 @@ export const getDatabaseConfig = (): DatabaseConfig => {
       batchesLimit: 10
     },
     sync: {
-      live: false, // 🔥 CRISIS FIX: Disabled to stop infinite sync loops
-      retry: false, // 🔥 CRISIS FIX: Disabled to stop resource drain
+      live: true,
+      retry: true,
       timeout: 30000,
       heartBeat: 10000
     }

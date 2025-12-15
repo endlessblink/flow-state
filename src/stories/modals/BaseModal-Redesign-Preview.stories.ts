@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
+import { ref } from 'vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
@@ -190,7 +191,8 @@ export const FormExample: Story = {
   render: (args) => ({
     components: { BaseModal, BaseInput },
     setup() {
-      return { args }
+      const taskName = ref('Design new modal system')
+      return { args, taskName }
     },
     template: `
       <div>
@@ -198,7 +200,7 @@ export const FormExample: Story = {
           <div style="padding: 0;">
             <div style="margin-bottom: 20px;">
               <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: 8px;">Task Name</label>
-              <BaseInput value="Design new modal system" />
+              <BaseInput v-model="taskName" />
             </div>
 
             <div style="margin-bottom: 20px;">

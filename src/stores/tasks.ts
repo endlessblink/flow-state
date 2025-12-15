@@ -149,9 +149,29 @@ export const useTaskStore = defineStore('tasks', () => {
   const MAX_SYNC_ATTEMPTS = 10 // Maximum sync attempts per session
 
   const safeSync = async (context: string) => {
-    // 🔥 CRITICAL: Hard disable sync to stop infinite loops
-    console.log(`🚨 [SYNC DISABLED] safeSync called (${context}) but sync is disabled to stop infinite loops`)
-    return
+    const now = Date.now()
+
+    // Cooldown check
+    if (now - lastSyncTime < SYNC_COOLDOWN) {
+      console.log(`⏳ [SAFE-SYNC] Skipping sync (${context}) - cooldown active`)
+      return
+    }
+
+    // Max attempts check
+    if (syncAttempts >= MAX_SYNC_ATTEMPTS) {
+      console.log(`🛑 [SAFE-SYNC] Max sync attempts reached for this session`)
+      return
+    }
+
+    lastSyncTime = now
+    syncAttempts++
+
+    try {
+      console.log(`🔄 [SAFE-SYNC] Triggering sync (${context}) - attempt ${syncAttempts}/${MAX_SYNC_ATTEMPTS}`)
+      await reliableSyncManager.triggerSync()
+    } catch (error) {
+      console.error(`❌ [SAFE-SYNC] Sync failed (${context}):`, error)
+    }
   }
 
   // CRITICAL: IMMEDIATE LOAD FROM POUCHDB ON STORE INITIALIZATION
@@ -1113,10 +1133,7 @@ export const useTaskStore = defineStore('tasks', () => {
     // Step 1: Apply smart view filter FIRST (if active)
     if (activeSmartView.value) {
       const { applySmartViewFilter } = useSmartViews()
-      console.log(`🔧 TaskStore.filteredTasks: Applying "${activeSmartView.value}" smart view filter`)
-      const beforeSmartFilter = filtered.length
       filtered = applySmartViewFilter(filtered, activeSmartView.value)
-      console.log(`🔧 TaskStore.filteredTasks: ${activeSmartView.value} smart filter applied - removed ${beforeSmartFilter - filtered.length} tasks, ${filtered.length} remaining`)
     }
 
     // Step 2: Apply project filter ON TOP of smart view result (if active)
@@ -1141,13 +1158,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // Apply status filter (NEW GLOBAL STATUS FILTER)
     if (activeStatusFilter.value) {
-      const beforeStatusFilter = filtered.length
-      filtered = filtered.filter(task => {
-        const passesStatusFilter = task.status === activeStatusFilter.value
-        console.log(`🔧 TaskStore.filteredTasks: Task "${task.title}" (status: ${task.status}) ${passesStatusFilter ? 'PASSED' : 'FAILED'} status filter "${activeStatusFilter.value}"`)
-        return passesStatusFilter
-      })
-      console.log(`🔧 TaskStore.filteredTasks: Status filter "${activeStatusFilter.value}" applied - removed ${beforeStatusFilter - filtered.length} tasks, ${filtered.length} remaining`)
+      filtered = filtered.filter(task => task.status === activeStatusFilter.value)
     }
 
     // Apply done task visibility based on user preference
@@ -1184,161 +1195,78 @@ export const useTaskStore = defineStore('tasks', () => {
         .filter(task => nestedTaskIds.includes(task.id))
         .filter(task => {
           try {
-            console.log(`🔧 TaskStore.filteredTasks: Evaluating nested task "${task.title}" (status: ${task.status})`)
-
             // Validate task object
-            if (!task || typeof task !== 'object') {
-              console.warn('TaskStore.filteredTasks: Invalid nested task object:', task)
-              return false
-            }
+            if (!task || typeof task !== 'object') return false
 
             // Apply project filter to nested tasks (including child projects)
             if (activeProjectId.value) {
-              try {
-                const projectIds = getChildProjectIds(activeProjectId.value)
-                if (!projectIds.includes(task.projectId)) {
-                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by project filter (projectId: ${task.projectId})`)
-                  return false
-                }
-              } catch (error) {
-                console.warn('TaskStore.filteredTasks: Error in project filter for nested task:', error, task)
-                return false
-              }
+              const projectIds = getChildProjectIds(activeProjectId.value)
+              if (!projectIds.includes(task.projectId)) return false
             }
 
             // Apply smart view filter to nested tasks
             if (activeSmartView.value === 'today') {
-              try {
-                // Exclude done tasks from today filter by default
-                if (task.status === 'done') {
-                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" excluded from today filter (status: done)`)
-                  return false
-                }
+              if (task.status === 'done') return false
 
-                const todayStr = new Date().toISOString().split('T')[0]
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
+              const todayStr = new Date().toISOString().split('T')[0]
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
 
-                
-                // Tasks created today
-                if (task.createdAt) {
-                  try {
-                    const taskCreatedDate = new Date(task.createdAt)
-                    taskCreatedDate.setHours(0, 0, 0, 0)
-                    if (taskCreatedDate.getTime() === today.getTime()) {
-                      console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (created today)`)
-                      return true
-                    }
-                  } catch (error) {
-                    console.warn('TaskStore.filteredTasks: Error processing nested task createdAt:', error, task.createdAt)
-                  }
-                }
-
-                // Tasks due today
-                if (task.dueDate) {
-                  try {
-                    const taskDueDate = new Date(task.dueDate)
-                    if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) {
-                      console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (due today)`)
-                      return true
-                    }
-                  } catch (error) {
-                    console.warn('TaskStore.filteredTasks: Error processing nested task dueDate:', error, task.dueDate)
-                  }
-                }
-
-                // Tasks currently in progress
-                if (task.status === 'in_progress') {
-                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches today filter (in progress)`)
-                  return true
-                }
-
-                console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" does not match today filter`)
-                return false
-              } catch (error) {
-                console.error('TaskStore.filteredTasks: Error in today filter for nested task:', error, task)
-                return false
+              // Tasks created today
+              if (task.createdAt) {
+                const taskCreatedDate = new Date(task.createdAt)
+                taskCreatedDate.setHours(0, 0, 0, 0)
+                if (taskCreatedDate.getTime() === today.getTime()) return true
               }
+
+              // Tasks due today
+              if (task.dueDate) {
+                const taskDueDate = new Date(task.dueDate)
+                if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) return true
+              }
+
+              // Tasks currently in progress
+              if (task.status === 'in_progress') return true
+
+              return false
             } else if (activeSmartView.value === 'week') {
-              try {
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
-                const todayStr = today.toISOString().split('T')[0]
-                const weekEnd = new Date(today)
-                weekEnd.setDate(weekEnd.getDate() + 7)
-                const weekEndStr = weekEnd.toISOString().split('T')[0]
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              const todayStr = today.toISOString().split('T')[0]
+              const weekEnd = new Date(today)
+              weekEnd.setDate(weekEnd.getDate() + 7)
+              const weekEndStr = weekEnd.toISOString().split('T')[0]
 
-                // SIMPLIFIED: Check if nested task is due within the week
-                if (!task.dueDate) return false
-                return task.dueDate >= todayStr && task.dueDate <= weekEndStr
-              } catch (error) {
-                console.warn('TaskStore.filteredTasks: Error in week filter for nested task:', error, task)
-                return false
-              }
-
+              if (!task.dueDate) return false
+              return task.dueDate >= todayStr && task.dueDate <= weekEndStr
             } else if (activeSmartView.value === 'uncategorized') {
-              try {
-                // Check if nested task is uncategorized
-                if (task.isUncategorized === true) {
-                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches uncategorized filter (isUncategorized flag)`)
-                  return true
-                }
-
-                // Backward compatibility: also treat tasks without proper project assignment as uncategorized
-                // REMOVED: projectId === '1' check - My Tasks concept removed
-                if (!task.projectId || task.projectId === '' || task.projectId === null) {
-                  console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" matches uncategorized filter (legacy projectId check)`)
-                  return true
-                }
-
-                console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" does not match uncategorized filter`)
-                return false
-              } catch (error) {
-                console.warn('TaskStore.filteredTasks: Error in uncategorized filter for nested task:', error, task)
-                return false
-              }
+              if (task.isUncategorized === true) return true
+              if (!task.projectId || task.projectId === '' || task.projectId === null) return true
+              return false
             }
 
             // Apply status filter to nested tasks
-            if (activeStatusFilter.value && task.status !== activeStatusFilter.value) {
-              console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by status filter "${activeStatusFilter.value}" (status: ${task.status})`)
-              return false
-            }
+            if (activeStatusFilter.value && task.status !== activeStatusFilter.value) return false
 
             // Apply global done task exclusion to nested tasks
-            if (task.status === 'done') {
-              console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" rejected by global done task exclusion`)
-              return false
-            }
+            if (task.status === 'done') return false
 
-            console.log(`🔧 TaskStore.filteredTasks: Nested task "${task.title}" passed all filters`)
             return true
-          } catch (error) {
-            console.error('TaskStore.filteredTasks: Error processing nested task:', error, task)
+          } catch {
             return false
           }
         })
-    } catch (error) {
-      console.error('TaskStore.filteredTasks: Critical error in nested tasks filtering:', error)
+    } catch {
       nestedTasks = []
     }
 
-    console.log(`🚨 TaskStore.filteredTasks: Found ${nestedTasks.length} nested tasks that passed all filters`)
-
     // Combine filtered tasks with their properly filtered nested tasks
     const allTasks = [...filtered, ...nestedTasks]
-    console.log(`🚨 TaskStore.filteredTasks: Combined ${filtered.length} parent tasks + ${nestedTasks.length} nested tasks = ${allTasks.length} total`)
 
     // Remove duplicates (in case a nested task was also directly filtered)
     const uniqueTasks = allTasks.filter((task, index, self) =>
       index === self.findIndex(t => t.id === task.id)
     )
-    console.log(`🚨 TaskStore.filteredTasks: After removing duplicates: ${uniqueTasks.length} unique tasks`)
-    console.log('🚨 TaskStore.filteredTasks: Final task list:')
-    uniqueTasks.forEach(task => {
-      console.log(`🚨 TaskStore.filteredTasks:   - "${task.title}" (ID: ${task.id}, Status: ${task.status}, Project: ${task.projectId})`)
-    })
-    console.log('🚨 TaskStore.filteredTasks: === END FILTERED TASKS COMPUTATION ===')
 
     return uniqueTasks
   })
@@ -1469,7 +1397,6 @@ export const useTaskStore = defineStore('tasks', () => {
         if (activeStatusFilter.value && task.status !== activeStatusFilter.value) return false
 
         if (isInInbox && isUnscheduled) {
-          console.log(`🚨 TaskStore.calendarFilteredTasks: Adding unscheduled inbox task "${task.title}" to today view`)
           return true
         }
 

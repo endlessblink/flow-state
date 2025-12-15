@@ -500,6 +500,40 @@ git commit -m "feat: description"
   - When user says "process an idea" or "pick up from ideas", look here first
   - Update status when features are completed or bugs are fixed
 
+### MASTER_PLAN.md Task ID Format (MANDATORY)
+
+**All items in MASTER_PLAN.md MUST have unique IDs. Use the following prefixes:**
+
+| Prefix | Usage | Example |
+|--------|-------|---------|
+| `TASK-XXX` | Active work features/tasks | `TASK-001: Power Groups Feature` |
+| `BUG-XXX` | Bug fixes | `BUG-003: Today group shows wrong count` |
+| `ROAD-XXX` | Roadmap items | `ROAD-002: Smart Group bug fixes` |
+| `IDEA-XXX` | Ideas | `IDEA-001: New feature concept` |
+| `ISSUE-XXX` | Known issues | `ISSUE-001: Live sync lost on refresh` |
+
+**Format Rules:**
+1. IDs must be sequential within their type (TASK-001, TASK-002, TASK-003...)
+2. Completed items should have `~~strikethrough~~` on the ID: `~~TASK-001~~`
+3. Tables MUST include an ID column as the first column
+4. When adding new items, find the highest existing ID and increment by 1
+5. Never reuse IDs - even after deletion
+
+**Example Table Format:**
+```markdown
+| ID | Feature | Priority | Status |
+|----|---------|----------|--------|
+| ROAD-001 | Feature name | P1 | IN PROGRESS |
+| ~~ROAD-002~~ | ~~Done feature~~ | ~~P1~~ | ✅ DONE |
+```
+
+**When to assign IDs:**
+- Adding new roadmap items → use `ROAD-XXX`
+- Adding new bugs → use `BUG-XXX`
+- Adding new active work tasks → use `TASK-XXX`
+- Adding new ideas → use `IDEA-XXX`
+- Documenting known issues → use `ISSUE-XXX`
+
 - **`README.md`** - User-facing project overview
   - Update for major feature additions
   - Keep setup instructions accurate

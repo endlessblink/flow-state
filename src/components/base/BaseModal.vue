@@ -4,7 +4,7 @@
     class="modal-overlay"
     :class="{ 'modal-closing': isClosing }"
     @click="handleOverlayClick"
-    @keydown.esc="handleEscapeKey"
+    @keydown="handleEscapeKey"
     role="dialog"
     :aria-modal="isOpen"
     :aria-labelledby="titleId"
@@ -341,7 +341,7 @@ defineExpose({
 
 /* Modal Container */
 .modal-container {
-  background: rgba(20, 24, 32, 0.85);
+  background: rgba(0, 0, 0, 0.95);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
   border: 1px solid rgba(255, 255, 255, 0.1);

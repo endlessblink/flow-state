@@ -196,25 +196,29 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
+import { getGlobalReliableSyncManager, useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
 import { SyncProviderType } from '@/types/sync'
 import {
   Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap
 } from 'lucide-vue-next'
 
-const reliableSyncManager = useReliableSyncManager() as ReturnType<typeof useReliableSyncManager> & {
+const reliableSyncManager = getGlobalReliableSyncManager() as ReturnType<typeof useReliableSyncManager> & {
   configureProvider?: (config: unknown) => Promise<void>
   enableProvider?: () => Promise<void>
   disableProvider?: () => Promise<void>
+  isLiveSyncActive?: () => boolean
 }
 const persistentStorage = usePersistentStorage()
 
-// State
-const selectedProvider = ref('')
-const githubToken = ref('')
+// State - Initialize from localStorage for persistence across page refreshes
+// If hasConnectedEver is true, default to 'couchdb' even if pomo-cloud-provider wasn't explicitly set
+const hasConnectedEver = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
+const savedProvider = localStorage.getItem('pomo-cloud-provider')
+const selectedProvider = ref(savedProvider || (hasConnectedEver ? 'couchdb' : ''))
+const githubToken = ref(localStorage.getItem('github-token') || '')
 const isSyncing = ref(false)
-const syncEnabled = ref(false)
+const syncEnabled = ref(!!savedProvider || hasConnectedEver)
 const syncProgress = ref('')
 const progressPercent = ref(0)
 const syncHistory = ref<Array<{
@@ -224,36 +228,54 @@ const syncHistory = ref<Array<{
   success: boolean
 }>>([])
 
-// CouchDB State
-const couchdbUrl = ref('http://84.46.253.137:5984/pomoflow-tasks')
-const couchdbUsername = ref('admin')
-const couchdbPassword = ref('pomoflow-2024')
+// CouchDB State - Initialize from localStorage
+const couchdbUrl = ref(localStorage.getItem('pomo-couchdb-url') || 'http://84.46.253.137:5984/pomoflow-tasks')
+const couchdbUsername = ref(localStorage.getItem('pomo-couchdb-username') || 'admin')
+const couchdbPassword = ref(localStorage.getItem('pomo-couchdb-password') || 'pomoflow-2024')
 const couchdbConnectionStatus = ref<'success' | 'error' | ''>('')
 const couchdbConnectionMessage = ref('')
 
-// Live Sync State
-const liveSyncActive = ref(false)
+// Live Sync State - Persist to localStorage
+const liveSyncActive = ref(localStorage.getItem('pomo-live-sync-active') === 'true')
+
+// WORKAROUND: Poll-based status update to bypass Vue reactivity issues with localStorage
+// This counter forces computed properties to re-evaluate
+const forceUpdateCounter = ref(0)
+let pollInterval: ReturnType<typeof setInterval> | null = null
 
 // Computed
 const syncStatus = computed(() => {
-  const health = reliableSyncManager.getSyncHealth()
+  // Force re-evaluation via counter (workaround for reactivity issues)
+  void forceUpdateCounter.value
 
-  // Determine provider name based on selection
+  const health = reliableSyncManager.getSyncHealth()
+  // Check localStorage for persistent connection status
+  const hasConnectedEver = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
+  // Read lastSyncTime from localStorage for reliable persistence
+  const storedLastSync = localStorage.getItem('pomoflow_lastSyncTime')
+  const lastSyncTimestamp = storedLastSync ? new Date(storedLastSync).getTime() : 0
+
+  // Determine provider name based on selection, connection status, or connection history
   let providerName = 'Local Only'
-  if (selectedProvider.value === 'couchdb' && syncEnabled.value) {
+
+  // Check multiple conditions for CouchDB connection
+  const isCouchdbConnected = selectedProvider.value === 'couchdb' ||
+                              couchdbConnectionStatus.value === 'success' ||
+                              hasConnectedEver ||
+                              reliableSyncManager.remoteConnected?.value
+
+  if (isCouchdbConnected) {
     providerName = 'CouchDB'
   } else if (selectedProvider.value === 'jsonbin' && syncEnabled.value) {
     providerName = 'JSONBin'
   } else if (selectedProvider.value === 'github' && syncEnabled.value) {
     providerName = 'GitHub Gist'
-  } else if (reliableSyncManager.remoteConnected?.value) {
-    providerName = 'CouchDB'
   }
 
   return {
-    isOnline: health.isOnline || (selectedProvider.value === 'couchdb' && couchdbConnectionStatus.value === 'success'),
+    isOnline: health.isOnline || isCouchdbConnected,
     provider: providerName,
-    lastSyncTime: reliableSyncManager.lastSyncTime.value?.getTime() ?? 0,
+    lastSyncTime: lastSyncTimestamp || reliableSyncManager.lastSyncTime.value?.getTime() || 0,
     syncUrl: selectedProvider.value === 'couchdb' ? couchdbUrl.value : '',
     deviceName: 'PomoFlow Device',
     deviceId: localStorage.getItem('pomo-device-id') || 'device-' + Math.random().toString(36).substring(7),
@@ -425,7 +447,9 @@ const saveCouchDBConfig = async () => {
       localStorage.setItem('pomo-couchdb-url', couchdbUrl.value)
       localStorage.setItem('pomo-couchdb-username', couchdbUsername.value)
       localStorage.setItem('pomo-couchdb-password', couchdbPassword.value)
+      localStorage.setItem('pomo-cloud-provider', 'couchdb')  // Save provider selection
 
+      selectedProvider.value = 'couchdb'  // Update dropdown to reflect CouchDB
       syncEnabled.value = true
       addHistoryEntry('CouchDB connected', true)
     } else {
@@ -458,6 +482,7 @@ const toggleLiveSync = async () => {
     try {
       await reliableSyncManager.stopLiveSync()
       liveSyncActive.value = false
+      localStorage.setItem('pomo-live-sync-active', 'false')  // Persist state
       addHistoryEntry('Live sync stopped', true)
     } catch (error) {
       console.error('Failed to stop live sync:', error)
@@ -471,6 +496,11 @@ const toggleLiveSync = async () => {
       const success = await reliableSyncManager.startLiveSync()
       if (success) {
         liveSyncActive.value = true
+        selectedProvider.value = 'couchdb'
+        syncEnabled.value = true
+        couchdbConnectionStatus.value = 'success'
+        localStorage.setItem('pomo-live-sync-active', 'true')  // Persist state
+        localStorage.setItem('pomo-cloud-provider', 'couchdb')  // Persist provider
         addHistoryEntry('Live sync started', true)
       } else {
         addHistoryEntry('Failed to start live sync', false)
@@ -481,6 +511,45 @@ const toggleLiveSync = async () => {
     } finally {
       isSyncing.value = false
       syncProgress.value = ''
+    }
+  }
+}
+
+// Restore sync state from sync manager or localStorage
+const restoreSyncState = async () => {
+  const wasLiveSyncActive = localStorage.getItem('pomo-live-sync-active') === 'true'
+  const hasConnected = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
+
+  // First check if live sync is ALREADY running in the sync manager
+  if (reliableSyncManager.isLiveSyncActive?.()) {
+    console.log('✅ Live sync already active in sync manager')
+    liveSyncActive.value = true
+    selectedProvider.value = 'couchdb'
+    syncEnabled.value = true
+    couchdbConnectionStatus.value = 'success'
+    localStorage.setItem('pomo-live-sync-active', 'true')
+    localStorage.setItem('pomo-cloud-provider', 'couchdb')
+    return
+  }
+
+  // If not running but should be, auto-start
+  if (wasLiveSyncActive || (hasConnected && selectedProvider.value === 'couchdb')) {
+    console.log('🔄 Auto-starting live sync from previous session...')
+    try {
+      const success = await reliableSyncManager.startLiveSync()
+      if (success) {
+        liveSyncActive.value = true
+        selectedProvider.value = 'couchdb'
+        syncEnabled.value = true
+        couchdbConnectionStatus.value = 'success'
+        localStorage.setItem('pomo-live-sync-active', 'true')
+        localStorage.setItem('pomo-cloud-provider', 'couchdb')
+        console.log('✅ Live sync auto-started successfully')
+      }
+    } catch (error) {
+      console.error('Failed to auto-start live sync:', error)
+      localStorage.setItem('pomo-live-sync-active', 'false')  // Reset if failed
+      liveSyncActive.value = false
     }
   }
 }
@@ -568,16 +637,28 @@ const updateStatus = () => {
 }
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
   loadSettings()
   statusTimer = setInterval(updateStatus, 30000) // Update every 30 seconds
+  // Start polling every 500ms to force computed re-evaluation (workaround for localStorage reactivity)
+  pollInterval = setInterval(() => {
+    forceUpdateCounter.value++
+  }, 500)
+
+  // Restore sync state from sync manager or localStorage
+  await restoreSyncState()
 })
 
 onUnmounted(() => {
   if (statusTimer) {
     clearInterval(statusTimer)
   }
-  reliableSyncManager.cleanup()
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+  // NOTE: Don't cleanup the global singleton - other components (SyncStatus) depend on it
+  // reliableSyncManager.cleanup()
 })
 </script>
 
@@ -650,6 +731,9 @@ onUnmounted(() => {
 .last-sync {
   font-size: var(--text-sm);
   color: var(--text-muted);
+  min-width: 80px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .sync-url {

@@ -34,36 +34,40 @@
 
 ## Ideas
 
-- (add rough ideas here)
+<!-- Ideas use IDEA-XXX format -->
+- IDEA-001: (add rough ideas here)
 
 ---
 
 ## Roadmap
 
 ### Near-term
-| Feature | Priority | Notes |
-|---------|----------|-------|
-| ~~Power Groups~~ | ~~P1~~ | ✅ DONE (Dec 5) - Auto-detect keywords, collect button, settings |
-| Smart Group bug fixes | P1 | Bugs 3, 7/9 |
-| Calendar resize fix | P2 | |
-| Mobile support | P2 | Responsive layout, touch interactions |
+<!-- Roadmap items use ROAD-XXX format -->
+| ID | Feature | Priority | Notes |
+|----|---------|----------|-------|
+| ~~ROAD-001~~ | ~~Power Groups~~ | ~~P1~~ | ✅ DONE (Dec 5) - Auto-detect keywords, collect button, settings |
+| ROAD-002 | Smart Group bug fixes | P1 | Bugs 3, 7/9 |
+| ROAD-003 | Calendar resize fix | P2 | |
+| ROAD-004 | Mobile support | P2 | Responsive layout, touch interactions |
 
 ### Later
-| Feature | Notes |
-|---------|-------|
-| Auto-sync enablement | After multi-device testing |
-| ~~Keyboard shortcuts~~ | ✅ DONE (Dec 5) - Delete, Redo (Ctrl+Y), New Task (Ctrl+N) |
-| Technical debt Phase 3-5 | D&D, Database, Validation |
-| Lint cleanup | Fix 2400+ lint errors for easier refactoring & faster Claude Code editing |
-| Expand CI tests | Add lint + unit tests to GitHub Actions after cleanup |
-| Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
-| Local AI assistant | Task breakdown, auto-categorize, daily planning. Hebrew required (Llama 3+, Claude/GPT-4 BYOK) |
+| ID | Feature | Notes |
+|----|---------|-------|
+| ROAD-005 | Auto-sync enablement | After multi-device testing |
+| ~~ROAD-006~~ | ~~Keyboard shortcuts~~ | ✅ DONE (Dec 5) - Delete, Redo (Ctrl+Y), New Task (Ctrl+N) |
+| ROAD-007 | Technical debt Phase 3-5 | D&D, Database, Validation |
+| ROAD-008 | Lint cleanup | Fix 2400+ lint errors for easier refactoring & faster Claude Code editing |
+| ROAD-009 | Expand CI tests | Add lint + unit tests to GitHub Actions after cleanup |
+| ROAD-010 | Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
+| ROAD-011 | Local AI assistant | Task breakdown, auto-categorize, daily planning. Hebrew required (Llama 3+, Claude/GPT-4 BYOK) |
 
 ---
 
 ## Active Work
 
-### Power Groups Feature (COMPLETE)
+<!-- Active work items use TASK-XXX format -->
+
+### TASK-001: Power Groups Feature (COMPLETE)
 
 **Goal**: Unify canvas groups into a single type where keywords trigger "power" behavior.
 
@@ -103,26 +107,27 @@
 
 ### Smart Group Bugs (9 issues documented)
 
-| Bug | Priority | Status |
-|-----|----------|--------|
-| Bug 1: Task disappears when set to yesterday | FIXED | `tasks.ts:1718-1729` |
-| Bug 2: Canvas tasks disappear on new task creation | FIXED | `CanvasView.vue:589-618` |
-| Bug 3: Today group shows wrong count | P1-HIGH | Pending fix in `canvas.ts:802-807` |
-| Bug 7/9: Deleting group deletes tasks inside | P1-HIGH | Pending (1 hour) |
-| Bug 4: Tasks in Today group don't drag | P2-MEDIUM | Needs investigation |
-| Bug 5: Date not updating on group drop | P2-MEDIUM | Needs investigation |
-| Bug 6: Week shows same count as Today | N/A | Not a bug - expected behavior |
-| Bug 8: Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
+<!-- Bugs use BUG-XXX format -->
+| ID | Bug | Priority | Status |
+|----|-----|----------|--------|
+| ~~BUG-001~~ | Task disappears when set to yesterday | ~~FIXED~~ | ✅ `tasks.ts:1718-1729` |
+| ~~BUG-002~~ | Canvas tasks disappear on new task creation | ~~FIXED~~ | ✅ `CanvasView.vue:589-618` |
+| BUG-003 | Today group shows wrong count | P1-HIGH | Pending fix in `canvas.ts:802-807` |
+| BUG-004 | Tasks in Today group don't drag | P2-MEDIUM | Needs investigation |
+| BUG-005 | Date not updating on group drop | P2-MEDIUM | Needs investigation |
+| BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |
+| BUG-007 | Deleting group deletes tasks inside | P1-HIGH | Pending (1 hour) |
+| BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
 
 **Details**: See "Open Bug Analysis" section below.
 
 ### Calendar Issues (From Dec 1 checkpoint)
 
-| Issue | Priority | Status |
-|-------|----------|--------|
-| Ghost preview wrong location | MEDIUM | TODO |
-| Resize creates artifacts | HIGH | TODO |
-| Resize broken (both sides) | HIGH | TODO |
+| ID | Issue | Priority | Status |
+|----|-------|----------|--------|
+| BUG-009 | Ghost preview wrong location | MEDIUM | TODO |
+| BUG-010 | Resize creates artifacts | HIGH | TODO |
+| BUG-011 | Resize broken (both sides) | HIGH | TODO |
 
 **SOP**: `docs/debug/sop/calendar-drag-inside-calendar/`
 
@@ -130,13 +135,14 @@
 
 ## Known Issues
 
-| Issue | Priority | Notes |
-|-------|----------|-------|
-| **Live sync lost on refresh** | P1-HIGH | See fix below |
-| **This Week shows 0 when tasks exist** | P2 | Today=0 correct, but This Week=0 wrong when tasks scheduled for Friday (today is Saturday) |
-| IndexedDB version mismatch errors | P2 | Needs proper DB migration |
-| Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
-| QuotaExceededError unhandled | P2 | Functions exist, not enforced |
+<!-- Known issues use ISSUE-XXX format -->
+| ID | Issue | Priority | Notes |
+|----|-------|----------|-------|
+| ISSUE-001 | **Live sync lost on refresh** | P1-HIGH | See fix below |
+| ISSUE-002 | **This Week shows 0 when tasks exist** | P2 | Today=0 correct, but This Week=0 wrong when tasks scheduled for Friday (today is Saturday) |
+| ISSUE-003 | IndexedDB version mismatch errors | P2 | Needs proper DB migration |
+| ISSUE-004 | Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
+| ISSUE-005 | QuotaExceededError unhandled | P2 | Functions exist, not enforced |
 
 ### 🔴 NEXT SESSION: Live Sync Persistence Fix
 
@@ -217,12 +223,12 @@ All shortcuts tested with Playwright MCP - all passed.
 
 ### Priority Tasks
 
-1. **C1 - Canvas Section Selection Dialog** (2h)
+1. **TASK-002: Canvas Section Selection Dialog** (2h)
    - Create `SectionSelectorDialog.vue` component
    - Wire to `handleBulkAction()` in CanvasView.vue:4708-4710
    - Allow moving selected tasks to different sections
 
-2. **D2 - Re-enable Backup Settings UI** (2h)
+2. **TASK-003: Re-enable Backup Settings UI** (2h)
    - Remove `disabled` attributes from buttons in `SimpleBackupSettings.vue`
    - Wire to `useBackupRestoration` composable
    - Test full backup/restore flow
@@ -383,20 +389,20 @@ if (section.type === 'custom' && isSmartGroup(section.name)) {
 
 ## Technical Debt: Detailed Plan
 
-### Phase 1: Error Handling (COMPLETE)
+### TASK-004: Phase 1 - Error Handling (COMPLETE)
 - 45 error locations migrated to unified `errorHandler.report()` API
 - 6 core files: useDatabase, tasks, canvas, timer, ui, notifications
 - 116 files deferred for organic migration
 
-### Phase 2: Calendar Consolidation (IN PROGRESS)
+### TASK-005: Phase 2 - Calendar Consolidation (IN PROGRESS)
 - Unify 6 calendar files into single `useCalendar()` composable
 - Target: ~1,000+ lines consolidated
 - Files: useCalendarDayView, useCalendarMonthView, useCalendarWeekView, useCalendarEventHelpers, useCalendarDragCreate
 
-### Phase 3-5: Planned
-- Drag-and-Drop unification (18 implementations)
-- Database layer consolidation (574 conflicts)
-- Validation framework (4,199 conflicts)
+### Phases 3-5: Planned
+- TASK-006: Drag-and-Drop unification (18 implementations)
+- TASK-007: Database layer consolidation (574 conflicts)
+- TASK-008: Validation framework (4,199 conflicts)
 
 ---
 

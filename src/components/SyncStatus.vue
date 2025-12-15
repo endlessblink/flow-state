@@ -282,7 +282,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
 import { RefreshCw, Wifi, WifiOff, Cloud, CloudOff, AlertCircle, Pause, Play, Shield, Activity, Clock, Settings, Database, Trash2, Heart, Download } from 'lucide-vue-next'
@@ -307,6 +307,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const reliableSync = getGlobalReliableSyncManager()
 
+// DEBUG: Log singleton ID to verify same instance
+console.log('🔍 [SyncStatus] Sync manager instance:', reliableSync)
+
 // Use reliable sync manager properties directly
 const {
   syncStatus,
@@ -324,6 +327,27 @@ const {
   getOfflineQueueStats,
   toggleSync
 } = reliableSync
+
+// WORKAROUND: Poll-based status update to bypass Vue reactivity issues
+// The sync manager refs aren't triggering watchers properly, so we poll directly
+// This counter forces computed properties to re-evaluate
+const forceUpdateCounter = ref(0)
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  console.log('🚀 [SyncStatus] Component mounted, starting poll interval')
+  // Start polling every 500ms to force computed re-evaluation
+  pollInterval = setInterval(() => {
+    forceUpdateCounter.value++
+  }, 500)
+})
+
+onUnmounted(() => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+})
 
 // Alias for backward compatibility
 const activeConflicts = conflicts
@@ -363,21 +387,37 @@ const statusClass = computed(() => ({
 const localIsSyncing = computed(() => isSyncing?.value || isManualSyncing.value)
 
 const statusIcon = computed(() => {
+  // Force re-evaluation via counter (workaround for reactivity issues)
+  void forceUpdateCounter.value
+
+  // Read from localStorage for guaranteed persistence
+  const hasConnected = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
+  const manager = getGlobalReliableSyncManager()
+  const currentSyncStatus = manager.syncStatus?.value
+
   if (!isOnline?.value) return WifiOff
   if (localIsSyncing.value) return RefreshCw
   if (hasErrors?.value) return AlertCircle
-  if (syncStatus?.value === 'complete' && remoteConnected?.value) return Cloud
-  if ((syncStatus?.value as any) === 'paused') return CloudOff
+  if (currentSyncStatus === 'complete' && hasConnected) return Cloud
+  if (currentSyncStatus === 'paused') return CloudOff
   return Cloud
 })
 
 const statusText = computed(() => {
+  // Force re-evaluation via counter (workaround for reactivity issues)
+  void forceUpdateCounter.value
+
+  // Read directly from localStorage for guaranteed persistence
+  const hasConnected = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
+  const manager = getGlobalReliableSyncManager()
+  const currentSyncStatus = manager.syncStatus?.value
+
   if (!isOnline?.value) return 'Offline'
   if (localIsSyncing.value) return 'Syncing...'
   if (hasErrors?.value) return 'Sync Error'
-  if (syncStatus?.value === 'complete' && remoteConnected?.value) return 'Synced'
-  if ((syncStatus?.value as any) === 'paused') return 'Sync Paused'
-  if (remoteConnected?.value) return 'Online'
+  if (currentSyncStatus === 'complete' && hasConnected) return 'Synced'
+  if (currentSyncStatus === 'paused') return 'Sync Paused'
+  if (hasConnected) return 'Online'  // Use localStorage-backed flag
   return 'Local Only'
 })
 

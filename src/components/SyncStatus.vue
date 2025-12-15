@@ -12,8 +12,8 @@
     <!-- Status Text -->
     <div class="sync-text">
       <span class="status-label">{{ statusText }}</span>
-      <span v-if="lastSyncTime" class="last-sync">
-        {{ formatTime(lastSyncTime) }}
+      <span class="last-sync" :class="{ 'invisible': !lastSyncTime }">
+        {{ lastSyncTime ? formatTime(lastSyncTime) : '—' }}
       </span>
 
       <!-- Error Message Display -->
@@ -645,7 +645,7 @@ onUnmounted(() => {
 
 <style scoped>
 .sync-status {
-  @apply flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200;
+  @apply flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors duration-200;
   @apply bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600;
   @apply text-slate-700 dark:text-slate-300;
   font-size: 0.875rem;
@@ -687,14 +687,19 @@ onUnmounted(() => {
 
 .sync-text {
   @apply flex flex-col;
+  min-width: 80px;
 }
 
 .status-label {
   @apply font-medium;
+  white-space: nowrap;
+  min-width: 70px;
+  display: inline-block;
 }
 
 .last-sync {
   @apply text-xs opacity-75;
+  white-space: nowrap;
 }
 
 .error-message {

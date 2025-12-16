@@ -106,7 +106,7 @@ const generateFavicon = (percentage: number, status: 'work' | 'break' | 'inactiv
   const ctx = faviconCanvas.value.getContext('2d')
   if (!ctx) return '/favicon.ico'
 
-  const { size, workColor, breakColor, inactiveColor, backgroundColor } = config.value
+  const { size, workColor, breakColor, inactiveColor: _inactiveColor, backgroundColor } = config.value
   const centerX = size / 2
   const centerY = size / 2
   const radius = (size / 2) - 4

@@ -22,7 +22,7 @@ export const useSimpleBackup = {
   async waitForTasksReady(maxWaitTime = 10000) {
     console.log('⏳ Waiting for tasks to load...')
 
-    const startTime = Date.now()
+    const _startTime = Date.now()
     const taskStore = useTaskStore()
     const { tasks } = storeToRefs(taskStore)
 

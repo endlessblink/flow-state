@@ -48,7 +48,7 @@
 import { ref, computed } from 'vue'
 import { Calendar } from 'lucide-vue-next'
 import BaseBadge from './base/BaseBadge.vue'
-import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useTaskStore } from '@/stores/tasks'
 
 interface Props {
@@ -63,11 +63,11 @@ const props = withDefaults(defineProps<Props>(), {
   filterColor: 'teal'
 })
 
-const emit = defineEmits<{
+const _emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
 
-const { isDragging, dragData, isValidDrop, setDropTarget, startDrag, endDrag } = useDragAndDrop()
+const { isDragging, dragData, isValidDrop, setDropTarget, startDrag: _startDrag, endDrag: _endDrag } = useDragAndDrop()
 const taskStore = useTaskStore()
 
 const isDragTarget = ref(false)

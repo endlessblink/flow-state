@@ -47,6 +47,7 @@
   --overlay-bg: rgba(0, 0, 0, 0.6);
 
   /* Glass Surfaces - SUBTLE glassmorphism (use sparingly!) */
+  --glass-bg-solid: rgba(0, 0, 0, 0.95);     /* Solid black for cards/panels */
   --glass-bg-light: rgba(255, 255, 255, 0.03);
   --glass-bg-medium: rgba(255, 255, 255, 0.05);
   --glass-bg-heavy: rgba(255, 255, 255, 0.08);

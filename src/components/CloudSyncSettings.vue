@@ -234,7 +234,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getGlobalReliableSyncManager, useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
-import { SyncProviderType } from '@/types/sync'
+import type { SyncProviderType as _SyncProviderType } from '@/types/sync'
 import {
   Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap
 } from 'lucide-vue-next'
@@ -245,7 +245,7 @@ const reliableSyncManager = getGlobalReliableSyncManager() as ReturnType<typeof 
   disableProvider?: () => Promise<void>
   isLiveSyncActive?: () => boolean
 }
-const persistentStorage = usePersistentStorage()
+const _persistentStorage = usePersistentStorage()
 
 // State - Initialize from localStorage for persistence across page refreshes
 // If hasConnectedEver is true, default to 'couchdb' even if pomo-cloud-provider wasn't explicitly set
@@ -400,7 +400,7 @@ const manualSync = async () => {
     syncProgress.value = 'Uploading local changes...'
     try {
       await reliableSyncManager.triggerSync()
-    } catch (syncError) {
+    } catch (_syncError) {
       throw new Error((syncError as Error)?.message || 'Failed to upload data')
     }
 
@@ -409,7 +409,7 @@ const manualSync = async () => {
     syncProgress.value = 'Checking for remote changes...'
     try {
       await reliableSyncManager.triggerSync()
-    } catch (syncError) {
+    } catch (_syncError) {
       // Sync error on download - still partial success
     }
 

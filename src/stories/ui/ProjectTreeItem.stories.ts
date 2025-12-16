@@ -115,84 +115,78 @@ export const NestedProjects: Story = {
   render: () => ({
     components: { ProjectTreeItem },
     setup() {
-      const projects = ref([
+      // Flat list of projects for easier rendering
+      const rootProject = ref({
+        id: '1',
+        name: 'Website Redesign',
+        color: '#3b82f6',
+        taskCount: 12,
+        completedCount: 8,
+      })
+
+      const level1Projects = ref([
         {
-          id: '1',
-          name: 'Website Redesign',
+          id: '1-1',
+          name: 'Frontend Development',
           color: '#3b82f6',
-          taskCount: 12,
-          completedCount: 8,
-          children: [
-            {
-              id: '1-1',
-              name: 'Frontend Development',
-              color: '#3b82f6',
-              taskCount: 8,
-              completedCount: 6,
-              children: [
-                {
-                  id: '1-1-1',
-                  name: 'React Components',
-                  color: '#3b82f6',
-                  taskCount: 5,
-                  completedCount: 4,
-                },
-                {
-                  id: '1-1-2',
-                  name: 'Styling Updates',
-                  color: '#3b82f6',
-                  taskCount: 3,
-                  completedCount: 2,
-                }
-              ]
-            },
-            {
-              id: '1-2',
-              name: 'Backend API',
-              color: '#3b82f6',
-              taskCount: 4,
-              completedCount: 2,
-            }
-          ]
+          taskCount: 8,
+          completedCount: 6,
+        },
+        {
+          id: '1-2',
+          name: 'Backend API',
+          color: '#3b82f6',
+          taskCount: 4,
+          completedCount: 2,
         }
       ])
 
-      const expandedItems = ref(new Set(['1', '1-1']))
+      const level2Projects = ref([
+        {
+          id: '1-1-1',
+          name: 'React Components',
+          color: '#3b82f6',
+          taskCount: 5,
+          completedCount: 4,
+        },
+        {
+          id: '1-1-2',
+          name: 'Styling Updates',
+          color: '#3b82f6',
+          taskCount: 3,
+          completedCount: 2,
+        }
+      ])
+
+      const expandedItems = ref(['1', '1-1'])
       const selectedProject = ref('1-1-1')
 
-      const handleSelect = (projectId: string) => {
-        selectedProject.value = projectId
+      const isExpanded = (id: string) => expandedItems.value.includes(id)
+      const isSelected = (id: string) => selectedProject.value === id
+
+      const handleSelect = (id: string) => {
+        selectedProject.value = id
       }
 
-      const handleToggle = (projectId: string) => {
-        if (expandedItems.value.has(projectId)) {
-          expandedItems.value.delete(projectId)
+      const handleToggle = (id: string) => {
+        const index = expandedItems.value.indexOf(id)
+        if (index > -1) {
+          expandedItems.value.splice(index, 1)
         } else {
-          expandedItems.value.add(projectId)
+          expandedItems.value.push(id)
         }
       }
 
-      const renderProjectTree = (projectList: any[], level = 0) => {
-        return projectList.map(project => `
-          <ProjectTreeItem
-            :project="${JSON.stringify(project).replace(/"/g, '&quot;')}"
-            :level="${level}"
-            :is-selected="${selectedProject.value === project.id}"
-            :is-expanded="${expandedItems.value.has(project.id)}"
-            @select="handleSelect('${project.id}')"
-            @toggle="handleToggle('${project.id}')"
-          />
-          ${project.children ? renderProjectTree(project.children, level + 1) : ''}
-        `).join('')
-      }
-
       return {
-        projects,
+        rootProject,
+        level1Projects,
+        level2Projects,
         expandedItems,
         selectedProject,
+        isExpanded,
+        isSelected,
         handleSelect,
         handleToggle,
-        renderProjectTree,
       }
     },
     template: `
@@ -201,7 +195,48 @@ export const NestedProjects: Story = {
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Multi-level project hierarchy</p>
 
         <div style="width: 350px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px;">
-          <div v-html="renderProjectTree(projects)"></div>
+          <!-- Root level -->
+          <ProjectTreeItem
+            :project="rootProject"
+            :level="0"
+            :is-selected="isSelected('1')"
+            :is-expanded="isExpanded('1')"
+            @select="handleSelect('1')"
+            @toggle="handleToggle('1')"
+          />
+
+          <!-- Level 1 (shown when root expanded) -->
+          <div v-if="isExpanded('1')" style="margin-left: 16px;">
+            <ProjectTreeItem
+              :project="level1Projects[0]"
+              :level="1"
+              :is-selected="isSelected('1-1')"
+              :is-expanded="isExpanded('1-1')"
+              @select="handleSelect('1-1')"
+              @toggle="handleToggle('1-1')"
+            />
+
+            <!-- Level 2 (shown when Frontend expanded) -->
+            <div v-if="isExpanded('1-1')" style="margin-left: 16px;">
+              <ProjectTreeItem
+                v-for="project in level2Projects"
+                :key="project.id"
+                :project="project"
+                :level="2"
+                :is-selected="isSelected(project.id)"
+                :is-expanded="false"
+                @select="handleSelect(project.id)"
+              />
+            </div>
+
+            <ProjectTreeItem
+              :project="level1Projects[1]"
+              :level="1"
+              :is-selected="isSelected('1-2')"
+              :is-expanded="false"
+              @select="handleSelect('1-2')"
+            />
+          </div>
         </div>
 
         <div style="margin-top: 24px; padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">

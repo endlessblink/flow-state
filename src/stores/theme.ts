@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { themes, DEFAULT_THEME, THEME_STORAGE_KEY, type Theme } from '@/config/themes'
 
 export const useThemeStore = defineStore('theme', () => {

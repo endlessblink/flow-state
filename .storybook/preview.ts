@@ -2,6 +2,7 @@ import type { Preview } from '@storybook/vue3'
 import type { App } from 'vue'
 import { setup } from '@storybook/vue3'
 import { createPinia } from 'pinia'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import customTheme from './theme'
 import i18n from '../src/i18n'
 
@@ -14,9 +15,21 @@ import '../src/assets/styles.css'
 
 const pinia = createPinia()
 
+// Create a mock router for components that need vue-router
+const mockRouter = createRouter({
+  history: createMemoryHistory(),
+  routes: [
+    { path: '/', name: 'home', component: { template: '<div>Home</div>' } },
+    { path: '/board', name: 'board', component: { template: '<div>Board</div>' } },
+    { path: '/calendar', name: 'calendar', component: { template: '<div>Calendar</div>' } },
+    { path: '/canvas', name: 'canvas', component: { template: '<div>Canvas</div>' } },
+  ],
+})
+
 setup((app: App) => {
   app.use(pinia)
   app.use(i18n)
+  app.use(mockRouter)
 })
 
 const preview: Preview = {

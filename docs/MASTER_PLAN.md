@@ -1,7 +1,7 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 16, 2025
-**Version**: 4.2 (Sync loop fix)
+**Version**: 4.3 (Calendar/Canvas inbox separation)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -68,27 +68,31 @@
 
 <!-- Active work items use TASK-XXX format -->
 
-### TASK-009: Separate Calendar/Canvas Inbox Systems (NEEDS USER TESTING)
+### ~~TASK-009~~: Separate Calendar/Canvas Inbox Systems (COMPLETE)
 
 **Goal**: Make calendar and canvas inboxes completely independent.
 
 | Step | Description | Status | Rollback |
 |------|-------------|--------|----------|
-| 1 | Update baseInboxTasks in CalendarInboxPanel.vue | DONE | `git checkout src/components/CalendarInboxPanel.vue` |
-| 2 | Update inboxTasks filter logic | DONE | Same as step 1 |
-| 3 | Remove notOnCanvas filter | DONE | Same as step 1 |
-| 4 | Update calendarFilteredTasks in tasks.ts | DONE | `git checkout src/stores/tasks.ts` |
-| 5 | Fix tasks.ts updateTask - don't set isInInbox on instances | DONE | `git checkout src/stores/tasks.ts` |
-| 6 | Fix useTaskLifecycle.ts - CALENDAR state shouldn't set isInInbox | DONE | `git checkout src/composables/useTaskLifecycle.ts` |
-| 7 | Fix useCalendarDayView.ts - drop handler shouldn't modify canvas state | DONE | `git checkout src/composables/calendar/useCalendarDayView.ts` |
-| 8 | Fix canvas inbox filtering - ONLY check canvasPosition, ignore isInInbox | DONE | `git checkout src/components/base/UnifiedInboxPanel.vue src/components/canvas/InboxPanel.vue src/views/CanvasView.vue` |
-| 9 | Test with manual user testing | PENDING | N/A |
+| 1 | Update baseInboxTasks in CalendarInboxPanel.vue | ✅ DONE | `git checkout src/components/CalendarInboxPanel.vue` |
+| 2 | Update inboxTasks filter logic | ✅ DONE | Same as step 1 |
+| 3 | Remove notOnCanvas filter | ✅ DONE | Same as step 1 |
+| 4 | Update calendarFilteredTasks in tasks.ts | ✅ DONE | `git checkout src/stores/tasks.ts` |
+| 5 | Fix tasks.ts updateTask - don't set isInInbox on instances | ✅ DONE | `git checkout src/stores/tasks.ts` |
+| 6 | Fix useTaskLifecycle.ts - CALENDAR state shouldn't set isInInbox | ✅ DONE | `git checkout src/composables/useTaskLifecycle.ts` |
+| 7 | Fix useCalendarDayView.ts - drop handler shouldn't modify canvas state | ✅ DONE | `git checkout src/composables/calendar/useCalendarDayView.ts` |
+| 8 | Fix canvas inbox filtering - ONLY check canvasPosition, ignore isInInbox | ✅ DONE | `git checkout src/components/base/UnifiedInboxPanel.vue src/components/canvas/InboxPanel.vue src/views/CanvasView.vue` |
+| 9 | Fix syncNodes() to only check canvasPosition for canvas rendering | ✅ DONE | `git checkout src/views/CanvasView.vue` |
+| 10 | Test with Playwright | ✅ DONE | N/A |
 
 **Root Cause Found Dec 16, 2025**:
 The `isInInbox` property was being used for BOTH calendar and canvas inbox membership. When scheduling a task on calendar, multiple places were setting `isInInbox = false`, which also removed it from canvas inbox.
 
 **Final Fix** (Dec 16, 2025):
 Canvas inbox filtering now ONLY checks `canvasPosition`, ignoring `isInInbox` entirely. This ensures tasks scheduled on calendar (which may have `isInInbox: false` from old data) still appear in canvas inbox.
+
+**Reactivity Fix** (Dec 16, 2025):
+The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox === false && canvasPosition`. This caused tasks to not appear on canvas until page refresh. Fixed to only check `canvasPosition`.
 
 **Fixes Applied**:
 1. `tasks.ts:1661-1670` - Calendar instance logic no longer modifies `isInInbox` or `canvasPosition`
@@ -97,6 +101,15 @@ Canvas inbox filtering now ONLY checks `canvasPosition`, ignoring `isInInbox` en
 4. `UnifiedInboxPanel.vue:288-294` - Canvas inbox filter: `!task.canvasPosition` (ignores isInInbox)
 5. `InboxPanel.vue:199-205` - Canvas inbox filter: `!task.canvasPosition` (ignores isInInbox)
 6. `CanvasView.vue:1213-1217` - hasInboxTasks check: `!task.canvasPosition` (ignores isInInbox)
+7. `CanvasView.vue:1774-1780` - syncNodes() filter: only checks `task.canvasPosition`
+8. `CanvasView.vue:2240-2242` - Auto-collect inbox filter: `!t.canvasPosition`
+9. `CanvasView.vue:2964-2966` - Section task filter: removed `task.isInInbox` check
+
+**Verification** (Dec 16, 2025 - Playwright):
+- ✅ Task dragged from canvas inbox → canvas appears immediately (no refresh needed)
+- ✅ Canvas inbox correctly shows 0 tasks after drop
+- ✅ Calendar inbox still shows the task (systems are independent!)
+- ✅ Task can be ON canvas AND IN calendar inbox simultaneously
 
 **Principle**:
 - `isInInbox` property is now OBSOLETE for filtering - kept only for backward compatibility

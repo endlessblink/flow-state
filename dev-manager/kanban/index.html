@@ -197,6 +197,51 @@
       display: none !important;
     }
 
+    /* COLLAPSE TOGGLE */
+    .collapse-toggle {
+      background: transparent;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      margin-left: auto;
+    }
+
+    .collapse-toggle:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e0e0e0;
+    }
+
+    .column-content.collapsed {
+      display: none !important;
+    }
+
+    .column-header.collapsed .collapse-toggle {
+      transform: rotate(-90deg);
+    }
+
+    .column-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .column-header-text {
+      flex: 1;
+    }
+
+    .collapse-count {
+      background: #333;
+      color: #888;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: normal;
+    }
+
     /* STATS BAR */
     .stats-bar {
       display: flex;
@@ -817,6 +862,7 @@
             <option value="task">📋 Tasks</option>
             <option value="bug">🐛 Bugs</option>
             <option value="issue">⚠️ Issues</option>
+            <option value="road">🗺️ Roadmap</option>
           </select>
           <select id="priority-filter" class="filter-select" onchange="applyFilters()">
             <option value="all">All Priorities</option>
@@ -890,7 +936,11 @@
             <div class="column-content" id="column-review"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header done">✅ Done</div>
+            <div class="column-header done" id="done-header">
+              <span class="column-header-text">✅ Done</span>
+              <span class="collapse-count" id="done-count">0</span>
+              <button class="collapse-toggle" onclick="toggleDoneColumn()" title="Collapse/Expand">▼</button>
+            </div>
             <div class="column-content" id="column-done"></div>
           </div>
         </div>
@@ -1381,11 +1431,13 @@
       try {
         const data = await parseMasterPlan();
 
-        // Combine all tasks into kanban columns
+        // Combine all tasks into kanban columns (including roadmap items!)
         const allItems = [
           ...data.activeWork,
           ...data.bugs,
-          ...data.issues
+          ...data.issues,
+          ...data.roadmap.nearTerm,
+          ...data.roadmap.later
         ];
 
         const tasks = {
@@ -1423,6 +1475,7 @@
             // Get type badge based on ID prefix
             const typeLabel = task.id.startsWith('BUG-') ? '🐛 Bug' :
                              task.id.startsWith('ISSUE-') ? '⚠️ Issue' :
+                             task.id.startsWith('ROAD-') ? '🗺️ Roadmap' :
                              task.id.startsWith('TASK-') ? '📋 Task' : '';
 
             // Use task's calculated progress, or default based on status
@@ -1472,6 +1525,8 @@
       applyFilters();
       updateStats();
       initDragAndDrop();
+      loadDoneColumnState();
+      updateDoneCount();
     } catch (error) {
       console.error('Error rendering kanban:', error);
       // Show error message on page instead of white overlay
@@ -2270,40 +2325,9 @@
 
     function handleSearch(query) {
       currentSearchQuery = query.toLowerCase().trim();
-      const searchInput = document.getElementById('search-input');
-      const resultsCount = document.getElementById('search-results-count');
-
-      // Get all task cards across all views
-      const allCards = document.querySelectorAll('.task-card');
-      let matchCount = 0;
-      let totalCount = allCards.length;
-
-      allCards.forEach(card => {
-        const cardText = card.textContent.toLowerCase();
-        const matches = currentSearchQuery === '' || cardText.includes(currentSearchQuery);
-
-        if (matches) {
-          card.classList.remove('search-dimmed');
-          card.classList.add('search-highlight');
-          matchCount++;
-        } else {
-          card.classList.add('search-dimmed');
-          card.classList.remove('search-highlight');
-        }
-
-        // Remove highlight if no search query
-        if (currentSearchQuery === '') {
-          card.classList.remove('search-highlight');
-          card.classList.remove('search-dimmed');
-        }
-      });
-
-      // Update results count
-      if (currentSearchQuery !== '') {
-        resultsCount.textContent = `${matchCount} of ${totalCount} tasks`;
-      } else {
-        resultsCount.textContent = '';
-      }
+      // Use unified filter function that handles search + type + priority
+      applyFilters();
+      updateStats();
     }
 
     function clearSearch() {
@@ -2346,6 +2370,7 @@
         let taskType = 'task';
         if (taskId.startsWith('BUG-')) taskType = 'bug';
         else if (taskId.startsWith('ISSUE-')) taskType = 'issue';
+        else if (taskId.startsWith('ROAD-')) taskType = 'road';
 
         // Check type filter
         const typeMatch = typeFilter === 'all' || taskType === typeFilter;
@@ -2392,6 +2417,10 @@
       // Save filter state
       localStorage.setItem('kanban-type-filter', typeFilter);
       localStorage.setItem('kanban-priority-filter', priorityFilter);
+
+      // Update stats to reflect filtered view
+      updateStats();
+      updateDoneCount();
     }
 
     // Load saved filters on page load
@@ -2449,6 +2478,44 @@
       const completion = total > 0 ? Math.round((done / total) * 100) : 0;
       document.getElementById('stat-completion').textContent = completion + '%';
       document.getElementById('stat-progress-fill').style.width = completion + '%';
+    }
+
+    // COLLAPSE DONE COLUMN
+    function toggleDoneColumn() {
+      const header = document.getElementById('done-header');
+      const content = document.getElementById('column-done');
+      const toggle = header.querySelector('.collapse-toggle');
+
+      const isCollapsed = content.classList.toggle('collapsed');
+      header.classList.toggle('collapsed', isCollapsed);
+
+      // Save state to localStorage
+      localStorage.setItem('kanban-done-collapsed', isCollapsed);
+
+      // Update toggle icon
+      toggle.textContent = isCollapsed ? '▶' : '▼';
+    }
+
+    function loadDoneColumnState() {
+      const isCollapsed = localStorage.getItem('kanban-done-collapsed') === 'true';
+      if (isCollapsed) {
+        const header = document.getElementById('done-header');
+        const content = document.getElementById('column-done');
+        const toggle = header.querySelector('.collapse-toggle');
+
+        content.classList.add('collapsed');
+        header.classList.add('collapsed');
+        toggle.textContent = '▶';
+      }
+    }
+
+    function updateDoneCount() {
+      const doneContent = document.getElementById('column-done');
+      const count = doneContent ? doneContent.querySelectorAll('.task-card:not(.filter-hidden)').length : 0;
+      const countEl = document.getElementById('done-count');
+      if (countEl) {
+        countEl.textContent = count;
+      }
     }
 
     // DRAG AND DROP FUNCTIONALITY

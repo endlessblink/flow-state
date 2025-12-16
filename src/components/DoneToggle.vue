@@ -291,13 +291,13 @@ const getCelebrationStyle = (index: number) => {
 }
 
 // Touch feedback system
-const handleTouchStart = (event: TouchEvent) => {
+const _handleTouchStart = (_event: TouchEvent) => {
   if (props.disabled) return
   showTouchFeedback.value = true
   triggerRipple()
 }
 
-const handleTouchEnd = (event: TouchEvent) => {
+const _handleTouchEnd = (_event: TouchEvent) => {
   if (props.disabled) return
   setTimeout(() => {
     showTouchFeedback.value = false
@@ -360,7 +360,7 @@ const handleBlur = () => {
 }
 
 // Animation frame optimization for smooth interactions
-const smoothStateTransition = (callback: () => void) => {
+const _smoothStateTransition = (callback: () => void) => {
   if (animationFrameId.value) {
     cancelAnimationFrame(animationFrameId.value)
   }

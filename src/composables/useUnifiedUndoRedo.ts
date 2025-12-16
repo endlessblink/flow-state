@@ -22,7 +22,7 @@ export const useUnifiedUndoRedo = () => {
     history,
     undo,
     redo,
-    saveState
+    saveState: _saveState
   } = singletonUndo
 
   // Sync state from store (call after operations that don't use undo)

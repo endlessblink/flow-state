@@ -150,7 +150,14 @@ export default [
 
       // Accessibility (removed deprecated rules: require-img-alt, mouse-events-have-key-events)
       'vue/no-deprecated-slot-attribute': 'error',
-      'vue/no-deprecated-slot-scope-attribute': 'error'
+      'vue/no-deprecated-slot-scope-attribute': 'error',
+
+      // TypeScript rules for Vue files (allow underscore prefix to silence unused vars)
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }]
     }
   },
   // TypeScript files

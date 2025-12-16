@@ -382,14 +382,16 @@ const handleDrop = (event: DragEvent) => {
 <style scoped>
 .task-sidebar {
   width: 300px;
-  background: var(--surface-secondary); /* Clean solid background */
-  border: 1px solid var(--border-subtle); /* Subtle stroke border */
-  border-radius: var(--radius-xl); /* Moderate rounded corners */
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   max-height: 100%;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-dark-xl);
 }
 
 .sidebar-header {
@@ -583,22 +585,21 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .sidebar-task {
-  background: var(--surface-primary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl); /* Moderate rounding - not too much */
+  background: var(--glass-bg-solid);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
   padding: var(--space-2);
   margin-bottom: var(--space-2);
   cursor: move;
   transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden; /* Clip content to rounded borders */
+  overflow: hidden;
 }
 
 .sidebar-task:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-medium);
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-dark-md);
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
@@ -721,15 +722,15 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .action-btn.start-timer:hover {
-  background: var(--color-work);
+  background: transparent;
   border-color: var(--color-work);
-  color: var(--state-active-text);
+  color: var(--color-work);
 }
 
 .action-btn.edit-task:hover {
-  background: var(--brand-primary);
+  background: transparent;
   border-color: var(--brand-primary);
-  color: var(--state-active-text);
+  color: var(--brand-primary);
 }
 
 .empty-state {
@@ -850,14 +851,15 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .nested-task {
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-solid);
+  border: 1px solid var(--glass-border);
   margin-bottom: var(--space-1);
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .nested-task:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-medium);
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
 }
 
 .indent-spacer {

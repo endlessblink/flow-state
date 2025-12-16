@@ -1,7 +1,7 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 16, 2025
-**Version**: 4.5 (TASK-013 Unified Group Modal complete)
+**Version**: 4.6 (TASK-014 Storybook Glass Morphism Streamlining started)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -64,6 +64,105 @@
 ## Active Work
 
 <!-- Active work items use TASK-XXX format -->
+
+### TASK-014: Storybook Glass Morphism Streamlining (IN PROGRESS)
+
+**Goal**: Apply consistent glass morphism design aesthetic (stroke borders, glass blur, no fills) across all Storybook stories and their components.
+
+**Priority**: P2-MEDIUM
+
+**Design Reference** (from BaseModal):
+- `background: var(--glass-bg-solid)` → `rgba(0, 0, 0, 0.95)` - Solid black for cards/panels
+- `border: 1px solid var(--glass-border)` → `rgba(255, 255, 255, 0.1)` - Stroke borders
+- `backdrop-filter: blur(20px) saturate(100%)` - Glass blur effect
+- Hover: `background: var(--glass-bg-medium)` → `rgba(255, 255, 255, 0.05)`
+- Hover border: `var(--glass-border-hover)` → `rgba(255, 255, 255, 0.15)`
+- Icon hovers: Strokes only, no fills
+
+**Design Token Added** (Dec 16, 2025):
+- `--glass-bg-solid: rgba(0, 0, 0, 0.95)` in `src/assets/design-tokens.css:50`
+
+**Completed Stories/Components**:
+| File | Component Changes | Status |
+|------|-------------------|--------|
+| `TaskManagerSidebar.vue` | `.task-sidebar`, `.sidebar-task`, `.nested-task`, `.action-btn` hover | ✅ DONE |
+
+**Where We Stopped**:
+- TaskManagerSidebar component fully updated to use design tokens
+- Action button hovers changed from fills to strokes
+- Need to verify in Storybook and continue with remaining stories
+
+**Remaining Stories** (54 total):
+
+**Base Components** (8):
+- [ ] `BaseButton.stories.ts`
+- [ ] `BaseCard.stories.ts`
+- [ ] `BaseInput.stories.ts`
+- [ ] `BaseDropdown.stories.ts`
+- [ ] `BaseBadge.stories.ts`
+- [ ] `BasePopover.stories.ts`
+- [ ] `BaseIconButton.stories.ts`
+- [ ] `BaseNavItem.stories.ts`
+- [ ] `BaseModal.stories.ts` (reference - already correct)
+
+**UI Components** (15):
+- [ ] `EmojiPicker.stories.ts` (reference - already correct)
+- [ ] `TimeDisplay.stories.ts`
+- [ ] `ProjectTreeItem.stories.ts`
+- [ ] `CommandPalette.stories.ts`
+- [ ] `CustomSelect.stories.ts`
+- [ ] `ErrorBoundary.stories.ts`
+- [ ] `ProjectDropZone.stories.ts`
+- [ ] `BackupSettings.stories.ts`
+- [ ] `CalendarInboxPanel.stories.ts`
+- [ ] `DoneToggle.stories.ts`
+- [ ] `ViewControls.stories.ts`
+- [ ] `DateDropZone.stories.ts`
+- [ ] `MultiSelectToggle.stories.ts`
+- [ ] `DragHandle.stories.ts`
+- [ ] `ContextMenu.stories.ts`
+- [ ] `PerformanceTest.stories.ts`
+
+**Board Components** (6):
+- [ ] `KanbanColumn.stories.ts`
+- [ ] `TaskCard.stories.ts`
+- [ ] `TaskTable.stories.ts`
+- [ ] `KanbanSwimlane.stories.ts`
+- [ ] `TaskRow.stories.ts`
+- [ ] `TaskList.stories.ts`
+
+**Canvas Components** (12):
+- [ ] `CanvasContextMenu.stories.ts`
+- [ ] `InboxPanel.stories.ts`
+- [ ] `CanvasSection.stories.ts`
+- [ ] `InboxTimeFilters.stories.ts`
+- [ ] `TaskNode.stories.ts`
+- [ ] `SectionManager.stories.ts`
+- [ ] `SectionNodeSimple.stories.ts`
+- [ ] `EdgeContextMenu.stories.ts`
+- [ ] `ResizeHandle.stories.ts`
+- [ ] `MultiSelectionOverlay.stories.ts`
+- [ ] `GroupEditModal.stories.ts`
+
+**Modals** (9):
+- [ ] `ConfirmationModal.stories.ts`
+- [ ] `GroupModal.stories.ts`
+- [ ] `BatchEditModal.stories.ts`
+- [ ] `QuickTaskCreateModal.stories.ts`
+- [ ] `SearchModal.stories.ts`
+- [ ] `SettingsModal.stories.ts`
+- [ ] `ProjectModal.stories.ts`
+- [ ] `QuickTaskCreate.stories.ts`
+- [ ] `BaseModal-Redesign-Preview.stories.ts`
+
+**Context Menus** (2):
+- [ ] `TaskContextMenu.stories.ts`
+- [ ] `TaskEditModal.stories.ts`
+
+**Design System** (1):
+- [ ] `Colors.stories.ts`
+
+---
 
 ### TASK-011: Lint Cleanup (IN PROGRESS)
 

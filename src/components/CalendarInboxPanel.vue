@@ -307,7 +307,7 @@ const statusLabel = computed(() => (status: string) => {
 })
 
 // Methods
-const getProjectName = (projectId: string) => {
+const _getProjectName = (projectId: string) => {
   const project = taskStore.getProjectById(projectId)
   return project?.name || 'Uncategorized'
 }
@@ -326,7 +326,7 @@ const addTask = () => {
   newTaskTitle.value = ''
 }
 
-const handleTaskClick = (event: MouseEvent, task: Task) => {
+const handleTaskClick = (_event: MouseEvent, _task: Task) => {
   // IMPORTANT: Don't handle clicks if a drag operation is in progress
   // This prevents interference with drag-drop functionality
   if (draggingTaskId.value) {

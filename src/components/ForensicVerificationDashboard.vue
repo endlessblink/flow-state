@@ -205,7 +205,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { ForensicLogger, BackupSnapshot } from '@/utils/forensicBackupLogger'
+import { ForensicLogger, type BackupSnapshot as _BackupSnapshot } from '@/utils/forensicBackupLogger'
 import { useSimpleBackup } from '@/composables/useSimpleBackup'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
@@ -476,7 +476,7 @@ const testBackupCreation = async () => {
 
     const hasTasks = backup.tasks && Array.isArray(backup.tasks)
     // Note: forensic property doesn't exist in SimpleBackupData interface
-    const hasForensic = false // Default since forensic property is not defined
+    const _hasForensic = false // Default since forensic property is not defined
 
     return {
       success: hasTasks,

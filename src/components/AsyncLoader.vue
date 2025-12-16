@@ -182,7 +182,7 @@ const emit = defineEmits<{
 }>()
 
 // Dynamic imports composable
-const { import: dynamicImport, getStatus } = useDynamicImports()
+const { import: _dynamicImport, getStatus } = useDynamicImports()
 
 // Reactive state
 const component = ref<any>(null)

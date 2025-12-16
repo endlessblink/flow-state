@@ -28,7 +28,7 @@ export const useVirtualList = <T = any>(
     itemHeight,
     containerHeight,
     overscan = 5,
-    threshold = 100,
+    threshold: _threshold = 100,
     scrollElement = window
   } = options
 
@@ -168,7 +168,7 @@ export const useVirtualList = <T = any>(
     }
 
     const itemHeight = getItemHeight(index)
-    const containerScrollElement = containerRef.value || window
+    const _containerScrollElement = containerRef.value || window
 
     switch (alignment) {
       case 'start':

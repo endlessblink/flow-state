@@ -7,9 +7,9 @@ import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import type {
-  TaskRecurrence,
-  NotificationPreferences,
-  ScheduledNotification
+  TaskRecurrence as _TaskRecurrence,
+  NotificationPreferences as _NotificationPreferences,
+  ScheduledNotification as _ScheduledNotification
 } from '@/types/recurrence'
 // Import all types from central location - no local redefinitions
 import type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
@@ -251,7 +251,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
       // Check localStorage for backup before creating sample tasks
       const userBackup = localStorage.getItem('pomo-flow-user-backup')
-      const importedTasks = localStorage.getItem('pomo-flow-imported-tasks')
+      const _importedTasks = localStorage.getItem('pomo-flow-imported-tasks')
 
       if (userBackup) {
         try {
@@ -365,7 +365,7 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Initialize sample tasks (disabled - start with empty)
-  const initializeSampleTasks = () => {
+  const _initializeSampleTasks = () => {
     // Disabled - users add their own tasks
     return
 }

@@ -152,7 +152,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useSimpleBackup } from '@/composables/useSimpleBackup'
 import { useTaskStore } from '@/stores/tasks'
 import { filterMockTasks } from '@/utils/mockTaskDetector'
-import { ForensicLogger } from '@/utils/forensicBackupLogger'
+import { ForensicLogger as _ForensicLogger } from '@/utils/forensicBackupLogger'
 
 interface VerificationResult {
   timestamp: string
@@ -275,7 +275,7 @@ const runVerification = async () => {
     const mockTasksCount = mockDetectionResult.mockTasks.length
 
     // Create backup for verification
-    const backup = await createBackup()
+    const _backup = await createBackup()
 
     // Run forensic verification
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -390,7 +390,7 @@ const checkBackupAvailability = async () => {
   try {
     const backup = getLatestBackup()
     isBackupAvailable.value = !!backup && !!backup.tasks
-  } catch (error) {
+  } catch (_error) {
     isBackupAvailable.value = false
   }
 }
@@ -409,12 +409,12 @@ onMounted(() => {
 
 // Show tooltip on hover
 let tooltipTimeout: NodeJS.Timeout
-const showTooltipHandler = () => {
+const _showTooltipHandler = () => {
   clearTimeout(tooltipTimeout)
   showTooltip.value = true
 }
 
-const hideTooltipHandler = () => {
+const _hideTooltipHandler = () => {
   tooltipTimeout = setTimeout(() => {
     showTooltip.value = false
   }, 500)

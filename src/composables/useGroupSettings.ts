@@ -1,8 +1,8 @@
 /**
- * Section Settings Composable
+ * Group Settings Composable
  *
- * Handles auto-fill logic for section settings based on keywords detected in section names.
- * Works with the unified groups/sections system where all sections can have assignOnDrop settings.
+ * Handles auto-fill logic for group settings based on keywords detected in group names.
+ * Works with the unified groups system where all groups can have assignOnDrop settings.
  */
 
 import { computed, ref, watch } from 'vue'
@@ -98,9 +98,9 @@ export function getSettingsDescription(settings: AssignOnDropSettings | undefine
 }
 
 /**
- * Composable for managing section settings with auto-fill from keywords
+ * Composable for managing group settings with auto-fill from keywords
  */
-export function useSectionSettings() {
+export function useGroupSettings() {
   /**
    * Auto-fill assignOnDrop settings based on section name
    * Detects keywords like "Today", "High Priority", "Done" and returns appropriate settings
@@ -225,4 +225,4 @@ export function useSectionSettings() {
   }
 }
 
-export type SectionSettingsManager = ReturnType<ReturnType<typeof useSectionSettings>['createSettingsManager']>
+export type GroupSettingsManager = ReturnType<ReturnType<typeof useGroupSettings>['createSettingsManager']>

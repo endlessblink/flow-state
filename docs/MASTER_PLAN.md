@@ -177,7 +177,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | ~~BUG-004~~ | ~~Tasks in Today group don't drag~~ | ~~P2-MEDIUM~~ | ✅ FIX APPLIED Dec 16 - Needs manual test |
 | ~~BUG-005~~ | ~~Date not updating on group drop~~ | ~~P1-HIGH~~ | ✅ FIX APPLIED Dec 16 - Added syncNodes() after property update |
 | BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |
-| BUG-007 | Deleting group deletes tasks inside | P1-HIGH | Pending (1 hour) |
+| ~~BUG-007~~ | ~~Deleting group deletes tasks inside~~ | ~~P1-HIGH~~ | ✅ ALREADY FIXED Dec 5, 2025 - Tasks preserved on canvas |
 | BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
 | BUG-013 | Tasks disappear after changing properties on canvas | P1-HIGH | Needs investigation - reappear after refresh |
 | BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
@@ -257,6 +257,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | ISSUE-004 | Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
 | ISSUE-005 | QuotaExceededError unhandled | P2 | Functions exist, not enforced |
 | ISSUE-007 | **Timer not syncing across instances** | P2-MEDIUM | Timer started in one tab should show in all open tabs/windows |
+| ISSUE-008 | **Ctrl+Z doesn't work on groups** | P2-MEDIUM | Undo doesn't restore deleted/modified groups on canvas |
 
 ### 🔴 NEXT SESSION: Live Sync Persistence Fix
 
@@ -512,51 +513,49 @@ if (section.type === 'custom' && isSmartGroup(section.name)) {
 
 **Updated Scope** (Dec 16, 2025 analysis):
 
-**Current State - 9 files, 5,845 lines total:**
+**Current State - 8 files, 5,671 lines total** (after Phase A+B):
 
 | File | Lines | Purpose |
 |------|-------|---------|
 | `CalendarView.vue` | 2,963 | Main calendar view (massive monolith) |
-| `calendar/useCalendarDayView.ts` | 900 | Day view logic |
-| `calendar/useCalendarDrag.ts` | 546 | Drag interactions |
+| `calendar/useCalendarDayView.ts` | 897 | Day view logic |
+| `calendar/useCalendarDrag.ts` | 542 | Drag interactions |
 | `calendar/useCalendarWeekView.ts` | 391 | Week view logic |
 | `CalendarViewVueCal.vue` | 297 | Alternative vue-cal implementation |
-| `useCalendarCore.ts` | 276 | Consolidation attempt (partially adopted) |
+| `useCalendarCore.ts` | 264 | **Unified core utilities** (consolidated) |
 | `useCalendarDragCreate.ts` | 180 | Drag-to-create functionality |
-| `calendar/useCalendarEventHelpers.ts` | 156 | Event helpers (legacy, widely used) |
-| `calendar/useCalendarMonthView.ts` | 136 | Month view logic |
+| `calendar/useCalendarMonthView.ts` | 137 | Month view logic |
+| ~~`calendar/useCalendarEventHelpers.ts`~~ | ~~156~~ | ~~DELETED - merged into useCalendarCore~~ |
 
-**Critical Duplications Found:**
+**Critical Duplications Found** (✅ ALL FIXED Dec 16, 2025):
 
-1. **CalendarEvent interface** - defined 3x identically:
-   - `src/types/tasks.ts:117`
-   - `useCalendarCore.ts:4`
-   - `useCalendarEventHelpers.ts:4`
+1. ~~**CalendarEvent interface** - defined 3x identically~~ ✅ FIXED
+   - Now only in `src/types/tasks.ts:117`
+   - Re-exported from `useCalendarCore.ts` for backward compatibility
 
-2. **DragGhost interface** - defined 2x:
-   - `useCalendarDayView.ts:13`
-   - `useCalendarDrag.ts:13`
+2. ~~**DragGhost interface** - defined 2x~~ ✅ FIXED
+   - Now only in `src/types/tasks.ts:138`
+   - Re-exported from composables for backward compatibility
 
-3. **Helper functions duplicated** between `useCalendarCore` and `useCalendarEventHelpers`:
-   - `getDateString`, `formatHour`, `formatEventTime`
-   - All priority helpers (getPriorityColor, getPriorityClass, getPriorityLabel)
-   - All status helpers (getTaskStatus, getStatusLabel, getStatusIcon, cycleTaskStatus)
-   - All project helpers (getTaskProject, getProjectColor, getProjectEmoji, getProjectName)
+3. ~~**Helper functions duplicated**~~ ✅ FIXED
+   - `useCalendarEventHelpers.ts` DELETED
+   - All consumers now use `useCalendarCore`
 
 **Consolidation Plan:**
 
-1. **Phase A - Interface Deduplication** (~30 min)
-   - Keep `CalendarEvent` only in `src/types/tasks.ts`
-   - Update all imports to use centralized type
-   - Remove duplicate interfaces from composables
+1. ~~**Phase A - Interface Deduplication**~~ ✅ COMPLETE (Dec 16, 2025)
+   - ~~Keep `CalendarEvent` only in `src/types/tasks.ts`~~
+   - ~~Update all imports to use centralized type~~
+   - ~~Remove duplicate interfaces from composables~~
+   - Added `DragGhost` interface to `src/types/tasks.ts`
 
-2. **Phase B - Merge Core + EventHelpers** (~1 hour)
-   - Merge `useCalendarEventHelpers` into `useCalendarCore`
-   - `useCalendarCore` has additional: `getWeekStart`, `calculateOverlappingPositions`, `snapTo15Minutes`
-   - Update all 5 consumers to use `useCalendarCore`
-   - Delete `useCalendarEventHelpers.ts`
+2. ~~**Phase B - Merge Core + EventHelpers**~~ ✅ COMPLETE (Dec 16, 2025)
+   - ~~Merge `useCalendarEventHelpers` into `useCalendarCore`~~
+   - ~~Update all 5 consumers to use `useCalendarCore`~~
+   - ~~Delete `useCalendarEventHelpers.ts`~~
+   - **Result**: 174 lines removed, 1 file deleted
 
-3. **Phase C - View Composables Consolidation** (~2 hours)
+3. **Phase C - View Composables Consolidation** (PENDING)
    - Evaluate merging Day/Week/Month views into unified `useCalendarViews`
    - Extract shared view logic (time slots, grid rendering, navigation)
    - Keep view-specific logic in separate sub-modules if needed

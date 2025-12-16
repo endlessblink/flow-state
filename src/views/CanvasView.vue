@@ -251,7 +251,7 @@
 
         <!-- Section Node Template -->
         <template #node-sectionNode="nodeProps">
-          <SectionNodeSimple
+          <GroupNodeSimple
             :data="nodeProps.data"
             :selected="nodeProps.selected"
             @update="handleSectionUpdate"
@@ -364,7 +364,7 @@
     />
 
     <!-- Section Settings Modal -->
-    <SectionSettingsMenu
+    <GroupSettingsMenu
       :section="editingSection"
       :is-visible="isSectionSettingsOpen"
       @close="closeSectionSettingsModal"
@@ -382,7 +382,7 @@
     />
 
     <!-- Section Wizard -->
-    <SectionWizard
+    <GroupWizard
       :is-open="isSectionWizardOpen"
       :position="sectionWizardPosition"
       @close="closeSectionWizard"
@@ -486,12 +486,12 @@ import { useUIStore } from '@/stores/ui'
 import { storeToRefs } from 'pinia'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
-import { resolveDueDate, useSectionSettings } from '@/composables/useSectionSettings'
+import { resolveDueDate, useGroupSettings } from '@/composables/useGroupSettings'
 import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
-import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
-import SectionSettingsMenu from '@/components/canvas/SectionSettingsMenu.vue'
+import GroupNodeSimple from '@/components/canvas/GroupNodeSimple.vue'
+import GroupSettingsMenu from '@/components/canvas/GroupSettingsMenu.vue'
 import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
@@ -501,7 +501,7 @@ import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
 import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
 import GroupModal from '@/components/GroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
-import SectionWizard from '@/components/canvas/SectionWizard.vue'
+import GroupWizard from '@/components/canvas/GroupWizard.vue'
 
 // Import Vue Flow styles
 import '@vue-flow/core/dist/style.css'
@@ -1343,7 +1343,7 @@ const getSectionResizeStyle = (section: any): Record<string, string | number> =>
 // Register custom node types
 const nodeTypes = markRaw({
   taskNode: TaskNode,
-  sectionNode: SectionNodeSimple
+  sectionNode: GroupNodeSimple
 })
 
 // Using default Vue Flow edge types - smoothstep, bezier, etc.

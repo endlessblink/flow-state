@@ -26,7 +26,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <style scoped>
-/* Base Badge - Matches screenshot count badges */
+/* Base Badge - Stroke + Glass Morphism Design */
 .base-badge {
   display: inline-flex;
   align-items: center;
@@ -38,7 +38,8 @@ withDefaults(defineProps<Props>(), {
   font-weight: var(--font-semibold);
   line-height: 1;
 
-  /* Visual */
+  /* Visual - Stroke based (no fills) */
+  background: transparent;
   border-radius: var(--radius-md);
   transition: all var(--duration-fast) var(--spring-smooth);
 }
@@ -70,46 +71,46 @@ withDefaults(defineProps<Props>(), {
   border-radius: var(--radius-full);
 }
 
-/* Variant: Default (neutral count badge from screenshots) */
+/* Variant: Default (neutral stroke badge) */
 .base-badge.variant-default {
-  background: var(--glass-bg-heavy);
+  background: transparent;
   color: var(--text-muted);
-  border: 1px solid var(--glass-bg-soft);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Variant: Count (like the sidebar count badges) */
+/* Variant: Count (subtle stroke for count badges) */
 .base-badge.variant-count {
-  background: var(--glass-bg-soft);
+  background: transparent;
   color: var(--text-muted);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   font-weight: var(--font-medium);
 }
 
-/* Variant: Success (green) */
+/* Variant: Success (green stroke) */
 .base-badge.variant-success {
-  background: var(--success-bg-light);
-  color: var(--color-work);
-  border: 1px solid var(--success-bg-subtle);
+  background: transparent;
+  color: rgba(16, 185, 129, 1);
+  border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
-/* Variant: Warning (orange) */
+/* Variant: Warning (orange stroke) */
 .base-badge.variant-warning {
-  background: var(--orange-bg-light);
-  color: var(--color-break);
-  border: 1px solid var(--orange-bg-medium);
+  background: transparent;
+  color: rgba(245, 158, 11, 1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
-/* Variant: Danger (red) */
+/* Variant: Danger (red stroke) */
 .base-badge.variant-danger {
-  background: var(--danger-bg-subtle);
-  color: var(--color-priority-high);
-  border: 1px solid var(--danger-bg-medium);
+  background: transparent;
+  color: rgba(239, 68, 68, 1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
-/* Variant: Info (blue) */
+/* Variant: Info (blue stroke) */
 .base-badge.variant-info {
-  background: var(--blue-bg-light);
-  color: var(--color-navigation);
-  border: 1px solid var(--blue-bg-medium);
+  background: transparent;
+  color: rgba(59, 130, 246, 1);
+  border: 1px solid rgba(59, 130, 246, 0.4);
 }
 </style>

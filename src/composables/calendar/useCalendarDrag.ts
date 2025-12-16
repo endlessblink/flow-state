@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
-import { useCalendarCore, type CalendarEvent } from '@/composables/useCalendarCore'
+import { useCalendarCore } from '@/composables/useCalendarCore'
+import type { CalendarEvent, DragGhost } from '@/types/tasks'
 
 export interface DragState {
   isDragging: boolean
@@ -10,13 +11,8 @@ export interface DragState {
   dragMode: 'move' | 'duplicate' | null
 }
 
-export interface DragGhost {
-  visible: boolean
-  title: string
-  duration: number
-  slotIndex: number
-  taskId?: string
-}
+// Re-export for consumers
+export type { DragGhost } from '@/types/tasks'
 
 export interface DropTarget {
   type: 'time-slot' | 'day-cell' | 'week-grid' | 'month-day'

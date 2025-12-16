@@ -207,20 +207,20 @@ export const TaskPriorities: Story = {
   render: () => ({
     components: { BaseBadge },
     template: `
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--surface-hover); border-radius: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 24px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
           <BaseBadge variant="danger" size="sm" rounded>High</BaseBadge>
-          <span style="font-size: 14px;">Fix critical bug in production</span>
+          <span style="font-size: 14px; color: var(--text-primary);">Fix critical bug in production</span>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--surface-hover); border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
           <BaseBadge variant="warning" size="sm" rounded>Medium</BaseBadge>
-          <span style="font-size: 14px;">Update project documentation</span>
+          <span style="font-size: 14px; color: var(--text-primary);">Update project documentation</span>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--surface-hover); border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
           <BaseBadge variant="info" size="sm" rounded>Low</BaseBadge>
-          <span style="font-size: 14px;">Review code formatting</span>
+          <span style="font-size: 14px; color: var(--text-primary);">Review code formatting</span>
         </div>
       </div>
     `,
@@ -239,11 +239,11 @@ export const InteractiveCounter: Story = {
       return { count, increment, decrement }
     },
     template: `
-      <div style="display: flex; flex-direction: column; gap: 16px; align-items: center;">
+      <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; padding: 24px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <button @click="decrement" style="padding: 4px 12px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 4px; cursor: pointer;">−</button>
+          <button @click="decrement" style="padding: 4px 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; cursor: pointer; color: var(--text-primary);">−</button>
           <BaseBadge variant="count" size="lg" rounded>{{ count }}</BaseBadge>
-          <button @click="increment" style="padding: 4px 12px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 4px; cursor: pointer;">+</button>
+          <button @click="increment" style="padding: 4px 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; cursor: pointer; color: var(--text-primary);">+</button>
         </div>
         <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Click buttons to change count</p>
       </div>

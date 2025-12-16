@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
-import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
+import { useCalendarCore } from '@/composables/useCalendarCore'
+import type { CalendarEvent } from '@/types/tasks'
 
 export interface MonthDay {
   dateString: string
@@ -16,7 +17,7 @@ export interface MonthDay {
  */
 export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
-  const { getPriorityColor, getDateString } = useCalendarEventHelpers()
+  const { getPriorityColor, getDateString } = useCalendarCore()
 
   // Month days computation
   const monthDays = computed<MonthDay[]>(() => {

@@ -11,7 +11,7 @@ import type { Ref } from 'vue'
 import PouchDB from 'pouchdb-browser'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
-import { getDatabaseConfig, type DatabaseHealth } from '@/config/database'
+import { getDatabaseConfig, type DatabaseHealth as _DatabaseHealth } from '@/config/database'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { isQuotaExceededError, checkStorageQuota } from '@/utils/storageQuotaMonitor'
 
@@ -25,7 +25,7 @@ let databaseRefCount = 0
 let lastHealthCheck: Date | null = null
 let consecutiveHealthFailures = 0
 const MAX_HEALTH_FAILURES = 3
-const HEALTH_CHECK_INTERVAL = 30000 // 30 seconds
+const _HEALTH_CHECK_INTERVAL = 30000 // 30 seconds
 
 export interface DatabaseStore {
   tasks: string
@@ -494,7 +494,7 @@ export function useDatabase(): UseDatabaseReturn {
    * Load data from PouchDB with enhanced retry logic, caching, and conflict detection
    */
   const load = async <T>(key: string): Promise<T | null> => {
-    const cacheKey = `db-load-${key}`
+    const _cacheKey = `db-load-${key}`
 
     // Direct database operation (network optimizer removed)
     try {

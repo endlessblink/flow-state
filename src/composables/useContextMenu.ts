@@ -28,7 +28,7 @@ export function useContextMenu(options: UseContextMenuOptions) {
     closeCallback,
     offset = { x: 2, y: 2 },
     viewportPadding = 8,
-    preventCloseOnMenuClick = true
+    preventCloseOnMenuClick: _preventCloseOnMenuClick = true
   } = options
 
   // ============================================

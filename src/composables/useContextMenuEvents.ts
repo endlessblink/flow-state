@@ -10,7 +10,7 @@
  * FIXED (2025-11-29): Now accepts reactive isVisible via refs or getters
  */
 
-import { onMounted, onUnmounted, nextTick, type Ref, isRef, toValue } from 'vue'
+import { onMounted, onUnmounted, nextTick, type Ref, toValue } from 'vue'
 
 export interface useContextMenuEventsOptions {
   isVisible: boolean | Ref<boolean> | (() => boolean)
@@ -20,7 +20,7 @@ export interface useContextMenuEventsOptions {
 }
 
 export function useContextMenuEvents(options: useContextMenuEventsOptions) {
-  const { menuRef, closeCallback, preventCloseOnMenuClick = true } = options
+  const { menuRef, closeCallback, preventCloseOnMenuClick: _preventCloseOnMenuClick = true } = options
 
   // Helper to get current visibility (works with boolean, ref, or getter)
   const getIsVisible = () => toValue(options.isVisible)

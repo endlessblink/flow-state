@@ -285,7 +285,7 @@ const handleDrop = (event: DragEvent) => {
 </script>
 
 <style scoped>
-/* Base Nav Item - Matches screenshot sidebar navigation */
+/* Base Nav Item - Stroke + Glass Morphism Design */
 .base-nav-item {
   display: flex;
   align-items: center;
@@ -302,20 +302,22 @@ const handleDrop = (event: DragEvent) => {
   position: relative;
   min-height: 40px;
   user-select: none;
+  background: transparent;
   border: 1px solid transparent; /* Always have border to prevent layout shift */
 }
 
 .base-nav-item:hover {
-  background: var(--surface-hover);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Active State - OUTLINED + GLASS (not filled) */
+/* Active State - Stroke + Glass with teal accent */
 .base-nav-item.is-active {
-  background: var(--state-active-bg);
-  border: 1px solid var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  -webkit-backdrop-filter: var(--state-active-glass);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+  background: transparent;
+  border: 1px solid rgba(78, 205, 196, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.15), inset 0 1px 0 rgba(78, 205, 196, 0.1);
 }
 
 /* Nested items - dynamic indentation based on CSS custom property */

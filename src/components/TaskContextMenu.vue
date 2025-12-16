@@ -224,6 +224,7 @@ import { ref, computed, onUnmounted, watch, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useCanvasStore } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
 import { Calendar, Sun, Moon, ArrowRight, MoreHorizontal, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
@@ -255,6 +256,7 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const canvasStore = useCanvasStore()
 const router = useRouter()
 
 // Optional focus mode injection - uses Symbol from useFocusMode.ts
@@ -382,6 +384,8 @@ const setDueDate = async (dateType: string) => {
       if (newDate && newDate !== currentDate) {
         try {
           await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: newDate })
+          // FIX BUG-013: Request canvas sync to refresh Vue Flow nodes after property change
+          canvasStore.requestSync()
         } catch (error) {
           console.error('❌ Error updating task due date:', error)
         }
@@ -396,6 +400,8 @@ const setDueDate = async (dateType: string) => {
     try {
       const formattedDate = dueDate.toLocaleDateString()
       await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
+      // FIX BUG-013: Request canvas sync to refresh Vue Flow nodes after property change
+      canvasStore.requestSync()
     } catch (error) {
       console.error('❌ Error setting due date:', error)
     }
@@ -410,6 +416,8 @@ const setPriority = async (priority: 'high' | 'medium' | 'low') => {
   } else if (currentTask.value) {
     try {
       await taskStore.updateTaskWithUndo(currentTask.value.id, { priority })
+      // FIX BUG-013: Request canvas sync to refresh Vue Flow nodes after property change
+      canvasStore.requestSync()
     } catch (error) {
       console.error('❌ Error setting priority:', error)
     }
@@ -424,6 +432,8 @@ const setStatus = async (status: 'planned' | 'in_progress' | 'done' | 'backlog' 
   } else if (currentTask.value) {
     try {
       await taskStore.updateTaskWithUndo(currentTask.value.id, { status })
+      // FIX BUG-013: Request canvas sync to refresh Vue Flow nodes after property change
+      canvasStore.requestSync()
     } catch (error) {
       console.error('❌ Error setting status:', error)
     }

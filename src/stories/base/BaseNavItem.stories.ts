@@ -230,7 +230,7 @@ export const SidebarNavigation: Story = {
   render: () => ({
     components: { BaseNavItem },
     template: `
-      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 280px; padding: 16px; background: var(--surface-secondary); border-radius: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 280px; padding: 16px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
         <div style="margin-bottom: 8px;">
           <h4 style="margin: 0; color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Navigation</h4>
         </div>
@@ -314,7 +314,7 @@ export const InteractiveDemo: Story = {
       return { activeItem, expandedProjects, handleClick, toggleExpand }
     },
     template: `
-      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 280px; padding: 16px; background: var(--surface-secondary); border-radius: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 280px; padding: 16px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
         <BaseNavItem
           :active="activeItem === 'inbox'"
           @click="handleClick('inbox')"
@@ -379,9 +379,9 @@ export const InteractiveDemo: Story = {
           Study Goals
         </BaseNavItem>
 
-        <div style="margin-top: 16px; padding: 12px; background: var(--surface-tertiary); border-radius: 8px; font-size: 13px; color: var(--text-muted);">
-          <strong>Active:</strong> {{ activeItem }}<br>
-          <strong>Expanded:</strong> {{ expandedProjects.join(', ') || 'None' }}
+        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 13px; color: var(--text-muted);">
+          <strong style="color: var(--text-primary);">Active:</strong> {{ activeItem }}<br>
+          <strong style="color: var(--text-primary);">Expanded:</strong> {{ expandedProjects.join(', ') || 'None' }}
         </div>
       </div>
     `,

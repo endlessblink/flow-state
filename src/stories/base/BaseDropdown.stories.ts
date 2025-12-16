@@ -59,7 +59,7 @@ export const SingleSelect: Story = {
           :options="options"
           placeholder="Choose one..."
         />
-        <div style="margin-top: 16px; padding: 12px; background: var(--glass-bg-soft); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
           Selected: <strong style="color: var(--text-primary);">{{ selected }}</strong>
         </div>
       </div>
@@ -87,7 +87,7 @@ export const WithIcons: Story = {
           :options="options"
           placeholder="Choose view..."
         />
-        <div style="margin-top: 16px; padding: 12px; background: var(--glass-bg-soft); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
           Selected view: <strong style="color: var(--text-primary);">{{ selected }}</strong>
         </div>
       </div>
@@ -116,7 +116,7 @@ export const MultiSelect: Story = {
           :multiple="true"
           placeholder="Choose multiple..."
         />
-        <div style="margin-top: 16px; padding: 12px; background: var(--glass-bg-soft); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
           Selected: <strong style="color: var(--text-primary);">{{ selected.join(', ') }}</strong>
         </div>
       </div>
@@ -145,7 +145,7 @@ export const Disabled: Story = {
           :disabled="true"
           placeholder="Cannot interact..."
         />
-        <div style="margin-top: 16px; padding: 12px; background: var(--glass-bg-soft); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
           Dropdown is disabled
         </div>
       </div>
@@ -179,7 +179,7 @@ export const ProjectFilter: Story = {
           :options="projects"
           placeholder="Select project..."
         />
-        <div style="margin-top: 16px; padding: 12px; background: var(--glass-bg-soft); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
           Showing tasks from: <strong style="color: var(--text-primary);">{{ selected }}</strong>
         </div>
       </div>
@@ -213,7 +213,7 @@ export const PrioritySelector: Story = {
           :multiple="true"
           placeholder="Select priorities..."
         />
-        <div style="margin-top: 16px; padding: 12px; background: var(--glass-bg-soft); border-radius: 8px;">
+        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
           <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">
             Showing <strong style="color: var(--text-primary);">{{ selected.length }}</strong> priorities:
           </div>
@@ -221,7 +221,7 @@ export const PrioritySelector: Story = {
             <span
               v-for="priority in selected"
               :key="priority"
-              style="padding: 4px 12px; background: var(--brand-primary); color: white; border-radius: 12px; font-size: 12px; font-weight: 600;"
+              style="padding: 4px 12px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 12px; font-size: 12px; font-weight: 600;"
             >
               {{ priority }}
             </span>
@@ -247,9 +247,9 @@ export const KeyboardNavigation: Story = {
         <div style="margin-bottom: 16px; padding: 12px; background: color-mix(in srgb, var(--brand-primary) 10%, transparent); border: 1px solid var(--brand-primary); border-radius: 8px; font-size: 13px; color: var(--text-primary);">
           <strong style="display: block; margin-bottom: 8px; color: var(--brand-primary);">⌨️ Keyboard Navigation:</strong>
           <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
-            <li><kbd style="padding: 2px 6px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">↓</kbd> / <kbd style="padding: 2px 6px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">↑</kbd> Navigate options</li>
-            <li><kbd style="padding: 2px 6px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">Enter</kbd> Select option</li>
-            <li><kbd style="padding: 2px 6px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">Esc</kbd> Close dropdown</li>
+            <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">↓</kbd> / <kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">↑</kbd> Navigate options</li>
+            <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">Enter</kbd> Select option</li>
+            <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">Esc</kbd> Close dropdown</li>
           </ul>
         </div>
         <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
@@ -260,7 +260,7 @@ export const KeyboardNavigation: Story = {
           :options="options"
           placeholder="Focus and use arrows..."
         />
-        <div style="margin-top: 16px; padding: 12px; background: var(--glass-bg-soft); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
           Selected: <strong style="color: var(--text-primary);">{{ selected }}</strong>
         </div>
       </div>

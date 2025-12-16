@@ -162,8 +162,8 @@ export const InteractiveForm: Story = {
           required
         />
 
-        <div style="padding: 16px; background: var(--surface-tertiary); border-radius: 8px;">
-          <strong>Form Data:</strong>
+        <div style="padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
+          <strong style="color: var(--text-primary);">Form Data:</strong>
           <pre style="margin: 8px 0 0 0; font-size: 12px; color: var(--text-secondary);">{{ JSON.stringify(formData, null, 2) }}</pre>
         </div>
       </div>

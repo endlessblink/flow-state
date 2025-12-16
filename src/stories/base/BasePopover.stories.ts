@@ -33,7 +33,7 @@ export const MenuVariant: Story = {
       return { isVisible, x, y }
     },
     template: `
-      <div style="width: 800px; height: 600px; display: flex; align-items: center; justify-content: center; background: var(--surface-primary); border-radius: var(--radius-xl);">
+      <div style="width: 800px; height: 600px; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-xl);">
         <button
           @click="isVisible = !isVisible"
           style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer;"
@@ -82,11 +82,11 @@ export const TooltipVariant: Story = {
       return { isVisible, x, y }
     },
     template: `
-      <div style="width: 800px; height: 600px; display: flex; align-items: center; justify-content: center; background: var(--surface-primary); border-radius: var(--radius-xl);">
+      <div style="width: 800px; height: 600px; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-xl);">
         <div
           @mouseenter="isVisible = true"
           @mouseleave="isVisible = false"
-          style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--glass-bg-soft); border: 1px solid var(--glass-border); border-radius: 8px; cursor: help;"
+          style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; cursor: help;"
         >
           <HelpCircle :size="16" style="color: var(--brand-primary);" />
           <span>Hover for tooltip</span>
@@ -128,7 +128,7 @@ export const AutoPositioning: Story = {
       return { isVisible, x, y, position, showAt }
     },
     template: `
-      <div style="width: 800px; height: 600px; position: relative; background: var(--surface-primary); border-radius: var(--radius-xl); padding: 40px;">
+      <div style="width: 800px; height: 600px; position: relative; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-xl); padding: 40px;">
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; height: 100%;">
           <button
             @click="showAt(100, 100)"

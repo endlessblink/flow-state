@@ -16,7 +16,7 @@ import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler
 // Task store import for safe sync functionality
 let taskStore: any = null
 
-export interface SectionFilter {
+export interface GroupFilter {
   priorities?: ('low' | 'medium' | 'high')[]
   statuses?: Task['status'][]
   projects?: string[]
@@ -31,25 +31,20 @@ export interface TaskPosition {
 }
 
 /**
- * Canvas container for organizing tasks.
+ * Canvas container for organizing tasks (unified as "Groups").
  *
- * **Terminology**:
- * - **Groups** (`type: 'custom'`): Visual organization only, no property updates
- * - **Sections** (`type: 'priority'|'status'|'timeline'|'project'`): Smart automation, auto-updates task properties
+ * All canvas containers are now called "Groups". Groups can have different types:
+ * - `type: 'custom'`: Visual organization only (unless power mode is enabled)
+ * - `type: 'priority'|'status'|'timeline'|'project'`: Smart automation with auto-assign
  *
  * **Power Groups**:
- * Any section (including custom groups) can become a "power group" when its name
- * contains special keywords like "Today", "High Priority", etc.
- * Power groups can:
+ * Any group can become a "power group" when its name contains special keywords
+ * like "Today", "High Priority", etc. Power groups can:
  * 1. Auto-assign properties to dropped tasks (e.g., set dueDate to today)
  * 2. Collect matching tasks from inbox with a "Collect" button
- *
- * When a task is dragged into a Section, its properties (priority, status, dueDate, etc.)
- * are automatically updated based on the section's type and propertyValue.
- * Groups do not modify task properties unless they are power groups.
  */
 /**
- * Settings for auto-assigning properties when a task is dropped into a section
+ * Settings for auto-assigning properties when a task is dropped into a group
  */
 export interface AssignOnDropSettings {
   priority?: 'high' | 'medium' | 'low' | null  // null = don't change
@@ -68,13 +63,13 @@ export interface CollectFilterSettings {
   matchProjectId?: string | null
 }
 
-export interface CanvasSection {
+export interface CanvasGroup {
   id: string
   name: string
   type: 'priority' | 'status' | 'timeline' | 'custom' | 'project'
   position: { x: number; y: number; width: number; height: number }
   color: string
-  filters?: SectionFilter
+  filters?: GroupFilter
   layout: 'vertical' | 'horizontal' | 'grid' | 'freeform'
   isVisible: boolean
   isCollapsed: boolean
@@ -91,6 +86,10 @@ export interface CanvasSection {
   collectFilter?: CollectFilterSettings
 }
 
+// Backward compatibility alias - keeping CanvasSection as alias for CanvasGroup
+/** @deprecated Use CanvasGroup instead */
+export type CanvasSection = CanvasGroup
+
 export interface CanvasState {
   viewport: {
     x: number
@@ -100,10 +99,10 @@ export interface CanvasState {
   selectedNodeIds: string[]
   connectMode: boolean
   connectingFrom: string | null
-  sections: CanvasSection[]
-  activeSectionId: string | null
-  showSectionGuides: boolean
-  snapToSections: boolean
+  groups: CanvasGroup[]
+  activeGroupId: string | null
+  showGroupGuides: boolean
+  snapToGroups: boolean
   multiSelectMode: boolean
   selectionRect: { x: number; y: number; width: number; height: number } | null
   selectionMode: 'rectangle' | 'lasso' | 'click'
@@ -133,11 +132,17 @@ export const useCanvasStore = defineStore('canvas', () => {
   const connectMode = ref(false)
   const connectingFrom = ref<string | null>(null)
 
-  // Sections state
-  const sections = ref<CanvasSection[]>([])
-  const activeSectionId = ref<string | null>(null)
-  const showSectionGuides = ref(true)
-  const snapToSections = ref(true)
+  // Groups state (unified - no more "sections" vs "groups" distinction)
+  const groups = ref<CanvasGroup[]>([])
+  const activeGroupId = ref<string | null>(null)
+  const showGroupGuides = ref(true)
+  const snapToGroups = ref(true)
+
+  // Backward compatibility aliases
+  const sections = groups  // Alias for backward compatibility
+  const activeSectionId = activeGroupId  // Alias for backward compatibility
+  const showSectionGuides = showGroupGuides  // Alias for backward compatibility
+  const snapToSections = snapToGroups  // Alias for backward compatibility
 
   // Store for collapsed task positions to restore on expand
   const collapsedTaskPositions = ref<Map<string, TaskPosition[]>>(new Map())
@@ -386,57 +391,57 @@ export const useCanvasStore = defineStore('canvas', () => {
     connectMode.value = false
   }
 
-  // Section management actions
-  const createSection = (section: Omit<CanvasSection, 'id'>) => {
-    const newSection: CanvasSection = {
-      ...section,
-      id: `section-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+  // Group management actions (unified - everything is now a "group")
+  const createGroup = (group: Omit<CanvasGroup, 'id'>) => {
+    const newGroup: CanvasGroup = {
+      ...group,
+      id: `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
     }
-    sections.value.push(newSection)
-    return newSection
+    groups.value.push(newGroup)
+    return newGroup
   }
 
-  const updateSection = (id: string, updates: Partial<CanvasSection>) => {
-    const section = sections.value.find(s => s.id === id)
-    if (section) {
-      Object.assign(section, updates)
+  const updateGroup = (id: string, updates: Partial<CanvasGroup>) => {
+    const group = groups.value.find(g => g.id === id)
+    if (group) {
+      Object.assign(group, updates)
     }
   }
 
-  const deleteSection = (id: string) => {
+  const deleteGroup = (id: string) => {
     if (import.meta.env.DEV) {
-      ;(window as any).__lastDeletedSection = { id, before: sections.value.map(s => s.id) }
+      ;(window as any).__lastDeletedGroup = { id, before: groups.value.map(g => g.id) }
     }
-    const index = sections.value.findIndex(s => s.id === id)
+    const index = groups.value.findIndex(g => g.id === id)
     if (index > -1) {
-      sections.value.splice(index, 1)
+      groups.value.splice(index, 1)
       if (import.meta.env.DEV) {
-        ;(window as any).__lastDeletedSection.after = sections.value.map(s => s.id)
+        ;(window as any).__lastDeletedGroup.after = groups.value.map(g => g.id)
       }
-      if (activeSectionId.value === id) {
-        activeSectionId.value = null
+      if (activeGroupId.value === id) {
+        activeGroupId.value = null
       }
     } else if (import.meta.env.DEV) {
-      ;(window as any).__lastDeletedSection.missed = true
+      ;(window as any).__lastDeletedGroup.missed = true
     }
   }
 
-  const toggleSectionVisibility = (id: string) => {
-    const section = sections.value.find(s => s.id === id)
-    if (section) {
-      section.isVisible = !section.isVisible
+  const toggleGroupVisibility = (id: string) => {
+    const group = groups.value.find(g => g.id === id)
+    if (group) {
+      group.isVisible = !group.isVisible
     }
   }
 
-  const toggleSectionCollapse = (id: string, allTasks: Task[] = []) => {
-    const section = sections.value.find(s => s.id === id)
-    if (!section) return
+  const toggleGroupCollapse = (id: string, allTasks: Task[] = []) => {
+    const group = groups.value.find(g => g.id === id)
+    if (!group) return
 
-    // Get tasks that belong to this section (both geometrically and logically)
-    const sectionTasks = getTasksInSectionBounds(section, allTasks)
+    // Get tasks that belong to this group (both geometrically and logically)
+    const groupTasks = getTasksInGroupBounds(group, allTasks)
 
-    if (section.isCollapsed) {
-      // EXPAND: Restore section height and task positions
+    if (group.isCollapsed) {
+      // EXPAND: Restore group height and task positions
       const savedPositions = collapsedTaskPositions.value.get(id)
       if (savedPositions) {
         savedPositions.forEach(savedTask => {
@@ -450,38 +455,46 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
 
       // Restore original height if it was stored
-      if (section.collapsedHeight) {
-        section.position.height = section.collapsedHeight
-        section.collapsedHeight = undefined
-        console.log(`📂 Restored section "${section.name}" height to ${section.position.height}px`)
+      if (group.collapsedHeight) {
+        group.position.height = group.collapsedHeight
+        group.collapsedHeight = undefined
+        console.log(`📂 Restored group "${group.name}" height to ${group.position.height}px`)
       }
 
-      section.isCollapsed = false
-      console.log(`📂 Expanded section "${section.name}" and restored ${savedPositions?.length || 0} task positions`)
+      group.isCollapsed = false
+      console.log(`📂 Expanded group "${group.name}" and restored ${savedPositions?.length || 0} task positions`)
     } else {
-      // COLLAPSE: Store task positions and section height before hiding
-      const taskPositions: TaskPosition[] = sectionTasks
+      // COLLAPSE: Store task positions and group height before hiding
+      const taskPositions: TaskPosition[] = groupTasks
         .filter(task => task.canvasPosition) // Only tasks with canvas positions
         .map(task => ({
           id: task.id,
           position: { ...task.canvasPosition! }, // Store absolute position
           relativePosition: {
-            x: task.canvasPosition!.x - section.position.x,
-            y: task.canvasPosition!.y - section.position.y
+            x: task.canvasPosition!.x - group.position.x,
+            y: task.canvasPosition!.y - group.position.y
           }
         }))
 
       // Store current height before collapsing
-      section.collapsedHeight = section.position.height
+      group.collapsedHeight = group.position.height
       collapsedTaskPositions.value.set(id, taskPositions)
-      section.isCollapsed = true
-      console.log(`📁 Collapsed section "${section.name}" (stored height: ${section.collapsedHeight}px) and stored ${taskPositions.length} task positions`)
+      group.isCollapsed = true
+      console.log(`📁 Collapsed group "${group.name}" (stored height: ${group.collapsedHeight}px) and stored ${taskPositions.length} task positions`)
     }
   }
 
-  const setActiveSection = (id: string | null) => {
-    activeSectionId.value = id
+  const setActiveGroup = (id: string | null) => {
+    activeGroupId.value = id
   }
+
+  // Backward compatibility aliases for methods
+  const createSection = createGroup
+  const updateSection = updateGroup
+  const deleteSection = deleteGroup
+  const toggleSectionVisibility = toggleGroupVisibility
+  const toggleSectionCollapse = toggleGroupCollapse
+  const setActiveSection = setActiveGroup
 
   // Multi-selection actions
   const toggleMultiSelectMode = () => {
@@ -592,32 +605,32 @@ export const useCanvasStore = defineStore('canvas', () => {
     console.log('Bulk update duration:', nodeIds, estimatedDuration)
   }
 
-  const getTasksInSection = (section: CanvasSection, allTasks: Task[]) => {
-    if (!section.filters) return allTasks
+  const getTasksInGroup = (group: CanvasGroup, allTasks: Task[]) => {
+    if (!group.filters) return allTasks
 
     return allTasks.filter(task => {
       // Priority filter
-      if (section.filters!.priorities && task.priority && !section.filters!.priorities.includes(task.priority)) {
+      if (group.filters!.priorities && task.priority && !group.filters!.priorities.includes(task.priority)) {
         return false
       }
 
       // Status filter
-      if (section.filters!.statuses && !section.filters!.statuses.includes(task.status)) {
+      if (group.filters!.statuses && !group.filters!.statuses.includes(task.status)) {
         return false
       }
 
       // Project filter
-      if (section.filters!.projects && !section.filters!.projects.includes(task.projectId)) {
+      if (group.filters!.projects && !group.filters!.projects.includes(task.projectId)) {
         return false
       }
 
       // Date range filter
-      if (section.filters!.dateRange) {
+      if (group.filters!.dateRange) {
         const taskDate = new Date(task.createdAt)
-        if (section.filters!.dateRange.start && taskDate < section.filters!.dateRange.start) {
+        if (group.filters!.dateRange.start && taskDate < group.filters!.dateRange.start) {
           return false
         }
-        if (section.filters!.dateRange.end && taskDate > section.filters!.dateRange.end) {
+        if (group.filters!.dateRange.end && taskDate > group.filters!.dateRange.end) {
           return false
         }
       }
@@ -626,11 +639,11 @@ export const useCanvasStore = defineStore('canvas', () => {
     })
   }
 
-  // Check if task matches section criteria (for auto-collect)
-  const taskMatchesSection = (task: Task, section: CanvasSection): boolean => {
-    // Handle smart groups (Today, Tomorrow, etc.) - these are custom sections with smart group names
-    if (section.type === 'custom' && isSmartGroup(section.name)) {
-      const smartGroupType = getSmartGroupType(section.name)
+  // Check if task matches group criteria (for auto-collect)
+  const taskMatchesGroup = (task: Task, group: CanvasGroup): boolean => {
+    // Handle smart groups (Today, Tomorrow, etc.) - these are custom groups with smart group names
+    if (group.type === 'custom' && isSmartGroup(group.name)) {
+      const smartGroupType = getSmartGroupType(group.name)
       if (!smartGroupType) return false
 
       // For smart groups, check if task has the corresponding due date
@@ -651,26 +664,26 @@ export const useCanvasStore = defineStore('canvas', () => {
       return task.dueDate === expectedDate
     }
 
-    // Smart sections match by propertyValue
-    if (section.type === 'priority' && section.propertyValue) {
-      return task.priority === section.propertyValue
+    // Smart groups match by propertyValue
+    if (group.type === 'priority' && group.propertyValue) {
+      return task.priority === group.propertyValue
     }
-    if (section.type === 'status' && section.propertyValue) {
-      return task.status === section.propertyValue
+    if (group.type === 'status' && group.propertyValue) {
+      return task.status === group.propertyValue
     }
-    if (section.type === 'project' && section.propertyValue) {
-      return task.projectId === section.propertyValue
+    if (group.type === 'project' && group.propertyValue) {
+      return task.projectId === group.propertyValue
     }
 
-    // Custom sections match by filters
-    if (section.filters) {
-      if (section.filters.priorities && task.priority && !section.filters.priorities.includes(task.priority)) {
+    // Custom groups match by filters
+    if (group.filters) {
+      if (group.filters.priorities && task.priority && !group.filters.priorities.includes(task.priority)) {
         return false
       }
-      if (section.filters.statuses && !section.filters.statuses.includes(task.status)) {
+      if (group.filters.statuses && !group.filters.statuses.includes(task.status)) {
         return false
       }
-      if (section.filters.projects && !section.filters.projects.includes(task.projectId)) {
+      if (group.filters.projects && !group.filters.projects.includes(task.projectId)) {
         return false
       }
       return true
@@ -679,80 +692,84 @@ export const useCanvasStore = defineStore('canvas', () => {
     return false
   }
 
-  const toggleAutoCollect = (sectionId: string) => {
-    const section = sections.value.find(s => s.id === sectionId)
-    if (section) {
-      section.autoCollect = !section.autoCollect
+  const toggleAutoCollect = (groupId: string) => {
+    const group = groups.value.find(g => g.id === groupId)
+    if (group) {
+      group.autoCollect = !group.autoCollect
     }
   }
+
+  // Backward compatibility aliases
+  const getTasksInSection = getTasksInGroup
+  const taskMatchesSection = taskMatchesGroup
 
   // ============================================
   // POWER GROUP FUNCTIONALITY
   // ============================================
 
   /**
-   * Toggle power mode for a section
+   * Toggle power mode for a group
    * Power mode is auto-detected from name but can be manually disabled
    */
-  const togglePowerMode = (sectionId: string) => {
-    const section = sections.value.find(s => s.id === sectionId)
-    if (section) {
+  const togglePowerMode = (groupId: string) => {
+    const group = groups.value.find(g => g.id === groupId)
+    if (group) {
       // If power mode was undefined, detect from name first
-      if (section.isPowerMode === undefined) {
-        section.powerKeyword = detectPowerKeyword(section.name)
-        section.isPowerMode = section.powerKeyword !== null
+      if (group.isPowerMode === undefined) {
+        group.powerKeyword = detectPowerKeyword(group.name)
+        group.isPowerMode = group.powerKeyword !== null
       }
       // Toggle
-      section.isPowerMode = !section.isPowerMode
-      console.log(`⚡ Power mode ${section.isPowerMode ? 'enabled' : 'disabled'} for section "${section.name}"`)
+      group.isPowerMode = !group.isPowerMode
+      console.log(`⚡ Power mode ${group.isPowerMode ? 'enabled' : 'disabled'} for group "${group.name}"`)
     }
   }
 
   /**
-   * Update section's power keyword detection (call when name changes)
+   * Update group's power keyword detection (call when name changes)
    */
-  const updateSectionPowerKeyword = (sectionId: string) => {
-    const section = sections.value.find(s => s.id === sectionId)
-    if (section) {
-      const newKeyword = detectPowerKeyword(section.name)
-      section.powerKeyword = newKeyword
+  const updateGroupPowerKeyword = (groupId: string) => {
+    const group = groups.value.find(g => g.id === groupId)
+    if (group) {
+      const newKeyword = detectPowerKeyword(group.name)
+      group.powerKeyword = newKeyword
 
       // Auto-enable power mode if keyword detected (unless explicitly disabled)
-      if (newKeyword && section.isPowerMode !== false) {
-        section.isPowerMode = true
-        console.log(`⚡ Auto-enabled power mode for "${section.name}" (keyword: ${newKeyword.keyword})`)
+      if (newKeyword && group.isPowerMode !== false) {
+        group.isPowerMode = true
+        console.log(`⚡ Auto-enabled power mode for "${group.name}" (keyword: ${newKeyword.keyword})`)
       }
     }
   }
 
   /**
-   * Check if a section is a power group (has power mode enabled)
+   * Check if a group has power mode enabled
    */
-  const isSectionPowerGroup = (section: CanvasSection): boolean => {
+  const isGroupPowerEnabled = (group: CanvasGroup): boolean => {
     // If power mode is explicitly set, use that
-    if (section.isPowerMode !== undefined) {
-      return section.isPowerMode
+    if (group.isPowerMode !== undefined) {
+      return group.isPowerMode
     }
     // Otherwise, detect from name
-    return isPowerGroup(section.name)
+    return isPowerGroup(group.name)
   }
 
   /**
-   * Get the power keyword for a section
+   * Get the power keyword for a group
    */
-  const getSectionPowerKeyword = (section: CanvasSection): PowerKeywordResult | null => {
-    if (section.powerKeyword !== undefined) {
-      return section.powerKeyword
+  const getGroupPowerKeyword = (group: CanvasGroup): PowerKeywordResult | null => {
+    if (group.powerKeyword !== undefined) {
+      return group.powerKeyword
     }
-    return detectPowerKeyword(section.name)
+    return detectPowerKeyword(group.name)
   }
 
   /**
    * Get matching tasks for a power group
    * Returns tasks that match the power keyword criteria
    */
-  const getMatchingTasksForPowerGroup = (section: CanvasSection, allTasks: Task[]): Task[] => {
-    const powerKeyword = getSectionPowerKeyword(section)
+  const getMatchingTasksForPowerGroup = (group: CanvasGroup, allTasks: Task[]): Task[] => {
+    const powerKeyword = getGroupPowerKeyword(group)
     if (!powerKeyword) return []
 
     return allTasks.filter(task => {
@@ -789,57 +806,57 @@ export const useCanvasStore = defineStore('canvas', () => {
   /**
    * Get count of matching tasks for a power group (for badge display)
    */
-  const getMatchingTaskCount = (sectionId: string, allTasks: Task[]): number => {
-    const section = sections.value.find(s => s.id === sectionId)
-    if (!section || !isSectionPowerGroup(section)) return 0
-    return getMatchingTasksForPowerGroup(section, allTasks).length
+  const getMatchingTaskCount = (groupId: string, allTasks: Task[]): number => {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group || !isGroupPowerEnabled(group)) return 0
+    return getMatchingTasksForPowerGroup(group, allTasks).length
   }
 
   /**
    * Collect matching tasks into a power group
-   * @param sectionId - The section to collect tasks into
+   * @param groupId - The group to collect tasks into
    * @param mode - 'move' to relocate tasks, 'highlight' to just mark them
    * @param allTasks - All available tasks
    * @param updateTaskFn - Function to update a task (from task store)
    * @returns The collected/highlighted task IDs
    */
   const collectMatchingTasks = async (
-    sectionId: string,
+    groupId: string,
     mode: 'move' | 'highlight',
     allTasks: Task[],
     updateTaskFn: (taskId: string, updates: Partial<Task>) => Promise<void>
   ): Promise<string[]> => {
-    const section = sections.value.find(s => s.id === sectionId)
-    if (!section) {
-      console.warn(`Section ${sectionId} not found`)
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) {
+      console.warn(`Group ${groupId} not found`)
       return []
     }
 
-    const matchingTasks = getMatchingTasksForPowerGroup(section, allTasks)
+    const matchingTasks = getMatchingTasksForPowerGroup(group, allTasks)
     if (matchingTasks.length === 0) {
-      console.log(`📋 No matching tasks found for power group "${section.name}"`)
+      console.log(`📋 No matching tasks found for power group "${group.name}"`)
       return []
     }
 
-    console.log(`📋 Found ${matchingTasks.length} matching tasks for power group "${section.name}"`)
+    console.log(`📋 Found ${matchingTasks.length} matching tasks for power group "${group.name}"`)
 
     const collectedIds: string[] = []
 
     if (mode === 'move') {
-      // Move tasks to canvas and position them in the section
-      const sectionBounds = section.position
+      // Move tasks to canvas and position them in the group
+      const groupBounds = group.position
       const taskWidth = 220
       const taskHeight = 100
       const padding = 20
       const headerHeight = 60
-      const cols = Math.max(1, Math.floor((sectionBounds.width - padding * 2) / (taskWidth + 10)))
+      const cols = Math.max(1, Math.floor((groupBounds.width - padding * 2) / (taskWidth + 10)))
 
       for (let i = 0; i < matchingTasks.length; i++) {
         const task = matchingTasks[i]
         const col = i % cols
         const row = Math.floor(i / cols)
-        const x = sectionBounds.x + padding + col * (taskWidth + 10)
-        const y = sectionBounds.y + headerHeight + padding + row * (taskHeight + 10)
+        const x = groupBounds.x + padding + col * (taskWidth + 10)
+        const y = groupBounds.y + headerHeight + padding + row * (taskHeight + 10)
 
         await updateTaskFn(task.id, {
           isInInbox: false,
@@ -849,31 +866,31 @@ export const useCanvasStore = defineStore('canvas', () => {
         collectedIds.push(task.id)
       }
 
-      console.log(`✅ Moved ${collectedIds.length} tasks to power group "${section.name}"`)
+      console.log(`✅ Moved ${collectedIds.length} tasks to power group "${group.name}"`)
     } else {
       // Highlight mode - just return the IDs for UI to highlight
       collectedIds.push(...matchingTasks.map(t => t.id))
-      console.log(`🔦 Highlighted ${collectedIds.length} matching tasks for power group "${section.name}"`)
+      console.log(`🔦 Highlighted ${collectedIds.length} matching tasks for power group "${group.name}"`)
     }
 
     return collectedIds
   }
 
   /**
-   * Apply power group properties to a task when dropped on the section
+   * Apply power group properties to a task when dropped on the group
    * @param task - The task being dropped
-   * @param section - The power group section
+   * @param group - The power group
    * @param overrideMode - How to handle existing properties
    * @returns The updates to apply to the task
    */
   const getPowerGroupUpdates = (
     task: Task,
-    section: CanvasSection,
+    group: CanvasGroup,
     overrideMode: 'always' | 'only_empty' | 'ask' = 'always'
   ): Partial<Task> | 'ask' | null => {
-    if (!isSectionPowerGroup(section)) return null
+    if (!isGroupPowerEnabled(group)) return null
 
-    const powerKeyword = getSectionPowerKeyword(section)
+    const powerKeyword = getGroupPowerKeyword(group)
     if (!powerKeyword) return null
 
     const updates: Partial<Task> = {}
@@ -928,34 +945,39 @@ export const useCanvasStore = defineStore('canvas', () => {
     return Object.keys(updates).length > 0 ? updates : null
   }
 
-  // Auto-save sections to PouchDB via SaveQueueManager (Chief Architect conflict prevention)
-  let sectionsSaveTimer: ReturnType<typeof setTimeout> | null = null
-  watch(sections, (newSections) => {
-    if (sectionsSaveTimer) clearTimeout(sectionsSaveTimer)
-    sectionsSaveTimer = setTimeout(async () => {
+  // Backward compatibility aliases for power group methods
+  const updateSectionPowerKeyword = updateGroupPowerKeyword
+  const isSectionPowerGroup = isGroupPowerEnabled
+  const getSectionPowerKeyword = getGroupPowerKeyword
+
+  // Auto-save groups to IndexedDB via SaveQueueManager (Chief Architect conflict prevention)
+  let groupsSaveTimer: ReturnType<typeof setTimeout> | null = null
+  watch(groups, (newGroups) => {
+    if (groupsSaveTimer) clearTimeout(groupsSaveTimer)
+    groupsSaveTimer = setTimeout(async () => {
       try {
-        await db.save(DB_KEYS.CANVAS, newSections)
-        console.log('📋 Canvas sections auto-saved via SaveQueueManager')
+        await db.save(DB_KEYS.CANVAS, newGroups)
+        console.log('📋 Canvas groups auto-saved via SaveQueueManager')
       } catch (error) {
         console.error('❌ Canvas auto-save failed:', error)
       }
     }, 1000)
   }, { deep: true, flush: 'post' })
 
-  // Initialize sections (empty by default - user creates them)
-  const initializeDefaultSections = () => {
-    // Start with empty sections - users create their own
-    if (sections.value.length === 0) {
-      sections.value = []
+  // Initialize groups (empty by default - user creates them)
+  const initializeDefaultGroups = () => {
+    // Start with empty groups - users create their own
+    if (groups.value.length === 0) {
+      groups.value = []
     }
   }
 
-  // Preset smart section creators
-  const createPrioritySection = (priority: 'high' | 'medium' | 'low', position: { x: number; y: number }) => {
+  // Preset smart group creators
+  const createPriorityGroup = (priority: 'high' | 'medium' | 'low', position: { x: number; y: number }) => {
     const colors = { high: '#ef4444', medium: '#f59e0b', low: '#6366f1' }
     const names = { high: 'High Priority', medium: 'Medium Priority', low: 'Low Priority' }
 
-    return createSection({
+    return createGroup({
       name: names[priority],
       type: 'priority',
       propertyValue: priority,
@@ -967,11 +989,11 @@ export const useCanvasStore = defineStore('canvas', () => {
     })
   }
 
-  const createStatusSection = (status: 'planned' | 'in_progress' | 'done' | 'backlog', position: { x: number; y: number }) => {
+  const createStatusGroup = (status: 'planned' | 'in_progress' | 'done' | 'backlog', position: { x: number; y: number }) => {
     const colors = { planned: '#6366f1', in_progress: '#f59e0b', done: '#10b981', backlog: '#64748b' }
     const names = { planned: 'Planned', in_progress: 'In Progress', done: 'Done', backlog: 'Backlog' }
 
-    return createSection({
+    return createGroup({
       name: names[status],
       type: 'status',
       propertyValue: status,
@@ -983,8 +1005,8 @@ export const useCanvasStore = defineStore('canvas', () => {
     })
   }
 
-  const createProjectSection = (projectId: string, projectName: string, color: string, position: { x: number; y: number }) => {
-    return createSection({
+  const createProjectGroup = (projectId: string, projectName: string, color: string, position: { x: number; y: number }) => {
+    return createGroup({
       name: projectName,
       type: 'project',
       propertyValue: projectId,
@@ -997,7 +1019,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const createCustomGroup = (name: string, color: string, position: { x: number; y: number }, width: number = 300, height: number = 200) => {
-    return createSection({
+    return createGroup({
       name: name,
       type: 'custom',
       position: { x: position.x, y: position.y, width, height },
@@ -1007,6 +1029,12 @@ export const useCanvasStore = defineStore('canvas', () => {
       isCollapsed: false
     })
   }
+
+  // Backward compatibility aliases for preset creators
+  const initializeDefaultSections = initializeDefaultGroups
+  const createPrioritySection = createPriorityGroup
+  const createStatusSection = createStatusGroup
+  const createProjectSection = createProjectGroup
 
   // Display preference toggles
   const togglePriorityIndicator = () => {
@@ -1027,17 +1055,17 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Load canvas state from IndexedDB
   // Magnetic zone utilities
-  const isPointInSection = (x: number, y: number, section: CanvasSection, padding: number = 0): boolean => {
-    const { x: sx, y: sy, width, height } = section.position
+  const isPointInGroup = (x: number, y: number, group: CanvasGroup, padding: number = 0): boolean => {
+    const { x: gx, y: gy, width, height } = group.position
     return (
-      x >= sx - padding &&
-      x <= sx + width + padding &&
-      y >= sy - padding &&
-      y <= sy + height + padding
+      x >= gx - padding &&
+      x <= gx + width + padding &&
+      y >= gy - padding &&
+      y <= gy + height + padding
     )
   }
 
-  const isTaskInSection = (task: Task, section: CanvasSection): boolean => {
+  const isTaskInGroup = (task: Task, group: CanvasGroup): boolean => {
     if (!task.canvasPosition) return false
 
     const taskWidth = 220
@@ -1045,21 +1073,21 @@ export const useCanvasStore = defineStore('canvas', () => {
     const taskCenterX = task.canvasPosition.x + taskWidth / 2
     const taskCenterY = task.canvasPosition.y + taskHeight / 2
 
-    return isPointInSection(taskCenterX, taskCenterY, section)
+    return isPointInGroup(taskCenterX, taskCenterY, group)
   }
 
-  // Check if task is logically associated with a section (matches criteria)
-  const isTaskLogicallyInSection = (task: Task, section: CanvasSection): boolean => {
-    return taskMatchesSection(task, section)
+  // Check if task is logically associated with a group (matches criteria)
+  const isTaskLogicallyInGroup = (task: Task, group: CanvasGroup): boolean => {
+    return taskMatchesGroup(task, group)
   }
 
-  const getTasksInSectionBounds = (section: CanvasSection, allTasks: Task[]): Task[] => {
-    // For smart sections (priority, status, project), include matching tasks that are ON CANVAS
+  const getTasksInGroupBounds = (group: CanvasGroup, allTasks: Task[]): Task[] => {
+    // For smart groups (priority, status, project), include matching tasks that are ON CANVAS
     // FIXED: Only include tasks with isInInbox === false (explicitly on canvas)
     // FIXED Dec 5, 2025: Also check canvasPosition to match syncNodes() filter
-    if (section.type === 'priority' || section.type === 'status' || section.type === 'project') {
+    if (group.type === 'priority' || group.type === 'status' || group.type === 'project') {
       return allTasks.filter(task =>
-        isTaskLogicallyInSection(task, section) &&
+        isTaskLogicallyInGroup(task, group) &&
         task.isInInbox === false &&  // Only tasks explicitly on canvas
         task.canvasPosition !== undefined  // Must have canvas position to be counted
       )
@@ -1068,73 +1096,73 @@ export const useCanvasStore = defineStore('canvas', () => {
     // For smart groups (Today, Tomorrow, etc.), include matching tasks that are ON CANVAS
     // FIXED: Only include tasks with isInInbox === false (explicitly on canvas)
     // FIXED Dec 5, 2025: Also check canvasPosition to match syncNodes() filter
-    if (section.type === 'custom' && isSmartGroup(section.name)) {
+    if (group.type === 'custom' && isSmartGroup(group.name)) {
       return allTasks.filter(task =>
-        isTaskLogicallyInSection(task, section) &&
+        isTaskLogicallyInGroup(task, group) &&
         task.isInInbox === false &&  // Only tasks explicitly on canvas
         task.canvasPosition !== undefined  // Must have canvas position to be counted
       )
     }
 
-    // For custom sections, include both geometrically contained and logically matching tasks
+    // For custom groups, include both geometrically contained and logically matching tasks
     return allTasks.filter(task => {
-      const isInside = isTaskInSection(task, section)
-      const matchesCriteria = isTaskLogicallyInSection(task, section)
+      const isInside = isTaskInGroup(task, group)
+      const matchesCriteria = isTaskLogicallyInGroup(task, group)
       return isInside || matchesCriteria
     })
   }
 
-  const findNearestSection = (x: number, y: number, maxDistance: number = 50): CanvasSection | null => {
-    let nearestSection: CanvasSection | null = null
+  const findNearestGroup = (x: number, y: number, maxDistance: number = 50): CanvasGroup | null => {
+    let nearestGroup: CanvasGroup | null = null
     let minDistance = maxDistance
 
-    sections.value.forEach(section => {
-      if (!section.isVisible || section.isCollapsed) return
+    groups.value.forEach(group => {
+      if (!group.isVisible || group.isCollapsed) return
 
-      const { x: sx, y: sy, width, height } = section.position
+      const { x: gx, y: gy, width, height } = group.position
 
-      // Find closest point on section rectangle to the point
-      const closestX = Math.max(sx, Math.min(x, sx + width))
-      const closestY = Math.max(sy, Math.min(y, sy + height))
+      // Find closest point on group rectangle to the point
+      const closestX = Math.max(gx, Math.min(x, gx + width))
+      const closestY = Math.max(gy, Math.min(y, gy + height))
 
       // Calculate distance
       const distance = Math.sqrt(Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2))
 
       if (distance < minDistance) {
         minDistance = distance
-        nearestSection = section
+        nearestGroup = group
       }
     })
 
-    return nearestSection
+    return nearestGroup
   }
 
-  const getMagneticSnapPosition = (task: Task, section: CanvasSection): { x: number; y: number } => {
+  const getMagneticSnapPosition = (task: Task, group: CanvasGroup): { x: number; y: number } => {
     if (!task.canvasPosition) return task.canvasPosition || { x: 0, y: 0 }
 
-    const { x: sx, y: sy, width, height } = section.position
+    const { x: gx, y: gy, width, height } = group.position
     const taskWidth = 220
     const taskHeight = 100
 
-    // Calculate position inside section with some padding
+    // Calculate position inside group with some padding
     const padding = 20
     const headerHeight = 60
 
-    // Simple grid-based positioning inside section
-    const existingTasks = getTasksInSectionBounds(section, [] as Task[]) // Will be called from CanvasView with actual tasks
+    // Simple grid-based positioning inside group
+    const existingTasks = getTasksInGroupBounds(group, [] as Task[]) // Will be called from CanvasView with actual tasks
     const cols = Math.floor((width - padding * 2) / (taskWidth + 20))
     const rows = Math.floor((height - headerHeight - padding) / (taskHeight + 20))
 
     if (cols === 0 || rows === 0) {
-      // Section too small, place at top-left with padding
-      return { x: sx + padding, y: sy + headerHeight + padding }
+      // Group too small, place at top-left with padding
+      return { x: gx + padding, y: gy + headerHeight + padding }
     }
 
     // Find first empty grid position
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
-        const testX = sx + padding + col * (taskWidth + 20)
-        const testY = sy + headerHeight + padding + row * (taskHeight + 20)
+        const testX = gx + padding + col * (taskWidth + 20)
+        const testY = gy + headerHeight + padding + row * (taskHeight + 20)
 
         // Check if this position is occupied (simplified check)
         const isOccupied = existingTasks.some(existingTask => {
@@ -1151,14 +1179,22 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
 
     // If no empty spot found, place at next available position
-    return { x: sx + padding, y: sy + headerHeight + padding }
+    return { x: gx + padding, y: gy + headerHeight + padding }
   }
 
-  const getTaskCountInSection = (section: CanvasSection, allTasks: Task[]): number => {
-    // Use the updated getTasksInSectionBounds which now includes logical association
-    const associatedTasks = getTasksInSectionBounds(section, allTasks)
+  const getTaskCountInGroup = (group: CanvasGroup, allTasks: Task[]): number => {
+    // Use the updated getTasksInGroupBounds which now includes logical association
+    const associatedTasks = getTasksInGroupBounds(group, allTasks)
     return associatedTasks.length
   }
+
+  // Backward compatibility aliases for magnetic zone utilities
+  const isPointInSection = isPointInGroup
+  const isTaskInSection = isTaskInGroup
+  const isTaskLogicallyInSection = isTaskLogicallyInGroup
+  const getTasksInSectionBounds = getTasksInGroupBounds
+  const findNearestSection = findNearestGroup
+  const getTaskCountInSection = getTaskCountInGroup
 
   // Load canvas state from IndexedDB
   const loadFromDatabase = async () => {
@@ -1180,37 +1216,43 @@ export const useCanvasStore = defineStore('canvas', () => {
         return
       }
 
-      const savedSections = await db.load<CanvasSection[]>(DB_KEYS.CANVAS)
-      if (savedSections && savedSections.length > 0) {
+      const savedGroups = await db.load<CanvasGroup[]>(DB_KEYS.CANVAS)
+      if (savedGroups && savedGroups.length > 0) {
         // Migrate old propertyValue to new assignOnDrop format
-        const migratedSections = savedSections.map(section => {
-          // Skip if already has assignOnDrop settings
-          if (section.assignOnDrop) return section
+        const migratedGroups = savedGroups.map(group => {
+          // Migrate old section- prefix IDs to group- prefix (backward compatibility)
+          if (group.id && group.id.startsWith('section-')) {
+            group.id = group.id.replace('section-', 'group-')
+            console.log(`🔄 Migrated group ID from section- to group- prefix`)
+          }
 
-          // Migrate based on section type and propertyValue
-          if (section.propertyValue) {
+          // Skip if already has assignOnDrop settings
+          if (group.assignOnDrop) return group
+
+          // Migrate based on group type and propertyValue
+          if (group.propertyValue) {
             const assignOnDrop: AssignOnDropSettings = {}
 
-            if (section.type === 'priority') {
-              assignOnDrop.priority = section.propertyValue as 'high' | 'medium' | 'low'
-            } else if (section.type === 'status') {
-              assignOnDrop.status = section.propertyValue as Task['status']
-            } else if (section.type === 'project') {
-              assignOnDrop.projectId = section.propertyValue
-            } else if (section.type === 'timeline') {
-              // Timeline sections use date keywords
-              assignOnDrop.dueDate = section.propertyValue
+            if (group.type === 'priority') {
+              assignOnDrop.priority = group.propertyValue as 'high' | 'medium' | 'low'
+            } else if (group.type === 'status') {
+              assignOnDrop.status = group.propertyValue as Task['status']
+            } else if (group.type === 'project') {
+              assignOnDrop.projectId = group.propertyValue
+            } else if (group.type === 'timeline') {
+              // Timeline groups use date keywords
+              assignOnDrop.dueDate = group.propertyValue
             }
 
             if (Object.keys(assignOnDrop).length > 0) {
-              section.assignOnDrop = assignOnDrop
-              console.log(`🔄 Migrated section "${section.name}" to assignOnDrop format`)
+              group.assignOnDrop = assignOnDrop
+              console.log(`🔄 Migrated group "${group.name}" to assignOnDrop format`)
             }
           }
 
           // Also migrate power keyword detection to assignOnDrop if power mode is enabled
-          if (section.isPowerMode && section.powerKeyword && !section.assignOnDrop) {
-            const { category, value } = section.powerKeyword
+          if (group.isPowerMode && group.powerKeyword && !group.assignOnDrop) {
+            const { category, value } = group.powerKeyword
             const assignOnDrop: AssignOnDropSettings = {}
 
             if (category === 'date') {
@@ -1222,16 +1264,16 @@ export const useCanvasStore = defineStore('canvas', () => {
             }
 
             if (Object.keys(assignOnDrop).length > 0) {
-              section.assignOnDrop = assignOnDrop
-              console.log(`🔄 Migrated power group "${section.name}" to assignOnDrop format`)
+              group.assignOnDrop = assignOnDrop
+              console.log(`🔄 Migrated power group "${group.name}" to assignOnDrop format`)
             }
           }
 
-          return section
+          return group
         })
 
-        sections.value = migratedSections
-        console.log(`📂 Loaded ${sections.value.length} canvas sections from IndexedDB`)
+        groups.value = migratedGroups
+        console.log(`📂 Loaded ${groups.value.length} canvas groups from IndexedDB`)
       }
     } catch (error) {
       console.warn('⚠️ Failed to load canvas from database:', error)
@@ -1242,9 +1284,9 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Undo/Redo enabled actions - simplified to avoid circular dependencies
   const undoRedoEnabledActions = () => {
     // Create local references to ensure proper closure access
-    const localUpdateSection = (sectionId: string, updates: Partial<CanvasSection>) => updateSection(sectionId, updates)
-    const localToggleSectionCollapse = (sectionId: string) => toggleSectionCollapse(sectionId)
-    const localToggleSectionVisibility = (sectionId: string) => toggleSectionVisibility(sectionId)
+    const localUpdateGroup = (groupId: string, updates: Partial<CanvasGroup>) => updateGroup(groupId, updates)
+    const localToggleGroupCollapse = (groupId: string) => toggleGroupCollapse(groupId)
+    const localToggleGroupVisibility = (groupId: string) => toggleGroupVisibility(groupId)
     const localSetViewport = (x: number, y: number, zoom: number) => setViewport(x, y, zoom)
     const localSetSelectedNodes = (nodeIds: string[]) => setSelectedNodes(nodeIds)
     const localToggleNodeSelection = (nodeId: string) => toggleNodeSelection(nodeId)
@@ -1253,60 +1295,82 @@ export const useCanvasStore = defineStore('canvas', () => {
     const localStartConnection = (nodeId: string) => startConnection(nodeId)
     const localClearConnection = () => clearConnection()
 
+    // Group actions with undo/redo (new primary names)
+    const createGroupWithUndo = async (group: Omit<CanvasGroup, 'id'>) => {
+      try {
+        const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+        const useUnifiedUndoRedo = await getUndoRedoComposable()
+        const actions = useUnifiedUndoRedo()
+        // Try new name first, fallback to old name for compatibility
+        return actions.createGroup ? actions.createGroup(group) : actions.createSection(group)
+      } catch (error) {
+        console.warn('Undo/Redo system not available, using direct updates:', error)
+        return createGroup(group)
+      }
+    }
+
+    const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup>) => {
+      try {
+        const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+        const useUnifiedUndoRedo = await getUndoRedoComposable()
+        const actions = useUnifiedUndoRedo()
+        const fn = actions.updateGroup || actions.updateSection
+        if (fn && typeof fn === 'function') {
+          return await fn(groupId, updates)
+        } else {
+          return localUpdateGroup(groupId, updates)
+        }
+      } catch (error) {
+        return localUpdateGroup(groupId, updates)
+      }
+    }
+
+    const deleteGroupWithUndo = async (groupId: string) => {
+      // Unified undo/redo doesn't support group deletion yet
+      // Using direct deletion for now
+      return deleteGroup(groupId)
+    }
+
+    const toggleGroupVisibilityWithUndo = async (groupId: string) => {
+      try {
+        const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+        const useUnifiedUndoRedo = await getUndoRedoComposable()
+        const actions = useUnifiedUndoRedo()
+        const fn = actions.toggleGroupVisibility || actions.toggleSectionVisibility
+        return fn(groupId)
+      } catch (error) {
+        console.warn('Undo/Redo system not available, using direct updates:', error)
+        return localToggleGroupVisibility(groupId)
+      }
+    }
+
+    const toggleGroupCollapseWithUndo = async (groupId: string) => {
+      try {
+        const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
+        const useUnifiedUndoRedo = await getUndoRedoComposable()
+        const actions = useUnifiedUndoRedo()
+        const fn = actions.toggleGroupCollapse || actions.toggleSectionCollapse
+        return fn(groupId)
+      } catch (error) {
+        console.warn('Undo/Redo system not available, using direct updates:', error)
+        return localToggleGroupCollapse(groupId)
+      }
+    }
+
     return {
-      // Section actions with undo/redo
-      createSectionWithUndo: async (section: Omit<CanvasSection, 'id'>) => {
-        try {
-          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
-          const useUnifiedUndoRedo = await getUndoRedoComposable()
-          const actions = useUnifiedUndoRedo()
-          return actions.createSection(section)
-        } catch (error) {
-          console.warn('Undo/Redo system not available, using direct updates:', error)
-          return createSection(section)
-        }
-      },
-      updateSectionWithUndo: async (sectionId: string, updates: Partial<CanvasSection>) => {
-        try {
-          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
-          const useUnifiedUndoRedo = await getUndoRedoComposable()
-          const actions = useUnifiedUndoRedo()
-          if (actions && typeof actions.updateSection === 'function') {
-            return await actions.updateSection(sectionId, updates)
-          } else {
-            return localUpdateSection(sectionId, updates)
-          }
-        } catch (error) {
-          return localUpdateSection(sectionId, updates)
-        }
-      },
-      deleteSectionWithUndo: async (sectionId: string) => {
-        // Unified undo/redo doesn't support section deletion yet
-        // Using direct deletion for now
-        return deleteSection(sectionId)
-      },
-      toggleSectionVisibilityWithUndo: async (sectionId: string) => {
-        try {
-          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
-          const useUnifiedUndoRedo = await getUndoRedoComposable()
-          const actions = useUnifiedUndoRedo()
-          return actions.toggleSectionVisibility(sectionId)
-        } catch (error) {
-          console.warn('Undo/Redo system not available, using direct updates:', error)
-          return localToggleSectionVisibility(sectionId)
-        }
-      },
-      toggleSectionCollapseWithUndo: async (sectionId: string) => {
-        try {
-          const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
-          const useUnifiedUndoRedo = await getUndoRedoComposable()
-          const actions = useUnifiedUndoRedo()
-          return actions.toggleSectionCollapse(sectionId)
-        } catch (error) {
-          console.warn('Undo/Redo system not available, using direct updates:', error)
-          return localToggleSectionCollapse(sectionId)
-        }
-      },
+      // Primary group actions with undo/redo
+      createGroupWithUndo,
+      updateGroupWithUndo,
+      deleteGroupWithUndo,
+      toggleGroupVisibilityWithUndo,
+      toggleGroupCollapseWithUndo,
+
+      // Backward compatibility aliases for section naming
+      createSectionWithUndo: createGroupWithUndo,
+      updateSectionWithUndo: updateGroupWithUndo,
+      deleteSectionWithUndo: deleteGroupWithUndo,
+      toggleSectionVisibilityWithUndo: toggleGroupVisibilityWithUndo,
+      toggleSectionCollapseWithUndo: toggleGroupCollapseWithUndo,
 
       // Viewport actions with undo/redo
       setViewportWithUndo: async (x: number, y: number, zoom: number) => {
@@ -1431,15 +1495,15 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   return {
-    // State
+    // State - Primary (new names)
     viewport,
     selectedNodeIds,
     connectMode,
     connectingFrom,
-    sections,
-    activeSectionId,
-    showSectionGuides,
-    snapToSections,
+    groups,              // Primary state name
+    activeGroupId,       // Primary state name
+    showGroupGuides,     // Primary state name
+    snapToGroups,        // Primary state name
     collapsedTaskPositions,
     nodes,
     edges,
@@ -1455,38 +1519,68 @@ export const useCanvasStore = defineStore('canvas', () => {
     zoomConfig,
     zoomHistory,
 
-    // Original actions (without undo/redo - for internal use)
+    // State - Backward compatibility aliases
+    sections,            // Alias for groups
+    activeSectionId,     // Alias for activeGroupId
+    showSectionGuides,   // Alias for showGroupGuides
+    snapToSections,      // Alias for snapToGroups
+
+    // Primary actions (new names - without undo/redo for internal use)
     setViewport,
     setViewportWithHistory,
     setSelectedNodes,
     toggleConnectMode,
     startConnection,
     clearConnection,
-    createSection,
-    updateSection,
-    deleteSection,
-    toggleSectionVisibility,
-    toggleSectionCollapse,
-    setActiveSection,
-    getTasksInSection,
-    taskMatchesSection,
+    createGroup,         // Primary method name
+    updateGroup,         // Primary method name
+    deleteGroup,         // Primary method name
+    toggleGroupVisibility,   // Primary method name
+    toggleGroupCollapse,     // Primary method name
+    setActiveGroup,          // Primary method name
+    getTasksInGroup,         // Primary method name
+    taskMatchesGroup,        // Primary method name
     toggleAutoCollect,
 
-    // Power group functions
+    // Backward compatibility method aliases
+    createSection,           // Alias for createGroup
+    updateSection,           // Alias for updateGroup
+    deleteSection,           // Alias for deleteGroup
+    toggleSectionVisibility, // Alias for toggleGroupVisibility
+    toggleSectionCollapse,   // Alias for toggleGroupCollapse
+    setActiveSection,        // Alias for setActiveGroup
+    getTasksInSection,       // Alias for getTasksInGroup
+    taskMatchesSection,      // Alias for taskMatchesGroup
+
+    // Power group functions (primary names)
     togglePowerMode,
-    updateSectionPowerKeyword,
-    isSectionPowerGroup,
-    getSectionPowerKeyword,
+    updateGroupPowerKeyword,     // Primary method name
+    isGroupPowerEnabled,         // Primary method name
+    getGroupPowerKeyword,        // Primary method name
     getMatchingTasksForPowerGroup,
     getMatchingTaskCount,
     collectMatchingTasks,
     getPowerGroupUpdates,
 
-    initializeDefaultSections,
-    createPrioritySection,
-    createStatusSection,
-    createProjectSection,
+    // Power group backward compatibility aliases
+    updateSectionPowerKeyword,   // Alias for updateGroupPowerKeyword
+    isSectionPowerGroup,         // Alias for isGroupPowerEnabled
+    getSectionPowerKeyword,      // Alias for getGroupPowerKeyword
+
+    // Preset group creators (primary names)
+    initializeDefaultGroups,     // Primary method name
+    createPriorityGroup,         // Primary method name
+    createStatusGroup,           // Primary method name
+    createProjectGroup,          // Primary method name
     createCustomGroup,
+
+    // Preset creator backward compatibility aliases
+    initializeDefaultSections,   // Alias for initializeDefaultGroups
+    createPrioritySection,       // Alias for createPriorityGroup
+    createStatusSection,         // Alias for createStatusGroup
+    createProjectSection,        // Alias for createProjectGroup
+
+    // Multi-selection
     toggleMultiSelectMode,
     setSelectionMode,
     startSelection,
@@ -1514,15 +1608,23 @@ export const useCanvasStore = defineStore('canvas', () => {
     calculateContentBounds,
     calculateDynamicMinZoom,
 
-    // Magnetic zone utilities
-    isPointInSection,
-    isTaskInSection,
-    isTaskLogicallyInSection,
-    getTasksInSectionBounds,
-    findNearestSection,
+    // Magnetic zone utilities (primary names)
+    isPointInGroup,              // Primary method name
+    isTaskInGroup,               // Primary method name
+    isTaskLogicallyInGroup,      // Primary method name
+    getTasksInGroupBounds,       // Primary method name
+    findNearestGroup,            // Primary method name
     getMagneticSnapPosition,
-    getTaskCountInSection,
+    getTaskCountInGroup,         // Primary method name
     getCollapsedTaskCount,
+
+    // Magnetic zone backward compatibility aliases
+    isPointInSection,            // Alias for isPointInGroup
+    isTaskInSection,             // Alias for isTaskInGroup
+    isTaskLogicallyInSection,    // Alias for isTaskLogicallyInGroup
+    getTasksInSectionBounds,     // Alias for getTasksInGroupBounds
+    findNearestSection,          // Alias for findNearestGroup
+    getTaskCountInSection,       // Alias for getTaskCountInGroup
 
     // Task synchronization
     syncTasksToCanvas,
@@ -1531,7 +1633,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     syncTrigger,
     requestSync,
 
-    // Undo/Redo enabled actions
+    // Undo/Redo enabled actions (includes both new and backward compat names)
     ...undoRedoEnabledActions()
   }
 })

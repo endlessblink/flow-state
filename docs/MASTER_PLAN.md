@@ -112,7 +112,7 @@
 |----|-----|----------|--------|
 | ~~BUG-001~~ | Task disappears when set to yesterday | ~~FIXED~~ | ✅ `tasks.ts:1718-1729` |
 | ~~BUG-002~~ | Canvas tasks disappear on new task creation | ~~FIXED~~ | ✅ `CanvasView.vue:589-618` |
-| BUG-003 | Today group shows wrong count | P1-HIGH | Pending fix in `canvas.ts:802-807` |
+| ~~BUG-003~~ | ~~Today group shows wrong count~~ | ~~P1-HIGH~~ | ✅ FIXED - Verified Dec 16, 2025 |
 | BUG-004 | Tasks in Today group don't drag | P2-MEDIUM | Needs investigation |
 | BUG-005 | Date not updating on group drop | P2-MEDIUM | Needs investigation |
 | BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |

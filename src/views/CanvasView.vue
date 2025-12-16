@@ -371,22 +371,14 @@
       @save="handleSectionSettingsSave"
     />
 
-    <!-- Group Modal -->
-    <GroupModal
+    <!-- Unified Group Modal (create + edit with optional smart settings) -->
+    <UnifiedGroupModal
       :is-open="isGroupModalOpen"
       :group="selectedGroup"
       :position="groupModalPosition"
       @close="closeGroupModal"
       @created="handleGroupCreated"
       @updated="handleGroupUpdated"
-    />
-
-    <!-- Section Wizard -->
-    <GroupWizard
-      :is-open="isSectionWizardOpen"
-      :position="sectionWizardPosition"
-      @close="closeSectionWizard"
-      @created="handleSectionCreated"
     />
 
     <!-- Group Edit Modal -->
@@ -408,7 +400,6 @@
       @close="closeCanvasContextMenu"
       @createTaskHere="createTaskHere"
       @createGroup="createGroup"
-      @createSection="createSection"
       @editGroup="editGroup"
       @deleteGroup="deleteGroup"
       @moveToInbox="moveSelectedTasksToInbox"
@@ -499,9 +490,8 @@ import BatchEditModal from '@/components/BatchEditModal.vue'
 import MultiSelectionOverlay from '@/components/canvas/MultiSelectionOverlay.vue'
 import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
 import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
-import GroupModal from '@/components/GroupModal.vue'
+import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
-import GroupWizard from '@/components/canvas/GroupWizard.vue'
 
 // Import Vue Flow styles
 import '@vue-flow/core/dist/style.css'
@@ -1135,14 +1125,10 @@ const nodeContextMenuX = ref(0)
 const nodeContextMenuY = ref(0)
 const selectedNode = ref<any>(null)
 
-// Group Modal state
+// Group Modal state (unified modal for create + edit with smart settings)
 const isGroupModalOpen = ref(false)
 const selectedGroup = ref<any>(null)
 const groupModalPosition = ref({ x: 100, y: 100 })
-
-// Section Wizard state
-const isSectionWizardOpen = ref(false)
-const sectionWizardPosition = ref({ x: 100, y: 100 })
 
 // Group Edit Modal state
 const isGroupEditModalOpen = ref(false)
@@ -3287,52 +3273,6 @@ const handleGroupCreated = (group: any) => {
 const handleGroupUpdated = (group: any) => {
   console.log('Group updated:', group)
   syncNodes() // Refresh VueFlow to show the updated group
-}
-
-// Section Wizard handlers
-const createSection = () => {
-  console.log('✨ CanvasView: createSection function called!')
-
-  // Get the VueFlow element to calculate canvas coordinates
-  const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
-  if (!vueFlowElement) {
-    console.error('✨ CanvasView: VueFlow element not found!')
-    return
-  }
-
-  // Calculate canvas coordinates accounting for viewport transformation
-  const rect = vueFlowElement.getBoundingClientRect()
-  const canvasX = (canvasContextMenuX.value - rect.left - viewport.value?.x) / viewport.value?.zoom
-  const canvasY = (canvasContextMenuY.value - rect.top - viewport.value?.y) / viewport.value?.zoom
-
-  console.log('✨ Creating section at:', {
-    screenCoords: { x: canvasContextMenuX.value, y: canvasContextMenuY.value },
-    viewport: { x: viewport.value?.x, y: viewport.value?.y, zoom: viewport.value?.zoom },
-    canvasCoords: { x: canvasX, y: canvasY }
-  })
-
-  // Set wizard position using calculated coordinates
-  sectionWizardPosition.value = { x: canvasX, y: canvasY }
-  console.log('✨ CanvasView: Set sectionWizardPosition:', sectionWizardPosition.value)
-
-  // Close context menu first
-  closeCanvasContextMenu()
-  console.log('✨ CanvasView: Closed context menu')
-
-  // Open section wizard
-  console.log('✨ CanvasView: Setting isSectionWizardOpen to true')
-  isSectionWizardOpen.value = true
-  console.log('✨ CanvasView: isSectionWizardOpen is now:', isSectionWizardOpen.value)
-}
-
-const closeSectionWizard = () => {
-  isSectionWizardOpen.value = false
-  sectionWizardPosition.value = { x: 100, y: 100 }
-}
-
-const handleSectionCreated = (section: any) => {
-  console.log('✨ Section created:', section)
-  syncNodes() // Refresh VueFlow to show the new section
 }
 
 // Group edit handlers

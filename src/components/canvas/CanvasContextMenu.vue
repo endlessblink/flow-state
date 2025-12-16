@@ -40,24 +40,14 @@
       <span class="menu-text">Create Task Here</span>
     </button>
 
-    <!-- Create Custom Group -->
+    <!-- Create Group (unified modal) -->
     <button
       v-if="!contextSection"
       class="menu-item"
       @click="handleCreateGroup"
     >
       <Group :size="16" :stroke-width="1.5" class="menu-icon" />
-      <span class="menu-text">Create Custom Group</span>
-    </button>
-
-    <!-- Create Group (Smart Wizard) -->
-    <button
-      v-if="!contextSection"
-      class="menu-item"
-      @click="handleCreateSection"
-    >
-      <Sparkles :size="16" :stroke-width="1.5" class="menu-icon" />
-      <span class="menu-text">Create Group (Smart)</span>
+      <span class="menu-text">Create Group</span>
     </button>
 
     <!-- Task-specific options (when tasks are selected) -->
@@ -173,7 +163,7 @@ import {
   AlignHorizontalJustifyCenter, AlignVerticalJustifyStart,
   AlignVerticalJustifyEnd, AlignVerticalJustifyCenter,
   Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2, Inbox,
-  LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3, Sparkles
+  LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3
 } from 'lucide-vue-next'
 import { useContextMenuEvents } from '@/composables/useContextMenuEvents'
 import { useContextMenuPositioning } from '@/composables/useContextMenuPositioning'
@@ -196,7 +186,6 @@ const emit = defineEmits<{
   close: []
   createTaskHere: []
   createGroup: []
-  createSection: []
   editGroup: [section: any]
   deleteGroup: [section: any]
   moveToInbox: []
@@ -269,19 +258,11 @@ watch([showLayoutSubmenu, submenuRef], () => {
   })
 })
 
-// Handle create group click
+// Handle create group click (opens unified modal)
 const handleCreateGroup = () => {
   console.log('🔧 CanvasContextMenu: Create Group button clicked!')
-  console.log('🔧 CanvasContextMenu: Emitting createGroup event')
+  console.log('🔧 CanvasContextMenu: Emitting createGroup event (opens unified modal)')
   emit('createGroup')
-  emit('close')
-}
-
-// Handle create smart group click (opens wizard)
-const handleCreateSection = () => {
-  console.log('✨ CanvasContextMenu: Create Group (Smart) button clicked!')
-  console.log('✨ CanvasContextMenu: Emitting createSection event (will open wizard)')
-  emit('createSection')
   emit('close')
 }
 

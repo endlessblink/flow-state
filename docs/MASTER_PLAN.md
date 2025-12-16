@@ -1,7 +1,7 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 16, 2025
-**Version**: 4.4 (TASK-005 Calendar Consolidation complete)
+**Version**: 4.5 (TASK-013 Unified Group Modal complete)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -107,14 +107,15 @@
 | 3b | Rename state variables | ✅ DONE | Same as 3a |
 | 3c | Rename methods (35+ methods) | ✅ DONE | Same as 3a |
 | 3d | Add backward compatibility migration | ✅ DONE | Same as 3a |
-| 4 | Update consumer files | PENDING | Part of TASK-010 |
-| 5 | Storybook stories | PENDING | Part of TASK-010 |
+| 4 | Update consumer files | ✅ DONE | N/A |
+| 5 | Storybook stories | PENDING | Part of ROAD-013 |
+| 6 | Consolidate group modals into one | ✅ DONE | See TASK-013 |
 
 **Files Renamed**:
 - `SectionManager.vue` → `GroupManager.vue`
 - `SectionNodeSimple.vue` → `GroupNodeSimple.vue`
 - `SectionSettingsMenu.vue` → `GroupSettingsMenu.vue`
-- `SectionWizard.vue` → `GroupWizard.vue`
+- ~~`SectionWizard.vue` → `GroupWizard.vue`~~ (deleted - replaced by UnifiedGroupModal)
 - `useSectionSettings.ts` → `useGroupSettings.ts`
 
 **Store Changes** (`src/stores/canvas.ts`):
@@ -129,6 +130,36 @@
 - Old state names (`sections`, `activeSectionId`) remain as aliases
 - Old IDs (`section-*`) are auto-migrated to `group-*` on load
 - Existing saved data loads correctly
+
+---
+
+### ~~TASK-013~~: Unified Group Modal (COMPLETE)
+
+**Goal**: Consolidate "Create Custom Group" and "Create Group (Smart)" into single "Create Group" option.
+
+**Date**: December 16, 2025
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | Create UnifiedGroupModal.vue | ✅ DONE |
+| 2 | Update CanvasContextMenu (single option) | ✅ DONE |
+| 3 | Update CanvasView imports | ✅ DONE |
+| 4 | Delete GroupWizard.vue (869 lines) | ✅ DONE |
+
+**Key Features**:
+- Single "Create Group" context menu option
+- Collapsible "Smart Settings" section (collapsed by default)
+- Auto-expand when keywords detected (e.g., "Today", "High Priority")
+- Supports both create and edit modes
+- Progressive disclosure - smart features are optional
+
+**Files Changed**:
+- `src/components/canvas/UnifiedGroupModal.vue` (created, ~400 lines)
+- `src/components/canvas/CanvasContextMenu.vue` (simplified)
+- `src/views/CanvasView.vue` (updated imports)
+- `src/components/canvas/GroupWizard.vue` (deleted, -869 lines)
+
+**Net Impact**: ~470 lines reduction
 
 ---
 

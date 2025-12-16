@@ -1,13 +1,15 @@
 <template>
   <div class="reset-password-view">
     <div class="form-header">
-      <h2 class="form-title">{{ $t('auth.resetPassword.title', 'Reset Password') }}</h2>
+      <h2 class="form-title">
+        {{ $t('auth.resetPassword.title', 'Reset Password') }}
+      </h2>
       <p class="form-subtitle">
         {{ $t('auth.resetPassword.subtitle', "We'll send you an email with instructions to reset your password") }}
       </p>
     </div>
 
-    <form v-if="!emailSent" @submit.prevent="handleSubmit" class="auth-form">
+    <form v-if="!emailSent" class="auth-form" @submit.prevent="handleSubmit">
       <!-- Error Display -->
       <div v-if="errorMessage" class="error-message" role="alert">
         <AlertCircle class="error-icon" />
@@ -22,9 +24,9 @@
         :placeholder="$t('auth.emailPlaceholder', 'your@email.com')"
         required
         :disabled="isLoading"
-        @keydown.enter="handleSubmit"
         data-testid="reset-email-input"
         autocomplete="email"
+        @keydown.enter="handleSubmit"
       />
 
       <!-- Submit Button -->
@@ -44,9 +46,9 @@
       <div class="form-footer">
         <button
           type="button"
-          @click="$emit('switchToLogin')"
           class="back-link"
           :disabled="isLoading"
+          @click="$emit('switchToLogin')"
         >
           ← {{ $t('auth.backToLogin', 'Back to login') }}
         </button>
@@ -58,21 +60,23 @@
       <div class="success-icon-wrapper">
         <CheckCircleIcon class="success-icon" />
       </div>
-      <h3 class="success-title">{{ $t('auth.resetPassword.emailSent', 'Email Sent!') }}</h3>
+      <h3 class="success-title">
+        {{ $t('auth.resetPassword.emailSent', 'Email Sent!') }}
+      </h3>
       <p class="success-text">
         {{ $t('auth.resetPassword.checkEmail', 'Check your email for a link to reset your password.') }}
       </p>
       <p class="success-subtext">
         {{ $t('auth.resetPassword.didntReceive', "Didn't receive the email?") }}
-        <button @click="handleSubmit" class="resend-link" :disabled="isLoading">
+        <button class="resend-link" :disabled="isLoading" @click="handleSubmit">
           {{ $t('auth.resetPassword.resend', 'Resend') }}
         </button>
       </p>
       <BaseButton
         variant="secondary"
         size="lg"
-        @click="$emit('switchToLogin')"
         class="back-button"
+        @click="$emit('switchToLogin')"
       >
         {{ $t('auth.backToLogin', 'Back to login') }}
       </BaseButton>
@@ -93,12 +97,12 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const emit = defineEmits<Emits>()
+
 interface Emits {
   success: []
   switchToLogin: []
 }
-
-const emit = defineEmits<Emits>()
 
 // ===== State =====
 const authStore = useAuthStore()

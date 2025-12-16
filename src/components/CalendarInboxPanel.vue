@@ -2,11 +2,13 @@
   <div class="calendar-inbox-panel" :class="{ collapsed: isCollapsed }">
     <!-- Header -->
     <div class="inbox-header">
-      <button @click="isCollapsed = !isCollapsed" class="collapse-btn" :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'">
+      <button class="collapse-btn" :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'" @click="isCollapsed = !isCollapsed">
         <ChevronLeft v-if="!isCollapsed" :size="16" />
         <ChevronRight v-else :size="16" />
       </button>
-      <h3 v-if="!isCollapsed" class="inbox-title">Inbox</h3>
+      <h3 v-if="!isCollapsed" class="inbox-title">
+        Inbox
+      </h3>
 
       <!-- Expanded state count -->
       <span v-if="!isCollapsed" class="inbox-count">{{ inboxTasks.length }}</span>
@@ -48,9 +50,10 @@
       <button
         v-for="option in filterOptions"
         :key="option.value"
-        :class="['filter-btn', { active: currentFilter === option.value }]"
-        @click="currentFilter = option.value"
+        class="filter-btn"
+        :class="[{ active: currentFilter === option.value }]"
         :title="option.label"
+        @click="currentFilter = option.value"
       >
         <span class="filter-icon">{{ option.icon }}</span>
       </button>
@@ -60,19 +63,25 @@
     <div v-if="!isCollapsed" class="quick-add">
       <input
         v-model="newTaskTitle"
-        @keydown.enter="addTask"
         placeholder="Quick add task (Enter)..."
         class="quick-add-input"
-      />
+        @keydown.enter="addTask"
+      >
     </div>
 
     <!-- Inbox Task List -->
     <div v-if="!isCollapsed" class="inbox-tasks">
       <!-- Empty State -->
       <div v-if="inboxTasks.length === 0" class="empty-inbox">
-        <div class="empty-icon">📋</div>
-        <p class="empty-text">No tasks in inbox</p>
-        <p class="empty-subtext">All tasks are scheduled</p>
+        <div class="empty-icon">
+          📋
+        </div>
+        <p class="empty-text">
+          No tasks in inbox
+        </p>
+        <p class="empty-subtext">
+          All tasks are scheduled
+        </p>
       </div>
 
       <!-- Task Cards with native HTML5 drag-drop (NOT vuedraggable - per PomoFlow spec) -->
@@ -82,78 +91,80 @@
           :key="task.id"
           class="inbox-task-card"
           draggable="true"
+          :class="{ 'is-dragging': draggingTaskId === task.id }"
           @dragstart="onDragStart($event, task)"
           @dragend="onDragEnd"
-          :class="{ 'is-dragging': draggingTaskId === task.id }"
           @click="handleTaskClick($event, task)"
           @dblclick="handleTaskDoubleClick(task)"
           @contextmenu.prevent="handleTaskContextMenu($event, task)"
         >
-        <div class="priority-stripe" :class="`priority-stripe-${task.priority}`"></div>
+          <div class="priority-stripe" :class="`priority-stripe-${task.priority}`" />
 
-        <!-- Timer Active Badge -->
-        <div v-if="isTimerActive(task.id)" class="timer-indicator" title="Timer Active">
-          <Timer :size="12" />
-        </div>
-
-        <div class="task-content">
-          <div class="task-title">{{ task.title }}</div>
-
-          <!-- Enhanced metadata section -->
-          <div class="task-metadata">
-            <!-- Status badge -->
-            <span class="status-badge">{{ statusLabel(task.status) }}</span>
-
-            <!-- Due date badge -->
-            <span v-if="task.dueDate" class="due-date-badge" title="Due Date">
-              <Calendar :size="12" />
-              {{ task.dueDate }}
-            </span>
-
-            <!-- Project visual indicator -->
-            <span
-              class="project-emoji-badge"
-              :class="[`project-visual--${projectVisual(task.projectId).type}`, { 'project-visual--colored': projectVisual(task.projectId).type === 'css-circle' }]"
-              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-            >
-              <ProjectEmojiIcon
-                v-if="projectVisual(task.projectId).type === 'emoji'"
-                :emoji="projectVisual(task.projectId).content"
-                size="sm"
-                :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-              />
-              <span
-                v-else-if="projectVisual(task.projectId).type === 'css-circle'"
-                class="project-emoji project-css-circle"
-                :style="{ '--project-color': projectVisual(task.projectId).color }"
-              >
-                {{ projectVisual(task.projectId).content }}
-              </span>
-              <span v-else class="project-emoji">{{ projectVisual(task.projectId).content }}</span>
-            </span>
-
-            <!-- Duration badge -->
-            <span v-if="task.estimatedDuration" class="duration-badge">
-              {{ task.estimatedDuration }}m
-            </span>
+          <!-- Timer Active Badge -->
+          <div v-if="isTimerActive(task.id)" class="timer-indicator" title="Timer Active">
+            <Timer :size="12" />
           </div>
-        </div>
-        <!-- Quick Actions -->
-        <div class="task-actions">
-          <button
-            class="action-btn"
-            @click="handleStartTimer(task)"
-            :title="`Start timer for ${task.title}`"
-          >
-            <Play :size="12" />
-          </button>
-          <button
-            class="action-btn"
-            @click="handleEditTask(task)"
-            :title="`Edit ${task.title}`"
-          >
-            <Edit2 :size="12" />
-          </button>
+
+          <div class="task-content">
+            <div class="task-title">
+              {{ task.title }}
+            </div>
+
+            <!-- Enhanced metadata section -->
+            <div class="task-metadata">
+              <!-- Status badge -->
+              <span class="status-badge">{{ statusLabel(task.status) }}</span>
+
+              <!-- Due date badge -->
+              <span v-if="task.dueDate" class="due-date-badge" title="Due Date">
+                <Calendar :size="12" />
+                {{ task.dueDate }}
+              </span>
+
+              <!-- Project visual indicator -->
+              <span
+                class="project-emoji-badge"
+                :class="[`project-visual--${projectVisual(task.projectId).type}`, { 'project-visual--colored': projectVisual(task.projectId).type === 'css-circle' }]"
+                :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+              >
+                <ProjectEmojiIcon
+                  v-if="projectVisual(task.projectId).type === 'emoji'"
+                  :emoji="projectVisual(task.projectId).content"
+                  size="sm"
+                  :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+                />
+                <span
+                  v-else-if="projectVisual(task.projectId).type === 'css-circle'"
+                  class="project-emoji project-css-circle"
+                  :style="{ '--project-color': projectVisual(task.projectId).color }"
+                >
+                  {{ projectVisual(task.projectId).content }}
+                </span>
+                <span v-else class="project-emoji">{{ projectVisual(task.projectId).content }}</span>
+              </span>
+
+              <!-- Duration badge -->
+              <span v-if="task.estimatedDuration" class="duration-badge">
+                {{ task.estimatedDuration }}m
+              </span>
+            </div>
+          </div>
+          <!-- Quick Actions -->
+          <div class="task-actions">
+            <button
+              class="action-btn"
+              :title="`Start timer for ${task.title}`"
+              @click="handleStartTimer(task)"
+            >
+              <Play :size="12" />
+            </button>
+            <button
+              class="action-btn"
+              :title="`Edit ${task.title}`"
+              @click="handleEditTask(task)"
+            >
+              <Edit2 :size="12" />
+            </button>
           </div>
         </div>
       </div>
@@ -163,8 +174,8 @@
     <div v-if="!isCollapsed" class="quick-add-task">
       <button
         class="add-task-btn"
-        @click="handleQuickAddTask"
         title="Add new task to inbox"
+        @click="handleQuickAddTask"
       >
         <Plus :size="14" />
         Add Task

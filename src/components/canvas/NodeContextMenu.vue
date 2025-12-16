@@ -41,7 +41,7 @@
       <span class="menu-shortcut">Del</span>
     </button>
 
-    <div class="menu-divider"></div>
+    <div class="menu-divider" />
 
     <!-- Node-specific actions for task nodes -->
     <template v-if="isTaskNode">
@@ -72,7 +72,12 @@
         class="menu-item"
         @click="$emit('toggleCollapse', node)"
       >
-        <component :is="node?.collapsed ? ChevronDown : ChevronUp" :size="16" :stroke-width="1.5" class="menu-icon" />
+        <component
+          :is="node?.collapsed ? ChevronDown : ChevronUp"
+          :size="16"
+          :stroke-width="1.5"
+          class="menu-icon"
+        />
         <span class="menu-text">{{ node?.collapsed ? 'Expand Section' : 'Collapse Section' }}</span>
       </button>
 
@@ -88,7 +93,7 @@
 
     <!-- Layout Submenu (when multiple nodes are selected) -->
     <template v-if="hasSelectedTasks && selectedCount >= 2">
-      <div class="menu-divider"></div>
+      <div class="menu-divider" />
       <div
         class="menu-item submenu-item"
         @mouseenter="handleLayoutSubmenuEnter"
@@ -136,7 +141,7 @@
 
           <!-- Distribute Options (3+ nodes) -->
           <template v-if="selectedCount >= 3">
-            <div class="menu-divider"></div>
+            <div class="menu-divider" />
             <button class="menu-item" @click="$emit('distributeHorizontal')">
               <ArrowLeftRight :size="16" :stroke-width="1.5" class="menu-icon" />
               <span class="menu-text">Distribute Horizontally</span>
@@ -148,7 +153,7 @@
           </template>
 
           <!-- Arrange Options -->
-          <div class="menu-divider"></div>
+          <div class="menu-divider" />
           <button class="menu-item" @click="$emit('arrangeInRow')">
             <Rows :size="16" :stroke-width="1.5" class="menu-icon" />
             <span class="menu-text">Arrange in Row</span>

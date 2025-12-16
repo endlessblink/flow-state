@@ -234,7 +234,7 @@ applyConsoleFiltering()
 
 // Expose to window for debugging
 if (import.meta.env.DEV) {
-  ;(window as any).consoleFilter = {
+  (window as any).consoleFilter = {
     getToggles: getLogToggles,
     saveToggles: saveLogToggles,
     restore: restoreConsole,

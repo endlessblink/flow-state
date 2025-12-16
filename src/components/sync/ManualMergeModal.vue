@@ -4,11 +4,21 @@
       <div class="modal-header">
         <h3>Manual Merge: {{ formatFieldName(conflict?.field || '') }}</h3>
         <button
-          @click="$emit('cancel')"
           class="close-btn"
+          @click="$emit('cancel')"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -20,21 +30,21 @@
             <h4>Merge Preview</h4>
             <div class="merge-actions">
               <button
-                @click="mergeAll"
                 class="merge-btn combine"
                 :disabled="!canCombineValues"
+                @click="mergeAll"
               >
                 Combine All
               </button>
               <button
-                @click="useLocalOnly"
                 class="merge-btn local"
+                @click="useLocalOnly"
               >
                 Use Local Only
               </button>
               <button
-                @click="useRemoteOnly"
                 class="merge-btn remote"
+                @click="useRemoteOnly"
               >
                 Use Remote Only
               </button>
@@ -93,15 +103,15 @@
 
       <div class="modal-footer">
         <button
-          @click="$emit('cancel')"
           class="action-btn cancel"
+          @click="$emit('cancel')"
         >
           Cancel
         </button>
         <button
-          @click="saveMerge"
           class="action-btn save"
           :disabled="!isValidMergeValue"
+          @click="saveMerge"
         >
           Save Merge
         </button>

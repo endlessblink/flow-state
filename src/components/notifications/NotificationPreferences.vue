@@ -6,11 +6,11 @@
       </h3>
       <label class="flex items-center cursor-pointer">
         <input
-          type="checkbox"
           v-model="preferences.isEnabled"
-          @change="handleToggle"
+          type="checkbox"
           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
+          @change="handleToggle"
+        >
         <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
           Enable notifications
         </span>
@@ -30,12 +30,12 @@
             class="flex items-center"
           >
             <input
+              v-model="selectedReminderTimes"
               type="checkbox"
               :value="option.value"
-              v-model="selectedReminderTimes"
-              @change="handleReminderTimesChange"
               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
+              @change="handleReminderTimesChange"
+            >
             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
               {{ option.label }}
             </span>
@@ -51,22 +51,22 @@
         <div class="space-y-2">
           <label class="flex items-center">
             <input
-              type="checkbox"
               v-model="preferences.notificationChannels.browser"
-              @change="handleChange"
+              type="checkbox"
               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
+              @change="handleChange"
+            >
             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
               Browser notifications
             </span>
           </label>
           <label class="flex items-center">
             <input
-              type="checkbox"
               v-model="preferences.notificationChannels.mobile"
-              @change="handleChange"
+              type="checkbox"
               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
+              @change="handleChange"
+            >
             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
               Mobile notifications
             </span>
@@ -81,11 +81,11 @@
         </label>
         <label class="flex items-center">
           <input
-            type="checkbox"
             v-model="preferences.soundEnabled"
-            @change="handleChange"
+            type="checkbox"
             class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
+            @change="handleChange"
+          >
           <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
             Play sound with notifications
           </span>
@@ -100,11 +100,11 @@
         <div class="space-y-2">
           <label class="flex items-center">
             <input
-              type="checkbox"
               v-model="(preferences.doNotDisturb as any)?.enabled"
-              @change="handleChange"
+              type="checkbox"
               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
+              @change="handleChange"
+            >
             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
               Enable Do Not Disturb
             </span>
@@ -115,16 +115,16 @@
               <input
                 type="time"
                 :value="formatTime((preferences.doNotDisturb as any)?.startHour)"
-                @input="handleDNDStartChange"
                 class="px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              />
+                @input="handleDNDStartChange"
+              >
               <span class="ml-2 text-sm text-gray-700 dark:text-gray-300 mr-2">to</span>
               <input
                 type="time"
                 :value="formatTime((preferences.doNotDisturb as any)?.endHour)"
-                @input="handleDNDEndChange"
                 class="px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              />
+                @input="handleDNDEndChange"
+              >
             </label>
             <p class="text-xs text-gray-500 dark:text-gray-400">
               Notifications will be silenced during these hours
@@ -140,8 +140,8 @@
         </label>
         <select
           v-model="preferences.snoozeDuration"
-          @change="handleChange"
           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+          @change="handleChange"
         >
           <option v-for="option in snoozeOptions" :key="option.value" :value="option.value">
             {{ option.label }}
@@ -156,8 +156,8 @@
             Browser permission:
           </span>
           <span
+            class="text-sm font-medium"
             :class="[
-              'text-sm font-medium',
               isPermissionGranted ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
             ]"
           >
@@ -166,8 +166,8 @@
         </div>
         <button
           v-if="!isPermissionGranted"
-          @click="requestPermission"
           class="mt-2 w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          @click="requestPermission"
         >
           Request Permission
         </button>
@@ -176,9 +176,9 @@
       <!-- Test Notification -->
       <div>
         <button
-          @click="sendTestNotification"
           :disabled="!isPermissionGranted"
           class="w-full px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="sendTestNotification"
         >
           Send Test Notification
         </button>

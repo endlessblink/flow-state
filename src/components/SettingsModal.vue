@@ -2,7 +2,9 @@
   <div v-if="isOpen" class="settings-overlay" @click="$emit('close')">
     <div class="settings-modal" @click.stop>
       <div class="settings-header">
-        <h2 class="settings-title">Settings</h2>
+        <h2 class="settings-title">
+          Settings
+        </h2>
         <button class="close-btn" @click="$emit('close')">
           <X :size="16" />
         </button>
@@ -11,7 +13,9 @@
       <div class="settings-content">
         <!-- Pomodoro Settings -->
         <section class="settings-section">
-          <h3 class="section-title">🍅 Pomodoro Settings</h3>
+          <h3 class="section-title">
+            🍅 Pomodoro Settings
+          </h3>
 
           <div class="setting-group">
             <label class="setting-label">Work Duration</label>
@@ -65,7 +69,7 @@
                 :checked="timerStore.settings.autoStartBreaks"
                 @change="updateSetting('autoStartBreaks', ($event.target as HTMLInputElement).checked)"
               >
-              <span class="toggle-slider"></span>
+              <span class="toggle-slider" />
               Auto-start breaks
             </label>
           </div>
@@ -77,7 +81,7 @@
                 :checked="timerStore.settings.autoStartPomodoros"
                 @change="updateSetting('autoStartPomodoros', ($event.target as HTMLInputElement).checked)"
               >
-              <span class="toggle-slider"></span>
+              <span class="toggle-slider" />
               Auto-start work sessions
             </label>
           </div>
@@ -85,7 +89,9 @@
 
         <!-- Kanban Settings -->
         <section class="settings-section">
-          <h3 class="section-title">📋 Kanban Settings</h3>
+          <h3 class="section-title">
+            📋 Kanban Settings
+          </h3>
 
           <div class="setting-toggle">
             <label class="toggle-label">
@@ -94,7 +100,7 @@
                 :checked="showDoneColumn"
                 @change="updateShowDoneColumn(($event.target as HTMLInputElement).checked)"
               >
-              <span class="toggle-slider"></span>
+              <span class="toggle-slider" />
               Show "Done" column
             </label>
           </div>
@@ -105,7 +111,9 @@
 
         <!-- Canvas Settings -->
         <section class="settings-section">
-          <h3 class="section-title">🎨 Canvas Settings</h3>
+          <h3 class="section-title">
+            🎨 Canvas Settings
+          </h3>
 
           <div class="setting-group">
             <label class="setting-label">Power Group Behavior</label>
@@ -140,7 +148,9 @@
 
         <!-- Interface Settings -->
         <section class="settings-section">
-          <h3 class="section-title">🎨 Interface Settings</h3>
+          <h3 class="section-title">
+            🎨 Interface Settings
+          </h3>
 
           <div class="setting-toggle">
             <label class="toggle-label">
@@ -149,7 +159,7 @@
                 :checked="timerStore.settings.playNotificationSounds"
                 @change="updateSetting('playNotificationSounds', ($event.target as HTMLInputElement).checked)"
               >
-              <span class="toggle-slider"></span>
+              <span class="toggle-slider" />
               Sound effects
             </label>
           </div>

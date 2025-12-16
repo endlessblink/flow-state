@@ -7,10 +7,12 @@
         :class="getLineClass(line)"
         class="diff-line"
       >
-        <div class="line-number">{{ line.lineNumber }}</div>
-        <div class="line-content" v-html="line.content"></div>
+        <div class="line-number">
+          {{ line.lineNumber }}
+        </div>
+        <div class="line-content" v-html="line.content" />
         <div v-if="line.type === 'changed'" class="line-comparison">
-          <div class="original-line" v-html="line.originalContent"></div>
+          <div class="original-line" v-html="line.originalContent" />
         </div>
       </div>
     </div>

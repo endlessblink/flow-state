@@ -5,8 +5,8 @@
       <div class="status-header">
         <h3>🛡️ Data Protection Status</h3>
         <button
-          @click="showDetails = !showDetails"
           class="toggle-details"
+          @click="showDetails = !showDetails"
         >
           {{ showDetails ? 'Hide' : 'Show' }} Details
         </button>
@@ -43,31 +43,31 @@
 
       <div class="action-group">
         <button
-          @click="createManualBackup"
           class="action-button primary"
+          @click="createManualBackup"
         >
           💾 Create Manual Backup
         </button>
 
         <button
-          @click="showRestoreDialog = true"
           :disabled="backupHistory.length === 0"
           class="action-button secondary"
+          @click="showRestoreDialog = true"
         >
           🔄 Restore from Backup
         </button>
 
         <button
-          @click="triggerFileUpload"
           class="action-button secondary"
+          @click="triggerFileUpload"
         >
           📁 Restore from File
         </button>
 
         <button
-          @click="downloadLatestBackup"
           :disabled="backupHistory.length === 0"
           class="action-button tertiary"
+          @click="downloadLatestBackup"
         >
           💾 Download Backup
         </button>
@@ -79,7 +79,9 @@
       <div class="restore-dialog" @click.stop>
         <div class="dialog-header">
           <h3>🔄 Restore from Backup</h3>
-          <button @click="closeRestoreDialog" class="close-button">×</button>
+          <button class="close-button" @click="closeRestoreDialog">
+            ×
+          </button>
         </div>
 
         <div class="backup-list">
@@ -87,18 +89,20 @@
             v-for="(backup, index) in backupHistory.slice(0, 5)"
             :key="backup.timestamp"
             class="backup-item"
-            @click="selectBackup(backup)"
             :class="{ selected: selectedBackup?.timestamp === backup.timestamp }"
+            @click="selectBackup(backup)"
           >
             <div class="backup-info">
-              <div class="backup-time">{{ formatTime(backup.timestamp) }}</div>
+              <div class="backup-time">
+                {{ formatTime(backup.timestamp) }}
+              </div>
               <div class="backup-details">
                 {{ backup.tasks.length }} tasks,
                 {{ backup.projects.length }} projects
               </div>
             </div>
             <div class="backup-actions">
-              <button @click.stop="downloadBackup(backup)" class="download-btn">
+              <button class="download-btn" @click.stop="downloadBackup(backup)">
                 💾
               </button>
             </div>
@@ -107,13 +111,13 @@
 
         <div class="dialog-actions">
           <button
-            @click="confirmRestore"
             :disabled="!selectedBackup"
             class="action-button primary"
+            @click="confirmRestore"
           >
             🔄 Restore Selected
           </button>
-          <button @click="closeRestoreDialog" class="action-button secondary">
+          <button class="action-button secondary" @click="closeRestoreDialog">
             Cancel
           </button>
         </div>
@@ -127,7 +131,7 @@
       accept=".json"
       style="display: none"
       @change="handleFileUpload"
-    />
+    >
 
     <!-- Success/Error Messages -->
     <div v-if="message" class="message" :class="messageType">

@@ -481,7 +481,7 @@ const processMessageQueue = async () => {
           (lastProcessedTimestamp as any).value || 0,
           (message as any).timestamp || 0
         )
-        if (lastProcessedTimestamp && typeof lastProcessedTimestamp === 'object') {
+        if (lastProcessedTimestamp.value && typeof lastProcessedTimestamp.value === 'object') {
           (lastProcessedTimestamp as any).value = maxTimestamp
         }
 

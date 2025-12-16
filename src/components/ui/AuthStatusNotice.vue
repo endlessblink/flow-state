@@ -3,10 +3,17 @@
     <div class="notice-content">
       <div class="header">
         <div class="icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
-            <path d="M2 17L12 22L22 17"/>
-            <path d="M2 12L12 17L22 12"/>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+            <path d="M2 17L12 22L22 17" />
+            <path d="M2 12L12 17L22 12" />
           </svg>
         </div>
         <h3>Local-First Productivity</h3>
@@ -18,30 +25,51 @@
 
       <div class="features">
         <div class="feature">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 6L9 17L4 12"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M20 6L9 17L4 12" />
           </svg>
           <span>Private & Secure</span>
         </div>
         <div class="feature">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 6L9 17L4 12"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M20 6L9 17L4 12" />
           </svg>
           <span>Works Offline</span>
         </div>
         <div class="feature">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 6L9 17L4 12"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M20 6L9 17L4 12" />
           </svg>
           <span>No Account Required</span>
         </div>
       </div>
 
       <div class="actions">
-        <button @click="startProductivity" class="primary-btn">
+        <button class="primary-btn" @click="startProductivity">
           Start Using Pomo-Flow
         </button>
-        <button @click="learnMore" class="secondary-btn">
+        <button class="secondary-btn" @click="learnMore">
           Learn More
         </button>
       </div>

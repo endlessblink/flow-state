@@ -2,8 +2,10 @@
   <div class="section-manager">
     <!-- Section Manager Header -->
     <div class="manager-header">
-      <h3 class="manager-title">Canvas Groups</h3>
-      <button @click="showCreateModal = true" class="create-btn">
+      <h3 class="manager-title">
+        Canvas Groups
+      </h3>
+      <button class="create-btn" @click="showCreateModal = true">
         <Plus :size="16" />
         Add Group
       </button>
@@ -21,33 +23,37 @@
           <div
             class="section-color"
             :style="{ backgroundColor: section.color }"
-          ></div>
+          />
           <div class="section-details">
-            <div class="section-name">{{ section.name }}</div>
-            <div class="section-type">{{ getSectionTypeLabel(section.type) }}</div>
+            <div class="section-name">
+              {{ section.name }}
+            </div>
+            <div class="section-type">
+              {{ getSectionTypeLabel(section.type) }}
+            </div>
           </div>
         </div>
         
         <div class="section-controls">
           <button
-            @click="toggleSectionVisibility(section.id)"
             class="control-btn"
             :title="section.isVisible ? 'Hide' : 'Show'"
+            @click="toggleSectionVisibility(section.id)"
           >
             <Eye v-if="section.isVisible" :size="14" />
             <EyeOff v-else :size="14" />
           </button>
           <button
-            @click="editSection(section)"
             class="control-btn"
             title="Edit Group"
+            @click="editSection(section)"
           >
             <Edit :size="14" />
           </button>
           <button
-            @click="deleteSection(section.id)"
             class="control-btn danger"
             title="Delete Group"
+            @click="deleteSection(section.id)"
           >
             <Trash2 :size="14" />
           </button>
@@ -58,8 +64,12 @@
         <div class="empty-icon">
           <Grid3X3 :size="48" />
         </div>
-        <p class="empty-text">No groups created yet</p>
-        <p class="empty-subtext">Create custom groups to organize your tasks</p>
+        <p class="empty-text">
+          No groups created yet
+        </p>
+        <p class="empty-subtext">
+          Create custom groups to organize your tasks
+        </p>
       </div>
     </div>
 
@@ -68,7 +78,7 @@
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>{{ editingSection ? 'Edit Group' : 'Create Group' }}</h3>
-          <button @click="closeModal" class="close-btn">
+          <button class="close-btn" @click="closeModal">
             <X :size="16" />
           </button>
         </div>
@@ -82,19 +92,31 @@
               type="text"
               class="form-input"
               placeholder="e.g., High Priority Tasks"
-            />
+            >
           </div>
 
           <!-- Section Type -->
           <div class="form-group">
             <label class="form-label">Group Type</label>
             <select v-model="sectionForm.type" class="form-select">
-              <option value="custom">Custom</option>
-              <option value="priority">Priority</option>
-              <option value="status">Status</option>
-              <option value="project">Project</option>
-              <option value="date">Date Range</option>
-              <option value="tags">Tags</option>
+              <option value="custom">
+                Custom
+              </option>
+              <option value="priority">
+                Priority
+              </option>
+              <option value="status">
+                Status
+              </option>
+              <option value="project">
+                Project
+              </option>
+              <option value="date">
+                Date Range
+              </option>
+              <option value="tags">
+                Tags
+              </option>
             </select>
           </div>
 
@@ -109,13 +131,13 @@
                 :class="{ active: sectionForm.color === color }"
                 :style="{ backgroundColor: color }"
                 @click="sectionForm.color = color"
-              ></div>
+              />
               <input
                 v-model="sectionForm.color"
                 type="color"
                 class="color-custom"
                 title="Custom color"
-              />
+              >
             </div>
           </div>
 
@@ -132,7 +154,7 @@
                     v-model="sectionForm.filters.priorities"
                     type="checkbox"
                     :value="priority"
-                  />
+                  >
                   <span class="checkbox-label">{{ priority.charAt(0).toUpperCase() + priority.slice(1) }}</span>
                 </label>
               </div>
@@ -147,7 +169,7 @@
                     v-model="sectionForm.filters.statuses"
                     type="checkbox"
                     :value="status"
-                  />
+                  >
                   <span class="checkbox-label">{{ getStatusLabel(status) }}</span>
                 </label>
               </div>
@@ -162,14 +184,14 @@
                   type="date"
                   class="form-input"
                   placeholder="Start date"
-                />
+                >
                 <span class="date-separator">to</span>
                 <input
                   v-model="sectionForm.filters.dateRange.end"
                   type="date"
                   class="form-input"
                   placeholder="End date"
-                />
+                >
               </div>
             </div>
 
@@ -202,8 +224,10 @@
         </div>
 
         <div class="modal-footer">
-          <button @click="closeModal" class="btn-secondary">Cancel</button>
-          <button @click="saveSection" class="btn-primary">
+          <button class="btn-secondary" @click="closeModal">
+            Cancel
+          </button>
+          <button class="btn-primary" @click="saveSection">
             {{ editingSection ? 'Update' : 'Create' }} Group
           </button>
         </div>

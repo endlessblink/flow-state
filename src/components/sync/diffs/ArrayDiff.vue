@@ -26,7 +26,9 @@
             <component :is="getItemIcon(item)" />
           </div>
           <div class="item-content">
-            <div class="item-value">{{ formatItemValue(item.value) }}</div>
+            <div class="item-value">
+              {{ formatItemValue(item.value) }}
+            </div>
             <div class="item-meta">
               <span v-if="item.source" class="item-source">{{ item.source }}</span>
               <span v-if="item.index !== undefined" class="item-index">#{{ item.index + 1 }}</span>
@@ -41,41 +43,51 @@
       <!-- Array Actions -->
       <div class="array-actions">
         <button
-          @click="showMergeOptions = !showMergeOptions"
           class="merge-toggle-btn"
+          @click="showMergeOptions = !showMergeOptions"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
           </svg>
           Merge Options
         </button>
 
         <div v-if="showMergeOptions" class="merge-options">
           <button
-            @click="mergeStrategy = 'union'"
             class="merge-strategy-btn"
             :class="{ active: mergeStrategy === 'union' }"
+            @click="mergeStrategy = 'union'"
           >
             Union (All Items)
           </button>
           <button
-            @click="mergeStrategy = 'local'"
             class="merge-strategy-btn"
             :class="{ active: mergeStrategy === 'local' }"
+            @click="mergeStrategy = 'local'"
           >
             Local Only
           </button>
           <button
-            @click="mergeStrategy = 'remote'"
             class="merge-strategy-btn"
             :class="{ active: mergeStrategy === 'remote' }"
+            @click="mergeStrategy = 'remote'"
           >
             Remote Only
           </button>
           <button
-            @click="mergeStrategy = 'intersection'"
             class="merge-strategy-btn"
             :class="{ active: mergeStrategy === 'intersection' }"
+            @click="mergeStrategy = 'intersection'"
           >
             Intersection (Common Only)
           </button>
@@ -85,8 +97,18 @@
 
     <div v-else class="no-arrays">
       <div class="empty-message">
-        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        <svg
+          class="w-8 h-8 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+          />
         </svg>
         <p>No array data to compare</p>
       </div>

@@ -24,12 +24,12 @@
           :selected="selectedTaskIds.includes(task.id)"
           :expanded-tasks="expandedTasks"
           @select="$emit('select', $event)"
-          @toggleComplete="$emit('toggleComplete', $event)"
-          @startTimer="$emit('startTimer', $event)"
+          @toggle-complete="$emit('toggleComplete', $event)"
+          @start-timer="$emit('startTimer', $event)"
           @edit="$emit('edit', $event)"
-          @contextMenu="handleContextMenu"
-          @toggleExpand="toggleTaskExpand"
-          @moveTask="handleMoveTask"
+          @context-menu="handleContextMenu"
+          @toggle-expand="toggleTaskExpand"
+          @move-task="handleMoveTask"
         />
       </template>
     </div>
@@ -37,7 +37,9 @@
     <!-- Empty State -->
     <div v-if="projectGroups.length === 0" class="empty-state">
       <Inbox :size="48" class="empty-icon" />
-      <p class="empty-title">No tasks found</p>
+      <p class="empty-title">
+        No tasks found
+      </p>
       <p class="empty-description">
         {{ emptyMessage || 'Create your first task to get started' }}
       </p>

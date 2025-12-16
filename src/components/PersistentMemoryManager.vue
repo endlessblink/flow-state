@@ -7,18 +7,22 @@
         <AlertTriangle v-else :size="16" />
       </div>
       <div class="health-text">
-        <div class="health-title">Storage Status</div>
-        <div class="health-details">{{ healthMessage }}</div>
+        <div class="health-title">
+          Storage Status
+        </div>
+        <div class="health-details">
+          {{ healthMessage }}
+        </div>
       </div>
     </div>
 
     <!-- Backup Controls -->
     <div class="backup-controls">
       <button
-        @click="createBackup"
         :disabled="isCreatingBackup"
         class="backup-btn primary"
         title="Create immediate backup"
+        @click="createBackup"
       >
         <RefreshCw v-if="isCreatingBackup" :size="14" class="animate-spin" />
         <Download v-else :size="14" />
@@ -26,19 +30,19 @@
       </button>
 
       <button
-        @click="showRestoreDialog = true"
         :disabled="availableBackups.length === 0"
         class="backup-btn secondary"
         title="Restore from backup"
+        @click="showRestoreDialog = true"
       >
         <Upload :size="14" />
         Restore ({{ availableBackups.length }})
       </button>
 
       <button
-        @click="exportBackup"
         class="backup-btn secondary"
         title="Export backup file"
+        @click="exportBackup"
       >
         <FileText :size="14" />
         Export
@@ -69,7 +73,9 @@
             @click="selectBackup(backup)"
           >
             <div class="backup-info">
-              <div class="backup-date">{{ formatBackupTime(backup.timestamp) }}</div>
+              <div class="backup-date">
+                {{ formatBackupTime(backup.timestamp) }}
+              </div>
               <div class="backup-stats">
                 {{ backup.metadata?.totalTasks || 0 }} tasks,
                 {{ backup.metadata?.totalProjects || 0 }} projects
@@ -77,10 +83,10 @@
             </div>
             <div class="backup-actions">
               <button
-                @click.stop="restoreBackup(backup)"
                 :disabled="isRestoring"
                 class="restore-btn"
                 :class="{ loading: isRestoring }"
+                @click.stop="restoreBackup(backup)"
               >
                 <RefreshCw v-if="isRestoring && selectedBackup?.timestamp === backup.timestamp" :size="14" class="animate-spin" />
                 <Check v-else :size="14" />
@@ -93,7 +99,9 @@
         <div v-if="availableBackups.length === 0" class="no-backups">
           <Database :size="32" />
           <p>No backups available</p>
-          <p class="text-muted">Create a backup to enable restore functionality</p>
+          <p class="text-muted">
+            Create a backup to enable restore functionality
+          </p>
         </div>
 
         <div class="dialog-actions">
@@ -119,9 +127,9 @@
             ref="fileInput"
             type="file"
             accept=".json"
-            @change="handleFileImport"
             style="display: none"
-          />
+            @change="handleFileImport"
+          >
           <BaseButton @click="($refs.fileInput as any).click()">
             <Upload :size="16" />
             Choose File

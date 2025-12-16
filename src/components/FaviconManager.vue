@@ -6,7 +6,7 @@
       :width="canvasSize"
       :height="canvasSize"
       style="display: none;"
-    ></canvas>
+    />
   </div>
 </template>
 

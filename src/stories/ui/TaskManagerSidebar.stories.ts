@@ -169,7 +169,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Task Manager Sidebar</h3>
         <TaskManagerSidebar
           @addTask="handleAddTask"
@@ -253,7 +253,7 @@ export const ScheduledTasks: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Scheduled Tasks View</h3>
         <TaskManagerSidebar
           @addTask="handleAddTask"
@@ -330,7 +330,7 @@ export const HighPriorityTasks: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">High Priority Tasks</h3>
         <TaskManagerSidebar
           @addTask="handleAddTask"
@@ -375,7 +375,7 @@ export const EmptyState: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Empty State</h3>
         <TaskManagerSidebar
           @addTask="handleAddTask"
@@ -452,7 +452,7 @@ export const TasksWithSubtasks: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Tasks with Subtasks</h3>
         <TaskManagerSidebar
           @addTask="handleAddTask"
@@ -513,7 +513,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
           <h3 style="margin: 0; font-size: 20px; color: var(--text-primary);">Interactive Task Manager Demo</h3>
           <div style="display: flex; gap: 16px; font-size: 14px; color: var(--text-secondary);">
@@ -529,7 +529,7 @@ export const InteractiveDemo: Story = {
           @editTask="handleEditTask"
         />
 
-        <div style="margin-top: 24px; padding: 20px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 24px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Try These Interactions:</h4>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
             <div><strong>➕ Add Task:</strong> Click the + button to create new tasks</div>
@@ -656,7 +656,7 @@ export const HierarchicalTasks: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Hierarchical Tasks Showcase</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary); font-size: 14px;">
           Click the chevron icons to expand/collapse parent tasks and see their child tasks.

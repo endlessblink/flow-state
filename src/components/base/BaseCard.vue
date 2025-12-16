@@ -1,7 +1,7 @@
 <template>
   <div
+    class="base-card"
     :class="[
-      'base-card',
       variant,
       {
         'has-hover': hoverable,

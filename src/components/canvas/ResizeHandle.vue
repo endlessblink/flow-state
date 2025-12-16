@@ -10,8 +10,8 @@
     ]"
     :style="handleStyle"
   >
-    <div class="handle-inner"></div>
-    <div class="handle-hitzone" @mouseenter="onHover" @mouseleave="onLeave"></div>
+    <div class="handle-inner" />
+    <div class="handle-hitzone" @mouseenter="onHover" @mouseleave="onLeave" />
   </div>
 </template>
 

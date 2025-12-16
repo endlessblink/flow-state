@@ -1,8 +1,10 @@
 <template>
   <!-- KANBAN BOARD HEADER CONTROLS -->
-<div class="kanban-header">
+  <div class="kanban-header">
     <div class="header-left">
-      <h2 class="board-title">Kanban Board</h2>
+      <h2 class="board-title">
+        Kanban Board
+      </h2>
       <span class="task-count">{{ totalDisplayedTasks }} tasks</span>
     </div>
     <div class="header-controls">
@@ -13,8 +15,8 @@
       <button
         class="done-column-toggle icon-only"
         :class="{ active: showDoneColumn }"
-        @click="handleToggleDoneColumn"
         :title="showDoneColumn ? 'Hide Done column' : 'Show Done column'"
+        @click="handleToggleDoneColumn"
       >
         <CheckCircle v-if="showDoneColumn" :size="16" />
         <Circle v-else :size="16" />
@@ -30,30 +32,30 @@
         :key="project.id"
         :project="project"
         :tasks="tasksByProject[project.id] || []"
-        :currentFilter="taskStore.activeSmartView as any"
+        :current-filter="taskStore.activeSmartView as any"
         :density="currentDensity"
-        :showDoneColumn="showDoneColumn"
-        @selectTask="handleSelectTask"
-        @startTimer="handleStartTimer"
-        @editTask="handleEditTask"
-        @deleteTask="handleDeleteTask"
-        @moveTask="handleMoveTask"
-        @addTask="handleAddTask"
-        @contextMenu="handleContextMenu"
+        :show-done-column="showDoneColumn"
+        @select-task="handleSelectTask"
+        @start-timer="handleStartTimer"
+        @edit-task="handleEditTask"
+        @delete-task="handleDeleteTask"
+        @move-task="handleMoveTask"
+        @add-task="handleAddTask"
+        @context-menu="handleContextMenu"
       />
     </div>
   </div>
 
   <!-- TASK EDIT MODAL -->
   <TaskEditModal
-    :isOpen="showEditModal"
+    :is-open="showEditModal"
     :task="selectedTask"
     @close="closeEditModal"
   />
 
   <!-- QUICK TASK CREATE MODAL -->
   <QuickTaskCreateModal
-    :isOpen="showQuickTaskCreate"
+    :is-open="showQuickTaskCreate"
     :loading="false"
     @cancel="closeQuickTaskCreate"
     @create="handleQuickTaskCreate"
@@ -61,22 +63,22 @@
 
   <!-- TASK CONTEXT MENU -->
   <TaskContextMenu
-    :isVisible="showContextMenu"
+    :is-visible="showContextMenu"
     :x="contextMenuX"
     :y="contextMenuY"
     :task="contextMenuTask"
-    :compactMode="currentDensity === 'ultrathin'"
+    :compact-mode="currentDensity === 'ultrathin'"
     @close="closeContextMenu"
     @edit="handleEditTask"
-    @confirmDelete="handleConfirmDelete"
+    @confirm-delete="handleConfirmDelete"
   />
 
   <!-- CONFIRMATION MODAL -->
   <ConfirmationModal
-    :isOpen="showConfirmModal"
+    :is-open="showConfirmModal"
     title="Delete Task"
     message="Are you sure you want to delete this task? This action cannot be undone."
-    confirmText="Delete"
+    confirm-text="Delete"
     @confirm="confirmDeleteTask"
     @cancel="cancelDeleteTask"
   />

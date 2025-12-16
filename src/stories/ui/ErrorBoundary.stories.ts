@@ -25,7 +25,7 @@ const AsyncErrorComponent = {
 
 // Normal component
 const NormalComponent = {
-  template: '<div style="padding: 20px; background: var(--surface-primary); border-radius: 8px; color: var(--text-primary);">✅ This component works fine</div>'
+  template: '<div style="padding: 20px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: var(--text-primary);">✅ This component works fine</div>'
 }
 
 const meta = {
@@ -43,9 +43,13 @@ const meta = {
   },
 
   argTypes: {
-    fallback: {
+    fallbackMessage: {
       control: 'text',
-      description: 'Custom fallback message or component',
+      description: 'Custom fallback message to display when an error occurs',
+    },
+    contained: {
+      control: 'boolean',
+      description: 'When true, renders inline with glass morphism instead of fixed overlay',
     },
   },
 } satisfies Meta<typeof ErrorBoundary>
@@ -58,7 +62,7 @@ export const NormalOperation: Story = {
   render: () => ({
     components: { ErrorBoundary, NormalComponent },
     template: `
-      <div style="padding: 40px; min-height: 400px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 400px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Error Boundary - Normal Operation</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">When no errors occur</p>
 
@@ -66,14 +70,14 @@ export const NormalOperation: Story = {
           <NormalComponent />
         </ErrorBoundary>
 
-        <div style="margin-top: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 24px; padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Error Boundary Benefits</h4>
           <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
-            <li><strong>Graceful degradation</strong> - App continues working</li>
-            <li><strong>Error isolation</strong> - Contains failures to component boundaries</li>
-            <li><strong>User feedback</strong> - Shows helpful error messages</li>
-            <li><strong>Development tools</strong> - Detailed error info in development</li>
-            <li><strong>Recovery options</strong> - Retry mechanisms and fallbacks</li>
+            <li><strong style="color: var(--text-primary);">Graceful degradation</strong> - App continues working</li>
+            <li><strong style="color: var(--text-primary);">Error isolation</strong> - Contains failures to component boundaries</li>
+            <li><strong style="color: var(--text-primary);">User feedback</strong> - Shows helpful error messages</li>
+            <li><strong style="color: var(--text-primary);">Development tools</strong> - Detailed error info in development</li>
+            <li><strong style="color: var(--text-primary);">Recovery options</strong> - Retry mechanisms and fallbacks</li>
           </ul>
         </div>
       </div>
@@ -92,7 +96,6 @@ export const SynchronousError: Story = {
       const retry = () => {
         retryKey.value++
         hasError.value = false
-        // Force re-render which will trigger the error again
         setTimeout(() => {
           hasError.value = true
         }, 100)
@@ -101,16 +104,17 @@ export const SynchronousError: Story = {
       return { hasError, retryKey, retry }
     },
     template: `
-      <div style="padding: 40px; min-height: 400px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-width: 600px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Error Boundary - Synchronous Error</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Handling component mounting errors</p>
 
         <ErrorBoundary
           :key="retryKey"
+          contained
           @error="(error) => console.error('Caught error:', error)"
         >
           <ErrorComponent v-if="hasError" />
-          <div v-else style="padding: 20px; background: #dcfce7; border: 1px solid #22c55e; border-radius: 8px; color: #166534; text-align: center;">
+          <div v-else style="padding: 20px; background: rgba(78, 205, 196, 0.1); border: 1px solid rgba(78, 205, 196, 0.5); border-radius: 12px; color: rgba(78, 205, 196, 1); text-align: center;">
             ✅ Component loaded successfully
           </div>
         </ErrorBoundary>
@@ -118,20 +122,20 @@ export const SynchronousError: Story = {
         <div style="margin-top: 24px; text-align: center;">
           <button
             @click="retry"
-            style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
           >
             Retry Error
           </button>
         </div>
 
-        <div style="margin-top: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 24px; padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Error Handling Features</h4>
           <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
-            <li><strong>Error capture</strong> - Catches both sync and async errors</li>
-            <li><strong>Fallback UI</strong> - Shows user-friendly error state</li>
-            <li><strong>Error logging</strong> - Emits error events for debugging</li>
-            <li><strong>Retry mechanism</strong> - Allows error recovery attempts</li>
-            <li><strong>Component isolation</strong> - Prevents app crashes</li>
+            <li><strong style="color: var(--text-primary);">Error capture</strong> - Catches both sync and async errors</li>
+            <li><strong style="color: var(--text-primary);">Fallback UI</strong> - Shows user-friendly error state</li>
+            <li><strong style="color: var(--text-primary);">Error logging</strong> - Emits error events for debugging</li>
+            <li><strong style="color: var(--text-primary);">Retry mechanism</strong> - Allows error recovery attempts</li>
+            <li><strong style="color: var(--text-primary);">Component isolation</strong> - Prevents app crashes</li>
           </ul>
         </div>
       </div>
@@ -142,33 +146,31 @@ export const SynchronousError: Story = {
 // Custom fallback
 export const CustomFallback: Story = {
   args: {
-    fallback: 'Something went wrong with this component. Please try refreshing the page.',
+    fallbackMessage: 'Something went wrong with this component. Please try refreshing the page.',
   },
   render: (args) => ({
     components: { ErrorBoundary, ErrorComponent },
     setup() {
-      const customFallback = ref(args.fallback)
-      const showDetails = ref(false)
-
-      return { customFallback, showDetails }
+      const customFallback = ref(args.fallbackMessage)
+      return { customFallback }
     },
     template: `
-      <div style="padding: 40px; min-height: 400px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-width: 600px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Error Boundary - Custom Fallback</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Custom error messages and recovery options</p>
 
-        <ErrorBoundary :fallback="customFallback">
+        <ErrorBoundary :fallback-message="customFallback" contained>
           <ErrorComponent />
         </ErrorBoundary>
 
-        <div style="margin-top: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 24px; padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Customization Options</h4>
           <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
-            <li><strong>Custom messages</strong> - Tailored error text</li>
-            <li><strong>Branding consistency</strong> - Match app design</li>
-            <li><strong>Action buttons</strong> - Retry, report, dismiss options</li>
-            <li><strong>Context awareness</strong> - Location-specific errors</li>
-            <li><strong>Recovery guidance</strong> - Help users fix issues</li>
+            <li><strong style="color: var(--text-primary);">Custom messages</strong> - Tailored error text</li>
+            <li><strong style="color: var(--text-primary);">Branding consistency</strong> - Match app design</li>
+            <li><strong style="color: var(--text-primary);">Action buttons</strong> - Retry, report, dismiss options</li>
+            <li><strong style="color: var(--text-primary);">Context awareness</strong> - Location-specific errors</li>
+            <li><strong style="color: var(--text-primary);">Recovery guidance</strong> - Help users fix issues</li>
           </ul>
         </div>
       </div>
@@ -191,7 +193,7 @@ export const MultipleBoundaries: Story = {
       return { sections }
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-width: 700px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Multiple Error Boundaries</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Isolated error handling for different sections</p>
 
@@ -199,19 +201,20 @@ export const MultipleBoundaries: Story = {
           <div
             v-for="section in sections"
             :key="section.id"
+            style="display: flex; flex-direction: column; gap: 8px;"
           >
-            <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">{{ section.title }}</h4>
-            <ErrorBoundary>
+            <h4 style="margin: 0; font-size: 14px; color: var(--text-primary);">{{ section.title }}</h4>
+            <ErrorBoundary contained>
               <ErrorComponent v-if="section.hasError" />
               <NormalComponent v-else />
             </ErrorBoundary>
           </div>
         </div>
 
-        <div style="margin-top: 32px; padding: 20px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 32px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Error Isolation Benefits</h4>
           <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
-            <p><strong>Partial failures don't crash the entire app</strong></p>
+            <p><strong style="color: var(--text-primary);">Partial failures don't crash the entire app</strong></p>
             <p>Each section is wrapped in its own error boundary, so when one component fails:</p>
             <ul style="margin: 12px 0 0 20px; padding-left: 20px;">
               <li>Only that section shows an error</li>

@@ -56,7 +56,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 400px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 400px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Project Drop Zone</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Drag and drop zone for task organization</p>
 
@@ -68,7 +68,7 @@ export const Default: Story = {
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-          <div style="padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+          <div style="padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
             <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Drop Statistics</h4>
             <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
               <div><strong>Total Drops:</strong> {{ dropCount }}</div>
@@ -77,7 +77,7 @@ export const Default: Story = {
             </div>
           </div>
 
-          <div style="padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+          <div style="padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
             <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Features</h4>
             <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
               <li><strong>Drag & Drop</strong> - Native HTML5 drag API</li>
@@ -89,7 +89,7 @@ export const Default: Story = {
           </div>
         </div>
 
-        <div v-if="lastDrop" style="margin-top: 20px; padding: 12px; background: var(--surface-tertiary); border-radius: 8px; border: 1px solid var(--border-subtle);">
+        <div v-if="lastDrop" style="margin-top: 20px; padding: 12px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-primary); font-weight: bold;">Last Drop Event:</h4>
           <pre style="margin: 0; font-size: 12px; color: var(--text-muted); white-space: pre-wrap;">{{ lastDrop }}</pre>
         </div>
@@ -160,7 +160,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 600px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Interactive Drop Zone Demo</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Drag tasks to different project drop zones</p>
 
@@ -174,7 +174,7 @@ export const InteractiveDemo: Story = {
                 :key="task.id"
                 draggable="true"
                 @dragstart="(e) => handleDragStart(e, task.id)"
-                style="padding: 12px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: 8px; cursor: move; display: flex; justify-content: space-between; align-items: center;"
+                style="padding: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: move; display: flex; justify-content: space-between; align-items: center;"
               >
                 <span style="font-size: 14px; color: var(--text-primary);">{{ task.title }}</span>
                 <span
@@ -183,8 +183,9 @@ export const InteractiveDemo: Story = {
                     borderRadius: '6px',
                     fontSize: '12px',
                     fontWeight: 'bold',
-                    background: task.priority === 'high' ? '#fef2f2' : task.priority === 'medium' ? '#fffbeb' : '#eff6ff',
-                    color: task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#2563eb',
+                    background: task.priority === 'high' ? 'rgba(239, 68, 68, 0.15)' : task.priority === 'medium' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                    color: task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#3b82f6',
+                    border: task.priority === 'high' ? '1px solid rgba(239, 68, 68, 0.3)' : task.priority === 'medium' ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
                   }"
                 >
                   {{ task.priority }}
@@ -202,10 +203,10 @@ export const InteractiveDemo: Story = {
                 @dragenter="() => handleDragEnter('frontend')"
                 @dragleave="handleDragLeave"
                 @drop="(e) => handleDrop(e, 'frontend')"
-                style="padding: 20px; border: 2px dashed var(--border-medium); border-radius: 12px; text-align: center; transition: all 0.2s ease;"
+                style="padding: 20px; border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: 12px; text-align: center; transition: all 0.2s ease;"
                 :style="{
-                  borderColor: dropZoneActive === 'frontend' ? 'var(--brand-primary)' : 'var(--border-medium)',
-                  background: dropZoneActive === 'frontend' ? 'var(--glass-bg-soft)' : 'transparent',
+                  borderColor: dropZoneActive === 'frontend' ? 'rgba(78, 205, 196, 0.5)' : 'rgba(255, 255, 255, 0.2)',
+                  background: dropZoneActive === 'frontend' ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
                 }"
               >
                 <div style="font-size: 16px; font-weight: bold; color: var(--text-primary); margin-bottom: 4px;">🎨 Frontend Project</div>
@@ -217,10 +218,10 @@ export const InteractiveDemo: Story = {
                 @dragenter="() => handleDragEnter('backend')"
                 @dragleave="handleDragLeave"
                 @drop="(e) => handleDrop(e, 'backend')"
-                style="padding: 20px; border: 2px dashed var(--border-medium); border-radius: 12px; text-align: center; transition: all 0.2s ease;"
+                style="padding: 20px; border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: 12px; text-align: center; transition: all 0.2s ease;"
                 :style="{
-                  borderColor: dropZoneActive === 'backend' ? 'var(--brand-primary)' : 'var(--border-medium)',
-                  background: dropZoneActive === 'backend' ? 'var(--glass-bg-soft)' : 'transparent',
+                  borderColor: dropZoneActive === 'backend' ? 'rgba(78, 205, 196, 0.5)' : 'rgba(255, 255, 255, 0.2)',
+                  background: dropZoneActive === 'backend' ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
                 }"
               >
                 <div style="font-size: 16px; font-weight: bold; color: var(--text-primary); margin-bottom: 4px;">⚙️ Backend Project</div>
@@ -232,10 +233,10 @@ export const InteractiveDemo: Story = {
                 @dragenter="() => handleDragEnter('design')"
                 @dragleave="handleDragLeave"
                 @drop="(e) => handleDrop(e, 'design')"
-                style="padding: 20px; border: 2px dashed var(--border-medium); border-radius: 12px; text-align: center; transition: all 0.2s ease;"
+                style="padding: 20px; border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: 12px; text-align: center; transition: all 0.2s ease;"
                 :style="{
-                  borderColor: dropZoneActive === 'design' ? 'var(--brand-primary)' : 'var(--border-medium)',
-                  background: dropZoneActive === 'design' ? 'var(--glass-bg-soft)' : 'transparent',
+                  borderColor: dropZoneActive === 'design' ? 'rgba(78, 205, 196, 0.5)' : 'rgba(255, 255, 255, 0.2)',
+                  background: dropZoneActive === 'design' ? 'rgba(78, 205, 196, 0.1)' : 'transparent',
                 }"
               >
                 <div style="font-size: 16px; font-weight: bold; color: var(--text-primary); margin-bottom: 4px;">🎯 Design Project</div>
@@ -246,24 +247,24 @@ export const InteractiveDemo: Story = {
         </div>
 
         <!-- Statistics -->
-        <div style="margin-top: 32px; padding: 20px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 32px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Drop Statistics</h4>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
             <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: bold; color: var(--brand-primary);">{{ dropCount }}</div>
+              <div style="font-size: 24px; font-weight: bold; color: rgba(78, 205, 196, 1);">{{ dropCount }}</div>
               <div style="font-size: 14px; color: var(--text-secondary);">Total Drops</div>
             </div>
             <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: bold; color: var(--brand-primary);">{{ tasks.length - droppedTasks.length }}</div>
+              <div style="font-size: 24px; font-weight: bold; color: rgba(78, 205, 196, 1);">{{ tasks.length - droppedTasks.length }}</div>
               <div style="font-size: 14px; color: var(--text-secondary);">Remaining Tasks</div>
             </div>
             <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: bold; color: var(--brand-primary);">{{ droppedTasks.length }}</div>
+              <div style="font-size: 24px; font-weight: bold; color: rgba(78, 205, 196, 1);">{{ droppedTasks.length }}</div>
               <div style="font-size: 14px; color: var(--text-secondary);">Dropped Tasks</div>
             </div>
           </div>
 
-          <div v-if="droppedTasks.length > 0" style="margin-top: 16px; padding: 12px; background: var(--surface-tertiary); border-radius: 8px; border: 1px solid var(--border-subtle);">
+          <div v-if="droppedTasks.length > 0" style="margin-top: 16px; padding: 12px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
             <div style="font-size: 14px; color: var(--text-primary); font-weight: bold; margin-bottom: 8px;">Dropped Task IDs:</div>
             <div style="font-size: 13px; color: var(--text-muted); font-family: monospace;">{{ droppedTasks.join(', ') }}</div>
           </div>

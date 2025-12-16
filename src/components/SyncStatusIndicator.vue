@@ -3,41 +3,97 @@
     <!-- Status Icon -->
     <div class="sync-icon" :title="statusTooltip">
       <div v-if="syncStatus === 'syncing' || (syncStatus as any) === 'retrying'" class="sync-spinner">
-        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        <svg
+          class="animate-spin h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
       </div>
 
       <div v-else-if="syncStatus === 'offline'" class="offline-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
+          />
         </svg>
       </div>
 
       <div v-else-if="syncStatus === 'error' || needsUserIntervention" class="error-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
       </div>
 
       <div v-else-if="syncStatus === 'complete'" class="success-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
       </div>
 
       <div v-else class="idle-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+          />
         </svg>
       </div>
     </div>
 
     <!-- Status Text -->
-    <div class="sync-text" v-if="showText">
+    <div v-if="showText" class="sync-text">
       <span class="status-message">{{ statusMessage }}</span>
-      <span class="last-sync" v-if="lastSyncTimeFormatted">{{ lastSyncTimeFormatted }}</span>
+      <span v-if="lastSyncTimeFormatted" class="last-sync">{{ lastSyncTimeFormatted }}</span>
     </div>
 
     <!-- Detailed Status Panel (when expanded) -->
@@ -47,17 +103,17 @@
         <span class="detail-value" :class="syncStatus">{{ syncStatus }}</span>
       </div>
 
-      <div class="detail-row" v-if="consecutiveFailures > 0">
+      <div v-if="consecutiveFailures > 0" class="detail-row">
         <span class="detail-label">Failures:</span>
         <span class="detail-value error">{{ consecutiveFailures }} / {{ maxRetries }}</span>
       </div>
 
-      <div class="detail-row" v-if="averageLatency > 0">
+      <div v-if="averageLatency > 0" class="detail-row">
         <span class="detail-label">Latency:</span>
         <span class="detail-value">{{ averageLatency }}ms</span>
       </div>
 
-      <div class="detail-row" v-if="totalRetries > 0">
+      <div v-if="totalRetries > 0" class="detail-row">
         <span class="detail-label">Total Retries:</span>
         <span class="detail-value">{{ totalRetries }}</span>
       </div>
@@ -78,9 +134,13 @@
 
       <!-- Error Details -->
       <div v-if="syncErrors.length > 0" class="error-details">
-        <h4 class="error-title">Recent Errors ({{ syncErrors.length }})</h4>
+        <h4 class="error-title">
+          Recent Errors ({{ syncErrors.length }})
+        </h4>
         <div v-for="(error, index) in recentErrors" :key="index" class="error-item">
-          <div class="error-message">{{ error.message }}</div>
+          <div class="error-message">
+            {{ error.message }}
+          </div>
           <div class="error-meta">
             {{ formatTimestamp(error.timestamp) }} •
             {{ error.direction ? error.direction.toUpperCase() : 'UNKNOWN' }}
@@ -93,41 +153,41 @@
       <div class="sync-actions">
         <button
           v-if="syncStatus === 'error' || needsUserIntervention"
-          @click="retrySync"
           class="btn btn-primary btn-sm"
           :disabled="isSyncing"
+          @click="retrySync"
         >
           Retry Sync
         </button>
 
         <button
           v-if="(syncStatus as any) === 'paused'"
-          @click="resumeSync"
           class="btn btn-primary btn-sm"
+          @click="resumeSync"
         >
           Resume
         </button>
 
         <button
           v-if="syncStatus === 'syncing' || (syncStatus as any) === 'retrying'"
-          @click="pauseSync"
           class="btn btn-secondary btn-sm"
+          @click="pauseSync"
         >
           Pause
         </button>
 
         <button
-          @click="triggerManualSync"
           class="btn btn-secondary btn-sm"
           :disabled="isSyncing || !canSync"
+          @click="triggerManualSync"
         >
           Manual Sync
         </button>
 
         <button
           v-if="syncErrors.length > 0"
-          @click="clearErrors"
           class="btn btn-outline btn-sm"
+          @click="clearErrors"
         >
           Clear Errors
         </button>
@@ -137,9 +197,11 @@
     <!-- Progress Bar (when syncing) -->
     <div v-if="showProgress && (syncStatus === 'syncing' || (syncStatus as any) === 'retrying')" class="sync-progress">
       <div class="progress-bar">
-        <div class="progress-fill" :style="{ width: `${syncProgress}%` }"></div>
+        <div class="progress-fill" :style="{ width: `${syncProgress}%` }" />
       </div>
-      <div class="progress-text">{{ syncProgressText }}</div>
+      <div class="progress-text">
+        {{ syncProgressText }}
+      </div>
     </div>
   </div>
 </template>

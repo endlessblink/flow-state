@@ -1,7 +1,7 @@
 <template>
   <span
+    class="base-badge"
     :class="[
-      'base-badge',
       `variant-${variant}`,
       `size-${size}`,
       { 'is-rounded': rounded }

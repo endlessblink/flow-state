@@ -10,7 +10,9 @@
           <WifiOff v-else :size="16" />
         </div>
         <div class="status-text">
-          <div class="provider-name">{{ syncStatus.provider }}</div>
+          <div class="provider-name">
+            {{ syncStatus.provider }}
+          </div>
           <div class="connection-status">
             {{ syncStatus.isOnline ? 'Connected' : 'Offline' }}
           </div>
@@ -24,8 +26,12 @@
       </div>
 
       <div v-if="syncStatus.syncUrl" class="sync-url">
-        <div class="url-label">Sync URL:</div>
-        <div class="url-value">{{ truncateUrl(syncStatus.syncUrl) }}</div>
+        <div class="url-label">
+          Sync URL:
+        </div>
+        <div class="url-value">
+          {{ truncateUrl(syncStatus.syncUrl) }}
+        </div>
       </div>
     </div>
 
@@ -35,11 +41,24 @@
         <span>Sync Provider</span>
         <span class="setting-description">Choose where to store your data</span>
       </label>
-      <select v-model="selectedProvider" @change="onProviderChange" :disabled="isSyncing" class="setting-select">
-        <option value="">Disabled</option>
-        <option value="couchdb">CouchDB (Self-hosted, cross-device sync)</option>
-        <option value="jsonbin">JSONBin (Free, no account needed)</option>
-        <option value="github">GitHub Gist (Requires token)</option>
+      <select
+        v-model="selectedProvider"
+        :disabled="isSyncing"
+        class="setting-select"
+        @change="onProviderChange"
+      >
+        <option value="">
+          Disabled
+        </option>
+        <option value="couchdb">
+          CouchDB (Self-hosted, cross-device sync)
+        </option>
+        <option value="jsonbin">
+          JSONBin (Free, no account needed)
+        </option>
+        <option value="github">
+          GitHub Gist (Requires token)
+        </option>
       </select>
     </div>
 
@@ -56,7 +75,7 @@
           placeholder="http://your-server:5984/database"
           class="token-input"
           :disabled="isSyncing"
-        />
+        >
         <div class="couchdb-auth">
           <input
             v-model="couchdbUsername"
@@ -64,16 +83,16 @@
             placeholder="Username"
             class="token-input"
             :disabled="isSyncing"
-          />
+          >
           <input
             v-model="couchdbPassword"
             type="password"
             placeholder="Password"
             class="token-input"
             :disabled="isSyncing"
-          />
+          >
         </div>
-        <button @click="saveCouchDBConfig" :disabled="!couchdbUrl || isSyncing" class="save-token-btn">
+        <button :disabled="!couchdbUrl || isSyncing" class="save-token-btn" @click="saveCouchDBConfig">
           <Key :size="16" />
           Save & Test Connection
         </button>
@@ -96,8 +115,8 @@
           placeholder="ghp_xxxxxxxxxxxx"
           class="token-input"
           :disabled="isSyncing"
-        />
-        <button @click="saveGitHubToken" :disabled="!githubToken || isSyncing" class="save-token-btn">
+        >
+        <button :disabled="!githubToken || isSyncing" class="save-token-btn" @click="saveGitHubToken">
           <Key :size="16" />
           Save
         </button>
@@ -111,19 +130,24 @@
 
     <!-- Sync Actions -->
     <div v-if="selectedProvider" class="sync-actions">
-      <button @click="toggleSync" :disabled="isSyncing" class="action-btn" :class="syncEnabled ? 'danger' : 'primary'">
+      <button
+        :disabled="isSyncing"
+        class="action-btn"
+        :class="syncEnabled ? 'danger' : 'primary'"
+        @click="toggleSync"
+      >
         <Power v-if="syncEnabled" :size="16" />
         <Cloud v-else :size="16" />
         {{ syncEnabled ? 'Disable Sync' : 'Enable Sync' }}
       </button>
 
-      <button @click="manualSync" :disabled="!syncEnabled || isSyncing" class="action-btn secondary">
+      <button :disabled="!syncEnabled || isSyncing" class="action-btn secondary" @click="manualSync">
         <RefreshCw v-if="isSyncing" :size="16" class="animate-spin" />
         <Download v-else :size="16" />
         {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
       </button>
 
-      <button v-if="syncStatus.syncUrl" @click="copySyncUrl" class="action-btn secondary">
+      <button v-if="syncStatus.syncUrl" class="action-btn secondary" @click="copySyncUrl">
         <Copy :size="16" />
         Copy URL
       </button>
@@ -137,10 +161,10 @@
       </label>
       <div class="live-sync-controls">
         <button
-          @click="toggleLiveSync"
           :disabled="isSyncing"
           class="action-btn"
           :class="liveSyncActive ? 'danger' : 'success'"
+          @click="toggleLiveSync"
         >
           <RefreshCw v-if="liveSyncActive" :size="16" class="animate-pulse" />
           <Zap v-else :size="16" />
@@ -159,19 +183,27 @@
         <span>This Device</span>
       </div>
       <div class="device-details">
-        <div class="device-name">{{ syncStatus.deviceName }}</div>
-        <div class="device-id">ID: {{ truncateId(syncStatus.deviceId) }}</div>
+        <div class="device-name">
+          {{ syncStatus.deviceName }}
+        </div>
+        <div class="device-id">
+          ID: {{ truncateId(syncStatus.deviceId) }}
+        </div>
       </div>
     </div>
 
     <!-- Sync Progress -->
     <div v-if="isSyncing" class="sync-progress">
       <div class="progress-header">
-        <div class="progress-text">Syncing data...</div>
-        <div class="progress-status">{{ syncProgress }}</div>
+        <div class="progress-text">
+          Syncing data...
+        </div>
+        <div class="progress-status">
+          {{ syncProgress }}
+        </div>
       </div>
       <div class="progress-bar">
-        <div class="progress-fill" :style="{ width: `${progressPercent}%` }"></div>
+        <div class="progress-fill" :style="{ width: `${progressPercent}%` }" />
       </div>
     </div>
 
@@ -183,8 +215,12 @@
       </div>
       <div class="history-list">
         <div v-for="entry in syncHistory.slice(0, 3)" :key="entry.id" class="history-item">
-          <div class="history-time">{{ formatTime(entry.timestamp) }}</div>
-          <div class="history-action">{{ entry.action }}</div>
+          <div class="history-time">
+            {{ formatTime(entry.timestamp) }}
+          </div>
+          <div class="history-action">
+            {{ entry.action }}
+          </div>
           <div class="history-status" :class="entry.success ? 'success' : 'error'">
             {{ entry.success ? '✓' : '✗' }}
           </div>

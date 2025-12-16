@@ -10,11 +10,13 @@
         @click.stop
       >
         <div class="modal-header">
-          <h2 class="modal-title">Edit Group</h2>
+          <h2 class="modal-title">
+            Edit Group
+          </h2>
           <button
             class="close-btn"
-            @click="close"
             aria-label="Close modal"
+            @click="close"
           >
             <X :size="18" />
           </button>
@@ -30,7 +32,7 @@
               class="form-input"
               placeholder="Enter group name"
               @keyup.enter="save"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -41,14 +43,14 @@
                 v-model="formData.color"
                 type="color"
                 class="color-input"
-              />
+              >
               <input
                 v-model="formData.color"
                 type="text"
                 class="color-text-input"
                 placeholder="#000000"
                 @keyup.enter="save"
-              />
+              >
             </div>
           </div>
 
@@ -74,7 +76,7 @@
                 v-model="formData.isCollapsed"
                 type="checkbox"
                 class="checkbox"
-              />
+              >
               Start Collapsed
             </label>
           </div>
@@ -85,7 +87,7 @@
                 v-model="formData.isVisible"
                 type="checkbox"
                 class="checkbox"
-              />
+              >
               Visible
             </label>
           </div>
@@ -100,8 +102,8 @@
           </button>
           <button
             class="btn btn-primary"
-            @click="save"
             :disabled="!formData.name.trim()"
+            @click="save"
           >
             Save Changes
           </button>

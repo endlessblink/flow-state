@@ -10,15 +10,15 @@
     @contextmenu.prevent="$emit('contextMenu', $event, task)"
   >
     <!-- Priority Indicator -->
-    <div v-if="task.priority" class="priority-indicator"></div>
+    <div v-if="task.priority" class="priority-indicator" />
     <!-- Checkbox -->
     <div class="task-row__checkbox" @click.stop>
       <input
         type="checkbox"
         :checked="task.status === 'done'"
-        @change="$emit('toggleComplete', task.id)"
         :aria-label="`Mark ${task.title} as ${task.status === 'done' ? 'incomplete' : 'complete'}`"
-      />
+        @change="$emit('toggleComplete', task.id)"
+      >
     </div>
 
     <!-- Title (flexible, main focus) -->
@@ -47,7 +47,7 @@
           class="project-emoji project-css-circle"
           :style="{ '--project-color': projectVisual.color }"
           :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-        ></span>
+        />
         <!-- Default fallback (folder icon) -->
         <ProjectEmojiIcon
           v-else
@@ -92,16 +92,16 @@
     <!-- Quick Actions (hover only) -->
     <div class="task-row__actions">
       <button
-        @click.stop="$emit('startTimer', task.id)"
         class="task-row__action-btn"
         title="Start Timer"
+        @click.stop="$emit('startTimer', task.id)"
       >
         <Play :size="14" />
       </button>
       <button
-        @click.stop="$emit('edit', task.id)"
         class="task-row__action-btn"
         title="Edit Task"
+        @click.stop="$emit('edit', task.id)"
       >
         <Edit :size="14" />
       </button>
@@ -125,8 +125,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const taskStore = useTaskStore()
-
 defineEmits<{
   select: [taskId: string]
   toggleComplete: [taskId: string]
@@ -134,6 +132,8 @@ defineEmits<{
   edit: [taskId: string]
   contextMenu: [event: MouseEvent, task: Task]
 }>()
+
+const taskStore = useTaskStore()
 
 // Hebrew text alignment support
 const { getAlignmentClasses } = useHebrewAlignment()

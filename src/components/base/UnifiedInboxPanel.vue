@@ -2,11 +2,13 @@
   <div class="unified-inbox-panel" :class="{ collapsed: isCollapsed }">
     <!-- Header -->
     <div class="inbox-header">
-      <button @click="isCollapsed = !isCollapsed" class="collapse-btn" :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'">
+      <button class="collapse-btn" :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'" @click="isCollapsed = !isCollapsed">
         <ChevronLeft v-if="!isCollapsed" :size="16" />
         <ChevronRight v-else :size="16" />
       </button>
-      <h3 v-if="!isCollapsed" class="inbox-title">Inbox</h3>
+      <h3 v-if="!isCollapsed" class="inbox-title">
+        Inbox
+      </h3>
 
       <!-- Expanded state count -->
       <span v-if="!isCollapsed" class="inbox-count">{{ inboxTasks.length }}</span>
@@ -47,12 +49,13 @@
       <button
         v-for="filter in smartFilters"
         :key="filter.key"
-        :class="['filter-tab', { active: activeFilter === filter.key }]"
-        @click="activeFilter = filter.key as any"
+        class="filter-tab"
+        :class="[{ active: activeFilter === filter.key }]"
         :title="filter.description"
         :aria-label="`${filter.label}: ${filter.count} tasks`"
         role="tab"
         :aria-selected="activeFilter === filter.key"
+        @click="activeFilter = filter.key as any"
       >
         <span class="filter-icon">{{ filter.icon }}</span>
         <span class="filter-label">{{ filter.label }}</span>
@@ -70,17 +73,17 @@
     <div v-if="!isCollapsed" class="quick-add">
       <input
         v-model="newTaskTitle"
-        @keydown.enter="addTask"
         placeholder="Quick add task (Enter)..."
         class="quick-add-input"
-      />
+        @keydown.enter="addTask"
+      >
     </div>
 
     <!-- Brain Dump Mode (optional) -->
     <div v-if="!isCollapsed && showBrainDump">
       <button
-        @click="brainDumpMode = !brainDumpMode"
         class="brain-dump-toggle"
+        @click="brainDumpMode = !brainDumpMode"
       >
         {{ brainDumpMode ? 'Quick Add Mode' : 'Brain Dump Mode' }}
       </button>
@@ -96,9 +99,9 @@ Call client"
           rows="8"
         />
         <button
-          @click="processBrainDump"
           class="process-brain-dump-btn"
           :disabled="parsedTaskCount === 0"
+          @click="processBrainDump"
         >
           Add {{ parsedTaskCount }} Tasks
         </button>
@@ -109,19 +112,25 @@ Call client"
     <div v-if="!isCollapsed" class="inbox-tasks">
       <!-- Empty State -->
       <div v-if="inboxTasks.length === 0" class="empty-inbox">
-        <div class="empty-icon">📋</div>
-        <p class="empty-text">No tasks in this filter</p>
-        <p class="empty-subtext">{{ getEmptyMessage() }}</p>
+        <div class="empty-icon">
+          📋
+        </div>
+        <p class="empty-text">
+          No tasks in this filter
+        </p>
+        <p class="empty-subtext">
+          {{ getEmptyMessage() }}
+        </p>
       </div>
 
       <!-- Selection Bar (shown when tasks are selected) -->
       <div v-if="multiSelectMode" class="selection-bar">
         <span class="selection-count">{{ selectedTaskIds.size }} selected</span>
-        <button @click="deleteSelectedTasks" class="selection-action delete-action" title="Delete selected tasks">
+        <button class="selection-action delete-action" title="Delete selected tasks" @click="deleteSelectedTasks">
           <Trash2 :size="14" />
           Delete
         </button>
-        <button @click="clearSelection" class="selection-action clear-action" title="Clear selection (Esc)">
+        <button class="selection-action clear-action" title="Clear selection (Esc)" @click="clearSelection">
           <X :size="14" />
           Clear
         </button>
@@ -131,7 +140,8 @@ Call client"
       <div
         v-for="task in inboxTasks"
         :key="task.id"
-        :class="['task-card', { selected: selectedTaskIds.has(task.id) }]"
+        class="task-card"
+        :class="[{ selected: selectedTaskIds.has(task.id) }]"
         draggable="true"
         tabindex="0"
         @dragstart="onDragStart($event, task)"
@@ -142,7 +152,7 @@ Call client"
         @keydown="handleTaskKeydown($event, task)"
       >
         <!-- Priority Stripe (top) -->
-        <div class="priority-stripe" :class="`priority-${task.priority || 'none'}`"></div>
+        <div class="priority-stripe" :class="`priority-${task.priority || 'none'}`" />
 
         <!-- Timer Active Badge -->
         <div v-if="isTimerActive(task.id)" class="timer-indicator" title="Timer Active">
@@ -151,7 +161,9 @@ Call client"
 
         <!-- Task Content -->
         <div class="task-content">
-          <div class="task-title">{{ task.title }}</div>
+          <div class="task-title">
+            {{ task.title }}
+          </div>
 
           <!-- Metadata Badges -->
           <div class="task-metadata">
@@ -195,15 +207,15 @@ Call client"
         <div class="task-actions">
           <button
             class="action-btn"
-            @click.stop="handleStartTimer(task)"
             :title="`Start timer for ${task.title}`"
+            @click.stop="handleStartTimer(task)"
           >
             <Play :size="12" />
           </button>
           <button
             class="action-btn"
-            @click.stop="handleEditTask(task)"
             :title="`Edit ${task.title}`"
+            @click.stop="handleEditTask(task)"
           >
             <Edit2 :size="12" />
           </button>
@@ -214,9 +226,9 @@ Call client"
     <!-- Quick Add Task Button -->
     <div v-if="!isCollapsed" class="quick-add-task">
       <button
-        @click="handleQuickAddTask"
         class="add-task-btn"
         title="Add new task to inbox"
+        @click="handleQuickAddTask"
       >
         <Plus :size="14" />
         Add Task

@@ -484,7 +484,7 @@ export class SyncCircuitBreaker {
   } {
     const health = this.metrics.healthScore
     let overall: 'healthy' | 'warning' | 'critical'
-    let recommendations: string[] = []
+    const recommendations: string[] = []
 
     if (health >= 80) {
       overall = 'healthy'

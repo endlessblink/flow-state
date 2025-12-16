@@ -1,7 +1,6 @@
 <template>
   <div class="backup-verification-button">
     <button
-      @click="runVerification"
       :disabled="isRunning || !isBackupAvailable"
       class="verification-btn"
       :class="{
@@ -9,12 +8,13 @@
         'btn-warning': verificationStatus === 'NEEDS_INVESTIGATION',
         'btn-error': verificationStatus === 'CONTAMINATED'
       }"
+      @click="runVerification"
     >
-      <span class="btn-icon" v-if="!isRunning">
+      <span v-if="!isRunning" class="btn-icon">
         {{ verificationIcon }}
       </span>
-      <span class="btn-spinner" v-else>
-        <div class="spinner"></div>
+      <span v-else class="btn-spinner">
+        <div class="spinner" />
       </span>
       <span class="btn-text">
         {{ buttonText }}
@@ -26,7 +26,9 @@
       <div class="verification-modal" @click.stop>
         <div class="modal-header">
           <h3>🔒 Backup System Verification</h3>
-          <button @click="closeModal" class="close-btn">✕</button>
+          <button class="close-btn" @click="closeModal">
+            ✕
+          </button>
         </div>
 
         <div class="modal-content">
@@ -71,10 +73,16 @@
                   class="test-item"
                   :class="{ 'test-pass': test.status === 'PASS', 'test-fail': test.status === 'FAIL' }"
                 >
-                  <div class="test-icon">{{ test.status === 'PASS' ? '✅' : '❌' }}</div>
+                  <div class="test-icon">
+                    {{ test.status === 'PASS' ? '✅' : '❌' }}
+                  </div>
                   <div class="test-details">
-                    <div class="test-name">{{ getTestName(key) }}</div>
-                    <div class="test-message">{{ test.details }}</div>
+                    <div class="test-name">
+                      {{ getTestName(key) }}
+                    </div>
+                    <div class="test-message">
+                      {{ test.details }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -98,10 +106,10 @@
 
           <div v-else-if="isRunning" class="verification-loading">
             <div class="loading-spinner">
-              <div class="spinner"></div>
+              <div class="spinner" />
               <p>Running forensic verification...</p>
               <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+                <div class="progress-fill" :style="{ width: progress + '%' }" />
               </div>
             </div>
           </div>
@@ -112,10 +120,10 @@
         </div>
 
         <div class="modal-footer">
-          <button @click="exportReport" class="btn btn-secondary" :disabled="!verificationResult">
+          <button class="btn btn-secondary" :disabled="!verificationResult" @click="exportReport">
             📄 Export Report
           </button>
-          <button @click="closeModal" class="btn btn-primary">
+          <button class="btn btn-primary" @click="closeModal">
             Close
           </button>
         </div>
@@ -125,8 +133,12 @@
     <!-- Quick Status Tooltip -->
     <div v-if="showTooltip" class="tooltip">
       <div class="tooltip-content">
-        <div class="tooltip-title">Backup System Status</div>
-        <div class="tooltip-status">{{ tooltipText }}</div>
+        <div class="tooltip-title">
+          Backup System Status
+        </div>
+        <div class="tooltip-status">
+          {{ tooltipText }}
+        </div>
         <div class="tooltip-details">
           Last check: {{ lastCheckTime }}
         </div>

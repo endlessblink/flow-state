@@ -7,11 +7,15 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
 <template>
   <div class="login-form">
     <div class="form-header">
-      <h2 class="form-title">Sign In</h2>
-      <p class="form-subtitle">Welcome back to your productivity hub</p>
+      <h2 class="form-title">
+        Sign In
+      </h2>
+      <p class="form-subtitle">
+        Welcome back to your productivity hub
+      </p>
     </div>
 
-    <form @submit.prevent="handleSubmit" class="auth-form">
+    <form class="auth-form" @submit.prevent="handleSubmit">
       <!-- Error Display -->
       <div v-if="errorMessage" class="error-message" role="alert">
         <AlertCircle class="error-icon" />
@@ -26,9 +30,9 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
         placeholder="Enter your email"
         required
         :disabled="isLoading"
-        @keydown.enter="handleSubmit"
         data-testid="email-input"
         autocomplete="email"
+        @keydown.enter="handleSubmit"
       />
 
       <!-- Password Input -->
@@ -40,17 +44,17 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
           placeholder="Enter your password"
           required
           :disabled="isLoading"
-          @keydown.enter="handleSubmit"
           data-testid="password-input"
           autocomplete="current-password"
+          @keydown.enter="handleSubmit"
         >
           <template #suffix>
             <button
               type="button"
-              @click="showPassword = !showPassword"
               class="password-toggle"
               :aria-label="showPassword ? 'Hide password' : 'Show password'"
               tabindex="-1"
+              @click="showPassword = !showPassword"
             >
               <EyeIcon v-if="!showPassword" class="icon" />
               <EyeOffIcon v-else class="icon" />
@@ -63,9 +67,9 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
       <div class="form-actions">
         <button
           type="button"
-          @click="$emit('forgotPassword', email)"
           class="forgot-password-link"
           :disabled="isLoading"
+          @click="$emit('forgotPassword', email)"
         >
           Forgot Password?
         </button>
@@ -99,9 +103,9 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
         </span>
         <button
           type="button"
-          @click="$emit('switchToSignup')"
           class="switch-mode-link"
           :disabled="isLoading"
+          @click="$emit('switchToSignup')"
         >
           Sign Up
         </button>
@@ -123,13 +127,13 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const emit = defineEmits<Emits>()
+
 interface Emits {
   success: [user: any]
   switchToSignup: []
   forgotPassword: [email: string]
 }
-
-const emit = defineEmits<Emits>()
 
 // ===== State =====
 const authStore = useAuthStore()

@@ -6,11 +6,11 @@
         :key="filter.key"
         class="filter-btn"
         :class="{ active: activeFilter === filter.key }"
-        @click="$emit('filter-changed', filter.key)"
         :title="`${filter.description} (${filter.count} tasks)`"
+        @click="$emit('filter-changed', filter.key)"
       >
         <component :is="filter.icon" :size="14" />
-        <span class="filter-count" v-if="filter.count > 0">{{ filter.count }}</span>
+        <span v-if="filter.count > 0" class="filter-count">{{ filter.count }}</span>
       </button>
     </div>
   </div>

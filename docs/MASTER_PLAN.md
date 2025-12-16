@@ -65,17 +65,32 @@
 
 <!-- Active work items use TASK-XXX format -->
 
-### TASK-011: Lint Cleanup
+### TASK-011: Lint Cleanup (IN PROGRESS)
 
 **Goal**: Fix 2400+ lint errors for easier refactoring & faster Claude Code editing.
 
 **Priority**: P2-MEDIUM
 
+**Baseline** (Dec 16, 2025): 5,175 problems (2,405 errors, 2,770 warnings)
+**Current** (Dec 16, 2025): 5,173 problems (2,403 errors, 2,770 warnings)
+
 | Step | Description | Status |
 |------|-------------|--------|
-| 1 | Run `npm run lint` to get baseline | PENDING |
-| 2 | Fix auto-fixable errors | PENDING |
-| 3 | Manual fixes for remaining errors | PENDING |
+| 1 | Run `npm run lint` to get baseline | ✅ DONE |
+| 2 | Safe fixes (remove unused imports, prefix unused vars) | ✅ DONE |
+| 3 | ~~Fix auto-fixable errors~~ | ⚠️ SKIPPED - User requested no `--fix` |
+| 4 | Manual fixes for remaining errors | PENDING |
+
+**Safe Fixes Applied** (Dec 16, 2025):
+- `FocusView.vue`: Removed unused `Task` import, prefixed `_handleComplete`
+- `QuickSortView.vue`: Removed unused `TaskEditModal` import, prefixed `_closeEditModal`
+
+**Error Breakdown**:
+- ~52 `no-explicit-any` errors - Requires context to fix safely
+- ~80 `no-unused-vars` in CanvasView.vue - Many used in template
+- ~2,770 warnings - Vue formatting (attribute order, newlines)
+
+**Note**: User explicitly requested NO `--fix` flag due to past issues with code being reverted.
 
 ---
 
@@ -276,7 +291,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
 | ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Two-part fix: (1) requestSync() in TaskContextMenu (2) spread task object in syncNodes |
 | BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
-| BUG-015 | Edit Task modal behind nav tabs | P2-MEDIUM | z-index issue - nav tabs overlap modal |
+| ~~BUG-015~~ | ~~Edit Task modal behind nav tabs~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 16, 2025 - Added Teleport to body |
 | BUG-016 | Timer status not syncing | P2-MEDIUM | Timer state not synchronized across views/components |
 
 **Details**: See "Open Bug Analysis" section below.
@@ -346,7 +361,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | ID | Issue | Priority | Notes |
 |----|-------|----------|-------|
 | ~~ISSUE-006~~ | ~~**Sync loop resets task positions every second**~~ | ~~P0-CRITICAL~~ | ✅ FIXED Dec 16, 2025 - See BUG-012 |
-| ISSUE-001 | **Live sync lost on refresh** | P1-HIGH | See fix below |
+| ~~ISSUE-001~~ | ~~**Live sync lost on refresh**~~ | ~~P1-HIGH~~ | ✅ ALREADY FIXED - See CloudSyncSettings.vue lines 239, 485, 502, 519-555, 649 |
 | ISSUE-002 | **This Week shows 0 when tasks exist** | P2 | Today=0 correct, but This Week=0 wrong when tasks scheduled for Friday (today is Saturday) |
 | ISSUE-003 | IndexedDB version mismatch errors | P2 | Needs proper DB migration |
 | ISSUE-004 | Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
@@ -354,13 +369,39 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | ISSUE-007 | **Timer not syncing across instances** | P2-MEDIUM | Timer started in one tab should show in all open tabs/windows |
 | ISSUE-008 | **Ctrl+Z doesn't work on groups** | P2-MEDIUM | Undo doesn't restore deleted/modified groups on canvas |
 
-### 🔴 NEXT SESSION: Live Sync Persistence Fix
+### ~~🔴 NEXT SESSION: Live Sync Persistence Fix~~ (ALREADY FIXED)
 
-**Problem**: Live sync is lost when page refreshes. User must manually re-enable it each time.
+**Status**: ✅ ALREADY IMPLEMENTED in CloudSyncSettings.vue
 
-**Root Cause**: `liveSyncActive` state is not persisted to localStorage, and there's no auto-start on page load.
+**Implementation Found** (Dec 16, 2025):
+- Line 239: `liveSyncActive` initialized from `localStorage.getItem('pomo-live-sync-active')`
+- Lines 485, 502: `localStorage.setItem('pomo-live-sync-active', ...)` on toggle
+- Lines 519-555: `restoreSyncState()` function auto-starts live sync
+- Line 649: `await restoreSyncState()` called in onMounted
 
-**Fix Required** (in `CloudSyncSettings.vue`):
+**Note**: The fix uses key `pomo-live-sync-active` (not `pomo-live-sync-enabled` as originally planned).
+
+---
+
+### 🔴 NEXT SESSION: Priority Tasks
+
+| ID | Task | Priority | Effort |
+|----|------|----------|--------|
+| ~~BUG-015~~ | ~~Edit Task modal behind nav tabs (z-index)~~ | ~~P2-MEDIUM~~ | ✅ DONE |
+| BUG-016 | Timer status not syncing across tabs | P2-MEDIUM | ~2h |
+| TASK-002 | Canvas Section Selection Dialog | P2-MEDIUM | ~2h |
+| TASK-003 | Re-enable Backup Settings UI | P2-MEDIUM | ~2h |
+| BUG-009-011 | Calendar resize/ghost preview issues | HIGH | ~4h |
+
+**Suggested**: Start with BUG-016 or TASK-002/TASK-003 as quick wins.
+
+---
+
+### ~~🔴 OLD: Live Sync Persistence Fix~~ (Reference)
+
+**Original Problem**: Live sync is lost when page refreshes. User must manually re-enable it each time.
+
+**Original Fix Plan** (in `CloudSyncSettings.vue`):
 
 1. **Save preference to localStorage** when toggling:
 ```typescript

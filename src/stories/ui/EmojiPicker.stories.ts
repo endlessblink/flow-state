@@ -41,11 +41,11 @@ export const Closed: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>EmojiPicker (Closed)</h3>
-        <p>Click the button below to open the emoji picker</p>
-        <button @click="() => console.log('Open picker')" style="margin-top: 20px; padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;">
-          😊 Open Emoji Picker
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">EmojiPicker (Closed)</h3>
+        <p style="color: var(--text-secondary);">Click the button below to open the emoji picker</p>
+        <button @click="() => console.log('Open picker')" style="margin-top: 20px; padding: 12px 24px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+          Open Emoji Picker
         </button>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
       </div>
@@ -63,9 +63,9 @@ export const DefaultOpen: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>EmojiPicker (Default State)</h3>
-        <p>Default state with emoji tab active</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">EmojiPicker (Default State)</h3>
+        <p style="color: var(--text-secondary);">Default state with emoji tab active</p>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
       </div>
     `,
@@ -84,9 +84,9 @@ export const WithEmoji: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>EmojiPicker with Preselected Emoji</h3>
-        <p>Opens with 🚀 emoji preselected</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">EmojiPicker with Preselected Emoji</h3>
+        <p style="color: var(--text-secondary);">Opens with rocket emoji preselected</p>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
       </div>
     `,
@@ -104,9 +104,9 @@ export const WithColor: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>EmojiPicker with Preselected Color</h3>
-        <p>Opens with color tab active and #4ECDC4 preselected</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">EmojiPicker with Preselected Color</h3>
+        <p style="color: var(--text-secondary);">Opens with color tab active and teal preselected</p>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
       </div>
     `,
@@ -125,9 +125,9 @@ export const EmojiTab: Story = {
       return { args, selectedTab }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>Emoji Tab</h3>
-        <p>Browse all available emojis with search functionality</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">Emoji Tab</h3>
+        <p style="color: var(--text-secondary);">Browse all available emojis with search functionality</p>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
       </div>
     `,
@@ -145,9 +145,9 @@ export const ColorTab: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>Color Tab</h3>
-        <p>Choose from predefined color options for project colors</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">Color Tab</h3>
+        <p style="color: var(--text-secondary);">Choose from predefined color options for project colors</p>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
       </div>
     `,
@@ -164,9 +164,9 @@ export const RecentTab: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>Recent Tab</h3>
-        <p>Shows recently used emojis (empty state initially)</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">Recent Tab</h3>
+        <p style="color: var(--text-secondary);">Shows recently used emojis (empty state initially)</p>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
       </div>
     `,
@@ -220,29 +220,29 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h1>EmojiPicker Interactive Demo</h1>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h1 style="color: var(--text-primary); margin: 0 0 24px 0;">EmojiPicker Interactive Demo</h1>
 
         <!-- Current Selection Display -->
-        <div style="margin-bottom: 30px; padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-          <h2 style="margin: 0 0 16px 0;">Current Selection</h2>
+        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+          <h2 style="margin: 0 0 16px 0; color: var(--text-primary);">Current Selection</h2>
 
           <div style="display: flex; gap: 20px; align-items: center;">
             <div style="flex: 1;">
               <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-secondary);">Emoji</h4>
-              <div style="font-size: 32px; min-height: 40px; display: flex; align-items: center; justify-content: center; background: var(--surface-hover); border-radius: 8px; padding: 10px;">
+              <div style="font-size: 32px; min-height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 10px; color: var(--text-primary);">
                 {{ currentEmoji || 'None' }}
               </div>
             </div>
 
             <div style="flex: 1;">
               <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-secondary);">Color</h4>
-              <div style="width: 40px; height: 40px; border-radius: 8px; border: 2px solid var(--border-medium);" :style="{ backgroundColor: currentColor }"></div>
+              <div style="width: 40px; height: 40px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);" :style="{ backgroundColor: currentColor }"></div>
             </div>
           </div>
 
-          <div v-if="lastSelection" style="margin-top: 16px; padding: 12px; background: var(--surface-tertiary); border-radius: 8px; font-size: 14px;">
-            <strong>Last Selection:</strong> {{ lastSelection.type }} - {{ lastSelection.value }}
+          <div v-if="lastSelection" style="margin-top: 16px; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+            <strong style="color: var(--text-primary);">Last Selection:</strong> {{ lastSelection.type }} - {{ lastSelection.value }}
           </div>
         </div>
 
@@ -250,13 +250,13 @@ export const InteractiveDemo: Story = {
         <div style="display: flex; gap: 12px; margin-bottom: 30px;">
           <button
             @click="openPicker"
-            style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer; font-size: 16px;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; font-size: 16px; transition: all 0.2s ease;"
           >
             😊 Choose Emoji/Color
           </button>
           <button
             @click="clearSelection"
-            style="padding: 12px 24px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); color: var(--text-secondary); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
           >
             Clear Selection
           </button>
@@ -264,19 +264,19 @@ export const InteractiveDemo: Story = {
 
         <!-- Usage Examples -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-          <div style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-            <h3 style="margin: 0 0 12px 0; font-size: 16px;">Project Example</h3>
-            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--surface-hover); border-radius: 8px;">
+          <div style="padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Project Example</h3>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
               <span style="font-size: 24px;">{{ currentEmoji || '📁' }}</span>
-              <span style="font-weight: 500;">My Project</span>
+              <span style="font-weight: 500; color: var(--text-primary);">My Project</span>
             </div>
           </div>
 
-          <div style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-            <h3 style="margin: 0 0 12px 0; font-size: 16px;">Task Example</h3>
-            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--surface-hover); border-radius: 8px;">
+          <div style="padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Task Example</h3>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
               <div style="width: 16px; height: 16px; border-radius: 4px;" :style="{ backgroundColor: currentColor || '#3b82f6' }"></div>
-              <span>Complete task</span>
+              <span style="color: var(--text-primary);">Complete task</span>
             </div>
           </div>
         </div>
@@ -305,9 +305,9 @@ export const ProductivityEmojis: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 20px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>Productivity-Focused Emojis</h3>
-        <p>Pre-categorized emojis optimized for task management workflows</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">Productivity-Focused Emojis</h3>
+        <p style="color: var(--text-secondary);">Pre-categorized emojis optimized for task management workflows</p>
         <EmojiPicker v-bind="args" @close="() => console.log('Closed')" @select="(data) => console.log('Selected:', data)" />
       </div>
     `,
@@ -326,41 +326,41 @@ export const AllVariants: Story = {
       return { showEmojiPicker, showColorPicker, showRecentPicker }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h1>EmojiPicker Component Showcase</h1>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h1 style="color: var(--text-primary); margin: 0 0 24px 0;">EmojiPicker Component Showcase</h1>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-top: 40px;">
           <!-- Emoji Picker -->
-          <div style="padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-            <h3 style="margin: 0 0 16px 0;">Emoji Selection</h3>
+          <div style="padding: 24px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">Emoji Selection</h3>
             <p style="margin: 0 0 20px 0; color: var(--text-secondary);">Browse productivity-focused emojis with search</p>
             <button
               @click="showEmojiPicker = true"
-              style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
+              style="width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
             >
               📝 Open Emoji Picker
             </button>
           </div>
 
           <!-- Color Picker -->
-          <div style="padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-            <h3 style="margin: 0 0 16px 0;">Color Selection</h3>
+          <div style="padding: 24px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">Color Selection</h3>
             <p style="margin: 0 0 20px 0; color: var(--text-secondary);">Choose from predefined project colors</p>
             <button
               @click="showColorPicker = true"
-              style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--color-navigation); color: var(--color-navigation); border-radius: 6px; cursor: pointer;"
+              style="width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
             >
               🎨 Open Color Picker
             </button>
           </div>
 
           <!-- Recent Items -->
-          <div style="padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-            <h3 style="margin: 0 0 16px 0;">Recent Items</h3>
+          <div style="padding: 24px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">Recent Items</h3>
             <p style="margin: 0 0 20px 0; color: var(--text-secondary);">View and reuse recent selections</p>
             <button
               @click="showRecentPicker = true"
-              style="width: 100%; padding: 12px; background: var(--color-break); color: white; border: none; border-radius: 6px; cursor: pointer;"
+              style="width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); color: var(--text-secondary); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
             >
               🕐 Open Recent Items
             </button>
@@ -368,9 +368,9 @@ export const AllVariants: Story = {
         </div>
 
         <!-- Features List -->
-        <div style="margin-top: 40px; padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-          <h3 style="margin: 0 0 16px 0;">Key Features</h3>
-          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+        <div style="margin-top: 40px; padding: 24px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+          <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">Key Features</h3>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: var(--text-secondary);">
             <li>📝 Productivity-focused emoji categories</li>
             <li>🎨 Predefined color palette</li>
             <li>🔍 Real-time emoji search</li>

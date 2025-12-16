@@ -3,8 +3,18 @@
     <!-- Conflict Header -->
     <div class="conflict-header">
       <div class="conflict-icon">
-        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+        <svg
+          class="w-6 h-6 text-red-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z"
+          />
         </svg>
       </div>
       <div class="conflict-title">
@@ -42,7 +52,9 @@
         class="conflict-field"
       >
         <div class="field-header">
-          <h4 class="field-name">{{ formatFieldName(conflict.field) }}</h4>
+          <h4 class="field-name">
+            {{ formatFieldName(conflict.field) }}
+          </h4>
           <div class="field-meta">
             <span :class="severityClass(conflict.severity)">{{ conflict.severity }}</span>
             <span v-if="conflict.autoResolvable" class="auto-resolvable">Auto-resolvable</span>
@@ -55,8 +67,18 @@
           <div class="value-column local">
             <div class="column-header">
               <div class="device-badge local">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
                 </svg>
                 Local (This Device)
               </div>
@@ -74,9 +96,9 @@
             </div>
             <div class="value-actions">
               <button
-                @click="selectLocalValue(conflict)"
                 class="action-btn select-local"
                 :class="{ active: selectedResolution[conflict.field] === 'local' }"
+                @click="selectLocalValue(conflict)"
               >
                 Use This Value
               </button>
@@ -87,8 +109,18 @@
           <div class="value-column remote">
             <div class="column-header">
               <div class="device-badge remote">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
                 </svg>
                 Remote (Synced)
               </div>
@@ -106,9 +138,9 @@
             </div>
             <div class="value-actions">
               <button
-                @click="selectRemoteValue(conflict)"
                 class="action-btn select-remote"
                 :class="{ active: selectedResolution[conflict.field] === 'remote' }"
+                @click="selectRemoteValue(conflict)"
               >
                 Use This Value
               </button>
@@ -121,8 +153,18 @@
           <!-- Suggested Resolution -->
           <div v-if="conflict.suggestedResolution !== undefined" class="suggested-resolution">
             <div class="suggestion-header">
-              <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              <svg
+                class="w-4 h-4 text-blue-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                />
               </svg>
               Suggested Resolution:
             </div>
@@ -133,9 +175,9 @@
               />
             </div>
             <button
-              @click="selectSuggestedValue(conflict)"
               class="action-btn accept-suggestion"
               :class="{ active: selectedResolution[conflict.field] === 'suggested' }"
+              @click="selectSuggestedValue(conflict)"
             >
               Accept Suggestion
             </button>
@@ -144,11 +186,21 @@
           <!-- Manual Merge -->
           <div v-if="canMergeValues(conflict)" class="manual-merge">
             <button
-              @click="enterManualMerge(conflict)"
               class="action-btn manual-merge-btn"
+              @click="enterManualMerge(conflict)"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
               </svg>
               Merge Manually
             </button>
@@ -172,23 +224,23 @@
     <div class="global-actions">
       <div class="bulk-actions">
         <button
-          @click="acceptAllLocal"
           class="bulk-btn local"
           :disabled="!hasUnresolvedConflicts"
+          @click="acceptAllLocal"
         >
           Keep All Local Changes
         </button>
         <button
-          @click="acceptAllRemote"
           class="bulk-btn remote"
           :disabled="!hasUnresolvedConflicts"
+          @click="acceptAllRemote"
         >
           Accept All Remote Changes
         </button>
         <button
-          @click="acceptAllSuggestions"
           class="bulk-btn suggested"
           :disabled="!hasSuggestions"
+          @click="acceptAllSuggestions"
         >
           Accept All Suggestions
         </button>
@@ -196,15 +248,15 @@
 
       <div class="final-actions">
         <button
-          @click="cancelResolution"
           class="action-btn cancel"
+          @click="cancelResolution"
         >
           Cancel Sync
         </button>
         <button
-          @click="applyResolutions"
           class="action-btn apply"
           :disabled="!hasSelectedResolutions"
+          @click="applyResolutions"
         >
           Apply Resolutions ({{ selectedCount }})
         </button>

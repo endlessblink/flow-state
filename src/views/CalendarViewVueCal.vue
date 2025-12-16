@@ -8,7 +8,7 @@
         </button>
       </div>
 
-      <vue-cal
+      <VueCal
         :time-from="0 * 60"
         :time-to="24 * 60"
         :time-step="30"
@@ -21,16 +21,15 @@
           delete: true,
           create: false
         }"
-        @event-drag-drop="handleEventDragDrop"
-        @event-duration-change="handleEventResize"
-        @event-dblclick="handleEventDblClick"
         class="custom-vuecal"
         hide-view-selector
         :disable-views="['years', 'year', 'month', 'week']"
+        @event-drag-drop="handleEventDragDrop"
+        @event-duration-change="handleEventResize"
+        @event-dblclick="handleEventDblClick"
       />
     </div>
-
-    </div>
+  </div>
 </template>
 
 <script setup lang="ts">

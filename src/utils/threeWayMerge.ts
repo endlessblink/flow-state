@@ -3,7 +3,7 @@
  * Advanced merging based on Git's three-way merge approach
  */
 
-import { ConflictDiff, ConflictResolution } from './conflictResolution'
+import type { ConflictDiff, ConflictResolution } from './conflictResolution'
 
 export interface ThreeWayMergeResult {
   mergedTask: any

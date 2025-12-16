@@ -481,17 +481,17 @@ onMounted(() => {
     <div class="test-controls">
       <div class="control-row">
         <button
-          @click="runComprehensiveTest"
           :disabled="isTestRunning"
           class="test-button primary"
+          @click="runComprehensiveTest"
         >
           {{ isTestRunning ? '⏳ Running Tests...' : '🚀 Run Comprehensive Test' }}
         </button>
 
         <button
-          @click="clearResults"
           :disabled="isTestRunning"
           class="test-button secondary"
+          @click="clearResults"
         >
           🗑️ Clear Results
         </button>
@@ -516,7 +516,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="control-row" v-if="testTaskId">
+      <div v-if="testTaskId" class="control-row">
         <div class="status-indicator">
           <span class="status-label">Test Task:</span>
           <span class="status-value">
@@ -537,7 +537,8 @@ onMounted(() => {
         <div
           v-for="result in testResults"
           :key="result.timestamp"
-          :class="['result-item', result.status]"
+          class="result-item"
+          :class="[result.status]"
         >
           <div class="result-header">
             <span class="result-status">

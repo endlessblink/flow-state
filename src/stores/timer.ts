@@ -68,15 +68,15 @@ watch(completedSessions, (newSessions) => {
 
   // Computed
   const isTimerActive = computed(() =>
-    currentSession.value!?.isActive && !currentSession.value!?.isPaused
+    currentSession.value?.isActive && !currentSession.value?.isPaused
   )
 
   const isPaused = computed(() =>
-    currentSession.value!?.isPaused || false
+    currentSession.value?.isPaused || false
   )
 
   const currentTaskId = computed(() =>
-    currentSession.value!?.taskId || null
+    currentSession.value?.taskId || null
   )
 
   const displayTime = computed(() => {

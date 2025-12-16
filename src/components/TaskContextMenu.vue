@@ -12,21 +12,45 @@
 
     <!-- Edit Task (only show for single task, not batch) -->
     <button v-if="!isBatchOperation" class="menu-item" @click="handleEdit">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="menu-icon">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+      <svg
+        width="16"
+        height="16"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        class="menu-icon"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+        />
       </svg>
       <span class="menu-text">Edit</span>
       <span class="menu-shortcut">Ctrl+E</span>
     </button>
 
-    <div v-if="!isBatchOperation" class="menu-divider"></div>
+    <div v-if="!isBatchOperation" class="menu-divider" />
 
     <!-- Date Section -->
     <div class="menu-section">
       <div class="section-header">
         <div class="section-label">
-          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="section-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          <svg
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            class="section-icon"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
           </svg>
           <span class="section-title">Date</span>
         </div>
@@ -34,36 +58,48 @@
       </div>
       <div class="icon-row">
         <!-- Today with Calendar icon (stroke style with color) -->
-        <button class="icon-btn today-icon" @click="setDueDate('today')" title="Today">
+        <button class="icon-btn today-icon" title="Today" @click="setDueDate('today')">
           <Calendar :size="16" :stroke-width="1.5" class="calendar-stroke" />
         </button>
         <!-- Tomorrow with Sun icon (warm yellow) -->
-        <button class="icon-btn sun-icon" @click="setDueDate('tomorrow')" title="Tomorrow">
+        <button class="icon-btn sun-icon" title="Tomorrow" @click="setDueDate('tomorrow')">
           <Sun :size="16" :stroke-width="1.5" class="sun-stroke" />
         </button>
         <!-- Weekend with Moon icon (cool purple) -->
-        <button class="icon-btn moon-icon" @click="setDueDate('weekend')" title="This Weekend">
+        <button class="icon-btn moon-icon" title="This Weekend" @click="setDueDate('weekend')">
           <Moon :size="16" :stroke-width="1.5" class="moon-stroke" />
         </button>
         <!-- Next Week with Arrow icon (blue) -->
-        <button class="icon-btn next-week-icon" @click="setDueDate('nextweek')" title="Next Week">
+        <button class="icon-btn next-week-icon" title="Next Week" @click="setDueDate('nextweek')">
           <ArrowRight :size="16" :stroke-width="1.5" class="arrow-stroke" />
         </button>
         <!-- More options -->
-        <button class="icon-btn more-icon" @click="setDueDate('custom')" title="More Options">
+        <button class="icon-btn more-icon" title="More Options" @click="setDueDate('custom')">
           <MoreHorizontal :size="16" :stroke-width="1.5" class="more-stroke" />
         </button>
       </div>
     </div>
 
-    <div class="menu-divider"></div>
+    <div class="menu-divider" />
 
     <!-- Priority Section -->
     <div class="menu-section">
       <div class="section-header">
         <div class="section-label">
-          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="section-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 2H21l-3 6 3 6h-8.5l-1-2H5a2 2 0 00-2 2zm9-13.5V9"/>
+          <svg
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            class="section-icon"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 2H21l-3 6 3 6h-8.5l-1-2H5a2 2 0 00-2 2zm9-13.5V9"
+            />
           </svg>
           <span class="section-title">Priority</span>
         </div>
@@ -73,38 +109,50 @@
         <button
           class="icon-btn priority-high"
           :class="{ active: currentTask?.priority === 'high' }"
-          @click="setPriority('high')"
           title="High Priority"
+          @click="setPriority('high')"
         >
-          <div class="priority-rect high"></div>
+          <div class="priority-rect high" />
         </button>
         <button
           class="icon-btn priority-medium"
           :class="{ active: currentTask?.priority === 'medium' }"
-          @click="setPriority('medium')"
           title="Medium Priority"
+          @click="setPriority('medium')"
         >
-          <div class="priority-rect medium"></div>
+          <div class="priority-rect medium" />
         </button>
         <button
           class="icon-btn priority-low"
           :class="{ active: currentTask?.priority === 'low' }"
-          @click="setPriority('low')"
           title="Low Priority"
+          @click="setPriority('low')"
         >
-          <div class="priority-rect low"></div>
+          <div class="priority-rect low" />
         </button>
       </div>
     </div>
 
-    <div class="menu-divider"></div>
+    <div class="menu-divider" />
 
     <!-- Status Section -->
     <div class="menu-section">
       <div class="section-header">
         <div class="section-label">
-          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="section-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+          <svg
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            class="section-icon"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+            />
           </svg>
           <span class="section-title">Status</span>
         </div>
@@ -114,104 +162,169 @@
         <button
           class="status-btn status-planned"
           :class="{ active: currentTask?.status === 'planned' }"
-          @click="setStatus('planned')"
           title="Planned"
+          @click="setStatus('planned')"
         >
           <CalendarDays :size="16" :stroke-width="1.5" class="status-icon planned" />
         </button>
         <button
           class="status-btn status-in-progress"
           :class="{ active: currentTask?.status === 'in_progress' }"
-          @click="setStatus('in_progress')"
           title="In Progress"
+          @click="setStatus('in_progress')"
         >
           <Loader :size="16" :stroke-width="1.5" class="status-icon in-progress" />
         </button>
         <button
           class="status-btn status-done"
           :class="{ active: currentTask?.status === 'done' }"
-          @click="setStatus('done')"
           title="Done"
+          @click="setStatus('done')"
         >
           <CheckCircle :size="16" :stroke-width="1.5" class="status-icon done" />
         </button>
         <button
           class="status-btn status-backlog"
           :class="{ active: currentTask?.status === 'backlog' }"
-          @click="setStatus('backlog')"
           title="Backlog"
+          @click="setStatus('backlog')"
         >
           <Inbox :size="16" :stroke-width="1.5" class="status-icon backlog" />
         </button>
         <button
           class="status-btn status-on-hold"
           :class="{ active: currentTask?.status === 'on_hold' }"
-          @click="setStatus('on_hold')"
           title="On Hold"
+          @click="setStatus('on_hold')"
         >
           <PauseCircle :size="16" :stroke-width="1.5" class="status-icon on-hold" />
         </button>
       </div>
     </div>
 
-    <div class="menu-divider"></div>
+    <div class="menu-divider" />
 
     <!-- Focus Mode -->
     <button class="menu-item focus-action" :class="{ 'menu-item--compact': compactMode }" @click="enterFocus">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="menu-icon">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+      <svg
+        width="16"
+        height="16"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        class="menu-icon"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+        />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+        />
       </svg>
       <span v-if="!compactMode" class="menu-text">Focus Mode</span>
       <span class="menu-shortcut" :class="{ 'menu-shortcut--compact': compactMode }">F</span>
     </button>
 
-    <div class="menu-divider"></div>
+    <div class="menu-divider" />
 
     <!-- Start Now -->
     <button class="menu-item start-now-action" :class="{ 'menu-item--compact': compactMode }" @click="startTaskNow">
-      <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" class="menu-icon start-now-icon">
-        <path d="M8 5v14l11-7z"/>
+      <svg
+        width="16"
+        height="16"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+        class="menu-icon start-now-icon"
+      >
+        <path d="M8 5v14l11-7z" />
       </svg>
       <span v-if="!compactMode" class="menu-text">Start Now</span>
       <span class="menu-shortcut" :class="{ 'menu-shortcut--compact': compactMode }">S</span>
     </button>
 
-    <div class="menu-divider"></div>
+    <div class="menu-divider" />
 
     <!-- Start Timer -->
     <button class="menu-item pomodoro-action" :class="{ 'menu-item--compact': compactMode }" @click="startTimer">
-      <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" class="menu-icon timer-icon">
-        <path d="M8 5v14l11-7z"/>
+      <svg
+        width="16"
+        height="16"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+        class="menu-icon timer-icon"
+      >
+        <path d="M8 5v14l11-7z" />
       </svg>
       <span v-if="!compactMode" class="menu-text">Start Timer</span>
       <span class="menu-shortcut" :class="{ 'menu-shortcut--compact': compactMode }">Space</span>
     </button>
 
-    <div class="menu-divider"></div>
+    <div class="menu-divider" />
 
     <!-- Duplicate -->
     <button class="menu-item" :class="{ 'menu-item--compact': compactMode }" @click="duplicateTask">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="menu-icon">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+      <svg
+        width="16"
+        height="16"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        class="menu-icon"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+        />
       </svg>
       <span v-if="!compactMode" class="menu-text">Duplicate</span>
     </button>
 
     <!-- Clear Selection (only for batch operations) -->
     <button v-if="isBatchOperation" class="menu-item" @click="clearSelection">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="menu-icon">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/>
+      <svg
+        width="16"
+        height="16"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        class="menu-icon"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M6 18L18 6M6 6l12 12"
+        />
       </svg>
       <span class="menu-text">Clear Selection</span>
     </button>
 
-    <div class="menu-divider"></div>
+    <div class="menu-divider" />
 
     <!-- Delete -->
     <button class="menu-item danger" @click="deleteTask">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="menu-icon">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      <svg
+        width="16"
+        height="16"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        class="menu-icon"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+        />
       </svg>
       <span class="menu-text">{{ deleteText }}</span>
       <span class="menu-shortcut">{{ deleteShortcut }}</span>

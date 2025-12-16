@@ -24,7 +24,9 @@
           <div class="field-values">
             <!-- Local Value -->
             <div class="field-value local">
-              <div class="value-label">Local:</div>
+              <div class="value-label">
+                Local:
+              </div>
               <div class="value-content">
                 <ValueDisplay
                   :value="field.localValue"
@@ -35,7 +37,9 @@
 
             <!-- Remote Value -->
             <div class="field-value remote">
-              <div class="value-label">Remote:</div>
+              <div class="value-label">
+                Remote:
+              </div>
               <div class="value-content">
                 <ValueDisplay
                   :value="field.remoteValue"
@@ -57,41 +61,51 @@
       <!-- Object Actions -->
       <div class="object-actions">
         <button
-          @click="showMergeOptions = !showMergeOptions"
           class="merge-toggle-btn"
+          @click="showMergeOptions = !showMergeOptions"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
           </svg>
           Merge Options
         </button>
 
         <div v-if="showMergeOptions" class="merge-options">
           <button
-            @click="mergeStrategy = 'union'"
             class="merge-strategy-btn"
             :class="{ active: mergeStrategy === 'union' }"
+            @click="mergeStrategy = 'union'"
           >
             Union (All Fields)
           </button>
           <button
-            @click="mergeStrategy = 'local'"
             class="merge-strategy-btn"
             :class="{ active: mergeStrategy === 'local' }"
+            @click="mergeStrategy = 'local'"
           >
             Local Values
           </button>
           <button
-            @click="mergeStrategy = 'remote'"
             class="merge-strategy-btn"
             :class="{ active: mergeStrategy === 'remote' }"
+            @click="mergeStrategy = 'remote'"
           >
             Remote Values
           </button>
           <button
-            @click="mergeStrategy = 'merge'"
             class="merge-strategy-btn"
             :class="{ active: mergeStrategy === 'merge' }"
+            @click="mergeStrategy = 'merge'"
           >
             Smart Merge
           </button>
@@ -101,8 +115,18 @@
 
     <div v-else class="no-objects">
       <div class="empty-message">
-        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        <svg
+          class="w-8 h-8 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+          />
         </svg>
         <p>No object data to compare</p>
       </div>

@@ -3,30 +3,30 @@
     <!-- Advanced Multi-Select Toggle with Floating Toolbar -->
     <div class="multi-select-toggle" :class="`multi-select-toggle--${size}`">
       <input
+        :id="inputId"
         ref="inputRef"
         type="checkbox"
         :checked="selected"
         :indeterminate="indeterminate"
+        class="sr-only"
+        :aria-describedby="selected ? 'selection-status' : undefined"
         @change="handleChange"
         @click.stop
-        class="sr-only"
-        :id="inputId"
-        :aria-describedby="selected ? 'selection-status' : undefined"
-      />
+      >
       <label
         :for="inputId"
         class="toggle-box"
         :class="toggleBoxClasses"
-        @click="handleClick"
-        @keydown.enter="handleKeydown"
-        @keydown.space.prevent="handleKeydown"
-        @keydown.ctrl.a.prevent="handleSelectAll"
-        @keydown.escape.prevent="handleClearSelection"
         tabindex="0"
         role="checkbox"
         :aria-checked="selected ? 'true' : 'false'"
         :aria-label="enhancedAriaLabel"
         :aria-disabled="disabled"
+        @click="handleClick"
+        @keydown.enter="handleKeydown"
+        @keydown.space.prevent="handleKeydown"
+        @keydown.ctrl.a.prevent="handleSelectAll"
+        @keydown.escape.prevent="handleClearSelection"
       >
         <span id="selection-status" class="sr-only">
           {{ selectionStatusText }}
@@ -40,12 +40,12 @@
             <Minus :size="iconSize" />
           </div>
           <div v-else class="toggle-box__empty" aria-hidden="true">
-            <div class="toggle-box__empty-inner"></div>
+            <div class="toggle-box__empty-inner" />
           </div>
 
           <!-- Enhanced visual feedback layers -->
-          <div class="toggle-box__glow"></div>
-          <div class="toggle-box__border-glow"></div>
+          <div class="toggle-box__glow" />
+          <div class="toggle-box__border-glow" />
         </div>
       </label>
     </div>
@@ -63,29 +63,29 @@
           <!-- Action buttons -->
           <div class="toolbar-actions">
             <button
-              @click="handleSelectAll"
               class="toolbar-btn"
               :class="{ 'toolbar-btn--active': allSelected }"
               title="Select All (Ctrl+A)"
               aria-label="Select all items"
+              @click="handleSelectAll"
             >
               <CheckSquare :size="14" />
             </button>
 
             <button
-              @click="handleInvertSelection"
               class="toolbar-btn"
               title="Invert Selection"
               aria-label="Invert selection"
+              @click="handleInvertSelection"
             >
               <GitCompare :size="14" />
             </button>
 
             <button
-              @click="handleClearSelection"
               class="toolbar-btn"
               title="Clear Selection (Escape)"
               aria-label="Clear selection"
+              @click="handleClearSelection"
             >
               <X :size="14" />
             </button>

@@ -3,19 +3,19 @@
     v-if="isOpen"
     class="modal-overlay"
     :class="{ 'modal-closing': isClosing }"
-    @click="handleOverlayClick"
-    @keydown="handleEscapeKey"
+    ref="overlayRef"
     role="dialog"
     :aria-modal="isOpen"
     :aria-labelledby="titleId"
     :aria-describedby="descriptionId"
-    ref="overlayRef"
+    @click="handleOverlayClick"
+    @keydown="handleEscapeKey"
   >
     <div
+      ref="modalRef"
       class="modal-container"
       :class="[`size-${size}`, `variant-${variant}`, { 'modal-closing': isClosing }]"
       @click.stop
-      ref="modalRef"
     >
       <!-- Modal Header -->
       <header v-if="showHeader" class="modal-header" :class="{ 'rtl-header': isRTL }">
@@ -25,7 +25,9 @@
             class="modal-title"
             :class="[titleClass, { 'text-end': isRTL }]"
           >
-            <slot name="title">{{ title }}</slot>
+            <slot name="title">
+              {{ title }}
+            </slot>
           </h2>
 
           <p
@@ -34,19 +36,21 @@
             class="modal-description"
             :class="[descriptionClass, { 'text-end': isRTL }]"
           >
-            <slot name="description">{{ description }}</slot>
+            <slot name="description">
+              {{ description }}
+            </slot>
           </p>
         </div>
 
         <!-- Close Button -->
         <button
           v-if="showCloseButton"
+          ref="closeBtnRef"
           class="modal-close-btn"
           :class="{ 'rtl-close-btn': isRTL }"
-          @click="handleClose"
           :aria-label="closeAriaLabel"
           type="button"
-          ref="closeBtnRef"
+          @click="handleClose"
         >
           <X :size="16" />
         </button>
@@ -65,8 +69,8 @@
             <BaseButton
               v-if="showCancelButton"
               variant="secondary"
-              @click="handleCancel"
               :disabled="loading"
+              @click="handleCancel"
             >
               {{ cancelText }}
             </BaseButton>
@@ -74,9 +78,9 @@
             <BaseButton
               v-if="showConfirmButton"
               variant="primary"
-              @click="handleConfirm"
               :loading="loading"
               :disabled="confirmDisabled"
+              @click="handleConfirm"
             >
               {{ confirmText }}
             </BaseButton>
@@ -85,7 +89,12 @@
       </footer>
 
       <!-- Focus Trap Indicator -->
-      <div ref="focusTrapRef" class="focus-trap" tabindex="0" aria-hidden="true"></div>
+      <div
+        ref="focusTrapRef"
+        class="focus-trap"
+        tabindex="0"
+        aria-hidden="true"
+      />
     </div>
   </div>
 </template>

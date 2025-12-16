@@ -79,11 +79,11 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 400px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 400px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Project Tree Item</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Interactive project tree component</p>
 
-        <div style="width: 300px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
+        <div style="width: 300px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px;">
           <ProjectTreeItem
             :project="project"
             :level="level"
@@ -94,7 +94,7 @@ export const Default: Story = {
           />
         </div>
 
-        <div style="margin-top: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 24px; padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Features</h4>
           <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
             <li><strong>Visual hierarchy</strong> - Indentation based on nesting level</li>
@@ -196,20 +196,20 @@ export const NestedProjects: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Nested Project Tree</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Multi-level project hierarchy</p>
 
-        <div style="width: 350px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
+        <div style="width: 350px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px;">
           <div v-html="renderProjectTree(projects)"></div>
         </div>
 
-        <div style="margin-top: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 24px; padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Project Hierarchy</h4>
           <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
             <div><strong>Website Redesign</strong> (12 tasks, 8 done)</div>
             <div style="margin-left: 20px;">├── Frontend Development (8 tasks, 6 done)</div>
-            <div style="margin-left: 40px;">├── React Components (5 tasks, 4 done) <span style="color: var(--brand-primary);">← Selected</span></div>
+            <div style="margin-left: 40px;">├── React Components (5 tasks, 4 done) <span style="color: rgba(78, 205, 196, 1);">← Selected</span></div>
             <div style="margin-left: 40px;">└── Styling Updates (3 tasks, 2 done)</div>
             <div style="margin-left: 20px;">└── Backend API (4 tasks, 2 done)</div>
           </div>
@@ -262,7 +262,7 @@ export const ProjectStates: Story = {
       return { projectStates }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 600px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Project States</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Different project statuses and progress</p>
 
@@ -285,7 +285,7 @@ export const ProjectStates: Story = {
             </div>
           </div>
 
-          <div style="padding: 20px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+          <div style="padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
             <h4 style="margin: 0 0 16px 0; font-size: 16px; color: var(--text-primary);">State Indicators</h4>
             <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.8;">
               <div><span style="display: inline-block; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; margin-right: 8px;"></span> <strong>Active:</strong> Currently in progress</div>
@@ -294,7 +294,7 @@ export const ProjectStates: Story = {
               <div><span style="display: inline-block; width: 12px; height: 12px; background: #f59e0b; border-radius: 50%; margin-right: 8px;"></span> <strong>Planning:</strong> Not started yet</div>
             </div>
 
-            <div style="margin-top: 20px; padding: 16px; background: var(--surface-tertiary); border-radius: 8px; border: 1px solid var(--border-subtle);">
+            <div style="margin-top: 20px; padding: 16px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
               <h5 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-primary); font-weight: bold;">Progress Calculations</h5>
               <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
                 • Progress bars show completion percentage<br>

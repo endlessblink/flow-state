@@ -6,11 +6,11 @@
       </h3>
       <label class="flex items-center cursor-pointer">
         <input
-          type="checkbox"
           v-model="isEnabled"
-          @change="handleToggle"
+          type="checkbox"
           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
+          @change="handleToggle"
+        >
         <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
           Enable recurring
         </span>
@@ -25,14 +25,24 @@
         </label>
         <select
           v-model="selectedPattern"
-          @change="handlePatternChange"
           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+          @change="handlePatternChange"
         >
-          <option value="none">None</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="yearly">Yearly</option>
+          <option value="none">
+            None
+          </option>
+          <option value="daily">
+            Daily
+          </option>
+          <option value="weekly">
+            Weekly
+          </option>
+          <option value="monthly">
+            Monthly
+          </option>
+          <option value="yearly">
+            Yearly
+          </option>
         </select>
       </div>
 
@@ -45,11 +55,11 @@
           </label>
           <div class="flex items-center space-x-2">
             <input
-              type="number"
               v-model.number="interval"
+              type="number"
               min="1"
               class="w-20 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-            />
+            >
             <span class="text-sm text-gray-600 dark:text-gray-400">
               {{ intervalUnit }}
             </span>
@@ -68,11 +78,11 @@
               class="flex flex-col items-center"
             >
               <input
+                v-model="selectedWeekdays"
                 type="checkbox"
                 :value="day.value"
-                v-model="selectedWeekdays"
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+              >
               <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 {{ day.label }}
               </span>
@@ -133,42 +143,42 @@
           <div class="space-y-2">
             <label class="flex items-center">
               <input
-                type="radio"
                 v-model="endType"
+                type="radio"
                 value="never"
                 class="border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+              >
               <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Never</span>
             </label>
             <label class="flex items-center">
               <input
-                type="radio"
                 v-model="endType"
+                type="radio"
                 value="after_count"
                 class="border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+              >
               <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">After</span>
               <input
-                type="number"
                 v-model.number="occurrenceCount"
+                type="number"
                 min="1"
                 class="ml-2 w-16 px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              />
+              >
               <span class="ml-1 text-sm text-gray-700 dark:text-gray-300">occurrences</span>
             </label>
             <label class="flex items-center">
               <input
-                type="radio"
                 v-model="endType"
+                type="radio"
                 value="on_date"
                 class="border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+              >
               <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">On</span>
               <input
-                type="date"
                 v-model="endDate"
+                type="date"
                 class="ml-2 px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              />
+              >
             </label>
           </div>
         </div>
@@ -179,7 +189,9 @@
             <strong>Preview:</strong> {{ recurrenceDescription }}
           </p>
           <div v-if="previewDates.length > 0" class="mt-2">
-            <p class="text-xs text-gray-500 dark:text-gray-500 mb-1">Next occurrences:</p>
+            <p class="text-xs text-gray-500 dark:text-gray-500 mb-1">
+              Next occurrences:
+            </p>
             <ul class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
               <li v-for="(date, index) in previewDates.slice(0, 5)" :key="index">
                 {{ formatDate(date) }}

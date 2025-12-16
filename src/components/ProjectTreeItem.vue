@@ -1,5 +1,6 @@
 <template>
   <div
+    :id="`project-${project.id}`"
     class="project-tree-item"
     :style="{ '--nesting-depth': nestingDepth }"
     role="treeitem"
@@ -7,7 +8,6 @@
     :aria-level="level"
     :aria-selected="taskStore.activeProjectId === project.id"
     :aria-label="project.name"
-    :id="`project-${project.id}`"
     tabindex="-1"
   >
     <!-- The project itself -->

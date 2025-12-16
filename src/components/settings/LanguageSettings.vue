@@ -8,17 +8,19 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
   <div class="language-settings">
     <!-- Language Selection -->
     <div class="setting-group">
-      <h3 class="setting-title">Language</h3>
+      <h3 class="setting-title">
+        Language
+      </h3>
       <div class="language-options">
         <button
           v-for="lang in availableLanguages"
           :key="lang.code"
+          class="language-option"
           :class="[
-            'language-option',
             { active: currentLanguage.code === lang.code }
           ]"
-          @click="handleLanguageChange(lang.code)"
           :aria-label="`Switch to ${lang.name}`"
+          @click="handleLanguageChange(lang.code)"
         >
           <span class="language-native">{{ lang.nativeName }}</span>
           <span class="language-english">{{ lang.name }}</span>
@@ -28,17 +30,19 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
 
     <!-- Text Direction -->
     <div class="setting-group">
-      <h3 class="setting-title">Text Direction</h3>
+      <h3 class="setting-title">
+        Text Direction
+      </h3>
       <div class="direction-options">
         <button
           v-for="option in directionOptions"
           :key="option.value"
+          class="direction-option"
           :class="[
-            'direction-option',
             { active: directionPreference === option.value }
           ]"
-          @click="handleDirectionChange(option.value)"
           :aria-label="`Set text direction to ${option.label}`"
+          @click="handleDirectionChange(option.value)"
         >
           <div class="direction-icon">
             <component :is="option.icon" :size="16" />
@@ -56,7 +60,9 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
 
     <!-- Current Status -->
     <div class="setting-group">
-      <h3 class="setting-title">General Settings</h3>
+      <h3 class="setting-title">
+        General Settings
+      </h3>
       <div class="status-info">
         <div class="status-item">
           <span class="status-label">Language:</span>

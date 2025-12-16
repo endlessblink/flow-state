@@ -12,7 +12,7 @@
         </p>
       </div>
 
-      <button class="close-button" @click="handleExit" aria-label="Exit Quick Sort">
+      <button class="close-button" aria-label="Exit Quick Sort" @click="handleExit">
         <X :size="24" />
       </button>
     </header>
@@ -54,9 +54,13 @@
 
           <!-- Completion State -->
           <div v-else-if="isComplete" class="completion-state">
-            <div class="celebration-icon">🎉</div>
+            <div class="celebration-icon">
+              🎉
+            </div>
             <h2>Amazing Work!</h2>
-            <p class="completion-message">You've sorted all your tasks!</p>
+            <p class="completion-message">
+              You've sorted all your tasks!
+            </p>
 
             <div v-if="sessionSummary" class="session-stats">
               <div class="stat-card">
@@ -101,15 +105,15 @@
         <button
           class="action-button"
           :disabled="!canUndo"
-          @click="handleUndo"
           aria-label="Undo last categorization"
+          @click="handleUndo"
         >
           <Undo2 :size="20" />
           Undo
           <kbd v-if="canUndo">Ctrl+Z</kbd>
         </button>
 
-        <button class="action-button" @click="handleSkip" aria-label="Skip this task">
+        <button class="action-button" aria-label="Skip this task" @click="handleSkip">
           <SkipForward :size="20" />
           Skip
           <kbd>Space</kbd>
@@ -146,7 +150,6 @@ import QuickSortCard from '@/components/QuickSortCard.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import SortProgress from '@/components/SortProgress.vue'
 import ProjectModal from '@/components/ProjectModal.vue'
-import TaskEditModal from '@/components/TaskEditModal.vue'
 import type { SessionSummary } from '@/stores/quickSort'
 import type { Task } from '@/types/tasks'
 
@@ -258,7 +261,7 @@ function handleEditTask() {
   showEditModal.value = true
 }
 
-function closeEditModal() {
+function _closeEditModal() {
   showEditModal.value = false
   taskToEdit.value = null
 }

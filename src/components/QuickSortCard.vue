@@ -99,7 +99,7 @@
               :value="dueDateValue"
               @change="updateDueDate"
               @click.stop
-            />
+            >
           </div>
 
           <!-- Quick Date Shortcuts -->
@@ -147,24 +147,24 @@
           <div class="action-buttons-group">
             <button
               class="mark-done-btn action-icon-btn"
-              @click.stop="handleMarkDone"
               title="Mark Done (D)"
+              @click.stop="handleMarkDone"
             >
               <CheckCircle :size="20" />
               <kbd class="shortcut-key">D</kbd>
             </button>
             <button
               class="edit-btn action-icon-btn"
-              @click.stop="handleEditTask"
               title="Edit Task (E)"
+              @click.stop="handleEditTask"
             >
               <Edit :size="20" />
               <kbd class="shortcut-key">E</kbd>
             </button>
             <button
               class="delete-btn action-icon-btn"
-              @click.stop="handleMarkDoneAndDelete"
               title="Done + Delete (Del)"
+              @click.stop="handleMarkDoneAndDelete"
             >
               <Trash2 :size="20" />
               <kbd class="shortcut-key">Del</kbd>
@@ -192,14 +192,14 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const taskStore = useTaskStore()
-
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
   markDone: []
   markDoneAndDelete: []
   editTask: []
 }>()
+
+const taskStore = useTaskStore()
 
 // Project visual indicator (emoji or colored dot)
 const projectVisual = computed(() =>

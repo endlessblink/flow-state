@@ -10,7 +10,7 @@
         class="title-input"
         @keydown.enter="handleCreate"
         @keydown.esc="$emit('close')"
-      />
+      >
 
       <!-- Description Input -->
       <input
@@ -20,7 +20,7 @@
         class="description-input"
         @keydown.enter="handleCreate"
         @keydown.esc="$emit('close')"
-      />
+      >
 
       <!-- Quick Properties Row -->
       <div class="properties-row">
@@ -45,7 +45,7 @@
             min="15"
             step="15"
             class="duration-input"
-          />
+          >
           <span>mins</span>
         </div>
       </div>
@@ -54,7 +54,9 @@
       <div class="project-row">
         <Inbox :size="14" />
         <select v-model="projectId" class="project-select">
-          <option value="">Inbox</option>
+          <option value="">
+            Inbox
+          </option>
           <option v-for="project in projects" :key="project.id" :value="project.id">
             {{ project.name }}
           </option>
@@ -63,8 +65,10 @@
 
       <!-- Actions -->
       <div class="actions-row">
-        <button class="cancel-btn" @click="$emit('close')">Cancel</button>
-        <button class="create-btn" @click="handleCreate" :disabled="!taskTitle.trim()">
+        <button class="cancel-btn" @click="$emit('close')">
+          Cancel
+        </button>
+        <button class="create-btn" :disabled="!taskTitle.trim()" @click="handleCreate">
           Add task
         </button>
       </div>

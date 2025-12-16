@@ -1,11 +1,11 @@
 <template>
   <button
     type="button"
-    @click="handleGoogleSignIn"
     :disabled="isLoading"
     class="google-signin-button"
     :class="{ 'is-loading': isLoading }"
     data-testid="google-signin-button"
+    @click="handleGoogleSignIn"
   >
     <!-- Google Logo -->
     <svg
@@ -35,7 +35,7 @@
 
     <!-- Loading Spinner -->
     <div v-if="isLoading" class="loading-spinner">
-      <div class="spinner"></div>
+      <div class="spinner" />
     </div>
 
     <span class="button-text">
@@ -58,12 +58,12 @@ const props = withDefaults(defineProps<Props>(), {
   loadingText: 'Signing in...'
 })
 
+const emit = defineEmits<Emits>()
+
 interface Emits {
   success: [user: any]
   error: [error: Error]
 }
-
-const emit = defineEmits<Emits>()
 
 // ===== State =====
 const authStore = useAuthStore()

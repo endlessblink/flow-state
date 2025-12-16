@@ -17,12 +17,12 @@
           :key="item.id"
           class="context-menu-item"
           :class="{ danger: item.danger, disabled: item.disabled }"
-          @click="handleItemClick(item)"
           :disabled="item.disabled"
+          @click="handleItemClick(item)"
         >
           <component
-            v-if="item.icon"
             :is="item.icon"
+            v-if="item.icon"
             :size="16"
             :stroke-width="1.5"
             class="menu-icon"

@@ -1,5 +1,5 @@
 <template>
-  <div class="custom-select" ref="selectRef">
+  <div ref="selectRef" class="custom-select">
     <button
       type="button"
       class="select-trigger"
@@ -160,32 +160,39 @@ watch(isOpen, (newVal) => {
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+
+  /* Glass morphism base - matches BaseDropdown */
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px) saturate(100%);
+  -webkit-backdrop-filter: blur(12px) saturate(100%);
+
+  /* Stroke border */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+
   color: var(--text-primary);
   font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   min-height: 44px;
   cursor: pointer;
   outline: none;
-  transition: all var(--duration-fast) ease;
+  transition: all var(--duration-fast) var(--spring-smooth);
   text-align: left;
 }
 
 .select-trigger:hover {
-  border-color: var(--border-medium);
-  background: var(--glass-bg-weak);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
 }
 
 .select-trigger:focus {
-  border-color: var(--state-active-border);
-  background: var(--glass-bg-soft);
-  box-shadow: 0 0 0 2px var(--state-active-bg);
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
 }
 
 .select-trigger.is-open {
-  border-color: var(--border-medium);
-  background: var(--glass-bg-soft);
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.15);
 }
 
 .select-value {
@@ -198,11 +205,12 @@ watch(isOpen, (newVal) => {
 .select-icon {
   flex-shrink: 0;
   color: var(--text-muted);
-  transition: transform var(--duration-fast) var(--spring-smooth);
+  transition: transform var(--duration-normal) var(--spring-smooth);
 }
 
 .select-icon.is-open {
   transform: rotate(180deg);
+  color: rgba(78, 205, 196, 0.8);
 }
 
 .select-dropdown {
@@ -211,47 +219,67 @@ watch(isOpen, (newVal) => {
   left: 0;
   right: 0;
   z-index: var(--z-dropdown);
-  background: linear-gradient(
-    135deg,
-    rgba(20, 20, 20, 0.96) 0%,
-    rgba(15, 15, 15, 0.98) 100%
-  );
-  backdrop-filter: blur(48px) saturate(180%);
-  -webkit-backdrop-filter: blur(48px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xl);
+
+  /* Glass morphism - transparent with blur (matches BasePopover) */
+  background: rgba(20, 20, 20, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  /* Stroke border */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-xl);
+
+  /* Layered shadow */
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+
   max-height: 240px;
   overflow-y: auto;
-  padding: var(--space-1);
+  padding: var(--space-2);
   margin: 0;
   list-style: none;
+
+  /* Ensure backdrop-filter works */
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
 .select-option {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all var(--duration-fast) ease;
-  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+
+  /* Transparent base with stroke on interaction */
   background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--spring-smooth);
+  user-select: none;
 }
 
 .select-option:hover,
 .select-option.is-focused {
-  background: var(--glass-bg-soft);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .select-option.is-selected {
-  background: var(--glass-bg-medium);
-  color: var(--text-primary);
-  font-weight: var(--font-medium);
+  /* Stroke-based selection - no fill */
+  background: transparent;
+  border-color: rgba(78, 205, 196, 0.5);
+  color: rgba(78, 205, 196, 1);
+  font-weight: var(--font-semibold);
 }
 
 .select-option.is-selected:hover,
 .select-option.is-selected.is-focused {
-  background: var(--glass-bg-soft);
+  background: rgba(78, 205, 196, 0.05);
 }
 
 /* Dropdown transition */

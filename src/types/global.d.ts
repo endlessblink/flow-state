@@ -29,7 +29,7 @@ declare global {
 
 // vue-cal module declaration (missing types)
 declare module 'vue-cal' {
-  import { App, DefineComponent } from 'vue'
+  import { App } from 'vue'
 
   interface VueCalProps {
     activeView?: string
@@ -71,7 +71,7 @@ declare module 'vue-cal' {
 
 // Vue module declarations - Critical for TypeScript to recognize .vue files
 declare module '*.vue' {
-  import type { DefineComponent } from 'vue'
+  import type { DefineComponent , DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, any>
   export default component
 }

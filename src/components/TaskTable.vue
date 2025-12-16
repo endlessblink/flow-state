@@ -8,7 +8,7 @@
           :checked="allSelected"
           :indeterminate="someSelected"
           @change="toggleSelectAll"
-        />
+        >
       </div>
 
       <!-- Bulk Actions Bar -->
@@ -16,17 +16,17 @@
         <span class="selection-count">{{ selectedTasks.length }} task{{ selectedTasks.length !== 1 ? 's' : '' }} selected</span>
         <div class="bulk-actions-buttons">
           <button
-            @click="handleDeleteSelected"
             class="bulk-action-btn delete-btn"
             title="Delete selected tasks (Ctrl+Delete)"
+            @click="handleDeleteSelected"
           >
             <Trash2 :size="14" />
             Delete Selected
           </button>
           <button
-            @click="clearSelection"
             class="bulk-action-btn clear-btn"
             title="Clear selection"
+            @click="clearSelection"
           >
             <X :size="14" />
             Clear
@@ -35,12 +35,24 @@
       </div>
 
       <template v-else>
-        <div class="header-cell title-cell">Task</div>
-        <div class="header-cell project-cell">Project</div>
-        <div class="header-cell status-cell">Status</div>
-        <div class="header-cell due-date-cell">Due Date</div>
-        <div class="header-cell progress-cell">Progress</div>
-        <div class="header-cell actions-cell">Actions</div>
+        <div class="header-cell title-cell">
+          Task
+        </div>
+        <div class="header-cell project-cell">
+          Project
+        </div>
+        <div class="header-cell status-cell">
+          Status
+        </div>
+        <div class="header-cell due-date-cell">
+          Due Date
+        </div>
+        <div class="header-cell progress-cell">
+          Progress
+        </div>
+        <div class="header-cell actions-cell">
+          Actions
+        </div>
       </template>
     </div>
 
@@ -56,14 +68,14 @@
       @click="$emit('select', task.id)"
       @contextmenu.prevent="$emit('contextMenu', $event, task)"
     >
-    <!-- Priority Indicator -->
-    <div v-if="task.priority" class="priority-indicator"></div>
+      <!-- Priority Indicator -->
+      <div v-if="task.priority" class="priority-indicator" />
       <div class="table-cell checkbox-cell" @click.stop>
         <input
           type="checkbox"
           :checked="selectedTasks.includes(task.id)"
           @change="toggleTaskSelect(task.id)"
-        />
+        >
       </div>
 
       <div class="table-cell title-cell">
@@ -71,13 +83,13 @@
           v-if="editingTaskId === task.id && editingField === 'title'"
           type="text"
           :value="task.title"
+          class="inline-edit"
+          autofocus
           @blur="saveEdit(task.id, 'title', $event)"
           @keydown.enter="saveEdit(task.id, 'title', $event)"
           @keydown.esc="cancelEdit"
-          class="inline-edit"
-          autofocus
-        />
-        <span v-else @dblclick="startEdit(task.id, 'title')" :class="getTextAlignmentClasses(task.title)">
+        >
+        <span v-else :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
           {{ task.title }}
         </span>
       </div>
@@ -102,7 +114,7 @@
             class="project-emoji project-css-circle"
             :style="{ '--project-color': getProjectVisual(task).color }"
             :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-          ></span>
+          />
           <!-- Default fallback (folder icon) -->
           <ProjectEmojiIcon
             v-else
@@ -117,14 +129,24 @@
       <div class="table-cell status-cell">
         <select
           :value="task.status"
-          @change="updateTaskStatus(task.id, ($event.target as HTMLSelectElement).value as Task['status'])"
           class="status-select"
+          @change="updateTaskStatus(task.id, ($event.target as HTMLSelectElement).value as Task['status'])"
         >
-          <option value="planned">To Do</option>
-          <option value="in_progress">In Progress</option>
-          <option value="done">✓</option>
-          <option value="backlog">Backlog</option>
-          <option value="on_hold">On Hold</option>
+          <option value="planned">
+            To Do
+          </option>
+          <option value="in_progress">
+            In Progress
+          </option>
+          <option value="done">
+            ✓
+          </option>
+          <option value="backlog">
+            Backlog
+          </option>
+          <option value="on_hold">
+            On Hold
+          </option>
         </select>
       </div>
 
@@ -138,23 +160,23 @@
 
       <div class="table-cell progress-cell">
         <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${task.progress}%` }"></div>
+          <div class="progress-fill" :style="{ width: `${task.progress}%` }" />
           <span class="progress-text">{{ task.progress }}%</span>
         </div>
       </div>
 
       <div class="table-cell actions-cell">
         <button
-          @click.stop="$emit('startTimer', task.id)"
           class="action-btn"
           title="Start Timer"
+          @click.stop="$emit('startTimer', task.id)"
         >
           <Play :size="14" />
         </button>
         <button
-          @click.stop="$emit('edit', task.id)"
           class="action-btn"
           title="Edit Task"
+          @click.stop="$emit('edit', task.id)"
         >
           <Edit :size="14" />
         </button>
@@ -164,7 +186,9 @@
     <!-- Empty State -->
     <div v-if="tasks.length === 0" class="empty-state">
       <Inbox :size="48" class="empty-icon" />
-      <p class="empty-title">No tasks found</p>
+      <p class="empty-title">
+        No tasks found
+      </p>
     </div>
   </div>
 </template>
@@ -185,6 +209,14 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const emit = defineEmits<{
+  select: [taskId: string]
+  startTimer: [taskId: string]
+  edit: [taskId: string]
+  contextMenu: [event: MouseEvent, task: Task]
+  updateTask: [taskId: string, updates: Partial<Task>]
+}>()
+
 const taskStore = useTaskStore()
 
 // Hebrew text alignment support
@@ -194,14 +226,6 @@ const { getAlignmentClasses } = useHebrewAlignment()
 const getTextAlignmentClasses = (text: string) => {
   return getAlignmentClasses(text)
 }
-
-const emit = defineEmits<{
-  select: [taskId: string]
-  startTimer: [taskId: string]
-  edit: [taskId: string]
-  contextMenu: [event: MouseEvent, task: Task]
-  updateTask: [taskId: string, updates: Partial<Task>]
-}>()
 
 const selectedTasks = ref<string[]>([])
 const editingTaskId = ref<string | null>(null)

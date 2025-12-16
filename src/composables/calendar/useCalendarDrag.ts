@@ -129,7 +129,7 @@ export function useCalendarDrag() {
     }
 
     // Set global fallback for browser compatibility
-    ;(window as any).__draggingTaskId = calendarEvent.taskId
+    (window as any).__draggingTaskId = calendarEvent.taskId
 
     console.log('🎯 [UnifiedDrag] Drag started:', {
       taskId: calendarEvent.taskId,

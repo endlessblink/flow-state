@@ -8,7 +8,9 @@
             <CheckSquare :size="16" :stroke-width="2" />
             <span>Editing {{ taskIds.length }} tasks</span>
           </div>
-          <h2 class="modal-title">Batch Edit</h2>
+          <h2 class="modal-title">
+            Batch Edit
+          </h2>
         </div>
         <button class="close-btn" @click="$emit('close')">
           <X :size="16" />
@@ -18,28 +20,30 @@
       <div class="modal-body">
         <!-- Quick Actions -->
         <section class="quick-actions-section">
-          <div class="section-label">Quick Actions</div>
+          <div class="section-label">
+            Quick Actions
+          </div>
           <div class="quick-actions-grid">
             <button
               class="quick-action-btn status-done"
-              @click="applyQuickAction('markDone')"
               title="Mark all selected tasks as done"
+              @click="applyQuickAction('markDone')"
             >
               <CheckCircle :size="18" :stroke-width="2" />
               <span>Mark as Done</span>
             </button>
             <button
               class="quick-action-btn priority-high"
-              @click="applyQuickAction('highPriority')"
               title="Set all to high priority"
+              @click="applyQuickAction('highPriority')"
             >
               <Zap :size="18" :stroke-width="2" />
               <span>High Priority</span>
             </button>
             <button
               class="quick-action-btn danger"
-              @click="applyQuickAction('deleteAll')"
               title="Delete all selected tasks"
+              @click="applyQuickAction('deleteAll')"
             >
               <Trash2 :size="18" :stroke-width="2" />
               <span>Delete All</span>
@@ -49,24 +53,36 @@
 
         <!-- Field Selectors -->
         <section class="field-selectors-section">
-          <div class="section-label">Select Fields to Change</div>
+          <div class="section-label">
+            Select Fields to Change
+          </div>
 
           <!-- Status Field -->
           <div class="field-selector">
             <label class="field-checkbox">
               <input
-                type="checkbox"
                 v-model="fieldChanges.status.enabled"
-              />
+                type="checkbox"
+              >
               <span class="checkbox-label">Change Status</span>
             </label>
             <div v-if="fieldChanges.status.enabled" class="field-input-wrapper">
               <select v-model="fieldChanges.status.value" class="field-select">
-                <option value="planned">Planned</option>
-                <option value="in_progress">Active</option>
-                <option value="done">✓</option>
-                <option value="backlog">Backlog</option>
-                <option value="on_hold">On Hold</option>
+                <option value="planned">
+                  Planned
+                </option>
+                <option value="in_progress">
+                  Active
+                </option>
+                <option value="done">
+                  ✓
+                </option>
+                <option value="backlog">
+                  Backlog
+                </option>
+                <option value="on_hold">
+                  On Hold
+                </option>
               </select>
             </div>
           </div>
@@ -75,16 +91,22 @@
           <div class="field-selector">
             <label class="field-checkbox">
               <input
-                type="checkbox"
                 v-model="fieldChanges.priority.enabled"
-              />
+                type="checkbox"
+              >
               <span class="checkbox-label">Change Priority</span>
             </label>
             <div v-if="fieldChanges.priority.enabled" class="field-input-wrapper">
               <select v-model="fieldChanges.priority.value" class="field-select">
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="low">
+                  Low
+                </option>
+                <option value="medium">
+                  Medium
+                </option>
+                <option value="high">
+                  High
+                </option>
               </select>
             </div>
           </div>
@@ -93,9 +115,9 @@
           <div class="field-selector">
             <label class="field-checkbox">
               <input
-                type="checkbox"
                 v-model="fieldChanges.projectId.enabled"
-              />
+                type="checkbox"
+              >
               <span class="checkbox-label">Move to Project</span>
             </label>
             <div v-if="fieldChanges.projectId.enabled" class="field-input-wrapper">
@@ -115,17 +137,17 @@
           <div class="field-selector">
             <label class="field-checkbox">
               <input
-                type="checkbox"
                 v-model="fieldChanges.dueDate.enabled"
-              />
+                type="checkbox"
+              >
               <span class="checkbox-label">Set Due Date</span>
             </label>
             <div v-if="fieldChanges.dueDate.enabled" class="field-input-wrapper">
               <input
-                type="date"
                 v-model="fieldChanges.dueDate.value"
+                type="date"
                 class="field-input"
-              />
+              >
             </div>
           </div>
 
@@ -133,20 +155,20 @@
           <div class="field-selector">
             <label class="field-checkbox">
               <input
-                type="checkbox"
                 v-model="fieldChanges.estimatedDuration.enabled"
-              />
+                type="checkbox"
+              >
               <span class="checkbox-label">Set Duration</span>
             </label>
             <div v-if="fieldChanges.estimatedDuration.enabled" class="field-input-wrapper">
               <input
-                type="number"
                 v-model.number="fieldChanges.estimatedDuration.value"
+                type="number"
                 min="15"
                 step="15"
                 class="field-input"
                 placeholder="60"
-              />
+              >
               <span class="input-unit">minutes</span>
             </div>
           </div>
@@ -154,8 +176,8 @@
 
         <!-- Preview Section -->
         <section v-if="hasChanges" class="preview-section">
-          <button @click="showPreview = !showPreview" class="section-toggle" type="button">
-            <ChevronDown :size="14" :class="['chevron-icon', { rotated: showPreview }]" />
+          <button class="section-toggle" type="button" @click="showPreview = !showPreview">
+            <ChevronDown :size="14" class="chevron-icon" :class="[{ rotated: showPreview }]" />
             <span class="section-label">Preview Changes</span>
           </button>
 
@@ -165,7 +187,9 @@
               :key="task.id"
               class="preview-item"
             >
-              <div class="task-name">{{ task.title }}</div>
+              <div class="task-name">
+                {{ task.title }}
+              </div>
               <div class="changes-list">
                 <div v-if="fieldChanges.status.enabled" class="change-item">
                   <span class="field-name">Status:</span>

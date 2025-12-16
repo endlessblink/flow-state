@@ -3,7 +3,8 @@
  * Resolves detected conflicts using multiple strategies: Last Write Wins, Smart Merge, etc.
  */
 
-import { ConflictInfo, ConflictType, ResolutionResult, ResolutionType, DocumentVersion } from '@/types/conflicts'
+import type { ConflictInfo, ResolutionResult, DocumentVersion } from '@/types/conflicts';
+import { ConflictType, ResolutionType } from '@/types/conflicts'
 
 export class ConflictResolver {
   private deviceId: string

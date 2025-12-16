@@ -410,19 +410,19 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   const deleteGroup = (id: string) => {
     if (import.meta.env.DEV) {
-      ;(window as any).__lastDeletedGroup = { id, before: groups.value.map(g => g.id) }
+      (window as any).__lastDeletedGroup = { id, before: groups.value.map(g => g.id) }
     }
     const index = groups.value.findIndex(g => g.id === id)
     if (index > -1) {
       groups.value.splice(index, 1)
       if (import.meta.env.DEV) {
-        ;(window as any).__lastDeletedGroup.after = groups.value.map(g => g.id)
+        (window as any).__lastDeletedGroup.after = groups.value.map(g => g.id)
       }
       if (activeGroupId.value === id) {
         activeGroupId.value = null
       }
     } else if (import.meta.env.DEV) {
-      ;(window as any).__lastDeletedGroup.missed = true
+      (window as any).__lastDeletedGroup.missed = true
     }
   }
 

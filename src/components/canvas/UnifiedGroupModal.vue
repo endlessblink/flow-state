@@ -7,7 +7,7 @@
             <Group :size="18" />
             {{ isEditing ? 'Edit Group' : 'Create Group' }}
           </h2>
-          <button class="close-btn" @click="$emit('close')" aria-label="Close modal">
+          <button class="close-btn" aria-label="Close modal" @click="$emit('close')">
             <X :size="16" :stroke-width="1.5" />
           </button>
         </div>
@@ -17,9 +17,9 @@
           <div class="form-group">
             <label class="form-label">Group Name *</label>
             <BaseInput
+              ref="nameInput"
               v-model="groupData.name"
               placeholder="Enter group name..."
-              ref="nameInput"
               @input="handleNameInput"
             />
             <p v-if="detectedKeyword" class="keyword-hint">
@@ -37,11 +37,12 @@
               <button
                 v-for="color in colorPresets"
                 :key="color"
-                :class="['color-preset', { active: groupData.color === color }]"
+                class="color-preset"
+                :class="[{ active: groupData.color === color }]"
                 :style="{ backgroundColor: color }"
-                @click="selectColor(color)"
                 type="button"
                 :title="`Select ${color}`"
+                @click="selectColor(color)"
               />
             </div>
 
@@ -56,13 +57,13 @@
                     placeholder="#3b82f6"
                     class="color-text-input"
                     @input="handleCustomColorInput"
-                  />
+                  >
                   <input
                     v-model="customColor"
                     type="color"
                     class="color-picker-input"
                     @input="handleColorPickerChange"
-                  />
+                  >
                 </div>
               </div>
 
@@ -86,7 +87,8 @@
             >
               <ChevronDown
                 :size="14"
-                :class="['chevron-icon', { rotated: showSmartSettings }]"
+                class="chevron-icon"
+                :class="[{ rotated: showSmartSettings }]"
               />
               <span class="section-title">
                 <Zap :size="14" />
@@ -104,10 +106,18 @@
               <div class="form-group compact">
                 <label class="form-label">Priority</label>
                 <select v-model="smartSettings.priority" class="form-select">
-                  <option :value="null">Don't change</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
+                  <option :value="null">
+                    Don't change
+                  </option>
+                  <option value="high">
+                    High
+                  </option>
+                  <option value="medium">
+                    Medium
+                  </option>
+                  <option value="low">
+                    Low
+                  </option>
                 </select>
               </div>
 
@@ -115,12 +125,24 @@
               <div class="form-group compact">
                 <label class="form-label">Status</label>
                 <select v-model="smartSettings.status" class="form-select">
-                  <option :value="null">Don't change</option>
-                  <option value="planned">Planned</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="done">Done</option>
-                  <option value="backlog">Backlog</option>
-                  <option value="on_hold">On Hold</option>
+                  <option :value="null">
+                    Don't change
+                  </option>
+                  <option value="planned">
+                    Planned
+                  </option>
+                  <option value="in_progress">
+                    In Progress
+                  </option>
+                  <option value="done">
+                    Done
+                  </option>
+                  <option value="backlog">
+                    Backlog
+                  </option>
+                  <option value="on_hold">
+                    On Hold
+                  </option>
                 </select>
               </div>
 
@@ -128,12 +150,24 @@
               <div class="form-group compact">
                 <label class="form-label">Due Date</label>
                 <select v-model="smartSettings.dueDate" class="form-select">
-                  <option :value="null">Don't change</option>
-                  <option value="today">Today</option>
-                  <option value="tomorrow">Tomorrow</option>
-                  <option value="this_week">This Week</option>
-                  <option value="this_weekend">This Weekend</option>
-                  <option value="later">Later (no specific date)</option>
+                  <option :value="null">
+                    Don't change
+                  </option>
+                  <option value="today">
+                    Today
+                  </option>
+                  <option value="tomorrow">
+                    Tomorrow
+                  </option>
+                  <option value="this_week">
+                    This Week
+                  </option>
+                  <option value="this_weekend">
+                    This Weekend
+                  </option>
+                  <option value="later">
+                    Later (no specific date)
+                  </option>
                 </select>
               </div>
 
@@ -141,7 +175,9 @@
               <div class="form-group compact">
                 <label class="form-label">Project</label>
                 <select v-model="smartSettings.projectId" class="form-select">
-                  <option :value="null">Don't change</option>
+                  <option :value="null">
+                    Don't change
+                  </option>
                   <option v-for="project in projects" :key="project.id" :value="project.id">
                     {{ project.name }}
                   </option>
@@ -184,8 +220,8 @@
           </button>
           <button
             class="btn btn-primary"
-            @click="saveGroup"
             :disabled="!groupData.name.trim()"
+            @click="saveGroup"
           >
             {{ isEditing ? 'Save Changes' : 'Create Group' }}
           </button>

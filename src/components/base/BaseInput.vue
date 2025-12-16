@@ -20,7 +20,7 @@
         :style="inputStyles"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
-      />
+      >
 
       <slot name="suffix" />
     </div>

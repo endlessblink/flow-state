@@ -69,14 +69,14 @@ export const Closed: Story = {
       return { args, taskStore }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>CommandPalette (Closed)</h3>
-        <p>Press Ctrl+K or Cmd+K to open the command palette</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">CommandPalette (Closed)</h3>
+        <p style="color: var(--text-secondary);">Press Ctrl+K or Cmd+K to open the command palette</p>
         <button
           @click="args.isOpen = true"
-          style="margin-top: 20px; padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
+          style="margin-top: 20px; padding: 12px 24px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
         >
-          ⚡ Open Command Palette
+          Open Command Palette
         </button>
         <CommandPalette v-bind="args" ref="commandPaletteRef" />
       </div>
@@ -95,9 +95,9 @@ export const DefaultOpen: Story = {
       return { args, taskStore }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>CommandPalette (Default State)</h3>
-        <p>Minimal interface with quick task input</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">CommandPalette (Default State)</h3>
+        <p style="color: var(--text-secondary);">Minimal interface with quick task input</p>
         <CommandPalette v-bind="args" ref="commandPaletteRef" />
       </div>
     `,
@@ -118,16 +118,16 @@ export const WithExpandedOptions: Story = {
       // Simulate expanded state after mount
       setTimeout(() => {
         if (commandPaletteRef.value) {
-          commandPalette.value.showMoreOptions = true
+          commandPaletteRef.value.showMoreOptions = true
         }
       }, 100)
 
       return { args, taskStore, commandPaletteRef }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>CommandPalette (Expanded Options)</h3>
-        <p>Shows additional fields for project, due date, and priority</p>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">CommandPalette (Expanded Options)</h3>
+        <p style="color: var(--text-secondary);">Shows additional fields for project, due date, and priority</p>
         <CommandPalette v-bind="args" ref="commandPaletteRef" />
       </div>
     `,
@@ -142,19 +142,19 @@ export const KeyboardShortcuts: Story = {
   render: (args) => ({
     components: { CommandPalette },
     setup() {
-      const taskStore = createMockStore()
+      const taskStore = createMockTaskStore()
       return { args, taskStore }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>Keyboard Shortcuts</h3>
-        <div style="margin-top: 20px; padding: 20px; background: var(--surface-primary); border-radius: 8px;">
-          <h4 style="margin: 0 0 12px 0;">Available Shortcuts:</h4>
-          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-            <li><kbd>Enter</kbd> - Create task</li>
-            <li><kbd>Shift+Enter</kbd> - Create task and continue</li>
-            <li><kbd>Esc</kbd> - Cancel and close</li>
-            <li><kbd>Ctrl+K</kbd> or <kbd>Cmd+K</kbd> - Open command palette</li>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 12px 0;">Keyboard Shortcuts</h3>
+        <div style="margin-top: 20px; padding: 20px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
+          <h4 style="margin: 0 0 12px 0; color: var(--text-primary);">Available Shortcuts:</h4>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: var(--text-secondary);">
+            <li><kbd style="padding: 2px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px;">Enter</kbd> - Create task</li>
+            <li><kbd style="padding: 2px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px;">Shift+Enter</kbd> - Create task and continue</li>
+            <li><kbd style="padding: 2px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px;">Esc</kbd> - Cancel and close</li>
+            <li><kbd style="padding: 2px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px;">Ctrl+K</kbd> or <kbd style="padding: 2px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px;">Cmd+K</kbd> - Open command palette</li>
           </ul>
         </div>
         <CommandPalette v-bind="args" ref="commandPaletteRef" />
@@ -169,7 +169,7 @@ export const InteractiveDemo: Story = {
     components: { CommandPalette },
     setup() {
       const isOpen = ref(false)
-      const taskStore = createMockStore()
+      const taskStore = createMockTaskStore()
       const commandPaletteRef = ref()
       const createdTasks = ref([])
       const demoMode = ref('quick')
@@ -193,7 +193,7 @@ export const InteractiveDemo: Story = {
 
       const exposeCommandPalette = () => {
         if (commandPaletteRef.value) {
-          commandPalette.value.open()
+          commandPaletteRef.value.open()
         }
       }
 
@@ -210,42 +210,44 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h1>CommandPalette Interactive Demo</h1>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h1 style="color: var(--text-primary); margin: 0 0 24px 0;">CommandPalette Interactive Demo</h1>
 
         <!-- Demo Mode Selection -->
-        <div style="margin-bottom: 30px; padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-          <h2 style="margin: 0 0 16px 0;">Demo Mode</h2>
+        <div style="margin-bottom: 30px; padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+          <h2 style="margin: 0 0 16px 0; color: var(--text-primary);">Demo Mode</h2>
           <div style="display: flex; gap: 12px; margin-bottom: 16px;">
             <button
               @click="openPalette('quick')"
               :style="{
-                background: demoMode === 'quick' ? 'var(--brand-primary)' : 'var(--surface-hover)',
-                color: demoMode === 'quick' ? 'white' : 'var(--text-primary)',
-                border: '1px solid var(--border-medium)',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer'
+                background: demoMode === 'quick' ? 'rgba(78, 205, 196, 0.2)' : 'transparent',
+                color: demoMode === 'quick' ? 'rgba(78, 205, 196, 1)' : 'var(--text-secondary)',
+                border: demoMode === 'quick' ? '1px solid rgba(78, 205, 196, 0.5)' : '1px solid rgba(255, 255, 255, 0.15)',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }"
             >
-              ⚡ Quick Mode
+              Quick Mode
             </button>
             <button
               @click="openPalette('full')"
               :style="{
-                background: demoMode === 'full' ? 'var(--color-navigation)' : 'var(--surface-hover)',
-                color: demoMode === 'full' ? 'white' : 'var(--text-primary)',
-                border: '1px solid var(--border-medium)',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: pointer'
+                background: demoMode === 'full' ? 'rgba(78, 205, 196, 0.2)' : 'transparent',
+                color: demoMode === 'full' ? 'rgba(78, 205, 196, 1)' : 'var(--text-secondary)',
+                border: demoMode === 'full' ? '1px solid rgba(78, 205, 196, 0.5)' : '1px solid rgba(255, 255, 255, 0.15)',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }"
             >
-              ⚙️ Full Mode
+              Full Mode
             </button>
           </div>
           <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
-            Current mode: <strong>{{ demoMode === 'quick' ? 'Quick add only' : 'All options available' }}</strong>
+            Current mode: <strong style="color: var(--text-primary);">{{ demoMode === 'quick' ? 'Quick add only' : 'All options available' }}</strong>
           </p>
         </div>
 
@@ -253,59 +255,59 @@ export const InteractiveDemo: Story = {
         <div style="display: flex; gap: 12px; margin-bottom: 30px;">
           <button
             @click="exposeCommandPalette"
-            style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
           >
-            ⚡ Open Palette (Ctrl+K)
+            Open Palette (Ctrl+K)
           </button>
           <button
             @click="clearTasks"
-            style="padding: 12px 24px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;"
+            style="padding: 12px 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); color: var(--text-secondary); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
           >
-            🗑️ Clear Tasks
+            Clear Tasks
           </button>
         </div>
 
         <!-- Created Tasks Display -->
-        <div v-if="createdTasks.length > 0" style="margin-bottom: 30px; padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-          <h2 style="margin: 0 0 16px 0;">Created Tasks ({{ createdTasks.length }})</h2>
+        <div v-if="createdTasks.length > 0" style="margin-bottom: 30px; padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+          <h2 style="margin: 0 0 16px 0; color: var(--text-primary);">Created Tasks ({{ createdTasks.length }})</h2>
           <div style="display: flex; flex-direction: column; gap: 12px; max-height: 200px; overflow-y: auto;">
             <div
               v-for="task in createdTasks.slice(0, 5)"
               :key="task.id"
-              style="padding: 12px; background: var(--surface-hover); border-radius: 8px; border: 1px solid var(--border-subtle);"
+              style="padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;"
             >
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 500;">{{ task.title }}</span>
+                <span style="font-weight: 500; color: var(--text-primary);">{{ task.title }}</span>
                 <span style="font-size: 12px; color: var(--text-muted);">{{ task.timestamp }}</span>
               </div>
               <div v-if="task.projectId || task.dueDate || task.priority !== 'medium'" style="margin-top: 8px; display: flex; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-                <span v-if="task.projectId">📁 {{ taskStore.projects.find(p => p.id === task.projectId)?.name }}</span>
-                <span v-if="task.dueDate">📅 {{ task.dueDate }}</span>
-                <span v-if="task.priority !== 'medium'">🔥 {{ task.priority }}</span>
+                <span v-if="task.projectId">{{ taskStore.projects.find(p => p.id === task.projectId)?.name }}</span>
+                <span v-if="task.dueDate">{{ task.dueDate }}</span>
+                <span v-if="task.priority !== 'medium'">{{ task.priority }}</span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Keyboard Shortcuts Reference -->
-        <div style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-          <h3 style="margin: 0 0 12px 0;">Keyboard Shortcuts</h3>
+        <div style="padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+          <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">Keyboard Shortcuts</h3>
           <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface-hover); border-radius: 6px;">
-              <kbd style="padding: 4px 8px; background: var(--surface-tertiary); border: 1px solid var(--border-medium); border-radius: 4px; font-family: monospace; font-size: 12px;">Ctrl+K</kbd>
-              <span>Open</span>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+              <kbd style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--text-primary);">Ctrl+K</kbd>
+              <span style="color: var(--text-secondary);">Open</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface-hover); border-radius: 6px;">
-              <kbd style="padding: 4px 8px; background: var(--surface-tertiary); border: 1px solid var(--border-medium); border-radius: 4px; font-family: monospace; font-size: 12px;">Enter</kbd>
-              <span>Create</span>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+              <kbd style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--text-primary);">Enter</kbd>
+              <span style="color: var(--text-secondary);">Create</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface-hover); border-radius: 6px;">
-              <kbd style="padding: 4px 8px; background: var(--surface-tertiary); border: 1px solid var(--border-medium); border-radius: 4px; font-family: monospace; font-size: 12px;">Shift+Enter</kbd>
-              <span>Create + Continue</span>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+              <kbd style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--text-primary);">Shift+Enter</kbd>
+              <span style="color: var(--text-secondary);">Create + Continue</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface-hover); border-radius: 6px;">
-              <kbd style="padding: 4px 8px; background: var(--surface-tertiary); border: 1px solid var(--border-medium); border-radius: 4px; font-family: monospace; font-size: 12px;">Esc</kbd>
-              <span>Close</span>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+              <kbd style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--text-primary);">Esc</kbd>
+              <span style="color: var(--text-secondary);">Close</span>
             </div>
           </div>
         </div>
@@ -377,8 +379,8 @@ export const ProductivityWorkflow: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h1>CommandPalette Productivity Workflows</h1>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h1 style="color: var(--text-primary); margin: 0 0 24px 0;">CommandPalette Productivity Workflows</h1>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 40px;">
           <div
@@ -386,28 +388,30 @@ export const ProductivityWorkflow: Story = {
             :key="index"
             :style="{
               padding: '24px',
-              background: var(--surface-primary)',
-              'border-radius': '12px',
-              'border': currentScenario === index ? '2px solid var(--brand-primary)' : '1px solid var(--border-medium)'
+              background: 'transparent',
+              borderRadius: '16px',
+              border: currentScenario === index ? '1px solid rgba(78, 205, 196, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: currentScenario === index ? '0 0 20px rgba(78, 205, 196, 0.1)' : 'none',
+              transition: 'all 0.2s ease'
             }"
           >
-            <h3 style="margin: 0 0 12px 0;">{{ scenario.title }}</h3>
+            <h3 style="margin: 0 0 12px 0; color: var(--text-primary);">{{ scenario.title }}</h3>
             <p style="margin: 0 0 16px 0; color: var(--text-secondary);">{{ scenario.description }}</p>
             <div style="display: flex; gap: 8px; margin-top: 16px;">
               <button
                 @click="runScenario(index)"
-                style="flex: 1; padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;"
+                style="flex: 1; padding: 10px 16px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
               >
-                ▶️ Demo
+                Demo
               </button>
             </div>
           </div>
         </div>
 
-        <div v-if="currentScenario !== null" style="margin-top: 30px; padding: 20px; background: var(--surface-tertiary); border-radius: 12px;">
-          <h3 style="margin: 0 0 12px 0;">Current Scenario: {{ scenarios[currentScenario].title }}</h3>
+        <div v-if="currentScenario !== null" style="margin-top: 30px; padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+          <h3 style="margin: 0 0 12px 0; color: var(--text-primary);">Current Scenario: {{ scenarios[currentScenario].title }}</h3>
           <p style="margin: 0 0 8px 0; color: var(--text-secondary);">{{ scenarios[currentScenario].description }}</p>
-          <p style="margin: 0 0 16px 0; font-weight: 500;">Expected: {{ scenarios[currentScenario].expectedOutcome }}</p>
+          <p style="margin: 0 0 16px 0; font-weight: 500; color: rgba(78, 205, 196, 1);">Expected: {{ scenarios[currentScenario].expectedOutcome }}</p>
         </div>
 
         <CommandPalette
@@ -429,36 +433,36 @@ export const AccessibilityFeatures: Story = {
   render: (args) => ({
     components: { CommandPalette },
     setup() {
-      const taskStore = createMockStore()
+      const taskStore = createMockTaskStore()
       return { args, taskStore }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h3>Accessibility Features</h3>
-        <div style="margin-top: 20px; padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
-          <h4 style="margin: 0 0 12px 0;">Screen Reader Support</h4>
-          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-            <li>✅ Semantic HTML structure</li>
-            <li>✅ ARIA labels and descriptions</li>
-            <li>✅ Focus management</li>
-            <li>✅ Keyboard navigation</li>
-            <li>✅ High contrast support</li>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="color: var(--text-primary); margin: 0 0 24px 0;">Accessibility Features</h3>
+        <div style="margin-top: 20px; padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+          <h4 style="margin: 0 0 12px 0; color: var(--text-primary);">Screen Reader Support</h4>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: var(--text-secondary);">
+            <li>Semantic HTML structure</li>
+            <li>ARIA labels and descriptions</li>
+            <li>Focus management</li>
+            <li>Keyboard navigation</li>
+            <li>High contrast support</li>
           </ul>
 
-          <h4 style="margin: 20px 0 12px 0;">Keyboard Navigation</h4>
-          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-            <li>⌨️ Tab order respected</li>
-            <li>⌨️ Escape cancels safely</li>
-            <li>⌨️ Enter confirms actions</li>
-            <li>⌨️ Shift+Enter enables batch mode</li>
+          <h4 style="margin: 20px 0 12px 0; color: var(--text-primary);">Keyboard Navigation</h4>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: var(--text-secondary);">
+            <li>Tab order respected</li>
+            <li>Escape cancels safely</li>
+            <li>Enter confirms actions</li>
+            <li>Shift+Enter enables batch mode</li>
           </ul>
 
-          <h4 style="margin: 20px 0 12px 0;">Visual Feedback</h4>
-          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-            <li>🎯 Clear focus indicators</li>
-            <li>🎨 Smooth transitions</li>
-            <li>📱 Touch-friendly sizing</li>
-            <li>🌙 Glass morphism for modern UI</li>
+          <h4 style="margin: 20px 0 12px 0; color: var(--text-primary);">Visual Feedback</h4>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: var(--text-secondary);">
+            <li>Clear focus indicators</li>
+            <li>Smooth transitions</li>
+            <li>Touch-friendly sizing</li>
+            <li>Glass morphism for modern UI</li>
           </ul>
         </div>
 
@@ -486,97 +490,97 @@ export const AllVariants: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h1>CommandPalette - Complete Component Showcase</h1>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+        <h1 style="color: var(--text-primary); margin: 0 0 32px 0;">CommandPalette - Complete Component Showcase</h1>
 
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; margin-top: 40px;">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 40px;">
           <!-- Quick Mode -->
-          <div style="padding: 30px; background: var(--surface-primary); border-radius: 16px; border: 1px solid var(--border-medium);">
-            <h2 style="margin: 0 0 20px 0;">Quick Mode</h2>
-            <p style="margin: 0 0 16px 0; color: var(--text-secondary);>
+          <div style="padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+            <h2 style="margin: 0 0 16px 0; color: var(--text-primary);">Quick Mode</h2>
+            <p style="margin: 0 0 16px 0; color: var(--text-secondary);">
               Minimal interface for rapid task capture
             </p>
             <div style="display: flex; gap: 12px;">
               <button
                 @click="showQuickDemo = true"
-                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer;"
+                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
               >
-                ⚡ Demo
+                Demo
               </button>
             </div>
-            <div style="margin-top: 16px; padding: 16px; background: var(--surface-tertiary); border-radius: 8px;">
-              <strong>Features:</strong> Quick input, Auto-focus, Keyboard shortcuts
+            <div style="margin-top: 16px; padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+              <strong style="color: var(--text-primary);">Features:</strong> <span style="color: var(--text-secondary);">Quick input, Auto-focus, Keyboard shortcuts</span>
             </div>
           </div>
 
           <!-- Full Mode -->
-          <div style="padding: 30px; background: var(--surface-primary); border-radius: 16px; border: 1px solid var(--border-medium);">
-            <h2 style="margin: 0 0 20px 0;">Full Mode</h2>
+          <div style="padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+            <h2 style="margin: 0 0 16px 0; color: var(--text-primary);">Full Mode</h2>
             <p style="margin: 0 0 16px 0; color: var(--text-secondary);">
               Complete task creation with all details
             </p>
             <div style="display: flex; gap: 12px;">
               <button
                 @click="showFullDemo = true"
-                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid var(--color-navigation); color: var(--color-navigation); border-radius: 8px; cursor: pointer;"
+                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
               >
-                ⚙️ Demo
+                Demo
               </button>
             </div>
-            <div style="margin-top: 16px; padding: 16px; background: var(--surface-tertiary); border-radius: 8px;">
-              <strong>Features:</strong> Project selection, Due dates, Priority levels
+            <div style="margin-top: 16px; padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+              <strong style="color: var(--text-primary);">Features:</strong> <span style="color: var(--text-secondary);">Project selection, Due dates, Priority levels</span>
             </div>
           </div>
 
           <!-- Workflow Demo -->
-          <div style="padding: 30px; background: var(--surface-primary); border-radius: 16px; border: 1px solid var(--border-medium);">
-            <h2 style="margin: 0 0 20px 0;">Workflow Demo</h2>
+          <div style="padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+            <h2 style="margin: 0 0 16px 0; color: var(--text-primary);">Workflow Demo</h2>
             <p style="margin: 0 0 16px 0; color: var(--text-secondary);">
               See productivity workflows in action
             </p>
             <div style="display: flex; gap: 12px;">
               <button
                 @click="showWorkflowDemo = true"
-                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid var(--color-break); color: var(--color-break); border-radius: 8px; cursor: pointer;"
+                style="flex: 1; padding: 12px 16px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
               >
-                🚀 Demo
+                Demo
               </button>
             </div>
-            <div style="margin-top: 16px; padding: 16px; background: var(--surface-sterary); border-radius: 8px;">
-              <strong>Features:</strong> Batch creation, Smart defaults, Context awareness
+            <div style="margin-top: 16px; padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+              <strong style="color: var(--text-primary);">Features:</strong> <span style="color: var(--text-secondary);">Batch creation, Smart defaults, Context awareness</span>
             </div>
           </div>
 
           <!-- Technical Features -->
-          <div style="padding: 30px; background: var(--surface-primary); border-radius: 16px; border: 1px solid var(--border-medium);">
-            <h2 style="margin: 0 0 20px 0;">Technical Excellence</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; padding: 16px; background: var(--surface-tertiary); border-radius: 8px;">
+          <div style="padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+            <h2 style="margin: 0 0 16px 0; color: var(--text-primary);">Technical Excellence</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
               <div>
-                <h4 style="margin: 0 0 8px 0;">Vue 3 Composition</h4>
-                <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
-                  <li>✅ Reactive state management</li>
-                  <li>✅ Teleport integration</li>
-                  <li>✅ Component composition</li>
-                  <li>✅ TypeScript support</li>
+                <h4 style="margin: 0 0 8px 0; color: var(--text-primary);">Vue 3 Composition</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
+                  <li>Reactive state management</li>
+                  <li>Teleport integration</li>
+                  <li>Component composition</li>
+                  <li>TypeScript support</li>
                 </ul>
               </div>
               <div>
-                <h4 style="h4>Performance</h4>
-                <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
-                  <li>⚡ Optimized re-renders</li>
-                  <li>🔄 Efficient animations</li>
-                  <li>💫 Smooth transitions</li>
-                  <li>📱 Responsive design</li>
+                <h4 style="margin: 0 0 8px 0; color: var(--text-primary);">Performance</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
+                  <li>Optimized re-renders</li>
+                  <li>Efficient animations</li>
+                  <li>Smooth transitions</li>
+                  <li>Responsive design</li>
                 </ul>
               </div>
             </div>
           </div>
 
           <!-- Glass Morphism -->
-          <div style="padding: 30px; background: var(--surface-primary); border-radius: 16px; border: 1px solid var(--border-medium);">
-            <h2 style="margin: 0 0 20px 0;">Modern UI Design</h2>
-            <div style="margin-top: 16px; padding: 16px; background: var(--surface-tertiary); border-radius: 8px;">
-              <strong>Features:</strong> Glass morphism, Blur effects, Smooth gradients, Professional aesthetics
+          <div style="padding: 24px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; grid-column: span 2;">
+            <h2 style="margin: 0 0 16px 0; color: var(--text-primary);">Modern UI Design</h2>
+            <div style="margin-top: 16px; padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+              <strong style="color: var(--text-primary);">Features:</strong> <span style="color: var(--text-secondary);">Glass morphism, Blur effects, Smooth gradients, Professional aesthetics</span>
             </div>
           </div>
         </div>

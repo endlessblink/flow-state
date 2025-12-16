@@ -18,7 +18,7 @@
     @contextmenu.prevent="handleContextMenu"
   >
     <!-- Priority Badge -->
-    <div v-if="showPriority" class="priority-indicator"></div>
+    <div v-if="showPriority" class="priority-indicator" />
 
     <!-- Timer Active Badge -->
     <div v-if="isTimerActive" class="timer-indicator" title="Timer Active">
@@ -26,7 +26,9 @@
     </div>
 
     <!-- Title -->
-    <div class="task-title" :class="titleAlignmentClasses">{{ task?.title || 'Untitled Task' }}</div>
+    <div class="task-title" :class="titleAlignmentClasses">
+      {{ task?.title || 'Untitled Task' }}
+    </div>
 
     <!-- Description (if available) -->
     <div v-if="task?.description" class="task-description" :class="titleAlignmentClasses">
@@ -38,10 +40,10 @@
       </div>
       <button
         v-if="isDescriptionLong"
-        @click.stop="toggleDescriptionExpanded"
         class="description-toggle"
         :aria-expanded="isDescriptionExpanded"
         aria-label="Show more description"
+        @click.stop="toggleDescriptionExpanded"
       >
         {{ isDescriptionExpanded ? 'Show less' : 'Show more' }}
       </button>
@@ -70,7 +72,7 @@
           v-else-if="projectVisual.type === 'css-circle'"
           class="project-css-circle"
           :style="{ '--project-color': projectVisual.color }"
-        ></div>
+        />
         <!-- Default fallback (folder icon) -->
         <ProjectEmojiIcon
           v-else
@@ -88,15 +90,25 @@
 
     <!-- Selection Indicator -->
     <div v-if="isSelected" class="selection-indicator">
-      <div class="selection-corner top-left"></div>
-      <div class="selection-corner top-right"></div>
-      <div class="selection-corner bottom-left"></div>
-      <div class="selection-corner bottom-right"></div>
+      <div class="selection-corner top-left" />
+      <div class="selection-corner top-right" />
+      <div class="selection-corner bottom-left" />
+      <div class="selection-corner bottom-right" />
     </div>
 
     <!-- Connection Handles - only render when in Vue Flow context -->
-    <Handle v-if="isInVueFlowContext" type="target" :position="Position.Top" class="handle-target" />
-    <Handle v-if="isInVueFlowContext" type="source" :position="Position.Bottom" class="handle-source" />
+    <Handle
+      v-if="isInVueFlowContext"
+      type="target"
+      :position="Position.Top"
+      class="handle-target"
+    />
+    <Handle
+      v-if="isInVueFlowContext"
+      type="source"
+      :position="Position.Bottom"
+      class="handle-source"
+    />
   </div>
 </template>
 
@@ -132,16 +144,16 @@ const props = withDefaults(defineProps<Props>(), {
   isConnecting: false
 })
 
-// Defensive validation - gracefully handle undefined task prop
-if (!props.task) {
-  console.warn('TaskNode: task prop is undefined, component will not render')
-}
-
 const emit = defineEmits<{
   edit: [task: Task]
   select: [task: Task, multiSelect: boolean]
   contextMenu: [event: MouseEvent, task: Task]
 }>()
+
+// Defensive validation - gracefully handle undefined task prop
+if (!props.task) {
+  console.warn('TaskNode: task prop is undefined, component will not render')
+}
 
 const { startDrag, endDrag } = useDragAndDrop()
 const timerStore = useTimerStore()

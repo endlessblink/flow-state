@@ -1,426 +1,446 @@
 <template>
-  <n-config-provider :theme="darkTheme">
-    <n-global-style />
-    <n-message-provider>
-  <!-- PROFESSIONAL PROJECT MANAGEMENT SYSTEM - CODOMO STYLE -->
-  <div class="app" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }" :dir="direction">
-    <!-- LEFT SIDEBAR NAVIGATION -->
-    <Transition name="sidebar-slide">
-      <aside v-show="uiStore.mainSidebarVisible" class="sidebar" aria-label="Main navigation" :aria-hidden="!uiStore.mainSidebarVisible">
-      <!-- App Header -->
-      <div class="sidebar-header">
-        <div class="app-brand">
-          <span class="brand-icon">🍅</span>
-          <span class="brand-text">Pomo-Flow</span>
-        </div>
-        <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
-          <Plus :size="14" />
-          Create project
-        </BaseButton>
-
-        <div class="icon-button-group">
-          <button
-            class="icon-btn"
-            @click="uiStore.toggleMainSidebar"
-            :title="'Hide Sidebar'"
-            aria-label="Hide sidebar"
+  <NConfigProvider :theme="darkTheme">
+    <NGlobalStyle />
+    <NMessageProvider>
+      <!-- PROFESSIONAL PROJECT MANAGEMENT SYSTEM - CODOMO STYLE -->
+      <div class="app" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }" :dir="direction">
+        <!-- LEFT SIDEBAR NAVIGATION -->
+        <Transition name="sidebar-slide">
+          <aside
+            v-show="uiStore.mainSidebarVisible"
+            class="sidebar"
+            aria-label="Main navigation"
+            :aria-hidden="!uiStore.mainSidebarVisible"
           >
-            <PanelLeftClose :size="18" />
-          </button>
+            <!-- App Header -->
+            <div class="sidebar-header">
+              <div class="app-brand">
+                <span class="brand-icon">🍅</span>
+                <span class="brand-text">Pomo-Flow</span>
+              </div>
+              <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
+                <Plus :size="14" />
+                Create project
+              </BaseButton>
 
-          <button
-            class="icon-btn"
-            @click="uiStore.openSettingsModal()"
-            title="Settings"
-            aria-label="Open settings"
-          >
-            <Settings :size="18" />
-          </button>
-        </div>
-      </div>
+              <div class="icon-button-group">
+                <button
+                  class="icon-btn"
+                  title="Hide Sidebar"
+                  aria-label="Hide sidebar"
+                  @click="uiStore.toggleMainSidebar"
+                >
+                  <PanelLeftClose :size="18" />
+                </button>
 
-      <!-- Quick Task Creation - REBUILT -->
-      <div class="quick-task-section">
-        <input
-          ref="quickTaskRef"
-          type="text"
-          class="quick-task-input"
-          placeholder="Quick add task (Enter)..."
-          @keydown.enter.prevent="createQuickTask"
-        />
-      </div>
+                <button
+                  class="icon-btn"
+                  title="Settings"
+                  aria-label="Open settings"
+                  @click="uiStore.openSettingsModal()"
+                >
+                  <Settings :size="18" />
+                </button>
+              </div>
+            </div>
 
-      <!-- Project & Task Management -->
-      <div class="task-management-section">
-        <div class="section-header">
-          <h3 class="section-title">
-            <FolderOpen :size="16" class="section-icon" />
-            Projects
-          </h3>
-          <button class="add-project-btn" @click="sidebar.openCreateProject" title="Add Project">
-            <Plus :size="14" />
-          </button>
-        </div>
-
-        <!-- Smart Views - Using DateDropZone for drag and drop functionality -->
-        <div class="smart-views">
-          <!-- Today - Azure highlight -->
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'today'"
-            :count="todayTaskCount"
-            target-type="today"
-            filter-color="azure"
-            @click="selectSmartView('today')"
-          >
-            <template #icon>
-              <Calendar :size="16" />
-            </template>
-            Today
-          </DateDropZone>
-
-          <!-- This Week - Azure-dark highlight -->
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'week'"
-            :count="weekTaskCount"
-            target-type="today"
-            filter-color="azure-dark"
-            @click="selectSmartView('week')"
-          >
-            <template #icon>
-              <Calendar :size="16" />
-            </template>
-            This Week
-          </DateDropZone>
-
-          <!-- Uncategorized Tasks -->
-          <div class="smart-view-uncategorized">
-            <!-- All Active Tasks - Blue highlight -->
-            <DateDropZone
-              :active="taskStore.activeSmartView === 'all_active'"
-              :count="allActiveCount"
-              target-type="nodate"
-              filter-color="blue"
-              @click="selectSmartView('all_active')"
-            >
-              <template #icon>
-                <List :size="16" />
-              </template>
-              All Active
-            </DateDropZone>
-
-            <button
-              class="uncategorized-filter"
-              :class="{ active: taskStore.activeSmartView === 'uncategorized' }"
-              @click="selectSmartView('uncategorized')"
-              title="Show Uncategorized Tasks"
-            >
-              <Inbox :size="16" />
-              <span>Uncategorized Tasks</span>
-              <span
-                v-if="uncategorizedCount > 0"
-                class="filter-badge"
-                :class="{ 'badge-active': taskStore.activeSmartView === 'uncategorized' }"
+            <!-- Quick Task Creation - REBUILT -->
+            <div class="quick-task-section">
+              <input
+                ref="quickTaskRef"
+                type="text"
+                class="quick-task-input"
+                placeholder="Quick add task (Enter)..."
+                @keydown.enter.prevent="createQuickTask"
               >
-                {{ uncategorizedCount }}
-              </span>
-            </button>
-
-            <!-- Quick Sort Button (shows when uncategorized filter is active) -->
-            <button
-              v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedCount > 0"
-              class="quick-sort-button"
-              @click="handleStartQuickSort"
-              title="Start Quick Sort to categorize these tasks"
-            >
-              <Zap :size="16" />
-              <span>Quick Sort</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Projects Section Header -->
-        <div class="projects-divider"></div>
-
-        <!-- Project List - Recursive tree rendering with accessibility -->
-        <nav
-          class="projects-list"
-          role="tree"
-          aria-label="Projects"
-          :aria-activedescendant="taskStore.activeProjectId ? `project-${taskStore.activeProjectId}` : undefined"
-          @keydown="handleProjectTreeKeydown"
-        >
-          <ProjectTreeItem
-            v-for="project in taskStore.projects.filter(p => !p.parentId)"
-            :key="project.id"
-            :project="project"
-            :expanded-projects="sidebar.expandedProjects.value || []"
-            :level="1"
-            @click="sidebar.selectProject"
-            @toggle-expand="sidebar.toggleProjectExpansion"
-            @contextmenu="handleProjectContextMenu"
-            @project-drop="() => {}"
-          />
-        </nav>
-
-        </div>
-      </aside>
-    </Transition>
-
-    <!-- FLOATING SIDEBAR TOGGLE (visible when sidebar is hidden) -->
-    <button
-      v-if="!uiStore.mainSidebarVisible"
-      class="floating-sidebar-toggle"
-      @click="uiStore.toggleMainSidebar"
-      :title="`Show Sidebar (${isMac ? 'Cmd' : 'Ctrl'}+B)`"
-      aria-label="Show sidebar"
-    >
-      <PanelLeft :size="20" />
-    </button>
-
-    <!-- MAIN CONTENT AREA -->
-    <main class="main-content" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }">
-
-      <!-- PROJECT TITLE AND TIMER -->
-      <div class="header-section">
-        <!-- USER PROFILE (Left side) - Firebase Auth disabled -->
-        <div class="user-profile-container">
-          <!-- UserProfile v-if="authStore.isAuthenticated" /-->
-          <!-- ⚠️ User profile disabled - Firebase authentication offline -->
-        </div>
-
-        <div class="page-title">
-          <h1 class="title-main">{{ pageTitleInfo.main }}</h1>
-          <span v-if="pageTitleInfo.filter" class="title-filter">
-            <template v-if="typeof pageTitleInfo.filter === 'object' && pageTitleInfo.filter.type === 'project'">
-              <!-- Emoji Indicator -->
-              <ProjectEmojiIcon
-                v-if="pageTitleInfo.filter.project?.colorType === 'emoji'"
-                :emoji="pageTitleInfo.filter.project.emoji || ''"
-                size="sm"
-                :title="`Project: ${pageTitleInfo.filter.project.name}`"
-                class="project-emoji-header"
-              />
-              <!-- Color Indicator -->
-              <span
-                v-else
-                class="project-color-header"
-                :style="{ backgroundColor: Array.isArray(pageTitleInfo.filter.project?.color) ? pageTitleInfo.filter.project.color[0] : pageTitleInfo.filter.project?.color }"
-              ></span>
-              {{ pageTitleInfo.filter.project?.name }}
-            </template>
-            <template v-else-if="typeof pageTitleInfo.filter === 'object' && pageTitleInfo.filter.type === 'smart-view'">
-              <!-- Smart View Emoji Indicator -->
-              <ProjectEmojiIcon
-                v-if="pageTitleInfo.filter.emoji"
-                :emoji="pageTitleInfo.filter.emoji"
-                size="sm"
-                :title="`Smart View: ${pageTitleInfo.filter.name}`"
-                class="project-emoji-header"
-              />
-              {{ pageTitleInfo.filter.name }}
-            </template>
-            <template v-else>
-              {{ pageTitleInfo.filter }}
-            </template>
-          </span>
-        </div>
-
-        <!-- INTEGRATED CONTROL PANEL: Clock + Timer -->
-        <div class="control-panel">
-          <!-- TIME DISPLAY - ADHD Feature #4 -->
-          <div class="time-display-container">
-            <TimeDisplay />
-          </div>
-
-          <!-- POMODORO TIMER DISPLAY -->
-          <div class="timer-container">
-          <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
-            <div class="timer-icon">
-              <!-- Animated emoticons when timer is active -->
-              <span v-if="timerStore.isTimerActive && !timerStore.currentSession?.isBreak" class="timer-emoticon active">🍅</span>
-              <span v-else-if="timerStore.isTimerActive && timerStore.currentSession?.isBreak" class="timer-emoticon active">🧎</span>
-              <!-- Static icons when timer is inactive -->
-              <Timer v-else :size="20" :stroke-width="1.5" class="timer-stroke" />
             </div>
-            <div class="timer-info">
-              <div class="timer-time">{{ timerStore.displayTime }}</div>
-              <!-- Always render task name div to prevent layout shift -->
-              <div class="timer-task">{{ timerStore.currentTaskName || '&nbsp;' }}</div>
-            </div>
-            <div class="timer-controls">
-              <div v-if="!timerStore.currentSession" class="timer-start-options">
-                <button
-                  class="timer-btn timer-start"
-                  @click="startQuickTimer"
-                  title="Start 25-min work timer"
-                >
-                  <Play :size="16" />
-                </button>
-                <button
-                  class="timer-btn timer-break"
-                  @click="startShortBreak"
-                  title="Start 5-min break"
-                >
-                  <Coffee :size="16" :stroke-width="1.5" class="coffee-stroke" />
-                </button>
-                <button
-                  class="timer-btn timer-break"
-                  @click="startLongBreak"
-                  title="Start 15-min long break"
-                >
-                  <User :size="16" :stroke-width="1.5" class="meditation-stroke" />
+
+            <!-- Project & Task Management -->
+            <div class="task-management-section">
+              <div class="section-header">
+                <h3 class="section-title">
+                  <FolderOpen :size="16" class="section-icon" />
+                  Projects
+                </h3>
+                <button class="add-project-btn" title="Add Project" @click="sidebar.openCreateProject">
+                  <Plus :size="14" />
                 </button>
               </div>
 
-              <button
-                v-else-if="timerStore.isPaused"
-                class="timer-btn timer-resume"
-                @click="timerStore.resumeTimer"
-                title="Resume timer"
-              >
-                <Play :size="16" />
-              </button>
+              <!-- Smart Views - Using DateDropZone for drag and drop functionality -->
+              <div class="smart-views">
+                <!-- Today - Azure highlight -->
+                <DateDropZone
+                  :active="taskStore.activeSmartView === 'today'"
+                  :count="todayTaskCount"
+                  target-type="today"
+                  filter-color="azure"
+                  @click="selectSmartView('today')"
+                >
+                  <template #icon>
+                    <Calendar :size="16" />
+                  </template>
+                  Today
+                </DateDropZone>
 
-              <button
-                v-else-if="timerStore.isTimerActive"
-                class="timer-btn timer-pause"
-                @click="timerStore.pauseTimer"
-                title="Pause timer"
-              >
-                <Pause :size="16" />
-              </button>
+                <!-- This Week - Azure-dark highlight -->
+                <DateDropZone
+                  :active="taskStore.activeSmartView === 'week'"
+                  :count="weekTaskCount"
+                  target-type="today"
+                  filter-color="azure-dark"
+                  @click="selectSmartView('week')"
+                >
+                  <template #icon>
+                    <Calendar :size="16" />
+                  </template>
+                  This Week
+                </DateDropZone>
 
-              <button
-                v-if="timerStore.currentSession"
-                class="timer-btn timer-stop"
-                @click="timerStore.stopTimer"
-                title="Stop timer"
+                <!-- Uncategorized Tasks -->
+                <div class="smart-view-uncategorized">
+                  <!-- All Active Tasks - Blue highlight -->
+                  <DateDropZone
+                    :active="taskStore.activeSmartView === 'all_active'"
+                    :count="allActiveCount"
+                    target-type="nodate"
+                    filter-color="blue"
+                    @click="selectSmartView('all_active')"
+                  >
+                    <template #icon>
+                      <List :size="16" />
+                    </template>
+                    All Active
+                  </DateDropZone>
+
+                  <button
+                    class="uncategorized-filter"
+                    :class="{ active: taskStore.activeSmartView === 'uncategorized' }"
+                    title="Show Uncategorized Tasks"
+                    @click="selectSmartView('uncategorized')"
+                  >
+                    <Inbox :size="16" />
+                    <span>Uncategorized Tasks</span>
+                    <span
+                      v-if="uncategorizedCount > 0"
+                      class="filter-badge"
+                      :class="{ 'badge-active': taskStore.activeSmartView === 'uncategorized' }"
+                    >
+                      {{ uncategorizedCount }}
+                    </span>
+                  </button>
+
+                  <!-- Quick Sort Button (shows when uncategorized filter is active) -->
+                  <button
+                    v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedCount > 0"
+                    class="quick-sort-button"
+                    title="Start Quick Sort to categorize these tasks"
+                    @click="handleStartQuickSort"
+                  >
+                    <Zap :size="16" />
+                    <span>Quick Sort</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Projects Section Header -->
+              <div class="projects-divider" />
+
+              <!-- Project List - Recursive tree rendering with accessibility -->
+              <nav
+                class="projects-list"
+                role="tree"
+                aria-label="Projects"
+                :aria-activedescendant="taskStore.activeProjectId ? `project-${taskStore.activeProjectId}` : undefined"
+                @keydown="handleProjectTreeKeydown"
               >
-                <Square :size="16" />
-              </button>
+                <ProjectTreeItem
+                  v-for="project in taskStore.projects.filter(p => !p.parentId)"
+                  :key="project.id"
+                  :project="project"
+                  :expanded-projects="sidebar.expandedProjects.value || []"
+                  :level="1"
+                  @click="sidebar.selectProject"
+                  @toggle-expand="sidebar.toggleProjectExpansion"
+                  @contextmenu="handleProjectContextMenu"
+                  @project-drop="() => {}"
+                />
+              </nav>
+            </div>
+          </aside>
+        </Transition>
+
+        <!-- FLOATING SIDEBAR TOGGLE (visible when sidebar is hidden) -->
+        <button
+          v-if="!uiStore.mainSidebarVisible"
+          class="floating-sidebar-toggle"
+          :title="`Show Sidebar (${isMac ? 'Cmd' : 'Ctrl'}+B)`"
+          aria-label="Show sidebar"
+          @click="uiStore.toggleMainSidebar"
+        >
+          <PanelLeft :size="20" />
+        </button>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }">
+          <!-- PROJECT TITLE AND TIMER -->
+          <div class="header-section">
+            <!-- USER PROFILE (Left side) - Firebase Auth disabled -->
+            <div class="user-profile-container">
+              <!-- UserProfile v-if="authStore.isAuthenticated" /-->
+              <!-- ⚠️ User profile disabled - Firebase authentication offline -->
+            </div>
+
+            <div class="page-title">
+              <h1 class="title-main">
+                {{ pageTitleInfo.main }}
+              </h1>
+              <span v-if="pageTitleInfo.filter" class="title-filter">
+                <template v-if="typeof pageTitleInfo.filter === 'object' && pageTitleInfo.filter.type === 'project'">
+                  <!-- Emoji Indicator -->
+                  <ProjectEmojiIcon
+                    v-if="pageTitleInfo.filter.project?.colorType === 'emoji'"
+                    :emoji="pageTitleInfo.filter.project.emoji || ''"
+                    size="sm"
+                    :title="`Project: ${pageTitleInfo.filter.project.name}`"
+                    class="project-emoji-header"
+                  />
+                  <!-- Color Indicator -->
+                  <span
+                    v-else
+                    class="project-color-header"
+                    :style="{ backgroundColor: Array.isArray(pageTitleInfo.filter.project?.color) ? pageTitleInfo.filter.project.color[0] : pageTitleInfo.filter.project?.color }"
+                  />
+                  {{ pageTitleInfo.filter.project?.name }}
+                </template>
+                <template v-else-if="typeof pageTitleInfo.filter === 'object' && pageTitleInfo.filter.type === 'smart-view'">
+                  <!-- Smart View Emoji Indicator -->
+                  <ProjectEmojiIcon
+                    v-if="pageTitleInfo.filter.emoji"
+                    :emoji="pageTitleInfo.filter.emoji"
+                    size="sm"
+                    :title="`Smart View: ${pageTitleInfo.filter.name}`"
+                    class="project-emoji-header"
+                  />
+                  {{ pageTitleInfo.filter.name }}
+                </template>
+                <template v-else>
+                  {{ pageTitleInfo.filter }}
+                </template>
+              </span>
+            </div>
+
+            <!-- INTEGRATED CONTROL PANEL: Clock + Timer -->
+            <div class="control-panel">
+              <!-- TIME DISPLAY - ADHD Feature #4 -->
+              <div class="time-display-container">
+                <TimeDisplay />
+              </div>
+
+              <!-- POMODORO TIMER DISPLAY -->
+              <div class="timer-container">
+                <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
+                  <div class="timer-icon">
+                    <!-- Animated emoticons when timer is active -->
+                    <span v-if="timerStore.isTimerActive && !timerStore.currentSession?.isBreak" class="timer-emoticon active">🍅</span>
+                    <span v-else-if="timerStore.isTimerActive && timerStore.currentSession?.isBreak" class="timer-emoticon active">🧎</span>
+                    <!-- Static icons when timer is inactive -->
+                    <Timer
+                      v-else
+                      :size="20"
+                      :stroke-width="1.5"
+                      class="timer-stroke"
+                    />
+                  </div>
+                  <div class="timer-info">
+                    <div class="timer-time">
+                      {{ timerStore.displayTime }}
+                    </div>
+                    <!-- Always render task name div to prevent layout shift -->
+                    <div class="timer-task">
+                      {{ timerStore.currentTaskName || '&nbsp;' }}
+                    </div>
+                  </div>
+                  <div class="timer-controls">
+                    <div v-if="!timerStore.currentSession" class="timer-start-options">
+                      <button
+                        class="timer-btn timer-start"
+                        title="Start 25-min work timer"
+                        @click="startQuickTimer"
+                      >
+                        <Play :size="16" />
+                      </button>
+                      <button
+                        class="timer-btn timer-break"
+                        title="Start 5-min break"
+                        @click="startShortBreak"
+                      >
+                        <Coffee :size="16" :stroke-width="1.5" class="coffee-stroke" />
+                      </button>
+                      <button
+                        class="timer-btn timer-break"
+                        title="Start 15-min long break"
+                        @click="startLongBreak"
+                      >
+                        <User :size="16" :stroke-width="1.5" class="meditation-stroke" />
+                      </button>
+                    </div>
+
+                    <button
+                      v-else-if="timerStore.isPaused"
+                      class="timer-btn timer-resume"
+                      title="Resume timer"
+                      @click="timerStore.resumeTimer"
+                    >
+                      <Play :size="16" />
+                    </button>
+
+                    <button
+                      v-else-if="timerStore.isTimerActive"
+                      class="timer-btn timer-pause"
+                      title="Pause timer"
+                      @click="timerStore.pauseTimer"
+                    >
+                      <Pause :size="16" />
+                    </button>
+
+                    <button
+                      v-if="timerStore.currentSession"
+                      class="timer-btn timer-stop"
+                      title="Stop timer"
+                      @click="timerStore.stopTimer"
+                    >
+                      <Square :size="16" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SYNC STATUS INDICATOR -->
+              <div class="sync-status-container">
+                <SyncStatus />
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- SYNC STATUS INDICATOR -->
-        <div class="sync-status-container">
-          <SyncStatus />
-        </div>
-        </div>
-      </div>
-
-      <!-- VIEW TABS AND CONTROLS -->
-      <div class="content-header">
-        <div class="view-tabs">
-          <router-link to="/" class="view-tab" active-class="active">Board</router-link>
-          <router-link to="/calendar" class="view-tab" active-class="active">Calendar</router-link>
-          <router-link to="/canvas" class="view-tab" active-class="active">Canvas</router-link>
-          <router-link to="/catalog" class="view-tab" active-class="active">Catalog</router-link>
-          <router-link to="/quick-sort" class="view-tab" active-class="active">
-            Quick Sort
-            <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
-          </router-link>
-        </div>
-
-      </div>
-
-      <!-- ROUTER VIEW FOR DIFFERENT VIEWS - ErrorBoundary removed for debugging -->
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <div class="view-wrapper">
-            <!-- DEBUG: ErrorBoundary temporarily removed to expose navigation errors -->
-            <component :is="Component" />
+          <!-- VIEW TABS AND CONTROLS -->
+          <div class="content-header">
+            <div class="view-tabs">
+              <router-link to="/" class="view-tab" active-class="active">
+                Board
+              </router-link>
+              <router-link to="/calendar" class="view-tab" active-class="active">
+                Calendar
+              </router-link>
+              <router-link to="/canvas" class="view-tab" active-class="active">
+                Canvas
+              </router-link>
+              <router-link to="/catalog" class="view-tab" active-class="active">
+                Catalog
+              </router-link>
+              <router-link to="/quick-sort" class="view-tab" active-class="active">
+                Quick Sort
+                <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
+              </router-link>
+            </div>
           </div>
-        </transition>
-      </router-view>
-    </main>
 
-    <!-- SETTINGS MODAL -->
-    <SettingsModal
-      :isOpen="uiStore.settingsModalOpen"
-      @close="uiStore.closeSettingsModal()"
-    />
+          <!-- ROUTER VIEW FOR DIFFERENT VIEWS - ErrorBoundary removed for debugging -->
+          <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <div class="view-wrapper">
+                <!-- DEBUG: ErrorBoundary temporarily removed to expose navigation errors -->
+                <component :is="Component" />
+              </div>
+            </transition>
+          </router-view>
+        </main>
 
-    <!-- PROJECT MODAL -->
-    <ProjectModal
-      :isOpen="sidebar.showProjectModal.value"
-      :project="sidebar.editingProject.value"
-      @close="sidebar.showProjectModal.value = false"
-    />
+        <!-- SETTINGS MODAL -->
+        <SettingsModal
+          :is-open="uiStore.settingsModalOpen"
+          @close="uiStore.closeSettingsModal()"
+        />
 
-    <!-- TASK EDIT MODAL -->
-    <TaskEditModal
-      :isOpen="showTaskEditModal"
-      :task="editingTask"
-      @close="showTaskEditModal = false"
-    />
+        <!-- PROJECT MODAL -->
+        <ProjectModal
+          :is-open="sidebar.showProjectModal.value"
+          :project="sidebar.editingProject.value"
+          @close="sidebar.showProjectModal.value = false"
+        />
 
-    <!-- TASK CONTEXT MENU -->
-    <TaskContextMenu
-      :isVisible="showTaskContextMenu"
-      :x="contextMenuX"
-      :y="contextMenuY"
-      :task="contextMenuTask"
-      :compactMode="uiStore.boardDensity === 'ultrathin'"
-      @close="closeTaskContextMenu"
-      @edit="(taskId: string) => {
-        const task = taskStore.tasks.find(t => t.id === taskId)
-        if (task) openEditTask(task)
-      }"
-      @confirmDelete="handleContextMenuDelete"
-    />
+        <!-- TASK EDIT MODAL -->
+        <TaskEditModal
+          :is-open="showTaskEditModal"
+          :task="editingTask"
+          @close="showTaskEditModal = false"
+        />
 
-    <!-- PROJECT CONTEXT MENU -->
-    <ContextMenu
-      :isVisible="showProjectContextMenu"
-      :x="projectContextMenuX"
-      :y="projectContextMenuY"
-      :items="projectContextMenuItems"
-      @close="showProjectContextMenu = false"
-    />
+        <!-- TASK CONTEXT MENU -->
+        <TaskContextMenu
+          :is-visible="showTaskContextMenu"
+          :x="contextMenuX"
+          :y="contextMenuY"
+          :task="contextMenuTask"
+          :compact-mode="uiStore.boardDensity === 'ultrathin'"
+          @close="closeTaskContextMenu"
+          @edit="(taskId: string) => {
+            const task = taskStore.tasks.find(t => t.id === taskId)
+            if (task) openEditTask(task)
+          }"
+          @confirm-delete="handleContextMenuDelete"
+        />
 
-    <!-- CONFIRMATION MODAL -->
-    <ConfirmationModal
-      :isOpen="showConfirmModal"
-      :title="'Confirm Action'"
-      :message="confirmMessage"
-      :details="confirmDetails"
-      :confirmText="'Delete'"
-      @confirm="executeConfirmAction"
-      @cancel="cancelConfirmAction"
-    />
+        <!-- PROJECT CONTEXT MENU -->
+        <ContextMenu
+          :is-visible="showProjectContextMenu"
+          :x="projectContextMenuX"
+          :y="projectContextMenuY"
+          :items="projectContextMenuItems"
+          @close="showProjectContextMenu = false"
+        />
 
-    <!-- SEARCH MODAL -->
-    <SearchModal
-      :isOpen="showSearchModal"
-      @close="showSearchModal = false"
-      @selectTask="handleSearchSelectTask"
-      @selectProject="handleSearchSelectProject"
-    />
+        <!-- CONFIRMATION MODAL -->
+        <ConfirmationModal
+          :is-open="showConfirmModal"
+          title="Confirm Action"
+          :message="confirmMessage"
+          :details="confirmDetails"
+          confirm-text="Delete"
+          @confirm="executeConfirmAction"
+          @cancel="cancelConfirmAction"
+        />
 
-    <!-- QUICK TASK CREATE MODAL -->
-    <QuickTaskCreateModal
-      :isOpen="showQuickTaskCreate"
-      :loading="false"
-      @cancel="closeQuickTaskCreate"
-      @create="handleQuickTaskCreate"
-    />
+        <!-- SEARCH MODAL -->
+        <SearchModal
+          :is-open="showSearchModal"
+          @close="showSearchModal = false"
+          @select-task="handleSearchSelectTask"
+          @select-project="handleSearchSelectProject"
+        />
 
-    <!-- COMMAND PALETTE - ADHD Feature #1 (Cmd+K) -->
-    <CommandPalette ref="commandPaletteRef" />
+        <!-- QUICK TASK CREATE MODAL -->
+        <QuickTaskCreateModal
+          :is-open="showQuickTaskCreate"
+          :loading="false"
+          @cancel="closeQuickTaskCreate"
+          @create="handleQuickTaskCreate"
+        />
 
-    <!-- FAVICON MANAGER - Dynamic favicon with timer progress -->
-    <FaviconManager />
+        <!-- COMMAND PALETTE - ADHD Feature #1 (Cmd+K) -->
+        <CommandPalette ref="commandPaletteRef" />
+
+        <!-- FAVICON MANAGER - Dynamic favicon with timer progress -->
+        <FaviconManager />
 
 
     
-    <!-- AUTHENTICATION MODAL - Firebase Auth disabled -->
-    <!-- AuthModal /-->
-    <!-- ⚠️ Authentication disabled - Firebase authentication offline -->
-
-    </div>
-    </n-message-provider>
-  </n-config-provider>
+        <!-- AUTHENTICATION MODAL - Firebase Auth disabled -->
+        <!-- AuthModal /-->
+        <!-- ⚠️ Authentication disabled - Firebase authentication offline -->
+      </div>
+    </NMessageProvider>
+  </NConfigProvider>
 </template>
 
 <script setup lang="ts">

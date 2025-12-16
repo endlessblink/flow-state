@@ -6,7 +6,7 @@
  * - PouchDB/CouchDB synchronization with advanced conflict resolution
  */
 
-import { ConflictInfo } from './conflicts'
+import type { ConflictInfo } from './conflicts'
 
 // ============================================================================
 // CORE SYNC INTERFACES

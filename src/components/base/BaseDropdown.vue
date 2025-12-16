@@ -52,8 +52,8 @@
         >
           <slot name="option" :option="option" :is-selected="isSelected(option)">
             <component
-              v-if="option.icon"
               :is="option.icon"
+              v-if="option.icon"
               :size="16"
               :stroke-width="1.5"
               class="option-icon"

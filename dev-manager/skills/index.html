@@ -607,6 +607,16 @@
             }
         });
 
+        // Listen for tab activation from parent frame
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'tab-activated') {
+                // Refresh graph when tab becomes visible
+                if (graph) {
+                    graph.zoomToFit(400, 50);
+                }
+            }
+        });
+
         // Initialize
         init();
     </script>

@@ -12,8 +12,8 @@
     <!-- Status Text -->
     <div class="sync-text">
       <span class="status-label">{{ statusText }}</span>
-      <span class="last-sync" :class="{ 'invisible': !lastSyncTime }">
-        {{ lastSyncTime ? formatTime(lastSyncTime) : '—' }}
+      <span class="last-sync">
+        {{ isManualSyncing ? progressText : (lastSyncTime ? formatTime(lastSyncTime) : '—') }}
       </span>
 
       <!-- Error Message Display -->
@@ -69,15 +69,14 @@
       </button>
     </div>
 
-    <!-- Progress Indicator -->
-    <div v-if="localIsSyncing" class="sync-progress">
+    <!-- Progress Indicator (progress bar only, text shown in last-sync) -->
+    <div v-if="localIsSyncing && props.showControls" class="sync-progress">
       <div class="progress-bar">
         <div
           class="progress-fill"
           :style="{ width: `${syncProgress}%` }"
         ></div>
       </div>
-      <span class="progress-text">{{ progressText }}</span>
     </div>
 
     <!-- Advanced Menu -->
@@ -700,6 +699,8 @@ onUnmounted(() => {
 .last-sync {
   @apply text-xs opacity-75;
   white-space: nowrap;
+  min-width: 75px;
+  display: inline-block;
 }
 
 .error-message {

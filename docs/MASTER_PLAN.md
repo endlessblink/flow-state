@@ -1,7 +1,7 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 5, 2025
-**Version**: 4.1 (Added Ideas/Roadmap sections)
+**Last Updated**: December 16, 2025
+**Version**: 4.2 (Sync loop fix)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -131,6 +131,28 @@
 
 **SOP**: `docs/debug/sop/calendar-drag-inside-calendar/`
 
+### Sync Issues
+
+| ID | Bug | Priority | Status |
+|----|-----|----------|--------|
+| ~~BUG-012~~ | ~~Sync loop resets task positions every second~~ | ~~P0-CRITICAL~~ | ✅ FIXED Dec 16, 2025 |
+
+#### BUG-012 Details (FIXED)
+
+**Problem**: Live sync was triggering constant database reloads every second, resetting all task positions on the canvas and causing infinite sync loops.
+
+**Root Cause**:
+1. `addTestCalendarInstances()` debug function in `tasks.ts:932` was being called on every `loadFromDatabase()`
+2. This function modified tasks with `Date.now()` timestamps, creating new data each time
+3. The watch on `tasks` triggered auto-save → sync push → remote receives → sync pull → loadFromDatabase → repeat
+
+**Fix Applied** (`src/stores/tasks.ts`):
+1. Commented out debug function call (line 932)
+2. Added `isLoadingFromDatabase` flag (line 152) to prevent auto-save during loads
+3. Added flag check in watch (lines 983-987) to skip saves during database operations
+
+**SOP**: `docs/🐛 debug/sop/sync-loop-fix-2025-12-16/`
+
 ---
 
 ## Known Issues
@@ -138,6 +160,7 @@
 <!-- Known issues use ISSUE-XXX format -->
 | ID | Issue | Priority | Notes |
 |----|-------|----------|-------|
+| ~~ISSUE-006~~ | ~~**Sync loop resets task positions every second**~~ | ~~P0-CRITICAL~~ | ✅ FIXED Dec 16, 2025 - See BUG-012 |
 | ISSUE-001 | **Live sync lost on refresh** | P1-HIGH | See fix below |
 | ISSUE-002 | **This Week shows 0 when tasks exist** | P2 | Today=0 correct, but This Week=0 wrong when tasks scheduled for Friday (today is Saturday) |
 | ISSUE-003 | IndexedDB version mismatch errors | P2 | Needs proper DB migration |

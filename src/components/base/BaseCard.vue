@@ -46,13 +46,21 @@ defineEmits<{
 </script>
 
 <style scoped>
-/* Base Card - Token-based design */
+/* Base Card - Stroke + Glass Morphism Design (matches BaseModal) */
 .base-card {
-  /* Visual - all from tokens */
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  /* Glass morphism base */
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
+
+  /* Stroke border - no fills */
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-xl);
-  box-shadow: var(--card-shadow);
+
+  /* Layered shadow for depth */
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.2);
 
   /* Animation */
   transition: all var(--duration-normal) var(--spring-smooth);
@@ -69,58 +77,73 @@ defineEmits<{
 }
 
 .base-card.has-hover:hover {
-  border-color: var(--card-border-hover);
-  box-shadow: var(--card-shadow-hover);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    0 6px 20px rgba(0, 0, 0, 0.3);
   transform: translateY(-2px);
 }
 
-/* Glass variant - dramatic glassmorphism */
+/* Glass variant - enhanced glassmorphism */
 .base-card.is-glass {
-  background: var(--glass-bg-light);
-  backdrop-filter: blur(var(--blur-md));
-  -webkit-backdrop-filter: blur(var(--blur-md));
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-glass);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .base-card.is-glass:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border-hover);
-  box-shadow: var(--shadow-glow);
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    0 6px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* Elevated variant - extra shadow */
+/* Elevated variant - extra depth with glow */
 .base-card.is-elevated {
-  background: var(--surface-elevated);
-  box-shadow: var(--shadow-lg);
+  background: rgba(0, 0, 0, 0.9);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .base-card.is-elevated:hover {
-  box-shadow: var(--shadow-xl);
+  box-shadow:
+    0 20px 56px rgba(0, 0, 0, 0.6),
+    0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
-/* Variant: Outlined */
+/* Variant: Outlined - pure stroke, transparent */
 .base-card.outlined {
   background: transparent;
-  border: 1px solid var(--border-medium);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: none;
 }
 
 .base-card.outlined:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
-/* Variant: Filled */
+/* Variant: Filled - subtle glass fill (not solid) */
 .base-card.filled {
-  background: var(--surface-tertiary);
-  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Card sections */
 .card-header {
   padding: var(--space-6);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 
 .card-content {
@@ -130,8 +153,13 @@ defineEmits<{
 
 .card-footer {
   padding: var(--space-6);
-  border-top: 1px solid var(--border-subtle);
-  background: var(--surface-hover);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  /* Subtle gradient instead of solid fill */
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
 }
 
 /* Compact variant (no padding on sections) */

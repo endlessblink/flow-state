@@ -194,6 +194,15 @@
             if (activeTab && activePanel) {
                 activeTab.classList.add('active');
                 activePanel.classList.add('active');
+
+                // Notify iframe that it's now visible so it can refresh its graph
+                const iframe = activePanel.querySelector('iframe');
+                if (iframe && iframe.contentWindow) {
+                    // Small delay to ensure panel is visible before refresh
+                    setTimeout(() => {
+                        iframe.contentWindow.postMessage({ type: 'tab-activated' }, '*');
+                    }, 50);
+                }
             }
         }
     </script>

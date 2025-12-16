@@ -63,6 +63,16 @@
         <Zap :size="12" />
       </button>
 
+      <!-- Settings Button -->
+      <button
+        v-if="!isCollapsed"
+        @click.stop="openSettings"
+        class="settings-btn"
+        title="Section settings - configure auto-assign properties"
+      >
+        <Settings :size="12" />
+      </button>
+
       <button
         v-if="section.type !== 'custom' && !isCollapsed"
         @click="toggleAutoCollect"
@@ -234,6 +244,11 @@ const handleContextMenu = (event: MouseEvent) => {
 // Power mode functions
 const togglePowerMode = () => {
   canvasStore.togglePowerMode(props.data.id)
+}
+
+// Settings function
+const openSettings = () => {
+  emit('openSettings', props.data.id)
 }
 
 const toggleCollectMenu = () => {

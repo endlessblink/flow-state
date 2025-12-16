@@ -678,6 +678,11 @@
       <div class="header">
         <h1 id="view-title">Kanban Board</h1>
         <div class="header-actions">
+          <div class="search-container">
+            <input type="text" id="search-input" class="search-input" placeholder="🔍 Search tasks..." oninput="handleSearch(this.value)">
+            <button class="search-clear" onclick="clearSearch()" title="Clear search">✕</button>
+            <span id="search-results-count" class="search-results-count"></span>
+          </div>
           <button class="btn" onclick="refreshData()">🔄 Refresh</button>
         </div>
       </div>
@@ -2065,6 +2070,68 @@
           await renderStatusKanban();
         }
       });
+    });
+
+    // SEARCH FUNCTIONALITY
+    let currentSearchQuery = '';
+
+    function handleSearch(query) {
+      currentSearchQuery = query.toLowerCase().trim();
+      const searchInput = document.getElementById('search-input');
+      const resultsCount = document.getElementById('search-results-count');
+
+      // Get all task cards across all views
+      const allCards = document.querySelectorAll('.task-card');
+      let matchCount = 0;
+      let totalCount = allCards.length;
+
+      allCards.forEach(card => {
+        const cardText = card.textContent.toLowerCase();
+        const matches = currentSearchQuery === '' || cardText.includes(currentSearchQuery);
+
+        if (matches) {
+          card.classList.remove('search-dimmed');
+          card.classList.add('search-highlight');
+          matchCount++;
+        } else {
+          card.classList.add('search-dimmed');
+          card.classList.remove('search-highlight');
+        }
+
+        // Remove highlight if no search query
+        if (currentSearchQuery === '') {
+          card.classList.remove('search-highlight');
+          card.classList.remove('search-dimmed');
+        }
+      });
+
+      // Update results count
+      if (currentSearchQuery !== '') {
+        resultsCount.textContent = `${matchCount} of ${totalCount} tasks`;
+      } else {
+        resultsCount.textContent = '';
+      }
+    }
+
+    function clearSearch() {
+      const searchInput = document.getElementById('search-input');
+      searchInput.value = '';
+      handleSearch('');
+      searchInput.focus();
+    }
+
+    // Keyboard shortcut: Ctrl+F or Cmd+F to focus search
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        const searchInput = document.getElementById('search-input');
+        searchInput.focus();
+        searchInput.select();
+      }
+      // ESC to clear search
+      if (e.key === 'Escape') {
+        clearSearch();
+      }
     });
 
     function refreshData() {

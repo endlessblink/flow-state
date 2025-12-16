@@ -71,25 +71,27 @@ defineEmits<{
   overflow: hidden;
 }
 
-/* Hover effect */
+/* Hover effect - teal glow for interactive cards */
 .base-card.has-hover {
   cursor: pointer;
 }
 
 .base-card.has-hover:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(78, 205, 196, 0.4);
   box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.5),
-    0 6px 20px rgba(0, 0, 0, 0.3);
+    0 6px 20px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(78, 205, 196, 0.15),
+    inset 0 1px 0 rgba(78, 205, 196, 0.1);
   transform: translateY(-2px);
 }
 
-/* Glass variant - enhanced glassmorphism */
+/* Glass variant - same base look, just adds inset highlight for colorful backgrounds */
 .base-card.is-glass {
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(24px) saturate(120%);
-  -webkit-backdrop-filter: blur(24px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
     0 4px 16px rgba(0, 0, 0, 0.2),
@@ -97,23 +99,26 @@ defineEmits<{
 }
 
 .base-card.is-glass:hover {
-  background: rgba(0, 0, 0, 0.7);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.15);
   box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.5),
     0 6px 20px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* Elevated variant - extra depth with glow */
+/* Elevated variant - same base look, just deeper shadows for hierarchy */
 .base-card.is-elevated {
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.5),
     0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .base-card.is-elevated:hover {
+  border-color: rgba(255, 255, 255, 0.15);
   box-shadow:
     0 20px 56px rgba(0, 0, 0, 0.6),
     0 10px 30px rgba(0, 0, 0, 0.4);

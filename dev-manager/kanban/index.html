@@ -861,19 +861,64 @@
 
           // Parse TASK- headers in Active Work
           if (currentSection === 'activeWork' && trimmed.match(/^### (TASK-\d+):/)) {
-            const match = trimmed.match(/^### (TASK-\d+):\s*(.+?)(?:\s*\((\w+)\))?$/);
+            // Save previous task's subtasks before starting new one
+            if (currentItem && currentItem.id?.startsWith('TASK-')) {
+              const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
+              if (taskIdx >= 0) {
+                data.activeWork[taskIdx].subtasks = currentItem.subtasks || [];
+                data.activeWork[taskIdx].progress = currentItem.subtasks?.length > 0
+                  ? Math.round((currentItem.completedSubtasks || 0) / currentItem.subtasks.length * 100)
+                  : (data.activeWork[taskIdx].status === 'done' ? 100 :
+                     data.activeWork[taskIdx].status === 'in-progress' ? 50 : 0);
+              }
+            }
+
+            const match = trimmed.match(/^### (TASK-\d+):\s*(.+?)(?:\s*\(([^)]+)\))?$/);
             if (match) {
-              const status = match[3] ? match[3].toLowerCase() : 'in-progress';
+              const statusText = match[3] ? match[3].toUpperCase() : '';
+              let status = 'todo';
+              if (statusText.includes('COMPLETE') || statusText.includes('DONE')) {
+                status = 'done';
+              } else if (statusText.includes('IN PROGRESS') || statusText.includes('PROGRESS')) {
+                status = 'in-progress';
+              }
+
+              currentItem = {
+                id: match[1],
+                subtasks: [],
+                completedSubtasks: 0
+              };
+
               data.activeWork.push({
                 id: match[1],
                 title: match[2].trim(),
-                status: status === 'complete' ? 'done' : status === 'in progress' ? 'in-progress' : 'todo',
+                status: status,
                 priority: 'P1',
                 section: 'activeWork',
-                description: ''
+                description: '',
+                subtasks: [],
+                progress: status === 'done' ? 100 : (status === 'in-progress' ? 50 : 0)
               });
             }
             continue;
+          }
+
+          // Parse subtasks (checkbox-style bullet points) under TASK headers
+          // Only count lines that look like actionable items, not descriptive text
+          if (currentSection === 'activeWork' && currentItem && trimmed.startsWith('- ')) {
+            // Skip if it's just a description (contains full sentences or is inside a section like "**Goal**:")
+            const isCheckbox = trimmed.match(/^- \[(x| )\]/i);
+            const isNumberedStep = trimmed.match(/^- \d+\./);
+            const hasStrikethrough = trimmed.includes('~~');
+            const hasCheckmark = trimmed.includes('✅') || trimmed.includes('✓');
+
+            // Only count as subtask if it's a checkbox, numbered step, or has completion markers
+            if (isCheckbox || isNumberedStep || hasStrikethrough || hasCheckmark) {
+              currentItem.subtasks.push(trimmed.substring(2));
+              if (isCheckbox && trimmed.match(/^- \[x\]/i) || hasStrikethrough || hasCheckmark) {
+                currentItem.completedSubtasks = (currentItem.completedSubtasks || 0) + 1;
+              }
+            }
           }
 
           // Parse Ideas list items
@@ -949,6 +994,18 @@
                 data.activeWork.push(item);
               }
             }
+          }
+        }
+
+        // Finalize last task's subtasks
+        if (currentItem && currentItem.id?.startsWith('TASK-')) {
+          const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
+          if (taskIdx >= 0) {
+            data.activeWork[taskIdx].subtasks = currentItem.subtasks || [];
+            data.activeWork[taskIdx].progress = currentItem.subtasks?.length > 0
+              ? Math.round((currentItem.completedSubtasks || 0) / currentItem.subtasks.length * 100)
+              : (data.activeWork[taskIdx].status === 'done' ? 100 :
+                 data.activeWork[taskIdx].status === 'in-progress' ? 50 : 0);
           }
         }
 
@@ -1100,8 +1157,9 @@
                              task.id.startsWith('ISSUE-') ? '⚠️ Issue' :
                              task.id.startsWith('TASK-') ? '📋 Task' : '';
 
-            // Determine progress based on status
-            const progress = task.status === 'done' ? 100 : task.status === 'in-progress' ? 50 : 0;
+            // Use task's calculated progress, or default based on status
+            const progress = task.progress !== undefined ? task.progress :
+                            (task.status === 'done' ? 100 : task.status === 'in-progress' ? 50 : 0);
             const progressClass = getProgressClass(progress);
 
             // Description from notes

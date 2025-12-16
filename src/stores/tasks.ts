@@ -1387,13 +1387,16 @@ export const useTaskStore = defineStore('tasks', () => {
         // Skip done tasks
         if (task.status === 'done') return false
 
-        // Must be in inbox (not on canvas, not explicitly excluded)
-        const isInInbox = task.isInInbox !== false && !task.canvasPosition
+        // Calendar filtering: IGNORE canvas position entirely
+        // A task can be on canvas AND still appear in calendar inbox if not on calendar grid
+        // "On calendar" = has instances (time slots), NOT just dueDate
+        // dueDate is a deadline, not a calendar time slot
 
-        // Must be unscheduled
+        // Check if task is on the calendar (has instances or legacy schedule)
         const hasInstances = task.instances && task.instances.length > 0
-        const hasLegacySchedule = task.scheduledDate && task.scheduledTime
-        const isUnscheduled = !hasInstances && !hasLegacySchedule
+        const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
+                                 (task.scheduledTime && task.scheduledTime.trim() !== '')
+        const isNotOnCalendar = !hasInstances && !hasLegacySchedule
 
         // Apply project filter if active
         if (activeProjectId.value) {
@@ -1412,11 +1415,8 @@ export const useTaskStore = defineStore('tasks', () => {
         // Apply status filter if active
         if (activeStatusFilter.value && task.status !== activeStatusFilter.value) return false
 
-        if (isInInbox && isUnscheduled) {
-          return true
-        }
-
-        return false
+        // Calendar inbox: show if not on calendar grid (ignore canvas state)
+        return isNotOnCalendar
       })
 
       // Add the additional inbox tasks
@@ -1658,17 +1658,15 @@ export const useTaskStore = defineStore('tasks', () => {
         console.log(`Task "${task.title}" removed from canvas with no instances - returned to inbox`)
       }
 
-      // 4. Calendar Instance Logic: Adding instances should remove from inbox
-      // BUT preserve canvas position if task is already on canvas (Dec 5, 2025 fix)
-      // This prevents tasks from disappearing when user edits dueDate or other properties
+      // 4. Calendar Instance Logic: Adding instances does NOT affect canvas inbox
+      // Dec 16, 2025 fix: Calendar and Canvas are INDEPENDENT systems
+      // - isInInbox controls CANVAS inbox membership only
+      // - instances controls CALENDAR inbox membership only
+      // - A task can be on canvas AND scheduled on calendar simultaneously
       if (updates.instances && updates.instances.length > 0) {
-        updates.isInInbox = false
-        // Only clear canvas position if task is NOT already on canvas
-        // Tasks already placed on canvas should stay there when instances are updated
-        if (!task.canvasPosition) {
-          updates.canvasPosition = undefined
-        }
-        console.log(`Task "${task.title}" given calendar instances - removed from inbox${task.canvasPosition ? ' (canvas position preserved)' : ''}`)
+        // DO NOT modify isInInbox or canvasPosition here
+        // Calendar scheduling should not affect canvas state
+        console.log(`Task "${task.title}" given calendar instances - canvas state unchanged (independent systems)`)
       }
 
       // 5. Instance Removal: If all instances removed and no canvas position, return to inbox

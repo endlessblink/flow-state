@@ -237,6 +237,7 @@ watch(isOpen, (newVal) => {
 </script>
 
 <style scoped>
+/* BaseDropdown - Stroke + Glass Morphism Design */
 .base-dropdown {
   position: relative;
   display: inline-block;
@@ -250,9 +251,16 @@ watch(isOpen, (newVal) => {
   width: 100%;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
+
+  /* Glass morphism base - matches BaseCard/BaseModal */
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px) saturate(100%);
+  -webkit-backdrop-filter: blur(12px) saturate(100%);
+
+  /* Stroke border */
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
+
   color: var(--text-primary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
@@ -261,19 +269,19 @@ watch(isOpen, (newVal) => {
 }
 
 .dropdown-trigger:hover:not(:disabled) {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border-strong);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
 }
 
 .dropdown-trigger:focus {
   outline: none;
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 15%, transparent);
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
 }
 
 .dropdown-trigger.is-open {
-  border-color: var(--brand-primary);
-  background: var(--glass-bg-medium);
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.15);
 }
 
 .dropdown-trigger.is-disabled {
@@ -295,12 +303,13 @@ watch(isOpen, (newVal) => {
 
 .trigger-icon.is-open {
   transform: rotate(180deg);
+  color: rgba(78, 205, 196, 0.8);
 }
 
 .dropdown-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: var(--space-1);
 }
 
 .dropdown-option {
@@ -308,9 +317,12 @@ watch(isOpen, (newVal) => {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
+
+  /* Transparent base with stroke on interaction */
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
+
   color: var(--text-primary);
   font-size: var(--text-sm);
   cursor: pointer;
@@ -319,20 +331,25 @@ watch(isOpen, (newVal) => {
 }
 
 .dropdown-option:hover:not(.is-disabled) {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .dropdown-option.is-focused {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .dropdown-option.is-selected {
-  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
+  /* Stroke-based selection - no fill */
+  background: transparent;
+  border-color: rgba(78, 205, 196, 0.5);
+  color: rgba(78, 205, 196, 1);
   font-weight: var(--font-semibold);
+}
+
+.dropdown-option.is-selected:hover {
+  background: rgba(78, 205, 196, 0.05);
 }
 
 .dropdown-option.is-disabled {
@@ -351,6 +368,6 @@ watch(isOpen, (newVal) => {
 
 .selected-icon {
   flex-shrink: 0;
-  color: var(--brand-primary);
+  color: rgba(78, 205, 196, 1);
 }
 </style>

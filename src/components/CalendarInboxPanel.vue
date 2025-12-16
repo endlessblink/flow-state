@@ -192,22 +192,32 @@ const newTaskTitle = ref('')
 const currentFilter = ref('unscheduled')
 const draggingTaskId = ref<string | null>(null)
 
-// Filter options
+// Filter options - calendar-only filters (no canvas-related options)
 const filterOptions = [
   { value: 'today', label: 'Today', icon: '☀️' },
   { value: 'unscheduled', label: 'Unscheduled', icon: '📅' },
-  { value: 'notOnCanvas', label: 'Not on Canvas', icon: '🎯' },
   { value: 'incomplete', label: 'Incomplete', icon: '⚡' },
   { value: 'allTasks', label: 'All Tasks', icon: '📋' }
 ]
 
 // Computed
 const baseInboxTasks = computed(() => {
-  // Get all inbox tasks regardless of filter
+  // Calendar inbox: Show tasks NOT scheduled on the calendar grid
+  // "Scheduled" means having instances (time slots) - NOT just having a dueDate
+  // dueDate is just a deadline, it doesn't put task on the calendar grid
+  // IGNORE canvasPosition - that's for Canvas inbox only
   const allTasks = taskStore.tasks
   return allTasks.filter(task => {
-    const isInInbox = task.isInInbox !== false && !task.canvasPosition && task.status !== 'done'
-    return isInInbox
+    if (task.status === 'done') return false
+
+    // Only check for actual calendar scheduling (instances or legacy scheduled date/time)
+    // dueDate does NOT count as "on the calendar"
+    const hasInstances = task.instances && task.instances.length > 0
+    const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
+                             (task.scheduledTime && task.scheduledTime.trim() !== '')
+
+    // Show in calendar inbox if task has NO calendar instances
+    return !hasInstances && !hasLegacySchedule
   })
 })
 
@@ -218,14 +228,16 @@ const inboxTasks = computed(() => {
 
 
   const filtered = allTasks.filter(task => {
-    // Calculate task properties
+    // Calculate task properties - calendar-only checks
+    // "On the calendar" = has instances (time slots), NOT just dueDate
     const hasInstances = task.instances && task.instances.length > 0
-    const hasLegacySchedule = task.scheduledDate && task.scheduledTime
-    // FIXED: Calendar inbox must respect actual task.isInInbox property
-    // Tasks on canvas (isInInbox: false) should NOT appear in inbox
+    const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
+                             (task.scheduledTime && task.scheduledTime.trim() !== '')
     const isNotDone = task.status !== 'done'
-    const isActuallyInInbox = task.isInInbox !== false  // Respect actual property value
-    const isInInbox = isNotDone && isActuallyInInbox  // Must be not done AND in inbox
+
+    // Calendar inbox: IGNORE canvas state (isInInbox, canvasPosition)
+    // A task is "not on calendar" if it has no instances
+    const isNotOnCalendar = !hasInstances && !hasLegacySchedule
 
     // Filter logic based on current selection
     let passesFilter = false
@@ -233,52 +245,28 @@ const inboxTasks = computed(() => {
       case 'today': {
         const todayStr = new Date().toISOString().split('T')[0]
 
-        // Check if task is due today (support both legacy dueDate and instances system)
-        const isDueToday = task.dueDate === todayStr ||
-          !!(task.instances && task.instances.some(instance =>
-            instance.scheduledDate === todayStr
-          ))
+        // Check if task is due today (dueDate) but NOT on calendar (no instances)
+        const isDueToday = task.dueDate === todayStr
 
-        // Show tasks that are due today and are in inbox state
-        passesFilter = isDueToday && isInInbox
-
-        // Debug: Log detailed today filter reasoning
-        console.log(`[CalendarInboxPanel] Today filter for "${task.title}":`, {
-          taskDueDate: task.dueDate,
-          todayStr,
-          isDueToday,
-          hasInstances,
-          instances: task.instances,
-          isInInbox,
-          passesFilter
-        })
+        // Show tasks due today that are NOT on the calendar grid
+        passesFilter = isDueToday && isNotOnCalendar && isNotDone
         break
       }
       case 'unscheduled':
-        passesFilter = !hasInstances && isInInbox
-        break
-      case 'notOnCanvas':
-        passesFilter = !task.canvasPosition && isInInbox
+        // Show tasks NOT on the calendar (no instances)
+        passesFilter = isNotOnCalendar && isNotDone
         break
       case 'incomplete':
-        passesFilter = task.status !== 'done' && isInInbox
+        // Show all incomplete tasks NOT on the calendar
+        passesFilter = isNotOnCalendar && isNotDone
         break
       case 'allTasks':
-        passesFilter = isInInbox
+        // Show all tasks NOT on the calendar
+        passesFilter = isNotOnCalendar && isNotDone
         break
       default:
-        passesFilter = !hasInstances && isInInbox
+        passesFilter = isNotOnCalendar && isNotDone
     }
-
-    // Debug: Log filter reasoning
-    console.log(`🔍 [${currentFilter.value}] Task "${task.title}":`, {
-      passesFilter,
-      hasInstances,
-      hasLegacySchedule,
-      status: task.status,
-      canvasPosition: !!task.canvasPosition,
-      isInInbox
-    })
 
     return passesFilter
   })

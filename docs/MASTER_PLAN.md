@@ -85,11 +85,13 @@
 - Calendar and Canvas inboxes are now fully independent
 
 **Principle**:
-- Calendar inbox = tasks WITHOUT scheduled dates (instances, dueDate, scheduledDate)
+- Calendar inbox = tasks WITHOUT scheduled time slots (instances, legacy scheduledDate+scheduledTime)
+  - NOTE: `dueDate` is just a deadline, does NOT put task on calendar grid
 - Canvas inbox = tasks WITHOUT canvas position (canvasPosition, isInInbox)
 - These are INDEPENDENT - one should never affect the other
 
 **Files Modified**:
+- `src/components/base/UnifiedInboxPanel.vue` - Context-aware filtering (CRITICAL FIX)
 - `src/components/CalendarInboxPanel.vue` - Removed canvasPosition checks, removed notOnCanvas filter
 - `src/stores/tasks.ts` - Removed canvasPosition check from calendarFilteredTasks
 

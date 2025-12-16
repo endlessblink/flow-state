@@ -172,6 +172,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* BasePopover - Stroke + Glass Morphism Design */
 .popover-overlay {
   position: fixed;
   inset: 0;
@@ -185,19 +186,21 @@ onUnmounted(() => {
 
 .base-popover {
   position: fixed;
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-medium) 0%,
-    var(--glass-bg-heavy) 100%
-  );
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid var(--glass-border-strong);
+
+  /* Glass morphism - more transparent for see-through effect */
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+
+  /* Stroke border */
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-xl);
+
+  /* Layered shadow */
   box-shadow:
-    0 16px 32px var(--shadow-strong),
-    0 8px 16px var(--shadow-md),
-    inset 0 1px 0 var(--glass-border-soft);
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+
   z-index: 3001;
   animation: popoverSlideIn var(--duration-fast) var(--spring-bounce);
   pointer-events: all;
@@ -288,16 +291,16 @@ onUnmounted(() => {
 }
 
 .variant-dropdown::-webkit-scrollbar-track {
-  background: var(--glass-bg-soft);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: var(--radius-full);
 }
 
 .variant-dropdown::-webkit-scrollbar-thumb {
-  background: var(--glass-border-strong);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-full);
 }
 
 .variant-dropdown::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: rgba(255, 255, 255, 0.25);
 }
 </style>

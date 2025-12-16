@@ -97,7 +97,7 @@ defineExpose({
 </script>
 
 <style scoped>
-/* Base Input - Token-based styling */
+/* Base Input - Stroke + Glass Morphism Design */
 .base-input-wrapper {
   display: flex;
   flex-direction: column;
@@ -115,7 +115,7 @@ defineExpose({
 }
 
 .required-indicator {
-  color: var(--color-danger);
+  color: rgba(239, 68, 68, 1);
 }
 
 .input-container {
@@ -136,10 +136,12 @@ defineExpose({
   font-size: var(--text-sm);
   font-weight: var(--font-normal);
 
-  /* Visual - all from tokens */
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
-  color: var(--input-text);
+  /* Visual - Glass morphism with stroke */
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
   border-radius: var(--radius-lg);
 
   /* Animation */
@@ -156,23 +158,24 @@ defineExpose({
 }
 
 .base-input::placeholder {
-  color: var(--input-placeholder);
-  opacity: 0.7;
+  color: var(--text-muted);
+  opacity: 0.6;
 }
 
 .base-input:hover:not(:disabled) {
-  border-color: var(--border-hover);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
 .base-input:focus {
-  border-color: var(--input-border-focus);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 15%, transparent);
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 12px rgba(78, 205, 196, 0.1);
 }
 
 .base-input:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
-  background: var(--surface-hover);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* Adjust padding when slots are used */

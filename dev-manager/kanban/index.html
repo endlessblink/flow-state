@@ -1466,6 +1466,12 @@
           });
         }
       }
+
+      // Initialize features after render
+      loadSavedFilters();
+      applyFilters();
+      updateStats();
+      initDragAndDrop();
     } catch (error) {
       console.error('Error rendering kanban:', error);
       // Show error message on page instead of white overlay

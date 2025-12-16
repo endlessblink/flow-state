@@ -16,7 +16,7 @@ export function useCopy() {
       text,
       showFeedback = false,
       feedbackMessage = 'Copied to clipboard!',
-      feedbackDuration = 2000
+      feedbackDuration: _feedbackDuration = 2000
     } = options
 
     if (isCopying.value) return false

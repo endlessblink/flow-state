@@ -206,10 +206,12 @@ watch(() => props.isVisible, (visible) => {
 }
 
 .modal-content {
-  background: var(--surface-primary);
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-dark-xl);
   max-width: 500px;
   width: 90%;
   max-height: 90vh;
@@ -245,7 +247,7 @@ watch(() => props.isVisible, (visible) => {
 
 .close-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-muted);
   cursor: pointer;
   padding: var(--space-2);
@@ -254,7 +256,8 @@ watch(() => props.isVisible, (visible) => {
 }
 
 .close-btn:hover {
-  background: var(--glass-bg-medium);
+  background: transparent;
+  border-color: var(--glass-border);
   color: var(--text-primary);
 }
 
@@ -283,7 +286,7 @@ watch(() => props.isVisible, (visible) => {
   padding: var(--space-3);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: var(--surface-primary);
+  background: var(--glass-bg-solid);
   color: var(--text-primary);
   font-size: var(--text-sm);
   transition: all var(--duration-fast);
@@ -291,8 +294,8 @@ watch(() => props.isVisible, (visible) => {
 
 .form-input:focus {
   outline: none;
-  border-color: var(--glass-border-active);
-  box-shadow: 0 0 0 2px var(--glass-border-subtle);
+  border-color: var(--glass-border-hover);
+  box-shadow: none;
 }
 
 .color-picker-wrapper {
@@ -328,19 +331,20 @@ watch(() => props.isVisible, (visible) => {
   padding: var(--space-4);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: var(--surface-primary);
-  color: var(--text-primary);
+  background: var(--glass-bg-solid);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--duration-fast);
 }
 
 .layout-btn:hover {
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-medium);
   border-color: var(--glass-border-hover);
+  color: var(--text-primary);
 }
 
 .layout-btn.active {
-  background: var(--purple-bg-subtle);
+  background: transparent;
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
@@ -373,14 +377,15 @@ watch(() => props.isVisible, (visible) => {
 }
 
 .btn-secondary {
-  background: var(--glass-bg-light);
+  background: transparent;
   border-color: var(--glass-border);
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--glass-bg-medium);
+  background: transparent;
   border-color: var(--glass-border-hover);
+  color: var(--text-primary);
 }
 
 .btn-primary {
@@ -390,7 +395,8 @@ watch(() => props.isVisible, (visible) => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.1);
-  border-color: var(--brand-primary);
+  background: transparent;
+  border-color: var(--brand-hover);
+  color: var(--brand-hover);
 }
 </style>

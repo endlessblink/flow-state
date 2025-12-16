@@ -551,7 +551,7 @@ const safeStoreOperation = <T>(
 }
 
 // Create a simple project filter helper function that matches the sidebar composable exactly
-const getVisibleProjectIds = () => {
+const _getVisibleProjectIds = () => {
   try {
     const visibleProjectIds = new Set()
 
@@ -678,9 +678,9 @@ const filteredTasksWithCanvasPosition = computed(() => {
 })
 
 // 🚀 Phase 1: Vue 3 + Pinia Reactivity Core - Use storeToRefs for proper reactivity
-const { hideDoneTasks } = storeToRefs(taskStore)
-const { sections, viewport } = storeToRefs(canvasStore)
-const { secondarySidebarVisible } = storeToRefs(uiStore)
+const { hideDoneTasks: _hideDoneTasks } = storeToRefs(taskStore)
+const { sections: _sections, viewport } = storeToRefs(canvasStore)
+const { secondarySidebarVisible: _secondarySidebarVisible } = storeToRefs(uiStore)
 const message = useMessage()
 const undoHistory = getUndoSystem()
 
@@ -985,7 +985,7 @@ const resourceManager = {
 }
 
 // Execute operation with loading state and error handling
-const executeWithFeedback = async <T>(
+const _executeWithFeedback = async <T>(
   operation: keyof typeof operationLoading.value,
   operationName: string,
   fn: () => Promise<T>,
@@ -1186,7 +1186,7 @@ const tasksWithCanvasPositions = computed(() => {
 let lastHasInboxTasks = false
 let lastHasInboxTasksHash = ''
 
-const hasInboxTasks = computed(() => {
+const _hasInboxTasks = computed(() => {
   const tasks = filteredTasks.value
   if (!Array.isArray(tasks)) {
     return false
@@ -1265,7 +1265,7 @@ const dynamicNodeExtent = computed(() => {
 })
 
 // Glass morphism corner handles - Modern minimal style
-const resizeHandleStyle = computed(() => ({
+const _resizeHandleStyle = computed(() => ({
   width: '10px',
   height: '10px',
   borderRadius: '3px',  // Rounded square (Figma/Linear style)
@@ -1277,14 +1277,14 @@ const resizeHandleStyle = computed(() => ({
   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
 }))
 
-const resizeLineStyle = computed(() => ({
+const _resizeLineStyle = computed(() => ({
   backgroundColor: 'var(--brand-primary)',
   opacity: 0.2, // Subtle, not prominent
   transition: 'background-color 0.2s ease'
 }))
 
 // Glass morphism edge handles - Vertical pills for wide sections
-const edgeHandleStyle = computed(() => ({
+const _edgeHandleStyle = computed(() => ({
   width: '6px',   // Thin vertical bar
   height: '24px',  // Tall for wide sections
   borderRadius: '3px',  // Pill shape
@@ -1341,10 +1341,10 @@ const nodeTypes = markRaw({
 const {
   fitView: vueFlowFitView,
   zoomIn: vueFlowZoomIn,
-  zoomOut: vueFlowZoomOut,
+  zoomOut: _vueFlowZoomOut,
   zoomTo: vueFlowZoomTo,
   getSelectedNodes,
-  getNodes,
+  getNodes: _getNodes,
   findNode,
   onEdgeClick,
   onEdgeContextMenu,
@@ -1400,10 +1400,10 @@ const vueFlowErrorHandling = useVueFlowErrorHandling({
 
 // 🚀 Phase 2: Vue Flow Integration & Canvas Positioning - Add VueUse composables
 const { width, height } = useWindowSize()
-const { ctrl, shift } = useMagicKeys()
+const { ctrl: _ctrl, shift: _shift } = useMagicKeys()
 
 // 🎯 Automatic canvas position generation for tasks without positions
-const generateCanvasPosition = (taskIndex: number): { x: number; y: number } => {
+const _generateCanvasPosition = (taskIndex: number): { x: number; y: number } => {
   const gridSize = 200
   const padding = 100
   const cols = Math.floor((width.value - padding * 2) / gridSize)
@@ -1535,11 +1535,11 @@ const batchedSyncEdges = (priority: 'high' | 'normal' | 'low' = 'normal') => {
 }
 
 // Legacy throttled function for backward compatibility
-const throttledSyncNodes = () => batchedSyncNodes('normal')
+const _throttledSyncNodes = () => batchedSyncNodes('normal')
 
 // Legacy debounced functions for backward compatibility
-const debouncedSyncNodes = () => batchedSyncNodes('normal')
-const debouncedSyncEdges = () => batchedSyncEdges('normal')
+const _debouncedSyncNodes = () => batchedSyncNodes('normal')
+const _debouncedSyncEdges = () => batchedSyncEdges('normal')
 
 // Setup Vue Flow edge event handlers for proper disconnection functionality
 onEdgeClick((param: EdgeMouseEvent) => {
@@ -2035,13 +2035,13 @@ resourceManager.addWatcher(
 resourceManager.addWatcher(
   watch(() => canvasStore.selectedNodeIds, (newSelectedIds) => {
     // Update Vue Flow nodes to match canvas store selection
-    let updateCount = 0
+    let _updateCount = 0
     nodes.value.forEach(node => {
       const shouldBeSelected = newSelectedIds.includes(node.id)
       const nodeAny = node as any
       if (nodeAny.selected !== shouldBeSelected) {
         nodeAny.selected = shouldBeSelected
-        updateCount++
+        _updateCount++
       }
     })
   }, { deep: true, flush: 'post' }) // Changed from 'sync' to 'post' to batch updates
@@ -2698,7 +2698,7 @@ const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes
 })
 
 // Handle resize start with enhanced state tracking - FIXED to prevent coordinate conflicts
-const handleResizeStart = (event: any) => {
+const _handleResizeStart = (event: any) => {
   console.log('🔧 Resize start:', event)
   const node = event.node || event
 
@@ -2752,7 +2752,7 @@ const handleResizeStart = (event: any) => {
 }
 
 // Handle resize with real-time preview - FIXED to prevent coordinate conflicts
-const handleResize = (event: any) => {
+const _handleResize = (event: any) => {
   if (!resizeState.value.isResizing || !resizeState.value.sectionId) return
 
   const node = event.node || event
@@ -2772,7 +2772,7 @@ const handleResize = (event: any) => {
 }
 
 // Handle resize end with cleanup and validation - FIXED to prevent coordinate conflicts
-const handleResizeEnd = (event: any) => {
+const _handleResizeEnd = (event: any) => {
   console.log('🔧 Resize end:', event)
   const node = event.node || event
 

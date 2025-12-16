@@ -1,7 +1,7 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 16, 2025
-**Version**: 4.3 (Calendar/Canvas inbox separation)
+**Version**: 4.4 (TASK-005 Calendar Consolidation complete)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -41,33 +41,57 @@
 
 ## Roadmap
 
+<!-- Roadmap = BIG features only. Small fixes go to Bugs/Tasks sections -->
+
 ### Near-term
-<!-- Roadmap items use ROAD-XXX format -->
 | ID | Feature | Priority | Notes |
 |----|---------|----------|-------|
 | ~~ROAD-001~~ | ~~Power Groups~~ | ~~P1~~ | ✅ DONE (Dec 5) - Auto-detect keywords, collect button, settings |
-| ROAD-002 | Smart Group bug fixes | P1 | Bugs 3, 7/9 |
-| ROAD-003 | Calendar resize fix | P2 | |
 | ROAD-004 | Mobile support | P2 | Responsive layout, touch interactions |
+| ROAD-005 | Auto-sync enablement | P1 | After multi-device testing |
 
 ### Later
 | ID | Feature | Notes |
 |----|---------|-------|
-| ROAD-005 | Auto-sync enablement | After multi-device testing |
 | ~~ROAD-006~~ | ~~Keyboard shortcuts~~ | ✅ DONE (Dec 5) - Delete, Redo (Ctrl+Y), New Task (Ctrl+N) |
-| ROAD-007 | Technical debt Phase 3-5 | D&D, Database, Validation |
-| ROAD-008 | Lint cleanup | Fix 2400+ lint errors for easier refactoring & faster Claude Code editing |
-| ROAD-009 | Expand CI tests | Add lint + unit tests to GitHub Actions after cleanup |
+| ROAD-007 | Technical debt cleanup | D&D unification, Database consolidation, Validation framework |
 | ROAD-010 | Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
 | ROAD-011 | Local AI assistant | Task breakdown, auto-categorize, daily planning. Hebrew required (Llama 3+, Claude/GPT-4 BYOK) |
 | ~~ROAD-012~~ | ~~Unified Section Settings Menu~~ | ✅ DONE (Dec 16) - Consolidated to Groups, added GroupSettingsMenu.vue |
-| ROAD-013 | Section → Group Terminology Cleanup | Phase 4-5 remaining: Update consumer files, Storybook stories |
 
 ---
 
 ## Active Work
 
 <!-- Active work items use TASK-XXX format -->
+
+### TASK-011: Lint Cleanup
+
+**Goal**: Fix 2400+ lint errors for easier refactoring & faster Claude Code editing.
+
+**Priority**: P2-MEDIUM
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Run `npm run lint` to get baseline | PENDING |
+| 2 | Fix auto-fixable errors | PENDING |
+| 3 | Manual fixes for remaining errors | PENDING |
+
+---
+
+### TASK-012: Expand CI Tests
+
+**Goal**: Add lint + unit tests to GitHub Actions after lint cleanup.
+
+**Priority**: P3-LOW (depends on TASK-011)
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Add lint check to CI workflow | PENDING |
+| 2 | Add unit test run to CI | PENDING |
+| 3 | Add build verification | PENDING |
+
+---
 
 ### ~~TASK-010~~: Consolidate Sections → Groups (COMPLETE)
 
@@ -83,8 +107,8 @@
 | 3b | Rename state variables | ✅ DONE | Same as 3a |
 | 3c | Rename methods (35+ methods) | ✅ DONE | Same as 3a |
 | 3d | Add backward compatibility migration | ✅ DONE | Same as 3a |
-| 4 | Update consumer files | PENDING | See ROAD-013 |
-| 5 | Storybook stories | PENDING | See ROAD-013 |
+| 4 | Update consumer files | PENDING | Part of TASK-010 |
+| 5 | Storybook stories | PENDING | Part of TASK-010 |
 
 **Files Renamed**:
 - `SectionManager.vue` → `GroupManager.vue`
@@ -549,22 +573,24 @@ if (section.type === 'custom' && isSmartGroup(section.name)) {
 - 6 core files: useDatabase, tasks, canvas, timer, ui, notifications
 - 116 files deferred for organic migration
 
-### TASK-005: Phase 2 - Calendar Consolidation (IN PROGRESS)
+### ~~TASK-005~~: Phase 2 - Calendar Consolidation (COMPLETE)
 
 **Updated Scope** (Dec 16, 2025 analysis):
 
-**Current State - 8 files, 5,671 lines total** (after Phase A+B):
+**Final State - 10 files, ~5,500 lines total** (after all phases):
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `CalendarView.vue` | 2,963 | Main calendar view (massive monolith) |
+| `CalendarView.vue` | 2,817 | Main calendar view (reduced from 2,963) |
 | `calendar/useCalendarDayView.ts` | 897 | Day view logic |
 | `calendar/useCalendarDrag.ts` | 542 | Drag interactions |
 | `calendar/useCalendarWeekView.ts` | 391 | Week view logic |
+| `useCalendarCore.ts` | ~300 | **Unified core utilities** (consolidated + new helpers) |
 | `CalendarViewVueCal.vue` | 297 | Alternative vue-cal implementation |
-| `useCalendarCore.ts` | 264 | **Unified core utilities** (consolidated) |
 | `useCalendarDragCreate.ts` | 180 | Drag-to-create functionality |
 | `calendar/useCalendarMonthView.ts` | 137 | Month view logic |
+| `calendar/useCalendarScroll.ts` | 67 | **NEW** - Scroll sync/navigation |
+| `calendar/useCalendarDateNavigation.ts` | 106 | **NEW** - Date state/navigation |
 | ~~`calendar/useCalendarEventHelpers.ts`~~ | ~~156~~ | ~~DELETED - merged into useCalendarCore~~ |
 
 **Critical Duplications Found** (✅ ALL FIXED Dec 16, 2025):
@@ -595,17 +621,24 @@ if (section.type === 'custom' && isSmartGroup(section.name)) {
    - ~~Delete `useCalendarEventHelpers.ts`~~
    - **Result**: 174 lines removed, 1 file deleted
 
-3. **Phase C - View Composables Consolidation** (PENDING)
-   - Evaluate merging Day/Week/Month views into unified `useCalendarViews`
-   - Extract shared view logic (time slots, grid rendering, navigation)
-   - Keep view-specific logic in separate sub-modules if needed
+3. ~~**Phase C - View Composables Assessment**~~ ✅ COMPLETE (Dec 16, 2025)
+   - Evaluated Day/Week/Month view composables
+   - **Finding**: Architecture already correct - views have distinct responsibilities
+   - Day view (897 lines): Resize/drag ghost handling
+   - Week view (391 lines): 7-day grid logic
+   - Month view (137 lines): Simple grid logic
+   - Shared utilities already extracted to `useCalendarCore.ts`
+   - **Decision**: No merge needed - would hurt maintainability
 
-4. **Phase D - CalendarView.vue Extraction** (~3 hours)
-   - Extract inline logic from 2,963-line monolith
-   - Move business logic to composables
-   - Target: reduce to ~500 lines (template + composition)
+4. ~~**Phase D - CalendarView.vue Extraction**~~ ✅ COMPLETE (Dec 16, 2025)
+   - **Result**: 2,963 → 2,817 lines (146 lines removed)
+   - Created `useCalendarScroll.ts` (67 lines) - scroll sync/navigation
+   - Created `useCalendarDateNavigation.ts` (106 lines) - date state/navigation
+   - Added `formatSlotTime`, `isCurrentTimeSlot`, `getProjectVisual` to `useCalendarCore.ts`
+   - Removed verbose debug logging code (~60 lines)
+   - Remaining size primarily styles (~1,700 lines CSS)
 
-**Target: ~2,000+ lines removed through deduplication**
+**Total Progress (Phases A-D): ~320 lines removed, 2 composables created**
 
 ### Phases 3-5: Planned
 - TASK-006: Drag-and-Drop unification (18 implementations)

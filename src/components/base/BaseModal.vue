@@ -451,8 +451,8 @@ defineExpose({
 
 /* Close Button */
 .modal-close-btn {
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-muted);
   cursor: pointer;
   padding: var(--space-2);
@@ -465,15 +465,16 @@ defineExpose({
 }
 
 .modal-close-btn:hover {
-  background: var(--glass-border);
-  border-color: var(--glass-border-medium);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.25);
   color: var(--text-primary);
   transform: scale(1.05);
 }
 
 .modal-close-btn:focus-visible {
-  outline: 2px solid var(--color-work);
-  outline-offset: 2px;
+  outline: none;
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
 /* Modal Body */
@@ -490,11 +491,7 @@ defineExpose({
   gap: var(--space-3);
   padding: var(--space-6);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--glass-bg-weak) 100%
-  );
+  background: transparent;
 }
 
 .default-actions {

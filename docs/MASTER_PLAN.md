@@ -179,7 +179,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |
 | ~~BUG-007~~ | ~~Deleting group deletes tasks inside~~ | ~~P1-HIGH~~ | ✅ ALREADY FIXED Dec 5, 2025 - Tasks preserved on canvas |
 | BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
-| BUG-013 | Tasks disappear after changing properties on canvas | P1-HIGH | Needs investigation - reappear after refresh |
+| ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Added canvasStore.requestSync() to TaskContextMenu |
 | BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
 | BUG-015 | Edit Task modal behind nav tabs | P2-MEDIUM | z-index issue - nav tabs overlap modal |
 | BUG-016 | Timer status not syncing | P2-MEDIUM | Timer state not synchronized across views/components |

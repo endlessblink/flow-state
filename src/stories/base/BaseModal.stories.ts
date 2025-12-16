@@ -74,16 +74,16 @@ export const Large: Story = {
       <BaseModal v-bind="args">
         <div style="display: flex; flex-direction: column; gap: 16px;">
           <p>This is a large modal with plenty of space for complex content.</p>
-          <div style="padding: 16px; background: var(--surface-tertiary); border-radius: 8px;">
+          <div style="padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
             <h4 style="margin: 0 0 8px 0;">Content Section</h4>
             <p>You can organize content into sections within the modal.</p>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div style="padding: 12px; background: var(--surface-hover); border-radius: 6px;">
+            <div style="padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px;">
               <strong>Column 1</strong>
               <p style="margin: 4px 0 0 0; font-size: 14px;">Content here</p>
             </div>
-            <div style="padding: 12px; background: var(--surface-hover); border-radius: 6px;">
+            <div style="padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px;">
               <strong>Column 2</strong>
               <p style="margin: 4px 0 0 0; font-size: 14px;">Content here</p>
             </div>
@@ -231,7 +231,7 @@ export const CustomFooter: Story = {
         <p>This modal demonstrates custom footer actions.</p>
         <template #footer>
           <div style="display: flex; gap: 8px; width: 100%;">
-            <button style="flex: 1; padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">
+            <button style="flex: 1; padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">
               Save Draft
             </button>
             <button style="flex: 1; padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 6px; cursor: pointer;">
@@ -297,18 +297,18 @@ export const FormModal: Story = {
         <form style="display: flex; flex-direction: column; gap: 20px;">
           <div>
             <label style="display: block; margin-bottom: 6px; font-weight: 500; color: var(--text-secondary); font-size: 14px;">Task Title *</label>
-            <input type="text" placeholder="Enter task title..." style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 14px;" />
+            <input type="text" placeholder="Enter task title..." style="width: 100%; padding: 10px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; font-size: 14px; color: var(--text-primary);" />
           </div>
 
           <div>
             <label style="display: block; margin-bottom: 6px; font-weight: 500; color: var(--text-secondary); font-size: 14px;">Description</label>
-            <textarea placeholder="Add task details..." rows="4" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+            <textarea placeholder="Add task details..." rows="4" style="width: 100%; padding: 10px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; font-size: 14px; color: var(--text-primary); resize: vertical;"></textarea>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
             <div>
               <label style="display: block; margin-bottom: 6px; font-weight: 500; color: var(--text-secondary); font-size: 14px;">Priority</label>
-              <select style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 14px;">
+              <select style="width: 100%; padding: 10px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; font-size: 14px; color: var(--text-primary);">
                 <option>Low</option>
                 <option>Medium</option>
                 <option>High</option>
@@ -317,13 +317,13 @@ export const FormModal: Story = {
 
             <div>
               <label style="display: block; margin-bottom: 6px; font-weight: 500; color: var(--text-secondary); font-size: 14px;">Due Date</label>
-              <input type="date" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 14px;" />
+              <input type="date" style="width: 100%; padding: 10px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; font-size: 14px; color: var(--text-primary);" />
             </div>
           </div>
 
           <div>
             <label style="display: block; margin-bottom: 6px; font-weight: 500; color: var(--text-secondary); font-size: 14px;">Project</label>
-            <select style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 14px;">
+            <select style="width: 100%; padding: 10px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; font-size: 14px; color: var(--text-primary);">
               <option>Personal Tasks</option>
               <option>Work Projects</option>
               <option>Learning</option>
@@ -374,38 +374,38 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
-        <h2 style="margin: 0 0 24px 0;">BaseModal Interactive Demo</h2>
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px);">
+        <h2 style="margin: 0 0 24px 0; color: var(--text-primary);">BaseModal Interactive Demo</h2>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
           <div>
-            <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Sizes</h4>
+            <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Sizes</h4>
             <div style="display: flex; flex-direction: column; gap: 8px;">
-              <button @click="openModal('default', 'sm')" style="padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">Small Modal</button>
-              <button @click="openModal('default', 'md')" style="padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">Medium Modal</button>
-              <button @click="openModal('default', 'lg')" style="padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">Large Modal</button>
+              <button @click="openModal('default', 'sm')" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">Small Modal</button>
+              <button @click="openModal('default', 'md')" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">Medium Modal</button>
+              <button @click="openModal('default', 'lg')" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">Large Modal</button>
             </div>
           </div>
 
           <div>
-            <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Variants</h4>
+            <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Variants</h4>
             <div style="display: flex; flex-direction: column; gap: 8px;">
-              <button @click="openModal('success', 'sm')" style="padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">Success</button>
-              <button @click="openModal('warning', 'md')" style="padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">Warning</button>
-              <button @click="openModal('danger', 'md')" style="padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">Danger</button>
+              <button @click="openModal('success', 'sm')" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">Success</button>
+              <button @click="openModal('warning', 'md')" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">Warning</button>
+              <button @click="openModal('danger', 'md')" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">Danger</button>
             </div>
           </div>
 
           <div>
-            <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Special</h4>
+            <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Special</h4>
             <div style="display: flex; flex-direction: column; gap: 8px;">
-              <button @click="openModal('default', 'lg')" style="padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">Form Modal</button>
-              <button @click="openModal('default', 'sm')" style="padding: 8px 16px; background: var(--surface-hover); border: 1px solid var(--border-medium); border-radius: 6px; cursor: pointer;">Loading Demo</button>
+              <button @click="openModal('default', 'lg')" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">Form Modal</button>
+              <button @click="openModal('default', 'sm')" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: 6px; cursor: pointer;">Loading Demo</button>
             </div>
           </div>
         </div>
 
-        <div style="padding: 16px; background: var(--surface-tertiary); border-radius: 8px;">
+        <div style="padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
           <p style="margin: 0; font-size: 14px; color: var(--text-muted);">
             <strong>Current State:</strong> Modal is {{ isModalOpen ? 'open' : 'closed' }}
             {{ isModalOpen ? '(' + modalVariant + ' variant, ' + modalSize + ' size)' : '' }}
@@ -425,8 +425,8 @@ export const InteractiveDemo: Story = {
         >
           <div v-if="modalVariant === 'default' && modalSize === 'lg'" style="display: flex; flex-direction: column; gap: 16px;">
             <p>This is a form modal demonstration.</p>
-            <input type="text" placeholder="Sample input field..." style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-medium); border-radius: 6px;">
-            <textarea placeholder="Sample textarea..." rows="3" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-medium); border-radius: 6px; resize: vertical;"></textarea>
+            <input type="text" placeholder="Sample input field..." style="width: 100%; padding: 10px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: var(--text-primary);">
+            <textarea placeholder="Sample textarea..." rows="3" style="width: 100%; padding: 10px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: var(--text-primary); resize: vertical;"></textarea>
           </div>
           <div v-else-if="modalVariant === 'default' && modalSize === 'sm'" style="text-align: center;">
             <p>This will demonstrate the loading state when you click Confirm.</p>

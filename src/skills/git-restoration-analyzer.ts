@@ -458,5 +458,5 @@ export const {
 // Development-only enhancements
 if (import.meta.env.DEV) {
   // Expose to window for debugging
-  ;(window as any).gitRestorationAnalyzer = gitRestorationAnalyzer
+  (window as any).gitRestorationAnalyzer = gitRestorationAnalyzer
 }

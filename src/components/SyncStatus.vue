@@ -36,31 +36,31 @@
     </div>
 
     <!-- Manual Controls -->
-    <div class="sync-controls" v-if="showControls">
+    <div v-if="showControls" class="sync-controls">
       <button
-        @click="triggerManualSync"
         :disabled="!canManualSync"
         class="sync-btn primary"
         :class="{ 'loading': localIsSyncing }"
         title="Manual sync"
+        @click="triggerManualSync"
       >
         <RefreshCw :size="14" :class="{ 'animate-spin': localIsSyncing }" />
       </button>
 
       <button
-        @click="showAdvancedMenu = !showAdvancedMenu"
         class="sync-btn"
         title="Advanced sync options"
+        @click="showAdvancedMenu = !showAdvancedMenu"
       >
         <Settings :size="14" />
       </button>
 
       <button
         v-if="remoteConnected"
-        @click="toggleSync"
         class="sync-btn"
         :class="{ 'active': (syncStatus as any) !== 'paused' }"
         :title="(syncStatus as any) === 'paused' ? 'Resume sync' : 'Pause sync'"
+        @click="toggleSync"
       >
         <component
           :is="(syncStatus as any) === 'paused' ? Play : Pause"
@@ -75,7 +75,7 @@
         <div
           class="progress-fill"
           :style="{ width: `${syncProgress}%` }"
-        ></div>
+        />
       </div>
     </div>
 
@@ -110,9 +110,9 @@
     <!-- Details Button -->
     <button
       v-if="showDetails"
-      @click="toggleDetails"
       class="details-button"
       :title="showDetailsPanel ? 'Hide Details' : 'Show Details'"
+      @click="toggleDetails"
     >
       <Activity :size="14" />
     </button>
@@ -172,8 +172,12 @@
             :class="`severity-${conflict.severity}`"
           >
             <div class="conflict-info">
-              <div class="conflict-id">{{ conflict.documentId }}</div>
-              <div class="conflict-type">{{ conflict.conflictType }}</div>
+              <div class="conflict-id">
+                {{ conflict.documentId }}
+              </div>
+              <div class="conflict-type">
+                {{ conflict.conflictType }}
+              </div>
               <div class="conflict-resolution">
                 {{ conflict.autoResolvable ? 'Auto-resolved' : 'Manual required' }}
               </div>
@@ -242,8 +246,12 @@
             class="issue-item"
             :class="`severity-${issue.severity}`"
           >
-            <div class="issue-message">{{ issue.message }}</div>
-            <div v-if="issue.field" class="issue-field">Field: {{ issue.field }}</div>
+            <div class="issue-message">
+              {{ issue.message }}
+            </div>
+            <div v-if="issue.field" class="issue-field">
+              Field: {{ issue.field }}
+            </div>
           </div>
           <div v-if="lastValidation.issues.length > 5" class="validation-more">
             +{{ lastValidation.issues.length - 5 }} more issues

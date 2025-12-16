@@ -3,19 +3,19 @@
     <!-- Premium Done Toggle with Advanced Glass Morphism -->
     <button
       :class="buttonClasses"
+      :disabled="disabled"
+      :title="enhancedTitle"
+      :aria-label="enhancedAriaLabel"
+      type="button"
       @click="handleClick"
+      role="switch"
       @keydown.enter="handleKeyDown"
+      :aria-checked="isCompleted ? 'true' : 'false'"
       @keydown.space.prevent="handleKeyDown"
       @mouseenter="handleMouseEnter"
       @mouseleave="handleMouseLeave"
       @focus="handleFocus"
       @blur="handleBlur"
-      :disabled="disabled"
-      :title="enhancedTitle"
-      :aria-label="enhancedAriaLabel"
-      type="button"
-      role="switch"
-      :aria-checked="isCompleted ? 'true' : 'false'"
     >
       <div class="done-toggle__content" :class="contentClasses">
         <!-- Enhanced icon system with sophisticated animations -->
@@ -23,15 +23,15 @@
           <!-- Premium check icon when completed -->
           <div v-if="isCompleted" class="done-toggle__check" :class="checkClasses">
             <Check :size="iconSize" />
-            <div class="done-toggle__check-glow"></div>
-            <div class="done-toggle__check-sparkle"></div>
+            <div class="done-toggle__check-glow" />
+            <div class="done-toggle__check-sparkle" />
           </div>
 
           <!-- Enhanced circle system when not completed -->
           <div v-else class="done-toggle__circle" :class="circleClasses">
-            <div class="done-toggle__circle-inner"></div>
-            <div class="done-toggle__circle-glow"></div>
-            <div class="done-toggle__circle-pulse"></div>
+            <div class="done-toggle__circle-inner" />
+            <div class="done-toggle__circle-glow" />
+            <div class="done-toggle__circle-pulse" />
           </div>
         </div>
 
@@ -42,12 +42,12 @@
           class="done-toggle__ripple"
           :class="getRippleClasses(ripple)"
           :style="getRippleStyle(ripple)"
-        ></div>
+        />
 
         <!-- Enhanced visual feedback layers -->
-        <div class="done-toggle__glow-layer"></div>
-        <div class="done-toggle__shine-layer"></div>
-        <div class="done-toggle__particle-layer"></div>
+        <div class="done-toggle__glow-layer" />
+        <div class="done-toggle__shine-layer" />
+        <div class="done-toggle__particle-layer" />
 
         <!-- Completion celebration effects -->
         <transition name="celebration-fade" appear>
@@ -57,13 +57,13 @@
               :key="n"
               class="celebration-particle"
               :style="getCelebrationStyle(n)"
-            ></div>
+            />
           </div>
         </transition>
       </div>
 
       <!-- Touch feedback overlay -->
-      <div v-if="showTouchFeedback" class="done-toggle__touch-feedback"></div>
+      <div v-if="showTouchFeedback" class="done-toggle__touch-feedback" />
     </button>
 
     <!-- Floating completion hints -->
@@ -90,8 +90,10 @@
 
     <!-- Progress indicator for multi-step completion -->
     <div v-if="showProgress" class="done-toggle__progress" :class="progressClasses">
-      <div class="progress-bar" :style="{ width: `${progressPercentage}%` }"></div>
-      <div class="progress-label">{{ progressPercentage }}%</div>
+      <div class="progress-bar" :style="{ width: `${progressPercentage}%` }" />
+      <div class="progress-label">
+        {{ progressPercentage }}%
+      </div>
     </div>
 
     <!-- Status announcement for screen readers -->

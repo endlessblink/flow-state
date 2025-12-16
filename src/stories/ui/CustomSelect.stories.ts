@@ -27,13 +27,13 @@ export const Default: Story = {
       return { selected, args }
     },
     template: `
-      <div style="width: 300px;">
-        <CustomSelect 
+      <div style="width: 300px; padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 16px;">
+        <CustomSelect
           v-model="selected"
           :options="args.options"
           :placeholder="args.placeholder"
         />
-        <p style="margin-top: 16px; color: var(--text-secondary);">Selected: {{ selected }}</p>
+        <p style="margin-top: 16px; color: var(--text-secondary); font-size: 14px;">Selected: <strong style="color: var(--text-primary);">{{ selected }}</strong></p>
       </div>
     `
   }),
@@ -56,19 +56,19 @@ export const AllStates: Story = {
       return { selected1, selected2, args }
     },
     template: `
-      <div style="display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px;">
+      <div style="display: flex; flex-direction: column; gap: 24px; width: 100%; max-width: 400px; padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 16px;">
         <div>
-          <h4 style="margin: 0 0 8px 0; color: var(--text-secondary); font-size: 12px;">With Selection</h4>
-          <CustomSelect 
+          <h4 style="margin: 0 0 8px 0; color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">With Selection</h4>
+          <CustomSelect
             v-model="selected1"
             :options="args.options"
             placeholder="Choose color..."
           />
         </div>
-        
+
         <div>
-          <h4 style="margin: 0 0 8px 0; color: var(--text-secondary); font-size: 12px;">Empty State</h4>
-          <CustomSelect 
+          <h4 style="margin: 0 0 8px 0; color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Empty State</h4>
+          <CustomSelect
             v-model="selected2"
             :options="args.options"
             :placeholder="args.placeholder"
@@ -95,16 +95,16 @@ export const Interactive: Story = {
       return { selected, args }
     },
     template: `
-      <div style="display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px;">
-        <CustomSelect 
+      <div style="display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px; padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 16px;">
+        <CustomSelect
           v-model="selected"
           :options="args.options"
           :placeholder="args.placeholder"
         />
-        
-        <div style="padding: 12px; background: var(--surface-tertiary); border-radius: 8px;">
-          <p style="margin: 0; font-size: 13px;">
-            <strong>Selected:</strong> {{ selected || 'None' }}
+
+        <div style="padding: 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
+          <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+            <strong style="color: var(--text-primary);">Selected:</strong> {{ selected || 'None' }}
           </p>
         </div>
       </div>

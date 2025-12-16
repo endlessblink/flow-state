@@ -15,25 +15,29 @@
         <div class="alert-content">
           <AlertCircle :size="20" class="alert-icon critical" />
           <div class="alert-text">
-            <div class="alert-title">{{ alert.title }}</div>
-            <div class="alert-message">{{ alert.message }}</div>
+            <div class="alert-title">
+              {{ alert.title }}
+            </div>
+            <div class="alert-message">
+              {{ alert.message }}
+            </div>
             <div v-if="alert.recoveryActions && alert.recoveryActions.length > 0" class="alert-actions">
               <button
                 v-for="action in alert.recoveryActions"
                 :key="action.id"
-                @click.stop="handleRecoveryAction(action, alert)"
                 class="action-btn"
                 :class="action.type"
+                @click.stop="handleRecoveryAction(action, alert)"
               >
                 {{ action.label }}
               </button>
             </div>
           </div>
           <button
-            @click.stop="dismissAlert(alert)"
             class="dismiss-btn"
             :title="alert.persistent ? 'Cannot dismiss critical alert' : 'Dismiss'"
             :disabled="alert.persistent"
+            @click.stop="dismissAlert(alert)"
           >
             <X :size="16" />
           </button>
@@ -55,13 +59,17 @@
         <div class="alert-content">
           <AlertTriangle :size="18" class="alert-icon warning" />
           <div class="alert-text">
-            <div class="alert-title">{{ alert.title }}</div>
-            <div class="alert-message">{{ alert.message }}</div>
+            <div class="alert-title">
+              {{ alert.title }}
+            </div>
+            <div class="alert-message">
+              {{ alert.message }}
+            </div>
           </div>
           <button
-            @click.stop="dismissAlert(alert)"
             class="dismiss-btn"
             title="Dismiss"
+            @click.stop="dismissAlert(alert)"
           >
             <X :size="14" />
           </button>
@@ -83,12 +91,14 @@
         <div class="alert-content">
           <Info :size="16" class="alert-icon info" />
           <div class="alert-text">
-            <div class="alert-message">{{ alert.message }}</div>
+            <div class="alert-message">
+              {{ alert.message }}
+            </div>
           </div>
           <button
-            @click.stop="dismissAlert(alert)"
             class="dismiss-btn"
             title="Dismiss"
+            @click.stop="dismissAlert(alert)"
           >
             <X :size="14" />
           </button>
@@ -111,9 +121,9 @@
         <div class="panel-header">
           <h3>Sync Alerts</h3>
           <button
-            @click="clearAllAlerts"
             class="clear-btn"
             :disabled="allAlerts.length === 0"
+            @click="clearAllAlerts"
           >
             Clear All
           </button>
@@ -133,13 +143,19 @@
                 class="panel-alert-icon"
               />
               <div class="panel-alert-text">
-                <div class="panel-alert-title">{{ alert.title }}</div>
-                <div class="panel-alert-message">{{ alert.message }}</div>
-                <div class="panel-alert-time">{{ formatRelativeTime(alert.timestamp) }}</div>
+                <div class="panel-alert-title">
+                  {{ alert.title }}
+                </div>
+                <div class="panel-alert-message">
+                  {{ alert.message }}
+                </div>
+                <div class="panel-alert-time">
+                  {{ formatRelativeTime(alert.timestamp) }}
+                </div>
               </div>
               <button
-                @click.stop="dismissAlert(alert)"
                 class="panel-dismiss-btn"
+                @click.stop="dismissAlert(alert)"
               >
                 <X :size="14" />
               </button>

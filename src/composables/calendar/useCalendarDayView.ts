@@ -314,7 +314,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
       slotTime: `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
     })
 
-    let data = event.dataTransfer?.getData('application/json')
+    const data = event.dataTransfer?.getData('application/json')
     let parsedData: any = null
 
     // FALLBACK: Check for global dragging state when dataTransfer is empty

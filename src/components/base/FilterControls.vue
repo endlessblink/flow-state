@@ -4,10 +4,12 @@
     <div class="filter-control">
       <select
         :value="activeProjectId || ''"
-        @input="updateProjectFilter($event)"
         class="filter-select"
+        @input="updateProjectFilter($event)"
       >
-        <option value="">All Projects</option>
+        <option value="">
+          All Projects
+        </option>
         <option v-for="project in projects" :key="project.id" :value="project.id">
           {{ project.name }}
         </option>
@@ -18,15 +20,27 @@
     <div class="filter-control">
       <select
         :value="activeSmartView || ''"
-        @input="updateSmartView($event)"
         class="filter-select"
+        @input="updateSmartView($event)"
       >
-        <option value="">All Tasks</option>
-        <option value="today">Today</option>
-        <option value="week">This Week</option>
-        <option value="uncategorized">Uncategorized</option>
-        <option value="all_active">All Active</option>
-        <option value="unscheduled">Unscheduled</option>
+        <option value="">
+          All Tasks
+        </option>
+        <option value="today">
+          Today
+        </option>
+        <option value="week">
+          This Week
+        </option>
+        <option value="uncategorized">
+          Uncategorized
+        </option>
+        <option value="all_active">
+          All Active
+        </option>
+        <option value="unscheduled">
+          Unscheduled
+        </option>
       </select>
     </div>
 
@@ -34,15 +48,27 @@
     <div class="filter-control">
       <select
         :value="activeStatusFilter || ''"
-        @input="updateStatusFilter($event)"
         class="filter-select"
+        @input="updateStatusFilter($event)"
       >
-        <option value="">All Status</option>
-        <option value="planned">Planned</option>
-        <option value="in_progress">In Progress</option>
-        <option value="done">Done</option>
-        <option value="backlog">Backlog</option>
-        <option value="on_hold">On Hold</option>
+        <option value="">
+          All Status
+        </option>
+        <option value="planned">
+          Planned
+        </option>
+        <option value="in_progress">
+          In Progress
+        </option>
+        <option value="done">
+          Done
+        </option>
+        <option value="backlog">
+          Backlog
+        </option>
+        <option value="on_hold">
+          On Hold
+        </option>
       </select>
     </div>
 
@@ -51,10 +77,10 @@
       <input
         id="hide-done"
         :checked="hideDoneTasks"
-        @input="updateHideDone"
         type="checkbox"
         class="hide-done-checkbox"
-      />
+        @input="updateHideDone"
+      >
       <label for="hide-done" class="checkbox-label">
         Hide Done
       </label>
@@ -62,8 +88,8 @@
 
     <!-- Clear Filters -->
     <button
-      @click="clearAllFilters"
       class="clear-filters-btn"
+      @click="clearAllFilters"
     >
       Clear
     </button>

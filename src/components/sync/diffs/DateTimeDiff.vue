@@ -4,19 +4,31 @@
       <div class="date-display">
         <!-- Local Date -->
         <div class="date-value local">
-          <div class="date-label">Local:</div>
+          <div class="date-label">
+            Local:
+          </div>
           <div class="date-content">
-            <div class="date-formatted">{{ formatDate(localDate) }}</div>
-            <div class="date-raw">{{ localDateRaw }}</div>
+            <div class="date-formatted">
+              {{ formatDate(localDate) }}
+            </div>
+            <div class="date-raw">
+              {{ localDateRaw }}
+            </div>
           </div>
         </div>
 
         <!-- Remote Date -->
         <div class="date-value remote">
-          <div class="date-label">Remote:</div>
+          <div class="date-label">
+            Remote:
+          </div>
           <div class="date-content">
-            <div class="date-formatted">{{ formatDate(remoteDate) }}</div>
-            <div class="date-raw">{{ remoteDateRaw }}</div>
+            <div class="date-formatted">
+              {{ formatDate(remoteDate) }}
+            </div>
+            <div class="date-raw">
+              {{ remoteDateRaw }}
+            </div>
           </div>
         </div>
       </div>
@@ -40,29 +52,29 @@
       <!-- Date Actions -->
       <div class="date-actions">
         <button
-          @click="selectDate('local')"
           class="action-btn local"
           :class="{ active: selectedDate === 'local' }"
+          @click="selectDate('local')"
         >
           Use Local Date
         </button>
         <button
-          @click="selectDate('remote')"
           class="action-btn remote"
           :class="{ active: selectedDate === 'remote' }"
+          @click="selectDate('remote')"
         >
           Use Remote Date
         </button>
         <button
-          @click="selectDate('newer')"
           class="action-btn newer"
           :class="{ active: selectedDate === 'newer' }"
+          @click="selectDate('newer')"
         >
           Use Newer Date
         </button>
         <button
-          @click="selectDate('now')"
           class="action-btn now"
+          @click="selectDate('now')"
         >
           Use Current Time
         </button>
@@ -71,8 +83,18 @@
 
     <div v-else class="no-dates">
       <div class="empty-message">
-        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          class="w-8 h-8 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
         <p>No valid date data to compare</p>
       </div>

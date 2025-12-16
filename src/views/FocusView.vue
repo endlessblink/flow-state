@@ -9,18 +9,16 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 import { useTaskStore } from '@/stores/tasks'
-import type { Task } from '@/stores/tasks'
 
+const props = withDefaults(defineProps<Props>(), {
+  taskId: ''
+})
 const timerStore = useTimerStore()
 const tasksStore = useTaskStore()
 
 interface Props {
   taskId?: string
 }
-
-const props = withDefaults(defineProps<Props>(), {
-  taskId: ''
-})
 
 // Focus view logic
 const isFocused = ref(false)
@@ -40,7 +38,7 @@ const stopFocusSession = () => {
   timerStore.stopTimer()
 }
 
-const handleComplete = () => {
+const _handleComplete = () => {
   if (currentTask.value) {
     tasksStore.updateTaskWithUndo(currentTask.value.id, { status: 'done' })
   }

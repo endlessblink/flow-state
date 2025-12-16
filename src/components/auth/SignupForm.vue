@@ -1,11 +1,15 @@
 <template>
   <div class="signup-form">
     <div class="form-header">
-      <h2 class="form-title">{{ $t('auth.signup.title', 'Create Account') }}</h2>
-      <p class="form-subtitle">{{ $t('auth.signup.subtitle', 'Start boosting your productivity') }}</p>
+      <h2 class="form-title">
+        {{ $t('auth.signup.title', 'Create Account') }}
+      </h2>
+      <p class="form-subtitle">
+        {{ $t('auth.signup.subtitle', 'Start boosting your productivity') }}
+      </p>
     </div>
 
-    <form @submit.prevent="handleSubmit" class="auth-form">
+    <form class="auth-form" @submit.prevent="handleSubmit">
       <!-- Error Display -->
       <div v-if="errorMessage" class="error-message" role="alert">
         <AlertCircle class="error-icon" />
@@ -50,10 +54,10 @@
           <template #suffix>
             <button
               type="button"
-              @click="showPassword = !showPassword"
               class="password-toggle"
               :aria-label="showPassword ? 'Hide password' : 'Show password'"
               tabindex="-1"
+              @click="showPassword = !showPassword"
             >
               <EyeIcon v-if="!showPassword" class="icon" />
               <EyeOffIcon v-else class="icon" />
@@ -68,7 +72,7 @@
               class="strength-fill"
               :class="`strength-${passwordStrength.level}`"
               :style="{ width: `${passwordStrength.percent}%` }"
-            ></div>
+            />
           </div>
           <span class="strength-text" :class="`strength-${passwordStrength.level}`">
             {{ passwordStrength.text }}
@@ -90,10 +94,10 @@
         <template #suffix>
           <button
             type="button"
-            @click="showConfirmPassword = !showConfirmPassword"
             class="password-toggle"
             :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
             tabindex="-1"
+            @click="showConfirmPassword = !showConfirmPassword"
           >
             <EyeIcon v-if="!showConfirmPassword" class="icon" />
             <EyeOffIcon v-else class="icon" />
@@ -135,9 +139,9 @@
         </span>
         <button
           type="button"
-          @click="$emit('switchToLogin')"
           class="switch-mode-link"
           :disabled="isLoading"
+          @click="$emit('switchToLogin')"
         >
           {{ $t('auth.signIn', 'Sign In') }}
         </button>

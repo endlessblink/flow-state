@@ -22,7 +22,9 @@
             ... and {{ value.length - maxItems }} more
           </div>
         </div>
-        <div v-else class="empty-array">(empty)</div>
+        <div v-else class="empty-array">
+          (empty)
+        </div>
       </div>
     </template>
 
@@ -39,7 +41,9 @@
         <div v-if="value" class="datetime-formatted">
           {{ formatDateTime(value) }}
         </div>
-        <div v-else class="datetime-empty">(not set)</div>
+        <div v-else class="datetime-empty">
+          (not set)
+        </div>
       </div>
     </template>
 

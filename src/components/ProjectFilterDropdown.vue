@@ -4,8 +4,8 @@
     <button
       class="filter-trigger"
       :class="{ 'has-active-filter': activeProjectId }"
-      @click="toggleDropdown"
       :title="getTriggerTitle()"
+      @click="toggleDropdown"
     >
       <div v-if="activeProject" class="project-indicator">
         <ProjectEmojiIcon
@@ -18,7 +18,7 @@
           v-else-if="activeProject.color"
           class="project-color"
           :style="{ backgroundColor: Array.isArray(activeProject.color) ? activeProject.color[0] : activeProject.color }"
-        ></div>
+        />
       </div>
       <div v-else class="all-projects-icon">
         <ListTodo :size="16" />
@@ -77,12 +77,14 @@
                 v-else-if="project.color"
                 class="project-color"
                 :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }"
-              ></div>
+              />
             </div>
 
             <span class="project-name">{{ getNestedName(project) }}</span>
 
-            <div class="task-count">{{ getProjectTaskCount(project.id) }}</div>
+            <div class="task-count">
+              {{ getProjectTaskCount(project.id) }}
+            </div>
 
             <div v-if="activeProjectId === project.id" class="active-indicator">
               <Check :size="14" />
@@ -97,7 +99,7 @@
       v-if="isOpen"
       class="click-outside-overlay"
       @click="closeDropdown"
-    ></div>
+    />
   </div>
 </template>
 

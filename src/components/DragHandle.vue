@@ -2,16 +2,16 @@
   <div
     class="drag-handle"
     :class="dragHandleClasses"
-    @mousedown="handleMouseDown"
-    @touchstart="handleTouchStart"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
     :title="enhancedTitle"
     role="button"
     tabindex="0"
     :aria-label="enhancedAriaLabel"
     :aria-disabled="disabled"
     :aria-describedby="isDragging ? 'drag-status' : undefined"
+    @mousedown="handleMouseDown"
+    @touchstart="handleTouchStart"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
     @keydown.enter="handleKeyDown"
     @keydown.space.prevent="handleKeyDown"
     @keydown.esc="handleEscape"
@@ -39,24 +39,24 @@
             class="drag-handle__dot"
             :class="getDotClasses(index)"
             :style="getDotStyle(index)"
-          ></div>
+          />
         </div>
 
         <!-- Enhanced visual feedback layers -->
-        <div class="drag-handle__glow-layer"></div>
-        <div class="drag-handle__pulse-layer"></div>
-        <div class="drag-handle__trail-layer"></div>
+        <div class="drag-handle__glow-layer" />
+        <div class="drag-handle__pulse-layer" />
+        <div class="drag-handle__trail-layer" />
       </div>
 
       <!-- Advanced drag indicators -->
       <div class="drag-handle__indicators" :class="indicatorClasses">
-        <div class="drag-handle__indicator drag-handle__indicator--horizontal"></div>
-        <div class="drag-handle__indicator drag-handle__indicator--vertical"></div>
-        <div class="drag-handle__indicator drag-handle__indicator--diagonal"></div>
+        <div class="drag-handle__indicator drag-handle__indicator--horizontal" />
+        <div class="drag-handle__indicator drag-handle__indicator--vertical" />
+        <div class="drag-handle__indicator drag-handle__indicator--diagonal" />
       </div>
 
       <!-- Touch feedback overlay -->
-      <div v-if="showTouchFeedback" class="drag-handle__touch-feedback"></div>
+      <div v-if="showTouchFeedback" class="drag-handle__touch-feedback" />
     </div>
 
     <!-- Floating drag hints -->
@@ -87,7 +87,7 @@
       >
         <div class="drag-handle__ghost-content">
           <div class="drag-handle__ghost-dots">
-            <div v-for="n in 6" :key="n" class="drag-handle__ghost-dot"></div>
+            <div v-for="n in 6" :key="n" class="drag-handle__ghost-dot" />
           </div>
         </div>
       </div>

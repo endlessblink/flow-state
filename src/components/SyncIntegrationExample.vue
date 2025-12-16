@@ -20,14 +20,26 @@
           <h3>Sync Controls</h3>
           <div class="control-buttons">
             <button
-              @click="triggerManualSync"
               :disabled="isSyncing || !canSync"
               class="btn btn-primary"
+              @click="triggerManualSync"
             >
               <span v-if="isSyncing" class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  class="animate-spin h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 Syncing...
               </span>
@@ -35,38 +47,50 @@
             </button>
 
             <button
-              @click="pauseSync"
               :disabled="!isSyncing"
               class="btn btn-secondary"
+              @click="pauseSync"
             >
               Pause
             </button>
 
             <button
-              @click="resumeSync"
               :disabled="isSyncing"
               class="btn btn-secondary"
+              @click="resumeSync"
             >
               Resume
             </button>
 
             <button
-              @click="clearErrors"
               :disabled="!hasErrors"
               class="btn btn-outline"
+              @click="clearErrors"
             >
               Clear Errors
             </button>
 
             <button
-              @click="runTests"
               :disabled="isTesting"
               class="btn btn-ghost"
+              @click="runTests"
             >
               <span v-if="isTesting" class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  class="animate-spin h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 Testing...
               </span>
@@ -93,15 +117,21 @@
               v-model="testKey"
               placeholder="Test key"
               class="input"
-            />
+            >
             <input
               v-model="testValue"
               placeholder="Test value"
               class="input"
-            />
-            <button @click="saveTestData" class="btn btn-sm btn-primary">Save</button>
-            <button @click="loadTestData" class="btn btn-sm btn-secondary">Load</button>
-            <button @click="removeTestData" class="btn btn-sm btn-outline">Remove</button>
+            >
+            <button class="btn btn-sm btn-primary" @click="saveTestData">
+              Save
+            </button>
+            <button class="btn btn-sm btn-secondary" @click="loadTestData">
+              Load
+            </button>
+            <button class="btn btn-sm btn-outline" @click="removeTestData">
+              Remove
+            </button>
           </div>
           <div v-if="operationResult" class="operation-result">
             <strong>Result:</strong> {{ operationResult }}
@@ -162,7 +192,9 @@
                 <span class="error-direction">{{ error.direction || 'Unknown' }}</span>
                 <span class="error-time">{{ formatTimestamp(error.timestamp) }}</span>
               </div>
-              <div class="error-message">{{ error.message }}</div>
+              <div class="error-message">
+                {{ error.message }}
+              </div>
               <div v-if="error.retryCount !== undefined" class="error-meta">
                 Retry {{ error.retryCount }} • {{ error.isRetryable ? 'Retryable' : 'Not Retryable' }}
               </div>

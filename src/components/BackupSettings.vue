@@ -2,7 +2,9 @@
   <div class="backup-settings">
     <div class="settings-header">
       <h3>🔒 Bulletproof Backup System</h3>
-      <p class="subtitle">Never lose your tasks again - Multiple redundancy layers</p>
+      <p class="subtitle">
+        Never lose your tasks again - Multiple redundancy layers
+      </p>
     </div>
 
     <!-- Data Integrity Status -->
@@ -41,15 +43,31 @@
           <span>Backup Frequency</span>
           <span class="setting-description">How often to automatically create backups</span>
         </label>
-        <select v-model="schedule.frequency" @change="updateFrequency" class="setting-select">
-          <option value="off">Disabled</option>
-          <option value="5min">Every 5 minutes</option>
-          <option value="15min">Every 15 minutes</option>
-          <option value="30min">Every 30 minutes</option>
-          <option value="1hour">Every hour</option>
-          <option value="6hours">Every 6 hours</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
+        <select v-model="schedule.frequency" class="setting-select" @change="updateFrequency">
+          <option value="off">
+            Disabled
+          </option>
+          <option value="5min">
+            Every 5 minutes
+          </option>
+          <option value="15min">
+            Every 15 minutes
+          </option>
+          <option value="30min">
+            Every 30 minutes
+          </option>
+          <option value="1hour">
+            Every hour
+          </option>
+          <option value="6hours">
+            Every 6 hours
+          </option>
+          <option value="daily">
+            Daily
+          </option>
+          <option value="weekly">
+            Weekly
+          </option>
         </select>
       </div>
 
@@ -58,20 +76,26 @@
           <span>Storage Location</span>
           <span class="setting-description">Where to store your backups</span>
         </label>
-        <select v-model="schedule.storageLocation" @change="updateStorageLocation" class="setting-select">
-          <option value="local">Local only</option>
-          <option value="cloud">Cloud only</option>
-          <option value="both">Local + Cloud</option>
+        <select v-model="schedule.storageLocation" class="setting-select" @change="updateStorageLocation">
+          <option value="local">
+            Local only
+          </option>
+          <option value="cloud">
+            Cloud only
+          </option>
+          <option value="both">
+            Local + Cloud
+          </option>
         </select>
       </div>
 
       <div class="setting-group">
         <label class="setting-label">
           <input
-            type="checkbox"
             v-model="schedule.autoDownload"
+            type="checkbox"
             @change="updateAutoDownload"
-          />
+          >
           <span>Auto-download backups</span>
           <span class="setting-description">Automatically download backup files to your computer</span>
         </label>
@@ -83,13 +107,13 @@
           <span class="setting-description">Keep only the most recent backups</span>
         </label>
         <input
-          type="number"
           v-model.number="schedule.maxBackups"
-          @change="updateMaxBackups"
+          type="number"
           min="5"
           max="100"
           class="setting-input"
-        />
+          @change="updateMaxBackups"
+        >
       </div>
     </div>
 
@@ -99,27 +123,27 @@
 
       <div class="control-buttons">
         <button
-          @click="startScheduler"
           :disabled="isSchedulerRunning && !isSchedulerPaused"
           class="control-btn start"
+          @click="startScheduler"
         >
           <Play :size="16" />
           Start
         </button>
 
         <button
-          @click="pauseScheduler"
           :disabled="!isSchedulerRunning || isSchedulerPaused"
           class="control-btn pause"
+          @click="pauseScheduler"
         >
           <Pause :size="16" />
           Pause
         </button>
 
         <button
-          @click="stopScheduler"
           :disabled="!isSchedulerRunning"
           class="control-btn stop"
+          @click="stopScheduler"
         >
           <Square :size="16" />
           Stop
@@ -132,19 +156,19 @@
       <h4>🚀 Backup Actions</h4>
 
       <div class="action-buttons">
-        <button @click="createManualBackup" :disabled="isCreatingBackup" class="action-btn primary">
+        <button :disabled="isCreatingBackup" class="action-btn primary" @click="createManualBackup">
           <RefreshCw v-if="isCreatingBackup" :size="16" class="animate-spin" />
           <Download v-else :size="16" />
           Create Backup
         </button>
 
-        <button @click="validateData" :disabled="isValidating" class="action-btn secondary">
+        <button :disabled="isValidating" class="action-btn secondary" @click="validateData">
           <Shield v-if="!isValidating" :size="16" />
           <Loader v-else :size="16" class="animate-spin" />
           Validate Data
         </button>
 
-        <button @click="viewRecoveryCenter" class="action-btn accent">
+        <button class="action-btn accent" @click="viewRecoveryCenter">
           <Activity :size="16" />
           Recovery Center
         </button>
@@ -152,7 +176,7 @@
     </div>
 
     <!-- Backup History -->
-    <div class="backup-history" v-if="backupHistory.length > 0">
+    <div v-if="backupHistory.length > 0" class="backup-history">
       <h4>📜 Recent History</h4>
       <div class="history-list">
         <div v-for="(backup, index) in backupHistory.slice(0, 5)" :key="index" class="history-item">
@@ -161,7 +185,7 @@
             <span class="history-status" :class="{ success: backup.success, failed: !backup.success }">
               {{ backup.success ? '✅ Success' : '❌ Failed' }}
             </span>
-            <span class="history-size" v-if="backup.success">{{ formatSize(backup.size) }}</span>
+            <span v-if="backup.success" class="history-size">{{ formatSize(backup.size) }}</span>
           </div>
         </div>
       </div>

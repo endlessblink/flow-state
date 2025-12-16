@@ -94,7 +94,7 @@
             v-else-if="projectVisual.type === 'css-circle'"
             class="project-css-circle"
             :style="{ '--project-color': projectVisual.color }"
-          ></div>
+          />
           <!-- Default fallback (folder icon) -->
           <ProjectEmojiIcon
             v-else
@@ -108,15 +108,25 @@
       <div class="task-row__status">
         <select
           :value="task.status"
-          @change="updateTaskStatus(task.id, ($event.target as HTMLSelectElement).value)"
           class="task-row__status-select"
           title="Change status"
+          @change="updateTaskStatus(task.id, ($event.target as HTMLSelectElement).value)"
         >
-          <option value="planned">To Do</option>
-          <option value="in_progress">In Progress</option>
-          <option value="done">Done</option>
-          <option value="backlog">Backlog</option>
-          <option value="on_hold">On Hold</option>
+          <option value="planned">
+            To Do
+          </option>
+          <option value="in_progress">
+            In Progress
+          </option>
+          <option value="done">
+            Done
+          </option>
+          <option value="backlog">
+            Backlog
+          </option>
+          <option value="on_hold">
+            On Hold
+          </option>
         </select>
       </div>
 
@@ -130,8 +140,8 @@
             'task-row__priority-badge--medium': task.priority === 'medium',
             'task-row__priority-badge--low': task.priority === 'low'
           }"
-          @click.stop="cyclePriority(task.id, task.priority)"
           title="Click to change priority"
+          @click.stop="cyclePriority(task.id, task.priority)"
         >
           {{ formatPriority(task.priority) }}
         </span>
@@ -149,7 +159,7 @@
       <!-- Progress (matches TaskTable progress-cell) -->
       <div class="task-row__progress">
         <div class="task-row__progress-bar">
-          <div class="task-row__progress-fill" :style="{ width: `${task.progress || 0}%` }"></div>
+          <div class="task-row__progress-fill" :style="{ width: `${task.progress || 0}%` }" />
           <span class="task-row__progress-text">{{ task.progress || 0 }}%</span>
         </div>
       </div>
@@ -157,26 +167,26 @@
       <!-- Actions (matches TaskTable actions-cell) -->
       <div class="task-row__actions">
         <button
-          @click.stop="$emit('startTimer', task.id)"
           class="task-row__action-btn"
           title="Start Timer"
           :aria-label="`Start timer for ${task.title}`"
+          @click.stop="$emit('startTimer', task.id)"
         >
           <Play :size="14" />
         </button>
         <button
-          @click.stop="$emit('edit', task.id)"
           class="task-row__action-btn"
           title="Edit Task"
           :aria-label="`Edit ${task.title}`"
+          @click.stop="$emit('edit', task.id)"
         >
           <Edit :size="14" />
         </button>
         <button
-          @click.stop="$emit('duplicate', task.id)"
           class="task-row__action-btn"
           title="Duplicate Task"
           :aria-label="`Duplicate ${task.title}`"
+          @click.stop="$emit('duplicate', task.id)"
         >
           <Copy :size="14" />
         </button>
@@ -194,12 +204,12 @@
           :indent-level="indentLevel + 1"
           :expanded-tasks="expandedTasks"
           @select="$emit('select', $event)"
-          @toggleComplete="$emit('toggleComplete', $event)"
-          @startTimer="$emit('startTimer', $event)"
+          @toggle-complete="$emit('toggleComplete', $event)"
+          @start-timer="$emit('startTimer', $event)"
           @edit="$emit('edit', $event)"
-          @contextMenu="$emit('contextMenu', $event, childTask)"
-          @toggleExpand="$emit('toggleExpand', $event)"
-          @moveTask="(taskId, targetProjectId, targetParentId) => $emit('moveTask', taskId, targetProjectId, targetParentId)"
+          @context-menu="$emit('contextMenu', $event, childTask)"
+          @toggle-expand="$emit('toggleExpand', $event)"
+          @move-task="(taskId, targetProjectId, targetParentId) => $emit('moveTask', taskId, targetProjectId, targetParentId)"
         />
       </div>
     </template>

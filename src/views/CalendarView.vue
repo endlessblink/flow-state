@@ -1,5 +1,5 @@
 <template>
-<div class="calendar-layout">
+  <div class="calendar-layout">
     <!-- Unified Inbox Panel -->
     <Transition name="sidebar-slide">
       <UnifiedInboxPanel v-show="uiStore.secondarySidebarVisible" context="calendar" />
@@ -25,22 +25,22 @@
 
     <!-- Task Context Menu -->
     <TaskContextMenu
-      :isVisible="showContextMenu"
+      :is-visible="showContextMenu"
       :x="contextMenuX"
       :y="contextMenuY"
       :task="contextMenuTask"
-      :compactMode="false"
+      :compact-mode="false"
       @close="closeContextMenu"
       @edit="handleEditTask"
-      @confirmDelete="handleConfirmDelete"
+      @confirm-delete="handleConfirmDelete"
     />
 
     <!-- Delete Confirmation Modal -->
     <ConfirmationModal
-      :isOpen="showConfirmModal"
+      :is-open="showConfirmModal"
       title="Delete Task"
       message="Are you sure you want to delete this task? This action cannot be undone."
-      confirmText="Delete"
+      confirm-text="Delete"
       @confirm="confirmDeleteTask"
       @cancel="cancelDeleteTask"
     />
@@ -50,11 +50,13 @@
       <!-- Calendar Header -->
       <div class="calendar-header">
         <div class="date-navigation">
-          <button class="nav-btn" @click="previousDay" title="Previous Day">
+          <button class="nav-btn" title="Previous Day" @click="previousDay">
             <ChevronLeft :size="16" :stroke-width="1.5" />
           </button>
-          <h2 class="current-date">{{ formatCurrentDate }}</h2>
-          <button class="nav-btn" @click="nextDay" title="Next Day">
+          <h2 class="current-date">
+            {{ formatCurrentDate }}
+          </h2>
+          <button class="nav-btn" title="Next Day" @click="nextDay">
             <ChevronRight :size="16" :stroke-width="1.5" />
           </button>
         </div>
@@ -112,19 +114,27 @@
         </div>
 
         <!-- Slots Container - Tasks render INSIDE slots (no absolute positioning) -->
-        <div class="slots-container" ref="timeGridRef">
+        <div ref="timeGridRef" class="slots-container">
           <!-- Ghost Preview (only shown during inbox drag) - absolute positioning for smooth tracking -->
-          <div v-if="dragGhost.visible" class="ghost-preview-inline" :style="{
-            position: 'absolute',
-            top: `${dragGhost.slotIndex * 30}px`,
-            height: `${Math.ceil(dragGhost.duration / 30) * 30}px`,
-            left: '4px',
-            right: '4px',
-            zIndex: 50
-          }">
+          <div
+            v-if="dragGhost.visible"
+            class="ghost-preview-inline"
+            :style="{
+              position: 'absolute',
+              top: `${dragGhost.slotIndex * 30}px`,
+              height: `${Math.ceil(dragGhost.duration / 30) * 30}px`,
+              left: '4px',
+              right: '4px',
+              zIndex: 50
+            }"
+          >
             <div class="ghost-content">
-              <div class="ghost-title">{{ dragGhost.title }}</div>
-              <div class="ghost-duration">{{ dragGhost.duration }}min</div>
+              <div class="ghost-title">
+                {{ dragGhost.title }}
+              </div>
+              <div class="ghost-duration">
+                {{ dragGhost.duration }}min
+              </div>
             </div>
           </div>
 
@@ -144,7 +154,7 @@
             :data-minute="slot.minute"
             :data-time="formatSlotTime(slot)"
             @dragover.prevent="onDragOver($event, slot)"
-                @dragenter.prevent="onDragEnter($event, slot)"
+            @dragenter.prevent="onDragEnter($event, slot)"
             @dragleave="onDragLeave"
             @drop.prevent="onDropSlot($event, slot)"
             @mousedown="dragCreate.handleSlotMouseDown($event, slot)"
@@ -161,11 +171,11 @@
                   'has-overlap': calEvent.totalColumns > 1
                 }"
                 :style="getSlotTaskStyle(calEvent)"
-                @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
-                @mouseleave="handleSlotTaskMouseLeave()"
                 :data-duration="calEvent.duration"
                 :data-task-id="calEvent.taskId"
                 draggable="true"
+                @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
+                @mouseleave="handleSlotTaskMouseLeave()"
                 @dragstart="handleEventDragStart($event, calEvent)"
                 @dragend="handleEventDragEnd($event, calEvent)"
                 @click="handleEventClick($event, calEvent)"
@@ -190,53 +200,57 @@
                   class="project-stripe project-color-stripe"
                   :style="{ backgroundColor: getProjectColor(calEvent) }"
                   :title="`Project: ${getProjectName(calEvent)}`"
-                ></div>
+                />
 
                 <!-- Priority Stripe -->
                 <div
                   class="priority-stripe"
                   :class="`priority-${getPriorityClass(calEvent)}`"
                   :title="`Priority: ${getPriorityLabel(calEvent)}`"
-                ></div>
+                />
 
                 <!-- Task Content -->
                 <div class="task-content">
                   <div class="task-header">
-                    <div class="task-title">{{ calEvent.title }}</div>
+                    <div class="task-title">
+                      {{ calEvent.title }}
+                    </div>
                     <div class="task-actions">
                       <div
                         class="status-indicator"
                         :class="`status-${getTaskStatus(calEvent)}`"
-                        @click.stop="cycleTaskStatus($event, calEvent)"
                         :title="`Status: ${getStatusLabel(calEvent)} (click to change)`"
+                        @click.stop="cycleTaskStatus($event, calEvent)"
                       >
                         {{ getStatusIcon(getTaskStatus(calEvent)) }}
                       </div>
                       <button
                         class="remove-from-calendar-btn"
-                        @click.stop="handleRemoveFromCalendar(calEvent)"
                         title="Remove from calendar (move to inbox)"
+                        @click.stop="handleRemoveFromCalendar(calEvent)"
                       >
                         ✕
                       </button>
                     </div>
                   </div>
-                  <div class="task-duration">{{ calEvent.duration }}min</div>
+                  <div class="task-duration">
+                    {{ calEvent.duration }}min
+                  </div>
                 </div>
 
                 <!-- Resize Handle (top for changing start time) -->
                 <div
                   class="resize-handle resize-top"
-                  @mousedown.stop="startResize($event, calEvent, 'top')"
                   title="Drag to change start time"
-                ></div>
+                  @mousedown.stop="startResize($event, calEvent, 'top')"
+                />
 
                 <!-- Resize Handle (bottom for changing duration) -->
                 <div
                   class="resize-handle resize-bottom"
-                  @mousedown.stop="startResize($event, calEvent, 'bottom')"
                   title="Drag to change duration"
-                ></div>
+                  @mousedown.stop="startResize($event, calEvent, 'bottom')"
+                />
 
                 <!-- Resize Preview Overlay - shows projected size during drag -->
                 <div
@@ -260,14 +274,18 @@
       <div v-else-if="viewMode === 'week'" class="week-view">
         <!-- Week Header -->
         <div class="week-header">
-          <div class="week-time-label"></div>
+          <div class="week-time-label" />
           <div
             v-for="(day, index) in weekDays"
             :key="index"
             class="week-day-header"
           >
-            <div class="week-day-name">{{ day.dayName }}</div>
-            <div class="week-day-date">{{ day.date }}</div>
+            <div class="week-day-name">
+              {{ day.dayName }}
+            </div>
+            <div class="week-day-date">
+              {{ day.date }}
+            </div>
           </div>
         </div>
 
@@ -300,7 +318,7 @@
                   @drop="handleWeekDrop($event, day.dateString, hour)"
                   @dragover.prevent="handleWeekDragOver"
                   @dragenter.prevent
-                ></div>
+                />
               </div>
             </div>
 
@@ -324,9 +342,9 @@
                 <!-- Top Resize Handle -->
                 <div
                   class="resize-handle resize-top"
-                  @mousedown.stop="startWeekResize($event, event, 'top')"
                   title="Resize start time"
-                ></div>
+                  @mousedown.stop="startWeekResize($event, event, 'top')"
+                />
 
                 <!-- Project Stripe -->
                 <div
@@ -346,14 +364,14 @@
                   class="project-stripe project-color-stripe"
                   :style="{ backgroundColor: getProjectColor(event) }"
                   :title="`Project: ${getProjectName(event)}`"
-                ></div>
+                />
 
                 <!-- Priority Stripe -->
                 <div
                   class="priority-stripe"
                   :class="`priority-${getPriorityClass(event)}`"
                   :title="`Priority: ${getPriorityLabel(event)}`"
-                ></div>
+                />
 
                 <!-- Event Content -->
                 <div
@@ -362,34 +380,38 @@
                   @contextmenu.prevent="handleEventContextMenu($event, event)"
                 >
                   <div class="event-header">
-                    <div class="event-title">{{ event.title }}</div>
+                    <div class="event-title">
+                      {{ event.title }}
+                    </div>
                     <div class="event-actions">
                       <div
                         class="status-indicator"
                         :class="`status-${getTaskStatus(event)}`"
-                        @click.stop="cycleTaskStatus($event, event)"
                         :title="`Status: ${getStatusLabel(event)} (click to change)`"
+                        @click.stop="cycleTaskStatus($event, event)"
                       >
                         {{ getStatusIcon(getTaskStatus(event)) }}
                       </div>
                       <button
                         class="remove-from-calendar-btn"
+                        title="Remove from calendar (move to inbox)"
                         @click.stop="handleRemoveFromCalendar(event)"
-                        :title="`Remove from calendar (move to inbox)`"
                       >
                         ✕
                       </button>
                     </div>
                   </div>
-                  <div class="event-duration">{{ event.duration }}min</div>
+                  <div class="event-duration">
+                    {{ event.duration }}min
+                  </div>
                 </div>
 
                 <!-- Bottom Resize Handle -->
                 <div
                   class="resize-handle resize-bottom"
-                  @mousedown.stop="startWeekResize($event, event, 'bottom')"
                   title="Resize end time"
-                ></div>
+                  @mousedown.stop="startWeekResize($event, event, 'bottom')"
+                />
               </div>
             </div>
 
@@ -405,7 +427,7 @@
                   :key="`time-${dayIndex}-${hour}`"
                   class="week-time-indicator"
                   :class="{ 'current-time': isCurrentWeekTimeCell(day.dateString, hour) }"
-                ></div>
+                />
               </div>
             </div>
           </div>
@@ -429,7 +451,9 @@
             @dragenter.prevent
             @click="handleMonthDayClick(day.dateString)"
           >
-            <div class="day-number">{{ day.dayNumber }}</div>
+            <div class="day-number">
+              {{ day.dayNumber }}
+            </div>
 
             <div class="day-events">
               <div
@@ -446,36 +470,36 @@
                 @click.stop
               >
                 <!-- Project Stripe -->
-              <div
-                v-if="getProjectVisual(event).type === 'emoji'"
-                class="project-indicator project-emoji-indicator"
-                :title="`Project: ${getProjectName(event)}`"
-              >
-                <ProjectEmojiIcon
-                  :emoji="getProjectVisual(event).content"
-                  size="xs"
+                <div
+                  v-if="getProjectVisual(event).type === 'emoji'"
+                  class="project-indicator project-emoji-indicator"
                   :title="`Project: ${getProjectName(event)}`"
-                  class="project-emoji"
+                >
+                  <ProjectEmojiIcon
+                    :emoji="getProjectVisual(event).content"
+                    size="xs"
+                    :title="`Project: ${getProjectName(event)}`"
+                    class="project-emoji"
+                  />
+                </div>
+                <div
+                  v-else
+                  class="project-indicator project-color-indicator"
+                  :style="{ backgroundColor: getProjectColor(event) }"
+                  :title="`Project: ${getProjectName(event)}`"
                 />
-              </div>
-              <div
-                v-else
-                class="project-indicator project-color-indicator"
-                :style="{ backgroundColor: getProjectColor(event) }"
-                :title="`Project: ${getProjectName(event)}`"
-              ></div>
 
-              <!-- Priority Stripe -->
-              <div
-                class="priority-stripe"
-                :class="`priority-${getPriorityClass(event)}`"
-                :title="`Priority: ${getPriorityLabel(event)}`"
-              ></div>
+                <!-- Priority Stripe -->
+                <div
+                  class="priority-stripe"
+                  :class="`priority-${getPriorityClass(event)}`"
+                  :title="`Priority: ${getPriorityLabel(event)}`"
+                />
                 <span class="event-time">{{ formatEventTime(event) }}</span>
                 <span 
                   class="event-title-short"
-                  @click.stop="cycleTaskStatus($event, event)"
                   :title="`Status: ${getStatusLabel(event)} (click to change)`"
+                  @click.stop="cycleTaskStatus($event, event)"
                 >
                   {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}
                 </span>
@@ -498,6 +522,7 @@ import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
+import { useCalendarScroll } from '@/composables/calendar/useCalendarScroll'
 import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
@@ -525,72 +550,15 @@ const recordingStatus = ref({ duration: 0, eventsCaptured: 0 })
 const lastAnalysis = ref<InteractionAnalysis | null>(null)
 const showRecordingPanel = ref(false)
 
-// Debug function to inventory all tasks with their statuses
-const debugTaskInventory = () => {
-  console.log('🚨 CALENDAR VIEW: === TASK INVENTORY DEBUG ===')
-  console.log('🚨 CALENDAR VIEW: Total tasks in store:', taskStore.tasks.length)
-
-  const tasksByStatus = {
-    planned: taskStore.tasks.filter(t => t.status === 'planned'),
-    'in-progress': taskStore.tasks.filter(t => t.status === 'in_progress'),
-    done: taskStore.tasks.filter(t => t.status === 'done'),
-    backlog: taskStore.tasks.filter(t => t.status === 'backlog'),
-    'on_hold': taskStore.tasks.filter(t => t.status === 'on_hold')
-  }
-
-  console.log('🚨 CALENDAR VIEW: Tasks by status:')
-  Object.entries(tasksByStatus).forEach(([status, tasks]) => {
-    console.log(`🚨 CALENDAR VIEW:   ${status}: ${tasks.length} tasks`)
-    tasks.forEach(task => {
-      console.log(`🚨 CALENDAR VIEW:     - "${task.title}" (ID: ${task.id})`)
-      const instances = taskStore.getTaskInstances(task)
-      if (instances.length > 0) {
-        console.log(`🚨 CALENDAR VIEW:       Instances: ${instances.map(i => `${i.scheduledDate} ${i.scheduledTime}`).join(', ')}`)
-      }
-    })
-  })
-
-  console.log('🚨 CALENDAR VIEW: Current filtered tasks:', taskStore.filteredTasks.length)
-  console.log('🚨 CALENDAR VIEW: Current calendar events:', calendarEvents.value.length)
-  console.log('🚨 CALENDAR VIEW: === END TASK INVENTORY ===')
-}
-
 // Status filter change handler using global TaskStore
-const handleStatusFilterChange = (event: MouseEvent, newFilter: 'planned' | 'in_progress' | 'done' | null) => {
-  // Prevent event bubbling that might interfere with other click handlers
-  event.stopPropagation()
-  console.log('🚨 CALENDAR VIEW: Status filter button clicked!')
-  console.log('🚨 CALENDAR VIEW: Previous filter:', statusFilter.value)
-  console.log('🚨 CALENDAR VIEW: New filter:', newFilter)
-  console.log('🚨 CALENDAR VIEW: Event target:', event.target)
-
-  // Show task inventory before filter change
-  debugTaskInventory()
-
-  // Use global TaskStore method to set status filter
+const handleStatusFilterChange = (_event: MouseEvent, newFilter: 'planned' | 'in_progress' | 'done' | null) => {
   taskStore.setActiveStatusFilter(newFilter)
-
-  console.log('🚨 CALENDAR VIEW: Filter updated via TaskStore, current value:', statusFilter.value)
-  console.log('🚨 CALENDAR VIEW: Task store filteredTasks count:', taskStore.filteredTasks.length)
-
-  // Force Vue reactivity check
-  nextTick(() => {
-    console.log('🚨 CALENDAR VIEW: After nextTick, filter value:', statusFilter.value)
-    console.log('🚨 CALENDAR VIEW: Task store filteredTasks count after tick:', taskStore.filteredTasks.length)
-    console.log('🚨 CALENDAR VIEW: Calendar events after filter:', calendarEvents.value.length)
-
-    // Show which calendar events passed the filter
-    console.log('🚨 CALENDAR VIEW: Calendar events after filter:')
-    calendarEvents.value.forEach(event => {
-      const task = taskStore.tasks.find(t => t.id === event.taskId)
-      console.log(`🚨 CALENDAR VIEW:   - "${event.title}" (Status: ${task?.status}, Task ID: ${event.taskId})`)
-    })
-  })
 }
 
 // Composables - Refactored logic into focused modules
 const dragCreate = useCalendarDragCreate()
 const eventHelpers = useCalendarCore()
+const calendarScroll = useCalendarScroll()
 const dayView = useCalendarDayView(currentDate, statusFilter)
 const weekView = useCalendarWeekView(currentDate, statusFilter)
 const monthView = useCalendarMonthView(currentDate, statusFilter)
@@ -639,13 +607,14 @@ const { monthDays, handleMonthDragStart, handleMonthDrop, handleMonthDragEnd, ha
 
 const { formatHour, formatEventTime, getPriorityClass, getPriorityLabel,
         getTaskStatus, getStatusLabel, getStatusIcon, cycleTaskStatus,
-        getProjectColor, getProjectEmoji, getProjectName } = eventHelpers
+        getProjectColor, getProjectEmoji, getProjectName, getProjectVisual,
+        formatSlotTime, isCurrentTimeSlot: checkCurrentTimeSlot, getWeekStart } = eventHelpers
 
-// Helper function to get project visual for calendar events
-const getProjectVisual = (event: any) => {
-  if (!event.projectId) return { type: 'default', content: '📁' }
-  return taskStore.getProjectVisual(event.projectId)
-}
+// Destructure scroll composable
+const { setupScrollSync, cleanupScrollSync, scrollToCurrentTime } = calendarScroll
+
+// Wrapper for isCurrentTimeSlot that passes current time
+const isCurrentTimeSlot = (slot: any) => checkCurrentTimeSlot(slot, currentTime.value)
 
 // Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
 const getSlotTaskStyle = (calEvent: any) => {
@@ -711,11 +680,6 @@ const handleVueDraggableAdd = (evt: any) => {
 const handleVueDraggableChange = (evt: any) => {
   // Optional: handle change events for debugging
   console.log('[Calendar] vuedraggable change:', evt)
-}
-
-// Helper to format slot time for data attribute
-const formatSlotTime = (slot: any) => {
-  return `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
 }
 
 // Native HTML5 Drag-Drop handlers for inbox → calendar (per PomoFlow Development Prompt)
@@ -812,61 +776,6 @@ const handleDropCapture = (e: DragEvent) => {
   if (slotObj) handleDrop(e, slotObj)
 }
 
-// Scroll synchronization
-let calendarEventsContainer: HTMLElement | null = null
-let timeLabelsContainer: HTMLElement | null = null
-let scrollHandler: ((event: Event) => void) | null = null
-
-const setupScrollSync = () => {
-  // Use nextTick to ensure DOM is ready
-  nextTick(() => {
-    calendarEventsContainer = document.querySelector('.calendar-events-container') as HTMLElement
-    timeLabelsContainer = document.querySelector('.time-labels') as HTMLElement
-
-    if (calendarEventsContainer && timeLabelsContainer) {
-      scrollHandler = () => {
-        if (timeLabelsContainer && calendarEventsContainer) {
-          timeLabelsContainer.scrollTop = calendarEventsContainer.scrollTop
-        }
-      }
-
-      calendarEventsContainer.addEventListener('scroll', scrollHandler, { passive: true })
-    }
-  })
-}
-
-// Scroll to current time functionality
-const scrollToCurrentTime = () => {
-  // Use nextTick to ensure DOM is ready and time slots are rendered
-  nextTick(() => {
-    const container = document.querySelector('.calendar-grid') as HTMLElement
-    if (!container) return
-
-    const now = new Date()
-    const currentHour = now.getHours()
-    const currentMinute = now.getMinutes()
-
-    // Calculate which time slot to scroll to (30-minute slots)
-    const slotIndex = Math.floor((currentHour * 2) + (currentMinute >= 30 ? 1 : 0))
-    const slotHeight = 30 // Each slot is 30px high
-
-    // Calculate scroll position with some offset to show current time in upper portion
-    const scrollTop = slotIndex * slotHeight - 100 // 100px offset from top
-
-    // Scroll to the calculated position
-    container.scrollTo({
-      top: Math.max(0, scrollTop),
-      behavior: 'smooth'
-    })
-  })
-}
-
-const cleanupScrollSync = () => {
-  if (calendarEventsContainer && scrollHandler) {
-    calendarEventsContainer.removeEventListener('scroll', scrollHandler)
-  }
-}
-
 // Listen for start-task-now events
 const handleStartTaskNow = () => {
   // Ensure we're in day view
@@ -961,16 +870,6 @@ watch(currentDate, (newDate, oldDate) => {
   }
 }, { immediate: false })
 
-// Helper to get week start (for date formatting only)
-const getWeekStart = (date: Date): Date => {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  d.setDate(diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
 // Formatted current date for header
 const formatCurrentDate = computed(() => {
   if (viewMode.value === 'week') {
@@ -1003,16 +902,6 @@ const formatCurrentDate = computed(() => {
     day: 'numeric'
   })
 })
-
-// Current time slot detection (not extracted to composable as it uses local currentTime ref)
-const isCurrentTimeSlot = (slot: any) => {
-  const now = currentTime.value
-  const slotDate = new Date(`${slot.date}T${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`)
-  const slotEnd = new Date(slotDate.getTime() + 30 * 60000)
-
-  return now >= slotDate && now < slotEnd &&
-         slot.date === now.toISOString().split('T')[0]
-}
 
 const previousDay = () => {
   const date = new Date(currentDate.value)
@@ -1245,20 +1134,9 @@ const handleMonthDayClick = (dateString: string) => {
   monthDayClickHandler(dateString, viewMode)
 }
 
-// Debug function to test toggle functionality
-const handleToggleDoneTasks = (event: MouseEvent) => {
-  // Prevent event bubbling that might interfere with other click handlers
-  event.stopPropagation()
-  console.log('🔧 CalendarView: Toggle button clicked!')
-  console.log('🔧 CalendarView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
-
-  try {
-    taskStore.toggleHideDoneTasks()
-    console.log('🔧 CalendarView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
-    console.log('🔧 CalendarView: Method call successful')
-  } catch (error) {
-    console.error('🔧 CalendarView: Error calling toggleHideDoneTasks:', error)
-  }
+// Toggle hide done tasks
+const handleToggleDoneTasks = (_event: MouseEvent) => {
+  taskStore.toggleHideDoneTasks()
 }
 </script>
 

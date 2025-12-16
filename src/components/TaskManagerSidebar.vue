@@ -7,7 +7,7 @@
         <span class="title-text">Tasks</span>
         <span class="task-count-badge">{{ visibleTaskCount }}</span>
       </div>
-      <button class="add-task-btn" @click="$emit('addTask')" title="Add new task">
+      <button class="add-task-btn" title="Add new task" @click="$emit('addTask')">
         <Plus :size="16" :stroke-width="1.5" />
       </button>
     </div>
@@ -24,19 +24,21 @@
           :class="{ 'search-focused': searchFocused }"
           @focus="searchFocused = true"
           @blur="searchFocused = false"
-        />
-        <div class="search-shortcut" v-if="!searchQuery">⌘K</div>
+        >
+        <div v-if="!searchQuery" class="search-shortcut">
+          ⌘K
+        </div>
       </div>
     </div>
 
     <!-- Task List - Drop zone to unschedule tasks -->
     <div
       class="task-list"
+      :class="{ 'drag-over': isDragOver }"
       @drop="handleDrop"
       @dragover.prevent
       @dragenter="isDragOver = true"
       @dragleave="isDragOver = false"
-      :class="{ 'drag-over': isDragOver }"
     >
       <div
         v-for="task in rootTasks"
@@ -67,7 +69,7 @@
             >
               <ChevronRight :size="14" :stroke-width="1.5" />
             </div>
-            <div v-else class="expand-spacer"></div>
+            <div v-else class="expand-spacer" />
 
             <!-- Left side: Task info -->
             <div class="task-info">
@@ -80,7 +82,7 @@
                   <span v-if="getTaskInstances(task).length > 0" class="instance-badge" :title="`${getTaskInstances(task).length} calendar instance(s)`">
                     {{ getTaskInstances(task).length }}×
                   </span>
-                  <span class="priority-badge" :class="task.priority" v-if="task.priority !== 'medium'">
+                  <span v-if="task.priority !== 'medium'" class="priority-badge" :class="task.priority">
                     <Flag :size="12" :stroke-width="1.5" />
                   </span>
                   <span v-if="taskStore.hasNestedTasks(task.id)" class="children-badge" :title="`${taskStore.getTaskChildren(task.id).length} nested task(s)`">
@@ -107,15 +109,15 @@
             <div class="task-actions">
               <button
                 class="action-btn start-timer"
-                @click="$emit('startTimer', task.id)"
                 title="Start Timer"
+                @click="$emit('startTimer', task.id)"
               >
                 <Play :size="12" :stroke-width="1.5" />
               </button>
               <button
                 class="action-btn edit-task"
-                @click="$emit('editTask', task.id)"
                 title="Edit Task"
+                @click="$emit('editTask', task.id)"
               >
                 <Edit :size="12" :stroke-width="1.5" />
               </button>
@@ -126,70 +128,70 @@
         <!-- Nested tasks (only show when parent is expanded) -->
         <Transition name="nested-tasks">
           <div v-if="expandedTasks.has(task.id)" class="nested-tasks-sidebar">
-          <div
-            v-for="childTask in taskStore.getTaskChildren(task.id)"
-            :key="childTask.id"
-            class="sidebar-task nested-task"
-            :class="{ scheduled: childTask.scheduledDate }"
-            draggable="true"
-            @dragstart="handleDragStart($event, childTask)"
-            @dblclick="$emit('editTask', childTask.id)"
-            @contextmenu="handleContextMenu($event, childTask)"
-          >
-            <div class="task-content-horizontal">
-              <!-- Indent spacer for nested tasks -->
-              <div class="indent-spacer"></div>
+            <div
+              v-for="childTask in taskStore.getTaskChildren(task.id)"
+              :key="childTask.id"
+              class="sidebar-task nested-task"
+              :class="{ scheduled: childTask.scheduledDate }"
+              draggable="true"
+              @dragstart="handleDragStart($event, childTask)"
+              @dblclick="$emit('editTask', childTask.id)"
+              @contextmenu="handleContextMenu($event, childTask)"
+            >
+              <div class="task-content-horizontal">
+                <!-- Indent spacer for nested tasks -->
+                <div class="indent-spacer" />
 
-              <!-- Left side: Task info -->
-              <div class="task-info">
-                <div class="task-title-row">
-                  <span class="task-title">{{ childTask.title }}</span>
-                  <div class="task-badges">
-                    <span v-if="childTask.scheduledDate" class="scheduled-badge" title="Scheduled">
-                      <Clock :size="12" :stroke-width="1.5" />
+                <!-- Left side: Task info -->
+                <div class="task-info">
+                  <div class="task-title-row">
+                    <span class="task-title">{{ childTask.title }}</span>
+                    <div class="task-badges">
+                      <span v-if="childTask.scheduledDate" class="scheduled-badge" title="Scheduled">
+                        <Clock :size="12" :stroke-width="1.5" />
+                      </span>
+                      <span v-if="getTaskInstances(childTask).length > 0" class="instance-badge" :title="`${getTaskInstances(childTask).length} calendar instance(s)`">
+                        {{ getTaskInstances(childTask).length }}×
+                      </span>
+                      <span v-if="childTask.priority !== 'medium'" class="priority-badge" :class="childTask.priority">
+                        <Flag :size="12" :stroke-width="1.5" />
+                      </span>
+                    </div>
+                  </div>
+                  <div class="task-meta">
+                    <span class="pomodoro-count">
+                      <Timer :size="12" :stroke-width="1.5" />
+                      {{ childTask.completedPomodoros }}
                     </span>
-                    <span v-if="getTaskInstances(childTask).length > 0" class="instance-badge" :title="`${getTaskInstances(childTask).length} calendar instance(s)`">
-                      {{ getTaskInstances(childTask).length }}×
+                    <span v-if="childTask.subtasks.length > 0" class="subtask-count">
+                      {{ completedSubtasks(childTask) }}/{{ childTask.subtasks.length }}
                     </span>
-                    <span class="priority-badge" :class="childTask.priority" v-if="childTask.priority !== 'medium'">
-                      <Flag :size="12" :stroke-width="1.5" />
+                    <span v-if="childTask.scheduledDate" class="scheduled-time-inline">
+                      <Calendar :size="12" :stroke-width="1.5" />
+                      {{ formatScheduledTime(childTask) }}
                     </span>
                   </div>
                 </div>
-                <div class="task-meta">
-                  <span class="pomodoro-count">
-                    <Timer :size="12" :stroke-width="1.5" />
-                    {{ childTask.completedPomodoros }}
-                  </span>
-                  <span v-if="childTask.subtasks.length > 0" class="subtask-count">
-                    {{ completedSubtasks(childTask) }}/{{ childTask.subtasks.length }}
-                  </span>
-                  <span v-if="childTask.scheduledDate" class="scheduled-time-inline">
-                    <Calendar :size="12" :stroke-width="1.5" />
-                    {{ formatScheduledTime(childTask) }}
-                  </span>
+
+                <!-- Right side: Action buttons -->
+                <div class="task-actions">
+                  <button
+                    class="action-btn start-timer"
+                    title="Start Timer"
+                    @click="$emit('startTimer', childTask.id)"
+                  >
+                    <Play :size="12" :stroke-width="1.5" />
+                  </button>
+                  <button
+                    class="action-btn edit-task"
+                    title="Edit Task"
+                    @click="$emit('editTask', childTask.id)"
+                  >
+                    <Edit :size="12" :stroke-width="1.5" />
+                  </button>
                 </div>
               </div>
-
-              <!-- Right side: Action buttons -->
-              <div class="task-actions">
-                <button
-                  class="action-btn start-timer"
-                  @click="$emit('startTimer', childTask.id)"
-                  title="Start Timer"
-                >
-                  <Play :size="12" :stroke-width="1.5" />
-                </button>
-                <button
-                  class="action-btn edit-task"
-                  @click="$emit('editTask', childTask.id)"
-                  title="Edit Task"
-                >
-                  <Edit :size="12" :stroke-width="1.5" />
-                </button>
-              </div>
             </div>
-          </div>
           </div>
         </Transition>
       </div>
@@ -199,7 +201,9 @@
         <div class="empty-icon">
           <ListTodo :size="32" :stroke-width="1.5" />
         </div>
-        <p class="empty-message">No tasks found</p>
+        <p class="empty-message">
+          No tasks found
+        </p>
         <button class="empty-action" @click="$emit('addTask')">
           <Plus :size="16" :stroke-width="1.5" />
           Create your first task
@@ -219,15 +223,14 @@ import {
   Edit, Inbox, ChevronRight, Check, Play
 } from 'lucide-vue-next'
 
-const route = useRoute()
-// Status filters now shown consistently across all views (including canvas)
-const hideStatusFilters = computed(() => false)
-
 defineEmits<{
   addTask: []
   startTimer: [taskId: string]
   editTask: [taskId: string]
 }>()
+const route = useRoute()
+// Status filters now shown consistently across all views (including canvas)
+const hideStatusFilters = computed(() => false)
 
 const taskStore = useTaskStore()
 const router = useRouter()

@@ -1,6 +1,8 @@
 <template>
   <div class="category-selector">
-    <h3 class="selector-title">Categorize as:</h3>
+    <h3 class="selector-title">
+      Categorize as:
+    </h3>
 
     <div class="category-grid">
       <button
@@ -33,7 +35,7 @@
           size="xs"
           class="project-emoji"
         />
-        <span v-else class="color-dot" :style="{ background: getColorValue(node.project.color) }"></span>
+        <span v-else class="color-dot" :style="{ background: getColorValue(node.project.color) }" />
 
         <!-- Project Name -->
         <span class="project-name">{{ node.project.name }}</span>
@@ -43,10 +45,10 @@
       <button
         class="category-button create-new-button"
         :tabindex="0"
+        aria-label="Create new project"
         @click="handleCreateNew"
         @keydown.enter.prevent="handleCreateNew"
         @keydown.space.prevent="handleCreateNew"
-        aria-label="Create new project"
       >
         <Plus :size="20" />
         <span class="project-name">Create New...</span>

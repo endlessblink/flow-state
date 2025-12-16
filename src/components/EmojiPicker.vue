@@ -4,24 +4,29 @@
       <div class="emoji-picker" @click.stop>
         <div class="emoji-picker-header">
           <h3>Choose Project Color</h3>
-          <button @click="closePicker" class="close-btn">×</button>
+          <button class="close-btn" @click="closePicker">
+            ×
+          </button>
         </div>
 
         <div class="emoji-picker-tabs">
           <button
-            :class="['tab-btn', { active: activeTab === 'emoji' }]"
+            class="tab-btn"
+            :class="[{ active: activeTab === 'emoji' }]"
             @click="activeTab = 'emoji'"
           >
             😀 Emoji
           </button>
           <button
-            :class="['tab-btn', { active: activeTab === 'recent' }]"
+            class="tab-btn"
+            :class="[{ active: activeTab === 'recent' }]"
             @click="activeTab = 'recent'"
           >
             🕐 Recent
           </button>
           <button
-            :class="['tab-btn', { active: activeTab === 'color' }]"
+            class="tab-btn"
+            :class="[{ active: activeTab === 'color' }]"
             @click="activeTab = 'color'"
           >
             🎨 Color
@@ -34,7 +39,7 @@
             type="text"
             placeholder="Search emojis..."
             class="search-input"
-          />
+          >
         </div>
 
         <div class="emoji-picker-content">
@@ -43,7 +48,8 @@
             <button
               v-for="emoji in filteredEmojis"
               :key="emoji"
-              :class="['emoji-btn', { selected: selectedEmoji === emoji }]"
+              class="emoji-btn"
+              :class="[{ selected: selectedEmoji === emoji }]"
               @click="selectEmoji(emoji)"
             >
               {{ emoji }}
@@ -55,7 +61,8 @@
             <button
               v-for="emoji in recentEmojis"
               :key="emoji"
-              :class="['emoji-btn', { selected: selectedEmoji === emoji }]"
+              class="emoji-btn"
+              :class="[{ selected: selectedEmoji === emoji }]"
               @click="selectEmoji(emoji)"
             >
               {{ emoji }}
@@ -70,7 +77,8 @@
             <button
               v-for="color in colorOptions"
               :key="color"
-              :class="['color-btn', { selected: selectedColor === color }]"
+              class="color-btn"
+              :class="[{ selected: selectedColor === color }]"
               :style="{ backgroundColor: color }"
               @click="selectColor(color)"
             />
@@ -78,10 +86,10 @@
         </div>
 
         <div class="emoji-picker-footer">
-          <button @click="clearSelection" class="clear-btn">
+          <button class="clear-btn" @click="clearSelection">
             Clear
           </button>
-          <button @click="applySelection" class="apply-btn">
+          <button class="apply-btn" @click="applySelection">
             Apply
           </button>
         </div>
@@ -511,8 +519,9 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--overlay-dark);
-  backdrop-filter: blur(12px) saturate(150%);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px) saturate(100%);
+  -webkit-backdrop-filter: blur(12px) saturate(100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -526,18 +535,14 @@ onMounted(() => {
 }
 
 .emoji-picker {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-medium) 0%,
-    var(--glass-bg-heavy) 100%
-  );
-  backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid var(--glass-border-strong);
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-2xl);
   box-shadow:
-    0 32px 64px var(--shadow-xl),
-    0 16px 32px var(--shadow-strong),
-    inset 0 2px 0 var(--glass-border-soft);
+    0 32px 64px rgba(0, 0, 0, 0.5),
+    0 16px 32px rgba(0, 0, 0, 0.3);
   width: 90%;
   max-width: 420px;
   max-height: 560px;
@@ -550,11 +555,11 @@ onMounted(() => {
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.92);
+    transform: scale(0.96) translateY(20px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -563,12 +568,8 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid var(--glass-border);
-  background: linear-gradient(
-    180deg,
-    var(--glass-bg-tint) 0%,
-    transparent 100%
-  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 
 .emoji-picker-header h3 {
@@ -576,12 +577,11 @@ onMounted(() => {
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  text-shadow: 0 2px 4px var(--shadow-subtle);
 }
 
 .close-btn {
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   font-size: 24px;
   cursor: pointer;
   color: var(--text-muted);
@@ -596,16 +596,16 @@ onMounted(() => {
 }
 
 .close-btn:hover {
-  background: var(--glass-border);
-  border-color: var(--glass-border-medium);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.25);
   color: var(--text-primary);
   transform: scale(1.05);
 }
 
 .emoji-picker-tabs {
   display: flex;
-  border-bottom: 1px solid var(--glass-border);
-  background: var(--glass-bg-soft);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 
 .tab-btn {
@@ -622,26 +622,26 @@ onMounted(() => {
 }
 
 .tab-btn.active {
-  border-bottom-color: var(--purple-border-medium);
-  color: var(--text-primary);
-  background: var(--glass-bg-light);
+  border-bottom-color: rgba(78, 205, 196, 0.8);
+  color: rgba(78, 205, 196, 1);
+  background: transparent;
 }
 
 .tab-btn:hover:not(.active) {
-  background: var(--glass-bg-light);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-secondary);
 }
 
 .emoji-picker-search {
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .search-input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -651,9 +651,9 @@ onMounted(() => {
 
 .search-input:focus {
   outline: none;
-  border-color: var(--purple-border-medium);
-  background: var(--glass-bg-light);
-  box-shadow: 0 0 0 3px var(--purple-glow-subtle);
+  border-color: rgba(78, 205, 196, 0.5);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
 .search-input::placeholder {
@@ -687,19 +687,15 @@ onMounted(() => {
 }
 
 .emoji-btn:hover {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
   transform: scale(1.15);
 }
 
 .emoji-btn.selected {
-  background: linear-gradient(
-    135deg,
-    var(--purple-gradient-start) 0%,
-    var(--purple-gradient-end) 100%
-  );
-  border-color: var(--purple-border-medium);
-  box-shadow: 0 4px 8px var(--purple-shadow-strong), 0 0 16px var(--purple-glow-subtle);
+  background: rgba(78, 205, 196, 0.2);
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 16px rgba(78, 205, 196, 0.2);
   transform: scale(1.08);
 }
 
@@ -720,19 +716,19 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-bounce);
-  box-shadow: 0 4px 8px var(--shadow-md);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .color-btn:hover {
   transform: scale(1.1) translateY(-2px);
-  box-shadow: 0 8px 16px var(--shadow-lg);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 
 .color-btn.selected {
-  border-color: var(--glass-border-active);
+  border-color: rgba(255, 255, 255, 0.8);
   box-shadow:
-    0 0 0 3px var(--glass-border-soft),
-    0 8px 16px var(--shadow-strong);
+    0 0 0 3px rgba(255, 255, 255, 0.2),
+    0 8px 16px rgba(0, 0, 0, 0.4);
   transform: scale(1.05);
 }
 
@@ -749,13 +745,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--glass-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   gap: var(--space-3);
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--glass-bg-tint) 100%
-  );
+  background: transparent;
 }
 
 .clear-btn, .apply-btn {
@@ -765,61 +757,39 @@ onMounted(() => {
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
-  transition: all var(--duration-normal) var(--spring-bounce);
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .clear-btn {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border-color: var(--glass-border);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.15);
   color: var(--text-secondary);
-  box-shadow: 0 4px 8px var(--shadow-md);
 }
 
 .clear-btn:hover {
-  background: linear-gradient(
-    135deg,
-    var(--glass-border) 0%,
-    var(--glass-bg-medium) 100%
-  );
-  border-color: var(--glass-border-medium);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.25);
   color: var(--text-primary);
   transform: translateY(-1px);
-  box-shadow: 0 6px 12px var(--shadow-lg);
 }
 
 .apply-btn {
-  background: linear-gradient(
-    135deg,
-    var(--purple-gradient-start) 0%,
-    var(--purple-gradient-end) 100%
-  );
-  border-color: var(--purple-border-medium);
-  color: white;
+  background: rgba(78, 205, 196, 0.15);
+  border-color: rgba(78, 205, 196, 0.5);
+  color: rgba(78, 205, 196, 1);
   flex: 1;
-  box-shadow:
-    0 8px 16px var(--purple-border-medium),
-    0 0 20px var(--purple-glow-subtle);
 }
 
 .apply-btn:hover {
-  background: linear-gradient(
-    135deg,
-    var(--purple-gradient-hover-start) 0%,
-    var(--purple-gradient-hover-end) 100%
-  );
+  background: rgba(78, 205, 196, 0.25);
+  border-color: rgba(78, 205, 196, 0.7);
   transform: translateY(-2px);
-  box-shadow:
-    0 12px 24px var(--purple-shadow-strong),
-    0 0 30px var(--purple-border-medium);
+  box-shadow: 0 0 20px rgba(78, 205, 196, 0.2);
 }
 
 .apply-btn:disabled {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.1);
   color: var(--text-muted);
   cursor: not-allowed;
   transform: none;

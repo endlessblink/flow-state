@@ -12,7 +12,7 @@
       </span>
     </div>
     <div class="banner-actions">
-      <button class="banner-btn" @click="dismissBanner" title="Dismiss for this session">
+      <button class="banner-btn" title="Dismiss for this session" @click="dismissBanner">
         Dismiss
       </button>
       <!-- Future: Link to ConflictResolutionDialog when ready -->

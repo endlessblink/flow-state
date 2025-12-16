@@ -1,5 +1,6 @@
 declare module 'vue-cal' {
-  import { Component, DefineComponent } from 'vue'
+  import type { DefineComponent } from 'vue';
+import { Component } from 'vue'
   const VueCal: DefineComponent<any, any, any>
   export default VueCal
 }

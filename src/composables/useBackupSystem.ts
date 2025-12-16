@@ -618,7 +618,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
  * Singleton instance for components using the old object pattern
  * @deprecated Use useBackupSystem() composable instead
  */
-let singletonInstance: ReturnType<typeof useBackupSystem> | null = null
+const singletonInstance: ReturnType<typeof useBackupSystem> | null = null
 
 export const backupSystem = {
   getInstance() {

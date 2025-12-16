@@ -419,7 +419,7 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
 
             // Show success notification
             if (enableUserNotifications) {
-              ;(message as any).success({
+              (message as any).success({
                 content: `Recovered: ${error.message}`,
                 duration: 3000
               } as any)

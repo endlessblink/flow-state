@@ -2,14 +2,16 @@
   <div class="inbox-panel" :class="{ collapsed: isCollapsed }">
     <!-- Header -->
     <div class="inbox-header">
-      <button @click="isCollapsed = !isCollapsed" class="collapse-btn" :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'">
+      <button class="collapse-btn" :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'" @click="isCollapsed = !isCollapsed">
         <ChevronLeft v-if="!isCollapsed" :size="16" />
         <ChevronRight v-else :size="16" />
       </button>
-      <h3 v-if="!isCollapsed" class="inbox-title">Inbox</h3>
+      <h3 v-if="!isCollapsed" class="inbox-title">
+        Inbox
+      </h3>
 
       <!-- Expanded state count -->
-      <n-badge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
+      <NBadge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
     </div>
 
     <!-- Collapsed state task count indicators positioned under arrow -->
@@ -45,28 +47,28 @@
 
     <!-- Quick Add -->
     <div v-if="!isCollapsed" class="quick-add">
-      <n-input
+      <NInput
         v-model:value="newTaskTitle"
-        @keydown.enter="addTask"
         placeholder="Quick add task (Enter)..."
         size="large"
         clearable
+        @keydown.enter="addTask"
       />
     </div>
 
     <!-- Brain Dump Mode Toggle -->
-    <n-button
+    <NButton
       v-if="!isCollapsed"
-      @click="brainDumpMode = !brainDumpMode"
       secondary
       block
+      @click="brainDumpMode = !brainDumpMode"
     >
       {{ brainDumpMode ? 'Quick Add Mode' : 'Brain Dump Mode' }}
-    </n-button>
+    </NButton>
 
     <!-- Brain Dump Textarea -->
     <div v-if="!isCollapsed && brainDumpMode" class="brain-dump">
-      <n-input
+      <NInput
         v-model:value="brainDumpText"
         type="textarea"
         placeholder="Paste or type tasks (one per line):
@@ -75,15 +77,15 @@
   Call client"
         :rows="8"
       />
-      <n-button
-        @click="processBrainDump"
+      <NButton
         type="primary"
         block
         size="large"
         :disabled="parsedTaskCount === 0"
+        @click="processBrainDump"
       >
         Add {{ parsedTaskCount }} Tasks
-      </n-button>
+      </NButton>
     </div>
 
     <!-- Time Filters -->
@@ -98,7 +100,9 @@
     <!-- Batch Actions Bar -->
     <div v-if="!isCollapsed && selectedTaskIds.size > 0" class="batch-actions">
       <span class="selected-count">{{ selectedTaskIds.size }} selected</span>
-      <n-button @click="selectedTaskIds.clear()" size="small" secondary>Clear</n-button>
+      <NButton size="small" secondary @click="selectedTaskIds.clear()">
+        Clear
+      </NButton>
     </div>
 
     <!-- Inbox Task List -->
@@ -120,7 +124,7 @@
         @keydown="handleTaskKeydown($event, task)"
       >
         <div v-if="selectedTaskIds.has(task.id)" class="selection-indicator" />
-        <div :class="`priority-stripe priority-stripe-${task.priority}`"></div>
+        <div :class="`priority-stripe priority-stripe-${task.priority}`" />
 
         <!-- Timer Active Badge -->
         <div v-if="isTimerActive(task.id)" class="timer-indicator" title="Timer Active">
@@ -128,15 +132,17 @@
         </div>
 
         <div class="task-content">
-          <div class="task-title">{{ task.title }}</div>
+          <div class="task-title">
+            {{ task.title }}
+          </div>
           <div class="task-meta">
-            <n-tag
+            <NTag
               :type="task.priority === 'high' ? 'error' : task.priority === 'medium' ? 'warning' : 'info'"
               size="small"
               round
             >
               {{ task.priority }}
-            </n-tag>
+            </NTag>
             <span v-if="task.estimatedDuration" class="duration-badge">
               {{ task.estimatedDuration }}m
             </span>

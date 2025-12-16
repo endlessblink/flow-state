@@ -1,18 +1,24 @@
 <template>
-  <div v-if="hasError" class="error-boundary">
+  <div v-if="hasError" class="error-boundary" :class="{ contained }">
     <div class="error-container">
-      <div class="error-icon">⚠️</div>
-      <h2 class="error-title">Something went wrong</h2>
-      <p class="error-message">{{ errorMessage }}</p>
+      <div class="error-icon">
+        ⚠️
+      </div>
+      <h2 class="error-title">
+        Something went wrong
+      </h2>
+      <p class="error-message">
+        {{ errorMessage }}
+      </p>
 
       <div class="error-actions">
-        <button @click="handleReload" class="error-btn primary">
+        <button class="error-btn primary" @click="handleReload">
           Reload Page
         </button>
-        <button @click="handleReset" class="error-btn secondary">
+        <button class="error-btn secondary" @click="handleReset">
           Reset & Continue
         </button>
-        <button @click="copyErrorMessage" class="error-btn copy">
+        <button class="error-btn copy" @click="copyErrorMessage">
           <Copy :size="14" />
           Copy Error
         </button>
@@ -21,7 +27,7 @@
       <details v-if="errorDetails" class="error-details">
         <summary>Technical Details</summary>
         <div class="error-details-header">
-          <button @click="copyErrorDetails" class="copy-details-btn">
+          <button class="copy-details-btn" @click="copyErrorDetails">
             <Copy :size="12" />
             Copy Details
           </button>
@@ -30,25 +36,29 @@
       </details>
     </div>
   </div>
-  <slot v-else></slot>
+  <slot v-else />
 </template>
 
 <script setup lang="ts">
-import { ref, onErrorCaptured, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onErrorCaptured, watch, getCurrentInstance } from 'vue'
 import { Copy } from 'lucide-vue-next'
 import { useCopy } from '@/composables/useCopy'
 
 const props = defineProps<{
   fallbackMessage?: string
+  contained?: boolean
 }>()
 
 const emit = defineEmits<{
   error: [error: Error, info: any]
 }>()
 
-const router = useRouter()
+// Try to get router safely (may not be available in Storybook)
+const instance = getCurrentInstance()
+const router = instance?.appContext.config.globalProperties.$router
+
 const { copyError } = useCopy()
+const { contained } = props
 const hasError = ref(false)
 const errorMessage = ref('')
 const errorDetails = ref('')
@@ -66,12 +76,14 @@ onErrorCaptured((error: Error, instance, info) => {
   return false
 })
 
-// Watch for route changes to reset error state
-watch(() => router.currentRoute.value.path, () => {
-  if (hasError.value) {
-    handleReset()
-  }
-})
+// Watch for route changes to reset error state (only if router available)
+if (router?.currentRoute) {
+  watch(() => router.currentRoute.value?.path, () => {
+    if (hasError.value) {
+      handleReset()
+    }
+  })
+}
 
 const handleReload = () => {
   window.location.reload()
@@ -102,6 +114,19 @@ const copyErrorDetails = () => {
   justify-content: center;
   background: var(--surface-primary);
   padding: var(--space-8);
+}
+
+/* Contained mode for Storybook demos - renders inline with glass morphism */
+.error-boundary.contained {
+  position: relative;
+  inset: unset;
+  z-index: auto;
+  border-radius: var(--radius-xl);
+  min-height: 280px;
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .error-container {

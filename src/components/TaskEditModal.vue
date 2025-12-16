@@ -1,251 +1,290 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
-    <div class="modal-content" @click.stop @submit.prevent>
-      <div class="modal-header">
-        <h2 class="modal-title">Edit Task</h2>
-        <button class="close-btn" @click="$emit('close')">
-          <X :size="16" />
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <!-- Task Details Section -->
-        <section class="form-section">
-          <h3 class="section-title">Task Details</h3>
-
-          <div class="form-group">
-            <label class="form-label">Title</label>
-            <input
-              ref="titleInput"
-              v-model="editedTask.title"
-              :class="['form-input', titleAlignmentClasses]"
-              :style="titleAlignmentStyles"
-              type="text"
-              placeholder="Enter task title..."
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea
-              v-model="editedTask.description"
-              :class="['form-textarea', descriptionAlignmentClasses]"
-              :style="descriptionAlignmentStyles"
-              rows="3"
-              placeholder="Describe what needs to be done..."
-            ></textarea>
-          </div>
-
-          <!-- Compact Metadata Bar (ClickUp-inspired) -->
-          <div class="metadata-bar">
-            <div class="metadata-field" title="Due date - When this task must be completed by">
-              <Calendar :size="14" />
-              <input
-                v-model="editedTask.dueDate"
-                type="date"
-                class="inline-input"
-                placeholder="Due date"
-              />
-            </div>
-
-            <div class="metadata-field" title="Scheduled for - When you plan to work on this task">
-              <CalendarClock :size="14" />
-              <input
-                v-model="editedTask.scheduledDate"
-                type="date"
-                class="inline-input"
-                placeholder="Schedule"
-                @change="handleScheduledDateChange"
-              />
-            </div>
-
-            <div class="metadata-field">
-              <Clock :size="14" />
-              <input
-                v-model="editedTask.scheduledTime"
-                type="time"
-                class="inline-input"
-                :disabled="!editedTask.scheduledDate"
-              />
-            </div>
-
-            <div class="metadata-field">
-              <TimerReset :size="14" />
-              <input
-                v-model.number="editedTask.estimatedDuration"
-                type="number"
-                min="15"
-                step="15"
-                class="inline-input"
-                placeholder="60m"
-              />
-            </div>
-
-            <div class="metadata-field">
-              <component
-                :is="priorityIcon || AlertCircle"
-                :size="14"
-                :class="priorityIconClass"
-              />
-              <select v-model="editedTask.priority" class="inline-select">
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-
-            <div class="metadata-field">
-              <component
-                :is="statusIcon || Circle"
-                :size="14"
-                :class="statusIconClass"
-              />
-              <select v-model="editedTask.status" class="inline-select">
-                <option value="planned">Planned</option>
-                <option value="in_progress">Active</option>
-                <option value="done">✓</option>
-                <option value="backlog">Backlog</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
-        <!-- Dependencies Section (Collapsible) -->
-        <section v-if="dependencies.length > 0" class="form-section collapsible">
-          <button @click="showDependencies = !showDependencies" class="section-toggle" type="button">
-            <ChevronDown :size="14" :class="['chevron-icon', { rotated: showDependencies }]" />
-            <h3 class="section-title">Dependencies ({{ dependencies.length }})</h3>
+  <Teleport to="body">
+    <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
+      <div class="modal-content" @click.stop @submit.prevent>
+        <div class="modal-header">
+          <h2 class="modal-title">
+            Edit Task
+          </h2>
+          <button class="close-btn" @click="$emit('close')">
+            <X :size="16" />
           </button>
-          <div v-show="showDependencies" class="section-content">
-            <div class="dependencies-list">
-              <div v-for="depTask in dependencies" :key="depTask.id" class="dependency-item">
-                <div class="dependency-icon">🔗</div>
-                <div class="dependency-info">
-                  <div class="dependency-title">{{ depTask.title }}</div>
-                  <div class="dependency-status" :class="`status-${depTask.status}`">
-                    {{ depTask.status === 'done' ? '✓ Complete' : '⏳ Pending' }}
+        </div>
+
+        <div class="modal-body">
+          <!-- Task Details Section -->
+          <section class="form-section">
+            <h3 class="section-title">
+              Task Details
+            </h3>
+
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input
+                ref="titleInput"
+                v-model="editedTask.title"
+                class="form-input"
+                :class="[titleAlignmentClasses]"
+                :style="titleAlignmentStyles"
+                type="text"
+                placeholder="Enter task title..."
+              >
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea
+                v-model="editedTask.description"
+                class="form-textarea"
+                :class="[descriptionAlignmentClasses]"
+                :style="descriptionAlignmentStyles"
+                rows="3"
+                placeholder="Describe what needs to be done..."
+              />
+            </div>
+
+            <!-- Compact Metadata Bar (ClickUp-inspired) -->
+            <div class="metadata-bar">
+              <div class="metadata-field" title="Due date - When this task must be completed by">
+                <Calendar :size="14" />
+                <input
+                  v-model="editedTask.dueDate"
+                  type="date"
+                  class="inline-input"
+                  placeholder="Due date"
+                >
+              </div>
+
+              <div class="metadata-field" title="Scheduled for - When you plan to work on this task">
+                <CalendarClock :size="14" />
+                <input
+                  v-model="editedTask.scheduledDate"
+                  type="date"
+                  class="inline-input"
+                  placeholder="Schedule"
+                  @change="handleScheduledDateChange"
+                >
+              </div>
+
+              <div class="metadata-field">
+                <Clock :size="14" />
+                <input
+                  v-model="editedTask.scheduledTime"
+                  type="time"
+                  class="inline-input"
+                  :disabled="!editedTask.scheduledDate"
+                >
+              </div>
+
+              <div class="metadata-field">
+                <TimerReset :size="14" />
+                <input
+                  v-model.number="editedTask.estimatedDuration"
+                  type="number"
+                  min="15"
+                  step="15"
+                  class="inline-input"
+                  placeholder="60m"
+                >
+              </div>
+
+              <div class="metadata-field">
+                <component
+                  :is="priorityIcon || AlertCircle"
+                  :size="14"
+                  :class="priorityIconClass"
+                />
+                <select v-model="editedTask.priority" class="inline-select">
+                  <option value="low">
+                    Low
+                  </option>
+                  <option value="medium">
+                    Medium
+                  </option>
+                  <option value="high">
+                    High
+                  </option>
+                </select>
+              </div>
+
+              <div class="metadata-field">
+                <component
+                  :is="statusIcon || Circle"
+                  :size="14"
+                  :class="statusIconClass"
+                />
+                <select v-model="editedTask.status" class="inline-select">
+                  <option value="planned">
+                    Planned
+                  </option>
+                  <option value="in_progress">
+                    Active
+                  </option>
+                  <option value="done">
+                    ✓
+                  </option>
+                  <option value="backlog">
+                    Backlog
+                  </option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <!-- Dependencies Section (Collapsible) -->
+          <section v-if="dependencies.length > 0" class="form-section collapsible">
+            <button class="section-toggle" type="button" @click="showDependencies = !showDependencies">
+              <ChevronDown :size="14" class="chevron-icon" :class="[{ rotated: showDependencies }]" />
+              <h3 class="section-title">
+                Dependencies ({{ dependencies.length }})
+              </h3>
+            </button>
+            <div v-show="showDependencies" class="section-content">
+              <div class="dependencies-list">
+                <div v-for="depTask in dependencies" :key="depTask.id" class="dependency-item">
+                  <div class="dependency-icon">
+                    🔗
+                  </div>
+                  <div class="dependency-info">
+                    <div class="dependency-title">
+                      {{ depTask.title }}
+                    </div>
+                    <div class="dependency-status" :class="`status-${depTask.status}`">
+                      {{ depTask.status === 'done' ? '✓ Complete' : '⏳ Pending' }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <!-- Subtasks Section (Collapsible) -->
-        <section class="form-section collapsible">
-          <div class="section-toggle-wrapper">
-            <button @click="showSubtasks = !showSubtasks" class="section-toggle" type="button">
-              <ChevronDown :size="14" :class="['chevron-icon', { rotated: showSubtasks }]" />
-              <h3 class="section-title">Subtasks ({{ editedTask.subtasks?.length || 0 }})</h3>
-            </button>
-            <button v-if="showSubtasks" class="inline-add-btn" @click="addSubtask" type="button">
-              <Plus :size="12" />
-            </button>
-          </div>
-
-          <div v-show="showSubtasks" class="section-content">
-            <div v-if="!editedTask.subtasks || editedTask.subtasks.length === 0" class="empty-subtasks">
-              <span class="empty-message">No subtasks yet</span>
-              <button class="add-first-subtask" @click="addSubtask" type="button">
-                <Plus :size="16" />
-                Add your first subtask
+          <!-- Subtasks Section (Collapsible) -->
+          <section class="form-section collapsible">
+            <div class="section-toggle-wrapper">
+              <button class="section-toggle" type="button" @click="showSubtasks = !showSubtasks">
+                <ChevronDown :size="14" class="chevron-icon" :class="[{ rotated: showSubtasks }]" />
+                <h3 class="section-title">
+                  Subtasks ({{ editedTask.subtasks?.length || 0 }})
+                </h3>
+              </button>
+              <button
+                v-if="showSubtasks"
+                class="inline-add-btn"
+                type="button"
+                @click="addSubtask"
+              >
+                <Plus :size="12" />
               </button>
             </div>
 
-            <div v-else class="subtasks-list">
-              <div
-                v-for="subtask in (editedTask.subtasks || [])"
-                :key="subtask.id"
-                class="subtask-item"
-              >
-                <div class="subtask-content">
-                  <div class="subtask-header">
-                    <input
-                      v-model="subtask.title"
-                      :class="['subtask-title-input', getSubtaskAlignmentClasses(subtask)]"
-                      :style="getSubtaskAlignmentStyles(subtask)"
-                      placeholder="Subtask title..."
-                    />
-                    <button
-                      class="delete-subtask-btn"
-                      @click="deleteSubtask(subtask.id)"
-                      title="Delete subtask"
-                      type="button"
-                    >
-                      <Trash2 :size="14" />
-                    </button>
-                  </div>
-                  <textarea
-                    v-model="subtask.description"
-                    :class="['subtask-description-input', getSubtaskDescAlignmentClasses(subtask)]"
-                    :style="getSubtaskDescAlignmentStyles(subtask)"
-                    rows="2"
-                    placeholder="Subtask description..."
-                  ></textarea>
-                  <div class="subtask-stats">
-                    <span class="pomodoro-count">🍅 {{ subtask.completedPomodoros }} sessions</span>
-                    <label class="completed-checkbox">
+            <div v-show="showSubtasks" class="section-content">
+              <div v-if="!editedTask.subtasks || editedTask.subtasks.length === 0" class="empty-subtasks">
+                <span class="empty-message">No subtasks yet</span>
+                <button class="add-first-subtask" type="button" @click="addSubtask">
+                  <Plus :size="16" />
+                  Add your first subtask
+                </button>
+              </div>
+
+              <div v-else class="subtasks-list">
+                <div
+                  v-for="subtask in (editedTask.subtasks || [])"
+                  :key="subtask.id"
+                  class="subtask-item"
+                >
+                  <div class="subtask-content">
+                    <div class="subtask-header">
                       <input
-                        type="checkbox"
-                        v-model="subtask.isCompleted"
-                        @change="updateSubtaskCompletion(subtask)"
-                      />
-                      <span class="checkbox-label">Completed</span>
-                    </label>
+                        v-model="subtask.title"
+                        class="subtask-title-input"
+                        :class="[getSubtaskAlignmentClasses(subtask)]"
+                        :style="getSubtaskAlignmentStyles(subtask)"
+                        placeholder="Subtask title..."
+                      >
+                      <button
+                        class="delete-subtask-btn"
+                        title="Delete subtask"
+                        type="button"
+                        @click="deleteSubtask(subtask.id)"
+                      >
+                        <Trash2 :size="14" />
+                      </button>
+                    </div>
+                    <textarea
+                      v-model="subtask.description"
+                      class="subtask-description-input"
+                      :class="[getSubtaskDescAlignmentClasses(subtask)]"
+                      :style="getSubtaskDescAlignmentStyles(subtask)"
+                      rows="2"
+                      placeholder="Subtask description..."
+                    />
+                    <div class="subtask-stats">
+                      <span class="pomodoro-count">🍅 {{ subtask.completedPomodoros }} sessions</span>
+                      <label class="completed-checkbox">
+                        <input
+                          v-model="subtask.isCompleted"
+                          type="checkbox"
+                          @change="updateSubtaskCompletion(subtask)"
+                        >
+                        <span class="checkbox-label">Completed</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <!-- Pomodoro Sessions Section (Collapsible) -->
-        <section class="form-section collapsible">
-          <div class="section-toggle-wrapper">
-            <button @click="showPomodoros = !showPomodoros" class="section-toggle" type="button">
-              <ChevronDown :size="14" :class="['chevron-icon', { rotated: showPomodoros }]" />
-              <h3 class="section-title">Pomodoro Sessions ({{ totalTaskPomodoros }})</h3>
-            </button>
-            <button
-              v-if="showPomodoros && totalTaskPomodoros > 0"
-              @click="resetPomodoros"
-              class="reset-pomodoros-btn-inline"
-              title="Reset all pomodoro counts"
-              type="button"
-            >
-              Reset
-            </button>
-          </div>
+          <!-- Pomodoro Sessions Section (Collapsible) -->
+          <section class="form-section collapsible">
+            <div class="section-toggle-wrapper">
+              <button class="section-toggle" type="button" @click="showPomodoros = !showPomodoros">
+                <ChevronDown :size="14" class="chevron-icon" :class="[{ rotated: showPomodoros }]" />
+                <h3 class="section-title">
+                  Pomodoro Sessions ({{ totalTaskPomodoros }})
+                </h3>
+              </button>
+              <button
+                v-if="showPomodoros && totalTaskPomodoros > 0"
+                class="reset-pomodoros-btn-inline"
+                title="Reset all pomodoro counts"
+                type="button"
+                @click="resetPomodoros"
+              >
+                Reset
+              </button>
+            </div>
 
-          <div v-show="showPomodoros" class="section-content">
-            <div class="pomodoro-stats">
-              <div class="stat-item">
-                <span class="stat-value">{{ editedTask.completedPomodoros }}</span>
-                <span class="stat-label">Task Sessions</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ totalSubtaskPomodoros }}</span>
-                <span class="stat-label">Subtask Sessions</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ totalTaskPomodoros }}</span>
-                <span class="stat-label">Total Sessions</span>
+            <div v-show="showPomodoros" class="section-content">
+              <div class="pomodoro-stats">
+                <div class="stat-item">
+                  <span class="stat-value">{{ editedTask.completedPomodoros }}</span>
+                  <span class="stat-label">Task Sessions</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-value">{{ totalSubtaskPomodoros }}</span>
+                  <span class="stat-label">Subtask Sessions</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-value">{{ totalTaskPomodoros }}</span>
+                  <span class="stat-label">Total Sessions</span>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
 
-      <div class="modal-footer">
-        <button class="cancel-btn" @click="emit('close')">
-          Cancel
-        </button>
-        <button class="save-btn" @click="saveTask">
-          Save Changes
-        </button>
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="emit('close')">
+            Cancel
+          </button>
+          <button class="save-btn" @click="saveTask">
+            Save Changes
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

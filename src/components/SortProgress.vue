@@ -7,7 +7,7 @@
         <span class="progress-label">tasks sorted</span>
       </div>
 
-      <div class="streak-info" v-if="streak > 0">
+      <div v-if="streak > 0" class="streak-info">
         <span class="streak-icon">🔥</span>
         <span class="streak-count">{{ streak }} day streak</span>
       </div>

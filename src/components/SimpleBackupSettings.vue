@@ -1,15 +1,21 @@
 <template>
   <div class="simple-backup-settings">
     <div class="backup-status">
-      <h3 class="section-title">💾 Backup & Export</h3>
+      <h3 class="section-title">
+        💾 Backup & Export
+      </h3>
 
       <div class="status-indicator">
         <div class="status-icon">
           ⚠️
         </div>
         <div class="status-text">
-          <div class="primary-status">Backup system disabled</div>
-          <div class="backup-count">Automatic backups temporarily paused</div>
+          <div class="primary-status">
+            Backup system disabled
+          </div>
+          <div class="backup-count">
+            Automatic backups temporarily paused
+          </div>
         </div>
       </div>
 
@@ -21,14 +27,16 @@
 
     <!-- Manual Actions Section -->
     <div class="backup-actions">
-      <h3 class="section-title">📤 Manual Actions</h3>
+      <h3 class="section-title">
+        📤 Manual Actions
+      </h3>
 
       <div class="action-buttons">
-        <button @click="showManualExportHelp" class="action-button primary" disabled>
+        <button class="action-button primary" disabled @click="showManualExportHelp">
           📤 Export Tasks (Disabled)
         </button>
 
-        <button @click="showManualBackupHelp" class="action-button secondary" disabled>
+        <button class="action-button secondary" disabled @click="showManualBackupHelp">
           💾 Create Backup (Disabled)
         </button>
       </div>

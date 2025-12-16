@@ -3,7 +3,8 @@
  * Verifies data integrity after sync operations and ensures consistency
  */
 
-import { ConflictInfo, ConflictType } from '@/types/conflicts'
+import type { ConflictInfo} from '@/types/conflicts';
+import { ConflictType } from '@/types/conflicts'
 import { isSyncableDocument } from '@/composables/documentFilters'
 
 export interface ValidationResult {

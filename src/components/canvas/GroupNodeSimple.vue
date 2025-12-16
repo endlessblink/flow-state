@@ -7,18 +7,18 @@
   >
     <!-- Section Header -->
     <div class="section-header" :style="{ background: section.color + '20' }">
-      <div class="section-color-dot" :style="{ background: section.color }"></div>
-      <button @click="toggleCollapse" class="collapse-btn" :title="isCollapsed ? 'Expand group' : 'Collapse group'">
+      <div class="section-color-dot" :style="{ background: section.color }" />
+      <button class="collapse-btn" :title="isCollapsed ? 'Expand group' : 'Collapse group'" @click="toggleCollapse">
         <ChevronDown v-if="!isCollapsed" :size="14" />
         <ChevronRight v-else :size="14" />
       </button>
       <input
         v-model="sectionName"
-        @blur="updateName"
         class="section-name-input"
         placeholder="Group name..."
         :disabled="isCollapsed"
-      />
+        @blur="updateName"
+      >
 
       <!-- Power Mode Indicator -->
       <div
@@ -32,10 +32,10 @@
       <!-- Collect Button (for power groups) -->
       <div v-if="isPowerMode && !isCollapsed" class="collect-wrapper">
         <button
-          @click.stop="toggleCollectMenu"
           class="collect-btn"
           :class="{ 'has-matches': matchingInboxCount > 0 }"
           :title="`Collect matching tasks (${matchingInboxCount} available)`"
+          @click.stop="toggleCollectMenu"
         >
           <Magnet :size="12" />
           <span v-if="matchingInboxCount > 0" class="collect-badge">{{ matchingInboxCount }}</span>
@@ -55,10 +55,10 @@
       <!-- Power Mode Toggle -->
       <button
         v-if="powerKeyword && !isCollapsed"
-        @click.stop="togglePowerMode"
         class="power-toggle-btn"
         :class="{ 'power-active': isPowerMode }"
         :title="isPowerMode ? 'Disable power mode' : 'Enable power mode'"
+        @click.stop="togglePowerMode"
       >
         <Zap :size="12" />
       </button>
@@ -66,19 +66,19 @@
       <!-- Settings Button -->
       <button
         v-if="!isCollapsed"
-        @click.stop="openSettings"
         class="settings-btn"
         title="Group settings - configure auto-assign properties"
+        @click.stop="openSettings"
       >
         <Settings :size="12" />
       </button>
 
       <button
         v-if="section.type !== 'custom' && !isCollapsed"
-        @click="toggleAutoCollect"
         class="auto-collect-btn"
         :class="{ active: autoCollectEnabled }"
         :title="autoCollectEnabled ? 'Auto-collect: ON - Matching tasks auto-placed' : 'Auto-collect: OFF - Manual placement only'"
+        @click="toggleAutoCollect"
       >
         🧲
       </button>
@@ -98,9 +98,9 @@
       :min-height="80"
       :max-width="2000"
       :max-height="2000"
-      @resizeStart="handleResizeStart"
+      @resize-start="handleResizeStart"
       @resize="handleResize"
-      @resizeEnd="handleResizeEnd"
+      @resize-end="handleResizeEnd"
     />
   </div>
 </template>

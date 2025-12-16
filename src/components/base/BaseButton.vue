@@ -1,8 +1,9 @@
 <template>
   <button
     :id="id"
+    class="base-button"
+    ref="buttonRef"
     :class="[
-      'base-button',
       `variant-${variant}`,
       `size-${size}`,
       {
@@ -20,11 +21,10 @@
     :aria-disabled="disabled"
     @click="handleClick"
     @keydown="handleKeydown"
-    ref="buttonRef"
   >
     <!-- Loading spinner -->
     <div v-if="loading" class="loading-spinner" aria-hidden="true">
-      <div class="spinner"></div>
+      <div class="spinner" />
     </div>
 
     <!-- Button content -->
@@ -33,7 +33,7 @@
     </span>
 
     <!-- Keyboard focus indicator -->
-    <div class="focus-indicator" aria-hidden="true"></div>
+    <div class="focus-indicator" aria-hidden="true" />
   </button>
 </template>
 

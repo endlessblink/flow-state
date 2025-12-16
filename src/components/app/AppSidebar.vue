@@ -1,5 +1,10 @@
 <template>
-  <aside v-show="true" class="sidebar" aria-label="Main navigation" aria-hidden="false">
+  <aside
+    v-show="true"
+    class="sidebar"
+    aria-label="Main navigation"
+    aria-hidden="false"
+  >
     <!-- App Header -->
     <div class="sidebar-header">
       <div class="app-brand">
@@ -14,18 +19,18 @@
       <div class="icon-button-group">
         <button
           class="icon-btn"
-          @click="() => {}"
-          :title="'Hide Sidebar'"
+          title="Hide Sidebar"
           aria-label="Hide sidebar"
+          @click="() => {}"
         >
           <PanelLeftClose :size="18" />
         </button>
 
         <button
           class="icon-btn"
-          @click="() => {}"
           title="Settings"
           aria-label="Open settings"
+          @click="() => {}"
         >
           <Settings :size="18" />
         </button>
@@ -42,7 +47,7 @@
           placeholder="Add a task..."
           class="task-input"
           @keyup.enter="createQuickTask"
-        />
+        >
       </div>
     </div>
 
@@ -53,7 +58,7 @@
           <FolderOpen :size="16" class="section-icon" />
           Projects
         </h3>
-        <button class="add-project-btn" @click="() => {}" title="Add Project">
+        <button class="add-project-btn" title="Add Project" @click="() => {}">
           <Plus :size="14" />
         </button>
       </div>
@@ -107,8 +112,8 @@
           <button
             class="uncategorized-filter"
             :class="{ active: activeSmartView === 'uncategorized' }"
-            @click="handleUncategorizedClick"
             title="Show Uncategorized Tasks"
+            @click="handleUncategorizedClick"
           >
             <Inbox :size="16" />
             <span>Uncategorized Tasks</span>
@@ -120,7 +125,7 @@
       </div>
 
       <!-- Projects Section Header -->
-      <div class="projects-divider"></div>
+      <div class="projects-divider" />
 
     
       <!-- Project List - Using ProjectTreeItem components -->
@@ -150,6 +155,11 @@ import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import ProjectTreeItem from '../ProjectTreeItem.vue'
+
+// Emit events for parent component handling
+defineEmits<{
+  'project-context-menu': [event: MouseEvent, project: any]
+}>()
 
 console.log('🎯 AppSidebar: Using Board view pattern - script running!')
 
@@ -223,10 +233,6 @@ const createQuickTask = async () => {
 
 console.log('🎯 AppSidebar: Script setup completed successfully!')
 
-// Emit events for parent component handling
-defineEmits<{
-  'project-context-menu': [event: MouseEvent, project: any]
-}>()
 </script>
 
 <style scoped>

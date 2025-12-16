@@ -29,7 +29,7 @@
             {{ text }}
           </slot>
         </div>
-        <div class="tooltip-arrow"></div>
+        <div class="tooltip-arrow" />
       </div>
     </Transition>
   </div>

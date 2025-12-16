@@ -1,7 +1,7 @@
 <template>
   <div
+    class="date-drop-zone"
     :class="[
-      'date-drop-zone',
       `filter-${filterColor}`,
       {
         'is-active': active,

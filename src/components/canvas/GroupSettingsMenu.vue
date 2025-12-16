@@ -16,8 +16,8 @@
           </h2>
           <button
             class="close-btn"
-            @click="close"
             aria-label="Close modal"
+            @click="close"
           >
             <X :size="18" />
           </button>
@@ -39,46 +39,82 @@
               <Zap :size="16" />
               Auto-assign when task dropped
             </h3>
-            <p class="settings-hint">Tasks dropped into this group will have these properties set</p>
+            <p class="settings-hint">
+              Tasks dropped into this group will have these properties set
+            </p>
 
             <div class="form-group">
               <label class="form-label">Priority</label>
               <select v-model="localSettings.priority" class="form-select">
-                <option :value="null">Don't change</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option :value="null">
+                  Don't change
+                </option>
+                <option value="high">
+                  High
+                </option>
+                <option value="medium">
+                  Medium
+                </option>
+                <option value="low">
+                  Low
+                </option>
               </select>
             </div>
 
             <div class="form-group">
               <label class="form-label">Status</label>
               <select v-model="localSettings.status" class="form-select">
-                <option :value="null">Don't change</option>
-                <option value="planned">Planned</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-                <option value="backlog">Backlog</option>
-                <option value="on_hold">On Hold</option>
+                <option :value="null">
+                  Don't change
+                </option>
+                <option value="planned">
+                  Planned
+                </option>
+                <option value="in_progress">
+                  In Progress
+                </option>
+                <option value="done">
+                  Done
+                </option>
+                <option value="backlog">
+                  Backlog
+                </option>
+                <option value="on_hold">
+                  On Hold
+                </option>
               </select>
             </div>
 
             <div class="form-group">
               <label class="form-label">Due Date</label>
               <select v-model="localSettings.dueDate" class="form-select">
-                <option :value="null">Don't change</option>
-                <option value="today">Today</option>
-                <option value="tomorrow">Tomorrow</option>
-                <option value="this_week">This Week</option>
-                <option value="this_weekend">This Weekend</option>
-                <option value="later">Later (no specific date)</option>
+                <option :value="null">
+                  Don't change
+                </option>
+                <option value="today">
+                  Today
+                </option>
+                <option value="tomorrow">
+                  Tomorrow
+                </option>
+                <option value="this_week">
+                  This Week
+                </option>
+                <option value="this_weekend">
+                  This Weekend
+                </option>
+                <option value="later">
+                  Later (no specific date)
+                </option>
               </select>
             </div>
 
             <div class="form-group">
               <label class="form-label">Project</label>
               <select v-model="localSettings.projectId" class="form-select">
-                <option :value="null">Don't change</option>
+                <option :value="null">
+                  Don't change
+                </option>
                 <option v-for="project in projects" :key="project.id" :value="project.id">
                   {{ project.name }}
                 </option>

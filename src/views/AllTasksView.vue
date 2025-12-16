@@ -7,8 +7,8 @@
       v-model:sort-by="sortBy"
       :filter-status="filterStatus"
       @update:filter-status="taskStore.setActiveStatusFilter"
-      @expandAll="handleExpandAll"
-      @collapseAll="handleCollapseAll"
+      @expand-all="handleExpandAll"
+      @collapse-all="handleCollapseAll"
     />
 
     <!-- Quick Actions -->
@@ -17,8 +17,8 @@
       <button
         class="hide-done-toggle icon-only"
         :class="{ active: hideDoneTasks }"
-        @click="handleToggleDoneTasks"
         :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+        @click="handleToggleDoneTasks"
       >
         <EyeOff v-if="hideDoneTasks" :size="16" />
         <Eye v-else :size="16" />
@@ -33,10 +33,10 @@
         :tasks="sortedTasks"
         :density="density"
         @select="handleSelectTask"
-        @startTimer="handleStartTimer"
+        @start-timer="handleStartTimer"
         @edit="handleEditTask"
-        @contextMenu="handleContextMenu"
-        @updateTask="handleUpdateTask"
+        @context-menu="handleContextMenu"
+        @update-task="handleUpdateTask"
       />
 
       <!-- List Mode -->
@@ -46,38 +46,38 @@
         :tasks="sortedTasks"
         :empty-message="getEmptyMessage()"
         @select="handleSelectTask"
-        @toggleComplete="handleToggleComplete"
-        @startTimer="handleStartTimer"
+        @toggle-complete="handleToggleComplete"
+        @start-timer="handleStartTimer"
         @edit="handleEditTask"
-        @contextMenu="handleContextMenu"
-        @moveTask="handleMoveTask"
+        @context-menu="handleContextMenu"
+        @move-task="handleMoveTask"
       />
     </div>
 
     <!-- Task Edit Modal -->
     <TaskEditModal
-      :isOpen="showEditModal"
+      :is-open="showEditModal"
       :task="selectedTask"
       @close="closeEditModal"
     />
 
     <!-- Task Context Menu -->
     <TaskContextMenu
-      :isVisible="showContextMenu"
+      :is-visible="showContextMenu"
       :x="contextMenuX"
       :y="contextMenuY"
       :task="contextMenuTask"
       @close="closeContextMenu"
       @edit="handleEditTask"
-      @confirmDelete="handleConfirmDelete"
+      @confirm-delete="handleConfirmDelete"
     />
 
     <!-- Confirmation Modal -->
     <ConfirmationModal
-      :isOpen="showConfirmModal"
+      :is-open="showConfirmModal"
       title="Delete Task"
       message="Are you sure you want to delete this task? This action cannot be undone."
-      confirmText="Delete"
+      confirm-text="Delete"
       @confirm="confirmDeleteTask"
       @cancel="cancelDeleteTask"
     />

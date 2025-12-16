@@ -7,13 +7,30 @@
           Welcome to Pomo-Flow
         </h2>
         <button
-          @click="closeModal"
           class="close-btn"
           aria-label="Close welcome modal"
+          @click="closeModal"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line
+              x1="18"
+              y1="6"
+              x2="6"
+              y2="18"
+            />
+            <line
+              x1="6"
+              y1="6"
+              x2="18"
+              y2="18"
+            />
           </svg>
         </button>
       </div>
@@ -22,8 +39,15 @@
         <!-- Local User Status -->
         <div class="user-status">
           <div class="status-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 6L9 17L4 12"/>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M20 6L9 17L4 12" />
             </svg>
           </div>
           <div class="status-text">
@@ -50,16 +74,18 @@
               placeholder="Enter your name"
               class="name-input"
               maxlength="50"
-            />
+            >
             <button
-              @click="saveDisplayName"
               :disabled="!displayName || displayName === currentDisplayName"
               class="save-btn"
+              @click="saveDisplayName"
             >
               Save
             </button>
           </div>
-          <p class="input-help">This is only stored locally and helps personalize your experience.</p>
+          <p class="input-help">
+            This is only stored locally and helps personalize your experience.
+          </p>
         </div>
 
         <!-- Key Features -->
@@ -67,10 +93,34 @@
           <h4>What Makes Pomo-Flow Special:</h4>
           <div class="feature-list">
             <div class="feature-item">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <line x1="9" y1="9" x2="15" y2="9"/>
-                <line x1="9" y1="15" x2="15" y2="15"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  ry="2"
+                />
+                <line
+                  x1="9"
+                  y1="9"
+                  x2="15"
+                  y2="9"
+                />
+                <line
+                  x1="9"
+                  y1="15"
+                  x2="15"
+                  y2="15"
+                />
               </svg>
               <div>
                 <strong>Task Management</strong>
@@ -78,9 +128,16 @@
               </div>
             </div>
             <div class="feature-item">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
               </svg>
               <div>
                 <strong>Pomodoro Timer</strong>
@@ -88,10 +145,17 @@
               </div>
             </div>
             <div class="feature-item">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
-                <path d="M2 17L12 22L22 17"/>
-                <path d="M2 12L12 17L22 12"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                <path d="M2 17L12 22L22 17" />
+                <path d="M2 12L12 17L22 12" />
               </svg>
               <div>
                 <strong>100% Private</strong>
@@ -99,9 +163,16 @@
               </div>
             </div>
             <div class="feature-item">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
               </svg>
               <div>
                 <strong>Works Offline</strong>
@@ -113,14 +184,14 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="closeModal" class="primary-btn">
+        <button class="primary-btn" @click="closeModal">
           Start Being Productive
         </button>
         <div class="secondary-actions">
-          <button @click="exportData" class="secondary-btn">
+          <button class="secondary-btn" @click="exportData">
             📤 Export Data
           </button>
-          <button @click="showSettings = true" class="secondary-btn">
+          <button class="secondary-btn" @click="showSettings = true">
             ⚙️ Settings
           </button>
         </div>

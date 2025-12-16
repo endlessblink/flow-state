@@ -1,7 +1,7 @@
 <template>
   <div
+    class="base-nav-item"
     :class="[
-      'base-nav-item',
       {
         'is-active': active,
         'is-nested': nested,
@@ -28,7 +28,7 @@
     >
       <ChevronDown :size="14" />
     </button>
-    <div v-else-if="nested" class="chevron-spacer"></div>
+    <div v-else-if="nested" class="chevron-spacer" />
 
     <!-- Icon slot -->
     <div v-if="$slots.icon" class="nav-icon">
@@ -46,7 +46,7 @@
       v-else-if="colorDot"
       class="color-dot"
       :style="{ backgroundColor: colorDot }"
-    ></div>
+    />
 
     <!-- Label with overflow tooltip -->
     <OverflowTooltip

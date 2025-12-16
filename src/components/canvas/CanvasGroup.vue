@@ -14,7 +14,7 @@
     <!-- Section Header -->
     <div class="section-header" :style="headerStyle">
       <div class="section-title">
-        <div class="section-color-indicator" :style="{ backgroundColor: section.color }"></div>
+        <div class="section-color-indicator" :style="{ backgroundColor: section.color }" />
         <span class="section-name">{{ section.name }}</span>
 
         <!-- Power Mode Indicator -->
@@ -26,17 +26,19 @@
           <Zap :size="12" class="power-icon" />
         </div>
 
-        <div class="section-count">{{ taskCount }}</div>
+        <div class="section-count">
+          {{ taskCount }}
+        </div>
       </div>
 
       <div class="section-controls">
         <!-- Collect Button (for power groups) -->
         <div v-if="isPowerMode" class="collect-wrapper">
           <button
-            @click.stop="toggleCollectMenu"
             class="control-btn collect-btn"
             :class="{ 'has-matches': matchingInboxCount > 0 }"
             :title="`Collect matching tasks (${matchingInboxCount} available)`"
+            @click.stop="toggleCollectMenu"
           >
             <Magnet :size="14" />
             <span v-if="matchingInboxCount > 0" class="collect-badge">{{ matchingInboxCount }}</span>
@@ -56,33 +58,33 @@
         <!-- Power Mode Toggle -->
         <button
           v-if="powerKeyword"
-          @click.stop="togglePowerMode"
           class="control-btn"
           :class="{ 'power-active': isPowerMode }"
           :title="isPowerMode ? 'Disable power mode' : 'Enable power mode'"
+          @click.stop="togglePowerMode"
         >
           <Zap :size="14" />
         </button>
 
         <button
-          @click.stop="toggleCollapse"
           class="control-btn"
           :title="section.isCollapsed ? 'Expand' : 'Collapse'"
+          @click.stop="toggleCollapse"
         >
           <ChevronDown v-if="!section.isCollapsed" :size="14" />
           <ChevronRight v-else :size="14" />
         </button>
         <button
-          @click.stop="toggleVisibility"
           class="control-btn"
           title="Toggle Visibility"
+          @click.stop="toggleVisibility"
         >
           <Eye :size="14" />
         </button>
         <button
-          @click.stop="startResize"
           class="control-btn"
           title="Resize Section"
+          @click.stop="startResize"
         >
           <Maximize2 :size="14" />
         </button>
@@ -115,7 +117,9 @@
           @dragover.prevent
         >
           <div v-if="slot.task" class="slot-task-preview">
-            <div class="slot-task-title">{{ slot.task.title }}</div>
+            <div class="slot-task-title">
+              {{ slot.task.title }}
+            </div>
             <div class="slot-task-meta">
               <span class="priority-badge" :class="slot.task.priority">{{ slot.task.priority }}</span>
               <span v-if="slot.task.estimatedDuration" class="duration">{{ slot.task.estimatedDuration }}m</span>
@@ -130,14 +134,14 @@
       v-if="!section.isCollapsed && isResizing"
       class="resize-handle"
       @mousedown="startResize"
-    ></div>
+    />
 
     <!-- Section Guides (when active) -->
     <div v-if="isActive && showSectionGuides" class="section-guides">
-      <div class="guide-top"></div>
-      <div class="guide-right"></div>
-      <div class="guide-bottom"></div>
-      <div class="guide-left"></div>
+      <div class="guide-top" />
+      <div class="guide-right" />
+      <div class="guide-bottom" />
+      <div class="guide-left" />
     </div>
   </div>
 </template>

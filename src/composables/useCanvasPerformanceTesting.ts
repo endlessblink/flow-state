@@ -436,7 +436,7 @@ export function useCanvasPerformanceTesting(
     const thresholds = finalConfig.thresholds
 
     let score = 0
-    let maxScore = 5
+    const maxScore = 5
 
     if (renderTime <= thresholds.maxRenderTime) score++
     if (fps >= thresholds.minFPS) score++

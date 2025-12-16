@@ -1,6 +1,6 @@
 <template>
-  <div class="user-profile-wrapper" ref="wrapperRef">
-    <div class="user-profile" ref="profileRef">
+  <div ref="wrapperRef" class="user-profile-wrapper">
+    <div ref="profileRef" class="user-profile">
       <div class="avatar-circle">
         <img
           v-if="authStore.user?.photoURL"
@@ -9,7 +9,7 @@
           class="avatar-image"
           crossorigin="anonymous"
           referrerpolicy="no-referrer"
-        />
+        >
         <span v-else class="avatar-initial">
           {{ userInitial }}
         </span>
@@ -28,19 +28,23 @@
           <!-- User Info -->
           <div class="dropdown-header">
             <div class="user-info">
-              <div class="user-name">{{ displayName }}</div>
-              <div class="user-email">{{ authStore.user?.email }}</div>
+              <div class="user-name">
+                {{ displayName }}
+              </div>
+              <div class="user-email">
+                {{ authStore.user?.email }}
+              </div>
             </div>
           </div>
 
           <!-- Divider -->
-          <div class="dropdown-divider"></div>
+          <div class="dropdown-divider" />
 
           <!-- Menu Items -->
           <button
             class="dropdown-item"
-            @click="handleSettings"
             role="menuitem"
+            @click="handleSettings"
           >
             <Settings :size="16" />
             <span>Settings</span>
@@ -48,8 +52,8 @@
 
           <button
             class="dropdown-item"
-            @click="handleSignOut"
             role="menuitem"
+            @click="handleSignOut"
           >
             <LogOut :size="16" />
             <span>Sign Out</span>

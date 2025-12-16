@@ -212,7 +212,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
     const clickOffsetY = event.clientY - eventRect.top
 
     const isDuplicateMode = event.altKey
-    let duplicateInstanceId: string | null = null
+    const duplicateInstanceId: string | null = null
 
     let lastUpdatedDayIndex = calendarEvent.dayIndex
     let lastUpdatedSlot = calendarEvent.startSlot

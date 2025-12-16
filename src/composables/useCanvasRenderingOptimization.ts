@@ -463,7 +463,7 @@ export function useCanvasRenderingOptimization(
 
     let visibleCount = 0
     let cachedCount = 0
-    let lodDistribution = { level1: 0, level2: 0, level3: 0, level4: 0 }
+    const lodDistribution = { level1: 0, level2: 0, level3: 0, level4: 0 }
 
     const newStates = new Map<string, NodeRenderingState>()
 

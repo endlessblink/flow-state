@@ -6,13 +6,15 @@
           <span class="icon">🔒</span>
           Forensic Verification Dashboard
         </h2>
-        <p class="dashboard-subtitle">Cryptographic proof of backup system integrity</p>
+        <p class="dashboard-subtitle">
+          Cryptographic proof of backup system integrity
+        </p>
       </div>
       <div class="header-actions">
-        <button @click="runVerification" :disabled="isVerifying" class="btn btn-primary">
+        <button :disabled="isVerifying" class="btn btn-primary" @click="runVerification">
           {{ isVerifying ? 'Running Tests...' : '🔍 Run Verification Now' }}
         </button>
-        <button @click="exportAuditTrail" class="btn btn-secondary">
+        <button class="btn btn-secondary" @click="exportAuditTrail">
           📄 Export Audit Trail
         </button>
       </div>
@@ -103,8 +105,12 @@
             <div class="test-status">
               {{ test.status === 'PASS' ? '✅' : '❌' }}
             </div>
-            <div class="test-scenario">{{ test.scenario }}</div>
-            <div class="test-time">{{ (test.executionTime / 1000).toFixed(1) }}s</div>
+            <div class="test-scenario">
+              {{ test.scenario }}
+            </div>
+            <div class="test-time">
+              {{ (test.executionTime / 1000).toFixed(1) }}s
+            </div>
           </div>
           <div class="test-details">
             <p>{{ test.details }}</p>
@@ -140,8 +146,12 @@
       <div v-else class="audit-events">
         <div v-for="event in recentAuditEvents" :key="event.id" class="audit-event">
           <div class="event-header">
-            <div class="event-time">{{ formatDateTime(event.timestamp) }}</div>
-            <div class="event-operation">{{ event.operation }}</div>
+            <div class="event-time">
+              {{ formatDateTime(event.timestamp) }}
+            </div>
+            <div class="event-operation">
+              {{ event.operation }}
+            </div>
             <div class="event-status" :class="event.status.toLowerCase()">
               {{ event.status }}
             </div>
@@ -157,7 +167,7 @@
         </div>
       </div>
       <div v-if="auditEvents.length > 5" class="view-all">
-        <button @click="showAllEvents = !showAllEvents" class="btn btn-link">
+        <button class="btn btn-link" @click="showAllEvents = !showAllEvents">
           {{ showAllEvents ? 'Show Less' : `View All ${auditEvents.length} Events` }}
         </button>
       </div>
@@ -168,7 +178,9 @@
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>🔍 Running Forensic Verification</h3>
-          <button @click="closeVerificationModal" class="modal-close">✕</button>
+          <button class="modal-close" @click="closeVerificationModal">
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <div class="verification-progress">
@@ -177,7 +189,7 @@
               <span>{{ verificationProgress }}%</span>
             </div>
             <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: verificationProgress + '%' }"></div>
+              <div class="progress-fill" :style="{ width: verificationProgress + '%' }" />
             </div>
           </div>
           <div class="verification-log">

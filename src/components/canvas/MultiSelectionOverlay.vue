@@ -1,11 +1,11 @@
 <template>
-  <div class="multi-selection-overlay" v-if="multiSelectMode || selectionRect">
+  <div v-if="multiSelectMode || selectionRect" class="multi-selection-overlay">
     <!-- Selection Rectangle -->
     <div
       v-if="selectionRect && isSelecting"
       class="selection-rectangle"
       :style="selectionRectStyle"
-    ></div>
+    />
 
     <!-- Selection Controls -->
     <div v-if="multiSelectMode" class="selection-controls">
@@ -14,10 +14,10 @@
         <button
           v-for="mode in selectionModes"
           :key="mode.value"
-          @click="setSelectionMode(mode.value as any)"
           class="mode-btn"
           :class="{ active: selectionMode === mode.value }"
           :title="mode.description"
+          @click="setSelectionMode(mode.value as any)"
         >
           <component :is="mode.icon" :size="14" />
           <span>{{ mode.label }}</span>
@@ -26,13 +26,13 @@
 
       <div class="control-group">
         <span class="control-label">Quick Actions:</span>
-        <button @click="selectAll" class="action-btn" title="Select All">
+        <button class="action-btn" title="Select All" @click="selectAll">
           <CheckSquare :size="14" />
         </button>
-        <button @click="clearSelection" class="action-btn" title="Clear Selection">
+        <button class="action-btn" title="Clear Selection" @click="clearSelection">
           <X :size="14" />
         </button>
-        <button @click="invertSelection" class="action-btn" title="Invert Selection">
+        <button class="action-btn" title="Invert Selection" @click="invertSelection">
           <RotateCcw :size="14" />
         </button>
       </div>
@@ -41,7 +41,7 @@
         <span class="selected-count">{{ selectedCount }} selected</span>
         
         <div class="bulk-actions">
-          <button @click="showBulkMenu = !showBulkMenu" class="bulk-menu-btn">
+          <button class="bulk-menu-btn" @click="showBulkMenu = !showBulkMenu">
             <MoreHorizontal :size="14" />
             Bulk Actions
           </button>
@@ -49,24 +49,44 @@
           <div v-if="showBulkMenu" class="bulk-menu">
             <div class="bulk-menu-section">
               <span class="bulk-menu-title">Status</span>
-              <button @click="bulkUpdateStatus('planned')" class="bulk-menu-item">Planned</button>
-              <button @click="bulkUpdateStatus('in_progress')" class="bulk-menu-item">In Progress</button>
-              <button @click="bulkUpdateStatus('done')" class="bulk-menu-item">Done</button>
-              <button @click="bulkUpdateStatus('backlog')" class="bulk-menu-item">Backlog</button>
+              <button class="bulk-menu-item" @click="bulkUpdateStatus('planned')">
+                Planned
+              </button>
+              <button class="bulk-menu-item" @click="bulkUpdateStatus('in_progress')">
+                In Progress
+              </button>
+              <button class="bulk-menu-item" @click="bulkUpdateStatus('done')">
+                Done
+              </button>
+              <button class="bulk-menu-item" @click="bulkUpdateStatus('backlog')">
+                Backlog
+              </button>
             </div>
             
             <div class="bulk-menu-section">
               <span class="bulk-menu-title">Priority</span>
-              <button @click="bulkUpdatePriority('high')" class="bulk-menu-item priority-high">High</button>
-              <button @click="bulkUpdatePriority('medium')" class="bulk-menu-item priority-medium">Medium</button>
-              <button @click="bulkUpdatePriority('low')" class="bulk-menu-item priority-low">Low</button>
+              <button class="bulk-menu-item priority-high" @click="bulkUpdatePriority('high')">
+                High
+              </button>
+              <button class="bulk-menu-item priority-medium" @click="bulkUpdatePriority('medium')">
+                Medium
+              </button>
+              <button class="bulk-menu-item priority-low" @click="bulkUpdatePriority('low')">
+                Low
+              </button>
             </div>
             
             <div class="bulk-menu-section">
               <span class="bulk-menu-title">Actions</span>
-              <button @click="bulkDelete" class="bulk-menu-item danger">Delete</button>
-              <button @click="bulkDuplicate" class="bulk-menu-item">Duplicate</button>
-              <button @click="bulkMoveToSection" class="bulk-menu-item">Move to Section</button>
+              <button class="bulk-menu-item danger" @click="bulkDelete">
+                Delete
+              </button>
+              <button class="bulk-menu-item" @click="bulkDuplicate">
+                Duplicate
+              </button>
+              <button class="bulk-menu-item" @click="bulkMoveToSection">
+                Move to Section
+              </button>
             </div>
           </div>
         </div>
@@ -81,10 +101,10 @@
         class="node-selection-handle"
         :style="getNodeHandleStyle(node)"
       >
-        <div class="handle-corner top-left"></div>
-        <div class="handle-corner top-right"></div>
-        <div class="handle-corner bottom-left"></div>
-        <div class="handle-corner bottom-right"></div>
+        <div class="handle-corner top-left" />
+        <div class="handle-corner top-right" />
+        <div class="handle-corner bottom-left" />
+        <div class="handle-corner bottom-right" />
       </div>
     </div>
   </div>

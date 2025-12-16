@@ -1,7 +1,7 @@
 <template>
   <button
+    class="base-icon-button"
     :class="[
-      'base-icon-button',
       `variant-${variant}`,
       `size-${size}`,
       { 'is-active': active }

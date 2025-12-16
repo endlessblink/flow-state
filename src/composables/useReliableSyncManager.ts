@@ -172,7 +172,7 @@ export const useReliableSyncManager = () => {
       }
 
       // Add timeout property - reduced to 10 seconds for faster feedback
-      ;(remoteOptions as any).timeout = 10000
+      (remoteOptions as any).timeout = 10000
       remoteOptions.skip_setup = false
 
       console.log('🔌 [REMOTE] Creating PouchDB instance...')
@@ -617,7 +617,7 @@ export const useReliableSyncManager = () => {
       }
 
       // Complete sync operation logging
-      ;(logger as any).completeSyncOperation(operationId, true)
+      (logger as any).completeSyncOperation(operationId, true)
 
       ;(logger as any).info('sync', 'Reliable sync completed successfully', {
         operationId,
@@ -1154,7 +1154,7 @@ export const useReliableSyncManager = () => {
       }
 
       // Clear Phase 2 systems
-      ;(conflictDetector as any).clearHistory?.()
+      (conflictDetector as any).clearHistory?.()
       ;(conflictResolver as any).clearHistory?.()
       ;(retryManager as any).clearHistory?.()
       ;(offlineQueue as any).clearQueue?.()

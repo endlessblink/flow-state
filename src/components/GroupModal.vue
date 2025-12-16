@@ -2,7 +2,9 @@
   <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h2 class="modal-title">{{ isEditing ? 'Edit Group' : 'Create Custom Group' }}</h2>
+        <h2 class="modal-title">
+          {{ isEditing ? 'Edit Group' : 'Create Custom Group' }}
+        </h2>
         <button class="close-btn" @click="$emit('close')">
           <X :size="16" :stroke-width="1.5" />
         </button>
@@ -12,9 +14,9 @@
         <div class="form-group">
           <label class="form-label">Group Name</label>
           <BaseInput
+            ref="nameInput"
             v-model="groupData.name"
             placeholder="Enter group name..."
-            ref="nameInput"
           />
         </div>
 
@@ -26,11 +28,12 @@
             <button
               v-for="color in colorPresets"
               :key="color"
-              :class="['color-preset', { active: groupData.color === color }]"
+              class="color-preset"
+              :class="[{ active: groupData.color === color }]"
               :style="{ backgroundColor: color }"
-              @click="selectColor(color)"
               type="button"
               :title="`Select ${color}`"
+              @click="selectColor(color)"
             />
           </div>
 
@@ -45,13 +48,13 @@
                   placeholder="#3b82f6"
                   class="color-text-input"
                   @input="handleCustomColorInput"
-                />
+                >
                 <input
                   v-model="customColor"
                   type="color"
                   class="color-picker-input"
                   @input="handleColorPickerChange"
-                />
+                >
               </div>
             </div>
 
@@ -73,8 +76,8 @@
         </button>
         <button
           class="btn btn-primary"
-          @click="saveGroup"
           :disabled="!groupData.name.trim()"
+          @click="saveGroup"
         >
           {{ isEditing ? 'Save Changes' : 'Create Group' }}
         </button>

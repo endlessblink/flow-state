@@ -9,56 +9,87 @@
     <div v-else class="error-fallback">
       <div class="error-container">
         <div class="error-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-8 w-8 text-red-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         </div>
 
         <div class="error-content">
-          <h3 class="error-title">Sync System Error</h3>
-          <p class="error-description">{{ errorMessage }}</p>
+          <h3 class="error-title">
+            Sync System Error
+          </h3>
+          <p class="error-description">
+            {{ errorMessage }}
+          </p>
 
           <div v-if="errorDetails" class="error-details">
-            <h4 class="details-title">Error Details:</h4>
+            <h4 class="details-title">
+              Error Details:
+            </h4>
             <pre class="error-stack">{{ errorDetails }}</pre>
           </div>
 
           <div class="error-actions">
-            <button @click="retryInitialization" class="btn btn-primary" :disabled="isRetrying">
+            <button class="btn btn-primary" :disabled="isRetrying" @click="retryInitialization">
               <span v-if="isRetrying" class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  class="animate-spin h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 Retrying...
               </span>
               <span v-else>Retry</span>
             </button>
 
-            <button @click="resetToOfflineMode" class="btn btn-secondary">
+            <button class="btn btn-secondary" @click="resetToOfflineMode">
               Work Offline
             </button>
 
-            <button @click="reloadPage" class="btn btn-outline">
+            <button class="btn btn-outline" @click="reloadPage">
               Reload Page
             </button>
 
-            <button @click="showAdvancedOptions = !showAdvancedOptions" class="btn btn-ghost">
+            <button class="btn btn-ghost" @click="showAdvancedOptions = !showAdvancedOptions">
               Advanced
             </button>
           </div>
 
           <!-- Advanced Options -->
           <div v-if="showAdvancedOptions" class="advanced-options">
-            <h4 class="options-title">Advanced Options:</h4>
+            <h4 class="options-title">
+              Advanced Options:
+            </h4>
             <div class="option-list">
-              <button @click="clearAllData" class="option-btn danger">
+              <button class="option-btn danger" @click="clearAllData">
                 Clear All Data
               </button>
-              <button @click="exportErrorLog" class="option-btn">
+              <button class="option-btn" @click="exportErrorLog">
                 Export Error Log
               </button>
-              <button @click="checkConnection" class="option-btn">
+              <button class="option-btn" @click="checkConnection">
                 Test Connection
               </button>
             </div>
@@ -75,13 +106,35 @@
     <!-- Warning banner for non-critical errors -->
     <div v-if="hasWarnings && !hasCriticalError" class="warning-banner">
       <div class="warning-content">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L5.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5 text-yellow-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L5.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+          />
         </svg>
         <span class="warning-text">{{ warningMessage }}</span>
-        <button @click="dismissWarning" class="dismiss-btn">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        <button class="dismiss-btn" @click="dismissWarning">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -91,16 +144,32 @@
     <div v-if="isRecovering" class="recovery-overlay">
       <div class="recovery-content">
         <div class="recovery-spinner">
-          <svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <svg
+            class="animate-spin h-8 w-8"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
         </div>
-        <h3 class="recovery-title">{{ recoveryTitle }}</h3>
-        <p class="recovery-message">{{ recoveryMessage }}</p>
+        <h3 class="recovery-title">
+          {{ recoveryTitle }}
+        </h3>
+        <p class="recovery-message">
+          {{ recoveryMessage }}
+        </p>
         <div class="recovery-progress">
           <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: `${recoveryProgress}%` }"></div>
+            <div class="progress-fill" :style="{ width: `${recoveryProgress}%` }" />
           </div>
           <span class="progress-text">{{ recoveryProgress }}%</span>
         </div>

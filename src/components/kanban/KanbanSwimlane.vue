@@ -1,9 +1,12 @@
 <template>
-  <div class="kanban-swimlane" :class="{
-    collapsed: isCollapsed,
-    'dragging': isDragging,
-    'scrolling': isScrolling
-  }">
+  <div
+    class="kanban-swimlane"
+    :class="{
+      collapsed: isCollapsed,
+      'dragging': isDragging,
+      'scrolling': isScrolling
+    }"
+  >
     <!-- Swimlane Header (fixed, not scrollable) -->
     <div class="swimlane-header" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
       <div class="header-content">
@@ -11,20 +14,28 @@
           <ChevronDown v-if="!isCollapsed" :size="16" />
           <ChevronRight v-if="isCollapsed" :size="16" />
         </button>
-        <div class="project-indicator" :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }"></div>
-        <h3 class="project-name">{{ project.name }}</h3>
+        <div class="project-indicator" :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }" />
+        <h3 class="project-name">
+          {{ project.name }}
+        </h3>
         <span class="task-count">{{ totalTasks }} tasks</span>
 
         <!-- View Type Dropdown -->
         <div class="view-type-dropdown" @click.stop>
           <select
             v-model="localViewType"
-            @change="handleViewTypeChange"
             class="view-type-select"
+            @change="handleViewTypeChange"
           >
-            <option value="status">Status</option>
-            <option value="date">Date</option>
-            <option value="priority">Priority</option>
+            <option value="status">
+              Status
+            </option>
+            <option value="date">
+              Date
+            </option>
+            <option value="priority">
+              Priority
+            </option>
           </select>
         </div>
       </div>
@@ -33,62 +44,62 @@
     <!-- Scrollable Table Container (only visible when not collapsed) -->
     <div v-if="!isCollapsed" ref="scrollContainer" class="table-scroll-container">
       <div class="swimlane-columns">
-      <!-- Status View Columns -->
-      <template v-if="currentViewType === 'status'">
-        <div
-          v-for="column in statusColumns"
-          :key="column.key"
-          class="swimlane-column"
-          @dragover="handleColumnDragOver"
-          @drop="handleColumnDrop"
-          @dragenter="handleColumnDragEnter"
-          @dragleave="handleColumnDragLeave"
-        >
-          <div class="column-header-mini">
-            <div class="header-left-mini">
-              <span class="column-title-mini">{{ column.label }}</span>
-              <span class="column-count">{{ getTasksByStatus(column.key).length }}</span>
-            </div>
-            <button
-              class="add-task-btn-mini"
-              @click="handleAddTask(column.key)"
-              :title="`Add task to ${column.label}`"
-            >
-              <Plus :size="12" />
-            </button>
-          </div>
-          <draggable
-            v-model="localTasks.status[column.key]"
-            group="swimlane-tasks"
-            item-key="id"
-            @change="handleDragChange($event, 'status', column.key)"
-            class="drag-area-mini"
-            :animation="30"
-            :ghost-class="'ghost-card'"
-            @dragstart="handleDragStart"
-            @dragend="handleDragEnd"
-            @dragover="handleDragOver"
+        <!-- Status View Columns -->
+        <template v-if="currentViewType === 'status'">
+          <div
+            v-for="column in statusColumns"
+            :key="column.key"
+            class="swimlane-column"
+            @dragover="handleColumnDragOver"
+            @drop="handleColumnDrop"
+            @dragenter="handleColumnDragEnter"
+            @dragleave="handleColumnDragLeave"
           >
-            <template #item="{ element: task }">
-              <TaskCard
-                :key="task.id"
-                :task="task"
-                :density="props.density || 'comfortable'"
-                @select="$emit('selectTask', $event)"
-                @startTimer="$emit('startTimer', $event)"
-                @edit="$emit('editTask', $event)"
-                @delete="$emit('deleteTask', $event)"
-                @contextMenu="(event, task) => $emit('contextMenu', event, task)"
-                class="task-item-mini"
-              />
-            </template>
-          </draggable>
-        </div>
-      </template>
+            <div class="column-header-mini">
+              <div class="header-left-mini">
+                <span class="column-title-mini">{{ column.label }}</span>
+                <span class="column-count">{{ getTasksByStatus(column.key).length }}</span>
+              </div>
+              <button
+                class="add-task-btn-mini"
+                :title="`Add task to ${column.label}`"
+                @click="handleAddTask(column.key)"
+              >
+                <Plus :size="12" />
+              </button>
+            </div>
+            <draggable
+              v-model="localTasks.status[column.key]"
+              group="swimlane-tasks"
+              item-key="id"
+              class="drag-area-mini"
+              :animation="30"
+              ghost-class="ghost-card"
+              @change="handleDragChange($event, 'status', column.key)"
+              @dragstart="handleDragStart"
+              @dragend="handleDragEnd"
+              @dragover="handleDragOver"
+            >
+              <template #item="{ element: task }">
+                <TaskCard
+                  :key="task.id"
+                  :task="task"
+                  :density="props.density || 'comfortable'"
+                  class="task-item-mini"
+                  @select="$emit('selectTask', $event)"
+                  @start-timer="$emit('startTimer', $event)"
+                  @edit="$emit('editTask', $event)"
+                  @delete="$emit('deleteTask', $event)"
+                  @context-menu="(event, task) => $emit('contextMenu', event, task)"
+                />
+              </template>
+            </draggable>
+          </div>
+        </template>
 
-      <!-- Date View Columns - Todoist Style -->
-      <template v-if="currentViewType === 'date'">
-        <div
+        <!-- Date View Columns - Todoist Style -->
+        <template v-if="currentViewType === 'date'">
+          <div
             v-for="column in dateColumns"
             :key="column.key"
             class="swimlane-column"
@@ -97,51 +108,51 @@
             @dragenter="handleColumnDragEnter"
             @dragleave="handleColumnDragLeave"
           >
-          <div class="column-header-mini">
-            <div class="header-left-mini">
-              <span class="column-title-mini">{{ column.label }}</span>
-              <span class="column-count">{{ getTasksByDate(column.key).length }}</span>
+            <div class="column-header-mini">
+              <div class="header-left-mini">
+                <span class="column-title-mini">{{ column.label }}</span>
+                <span class="column-count">{{ getTasksByDate(column.key).length }}</span>
+              </div>
+              <button
+                class="add-task-btn-mini"
+                :title="`Add task to ${column.label}`"
+                @click="handleAddTask(column.key)"
+              >
+                <Plus :size="12" />
+              </button>
             </div>
-            <button
-              class="add-task-btn-mini"
-              @click="handleAddTask(column.key)"
-              :title="`Add task to ${column.label}`"
+            <draggable
+              v-model="localTasks.date[column.key]"
+              group="swimlane-tasks"
+              item-key="id"
+              class="drag-area-mini"
+              :animation="30"
+              ghost-class="ghost-card"
+              @change="handleDragChange($event, 'date', column.key)"
+              @dragstart="handleDragStart"
+              @dragend="handleDragEnd"
+              @dragover="handleDragOver"
             >
-              <Plus :size="12" />
-            </button>
+              <template #item="{ element: task }">
+                <TaskCard
+                  :key="task.id"
+                  :task="task"
+                  :density="props.density || 'comfortable'"
+                  class="task-item-mini"
+                  @select="$emit('selectTask', $event)"
+                  @start-timer="$emit('startTimer', $event)"
+                  @edit="$emit('editTask', $event)"
+                  @delete="$emit('deleteTask', $event)"
+                  @context-menu="(event, task) => $emit('contextMenu', event, task)"
+                />
+              </template>
+            </draggable>
           </div>
-          <draggable
-            v-model="localTasks.date[column.key]"
-            group="swimlane-tasks"
-            item-key="id"
-            @change="handleDragChange($event, 'date', column.key)"
-            class="drag-area-mini"
-            :animation="30"
-            :ghost-class="'ghost-card'"
-            @dragstart="handleDragStart"
-            @dragend="handleDragEnd"
-            @dragover="handleDragOver"
-          >
-            <template #item="{ element: task }">
-              <TaskCard
-                :key="task.id"
-                :task="task"
-                :density="props.density || 'comfortable'"
-                @select="$emit('selectTask', $event)"
-                @startTimer="$emit('startTimer', $event)"
-                @edit="$emit('editTask', $event)"
-                @delete="$emit('deleteTask', $event)"
-                @contextMenu="(event, task) => $emit('contextMenu', event, task)"
-                class="task-item-mini"
-              />
-            </template>
-          </draggable>
-        </div>
-      </template>
+        </template>
 
-      <!-- Priority View Columns -->
-      <template v-if="currentViewType === 'priority'">
-        <div
+        <!-- Priority View Columns -->
+        <template v-if="currentViewType === 'priority'">
+          <div
             v-for="column in priorityColumns"
             :key="column.key"
             class="swimlane-column"
@@ -150,48 +161,48 @@
             @dragenter="handleColumnDragEnter"
             @dragleave="handleColumnDragLeave"
           >
-          <div class="column-header-mini">
-            <span class="column-title-mini">{{ column.label }}</span>
-            <span class="column-count">{{ getTasksByPriority(column.key).length }}</span>
+            <div class="column-header-mini">
+              <span class="column-title-mini">{{ column.label }}</span>
+              <span class="column-count">{{ getTasksByPriority(column.key).length }}</span>
+            </div>
+            <draggable
+              v-model="localTasks.priority[column.key]"
+              group="swimlane-tasks"
+              item-key="id"
+              class="drag-area-mini"
+              :animation="30"
+              ghost-class="ghost-card"
+              @change="handleDragChange($event, 'priority', column.key)"
+              @dragstart="handleDragStart"
+              @dragend="handleDragEnd"
+              @dragover="handleDragOver"
+            >
+              <template #item="{ element: task }">
+                <TaskCard
+                  :key="task.id"
+                  :task="task"
+                  :density="props.density || 'comfortable'"
+                  class="task-item-mini"
+                  @select="$emit('selectTask', $event)"
+                  @start-timer="$emit('startTimer', $event)"
+                  @edit="$emit('editTask', $event)"
+                  @delete="$emit('deleteTask', $event)"
+                  @context-menu="(event, task) => $emit('contextMenu', event, task)"
+                />
+              </template>
+            </draggable>
           </div>
-          <draggable
-            v-model="localTasks.priority[column.key]"
-            group="swimlane-tasks"
-            item-key="id"
-            @change="handleDragChange($event, 'priority', column.key)"
-            class="drag-area-mini"
-            :animation="30"
-            :ghost-class="'ghost-card'"
-            @dragstart="handleDragStart"
-            @dragend="handleDragEnd"
-            @dragover="handleDragOver"
-          >
-            <template #item="{ element: task }">
-              <TaskCard
-                :key="task.id"
-                :task="task"
-                :density="props.density || 'comfortable'"
-                @select="$emit('selectTask', $event)"
-                @startTimer="$emit('startTimer', $event)"
-                @edit="$emit('editTask', $event)"
-                @delete="$emit('deleteTask', $event)"
-                @contextMenu="(event, task) => $emit('contextMenu', event, task)"
-                class="task-item-mini"
-              />
-            </template>
-          </draggable>
-        </div>
-      </template>
-    </div>
-
-    <!-- Empty State for Filter -->
-    <div v-if="totalTasks === 0 && currentFilter" class="empty-filter-state">
-      <div class="empty-icon">
-        <Calendar :size="24" :stroke-width="1.5" />
+        </template>
       </div>
-      <p class="empty-message">
-        {{ getEmptyStateMessage() }}
-      </p>
+
+      <!-- Empty State for Filter -->
+      <div v-if="totalTasks === 0 && currentFilter" class="empty-filter-state">
+        <div class="empty-icon">
+          <Calendar :size="24" :stroke-width="1.5" />
+        </div>
+        <p class="empty-message">
+          {{ getEmptyStateMessage() }}
+        </p>
       </div>
     </div>
   </div>

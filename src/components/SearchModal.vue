@@ -15,7 +15,7 @@
             @keydown.arrow-down="moveSelection(1)"
             @keydown.arrow-up="moveSelection(-1)"
             @keydown.escape="$emit('close')"
-          />
+          >
         </div>
         <div class="search-shortcuts">
           <kbd class="shortcut">↑↓</kbd>
@@ -24,7 +24,7 @@
         </div>
       </div>
 
-      <div class="search-results" v-if="searchQuery.trim()">
+      <div v-if="searchQuery.trim()" class="search-results">
         <!-- Tasks Section -->
         <div v-if="filteredTasks.length > 0" class="result-section">
           <div class="section-header">
@@ -40,7 +40,7 @@
             @mouseenter="selectedIndex = tasksStartIndex + index"
           >
             <div class="result-content">
-              <div class="result-title" v-html="highlightMatch(task.title)"></div>
+              <div class="result-title" v-html="highlightMatch(task.title)" />
               <div class="result-meta">
                 <span v-if="task.projectName" class="result-project">{{ task.projectName }}</span>
                 <span class="result-status">{{ task.status || 'No status' }}</span>
@@ -65,9 +65,9 @@
             @mouseenter="selectedIndex = projectsStartIndex + index"
           >
             <div class="result-content">
-              <div class="result-title" v-html="highlightMatch(project.name)"></div>
+              <div class="result-title" v-html="highlightMatch(project.name)" />
               <div class="result-meta">
-                <span class="project-color" :style="{ backgroundColor: project.color as string }"></span>
+                <span class="project-color" :style="{ backgroundColor: project.color as string }" />
                 <span>{{ getTaskCountForProject(project.id) }} tasks</span>
               </div>
             </div>

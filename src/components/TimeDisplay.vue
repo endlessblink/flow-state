@@ -1,8 +1,12 @@
 <template>
   <div class="time-display">
     <div class="time-info">
-      <div class="current-time">{{ currentTime }}</div>
-      <div class="current-date">{{ currentDate }}</div>
+      <div class="current-time">
+        {{ currentTime }}
+      </div>
+      <div class="current-date">
+        {{ currentDate }}
+      </div>
     </div>
   </div>
 </template>

@@ -22,7 +22,6 @@
     >
       {{ emoji }}
     </span>
-
   </div>
 </template>
 

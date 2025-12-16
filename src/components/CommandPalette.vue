@@ -15,7 +15,7 @@
               @keydown.enter.exact="createTask"
               @keydown.enter.shift="createAndContinue"
               @keydown.esc="close"
-            />
+            >
           </div>
 
           <!-- Progressive Disclosure: More Options -->
@@ -27,7 +27,7 @@
                 placeholder="Project"
               />
 
-              <input v-model="dueDate" type="date" class="field-input" />
+              <input v-model="dueDate" type="date" class="field-input">
 
               <CustomSelect
                 v-model="priority"
@@ -185,33 +185,31 @@ defineExpose({ open, close })
 .command-palette-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px) saturate(100%);
+  -webkit-backdrop-filter: blur(12px) saturate(100%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding-top: 20vh;
   z-index: 2000;
+  animation: fadeIn var(--duration-normal) var(--spring-smooth);
 }
 
 /* Modal */
 .command-palette-modal {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--glass-border-hover);
-  border-radius: var(--radius-xl);
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-2xl);
   width: 600px;
   max-width: 90vw;
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.4),
-    0 0 0 1px var(--glass-bg-soft),
-    inset 0 1px 0 var(--glass-bg-heavy);
+    0 32px 64px rgba(0, 0, 0, 0.5),
+    0 16px 32px rgba(0, 0, 0, 0.3);
   overflow: visible;
+  animation: slideUp var(--duration-normal) var(--spring-bounce);
 }
 
 /* Quick Add Section */
@@ -220,12 +218,18 @@ defineExpose({ open, close })
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-6);
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 
 .add-icon {
   color: var(--text-muted);
   flex-shrink: 0;
+  transition: color var(--duration-fast) ease;
+}
+
+.quick-add-section:focus-within .add-icon {
+  color: rgba(78, 205, 196, 0.8);
 }
 
 .task-input {
@@ -248,7 +252,8 @@ defineExpose({ open, close })
   display: flex;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 
 .field-select,
@@ -256,13 +261,13 @@ defineExpose({ open, close })
   flex: 1;
   padding: var(--space-3) var(--space-4);
   background: transparent;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-sm);
   min-height: 44px;
   outline: none;
-  transition: all var(--duration-fast) ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
   color-scheme: dark;
 }
 
@@ -275,22 +280,28 @@ defineExpose({ open, close })
   padding-right: var(--space-8);
 }
 
+.field-select:hover,
+.field-input:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .field-select:focus,
 .field-input:focus {
-  border-color: var(--state-active-border);
-  background: var(--glass-bg-soft);
-  box-shadow: 0 0 0 2px var(--state-active-bg);
+  border-color: rgba(78, 205, 196, 0.5);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
 .field-select option {
-  background: var(--surface-tertiary);
+  background: rgba(0, 0, 0, 0.95);
   color: var(--text-primary);
   padding: var(--space-2);
 }
 
 .field-select option:hover,
 .field-select option:checked {
-  background: var(--surface-elevated);
+  background: rgba(78, 205, 196, 0.2);
 }
 
 .field-input[type="date"]::-webkit-calendar-picker-indicator {
@@ -304,12 +315,13 @@ defineExpose({ open, close })
   justify-content: space-between;
   align-items: center;
   padding: var(--space-4) var(--space-6);
-  background: var(--glass-bg-weak);
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .toggle-options-btn {
   background: transparent;
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-secondary);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
@@ -317,12 +329,20 @@ defineExpose({ open, close })
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   min-height: 36px;
-  transition: all var(--duration-fast) ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .toggle-options-btn:hover {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border-hover);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text-primary);
+  transform: scale(1.02);
+}
+
+.toggle-options-btn:focus-visible {
+  outline: none;
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
 .keyboard-hints {
@@ -334,7 +354,8 @@ defineExpose({ open, close })
   font-size: var(--text-xs);
   color: var(--text-muted);
   padding: var(--space-1) var(--space-2);
-  background: var(--glass-bg-soft);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
 }
 
@@ -379,5 +400,31 @@ defineExpose({ open, close })
 .slide-down-leave-from {
   opacity: 1;
   max-height: 200px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .command-palette-overlay,
+  .command-palette-modal {
+    animation: none;
+    transition: opacity 0.2s ease;
+  }
 }
 </style>

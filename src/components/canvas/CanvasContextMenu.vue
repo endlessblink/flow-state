@@ -28,7 +28,7 @@
         <span class="menu-text">Delete Group</span>
       </button>
 
-      <div class="menu-divider"></div>
+      <div class="menu-divider" />
     </template>
 
     <!-- Create Task Here -->
@@ -52,7 +52,7 @@
 
     <!-- Task-specific options (when tasks are selected) -->
     <template v-if="hasSelectedTasks && selectedCount >= 1 && !contextSection">
-      <div class="menu-divider"></div>
+      <div class="menu-divider" />
 
       <!-- Move to Inbox -->
       <button
@@ -77,7 +77,7 @@
 
     <!-- Layout Submenu (2+ tasks) -->
     <template v-if="selectedCount >= 2">
-      <div class="menu-divider"></div>
+      <div class="menu-divider" />
       <div
         class="menu-item submenu-item"
         @mouseenter="handleLayoutSubmenuEnter"
@@ -125,7 +125,7 @@
 
           <!-- Distribute Options (3+ tasks) -->
           <template v-if="selectedCount >= 3">
-            <div class="menu-divider"></div>
+            <div class="menu-divider" />
             <button class="menu-item" @click="handleDistributeHorizontal">
               <ArrowLeftRight :size="16" :stroke-width="1.5" class="menu-icon" />
               <span class="menu-text">Distribute Horizontally</span>
@@ -137,7 +137,7 @@
           </template>
 
           <!-- Arrange Options -->
-          <div class="menu-divider"></div>
+          <div class="menu-divider" />
           <button class="menu-item" @click="handleArrangeInRow">
             <Rows :size="16" :stroke-width="1.5" class="menu-icon" />
             <span class="menu-text">Arrange in a row</span>

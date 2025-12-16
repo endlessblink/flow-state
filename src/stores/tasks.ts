@@ -2503,7 +2503,7 @@ export const useTaskStore = defineStore('tasks', () => {
           } else {
             undoRedoActions = useUnifiedUndoRedo()
             if (typeof window !== 'undefined') {
-              ;(window as any).__pomoFlowUndoSystem = undoRedoActions
+              (window as any).__pomoFlowUndoSystem = undoRedoActions
             }
             console.log('✅ Created new global unified undo system instance')
           }

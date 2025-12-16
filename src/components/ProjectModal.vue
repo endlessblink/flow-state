@@ -10,9 +10,9 @@
     <div class="form-group">
       <label class="form-label">Project Name</label>
       <BaseInput
+        ref="nameInput"
         v-model="projectData.name"
         placeholder="Enter project name..."
-        ref="nameInput"
       />
     </div>
 
@@ -22,7 +22,9 @@
         v-model="projectData.parentId"
         class="parent-project-select"
       >
-        <option :value="null">None (Top Level)</option>
+        <option :value="null">
+          None (Top Level)
+        </option>
         <option
           v-for="proj in availableParentProjects"
           :key="proj.id"
@@ -45,16 +47,16 @@
           }"
         >
           <ProjectEmojiIcon
-          v-if="projectData.colorType === 'emoji' && projectData.emoji"
-          :emoji="projectData.emoji"
-          size="sm"
-          class="preview-emoji"
-        />
+            v-if="projectData.colorType === 'emoji' && projectData.emoji"
+            :emoji="projectData.emoji"
+            size="sm"
+            class="preview-emoji"
+          />
         </div>
         <button
           class="change-icon-btn"
-          @click="isEmojiPickerOpen = true"
           type="button"
+          @click="isEmojiPickerOpen = true"
         >
           {{ projectData.colorType === 'emoji' && projectData.emoji ? 'Change Icon' : 'Choose Icon or Color' }}
         </button>
@@ -72,8 +74,8 @@
         </BaseButton>
         <BaseButton
           variant="primary"
-          @click="saveProject"
           :disabled="!projectData?.name?.trim()"
+          @click="saveProject"
         >
           {{ isEditing ? 'Save Changes' : 'Create Project' }}
         </BaseButton>

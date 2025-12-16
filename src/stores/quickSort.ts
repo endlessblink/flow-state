@@ -56,7 +56,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
       (a, b) => b.completedAt.getTime() - a.completedAt.getTime()
     )
 
-    let currentDate = new Date()
+    const currentDate = new Date()
     for (const session of sortedHistory) {
       const sessionDate = new Date(session.completedAt).toDateString()
       const expectedDate = new Date(currentDate).toDateString()

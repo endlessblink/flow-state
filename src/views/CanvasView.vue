@@ -41,9 +41,9 @@
         <span class="health-icon">⚠️</span>
         <span class="health-message">{{ systemHealthMessage }}</span>
         <button
-          @click="validateStores"
           class="health-retry-btn"
           title="Retry store initialization"
+          @click="validateStores"
         >
           Retry
         </button>
@@ -64,24 +64,24 @@
         <div class="error-actions">
           <button
             v-if="operationError.retryable"
-            @click="retryFailedOperation"
             class="retry-btn"
             title="Retry failed operation"
+            @click="retryFailedOperation"
           >
             🔄 Retry
           </button>
           <button
-            @click="clearOperationError"
             class="dismiss-btn"
             title="Dismiss error"
+            @click="clearOperationError"
           >
             ✕
           </button>
           <button
             v-if="operationError.type === 'System Restart'"
-            @click="reloadPage"
             class="refresh-btn"
             title="Refresh page"
+            @click="reloadPage"
           >
             🔄 Refresh
           </button>
@@ -95,7 +95,7 @@
       class="global-loading-overlay"
     >
       <div class="loading-content">
-        <div class="loading-spinner"></div>
+        <div class="loading-spinner" />
         <span class="loading-text">
           {{ operationLoading.loading ? 'Loading Canvas...' : 'Synchronizing Data...' }}
         </span>
@@ -110,18 +110,17 @@
   
     <!-- MAIN CANVAS AREA -->
     <div class="canvas-main">
-  
-       <!-- Vue Flow Canvas -->
+      <!-- Vue Flow Canvas -->
       <div
+        class="canvas-drop-zone"
         @drop="handleDrop"
         @dragover.prevent
         @contextmenu.prevent="handleCanvasRightClick"
-        class="canvas-drop-zone"
       >
         <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
         <div v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0" class="canvas-loading-overlay">
           <div class="loading-content">
-            <div class="loading-spinner"></div>
+            <div class="loading-spinner" />
             <span class="loading-text">Loading canvas...</span>
           </div>
         </div>
@@ -129,8 +128,12 @@
         <!-- Empty state when no tasks exist -->
         <div v-if="hasNoTasks" class="canvas-empty-state">
           <Inbox :size="64" class="empty-icon" />
-          <h2 class="empty-title">Your canvas is empty</h2>
-          <p class="empty-description">Add your first task to get started with visual organization</p>
+          <h2 class="empty-title">
+            Your canvas is empty
+          </h2>
+          <p class="empty-description">
+            Add your first task to get started with visual organization
+          </p>
           <button class="add-task-button" @click="handleAddTask">
             <Plus :size="16" />
             Add Task
@@ -167,9 +170,9 @@
           <Filter :size="16" />
           <span>{{ getStatusFilterLabel(taskStore.activeStatusFilter) }} filter active</span>
           <button
-            @click="clearStatusFilter"
             class="ml-2 text-indigo-400 hover:text-white transition-colors"
             title="Clear filter"
+            @click="clearStatusFilter"
           >
             <X :size="14" />
           </button>
@@ -186,152 +189,151 @@
           <div class="canvas-container-wrapper">
             <!-- Canvas with tasks -->
             <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
-            <VueFlow
-              v-if="systemHealthy && isCanvasReady"
-              ref="vueFlowRef"
-              :class="{ 'canvas-ready': isCanvasReady }"
-              class="vue-flow-container"
-              v-model:nodes="safeNodes"
-              v-model:edges="safeEdges"
-            :node-types="nodeTypes as any"
-          :edges-focusable="true"
-          :elevate-nodes-on-select="false"
-          :elevate-edges-on-select="true"
-          :zoom-on-scroll="true"
-          :pan-on-scroll="false"
-          :zoom-on-pinch="true"
-          :pan-on-drag="true"
-          :multi-selection-key-code="'Shift'"
-          :snap-to-grid="true"
-          :snap-grid="[16, 16]"
-          :node-extent="dynamicNodeExtent"
-          :min-zoom="0.05"
-          :max-zoom="4.0"
-          :fit-view-on-init="false"
-          :connect-on-drag-nodes="false"
-          :zoom-scroll-sensitivity="1.0"
-          :zoom-activation-key-code="null"
-          :prevent-scrolling="true"
-          :default-viewport="{ zoom: 1, x: 0, y: 0 }"
-          @node-drag-start="handleNodeDragStart"
-          @node-drag-stop="handleNodeDragStop"
-          @node-drag="handleNodeDrag"
-          @nodes-change="handleNodesChange"
-          @selection-change="handleSelectionChange"
-          @pane-click="handlePaneClick"
-          @pane-context-menu="handlePaneContextMenu"
-          @node-context-menu="handleNodeContextMenu"
-          @edge-click="handleEdgeClick"
-          @edge-context-menu="handleEdgeContextMenu"
-            @connect="handleConnect"
-          @connect-start="handleConnectStart"
-          @connect-end="handleConnectEnd"
-          @keydown="handleKeyDown"
-          dir="ltr"
-          tabindex="0"
-        >
-        <!-- Background Grid -->
-        <Background
-          pattern-color="#e5e7eb"
-          pattern="dots"
-          :gap="16"
-          :size="1"
-        />
+              <VueFlow
+                v-if="systemHealthy && isCanvasReady"
+                ref="vueFlowRef"
+                v-model:nodes="safeNodes"
+                v-model:edges="safeEdges"
+                :class="{ 'canvas-ready': isCanvasReady }"
+                class="vue-flow-container"
+                :node-types="nodeTypes as any"
+                :edges-focusable="true"
+                :elevate-nodes-on-select="false"
+                :elevate-edges-on-select="true"
+                :zoom-on-scroll="true"
+                :pan-on-scroll="false"
+                :zoom-on-pinch="true"
+                :pan-on-drag="true"
+                multi-selection-key-code="Shift"
+                :snap-to-grid="true"
+                :snap-grid="[16, 16]"
+                :node-extent="dynamicNodeExtent"
+                :min-zoom="0.05"
+                :max-zoom="4.0"
+                :fit-view-on-init="false"
+                :connect-on-drag-nodes="false"
+                :zoom-scroll-sensitivity="1.0"
+                :zoom-activation-key-code="null"
+                :prevent-scrolling="true"
+                :default-viewport="{ zoom: 1, x: 0, y: 0 }"
+                @node-drag-start="handleNodeDragStart"
+                @node-drag-stop="handleNodeDragStop"
+                @node-drag="handleNodeDrag"
+                @nodes-change="handleNodesChange"
+                @selection-change="handleSelectionChange"
+                dir="ltr"
+                @pane-click="handlePaneClick"
+                tabindex="0"
+                @pane-context-menu="handlePaneContextMenu"
+                @node-context-menu="handleNodeContextMenu"
+                @edge-click="handleEdgeClick"
+                @edge-context-menu="handleEdgeContextMenu"
+                @connect="handleConnect"
+                @connect-start="handleConnectStart"
+                @connect-end="handleConnectEnd"
+                @keydown="handleKeyDown"
+              >
+                <!-- Background Grid -->
+                <Background
+                  pattern-color="#e5e7eb"
+                  pattern="dots"
+                  :gap="16"
+                  :size="1"
+                />
 
   
   
-        <!-- MiniMap -->
-        <MiniMap
-          :node-color="getNodeColor"
-          :mask-color="'var(--text-secondary)'"
-          :pannable="true"
-          :zoomable="true"
-          :position="'bottom-right'"
-        />
+                <!-- MiniMap -->
+                <MiniMap
+                  :node-color="getNodeColor"
+                  mask-color="var(--text-secondary)"
+                  :pannable="true"
+                  :zoomable="true"
+                  position="bottom-right"
+                />
 
-        <!-- Section Node Template -->
-        <template #node-sectionNode="nodeProps">
-          <GroupNodeSimple
-            :data="nodeProps.data"
-            :selected="nodeProps.selected"
-            @update="handleSectionUpdate"
-            @collect="collectTasksForSection"
-            @context-menu="handleSectionContextMenu"
-            @open-settings="handleOpenSectionSettings"
-            @resizeStart="handleSectionResizeStart"
-            @resize="handleSectionResize"
-            @resizeEnd="handleSectionResizeEnd"
-          />
-        </template>
+                <!-- Section Node Template -->
+                <template #node-sectionNode="nodeProps">
+                  <GroupNodeSimple
+                    :data="nodeProps.data"
+                    :selected="nodeProps.selected"
+                    @update="handleSectionUpdate"
+                    @collect="collectTasksForSection"
+                    @context-menu="handleSectionContextMenu"
+                    @open-settings="handleOpenSectionSettings"
+                    @resize-start="handleSectionResizeStart"
+                    @resize="handleSectionResize"
+                    @resize-end="handleSectionResizeEnd"
+                  />
+                </template>
 
-        <!-- Custom Task Node Template -->
-        <template #node-taskNode="nodeProps">
-          <TaskNode
-            :task="nodeProps.data.task"
-            :is-selected="canvasStore.selectedNodeIds.includes(nodeProps.data.task.id)"
-            :multi-select-mode="canvasStore.multiSelectMode"
-            :show-priority="canvasStore.showPriorityIndicator"
-            :show-status="canvasStore.showStatusBadge"
-            :show-duration="canvasStore.showDurationBadge"
-            :show-schedule="canvasStore.showScheduleBadge"
-            :is-connecting="isConnecting"
-            @edit="handleEditTask"
-            @select="handleTaskSelect"
-            @context-menu="handleTaskContextMenu"
-          />
-        </template>
+                <!-- Custom Task Node Template -->
+                <template #node-taskNode="nodeProps">
+                  <TaskNode
+                    :task="nodeProps.data.task"
+                    :is-selected="canvasStore.selectedNodeIds.includes(nodeProps.data.task.id)"
+                    :multi-select-mode="canvasStore.multiSelectMode"
+                    :show-priority="canvasStore.showPriorityIndicator"
+                    :show-status="canvasStore.showStatusBadge"
+                    :show-duration="canvasStore.showDurationBadge"
+                    :show-schedule="canvasStore.showScheduleBadge"
+                    :is-connecting="isConnecting"
+                    @edit="handleEditTask"
+                    @select="handleTaskSelect"
+                    @context-menu="handleTaskContextMenu"
+                  />
+                </template>
 
-        <!-- SVG markers for connection arrows -->
-        <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
-          <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="3"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
-              <polygon
-                points="0 0, 10 3, 0 6"
-                fill="var(--border-secondary)"
-              />
-            </marker>
-            <marker
-              id="arrowhead-hover"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="3"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
-              <polygon
-                points="0 0, 10 3, 0 6"
-                fill="var(--color-navigation)"
-              />
-            </marker>
-          </defs>
-        </svg>
-      </VueFlow>
+                <!-- SVG markers for connection arrows -->
+                <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
+                  <defs>
+                    <marker
+                      id="arrowhead"
+                      markerWidth="10"
+                      markerHeight="10"
+                      refX="9"
+                      refY="3"
+                      orient="auto"
+                      markerUnits="strokeWidth"
+                    >
+                      <polygon
+                        points="0 0, 10 3, 0 6"
+                        fill="var(--border-secondary)"
+                      />
+                    </marker>
+                    <marker
+                      id="arrowhead-hover"
+                      markerWidth="10"
+                      markerHeight="10"
+                      refX="9"
+                      refY="3"
+                      orient="auto"
+                      markerUnits="strokeWidth"
+                    >
+                      <polygon
+                        points="0 0, 10 3, 0 6"
+                        fill="var(--color-navigation)"
+                      />
+                    </marker>
+                  </defs>
+                </svg>
+              </VueFlow>
 
-          <!-- Loading state when canvas is not ready -->
-          <div v-else class="canvas-loading-state">
-            <div class="flex items-center justify-center h-full">
-              <div class="text-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-                <p class="text-gray-600 dark:text-gray-400">
-                  {{ systemHealthy ? 'Initializing Canvas...' : 'System Initializing...' }}
-                </p>
+              <!-- Loading state when canvas is not ready -->
+              <div v-else class="canvas-loading-state">
+                <div class="flex items-center justify-center h-full">
+                  <div class="text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4" />
+                    <p class="text-gray-600 dark:text-gray-400">
+                      {{ systemHealthy ? 'Initializing Canvas...' : 'System Initializing...' }}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-
-          </div>
         </div>
       </div>
-    </div>
     </div>  <!-- This closes the canvas-drop-zone div from line 55 -->
 
     <!-- ================================================================= -->
@@ -398,23 +400,23 @@
       :selected-count="canvasStore.selectedNodeIds.length"
       :context-section="canvasContextSection"
       @close="closeCanvasContextMenu"
-      @createTaskHere="createTaskHere"
-      @createGroup="createGroup"
-      @editGroup="editGroup"
-      @deleteGroup="deleteGroup"
-      @moveToInbox="moveSelectedTasksToInbox"
-      @deleteTasks="deleteSelectedTasks"
-      @alignLeft="alignLeft"
-      @alignRight="alignRight"
-      @alignTop="alignTop"
-      @alignBottom="alignBottom"
-      @alignCenterHorizontal="alignCenterHorizontal"
-      @alignCenterVertical="alignCenterVertical"
-      @distributeHorizontal="distributeHorizontal"
-      @distributeVertical="distributeVertical"
-      @arrangeInRow="arrangeInRow"
-      @arrangeInColumn="arrangeInColumn"
-      @arrangeInGrid="arrangeInGrid"
+      @create-task-here="createTaskHere"
+      @create-group="createGroup"
+      @edit-group="editGroup"
+      @delete-group="deleteGroup"
+      @move-to-inbox="moveSelectedTasksToInbox"
+      @delete-tasks="deleteSelectedTasks"
+      @align-left="alignLeft"
+      @align-right="alignRight"
+      @align-top="alignTop"
+      @align-bottom="alignBottom"
+      @align-center-horizontal="alignCenterHorizontal"
+      @align-center-vertical="alignCenterVertical"
+      @distribute-horizontal="distributeHorizontal"
+      @distribute-vertical="distributeVertical"
+      @arrange-in-row="arrangeInRow"
+      @arrange-in-column="arrangeInColumn"
+      @arrange-in-grid="arrangeInGrid"
     />
 
     <!-- Edge Context Menu -->
@@ -443,8 +445,8 @@
     >
       <div
         v-for="section in canvasStore.sections"
-        :key="section.id"
         v-show="section.id === resizeState.sectionId"
+        :key="section.id"
         class="resize-preview-section-overlay"
         :style="getSectionResizeStyle(section)"
       >
@@ -683,7 +685,7 @@ const message = useMessage()
 const undoHistory = getUndoSystem()
 
 if (import.meta.env.DEV) {
-  ;(window as any).__canvasStore = canvasStore
+  (window as any).__canvasStore = canvasStore
 }
 
 // ============================================================================
@@ -922,12 +924,12 @@ const resourceManager = {
 
     try {
       // Clear reactive arrays first
-      if (typeof nodes !== 'undefined' && nodes.value && Array.isArray(nodes.value)) {
+      if (typeof nodes.value !== 'undefined' && nodes.value && Array.isArray(nodes.value)) {
         nodes.value.length = 0
         console.log('🧹 [VUE_FLOW] Cleared nodes array')
       }
 
-      if (typeof edges !== 'undefined' && edges.value && Array.isArray(edges.value)) {
+      if (typeof edges.value !== 'undefined' && edges.value && Array.isArray(edges.value)) {
         edges.value.length = 0
         console.log('🧹 [VUE_FLOW] Cleared edges array')
       }
@@ -4035,7 +4037,7 @@ const handleKeyDown = async (event: KeyboardEvent) => {
   }
 
   if (import.meta.env.DEV) {
-    ;(window as any).__canvasDeleteDebug = {
+    (window as any).__canvasDeleteDebug = {
       selectedIds: selectedNodes.map(node => node.id),
       targetTag: target ? target.tagName : null,
       shiftKey: event.shiftKey

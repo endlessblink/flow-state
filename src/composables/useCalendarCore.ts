@@ -228,6 +228,35 @@ export function useCalendarCore() {
     return { hour: snappedHour, minute: snappedMinute }
   }
 
+  // === SLOT UTILITIES ===
+  // Extracted from CalendarView.vue
+
+  /**
+   * Format slot time for data attribute (HH:MM format)
+   */
+  const formatSlotTime = (slot: { hour: number; minute: number }): string => {
+    return `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
+  }
+
+  /**
+   * Check if a time slot contains the current time
+   */
+  const isCurrentTimeSlot = (slot: { date: string; hour: number; minute: number }, currentTime: Date): boolean => {
+    const slotDate = new Date(`${slot.date}T${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`)
+    const slotEnd = new Date(slotDate.getTime() + 30 * 60000)
+
+    return currentTime >= slotDate && currentTime < slotEnd &&
+           slot.date === currentTime.toISOString().split('T')[0]
+  }
+
+  /**
+   * Get project visual (emoji or color) for a calendar event
+   */
+  const getProjectVisual = (event: { projectId?: string }): { type: string; content: string } => {
+    if (!event.projectId) return { type: 'default', content: '📁' }
+    return taskStore.getProjectVisual(event.projectId)
+  }
+
   return {
     // Date utilities
     getDateString,
@@ -253,12 +282,17 @@ export function useCalendarCore() {
     getProjectColor,
     getProjectEmoji,
     getProjectName,
+    getProjectVisual,
 
     // Overlap calculation
     calculateOverlappingPositions,
 
     // Time snapping
     snapTo15Minutes,
+
+    // Slot utilities
+    formatSlotTime,
+    isCurrentTimeSlot,
 
     // Note: CalendarEvent type is already exported as interface above
   }

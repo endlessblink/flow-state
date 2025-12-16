@@ -141,7 +141,7 @@ export function useTaskRecurrence(taskId: string) {
       return
     }
 
-    ;(recurrence.value.rule as any).weekdays = weekdays
+    (recurrence.value.rule as any).weekdays = weekdays
   }
 
   /**
@@ -152,7 +152,7 @@ export function useTaskRecurrence(taskId: string) {
       return
     }
 
-    ;(recurrence.value.rule as any).dayOfMonth = dayOfMonth
+    (recurrence.value.rule as any).dayOfMonth = dayOfMonth
   }
 
   /**

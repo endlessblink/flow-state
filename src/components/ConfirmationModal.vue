@@ -18,7 +18,9 @@
 
     <!-- Details (if provided) -->
     <div v-if="details && details.length > 0" class="modal-details">
-      <h4 class="details-title">Items to be deleted:</h4>
+      <h4 class="details-title">
+        Items to be deleted:
+      </h4>
       <ul class="details-list">
         <li v-for="(detail, index) in details" :key="index" class="detail-item">
           {{ detail }}

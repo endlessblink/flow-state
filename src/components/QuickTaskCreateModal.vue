@@ -18,14 +18,15 @@
           id="task-title-input"
           ref="titleInput"
           v-model="taskTitle"
-          :class="['form-input', titleAlignmentClasses]"
+          class="form-input"
+          :class="[titleAlignmentClasses]"
           :style="titleAlignmentStyles"
           type="text"
           placeholder="Enter task title..."
           maxlength="200"
           @keydown.enter="handleCreateTask"
           @keydown.esc="$emit('cancel')"
-        />
+        >
         <div class="input-help">
           {{ taskTitle.length }}/200 characters
         </div>
@@ -37,12 +38,13 @@
         <textarea
           id="task-description-input"
           v-model="taskDescription"
-          :class="['form-textarea', descriptionAlignmentClasses]"
+          class="form-textarea"
+          :class="[descriptionAlignmentClasses]"
           :style="descriptionAlignmentStyles"
           rows="3"
           placeholder="Add a description..."
           maxlength="500"
-        ></textarea>
+        />
         <div class="input-help">
           {{ taskDescription.length }}/500 characters
         </div>
@@ -60,9 +62,9 @@
         </BaseButton>
         <BaseButton
           variant="primary"
-          @click="handleCreateTask"
           :disabled="!taskTitle.trim()"
           :loading="loading"
+          @click="handleCreateTask"
         >
           Create Task
         </BaseButton>

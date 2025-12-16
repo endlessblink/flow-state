@@ -13,6 +13,7 @@
     :aria-label="taskAriaLabel"
     :aria-describedby="`task-meta-${task.id}`"
     :aria-pressed="isPressed"
+    ref="taskCardRef"
     :aria-expanded="progressiveDisclosureEnabled ? isExpanded : undefined"
     :aria-disabled="disabled"
     draggable="true"
@@ -23,7 +24,6 @@
     @contextmenu.prevent="handleRightClick"
     @focus="handleFocus"
     @blur="handleBlur"
-    ref="taskCardRef"
   >
     <!-- Status icon and title row -->
     <div class="card-header">
@@ -31,18 +31,43 @@
       <button
         class="status-icon-button"
         :class="statusColorClass"
-        @click.stop="cycleStatus"
         :title="statusTooltip"
         :aria-label="statusTooltip"
         :aria-describedby="`task-title-${task.id}`"
         type="button"
         tabindex="-1"
+        @click.stop="cycleStatus"
       >
-        <CalendarDays v-if="task.status === 'planned'" :size="14" :stroke-width="1.5" aria-hidden="true" />
-        <Loader v-else-if="task.status === 'in_progress'" :size="14" :stroke-width="1.5" aria-hidden="true" />
-        <CheckCircle v-else-if="task.status === 'done'" :size="14" :stroke-width="1.5" aria-hidden="true" />
-        <Inbox v-else-if="task.status === 'backlog'" :size="14" :stroke-width="1.5" aria-hidden="true" />
-        <PauseCircle v-else :size="14" :stroke-width="1.5" aria-hidden="true" />
+        <CalendarDays
+          v-if="task.status === 'planned'"
+          :size="14"
+          :stroke-width="1.5"
+          aria-hidden="true"
+        />
+        <Loader
+          v-else-if="task.status === 'in_progress'"
+          :size="14"
+          :stroke-width="1.5"
+          aria-hidden="true"
+        />
+        <CheckCircle
+          v-else-if="task.status === 'done'"
+          :size="14"
+          :stroke-width="1.5"
+          aria-hidden="true"
+        />
+        <Inbox
+          v-else-if="task.status === 'backlog'"
+          :size="14"
+          :stroke-width="1.5"
+          aria-hidden="true"
+        />
+        <PauseCircle
+          v-else
+          :size="14"
+          :stroke-width="1.5"
+          aria-hidden="true"
+        />
       </button>
 
       <!-- Title and metadata in flex layout -->
@@ -63,31 +88,37 @@
           aria-label="Task metadata"
         >
           <!-- Due date badge -->
-          <span v-if="task.dueDate"
-                class="meta-badge due-date-badge"
-                :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
-                :title="`Due: ${task.dueDate}`"
-                :aria-label="`Due date: ${task.dueDate}`"
-                role="status">
+          <span
+            v-if="task.dueDate"
+            class="meta-badge due-date-badge"
+            :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
+            :title="`Due: ${task.dueDate}`"
+            :aria-label="`Due date: ${task.dueDate}`"
+            role="status"
+          >
             <Calendar :size="10" aria-hidden="true" />
             <span v-if="density !== 'ultrathin'">{{ task.dueDate }}</span>
           </span>
 
           <!-- Priority badge -->
-          <span class="meta-badge priority-badge"
-                :class="[`priority-${task.priority || 'medium'}`, { 'meta-badge--icon-only': density === 'ultrathin' }]"
-                :title="`Priority: ${(task.priority || 'medium').charAt(0).toUpperCase()}`"
-                :aria-label="`Priority: ${task.priority || 'medium'}`"
-                role="status">
-            <span class="priority-dot" aria-hidden="true"></span>
+          <span
+            class="meta-badge priority-badge"
+            :class="[`priority-${task.priority || 'medium'}`, { 'meta-badge--icon-only': density === 'ultrathin' }]"
+            :title="`Priority: ${(task.priority || 'medium').charAt(0).toUpperCase()}`"
+            :aria-label="`Priority: ${task.priority || 'medium'}`"
+            role="status"
+          >
+            <span class="priority-dot" aria-hidden="true" />
             <span v-if="density !== 'ultrathin'">{{ (task.priority || 'medium').charAt(0).toUpperCase() }}</span>
           </span>
 
           <!-- Project visual indicator (emoji, SVG, or CSS circle) -->
-          <div class="meta-badge project-visual-container"
-               :class="{ 'project-visual-container--emoji': projectVisual.type === 'emoji' }"
-               :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-               role="status">
+          <div
+            class="meta-badge project-visual-container"
+            :class="{ 'project-visual-container--emoji': projectVisual.type === 'emoji' }"
+            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+            role="status"
+          >
             <!-- SVG/Native Emoji for projects with emoji -->
             <ProjectEmojiIcon
               v-if="projectVisual.type === 'emoji'"
@@ -104,7 +135,7 @@
               :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
               role="img"
               :aria-label="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-            ></div>
+            />
 
             <!-- Default fallback (folder icon) -->
             <ProjectEmojiIcon
@@ -116,34 +147,40 @@
           </div>
 
           <!-- Subtasks badge -->
-          <span v-if="task.subtasks && task.subtasks.length > 0"
-                class="meta-badge subtasks-badge"
-                :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
-                :title="`Subtasks: ${completedSubtasks}/${task.subtasks.length}`"
-                :aria-label="`Subtasks: ${completedSubtasks} of ${task.subtasks.length} completed`"
-                role="status">
+          <span
+            v-if="task.subtasks && task.subtasks.length > 0"
+            class="meta-badge subtasks-badge"
+            :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
+            :title="`Subtasks: ${completedSubtasks}/${task.subtasks.length}`"
+            :aria-label="`Subtasks: ${completedSubtasks} of ${task.subtasks.length} completed`"
+            role="status"
+          >
             <List :size="10" aria-hidden="true" />
             <span v-if="density !== 'ultrathin'">{{ completedSubtasks }}/{{ task.subtasks.length }}</span>
           </span>
 
           <!-- Dependency badge -->
-          <span v-if="hasDependencies"
-                class="meta-badge dependency-badge"
-                :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
-                :title="`Dependencies: ${task.dependsOn?.length || 0}`"
-                :aria-label="`${task.dependsOn?.length || 0} dependencies`"
-                role="status">
+          <span
+            v-if="hasDependencies"
+            class="meta-badge dependency-badge"
+            :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
+            :title="`Dependencies: ${task.dependsOn?.length || 0}`"
+            :aria-label="`${task.dependsOn?.length || 0} dependencies`"
+            role="status"
+          >
             <Link :size="10" aria-hidden="true" />
             <span v-if="density !== 'ultrathin'">{{ task.dependsOn?.length || 0 }}</span>
           </span>
 
           <!-- Pomodoro sessions badge -->
-          <span v-if="task.completedPomodoros > 0"
-                class="meta-badge pomodoro-badge"
-                :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
-                :title="`Pomodoro sessions: ${task.completedPomodoros}`"
-                :aria-label="`${task.completedPomodoros} completed pomodoro session${task.completedPomodoros !== 1 ? 's' : ''}`"
-                role="status">
+          <span
+            v-if="task.completedPomodoros > 0"
+            class="meta-badge pomodoro-badge"
+            :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
+            :title="`Pomodoro sessions: ${task.completedPomodoros}`"
+            :aria-label="`${task.completedPomodoros} completed pomodoro session${task.completedPomodoros !== 1 ? 's' : ''}`"
+            role="status"
+          >
             <span class="pomodoro-icon" aria-hidden="true">🍅</span>
             <span v-if="density !== 'ultrathin'">{{ task.completedPomodoros }}</span>
           </span>
@@ -153,22 +190,22 @@
       <!-- Compact action buttons -->
       <div class="compact-actions" role="group" aria-label="Task actions">
         <button
-          @click.stop="$emit('startTimer', task.id)"
           class="action-btn timer-btn"
           title="Start Pomodoro Timer"
           aria-label="Start Pomodoro timer for this task"
           type="button"
           tabindex="-1"
+          @click.stop="$emit('startTimer', task.id)"
         >
           <Play :size="12" aria-hidden="true" />
         </button>
         <button
-          @click.stop="$emit('edit', task.id)"
           class="action-btn edit-btn"
           title="Edit Task"
           aria-label="Edit this task"
           type="button"
           tabindex="-1"
+          @click.stop="$emit('edit', task.id)"
         >
           <Edit :size="12" aria-hidden="true" />
         </button>
@@ -204,12 +241,6 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false
 })
 
-const { enabled: progressiveDisclosureEnabled } = useProgressiveDisclosure()
-const isExpanded = ref(true) // Default expanded (current behavior)
-const isFocused = ref(false)
-const isPressed = ref(false)
-const taskCardRef = ref<HTMLElement>()
-
 const emit = defineEmits<{
   select: [taskId: string]
   startTimer: [taskId: string]
@@ -219,6 +250,11 @@ const emit = defineEmits<{
   focus: [event: FocusEvent]
   blur: [event: FocusEvent]
 }>()
+const { enabled: progressiveDisclosureEnabled } = useProgressiveDisclosure()
+const isExpanded = ref(true) // Default expanded (current behavior)
+const isFocused = ref(false)
+const isPressed = ref(false)
+const taskCardRef = ref<HTMLElement>()
 
 const { startDrag, endDrag } = useDragAndDrop()
 

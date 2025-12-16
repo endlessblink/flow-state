@@ -3,9 +3,9 @@
     :is-open="uiStore.authModalOpen"
     :show-footer="false"
     size="md"
-    @close="handleClose"
     :close-on-overlay-click="true"
     :close-on-escape="true"
+    @close="handleClose"
   >
     <template #title>
       <div class="auth-modal-title">
@@ -19,8 +19,8 @@
       <LoginForm
         v-if="uiStore.authModalView === 'login'"
         @success="handleAuthSuccess"
-        @switchToSignup="uiStore.switchAuthView('signup')"
-        @forgotPassword="handleForgotPassword"
+        @switch-to-signup="uiStore.switchAuthView('signup')"
+        @forgot-password="handleForgotPassword"
       >
         <template #google-signin>
           <GoogleSignInButton
@@ -34,7 +34,7 @@
       <SignupForm
         v-else-if="uiStore.authModalView === 'signup'"
         @success="handleAuthSuccess"
-        @switchToLogin="uiStore.switchAuthView('login')"
+        @switch-to-login="uiStore.switchAuthView('login')"
       >
         <template #google-signin>
           <GoogleSignInButton
@@ -49,7 +49,7 @@
         v-else-if="uiStore.authModalView === 'reset-password'"
         :prefilled-email="resetEmail"
         @success="handleResetSuccess"
-        @switchToLogin="uiStore.switchAuthView('login')"
+        @switch-to-login="uiStore.switchAuthView('login')"
       />
     </div>
   </BaseModal>

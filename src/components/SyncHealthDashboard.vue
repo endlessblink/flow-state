@@ -13,25 +13,25 @@
       </div>
       <div class="header-controls">
         <button
-          @click="toggleMinimized"
           class="control-btn"
           :title="isMinimized ? 'Expand' : 'Minimize'"
+          @click="toggleMinimized"
         >
           <Minimize2 v-if="!isMinimized" :size="16" />
           <Maximize2 v-else :size="16" />
         </button>
         <button
-          @click="refreshDashboard"
           class="control-btn"
           :class="{ 'loading': isRefreshing }"
           title="Refresh"
+          @click="refreshDashboard"
         >
           <RefreshCw :size="16" :class="{ 'animate-spin': isRefreshing }" />
         </button>
         <button
-          @click="exportLogs"
           class="control-btn"
           title="Export Logs"
+          @click="exportLogs"
         >
           <Download :size="16" />
         </button>
@@ -111,8 +111,12 @@
               :class="{ 'success': operation.success, 'failed': !operation.success }"
             >
               <div class="operation-info">
-                <div class="operation-type">{{ operation.type }}</div>
-                <div class="operation-time">{{ formatDateTime(operation.startTime) }}</div>
+                <div class="operation-type">
+                  {{ operation.type }}
+                </div>
+                <div class="operation-time">
+                  {{ formatDateTime(operation.startTime) }}
+                </div>
               </div>
               <div class="operation-metrics">
                 <div class="metric">
@@ -187,8 +191,12 @@
                 <span class="error-level">{{ error.level.toUpperCase() }}</span>
                 <span class="error-time">{{ formatRelativeTime(error.timestamp) }}</span>
               </div>
-              <div class="error-message">{{ error.message }}</div>
-              <div class="error-category">{{ error.category }}</div>
+              <div class="error-message">
+                {{ error.message }}
+              </div>
+              <div class="error-category">
+                {{ error.category }}
+              </div>
             </div>
           </div>
         </div>
@@ -197,24 +205,24 @@
       <!-- Action Buttons -->
       <div class="action-section">
         <button
-          @click="runHealthCheck"
           class="action-btn primary"
           :disabled="isHealthCheckRunning"
+          @click="runHealthCheck"
         >
           <Heart :size="16" />
           {{ isHealthCheckRunning ? 'Running...' : 'Run Health Check' }}
         </button>
         <button
-          @click="triggerManualSync"
           class="action-btn"
           :disabled="isSyncing"
+          @click="triggerManualSync"
         >
           <RefreshCw :size="16" />
           Manual Sync
         </button>
         <button
-          @click="showAdvancedSettings"
           class="action-btn"
+          @click="showAdvancedSettings"
         >
           <Settings :size="16" />
           Advanced Settings
@@ -246,28 +254,50 @@
           <div class="setting-item">
             <label>Sync Interval</label>
             <select v-model="settings.syncInterval">
-              <option value="5000">5 seconds</option>
-              <option value="10000">10 seconds</option>
-              <option value="30000">30 seconds</option>
-              <option value="60000">1 minute</option>
+              <option value="5000">
+                5 seconds
+              </option>
+              <option value="10000">
+                10 seconds
+              </option>
+              <option value="30000">
+                30 seconds
+              </option>
+              <option value="60000">
+                1 minute
+              </option>
             </select>
           </div>
           <div class="setting-item">
             <label>Batch Size</label>
-            <input v-model.number="settings.batchSize" type="number" min="1" max="100" />
+            <input
+              v-model.number="settings.batchSize"
+              type="number"
+              min="1"
+              max="100"
+            >
           </div>
           <div class="setting-item">
             <label>Max Retries</label>
-            <input v-model.number="settings.maxRetries" type="number" min="0" max="10" />
+            <input
+              v-model.number="settings.maxRetries"
+              type="number"
+              min="0"
+              max="10"
+            >
           </div>
           <div class="setting-item">
             <label>Enable Compression</label>
-            <input v-model="settings.enableCompression" type="checkbox" />
+            <input v-model="settings.enableCompression" type="checkbox">
           </div>
         </div>
         <div class="modal-actions">
-          <button @click="saveSettings" class="btn-primary">Save</button>
-          <button @click="showSettings = false" class="btn-secondary">Cancel</button>
+          <button class="btn-primary" @click="saveSettings">
+            Save
+          </button>
+          <button class="btn-secondary" @click="showSettings = false">
+            Cancel
+          </button>
         </div>
       </div>
     </div>

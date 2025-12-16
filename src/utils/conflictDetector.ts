@@ -3,8 +3,9 @@
  * Automatically detects parallel edits and data conflicts between local and remote documents
  */
 
-import PouchDB from 'pouchdb-browser'
-import { ConflictInfo, ConflictType, DocumentVersion, ConflictDetectionOptions } from '@/types/conflicts'
+import type PouchDB from 'pouchdb-browser'
+import type { ConflictInfo, DocumentVersion, ConflictDetectionOptions } from '@/types/conflicts';
+import { ConflictType } from '@/types/conflicts'
 import { isSyncableDocument } from '@/composables/documentFilters'
 
 export class ConflictDetector {

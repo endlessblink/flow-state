@@ -60,6 +60,7 @@
 | ROAD-009 | Expand CI tests | Add lint + unit tests to GitHub Actions after cleanup |
 | ROAD-010 | Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
 | ROAD-011 | Local AI assistant | Task breakdown, auto-categorize, daily planning. Hebrew required (Llama 3+, Claude/GPT-4 BYOK) |
+| ROAD-012 | Unified Section Settings Menu | Manual config for section behaviors - set priority/status/dueDate/project on drop. Keywords auto-fill as suggestions. Plan: `~/.claude/plans/nifty-petting-platypus.md` |
 
 ---
 
@@ -67,7 +68,7 @@
 
 <!-- Active work items use TASK-XXX format -->
 
-### TASK-009: Separate Calendar/Canvas Inbox Systems (COMPLETE)
+### TASK-009: Separate Calendar/Canvas Inbox Systems (NEEDS USER TESTING)
 
 **Goal**: Make calendar and canvas inboxes completely independent.
 
@@ -77,14 +78,22 @@
 | 2 | Update inboxTasks filter logic | DONE | Same as step 1 |
 | 3 | Remove notOnCanvas filter | DONE | Same as step 1 |
 | 4 | Update calendarFilteredTasks in tasks.ts | DONE | `git checkout src/stores/tasks.ts` |
-| 5 | Test with Playwright | DONE | N/A |
+| 5 | Fix tasks.ts updateTask - don't set isInInbox on instances | DONE | `git checkout src/stores/tasks.ts` |
+| 6 | Fix useTaskLifecycle.ts - CALENDAR state shouldn't set isInInbox | DONE | `git checkout src/composables/useTaskLifecycle.ts` |
+| 7 | Fix useCalendarDayView.ts - drop handler shouldn't modify canvas state | DONE | `git checkout src/composables/calendar/useCalendarDayView.ts` |
+| 8 | Test with manual user testing | PENDING | N/A |
 
-**Tested Dec 16, 2025**:
-- Task "Work on tasks for lime" appears in BOTH inboxes (no canvas position, no scheduled dates)
-- Tasks on canvas with dates appear in neither inbox (correct behavior)
-- Calendar and Canvas inboxes are now fully independent
+**Root Cause Found Dec 16, 2025**:
+The `isInInbox` property was being used for BOTH calendar and canvas inbox membership. When scheduling a task on calendar, multiple places were setting `isInInbox = false`, which also removed it from canvas inbox.
+
+**Fixes Applied**:
+1. `tasks.ts:1661-1670` - Calendar instance logic no longer modifies `isInInbox` or `canvasPosition`
+2. `useTaskLifecycle.ts:297-305` - CALENDAR state no longer sets `isInInbox = false`
+3. `useCalendarDayView.ts:497-507` - Drop handler no longer sets `isInInbox: false` or clears `canvasPosition`
 
 **Principle**:
+- `isInInbox` property controls CANVAS inbox membership ONLY
+- `instances` (time slots) control CALENDAR inbox membership ONLY
 - Calendar inbox = tasks WITHOUT scheduled time slots (instances, legacy scheduledDate+scheduledTime)
   - NOTE: `dueDate` is just a deadline, does NOT put task on calendar grid
 - Canvas inbox = tasks WITHOUT canvas position (canvasPosition, isInInbox)
@@ -93,7 +102,9 @@
 **Files Modified**:
 - `src/components/base/UnifiedInboxPanel.vue` - Context-aware filtering (CRITICAL FIX)
 - `src/components/CalendarInboxPanel.vue` - Removed canvasPosition checks, removed notOnCanvas filter
-- `src/stores/tasks.ts` - Removed canvasPosition check from calendarFilteredTasks
+- `src/stores/tasks.ts` - Removed canvasPosition check from calendarFilteredTasks + instance logic fix
+- `src/composables/useTaskLifecycle.ts` - CALENDAR state doesn't set isInInbox
+- `src/composables/calendar/useCalendarDayView.ts` - Drop handler doesn't modify canvas state
 
 ---
 
@@ -144,10 +155,11 @@
 | ~~BUG-002~~ | Canvas tasks disappear on new task creation | ~~FIXED~~ | ✅ `CanvasView.vue:589-618` |
 | ~~BUG-003~~ | ~~Today group shows wrong count~~ | ~~P1-HIGH~~ | ✅ FIXED - Verified Dec 16, 2025 |
 | ~~BUG-004~~ | ~~Tasks in Today group don't drag~~ | ~~P2-MEDIUM~~ | ✅ FIX APPLIED Dec 16 - Needs manual test |
-| BUG-005 | Date not updating on group drop | P2-MEDIUM | Needs investigation |
+| BUG-005 | Date not updating on group drop | P1-HIGH | CONFIRMED Dec 16 - Priority groups work, Timeline groups don't |
 | BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |
 | BUG-007 | Deleting group deletes tasks inside | P1-HIGH | Pending (1 hour) |
 | BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
+| BUG-013 | Tasks disappear after changing properties on canvas | P1-HIGH | Needs investigation - reappear after refresh |
 
 **Details**: See "Open Bug Analysis" section below.
 

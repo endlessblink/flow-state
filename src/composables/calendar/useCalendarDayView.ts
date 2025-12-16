@@ -494,16 +494,14 @@ export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<str
           scheduledTime: timeStr
         })
 
-        // If instance was created successfully, update task to remove from inbox and canvas
+        // If instance was created successfully, log it
+        // Dec 16, 2025 fix: DO NOT modify isInInbox or canvasPosition here
+        // Calendar and Canvas are INDEPENDENT systems:
+        // - Creating an instance removes task from CALENDAR inbox (filtered by !hasInstances)
+        // - Canvas state (isInInbox, canvasPosition) should NOT be affected
         if (instance) {
           console.log(`🎯 CALENDAR DROP: Instance created successfully:`, instance.id)
-          if (task) {
-            taskStore.updateTask(taskId, {
-              isInInbox: false, // Task is now scheduled, no longer in inbox
-              canvasPosition: undefined // Remove from canvas when scheduled in calendar
-            })
-            console.log(`🎯 CALENDAR DROP: Task removed from inbox and canvas, scheduled for ${slot.date} at ${timeStr}`)
-          }
+          console.log(`🎯 CALENDAR DROP: Task scheduled for ${slot.date} at ${timeStr} (canvas state unchanged)`)
         } else {
           console.log(`🎯 CALENDAR DROP: Failed to create instance for task ${taskId}`)
         }

@@ -48,6 +48,26 @@ export interface TaskPosition {
  * are automatically updated based on the section's type and propertyValue.
  * Groups do not modify task properties unless they are power groups.
  */
+/**
+ * Settings for auto-assigning properties when a task is dropped into a section
+ */
+export interface AssignOnDropSettings {
+  priority?: 'high' | 'medium' | 'low' | null  // null = don't change
+  status?: Task['status'] | null
+  dueDate?: 'today' | 'tomorrow' | 'this_week' | 'this_weekend' | 'later' | string | null
+  projectId?: string | null
+}
+
+/**
+ * Settings for the collect/magnet feature - which tasks to match
+ */
+export interface CollectFilterSettings {
+  matchPriority?: 'high' | 'medium' | 'low' | null
+  matchStatus?: Task['status'] | null
+  matchDueDate?: 'today' | 'tomorrow' | 'this_week' | 'overdue' | null
+  matchProjectId?: string | null
+}
+
 export interface CanvasSection {
   id: string
   name: string
@@ -58,12 +78,17 @@ export interface CanvasSection {
   layout: 'vertical' | 'horizontal' | 'grid' | 'freeform'
   isVisible: boolean
   isCollapsed: boolean
+  /** @deprecated Use assignOnDrop instead */
   propertyValue?: string | 'high' | 'medium' | 'low' | 'planned' | 'in_progress' | 'done' | 'backlog'
   autoCollect?: boolean // Auto-collect matching tasks from inbox
   collapsedHeight?: number // Store height when collapsed to restore on expand
   // Power group fields
   isPowerMode?: boolean // Whether power mode is enabled (auto-detected from name, can be toggled off)
   powerKeyword?: PowerKeywordResult | null // Detected power keyword info
+  // NEW: Explicit property assignment settings (user-configurable via settings menu)
+  assignOnDrop?: AssignOnDropSettings
+  // NEW: Collect filter settings for magnet button
+  collectFilter?: CollectFilterSettings
 }
 
 export interface CanvasState {
@@ -1157,7 +1182,55 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       const savedSections = await db.load<CanvasSection[]>(DB_KEYS.CANVAS)
       if (savedSections && savedSections.length > 0) {
-        sections.value = savedSections
+        // Migrate old propertyValue to new assignOnDrop format
+        const migratedSections = savedSections.map(section => {
+          // Skip if already has assignOnDrop settings
+          if (section.assignOnDrop) return section
+
+          // Migrate based on section type and propertyValue
+          if (section.propertyValue) {
+            const assignOnDrop: AssignOnDropSettings = {}
+
+            if (section.type === 'priority') {
+              assignOnDrop.priority = section.propertyValue as 'high' | 'medium' | 'low'
+            } else if (section.type === 'status') {
+              assignOnDrop.status = section.propertyValue as Task['status']
+            } else if (section.type === 'project') {
+              assignOnDrop.projectId = section.propertyValue
+            } else if (section.type === 'timeline') {
+              // Timeline sections use date keywords
+              assignOnDrop.dueDate = section.propertyValue
+            }
+
+            if (Object.keys(assignOnDrop).length > 0) {
+              section.assignOnDrop = assignOnDrop
+              console.log(`🔄 Migrated section "${section.name}" to assignOnDrop format`)
+            }
+          }
+
+          // Also migrate power keyword detection to assignOnDrop if power mode is enabled
+          if (section.isPowerMode && section.powerKeyword && !section.assignOnDrop) {
+            const { category, value } = section.powerKeyword
+            const assignOnDrop: AssignOnDropSettings = {}
+
+            if (category === 'date') {
+              assignOnDrop.dueDate = value
+            } else if (category === 'priority') {
+              assignOnDrop.priority = value as 'high' | 'medium' | 'low'
+            } else if (category === 'status') {
+              assignOnDrop.status = value as Task['status']
+            }
+
+            if (Object.keys(assignOnDrop).length > 0) {
+              section.assignOnDrop = assignOnDrop
+              console.log(`🔄 Migrated power group "${section.name}" to assignOnDrop format`)
+            }
+          }
+
+          return section
+        })
+
+        sections.value = migratedSections
         console.log(`📂 Loaded ${sections.value.length} canvas sections from IndexedDB`)
       }
     } catch (error) {

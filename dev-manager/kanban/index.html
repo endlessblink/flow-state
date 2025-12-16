@@ -859,8 +859,8 @@
             continue;
           }
 
-          // Parse TASK- headers in Active Work
-          if (currentSection === 'activeWork' && trimmed.match(/^### (TASK-\d+):/)) {
+          // Parse TASK- headers in Active Work OR Technical Debt (archive) sections
+          if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^### (TASK-\d+):/)) {
             // Save previous task's subtasks before starting new one
             if (currentItem && currentItem.id?.startsWith('TASK-')) {
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
@@ -905,7 +905,7 @@
 
           // Parse subtasks (checkbox-style bullet points) under TASK headers
           // Only count lines that look like actionable items, not descriptive text
-          if (currentSection === 'activeWork' && currentItem && trimmed.startsWith('- ')) {
+          if ((currentSection === 'activeWork' || currentSection === 'archive') && currentItem && trimmed.startsWith('- ')) {
             // Skip if it's just a description (contains full sentences or is inside a section like "**Goal**:")
             const isCheckbox = trimmed.match(/^- \[(x| )\]/i);
             const isNumberedStep = trimmed.match(/^- \d+\./);

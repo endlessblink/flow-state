@@ -12,7 +12,7 @@
         <div class="modal-header">
           <h2 class="modal-title">
             <Settings :size="18" />
-            Section Settings
+            Group Settings
           </h2>
           <button
             class="close-btn"
@@ -39,7 +39,7 @@
               <Zap :size="16" />
               Auto-assign when task dropped
             </h3>
-            <p class="settings-hint">Tasks dropped into this section will have these properties set</p>
+            <p class="settings-hint">Tasks dropped into this group will have these properties set</p>
 
             <div class="form-group">
               <label class="form-label">Priority</label>

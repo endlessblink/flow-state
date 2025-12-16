@@ -8,7 +8,7 @@
     <!-- Section Header -->
     <div class="section-header" :style="{ background: section.color + '20' }">
       <div class="section-color-dot" :style="{ background: section.color }"></div>
-      <button @click="toggleCollapse" class="collapse-btn" :title="isCollapsed ? 'Expand section' : 'Collapse section'">
+      <button @click="toggleCollapse" class="collapse-btn" :title="isCollapsed ? 'Expand group' : 'Collapse group'">
         <ChevronDown v-if="!isCollapsed" :size="14" />
         <ChevronRight v-else :size="14" />
       </button>
@@ -16,7 +16,7 @@
         v-model="sectionName"
         @blur="updateName"
         class="section-name-input"
-        placeholder="Section name..."
+        placeholder="Group name..."
         :disabled="isCollapsed"
       />
 
@@ -68,7 +68,7 @@
         v-if="!isCollapsed"
         @click.stop="openSettings"
         class="settings-btn"
-        title="Section settings - configure auto-assign properties"
+        title="Group settings - configure auto-assign properties"
       >
         <Settings :size="12" />
       </button>
@@ -167,11 +167,11 @@ const sectionTypeIcon = computed(() => {
 
 const sectionTypeLabel = computed(() => {
   const labels = {
-    priority: 'Priority Section - Auto-assigns priority',
-    status: 'Status Section - Auto-assigns status',
-    project: 'Project Section - Auto-assigns project',
-    timeline: 'Timeline Section - Auto-assigns schedule',
-    custom: 'Custom Section'
+    priority: 'Priority Group - Auto-assigns priority',
+    status: 'Status Group - Auto-assigns status',
+    project: 'Project Group - Auto-assigns project',
+    timeline: 'Timeline Group - Auto-assigns schedule',
+    custom: 'Custom Group'
   }
   return labels[props.data.type || 'custom']
 })

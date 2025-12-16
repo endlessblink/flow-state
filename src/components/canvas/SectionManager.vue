@@ -2,10 +2,10 @@
   <div class="section-manager">
     <!-- Section Manager Header -->
     <div class="manager-header">
-      <h3 class="manager-title">Canvas Sections</h3>
+      <h3 class="manager-title">Canvas Groups</h3>
       <button @click="showCreateModal = true" class="create-btn">
         <Plus :size="16" />
-        Add Section
+        Add Group
       </button>
     </div>
 
@@ -40,14 +40,14 @@
           <button
             @click="editSection(section)"
             class="control-btn"
-            title="Edit Section"
+            title="Edit Group"
           >
             <Edit :size="14" />
           </button>
           <button
             @click="deleteSection(section.id)"
             class="control-btn danger"
-            title="Delete Section"
+            title="Delete Group"
           >
             <Trash2 :size="14" />
           </button>
@@ -58,8 +58,8 @@
         <div class="empty-icon">
           <Grid3X3 :size="48" />
         </div>
-        <p class="empty-text">No sections created yet</p>
-        <p class="empty-subtext">Create custom sections to organize your tasks</p>
+        <p class="empty-text">No groups created yet</p>
+        <p class="empty-subtext">Create custom groups to organize your tasks</p>
       </div>
     </div>
 
@@ -67,7 +67,7 @@
     <div v-if="showCreateModal || editingSection" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ editingSection ? 'Edit Section' : 'Create Section' }}</h3>
+          <h3>{{ editingSection ? 'Edit Group' : 'Create Group' }}</h3>
           <button @click="closeModal" class="close-btn">
             <X :size="16" />
           </button>
@@ -76,7 +76,7 @@
         <div class="modal-body">
           <!-- Section Name -->
           <div class="form-group">
-            <label class="form-label">Section Name</label>
+            <label class="form-label">Group Name</label>
             <input
               v-model="sectionForm.name"
               type="text"
@@ -87,7 +87,7 @@
 
           <!-- Section Type -->
           <div class="form-group">
-            <label class="form-label">Section Type</label>
+            <label class="form-label">Group Type</label>
             <select v-model="sectionForm.type" class="form-select">
               <option value="custom">Custom</option>
               <option value="priority">Priority</option>
@@ -204,7 +204,7 @@
         <div class="modal-footer">
           <button @click="closeModal" class="btn-secondary">Cancel</button>
           <button @click="saveSection" class="btn-primary">
-            {{ editingSection ? 'Update' : 'Create' }} Section
+            {{ editingSection ? 'Update' : 'Create' }} Group
           </button>
         </div>
       </div>

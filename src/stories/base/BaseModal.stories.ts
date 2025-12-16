@@ -9,6 +9,12 @@ const meta = {
 
   parameters: {
     layout: 'fullscreen',
+    docs: {
+      story: {
+        inline: false,
+        iframeHeight: 500,
+      },
+    },
   },
 } satisfies Meta<typeof BaseModal>
 

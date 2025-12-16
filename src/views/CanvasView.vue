@@ -1826,7 +1826,9 @@ const syncNodes = () => {
       position: finalPosition,
       parentNode: parentNode,
       style: { zIndex: 10 },
-      data: { task },
+      // FIX BUG-013: Spread task object to create new reference for Vue Flow reactivity
+      // Without this, Vue Flow doesn't detect internal property changes (priority, status, etc.)
+      data: { task: { ...task } },
       draggable: true,
       selectable: true
     })

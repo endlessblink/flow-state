@@ -257,6 +257,7 @@
             @update="handleSectionUpdate"
             @collect="collectTasksForSection"
             @context-menu="handleSectionContextMenu"
+            @open-settings="handleOpenSectionSettings"
             @resizeStart="handleSectionResizeStart"
             @resize="handleSectionResize"
             @resizeEnd="handleSectionResizeEnd"
@@ -360,6 +361,14 @@
       :task-ids="batchEditTaskIds"
       @close="closeBatchEditModal"
       @applied="handleBatchEditApplied"
+    />
+
+    <!-- Section Settings Modal -->
+    <SectionSettingsMenu
+      :section="editingSection"
+      :is-visible="isSectionSettingsOpen"
+      @close="closeSectionSettingsModal"
+      @save="handleSectionSettingsSave"
     />
 
     <!-- Group Modal -->
@@ -482,6 +491,7 @@ import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
+import SectionSettingsMenu from '@/components/canvas/SectionSettingsMenu.vue'
 import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
@@ -722,6 +732,14 @@ const quickTaskPosition = ref({ x: 0, y: 0 })
 // Batch Edit Modal state
 const isBatchEditModalOpen = ref(false)
 const batchEditTaskIds = ref<string[]>([])
+
+// Section Settings Modal state
+const isSectionSettingsOpen = ref(false)
+const editingSectionId = ref<string | null>(null)
+const editingSection = computed(() => {
+  if (!editingSectionId.value) return null
+  return canvasStore.sections.find(s => s.id === editingSectionId.value) || null
+})
 
 // Canvas Context Menu state
 const showCanvasContextMenu = ref(false)
@@ -1193,9 +1211,10 @@ const hasInboxTasks = computed(() => {
   }
 
   // Optimized checking with early exit
+  // Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i]
-    if (!task.canvasPosition && task.isInInbox !== false && task.status !== 'done') {
+    if (!task.canvasPosition && task.status !== 'done') {
       lastHasInboxTasksHash = currentHash
       lastHasInboxTasks = true
       return true
@@ -1752,13 +1771,13 @@ const syncNodes = () => {
   // Safety check: ensure filteredTasks is an array
   const safeFilteredTasks = Array.isArray(filteredTasks.value) ? filteredTasks.value : []
 
-  // 🎯 FIXED: Only show tasks that are EXPLICITLY on canvas
-  // Tasks must have BOTH:
-  // 1. isInInbox === false (explicitly moved to canvas)
-  // 2. canvasPosition (has a position on canvas)
-  // This prevents tasks from showing on canvas until dragged from inbox
+  // 🎯 Dec 16, 2025 FIX: Only check canvasPosition, IGNORE isInInbox
+  // Canvas and Calendar inbox are INDEPENDENT systems:
+  // - Canvas shows tasks WITH canvasPosition
+  // - Canvas inbox shows tasks WITHOUT canvasPosition
+  // - isInInbox property is no longer used for canvas filtering
   safeFilteredTasks
-    .filter(task => task && task.id && task.isInInbox === false && task.canvasPosition)
+    .filter(task => task && task.id && task.canvasPosition)
     .forEach((task, index) => {
       // 🎯 FIXED: Handle positioning for tasks with and without canvasPosition
       let position
@@ -2218,8 +2237,9 @@ const collectTasksForSection = (sectionId: string) => {
   })
 
   // Get tasks currently in inbox ONLY (not canvas tasks, excluding done tasks)
+  // Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
   const inboxTasks = Array.isArray(filteredTasks.value) ? filteredTasks.value.filter(t =>
-    t.isInInbox === true && t.status !== 'done'
+    !t.canvasPosition && t.status !== 'done'
   ) : []
 
   console.log(`[Auto-Collect] Inbox has ${inboxTasks.length} tasks:`, inboxTasks.map(t => ({
@@ -2592,6 +2612,12 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
       if (containingSection.type !== 'custom' || isSmartGroupSection) {
         console.log('[handleNodeDragStop] Applying properties for section:', containingSection.name, 'isSmartGroup:', isSmartGroupSection)
         applySectionPropertiesToTask(node.id, containingSection)
+
+        // FIX BUG-005 Dec 16, 2025: Sync nodes after applying section properties
+        // Without this, the node data (snapshot) doesn't reflect updated task properties (dueDate, priority, etc.)
+        // This ensures the UI shows the updated values immediately after drop
+        syncNodes()
+        console.log('[handleNodeDragStop] syncNodes() called after property application')
       } else {
         console.log('[handleNodeDragStop] ⚠️ Skipping property application for custom section:', containingSection.name)
       }
@@ -2935,8 +2961,9 @@ const handleSectionResizeEnd = ({ sectionId, event }: any) => {
         console.log('🔄 [CanvasView] Adjusting task positions by delta:', { deltaX, deltaY })
 
         // Find all tasks inside this section (geometric bounds check using ORIGINAL section bounds)
+        // Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
         const tasksInSection = Array.isArray(filteredTasks.value) ? filteredTasks.value.filter(task => {
-          if (!task.canvasPosition || task.isInInbox || section.isCollapsed) return false
+          if (!task.canvasPosition || section.isCollapsed) return false
 
           const taskX = task.canvasPosition.x
           const taskY = task.canvasPosition.y
@@ -4643,6 +4670,33 @@ const handleBatchEditApplied = () => {
   // Clear selection after batch edit
   canvasStore.clearSelection()
   syncNodes()
+}
+
+// Section Settings Modal handlers
+const handleOpenSectionSettings = (sectionId: string) => {
+  editingSectionId.value = sectionId
+  isSectionSettingsOpen.value = true
+}
+
+const closeSectionSettingsModal = () => {
+  isSectionSettingsOpen.value = false
+  editingSectionId.value = null
+}
+
+const handleSectionSettingsSave = (settings: { assignOnDrop: AssignOnDropSettings }) => {
+  if (!editingSectionId.value) return
+
+  // Update the section with new settings
+  canvasStore.updateSection(editingSectionId.value, {
+    assignOnDrop: settings.assignOnDrop
+  })
+
+  console.log('[handleSectionSettingsSave] Updated section settings:', {
+    sectionId: editingSectionId.value,
+    assignOnDrop: settings.assignOnDrop
+  })
+
+  closeSectionSettingsModal()
 }
 
 // Section management methods

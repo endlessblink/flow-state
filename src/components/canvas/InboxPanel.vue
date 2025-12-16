@@ -197,9 +197,10 @@ const contextMenuY = ref(0)
 const contextMenuTask = ref<any>(null) // Task that was right-clicked
 
 // Get ONLY inbox tasks (tasks without canvas position, excluding done tasks)
+// Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
 const baseInboxTasks = computed(() =>
   taskStore.filteredTasks.filter(task =>
-    !task.canvasPosition && task.isInInbox !== false && task.status !== 'done'
+    !task.canvasPosition && task.status !== 'done'
   )
 )
 

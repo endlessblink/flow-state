@@ -287,9 +287,10 @@ const baseInboxTasks = computed(() => {
       return !hasInstances && !hasLegacySchedule
     } else {
       // CANVAS INBOX: Show tasks NOT on the canvas
-      // Check canvasPosition and isInInbox
-      // IGNORE calendar scheduling - that's for Calendar inbox only
-      return task.isInInbox !== false && !task.canvasPosition
+      // Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
+      // isInInbox was conflating calendar and canvas state - now we only care about position
+      // A task without canvasPosition should appear here, regardless of isInInbox value
+      return !task.canvasPosition
     }
   })
 })

@@ -148,6 +148,9 @@ export const useTaskStore = defineStore('tasks', () => {
   let syncAttempts = 0
   const MAX_SYNC_ATTEMPTS = 10 // Maximum sync attempts per session
 
+  // Flag to prevent auto-save during database loads (prevents sync loops)
+  let isLoadingFromDatabase = false
+
   const safeSync = async (context: string) => {
     const now = Date.now()
 
@@ -861,6 +864,9 @@ export const useTaskStore = defineStore('tasks', () => {
   // Load tasks from PouchDB on initialization
   const loadFromDatabase = async () => {
     console.log('🚀 NEW POUCHDB LOADING: Starting task load from PouchDB...')
+
+    // Set flag to prevent auto-save during load (prevents sync loop)
+    isLoadingFromDatabase = true
     // Wait for PouchDB to be available (simple polling)
     let attempts = 0
     while (!(window as any).pomoFlowDb && attempts < 50) {
@@ -928,8 +934,8 @@ export const useTaskStore = defineStore('tasks', () => {
     migrateNestedTaskProjectIds() // Fix nested tasks to inherit parent's projectId
     migrateTaskUncategorizedFlag() // Set isUncategorized flag for existing tasks
 
-    // DEBUG: Add test instances for calendar filter testing
-    addTestCalendarInstances()
+    // DEBUG: DISABLED - was causing infinite sync loop by modifying tasks on every load
+    // addTestCalendarInstances()
 
     // If no tasks found, try to import from recovery tool first, then JSON file
     if (tasks.value.length === 0) {
@@ -953,9 +959,13 @@ export const useTaskStore = defineStore('tasks', () => {
     }
     // If no saved setting exists, keep the default value of false (show done tasks)
 
-  
+
     // Test safe sync once
     safeSync('startup-check')
+
+    // Reset flag after loading complete
+    isLoadingFromDatabase = false
+    console.log('✅ Database load complete, auto-save re-enabled')
   }
 
   // Auto-save to IndexedDB when tasks, projects, or settings change (debounced)
@@ -967,6 +977,12 @@ export const useTaskStore = defineStore('tasks', () => {
     // EMERGENCY FIX: Skip watch during manual operations to prevent conflicts
     if (manualOperationInProgress) {
       console.log('⏸️ Skipping auto-save during manual operation')
+      return
+    }
+
+    // SYNC LOOP FIX: Skip watch during database loads (prevents sync -> load -> save -> sync loop)
+    if (isLoadingFromDatabase) {
+      console.log('⏸️ Skipping auto-save during database load')
       return
     }
 

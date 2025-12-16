@@ -476,7 +476,9 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { storeToRefs } from 'pinia'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
-import { shouldUseSmartGroupLogic, getSmartGroupType } from '@/composables/useTaskSmartGroups'
+import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
+import { resolveDueDate, useSectionSettings } from '@/composables/useSectionSettings'
+import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import SectionNodeSimple from '@/components/canvas/SectionNodeSimple.vue'
@@ -2310,54 +2312,108 @@ const isTaskInSectionBounds = (x: number, y: number, section: any, taskWidth: nu
 }
 
 // Helper: Apply section properties to task
-const applySectionPropertiesToTask = (taskId: string, section: any) => {
+// UNIFIED SYSTEM: Uses assignOnDrop settings first, falls back to legacy type-based behavior
+const applySectionPropertiesToTask = (taskId: string, section: CanvasSection) => {
   console.log('[applySectionPropertiesToTask] Called with:', {
     taskId,
     sectionName: section.name,
     sectionType: section.type,
+    assignOnDrop: section.assignOnDrop,
     propertyValue: section.propertyValue
   })
 
-  const updates: any = {}
+  const updates: Partial<Task> = {}
 
+  // 1. UNIFIED APPROACH: Check for explicit assignOnDrop settings first
+  if (section.assignOnDrop) {
+    const settings = section.assignOnDrop
+
+    if (settings.priority) {
+      updates.priority = settings.priority
+    }
+    if (settings.status) {
+      updates.status = settings.status
+    }
+    if (settings.projectId) {
+      updates.projectId = settings.projectId
+    }
+    if (settings.dueDate) {
+      // Resolve smart date values like 'today', 'tomorrow' to actual dates
+      const resolvedDate = resolveDueDate(settings.dueDate)
+      if (resolvedDate !== null) {
+        updates.dueDate = resolvedDate
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      console.log('[applySectionPropertiesToTask] Applying assignOnDrop updates:', updates)
+      taskStore.updateTaskWithUndo(taskId, updates)
+      return
+    }
+  }
+
+  // 2. AUTO-DETECT: If no assignOnDrop settings, try keyword detection on section name
+  const keyword = detectPowerKeyword(section.name)
+  if (keyword) {
+    console.log('[applySectionPropertiesToTask] Auto-detected keyword:', keyword)
+
+    switch (keyword.category) {
+      case 'date':
+        // Use smart group logic for dates - handles keeping in inbox correctly
+        taskStore.moveTaskToSmartGroup(taskId, keyword.value)
+        console.log(`[applySectionPropertiesToTask] Called moveTaskToSmartGroup for ${keyword.value}`)
+        return
+
+      case 'priority':
+        updates.priority = keyword.value as 'high' | 'medium' | 'low'
+        break
+
+      case 'status':
+        updates.status = keyword.value as Task['status']
+        break
+    }
+
+    if (Object.keys(updates).length > 0) {
+      console.log('[applySectionPropertiesToTask] Applying keyword-based updates:', updates)
+      taskStore.updateTaskWithUndo(taskId, updates)
+      return
+    }
+  }
+
+  // 3. LEGACY FALLBACK: Use old type-based behavior for backward compatibility
   switch (section.type) {
     case 'priority':
       if (!section.propertyValue) return
-      updates.priority = section.propertyValue
+      updates.priority = section.propertyValue as 'high' | 'medium' | 'low'
       break
     case 'status':
       if (!section.propertyValue) return
-      updates.status = section.propertyValue
+      updates.status = section.propertyValue as Task['status']
       break
     case 'project':
       if (!section.propertyValue) return
       updates.projectId = section.propertyValue
       break
-    case 'custom':  // Allow custom sections with timeline names (e.g., "Today")
+    case 'custom':
     case 'timeline':
       // Check if this is a smart group (today, tomorrow, weekend, etc.)
       if (shouldUseSmartGroupLogic(section.name)) {
         const smartGroupType = getSmartGroupType(section.name)
         if (smartGroupType) {
           console.log(`[applySectionPropertiesToTask] Detected smart group: ${smartGroupType}`)
-
-          // Use smart group logic - set dueDate but keep in inbox
           taskStore.moveTaskToSmartGroup(taskId, smartGroupType)
           console.log(`[applySectionPropertiesToTask] Called moveTaskToSmartGroup for ${smartGroupType}`)
         } else {
-          console.log('[applySectionPropertiesToTask] Smart group type not found, using fallback')
-          // Fallback to old behavior if smart group detection fails
           taskStore.moveTaskToDate(taskId, section.propertyValue || section.name)
         }
       } else {
-        // Regular timeline section - use original behavior
         taskStore.moveTaskToDate(taskId, section.propertyValue || section.name)
       }
-      break
+      return
   }
 
   if (Object.keys(updates).length > 0) {
-    console.log('[applySectionPropertiesToTask] Applying updates:', updates)
+    console.log('[applySectionPropertiesToTask] Applying legacy updates:', updates)
     taskStore.updateTaskWithUndo(taskId, updates)
   } else {
     console.log('[applySectionPropertiesToTask] No updates to apply')

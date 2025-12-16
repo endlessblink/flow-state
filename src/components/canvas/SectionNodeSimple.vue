@@ -97,7 +97,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { ChevronDown, ChevronRight, Zap, Magnet } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Zap, Magnet, Settings } from 'lucide-vue-next'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
 import { useCanvasStore } from '@/stores/canvas'
@@ -123,6 +123,7 @@ const emit = defineEmits<{
   update: [data: Partial<SectionData>]
   collect: [sectionId: string]
   contextMenu: [event: MouseEvent, section: SectionData]
+  openSettings: [sectionId: string]
   resizeStart: [data: { sectionId: string; event: any }]
   resize: [data: { sectionId: string; event: any }]
   resizeEnd: [data: { sectionId: string; event: any }]

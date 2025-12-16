@@ -60,13 +60,53 @@
 | ROAD-009 | Expand CI tests | Add lint + unit tests to GitHub Actions after cleanup |
 | ROAD-010 | Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
 | ROAD-011 | Local AI assistant | Task breakdown, auto-categorize, daily planning. Hebrew required (Llama 3+, Claude/GPT-4 BYOK) |
-| ROAD-012 | Unified Section Settings Menu | Manual config for section behaviors - set priority/status/dueDate/project on drop. Keywords auto-fill as suggestions. Plan: `~/.claude/plans/nifty-petting-platypus.md` |
+| ~~ROAD-012~~ | ~~Unified Section Settings Menu~~ | ✅ DONE (Dec 16) - Consolidated to Groups, added GroupSettingsMenu.vue |
+| ROAD-013 | Section → Group Terminology Cleanup | Phase 4-5 remaining: Update consumer files, Storybook stories |
 
 ---
 
 ## Active Work
 
 <!-- Active work items use TASK-XXX format -->
+
+### ~~TASK-010~~: Consolidate Sections → Groups (COMPLETE)
+
+**Goal**: Remove "sections" terminology entirely - everything becomes "groups" with unified naming.
+
+**Date**: December 16, 2025
+
+| Phase | Description | Status | Rollback |
+|-------|-------------|--------|----------|
+| 1 | UI text changes (Section → Group) | ✅ DONE | `git checkout src/components/canvas/` |
+| 2 | Rename component files | ✅ DONE | `git checkout src/components/canvas/` |
+| 3a | Rename types/interfaces | ✅ DONE | `git checkout src/stores/canvas.ts` |
+| 3b | Rename state variables | ✅ DONE | Same as 3a |
+| 3c | Rename methods (35+ methods) | ✅ DONE | Same as 3a |
+| 3d | Add backward compatibility migration | ✅ DONE | Same as 3a |
+| 4 | Update consumer files | PENDING | See ROAD-013 |
+| 5 | Storybook stories | PENDING | See ROAD-013 |
+
+**Files Renamed**:
+- `SectionManager.vue` → `GroupManager.vue`
+- `SectionNodeSimple.vue` → `GroupNodeSimple.vue`
+- `SectionSettingsMenu.vue` → `GroupSettingsMenu.vue`
+- `SectionWizard.vue` → `GroupWizard.vue`
+- `useSectionSettings.ts` → `useGroupSettings.ts`
+
+**Store Changes** (`src/stores/canvas.ts`):
+- `CanvasSection` → `CanvasGroup` (with alias for backward compatibility)
+- `SectionFilter` → `GroupFilter`
+- `sections` → `groups` state variable
+- 35+ method renames with backward compatibility aliases
+- ID migration: `section-*` → `group-*`
+
+**Backward Compatibility**:
+- All old method names (`createSection`, etc.) remain as aliases
+- Old state names (`sections`, `activeSectionId`) remain as aliases
+- Old IDs (`section-*`) are auto-migrated to `group-*` on load
+- Existing saved data loads correctly
+
+---
 
 ### ~~TASK-009~~: Separate Calendar/Canvas Inbox Systems (COMPLETE)
 
@@ -179,7 +219,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |
 | ~~BUG-007~~ | ~~Deleting group deletes tasks inside~~ | ~~P1-HIGH~~ | ✅ ALREADY FIXED Dec 5, 2025 - Tasks preserved on canvas |
 | BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
-| ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Added canvasStore.requestSync() to TaskContextMenu |
+| ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Two-part fix: (1) requestSync() in TaskContextMenu (2) spread task object in syncNodes |
 | BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
 | BUG-015 | Edit Task modal behind nav tabs | P2-MEDIUM | z-index issue - nav tabs overlap modal |
 | BUG-016 | Timer status not syncing | P2-MEDIUM | Timer state not synchronized across views/components |

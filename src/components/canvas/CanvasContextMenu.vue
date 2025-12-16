@@ -50,14 +50,14 @@
       <span class="menu-text">Create Custom Group</span>
     </button>
 
-    <!-- Create Section (Wizard) -->
+    <!-- Create Group (Smart Wizard) -->
     <button
       v-if="!contextSection"
       class="menu-item"
       @click="handleCreateSection"
     >
       <Sparkles :size="16" :stroke-width="1.5" class="menu-icon" />
-      <span class="menu-text">Create Section (Smart)</span>
+      <span class="menu-text">Create Group (Smart)</span>
     </button>
 
     <!-- Task-specific options (when tasks are selected) -->
@@ -277,9 +277,9 @@ const handleCreateGroup = () => {
   emit('close')
 }
 
-// Handle create section click
+// Handle create smart group click (opens wizard)
 const handleCreateSection = () => {
-  console.log('✨ CanvasContextMenu: Create Section button clicked!')
+  console.log('✨ CanvasContextMenu: Create Group (Smart) button clicked!')
   console.log('✨ CanvasContextMenu: Emitting createSection event (will open wizard)')
   emit('createSection')
   emit('close')

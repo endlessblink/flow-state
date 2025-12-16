@@ -237,7 +237,7 @@
           :disabled="!canCreate"
         >
           <Sparkles :size="16" :stroke-width="1.5" />
-          Create Section
+          Create Group
         </button>
 
         <button

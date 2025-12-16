@@ -187,13 +187,13 @@ onUnmounted(() => {
 .base-popover {
   position: fixed;
 
-  /* Glass morphism - more transparent for see-through effect */
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(24px) saturate(120%);
-  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  /* Glass morphism - transparent with blur */
+  background: rgba(20, 20, 20, 0.5);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
 
   /* Stroke border */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
 
   /* Layered shadow */
@@ -204,6 +204,10 @@ onUnmounted(() => {
   z-index: 3001;
   animation: popoverSlideIn var(--duration-fast) var(--spring-bounce);
   pointer-events: all;
+
+  /* Ensure backdrop-filter works */
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
 /* Variant: Menu */

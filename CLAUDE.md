@@ -7,7 +7,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Pomo-Flow** is a sophisticated Vue 3 productivity application that combines Pomodoro timer functionality with task management across multiple views (Board, Calendar, Canvas). It features a unified undo/redo system, IndexedDB persistence, and a custom design system with glass morphism aesthetics.
+**Pomo-Flow** is a sophisticated Vue 3 productivity application that combines Pomodoro timer functionality with task management across multiple views (Board, Calendar, Canvas). It features a unified undo/redo system, PouchDB + CouchDB persistence, and a custom design system with glass morphism aesthetics.
+
+## Current Project Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Canvas | ✅ Working | All major bugs fixed |
+| Calendar | ⚠️ Partial | Resize issues remain |
+| CouchDB Sync | ✅ Working | Manual sync operational |
+| Build/CI | ✅ Passing | GitHub Actions active |
+
+**Full Tracking**: See `docs/MASTER_PLAN.md` for:
+- Active work (TASK-XXX)
+- Bug tracking (BUG-XXX)
+- Roadmap items (ROAD-XXX)
+- Known issues (ISSUE-XXX)
 
 ## Technology Stack
 
@@ -28,14 +43,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Vuedraggable** for drag-and-drop functionality
 
 ### Data & Storage
-- **IndexedDB** via LocalForage for client-side persistence
-- **PouchDB** for database operations
+- **PouchDB** (v9.0.0) - Local-first database with IndexedDB adapter
+- **CouchDB** (remote) - Optional cross-device synchronization
+- **Singleton Pattern** - Single database instance across all stores
+- **Conflict Detection** - Built-in conflict detection and resolution
 
 ### Development Tools
-- **Vitest** for unit testing
+- **Vitest** (v3.2.4) for unit testing
 - **Playwright** for end-to-end testing
-- **Storybook** for component documentation (port 6006)
-- **ESLint** with TypeScript support
+- **Storybook** (v10.1.4) for component documentation (port 6006)
+- **ESLint** (v8.55.0) with TypeScript support
 
 ## Development Commands
 
@@ -100,7 +117,7 @@ src/
 │   ├── sync/                 # Sync-related components
 │   └── ui/                   # General UI components
 ├── stores/                   # Pinia state management (12 stores)
-├── composables/              # Vue 3 composables (56 files)
+├── composables/              # Vue 3 composables (64 files)
 ├── assets/                   # Static assets and styles
 └── utils/                    # Utility functions
 ```
@@ -108,16 +125,16 @@ src/
 ## State Management (Pinia Stores)
 
 ### Task Store (`src/stores/tasks.ts`)
-**Largest store (3000 lines)** - Central task management with:
+**Largest store (3,073 lines)** - Central task management with:
 - Task CRUD operations with undo/redo support
 - Project hierarchy with nesting support
 - Task instances system for calendar scheduling
-- IndexedDB persistence with debounced saves
+- PouchDB persistence with debounced saves
 - Smart views (Today, Weekend) with complex filtering
 - Backward compatibility with legacy scheduled fields
 
 ### Canvas Store (`src/stores/canvas.ts`)
-**Second largest (1166 lines)** - Canvas-specific state:
+**Second largest (1,464 lines)** - Canvas-specific state:
 - Vue Flow integration for node-based canvas
 - Section management (priority, status, project sections)
 - Collapsible sections with data preservation
@@ -126,7 +143,7 @@ src/
 - Viewport controls and zoom management
 
 ### Timer Store (`src/stores/timer.ts`)
-**Pomodoro timer functionality (483 lines)**:
+**Pomodoro timer functionality (534 lines)**:
 - Session management with work/break cycles
 - Settings persistence in localStorage
 - Browser notification integration
@@ -134,7 +151,7 @@ src/
 - Session history tracking
 
 ### UI Store (`src/stores/ui.ts`)
-Application UI state (234 lines):
+Application UI state (269 lines):
 - Sidebar visibility states
 - Theme management integration
 - Modal and overlay controls
@@ -144,7 +161,7 @@ Application UI state (234 lines):
 ### Additional Stores
 - **auth.ts** (515 lines) - Authentication state
 - **local-auth.ts** (302 lines) - Local authentication
-- **notifications.ts** (488 lines) - Notification management
+- **notifications.ts** (540 lines) - Notification management
 - **quickSort.ts** (214 lines) - Quick sort view state
 - **taskCanvas.ts** (491 lines) - Canvas task state
 - **taskCore.ts** (234 lines) - Core task utilities
@@ -161,11 +178,13 @@ Application UI state (234 lines):
 - JSON-based state serialization for persistence
 
 ### Database Operations (`src/composables/useDatabase.ts`)
-**IndexedDB abstraction layer**:
-- LocalForage integration with automatic fallbacks
+**PouchDB abstraction layer (953 lines)**:
+- Direct PouchDB integration with IndexedDB adapter
+- Optional CouchDB remote sync via useReliableSyncManager
+- Conflict detection and monitoring
+- Health monitoring with automatic retry logic
 - Type-safe generic save/load operations
-- Error handling and data validation
-- Performance optimizations with debounced writes
+- Singleton pattern for shared database instance
 
 ## Task Management System
 
@@ -339,15 +358,37 @@ describe('Task Store', () => {
 
 ## Database Architecture
 
-### IndexedDB Schema
+### PouchDB + CouchDB Stack
+```typescript
+// Configuration from src/config/database.ts
+export interface DatabaseConfig {
+  local: { name: string; adapter?: string }
+  remote?: { url: string; auth?: { username: string; password: string } }
+  sync?: { live: boolean; retry: boolean; timeout?: number }
+}
+```
+
+### Local Storage (PouchDB)
+- **Adapter**: IndexedDB (`adapter: 'idb'`)
+- **Database Name**: `pomoflow-app-dev`
+- **Features**: Auto-compaction, revision limiting (5)
+- **Singleton**: Single instance shared across all stores
+
+### Remote Sync (CouchDB)
+- **Optional**: Configured via environment variables
+- **Live Sync**: Real-time bidirectional synchronization
+- **Retry Logic**: Automatic reconnection with backoff
+- **Conflict Detection**: Built-in with manual resolution UI
+
+### Document Structure
 ```typescript
 export const DB_KEYS = {
   TASKS: 'tasks',           // Main task storage
   PROJECTS: 'projects',     // Project definitions
   CANVAS: 'canvas',         // Canvas layout data
-  TIMER: 'timer',          // Timer session history
-  SETTINGS: 'settings',    // App preferences
-  VERSION: 'version'       // Schema version tracking
+  TIMER: 'timer',           // Timer session history
+  SETTINGS: 'settings',     // App preferences
+  NOTIFICATIONS: 'notifications'  // Notification state
 } as const
 ```
 
@@ -356,6 +397,27 @@ export const DB_KEYS = {
 - **Auto-migration** for schema changes
 - **Backward compatibility** preservation
 - **Error recovery** with graceful degradation
+- **Conflict resolution** via enterprise-grade system
+
+## Cross-Device Synchronization
+
+### Architecture Overview
+- **Local-First**: All data stored locally in PouchDB first
+- **Sync Optional**: CouchDB sync is opt-in via settings
+- **Conflict Resolution**: Enterprise-grade system with UI
+
+### Configuration
+Environment variables for CouchDB sync:
+- `VITE_COUCHDB_URL` - CouchDB server URL
+- `VITE_COUCHDB_USERNAME` - Authentication username
+- `VITE_COUCHDB_PASSWORD` - Authentication password
+
+### Key Files
+- `src/config/database.ts` - Database configuration
+- `src/composables/useDatabase.ts` - PouchDB abstraction (953 lines)
+- `src/composables/useReliableSyncManager.ts` - Sync orchestration
+- `src/composables/useCouchDBSync.ts` - CouchDB-specific sync
+- `docs/conflict-systems-resolution/` - Conflict resolution docs
 
 ## Design System
 
@@ -457,6 +519,26 @@ git commit -m "feat: description"
 - **Vue DevTools Performance** - Profile component updates
 - **Bundle Analysis** - `npm run build` and analyze output
 
+## Standard Operating Procedures (SOPs)
+
+**Location**: `docs/🐛 debug/sop/`
+
+SOPs document production fixes with root cause analysis, solution steps, and rollback procedures.
+
+### Active SOPs (14 total)
+| SOP | Purpose |
+|-----|---------|
+| sync-loop-fix-2025-12-16 | Task position reset infinite loop fix |
+| competing-systems-consolidation-2025-12-03 | Unified undo/redo consolidation |
+| calendar-resize-artifacts-2025-12-02 | Calendar grid resize fixes |
+| sidebar-categories-fix-2025-11-28 | Smart view count fixes |
+| canvas-development-safety-2025-12-04 | Canvas safety guidelines |
+
+### When to Create SOPs
+- After fixing production bugs
+- When implementing complex system changes
+- For rollback procedures
+
 ## Common Issues & Solutions
 
 ### **Task Creation Not Working**
@@ -472,10 +554,11 @@ git commit -m "feat: description"
 4. Verify mouse event propagation
 
 ### **Database Not Persisting**
-1. Check LocalForage instance configuration
+1. Check PouchDB instance is initialized (singleton pattern)
 2. Verify browser supports IndexedDB
 3. Check for quota exceeded errors
 4. Test with manual save operations
+5. Check CouchDB sync status if remote sync enabled
 
 ### **Theme Switching Issues**
 1. Verify CSS custom properties are loaded
@@ -555,6 +638,7 @@ git commit -m "feat: description"
 
 ---
 
-**Last Updated**: December 5, 2025
+**Last Updated**: December 16, 2025
 **Framework Version**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3
-**Development Focus**: Productivity application with advanced task management and Pomodoro integration
+**Database**: PouchDB 9.0.0 + CouchDB (optional sync)
+**Development Focus**: Productivity app with advanced task management, Pomodoro integration, and cross-device sync

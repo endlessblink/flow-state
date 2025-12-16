@@ -81,28 +81,35 @@
 | 5 | Fix tasks.ts updateTask - don't set isInInbox on instances | DONE | `git checkout src/stores/tasks.ts` |
 | 6 | Fix useTaskLifecycle.ts - CALENDAR state shouldn't set isInInbox | DONE | `git checkout src/composables/useTaskLifecycle.ts` |
 | 7 | Fix useCalendarDayView.ts - drop handler shouldn't modify canvas state | DONE | `git checkout src/composables/calendar/useCalendarDayView.ts` |
-| 8 | Test with manual user testing | PENDING | N/A |
+| 8 | Fix canvas inbox filtering - ONLY check canvasPosition, ignore isInInbox | DONE | `git checkout src/components/base/UnifiedInboxPanel.vue src/components/canvas/InboxPanel.vue src/views/CanvasView.vue` |
+| 9 | Test with manual user testing | PENDING | N/A |
 
 **Root Cause Found Dec 16, 2025**:
 The `isInInbox` property was being used for BOTH calendar and canvas inbox membership. When scheduling a task on calendar, multiple places were setting `isInInbox = false`, which also removed it from canvas inbox.
+
+**Final Fix** (Dec 16, 2025):
+Canvas inbox filtering now ONLY checks `canvasPosition`, ignoring `isInInbox` entirely. This ensures tasks scheduled on calendar (which may have `isInInbox: false` from old data) still appear in canvas inbox.
 
 **Fixes Applied**:
 1. `tasks.ts:1661-1670` - Calendar instance logic no longer modifies `isInInbox` or `canvasPosition`
 2. `useTaskLifecycle.ts:297-305` - CALENDAR state no longer sets `isInInbox = false`
 3. `useCalendarDayView.ts:497-507` - Drop handler no longer sets `isInInbox: false` or clears `canvasPosition`
+4. `UnifiedInboxPanel.vue:288-294` - Canvas inbox filter: `!task.canvasPosition` (ignores isInInbox)
+5. `InboxPanel.vue:199-205` - Canvas inbox filter: `!task.canvasPosition` (ignores isInInbox)
+6. `CanvasView.vue:1213-1217` - hasInboxTasks check: `!task.canvasPosition` (ignores isInInbox)
 
 **Principle**:
-- `isInInbox` property controls CANVAS inbox membership ONLY
-- `instances` (time slots) control CALENDAR inbox membership ONLY
-- Calendar inbox = tasks WITHOUT scheduled time slots (instances, legacy scheduledDate+scheduledTime)
-  - NOTE: `dueDate` is just a deadline, does NOT put task on calendar grid
-- Canvas inbox = tasks WITHOUT canvas position (canvasPosition, isInInbox)
+- `isInInbox` property is now OBSOLETE for filtering - kept only for backward compatibility
+- Canvas inbox = tasks WITHOUT `canvasPosition` (ONLY this check matters)
+- Calendar inbox = tasks WITHOUT `instances` (scheduled time slots)
 - These are INDEPENDENT - one should never affect the other
 
 **Files Modified**:
-- `src/components/base/UnifiedInboxPanel.vue` - Context-aware filtering (CRITICAL FIX)
-- `src/components/CalendarInboxPanel.vue` - Removed canvasPosition checks, removed notOnCanvas filter
-- `src/stores/tasks.ts` - Removed canvasPosition check from calendarFilteredTasks + instance logic fix
+- `src/components/base/UnifiedInboxPanel.vue` - Canvas inbox filter ignores isInInbox
+- `src/components/canvas/InboxPanel.vue` - Canvas inbox filter ignores isInInbox
+- `src/views/CanvasView.vue` - hasInboxTasks check ignores isInInbox
+- `src/components/CalendarInboxPanel.vue` - Removed canvasPosition checks
+- `src/stores/tasks.ts` - Instance logic doesn't modify canvas state
 - `src/composables/useTaskLifecycle.ts` - CALENDAR state doesn't set isInInbox
 - `src/composables/calendar/useCalendarDayView.ts` - Drop handler doesn't modify canvas state
 
@@ -155,11 +162,14 @@ The `isInInbox` property was being used for BOTH calendar and canvas inbox membe
 | ~~BUG-002~~ | Canvas tasks disappear on new task creation | ~~FIXED~~ | ✅ `CanvasView.vue:589-618` |
 | ~~BUG-003~~ | ~~Today group shows wrong count~~ | ~~P1-HIGH~~ | ✅ FIXED - Verified Dec 16, 2025 |
 | ~~BUG-004~~ | ~~Tasks in Today group don't drag~~ | ~~P2-MEDIUM~~ | ✅ FIX APPLIED Dec 16 - Needs manual test |
-| BUG-005 | Date not updating on group drop | P1-HIGH | CONFIRMED Dec 16 - Priority groups work, Timeline groups don't |
+| ~~BUG-005~~ | ~~Date not updating on group drop~~ | ~~P1-HIGH~~ | ✅ FIX APPLIED Dec 16 - Added syncNodes() after property update |
 | BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |
 | BUG-007 | Deleting group deletes tasks inside | P1-HIGH | Pending (1 hour) |
 | BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
 | BUG-013 | Tasks disappear after changing properties on canvas | P1-HIGH | Needs investigation - reappear after refresh |
+| BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
+| BUG-015 | Edit Task modal behind nav tabs | P2-MEDIUM | z-index issue - nav tabs overlap modal |
+| BUG-016 | Timer status not syncing | P2-MEDIUM | Timer state not synchronized across views/components |
 
 **Details**: See "Open Bug Analysis" section below.
 
@@ -233,6 +243,7 @@ The `isInInbox` property was being used for BOTH calendar and canvas inbox membe
 | ISSUE-003 | IndexedDB version mismatch errors | P2 | Needs proper DB migration |
 | ISSUE-004 | Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
 | ISSUE-005 | QuotaExceededError unhandled | P2 | Functions exist, not enforced |
+| ISSUE-007 | **Timer not syncing across instances** | P2-MEDIUM | Timer started in one tab should show in all open tabs/windows |
 
 ### 🔴 NEXT SESSION: Live Sync Persistence Fix
 
@@ -485,9 +496,64 @@ if (section.type === 'custom' && isSmartGroup(section.name)) {
 - 116 files deferred for organic migration
 
 ### TASK-005: Phase 2 - Calendar Consolidation (IN PROGRESS)
-- Unify 6 calendar files into single `useCalendar()` composable
-- Target: ~1,000+ lines consolidated
-- Files: useCalendarDayView, useCalendarMonthView, useCalendarWeekView, useCalendarEventHelpers, useCalendarDragCreate
+
+**Updated Scope** (Dec 16, 2025 analysis):
+
+**Current State - 9 files, 5,845 lines total:**
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `CalendarView.vue` | 2,963 | Main calendar view (massive monolith) |
+| `calendar/useCalendarDayView.ts` | 900 | Day view logic |
+| `calendar/useCalendarDrag.ts` | 546 | Drag interactions |
+| `calendar/useCalendarWeekView.ts` | 391 | Week view logic |
+| `CalendarViewVueCal.vue` | 297 | Alternative vue-cal implementation |
+| `useCalendarCore.ts` | 276 | Consolidation attempt (partially adopted) |
+| `useCalendarDragCreate.ts` | 180 | Drag-to-create functionality |
+| `calendar/useCalendarEventHelpers.ts` | 156 | Event helpers (legacy, widely used) |
+| `calendar/useCalendarMonthView.ts` | 136 | Month view logic |
+
+**Critical Duplications Found:**
+
+1. **CalendarEvent interface** - defined 3x identically:
+   - `src/types/tasks.ts:117`
+   - `useCalendarCore.ts:4`
+   - `useCalendarEventHelpers.ts:4`
+
+2. **DragGhost interface** - defined 2x:
+   - `useCalendarDayView.ts:13`
+   - `useCalendarDrag.ts:13`
+
+3. **Helper functions duplicated** between `useCalendarCore` and `useCalendarEventHelpers`:
+   - `getDateString`, `formatHour`, `formatEventTime`
+   - All priority helpers (getPriorityColor, getPriorityClass, getPriorityLabel)
+   - All status helpers (getTaskStatus, getStatusLabel, getStatusIcon, cycleTaskStatus)
+   - All project helpers (getTaskProject, getProjectColor, getProjectEmoji, getProjectName)
+
+**Consolidation Plan:**
+
+1. **Phase A - Interface Deduplication** (~30 min)
+   - Keep `CalendarEvent` only in `src/types/tasks.ts`
+   - Update all imports to use centralized type
+   - Remove duplicate interfaces from composables
+
+2. **Phase B - Merge Core + EventHelpers** (~1 hour)
+   - Merge `useCalendarEventHelpers` into `useCalendarCore`
+   - `useCalendarCore` has additional: `getWeekStart`, `calculateOverlappingPositions`, `snapTo15Minutes`
+   - Update all 5 consumers to use `useCalendarCore`
+   - Delete `useCalendarEventHelpers.ts`
+
+3. **Phase C - View Composables Consolidation** (~2 hours)
+   - Evaluate merging Day/Week/Month views into unified `useCalendarViews`
+   - Extract shared view logic (time slots, grid rendering, navigation)
+   - Keep view-specific logic in separate sub-modules if needed
+
+4. **Phase D - CalendarView.vue Extraction** (~3 hours)
+   - Extract inline logic from 2,963-line monolith
+   - Move business logic to composables
+   - Target: reduce to ~500 lines (template + composition)
+
+**Target: ~2,000+ lines removed through deduplication**
 
 ### Phases 3-5: Planned
 - TASK-006: Drag-and-Drop unification (18 implementations)

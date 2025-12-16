@@ -619,4 +619,30 @@ const handleResizeEnd = (event: any) => {
   border-color: var(--amber-border-active, rgba(245, 158, 11, 0.4));
   color: var(--amber-text, #f59e0b);
 }
+
+/* Settings Button */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+  border-color: var(--glass-border-hover);
+}
+
+.settings-btn:active {
+  background: var(--glass-bg-heavy);
+  transform: scale(0.95);
+}
 </style>

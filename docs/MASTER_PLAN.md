@@ -67,6 +67,34 @@
 
 <!-- Active work items use TASK-XXX format -->
 
+### TASK-009: Separate Calendar/Canvas Inbox Systems (COMPLETE)
+
+**Goal**: Make calendar and canvas inboxes completely independent.
+
+| Step | Description | Status | Rollback |
+|------|-------------|--------|----------|
+| 1 | Update baseInboxTasks in CalendarInboxPanel.vue | DONE | `git checkout src/components/CalendarInboxPanel.vue` |
+| 2 | Update inboxTasks filter logic | DONE | Same as step 1 |
+| 3 | Remove notOnCanvas filter | DONE | Same as step 1 |
+| 4 | Update calendarFilteredTasks in tasks.ts | DONE | `git checkout src/stores/tasks.ts` |
+| 5 | Test with Playwright | DONE | N/A |
+
+**Tested Dec 16, 2025**:
+- Task "Work on tasks for lime" appears in BOTH inboxes (no canvas position, no scheduled dates)
+- Tasks on canvas with dates appear in neither inbox (correct behavior)
+- Calendar and Canvas inboxes are now fully independent
+
+**Principle**:
+- Calendar inbox = tasks WITHOUT scheduled dates (instances, dueDate, scheduledDate)
+- Canvas inbox = tasks WITHOUT canvas position (canvasPosition, isInInbox)
+- These are INDEPENDENT - one should never affect the other
+
+**Files Modified**:
+- `src/components/CalendarInboxPanel.vue` - Removed canvasPosition checks, removed notOnCanvas filter
+- `src/stores/tasks.ts` - Removed canvasPosition check from calendarFilteredTasks
+
+---
+
 ### TASK-001: Power Groups Feature (COMPLETE)
 
 **Goal**: Unify canvas groups into a single type where keywords trigger "power" behavior.
@@ -113,13 +141,38 @@
 | ~~BUG-001~~ | Task disappears when set to yesterday | ~~FIXED~~ | ✅ `tasks.ts:1718-1729` |
 | ~~BUG-002~~ | Canvas tasks disappear on new task creation | ~~FIXED~~ | ✅ `CanvasView.vue:589-618` |
 | ~~BUG-003~~ | ~~Today group shows wrong count~~ | ~~P1-HIGH~~ | ✅ FIXED - Verified Dec 16, 2025 |
-| BUG-004 | Tasks in Today group don't drag | P2-MEDIUM | Needs investigation |
+| ~~BUG-004~~ | ~~Tasks in Today group don't drag~~ | ~~P2-MEDIUM~~ | ✅ FIX APPLIED Dec 16 - Needs manual test |
 | BUG-005 | Date not updating on group drop | P2-MEDIUM | Needs investigation |
 | BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |
 | BUG-007 | Deleting group deletes tasks inside | P1-HIGH | Pending (1 hour) |
 | BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
 
 **Details**: See "Open Bug Analysis" section below.
+
+#### BUG-004 Investigation & Fix (Dec 16, 2025)
+
+**Root Cause Identified**:
+1. **HTML5 drag API conflict** - TaskNode.vue had `draggable` attribute + `@dragstart/@dragend` handlers
+2. This conflicted with Vue Flow's d3-drag system (two drag systems competing)
+3. **d3-drag testing limitation** - The `document` null error only occurs with synthetic/programmatic events
+4. Real user mouse interactions work correctly (browser sets proper event context)
+
+**Fix Applied** (`src/components/canvas/TaskNode.vue`):
+- Removed `:draggable="!isConnecting"` attribute
+- Removed `@dragstart="handleDragStart"` handler
+- Removed `@dragend="handleDragEnd"` handler
+- Vue Flow's built-in d3-drag now handles all node dragging
+
+**Research Sources**:
+- [xyflow/xyflow#2461](https://github.com/xyflow/xyflow/issues/2461) - d3-drag synthetic event limitation
+- [Vue Flow Configuration](https://vueflow.dev/guide/vue-flow/config.html) - nodesDraggable docs
+
+**Testing Notes**:
+- Playwright/synthetic mouse events trigger d3-drag error (known library limitation)
+- Manual user testing required to verify fix works
+- The error does NOT affect real users - only automated testing frameworks
+
+**Status**: FIX APPLIED - Needs manual verification by user
 
 ### Calendar Issues (From Dec 1 checkpoint)
 

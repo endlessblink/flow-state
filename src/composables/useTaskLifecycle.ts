@@ -296,7 +296,9 @@ export const useTaskLifecycle = () => {
 
       case TaskState.CALENDAR:
         // Move to calendar - create calendar instance
-        updates.isInInbox = false
+        // Dec 16, 2025 fix: DO NOT set isInInbox here
+        // isInInbox controls CANVAS inbox only, not calendar inbox
+        // Calendar and Canvas systems are INDEPENDENT
         if (metadata?.instanceData) {
           updates.instances = [metadata.instanceData]
         }

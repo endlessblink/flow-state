@@ -271,14 +271,27 @@ const draggingTaskId = ref<string | null>(null)
 const selectedTaskIds = ref<Set<string>>(new Set())
 const multiSelectMode = computed(() => selectedTaskIds.value.size > 0)
 
-// Base inbox tasks (consistent data source)
+// Base inbox tasks (different filtering based on context)
 const baseInboxTasks = computed(() => {
   // Use taskStore.tasks directly to avoid conflicts with smart view filtering
-  return taskStore.tasks.filter(task =>
-    task.isInInbox !== false &&
-    !task.canvasPosition &&
-    task.status !== 'done'
-  )
+  return taskStore.tasks.filter(task => {
+    if (task.status === 'done') return false
+
+    if (props.context === 'calendar') {
+      // CALENDAR INBOX: Show tasks NOT on the calendar grid
+      // "On calendar" = has instances (time slots), NOT just dueDate
+      // IGNORE canvasPosition - that's for Canvas inbox only
+      const hasInstances = task.instances && task.instances.length > 0
+      const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
+                               (task.scheduledTime && task.scheduledTime.trim() !== '')
+      return !hasInstances && !hasLegacySchedule
+    } else {
+      // CANVAS INBOX: Show tasks NOT on the canvas
+      // Check canvasPosition and isInInbox
+      // IGNORE calendar scheduling - that's for Calendar inbox only
+      return task.isInInbox !== false && !task.canvasPosition
+    }
+  })
 })
 
 // Smart filters with counts

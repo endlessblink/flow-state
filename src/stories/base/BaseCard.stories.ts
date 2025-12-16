@@ -249,7 +249,7 @@ export const WithSlots: Story = {
               <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
                 Task Summary
               </h3>
-              <span style="padding: 2px 8px; background: var(--color-work); color: white; border-radius: var(--radius-full); font-size: 11px; font-weight: 500;">
+              <span style="padding: 2px 8px; background: transparent; border: 1px solid var(--color-work); color: var(--color-work); border-radius: var(--radius-full); font-size: 11px; font-weight: 500;">
                 Active
               </span>
             </div>
@@ -286,8 +286,8 @@ export const WithSlots: Story = {
           </p>
           <template #footer>
             <div style="display: flex; gap: var(--space-2);">
-              <span style="padding: 4px 8px; background: var(--surface-tertiary); border-radius: var(--radius-sm); font-size: 11px;">React</span>
-              <span style="padding: 4px 8px; background: var(--surface-tertiary); border-radius: var(--radius-sm); font-size: 11px;">Vue</span>
+              <span style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: var(--radius-sm); font-size: 11px;">React</span>
+              <span style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: var(--radius-sm); font-size: 11px;">Vue</span>
             </div>
           </template>
         </BaseCard>
@@ -315,10 +315,10 @@ export const TaskCardExample: Story = {
               Complete Project Documentation
             </h3>
             <div style="display: flex; gap: 4px; flex-shrink: 0;">
-              <span style="padding: 3px 8px; background: var(--color-work); color: white; border-radius: var(--radius-full); font-size: 11px; font-weight: 500;">
+              <span style="padding: 3px 8px; background: transparent; border: 1px solid var(--color-work); color: var(--color-work); border-radius: var(--radius-full); font-size: 11px; font-weight: 500;">
                 Work
               </span>
-              <span style="padding: 3px 8px; background: var(--color-danger); color: white; border-radius: var(--radius-full); font-size: 11px; font-weight: 500;">
+              <span style="padding: 3px 8px; background: transparent; border: 1px solid var(--color-danger); color: var(--color-danger); border-radius: var(--radius-full); font-size: 11px; font-weight: 500;">
                 High
               </span>
             </div>
@@ -346,7 +346,7 @@ export const TaskCardExample: Story = {
 
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: var(--space-2);">
-              <div style="width: 32px; height: 32px; background: var(--color-work); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: white; font-weight: 600;">
+              <div style="width: 32px; height: 32px; background: transparent; border: 1px solid var(--color-work); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--color-work); font-weight: 600;">
                 JD
               </div>
               <span style="font-size: 13px; color: var(--text-secondary);">John Doe</span>
@@ -362,10 +362,10 @@ export const TaskCardExample: Story = {
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 13px; color: var(--text-muted);">Updated 1 hour ago</span>
             <div style="display: flex; gap: var(--space-2);">
-              <button style="padding: 6px 12px; background: transparent; border: 1px solid var(--border-medium); border-radius: var(--radius-md); font-size: 12px; cursor: pointer; color: var(--text-secondary);">
+              <button style="padding: 6px 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: var(--radius-md); font-size: 12px; cursor: pointer; color: var(--text-secondary);">
                 Edit
               </button>
-              <button style="padding: 6px 12px; background: var(--color-work); color: white; border: none; border-radius: var(--radius-md); font-size: 12px; cursor: pointer;">
+              <button style="padding: 6px 12px; background: transparent; border: 1px solid var(--color-work); color: var(--color-work); border-radius: var(--radius-md); font-size: 12px; cursor: pointer;">
                 Start Timer
               </button>
             </div>

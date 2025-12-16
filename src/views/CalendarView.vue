@@ -494,7 +494,7 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { useCalendarDragCreate } from '@/composables/useCalendarDragCreate'
-import { useCalendarEventHelpers } from '@/composables/calendar/useCalendarEventHelpers'
+import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
@@ -590,7 +590,7 @@ const handleStatusFilterChange = (event: MouseEvent, newFilter: 'planned' | 'in_
 
 // Composables - Refactored logic into focused modules
 const dragCreate = useCalendarDragCreate()
-const eventHelpers = useCalendarEventHelpers()
+const eventHelpers = useCalendarCore()
 const dayView = useCalendarDayView(currentDate, statusFilter)
 const weekView = useCalendarWeekView(currentDate, statusFilter)
 const monthView = useCalendarMonthView(currentDate, statusFilter)

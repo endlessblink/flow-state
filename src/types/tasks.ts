@@ -134,6 +134,15 @@ export interface WeekEvent extends CalendarEvent {
   dayIndex: number
 }
 
+// Calendar drag ghost (visual feedback during drag operations)
+export interface DragGhost {
+  visible: boolean
+  title: string
+  duration: number
+  slotIndex: number
+  taskId?: string
+}
+
 // Task creation types
 export interface CreateTaskData {
   title: string

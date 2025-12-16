@@ -39,7 +39,7 @@ defineEmits<{
 </script>
 
 <style scoped>
-/* Base Icon Button - Matches screenshot icon buttons */
+/* BaseIconButton - Stroke + Glass Morphism Design */
 .base-icon-button {
   /* Layout - Square shape */
   display: inline-flex;
@@ -47,9 +47,9 @@ defineEmits<{
   justify-content: center;
   flex-shrink: 0;
 
-  /* Visual - Subtle, refined */
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  /* Stroke-based design - transparent with border */
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-secondary);
   border-radius: var(--radius-md);
 
@@ -65,11 +65,11 @@ defineEmits<{
 }
 
 .base-icon-button:hover:not(:disabled) {
-  background: var(--surface-elevated);
-  border-color: var(--border-medium);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
 }
 
 .base-icon-button:active:not(:disabled) {
@@ -81,7 +81,7 @@ defineEmits<{
   cursor: not-allowed;
 }
 
-/* Size Variants - matching screenshot icon sizes */
+/* Size Variants */
 .base-icon-button.size-sm {
   width: 28px;
   height: 28px;
@@ -97,61 +97,64 @@ defineEmits<{
   height: 40px;
 }
 
-/* Active State */
+/* Active State - Teal stroke */
 .base-icon-button.is-active {
   background: transparent;
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  box-shadow: 0 0 0 1px var(--brand-primary) inset;
+  border-color: rgba(78, 205, 196, 0.5);
+  color: rgba(78, 205, 196, 1);
+  box-shadow: 0 0 8px rgba(78, 205, 196, 0.2);
 }
 
 .base-icon-button.is-active:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.08);
-  border-color: var(--brand-hover);
-  color: var(--brand-hover);
+  border-color: rgba(78, 205, 196, 0.7);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.3);
 }
 
-/* Variant: Primary (brand color) */
+/* Variant: Primary (teal) */
 .base-icon-button.variant-primary {
   background: transparent;
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
+  border-color: rgba(78, 205, 196, 0.4);
+  color: rgba(78, 205, 196, 1);
 }
 
 .base-icon-button.variant-primary:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.08);
-  border-color: var(--brand-hover);
-  color: var(--brand-hover);
-  box-shadow: var(--state-hover-shadow);
+  border-color: rgba(78, 205, 196, 0.6);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.2);
 }
 
-/* Variant: Success (green) */
+/* Variant: Success (green) - stroke only */
 .base-icon-button.variant-success {
-  color: var(--color-work);
+  background: transparent;
+  border-color: rgba(16, 185, 129, 0.4);
+  color: rgba(16, 185, 129, 1);
 }
 
 .base-icon-button.variant-success:hover:not(:disabled) {
-  background: var(--success-bg-light);
-  border-color: var(--success-bg-subtle);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
 }
 
-/* Variant: Warning (orange) */
+/* Variant: Warning (orange) - stroke only */
 .base-icon-button.variant-warning {
-  color: var(--color-break);
+  background: transparent;
+  border-color: rgba(245, 158, 11, 0.4);
+  color: rgba(245, 158, 11, 1);
 }
 
 .base-icon-button.variant-warning:hover:not(:disabled) {
-  background: var(--orange-bg-light);
-  border-color: var(--orange-bg-medium);
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
 }
 
-/* Variant: Danger (red) */
+/* Variant: Danger (red) - stroke only */
 .base-icon-button.variant-danger {
-  color: var(--color-danger);
+  background: transparent;
+  border-color: rgba(239, 68, 68, 0.4);
+  color: rgba(239, 68, 68, 1);
 }
 
 .base-icon-button.variant-danger:hover:not(:disabled) {
-  background: var(--danger-bg-subtle);
-  border-color: var(--danger-bg-medium);
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
 }
 </style>

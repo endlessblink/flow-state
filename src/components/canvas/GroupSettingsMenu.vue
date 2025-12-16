@@ -130,7 +130,7 @@ import { ref, reactive, watch, computed } from 'vue'
 import { X, Settings, Zap, RefreshCw, Trash2 } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
-import { useSectionSettings, getSettingsDescription } from '@/composables/useSectionSettings'
+import { useGroupSettings, getSettingsDescription } from '@/composables/useGroupSettings'
 import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 
 interface Props {
@@ -146,7 +146,7 @@ const emit = defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
-const { getAutoFilledSettings } = useSectionSettings()
+const { getAutoFilledSettings } = useGroupSettings()
 
 // Local settings state
 const localSettings = reactive<AssignOnDropSettings>({

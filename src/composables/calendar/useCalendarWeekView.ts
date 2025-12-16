@@ -1,6 +1,7 @@
 import { computed, ref, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
-import { useCalendarEventHelpers, type CalendarEvent } from './useCalendarEventHelpers'
+import { useCalendarCore } from '@/composables/useCalendarCore'
+import type { CalendarEvent, WeekEvent } from '@/types/tasks'
 
 export interface WeekDay {
   dayName: string
@@ -9,9 +10,8 @@ export interface WeekDay {
   fullDate: Date
 }
 
-export interface WeekEvent extends CalendarEvent {
-  dayIndex: number
-}
+// Re-export for consumers
+export type { WeekEvent } from '@/types/tasks'
 
 /**
  * Week view specific logic for calendar
@@ -19,7 +19,7 @@ export interface WeekEvent extends CalendarEvent {
  */
 export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
-  const { getPriorityColor, getDateString } = useCalendarEventHelpers()
+  const { getPriorityColor, getDateString } = useCalendarCore()
 
   const workingHours = Array.from({ length: 17 }, (_, i) => i + 6) // 6 AM to 10 PM
   const dragMode = ref<string | null>(null)

@@ -78,7 +78,7 @@ export const Sizes: Story = {
       return { handleClick }
     },
     template: `
-      <div style="display: flex; align-items: center; gap: 16px; padding: 24px; background: var(--surface-secondary); border-radius: 12px;">
+      <div style="display: flex; align-items: center; gap: 16px; padding: 24px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
         <div style="text-align: center;">
           <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Small (28px)</div>
           <BaseIconButton size="sm" title="Small icon button" @click="handleClick">
@@ -130,7 +130,7 @@ export const Variants: Story = {
       return { handleClick, icons }
     },
     template: `
-      <div style="display: flex; align-items: center; gap: 20px; padding: 24px; background: var(--surface-secondary); border-radius: 12px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 20px; padding: 24px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; flex-wrap: wrap;">
         <div style="text-align: center;">
           <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Default</div>
           <BaseIconButton variant="default" title="Default variant" @click="handleClick('default')">
@@ -188,7 +188,7 @@ export const ActiveStates: Story = {
       return { activeStates, toggleActive }
     },
     template: `
-      <div style="display: flex; align-items: center; gap: 20px; padding: 24px; background: var(--surface-secondary); border-radius: 12px;">
+      <div style="display: flex; align-items: center; gap: 20px; padding: 24px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
         <div style="text-align: center;">
           <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Active</div>
           <BaseIconButton
@@ -243,7 +243,7 @@ export const DisabledStates: Story = {
       return { handleClick }
     },
     template: `
-      <div style="display: flex; align-items: center; gap: 20px; padding: 24px; background: var(--surface-secondary); border-radius: 12px;">
+      <div style="display: flex; align-items: center; gap: 20px; padding: 24px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
         <div style="text-align: center;">
           <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Disabled</div>
           <BaseIconButton disabled title="Disabled button" @click="handleClick">
@@ -299,7 +299,7 @@ export const CommonIcons: Story = {
       return { handleIconClick, commonIcons }
     },
     template: `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; padding: 24px; background: var(--surface-secondary); border-radius: 12px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; padding: 24px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
         <div v-for="(icon, name) in commonIcons" :key="name" style="text-align: center;">
           <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; text-transform: capitalize;">{{ name }}</div>
           <BaseIconButton
@@ -349,7 +349,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 32px; background: var(--surface-secondary); border-radius: 12px; min-width: 400px;">
+      <div style="padding: 32px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; min-width: 400px;">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Interactive Icon Button Demo</h3>
 
         <!-- Controls -->
@@ -363,13 +363,14 @@ export const InteractiveDemo: Story = {
                 @click="selectedVariant = variant"
                 :style="{
                   padding: '6px 12px',
-                  background: selectedVariant === variant ? 'var(--brand-primary)' : 'var(--surface-tertiary)',
-                  color: selectedVariant === variant ? 'white' : 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)',
+                  background: 'transparent',
+                  color: selectedVariant === variant ? 'rgba(78, 205, 196, 1)' : 'var(--text-secondary)',
+                  border: selectedVariant === variant ? '1px solid rgba(78, 205, 196, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '6px',
                   fontSize: '12px',
                   cursor: 'pointer',
-                  textTransform: 'capitalize'
+                  textTransform: 'capitalize',
+                  boxShadow: selectedVariant === variant ? '0 0 8px rgba(78, 205, 196, 0.2)' : 'none'
                 }"
               >
                 {{ variant }}
@@ -386,13 +387,14 @@ export const InteractiveDemo: Story = {
                 @click="selectedSize = size"
                 :style="{
                   padding: '6px 12px',
-                  background: selectedSize === size ? 'var(--brand-primary)' : 'var(--surface-tertiary)',
-                  color: selectedSize === size ? 'white' : 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)',
+                  background: 'transparent',
+                  color: selectedSize === size ? 'rgba(78, 205, 196, 1)' : 'var(--text-secondary)',
+                  border: selectedSize === size ? '1px solid rgba(78, 205, 196, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '6px',
                   fontSize: '12px',
                   cursor: 'pointer',
-                  textTransform: 'uppercase'
+                  textTransform: 'uppercase',
+                  boxShadow: selectedSize === size ? '0 0 8px rgba(78, 205, 196, 0.2)' : 'none'
                 }"
               >
                 {{ size }}
@@ -402,7 +404,7 @@ export const InteractiveDemo: Story = {
         </div>
 
         <!-- Demo Area -->
-        <div style="display: flex; align-items: center; gap: 24px; padding: 24px; background: var(--surface-primary); border-radius: 8px; border: 1px solid var(--border-subtle);">
+        <div style="display: flex; align-items: center; gap: 24px; padding: 24px; background: transparent; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <div>
             <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Click Counter</div>
             <BaseIconButton
@@ -437,7 +439,7 @@ export const InteractiveDemo: Story = {
         </div>
 
         <!-- Instructions -->
-        <div style="margin-top: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 8px; border: 1px solid var(--glass-border);">
+        <div style="margin-top: 24px; padding: 16px; background: transparent; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-primary);">Features</h4>
           <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
             <li><strong>Click counter</strong> - Tracks total clicks</li>

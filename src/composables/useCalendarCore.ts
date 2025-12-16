@@ -1,21 +1,9 @@
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
+import type { CalendarEvent } from '@/types/tasks'
 
-export interface CalendarEvent {
-  id: string // instanceId
-  taskId: string
-  instanceId: string
-  title: string
-  startTime: Date
-  endTime: Date
-  duration: number
-  startSlot: number
-  slotSpan: number
-  color: string
-  column: number
-  totalColumns: number
-  isDueDate: boolean // Whether this represents a task due date
-}
+// Re-export CalendarEvent for consumers that import from this file
+export type { CalendarEvent } from '@/types/tasks'
 
 /**
  * Core shared utilities for calendar functionality

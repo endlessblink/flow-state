@@ -13,9 +13,6 @@
       'is-dragging': isNodeDragging,
       'is-connecting': isConnecting
     }"
-    :draggable="!isConnecting"
-    @dragstart="handleDragStart"
-    @dragend="handleDragEnd"
     @dblclick="$emit('edit', task)"
     @click="handleClick"
     @contextmenu.prevent="handleContextMenu"

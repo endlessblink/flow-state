@@ -1,73 +1,13 @@
 <style>
-  /* ===== DARK MODE STYLES ===== */
+  /* Dark mode base */
   :root {
     color-scheme: dark;
+    background-color: #000000;
   }
 
-  /* Docs page wrapper and content backgrounds */
-  .sbdocs-wrapper,
-  .sbdocs,
-  .sbdocs-content,
-  #storybook-docs,
-  .sb-main-padded,
-  .sb-show-main {
-    background-color: #0d1117 !important;
+  html, body {
+    background-color: #000000 !important;
   }
-
-  /* Story preview container in docs */
-  .docs-story,
-  .docs-story > div,
-  .sbdocs-preview,
-  .sb-story,
-  .innerZoomElementWrapper,
-  .innerZoomElementWrapper > div {
-    background-color: #0d1117 !important;
-  }
-
-  /* Docs text colors */
-  .sbdocs-p,
-  .sbdocs-h1,
-  .sbdocs-h2,
-  .sbdocs-h3,
-  .sbdocs-h4,
-  .sbdocs-wrapper p,
-  .sbdocs-wrapper h1,
-  .sbdocs-wrapper h2,
-  .sbdocs-wrapper h3,
-  .sbdocs-wrapper span,
-  .sbdocs-title,
-  .sbdocs-subtitle {
-    color: #e6edf3 !important;
-  }
-
-  /* Args table dark mode */
-  .docblock-argstable,
-  .docblock-argstable-head,
-  .docblock-argstable-body,
-  .docblock-argstable th,
-  .docblock-argstable td,
-  table[class*="ArgTypes"],
-  table[class*="ArgTypes"] th,
-  table[class*="ArgTypes"] td {
-    background-color: #161b22 !important;
-    color: #e6edf3 !important;
-    border-color: #30363d !important;
-  }
-
-  /* Code blocks */
-  .docblock-source,
-  pre,
-  code {
-    background-color: #161b22 !important;
-    color: #e6edf3 !important;
-  }
-
-  /* Canvas toolbar */
-  .sb-bar {
-    background-color: #161b22 !important;
-  }
-
-  /* ===== END DARK MODE STYLES ===== */
 
   /* Fix for cut-off content in Storybook docs */
   .sbdocs-preview,

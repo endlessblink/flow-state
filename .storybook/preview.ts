@@ -5,6 +5,9 @@ import { createPinia } from 'pinia'
 import customTheme from './theme'
 import i18n from '../src/i18n'
 
+// Storybook dark mode override (must come first)
+import './storybook-dark-override.css'
+
 // Design system (order matters - must match main.ts)
 import '../src/assets/design-tokens.css'
 import '../src/assets/styles.css'
@@ -75,11 +78,12 @@ const preview: Preview = {
   decorators: [
     (story: any) => {
       if (typeof document !== 'undefined') {
+        // Apply pure black background
+        document.documentElement.style.setProperty('background-color', '#000000', 'important')
+        document.body.style.backgroundColor = '#000000'
+        document.body.style.color = '#e6edf3'
         document.documentElement.classList.add('dark-theme')
         document.documentElement.style.colorScheme = 'dark'
-        document.documentElement.style.backgroundColor = '#0d1117'
-        document.body.style.backgroundColor = '#0d1117'
-        document.body.style.color = '#f0f6fc'
       }
       return story()
     },

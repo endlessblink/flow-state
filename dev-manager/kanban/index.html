@@ -1165,10 +1165,14 @@
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
               if (taskIdx >= 0) {
                 data.activeWork[taskIdx].subtasks = currentItem.subtasks || [];
-                data.activeWork[taskIdx].progress = currentItem.subtasks?.length > 0
-                  ? Math.round((currentItem.completedSubtasks || 0) / currentItem.subtasks.length * 100)
-                  : (data.activeWork[taskIdx].status === 'done' ? 100 :
-                     data.activeWork[taskIdx].status === 'in-progress' ? 50 : 0);
+                // Done tasks always show 100%, regardless of subtask completion
+                if (data.activeWork[taskIdx].status === 'done') {
+                  data.activeWork[taskIdx].progress = 100;
+                } else if (currentItem.subtasks?.length > 0) {
+                  data.activeWork[taskIdx].progress = Math.round((currentItem.completedSubtasks || 0) / currentItem.subtasks.length * 100);
+                } else {
+                  data.activeWork[taskIdx].progress = data.activeWork[taskIdx].status === 'in-progress' ? 50 : 0;
+                }
               }
             }
 
@@ -1320,10 +1324,14 @@
           const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
           if (taskIdx >= 0) {
             data.activeWork[taskIdx].subtasks = currentItem.subtasks || [];
-            data.activeWork[taskIdx].progress = currentItem.subtasks?.length > 0
-              ? Math.round((currentItem.completedSubtasks || 0) / currentItem.subtasks.length * 100)
-              : (data.activeWork[taskIdx].status === 'done' ? 100 :
-                 data.activeWork[taskIdx].status === 'in-progress' ? 50 : 0);
+            // Done tasks always show 100%, regardless of subtask completion
+            if (data.activeWork[taskIdx].status === 'done') {
+              data.activeWork[taskIdx].progress = 100;
+            } else if (currentItem.subtasks?.length > 0) {
+              data.activeWork[taskIdx].progress = Math.round((currentItem.completedSubtasks || 0) / currentItem.subtasks.length * 100);
+            } else {
+              data.activeWork[taskIdx].progress = data.activeWork[taskIdx].status === 'in-progress' ? 50 : 0;
+            }
           }
         }
 

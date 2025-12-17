@@ -149,7 +149,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted as _onMounted, onUnmounted } from 'vue'
 import { ChevronDown, ChevronRight, Eye, Maximize2, Archive, Zap, Magnet } from 'lucide-vue-next'
-import type { CanvasSection, SectionFilter as _SectionFilter } from '@/stores/canvas'
+import type { CanvasSection } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'

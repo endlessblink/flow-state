@@ -189,24 +189,27 @@ export function getSmartGroupDate(smartGroupType: SmartGroupType): string {
     case SMART_GROUPS.TODAY:
       return `${year}-${month}-${day}`
 
-    case SMART_GROUPS.TOMORROW:
+    case SMART_GROUPS.TOMORROW: {
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
       return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+    }
 
-    case SMART_GROUPS.THIS_WEEKEND:
+    case SMART_GROUPS.THIS_WEEKEND: {
       // Get next Saturday
       const saturday = new Date(today)
       const daysUntilSaturday = (6 - today.getDay() + 7) % 7 || 7
       saturday.setDate(today.getDate() + daysUntilSaturday)
       return `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`
+    }
 
-    case SMART_GROUPS.THIS_WEEK:
+    case SMART_GROUPS.THIS_WEEK: {
       // Get end of current week (Sunday)
       const sunday = new Date(today)
       const daysUntilSunday = (7 - today.getDay()) % 7 || 7
       sunday.setDate(today.getDate() + daysUntilSunday)
       return `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`
+    }
 
     case SMART_GROUPS.LATER:
       // For "later", return empty string (no specific date)

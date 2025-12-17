@@ -337,7 +337,7 @@ const handleToggleComplete = (_completed: boolean) => {
   emit('toggleComplete', props.task.id)
 }
 
-const _handleSelectionChange = (_selected: boolean) => {
+const _handleSelectionChange = (selected: boolean) => {
   if (selected) {
     emit('select', props.task.id)
   } else {

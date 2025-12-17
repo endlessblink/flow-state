@@ -153,13 +153,14 @@ const sortedTasks = computed(() => {
         if (!b.dueDate) return -1
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
       })
-    case 'priority':
+    case 'priority': {
       const priorityOrder = { high: 0, medium: 1, low: 2 }
       return tasks.sort((a, b) => {
         const aPriority = a.priority ? priorityOrder[a.priority] : 3
         const bPriority = b.priority ? priorityOrder[b.priority] : 3
         return aPriority - bPriority
       })
+    }
     case 'title':
       return tasks.sort((a, b) => a.title.localeCompare(b.title))
     case 'created':

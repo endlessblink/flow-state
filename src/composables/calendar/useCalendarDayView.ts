@@ -517,7 +517,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   }
 
   // Event drag-and-drop (repositioning within calendar)
-  const _startEventDrag = (event: MouseEvent, _calendarEvent: CalendarEvent) => {
+  const _startEventDrag = (event: MouseEvent, calendarEvent: CalendarEvent) => {
     event.preventDefault()
 
     const container = document.querySelector('.calendar-events-container') as HTMLElement

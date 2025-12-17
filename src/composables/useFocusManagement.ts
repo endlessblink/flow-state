@@ -179,11 +179,12 @@ export function useFocusManagement(options: {
         }
         break
 
-      case 'ArrowUp':
+      case 'ArrowUp': {
         event.preventDefault()
         const prevIndex = currentIndex <= 0 ? focusableElements.value.length - 1 : currentIndex - 1
         focusByIndex(prevIndex)
         break
+      }
 
       case 'Home':
         event.preventDefault()

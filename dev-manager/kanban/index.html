@@ -1385,24 +1385,40 @@
           }
 
           // Parse TASK- headers in Active Work OR Technical Debt (archive) sections
-          if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^### (TASK-\d+):/)) {
+          // Handle strikethrough markers (~~) for completed tasks
+          if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^### ~~?(TASK-\d+)~~?:/)) {
             // Save previous task's subtasks before starting new one
             if (currentItem && currentItem.id?.startsWith('TASK-')) {
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
               if (taskIdx >= 0) {
                 data.activeWork[taskIdx].subtasks = currentItem.subtasks || [];
-                // Done tasks always show 100%, regardless of subtask completion
-                if (data.activeWork[taskIdx].status === 'done') {
+                const taskStatus = data.activeWork[taskIdx].status;
+                const description = data.activeWork[taskIdx].description || '';
+
+                // Try to extract percentage from description (e.g., "61.5% reduction" or "85% complete")
+                // Handle markdown bold markers (**) around percentages
+                const percentMatch = description.match(/\*?\*?(\d+(?:\.\d+)?)\s*%\s*(?:reduction|complete|done)\*?\*?/i);
+
+                // Done tasks always show 100%
+                if (taskStatus === 'done') {
                   data.activeWork[taskIdx].progress = 100;
+                } else if (percentMatch) {
+                  // Use percentage from description if available
+                  data.activeWork[taskIdx].progress = Math.round(parseFloat(percentMatch[1]));
                 } else if (currentItem.subtasks?.length > 0) {
-                  data.activeWork[taskIdx].progress = Math.round((currentItem.completedSubtasks || 0) / currentItem.subtasks.length * 100);
+                  let calculatedProgress = Math.round((currentItem.completedSubtasks || 0) / currentItem.subtasks.length * 100);
+                  // Cap at 95% for in-progress tasks to avoid false "complete" appearance
+                  if (taskStatus === 'in-progress' && calculatedProgress >= 100) {
+                    calculatedProgress = 95;
+                  }
+                  data.activeWork[taskIdx].progress = calculatedProgress;
                 } else {
-                  data.activeWork[taskIdx].progress = data.activeWork[taskIdx].status === 'in-progress' ? 50 : 0;
+                  data.activeWork[taskIdx].progress = taskStatus === 'in-progress' ? 50 : 0;
                 }
               }
             }
 
-            const match = trimmed.match(/^### (TASK-\d+):\s*(.+?)(?:\s*\(([^)]+)\))?$/);
+            const match = trimmed.match(/^### ~~?(TASK-\d+)~~?:\s*(.+?)(?:\s*\(([^)]+)\))?$/);
             if (match) {
               const statusText = match[3] ? match[3].toUpperCase() : '';
               const status = parseTaskStatus(statusText);
@@ -1449,20 +1465,22 @@
             }
           }
 
-          // Parse ALL bullet points under TASK headers as subtasks
-          // Every subtask fills the main task progress bar
+          // Parse ONLY checkbox-style bullet points as subtasks
+          // Regular informational bullets (like file lists) are ignored
+          // Format: - [ ] incomplete or - [x] complete
           if ((currentSection === 'activeWork' || currentSection === 'archive') && currentItem && trimmed.startsWith('- ')) {
-            // Count this as a subtask
-            currentItem.subtasks.push(trimmed.substring(2));
+            // Only count checkbox-style bullets as actual subtasks
+            const isCheckbox = trimmed.match(/^- \[[x ]\]/i);
 
-            // Check if subtask is completed (multiple ways to mark completion)
-            const isCheckedCheckbox = trimmed.match(/^- \[x\]/i);
-            const hasStrikethrough = trimmed.includes('~~');
-            const hasCheckmark = trimmed.includes('✅') || trimmed.includes('✓');
-            const hasDoneStatus = trimmed.toUpperCase().includes('DONE') || trimmed.toUpperCase().includes('COMPLETE');
+            if (isCheckbox) {
+              // Count this as a subtask
+              currentItem.subtasks.push(trimmed.substring(2));
 
-            if (isCheckedCheckbox || hasStrikethrough || hasCheckmark || hasDoneStatus) {
-              currentItem.completedSubtasks = (currentItem.completedSubtasks || 0) + 1;
+              // Check if subtask is completed
+              const isCheckedCheckbox = trimmed.match(/^- \[x\]/i);
+              if (isCheckedCheckbox) {
+                currentItem.completedSubtasks = (currentItem.completedSubtasks || 0) + 1;
+              }
             }
           }
 

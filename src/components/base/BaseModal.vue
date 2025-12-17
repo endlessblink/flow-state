@@ -1,9 +1,9 @@
 <template>
   <div
     v-if="isOpen"
+    ref="overlayRef"
     class="modal-overlay"
     :class="{ 'modal-closing': isClosing }"
-    ref="overlayRef"
     role="dialog"
     :aria-modal="isOpen"
     :aria-labelledby="titleId"

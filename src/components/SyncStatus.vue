@@ -292,6 +292,7 @@
 import { computed, ref, onMounted, onUnmounted, watch as _watch } from 'vue'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
+import type { QueueStats } from '@/utils/offlineQueue'
 import { RefreshCw, Wifi, WifiOff, Cloud, CloudOff, AlertCircle, Pause, Play, Shield, Activity, Clock, Settings, Database, Trash2, Heart, Download } from 'lucide-vue-next'
 
 interface Props {
@@ -363,7 +364,7 @@ const _resolveConflict = manualConflictResolution
 const _getHealth = getSyncHealth
 
 // Get queue stats for display
-const queueStats = computed(() => getOfflineQueueStats())
+const queueStats = computed(() => getOfflineQueueStats() as QueueStats)
 
 // Reactive state
 const isManualSyncing = ref(false)

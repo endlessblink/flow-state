@@ -135,10 +135,12 @@ const filterOptions = [
 .density-control {
   display: flex;
   gap: 2px;
-  background-color: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: 2px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .density-option {
@@ -146,8 +148,8 @@ const filterOptions = [
   align-items: center;
   justify-content: center;
   padding: var(--space-2);
-  background-color: transparent;
-  border: none;
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: calc(var(--radius-md) - 2px);
   color: var(--text-secondary);
   cursor: pointer;
@@ -155,13 +157,17 @@ const filterOptions = [
 }
 
 .density-option:hover {
-  background-color: var(--surface-hover);
+  background: var(--state-hover-bg);
+  border-color: var(--state-hover-border);
   color: var(--text-primary);
 }
 
 .density-option.active {
-  background-color: var(--color-primary);
-  color: var(--color-primary-contrast);
+  /* Outlined active state (not filled) - consistent with BaseButton variant-active */
+  background: transparent;
+  border-color: var(--brand-primary);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--brand-primary) inset;
 }
 
 .control-wrapper {

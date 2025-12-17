@@ -9,10 +9,10 @@ import { ref as _ref, reactive } from 'vue'
 
 // Type definitions for dynamic imports
 type _DynamicImport<T = any> = () => Promise<T>
-type _ImportCache = Map<string, any>
+type ImportCache = Map<string, any>
 
 // Global import cache to prevent duplicate loading
-const _importCache: _ImportCache = new Map()
+const _importCache: ImportCache = new Map()
 
 // Loading states for tracking imports
 const loadingStates = reactive<Record<string, boolean>>({})

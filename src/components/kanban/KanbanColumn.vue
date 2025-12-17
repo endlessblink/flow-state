@@ -27,7 +27,6 @@
         :scroll-sensitivity="100"
         :scroll-speed="20"
         :bubble-scroll="true"
-        @change="handleDragChange"
         :delay="0"
         :delay-on-touch-start="false"
         :delay-on-touch-only="false"
@@ -36,6 +35,7 @@
         easing="cubic-bezier(0.25, 0.46, 0.45, 0.94)"
         tag="div"
         style="min-height: var(--kanban-column-min-height); padding: var(--space-2);"
+        @change="handleDragChange"
       >
         <template #item="{ element: task }">
           <TaskCard

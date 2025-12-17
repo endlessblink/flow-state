@@ -97,7 +97,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const _emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>()
 
 interface Emits {
   success: []

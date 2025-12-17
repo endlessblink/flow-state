@@ -1,7 +1,7 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 16, 2025
-**Version**: 4.6 (TASK-014 Storybook Glass Morphism Streamlining started)
+**Last Updated**: December 17, 2025
+**Version**: 4.7 (TASK-014 DoneToggle & Progress Bar work)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -36,6 +36,7 @@
 
 <!-- Ideas use IDEA-XXX format -->
 - IDEA-001: (add rough ideas here)
+- IDEA-002: **Timeline View for Dev-Manager** - Add a timeline/Gantt-style view to see all tasks in the order they should be completed visually. Would help visualize task priorities, dependencies, and progress at a glance. Could integrate intelligent task analysis (read actual content/subtasks) instead of simple pattern matching to determine true completion status.
 
 ---
 
@@ -88,11 +89,21 @@
 | `TaskManagerSidebar.vue` | `.task-sidebar`, `.sidebar-task`, `.nested-task`, `.action-btn` hover | ✅ DONE |
 | `BaseButton.stories.ts` | Added dark bg wrappers, argTypes, streamlined stories | ✅ DONE |
 | `GroupEditModal.vue` | `.modal-content`, `.form-input`, `.layout-btn`, buttons to strokes | ✅ DONE |
+| `DoneToggle.vue` | Progress indicator: clip-path left-to-right fill; Minimal variant: stroke-only when completed | ✅ DONE |
+| `DoneToggle.stories.ts` | Fixed missing `computed` import for Interactive Demo story | ✅ DONE |
+| `TaskRow.vue` | Replaced native checkbox with DoneToggle component | ✅ DONE |
+| `HierarchicalTaskRow.vue` | Progress bar updated to stroke-only design | ✅ DONE |
+| `TaskTable.vue` | Progress bar updated to stroke-only design | ⚠️ NEEDS REVIEW |
 
-**Where We Stopped**:
-- TaskManagerSidebar component fully updated to use design tokens
-- Action button hovers changed from fills to strokes
-- Need to verify in Storybook and continue with remaining stories
+**Where We Stopped** (Dec 17, 2025):
+- DoneToggle progress indicator fixed to use left-to-right clip-path fill
+- DoneToggle minimal variant now shows stroke-only (not filled) when completed
+- TaskRow.vue updated to use DoneToggle instead of native checkbox
+- **Progress bar stroke-only design applied but user says it doesn't look/work well**
+- Need to discuss alternative progress bar visual approach with user:
+  1. Subtle glass fill (transparent `rgba(--color-primary-rgb, 0.3)`)
+  2. Text only (just percentage number)
+  3. Different approach TBD
 
 **Remaining Stories** (54 total):
 
@@ -166,7 +177,7 @@
 
 ---
 
-### TASK-011: Lint Cleanup (PARTIAL - PAUSED)
+### TASK-011: Lint Cleanup (IN PROGRESS - NEAR COMPLETE)
 
 **Goal**: Fix 2400+ lint errors for easier refactoring & faster Claude Code editing.
 
@@ -174,19 +185,20 @@
 
 **Baseline** (Dec 16, 2025): 5,175 problems (2,405 errors, 2,770 warnings)
 **After --fix**: 2,406 problems (1,227 errors, 1,179 warnings) - formatting only
-**Final** (Dec 16, 2025): 2,225 problems (1,046 errors, 1,179 warnings)
-**Progress**: 57% reduction (2,950 problems fixed)
+**Session 1** (Dec 16): 2,225 problems (1,046 errors, 1,179 warnings) - 57% reduction
+**Session 2** (Dec 17): 1,996 problems (817 errors, 1,179 warnings) - **61.5% reduction**
+**Total Fixed**: 3,179 problems resolved
 
 | Step | Description | Status |
 |------|-------------|--------|
 | 1 | Run `npm run lint` to get baseline | ✅ DONE |
 | 2 | Run `--fix` for formatting rules only | ✅ DONE |
 | 3 | Add underscore pattern to eslint config for Vue files | ✅ DONE |
-| 4 | Manual prefix unused vars with `_` | ✅ DONE (most) |
+| 4 | Manual prefix unused vars with `_` | ✅ DONE (28 remain) |
 | 5 | Verify build passes | ✅ DONE |
 | 6 | Created lint skill `.claude/skills/dev-lint-cleanup/` | ✅ DONE |
 
-**Files Fixed** (Dec 16, 2025):
+**Files Fixed - Session 1** (Dec 16, 2025):
 - `eslint.config.js`: Added `varsIgnorePattern: '^_'` for Vue files
 - `FocusView.vue`, `QuickSortView.vue`: Removed unused imports
 - `DoneToggle.vue`: Prefixed `_handleTouchStart`, `_handleTouchEnd`, `_smoothStateTransition`
@@ -201,11 +213,19 @@
 - `useDatabase.ts`: Prefixed `_DatabaseHealth`, `_HEALTH_CHECK_INTERVAL`, `_cacheKey`
 - `useContextMenu.ts`, `useContextMenuEvents.ts`: Prefixed unused params
 - `useCopy.ts`: Prefixed `_feedbackDuration`
-- `CanvasView.vue`: Prefixed 20+ unused vars (getVisibleProjectIds, hideDoneTasks, sections, resizeHandleStyle, etc.)
+- `CanvasView.vue`: Prefixed 20+ unused vars
 
-**Remaining** (1,046 errors, 1,179 warnings):
+**Files Fixed - Session 2** (Dec 17, 2025):
+- 57+ files fixed via parallel agents targeting `@typescript-eslint/no-unused-vars`
+- Components: GoogleSignInButton, ResetPasswordView, BaseInput, BasePopover, UnifiedInboxPanel, CanvasContextMenu, GroupEditModal, HierarchicalTaskRow, KanbanSwimlane, SettingsModal, SyncAlertSystem, SyncStatus, TaskManagerSidebar, WelcomeModal, ViewControls, CalendarView, CalendarViewVueCal, BaseNavItem, ProjectEmojiIcon, InboxPanel, SyncErrorBoundary, SyncIntegrationExample
+- Composables: useCalendarDayView, useBackupRestoration, useCanvasRenderingOptimization, useCrossTabSyncIntegration, useNetworkOptimizer
+- Stores: auth.ts, canvas.ts, notifications.ts, taskCore.ts, ui.ts, taskCanvas.ts
+- Utils: main.ts, router, services, security files, forensicBackupLogger, mockTaskDetector, networkOptimizer, errorHandler, memoryLeakDetector, performanceBenchmark, retryManager, securityScanner, syncTestSuite, timezoneCompatibility
+- Views: BoardView.vue, CanvasView.vue
+
+**Remaining** (817 errors, 1,179 warnings):
 - `@typescript-eslint/no-explicit-any` (~600 errors) - Require proper typing, too risky to auto-fix
-- `@typescript-eslint/no-unused-vars` (~50 errors) - Some remaining in large components
+- `@typescript-eslint/no-unused-vars` (~28 errors) - Minor cleanup remaining
 - Vue formatting warnings (~1,179) - Attribute order, etc. (cosmetic)
 
 **Skill Created**: `.claude/skills/dev-lint-cleanup/SKILL.md` - Documents safe patterns for future cleanup
@@ -486,6 +506,22 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | ISSUE-005 | QuotaExceededError unhandled | P2 | Functions exist, not enforced |
 | ISSUE-007 | **Timer not syncing across instances** | P2-MEDIUM | Timer started in one tab should show in all open tabs/windows |
 | ISSUE-008 | **Ctrl+Z doesn't work on groups** | P2-MEDIUM | Undo doesn't restore deleted/modified groups on canvas |
+| ISSUE-009 | **15 vue-tsc TypeScript errors** | P2-MEDIUM | Build passes but `vue-tsc` fails. See details below |
+
+### ISSUE-009: Vue TypeScript Errors (15 total)
+
+**Priority**: P2-MEDIUM
+**Note**: `npm run build` passes (Vite transpiles only), but `vue-tsc --noEmit` fails.
+
+| File | Error | Fix |
+|------|-------|-----|
+| `CloudSyncSettings.vue:404` | `syncError` not defined | Should use `_syncError` (typo) |
+| `HierarchicalTaskRow.vue:341` | `selected` not defined | Should use `_selected` parameter |
+| `ResetPasswordView.vue:143` | `emit` not defined | Missing `defineEmits` |
+| `CanvasGroup.vue:152` | `SectionFilter` not exported | Export missing from canvas store |
+| `useCalendarDayView.ts:536,555,562,571` | `calendarEvent` → `_calendarEvent` | Wrong variable name (4 errors) |
+| `useDynamicImports.ts:88` | `ImportCache` not defined | Missing type definition |
+| `CalendarView.vue:187,192,351,356,474,479` | CalendarEvent/WeekEvent type mismatch | Interface needs `projectId` (6 errors) |
 
 ### ~~🔴 NEXT SESSION: Live Sync Persistence Fix~~ (ALREADY FIXED)
 

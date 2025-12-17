@@ -1,7 +1,7 @@
 # Pomo-Flow Master Plan & Roadmap
 
 **Last Updated**: December 17, 2025
-**Version**: 4.7 (TASK-014 DoneToggle & Progress Bar work)
+**Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -600,17 +600,32 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 
 ---
 
-### 🔴 NEXT SESSION: Priority Tasks
+### 🔴 NEXT SESSION: Strategic Priority
 
-| ID | Task | Priority | Effort |
-|----|------|----------|--------|
-| ~~BUG-015~~ | ~~Edit Task modal behind nav tabs (z-index)~~ | ~~P2-MEDIUM~~ | ✅ DONE |
-| BUG-016 | Timer status not syncing across tabs | P2-MEDIUM | ~2h |
-| TASK-002 | Canvas Section Selection Dialog | P2-MEDIUM | ~2h |
-| TASK-003 | Re-enable Backup Settings UI | P2-MEDIUM | ~2h |
-| BUG-009-011 | Calendar resize/ghost preview issues | HIGH | ~4h |
+#### Phase 0: Sync Hardening (FIRST - PREREQUISITE)
 
-**Suggested**: Start with BUG-016 or TASK-002/TASK-003 as quick wins.
+| Task | Priority | Reference |
+|------|----------|-----------|
+| BUG-016 | Timer sync across tabs | P2-MEDIUM |
+| ISSUE-007 | Timer sync across instances | P2-MEDIUM |
+| 13.3 | Conflict resolution UI | P2-MEDIUM |
+
+**See**: ROAD-013 section below for full task list
+
+#### Then: Phase 1 - Gamification (ROAD-010)
+
+Start with tasks 10.1-10.5 (XP system + character)
+
+**See**: ROAD-010 section below for full task list
+
+#### Current Active Work (Can Pause)
+
+| ID | Task | Status |
+|----|------|--------|
+| TASK-014 | Storybook Glass Morphism | IN PROGRESS (7/54) |
+| TASK-011 | Lint Cleanup | 61.5% complete |
+
+**Note**: Pause active work to focus on strategic roadmap priorities.
 
 ---
 
@@ -687,22 +702,41 @@ All shortcuts tested with Playwright MCP - all passed.
 
 ---
 
-## 🔴 NEXT SESSION: Continue Quick Wins
+## 🔴 Strategic Roadmap Quick Reference
 
-### Priority Tasks
+### Implementation Order
 
-1. **TASK-002: Canvas Section Selection Dialog** (2h)
-   - Create `SectionSelectorDialog.vue` component
-   - Wire to `handleBulkAction()` in CanvasView.vue:4708-4710
-   - Allow moving selected tasks to different sections
+1. **Phase 0: Sync Hardening** (ROAD-013) - 1 week
+   - Fix timer sync (BUG-016, ISSUE-007)
+   - Improve conflict resolution UI
+   - Test multi-device scenarios
 
-2. **TASK-003: Re-enable Backup Settings UI** (2h)
-   - Remove `disabled` attributes from buttons in `SimpleBackupSettings.vue`
-   - Wire to `useBackupRestoration` composable
-   - Test full backup/restore flow
+2. **Phase 1: Gamification** (ROAD-010) - 2-3 weeks
+   - Create gamification store (10.1)
+   - Implement XP system (10.2-10.3)
+   - Create character avatar (10.4-10.5)
+   - Add achievements (10.6)
+
+3. **Phase 2: AI Assistant** (ROAD-011) - 3-4 weeks
+   - Create AI services (11.1-11.3)
+   - Task breakdown feature (11.6)
+   - Natural language input (11.8)
+
+4. **Phase 3: Mobile PWA** (ROAD-004) - 4-6 weeks
+   - PWA setup (4.1-4.4)
+   - Responsive layout (4.5-4.8)
+   - Mobile views (4.9-4.11)
+
+### Deferred Quick Wins
+
+| ID | Task | Effort | Note |
+|----|------|--------|------|
+| TASK-002 | Canvas Section Selection Dialog | ~2h | After Phase 0 |
+| TASK-003 | Re-enable Backup Settings UI | ~2h | After Phase 0 |
+| BUG-009-011 | Calendar resize/ghost issues | ~4h | Non-blocking |
 
 ### Reference: Plan File Location
-Full implementation plan available at: `/home/noam/.claude/plans/encapsulated-drifting-cray.md`
+Full strategic plan: `/home/endlessblink/.claude/plans/distributed-squishing-mochi.md`
 
 ---
 
@@ -963,6 +997,255 @@ sync: {
   heartBeat: 10000,
 }
 ```
+
+---
+
+## ROAD-013: Sync Hardening (PREREQUISITE)
+
+**Goal**: Fix "mostly works, some issues" → reliable daily driver
+
+**Priority**: P0-CRITICAL (blocks all other features)
+
+**Related Issues**: BUG-016, ISSUE-007
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 13.1 | Audit current sync issues | PENDING |
+| 13.2 | Fix timer sync across tabs (BUG-016) | PENDING |
+| 13.3 | Improve conflict resolution UI | PENDING |
+| 13.4 | Add sync status indicator improvements | PENDING |
+| 13.5 | Test multi-device scenarios E2E | PENDING |
+
+**Critical Files**:
+- `src/composables/useReliableSyncManager.ts`
+- `src/composables/useCouchDBSync.ts`
+- `src/composables/useCrossTabSync.ts`
+- `src/config/database.ts`
+
+**Success Criteria**:
+- [ ] Sync works reliably across 2+ devices
+- [ ] No data loss during sync conflicts
+- [ ] Clear UI feedback on sync status
+- [ ] Timer state syncs across all open tabs
+
+---
+
+## ROAD-010: Gamification - "Cyberflow" (Phase 1)
+
+**Goal**: Make daily use engaging through RPG-style character progression
+
+**Theme**: Cyberpunk 2077-inspired (no affiliation) - rising in the world of "Cyberflow"
+
+**Priority**: P1-HIGH (first major feature after sync)
+
+### MVP Scope (Phase 1a): XP + Levels + Character Visual
+
+| Task | Description | Complexity | Status |
+|------|-------------|------------|--------|
+| 10.1 | Create `src/stores/gamification.ts` | Medium | PENDING |
+| 10.2 | Implement XP earning system | Medium | PENDING |
+| 10.3 | Create level progression logic | Low | PENDING |
+| 10.4 | Create CharacterAvatar component | Medium | PENDING |
+| 10.5 | Add character to sidebar | Low | PENDING |
+| 10.6 | Implement achievement badges (5+) | Medium | PENDING |
+| 10.7 | Add intensity settings (minimal/moderate/full) | Low | PENDING |
+| 10.8 | Integrate XP triggers in task store | Medium | PENDING |
+| 10.9 | Integrate XP triggers in timer store | Low | PENDING |
+
+**XP Sources**:
+- Task completion (base XP)
+- Difficulty bonus (high priority = more XP)
+- Pomodoro sessions
+- Daily goals (bonus for hitting targets)
+- Streak multipliers
+
+**Achievements (MVP)**:
+- First task completed
+- 7-day streak
+- 100 tasks completed
+- Perfect Pomodoro day (4+ sessions)
+- Weekly goal achieved
+- Level milestones (5, 10, 25, 50, 100)
+
+**User-Controlled Intensity**:
+- Minimal: Numbers only in sidebar
+- Moderate: Level-up notifications, achievement popups
+- Full: Sounds, animations, visual effects
+
+**New Files**:
+- `src/stores/gamification.ts`
+- `src/components/gamification/CharacterAvatar.vue`
+- `src/components/gamification/LevelProgress.vue`
+- `src/components/gamification/AchievementBadge.vue`
+- `src/components/gamification/XPNotification.vue`
+- `src/composables/useGamification.ts`
+
+**Files to Modify**:
+- `src/stores/tasks.ts` - XP triggers
+- `src/stores/timer.ts` - XP triggers
+- `src/components/app/AppSidebar.vue` - Character display
+- `src/stores/quickSort.ts` - Integrate with existing streaks
+
+### Future Expansion (Phase 1b+)
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 10.10 | Character upgrades (stats) | FUTURE |
+| 10.11 | Visual customization (clothes, implants) | FUTURE |
+| 10.12 | App feature unlocks | FUTURE (TBD during build) |
+| 10.13 | AI-generated milestone chapters | FUTURE |
+| 10.14 | Weekly narrative summaries | FUTURE |
+| 10.15 | Event-based missions/quests | FUTURE |
+
+**Success Criteria (MVP)**:
+- [ ] XP earned for completing tasks and Pomodoros
+- [ ] Visible level progression in UI
+- [ ] Character avatar displayed in sidebar
+- [ ] At least 5 unlockable achievements
+- [ ] User can control gamification intensity
+
+---
+
+## ROAD-011: AI Assistant (Phase 2)
+
+**Goal**: Reduce friction with intelligent task management
+
+**Configuration**: Local (Ollama) + Cloud (BYOK Claude/GPT-4)
+
+**Languages**: Hebrew + English required
+
+**Concerns**: Speed/latency, Privacy, Hebrew support, Cost
+
+**Priority**: P1-HIGH (after gamification)
+
+### Phase 2a: Core AI (Start Here)
+
+| Task | Description | Complexity | Status |
+|------|-------------|------------|--------|
+| 11.1 | Create `src/services/ai/` directory structure | Low | PENDING |
+| 11.2 | Implement Ollama client (`ollama.ts`) | Medium | PENDING |
+| 11.3 | Implement Cloud API client (`cloud.ts`) | Medium | PENDING |
+| 11.4 | Create `useAIAssistant.ts` composable | Medium | PENDING |
+| 11.5 | Add AI settings to SettingsModal | Medium | PENDING |
+| 11.6 | Implement Task Breakdown feature | Medium | PENDING |
+| 11.7 | Implement Auto-Categorization | Medium | PENDING |
+| 11.8 | Implement Natural Language Input | High | PENDING |
+
+**Core Features**:
+- **Task Breakdown**: Large task → AI suggests subtasks
+- **Auto-Categorization**: New task → AI suggests project/priority
+- **Natural Language Input**: "Add meeting tomorrow 3pm" → parsed task
+
+### Phase 2b: Intelligence Layer
+
+| Task | Description | Complexity | Status |
+|------|-------------|------------|--------|
+| 11.9 | Meeting Notes → Tasks extraction | Medium | PENDING |
+| 11.10 | Weekly Review Summary generation | Low | PENDING |
+| 11.11 | Smart Time Estimation (learn patterns) | Medium | PENDING |
+| 11.12 | Daily Planning suggestions | Medium | PENDING |
+
+### Phase 2c: Automation (Future)
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 11.13 | Auto-subtask suggestions | FUTURE |
+| 11.14 | Priority auto-adjustment | FUTURE |
+| 11.15 | Deadline risk detection | FUTURE |
+| 11.16 | Smart rescheduling | FUTURE |
+| 11.17 | Blocker detection | FUTURE |
+
+**New Files**:
+- `src/services/ai/index.ts` - AI service factory
+- `src/services/ai/ollama.ts` - Local Ollama client
+- `src/services/ai/cloud.ts` - Claude/OpenAI client
+- `src/services/ai/prompts.ts` - Prompt templates
+- `src/composables/useAIAssistant.ts` - Main composable
+- `src/components/ai/AIAssistantPanel.vue`
+- `src/components/ai/TaskBreakdownModal.vue`
+- `src/components/ai/NaturalLanguageInput.vue`
+- `src/components/settings/AISettings.vue`
+
+**Files to Modify**:
+- `src/components/settings/SettingsModal.vue` - AI settings tab
+- `src/views/QuickSortView.vue` - Auto-categorize integration
+- `src/components/kanban/TaskEditModal.vue` - AI breakdown button
+
+**Success Criteria**:
+- [ ] AI responds within 2-3 seconds (local) or 1-2 seconds (cloud)
+- [ ] Hebrew tasks work correctly
+- [ ] Natural language parses correctly 80%+ of time
+- [ ] Task breakdown produces useful subtasks
+
+---
+
+## ROAD-004: Mobile PWA (Phase 3)
+
+**Goal**: Quick capture + view today's tasks + Pomodoro on mobile
+
+**Platform Strategy**:
+1. PWA First (any mobile browser)
+2. Android App (after PWA proven)
+3. iOS App (paid subscription users only)
+
+**Priority**: P2-MEDIUM (after AI)
+
+### Phase 3a: PWA Setup
+
+| Task | Description | Complexity | Status |
+|------|-------------|------------|--------|
+| 4.1 | Create `public/manifest.json` | Low | PENDING |
+| 4.2 | Create service worker for offline | Medium | PENDING |
+| 4.3 | Add "Add to Home Screen" prompt | Low | PENDING |
+| 4.4 | Configure icons (all sizes) | Low | PENDING |
+
+### Phase 3b: Responsive Layout
+
+| Task | Description | Complexity | Status |
+|------|-------------|------------|--------|
+| 4.5 | Audit all 7 views for mobile breakpoints | High | PENDING |
+| 4.6 | Implement collapsible sidebar (<640px) | Medium | PENDING |
+| 4.7 | Create mobile navigation (bottom tabs) | Medium | PENDING |
+| 4.8 | Ensure 44x44px touch targets | Medium | PENDING |
+
+### Phase 3c: Mobile-Specific Features
+
+| Task | Description | Complexity | Status |
+|------|-------------|------------|--------|
+| 4.9 | Mobile Task Input (quick capture) | Medium | PENDING |
+| 4.10 | Mobile Today View (simple list) | Medium | PENDING |
+| 4.11 | Mobile Timer View (large display) | Medium | PENDING |
+| 4.12 | Swipe gestures for actions | High | PENDING |
+
+### Phase 3d: Touch Optimization
+
+| Task | Description | Complexity | Status |
+|------|-------------|------------|--------|
+| 4.13 | Swipe to complete task | Medium | PENDING |
+| 4.14 | Long press for context menu | Medium | PENDING |
+| 4.15 | Pull to refresh | Low | PENDING |
+| 4.16 | Touch-friendly drag handles | Medium | PENDING |
+
+**New Files**:
+- `public/manifest.json`
+- `src/sw.ts` - Service worker
+- `src/components/mobile/MobileNav.vue`
+- `src/components/mobile/QuickCapture.vue`
+- `src/components/mobile/MobileTimerView.vue`
+- `src/composables/useMobileLayout.ts`
+
+**Files to Modify**:
+- `index.html` - PWA meta tags
+- `vite.config.ts` - PWA plugin
+- `src/App.vue` - Mobile layout detection
+- All views - Responsive breakpoints
+
+**Success Criteria**:
+- [ ] PWA installable on Android/iOS
+- [ ] Tasks viewable and creatable on phone
+- [ ] Timer works on mobile
+- [ ] Sync works between mobile and desktop
+- [ ] Touch interactions feel natural
 
 ---
 

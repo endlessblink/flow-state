@@ -1313,7 +1313,8 @@
               let status = 'todo';
               if (statusText.includes('COMPLETE') || statusText.includes('DONE')) {
                 status = 'done';
-              } else if (statusText.includes('IN PROGRESS') || statusText.includes('PROGRESS')) {
+              } else if (statusText.includes('IN PROGRESS') || statusText.includes('PROGRESS') ||
+                         statusText.includes('PARTIAL') || statusText.includes('PAUSED')) {
                 status = 'in-progress';
               }
 
@@ -1626,7 +1627,8 @@
           taskList.forEach(task => {
             const card = document.createElement('div');
             const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-            card.className = `task-card${hasSubtasks ? ' has-subtasks' : ''}`;
+            const hasExpandableContent = task.description || hasSubtasks;
+            card.className = `task-card${hasExpandableContent ? ' has-subtasks' : ''}`;
             card.draggable = true;
             card.setAttribute('data-id', task.id);
 
@@ -1653,31 +1655,10 @@
             // Get expand state from localStorage
             const isExpanded = getExpandState(task.id);
 
-            // Build subtasks HTML if available
-            let subtasksHtml = '';
-            if (hasSubtasks) {
-              const completed = task.completedSubtasks || 0;
-              const total = task.subtasks.length;
-              subtasksHtml = `
-                <div class="task-subtasks">
-                  <div class="subtask-header">Subtasks (${completed}/${total})</div>
-                  ${task.subtasks.map(st => {
-                    const isCompleted = st.includes('[x]') || st.includes('✅') ||
-                                       st.includes('~~') || st.toLowerCase().includes('done') ||
-                                       st.includes('✓');
-                    const text = st.replace(/\[x\]|\[\s?\]|✅|✓/gi, '').trim();
-                    return `<div class="subtask ${isCompleted ? 'completed' : ''}">${isCompleted ? '✓' : '○'} ${renderMarkdown(text)}</div>`;
-                  }).join('')}
-                </div>
-              `;
-            }
-
-            // Build expanded section HTML with markdown rendering
-            const fullDescription = task.description || '';
-            const expandedHtml = (fullDescription || hasSubtasks) ? `
+            // Build structured expanded content HTML (uses hasExpandableContent from above)
+            const expandedHtml = hasExpandableContent ? `
               <div class="task-expanded" style="display: ${isExpanded ? 'block' : 'none'}">
-                ${fullDescription ? `<div class="task-full-description">${renderMarkdown(fullDescription)}</div>` : ''}
-                ${subtasksHtml}
+                ${buildExpandedContentHtml(task)}
               </div>
             ` : '';
 
@@ -2768,10 +2749,160 @@
       if (!text) return '';
       return text
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')  // **bold**
-        .replace(/`([^`]+)`/g, '<code style="background:#1e293b;padding:1px 4px;border-radius:3px;font-size:0.75rem;">$1</code>')  // `code`
+        .replace(/`([^`]+)`/g, '<code>$1</code>')  // `code`
         .replace(/\[x\]/gi, '✅')  // [x] checkbox
         .replace(/\[\s?\]/g, '☐')  // [ ] checkbox
         .replace(/~~(.+?)~~/g, '<s style="opacity:0.6">$1</s>');  // ~~strikethrough~~
+    }
+
+    // Parse description into structured sections (Goal, Priority, Design Reference, etc.)
+    function parseStructuredDescription(description) {
+      if (!description) return { sections: [], otherContent: '' };
+
+      const sections = [];
+      const lines = description.split('\n');
+      let currentSection = null;
+      let otherLines = [];
+
+      // Known section patterns (bold labels at start of line)
+      const sectionPatterns = [
+        { pattern: /^\*\*Goal\*\*:?\s*/i, type: 'goal', label: 'Goal' },
+        { pattern: /^\*\*Priority\*\*:?\s*/i, type: 'priority', label: 'Priority' },
+        { pattern: /^\*\*Design Reference\*\*/i, type: 'reference', label: 'Design Reference' },
+        { pattern: /^\*\*Design Token Added\*\*/i, type: 'reference', label: 'Design Tokens' },
+        { pattern: /^\*\*Where We Stopped\*\*:?\s*/i, type: 'progress', label: 'Current Status' },
+        { pattern: /^\*\*Baseline\*\*/i, type: 'notes', label: 'Baseline' },
+        { pattern: /^\*\*Progress\*\*:?\s*/i, type: 'progress', label: 'Progress' },
+        { pattern: /^\*\*After.*\*\*:?\s*/i, type: 'notes', label: 'Notes' },
+        { pattern: /^\*\*Final\*\*/i, type: 'progress', label: 'Final Status' },
+        { pattern: /^\*\*Completed.*\*\*:?\s*/i, type: 'progress', label: 'Completed' },
+        { pattern: /^\*\*Remaining.*\*\*\s*/i, type: 'notes', label: 'Remaining' },
+        { pattern: /^\*\*Files Fixed\*\*/i, type: 'notes', label: 'Files Fixed' },
+      ];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Check if line starts a new section
+        let matched = false;
+        for (const { pattern, type, label } of sectionPatterns) {
+          if (pattern.test(trimmed)) {
+            // Save previous section if exists
+            if (currentSection && currentSection.content.length > 0) {
+              sections.push(currentSection);
+            }
+            // Start new section - extract content after the label
+            const content = trimmed.replace(pattern, '').trim();
+            currentSection = { type, label, content: content ? [content] : [] };
+            matched = true;
+            break;
+          }
+        }
+
+        if (!matched) {
+          // Add to current section or other content
+          if (currentSection) {
+            // Check if this is a bullet point or continuation
+            if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
+              currentSection.content.push(trimmed);
+            } else if (!trimmed.startsWith('|')) {  // Skip table rows
+              currentSection.content.push(trimmed);
+            }
+          } else {
+            otherLines.push(trimmed);
+          }
+        }
+      }
+
+      // Don't forget the last section
+      if (currentSection && currentSection.content.length > 0) {
+        sections.push(currentSection);
+      }
+
+      return { sections, otherContent: otherLines.join('\n') };
+    }
+
+    // Build structured HTML for expanded task content
+    function buildExpandedContentHtml(task) {
+      const { sections, otherContent } = parseStructuredDescription(task.description);
+      const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+
+      let html = '';
+
+      // Quick stats badges
+      const completed = task.completedSubtasks || 0;
+      const total = hasSubtasks ? task.subtasks.length : 0;
+      const priorityText = task.priority || '';
+      const isHighPriority = priorityText.toLowerCase().includes('p1') || priorityText.toLowerCase().includes('high');
+      const isMediumPriority = priorityText.toLowerCase().includes('p2') || priorityText.toLowerCase().includes('medium');
+
+      if (hasSubtasks || isHighPriority || isMediumPriority) {
+        html += '<div class="quick-stats">';
+        if (isHighPriority) {
+          html += '<span class="stat-badge priority-high">🔴 High Priority</span>';
+        } else if (isMediumPriority) {
+          html += '<span class="stat-badge priority-medium">🟡 Medium Priority</span>';
+        }
+        if (hasSubtasks) {
+          const percent = Math.round((completed / total) * 100);
+          html += `<span class="stat-badge subtasks">📋 ${completed}/${total} subtasks (${percent}%)</span>`;
+        }
+        html += '</div>';
+      }
+
+      // Structured sections
+      for (const section of sections) {
+        html += `<div class="detail-section ${section.type}">`;
+        html += `<div class="detail-label">${section.label}</div>`;
+        html += `<div class="detail-content">${renderMarkdown(section.content.join('<br>'))}</div>`;
+        html += '</div>';
+      }
+
+      // Other content (if any)
+      if (otherContent) {
+        html += `<div class="detail-section notes">`;
+        html += `<div class="detail-label">Details</div>`;
+        html += `<div class="detail-content">${renderMarkdown(otherContent)}</div>`;
+        html += '</div>';
+      }
+
+      // Subtasks with categories
+      if (hasSubtasks) {
+        html += '<div class="task-subtasks">';
+        html += `<div class="subtask-header">Checklist <span class="subtask-progress">${completed}/${total} complete</span></div>`;
+
+        // Group subtasks by category headers (lines ending with colon or containing parentheses like "Base Components (8):")
+        let currentCategory = null;
+
+        for (const st of task.subtasks) {
+          const trimmed = st.trim();
+
+          // Check if this is a category header (e.g., "Base Components (8):" or "**UI Components**:")
+          const categoryMatch = trimmed.match(/^\*?\*?([^*]+)\*?\*?\s*\(\d+\):?$/) ||
+                               trimmed.match(/^\*?\*?([^*:]+)\*?\*?:$/);
+
+          if (categoryMatch) {
+            currentCategory = categoryMatch[1].trim();
+            html += `<div class="subtask-category">${currentCategory}</div>`;
+            continue;
+          }
+
+          const isCompleted = st.includes('[x]') || st.includes('✅') ||
+                             st.includes('~~') || st.toLowerCase().includes('done') ||
+                             st.includes('✓');
+          const text = st.replace(/\[x\]|\[\s?\]|✅|✓|-\s+/gi, '').trim();
+
+          html += `<div class="subtask ${isCompleted ? 'completed' : ''}">`;
+          html += `<span class="subtask-icon">${isCompleted ? '✓' : '○'}</span>`;
+          html += `<span class="subtask-text">${renderMarkdown(text)}</span>`;
+          html += '</div>';
+        }
+
+        html += '</div>';
+      }
+
+      return html;
     }
 
     // Expandable task card functions

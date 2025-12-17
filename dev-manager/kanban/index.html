@@ -1295,17 +1295,17 @@
         '⏳', '🔄', '⏸️', '⏸', '🚧', '👀'
       ];
 
-      // Check done patterns first (higher priority)
-      for (const pattern of donePatterns) {
-        if (text.includes(pattern)) {
-          return 'done';
-        }
-      }
-
-      // Check in-progress patterns
+      // Check in-progress patterns FIRST (more specific - "IN PROGRESS" should win over "COMPLETE" in "NEAR COMPLETE")
       for (const pattern of inProgressPatterns) {
         if (text.includes(pattern)) {
           return 'in-progress';
+        }
+      }
+
+      // Check done patterns second
+      for (const pattern of donePatterns) {
+        if (text.includes(pattern)) {
+          return 'done';
         }
       }
 

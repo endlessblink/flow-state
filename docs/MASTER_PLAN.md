@@ -48,7 +48,8 @@
 | ID | Feature | Priority | Notes |
 |----|---------|----------|-------|
 | ~~ROAD-001~~ | ~~Power Groups~~ | ~~P1~~ | ✅ DONE (Dec 5) - Auto-detect keywords, collect button, settings |
-| ROAD-004 | Mobile support | P2 | Responsive layout, touch interactions |
+| **ROAD-013** | **Sync Hardening** | **P0-CRITICAL** | **PREREQUISITE - Fix "mostly works" issues before major features** |
+| ROAD-004 | Mobile support (PWA) | P2 | PWA first → Android → iOS (paid only). Quick capture, today view, timer |
 | ROAD-005 | Auto-sync enablement | P1 | After multi-device testing |
 
 ### Later
@@ -56,9 +57,54 @@
 |----|---------|-------|
 | ~~ROAD-006~~ | ~~Keyboard shortcuts~~ | ✅ DONE (Dec 5) - Delete, Redo (Ctrl+Y), New Task (Ctrl+N) |
 | ROAD-007 | Technical debt cleanup | D&D unification, Database consolidation, Validation framework |
-| ROAD-010 | Cyberpunk gamification | Tasks = XP, character progression, upgrades system |
-| ROAD-011 | Local AI assistant | Task breakdown, auto-categorize, daily planning. Hebrew required (Llama 3+, Claude/GPT-4 BYOK) |
+| ROAD-010 | Cyberpunk gamification ("Cyberflow") | XP system, character progression, AI-generated story. MVP: XP + Levels + Character Visual |
+| ROAD-011 | Local AI assistant | Task breakdown, auto-categorize, NL input, meeting→tasks, weekly review. Local (Ollama) + Cloud (BYOK). Hebrew required |
 | ~~ROAD-012~~ | ~~Unified Section Settings Menu~~ | ✅ DONE (Dec 16) - Consolidated to Groups, added GroupSettingsMenu.vue |
+
+---
+
+## Strategic Roadmap: Personal Daily Driver
+
+**Goal**: Replace Obsidian as personal task management daily driver, then public release as freemium.
+
+**Usage Pattern**: Desktop primary (90%), mobile for quick capture
+
+### Priority Order (Dec 2025)
+
+| Phase | Feature | Timeline | Dependencies |
+|-------|---------|----------|--------------|
+| **Phase 0** | Sync Hardening (ROAD-013) | 1 week | None |
+| **Phase 1** | Gamification (ROAD-010) | 2-3 weeks | Sync stable |
+| **Phase 2** | AI Assistant (ROAD-011) | 3-4 weeks | Phase 1 complete |
+| **Phase 3** | Mobile PWA (ROAD-004) | 4-6 weeks | Phase 2 complete |
+
+**Note**: Each phase is independently valuable. Can stop after any phase.
+
+### Phase Dependencies
+
+```
+Phase 0 (Sync) ─────────────────────────────────┐
+                                                │
+Phase 1 (Gamification) ←────────────────────────┤
+    │                                           │
+    │ (XP for AI-suggested tasks)              │
+    ↓                                           │
+Phase 2 (AI) ←──────────────────────────────────┤
+    │                                           │
+    │ (AI works on mobile)                     │
+    ↓                                           │
+Phase 3 (Mobile) ←──────────────────────────────┘
+```
+
+### Risks & Mitigations
+
+| Risk | Mitigation |
+|------|------------|
+| AI latency (5-30s on first run) | Pre-warm model, show progress UI, cache results |
+| Hebrew accuracy | Test with Hebrew-speaking user, use Claude/GPT-4 for better Hebrew |
+| Mobile testing limitations | Manual device testing required (Playwright can't test touch well) |
+| Sync conflicts during testing | Always backup before major changes |
+| Feature creep | Start minimal, expand based on actual use |
 
 ---
 

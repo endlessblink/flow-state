@@ -22,7 +22,7 @@ const meta = {
     (story) => ({
       components: { story },
       template: `
-        <div style="padding: var(--space-8); display: flex; flex-direction: column; align-items: center; gap: var(--space-8);">
+        <div style="padding: var(--space-8); display: flex; flex-direction: column; align-items: center; gap: var(--space-8); background: rgba(0, 0, 0, 0.95); border-radius: 12px; min-width: 300px;">
           <story />
           <div style="text-align: center; color: var(--text-secondary); font-size: var(--text-sm);">
             <p>Click and drag to test drag functionality</p>

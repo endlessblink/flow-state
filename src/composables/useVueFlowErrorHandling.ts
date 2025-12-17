@@ -3,7 +3,7 @@
  * Provides comprehensive error handling, recovery strategies, and user feedback for Vue Flow operations
  */
 
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useMessage } from 'naive-ui'
 
 // Type alias for VueFlow severity
@@ -342,7 +342,7 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
    * Log error details
    */
   const logError = (error: VueFlowError) => {
-    const logData = {
+    const _logData = {
       id: error.id,
       type: error.type,
       message: error.message,

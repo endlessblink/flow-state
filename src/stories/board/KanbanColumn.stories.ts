@@ -6,7 +6,7 @@ import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
 const MockTaskCard = {
   template: `
     <div class="mock-task-card" style="
-      background: var(--surface-primary);
+      background: var(--glass-bg-solid);
       border: 1px solid var(--border-medium);
       border-radius: var(--radius-lg);
       padding: var(--space-4);
@@ -393,7 +393,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="display: flex; gap: 20px; padding: 20px; min-height: 600px; background: var(--surface-secondary);">
+      <div style="display: flex; gap: 20px; padding: 20px; min-height: 600px; background: rgba(0, 0, 0, 0.95);">
         <div style="display: flex; flex-direction: column; gap: 12px;">
           <h3 style="margin: 0; color: var(--text-secondary); font-size: 14px; font-weight: 600; text-align: center;">TO DO</h3>
           <KanbanColumn
@@ -449,7 +449,7 @@ export const AllWipStates: Story = {
       return { normalTasks, warningTasks, exceededTasks }
     },
     template: `
-      <div style="display: flex; gap: 20px; padding: 20px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="display: flex; gap: 20px; padding: 20px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
         <div style="display: flex; flex-direction: column; gap: 12px;">
           <h4 style="margin: 0; color: var(--text-secondary); font-size: 14px; font-weight: 600; text-align: center;">Normal (1/3)</h4>
           <KanbanColumn

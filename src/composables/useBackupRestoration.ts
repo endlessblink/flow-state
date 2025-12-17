@@ -15,7 +15,7 @@
  * @since 2025-11-11
  */
 
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive as _reactive } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
@@ -164,7 +164,7 @@ export function useBackupRestoration() {
     error.value = null
 
     try {
-      const backupAPI = getBackupAPI()
+      const _backupAPI = getBackupAPI()
 
       // Try to get backup list - this might need to be implemented in the API
       let backups: any[] = []

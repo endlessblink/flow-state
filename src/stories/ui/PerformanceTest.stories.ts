@@ -15,11 +15,11 @@ const meta = {
     (story) => ({
       components: { story },
       template: `
-        <div style="height: 600px; width: 800px; position: relative; background: var(--surface-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);">
+        <div style="height: 600px; width: 800px; position: relative; background: rgba(0, 0, 0, 0.95); border: 1px solid var(--glass-border); border-radius: var(--radius-lg);">
           <div style="padding: var(--space-4);">
             <h2 style="margin: 0 0 var(--space-4) 0; color: var(--text-primary);">Performance Testing Demo</h2>
             <p style="margin: 0 0 var(--space-4) 0; color: var(--text-secondary);">The PerformanceTest component appears as a fixed overlay in the top-right corner.</p>
-            <div style="background: var(--surface-tertiary); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <div style="background: rgba(255, 255, 255, 0.05); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--glass-border);">
               <p style="margin: 0; color: var(--text-secondary); font-size: var(--text-sm);">🚀 Look for the performance testing panel in the top-right corner to test application performance with various scenarios.</p>
             </div>
           </div>

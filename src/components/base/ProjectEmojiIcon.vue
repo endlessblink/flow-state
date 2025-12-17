@@ -73,7 +73,7 @@ const nativeStyles = computed(() => ({
 }))
 
 // Computed title if not provided
-const computedTitle = computed(() => {
+const _computedTitle = computed(() => {
   if (props.title) return props.title
   return `Project emoji: ${props.emoji}`
 })

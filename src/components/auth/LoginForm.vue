@@ -125,7 +125,7 @@ interface Props {
   redirectTo?: string
 }
 
-const props = defineProps<Props>()
+const _props = defineProps<Props>()
 
 const emit = defineEmits<Emits>()
 
@@ -171,7 +171,7 @@ async function handleSubmit() {
     // Clear form
     email.value = ''
     password.value = ''
-  } catch (error: any) {
+  } catch (_error: any) {
     // Error message is already set by auth store
     errorMessage.value = authStore.error || 'Sign in failed. Please try again.'
   } finally {

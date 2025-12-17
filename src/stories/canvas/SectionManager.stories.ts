@@ -27,11 +27,11 @@ export const EmptyState: Story = {
       return {}
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Section Manager - Empty State</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">When no sections have been created yet</p>
 
-        <div style="width: 300px; background: var(--surface-secondary); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
+        <div style="width: 300px; background: rgba(0, 0, 0, 0.95); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h4 style="margin: 0; font-size: 16px; font-weight: bold; color: var(--text-primary);">Canvas Sections</h4>
             <button style="display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
@@ -64,11 +64,11 @@ export const WithSections: Story = {
       return { sections }
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Section Manager with Sections</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Managing multiple canvas sections</p>
 
-        <div style="width: 300px; background: var(--surface-secondary); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
+        <div style="width: 300px; background: rgba(0, 0, 0, 0.95); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h4 style="margin: 0; font-size: 16px; font-weight: bold; color: var(--text-primary);">Canvas Sections</h4>
             <button style="display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
@@ -80,7 +80,7 @@ export const WithSections: Story = {
             <div
               v-for="section in sections"
               :key="section.id"
-              style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: 8px;"
+              style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--glass-bg-solid); border: 1px solid var(--border-subtle); border-radius: 8px;"
               :style="{
                 borderColor: section.isVisible ? 'var(--brand-primary)' : 'var(--border-subtle)',
                 background: section.isVisible ? 'var(--glass-bg-soft)' : 'var(--surface-primary)',

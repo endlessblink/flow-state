@@ -90,7 +90,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <DoneToggle
           :completed="completed"
           :disabled="disabled"
@@ -136,7 +136,7 @@ export const Completed: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <DoneToggle
           :completed="completed"
           :disabled="disabled"
@@ -174,7 +174,7 @@ export const SizeVariants: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Size Variants</h3>
 
         <div style="display: flex; gap: 32px; align-items: center;">
@@ -229,14 +229,14 @@ export const StyleVariants: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Style Variants</h3>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px;">
           <div
             v-for="(variant, index) in variants"
             :key="variant.variant"
-            style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);"
+            style="padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid var(--glass-border);"
           >
             <div style="text-align: center; margin-bottom: 16px;">
               <DoneToggle
@@ -291,7 +291,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary); min-width: 400px;">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); min-width: 400px;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Interactive Task List</h3>
 
         <div style="margin-bottom: 24px; padding: 20px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
@@ -318,7 +318,7 @@ export const InteractiveDemo: Story = {
           <div
             v-for="task in tasks"
             :key="task.id"
-            style="display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle); transition: all 0.2s ease;"
+            style="display: flex; align-items: center; gap: 16px; padding: 16px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid var(--glass-border); transition: all 0.2s ease;"
             :style="{ opacity: task.completed ? 0.7 : 1 }"
           >
             <DoneToggle
@@ -375,14 +375,14 @@ export const DisabledStates: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Disabled States</h3>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
           <div
             v-for="(state, index) in states"
             :key="index"
-            style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle); text-align: center;"
+            style="padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid var(--glass-border); text-align: center;"
           >
             <DoneToggle
               :completed="state.completed"
@@ -434,14 +434,14 @@ export const ProgressIndicator: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Progress Indicators</h3>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
           <div
             v-for="(step, index) in progressSteps"
             :key="index"
-            style="padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle); text-align: center;"
+            style="padding: 24px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid var(--glass-border); text-align: center;"
           >
             <div style="position: relative; margin-bottom: 20px;">
               <DoneToggle

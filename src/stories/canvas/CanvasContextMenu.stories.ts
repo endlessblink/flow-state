@@ -108,14 +108,14 @@ export const Default: Story = {
     },
     template: `
       <div
-        style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); cursor: crosshair;"
+        style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); cursor: crosshair;"
         @click="handleCanvasClick"
       >
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Canvas Context Menu</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Click anywhere on the canvas to show the context menu</p>
 
         <!-- Canvas area -->
-        <div style="position: relative; width: 100%; height: 500px; background: var(--surface-primary); border: 2px dashed var(--border-medium); border-radius: 12px;">
+        <div style="position: relative; width: 100%; height: 500px; background: var(--glass-bg-solid); border: 2px dashed var(--border-medium); border-radius: 12px;">
           <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; color: var(--text-muted); font-size: 14px;">
             Click to test context menu positioning
           </div>
@@ -198,7 +198,7 @@ export const WithSelectedTasks: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">With Selected Tasks</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Context menu with alignment tools for selected tasks</p>
 
@@ -231,7 +231,7 @@ export const WithSelectedTasks: Story = {
         </div>
 
         <!-- Canvas area with selected tasks visualization -->
-        <div style="position: relative; width: 100%; height: 400px; background: var(--surface-primary); border: 2px dashed var(--border-medium); border-radius: 12px;">
+        <div style="position: relative; width: 100%; height: 400px; background: var(--glass-bg-solid); border: 2px dashed var(--border-medium); border-radius: 12px;">
           <!-- Selected task visualization -->
           <div v-if="selectedCount > 0" style="position: absolute; top: 20px; left: 20px; background: var(--glass-bg-soft); padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
             <div style="font-size: 14px; color: var(--text-primary); font-weight: bold;">
@@ -333,7 +333,7 @@ export const WithGroupContext: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">With Group Context</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Context menu with group-specific options</p>
 
@@ -366,7 +366,7 @@ export const WithGroupContext: Story = {
         </div>
 
         <!-- Canvas area with group visualization -->
-        <div style="position: relative; width: 100%; height: 400px; background: var(--surface-primary); border: 2px dashed var(--border-medium); border-radius: 12px;">
+        <div style="position: relative; width: 100%; height: 400px; background: var(--glass-bg-solid); border: 2px dashed var(--border-medium); border-radius: 12px;">
           <div v-if="contextSection" style="position: absolute; top: 20px; left: 20px; background: var(--glass-bg-soft); padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
             <div style="font-size: 14px; color: var(--text-primary); font-weight: bold;">
               Current Group:
@@ -458,7 +458,7 @@ export const FullFeatured: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Full Featured Canvas Menu</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Complete context menu with all options available</p>
 

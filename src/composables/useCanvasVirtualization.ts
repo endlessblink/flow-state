@@ -5,7 +5,7 @@
  * for handling large canvases with 1000+ nodes efficiently.
  */
 
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, readonly, type Ref } from 'vue'
+import { ref, computed, watch, onMounted as _onMounted, onUnmounted, nextTick, readonly, type Ref } from 'vue'
 import { useThrottleFn, useDebounceFn } from '@vueuse/core'
 import type { Node, Edge, ViewportTransform } from '@vue-flow/core'
 
@@ -288,7 +288,7 @@ export function useCanvasVirtualization(
         } else {
           if (offscreenNodes.length < finalConfig.maxOffscreenNodes) {
             offscreenNodes.push(node)
-            offscreenCount++
+            const _offscreenCount = offscreenCount++
           } else {
             culledCount++
           }

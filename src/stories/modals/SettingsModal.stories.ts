@@ -15,7 +15,7 @@ const MockCloudSyncSettings = {
             <button style="padding: 6px 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 4px; font-size: 12px; cursor: pointer;">Sync Now</button>
           </div>
         </div>
-        <div style="padding: 16px; background: var(--surface-tertiary); border-radius: 8px; border: 1px solid var(--border-medium);">
+        <div style="padding: 16px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border: 1px solid var(--border-medium);">
           <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Auto-sync enabled</p>
         </div>
       </div>
@@ -65,7 +65,7 @@ export const Closed: Story = {
       return { args }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <div style="padding: 20px; text-align: center;">
           <h3>Settings Modal (Closed)</h3>
           <p>Click the button below to open the settings</p>
@@ -94,8 +94,8 @@ export const DefaultSettings: Story = {
       return { isOpen, useTimerStore }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Default Settings</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Default Pomodoro and Kanban settings</p>
         </div>
@@ -125,8 +125,8 @@ export const ShortPomodoro: Story = {
       return { isOpen, useTimerStore }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Short Pomodoro</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Quick 15-minute work sessions</p>
         </div>
@@ -155,8 +155,8 @@ export const LongPomodoro: Story = {
       return { isOpen, useTimerStore }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Long Pomodoro</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Focused 30-minute work sessions</p>
         </div>
@@ -186,8 +186,8 @@ export const AllFeaturesEnabled: Story = {
       return { isOpen, useTimerStore }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-focus: 600;">All Features Enabled</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Auto-starts and sounds enabled</p>
         </div>
@@ -216,8 +216,8 @@ export const MinimalFeatures: Story = {
       return { isOpen, useTimerStore }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Minimal Features</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">All automation disabled</p>
         </div>
@@ -244,8 +244,8 @@ export const DoneColumnVisible: Story = {
       return { isOpen, useTimerStore, showDoneColumn }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Done Column Visible</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Done column is shown in Kanban board</p>
         </div>
@@ -271,8 +271,8 @@ export const DoneColumnHidden: Story = {
       return { isOpen, useTimerStore, showDoneColumn }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Done Column Hidden</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Done column is hidden for focus</p>
         </div>
@@ -384,7 +384,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative; overflow: hidden;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative; overflow: hidden;">
         <!-- Main Content -->
         <div style="padding: 20px; display: flex; flex-direction: column; gap: 24px;">
           <!-- Header -->
@@ -407,7 +407,7 @@ export const InteractiveDemo: Story = {
           </div>
 
           <!-- Current Settings Display -->
-          <div style="background: var(--surface-primary); padding: 20px; border-radius: 12px; border: 1px solid var(--border-medium);">
+          <div style="background: var(--glass-bg-solid); padding: 20px; border-radius: 12px; border: 1px solid var(--border-medium);">
             <h2 style="margin: 0 0 16px 0;">Current Configuration</h2>
 
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">

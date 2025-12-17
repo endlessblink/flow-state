@@ -5,14 +5,14 @@
  * for all composables and components that need lazy loading
  */
 
-import { ref, reactive } from 'vue'
+import { ref as _ref, reactive } from 'vue'
 
 // Type definitions for dynamic imports
-type DynamicImport<T = any> = () => Promise<T>
-type ImportCache = Map<string, any>
+type _DynamicImport<T = any> = () => Promise<T>
+type _ImportCache = Map<string, any>
 
 // Global import cache to prevent duplicate loading
-const importCache: ImportCache = new Map()
+const _importCache: _ImportCache = new Map()
 
 // Loading states for tracking imports
 const loadingStates = reactive<Record<string, boolean>>({})

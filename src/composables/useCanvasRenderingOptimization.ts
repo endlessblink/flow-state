@@ -5,7 +5,7 @@
  * including level-of-detail rendering, lazy loading, and memory management.
  */
 
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, readonly, type Ref } from 'vue'
+import { ref, computed, watch, onMounted as _onMounted, onUnmounted, nextTick as _nextTick, readonly, type Ref } from 'vue'
 import { useThrottleFn, useDebounceFn } from '@vueuse/core'
 import type { Node } from '@vue-flow/core'
 
@@ -335,7 +335,7 @@ export function useCanvasRenderingOptimization(
     })
   }
 
-  const createSkeletonNode = (node: Node): any => {
+  const _createSkeletonNode = (node: Node): any => {
     return {
       ...node,
       data: {

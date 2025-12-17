@@ -165,14 +165,14 @@ defineExpose({
 .task-list {
   display: flex;
   flex-direction: column;
-  background-color: var(--surface-secondary);
+  background-color: var(--glass-bg-solid);
   border-radius: var(--radius-lg);
   overflow: hidden;
   contain: layout style; /* Performance optimization */
 }
 
 .project-group {
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .project-group:last-child {
@@ -184,14 +184,14 @@ defineExpose({
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background-color: var(--surface-tertiary);
-  border-bottom: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--glass-border);
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;
 }
 
 .project-header:hover {
-  background-color: var(--surface-hover);
+  background-color: var(--glass-bg-medium);
 }
 
 .project-expand-icon {
@@ -214,7 +214,7 @@ defineExpose({
 .project-task-count {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
-  background-color: var(--surface-secondary);
+  background-color: rgba(255, 255, 255, 0.05);
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
   min-width: 24px;

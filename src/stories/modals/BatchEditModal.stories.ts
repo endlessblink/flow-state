@@ -60,7 +60,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Batch Edit Modal</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Edit multiple tasks simultaneously</p>
 
@@ -83,7 +83,7 @@ export const Default: Story = {
             <div
               v-for="task in selectedTasks"
               :key="task.id"
-              style="padding: 12px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;"
+              style="padding: 12px; background: var(--glass-bg-solid); border: 1px solid var(--border-subtle); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;"
             >
               <div style="font-size: 14px; color: var(--text-primary);">{{ task.title }}</div>
               <div style="display: flex; gap: 8px;">
@@ -161,7 +161,7 @@ export const ManyTasks: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Batch Edit - Many Tasks</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Editing 10 tasks simultaneously</p>
 

@@ -52,7 +52,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
           instances
             .filter(instance => instance.scheduledDate === dateString)
             .forEach(instance => {
-              const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
+              const [_hour, _minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
               const duration = instance.duration || task.estimatedDuration || 30
 
               dayEvents.push({
@@ -99,7 +99,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
     const data = event.dataTransfer?.getData('application/json')
     if (!data) return
 
-    const { taskId, instanceId } = JSON.parse(data)
+    const { taskId, instanceId: _instanceId } = JSON.parse(data)
 
     // Simple update: modify task's scheduledDate directly
     // Keep existing time if task has one, otherwise set to 9 AM
@@ -113,7 +113,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
     })
   }
 
-  const handleMonthDragEnd = (event: DragEvent) => {
+  const handleMonthDragEnd = (_event: DragEvent) => {
     // Cleanup any drag states
     // Currently no specific cleanup needed for month view
   }

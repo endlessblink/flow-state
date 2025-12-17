@@ -217,7 +217,7 @@
 import { ref, computed, watch } from 'vue'
 import { useTaskRecurrence } from '@/composables/useTaskRecurrence'
 import { RecurrencePattern, EndCondition  } from '@/types/recurrence'
-import { formatDateKey, parseDateKey } from '@/stores/tasks'
+import { formatDateKey as _formatDateKey, parseDateKey } from '@/stores/tasks'
 
 interface Props {
   taskId: string

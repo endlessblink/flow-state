@@ -181,9 +181,9 @@ export function filterMockTasks<T extends Record<string, any>>(
 
   try {
     // NOW it's safe to iterate
-    const mockPatterns = [/mock/i, /test/i, /fake/i, /sample/i, /placeholder/i]
+    const _mockPatterns = [/mock/i, /test/i, /fake/i, /sample/i, /placeholder/i]
 
-      const mockTasks: T[] = []
+    const mockTasks: T[] = []
     const cleanTasks: T[] = []
     const results: MockTaskDetectionResult[] = []
 

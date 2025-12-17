@@ -391,7 +391,7 @@ const onDragStart = (e: DragEvent, task: Task) => {
     dragImage.style.maxWidth = '250px'
     dragImage.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)'
     dragImage.style.borderRadius = '8px'
-    dragImage.style.backgroundColor = 'var(--surface-tertiary)'
+    dragImage.style.backgroundColor = 'rgba(0, 0, 0, 0.95)'
     dragImage.style.border = '2px solid var(--brand-primary)'
 
     // Temporarily add to body to create image
@@ -468,8 +468,8 @@ const handleQuickAddTask = () => {
   position: relative;
   z-index: 100;
   /* Clean solid background matching target design */
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-solid);
+  border: 1px solid var(--glass-border);
   border-radius: 16px; /* Moderate rounded corners */
   box-shadow: var(--shadow-sm);
 }
@@ -674,8 +674,8 @@ const handleQuickAddTask = () => {
   padding: var(--space-4);
   margin-bottom: var(--space-1);
   cursor: move;
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   transition: all var(--duration-normal) var(--spring-smooth);
   box-shadow: var(--shadow-sm);
@@ -714,32 +714,28 @@ const handleQuickAddTask = () => {
 .priority-stripe {
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  right: 0;
-  height: 5px;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  box-shadow: 0 4px 8px var(--shadow-md);
+  width: 3px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
   margin: 0;
   padding: 0;
 }
 
 .priority-stripe.priority-high {
   background: var(--color-priority-high);
-  box-shadow: var(--priority-high-glow);
 }
 
 .priority-stripe.priority-medium {
   background: var(--color-priority-medium);
-  box-shadow: var(--priority-medium-glow);
 }
 
 .priority-stripe.priority-low {
   background: var(--color-priority-low);
-  box-shadow: var(--priority-low-glow);
 }
 
 .priority-stripe.priority-none {
-  background: var(--glass-bg-heavy);
+  background: transparent;
 }
 
 /* Timer Active Badge */
@@ -813,9 +809,9 @@ const handleQuickAddTask = () => {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
-  background: var(--surface-elevated);
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(8px);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
   font-weight: var(--font-medium);
   box-shadow: 0 2px 4px var(--shadow-subtle);

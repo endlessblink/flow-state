@@ -57,7 +57,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="width: 300px; padding: 40px; background: var(--surface-secondary);">
+      <div style="width: 300px; padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <DateDropZone
           :active="active"
           :count="count"
@@ -126,7 +126,7 @@ export const AllTargetTypes: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Date Drop Zones</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Drag tasks to schedule them for specific dates</p>
 
@@ -134,7 +134,7 @@ export const AllTargetTypes: Story = {
           <div
             v-for="zone in dropZones"
             :key="zone.type"
-            style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);"
+            style="padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-subtle);"
           >
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
               <h4 style="margin: 0; font-size: 16px; color: var(--text-primary);">{{ zone.label }}</h4>
@@ -201,7 +201,7 @@ export const ActiveStates: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Active States</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Click to toggle active state</p>
 
@@ -339,7 +339,7 @@ export const InteractiveDragDrop: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Interactive Drag & Drop</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Drag tasks to drop zones to schedule them</p>
 
@@ -355,7 +355,7 @@ export const InteractiveDragDrop: Story = {
                 @dragstart="handleTaskDragStart(task.id)"
                 @dragend="handleTaskDragEnd"
                 @click="handleTaskClick(task.id)"
-                style="padding: 12px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: 8px; cursor: move; display: flex; justify-content: space-between; align-items: center;"
+                style="padding: 12px; background: var(--glass-bg-solid); border: 1px solid var(--border-subtle); border-radius: 8px; cursor: move; display: flex; justify-content: space-between; align-items: center;"
               >
                 <span style="font-size: 14px; color: var(--text-primary);">
                   {{ task.title }}
@@ -450,7 +450,7 @@ export const CountVariations: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Count Variations</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Different task counts displayed as badges</p>
 
@@ -458,7 +458,7 @@ export const CountVariations: Story = {
           <div
             v-for="count in todayCounts"
             :key="count"
-            style="padding: 16px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle); text-align: center;"
+            style="padding: 16px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-subtle); text-align: center;"
           >
             <DateDropZone
               :count="count"
@@ -523,7 +523,7 @@ export const WeekendSpecialCase: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Weekend Drop Zone</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Smart weekend scheduling</p>
 

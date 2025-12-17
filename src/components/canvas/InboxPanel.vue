@@ -174,8 +174,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { NInput, NButton, NBadge, NTag, NIcon } from 'naive-ui'
-import { Plus, Zap, Clock, ChevronLeft, ChevronRight, Timer } from 'lucide-vue-next'
+import { NInput, NButton, NBadge, NTag, NIcon as _NIcon } from 'naive-ui'
+import { Plus as _Plus, Zap as _Zap, Clock as _Clock, ChevronLeft, ChevronRight, Timer } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
@@ -190,7 +190,7 @@ const newTaskTitle = ref('')
 const brainDumpMode = ref(false)
 const brainDumpText = ref('')
 const isCollapsed = ref(true) // Start collapsed to avoid overwhelming the user
-const quickInputRef = ref<HTMLInputElement>()
+const _quickInputRef = ref<HTMLInputElement>()
 const selectedTaskIds = ref<Set<string>>(new Set())
 
 // Time filter state

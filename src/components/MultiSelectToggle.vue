@@ -226,7 +226,7 @@ const allSelected = computed(() =>
 )
 
 // Check if any items are selected
-const hasSelection = computed(() =>
+const _hasSelection = computed(() =>
   props.selectedCount > 0
 )
 
@@ -336,19 +336,19 @@ const triggerSelectionAnimation = () => {
 }
 
 // Hover and focus management
-const handleMouseEnter = () => {
+const _handleMouseEnter = () => {
   isHovered.value = true
 }
 
-const handleMouseLeave = () => {
+const _handleMouseLeave = () => {
   isHovered.value = false
 }
 
-const handleFocus = () => {
+const _handleFocus = () => {
   isFocused.value = true
 }
 
-const handleBlur = () => {
+const _handleBlur = () => {
   isFocused.value = false
 }
 

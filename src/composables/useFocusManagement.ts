@@ -4,7 +4,7 @@ interface FocusableElement extends HTMLElement {
   focus: () => void
 }
 
-interface FocusableItem {
+interface _FocusableItem {
   element: FocusableElement
   group?: string
   priority?: number
@@ -21,7 +21,7 @@ export function useFocusManagement(options: {
   skipLinks?: boolean
 } = {}) {
   const {
-    container = '.focus-container',
+    container: _container = '.focus-container',
     trapFocus = false,
     restoreFocus = true,
     skipLinks = false

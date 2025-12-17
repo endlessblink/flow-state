@@ -54,10 +54,10 @@ export const NoSelection: Story = {
       return { args }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative; overflow: hidden;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative; overflow: hidden;">
         <!-- Mock canvas nodes -->
         <div v-for="node in args.nodes" :key="node.id"
-             style="position: absolute; background: var(--surface-primary); border: 1px solid var(--border-medium); border-radius: 8px; padding: 12px; width: 200px; height: 80px;"
+             style="position: absolute; background: var(--glass-bg-solid); border: 1px solid var(--border-medium); border-radius: 8px; padding: 12px; width: 200px; height: 80px;"
              :style="{ left: node.position.x + 'px', top: node.position.y + 'px' }">
           <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">{{ node.data.label }}</div>
           <div style="display: flex; gap: 8px;">
@@ -86,7 +86,7 @@ export const SingleSelection: Story = {
       return { args }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative; overflow: hidden;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative; overflow: hidden;">
         <!-- Mock canvas nodes -->
         <div v-for="node in args.nodes" :key="node.id"
              :style="{ position: 'absolute', background: args.selectedNodeIds.includes(node.id) ? 'var(--color-work)' : 'var(--surface-primary)', border: '1px solid var(--border-medium)', borderRadius: '8px', padding: '12px', width: '200px', height: '80px', left: node.position.x + 'px', top: node.position.y + 'px' }">
@@ -117,7 +117,7 @@ export const MultipleSelection: Story = {
       return { args }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative; overflow: hidden;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative; overflow: hidden;">
         <!-- Mock canvas nodes -->
         <div v-for="node in args.nodes" :key="node.id"
              :style="{ position: 'absolute', background: args.selectedNodeIds.includes(node.id) ? 'var(--color-work)' : 'var(--surface-primary)', border: '1px solid var(--border-medium)', borderRadius: '8px', padding: '12px', width: '200px', height: '80px', left: node.position.x + 'px', top: node.position.y + 'px' }">
@@ -148,7 +148,7 @@ export const LargeSelection: Story = {
       return { args }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative; overflow: auto;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative; overflow: auto;">
         <!-- Mock canvas nodes -->
         <div v-for="node in args.nodes" :key="node.id"
              :style="{ position: 'absolute', background: args.selectedNodeIds.includes(node.id) ? 'var(--color-work)' : 'var(--surface-primary)', border: '1px solid var(--border-medium)', borderRadius: '8px', padding: '12px', width: '200px', height: '80px', left: node.position.x + 'px', top: node.position.y + 'px' }">
@@ -231,9 +231,9 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative; overflow: hidden;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative; overflow: hidden;">
         <!-- Controls Panel -->
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--surface-primary); padding: 16px; border-radius: 8px; box-shadow: var(--shadow-md); min-width: 200px;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 16px; border-radius: 8px; box-shadow: var(--shadow-md); min-width: 200px;">
           <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Interactive Demo</h4>
 
           <div style="margin-bottom: 12px;">
@@ -307,10 +307,10 @@ export const InteractiveDemo: Story = {
 
             <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3);">
               <span style="font-size: var(--text-xs); font-weight: var(--font-medium); color: var(--text-secondary); min-width: 80px;">Actions:</span>
-              <button @click="selectedNodeIds = []" style="display: flex; align-items: center; gap: var(--space-1); background: var(--surface-primary); border: 1px solid var(--border-secondary); color: var(--text-secondary); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;">
+              <button @click="selectedNodeIds = []" style="display: flex; align-items: center; gap: var(--space-1); background: var(--glass-bg-solid); border: 1px solid var(--border-secondary); color: var(--text-secondary); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;">
                 Clear
               </button>
-              <button @click="selectedNodeIds = nodes.map(n => n.id)" style="display: flex; align-items: center; gap: var(--space-1); background: var(--surface-primary); border: 1px solid var(--border-secondary); color: var(--text-secondary); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;">
+              <button @click="selectedNodeIds = nodes.map(n => n.id)" style="display: flex; align-items: center; gap: var(--space-1); background: var(--glass-bg-solid); border: 1px solid var(--border-secondary); color: var(--text-secondary); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); cursor: pointer;">
                 All
               </button>
             </div>

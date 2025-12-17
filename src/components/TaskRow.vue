@@ -205,15 +205,15 @@ const formatStatus = (status: string): string => {
   padding: 0 var(--space-3);
   align-items: center;
   gap: var(--space-2);
-  border-bottom: 1px solid var(--border-subtle);
-  background-color: var(--surface-secondary);
+  border-bottom: 1px solid var(--glass-border);
+  background-color: var(--glass-bg-solid);
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;
   contain: layout style size; /* Performance optimization */
 }
 
 .task-row:hover {
-  background-color: var(--surface-hover);
+  background-color: var(--glass-bg-medium);
 }
 
 .task-row--selected {
@@ -223,11 +223,11 @@ const formatStatus = (status: string): string => {
 
 /* ADHD Visual Anchor - Every 5th row */
 .task-row--anchor {
-  background-color: var(--surface-tertiary);
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .task-row--anchor:hover {
-  background-color: var(--surface-hover);
+  background-color: var(--glass-bg-medium);
 }
 
 /* Density Variants */
@@ -400,48 +400,42 @@ const formatStatus = (status: string): string => {
   color: var(--color-info);
 }
 
-/* Priority Indicator - 5px stripe matching canvas */
+/* Priority Indicator - Subtle left border */
 .priority-indicator {
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  right: 0;
-  height: 5px;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  box-shadow: 0 4px 8px var(--shadow-md);
+  width: 3px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  /* Removed debugging background - priority indicators should now work correctly */
 }
 
 .priority-high .priority-indicator {
   background: var(--color-priority-high);
-  box-shadow: var(--priority-high-glow);
 }
 
 .priority-medium .priority-indicator {
   background: var(--color-priority-medium);
-  box-shadow: var(--priority-medium-glow);
 }
 
 .priority-low .priority-indicator {
   background: var(--color-priority-low);
-  box-shadow: var(--priority-low-glow);
 }
 
 .timer-active .priority-indicator {
   background: var(--brand-primary) !important;
-  box-shadow: 0 0 12px var(--brand-primary) !important;
   animation: priorityPulse 2s ease-in-out infinite;
 }
 
 @keyframes priorityPulse {
   0%, 100% {
-    box-shadow: 0 2px 8px var(--brand-primary);
+    opacity: 1;
   }
   50% {
-    box-shadow: 0 2px 12px var(--brand-primary), 0 0 16px rgba(59, 130, 246, 0.4);
+    opacity: 0.6;
   }
 }
 
@@ -451,7 +445,7 @@ const formatStatus = (status: string): string => {
 }
 
 .task-row__badge--planned {
-  background-color: var(--surface-tertiary);
+  background-color: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
 }
 
@@ -491,8 +485,8 @@ const formatStatus = (status: string): string => {
 
 .task-row__tag {
   padding: 2px var(--space-1_5);
-  background-color: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: 11px;
   color: var(--text-secondary);
@@ -526,8 +520,8 @@ const formatStatus = (status: string): string => {
   width: 28px;
   height: 28px;
   padding: 0;
-  background-color: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
@@ -535,8 +529,8 @@ const formatStatus = (status: string): string => {
 }
 
 .task-row__action-btn:hover {
-  background-color: var(--surface-hover);
-  border-color: var(--border-medium);
+  background-color: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
   color: var(--text-primary);
   transform: scale(1.05);
 }

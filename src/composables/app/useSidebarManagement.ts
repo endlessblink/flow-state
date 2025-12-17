@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { useTaskStore, formatDateKey } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useRouter } from 'vue-router'
 
@@ -20,7 +20,7 @@ import { useRouter } from 'vue-router'
 
 export function useSidebarManagement() {
   const taskStore = useTaskStore()
-  const uiStore = useUIStore()
+  const _uiStore = useUIStore()
   const router = useRouter()
 
   // Quick task creation state

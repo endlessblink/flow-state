@@ -165,7 +165,7 @@ console.log('🎯 AppSidebar: Using Board view pattern - script running!')
 
 // Exact same pattern as Board view (line 100)
 const taskStore = useTaskStore()
-const uiStore = useUIStore()
+const _uiStore = useUIStore()
 
 // Quick task creation
 const newTaskTitle = ref('')

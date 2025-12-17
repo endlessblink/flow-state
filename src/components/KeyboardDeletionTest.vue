@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
-import type { Task } from '@/stores/tasks'
+import type { Task as _Task } from '@/stores/tasks'
 
 interface TestResult {
   testName: string
@@ -28,7 +28,7 @@ const testTaskId = ref<string>('')
 
 // Computed properties
 const filteredTasks = computed(() => taskStore.tasks.filter(task => task.status === 'planned'))
-const canvasTasks = computed(() => filteredTasks.value.filter(task => task.canvasPosition))
+const _canvasTasks = computed(() => filteredTasks.value.filter(task => task.canvasPosition))
 const hasTestTask = computed(() => !!testTaskId.value && taskStore.tasks.find(t => t.id === testTaskId.value))
 
 // Helper functions
@@ -49,7 +49,7 @@ const createTestTask = async (): Promise<string> => {
   return newTask.id
 }
 
-const selectTaskForTesting = async (taskId: string) => {
+const _selectTaskForTesting = async (taskId: string) => {
   selectedTaskId.value = taskId
 
   // Trigger VueFlow selection simulation
@@ -98,7 +98,7 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
     // Record state before deletion
     const undoCountBefore = undoHistory.undoCount.value
     const canUndoBefore = undoHistory.canUndo.value
-    const tasksCountBefore = taskStore.tasks.length
+    const _tasksCountBefore = taskStore.tasks.length
 
     // Simulate Shift+Delete operation
     undoHistory.deleteTaskWithUndo(taskToDelete)
@@ -177,7 +177,7 @@ const testDeleteOperation = async (): Promise<boolean> => {
     // Record state before modification
     const undoCountBefore = undoHistory.undoCount.value
     const canUndoBefore = undoHistory.canUndo.value
-    const hadCanvasPosition = !!originalTask.canvasPosition
+    const _hadCanvasPosition = !!originalTask.canvasPosition
 
     // Simulate Delete operation (move to inbox)
     undoHistory.updateTaskWithUndo(taskToModify, {

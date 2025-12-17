@@ -214,7 +214,7 @@ const isSwiping = ref(false)
 const swipeStartX = ref(0)
 const swipeCurrentX = ref(0)
 
-const SWIPE_THRESHOLD = 120 // pixels
+const _SWIPE_THRESHOLD = 120 // pixels
 
 const swipeDirection = computed(() => {
   const delta = swipeCurrentX.value - swipeStartX.value
@@ -419,7 +419,7 @@ function handleTouchStart(event: TouchEvent) {
 }
 
 function handleSwipeEnd() {
-  const delta = swipeCurrentX.value - swipeStartX.value
+  const _delta = swipeCurrentX.value - swipeStartX.value
 
   // For now, just reset - actual categorization will be handled by parent
   // This is just the visual component

@@ -166,7 +166,7 @@
 
 ---
 
-### TASK-011: Lint Cleanup (IN PROGRESS)
+### TASK-011: Lint Cleanup (PARTIAL - PAUSED)
 
 **Goal**: Fix 2400+ lint errors for easier refactoring & faster Claude Code editing.
 
@@ -174,16 +174,17 @@
 
 **Baseline** (Dec 16, 2025): 5,175 problems (2,405 errors, 2,770 warnings)
 **After --fix**: 2,406 problems (1,227 errors, 1,179 warnings) - formatting only
-**Current** (Dec 16, 2025): 2,356 problems (1,177 errors, 1,179 warnings)
-**Progress**: 54.5% reduction (2,819 problems fixed)
+**Final** (Dec 16, 2025): 2,225 problems (1,046 errors, 1,179 warnings)
+**Progress**: 57% reduction (2,950 problems fixed)
 
 | Step | Description | Status |
 |------|-------------|--------|
 | 1 | Run `npm run lint` to get baseline | ✅ DONE |
 | 2 | Run `--fix` for formatting rules only | ✅ DONE |
 | 3 | Add underscore pattern to eslint config for Vue files | ✅ DONE |
-| 4 | Manual prefix unused vars with `_` | 🔄 IN PROGRESS |
+| 4 | Manual prefix unused vars with `_` | ✅ DONE (most) |
 | 5 | Verify build passes | ✅ DONE |
+| 6 | Created lint skill `.claude/skills/dev-lint-cleanup/` | ✅ DONE |
 
 **Files Fixed** (Dec 16, 2025):
 - `eslint.config.js`: Added `varsIgnorePattern: '^_'` for Vue files
@@ -200,10 +201,14 @@
 - `useDatabase.ts`: Prefixed `_DatabaseHealth`, `_HEALTH_CHECK_INTERVAL`, `_cacheKey`
 - `useContextMenu.ts`, `useContextMenuEvents.ts`: Prefixed unused params
 - `useCopy.ts`: Prefixed `_feedbackDuration`
+- `CanvasView.vue`: Prefixed 20+ unused vars (getVisibleProjectIds, hideDoneTasks, sections, resizeHandleStyle, etc.)
 
-**Remaining**:
-- ~1,177 errors (mostly `no-explicit-any` warnings and unused vars in large components)
-- ~1,179 warnings (Vue formatting - attribute order, etc.)
+**Remaining** (1,046 errors, 1,179 warnings):
+- `@typescript-eslint/no-explicit-any` (~600 errors) - Require proper typing, too risky to auto-fix
+- `@typescript-eslint/no-unused-vars` (~50 errors) - Some remaining in large components
+- Vue formatting warnings (~1,179) - Attribute order, etc. (cosmetic)
+
+**Skill Created**: `.claude/skills/dev-lint-cleanup/SKILL.md` - Documents safe patterns for future cleanup
 
 ---
 

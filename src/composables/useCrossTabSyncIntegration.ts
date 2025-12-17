@@ -16,10 +16,10 @@ export function useCrossTabSyncIntegration() {
   const uiStore = useUIStore()
   const canvasStore = useCanvasStore()
   const crossTabSync = getCrossTabSync()
-  const undoSystem = getUndoSystem()
+  const _undoSystem = getUndoSystem()
 
   let isIntegrationEnabled = false
-  let lastKnownTaskState: any[] = []
+  let _lastKnownTaskState: any[] = []
   let isProcessingRemoteChange = false
 
   // Initialize integration
@@ -29,7 +29,7 @@ export function useCrossTabSyncIntegration() {
     console.log('🔄 Initializing cross-tab sync integration...')
 
     // Store initial state
-    lastKnownTaskState = JSON.parse(JSON.stringify(taskStore.tasks))
+    _lastKnownTaskState = JSON.parse(JSON.stringify(taskStore.tasks))
 
     // Setup task store watchers
     setupTaskStoreWatchers()
@@ -114,7 +114,7 @@ export function useCrossTabSyncIntegration() {
     // Watch sidebar state changes
     watch(
       () => [uiStore.mainSidebarVisible, uiStore.secondarySidebarVisible],
-      ([newMainSidebar, newSecondarySidebar], [oldMainSidebar, oldSecondarySidebar]) => {
+      ([newMainSidebar, _newSecondarySidebar], [oldMainSidebar, _oldSecondarySidebar]) => {
         if (isProcessingRemoteChange) return
 
         if (newMainSidebar !== oldMainSidebar) {

@@ -15,6 +15,17 @@ const meta = {
   parameters: {
     layout: 'centered',
   },
+
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 12px; min-width: 600px;">
+          <story />
+        </div>
+      `
+    })
+  ],
 } satisfies Meta<typeof TaskList>
 
 export default meta

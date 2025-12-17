@@ -50,17 +50,22 @@ export const SingleSelect: Story = {
       return { selected, options }
     },
     template: `
-      <div style="width: 300px;">
-        <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
-          Select an option
-        </label>
-        <BaseDropdown
-          v-model="selected"
-          :options="options"
-          placeholder="Choose one..."
-        />
-        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
-          Selected: <strong style="color: var(--text-primary);">{{ selected }}</strong>
+      <div style="padding: 40px; min-height: 350px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Single Select Dropdown</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Basic dropdown with single selection</p>
+
+        <div style="width: 300px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
+            Select an option
+          </label>
+          <BaseDropdown
+            v-model="selected"
+            :options="options"
+            placeholder="Choose one..."
+          />
+          <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+            Selected: <strong style="color: var(--text-primary);">{{ selected }}</strong>
+          </div>
         </div>
       </div>
     `,
@@ -78,17 +83,22 @@ export const WithIcons: Story = {
       return { selected, options }
     },
     template: `
-      <div style="width: 300px;">
-        <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
-          Select a view
-        </label>
-        <BaseDropdown
-          v-model="selected"
-          :options="options"
-          placeholder="Choose view..."
-        />
-        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
-          Selected view: <strong style="color: var(--text-primary);">{{ selected }}</strong>
+      <div style="padding: 40px; min-height: 350px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Dropdown with Icons</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Options with leading icons</p>
+
+        <div style="width: 300px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
+            Select a view
+          </label>
+          <BaseDropdown
+            v-model="selected"
+            :options="options"
+            placeholder="Choose view..."
+          />
+          <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+            Selected view: <strong style="color: var(--text-primary);">{{ selected }}</strong>
+          </div>
         </div>
       </div>
     `,
@@ -106,18 +116,23 @@ export const MultiSelect: Story = {
       return { selected, options }
     },
     template: `
-      <div style="width: 300px;">
-        <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
-          Select multiple options
-        </label>
-        <BaseDropdown
-          v-model="selected"
-          :options="options"
-          :multiple="true"
-          placeholder="Choose multiple..."
-        />
-        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
-          Selected: <strong style="color: var(--text-primary);">{{ selected.join(', ') }}</strong>
+      <div style="padding: 40px; min-height: 350px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Multi-Select Dropdown</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Allow selecting multiple options</p>
+
+        <div style="width: 300px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
+            Select multiple options
+          </label>
+          <BaseDropdown
+            v-model="selected"
+            :options="options"
+            :multiple="true"
+            placeholder="Choose multiple..."
+          />
+          <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+            Selected: <strong style="color: var(--text-primary);">{{ selected.join(', ') }}</strong>
+          </div>
         </div>
       </div>
     `,
@@ -135,18 +150,23 @@ export const Disabled: Story = {
       return { selected, options }
     },
     template: `
-      <div style="width: 300px;">
-        <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600; opacity: 0.5;">
-          Disabled dropdown
-        </label>
-        <BaseDropdown
-          v-model="selected"
-          :options="options"
-          :disabled="true"
-          placeholder="Cannot interact..."
-        />
-        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
-          Dropdown is disabled
+      <div style="padding: 40px; min-height: 300px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Disabled State</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Dropdown in disabled state</p>
+
+        <div style="width: 300px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600; opacity: 0.5;">
+            Disabled dropdown
+          </label>
+          <BaseDropdown
+            v-model="selected"
+            :options="options"
+            :disabled="true"
+            placeholder="Cannot interact..."
+          />
+          <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+            Dropdown is disabled
+          </div>
         </div>
       </div>
     `,
@@ -170,17 +190,22 @@ export const ProjectFilter: Story = {
       return { selected, projects }
     },
     template: `
-      <div style="width: 300px;">
-        <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
-          Filter by project
-        </label>
-        <BaseDropdown
-          v-model="selected"
-          :options="projects"
-          placeholder="Select project..."
-        />
-        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
-          Showing tasks from: <strong style="color: var(--text-primary);">{{ selected }}</strong>
+      <div style="padding: 40px; min-height: 350px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Project Filter</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Real-world project filtering example</p>
+
+        <div style="width: 300px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
+            Filter by project
+          </label>
+          <BaseDropdown
+            v-model="selected"
+            :options="projects"
+            placeholder="Select project..."
+          />
+          <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+            Showing tasks from: <strong style="color: var(--text-primary);">{{ selected }}</strong>
+          </div>
         </div>
       </div>
     `,
@@ -203,28 +228,33 @@ export const PrioritySelector: Story = {
       return { selected, priorities }
     },
     template: `
-      <div style="width: 300px;">
-        <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
-          Filter by priority
-        </label>
-        <BaseDropdown
-          v-model="selected"
-          :options="priorities"
-          :multiple="true"
-          placeholder="Select priorities..."
-        />
-        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
-          <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">
-            Showing <strong style="color: var(--text-primary);">{{ selected.length }}</strong> priorities:
-          </div>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <span
-              v-for="priority in selected"
-              :key="priority"
-              style="padding: 4px 12px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 12px; font-size: 12px; font-weight: 600;"
-            >
-              {{ priority }}
-            </span>
+      <div style="padding: 40px; min-height: 400px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Priority Selector</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Multi-select with priority tags display</p>
+
+        <div style="width: 300px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
+            Filter by priority
+          </label>
+          <BaseDropdown
+            v-model="selected"
+            :options="priorities"
+            :multiple="true"
+            placeholder="Select priorities..."
+          />
+          <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;">
+            <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">
+              Showing <strong style="color: var(--text-primary);">{{ selected.length }}</strong> priorities:
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span
+                v-for="priority in selected"
+                :key="priority"
+                style="padding: 4px 12px; background: transparent; border: 1px solid rgba(78, 205, 196, 0.5); color: rgba(78, 205, 196, 1); border-radius: 12px; font-size: 12px; font-weight: 600;"
+              >
+                {{ priority }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -243,25 +273,30 @@ export const KeyboardNavigation: Story = {
       return { selected, options }
     },
     template: `
-      <div style="width: 300px;">
-        <div style="margin-bottom: 16px; padding: 12px; background: color-mix(in srgb, var(--brand-primary) 10%, transparent); border: 1px solid var(--brand-primary); border-radius: 8px; font-size: 13px; color: var(--text-primary);">
-          <strong style="display: block; margin-bottom: 8px; color: var(--brand-primary);">⌨️ Keyboard Navigation:</strong>
-          <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
-            <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">↓</kbd> / <kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">↑</kbd> Navigate options</li>
-            <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">Enter</kbd> Select option</li>
-            <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">Esc</kbd> Close dropdown</li>
-          </ul>
-        </div>
-        <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
-          Try keyboard controls
-        </label>
-        <BaseDropdown
-          v-model="selected"
-          :options="options"
-          placeholder="Focus and use arrows..."
-        />
-        <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
-          Selected: <strong style="color: var(--text-primary);">{{ selected }}</strong>
+      <div style="padding: 40px; min-height: 400px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Keyboard Navigation</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Full keyboard support for accessibility</p>
+
+        <div style="width: 300px;">
+          <div style="margin-bottom: 16px; padding: 12px; background: transparent; border: 1px solid var(--brand-primary); border-radius: 8px; font-size: 13px; color: var(--text-primary);">
+            <strong style="display: block; margin-bottom: 8px; color: var(--brand-primary);">Keyboard Controls:</strong>
+            <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+              <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">↓</kbd> / <kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">↑</kbd> Navigate options</li>
+              <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">Enter</kbd> Select option</li>
+              <li><kbd style="padding: 2px 6px; background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 11px;">Esc</kbd> Close dropdown</li>
+            </ul>
+          </div>
+          <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: 600;">
+            Try keyboard controls
+          </label>
+          <BaseDropdown
+            v-model="selected"
+            :options="options"
+            placeholder="Focus and use arrows..."
+          />
+          <div style="margin-top: 16px; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; color: var(--text-secondary);">
+            Selected: <strong style="color: var(--text-primary);">{{ selected }}</strong>
+          </div>
         </div>
       </div>
     `,

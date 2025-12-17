@@ -54,7 +54,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Quick Task Create Modal</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">A lightweight modal for quickly creating new tasks</p>
 
@@ -108,7 +108,7 @@ export const Loading: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Quick Task Create Modal - Loading State</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Shows the modal in loading state (e.g., while task is being saved)</p>
 

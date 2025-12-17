@@ -3,21 +3,21 @@
  * Provides reactive management of recurring tasks with Vue 3 Composition API
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch as _watch } from 'vue'
 import type {
-  RecurrenceRule,
-  RecurrenceEndCondition,
+  RecurrenceRule as _RecurrenceRule,
+  RecurrenceEndCondition as _RecurrenceEndCondition,
   RecurrenceException,
   TaskRecurrence,
-  RecurringTaskInstance,
+  RecurringTaskInstance as _RecurringTaskInstance,
   RecurrenceValidationResult,
-  NotificationPreferences
+  NotificationPreferences as _NotificationPreferences
 } from '@/types/recurrence'
 import { RecurrencePattern, EndCondition } from '@/types/recurrence'
 import {
   generateRecurringInstances,
   validateRecurrenceRule,
-  updateRecurringInstances,
+  updateRecurringInstances as _updateRecurringInstances,
   generateRecurrencePreview
 } from '@/utils/recurrenceUtils'
 import { formatDateKey, parseDateKey } from '@/stores/tasks'
@@ -62,7 +62,7 @@ export function useTaskRecurrence(taskId: string) {
   /**
    * Initialize recurrence with default values
    */
-  const initializeRecurrence = (dueDate?: string, dueTime?: string): TaskRecurrence => {
+  const initializeRecurrence = (_dueDate?: string, _dueTime?: string): TaskRecurrence => {
     return {
       isEnabled: false,
       rule: {

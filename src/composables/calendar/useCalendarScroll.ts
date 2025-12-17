@@ -1,4 +1,4 @@
-import { ref, nextTick } from 'vue'
+import { ref as _ref, nextTick } from 'vue'
 
 /**
  * Calendar scroll management composable

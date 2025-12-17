@@ -3,7 +3,7 @@
  * Comprehensive security event monitoring, logging, and alerting
  */
 
-import { ref } from 'vue'
+import { ref as _ref } from 'vue'
 
 export interface SecurityEvent {
   id: string
@@ -307,7 +307,7 @@ export class SecurityMonitor {
   }
 
   // Send to external endpoints
-  private sendToExternalEndpoints(event: SecurityEvent): void {
+  private sendToExternalEndpoints(_event: SecurityEvent): void {
     // Implementation for various external services
     // This would integrate with services like Slack, email, SIEM systems, etc.
   }

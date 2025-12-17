@@ -3,8 +3,8 @@
  * Centralized performance optimization with debouncing, memoization, and cleanup
  */
 
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useDebounceFn, useThrottleFn, useStorage, useRafFn } from '@vueuse/core'
+import { ref, computed as _computed, watch as _watch, onMounted, onUnmounted, nextTick as _nextTick } from 'vue'
+import { useDebounceFn, useThrottleFn, useStorage as _useStorage, useRafFn } from '@vueuse/core'
 
 export interface PerformanceConfig {
   debounceDelay?: number
@@ -131,7 +131,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Cache management
-  const setCache = <T>(key: string, value: T, ttl: number = 300000) => {
+  const setCache = <T>(key: string, value: T, _ttl: number = 300000) => {
     if (!enableMemoization) return
 
     const size = calculateSize(value)

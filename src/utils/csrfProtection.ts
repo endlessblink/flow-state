@@ -3,7 +3,7 @@
  * Comprehensive Cross-Site Request Forgery protection
  */
 
-import { ref } from 'vue'
+import { ref as _ref } from 'vue'
 
 export interface CSRFToken {
   token: string

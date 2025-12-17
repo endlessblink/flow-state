@@ -194,11 +194,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed as _computed, onMounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
-import { useDirection } from '@/i18n/useDirection'
-import { useI18n } from 'vue-i18n'
+import { useDirection as _useDirection } from '@/i18n/useDirection'
+import { useI18n as _useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
 import CloudSyncSettings from './CloudSyncSettings.vue'
 import LanguageSettings from './settings/LanguageSettings.vue'

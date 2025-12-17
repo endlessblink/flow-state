@@ -3,8 +3,8 @@
  * Provides robust state synchronization for Vue Flow nodes and edges
  */
 
-import { ref, computed, watch, type Ref, type ComputedRef } from 'vue'
-import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@vue-flow/core'
+import { ref, computed, watch, type Ref, type ComputedRef as _ComputedRef } from 'vue'
+import type { Node, Edge, NodeChange as _NodeChange, EdgeChange as _EdgeChange, Connection as _Connection } from '@vue-flow/core'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 
@@ -40,16 +40,16 @@ export function useVueFlowStateManager(
   config: VueFlowStateConfig = {}
 ) {
   const {
-    enableOptimisticUpdates = true,
+    enableOptimisticUpdates: _enableOptimisticUpdates = true,
     enableBatchUpdates = true,
     batchDelay = 50,
     enableStateValidation = true,
-    enableConflictResolution = true
+    enableConflictResolution: _enableConflictResolution = true
   } = config
 
   // Store references
   const taskStore = useTaskStore()
-  const canvasStore = useCanvasStore()
+  const _canvasStore = useCanvasStore()
 
   // State management
   const isInitialized = ref(false)
@@ -72,8 +72,8 @@ export function useVueFlowStateManager(
   const canRedo = computed(() => currentIndex.value < stateHistory.value.length - 1)
   const stateIntegrity = computed(() => {
     const nodeIds = new Set(nodes.value.map(n => n.id))
-    const edgeSources = new Set(edges.value.map(e => e.source))
-    const edgeTargets = new Set(edges.value.map(e => e.target))
+    const _edgeSources = new Set(edges.value.map(e => e.source))
+    const _edgeTargets = new Set(edges.value.map(e => e.target))
 
     return {
       orphanedEdges: edges.value.filter(e => !nodeIds.has(e.source) || !nodeIds.has(e.target)),
@@ -199,7 +199,7 @@ export function useVueFlowStateManager(
     }
 
     // Override the scheduleOperation function for batch processing
-    const originalScheduleOperation = scheduleOperation
+    const _originalScheduleOperation = scheduleOperation
     scheduleOperation = (operation: () => void) => {
       operationQueue.value.add(operation)
 

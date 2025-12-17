@@ -208,7 +208,7 @@ interface Props {
   isOpen: boolean
 }
 
-const props = defineProps<Props>()
+const _props = defineProps<Props>()
 const emit = defineEmits<{
   close: []
   showSettings: []

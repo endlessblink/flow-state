@@ -289,7 +289,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch as _watch } from 'vue'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
 import { RefreshCw, Wifi, WifiOff, Cloud, CloudOff, AlertCircle, Pause, Play, Shield, Activity, Clock, Settings, Database, Trash2, Heart, Download } from 'lucide-vue-next'
@@ -357,10 +357,10 @@ onUnmounted(() => {
 })
 
 // Alias for backward compatibility
-const activeConflicts = conflicts
+const _activeConflicts = conflicts
 const syncNow = triggerSync
-const resolveConflict = manualConflictResolution
-const getHealth = getSyncHealth
+const _resolveConflict = manualConflictResolution
+const _getHealth = getSyncHealth
 
 // Get queue stats for display
 const queueStats = computed(() => getOfflineQueueStats())
@@ -623,7 +623,7 @@ const handleSyncEvent = (event: CustomEvent) => {
 }
 
 const handleReliableSyncChange = (event: CustomEvent) => {
-  const { documentCount, conflictsDetected, timestamp } = event.detail
+  const { documentCount, conflictsDetected, timestamp: _timestamp } = event.detail
   console.log(`Phase 2 sync change: ${documentCount} documents, ${conflictsDetected} conflicts detected`)
 }
 

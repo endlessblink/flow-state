@@ -4,7 +4,7 @@
  */
 
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue'
-import type { Node, Edge, NodeChange, EdgeChange, Connection, VueFlowStore } from '@vue-flow/core'
+import type { Node, Edge, NodeChange as _NodeChange, EdgeChange as _EdgeChange, Connection as _Connection, VueFlowStore } from '@vue-flow/core'
 
 export interface VueFlowStabilityConfig {
   maxNodes?: number
@@ -203,7 +203,7 @@ export function useVueFlowStability(
   /**
    * Handle nodes change
    */
-  const handleNodesChange = (newNodes: Node[], oldNodes: Node[]) => {
+  const handleNodesChange = (newNodes: Node[], _oldNodes: Node[]) => {
     try {
       renderStartTime.value = performance.now()
 
@@ -236,7 +236,7 @@ export function useVueFlowStability(
   /**
    * Handle edges change
    */
-  const handleEdgesChange = (newEdges: Edge[], oldEdges: Edge[]) => {
+  const handleEdgesChange = (newEdges: Edge[], _oldEdges: Edge[]) => {
     try {
       // Validate edges
       const validEdges = validateEdges(newEdges)

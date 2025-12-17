@@ -266,7 +266,7 @@ const isHovered = ref(false)
 const showTouchFeedback = ref(false)
 const touchFeedbackStyle = ref({})
 const _isTimerActive = ref(false)
-const animationFrameId = ref<number>()
+const animationFrameId = ref<number | undefined>()
 
 // Mobile detection with responsive breakpoint
 const checkMobile = () => {
@@ -334,7 +334,7 @@ const handleToggleComplete = (_completed: boolean) => {
   emit('toggleComplete', props.task.id)
 }
 
-const _handleSelectionChange = (selected: boolean) => {
+const _handleSelectionChange = (_selected: boolean) => {
   if (selected) {
     emit('select', props.task.id)
   } else {
@@ -460,7 +460,7 @@ const _getDueDateIconClass = (): string => {
   return ''
 }
 
-const getFullDueDateText = (): string => {
+const _getFullDueDateText = (): string => {
   if (!props.task.dueDate) return ''
   const date = new Date(props.task.dueDate)
   return date.toLocaleDateString('en-US', {

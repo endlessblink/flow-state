@@ -88,12 +88,17 @@
       </div>
     </transition>
 
-    <!-- Progress indicator for multi-step completion -->
-    <div v-if="showProgress" class="done-toggle__progress" :class="progressClasses">
-      <div class="progress-bar" :style="{ width: `${progressPercentage}%` }" />
-      <div class="progress-label">
-        {{ progressPercentage }}%
-      </div>
+    <!-- Progress border around the checkbox - left-to-right fill -->
+    <div
+      v-if="showProgress && progressPercentage > 0 && progressPercentage < 100"
+      class="done-toggle__progress-wrapper"
+      :class="progressClasses"
+      :style="{ '--progress': progressPercentage + '%' }"
+    >
+      <!-- Gray background border (always visible) -->
+      <div class="done-toggle__progress-bg" />
+      <!-- Green progress fill (clips left-to-right) -->
+      <div class="done-toggle__progress-fill" />
     </div>
 
     <!-- Status announcement for screen readers -->
@@ -229,10 +234,9 @@ const hintsClasses = computed(() => [
 ])
 
 const progressClasses = computed(() => [
-  'done-toggle__progress',
-  `done-toggle__progress--${props.size}`,
+  `done-toggle__progress-wrapper--${props.size}`,
   {
-    'done-toggle__progress--completed': props.completed
+    'done-toggle__progress-wrapper--completed': props.completed
   }
 ])
 
@@ -814,19 +818,21 @@ onUnmounted(() => {
 }
 
 .done-toggle__button--minimal.done-toggle__button--completed {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: white;
+  background: transparent;
+  border-color: var(--color-success);
+  border-width: 2.5px;
+  color: var(--color-success);
   box-shadow: none;
 }
 
 .done-toggle__button--minimal.done-toggle__button--completed:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background: transparent;
+  border-color: var(--color-success);
+  box-shadow: 0 0 8px var(--color-success);
 }
 
 .done-toggle__button--minimal .done-toggle__check {
-  color: white;
+  color: var(--color-success);
   animation: none;
 }
 
@@ -927,45 +933,56 @@ onUnmounted(() => {
   margin-inline-end: 4px; /* RTL: kbd hint spacing */
 }
 
-/* Progress indicator */
-.done-toggle__progress {
+/* Progress border wrapper - left-to-right fill */
+.done-toggle__progress-wrapper {
   position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80%;
-  height: 3px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 2px;
-  overflow: hidden;
+  inset: -4px;
+  border-radius: calc(var(--radius-md) + 2px);
+  pointer-events: none;
   z-index: 5;
 }
 
-.done-toggle__progress--sm {
-  width: 70%;
-  height: 2px;
-}
-
-.done-toggle__progress--lg {
-  width: 90%;
-  height: 4px;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-success) 100%);
-  border-radius: 2px;
-  transition: width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.progress-label {
+/* Gray background border - always visible */
+.done-toggle__progress-bg {
   position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  inset: 0;
+  border: 2.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: inherit;
+  box-sizing: border-box;
+}
+
+/* Green progress fill - clips from left to right */
+.done-toggle__progress-fill {
+  position: absolute;
+  inset: 0;
+  border: 2.5px solid var(--color-success);
+  border-radius: inherit;
+  box-sizing: border-box;
+  /* Clip from right side: 0 top, (100% - progress) from right, 0 bottom, 0 left */
+  clip-path: inset(0 calc(100% - var(--progress)) 0 0);
+  filter: drop-shadow(0 0 4px var(--color-success));
+  transition: clip-path 0.3s ease;
+}
+
+/* Size variants */
+.done-toggle__progress-wrapper--sm {
+  inset: -3px;
+  border-radius: calc(var(--radius-sm) + 2px);
+}
+
+.done-toggle__progress-wrapper--sm .done-toggle__progress-bg,
+.done-toggle__progress-wrapper--sm .done-toggle__progress-fill {
+  border-width: 2px;
+}
+
+.done-toggle__progress-wrapper--lg {
+  inset: -5px;
+  border-radius: calc(var(--radius-lg) + 2px);
+}
+
+.done-toggle__progress-wrapper--lg .done-toggle__progress-bg,
+.done-toggle__progress-wrapper--lg .done-toggle__progress-fill {
+  border-width: 3px;
 }
 
 /* Celebration effects */

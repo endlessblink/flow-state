@@ -19,7 +19,7 @@ import { getBatchManager } from '@/utils/syncBatchManager'
 import { getLogger } from '@/utils/productionLogger'
 import type { ConflictInfo, ResolutionResult } from '@/types/conflicts'
 import type { SyncValidationResult } from '@/utils/syncValidator'
-import type { SyncMetadata } from '@/utils/timezoneCompatibility'
+import type { SyncMetadata as _SyncMetadata } from '@/utils/timezoneCompatibility'
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'complete' | 'resolving_conflicts' | 'validating' | 'offline' | 'paused'
 
@@ -268,7 +268,7 @@ export const useReliableSyncManager = () => {
   /**
    * Setup enhanced sync event handlers
    */
-  const setupSyncEventHandlers = (handler: any) => {
+  const _setupSyncEventHandlers = (handler: any) => {
     try {
       handler.on('change', (info: any) => {
         console.log(`📤 Reliable sync change:`, info)
@@ -688,7 +688,7 @@ export const useReliableSyncManager = () => {
   /**
    * Manual conflict resolution
    */
-  const manualConflictResolution = async (conflictId: string, resolution: any): Promise<void> => {
+  const manualConflictResolution = async (conflictId: string, _resolution: any): Promise<void> => {
     // TODO: Implement proper manual conflict resolution
     console.log(`👤 Manual conflict resolution requested for ${conflictId} - temporarily disabled`)
     return Promise.resolve()

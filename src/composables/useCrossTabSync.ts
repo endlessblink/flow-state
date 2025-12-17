@@ -4,7 +4,7 @@ import { useUIStore } from '@/stores/ui'
 import { useCanvasStore } from '@/stores/canvas'
 import { ConflictResolver } from '@/utils/conflictResolver'
 import type { ConflictInfo } from '@/types/conflicts'
-import type { ConflictResolutionStrategy } from '@/types/sync'
+import type { ConflictResolutionStrategy as _ConflictResolutionStrategy } from '@/types/sync'
 // CrossTabSaveCoordinator removed - Phase 2 simplification
 import CrossTabPerformance from '@/utils/CrossTabPerformance'
 import CrossTabBrowserCompatibility from '@/utils/CrossTabBrowserCompatibility'
@@ -394,7 +394,7 @@ const sendMessageImmediately = (message: Omit<CrossTabMessage, 'id' | 'timestamp
       setTimeout(() => {
         try {
           localStorage.removeItem('pomo-flow-cross-tab-sync')
-        } catch (error) {
+        } catch (_error) {
           // Ignore cleanup errors
         }
       }, 100)
@@ -582,7 +582,7 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
 }
 
 // Detect conflicts between remote operation and pending local operations
-const detectTaskConflicts = async (remoteOperation: TaskOperation, taskStore: any): Promise<ConflictInfo[]> => {
+const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: any): Promise<ConflictInfo[]> => {
   const conflicts: ConflictInfo[] = []
 
   if (!remoteOperation.taskId) return conflicts
@@ -840,9 +840,9 @@ const applyBrowserOptimizations = () => {
 
 // Main composable function
 export function useCrossTabSync() {
-  const taskStore = useTaskStore()
-  const uiStore = useUIStore()
-  const canvasStore = useCanvasStore()
+  const _taskStore = useTaskStore()
+  const _uiStore = useUIStore()
+  const _canvasStore = useCanvasStore()
 
   // Initialize cross-tab sync with compatibility checking
   const initialize = async () => {

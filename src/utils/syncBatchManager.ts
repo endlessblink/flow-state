@@ -4,7 +4,7 @@
  */
 
 import type { SyncableDocument } from '@/composables/documentFilters'
-import type { SyncOptimizationConfig, NetworkCondition } from './networkOptimizer'
+import type { SyncOptimizationConfig as _SyncOptimizationConfig, NetworkCondition as _NetworkCondition } from './networkOptimizer'
 import { getNetworkOptimizer } from './networkOptimizer'
 
 export interface SyncBatch {

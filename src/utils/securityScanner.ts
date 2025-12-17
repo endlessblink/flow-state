@@ -410,7 +410,7 @@ export class SecurityScanner {
       for (let i = 0; i < sessionStorage.length; i++) {
         storageKeys.push(sessionStorage.key(i))
       }
-    } catch (error) {
+    } catch (_error) {
       // Storage might be disabled or blocked
     }
 
@@ -459,7 +459,7 @@ export class SecurityScanner {
 
   // Helper methods
 
-  private findCodePatterns(patterns: string[]): string[] {
+  private findCodePatterns(_patterns: string[]): string[] {
     // This would scan actual code files
     // For demo purposes, return simulated findings
     return ['src/components/TaskEditModal.vue:45']

@@ -169,7 +169,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, readonly } from 'vue'
-import { AlertCircle, AlertTriangle, AlertCircle as Info, X, RefreshCw, Database, Wifi, Shield } from 'lucide-vue-next'
+import { AlertCircle, AlertTriangle, AlertCircle as Info, X, RefreshCw as _RefreshCw, Database as _Database, Wifi as _Wifi, Shield as _Shield } from 'lucide-vue-next'
 import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
 

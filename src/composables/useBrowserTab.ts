@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed as _computed, watch, onMounted, onUnmounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 
 export function useBrowserTab() {

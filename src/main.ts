@@ -32,12 +32,12 @@ preloadCriticalResources()
 import './utils/errorHandler'
 
 // Initialize security systems
-import { useSecurityHeaderManager } from './utils/securityHeaderManager'
-import { useCSPManager } from './utils/cspManager'
-import { useSecurityMonitor } from './utils/securityMonitor'
+import { useSecurityHeaderManager as _useSecurityHeaderManager } from './utils/securityHeaderManager'
+import { useCSPManager as _useCSPManager } from './utils/cspManager'
+import { useSecurityMonitor as _useSecurityMonitor } from './utils/securityMonitor'
 
 // Initialize local-first authentication system
-import { useLocalAuthStore } from './stores/local-auth'
+import { useLocalAuthStore as _useLocalAuthStore } from './stores/local-auth'
 
 const app = createApp(App)
 
@@ -46,7 +46,7 @@ app.use(router)
 app.use(i18n)
 
 // Global error handler for extension compatibility
-app.config.errorHandler = (err, vm, info) => {
+app.config.errorHandler = (err, _vm, info) => {
   const errorStr = String(err);
 
   // Extension errors: log silently, don't crash

@@ -7,7 +7,7 @@
  * - Pomo-Flow App (Vue 3 productivity application)
  */
 
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive as _reactive } from 'vue';
 // TODO: These imports don't exist - temporarily commenting out to fix compilation
 // import type {
 //   UnifiedTask,
@@ -86,7 +86,7 @@ interface TaskSort {
 
 // Mock class implementations to prevent compilation errors
 class TaskStorage {
-  async save(tasks: UnifiedTask[]): Promise<void> {
+  async save(_tasks: UnifiedTask[]): Promise<void> {
     console.log('Mock TaskStorage.save called');
   }
 
@@ -95,11 +95,11 @@ class TaskStorage {
     return [];
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(_id: string): Promise<void> {
     console.log('Mock TaskStorage.delete called');
   }
 
-  async findById(id: string): Promise<UnifiedTask | null> {
+  async findById(_id: string): Promise<UnifiedTask | null> {
     console.log('Mock TaskStorage.findById called');
     return null;
   }
@@ -114,36 +114,36 @@ class TaskStorage {
     return null;
   }
 
-  async setLastSyncTime(date: Date): Promise<void> {
+  async setLastSyncTime(_date: Date): Promise<void> {
     console.log('Mock TaskStorage.setLastSyncTime called');
   }
 }
 
 class GitHubService {
-  async sync(tasks: UnifiedTask[]): Promise<void> {
+  async sync(_tasks: UnifiedTask[]): Promise<void> {
     console.log('Mock GitHubService.sync called');
   }
 
-  async createIssue(task: UnifiedTask): Promise<any> {
+  async createIssue(_task: UnifiedTask): Promise<any> {
     console.log('Mock GitHubService.createIssue called');
     return { id: 'mock-issue-id', url: 'https://github.com/mock' };
   }
 
-  async updateIssue(task: UnifiedTask): Promise<void> {
+  async updateIssue(_task: UnifiedTask): Promise<void> {
     console.log('Mock GitHubService.updateIssue called');
   }
 
-  async closeIssue(issueId: string): Promise<void> {
+  async closeIssue(_issueId: string): Promise<void> {
     console.log('Mock GitHubService.closeIssue called');
   }
 }
 
 class EventBus {
-  emit(event: string, data: any): void {
+  emit(_event: string, _data: any): void {
     console.log('Mock EventBus.emit called');
   }
 
-  on(event: string, callback: Function): void {
+  on(_event: string, _callback: Function): void {
     console.log('Mock EventBus.on called');
   }
 }
@@ -153,26 +153,26 @@ class IdMappingService {
     return Date.now().toString();
   }
 
-  createMappings(task: UnifiedTask): void {
+  createMappings(_task: UnifiedTask): void {
     console.log('Mock IdMappingService.createMappings called');
   }
 
-  saveMappings(tasks: UnifiedTask[]): void {
+  saveMappings(_tasks: UnifiedTask[]): void {
     console.log('Mock IdMappingService.saveMappings called');
   }
 
-  async deleteMappings(id: string): Promise<void> {
+  async deleteMappings(_id: string): Promise<void> {
     console.log('Mock IdMappingService.deleteMappings called');
   }
 
-  async getUnifiedId(legacyId: string, system: string): Promise<string | null> {
+  async getUnifiedId(_legacyId: string, _system: string): Promise<string | null> {
     console.log('Mock IdMappingService.getUnifiedId called');
     return null;
   }
 }
 
 class ConflictResolutionService {
-  resolve(conflicts: any[]): any[] {
+  resolve(_conflicts: any[]): any[] {
     console.log('Mock ConflictResolutionService.resolve called');
     return [];
   }

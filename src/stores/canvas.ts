@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed as _computed } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import type { Task } from './tasks'
 import {
@@ -1320,7 +1320,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         } else {
           return localUpdateGroup(groupId, updates)
         }
-      } catch (error) {
+      } catch (_error) {
         return localUpdateGroup(groupId, updates)
       }
     }

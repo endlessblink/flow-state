@@ -1,7 +1,7 @@
 import { ref, computed, readonly } from 'vue'
 import PouchDB from 'pouchdb-browser'
-import type { DatabaseConfig, SyncStatus, SyncEvent, DatabaseHealth } from '@/config/database'
-import { getDatabaseConfig, DOCUMENT_IDS } from '@/config/database'
+import type { DatabaseConfig as _DatabaseConfig, SyncStatus, SyncEvent, DatabaseHealth } from '@/config/database'
+import { getDatabaseConfig, DOCUMENT_IDS as _DOCUMENT_IDS } from '@/config/database'
 
 // Global PouchDB instance
 let globalPouchDB: PouchDB.Database | null = null
@@ -247,13 +247,13 @@ export const useCouchDBSync = () => {
     const localDB = initializeDatabase()
 
     try {
-      const localInfo = await localDB.info()
-      let remoteInfo = null
+      const _localInfo = await localDB.info()
+      let _remoteInfo = null
 
       if (remoteConnected.value && config.remote?.url) {
         try {
           const remoteDB = new PouchDB(config.remote.url)
-          remoteInfo = await remoteDB.info()
+          _remoteInfo = await remoteDB.info()
         } catch (error) {
           console.warn('Could not get remote DB info:', error)
         }

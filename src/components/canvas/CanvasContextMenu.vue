@@ -159,10 +159,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 import {
-  PlusCircle, Group, AlignLeft, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd,
+  PlusCircle, Group, AlignLeft as _AlignLeft, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd,
   AlignHorizontalJustifyCenter, AlignVerticalJustifyStart,
   AlignVerticalJustifyEnd, AlignVerticalJustifyCenter,
-  Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2, Inbox,
+  Columns as _Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2, Inbox,
   LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3
 } from 'lucide-vue-next'
 import { useContextMenuEvents } from '@/composables/useContextMenuEvents'

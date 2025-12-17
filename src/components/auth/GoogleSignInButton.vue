@@ -53,7 +53,7 @@ interface Props {
   loadingText?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const _props = withDefaults(defineProps<Props>(), {
   buttonText: 'Continue with Google',
   loadingText: 'Signing in...'
 })

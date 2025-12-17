@@ -58,7 +58,7 @@ export class CrossTabBrowserCompatibility {
     if (this.capabilities.broadcastChannel) {
       try {
         return new BroadcastChannel('pomo-flow-sync')
-      } catch (error) {
+      } catch (_error) {
         console.warn('BroadcastChannel creation failed, falling back')
       }
     }
@@ -66,7 +66,7 @@ export class CrossTabBrowserCompatibility {
     if (this.capabilities.sharedWorker) {
       try {
         return this.createSharedWorkerChannel()
-      } catch (error) {
+      } catch (_error) {
         console.warn('SharedWorker creation failed, falling back')
       }
     }
@@ -225,7 +225,7 @@ export class CrossTabBrowserCompatibility {
       localStorage.setItem(testKey, 'test')
       localStorage.removeItem(testKey)
       return true
-    } catch (error) {
+    } catch (_error) {
       return false
     }
   }
@@ -239,7 +239,7 @@ export class CrossTabBrowserCompatibility {
       sessionStorage.setItem(testKey, 'test')
       sessionStorage.removeItem(testKey)
       return true
-    } catch (error) {
+    } catch (_error) {
       return false
     }
   }

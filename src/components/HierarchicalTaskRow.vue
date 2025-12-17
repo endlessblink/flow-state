@@ -156,10 +156,13 @@
         <span v-else class="task-row__no-date">-</span>
       </div>
 
-      <!-- Progress (matches TaskTable progress-cell) -->
+      <!-- Progress (matches TaskTable progress-cell) - Stroke-only design -->
       <div class="task-row__progress">
-        <div class="task-row__progress-bar">
-          <div class="task-row__progress-fill" :style="{ width: `${task.progress || 0}%` }" />
+        <div class="task-row__progress-bar" :style="{ '--progress': `${task.progress || 0}%` }">
+          <!-- Gray background stroke (always visible) -->
+          <div class="task-row__progress-bg" />
+          <!-- Colored progress stroke (clips left-to-right) -->
+          <div class="task-row__progress-fill" />
           <span class="task-row__progress-text">{{ task.progress || 0 }}%</span>
         </div>
       </div>
@@ -879,7 +882,7 @@ onUnmounted(() => {
   color: var(--text-tertiary);
 }
 
-/* Progress cell - Match TaskTable */
+/* Progress cell - Stroke-only design */
 .task-row__progress {
   grid-area: progress;
   display: flex;
@@ -890,18 +893,33 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 20px;
-  background-color: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-full);
-  overflow: hidden;
+  --progress: 0%;
 }
 
+/* Gray background stroke - always visible */
+.task-row__progress-bg {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: inherit;
+  box-sizing: border-box;
+}
+
+/* Colored progress stroke - clips from left to right */
 .task-row__progress-fill {
   position: absolute;
-  top: 0;
-  inset-inline-start: 0; /* RTL: progress fill starts from start edge */
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
-  transition: width var(--duration-normal) ease;
+  inset: 0;
+  border: 2px solid var(--color-primary);
+  border-radius: inherit;
+  box-sizing: border-box;
+  clip-path: inset(0 calc(100% - var(--progress)) 0 0);
+  transition: clip-path var(--duration-normal) ease;
+}
+
+/* Add glow effect when progress > 0 */
+.task-row__progress-bar:has(.task-row__progress-fill[style*="--progress"]:not([style*="0%"])) .task-row__progress-fill {
+  filter: drop-shadow(0 0 4px var(--color-primary));
 }
 
 .task-row__progress-text {
@@ -912,7 +930,7 @@ onUnmounted(() => {
   height: 100%;
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  color: var(--text-primary);
+  color: var(--text-secondary);
   z-index: 1;
 }
 

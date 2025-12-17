@@ -159,8 +159,11 @@
       </div>
 
       <div class="table-cell progress-cell">
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${task.progress}%` }" />
+        <div class="progress-bar" :style="{ '--progress': `${task.progress}%` }">
+          <!-- Gray background stroke (always visible) -->
+          <div class="progress-bg" />
+          <!-- Colored progress stroke (clips left-to-right) -->
+          <div class="progress-fill" />
           <span class="progress-text">{{ task.progress }}%</span>
         </div>
       </div>
@@ -640,22 +643,33 @@ onUnmounted(() => {
   color: var(--text-tertiary);
 }
 
+/* Progress bar - Stroke-only design (no fills) */
 .progress-bar {
   position: relative;
   width: 100%;
   height: 20px;
-  background-color: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-full);
-  overflow: hidden;
+  --progress: 0%;
 }
 
+/* Gray background stroke - always visible */
+.progress-bg {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: inherit;
+  box-sizing: border-box;
+}
+
+/* Colored progress stroke - clips from left to right */
 .progress-fill {
   position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
-  transition: width var(--duration-normal) ease;
+  inset: 0;
+  border: 2px solid var(--color-primary);
+  border-radius: inherit;
+  box-sizing: border-box;
+  clip-path: inset(0 calc(100% - var(--progress)) 0 0);
+  transition: clip-path var(--duration-normal) ease;
 }
 
 .progress-text {
@@ -666,7 +680,7 @@ onUnmounted(() => {
   height: 100%;
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  color: var(--text-primary);
+  color: var(--text-secondary);
   z-index: 1;
 }
 

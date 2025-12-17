@@ -629,6 +629,54 @@
       background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
     }
 
+    /* Expandable Task Cards */
+    .expand-toggle {
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      padding: 0 4px;
+      font-size: 0.75rem;
+      margin-right: 0.25rem;
+      transition: color 0.2s;
+    }
+    .expand-toggle:hover { color: #94a3b8; }
+    .task-card:not(.has-subtasks) .expand-toggle { display: none; }
+
+    .task-expanded {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .task-full-description {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      line-height: 1.4;
+      margin-bottom: 0.5rem;
+    }
+
+    .task-subtasks {
+      margin-top: 0.5rem;
+    }
+    .subtask-header {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+    .subtask {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      padding: 0.2rem 0;
+      padding-left: 0.75rem;
+    }
+    .subtask.completed {
+      color: #22c55e;
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+
     /* Task Modal */
     .task-modal {
       display: none;
@@ -1472,8 +1520,10 @@
         } else {
           taskList.forEach(task => {
             const card = document.createElement('div');
-            card.className = 'task-card';
+            const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+            card.className = `task-card${hasSubtasks ? ' has-subtasks' : ''}`;
             card.draggable = true;
+            card.setAttribute('data-id', task.id);
 
             // Use direct properties from MASTER_PLAN parser
             const priority = task.priority || '';
@@ -1494,13 +1544,46 @@
             // Description from notes
             const description = task.notes || task.description || '';
 
+            // Get expand state from localStorage
+            const isExpanded = getExpandState(task.id);
+
+            // Build subtasks HTML if available
+            let subtasksHtml = '';
+            if (hasSubtasks) {
+              const completed = task.completedSubtasks || 0;
+              const total = task.subtasks.length;
+              subtasksHtml = `
+                <div class="task-subtasks">
+                  <div class="subtask-header">Subtasks (${completed}/${total})</div>
+                  ${task.subtasks.map(st => {
+                    const isCompleted = st.includes('[x]') || st.includes('✅') ||
+                                       st.includes('~~') || st.toLowerCase().includes('done') ||
+                                       st.includes('✓');
+                    const text = st.replace(/\[x\]|\[\s?\]|~~|✅|✓/gi, '').trim();
+                    return `<div class="subtask ${isCompleted ? 'completed' : ''}">${isCompleted ? '✓' : '○'} ${text}</div>`;
+                  }).join('')}
+                </div>
+              `;
+            }
+
+            // Build expanded section HTML
+            const fullDescription = task.description || '';
+            const expandedHtml = (fullDescription || hasSubtasks) ? `
+              <div class="task-expanded" style="display: ${isExpanded ? 'block' : 'none'}">
+                ${fullDescription ? `<div class="task-full-description">${fullDescription}</div>` : ''}
+                ${subtasksHtml}
+              </div>
+            ` : '';
+
             card.innerHTML = `
               <div class="task-header">
+                <button class="expand-toggle" onclick="toggleExpand('${task.id}', event)">${isExpanded ? '▼' : '▶'}</button>
                 <div class="task-id">${task.id}</div>
                 ${priority ? `<div class="task-priority ${priorityClass}">${priority}</div>` : ''}
               </div>
               <div class="task-title">${task.title}</div>
               ${description ? `<div class="task-description">${description}</div>` : ''}
+              ${expandedHtml}
               <div class="task-footer">
                 <div class="task-meta">
                   ${typeLabel ? `<span class="task-tags">${typeLabel}</span>` : ''}
@@ -2572,6 +2655,34 @@
         toast.style.transform = 'translateX(100%)';
         setTimeout(() => toast.remove(), 300);
       }, 3000);
+    }
+
+    // Expandable task card functions
+    function toggleExpand(taskId, event) {
+      event.stopPropagation(); // Don't trigger card click
+      const card = document.querySelector(`[data-id="${taskId}"]`);
+      if (!card) return;
+
+      const expanded = card.querySelector('.task-expanded');
+      const toggle = card.querySelector('.expand-toggle');
+      if (!expanded || !toggle) return;
+
+      const isExpanded = expanded.style.display !== 'none';
+      expanded.style.display = isExpanded ? 'none' : 'block';
+      toggle.textContent = isExpanded ? '▶' : '▼';
+
+      saveExpandState(taskId, !isExpanded);
+    }
+
+    function getExpandState(taskId) {
+      const states = JSON.parse(localStorage.getItem('kanban-expand-states') || '{}');
+      return states[taskId] || false;
+    }
+
+    function saveExpandState(taskId, isExpanded) {
+      const states = JSON.parse(localStorage.getItem('kanban-expand-states') || '{}');
+      states[taskId] = isExpanded;
+      localStorage.setItem('kanban-expand-states', JSON.stringify(states));
     }
 
     function refreshData() {

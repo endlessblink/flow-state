@@ -7,6 +7,25 @@
     <script src="https://unpkg.com/d3@7"></script>
     <script src="https://unpkg.com/force-graph"></script>
     <style>
+        /* Design tokens aligned with main Pomo-Flow app */
+        :root {
+            --surface-primary: #1f1f1f;
+            --surface-secondary: #2b2b2b;
+            --surface-tertiary: #383838;
+            --surface-hover: rgba(255, 255, 255, 0.05);
+            --text-primary: #f5f5f5;
+            --text-secondary: #e0e0e0;
+            --text-muted: #a3a3a3;
+            --text-subtle: #737373;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-medium: rgba(255, 255, 255, 0.12);
+            --brand-primary: #4ECDC4;
+            --brand-hover: #5fd9d1;
+            --brand-subtle: rgba(78, 205, 196, 0.15);
+            --color-success: #10b981;
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -20,8 +39,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
+            background: var(--surface-primary);
+            color: var(--text-secondary);
         }
 
         .container {
@@ -31,9 +50,10 @@
         }
 
         .header {
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+            background: rgba(31, 31, 31, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-subtle);
             padding: 0.75rem 1.5rem;
             display: flex;
             align-items: center;
@@ -47,7 +67,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            color: #f1f5f9;
+            color: var(--text-primary);
         }
 
         .search-box {
@@ -58,27 +78,29 @@
         .search-input {
             width: 100%;
             padding: 0.5rem 0.75rem;
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 6px;
-            color: #e2e8f0;
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            color: var(--text-secondary);
             font-size: 0.875rem;
+            transition: all var(--transition-fast);
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #10b981;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 2px var(--brand-subtle);
         }
 
         .search-input::placeholder {
-            color: #64748b;
+            color: var(--text-subtle);
         }
 
         .stats {
             display: flex;
             gap: 1rem;
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--text-subtle);
         }
 
         .stat {
@@ -88,7 +110,7 @@
         }
 
         .stat-value {
-            color: #94a3b8;
+            color: var(--text-muted);
             font-weight: 600;
         }
 
@@ -117,18 +139,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 6px;
-            color: #e2e8f0;
+            background: rgba(31, 31, 31, 0.9);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            color: var(--text-secondary);
             cursor: pointer;
             font-size: 1.1rem;
-            transition: all 0.2s;
+            transition: all var(--transition-fast);
         }
 
         .control-btn:hover {
-            background: rgba(30, 41, 59, 0.9);
-            border-color: #10b981;
+            background: var(--surface-tertiary);
+            border-color: var(--brand-primary);
         }
 
         .detail-panel {
@@ -136,10 +158,11 @@
             top: 1rem;
             right: 1rem;
             width: 320px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 8px;
+            background: rgba(31, 31, 31, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-medium);
+            border-radius: 12px;
             padding: 1rem;
             display: none;
             z-index: 100;
@@ -155,27 +178,28 @@
             right: 0.5rem;
             background: none;
             border: none;
-            color: #64748b;
+            color: var(--text-subtle);
             cursor: pointer;
             font-size: 1.25rem;
             line-height: 1;
+            transition: color var(--transition-fast);
         }
 
         .detail-close:hover {
-            color: #94a3b8;
+            color: var(--text-muted);
         }
 
         .detail-title {
             font-size: 1rem;
             font-weight: 600;
-            color: #f1f5f9;
+            color: var(--text-primary);
             margin-bottom: 0.5rem;
             padding-right: 1.5rem;
         }
 
         .detail-folder {
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--text-subtle);
             word-break: break-all;
             margin-bottom: 0.75rem;
             font-family: monospace;
@@ -184,7 +208,7 @@
         .detail-category {
             display: inline-block;
             padding: 0.25rem 0.5rem;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 500;
             margin-bottom: 0.75rem;
@@ -192,7 +216,7 @@
 
         .detail-description {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--text-muted);
             line-height: 1.4;
             margin-bottom: 0.75rem;
             max-height: 100px;
@@ -207,40 +231,40 @@
         .detail-btn {
             flex: 1;
             padding: 0.5rem;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 0.8rem;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all var(--transition-fast);
         }
 
         .detail-btn-primary {
-            background: #10b981;
+            background: var(--brand-primary);
             border: none;
-            color: white;
+            color: var(--surface-primary);
         }
 
         .detail-btn-primary:hover {
-            background: #059669;
+            background: var(--brand-hover);
         }
 
         .detail-btn-secondary {
             background: transparent;
-            border: 1px solid rgba(148, 163, 184, 0.3);
-            color: #94a3b8;
+            border: 1px solid var(--border-medium);
+            color: var(--text-muted);
         }
 
         .detail-btn-secondary:hover {
-            background: rgba(148, 163, 184, 0.1);
-            border-color: rgba(148, 163, 184, 0.5);
+            background: var(--surface-hover);
+            border-color: var(--border-subtle);
         }
 
         .legend {
             position: absolute;
             bottom: 1rem;
             right: 1rem;
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 8px;
+            background: rgba(31, 31, 31, 0.9);
+            border: 1px solid var(--border-medium);
+            border-radius: 10px;
             padding: 0.75rem;
             z-index: 100;
             max-height: calc(100% - 2rem);
@@ -249,7 +273,7 @@
 
         .legend-title {
             font-size: 0.7rem;
-            color: #64748b;
+            color: var(--text-subtle);
             margin-bottom: 0.5rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -266,7 +290,7 @@
             align-items: center;
             gap: 0.5rem;
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--text-muted);
         }
 
         .legend-dot {

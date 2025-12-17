@@ -49,7 +49,7 @@ defineEmits<{
 /* Base Card - Stroke + Glass Morphism Design (matches BaseModal) */
 .base-card {
   /* Glass morphism base */
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
 
@@ -88,10 +88,10 @@ defineEmits<{
 
 /* Glass variant - same base look, just adds inset highlight for colorful backgrounds */
 .base-card.is-glass {
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
     0 4px 16px rgba(0, 0, 0, 0.2),
@@ -108,10 +108,10 @@ defineEmits<{
 
 /* Elevated variant - same base look, just deeper shadows for hierarchy */
 .base-card.is-elevated {
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.5),
     0 8px 24px rgba(0, 0, 0, 0.3);

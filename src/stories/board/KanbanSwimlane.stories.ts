@@ -138,7 +138,7 @@ export const StatusView: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Status View Swimlane</h3>
         <KanbanSwimlane
           :project="project"
@@ -209,7 +209,7 @@ export const DateView: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Date View Swimlane (Todoist-style)</h3>
         <KanbanSwimlane
           :project="project"
@@ -279,7 +279,7 @@ export const PriorityView: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Priority View Swimlane</h3>
         <KanbanSwimlane
           :project="project"
@@ -357,7 +357,7 @@ export const MultipleSwimlanes: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Multiple Swimlanes</h3>
         <div style="display: flex; flex-direction: column; gap: 24px;">
           <KanbanSwimlane
@@ -426,7 +426,7 @@ export const DensityVariants: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Density Variants</h3>
         <div style="display: flex; flex-direction: column; gap: 32px;">
           <div v-for="density in densities" :key="density">
@@ -505,7 +505,7 @@ export const FilterStates: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Filter States</h3>
         <div style="display: flex; flex-direction: column; gap: 32px;">
           <div v-for="(filter, index) in currentFilters" :key="filter || 'no-filter'">
@@ -606,17 +606,17 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 24px; background: var(--surface-secondary); min-height: 100vh;">
+      <div style="padding: 24px; background: rgba(0, 0, 0, 0.95); min-height: 100vh;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Interactive KanbanSwimlane Demo</h3>
 
         <!-- Controls -->
-        <div style="display: flex; gap: 20px; margin-bottom: 24px; flex-wrap: wrap; padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);">
+        <div style="display: flex; gap: 20px; margin-bottom: 24px; flex-wrap: wrap; padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-subtle);">
           <div>
             <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">View Type</label>
             <select
               v-model="currentViewType"
               @change="project.viewType = currentViewType"
-              style="padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-tertiary); color: var(--text-primary);"
+              style="padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: rgba(255, 255, 255, 0.05); color: var(--text-primary);"
             >
               <option v-for="viewType in viewTypes" :key="viewType" :value="viewType">
                 {{ viewType.charAt(0).toUpperCase() + viewType.slice(1) }}
@@ -628,7 +628,7 @@ export const InteractiveDemo: Story = {
             <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Density</label>
             <select
               v-model="density"
-              style="padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-tertiary); color: var(--text-primary);"
+              style="padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: rgba(255, 255, 255, 0.05); color: var(--text-primary);"
             >
               <option v-for="d in densities" :key="d" :value="d">
                 {{ d.charAt(0).toUpperCase() + d.slice(1) }}
@@ -648,7 +648,7 @@ export const InteractiveDemo: Story = {
             <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Filter</label>
             <select
               v-model="currentFilter"
-              style="padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-tertiary); color: var(--text-primary);"
+              style="padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: rgba(255, 255, 255, 0.05); color: var(--text-primary);"
             >
               <option v-for="filter in filters" :key="filter || 'none'" :value="filter">
                 {{ filter || 'None' }}

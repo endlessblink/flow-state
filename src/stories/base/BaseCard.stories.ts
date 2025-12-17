@@ -76,16 +76,18 @@ export const Default: Story = {
       return { args }
     },
     template: `
-      <BaseCard v-bind="args" style="width: 320px;">
-        <div style="padding: var(--space-2);">
-          <h3 style="margin: 0 0 var(--space-2) 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
-            Default Card
-          </h3>
-          <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.5;">
-            The default card style with subtle background and border. Use for general content grouping.
-          </p>
-        </div>
-      </BaseCard>
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 12px;">
+        <BaseCard v-bind="args" style="width: 320px;">
+          <div style="padding: var(--space-2);">
+            <h3 style="margin: 0 0 var(--space-2) 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
+              Default Card
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.5;">
+              The default card style with subtle background and border. Use for general content grouping.
+            </p>
+          </div>
+        </BaseCard>
+      </div>
     `,
   })
 }
@@ -106,36 +108,41 @@ export const Variants: Story = {
   render: () => ({
     components: { BaseCard },
     template: `
-      <div style="display: flex; gap: var(--space-6); flex-wrap: wrap;">
-        <!-- Default -->
-        <BaseCard variant="default" style="width: 280px;">
-          <div style="padding: var(--space-4);">
-            <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Default</h4>
-            <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
-              Use for general content. Works on any background.
-            </p>
-          </div>
-        </BaseCard>
+      <div style="padding: 40px; min-height: 300px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Card Variants</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Visual variants for different contexts</p>
 
-        <!-- Outlined -->
-        <BaseCard variant="outlined" style="width: 280px;">
-          <div style="padding: var(--space-4);">
-            <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Outlined</h4>
-            <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
-              Use on colored backgrounds or for subtle emphasis.
-            </p>
-          </div>
-        </BaseCard>
+        <div style="display: flex; gap: var(--space-6); flex-wrap: wrap;">
+          <!-- Default -->
+          <BaseCard variant="default" style="width: 280px;">
+            <div style="padding: var(--space-4);">
+              <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Default</h4>
+              <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                Use for general content. Works on any background.
+              </p>
+            </div>
+          </BaseCard>
 
-        <!-- Filled -->
-        <BaseCard variant="filled" style="width: 280px;">
-          <div style="padding: var(--space-4);">
-            <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Filled</h4>
-            <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
-              Use for emphasis or to differentiate from other cards.
-            </p>
-          </div>
-        </BaseCard>
+          <!-- Outlined -->
+          <BaseCard variant="outlined" style="width: 280px;">
+            <div style="padding: var(--space-4);">
+              <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Outlined</h4>
+              <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                Use on colored backgrounds or for subtle emphasis.
+              </p>
+            </div>
+          </BaseCard>
+
+          <!-- Filled -->
+          <BaseCard variant="filled" style="width: 280px;">
+            <div style="padding: var(--space-4);">
+              <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">Filled</h4>
+              <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                Use for emphasis or to differentiate from other cards.
+              </p>
+            </div>
+          </BaseCard>
+        </div>
       </div>
     `,
   })
@@ -158,67 +165,72 @@ export const Effects: Story = {
   render: () => ({
     components: { BaseCard },
     template: `
-      <div style="padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-8);">
-        <!-- Hoverable Card -->
-        <div>
-          <h3 style="margin: 0 0 var(--space-4) 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
-            Hoverable Card
-          </h3>
-          <p style="margin: 0 0 var(--space-4) 0; font-size: 14px; color: var(--text-muted);">
-            Use when cards are clickable or interactive. Hover to see the effect.
-          </p>
-          <BaseCard hoverable style="width: 320px; cursor: pointer;">
-            <div style="padding: var(--space-4);">
-              <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
-                Interactive Card
-              </h4>
-              <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
-                This card lifts on hover to indicate it's clickable.
-              </p>
-            </div>
-          </BaseCard>
-        </div>
+      <div style="padding: 40px; min-height: 600px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Card Effects</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Effects for interaction and visual hierarchy</p>
 
-        <!-- Glass Card -->
-        <div>
-          <h3 style="margin: 0 0 var(--space-4) 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
-            Glass Card
-          </h3>
-          <p style="margin: 0 0 var(--space-4) 0; font-size: 14px; color: var(--text-muted);">
-            Use on colorful or gradient backgrounds for a modern glassmorphism effect.
-          </p>
-          <div style="padding: var(--space-8); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: var(--radius-xl);">
-            <BaseCard glass style="width: 320px;">
+        <div style="display: flex; flex-direction: column; gap: var(--space-8);">
+          <!-- Hoverable Card -->
+          <div>
+            <h4 style="margin: 0 0 var(--space-4) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
+              Hoverable Card
+            </h4>
+            <p style="margin: 0 0 var(--space-4) 0; font-size: 13px; color: var(--text-muted);">
+              Use when cards are clickable or interactive. Hover to see the effect.
+            </p>
+            <BaseCard hoverable style="width: 320px; cursor: pointer;">
               <div style="padding: var(--space-4);">
                 <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
-                  Glass Effect
+                  Interactive Card
                 </h4>
                 <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
-                  Glassmorphism works best on vibrant backgrounds.
+                  This card lifts on hover to indicate it's clickable.
                 </p>
               </div>
             </BaseCard>
           </div>
-        </div>
 
-        <!-- Elevated Card -->
-        <div>
-          <h3 style="margin: 0 0 var(--space-4) 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
-            Elevated Card
-          </h3>
-          <p style="margin: 0 0 var(--space-4) 0; font-size: 14px; color: var(--text-muted);">
-            Use to create visual hierarchy and emphasize important content.
-          </p>
-          <BaseCard elevated style="width: 320px;">
-            <div style="padding: var(--space-4);">
-              <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
-                Important Card
-              </h4>
-              <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
-                Extra shadow creates depth and draws attention.
-              </p>
+          <!-- Glass Card -->
+          <div>
+            <h4 style="margin: 0 0 var(--space-4) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
+              Glass Card
+            </h4>
+            <p style="margin: 0 0 var(--space-4) 0; font-size: 13px; color: var(--text-muted);">
+              Use on colorful or gradient backgrounds for a modern glassmorphism effect.
+            </p>
+            <div style="padding: var(--space-8); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: var(--radius-xl);">
+              <BaseCard glass style="width: 320px;">
+                <div style="padding: var(--space-4);">
+                  <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
+                    Glass Effect
+                  </h4>
+                  <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                    Glassmorphism works best on vibrant backgrounds.
+                  </p>
+                </div>
+              </BaseCard>
             </div>
-          </BaseCard>
+          </div>
+
+          <!-- Elevated Card -->
+          <div>
+            <h4 style="margin: 0 0 var(--space-4) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
+              Elevated Card
+            </h4>
+            <p style="margin: 0 0 var(--space-4) 0; font-size: 13px; color: var(--text-muted);">
+              Use to create visual hierarchy and emphasize important content.
+            </p>
+            <BaseCard elevated style="width: 320px;">
+              <div style="padding: var(--space-4);">
+                <h4 style="margin: 0 0 var(--space-2) 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
+                  Important Card
+                </h4>
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                  Extra shadow creates depth and draws attention.
+                </p>
+              </div>
+            </BaseCard>
+          </div>
         </div>
       </div>
     `,
@@ -241,56 +253,61 @@ export const WithSlots: Story = {
   render: () => ({
     components: { BaseCard },
     template: `
-      <div style="display: flex; gap: var(--space-6); flex-wrap: wrap;">
-        <!-- With Header -->
-        <BaseCard style="width: 300px;">
-          <template #header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="padding: 40px; min-height: 400px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Card with Slots</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Header and footer slots for structured content</p>
+
+        <div style="display: flex; gap: var(--space-6); flex-wrap: wrap;">
+          <!-- With Header -->
+          <BaseCard style="width: 300px;">
+            <template #header>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
+                  Task Summary
+                </h3>
+                <span style="padding: 2px 8px; background: transparent; border: 1px solid var(--color-work); color: var(--color-work); border-radius: var(--radius-full); font-size: 11px; font-weight: 500;">
+                  Active
+                </span>
+              </div>
+            </template>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+              Card with header slot for title and status badge.
+            </p>
+          </BaseCard>
+
+          <!-- With Footer -->
+          <BaseCard style="width: 300px;">
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+              Card with footer slot for actions and metadata.
+            </p>
+            <template #footer>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; color: var(--text-muted);">Updated 2h ago</span>
+                <button style="padding: 6px 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: var(--radius-md); font-size: 12px; cursor: pointer;">
+                  View
+                </button>
+              </div>
+            </template>
+          </BaseCard>
+
+          <!-- With Both -->
+          <BaseCard style="width: 300px;">
+            <template #header>
               <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
-                Task Summary
+                Project Card
               </h3>
-              <span style="padding: 2px 8px; background: transparent; border: 1px solid var(--color-work); color: var(--color-work); border-radius: var(--radius-full); font-size: 11px; font-weight: 500;">
-                Active
-              </span>
-            </div>
-          </template>
-          <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
-            Card with header slot for title and status badge.
-          </p>
-        </BaseCard>
-
-        <!-- With Footer -->
-        <BaseCard style="width: 300px;">
-          <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
-            Card with footer slot for actions and metadata.
-          </p>
-          <template #footer>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 12px; color: var(--text-muted);">Updated 2h ago</span>
-              <button style="padding: 6px 12px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: var(--radius-md); font-size: 12px; cursor: pointer;">
-                View
-              </button>
-            </div>
-          </template>
-        </BaseCard>
-
-        <!-- With Both -->
-        <BaseCard style="width: 300px;">
-          <template #header>
-            <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
-              Project Card
-            </h3>
-          </template>
-          <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
-            Card with both header and footer slots for complete structure.
-          </p>
-          <template #footer>
-            <div style="display: flex; gap: var(--space-2);">
-              <span style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: var(--radius-sm); font-size: 11px;">React</span>
-              <span style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: var(--radius-sm); font-size: 11px;">Vue</span>
-            </div>
-          </template>
-        </BaseCard>
+            </template>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+              Card with both header and footer slots for complete structure.
+            </p>
+            <template #footer>
+              <div style="display: flex; gap: var(--space-2);">
+                <span style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: var(--radius-sm); font-size: 11px;">React</span>
+                <span style="padding: 4px 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-secondary); border-radius: var(--radius-sm); font-size: 11px;">Vue</span>
+              </div>
+            </template>
+          </BaseCard>
+        </div>
       </div>
     `,
   })
@@ -308,8 +325,12 @@ export const TaskCardExample: Story = {
   render: () => ({
     components: { BaseCard },
     template: `
-      <BaseCard hoverable elevated style="width: 380px;">
-        <template #header>
+      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Task Card Example</h3>
+        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Production-ready task card implementation</p>
+
+        <BaseCard hoverable elevated style="width: 380px;">
+          <template #header>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2);">
             <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary); flex: 1;">
               Complete Project Documentation
@@ -372,6 +393,7 @@ export const TaskCardExample: Story = {
           </div>
         </template>
       </BaseCard>
+      </div>
     `,
   })
 }

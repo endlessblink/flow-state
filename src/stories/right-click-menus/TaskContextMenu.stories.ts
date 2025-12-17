@@ -17,6 +17,17 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
   },
+
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="min-height: 100vh; width: 100%; padding: 40px; background: rgba(0, 0, 0, 0.95);">
+          <story />
+        </div>
+      `
+    })
+  ],
 } satisfies Meta<typeof TaskContextMenu>
 
 export default meta

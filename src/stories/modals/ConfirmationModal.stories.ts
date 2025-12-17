@@ -19,6 +19,17 @@ const meta = {
   parameters: {
     layout: 'centered',
   },
+
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 12px; min-width: 400px;">
+          <story />
+        </div>
+      `
+    })
+  ],
 } satisfies Meta<typeof ConfirmationModal>
 
 export default meta

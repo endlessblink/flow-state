@@ -22,7 +22,7 @@ export const Default: Story = {
   render: () => ({
     components: { InboxPanel },
     template: `
-      <div style="display: flex; height: 100vh; min-height: 600px; padding: 20px; background: var(--surface-secondary);">
+      <div style="display: flex; height: 100vh; min-height: 600px; padding: 20px; background: rgba(0, 0, 0, 0.95);">
         <InboxPanel />
         <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
           <p>Click the arrow button to expand/collapse the InboxPanel</p>
@@ -43,7 +43,7 @@ export const Expanded: Story = {
   render: () => ({
     components: { InboxPanel },
     template: `
-      <div style="display: flex; height: 100vh; min-height: 600px; padding: 20px; background: var(--surface-secondary);">
+      <div style="display: flex; height: 100vh; min-height: 600px; padding: 20px; background: rgba(0, 0, 0, 0.95);">
         <InboxPanel />
         <div style="flex: 1; padding: 20px;">
           <h3 style="color: var(--text-primary); margin: 0 0 16px 0;">InboxPanel Features</h3>

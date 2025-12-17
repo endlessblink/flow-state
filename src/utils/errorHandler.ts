@@ -406,7 +406,7 @@ window.copyError = (encodedError: string) => {
 window.showFullError = (encodedError: string) => {
   try {
     const error: ErrorInfo = JSON.parse(atob(encodedError))
-    const { copyError } = useCopy()
+    const { copyError: _copyError } = useCopy()
 
     // Create a modal with full error details
     const modal = document.createElement('div')

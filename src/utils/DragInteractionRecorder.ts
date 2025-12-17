@@ -286,7 +286,7 @@ export class DragInteractionRecorder {
     // In a real scenario, you might use html2canvas or similar library
     try {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      const _ctx = canvas.getContext('2d');
       // This would need more implementation for actual screen capture
 
       this.screenshots.push({
@@ -294,7 +294,7 @@ export class DragInteractionRecorder {
         dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // Placeholder
         description: `Screenshot at ${Date.now() - this.recordingStartTime}ms`
       });
-    } catch (error) {
+    } catch (_error) {
       // Screenshot failed, continue without it
     }
   }
@@ -330,7 +330,7 @@ export class DragInteractionRecorder {
 
     // Analyze mouse movements
     const mouseDowns = this.mouseMovements.filter(m => m.eventType === 'mousedown');
-    const mouseUps = this.mouseMovements.filter(m => m.eventType === 'mouseup');
+    const _mouseUps = this.mouseMovements.filter(m => m.eventType === 'mouseup');
 
     // Check if drag was initiated
     if (mouseDowns.length === 0) {

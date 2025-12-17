@@ -14,7 +14,7 @@ const meta = {
     (story) => ({
       components: { story },
       template: `
-        <div style="max-width: 600px; width: 100%; padding: var(--space-4);">
+        <div style="max-width: 600px; width: 100%; padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 16px;">
           <story />
         </div>
       `

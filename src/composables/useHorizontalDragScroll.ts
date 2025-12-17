@@ -62,7 +62,7 @@ export function useHorizontalDragScroll(
   const animationFrameId = ref<number>()
 
   // Comprehensive drag intent detection - FIXED: Check BEFORE preventDefault
-  const detectDragIntent = (target: HTMLElement, clientX: number, clientY: number): boolean => {
+  const detectDragIntent = (target: HTMLElement, _clientX: number, _clientY: number): boolean => {
     // Check for draggable elements (from mapping documentation)
     const draggableElement = target.closest<HTMLElement>(
       '.draggable, [data-draggable="true"], [draggable="true"], .task-card, .inbox-task-card, ' +
@@ -219,7 +219,7 @@ export function useHorizontalDragScroll(
     handleMove(e.clientX, e.clientY, e)
   }
 
-  const handleMouseUp = (e: MouseEvent) => {
+  const _handleMouseUp = (e: MouseEvent) => {
     if (!isDragging.value) return
     e.preventDefault()
     e.stopPropagation()

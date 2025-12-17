@@ -137,10 +137,10 @@ defineExpose({
   font-weight: var(--font-normal);
 
   /* Visual - Glass morphism with stroke */
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  border: 1px solid var(--glass-border);
   color: var(--text-primary);
   border-radius: var(--radius-lg);
 

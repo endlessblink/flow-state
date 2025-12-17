@@ -453,8 +453,8 @@ const cycleStatus = () => {
 <style scoped>
 .task-card {
   /* Todoist-inspired compact card */
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-solid);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-2);
@@ -481,7 +481,7 @@ const cycleStatus = () => {
 
 .task-card.completed {
   opacity: 0.8;
-  background: var(--surface-secondary);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* Multi-select selected state */
@@ -513,7 +513,7 @@ const cycleStatus = () => {
   width: var(--task-card-icon-size);
   height: var(--task-card-icon-size);
   border-radius: var(--radius-sm);
-  border: var(--task-card-border-width) solid var(--border-secondary);
+  border: var(--task-card-border-width) solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -522,7 +522,7 @@ const cycleStatus = () => {
   transition: all var(--duration-fast) ease;
   cursor: pointer;
   position: relative;
-  background: var(--surface-tertiary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .status-icon-button:hover {

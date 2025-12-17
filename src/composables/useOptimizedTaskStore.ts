@@ -3,7 +3,7 @@
  * Provides debounced, memoized, and performance-optimized task store operations
  */
 
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { usePerformanceManager } from './usePerformanceManager'
 import { useDatabase } from './useDatabase'
 import { DB_KEYS } from './useDatabase'
@@ -32,7 +32,7 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
     batchSize = 10,
     batchDelay = 500,
     enableMemoization = true,
-    enableCompression = true
+    enableCompression: _enableCompression = true
   } = options
 
   // Performance manager

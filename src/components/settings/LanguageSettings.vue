@@ -101,7 +101,7 @@ interface DirectionOption {
 }
 
 const uiStore = useUIStore()
-const { direction, isRTL, directionPreference } = useDirection()
+const { direction: _direction, isRTL: _isRTL, directionPreference } = useDirection()
 
 // Available languages
 const availableLanguages = computed(() => uiStore.availableLanguages as Language[])

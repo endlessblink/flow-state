@@ -265,7 +265,7 @@ const isFocused = ref(false)
 const isHovered = ref(false)
 const showTouchFeedback = ref(false)
 const touchFeedbackStyle = ref({})
-const isTimerActive = ref(false)
+const _isTimerActive = ref(false)
 const animationFrameId = ref<number>()
 
 // Mobile detection with responsive breakpoint
@@ -274,7 +274,7 @@ const checkMobile = () => {
 }
 
 // Performance optimization: throttle expensive computations
-let resizeTimeout: NodeJS.Timeout
+let resizeTimeout: ReturnType<typeof setTimeout>
 const handleResize = () => {
   clearTimeout(resizeTimeout)
   resizeTimeout = setTimeout(checkMobile, 100)
@@ -301,7 +301,7 @@ const isAllSubtasksCompleted = computed(() =>
   hasSubtasks.value && completedSubtaskCount.value === childTasks.value.length
 )
 
-const subtaskProgressPercentage = computed(() => {
+const _subtaskProgressPercentage = computed(() => {
   if (!hasSubtasks.value) return 0
   return Math.round((completedSubtaskCount.value / childTasks.value.length) * 100)
 })
@@ -330,11 +330,11 @@ const handleRowClick = () => {
   emit('select', props.task.id)
 }
 
-const handleToggleComplete = (completed: boolean) => {
+const handleToggleComplete = (_completed: boolean) => {
   emit('toggleComplete', props.task.id)
 }
 
-const handleSelectionChange = (selected: boolean) => {
+const _handleSelectionChange = (selected: boolean) => {
   if (selected) {
     emit('select', props.task.id)
   } else {
@@ -355,7 +355,7 @@ const formatDueDate = (dateString: string): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-const getDueDateClass = (): string => {
+const _getDueDateClass = (): string => {
   if (!props.task.dueDate) return ''
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -369,7 +369,7 @@ const getDueDateClass = (): string => {
   return ''
 }
 
-const formatStatus = (status: string): string => {
+const _formatStatus = (status: string): string => {
   const statusMap: Record<string, string> = {
     'planned': 'To Do',
     'in_progress': 'In Progress',
@@ -435,18 +435,18 @@ const handleTouchEnd = () => {
 }
 
 // Celebration handling for enhanced feedback
-const handleCelebrationStart = () => {
+const _handleCelebrationStart = () => {
   // Could trigger parent component celebration or confetti
   console.log(`Celebration started for task: ${props.task.title}`)
 }
 
-const handleCelebrationEnd = () => {
+const _handleCelebrationEnd = () => {
   // Could trigger analytics or achievement tracking
   console.log(`Celebration ended for task: ${props.task.title}`)
 }
 
 // Enhanced date utilities
-const getDueDateIconClass = (): string => {
+const _getDueDateIconClass = (): string => {
   if (!props.task.dueDate) return ''
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -620,8 +620,8 @@ onUnmounted(() => {
   grid-template-areas: "done title project status priority due progress actions";
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--surface-secondary);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass-bg-solid);
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;
   position: relative;
@@ -630,7 +630,7 @@ onUnmounted(() => {
 
 /* Match TaskTable hover and selected states */
 .task-row:hover {
-  background-color: var(--surface-hover);
+  background-color: var(--glass-bg-medium);
 }
 
 .task-row--selected {
@@ -782,7 +782,7 @@ onUnmounted(() => {
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--text-tertiary);
-  background-color: var(--surface-tertiary);
+  background-color: rgba(255, 255, 255, 0.05);
   padding: 2px var(--space-1_5);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
@@ -807,8 +807,8 @@ onUnmounted(() => {
 
 .task-row__status-select {
   padding: var(--space-1) var(--space-2);
-  background-color: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -816,8 +816,8 @@ onUnmounted(() => {
 }
 
 .task-row__status-select:hover {
-  background-color: var(--surface-hover);
-  border-color: var(--border-medium);
+  background-color: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
 }
 
 /* Priority cell - Match TaskTable */
@@ -890,7 +890,7 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 20px;
-  background-color: var(--surface-tertiary);
+  background-color: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -935,8 +935,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: var(--space-1);
-  background-color: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
@@ -944,8 +944,8 @@ onUnmounted(() => {
 }
 
 .task-row__action-btn:hover {
-  background-color: var(--surface-hover);
-  border-color: var(--border-medium);
+  background-color: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
   color: var(--text-primary);
 }
 

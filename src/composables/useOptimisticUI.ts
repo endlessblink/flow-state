@@ -267,7 +267,7 @@ export function useOptimisticUI() {
 
     // Remove optimistic flags from the actual data
     if (update.optimisticData) {
-      const { optimistic, pendingSync, ...cleanData } = update.optimisticData
+      const { optimistic: _optimistic, pendingSync: _pendingSync, ...cleanData } = update.optimisticData
       if (serverId && cleanData.id?.toString().startsWith('optimistic-')) {
         cleanData.id = serverId
       }
@@ -293,7 +293,7 @@ export function useOptimisticUI() {
   /**
    * Handle operation failure
    */
-  const handleOperationFailure = (operationId: string, error: string): void => {
+  const handleOperationFailure = (operationId: string, _error: string): void => {
     // Find optimistic update
     const update = Array.from(optimisticUpdates.value.values()).find(
       u => u.operation.id === operationId

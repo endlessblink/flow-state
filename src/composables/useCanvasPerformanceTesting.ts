@@ -558,8 +558,8 @@ export function useCanvasPerformanceTesting(
     const testStartTime = performance.now()
     const testMetrics: PerformanceMetrics[] = []
 
-    for (const nodeCount of finalConfig.benchmarkTest.nodeCounts) {
-      for (const edgeCount of finalConfig.benchmarkTest.edgeCounts) {
+    for (const _nodeCount of finalConfig.benchmarkTest.nodeCounts) {
+      for (const _edgeCount of finalConfig.benchmarkTest.edgeCounts) {
         for (let iteration = 0; iteration < finalConfig.benchmarkTest.iterations; iteration++) {
           // Simulate loading the specified number of nodes and edges
           // In a real implementation, this would involve actually loading the data
@@ -617,7 +617,7 @@ export function useCanvasPerformanceTesting(
 
     for (let nodeCount = 100; nodeCount <= finalConfig.stressTest.maxNodes; nodeCount += finalConfig.stressTest.nodeIncrement) {
       // Generate test nodes
-      const testNodes = Array.from({ length: nodeCount }, (_, i) => ({
+      const _testNodes = Array.from({ length: nodeCount }, (_, i) => ({
         id: `test-node-${i}`,
         type: 'default',
         position: { x: (i % 10) * 220, y: Math.floor(i / 10) * 120 },

@@ -1474,7 +1474,7 @@ const saveTask = () => {
 
 /* Dark theme */
 :root.dark-theme .modal-content {
-  background: var(--surface-secondary);
+  background: var(--glass-bg-solid);
 }
 
 :root.dark-theme .modal-header {
@@ -1490,7 +1490,7 @@ const saveTask = () => {
 }
 
 :root.dark-theme .close-btn:hover {
-  background: var(--surface-tertiary);
+  background: var(--glass-bg-medium);
   color: var(--text-secondary);
 }
 
@@ -1505,8 +1505,8 @@ const saveTask = () => {
 :root.dark-theme .form-input,
 :root.dark-theme .form-textarea,
 :root.dark-theme .form-select {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--glass-border);
   color: var(--text-primary);
 }
 
@@ -1518,20 +1518,20 @@ const saveTask = () => {
 }
 
 :root.dark-theme .subtask-item {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--glass-border);
 }
 
 :root.dark-theme .subtask-title-input,
 :root.dark-theme .subtask-description-input {
-  background: var(--surface-secondary);
-  border-color: var(--border-medium);
+  background: var(--glass-bg-solid);
+  border-color: var(--glass-border);
   color: var(--text-primary);
 }
 
 :root.dark-theme .stat-item {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--glass-border);
 }
 
 :root.dark-theme .stat-label,
@@ -1546,7 +1546,7 @@ const saveTask = () => {
 }
 
 :root.dark-theme .cancel-btn:hover {
-  background: var(--surface-tertiary);
+  background: var(--glass-bg-medium);
   color: var(--text-secondary);
 }
 

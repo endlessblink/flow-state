@@ -143,7 +143,7 @@ export class NetworkOptimizer {
 
     try {
       // Create a small test request to measure latency
-      const response = await fetch('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==', {
+      const _response = await fetch('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==', {
         cache: 'no-cache',
         method: 'GET'
       })
@@ -155,7 +155,7 @@ export class NetworkOptimizer {
       const bandwidth = (contentSize * 1000) / Math.max(latency, 1) // bytes per second
 
       return { bandwidth, latency }
-    } catch (error) {
+    } catch (_error) {
       // Fallback to Connection API if available
       if ('connection' in navigator) {
         const connection = (navigator as any).connection

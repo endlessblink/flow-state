@@ -229,7 +229,7 @@ const retryCount = ref(0)
 
 // Computed properties
 const healthStatus = computed(() => syncManager.getHealthStatus())
-const hasErrors = computed(() => syncManager.hasErrors.value)
+const _hasErrors = computed(() => syncManager.hasErrors.value)
 const syncErrors = computed(() => syncManager.syncErrors.value)
 
 // Watch for critical errors

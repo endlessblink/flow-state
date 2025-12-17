@@ -66,7 +66,7 @@ const getWeekEnd = () => {
   return weekEnd
 }
 
-const isToday = (dateStr?: string) => {
+const _isToday = (dateStr?: string) => {
   if (!dateStr) return false
   const today = getToday()
   const date = new Date(dateStr)
@@ -74,7 +74,7 @@ const isToday = (dateStr?: string) => {
   return date.getTime() === today.getTime()
 }
 
-const isTomorrow = (dateStr?: string) => {
+const _isTomorrow = (dateStr?: string) => {
   if (!dateStr) return false
   const tomorrow = getTomorrow()
   const date = new Date(dateStr)
@@ -82,7 +82,7 @@ const isTomorrow = (dateStr?: string) => {
   return date.getTime() === tomorrow.getTime()
 }
 
-const isThisWeek = (dateStr?: string) => {
+const _isThisWeek = (dateStr?: string) => {
   if (!dateStr) return false
   const today = getToday()
   const weekEnd = getWeekEnd()

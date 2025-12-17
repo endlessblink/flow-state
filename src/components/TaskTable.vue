@@ -335,7 +335,7 @@ onUnmounted(() => {
 .task-table {
   display: flex;
   flex-direction: column;
-  background-color: var(--surface-secondary);
+  background-color: var(--glass-bg-solid);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -345,8 +345,8 @@ onUnmounted(() => {
   grid-template-columns: 40px 1fr 80px 120px 120px 100px 100px;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background-color: var(--surface-tertiary);
-  border-bottom: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--glass-border);
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-secondary);
@@ -405,15 +405,15 @@ onUnmounted(() => {
 }
 
 .bulk-action-btn.clear-btn {
-  background-color: var(--surface-tertiary);
+  background-color: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
-  border-color: var(--border-subtle);
+  border-color: var(--glass-border);
 }
 
 .bulk-action-btn.clear-btn:hover {
-  background-color: var(--surface-hover);
+  background-color: var(--glass-bg-medium);
   color: var(--text-primary);
-  border-color: var(--border-medium);
+  border-color: var(--glass-border-hover);
 }
 
 .table-row {
@@ -422,13 +422,13 @@ onUnmounted(() => {
   gap: var(--space-2);
   position: relative; /* Needed for absolute positioned priority indicator */
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--glass-border);
   transition: background-color var(--duration-fast) ease;
   cursor: pointer;
 }
 
 .table-row:hover {
-  background-color: var(--surface-hover);
+  background-color: var(--glass-bg-medium);
 }
 
 .table-row.row-selected {
@@ -571,7 +571,7 @@ onUnmounted(() => {
 .inline-edit {
   width: 100%;
   padding: var(--space-1) var(--space-2);
-  background-color: var(--surface-tertiary);
+  background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -581,23 +581,22 @@ onUnmounted(() => {
 
 .status-select {
   padding: var(--space-1) var(--space-2);
-  background-color: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--text-sm);
   cursor: pointer;
 }
 
-/* Priority Indicator - 5px stripe matching canvas */
+/* Priority Indicator - Subtle left border */
 .priority-indicator {
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  right: 0;
-  height: 5px;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  box-shadow: 0 4px 8px var(--shadow-md);
+  width: 3px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -605,31 +604,27 @@ onUnmounted(() => {
 
 .priority-high .priority-indicator {
   background: var(--color-priority-high);
-  box-shadow: var(--priority-high-glow);
 }
 
 .priority-medium .priority-indicator {
   background: var(--color-priority-medium);
-  box-shadow: var(--priority-medium-glow);
 }
 
 .priority-low .priority-indicator {
   background: var(--color-priority-low);
-  box-shadow: var(--priority-low-glow);
 }
 
 .timer-active .priority-indicator {
   background: var(--brand-primary) !important;
-  box-shadow: 0 0 12px var(--brand-primary) !important;
   animation: priorityPulse 2s ease-in-out infinite;
 }
 
 @keyframes priorityPulse {
   0%, 100% {
-    box-shadow: 0 2px 8px var(--brand-primary);
+    opacity: 1;
   }
   50% {
-    box-shadow: 0 2px 12px var(--brand-primary), 0 0 16px rgba(59, 130, 246, 0.4);
+    opacity: 0.6;
   }
 }
 
@@ -649,7 +644,7 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 20px;
-  background-color: var(--surface-tertiary);
+  background-color: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -690,8 +685,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: var(--space-1);
-  background-color: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
@@ -699,8 +694,8 @@ onUnmounted(() => {
 }
 
 .action-btn:hover {
-  background-color: var(--surface-hover);
-  border-color: var(--border-medium);
+  background-color: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
   color: var(--text-primary);
 }
 

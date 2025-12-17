@@ -88,12 +88,12 @@ export const Default: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Basic Context Menu</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Right-click anywhere to test positioning</p>
 
         <div
-          style="padding: 60px; background: var(--surface-primary); border-radius: 12px; border: 2px dashed var(--border-medium); text-align: center; color: var(--text-muted);"
+          style="padding: 60px; background: var(--glass-bg-solid); border-radius: 12px; border: 2px dashed var(--border-medium); text-align: center; color: var(--text-muted);"
           @contextmenu.prevent="(e) => { console.log('Context menu at:', e.clientX, e.clientY) }"
         >
           <p style="margin: 0; font-size: 16px;">Right-click in this area</p>
@@ -182,12 +182,12 @@ export const TaskMenu: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Task Context Menu</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Comprehensive task management options</p>
 
         <div style="display: grid; gap: 16px; max-width: 600px;">
-          <div style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
+          <div style="padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium);">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
               <div style="width: 20px; height: 20px; border-radius: 4px; background: var(--brand-primary);"></div>
               <span style="font-weight: 500; color: var(--text-primary);">Complete project documentation</span>
@@ -251,11 +251,11 @@ export const WithDisabledItems: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Context Menu with Disabled Items</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Some actions are unavailable based on current state</p>
 
-        <div style="padding: 40px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium); text-align: center;">
+        <div style="padding: 40px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium); text-align: center;">
           <p style="margin: 0; font-size: 16px; color: var(--text-secondary);">Read-only item selected</p>
           <p style="margin: 8px 0 0 0; font-size: 14px; color: var(--text-muted);">Copy and Share actions are disabled</p>
         </div>
@@ -300,12 +300,12 @@ export const SimpleActions: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Simple Actions Menu</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Minimal context menu for quick actions</p>
 
         <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-          <button style="padding: 12px 24px; background: var(--surface-primary); border: 1px solid var(--border-medium); border-radius: 8px; cursor: pointer;">
+          <button style="padding: 12px 24px; background: var(--glass-bg-solid); border: 1px solid var(--border-medium); border-radius: 8px; cursor: pointer;">
             Quick Actions
           </button>
         </div>
@@ -367,12 +367,12 @@ export const ProjectMenu: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Project Context Menu</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Project-specific actions and management</p>
 
         <div style="display: grid; gap: 12px; max-width: 500px;">
-          <div style="padding: 16px; background: var(--surface-primary); border-radius: 8px; border: 1px solid var(--border-medium); display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 16px; background: var(--glass-bg-solid); border-radius: 8px; border: 1px solid var(--border-medium); display: flex; align-items: center; gap: 12px;">
             <div style="font-size: 24px;">📁</div>
             <div>
               <div style="font-weight: 500; color: var(--text-primary);">Web Development</div>
@@ -515,7 +515,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <h2 style="margin: 0 0 16px 0; font-size: 20px; color: var(--text-primary);">Interactive Context Menu Demo</h2>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Right-click on any item below to see its context menu</p>
 
@@ -529,7 +529,7 @@ export const InteractiveDemo: Story = {
         <div style="display: grid; gap: 16px; max-width: 600px;">
           <!-- Task Item -->
           <div
-            style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
+            style="padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
             @contextmenu.prevent="showTaskMenu"
             @mouseenter="$event.target.style.borderColor = 'var(--brand-primary)'"
             @mouseleave="$event.target.style.borderColor = 'var(--border-medium)'"
@@ -545,7 +545,7 @@ export const InteractiveDemo: Story = {
 
           <!-- Project Item -->
           <div
-            style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
+            style="padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
             @contextmenu.prevent="showProjectMenu"
             @mouseenter="$event.target.style.borderColor = 'var(--color-navigation)'"
             @mouseleave="$event.target.style.borderColor = 'var(--border-medium)'"
@@ -626,31 +626,31 @@ export const AllVariants: Story = {
       return { menu1, menu2, menu3 }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <h2 style="margin: 0 0 24px 0; font-size: 20px; text-align: center; color: var(--text-primary);">ContextMenu Component Variants</h2>
 
         <!-- Menu Areas -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 40px;">
-          <div style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
+          <div style="padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium);">
             <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Task Actions</h3>
             <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-secondary);">Standard task operations with danger actions</p>
-            <div style="padding: 40px; background: var(--surface-secondary); border-radius: 8px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-medium);">
+            <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 8px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-medium);">
               Task Menu Area
             </div>
           </div>
 
-          <div style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
+          <div style="padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium);">
             <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Status & Priority</h3>
             <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-secondary);">Quick status changes and priority settings</p>
-            <div style="padding: 40px; background: var(--surface-secondary); border-radius: 8px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-medium);">
+            <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 8px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-medium);">
               Status Menu Area
             </div>
           </div>
 
-          <div style="padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium);">
+          <div style="padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium);">
             <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Quick Actions</h3>
             <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-secondary);">Common actions with disabled states</p>
-            <div style="padding: 40px; background: var(--surface-secondary); border-radius: 8px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-medium);">
+            <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 8px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-medium);">
               Actions Menu Area
             </div>
           </div>

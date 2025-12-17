@@ -189,7 +189,7 @@ const isInVueFlowContext = computed(() => {
   try {
     const vueFlow = useVueFlow()
     return !!(vueFlow && typeof vueFlow === 'object')
-  } catch (error) {
+  } catch (_error) {
     // In Storybook or outside VueFlow context - this is expected
     return false
   }
@@ -220,7 +220,7 @@ const isTimerActive = computed(() => {
 })
 
 // Drag handler with proper state management
-const handleDragStart = (event: DragEvent) => {
+const _handleDragStart = (event: DragEvent) => {
   // Prevent HTML5 drag during connection operations to avoid opaque preview
   if (props.isConnecting) {
     event.preventDefault()
@@ -281,7 +281,7 @@ const handleContextMenu = (event: MouseEvent) => {
 }
 
 // Handle drag end to clean up visual state
-const handleDragEnd = () => {
+const _handleDragEnd = () => {
   // Clean up local dragging state with a small delay to ensure smooth transition
   setTimeout(() => {
     isNodeDragging.value = false

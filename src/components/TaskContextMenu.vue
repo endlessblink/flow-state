@@ -655,8 +655,8 @@ onUnmounted(() => {
 <style scoped>
 .context-menu {
   position: fixed;
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-secondary);
+  background: var(--glass-bg-solid);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   padding: var(--space-2) 0;
@@ -809,8 +809,8 @@ onUnmounted(() => {
 }
 
 .icon-btn {
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -910,8 +910,8 @@ onUnmounted(() => {
 }
 
 .status-btn {
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   cursor: pointer;

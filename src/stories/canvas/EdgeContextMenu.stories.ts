@@ -81,14 +81,14 @@ export const Default: Story = {
     },
     template: `
       <div
-        style="padding: 40px; min-height: 100vh; background: var(--surface-secondary); cursor: crosshair;"
+        style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95); cursor: crosshair;"
         @click="handleCanvasClick"
       >
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Edge Context Menu</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Click anywhere on the canvas to show the context menu</p>
 
         <!-- Canvas area visualization -->
-        <div style="position: relative; width: 100%; height: 400px; background: var(--surface-primary); border: 2px dashed var(--border-medium); border-radius: 12px;">
+        <div style="position: relative; width: 100%; height: 400px; background: var(--glass-bg-solid); border: 2px dashed var(--border-medium); border-radius: 12px;">
           <!-- Sample nodes -->
           <div style="position: absolute; left: 100px; top: 150px; width: 120px; height: 60px; background: var(--brand-primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
             Task Node A
@@ -161,7 +161,7 @@ export const CustomText: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Custom Menu Text</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Context menu with custom action text</p>
 
@@ -230,7 +230,7 @@ export const TopLeft: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Multi-Position Test</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Test context menu positioning at different screen locations</p>
 
@@ -247,7 +247,7 @@ export const TopLeft: Story = {
         </div>
 
         <!-- Canvas area -->
-        <div style="position: relative; width: 100%; height: 500px; background: var(--surface-primary); border: 2px dashed var(--border-medium); border-radius: 12px;">
+        <div style="position: relative; width: 100%; height: 500px; background: var(--glass-bg-solid); border: 2px dashed var(--border-medium); border-radius: 12px;">
           <!-- Position indicators -->
           <div
             v-for="pos in positions"
@@ -321,7 +321,7 @@ export const Hidden: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Hidden/Visible States</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Toggle context menu visibility</p>
 

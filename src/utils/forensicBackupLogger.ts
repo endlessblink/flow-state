@@ -4,7 +4,7 @@
  */
 
 import CryptoJS from 'crypto-js'
-import { filterMockTasks, detectMockTask, MockTaskDetectionResult } from './mockTaskDetector'
+import { filterMockTasks, detectMockTask, MockTaskDetectionResult as _MockTaskDetectionResult } from './mockTaskDetector'
 import type { Task } from '@/types/tasks' // Use the canonical Task interface
 
 export interface BackupSnapshot {

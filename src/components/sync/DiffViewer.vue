@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed as _computed } from 'vue'
 import TextDiff from './diffs/TextDiff.vue'
 import ArrayDiff from './diffs/ArrayDiff.vue'
 import ObjectDiff from './diffs/ObjectDiff.vue'
@@ -71,7 +71,7 @@ interface Props {
   mode: 'local' | 'remote'
 }
 
-const props = defineProps<Props>()
+const _props = defineProps<Props>()
 
 // Format value for display
 function formatValue(value: any): string {

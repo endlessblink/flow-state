@@ -202,7 +202,7 @@ export const DifferentColors: Story = {
       return { sections, taskGroups }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative; overflow: auto; padding: 20px;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative; overflow: auto; padding: 20px;">
         <div style="position: relative; min-width: 800px; min-height: 500px;">
           <CanvasSection
             v-for="(section, index) in sections"
@@ -254,7 +254,7 @@ export const DifferentSizes: Story = {
       return { sections, taskGroups }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative; overflow: auto; padding: 20px;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative; overflow: auto; padding: 20px;">
         <div style="position: relative; min-width: 780px; min-height: 600px;">
           <CanvasSection
             v-for="(section, index) in sections"

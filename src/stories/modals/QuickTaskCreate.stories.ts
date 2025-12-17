@@ -65,7 +65,7 @@ export const Default: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Quick Task Create Modal</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Fast task creation with time scheduling</p>
 
@@ -114,7 +114,7 @@ export const MorningTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Morning Task Creation</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Quick task for 9:00 AM - 9:30 AM slot</p>
 
@@ -156,7 +156,7 @@ export const AfternoonMeeting: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Afternoon Meeting</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Schedule a meeting from 2:30 PM to 4:00 PM</p>
 
@@ -198,7 +198,7 @@ export const ShortTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Quick 15-Minute Task</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Perfect for quick actions and micro-tasks</p>
 
@@ -240,7 +240,7 @@ export const LongTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Extended Work Session</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">2-hour deep work session from 10:00 AM to 12:00 PM</p>
 
@@ -330,7 +330,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h2 style="margin: 0 0 16px 0; font-size: 20px; color: var(--text-primary);">Interactive QuickTaskCreate Demo</h2>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Click any time slot below to open the quick create modal</p>
 
@@ -351,7 +351,7 @@ export const InteractiveDemo: Story = {
           <div
             v-for="slot in timeSlots"
             :key="slot.label"
-            style="padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
+            style="padding: 24px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
             @click="openQuickCreate(slot.startTime, new Date(slot.startTime.getTime() + slot.duration * 60 * 1000), slot.duration)"
             @mouseenter="$event.target.style.transform = 'translateY(-2px)'"
             @mouseleave="$event.target.style.transform = 'translateY(0)'"
@@ -462,7 +462,7 @@ export const AllVariants: Story = {
       return { modals, openModal, closeModal, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
         <h2 style="margin: 0 0 24px 0; font-size: 20px; text-align: center; color: var(--text-primary);">QuickTaskCreate Duration Variants</h2>
 
         <!-- Task Type Grid -->
@@ -470,7 +470,7 @@ export const AllVariants: Story = {
           <div
             v-for="modal in modals"
             :key="modal.id"
-            style="padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
+            style="padding: 24px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
             @click="openModal(modal.id)"
             @mouseenter="$event.target.style.transform = 'translateY(-2px)'; $event.target.style.borderColor = 'var(--brand-primary)'"
             @mouseleave="$event.target.style.transform = 'translateY(0)'; $event.target.style.borderColor = 'var(--border-medium)'"

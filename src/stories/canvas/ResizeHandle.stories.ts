@@ -26,6 +26,17 @@ const meta = {
       description: 'Callback when resize starts/moves/ends',
     },
   },
+
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 12px; min-width: 200px; min-height: 200px; display: flex; align-items: center; justify-content: center;">
+          <story />
+        </div>
+      `
+    })
+  ],
 } satisfies Meta<typeof ResizeHandle>
 
 export default meta

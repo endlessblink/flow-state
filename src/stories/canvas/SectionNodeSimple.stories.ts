@@ -63,7 +63,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="width: 300px; height: 200px; padding: 20px; background: var(--surface-secondary);">
+      <div style="width: 300px; height: 200px; padding: 20px; background: rgba(0, 0, 0, 0.95);">
         <SectionNodeSimple
           :data="sectionData"
           @update="handleUpdate"
@@ -112,7 +112,7 @@ export const PrioritySection: Story = {
       }
     },
     template: `
-      <div style="width: 300px; height: 200px; padding: 20px; background: var(--surface-secondary);">
+      <div style="width: 300px; height: 200px; padding: 20px; background: rgba(0, 0, 0, 0.95);">
         <div style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">
           <strong>Priority Section</strong> - Auto-collects high-priority tasks
         </div>
@@ -164,7 +164,7 @@ export const StatusSection: Story = {
       }
     },
     template: `
-      <div style="width: 300px; height: 200px; padding: 20px; background: var(--surface-secondary);">
+      <div style="width: 300px; height: 200px; padding: 20px; background: rgba(0, 0, 0, 0.95);">
         <div style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">
           <strong>Status Section</strong> - Groups tasks by status
         </div>
@@ -216,7 +216,7 @@ export const ProjectSection: Story = {
       }
     },
     template: `
-      <div style="width: 300px; height: 200px; padding: 20px; background: var(--surface-secondary);">
+      <div style="width: 300px; height: 200px; padding: 20px; background: rgba(0, 0, 0, 0.95);">
         <div style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">
           <strong>Project Section</strong> - Organizes tasks by project
         </div>
@@ -268,7 +268,7 @@ export const TimelineSection: Story = {
       }
     },
     template: `
-      <div style="width: 300px; height: 200px; padding: 20px; background: var(--surface-secondary);">
+      <div style="width: 300px; height: 200px; padding: 20px; background: rgba(0, 0, 0, 0.95);">
         <div style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">
           <strong>Timeline Section</strong> - Groups tasks by schedule
         </div>
@@ -319,7 +319,7 @@ export const EmptySection: Story = {
       }
     },
     template: `
-      <div style="width: 300px; height: 200px; padding: 20px; background: var(--surface-secondary);">
+      <div style="width: 300px; height: 200px; padding: 20px; background: rgba(0, 0, 0, 0.95);">
         <div style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">
           <strong>Empty Section</strong> - Ready for task organization
         </div>
@@ -400,7 +400,7 @@ export const AllSectionTypes: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--surface-secondary);">
+      <div style="padding: 40px; min-height: 600px; background: rgba(0, 0, 0, 0.95);">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Section Node Types</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Different section types with auto-collect capabilities</p>
 
@@ -408,7 +408,7 @@ export const AllSectionTypes: Story = {
           <div
             v-for="section in sections"
             :key="section.id"
-            style="background: var(--surface-primary); border-radius: 12px; padding: 20px;"
+            style="background: var(--glass-bg-solid); border-radius: 12px; padding: 20px;"
           >
             <div style="margin-bottom: 16px;">
               <h4 style="margin: 0 0 4px 0; font-size: 16px; color: var(--text-primary); text-transform: capitalize;">

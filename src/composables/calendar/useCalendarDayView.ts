@@ -1,5 +1,5 @@
-import { ref, computed, nextTick, type Ref, type ComputedRef } from 'vue'
-import { useTaskStore, formatDateKey } from '@/stores/tasks'
+import { ref, computed, nextTick, type Ref } from 'vue'
+import { useTaskStore } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 
@@ -32,9 +32,9 @@ function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: 
   return { hour: snappedHour, minute: snappedMinute }
 }
 
-export function useCalendarDayView(currentDate: Ref<Date>, statusFilter: Ref<string | null>) {
+export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
-  const { getPriorityColor, getDateString } = useCalendarCore()
+  const { getPriorityColor, getDateString: _getDateString } = useCalendarCore()
 
   const hours = Array.from({ length: 24 }, (_, i) => i)
 

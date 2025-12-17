@@ -1,7 +1,7 @@
 import { computed, ref, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
-import type { CalendarEvent, WeekEvent } from '@/types/tasks'
+import type { WeekEvent } from '@/types/tasks'
 
 export interface WeekDay {
   dayName: string
@@ -17,7 +17,7 @@ export type { WeekEvent } from '@/types/tasks'
  * Week view specific logic for calendar
  * Handles 7-day grid, events positioning, drag-and-drop, and resizing
  */
-export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<string | null>) {
+export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
 
@@ -194,7 +194,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
   }
 
   // Week drag-and-drop handlers
-  const startWeekDrag = (event: MouseEvent, calendarEvent: WeekEvent) => {
+  const _startWeekDrag = (event: MouseEvent, calendarEvent: WeekEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
@@ -212,7 +212,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
     const clickOffsetY = event.clientY - eventRect.top
 
     const isDuplicateMode = event.altKey
-    const duplicateInstanceId: string | null = null
+    const _duplicateInstanceId: string | null = null
 
     let lastUpdatedDayIndex = calendarEvent.dayIndex
     let lastUpdatedSlot = calendarEvent.startSlot
@@ -275,7 +275,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, statusFilter: Ref<st
     document.addEventListener('mouseup', handleMouseUp)
   }
 
-  const handleWeekEventMouseDown = (event: MouseEvent, calendarEvent: WeekEvent) => {
+  const handleWeekEventMouseDown = (event: MouseEvent, _calendarEvent: WeekEvent) => {
     // Only handle mouse down for resize handles, let HTML5 drag handle dragging
     // Don't interfere with dragstart events
     if (event.shiftKey) {

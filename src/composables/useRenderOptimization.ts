@@ -3,7 +3,7 @@
  * Optimizes Vue component rendering, reduces unnecessary re-renders
  */
 
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, shallowRef, triggerRef } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, shallowRef, triggerRef } from 'vue'
 import { useThrottleFn, useDebounceFn } from '@vueuse/core'
 
 export interface RenderOptimizationOptions {
@@ -32,7 +32,7 @@ export interface RenderMetrics {
 export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
   const {
     enableShallowReactive = true,
-    enableVirtualScrolling = true,
+    enableVirtualScrolling: _enableVirtualScrolling = true,
     enableLazyLoading = true,
     throttleRenderEvents = true,
     enableRenderBatching = true,

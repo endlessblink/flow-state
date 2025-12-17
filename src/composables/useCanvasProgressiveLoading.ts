@@ -5,8 +5,8 @@
  * to handle large datasets (1000+ nodes) without blocking the UI.
  */
 
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, readonly, type Ref } from 'vue'
-import { useThrottleFn, useDebounceFn } from '@vueuse/core'
+import { ref, computed, watch, onMounted as _onMounted, onUnmounted, nextTick as _nextTick, readonly, type Ref } from 'vue'
+import { useThrottleFn, useDebounceFn as _useDebounceFn } from '@vueuse/core'
 import type { Node, Edge } from '@vue-flow/core'
 
 export interface ProgressiveLoadingConfig {
@@ -146,11 +146,11 @@ export function useCanvasProgressiveLoading(
 
   // Performance tracking
   const batchTimes = ref<number[]>([])
-  const throughputHistory = ref<number[]>([])
+  const _throughputHistory = ref<number[]>([])
   const adaptiveBatchSize = ref(finalConfig.initialBatchSize)
 
   // Loading queue and priorities
-  const loadingQueue = ref<Array<{ data: Node[] | Edge[]; type: 'nodes' | 'edges'; priority: number }>>([])
+  const _loadingQueue = ref<Array<{ data: Node[] | Edge[]; type: 'nodes' | 'edges'; priority: number }>>([])
   const processedData = ref<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] })
 
   // Background loading

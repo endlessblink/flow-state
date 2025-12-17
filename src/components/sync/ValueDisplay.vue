@@ -82,7 +82,7 @@ interface Props {
   maxItems?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const _props = withDefaults(defineProps<Props>(), {
   maxItems: 5
 })
 

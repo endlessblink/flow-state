@@ -138,7 +138,7 @@ const emit = defineEmits<{
 }>()
 
 const canvasStore = useCanvasStore()
-const taskStore = useTaskStore()
+const _taskStore = useTaskStore()
 
 const showBulkMenu = ref(false)
 const isSelecting = ref(false)

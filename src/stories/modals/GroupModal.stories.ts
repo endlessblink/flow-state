@@ -129,7 +129,7 @@ export const EditGroup: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary); min-height: 600px;">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); min-height: 600px;">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Edit Group Modal</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Modifying existing group with pre-filled data</p>
 
@@ -172,7 +172,7 @@ export const ColorSelection: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary); min-height: 700px;">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); min-height: 700px;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Color Selection Features</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Comprehensive color picker with presets and custom colors</p>
 
@@ -251,7 +251,7 @@ export const MultiplePositions: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary); min-height: 600px; position: relative;">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); min-height: 600px; position: relative;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Multiple Position Demo</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Click buttons to open modals at different positions</p>
 
@@ -263,7 +263,7 @@ export const MultiplePositions: Story = {
             @click="openModal(modal.id)"
             style="
               padding: 12px 20px;
-              background: var(--surface-primary);
+              background: var(--glass-bg-solid);
               border: 1px solid var(--border-subtle);
               border-radius: 8px;
               color: var(--text-primary);
@@ -282,7 +282,7 @@ export const MultiplePositions: Story = {
         <div style="
           position: relative;
           height: 400px;
-          background: var(--surface-primary);
+          background: var(--glass-bg-solid);
           border: 2px dashed var(--border-medium);
           border-radius: 12px;
           overflow: hidden;
@@ -406,7 +406,7 @@ export const ValidationStates: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary); min-height: 600px;">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); min-height: 600px;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Validation and States</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Different form states and validation scenarios</p>
 
@@ -417,7 +417,7 @@ export const ValidationStates: Story = {
             :key="index"
             style="
               padding: 20px;
-              background: var(--surface-primary);
+              background: var(--glass-bg-solid);
               border: 1px solid var(--border-subtle);
               border-radius: 12px;
               cursor: pointer;
@@ -537,12 +537,12 @@ export const InteractiveWorkflow: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: var(--surface-secondary); min-height: 600px;">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); min-height: 600px;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Interactive Group Workflow</h3>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Create, edit, and manage canvas groups</p>
 
         <!-- Control Panel -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 20px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 20px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-subtle);">
           <div>
             <h4 style="margin: 0 0 4px 0; font-size: 16px; color: var(--text-primary);">Group Manager</h4>
             <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">{{ createdGroups.length }} groups created</p>
@@ -580,7 +580,7 @@ export const InteractiveWorkflow: Story = {
                 align-items: center;
                 gap: 16px;
                 padding: 16px;
-                background: var(--surface-primary);
+                background: var(--glass-bg-solid);
                 border: 1px solid var(--border-subtle);
                 border-radius: 8px;
                 transition: all 0.2s ease;
@@ -652,7 +652,7 @@ export const InteractiveWorkflow: Story = {
           margin-bottom: 24px;
           padding: 40px;
           text-align: center;
-          background: var(--surface-primary);
+          background: var(--glass-bg-solid);
           border: 2px dashed var(--border-medium);
           border-radius: 12px;
         ">

@@ -134,7 +134,7 @@ export const Closed: Story = {
       return { args }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <div style="padding: 20px; text-align: center;">
           <h3>Search Modal (Closed)</h3>
           <p>Click the button below to open the search modal</p>
@@ -162,7 +162,7 @@ export const EmptyOpen: Story = {
       return { args }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <SearchModal v-bind="args"
           @close="() => console.log('Search closed')"
           @select-task="(task) => console.log('Selected task:', task.title)"
@@ -192,8 +192,8 @@ export const TaskSearch: Story = {
       return { isOpen, useTaskStore }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; left: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; left: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Task Search Demo</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Try searching for: "documentation", "bug", "fix", "test", "deploy"</p>
         </div>
@@ -226,8 +226,8 @@ export const ProjectSearch: Story = {
       return { isOpen, useTaskStore }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; left: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; left: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Project Search Demo</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Try searching for: "development", "design", "testing", "infrastructure"</p>
         </div>
@@ -260,8 +260,8 @@ export const NoResults: Story = {
       return { isOpen, useTaskStore }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
-        <div style="position: absolute; top: 20px; left: 20px; z-index: 100; background: var(--surface-primary); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <div style="position: absolute; top: 20px; left: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">No Results Demo</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Try searching: "nonexistent" - should show no results</p>
         </div>
@@ -324,7 +324,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="width: 100vw; height: 100vh; background: var(--surface-secondary); position: relative;">
+      <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
         <!-- Main Content -->
         <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -351,7 +351,7 @@ export const InteractiveDemo: Story = {
           </div>
 
           <!-- Selected Items -->
-          <div v-if="selectedItems.length > 0" style="background: var(--surface-primary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-medium);">
+          <div v-if="selectedItems.length > 0" style="background: var(--glass-bg-solid); padding: 16px; border-radius: 8px; border: 1px solid var(--border-medium);">
             <h3 style="margin: 0 0 12px 0;">Selected Items ({{ selectedItems.length }})</h3>
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <div v-for="item in selectedItems" :key="item.id"
@@ -384,7 +384,7 @@ export const InteractiveDemo: Story = {
           </div>
 
           <!-- Instructions -->
-          <div style="background: var(--surface-primary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-medium);">
+          <div style="background: var(--glass-bg-solid); padding: 16px; border-radius: 8px; border: 1px solid var(--border-medium);">
             <h3 style="margin: 0 0 12px 0;">How to Use</h3>
             <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary);">
               <li>Press <kbd style="padding: 2px 6px; background: var(--surface-hover); border-radius: 3px; font-size: 11px;">Ctrl+K</kbd> or click the Search button to open</li>
@@ -396,7 +396,7 @@ export const InteractiveDemo: Story = {
           </div>
 
           <!-- Available Content -->
-          <div style="background: var(--surface-primary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-medium);">
+          <div style="background: var(--glass-bg-solid); padding: 16px; border-radius: 8px; border: 1px solid var(--border-medium);">
             <h3 style="margin: 0 0 12px 0;">Available Content</h3>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
               <div>

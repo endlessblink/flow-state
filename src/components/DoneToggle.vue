@@ -629,7 +629,7 @@ onUnmounted(() => {
   inset-inline-end: -4px; /* RTL: check sparkle position */
   width: 4px;
   height: 4px;
-  background: var(--surface-elevated);
+  background: rgba(255, 255, 255, 0.8);
   border-radius: 50%;
   opacity: 0;
   animation: sparkle 3s ease-in-out infinite;
@@ -792,8 +792,8 @@ onUnmounted(() => {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid var(--border-medium);
-  background: var(--surface-primary);
+  border: 2px solid var(--glass-border);
+  background: transparent;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: none;
@@ -803,7 +803,7 @@ onUnmounted(() => {
 
 .done-toggle__button--minimal:hover {
   border-color: var(--color-primary);
-  background: var(--surface-primary);
+  background: transparent;
   box-shadow: none;
   transform: none;
 }

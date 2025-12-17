@@ -1996,23 +1996,26 @@ export const useTaskStore = defineStore('tasks', () => {
       case 'today':
         dueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
         break
-      case 'tomorrow':
+      case 'tomorrow': {
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
         dueDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
         break
-      case 'this weekend':
+      }
+      case 'this weekend': {
         const saturday = new Date(today)
         const daysUntilSaturday = (6 - today.getDay() + 7) % 7 || 7
         saturday.setDate(today.getDate() + daysUntilSaturday)
         dueDate = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`
         break
-      case 'this week':
+      }
+      case 'this week': {
         const sunday = new Date(today)
         const daysUntilSunday = (7 - today.getDay()) % 7 || 7
         sunday.setDate(today.getDate() + daysUntilSunday)
         dueDate = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`
         break
+      }
       case 'later':
         // For "later", don't set a specific due date
         dueDate = ''

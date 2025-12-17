@@ -25,7 +25,7 @@
 | Check | Status | Notes |
 |-------|--------|-------|
 | `npm run build` | ✅ Active | Catches TS errors, broken imports, syntax issues |
-| `npm run lint` | ❌ Skipped | 2400+ errors need cleanup first |
+| `npm run lint` | ⚠️ In Progress | Reduced 2400+ → 552 errors (Dec 17), cleanup ongoing |
 | `npm run test` | ❌ Skipped | 90 failures (mostly Storybook) need fixing |
 
 **Branch Protection**: Not enabled (solo developer, direct push workflow)
@@ -275,6 +275,38 @@ Phase 3 (Mobile) ←────────────────────
 - Vue formatting warnings (~1,179) - Attribute order, etc. (cosmetic)
 
 **Skill Created**: `.claude/skills/dev-lint-cleanup/SKILL.md` - Documents safe patterns for future cleanup
+
+---
+
+### ~~TASK-016~~: Calendar Time Indicator (COMPLETE)
+
+**Goal**: Add a visual time indicator (current time line) in the calendar view to show the current time position.
+
+**Priority**: P2-MEDIUM
+
+**Date Completed**: December 17, 2025
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Add horizontal line component for current time | ✅ DONE |
+| 2 | Position line dynamically based on current time | ✅ DONE |
+| 3 | Auto-update position every 30 seconds | ✅ DONE |
+| 4 | Style with design tokens (--color-danger, glow effect) | ✅ DONE |
+| 5 | Hide line when viewing non-today dates | ✅ DONE |
+| 6 | Fix scroll sync between time labels and slots | ✅ DONE |
+
+**Implementation**:
+- Added `current-time-indicator` element in `CalendarView.vue:118-126`
+- Computed `isViewingToday` and `timeIndicatorPosition` for positioning
+- Uses existing `currentTime` ref that updates every 30 seconds
+- Red dot + horizontal line with glow effect (similar to Google Calendar)
+- Fixed scroll sync in `useCalendarScroll.ts` - was using old `.calendar-events-container` selector instead of `.slots-container`
+
+**Files Modified**:
+- `src/views/CalendarView.vue` - Time indicator element and styles
+- `src/composables/calendar/useCalendarScroll.ts` - Fixed scroll sync selector
+
+**Reference**: Similar to Google Calendar's red "now" line
 
 ---
 

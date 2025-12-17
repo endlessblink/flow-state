@@ -128,6 +128,7 @@ export interface CalendarEvent {
   column: number
   totalColumns: number
   isDueDate: boolean // Whether this represents a task due date
+  projectId?: string // Project association for visual styling
 }
 
 export interface WeekEvent extends CalendarEvent {

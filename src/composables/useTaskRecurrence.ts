@@ -101,7 +101,7 @@ export function useTaskRecurrence(taskId: string) {
         }
         break
 
-      case RecurrencePattern.MONTHLY:
+      case RecurrencePattern.MONTHLY: {
         const today = new Date()
         recurrence.value.rule = {
           pattern,
@@ -109,8 +109,9 @@ export function useTaskRecurrence(taskId: string) {
           dayOfMonth: today.getDate()
         }
         break
+      }
 
-      case RecurrencePattern.YEARLY:
+      case RecurrencePattern.YEARLY: {
         const todayYear = new Date()
         recurrence.value.rule = {
           pattern,
@@ -119,6 +120,7 @@ export function useTaskRecurrence(taskId: string) {
           dayOfMonth: todayYear.getDate()
         }
         break
+      }
 
       case RecurrencePattern.NONE:
         recurrence.value.rule = { pattern }
@@ -315,12 +317,13 @@ export function useTaskRecurrence(taskId: string) {
     let description = ''
 
     switch (rule.pattern) {
-      case RecurrencePattern.DAILY:
+      case RecurrencePattern.DAILY: {
         const dailyInterval = (rule as any).interval
         description = dailyInterval === 1 ? 'Daily' : `Every ${dailyInterval} days`
         break
+      }
 
-      case RecurrencePattern.WEEKLY:
+      case RecurrencePattern.WEEKLY: {
         const weeklyInterval = (rule as any).interval
         const weekdays = (rule as any).weekdays
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -329,8 +332,9 @@ export function useTaskRecurrence(taskId: string) {
           ? `Weekly on ${dayList}`
           : `Every ${weeklyInterval} weeks on ${dayList}`
         break
+      }
 
-      case RecurrencePattern.MONTHLY:
+      case RecurrencePattern.MONTHLY: {
         const monthlyInterval = (rule as any).interval
         const dayOfMonth = (rule as any).dayOfMonth
         const suffix = getDaySuffix(dayOfMonth)
@@ -338,8 +342,9 @@ export function useTaskRecurrence(taskId: string) {
           ? `Monthly on the ${dayOfMonth}${suffix}`
           : `Every ${monthlyInterval} months on the ${dayOfMonth}${suffix}`
         break
+      }
 
-      case RecurrencePattern.YEARLY:
+      case RecurrencePattern.YEARLY: {
         const yearlyInterval = (rule as any).interval
         const month = (rule as any).month
         const yearDay = (rule as any).dayOfMonth
@@ -348,6 +353,7 @@ export function useTaskRecurrence(taskId: string) {
           ? `Yearly on ${monthNames[month - 1]} ${yearDay}`
           : `Every ${yearlyInterval} years on ${monthNames[month - 1]} ${yearDay}`
         break
+      }
 
       default:
         description = 'Custom recurrence'

@@ -3,7 +3,7 @@
  * Enhanced sync manager with conflict detection, resolution, retry logic, and validation
  */
 
-import { ref, computed, triggerRef } from 'vue'
+import { ref, computed, triggerRef, type Ref, type ComputedRef } from 'vue'
 import PouchDB from 'pouchdb-browser'
 import { ConflictDetector } from '@/utils/conflictDetector'
 import { ConflictResolver } from '@/utils/conflictResolver'
@@ -1235,36 +1235,86 @@ export const useReliableSyncManager = () => {
   }
 }
 
+// Type for the sync manager instance (avoids circular ReturnType reference)
+export interface ReliableSyncManagerInstance {
+  // State refs
+  syncStatus: Ref<SyncStatus>
+  error: Ref<string | null>
+  lastSyncTime: Ref<Date | null>
+  pendingChanges: Ref<number>
+  isOnline: Ref<boolean>
+  remoteConnected: Ref<boolean>
+  hasConnectedEver: Ref<boolean>
+  conflicts: Ref<ConflictInfo[]>
+  resolutions: Ref<ResolutionResult[]>
+  lastValidation: Ref<SyncValidationResult | null>
+  metrics: Ref<SyncMetrics>
+  isLiveSyncActive: Ref<boolean>
+
+  // Computed properties
+  isSyncing: ComputedRef<boolean>
+  hasErrors: ComputedRef<boolean>
+
+  // Methods
+  init: () => Promise<(() => void) | null>
+  triggerSync: () => Promise<void>
+  clearSyncErrors: () => void
+  manualConflictResolution: (conflictId: string, strategy: 'local' | 'remote' | 'merge') => Promise<void>
+  getSyncHealth: () => SyncHealth
+  getSyncMetrics: () => SyncMetrics
+  getRetryStats: () => unknown
+  getOfflineQueueStats: () => unknown
+  pauseSync: () => void
+  resumeSync: () => void
+  toggleSync: () => void
+  throttledSync: () => void
+  cancelThrottledSync: () => void
+  startLiveSync: () => Promise<void>
+  stopLiveSync: () => void
+  cleanup: () => Promise<void>
+
+  // Underlying systems (for advanced usage)
+  conflictDetector: unknown
+  conflictResolver: unknown
+  retryManager: unknown
+  offlineQueue: unknown
+  syncValidator: unknown
+  timezoneManager: unknown
+  networkOptimizer: unknown
+  batchManager: unknown
+  logger: unknown
+}
+
 /**
  * Global reliable sync manager instance
  * Using window object to prevent Vite module duplication from creating multiple "singletons"
  */
 declare global {
   interface Window {
-    __pomoFlowSyncManager?: ReturnType<typeof useReliableSyncManager>
+    __pomoFlowSyncManager?: ReliableSyncManagerInstance
   }
 }
 
 // Fallback for SSR or non-browser environments
-let fallbackSyncManager: ReturnType<typeof useReliableSyncManager> | null = null
+let fallbackSyncManager: ReliableSyncManagerInstance | null = null
 
 /**
  * Get or create the global reliable sync manager instance
  * Uses window object to ensure true singleton across Vite chunks
  */
-export const getGlobalReliableSyncManager = () => {
+export const getGlobalReliableSyncManager = (): ReliableSyncManagerInstance => {
   // Use window for browser, fallback for SSR
   if (typeof window !== 'undefined') {
     if (!window.__pomoFlowSyncManager) {
       console.log('🔧 [SYNC MANAGER] Creating TRUE global singleton on window')
-      window.__pomoFlowSyncManager = useReliableSyncManager()
+      window.__pomoFlowSyncManager = useReliableSyncManager() as ReliableSyncManagerInstance
     }
     return window.__pomoFlowSyncManager
   }
 
   // Fallback for non-browser environments
   if (!fallbackSyncManager) {
-    fallbackSyncManager = useReliableSyncManager()
+    fallbackSyncManager = useReliableSyncManager() as ReliableSyncManagerInstance
   }
   return fallbackSyncManager
 }

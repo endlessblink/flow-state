@@ -400,7 +400,7 @@ const manualSync = async () => {
     syncProgress.value = 'Uploading local changes...'
     try {
       await reliableSyncManager.triggerSync()
-    } catch (_syncError) {
+    } catch (syncError) {
       throw new Error((syncError as Error)?.message || 'Failed to upload data')
     }
 

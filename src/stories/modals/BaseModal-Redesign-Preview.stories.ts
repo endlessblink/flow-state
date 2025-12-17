@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
+import EmojiPicker from '@/components/EmojiPicker.vue'
 
 const meta = {
   component: BaseModal,
@@ -70,8 +71,8 @@ export const SimpleModal: Story = {
 
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--glass-bg-soft); border-radius: var(--radius-md); margin-top: 16px;">
               <span style="color: var(--text-secondary); font-size: var(--text-sm);">Auto-start breaks</span>
-              <div style="width: 40px; height: 20px; background: var(--brand-primary); border-radius: 10px; position: relative;">
-                <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; right: 2px; top: 2px;"></div>
+              <div style="width: 40px; height: 20px; background: transparent; border: 2px solid var(--brand-primary); border-radius: 10px; position: relative;">
+                <div style="width: 14px; height: 14px; background: var(--brand-primary); border-radius: 50%; position: absolute; right: 1px; top: 1px;"></div>
               </div>
             </div>
           </div>
@@ -92,9 +93,21 @@ export const ProjectModalStyle: Story = {
     confirmText: 'Create Project'
   },
   render: (args) => ({
-    components: { BaseModal, BaseInput },
+    components: { BaseModal, BaseInput, EmojiPicker },
     setup() {
-      return { args }
+      const selectedColor = ref('#4ecdc4')
+      const selectedEmoji = ref('📁')
+      const showPicker = ref(false)
+
+      const handlePickerSelect = (data: { type: 'emoji' | 'color'; value: string }) => {
+        if (data.type === 'emoji') {
+          selectedEmoji.value = data.value
+        } else {
+          selectedColor.value = data.value
+        }
+      }
+
+      return { args, selectedColor, selectedEmoji, showPicker, handlePickerSelect }
     },
     template: `
       <div>
@@ -122,17 +135,41 @@ export const ProjectModalStyle: Story = {
 
           <div style="margin-bottom: 0;">
             <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); font-weight: 500; margin-bottom: 12px;">
-              Project Icon & Color
+              Icon & Color
             </label>
-            <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--glass-bg-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-lg);">
-              <div style="width: 56px; height: 56px; background: #3b82f6; border-radius: var(--radius-xl); border: 2px solid var(--glass-border);"></div>
-              <button style="flex: 1; padding: 12px 16px; background: var(--glass-bg-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--text-sm); cursor: pointer;">
-                Choose Icon or Color
-              </button>
-            </div>
+            <button
+              @click="showPicker = true"
+              style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--glass-bg-light); border: 1px solid var(--glass-border); border-radius: var(--radius-md); cursor: pointer; width: 100%; transition: all 0.2s ease;"
+            >
+              <!-- Icon Preview -->
+              <div
+                :style="{
+                  width: '40px',
+                  height: '40px',
+                  background: selectedColor,
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px',
+                  flexShrink: '0'
+                }"
+              >{{ selectedEmoji }}</div>
+              <span style="color: var(--text-secondary); font-size: var(--text-sm);">Click to change icon & color</span>
+            </button>
           </div>
         </div>
       </BaseModal>
+
+      <!-- EmojiPicker Modal -->
+      <EmojiPicker
+        :is-open="showPicker"
+        :current-emoji="selectedEmoji"
+        :current-color="selectedColor"
+        @close="showPicker = false"
+        @select="handlePickerSelect"
+      />
       </div>
     `
   })

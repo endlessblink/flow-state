@@ -12,11 +12,12 @@ export function useCalendarScroll() {
   let scrollHandler: ((event: Event) => void) | null = null
 
   /**
-   * Setup scroll synchronization between time labels and calendar events container
+   * Setup scroll synchronization between time labels and slots container
    */
   const setupScrollSync = () => {
     nextTick(() => {
-      calendarEventsContainer = document.querySelector('.calendar-events-container') as HTMLElement
+      // Use .slots-container (the current calendar structure)
+      calendarEventsContainer = document.querySelector('.slots-container') as HTMLElement
       timeLabelsContainer = document.querySelector('.time-labels') as HTMLElement
 
       if (calendarEventsContainer && timeLabelsContainer) {
@@ -45,25 +46,30 @@ export function useCalendarScroll() {
    */
   const scrollToCurrentTime = () => {
     nextTick(() => {
-      const container = document.querySelector('.calendar-grid') as HTMLElement
-      if (!container) return
+      const slotsContainer = document.querySelector('.slots-container') as HTMLElement
+      const timeLabels = document.querySelector('.time-labels') as HTMLElement
+      if (!slotsContainer) return
 
       const now = new Date()
       const currentHour = now.getHours()
       const currentMinute = now.getMinutes()
 
-      // Calculate which time slot to scroll to (30-minute slots)
-      const slotIndex = Math.floor((currentHour * 2) + (currentMinute >= 30 ? 1 : 0))
-      const slotHeight = 30 // Each slot is 30px high
+      // Calculate scroll position: 1 minute = 1px
+      const scrollTop = (currentHour * 60) + currentMinute - 100 // 100px offset from top
 
-      // Calculate scroll position with some offset to show current time in upper portion
-      const scrollTop = slotIndex * slotHeight - 100 // 100px offset from top
-
-      // Scroll to the calculated position
-      container.scrollTo({
+      // Scroll both containers to the calculated position
+      slotsContainer.scrollTo({
         top: Math.max(0, scrollTop),
         behavior: 'smooth'
       })
+
+      // Also scroll time labels to stay in sync
+      if (timeLabels) {
+        timeLabels.scrollTo({
+          top: Math.max(0, scrollTop),
+          behavior: 'smooth'
+        })
+      }
     })
   }
 

@@ -1,8 +1,8 @@
 <template>
   <button
     :id="id"
-    class="base-button"
     ref="buttonRef"
+    class="base-button"
     :class="[
       `variant-${variant}`,
       `size-${size}`,

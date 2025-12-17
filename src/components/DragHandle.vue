@@ -184,7 +184,7 @@ const dotsClasses = computed(() => [
   `drag-handle__dots--${props.size}`,
   {
     'drag-handle__dots--dragging': isDragging.value,
-    'drag-handle__dots--animated': isHovered.value || isDragging.value
+    'drag-handle__dots--hovered': isHovered.value && !isDragging.value
   }
 ])
 
@@ -247,7 +247,6 @@ const getDotClasses = (index: number) => [
   `drag-handle__dot--${index}`,
   {
     'drag-handle__dot--dragging': isDragging.value,
-    'drag-handle__dot--animated': isHovered.value || isDragging.value,
     'drag-handle__dot--delayed': true
   }
 ]
@@ -752,16 +751,16 @@ defineExpose({
    ========================================================================== */
 .drag-handle__dots {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   align-items: center;
   justify-content: center;
   gap: 3px;
   z-index: 3;
 }
 
-.drag-handle__dots--animated {
-  animation: dotsContainerAnimate 0.8s var(--spring-bouncy);
+.drag-handle__dots--hovered {
+  /* No animation on hover - just smooth transitions */
 }
 
 .drag-handle__dots--dragging {
@@ -794,41 +793,36 @@ defineExpose({
   animation-delay: var(--dot-delay, 0ms);
 }
 
-.drag-handle__dot--animated {
-  animation: dotAppear 0.4s var(--ease-out-back) both;
-  animation-delay: var(--dot-delay, 0ms);
-}
-
 .drag-handle__dot--delayed {
-  animation-delay: calc(var(--dot-delay, 0ms) * var(--dot-intensity, 1));
+  /* Delay applied via inline style for staggered effects */
 }
 
-/* Enhanced dot hover states */
+/* Enhanced dot hover states - using explicit colors for reliability */
 .drag-handle:hover .drag-handle__dot:not(.drag-handle__dot--dragging),
 .drag-handle:focus-visible .drag-handle__dot {
   background:
-    linear-gradient(135deg, rgba(var(--primary-rgb), 0.95) 0%, rgba(var(--primary-light-rgb), 0.85) 100%),
-    linear-gradient(225deg, rgba(var(--primary-rgb), 1) 0%, rgba(var(--primary-light-rgb), 0.95) 100%);
+    linear-gradient(135deg, rgba(78, 205, 196, 0.95) 0%, rgba(78, 205, 196, 0.85) 100%),
+    linear-gradient(225deg, rgba(78, 205, 196, 1) 0%, rgba(78, 205, 196, 0.95) 100%);
 
   transform: scaleY(1.4) scaleX(1.2) translateZ(0);
   box-shadow:
-    0 2px 12px rgba(var(--primary-rgb), 0.4),
+    0 2px 12px rgba(78, 205, 196, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
 
   border-radius: 3px;
 }
 
-/* Enhanced dot dragging states */
+/* Enhanced dot dragging states - using explicit colors for reliability */
 .drag-handle:active .drag-handle__dot,
 .drag-handle--dragging .drag-handle__dot {
   background:
-    linear-gradient(135deg, rgba(var(--accent-rgb), 0.95) 0%, rgba(var(--primary-rgb), 0.9) 100%),
-    linear-gradient(225deg, rgba(var(--accent-rgb), 1) 0%, rgba(var(--primary-rgb), 0.95) 100%);
+    linear-gradient(135deg, rgba(99, 102, 241, 0.95) 0%, rgba(78, 205, 196, 0.9) 100%),
+    linear-gradient(225deg, rgba(99, 102, 241, 1) 0%, rgba(78, 205, 196, 0.95) 100%);
 
   transform: scaleY(1.6) scaleX(1.3) rotate(15deg) translateZ(0);
   box-shadow:
-    0 4px 20px rgba(var(--primary-rgb), 0.6),
-    0 0 16px rgba(var(--accent-rgb), 0.4),
+    0 4px 20px rgba(78, 205, 196, 0.6),
+    0 0 16px rgba(99, 102, 241, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 
   border-radius: 4px;
@@ -842,8 +836,8 @@ defineExpose({
   position: absolute;
   inset: -4px; /* RTL: full coverage glow layer */
   background: radial-gradient(circle,
-    rgba(var(--primary-rgb), 0.15) 0%,
-    rgba(var(--primary-rgb), 0.08) 40%,
+    rgba(78, 205, 196, 0.15) 0%,
+    rgba(78, 205, 196, 0.08) 40%,
     transparent 70%);
   border-radius: var(--radius-md);
   opacity: 0;
@@ -859,8 +853,8 @@ defineExpose({
 .drag-handle--dragging .drag-handle__glow-layer {
   opacity: 1;
   background: radial-gradient(circle,
-    rgba(var(--primary-rgb), 0.25) 0%,
-    rgba(var(--primary-rgb), 0.15) 40%,
+    rgba(78, 205, 196, 0.25) 0%,
+    rgba(78, 205, 196, 0.15) 40%,
     transparent 70%);
   animation: glowPulse 1.5s ease-in-out infinite;
 }
@@ -870,7 +864,7 @@ defineExpose({
   inset: 0; /* RTL: full coverage pulse layer */
   background: linear-gradient(45deg,
     transparent 30%,
-    rgba(var(--primary-rgb), 0.1) 50%,
+    rgba(78, 205, 196, 0.1) 50%,
     transparent 70%);
   border-radius: var(--radius-md);
   opacity: 0;
@@ -891,7 +885,7 @@ defineExpose({
   height: 0;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(var(--primary-rgb), 0.6) 50%,
+    rgba(78, 205, 196, 0.6) 50%,
     transparent 100%);
   opacity: 0;
   transform: translate(-50%, -50%);
@@ -929,7 +923,7 @@ defineExpose({
 
 .drag-handle__indicator {
   position: absolute;
-  background: rgba(var(--primary-rgb), 0.8);
+  background: rgba(78, 205, 196, 0.8);
   border-radius: 1px;
   opacity: 0;
   transform-origin: center;
@@ -955,7 +949,7 @@ defineExpose({
   left: 25%;
   width: 50%;
   height: 50%;
-  border: 1px solid rgba(var(--primary-rgb), 0.6);
+  border: 1px solid rgba(78, 205, 196, 0.6);
   transform: scale(0) rotate(45deg);
   border-radius: var(--radius-sm);
 }
@@ -984,8 +978,8 @@ defineExpose({
   position: absolute;
   inset: 0; /* RTL: full coverage touch feedback */
   background: radial-gradient(circle,
-    rgba(var(--primary-rgb), 0.3) 0%,
-    rgba(var(--primary-rgb), 0.15) 50%,
+    rgba(78, 205, 196, 0.3) 0%,
+    rgba(78, 205, 196, 0.15) 50%,
     transparent 70%);
   border-radius: var(--radius-md);
   opacity: 0;
@@ -1079,37 +1073,37 @@ defineExpose({
   width: 100%;
   height: 100%;
   background:
-    linear-gradient(135deg, var(--glass-bg-strong) 0%, var(--glass-bg-medium) 100%),
-    linear-gradient(225deg, var(--glass-bg-light) 0%, var(--glass-bg-soft) 100%);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.14) 100%),
+    linear-gradient(225deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.06) 100%);
 
-  border: 1px solid var(--glass-border-medium);
-  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: 8px;
 
   box-shadow:
-    var(--shadow-strong),
-    var(--shadow-glow-strong),
-    0 0 40px rgba(var(--primary-rgb), 0.3);
+    0 8px 32px rgba(0, 0, 0, 0.14),
+    0 0 32px rgba(78, 205, 196, 0.35),
+    0 0 40px rgba(78, 205, 196, 0.3);
 
-  backdrop-filter: var(--blur-strong);
+  backdrop-filter: blur(14px);
   transform: scale(1.1);
 }
 
 .drag-handle__ghost-dots {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   align-items: center;
   justify-content: center;
   gap: 3px;
   height: 100%;
-  padding: 12px 0;
+  padding: 12px;
 }
 
 .drag-handle__ghost-dot {
   width: 4px;
   height: 4px;
   background:
-    linear-gradient(135deg, rgba(var(--primary-rgb), 0.9) 0%, rgba(var(--primary-light-rgb), 0.8) 100%),
-    linear-gradient(225deg, rgba(var(--primary-rgb), 1) 0%, rgba(var(--primary-light-rgb), 0.9) 100%);
+    linear-gradient(135deg, rgba(78, 205, 196, 0.9) 0%, rgba(147, 197, 253, 0.8) 100%),
+    linear-gradient(225deg, rgba(78, 205, 196, 1) 0%, rgba(147, 197, 253, 0.9) 100%);
 
   border-radius: 2px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);

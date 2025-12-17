@@ -49,7 +49,10 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         setInterval: 'readonly',
-        clearInterval: 'readonly'
+        clearInterval: 'readonly',
+        NodeJS: 'readonly',
+        require: 'readonly',
+        module: 'readonly'
       }
     },
     settings: {
@@ -208,10 +211,23 @@ export default [
       'build/**',
       'coverage/**',
       '.nyc_output/**',
-      '*.d.ts',
+      '**/*.d.ts',
       'vite.config.*',
       'vitest.config.*',
-      'eslint.config.*'
+      'eslint.config.*',
+      // Excluded from tsconfig - causes parsing errors
+      'src/stories/**',
+      'src/composables/adapters/**',
+      'src/sync/**',
+      'src/utils/emojiDetection.ts',
+      'src/utils/logger.ts',
+      'src/utils/errorHandler.ts',
+      'src/utils/performanceTest.ts',
+      'src/utils/testDataGenerator.ts',
+      'src/utils/recurrenceUtils.ts',
+      'src/utils/consoleFilter.ts',
+      // CommonJS files - not ES modules
+      'src/**/*.cjs'
     ]
   },
   // File-specific overrides

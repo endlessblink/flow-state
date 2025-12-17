@@ -1,5 +1,6 @@
 <template>
   <article
+    ref="taskCardRef"
     class="task-card"
     :class="[
       { 'collapsed': progressiveDisclosureEnabled && !isExpanded },
@@ -13,7 +14,6 @@
     :aria-label="taskAriaLabel"
     :aria-describedby="`task-meta-${task.id}`"
     :aria-pressed="isPressed"
-    ref="taskCardRef"
     :aria-expanded="progressiveDisclosureEnabled ? isExpanded : undefined"
     :aria-disabled="disabled"
     draggable="true"

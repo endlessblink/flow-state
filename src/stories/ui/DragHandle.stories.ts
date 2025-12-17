@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
+import { ref } from 'vue'
 import DragHandle from '@/components/DragHandle.vue'
 
 const meta = {

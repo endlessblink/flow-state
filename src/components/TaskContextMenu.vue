@@ -481,17 +481,19 @@ const setDueDate = async (dateType: string) => {
       dueDate = new Date(today)
       dueDate.setDate(today.getDate() + 1)
       break
-    case 'weekend':
+    case 'weekend': {
       dueDate = new Date(today)
       const daysUntilSaturday = (6 - today.getDay()) % 7 || 7
       dueDate.setDate(today.getDate() + daysUntilSaturday)
       break
-    case 'nextweek':
+    }
+    case 'nextweek': {
       dueDate = new Date(today)
       const daysUntilNextMonday = (8 - today.getDay()) % 7 || 7
       dueDate.setDate(today.getDate() + daysUntilNextMonday)
       break
-    case 'custom':
+    }
+    case 'custom': {
       const currentDate = currentTask.value.dueDate
       const newDate = prompt('Set due date (MM/DD/YYYY):', currentDate)
       if (newDate && newDate !== currentDate) {
@@ -505,6 +507,7 @@ const setDueDate = async (dateType: string) => {
       }
       emit('close')
       return
+    }
     default:
       return
   }

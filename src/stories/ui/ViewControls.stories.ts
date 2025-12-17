@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import ViewControls from '@/components/ViewControls.vue'
 
 const meta = {
@@ -101,7 +101,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); max-width: 800px;">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); max-width: 800px; overflow: visible;">
         <ViewControls
           :view-type="viewType"
           :density="density"
@@ -173,7 +173,7 @@ export const ListViewMode: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); max-width: 800px;">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); max-width: 800px; overflow: visible;">
         <div style="margin-bottom: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
           <h4 style="margin: 0 0 8px 0; font-size: 16px; color: var(--text-primary);">List View Mode</h4>
           <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
@@ -223,7 +223,7 @@ export const DensityVariations: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); overflow: visible;">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Density Variations</h3>
 
         <div style="display: grid; gap: 24px;">
@@ -240,8 +240,9 @@ export const DensityVariations: Story = {
                   borderRadius: '4px',
                   fontSize: '12px',
                   fontWeight: '500',
-                  background: currentDensity === option.value ? 'var(--color-primary)' : 'var(--surface-tertiary)',
-                  color: currentDensity === option.value ? 'white' : 'var(--text-secondary)'
+                  background: 'transparent',
+                  border: currentDensity === option.value ? '1px solid var(--brand-primary)' : '1px solid var(--glass-border)',
+                  color: currentDensity === option.value ? 'var(--brand-primary)' : 'var(--text-secondary)'
                 }"
               >
                 {{ option.value }}
@@ -382,7 +383,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); overflow: visible;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Interactive View Controls Demo</h3>
 
         <div style="margin-bottom: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
@@ -517,7 +518,7 @@ export const AllControlsShowcase: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); overflow: visible;">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">All Controls Showcase</h3>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">

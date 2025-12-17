@@ -115,6 +115,16 @@
 
         <!-- Slots Container - Tasks render INSIDE slots (no absolute positioning) -->
         <div ref="timeGridRef" class="slots-container">
+          <!-- Current Time Indicator (only shown when viewing today in day view) -->
+          <div
+            v-if="isViewingToday && viewMode === 'day'"
+            class="current-time-indicator"
+            :style="{ top: `${timeIndicatorPosition}px` }"
+          >
+            <div class="time-indicator-dot" />
+            <div class="time-indicator-line" />
+          </div>
+
           <!-- Ghost Preview (only shown during inbox drag) - absolute positioning for smooth tracking -->
           <div
             v-if="dragGhost.visible"
@@ -615,6 +625,20 @@ const { setupScrollSync, cleanupScrollSync, scrollToCurrentTime } = calendarScro
 
 // Wrapper for isCurrentTimeSlot that passes current time
 const isCurrentTimeSlot = (slot: any) => checkCurrentTimeSlot(slot, currentTime.value)
+
+// Time indicator computeds
+const isViewingToday = computed(() => {
+  const today = new Date()
+  return currentDate.value.toDateString() === today.toDateString()
+})
+
+const timeIndicatorPosition = computed(() => {
+  // Calculate position in pixels from top of slots container
+  // Each 30-minute slot is 30px, so 1 minute = 1px
+  const hours = currentTime.value.getHours()
+  const minutes = currentTime.value.getMinutes()
+  return (hours * 60) + minutes
+})
 
 // Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
 const getSlotTaskStyle = (calEvent: any) => {
@@ -1485,6 +1509,36 @@ const _handleToggleDoneTasks = (_event: MouseEvent) => {
 .slots-container {
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
+}
+
+/* Current Time Indicator - shows "now" line like Google Calendar */
+.current-time-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.time-indicator-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  box-shadow: 0 0 8px var(--color-danger),
+              0 0 16px rgba(239, 68, 68, 0.4);
+  flex-shrink: 0;
+  margin-left: -6px;
+}
+
+.time-indicator-line {
+  flex: 1;
+  height: 2px;
+  background: var(--color-danger);
+  box-shadow: 0 0 4px var(--color-danger),
+              0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Slot tasks - position relative within time-slots, overflow visible */

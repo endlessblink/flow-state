@@ -14,6 +14,40 @@ Activate this skill when:
 - Writing new TypeScript interfaces, types, or generics
 - Working with Vue 3 + TypeScript patterns
 
+## Finding TypeScript Errors
+
+**CRITICAL**: `npm run build` does NOT catch all TypeScript errors! Vite only transpiles, it doesn't type-check.
+
+### Commands to Find Errors
+
+```bash
+# Vue projects - ALWAYS run this to find TS errors
+npm run type-check:watch
+
+# Or one-time check
+npx vue-tsc --noEmit
+
+# Non-Vue TypeScript projects
+npx tsc --noEmit
+
+# Check specific file
+npx vue-tsc --noEmit src/path/to/file.vue
+```
+
+### Verification Workflow
+
+1. **Before claiming code works**: Run `npm run type-check:watch`
+2. **After fixing errors**: Run again to verify all resolved
+3. **Before committing**: Ensure zero TypeScript errors
+
+### Common Gotcha
+
+| Command | What it checks |
+|---------|----------------|
+| `npm run build` | Syntax only (Vite transpiles) - **NOT SUFFICIENT** |
+| `npm run type-check:watch` | Full type checking (vue-tsc) - **USE THIS** |
+| `npm run lint` | ESLint rules (separate from TS errors) |
+
 ## Fix Type Errors
 
 ### TS2322: Type 'X' is not assignable to type 'Y'

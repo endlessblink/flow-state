@@ -232,6 +232,23 @@
 
 ---
 
+### TASK-015: Intelligent Task Status Analysis for Dev-Manager
+
+**Goal**: Dev-manager should analyze task content semantically, not just pattern match status text.
+
+**Priority**: P2-MEDIUM
+
+**Why Important**: Current status parser is brittle (e.g., "NEAR COMPLETE" matched as "done"). Need smarter analysis.
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Read subtask completion ratios to determine true status | PENDING |
+| 2 | Analyze content semantics (not just regex patterns) | PENDING |
+| 3 | Use Claude Code instance for intelligent understanding | PENDING |
+| 4 | Show accurate progress % based on actual subtask data | PENDING |
+
+---
+
 ### TASK-012: Expand CI Tests
 
 **Goal**: Add lint + unit tests to GitHub Actions after lint cleanup.

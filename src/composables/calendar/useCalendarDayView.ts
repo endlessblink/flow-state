@@ -586,7 +586,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     document.addEventListener('mouseup', handleMouseUp)
   }
 
-  const handleEventMouseDown = (event: MouseEvent, calendarEvent: CalendarEvent) => {
+  const handleEventMouseDown = (event: MouseEvent, _calendarEvent: CalendarEvent) => {
     // Only handle mouse down for resize handles, let HTML5 drag handle dragging
     // Don't interfere with dragstart events
     if (event.shiftKey) {

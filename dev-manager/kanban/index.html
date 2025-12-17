@@ -652,8 +652,19 @@
     .task-full-description {
       font-size: 0.8rem;
       color: #94a3b8;
-      line-height: 1.4;
-      margin-bottom: 0.5rem;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+    .task-full-description::-webkit-scrollbar {
+      width: 4px;
+    }
+    .task-full-description::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 2px;
     }
 
     .task-subtasks {
@@ -1254,6 +1265,28 @@
             continue;
           }
 
+          // Capture description content (Goal, Priority, Design Reference, etc.)
+          // Lines that are NOT bullets, tables, or headers go into description
+          if ((currentSection === 'activeWork' || currentSection === 'archive') && currentItem && trimmed) {
+            const isBullet = trimmed.startsWith('- ');
+            const isTable = trimmed.startsWith('|');
+            const isHeader = trimmed.startsWith('###') || trimmed.startsWith('##');
+            const isHorizontalRule = trimmed === '---';
+            const isComment = trimmed.startsWith('<!--');
+
+            // Capture description text (Goal, Priority, Design Reference, etc.)
+            if (!isBullet && !isTable && !isHeader && !isHorizontalRule && !isComment) {
+              const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
+              if (taskIdx >= 0) {
+                if (data.activeWork[taskIdx].description) {
+                  data.activeWork[taskIdx].description += '\n' + trimmed;
+                } else {
+                  data.activeWork[taskIdx].description = trimmed;
+                }
+              }
+            }
+          }
+
           // Parse ALL bullet points under TASK headers as subtasks
           // Every subtask fills the main task progress bar
           if ((currentSection === 'activeWork' || currentSection === 'archive') && currentItem && trimmed.startsWith('- ')) {
@@ -1541,8 +1574,9 @@
                             (task.status === 'done' ? 100 : task.status === 'in-progress' ? 50 : 0);
             const progressClass = getProgressClass(progress);
 
-            // Description from notes
-            const description = task.notes || task.description || '';
+            // Short description from notes only (not full description)
+            // Full description shows in expanded section
+            const description = task.notes || '';
 
             // Get expand state from localStorage
             const isExpanded = getExpandState(task.id);
@@ -1559,18 +1593,18 @@
                     const isCompleted = st.includes('[x]') || st.includes('✅') ||
                                        st.includes('~~') || st.toLowerCase().includes('done') ||
                                        st.includes('✓');
-                    const text = st.replace(/\[x\]|\[\s?\]|~~|✅|✓/gi, '').trim();
-                    return `<div class="subtask ${isCompleted ? 'completed' : ''}">${isCompleted ? '✓' : '○'} ${text}</div>`;
+                    const text = st.replace(/\[x\]|\[\s?\]|✅|✓/gi, '').trim();
+                    return `<div class="subtask ${isCompleted ? 'completed' : ''}">${isCompleted ? '✓' : '○'} ${renderMarkdown(text)}</div>`;
                   }).join('')}
                 </div>
               `;
             }
 
-            // Build expanded section HTML
+            // Build expanded section HTML with markdown rendering
             const fullDescription = task.description || '';
             const expandedHtml = (fullDescription || hasSubtasks) ? `
               <div class="task-expanded" style="display: ${isExpanded ? 'block' : 'none'}">
-                ${fullDescription ? `<div class="task-full-description">${fullDescription}</div>` : ''}
+                ${fullDescription ? `<div class="task-full-description">${renderMarkdown(fullDescription)}</div>` : ''}
                 ${subtasksHtml}
               </div>
             ` : '';
@@ -2655,6 +2689,17 @@
         toast.style.transform = 'translateX(100%)';
         setTimeout(() => toast.remove(), 300);
       }, 3000);
+    }
+
+    // Simple markdown to HTML converter
+    function renderMarkdown(text) {
+      if (!text) return '';
+      return text
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')  // **bold**
+        .replace(/`([^`]+)`/g, '<code style="background:#1e293b;padding:1px 4px;border-radius:3px;font-size:0.75rem;">$1</code>')  // `code`
+        .replace(/\[x\]/gi, '✅')  // [x] checkbox
+        .replace(/\[\s?\]/g, '☐')  // [ ] checkbox
+        .replace(/~~(.+?)~~/g, '<s style="opacity:0.6">$1</s>');  // ~~strikethrough~~
     }
 
     // Expandable task card functions

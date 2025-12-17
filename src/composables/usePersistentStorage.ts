@@ -5,7 +5,7 @@
  * Prevents data loss through redundant storage across multiple locations
  */
 
-import { ref, watch } from 'vue'
+import { ref, watch as _watch } from 'vue'
 
 // Storage priority order (most reliable first)
 const STORAGE_LAYERS = {
@@ -243,14 +243,14 @@ class PersistentStorage {
   /**
    * File system operations (download backup files) - DISABLED to prevent spam
    */
-  private async saveToFileSystem(key: string, data: string): Promise<boolean> {
+  private async saveToFileSystem(_key: string, _data: string): Promise<boolean> {
     // File system downloads disabled to prevent automatic file spam
     // Users can manually export backups using the UI component
     console.log('📁 File system download disabled - use manual export via UI')
     return true // Return true to indicate layer is available but not auto-downloading
   }
 
-  private async loadFromFileSystem(key: string): Promise<string | null> {
+  private async loadFromFileSystem(_key: string): Promise<string | null> {
     // File system loading would require user interaction (file input)
     // This is handled by the recovery tool
     return null
@@ -318,7 +318,7 @@ class PersistentStorage {
             const parsed = JSON.parse(data)
             backups.push(parsed)
           }
-        } catch (error) {
+        } catch (_error) {
           console.warn('Invalid backup found:', key)
         }
       }

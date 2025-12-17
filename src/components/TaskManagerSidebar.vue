@@ -220,7 +220,7 @@ import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import {
   ListTodo, Plus, Search, Clock, Flag, Timer, Calendar,
-  Edit, Inbox, ChevronRight, Check, Play
+  Edit, Inbox as _Inbox, ChevronRight, Check as _Check, Play
 } from 'lucide-vue-next'
 
 defineEmits<{
@@ -230,7 +230,7 @@ defineEmits<{
 }>()
 const route = useRoute()
 // Status filters now shown consistently across all views (including canvas)
-const hideStatusFilters = computed(() => false)
+const _hideStatusFilters = computed(() => false)
 
 const taskStore = useTaskStore()
 const router = useRouter()
@@ -261,7 +261,7 @@ const toggleTaskExpand = (taskId: string) => {
   }
 }
 
-const filters = [
+const _filters = [
   { key: 'all', label: 'All' },
   { key: 'unscheduled', label: 'Unscheduled' },
   { key: 'scheduled', label: 'Scheduled' }

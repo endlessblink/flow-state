@@ -66,7 +66,7 @@ const inputId = computed(() => props.id || `input-${Math.random().toString(36).s
 const slots = useSlots()
 
 // Hebrew alignment support
-const { shouldAlignRight, getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
+const { shouldAlignRight: _shouldAlignRight, getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
 
 const localValue = computed({
   get: () => props.modelValue,
@@ -75,7 +75,7 @@ const localValue = computed({
 
 // Computed properties for Hebrew text alignment
 const inputText = computed(() => String(localValue.value || ''))
-const hasHebrew = computed(() => shouldAlignRight(inputText.value))
+const _hasHebrew = computed(() => _shouldAlignRight(inputText.value))
 const alignmentClasses = computed(() => getAlignmentClasses(inputText.value))
 const alignmentStyles = computed(() => applyInputAlignment(inputText.value))
 

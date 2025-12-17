@@ -3,7 +3,7 @@
  * Detects and reports memory leaks in the Pomo-Flow application
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted as _onMounted, onUnmounted as _onUnmounted } from 'vue'
 
 export interface MemorySnapshot {
   timestamp: number
@@ -210,7 +210,7 @@ export class MemoryLeakDetector {
   }
 
   // Check for suspicious memory growth
-  private checkForSuspiciousGrowth(currentSnapshot: MemorySnapshot): void {
+  private checkForSuspiciousGrowth(_currentSnapshot: MemorySnapshot): void {
     if (!this.baselineMemory || this.snapshots.length < 5) return
 
     const recentSnapshots = this.snapshots.slice(-5)

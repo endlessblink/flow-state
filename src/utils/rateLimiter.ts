@@ -3,7 +3,7 @@
  * Comprehensive rate limiting and DDoS protection
  */
 
-import { ref } from 'vue'
+import { ref as _ref } from 'vue'
 
 export interface RateLimitConfig {
   windowMs: number // Time window in milliseconds

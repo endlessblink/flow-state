@@ -1,4 +1,4 @@
-import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import { ref, computed, type Ref as _Ref, type ComputedRef as _ComputedRef } from 'vue'
 
 type ViewMode = 'day' | 'week' | 'month'
 

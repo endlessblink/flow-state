@@ -3,7 +3,7 @@
  * Creates comprehensive, cryptographically verifiable reports
  */
 
-import { ForensicLogger, AuditEvent, BackupSnapshot } from './forensicBackupLogger'
+import { ForensicLogger, AuditEvent as _AuditEvent, BackupSnapshot as _BackupSnapshot } from './forensicBackupLogger'
 import { filterMockTasks } from './mockTaskDetector'
 
 export interface VerificationReport {
@@ -618,7 +618,7 @@ export class VerificationReportGenerator {
           taskStore.getAll().onerror = () => resolve([])
         }
         request.onerror = () => resolve([])
-      } catch (error) {
+      } catch (_error) {
         resolve([])
       }
     })
@@ -669,7 +669,7 @@ export class VerificationReportGenerator {
 
     <div class="section">
       <h2>Test Results</h2>
-      ${Object.entries(report.testResults).map(([key, test]) => `
+      ${Object.entries(report.testResults).map(([_key, test]) => `
         <p>${test.name}: <span class="${test.status === 'PASS' ? 'pass' : 'fail'}">${test.status}</span></p>
       `).join('')}
     </div>
@@ -716,7 +716,7 @@ export class VerificationReportGenerator {
     return [headers, ...rows].map(row => row.join(',')).join('\n')
   }
 
-  private static generatePDFReport(report: VerificationReport): string {
+  private static generatePDFReport(_report: VerificationReport): string {
     // Would need a PDF library like jsPDF
     return 'PDF generation not implemented'
   }

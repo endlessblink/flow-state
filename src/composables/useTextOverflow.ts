@@ -7,7 +7,7 @@
 
 import { ref, computed, watch, nextTick, type Ref } from 'vue'
 
-export function useTextOverflow(elementRef?: Ref<HTMLElement | null>, textRef?: Ref<string>) {
+export function useTextOverflow(elementRef?: Ref<HTMLElement | null>, _textRef?: Ref<string>) {
   const isOverflowing = ref(false)
   const showTooltip = ref(false)
   let tooltipTimeout: number | null = null

@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, type Ref as _Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
@@ -405,7 +405,7 @@ export function useCalendarDrag() {
   /**
    * Handle drop on day cell (month view)
    */
-  const handleDayDrop = async (task: any, target: DropTarget, dragData: any) => {
+  const handleDayDrop = async (task: any, target: DropTarget, _dragData: any) => {
     // Keep existing time or default to 9 AM
     const scheduledTime = task.scheduledTime || '09:00'
 
@@ -435,7 +435,7 @@ export function useCalendarDrag() {
   /**
    * Handle drop on week grid (complex positioning)
    */
-  const handleWeekGridDrop = async (task: any, target: DropTarget, dragData: any) => {
+  const handleWeekGridDrop = async (task: any, target: DropTarget, _dragData: any) => {
     if (target.dayIndex === undefined || target.slotIndex === undefined) return
 
     const WORKING_HOURS_OFFSET = 6

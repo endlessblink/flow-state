@@ -13,7 +13,7 @@
  * - Works in both LTR and RTL document modes
  */
 
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref as _ref, type Ref } from 'vue'
 
 export function useHebrewAlignment() {
   // Hebrew Unicode range detection

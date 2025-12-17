@@ -245,7 +245,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import {
   ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock,
-  Target, Calendar as CalendarIcon, Clipboard, Folder, Trash2, X
+  Target as _Target, Calendar as _CalendarIcon, Clipboard as _Clipboard, Folder as _Folder, Trash2, X
 } from 'lucide-vue-next'
 import BaseBadge from './BaseBadge.vue'
 import ProjectEmojiIcon from './ProjectEmojiIcon.vue'

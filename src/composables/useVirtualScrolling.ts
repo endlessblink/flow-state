@@ -3,7 +3,7 @@
  * Provides high-performance virtual scrolling with dynamic item heights
  */
 
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted as _onMounted, onUnmounted, nextTick as _nextTick } from 'vue'
 import { useVirtualList, useThrottleFn, useResizeObserver } from '@vueuse/core'
 
 export interface VirtualItem {

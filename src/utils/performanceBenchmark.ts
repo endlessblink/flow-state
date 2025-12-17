@@ -3,7 +3,7 @@
  * Comprehensive performance testing and validation for the Pomo-Flow application
  */
 
-import { ref, computed } from 'vue'
+import { ref, computed as _computed } from 'vue'
 import { usePerformanceManager } from '@/composables/usePerformanceManager'
 import { useVirtualScrolling } from '@/composables/useVirtualScrolling'
 import { useNetworkOptimizer } from '@/composables/useNetworkOptimizer'
@@ -393,7 +393,7 @@ export class PerformanceBenchmark {
             // Simulate bundle size calculation
             // In a real app, you'd fetch and calculate actual sizes
             totalSize += Math.random() * 100000 // Simulated size
-          } catch (error) {
+          } catch (_error) {
             errors.push(`Failed to calculate bundle size for ${src}`)
           }
         }
@@ -450,7 +450,7 @@ export class PerformanceBenchmark {
   }
 
   // Simulation functions
-  private async simulateTaskCreate(task: any): Promise<void> {
+  private async simulateTaskCreate(_task: any): Promise<void> {
     // Simulate database operation
     await new Promise(resolve => setTimeout(resolve, Math.random() * 10))
   }
@@ -461,12 +461,12 @@ export class PerformanceBenchmark {
     return { id, title: `Task ${id}` }
   }
 
-  private async simulateTaskUpdate(task: any): Promise<void> {
+  private async simulateTaskUpdate(_task: any): Promise<void> {
     // Simulate database operation
     await new Promise(resolve => setTimeout(resolve, Math.random() * 8))
   }
 
-  private async simulateTaskDelete(id: string): Promise<void> {
+  private async simulateTaskDelete(_id: string): Promise<void> {
     // Simulate database operation
     await new Promise(resolve => setTimeout(resolve, Math.random() * 3))
   }

@@ -8,7 +8,7 @@
  * @since 2025-12-03
  */
 
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch as _watch, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
@@ -115,7 +115,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
   // Dependencies
   const taskStore = useTaskStore()
-  const canvasStore = useCanvasStore()
+  const _canvasStore = useCanvasStore()
   const db = useDatabase()
 
   // State

@@ -3,7 +3,7 @@
  * Comprehensive security headers implementation with XSS protection and secure cookie handling
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref as _ref, onMounted, onUnmounted } from 'vue'
 
 export interface SecurityHeaderConfig {
   // XSS Protection

@@ -84,7 +84,7 @@ interface Props {
 defineProps<Props>()
 
 // Use explicit function signature to avoid emit type inference issues
-const emit = defineEmits<{
+const _emit = defineEmits<{
   (e: 'update:viewType', value: ViewType): void
   (e: 'update:density', value: DensityType): void
   (e: 'update:sortBy', value: string): void

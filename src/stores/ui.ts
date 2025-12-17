@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch, computed } from 'vue'
+import { ref, watch as _watch, computed } from 'vue'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // Temporarily remove i18n to fix setup function error
 // import { useI18n } from 'vue-i18n'

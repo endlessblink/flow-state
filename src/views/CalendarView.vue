@@ -513,7 +513,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick as _nextTick, watch } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
@@ -530,8 +530,8 @@ import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import QuickTaskCreate from '@/components/QuickTaskCreate.vue'
 import ProjectFilterDropdown from '@/components/ProjectFilterDropdown.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
-import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, ListTodo, Play, Check, Video, VideoOff, Download } from 'lucide-vue-next'
-import { dragRecorder, type InteractionAnalysis } from '@/utils/DragInteractionRecorder'
+import { ChevronLeft, ChevronRight, Calendar, Eye as _Eye, EyeOff as _EyeOff, ListTodo as _ListTodo, Play as _Play, Check as _Check, Video as _Video, VideoOff as _VideoOff, Download as _Download } from 'lucide-vue-next'
+import { dragRecorder as _dragRecorder, type InteractionAnalysis } from '@/utils/DragInteractionRecorder'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
@@ -545,13 +545,13 @@ const statusFilter = computed(() => taskStore.activeStatusFilter)
 const timeGridRef = ref<HTMLElement | null>(null)
 
 // Recording state
-const isRecording = ref(false)
-const recordingStatus = ref({ duration: 0, eventsCaptured: 0 })
-const lastAnalysis = ref<InteractionAnalysis | null>(null)
-const showRecordingPanel = ref(false)
+const _isRecording = ref(false)
+const _recordingStatus = ref({ duration: 0, eventsCaptured: 0 })
+const _lastAnalysis = ref<InteractionAnalysis | null>(null)
+const _showRecordingPanel = ref(false)
 
 // Status filter change handler using global TaskStore
-const handleStatusFilterChange = (_event: MouseEvent, newFilter: 'planned' | 'in_progress' | 'done' | null) => {
+const _handleStatusFilterChange = (_event: MouseEvent, newFilter: 'planned' | 'in_progress' | 'done' | null) => {
   taskStore.setActiveStatusFilter(newFilter)
 }
 
@@ -596,18 +596,18 @@ const handleSlotTaskMouseLeave = () => {
 }
 
 // Destructure commonly used items from composables
-const { hours, timeSlots, calendarEvents, dragGhost, dragMode, getEventStyle, getGhostStyle,
+const { hours, timeSlots, calendarEvents: _calendarEvents, dragGhost, dragMode: _dragMode, getEventStyle: _getEventStyle, getGhostStyle: _getGhostStyle,
         isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd,
-        handleEventMouseDown, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot } = dayView
+        handleEventMouseDown: _handleEventMouseDown, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot } = dayView
 
-const { workingHours, weekDays, weekEvents, getWeekEventStyle, handleWeekEventMouseDown,
+const { workingHours, weekDays, weekEvents, getWeekEventStyle, handleWeekEventMouseDown: _handleWeekEventMouseDown,
         handleWeekDragOver, handleWeekDrop, startWeekResize, isCurrentWeekTimeCell } = weekView
 
 const { monthDays, handleMonthDragStart, handleMonthDrop, handleMonthDragEnd, handleMonthDayClick: monthDayClickHandler } = monthView
 
 const { formatHour, formatEventTime, getPriorityClass, getPriorityLabel,
         getTaskStatus, getStatusLabel, getStatusIcon, cycleTaskStatus,
-        getProjectColor, getProjectEmoji, getProjectName, getProjectVisual,
+        getProjectColor, getProjectEmoji: _getProjectEmoji, getProjectName, getProjectVisual,
         formatSlotTime, isCurrentTimeSlot: checkCurrentTimeSlot, getWeekStart } = eventHelpers
 
 // Destructure scroll composable
@@ -651,7 +651,7 @@ const getSlotTaskStyle = (calEvent: any) => {
 // This provides an alternative to native HTML5 drag-drop for better mobile support
 const timeGridDropList = ref<any[]>([])
 
-const handleVueDraggableAdd = (evt: any) => {
+const _handleVueDraggableAdd = (evt: any) => {
   // When a task is dropped via vuedraggable, schedule it to the drop time
   const droppedElement = evt.item
   const taskId = droppedElement?.dataset?.taskId
@@ -677,7 +677,7 @@ const handleVueDraggableAdd = (evt: any) => {
   timeGridDropList.value = []
 }
 
-const handleVueDraggableChange = (evt: any) => {
+const _handleVueDraggableChange = (evt: any) => {
   // Optional: handle change events for debugging
   console.log('[Calendar] vuedraggable change:', evt)
 }
@@ -857,7 +857,7 @@ watch(viewMode, (newMode) => {
   }
 })
 
-watch(currentDate, (newDate, oldDate) => {
+watch(currentDate, (newDate, _oldDate) => {
   if (viewMode.value === 'day') {
     // Check if it's today's date
     const today = new Date()
@@ -921,7 +921,7 @@ const goToToday = () => {
   setTimeout(() => scrollToCurrentTime(), 100)
 }
 
-const handleAddTask = () => {
+const _handleAddTask = () => {
   // Open QuickTaskCreate modal instead of creating a hardcoded task
   const now = new Date()
   const dateStr = currentDate.value.toISOString().split('T')[0]
@@ -933,7 +933,7 @@ const handleAddTask = () => {
   dragCreate.showQuickCreateModal.value = true
 }
 
-const handleStartTimer = (taskId: string) => {
+const _handleStartTimer = (taskId: string) => {
   timerStore.startTimer(taskId)
 }
 
@@ -1135,7 +1135,7 @@ const handleMonthDayClick = (dateString: string) => {
 }
 
 // Toggle hide done tasks
-const handleToggleDoneTasks = (_event: MouseEvent) => {
+const _handleToggleDoneTasks = (_event: MouseEvent) => {
   taskStore.toggleHideDoneTasks()
 }
 </script>

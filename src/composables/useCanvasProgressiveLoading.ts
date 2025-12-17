@@ -155,7 +155,7 @@ export function useCanvasProgressiveLoading(
 
   // Background loading
   const backgroundLoader = ref<Worker | null>(null)
-  const isLoadingInBackground = ref(false)
+  const _isLoadingInBackground = ref(false)
 
   // Predictive loading
   const lastViewportPosition = ref({ x: 0, y: 0 })
@@ -286,7 +286,7 @@ export function useCanvasProgressiveLoading(
     }
 
     // Add edge batches to the main batch list
-    edgeBatches.forEach((edgeBatch, index) => {
+    edgeBatches.forEach((edgeBatch, _index) => {
       batches.push({
         nodes: [],
         edges: edgeBatch,
@@ -540,7 +540,7 @@ export function useCanvasProgressiveLoading(
       backgroundLoader.value = new Worker(workerUrl)
 
       backgroundLoader.value.addEventListener('message', (e) => {
-        const { batchId, processedNodes, processedEdges } = e.data
+        const { batchId: _batchId, processedNodes: _processedNodes, processedEdges: _processedEdges } = e.data
         // Handle processed data from background worker
       })
 

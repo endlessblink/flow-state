@@ -4,7 +4,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
-import type { Task, TaskInstance, Subtask, Project } from '@/types/tasks'
+import type { Task, TaskInstance as _TaskInstance, Subtask as _Subtask, Project } from '@/types/tasks'
 
 export const useTaskCoreStore = defineStore('taskCore', () => {
   // State

@@ -3,7 +3,7 @@
  * Comprehensive input sanitization, validation, and XSS prevention
  */
 
-import { ref } from 'vue'
+import { ref as _ref } from 'vue'
 
 export interface ValidationRule {
   name: string

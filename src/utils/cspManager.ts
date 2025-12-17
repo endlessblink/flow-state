@@ -3,8 +3,8 @@
  * Advanced CSP implementation with Vue 3 optimization and violation reporting
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
-import type { SecurityHeaderConfig, CSPViolationReport } from './securityHeaders'
+import { ref as _ref, onMounted, onUnmounted } from 'vue'
+import type { SecurityHeaderConfig as _SecurityHeaderConfig, CSPViolationReport } from './securityHeaders'
 
 export interface CSPConfig {
   development: {

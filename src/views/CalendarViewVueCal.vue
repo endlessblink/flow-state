@@ -40,7 +40,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 
 const taskStore = useTaskStore()
-const timerStore = useTimerStore()
+const _timerStore = useTimerStore()
 
 // Convert Pinia tasks to vue-cal event format
 const vueCalEvents = computed(() => {
@@ -50,7 +50,7 @@ const vueCalEvents = computed(() => {
   taskStore.filteredTasks
     .filter(task => task.scheduledDate && task.scheduledTime && !task.recurrence?.isEnabled)
     .forEach(task => {
-      const [hour, minute] = task.scheduledTime!.split(':').map(Number)
+      const [_hour, _minute] = task.scheduledTime!.split(':').map(Number)
       const start = new Date(`${task.scheduledDate}T${task.scheduledTime}`)
       const duration = task.estimatedDuration || 30
       const end = new Date(start.getTime() + duration * 60000)
@@ -74,7 +74,7 @@ const vueCalEvents = computed(() => {
       task.recurrence?.generatedInstances
         ?.filter(instance => !instance.isSkipped && instance.scheduledDate && instance.scheduledTime)
         ?.forEach(instance => {
-          const [hour, minute] = instance.scheduledTime!.split(':').map(Number)
+          const [_hour2, _minute2] = instance.scheduledTime!.split(':').map(Number)
           const start = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
           const duration = instance.duration || task.estimatedDuration || 30
           const end = new Date(start.getTime() + duration * 60000)
@@ -98,7 +98,7 @@ const vueCalEvents = computed(() => {
   return events
 })
 
-const getPriorityColor = (priority: string) => {
+const _getPriorityColor = (priority: string) => {
   switch (priority) {
     case 'high': return 'var(--color-priority-high)'
     case 'low': return 'var(--color-priority-low)'
@@ -107,7 +107,7 @@ const getPriorityColor = (priority: string) => {
 }
 
 // Event handlers
-const handleEventDragDrop = (event: any, originalEvent: any) => {
+const handleEventDragDrop = (event: any, _originalEvent: any) => {
   console.log('Event dropped:', event)
 
   const newStart = new Date(event.start)
@@ -142,7 +142,7 @@ const handleEventDragDrop = (event: any, originalEvent: any) => {
   }
 }
 
-const handleEventResize = (event: any, originalEvent: any) => {
+const handleEventResize = (event: any, _originalEvent: any) => {
   console.log('Event resized:', event)
 
   const start = new Date(event.start)
@@ -154,7 +154,7 @@ const handleEventResize = (event: any, originalEvent: any) => {
   })
 }
 
-const handleEventDblClick = (event: any, e: MouseEvent) => {
+const handleEventDblClick = (event: any, _e: MouseEvent) => {
   console.log('Event double-clicked:', event)
   window.dispatchEvent(new CustomEvent('open-task-edit', {
     detail: { taskId: event.id }

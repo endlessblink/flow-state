@@ -1,7 +1,7 @@
 // Performance Monitoring Composable
 // Tracks application performance metrics and provides optimization suggestions
 
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted as _onMounted, onUnmounted } from 'vue'
 
 interface PerformanceMetrics {
   renderTime: number
@@ -304,7 +304,7 @@ export const usePerformanceMonitor = () => {
     results.memoryTest = performance.now() - memoryStart
 
     // Calculate overall score
-    const maxScore = 1000 // 1 second max for each test
+    const _maxScore = 1000 // 1 second max for each test
     results.overallScore = Math.max(0, 300 - (results.renderTest + results.stateUpdateTest + results.memoryTest))
 
     console.log('📊 Benchmark results:', results)

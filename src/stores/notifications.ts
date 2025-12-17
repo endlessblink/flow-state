@@ -10,7 +10,7 @@ import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler
 import type {
   ScheduledNotification,
   NotificationPreferences,
-  RecurringTaskInstance
+  RecurringTaskInstance as _RecurringTaskInstance
 } from '@/types/recurrence'
 import { useTaskStore } from './tasks'
 
@@ -364,7 +364,7 @@ export const useNotificationStore = defineStore('notifications', () => {
   /**
    * Get reminder message based on time before task
    */
-  const getReminderMessage = (minutesBefore: number, dueDate: string, dueTime?: string): string => {
+  const getReminderMessage = (minutesBefore: number, _dueDate: string, _dueTime?: string): string => {
     if (minutesBefore < 60) {
       return `Task due in ${minutesBefore} minute${minutesBefore > 1 ? 's' : ''}`
     } else if (minutesBefore < 1440) {

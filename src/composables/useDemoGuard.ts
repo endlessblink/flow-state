@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref as _ref } from 'vue'
 
 export function useDemoGuard() {
   const isProduction = import.meta.env.PROD

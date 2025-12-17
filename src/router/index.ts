@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
+import type { RouteLocationNormalized as _RouteLocationNormalized, NavigationGuardNext as _NavigationGuardNext } from 'vue-router'
 import { useLocalAuthStore } from '@/stores/local-auth'
 
 const router = createRouter({
@@ -77,7 +77,7 @@ const router = createRouter({
 })
 
 // Local authentication guard
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useLocalAuthStore()
 
   // Ensure local user is initialized

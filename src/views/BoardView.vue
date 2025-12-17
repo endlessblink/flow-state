@@ -94,8 +94,7 @@ import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
-import { Eye, EyeOff, CheckCircle, Circle, Minimize2, Maximize2, AlignCenter, ListTodo, Calendar as CalendarIcon, Play, Check, CalendarDays } from 'lucide-vue-next'
-import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
+import { CheckCircle, Circle } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
 import FilterControls from '@/components/base/FilterControls.vue'
 
@@ -138,7 +137,7 @@ const handleKanbanSettingsChange = (event: Event) => {
 }
 
 // Set density using global store
-const setDensity = (density: 'ultrathin' | 'compact' | 'comfortable') => {
+const _setDensity = (density: 'ultrathin' | 'compact' | 'comfortable') => {
   uiStore.setBoardDensity(density)
 }
 
@@ -317,7 +316,7 @@ const closeContextMenu = () => {
   contextMenuTask.value = null
 }
 
-const handleAddSubtaskFromMenu = async (taskId: string) => {
+const _handleAddSubtaskFromMenu = async (taskId: string) => {
   try {
     await taskStore.createSubtaskWithUndo(taskId, { title: 'New Subtask' })
   } catch (error) {
@@ -358,7 +357,7 @@ const handleMoveTask = async (taskId: string, newStatus: string) => {
 }
 
 // Debug function to test toggle functionality
-const handleToggleDoneTasks = (event: MouseEvent) => {
+const _handleToggleDoneTasks = (event: MouseEvent) => {
   // Prevent event bubbling that might interfere with other click handlers
   event.stopPropagation()
   console.log('🔧 BoardView: Toggle button clicked!')
@@ -411,7 +410,7 @@ const saveKanbanSettings = () => {
 }
 
 // Toggle Today filter
-const handleToggleTodayFilter = (event: MouseEvent) => {
+const _handleToggleTodayFilter = (event: MouseEvent) => {
   event.stopPropagation()
   console.log('🔧 BoardView: Today filter toggle clicked!')
   console.log('🔧 BoardView: Current activeSmartView:', taskStore.activeSmartView)

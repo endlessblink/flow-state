@@ -507,7 +507,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 }
 
 // Performance optimization for smooth animations
-const smoothStateTransition = (callback: () => void) => {
+const _smoothStateTransition = (callback: () => void) => {
   if (animationFrameId.value) {
     cancelAnimationFrame(animationFrameId.value)
   }

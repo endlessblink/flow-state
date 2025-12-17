@@ -542,7 +542,7 @@ export function useCanvasRenderingOptimization(
   }
 
   const throttledUpdate = useThrottleFn(updateNodeStates, 16) // ~60fps
-  const debouncedUpdate = useDebounceFn(updateNodeStates, 100)
+  const _debouncedUpdate = useDebounceFn(updateNodeStates, 100)
 
   // Utility functions
   const estimateMemoryUsage = (): number => {

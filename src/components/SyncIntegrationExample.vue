@@ -265,7 +265,7 @@ const isTesting = ref(false)
 const testResults = ref<any>(null)
 
 // Computed properties (adapted for ReliableSyncManager API)
-const syncStatus = computed(() => syncManager.syncStatus.value)
+const _syncStatus = computed(() => syncManager.syncStatus.value)
 const isSyncing = computed(() => syncManager.isSyncing.value)
 const hasErrors = computed(() => syncManager.hasErrors.value)
 

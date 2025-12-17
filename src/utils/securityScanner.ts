@@ -410,7 +410,7 @@ export class SecurityScanner {
       for (let i = 0; i < sessionStorage.length; i++) {
         storageKeys.push(sessionStorage.key(i))
       }
-    } catch (_error) {
+    } catch {
       // Storage might be disabled or blocked
     }
 

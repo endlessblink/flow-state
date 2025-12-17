@@ -359,7 +359,7 @@ function applySmartFilter(tasks: Task[], filter: string): Task[] {
   return tasks.filter(task => {
     // Check if task has date (instances or legacy)
     const hasInstances = task.instances && task.instances.length > 0
-    const hasScheduledDate = task.scheduledDate || (hasInstances &&
+    const _hasScheduledDate = task.scheduledDate || (hasInstances &&
       task.instances.some(inst => inst.scheduledDate))
 
     // Get effective date for filtering

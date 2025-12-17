@@ -195,7 +195,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   }
 
   // Decompress data
-  const decompressData = async (compressedData: any): Promise<any> => {
+  const _decompressData = async (compressedData: any): Promise<any> => {
     if (!compressedData?._compressed) return compressedData
 
     try {
@@ -441,7 +441,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   const measureConnectionSpeed = async (): Promise<number> => {
     try {
       const startTime = Date.now()
-      const response = await fetch('https://httpbin.org/bytes/1024', {
+      const _response = await fetch('https://httpbin.org/bytes/1024', {
         method: 'GET',
         cache: 'no-cache'
       })

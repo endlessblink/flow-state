@@ -180,7 +180,7 @@ const isDragValid = computed(() => {
 })
 
 // Get project name for drop target label
-const getProjectName = () => {
+const _getProjectName = () => {
   if (!props.projectId) return ''
   if (props.projectId === '__root__') return 'Root Level'
   return taskStore.getProjectDisplayName(props.projectId)

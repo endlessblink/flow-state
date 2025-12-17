@@ -472,7 +472,7 @@ const startRecovery = async (title: string): Promise<void> => {
 
 // Error monitoring
 const handleSyncError = (event: CustomEvent) => {
-  const { error, needsUserIntervention } = event.detail
+  const { error: _error, needsUserIntervention } = event.detail
 
   if (needsUserIntervention) {
     checkForCriticalErrors()

@@ -3,7 +3,7 @@
  * Detects and reports memory leaks in the Pomo-Flow application
  */
 
-import { ref, onMounted as _onMounted, onUnmounted as _onUnmounted } from 'vue'
+import { ref } from 'vue'
 
 export interface MemorySnapshot {
   timestamp: number

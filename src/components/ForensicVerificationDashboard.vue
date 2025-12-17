@@ -523,7 +523,7 @@ const testChainOfCustody = async () => {
   try {
     const report = ForensicLogger.generateAuditReport()
     const chainIntact = report.chainOfCustody
-    const hasEvents = report.events.length > 0
+    const _hasEvents = report.events.length > 0
 
     return {
       success: chainIntact,

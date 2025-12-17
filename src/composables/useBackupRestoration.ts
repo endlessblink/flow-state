@@ -238,7 +238,7 @@ export function useBackupRestoration() {
       warnings.push('Backup appears to be empty')
     }
 
-    const backupAPI = getBackupAPI()
+    const _backupAPI = getBackupAPI()
 
     return {
       backupId,

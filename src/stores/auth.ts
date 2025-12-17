@@ -19,23 +19,23 @@ import { ref, computed } from 'vue'
 // Mock type definitions for Firebase compatibility
 type User = any
 type Timestamp = any
-const auth: any = null
-const db: any = null
-const waitForFirebase: any = () => Promise.resolve(false)
-const serverTimestamp: any = () => new Date()
-const doc: any = () => ({})
-const getDoc: any = () => Promise.resolve(null)
-const setDoc: any = () => Promise.resolve()
-const updateDoc: any = () => Promise.resolve()
-const createUserWithEmailAndPassword: any = () => Promise.reject(new Error('Firebase disabled'))
-const signInWithEmailAndPassword: any = () => Promise.reject(new Error('Firebase disabled'))
-const signInWithPopup: any = () => Promise.reject(new Error('Firebase disabled'))
-const GoogleAuthProvider: any = class {}
-const firebaseSignOut: any = () => Promise.resolve()
-const firebaseSendPasswordResetEmail: any = () => Promise.reject(new Error('Firebase disabled'))
-const firebaseUpdateProfile: any = () => Promise.reject(new Error('Firebase disabled'))
-const firebaseUpdatePassword: any = () => Promise.reject(new Error('Firebase disabled'))
-const onAuthStateChanged: any = () => () => {}
+const _auth: any = null
+const _db: any = null
+const _waitForFirebase: any = () => Promise.resolve(false)
+const _serverTimestamp: any = () => new Date()
+const _doc: any = () => ({})
+const _getDoc: any = () => Promise.resolve(null)
+const _setDoc: any = () => Promise.resolve()
+const _updateDoc: any = () => Promise.resolve()
+const _createUserWithEmailAndPassword: any = () => Promise.reject(new Error('Firebase disabled'))
+const _signInWithEmailAndPassword: any = () => Promise.reject(new Error('Firebase disabled'))
+const _signInWithPopup: any = () => Promise.reject(new Error('Firebase disabled'))
+const _GoogleAuthProvider: any = class {}
+const _firebaseSignOut: any = () => Promise.resolve()
+const _firebaseSendPasswordResetEmail: any = () => Promise.reject(new Error('Firebase disabled'))
+const _firebaseUpdateProfile: any = () => Promise.reject(new Error('Firebase disabled'))
+const _firebaseUpdatePassword: any = () => Promise.reject(new Error('Firebase disabled'))
+const _onAuthStateChanged: any = () => () => {}
 
 /**
  * User profile data stored in Firestore
@@ -142,7 +142,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Wait for Firebase to be initialized
     console.log('🔄 Waiting for Firebase initialization...')
-    const firebaseReady = await waitForFirebase(10000) // Wait up to 10 seconds
+    const firebaseReady = await _waitForFirebase(10000) // Wait up to 10 seconds
 
     if (!firebaseReady) {
       console.warn('⚠️ Firebase initialization failed or timed out - running in offline mode')
@@ -152,7 +152,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     // Check if Firebase Auth is available
-    if (!auth) {
+    if (!_auth) {
       console.warn('⚠️ Firebase Auth not available - running without authentication')
       console.log('ℹ️ Please configure Firebase credentials in .env.local for authentication features.')
       isLoading.value = false
@@ -173,8 +173,8 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function loadUserProfile(uid: string): Promise<void> {
     try {
-      const profileRef = doc(db, 'users', uid, 'profile', 'main')
-      const profileSnap = await getDoc(profileRef)
+      const profileRef = _doc(_db, 'users', uid, 'profile', 'main')
+      const profileSnap = await _getDoc(profileRef)
 
       if (profileSnap.exists()) {
         const data = profileSnap.data()
@@ -204,22 +204,22 @@ export const useAuthStore = defineStore('auth', () => {
     const now = new Date()
 
     const newProfile: Omit<UserProfile, 'createdAt' | 'lastLoginAt'> & {
-      createdAt: ReturnType<typeof serverTimestamp>
-      lastLoginAt: ReturnType<typeof serverTimestamp>
+      createdAt: ReturnType<typeof _serverTimestamp>
+      lastLoginAt: ReturnType<typeof _serverTimestamp>
     } = {
       uid,
       email: user.value.email || '',
       displayName: user.value.displayName || null,
       photoURL: user.value.photoURL || null,
-      createdAt: serverTimestamp(),
-      lastLoginAt: serverTimestamp(),
+      createdAt: _serverTimestamp(),
+      lastLoginAt: _serverTimestamp(),
       preferences: { ...DEFAULT_PREFERENCES },
       stats: { ...DEFAULT_STATS }
     }
 
     try {
-      const profileRef = doc(db, 'users', uid, 'profile', 'main')
-      await setDoc(profileRef, newProfile)
+      const profileRef = _doc(_db, 'users', uid, 'profile', 'main')
+      await _setDoc(profileRef, newProfile)
 
       // Set local profile with actual dates
       profile.value = {
@@ -240,9 +240,9 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function updateLastLogin(uid: string): Promise<void> {
     try {
-      const profileRef = doc(db, 'users', uid, 'profile', 'main')
-      await updateDoc(profileRef, {
-        lastLoginAt: serverTimestamp()
+      const profileRef = _doc(_db, 'users', uid, 'profile', 'main')
+      await _updateDoc(profileRef, {
+        lastLoginAt: _serverTimestamp()
       })
     } catch (err) {
       console.error('Failed to update last login:', err)
@@ -258,12 +258,12 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       // Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await _createUserWithEmailAndPassword(_auth, email, password)
       user.value = userCredential.user
 
       // Update display name if provided
       if (displayName) {
-        await firebaseUpdateProfile(userCredential.user, { displayName })
+        await _firebaseUpdateProfile(userCredential.user, { displayName })
       }
 
       // Create user profile in Firestore
@@ -287,7 +287,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await _signInWithEmailAndPassword(_auth, email, password)
       user.value = userCredential.user
 
       console.log('✅ User signed in:', email)
@@ -308,19 +308,19 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
 
     try {
-      const provider = new GoogleAuthProvider()
+      const provider = new _GoogleAuthProvider()
 
       // Always show account picker
       provider.setCustomParameters({
         prompt: 'select_account'
       })
 
-      const result = await signInWithPopup(auth, provider)
+      const result = await _signInWithPopup(_auth, provider)
       user.value = result.user
 
       // Check if profile exists, create if not
-      const profileRef = doc(db, 'users', result.user.uid, 'profile', 'main')
-      const profileSnap = await getDoc(profileRef)
+      const profileRef = _doc(_db, 'users', result.user.uid, 'profile', 'main')
+      const profileSnap = await _getDoc(profileRef)
 
       if (!profileSnap.exists()) {
         await createUserProfile(result.user.uid)
@@ -343,7 +343,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      await firebaseSignOut(auth)
+      await _firebaseSignOut(_auth)
       user.value = null
       profile.value = null
 
@@ -368,7 +368,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      await firebaseSendPasswordResetEmail(auth, email)
+      await _firebaseSendPasswordResetEmail(_auth, email)
       console.log('✅ Password reset email sent to:', email)
     } catch (err: any) {
       error.value = getErrorMessage(err)
@@ -388,7 +388,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      await firebaseUpdatePassword(user.value, newPassword)
+      await _firebaseUpdatePassword(user.value, newPassword)
       console.log('✅ Password updated')
     } catch (err: any) {
       error.value = getErrorMessage(err)
@@ -408,12 +408,12 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      const profileRef = doc(db, 'users', user.value.uid, 'profile', 'main')
+      const profileRef = _doc(_db, 'users', user.value.uid, 'profile', 'main')
 
       // Update Firestore
-      await updateDoc(profileRef, {
+      await _updateDoc(profileRef, {
         ...data,
-        updatedAt: serverTimestamp()
+        updatedAt: _serverTimestamp()
       })
 
       // Update local profile (optimistic update)
@@ -424,7 +424,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Update Firebase Auth profile if display name or photo changed
       if (data.displayName !== undefined || data.photoURL !== undefined) {
-        await firebaseUpdateProfile(user.value, {
+        await _firebaseUpdateProfile(user.value, {
           displayName: data.displayName ?? user.value.displayName,
           photoURL: data.photoURL ?? user.value.photoURL
         })

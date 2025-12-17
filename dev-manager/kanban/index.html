@@ -1218,6 +1218,60 @@
     // Global parsed data cache
     let MASTER_PLAN_DATA = null;
 
+    /**
+     * Comprehensive task status parser
+     * Recognizes various status patterns from task headers
+     * Based on common conventions from TODO.md, Backlog.md, and Kanban standards
+     *
+     * Status categories:
+     * - 'done': Completed, finished, closed tasks
+     * - 'in-progress': Active work, paused, blocked, review
+     * - 'todo': Default for unrecognized or new tasks
+     */
+    function parseTaskStatus(statusText) {
+      if (!statusText) return 'todo';
+
+      const text = statusText.toUpperCase();
+
+      // Done patterns - task is completed
+      const donePatterns = [
+        'DONE', 'COMPLETE', 'COMPLETED', 'FINISHED', 'CLOSED',
+        'RESOLVED', 'FIXED', 'SHIPPED', 'RELEASED', 'MERGED',
+        '✅', '✓', '[X]', 'VERIFIED'
+      ];
+
+      // In-progress patterns - task is being worked on or temporarily stopped
+      const inProgressPatterns = [
+        // Active work
+        'IN PROGRESS', 'IN-PROGRESS', 'PROGRESS', 'ACTIVE', 'WORKING',
+        'WIP', 'STARTED', 'ONGOING', 'DOING',
+        // Paused/blocked states (still in-progress, just not active)
+        'PAUSED', 'PARTIAL', 'ON HOLD', 'ON-HOLD', 'HOLD', 'BLOCKED',
+        'WAITING', 'PENDING REVIEW', 'NEEDS REVIEW',
+        // Review states
+        'REVIEW', 'IN REVIEW', 'TESTING', 'QA', 'UNDER REVIEW',
+        // Emoji indicators
+        '⏳', '🔄', '⏸️', '⏸', '🚧', '👀'
+      ];
+
+      // Check done patterns first (higher priority)
+      for (const pattern of donePatterns) {
+        if (text.includes(pattern)) {
+          return 'done';
+        }
+      }
+
+      // Check in-progress patterns
+      for (const pattern of inProgressPatterns) {
+        if (text.includes(pattern)) {
+          return 'in-progress';
+        }
+      }
+
+      // Default to todo
+      return 'todo';
+    }
+
     // Parse MASTER_PLAN.md and extract all sections
     async function parseMasterPlan() {
       try {
@@ -1310,13 +1364,7 @@
             const match = trimmed.match(/^### (TASK-\d+):\s*(.+?)(?:\s*\(([^)]+)\))?$/);
             if (match) {
               const statusText = match[3] ? match[3].toUpperCase() : '';
-              let status = 'todo';
-              if (statusText.includes('COMPLETE') || statusText.includes('DONE')) {
-                status = 'done';
-              } else if (statusText.includes('IN PROGRESS') || statusText.includes('PROGRESS') ||
-                         statusText.includes('PARTIAL') || statusText.includes('PAUSED')) {
-                status = 'in-progress';
-              }
+              const status = parseTaskStatus(statusText);
 
               currentItem = {
                 id: match[1],

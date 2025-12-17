@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import DoneToggle from '@/components/DoneToggle.vue'
 
 const meta = {

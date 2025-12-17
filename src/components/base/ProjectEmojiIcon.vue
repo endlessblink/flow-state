@@ -44,7 +44,7 @@ const props = withDefaults(defineProps<Props>(), {
   variant: 'plain' // Default to plain (no background/border) to avoid gray dots
 })
 
-const emit = defineEmits<{
+const _emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
 

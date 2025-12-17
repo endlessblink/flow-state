@@ -13,12 +13,14 @@
     <div v-if="task.priority" class="priority-indicator" />
     <!-- Checkbox -->
     <div class="task-row__checkbox" @click.stop>
-      <input
-        type="checkbox"
-        :checked="task.status === 'done'"
-        :aria-label="`Mark ${task.title} as ${task.status === 'done' ? 'incomplete' : 'complete'}`"
-        @change="$emit('toggleComplete', task.id)"
-      >
+      <DoneToggle
+        :completed="task.status === 'done'"
+        size="sm"
+        variant="minimal"
+        :title="`Mark ${task.title} as ${task.status === 'done' ? 'incomplete' : 'complete'}`"
+        :aria-label="`Toggle completion for ${task.title}`"
+        @toggle="$emit('toggleComplete', task.id)"
+      />
     </div>
 
     <!-- Title (flexible, main focus) -->
@@ -114,6 +116,7 @@ import { computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { Calendar, Play, Edit } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import DoneToggle from '@/components/DoneToggle.vue'
 import type { DensityType } from '@/components/ViewControls.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
@@ -253,12 +256,6 @@ const formatStatus = (status: string): string => {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.task-row__checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
 }
 
 /* Title Cell - Flexible, main focus */

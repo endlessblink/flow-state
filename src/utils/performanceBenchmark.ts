@@ -3,7 +3,7 @@
  * Comprehensive performance testing and validation for the Pomo-Flow application
  */
 
-import { ref, computed as _computed } from 'vue'
+import { ref } from 'vue'
 import { usePerformanceManager } from '@/composables/usePerformanceManager'
 import { useVirtualScrolling } from '@/composables/useVirtualScrolling'
 import { useNetworkOptimizer } from '@/composables/useNetworkOptimizer'

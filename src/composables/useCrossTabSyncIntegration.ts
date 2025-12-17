@@ -263,11 +263,11 @@ export function useCrossTabSyncIntegration() {
   const broadcastCanvasChange = useDebounceFn(_broadcastCanvasChange, CANVAS_BROADCAST_DELAY)
 
   // Handle incoming remote changes by temporarily disabling broadcasting
-  const handleRemoteChangeStart = () => {
+  const _handleRemoteChangeStart = () => {
     isProcessingRemoteChange = true
   }
 
-  const handleRemoteChangeEnd = () => {
+  const _handleRemoteChangeEnd = () => {
     // Small delay to ensure all related changes are processed
     setTimeout(() => {
       isProcessingRemoteChange = false
@@ -305,7 +305,7 @@ export function useCrossTabSyncIntegration() {
 
     // Override updateTask
     taskStore.updateTask = function(taskId: string, updates: any) {
-      const oldTask = taskStore.tasks.find(t => t.id === taskId)
+      const _oldTask = taskStore.tasks.find(t => t.id === taskId)
       const result = originalUpdateTask(taskId, updates)
 
       // Broadcast after update
@@ -316,7 +316,7 @@ export function useCrossTabSyncIntegration() {
             operation: 'update',
             taskId,
             taskData: updatedTask,
-            oldData: oldTask,
+            oldData: _oldTask,
             timestamp: Date.now()
           })
         }
@@ -327,7 +327,7 @@ export function useCrossTabSyncIntegration() {
 
     // Override deleteTask
     taskStore.deleteTask = async function(taskId: string) {
-      const oldTask = taskStore.tasks.find(t => t.id === taskId)
+      const _oldTask = taskStore.tasks.find(t => t.id === taskId)
       const result = await originalDeleteTask(taskId)
 
       // Broadcast after deletion

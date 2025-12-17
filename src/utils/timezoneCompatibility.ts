@@ -93,7 +93,7 @@ export class TimezoneCompatibilityManager {
         ctx.fillText('Device fingerprint', 2, 2)
         fingerprint = canvas.toDataURL().slice(-50) // Last 50 chars
       }
-    } catch (_error) {
+    } catch {
       console.warn('Could not generate canvas fingerprint')
     }
 

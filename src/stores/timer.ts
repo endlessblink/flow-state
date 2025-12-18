@@ -4,6 +4,12 @@ import { useTaskStore } from './tasks'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
+// Cross-tab sync imports - for timer synchronization across browser tabs
+import {
+  useCrossTabSync,
+  type TimerSessionSync as _TimerSessionSync
+} from '@/composables/useCrossTabSync'
+
 export interface PomodoroSession {
   id: string
   taskId: string
@@ -57,6 +63,71 @@ export const useTimerStore = defineStore('timer', () => {
   const completedSessions = ref<PomodoroSession[]>([])
   const sessions = ref<PomodoroSession[]>([]) // Alias for completedSessions for compatibility
   const timerInterval = ref<NodeJS.Timeout | null>(null)
+
+  // Cross-tab sync state
+  let crossTabSync: ReturnType<typeof useCrossTabSync> | null = null
+  const isLeader = ref(false) // Whether this tab controls the timer
+  let crossTabInitialized = false
+
+  // Initialize cross-tab sync for timer
+  const initCrossTabSync = () => {
+    if (crossTabInitialized || typeof window === 'undefined') return
+
+    try {
+      crossTabSync = useCrossTabSync()
+
+      // Set up callbacks for cross-tab timer events
+      crossTabSync.setTimerCallbacks({
+        onSessionUpdate: (session: any) => {
+          // Another tab updated the timer - sync local state
+          if (!isLeader.value && session) {
+            console.log('🔄 [TIMER SYNC] Received session update from leader:', session)
+            currentSession.value = {
+              ...session,
+              startTime: new Date(session.startTime)
+            }
+          } else if (!isLeader.value && session === null) {
+            console.log('🔄 [TIMER SYNC] Leader stopped timer')
+            if (timerInterval.value) {
+              clearInterval(timerInterval.value)
+              timerInterval.value = null
+            }
+            currentSession.value = null
+          }
+        },
+        onBecomeLeader: () => {
+          console.log('👑 [TIMER SYNC] This tab is now the timer leader')
+          isLeader.value = true
+        },
+        onLoseLeadership: () => {
+          console.log('😔 [TIMER SYNC] This tab lost timer leadership')
+          isLeader.value = false
+          // Stop local interval - we're now a follower
+          if (timerInterval.value) {
+            clearInterval(timerInterval.value)
+            timerInterval.value = null
+          }
+        }
+      })
+
+      crossTabInitialized = true
+      console.log('✅ [TIMER SYNC] Cross-tab sync initialized for timer')
+    } catch (error) {
+      console.warn('⚠️ [TIMER SYNC] Failed to initialize cross-tab sync:', error)
+    }
+  }
+
+  // Broadcast current session to other tabs
+  const broadcastSession = () => {
+    if (!crossTabSync || !isLeader.value) return
+
+    const sessionData = currentSession.value ? {
+      ...currentSession.value,
+      startTime: currentSession.value.startTime.toISOString()
+    } : null
+
+    crossTabSync.broadcastTimerSession(sessionData)
+  }
 
 // Keep sessions in sync with completedSessions for compatibility
 watch(completedSessions, (newSessions) => {
@@ -157,6 +228,20 @@ watch(completedSessions, (newSessions) => {
   const startTimer = (taskId: string, duration?: number, isBreak: boolean = false) => {
     console.log('🍅 DEBUG startTimer called:', { taskId, duration, isBreak })
 
+    // Initialize cross-tab sync if not already done
+    initCrossTabSync()
+
+    // Claim timer leadership
+    if (crossTabSync) {
+      const claimed = crossTabSync.claimTimerLeadership()
+      if (!claimed) {
+        console.warn('⚠️ [TIMER] Could not claim leadership - another tab is controlling the timer')
+        // Don't start if we can't claim leadership
+        return
+      }
+      isLeader.value = true
+    }
+
     // Stop any existing timer
     if (currentSession.value!) {
       console.log('🍅 DEBUG: Stopping existing timer')
@@ -187,6 +272,9 @@ watch(completedSessions, (newSessions) => {
       computedIsActive: isTimerActive.value
     })
 
+    // Broadcast to other tabs
+    broadcastSession()
+
     // Play start sound
     playStartSound()
 
@@ -194,6 +282,11 @@ watch(completedSessions, (newSessions) => {
     timerInterval.value = setInterval(() => {
       if (currentSession.value! && currentSession.value!.isActive && !currentSession.value!.isPaused) {
         currentSession.value!.remainingTime -= 1
+
+        // Broadcast every 5 seconds to reduce overhead (or on significant changes)
+        if (currentSession.value!.remainingTime % 5 === 0) {
+          broadcastSession()
+        }
 
         if (currentSession.value!.remainingTime <= 0) {
           completeSession()
@@ -205,12 +298,16 @@ watch(completedSessions, (newSessions) => {
   const pauseTimer = () => {
     if (currentSession.value!) {
       currentSession.value!.isPaused = true
+      // Broadcast pause to other tabs
+      broadcastSession()
     }
   }
 
   const resumeTimer = () => {
     if (currentSession.value!) {
       currentSession.value!.isPaused = false
+      // Broadcast resume to other tabs
+      broadcastSession()
     }
   }
 
@@ -229,6 +326,9 @@ watch(completedSessions, (newSessions) => {
       })
 
       currentSession.value = null
+
+      // Broadcast stop to other tabs
+      broadcastSession()
     }
   }
 
@@ -274,6 +374,9 @@ watch(completedSessions, (newSessions) => {
     }
 
     currentSession.value = null
+
+    // Broadcast completion to other tabs
+    broadcastSession()
 
     // Play completion sound
     playEndSound()
@@ -484,6 +587,9 @@ watch(completedSessions, (newSessions) => {
 
       // Load timer session from PouchDB
       await loadTimerSession()
+
+      // Initialize cross-tab sync for timer state
+      initCrossTabSync()
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.ERROR,
@@ -506,6 +612,7 @@ watch(completedSessions, (newSessions) => {
     completedSessions,
     sessions,
     settings,
+    isLeader, // Whether this tab controls the timer (cross-tab sync)
 
     // Computed
     isTimerActive,

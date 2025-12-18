@@ -779,7 +779,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Two-part fix: (1) requestSync() in TaskContextMenu (2) spread task object in syncNodes |
 | BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
 | ~~BUG-015~~ | ~~Edit Task modal behind nav tabs~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 16, 2025 - Added Teleport to body |
-| BUG-016 | Timer status not syncing | P2-MEDIUM | Timer state not synchronized across views/components |
+| BUG-016 | Timer status not syncing | P2-MEDIUM | **IN PROGRESS** Dec 18 - Cross-tab sync infrastructure added (timer.ts + useCrossTabSync.ts + CrossTabPerformance.ts), but leadership election conflict exists - auto-break starts override leader. |
 | BUG-018 | Canvas smart group header icons cut off | P2-MEDIUM | TODO - Right-side icons overlap when group is narrow |
 | BUG-019 | Canvas section resize preview mispositioned | P2-MEDIUM | TODO - Ghost preview shows wrong position during resize |
 
@@ -1335,7 +1335,7 @@ sync: {
 | Task | Description | Status |
 |------|-------------|--------|
 | 13.1 | Audit current sync issues | PENDING |
-| 13.2 | Fix timer sync across tabs (BUG-016) | PENDING |
+| 13.2 | Fix timer sync across tabs (BUG-016) | IN PROGRESS - Infrastructure done, leadership conflict remains |
 | 13.3 | Improve conflict resolution UI | PENDING |
 | 13.4 | Add sync status indicator improvements | PENDING |
 | 13.5 | Test multi-device scenarios E2E | PENDING |

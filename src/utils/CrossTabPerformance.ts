@@ -270,6 +270,106 @@ export class CrossTabPerformance {
     }
     this.reset()
   }
+
+  // ========== Message Deduplication ==========
+  private processedMessages: Map<string, number> = new Map()
+  private readonly MESSAGE_EXPIRY_MS = 5000 // 5 seconds
+
+  /**
+   * Check if a message should be processed (deduplication)
+   */
+  shouldProcessMessage(messageId: string, _message: any): boolean {
+    this.cleanupExpiredMessages()
+
+    if (this.processedMessages.has(messageId)) {
+      return false // Duplicate
+    }
+
+    this.processedMessages.set(messageId, Date.now())
+    return true
+  }
+
+  /**
+   * Record a message processing event
+   */
+  recordMessage(messageId: string, startTime: number, endTime: number): void {
+    const processingTime = endTime - startTime
+    this.metrics.processingTime = (this.metrics.processingTime + processingTime) / 2 // Rolling average
+  }
+
+  /**
+   * Clean up expired message IDs
+   */
+  private cleanupExpiredMessages(): void {
+    const now = Date.now()
+    for (const [id, timestamp] of this.processedMessages.entries()) {
+      if (now - timestamp > this.MESSAGE_EXPIRY_MS) {
+        this.processedMessages.delete(id)
+      }
+    }
+  }
+
+  // ========== Config Management ==========
+
+  /**
+   * Get current configuration
+   */
+  getConfig(): PerformanceConfig {
+    return { ...this.config }
+  }
+
+  /**
+   * Update configuration
+   */
+  updateConfig(newConfig: Partial<PerformanceConfig>): void {
+    this.config = { ...this.config, ...newConfig }
+  }
+
+  /**
+   * Optimize configuration based on current metrics
+   */
+  optimizeConfiguration(): void {
+    this.optimize()
+  }
+
+  /**
+   * Reset metrics
+   */
+  resetMetrics(): void {
+    this.metrics = {
+      batchCount: 0,
+      totalDataSize: 0,
+      processingTime: 0,
+      memoryUsage: 0,
+      cacheHitRate: 0
+    }
+    this.processedMessages.clear()
+  }
+
+  /**
+   * Export performance data with recommendations
+   */
+  exportPerformanceData(): { metrics: PerformanceMetrics; config: PerformanceConfig; recommendations: string[] } {
+    const metrics = this.getMetrics()
+    const recommendations: string[] = []
+
+    // Generate recommendations based on metrics
+    if (metrics.memoryUsage > this.config.maxMemoryUsage * 0.8) {
+      recommendations.push('Memory usage is high. Consider reducing batch size.')
+    }
+    if (metrics.processingTime > 100) {
+      recommendations.push('Processing time is high. Consider increasing throttle delay.')
+    }
+    if (metrics.cacheHitRate < 0.5 && this.config.cachingEnabled) {
+      recommendations.push('Cache hit rate is low. Cache may not be effective.')
+    }
+
+    return {
+      metrics,
+      config: this.getConfig(),
+      recommendations
+    }
+  }
 }
 
 export default CrossTabPerformance

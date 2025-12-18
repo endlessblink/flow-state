@@ -64,10 +64,29 @@ export const useTimerStore = defineStore('timer', () => {
   const sessions = ref<PomodoroSession[]>([]) // Alias for completedSessions for compatibility
   const timerInterval = ref<NodeJS.Timeout | null>(null)
 
-  // Cross-tab sync state
+  // Cross-tab sync state (same browser)
   let crossTabSync: ReturnType<typeof useCrossTabSync> | null = null
   const isLeader = ref(false) // Whether this tab controls the timer
   let crossTabInitialized = false
+
+  // Cross-device sync state (different browsers/devices via CouchDB)
+  const DEVICE_LEADER_TIMEOUT_MS = 5000  // 5 seconds - consider leader stale after this
+  const DEVICE_HEARTBEAT_INTERVAL_MS = 2000  // 2 seconds - send heartbeat
+
+  // Get or create device ID (persisted in localStorage)
+  const getDeviceId = (): string => {
+    if (typeof window === 'undefined') return 'server'
+    const stored = localStorage.getItem('pomoflow-device-id')
+    if (stored) return stored
+    const newId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    localStorage.setItem('pomoflow-device-id', newId)
+    return newId
+  }
+
+  const deviceId = getDeviceId()
+  const isDeviceLeader = ref(false) // Whether this device controls the timer
+  let deviceHeartbeatInterval: ReturnType<typeof setInterval> | null = null
+  let crossDeviceSyncInitialized = false
 
   // Initialize cross-tab sync for timer
   const initCrossTabSync = () => {
@@ -127,6 +146,173 @@ export const useTimerStore = defineStore('timer', () => {
     } : null
 
     crossTabSync.broadcastTimerSession(sessionData)
+  }
+
+  // ============================================
+  // CROSS-DEVICE SYNC (CouchDB) - TASK-021
+  // ============================================
+
+  /**
+   * Handle timer updates from remote devices (via CouchDB sync)
+   */
+  const handleRemoteTimerUpdate = async (remoteDoc: any) => {
+    // If we're the device leader and this is our own update, ignore
+    if (isDeviceLeader.value && remoteDoc.deviceLeaderId === deviceId) {
+      return
+    }
+
+    // Check if remote leader is still active (heartbeat within timeout)
+    const elapsed = Date.now() - (remoteDoc.deviceLeaderLastSeen || 0)
+    const remoteLeaderActive = elapsed < DEVICE_LEADER_TIMEOUT_MS
+
+    // If there's an active remote leader that's not us, become a follower
+    if (remoteDoc.deviceLeaderId &&
+        remoteDoc.deviceLeaderId !== deviceId &&
+        remoteLeaderActive) {
+
+      console.log('🔄 [TIMER CROSS-DEVICE] Syncing with remote device leader:', remoteDoc.deviceLeaderId)
+      isDeviceLeader.value = false
+      stopDeviceHeartbeat()
+
+      // Stop local timer interval - we're now a follower
+      if (timerInterval.value) {
+        clearInterval(timerInterval.value)
+        timerInterval.value = null
+      }
+
+      // Update local state from remote
+      if (remoteDoc.session) {
+        currentSession.value = {
+          ...remoteDoc.session,
+          startTime: new Date(remoteDoc.session.startTime),
+          completedAt: remoteDoc.session.completedAt ? new Date(remoteDoc.session.completedAt) : undefined
+        }
+      } else {
+        currentSession.value = null
+      }
+    }
+  }
+
+  /**
+   * Set up listener for CouchDB sync changes
+   */
+  const setupCrossDeviceSync = () => {
+    if (crossDeviceSyncInitialized || typeof window === 'undefined') return
+
+    const handleRemoteSyncChange = async (event: CustomEvent) => {
+      try {
+        const { documents } = event.detail || {}
+        if (!documents || !Array.isArray(documents)) return
+
+        // Look for timer session document
+        const timerDoc = documents.find((doc: any) =>
+          doc._id === 'pomo-flow-timer-session:data'
+        )
+
+        if (timerDoc) {
+          console.log('📡 [TIMER CROSS-DEVICE] Received remote timer update')
+          await handleRemoteTimerUpdate(timerDoc)
+        }
+      } catch (error) {
+        console.warn('⚠️ [TIMER CROSS-DEVICE] Error handling sync change:', error)
+      }
+    }
+
+    window.addEventListener('reliable-sync-change', handleRemoteSyncChange as EventListener)
+    crossDeviceSyncInitialized = true
+    console.log('✅ [TIMER CROSS-DEVICE] Cross-device sync initialized (listening for CouchDB changes)')
+  }
+
+  /**
+   * Save timer session with device leadership info for cross-device sync
+   */
+  const saveTimerSessionWithLeadership = async () => {
+    try {
+      // Wait for database to be ready
+      while (!db.isReady?.value) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
+      if (currentSession.value) {
+        const sessionData = {
+          session: {
+            ...currentSession.value,
+            startTime: currentSession.value.startTime.toISOString(),
+            completedAt: currentSession.value.completedAt?.toISOString()
+          },
+          deviceLeaderId: deviceId,
+          deviceLeaderLastSeen: Date.now()
+        }
+        await db.save('pomo-flow-timer-session', sessionData)
+      } else {
+        // Clear session but keep device info for cleanup
+        await db.save('pomo-flow-timer-session', {
+          session: null,
+          deviceLeaderId: null,
+          deviceLeaderLastSeen: null
+        })
+      }
+    } catch (error) {
+      console.warn('⚠️ [TIMER CROSS-DEVICE] Failed to save session with leadership:', error)
+    }
+  }
+
+  /**
+   * Start device heartbeat to maintain leadership across devices
+   */
+  const startDeviceHeartbeat = () => {
+    if (deviceHeartbeatInterval) clearInterval(deviceHeartbeatInterval)
+
+    deviceHeartbeatInterval = setInterval(async () => {
+      // Only send heartbeat if we're the device leader with an active session
+      if (!currentSession.value || !isDeviceLeader.value) {
+        stopDeviceHeartbeat()
+        return
+      }
+
+      // Save session with updated heartbeat timestamp
+      await saveTimerSessionWithLeadership()
+    }, DEVICE_HEARTBEAT_INTERVAL_MS)
+
+    console.log('💓 [TIMER CROSS-DEVICE] Device heartbeat started (every ' + DEVICE_HEARTBEAT_INTERVAL_MS + 'ms)')
+  }
+
+  /**
+   * Stop device heartbeat
+   */
+  const stopDeviceHeartbeat = () => {
+    if (deviceHeartbeatInterval) {
+      clearInterval(deviceHeartbeatInterval)
+      deviceHeartbeatInterval = null
+      console.log('💔 [TIMER CROSS-DEVICE] Device heartbeat stopped')
+    }
+  }
+
+  /**
+   * Check if another device is currently the leader
+   */
+  const checkForActiveDeviceLeader = async (): Promise<boolean> => {
+    try {
+      // Wait for database to be ready
+      while (!db.isReady?.value) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
+      const existingSession = await db.load<any>('pomo-flow-timer-session')
+
+      if (existingSession?.deviceLeaderId && existingSession.deviceLeaderId !== deviceId) {
+        const elapsed = Date.now() - (existingSession.deviceLeaderLastSeen || 0)
+        if (elapsed < DEVICE_LEADER_TIMEOUT_MS) {
+          console.log('⚠️ [TIMER CROSS-DEVICE] Another device is controlling the timer:', existingSession.deviceLeaderId)
+          return true // Another active leader exists
+        }
+      }
+
+      return false // No active leader or we are the leader
+    } catch (error) {
+      console.warn('⚠️ [TIMER CROSS-DEVICE] Error checking for device leader:', error)
+      return false // Proceed with caution
+    }
   }
 
 // Keep sessions in sync with completedSessions for compatibility
@@ -225,13 +411,20 @@ watch(completedSessions, (newSessions) => {
   })
 
   // Actions
-  const startTimer = (taskId: string, duration?: number, isBreak: boolean = false) => {
+  const startTimer = async (taskId: string, duration?: number, isBreak: boolean = false) => {
     console.log('🍅 DEBUG startTimer called:', { taskId, duration, isBreak })
 
     // Initialize cross-tab sync if not already done
     initCrossTabSync()
 
-    // Claim timer leadership
+    // CROSS-DEVICE CHECK: See if another device is controlling the timer
+    const otherDeviceIsLeader = await checkForActiveDeviceLeader()
+    if (otherDeviceIsLeader) {
+      console.warn('⚠️ [TIMER CROSS-DEVICE] Cannot start - another device is controlling the timer')
+      return // Don't start - another device has leadership
+    }
+
+    // Claim timer leadership (same-browser tabs)
     if (crossTabSync) {
       const claimed = crossTabSync.claimTimerLeadership()
       if (!claimed) {
@@ -261,6 +454,10 @@ watch(completedSessions, (newSessions) => {
       isBreak
     }
 
+    // CROSS-DEVICE: Claim device leadership and start heartbeat
+    isDeviceLeader.value = true
+    startDeviceHeartbeat()
+
     console.log('🍅 DEBUG: Timer session created:', {
       id: currentSession.value!.id,
       taskId,
@@ -269,11 +466,16 @@ watch(completedSessions, (newSessions) => {
       isActive: true,
       isPaused: false,
       isBreak,
-      computedIsActive: isTimerActive.value
+      computedIsActive: isTimerActive.value,
+      deviceId,
+      isDeviceLeader: isDeviceLeader.value
     })
 
-    // Broadcast to other tabs
+    // Broadcast to other tabs (same browser)
     broadcastSession()
+
+    // Save with device leadership info for cross-device sync
+    await saveTimerSessionWithLeadership()
 
     // Play start sound
     playStartSound()
@@ -311,11 +513,15 @@ watch(completedSessions, (newSessions) => {
     }
   }
 
-  const stopTimer = () => {
+  const stopTimer = async () => {
     if (timerInterval.value) {
       clearInterval(timerInterval.value)
       timerInterval.value = null
     }
+
+    // CROSS-DEVICE: Clean up device leadership
+    stopDeviceHeartbeat()
+    isDeviceLeader.value = false
 
     if (currentSession.value!) {
       // Save incomplete session
@@ -329,10 +535,13 @@ watch(completedSessions, (newSessions) => {
 
       // Broadcast stop to other tabs
       broadcastSession()
+
+      // Clear device leadership in database
+      await saveTimerSessionWithLeadership()
     }
   }
 
-  const completeSession = () => {
+  const completeSession = async () => {
     if (!currentSession.value!) return
 
     // Clear interval
@@ -340,6 +549,9 @@ watch(completedSessions, (newSessions) => {
       clearInterval(timerInterval.value)
       timerInterval.value = null
     }
+
+    // CROSS-DEVICE: Stop heartbeat (but don't release leadership yet - auto-transition may reclaim)
+    stopDeviceHeartbeat()
 
     // Mark session as completed
     const completedSession = {
@@ -390,16 +602,27 @@ watch(completedSessions, (newSessions) => {
     }
 
     // Auto-transition: Work → Break → Work
+    // Note: startTimer will re-claim device leadership when starting the next session
     if (settings.value.autoStartBreaks && !wasBreakSession) {
       // Just completed work session, start break
+      // Release device leadership before auto-transition
+      isDeviceLeader.value = false
+      await saveTimerSessionWithLeadership()
       setTimeout(() => {
         startTimer('break', settings.value.shortBreakDuration, true)
       }, 2000) // 2-second delay for notification
     } else if (settings.value.autoStartPomodoros && wasBreakSession && lastTaskId !== 'break') {
       // Just completed break, restart work timer for same task
+      // Release device leadership before auto-transition
+      isDeviceLeader.value = false
+      await saveTimerSessionWithLeadership()
       setTimeout(() => {
         startTimer(lastTaskId, settings.value.workDuration, false)
       }, 2000)
+    } else {
+      // No auto-transition - fully release device leadership
+      isDeviceLeader.value = false
+      await saveTimerSessionWithLeadership()
     }
   }
 
@@ -588,8 +811,11 @@ watch(completedSessions, (newSessions) => {
       // Load timer session from PouchDB
       await loadTimerSession()
 
-      // Initialize cross-tab sync for timer state
+      // Initialize cross-tab sync for timer state (same browser)
       initCrossTabSync()
+
+      // Initialize cross-device sync via CouchDB (different browsers/devices)
+      setupCrossDeviceSync()
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.ERROR,
@@ -613,6 +839,7 @@ watch(completedSessions, (newSessions) => {
     sessions,
     settings,
     isLeader, // Whether this tab controls the timer (cross-tab sync)
+    isDeviceLeader, // Whether this device controls the timer (cross-device sync via CouchDB)
 
     // Computed
     isTimerActive,

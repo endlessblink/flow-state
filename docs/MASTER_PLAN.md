@@ -469,59 +469,112 @@ Phase 3 (Mobile) ←────────────────────
 
 ---
 
-### TASK-012: Expand CI Tests (IN PROGRESS)
+### ~~TASK-012~~: Expand CI Tests (COMPLETE - Partial)
 
 **Goal**: Add lint + unit tests to GitHub Actions after lint cleanup.
 
 **Priority**: P3-LOW (depends on ~~TASK-011~~ ✅ complete)
 
 **Date Started**: December 18, 2025
+**Date Completed**: December 18, 2025 (lint + build achieved; unit tests → TASK-020)
 
 | Step | Description | Status |
 |------|-------------|--------|
 | 1 | Add lint check to CI workflow | ✅ DONE |
 | 2 | Enable blocking lint in CI | ✅ DONE (Dec 18, 2025) |
-| 3 | Add unit test run to CI | ⏸️ DEFERRED |
+| 3 | Add unit test run to CI | ➡️ Moved to TASK-020 |
 | 4 | Add build verification | ✅ DONE (already existed) |
 
-**Implementation Notes** (Dec 18, 2025):
-- **Lint check now BLOCKING** - `continue-on-error: true` removed!
-- **Current lint status**: 1,369 problems (**0 errors**, 1,369 warnings) - **100% ERROR REDUCTION**
-- **Unit tests deferred** due to:
-  - Vitest/Storybook integration conflict (browser tests override include patterns)
-  - Test failures: CSS syntax (13), circular deps (121), Vue imports (9)
-  - Created `vitest.ci.config.ts` for future CI-only test runs
-  - Integration tests need Playwright assertions fixed (Chai compatibility)
-- **Build verification** was already in CI and passing
+**Achieved**:
+- ✅ Lint check now BLOCKING - CI fails on any lint errors
+- ✅ Build verification active
+- ✅ 0 lint errors (from 2,405)
 
-**Session 2 Progress** (Dec 18, 2025):
-- Downgraded `no-explicit-any` to warning for Vue files (315 errors → warnings)
-- Added Storybook `.stories.ts` files to eslint ignores
-- Fixed DragHandle.vue arrow key modifiers, CloudSyncSettings.vue security, App.vue transition
-- Added eslint-disable for intentional dynamic require() statements
-- Ran 4 parallel agents to fix Vue/TS errors
-
-**Session 3 Progress** (Dec 18, 2025 - FINAL):
-- Fixed all `Function` type errors with proper typed functions
-- Changed all event names from kebab-case to camelCase
-- Fixed arrow key modifiers (.arrowup → .up)
-- Fixed duplicate switch case labels
-- Wrapped multi-root templates in single wrapper divs
-- Fixed ASI issues and v-model optional chaining
-- **0 ERRORS ACHIEVED!**
+**Deferred to TASK-020**: Unit test CI integration (requires fixing blockers first)
 
 **Files Created/Modified**:
-- `.github/workflows/ci.yml` - Added lint step
-- `vitest.ci.config.ts` - New CI-specific vitest config (excludes Storybook browser tests)
+- `.github/workflows/ci.yml` - Added lint step, made blocking
+- `vitest.ci.config.ts` - CI-specific vitest config (excludes Storybook browser tests)
 - `eslint.config.js` - Downgraded no-explicit-any, added stories ignores
 
-**Blocking Lint**: ✅ **ENABLED** (Dec 18, 2025)
-- CI will now fail if any lint errors are introduced
+---
 
-**Blockers for Unit Tests**:
-- Fix circular dependency in `useDatabase` ↔ `useReliableSyncManager` ↔ `localBackupManager`
-- Fix 13 CSS variable syntax errors (mismatched parentheses)
-- Fix Vue import validation errors (9 components)
+### TASK-020: Fix Unit Test Infrastructure (PLANNED)
+
+**Goal**: Fix all blockers preventing unit tests from running in CI.
+
+**Priority**: P3-LOW (code quality / CI improvement)
+
+**Depends On**: None (can start anytime)
+
+**Total Failures**: ~143 (121 circular deps + 13 CSS + 9 Vue imports)
+
+| Category | Count | Description | Status |
+|----------|-------|-------------|--------|
+| Circular Dependencies | 121 | `useDatabase` ↔ `useReliableSyncManager` ↔ `localBackupManager` | TODO |
+| CSS Syntax Errors | 13 | Mismatched parentheses in CSS variables | TODO |
+| Vue Import Errors | 9 | Component import validation failures | TODO |
+| Vitest/Storybook Conflict | 1 | Browser tests override include patterns | TODO |
+| Playwright/Chai Compat | ~10 | Integration tests use wrong assertion library | TODO |
+
+#### Blocker Details
+
+**1. Circular Dependencies (121 failures)**
+- **Root cause**: Three-way circular import between database composables
+- **Files involved**:
+  - `src/composables/useDatabase.ts`
+  - `src/composables/useReliableSyncManager.ts`
+  - `src/utils/localBackupManager.ts`
+- **Fix approach**: Extract shared types/interfaces to separate file, use lazy imports, or restructure dependencies
+
+**2. CSS Variable Syntax Errors (13 failures)**
+- **Root cause**: Mismatched parentheses in CSS custom property definitions
+- **Files to audit**: `src/assets/*.css`, component `<style>` blocks
+- **Fix approach**: Run CSS linter, fix syntax errors
+
+**3. Vue Import Validation Errors (9 failures)**
+- **Root cause**: Components fail Vitest's Vue import validation
+- **Fix approach**: Check component exports, ensure proper SFC structure
+
+**4. Vitest/Storybook Integration Conflict**
+- **Root cause**: Storybook browser tests (`*.stories.ts`) override Vitest include patterns
+- **Workaround created**: `vitest.ci.config.ts` excludes Storybook files
+- **Fix approach**: Use separate test configs for unit vs browser tests
+
+**5. Playwright/Chai Compatibility (~10 failures)**
+- **Root cause**: Integration tests use Playwright's `expect` but some assertions expect Chai syntax
+- **Fix approach**: Standardize on Playwright assertions or add Chai compatibility
+
+#### Implementation Steps
+
+| Step | Description | Effort | Status |
+|------|-------------|--------|--------|
+| 1 | Audit and fix CSS syntax errors (13) | ~1h | TODO |
+| 2 | Fix Vue import validation errors (9) | ~2h | TODO |
+| 3 | Refactor circular dependencies (121) | ~4-8h | TODO |
+| 4 | Update integration tests for Playwright assertions | ~2h | TODO |
+| 5 | Enable unit tests in CI workflow | ~30min | TODO |
+| 6 | Add E2E test step to CI (optional) | ~2h | TODO |
+
+**Files to Modify**:
+- `src/composables/useDatabase.ts` - Break circular dep
+- `src/composables/useReliableSyncManager.ts` - Break circular dep
+- `src/utils/localBackupManager.ts` - Break circular dep
+- `src/assets/*.css` - Fix CSS syntax
+- `.github/workflows/ci.yml` - Add test step
+- `vitest.config.ts` - Ensure proper excludes
+
+**Success Criteria**:
+- [ ] `npm run test` passes with 0 failures
+- [ ] CI runs unit tests on every push/PR
+- [ ] No circular dependency warnings
+- [ ] CSS validates without syntax errors
+
+**Notes**:
+- Can be done incrementally (fix one category at a time)
+- CSS and Vue import fixes are quick wins
+- Circular dependency fix is the largest effort
+- E2E tests (Playwright) can be added as separate step after unit tests work
 
 ---
 

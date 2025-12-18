@@ -67,6 +67,88 @@
         }
       }
     },
+"ui_components": {
+      "description": "Standard UI component styling for dropdowns, modals, and overlays",
+      "components": {
+        "dropdown": {
+          "component_file": "src/components/CustomSelect.vue",
+          "description": "MANDATORY: All dropdowns must use CustomSelect component - NEVER native <select>",
+          "tokens": {
+            "--dropdown-bg": {
+              "value": "rgba(20, 20, 20, 0.95)",
+              "description": "Dark glass morphism background"
+            },
+            "--dropdown-backdrop": {
+              "value": "blur(20px)",
+              "description": "Backdrop blur for glass effect"
+            },
+            "--dropdown-border": {
+              "value": "1px solid rgba(255, 255, 255, 0.15)",
+              "description": "Subtle white border"
+            },
+            "--dropdown-border-radius": {
+              "value": "var(--radius-xl)",
+              "description": "Standard rounded corners"
+            },
+            "--dropdown-shadow": {
+              "value": "0 16px 48px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3)",
+              "description": "Multi-layer shadow for depth"
+            },
+            "--dropdown-trigger-height": {
+              "value": "44px",
+              "description": "Standard trigger button height"
+            },
+            "--dropdown-trigger-height-compact": {
+              "value": "32px",
+              "description": "Compact/inline trigger height"
+            }
+          },
+          "usage_pattern": "import CustomSelect from '@/components/CustomSelect.vue'"
+        },
+        "context_menu": {
+          "component_file": "src/components/ContextMenu.vue",
+          "description": "MANDATORY: All right-click menus must use ContextMenu component",
+          "tokens": {
+            "--context-menu-bg": {
+              "value": "rgba(20, 20, 20, 0.95)",
+              "description": "Same as dropdown for consistency"
+            },
+            "--context-menu-separator": {
+              "value": "rgba(255, 255, 255, 0.15)",
+              "description": "Separator line color"
+            },
+            "--context-menu-danger": {
+              "value": "var(--red-500)",
+              "description": "Danger action color"
+            }
+          }
+        },
+        "modal": {
+          "component_files": ["src/components/base/BaseModal.vue", "src/components/base/BasePopover.vue"],
+          "description": "Standard modal/popover styling",
+          "tokens": {
+            "--modal-bg": {
+              "value": "rgba(20, 20, 20, 0.95)",
+              "description": "Dark glass morphism background"
+            },
+            "--modal-backdrop": {
+              "value": "blur(20px)",
+              "description": "Backdrop blur for glass effect"
+            },
+            "--modal-border": {
+              "value": "1px solid rgba(255, 255, 255, 0.15)",
+              "description": "Subtle white border"
+            }
+          }
+        }
+      },
+      "enforcement_rules": [
+        "NEVER use native <select> elements - always use CustomSelect",
+        "NEVER use native browser context menus - always use ContextMenu",
+        "All overlays must use dark glass morphism with blur(20px)",
+        "All overlay backgrounds must use rgba(20, 20, 20, 0.95)"
+      ]
+    },
     "alpha_variants": {
       "description": "Alpha variants for different opacity levels",
       "tokens": {

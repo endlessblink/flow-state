@@ -12,33 +12,33 @@
         :style="menuStyle"
         @click.stop
       >
-        <button
-          v-for="item in menuItems"
-          :key="item.id"
-          class="context-menu-item"
-          :class="{ danger: item.danger, disabled: item.disabled }"
-          :disabled="item.disabled"
-          @click="handleItemClick(item)"
-        >
-          <component
-            :is="item.icon"
-            v-if="item.icon"
-            :size="16"
-            :stroke-width="1.5"
-            class="menu-icon"
-          />
-          <span class="menu-text">{{ item.label }}</span>
-          <span v-if="item.shortcut" class="menu-shortcut">{{ item.shortcut }}</span>
-        </button>
-
-        <div v-if="hasSeparator" class="context-menu-separator" />
+        <template v-for="item in items" :key="item.id">
+          <div v-if="item.separator" class="context-menu-separator" />
+          <button
+            v-else
+            class="context-menu-item"
+            :class="{ danger: item.danger, disabled: item.disabled }"
+            :disabled="item.disabled"
+            @click="handleItemClick(item)"
+          >
+            <component
+              :is="item.icon"
+              v-if="item.icon"
+              :size="16"
+              :stroke-width="1.5"
+              class="menu-icon"
+            />
+            <span class="menu-text">{{ item.label }}</span>
+            <span v-if="item.shortcut" class="menu-shortcut">{{ item.shortcut }}</span>
+          </button>
+        </template>
       </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import type { Component } from 'vue'
 
 export interface ContextMenuItem {
@@ -46,7 +46,7 @@ export interface ContextMenuItem {
   label: string
   icon?: Component
   shortcut?: string
-  action: () => void
+  action?: () => void
   danger?: boolean
   disabled?: boolean
   separator?: boolean
@@ -66,9 +66,6 @@ const emit = defineEmits<{
 }>()
 
 const menuRef = ref<HTMLElement>()
-
-const menuItems = computed(() => props.items.filter(item => !item.separator))
-const hasSeparator = computed(() => props.items.some(item => item.separator))
 
 const menuStyle = ref({
   left: '0px',
@@ -107,7 +104,7 @@ const calculatePosition = () => {
 }
 
 const handleItemClick = (item: ContextMenuItem) => {
-  if (item.disabled) return
+  if (item.disabled || !item.action) return
   item.action()
   close()
 }
@@ -149,18 +146,15 @@ onUnmounted(() => {
 .context-menu {
   position: fixed;
   min-width: 200px;
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-medium) 0%,
-    var(--glass-bg-heavy) 100%
-  );
-  backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid var(--glass-border-strong);
+  /* Dark glass morphism */
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
   box-shadow:
-    0 16px 32px var(--shadow-strong),
-    0 8px 16px var(--shadow-md),
-    inset 0 1px 0 var(--glass-border-soft);
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
   padding: var(--space-2);
   animation: menuSlideIn var(--duration-fast) var(--spring-bounce);
   z-index: 3001;
@@ -195,9 +189,8 @@ onUnmounted(() => {
 }
 
 .context-menu-item:hover:not(:disabled) {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border);
-  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .context-menu-item:active:not(:disabled) {
@@ -209,9 +202,8 @@ onUnmounted(() => {
 }
 
 .context-menu-item.danger:hover:not(:disabled) {
-  background: var(--red-50);
-  border-color: var(--red-200);
-  color: var(--red-600);
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .context-menu-item:disabled {
@@ -233,13 +225,14 @@ onUnmounted(() => {
   font-size: var(--text-xs);
   color: var(--text-muted);
   padding: var(--space-1) var(--space-2);
-  background: var(--glass-bg-soft);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-sm);
 }
 
 .context-menu-separator {
   height: 1px;
-  background: var(--glass-border);
-  margin: var(--space-2) var(--space-2);
+  margin: var(--space-2) var(--space-3);
+  background: var(--context-menu-separator, rgba(255, 255, 255, 0.15));
 }
 </style>

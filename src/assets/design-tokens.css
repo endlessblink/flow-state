@@ -496,6 +496,29 @@
   --danger-text: var(--color-danger);
   --blue-text: var(--color-info);
 
+  /* ===== UI OVERLAY COMPONENT TOKENS ===== */
+  /* Dropdowns, Modals, Context Menus - Dark Glass Morphism */
+  /* MANDATORY: Use CustomSelect.vue, ContextMenu.vue, BaseModal.vue */
+
+  /* Overlay backgrounds - Dark glass morphism */
+  --overlay-component-bg: rgba(20, 20, 20, 0.95);
+  --overlay-component-bg-lighter: rgba(0, 0, 0, 0.4);
+  --overlay-component-backdrop: blur(20px);
+  --overlay-component-border: 1px solid rgba(255, 255, 255, 0.15);
+  --overlay-component-border-color: rgba(255, 255, 255, 0.15);
+  --overlay-component-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3);
+
+  /* Dropdown-specific tokens */
+  --dropdown-trigger-height: 44px;
+  --dropdown-trigger-height-compact: 32px;
+  --dropdown-item-hover-bg: rgba(255, 255, 255, 0.03);
+  --dropdown-item-hover-border: rgba(255, 255, 255, 0.1);
+  --dropdown-selected-border: rgba(78, 205, 196, 0.5);
+  --dropdown-selected-color: rgba(78, 205, 196, 1);
+
+  /* Context menu separator */
+  --context-menu-separator: rgba(255, 255, 255, 0.15);
+
   /* ===== TYPOGRAPHY SYSTEM ===== */
 
   /* Font Families */

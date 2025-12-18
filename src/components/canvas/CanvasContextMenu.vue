@@ -358,20 +358,15 @@ const handleArrangeInGrid = () => {
 <style scoped>
 .context-menu {
   position: fixed;
-  background: linear-gradient(
-    135deg,
-    var(--surface-primary) 0%,
-    var(--surface-secondary) 100%
-  );
-  backdrop-filter: blur(32px) saturate(150%);
-  -webkit-backdrop-filter: blur(32px) saturate(150%);
-  border: 1px solid var(--glass-bg-medium);
+  /* Dark glass morphism */
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
   box-shadow:
-    0 24px 48px var(--shadow-xl),
-    0 12px 24px var(--shadow-xl),
-    0 0 0 1px var(--glass-bg-medium),
-    inset 0 1px 0 var(--glass-border);
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
   padding: var(--space-2);
   min-width: 200px;
   max-width: 320px;
@@ -409,7 +404,8 @@ const handleArrangeInGrid = () => {
 }
 
 .menu-item:hover {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .menu-item.danger {
@@ -417,7 +413,7 @@ const handleArrangeInGrid = () => {
 }
 
 .menu-item.danger:hover {
-  background: var(--danger-bg-subtle);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .menu-item:disabled {
@@ -437,7 +433,8 @@ const handleArrangeInGrid = () => {
 .menu-shortcut {
   font-size: var(--text-xs);
   color: var(--text-muted);
-  background: var(--surface-tertiary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -446,7 +443,7 @@ const handleArrangeInGrid = () => {
 
 .menu-divider {
   height: 1px;
-  background: var(--border-secondary);
+  background: rgba(255, 255, 255, 0.1);
   margin: var(--space-2) 0;
 }
 
@@ -472,8 +469,8 @@ const handleArrangeInGrid = () => {
 }
 
 .menu-icon-button {
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -487,8 +484,8 @@ const handleArrangeInGrid = () => {
 }
 
 .menu-icon-button:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .menu-icon-button:active {
@@ -514,10 +511,15 @@ const handleArrangeInGrid = () => {
   position: absolute;
   left: calc(100% + var(--space-1));
   top: 0;
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-secondary);
+  /* Dark glass morphism */
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
   padding: var(--space-2) 0;
   min-width: 180px;
   max-width: 280px;

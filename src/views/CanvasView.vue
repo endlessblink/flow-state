@@ -462,12 +462,10 @@
 import { ref, computed, watch, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useDebounceFn, useMagicKeys, useWindowSize } from '@vueuse/core'
 import { Filter, X, Plus, Inbox } from 'lucide-vue-next'
-import { VueFlow, useVueFlow, useNodesInitialized, PanOnScrollMode } from '@vue-flow/core'
+import { VueFlow, useVueFlow, useNodesInitialized } from '@vue-flow/core'
 import { useMessage } from 'naive-ui'
 import { Background } from '@vue-flow/background'
-import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
-import { NodeResizer, NodeResizeControl } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
 import type { Node, Edge, EdgeMouseEvent } from '@vue-flow/core'
 import { useVueFlowStability } from '@/composables/useVueFlowStability'
@@ -477,9 +475,8 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { storeToRefs } from 'pinia'
-import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
-import { resolveDueDate, useGroupSettings } from '@/composables/useGroupSettings'
+import { resolveDueDate } from '@/composables/useGroupSettings'
 import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
@@ -489,7 +486,6 @@ import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 import BatchEditModal from '@/components/BatchEditModal.vue'
-import MultiSelectionOverlay from '@/components/canvas/MultiSelectionOverlay.vue'
 import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
 import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
 import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
@@ -1102,7 +1098,7 @@ const retryFailedOperation = async () => {
         syncNodes()
         syncEdges()
         setOperationLoading('syncing', false)
-      } catch (error) {
+      } catch (_error) {
         setOperationError('Sync Operation', 'Retry failed: Unable to synchronize data', true)
         setOperationLoading('syncing', false)
       }
@@ -2839,7 +2835,7 @@ const _handleResizeEnd = (event: any) => {
 }
 
 // New NodeResizer event handlers with comprehensive logging
-const handleSectionResizeStart = ({ sectionId, event }: any) => {
+const handleSectionResizeStart = ({ sectionId, event: _event }: any) => {
   // Capture original section position to track position changes during resize
   const section = canvasStore.sections.find(s => s.id === sectionId)
   if (section) {
@@ -2866,7 +2862,7 @@ const handleSectionResizeStart = ({ sectionId, event }: any) => {
   }
 }
 
-const handleSectionResize = ({ sectionId, event }: any) => {
+const handleSectionResize = ({ sectionId: _sectionId, event }: any) => {
   // NodeResizer provides dimensions in event.params as { width, height }
   const width = event?.params?.width || event?.width
   const height = event?.params?.height || event?.height
@@ -3067,7 +3063,7 @@ const closeCanvasContextMenu = () => {
   canvasContextSection.value = null // Reset context section so "Create Custom Group" appears
 }
 
-const centerOnSelectedTasks = () => {
+const _centerOnSelectedTasks = () => {
   const selectedNodes = nodes.value.filter(n => canvasStore.selectedNodeIds.includes(n.id))
   if (selectedNodes.length === 0) return
 
@@ -3079,8 +3075,8 @@ const centerOnSelectedTasks = () => {
   const maxX = Math.max(...xs) + 220 // approximate node width
   const maxY = Math.max(...ys) + 100 // approximate node height
 
-  const centerX = (minX + maxX) / 2
-  const centerY = (minY + maxY) / 2
+  const _centerX = (minX + maxX) / 2
+  const _centerY = (minY + maxY) / 2
 
   vueFlowFitView({
     nodes: selectedNodes.map(n => n.id),
@@ -3091,13 +3087,13 @@ const centerOnSelectedTasks = () => {
   closeCanvasContextMenu()
 }
 
-const fitAllTasks = () => {
+const _fitAllTasks = () => {
   vueFlowFitView({ padding: 0.2, duration: 300 })
   closeCanvasContextMenu()
 }
 
 
-const selectAllTasks = () => {
+const _selectAllTasks = () => {
   const taskNodeIds = nodes.value
     .filter(n => n.type === 'taskNode')
     .map(n => n.id)
@@ -3105,7 +3101,7 @@ const selectAllTasks = () => {
   closeCanvasContextMenu()
 }
 
-const clearSelection = () => {
+const _clearSelection = () => {
   canvasStore.setSelectedNodes([])
   closeCanvasContextMenu()
 }
@@ -4338,7 +4334,7 @@ const zoomPerformanceManager = {
 }
 
 // Performance optimized viewport culling for extreme zoom levels
-const shouldCullNode = (node: Node, currentZoom: number): boolean => {
+const _shouldCullNode = (node: Node, currentZoom: number): boolean => {
   // Cull nodes when zoom is extremely low to improve performance
   if (currentZoom < 0.1) { // Below 10% zoom
     // Only show visible nodes in viewport or important nodes
@@ -4374,7 +4370,7 @@ const fitView = () => {
   vueFlowFitView({ padding: 0.2, duration: 300 })
 }
 
-const zoomIn = () => {
+const _zoomIn = () => {
   if (zoomPerformanceManager.shouldThrottleZoom()) return
 
   zoomPerformanceManager.scheduleOperation(() => {
@@ -4382,7 +4378,7 @@ const zoomIn = () => {
   })
 }
 
-const zoomOut = () => {
+const _zoomOut = () => {
   if (zoomPerformanceManager.shouldThrottleZoom()) return
 
   zoomPerformanceManager.scheduleOperation(() => {
@@ -4646,17 +4642,17 @@ const handleSectionSettingsSave = (settings: { assignOnDrop: AssignOnDropSetting
 // Section management methods
 
   
-const getTasksForSection = (section: any) => {
+const _getTasksForSection = (section: any) => {
   const tasks = canvasStore.getTasksInSection(section, Array.isArray(filteredTasks.value) ? filteredTasks.value : [])
   // If section is collapsed, return empty array to hide tasks
   return section.isCollapsed ? [] : tasks
 }
 
-const handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
+const _handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
   const data = event.dataTransfer?.getData('application/json')
   if (!data) return
 
-  const { taskId, fromInbox } = JSON.parse(data)
+  const { taskId, fromInbox: _fromInbox } = JSON.parse(data)
 
   console.log(`[handleSectionTaskDrop] Task "${taskId}" dropped on section "${section.name}" (type: ${section.type})`)
 
@@ -4694,7 +4690,7 @@ const handleSectionUpdate = (data: any) => {
   }
 }
 
-const handleSectionActivate = (sectionId: string) => {
+const _handleSectionActivate = (sectionId: string) => {
   canvasStore.activeSectionId = sectionId
   canvasStore.setActiveSection(sectionId)
 }
@@ -4734,9 +4730,9 @@ const handleSelectionChange = withVueFlowErrorBoundary('handleSelectionChange', 
   console.log('🔄 Selection synchronization complete')
 })
 
-const handleBulkAction = (action: string, params: any) => {
+const _handleBulkAction = (action: string, params: any) => {
   const { nodeIds } = params
-  
+
   switch (action) {
     case 'updateStatus':
       nodeIds.forEach((nodeId: string) => {

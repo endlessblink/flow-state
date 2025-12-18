@@ -17,11 +17,7 @@
             @keydown.escape="$emit('close')"
           >
         </div>
-        <div class="search-shortcuts">
-          <kbd class="shortcut">↑↓</kbd>
-          <kbd class="shortcut">Enter</kbd>
-          <kbd class="shortcut">Esc</kbd>
-        </div>
+        <kbd class="shortcut-esc">Esc</kbd>
       </div>
 
       <div v-if="searchQuery.trim()" class="search-results">
@@ -82,19 +78,9 @@
         </div>
       </div>
 
-      <!-- Initial State -->
+      <!-- Initial State - Minimal -->
       <div v-else class="search-empty">
-        <Search :size="48" />
-        <h3>Search anything</h3>
-        <p>Find tasks, projects, and more</p>
-        <div class="search-tips">
-          <div class="tip">
-            <kbd class="shortcut">Ctrl</kbd>
-            <span>+</span>
-            <kbd class="shortcut">K</kbd>
-            <span>to open search</span>
-          </div>
-        </div>
+        <span class="empty-hint">Type to search tasks and projects</span>
       </div>
     </div>
   </div>
@@ -316,21 +302,15 @@ onMounted(() => {
   color: var(--text-subtle);
 }
 
-.search-shortcuts {
-  display: flex;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-.shortcut {
+.shortcut-esc {
   background: var(--surface-primary);
   border: 1px solid var(--border-secondary);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xs);
   font-family: var(--font-mono);
-  color: var(--text-secondary);
-  box-shadow: var(--shadow-sm);
+  color: var(--text-subtle);
+  flex-shrink: 0;
 }
 
 .search-results {
@@ -454,43 +434,12 @@ onMounted(() => {
 }
 
 .search-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-8);
+  padding: var(--space-6);
   text-align: center;
-  color: var(--text-subtle);
 }
 
-.search-empty svg {
-  margin-bottom: var(--space-4);
-  opacity: 0.3;
-}
-
-.search-empty h3 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-lg);
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-}
-
-.search-empty p {
-  margin: 0 0 var(--space-6);
+.empty-hint {
   font-size: var(--text-sm);
-  color: var(--text-subtle);
-}
-
-.search-tips {
-  display: flex;
-  gap: var(--space-4);
-}
-
-.tip {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
   color: var(--text-subtle);
 }
 

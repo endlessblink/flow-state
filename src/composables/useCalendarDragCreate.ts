@@ -96,7 +96,7 @@ export function useCalendarDragCreate() {
     }
   }
 
-  const handleCreateDragEnd = (event: MouseEvent) => {
+  const handleCreateDragEnd = (_event: MouseEvent) => {
     if (!createDragState.isActive || !createDragState.startSlot || !createDragState.currentSlot) {
       resetCreateDrag()
       return

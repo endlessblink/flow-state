@@ -47,13 +47,13 @@
 
     <!-- Quick Add -->
     <div v-if="!isCollapsed" class="quick-add">
-      <NInput
-        v-model:value="newTaskTitle"
+      <input
+        v-model="newTaskTitle"
+        type="text"
+        class="quick-add-input"
         placeholder="Quick add task (Enter)..."
-        size="large"
-        clearable
         @keydown.enter="addTask"
-      />
+      >
     </div>
 
     <!-- Brain Dump Mode Toggle -->
@@ -68,14 +68,14 @@
 
     <!-- Brain Dump Textarea -->
     <div v-if="!isCollapsed && brainDumpMode" class="brain-dump">
-      <NInput
-        v-model:value="brainDumpText"
-        type="textarea"
+      <textarea
+        v-model="brainDumpText"
+        class="brain-dump-textarea"
+        rows="8"
         placeholder="Paste or type tasks (one per line):
   Write proposal !!!
   Review code 2h
   Call client"
-        :rows="8"
       />
       <NButton
         type="primary"
@@ -174,7 +174,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { NInput, NButton, NBadge, NTag, NIcon as _NIcon } from 'naive-ui'
+import { NButton, NBadge, NTag, NIcon as _NIcon } from 'naive-ui'
 import { Plus as _Plus, Zap as _Zap, Clock as _Clock, ChevronLeft, ChevronRight, Timer } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -624,12 +624,69 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* Native input styling for quick add */
+.quick-add-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  outline: none;
+  transition: all var(--duration-fast) var(--spring-smooth);
+}
+
+.quick-add-input:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.quick-add-input:focus {
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.15);
+}
+
+.quick-add-input::placeholder {
+  color: var(--text-muted);
+}
+
 .brain-dump {
   padding: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* Native textarea styling for brain dump */
+.brain-dump-textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+  transition: all var(--duration-fast) var(--spring-smooth);
+}
+
+.brain-dump-textarea:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.brain-dump-textarea:focus {
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.15);
+}
+
+.brain-dump-textarea::placeholder {
+  color: var(--text-muted);
 }
 
 .batch-actions {

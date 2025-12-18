@@ -1,6 +1,7 @@
 <template>
   <div ref="selectRef" class="custom-select">
     <button
+      ref="triggerRef"
       type="button"
       class="select-trigger"
       :class="{ 'is-open': isOpen }"
@@ -15,38 +16,41 @@
       <ChevronDown :size="14" class="select-icon" :class="{ 'is-open': isOpen }" />
     </button>
 
-    <Transition name="dropdown">
-      <ul
-        v-if="isOpen"
-        class="select-dropdown"
-        role="listbox"
-        @keydown.down.prevent="focusNext"
-        @keydown.up.prevent="focusPrevious"
-        @keydown.enter.prevent="selectFocused"
-        @keydown.esc="closeDropdown"
-      >
-        <li
-          v-for="(option, index) in options"
-          :key="option.value"
-          class="select-option"
-          :class="{
-            'is-selected': option.value === modelValue,
-            'is-focused': index === focusedIndex
-          }"
-          role="option"
-          :aria-selected="option.value === modelValue"
-          @click="selectOption(option)"
-          @mouseenter="focusedIndex = index"
+    <Teleport to="body">
+      <Transition name="dropdown">
+        <ul
+          v-if="isOpen"
+          class="select-dropdown"
+          :style="dropdownStyle"
+          role="listbox"
+          @keydown.down.prevent="focusNext"
+          @keydown.up.prevent="focusPrevious"
+          @keydown.enter.prevent="selectFocused"
+          @keydown.esc="closeDropdown"
         >
-          {{ option.label }}
-        </li>
-      </ul>
-    </Transition>
+          <li
+            v-for="(option, index) in options"
+            :key="option.value"
+            class="select-option"
+            :class="{
+              'is-selected': option.value === modelValue,
+              'is-focused': index === focusedIndex
+            }"
+            role="option"
+            :aria-selected="option.value === modelValue"
+            @click="selectOption(option)"
+            @mouseenter="focusedIndex = index"
+          >
+            {{ option.label }}
+          </li>
+        </ul>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
 
 interface SelectOption {
@@ -69,31 +73,67 @@ const emit = defineEmits<{
 }>()
 
 const selectRef = ref<HTMLElement>()
+const triggerRef = ref<HTMLButtonElement>()
 const isOpen = ref(false)
 const focusedIndex = ref(0)
+
+// Dropdown positioning
+const dropdownStyle = ref({
+  position: 'fixed' as const,
+  top: '0px',
+  left: '0px',
+  width: '0px'
+})
+
+const calculateDropdownPosition = () => {
+  if (!triggerRef.value) return
+
+  const rect = triggerRef.value.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+  const spaceBelow = viewportHeight - rect.bottom
+  const spaceAbove = rect.top
+  const dropdownHeight = Math.min(240, props.options.length * 44 + 16) // Estimate height
+
+  // Position below if there's enough space, otherwise above
+  const positionAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
+
+  dropdownStyle.value = {
+    position: 'fixed',
+    top: positionAbove ? `${rect.top - dropdownHeight - 4}px` : `${rect.bottom + 4}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`
+  }
+}
 
 const displayValue = computed(() => {
   const selected = props.options.find(opt => opt.value === props.modelValue)
   return selected ? selected.label : props.placeholder
 })
 
-const toggleDropdown = () => {
+const toggleDropdown = async () => {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     // Focus current selection
     const selectedIndex = props.options.findIndex(opt => opt.value === props.modelValue)
     focusedIndex.value = selectedIndex >= 0 ? selectedIndex : 0
+    // Calculate dropdown position
+    await nextTick()
+    calculateDropdownPosition()
   }
 }
 
-const openAndFocusFirst = () => {
+const openAndFocusFirst = async () => {
   isOpen.value = true
   focusedIndex.value = 0
+  await nextTick()
+  calculateDropdownPosition()
 }
 
-const openAndFocusLast = () => {
+const openAndFocusLast = async () => {
   isOpen.value = true
   focusedIndex.value = props.options.length - 1
+  await nextTick()
+  calculateDropdownPosition()
 }
 
 const closeDropdown = () => {
@@ -130,12 +170,30 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 }
 
+// Handle window resize to recalculate position
+const handleResize = () => {
+  if (isOpen.value) {
+    calculateDropdownPosition()
+  }
+}
+
+// Handle scroll to close dropdown (avoid position issues)
+const handleScroll = () => {
+  if (isOpen.value) {
+    closeDropdown()
+  }
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', handleResize)
+  window.addEventListener('scroll', handleScroll, true)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', handleResize)
+  window.removeEventListener('scroll', handleScroll, true)
 })
 
 // Reset focused index when dropdown closes
@@ -214,14 +272,11 @@ watch(isOpen, (newVal) => {
 }
 
 .select-dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  left: 0;
-  right: 0;
-  z-index: var(--z-dropdown);
+  /* Position is set via inline style from Teleport */
+  z-index: 9999;
 
   /* Glass morphism - transparent with blur (matches BasePopover) */
-  background: rgba(20, 20, 20, 0.5);
+  background: rgba(20, 20, 20, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 

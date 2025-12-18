@@ -22,7 +22,8 @@
         @keydown.esc="$emit('close')"
       >
 
-      <!-- Date & Time Row -->
+      <!-- Schedule Section -->
+      <span class="section-label">Schedule</span>
       <div class="date-time-row">
         <!-- Date Picker -->
         <div class="date-picker-section">
@@ -95,16 +96,17 @@
         </div>
       </div>
 
-      <!-- Quick Properties Row -->
+      <!-- Details Section -->
+      <span class="section-label">Details</span>
       <div class="properties-row">
         <!-- Priority Dropdown -->
-        <div class="property-chip select-chip">
-          <Flag :size="14" />
-          <select v-model="priority" class="chip-select">
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
+        <div class="property-select">
+          <Flag :size="14" class="property-icon" />
+          <CustomSelect
+            v-model="priority"
+            :options="priorityOptions"
+            class="compact-select"
+          />
         </div>
 
         <!-- Duration (editable) -->
@@ -121,14 +123,13 @@
         </div>
 
         <!-- Project Dropdown -->
-        <div class="property-chip select-chip">
-          <Inbox :size="14" />
-          <select v-model="projectId" class="chip-select">
-            <option value="">Inbox</option>
-            <option v-for="project in projects" :key="project.id" :value="project.id">
-              {{ project.name }}
-            </option>
-          </select>
+        <div class="property-select">
+          <Inbox :size="14" class="property-icon" />
+          <CustomSelect
+            v-model="projectId"
+            :options="projectOptions"
+            class="compact-select"
+          />
         </div>
       </div>
 
@@ -150,6 +151,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { Calendar, Flag, Clock, Inbox } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
+import CustomSelect from '@/components/CustomSelect.vue'
 
 interface Props {
   isOpen: boolean
@@ -181,6 +183,18 @@ const localEndTime = ref('')
 const hasTime = ref(true) // Time is enabled by default when coming from calendar
 
 const projects = computed(() => taskStore.projects)
+
+// Options for CustomSelect dropdowns
+const priorityOptions = [
+  { label: 'Low', value: 'low' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'High', value: 'high' }
+]
+
+const projectOptions = computed(() => [
+  { label: 'Inbox', value: '' },
+  ...projects.value.map(p => ({ label: p.name, value: p.id }))
+])
 
 // Format date for display
 const formattedDate = computed(() => {
@@ -391,6 +405,18 @@ watch(() => props.isOpen, (isOpen) => {
   opacity: 0.5;
 }
 
+/* Section Labels */
+.section-label {
+  display: block;
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+  opacity: 0.7;
+}
+
 /* Date & Time Section */
 .date-time-row {
   display: flex;
@@ -559,53 +585,50 @@ watch(() => props.isOpen, (isOpen) => {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Select chips with dropdown indicator */
-.select-chip {
+/* Property select wrapper with icon */
+.property-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   position: relative;
-  padding-right: var(--space-6);
 }
 
-.select-chip::after {
-  content: '';
+.property-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
   position: absolute;
-  right: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid var(--text-muted);
+  left: var(--space-3);
+  z-index: 1;
   pointer-events: none;
 }
 
-.chip-select {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  padding-right: var(--space-2);
-  text-transform: capitalize;
+/* Compact CustomSelect styling */
+.compact-select {
+  min-width: 100px;
 }
 
-.chip-select:focus {
+.compact-select :deep(.select-trigger) {
+  padding: var(--space-2) var(--space-3);
+  padding-left: calc(var(--space-3) + 14px + var(--space-2));
+  min-height: auto;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.compact-select :deep(.select-trigger:hover) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+.compact-select :deep(.select-trigger:focus),
+.compact-select :deep(.select-trigger.is-open) {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.compact-select :deep(.select-icon.is-open) {
   color: var(--text-primary);
-}
-
-.chip-select option {
-  background: #0a0a0f;
-  color: #a1a1aa;
-  padding: var(--space-2);
-}
-
-.chip-select option:checked {
-  background: #18181b;
-  color: #e4e4e7;
 }
 
 .duration-chip {

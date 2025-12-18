@@ -148,6 +148,52 @@ Phase 3 (Mobile) ←────────────────────
 
 ---
 
+### TASK-019: Fix `any` Type Warnings (PLANNED)
+
+**Goal**: Fix 1,369 `no-explicit-any` warnings in batches for better type safety.
+
+**Priority**: P3-LOW (code quality improvement)
+
+**Total Warnings**: 1,369 across 140 files
+
+| Batch | Target | Warnings | Status |
+|-------|--------|----------|--------|
+| 1 | Stores (tasks, auth, canvas, etc.) | ~80 | TODO |
+| 2 | Views (CanvasView, CalendarView, etc.) | ~102 | TODO |
+| 3 | Sync utils (conflictResolution, threeWayMerge) | ~128 | TODO |
+| 4 | Core composables (useCrossTabSync, useDatabase) | ~200 | TODO |
+| 5 | Components | ~212 | TODO |
+| 6 | Remaining utils | ~247 | TODO |
+| 7 | Other files | ~400 | TODO |
+
+**Top 10 Files by Warning Count**:
+1. `CanvasView.vue` (81)
+2. `useCrossTabSync.ts` (71)
+3. `useReliableSyncManager.ts` (50)
+4. `conflictResolution.ts` (44)
+5. `tasks.ts` store (37)
+6. `SyncErrorBoundary.vue` (35)
+7. `threeWayMerge.ts` (31)
+8. `auth.ts` store (27)
+9. `verificationReportGenerator.ts` (27)
+10. `userResolutionRules.ts` (26)
+
+**Process Per Batch**:
+1. Read each file to understand context
+2. Define proper types (interfaces/types)
+3. Replace `any` with correct types
+4. Run `npm run lint` to verify reduction
+5. Run `npm run build` to ensure no breaks
+6. Commit batch with clear message
+
+**Notes**:
+- Each batch should be committed separately
+- Build must pass after each batch
+- Can be paused/resumed between batches
+- Low priority - do when time permits
+
+---
+
 ### TASK-014: Storybook Glass Morphism Streamlining (IN PROGRESS)
 
 **Goal**: Apply consistent glass morphism design aesthetic (stroke borders, glass blur, no fills) across all Storybook stories and their components.

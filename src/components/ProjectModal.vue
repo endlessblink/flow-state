@@ -1,96 +1,98 @@
 <template>
-  <BaseModal
-    :is-open="isOpen"
-    :title="isEditing ? 'Edit Project' : 'Create Project'"
-    size="md"
-    :show-footer="false"
-    @close="emit('close')"
-  >
-    <!-- Modal Body Content -->
-    <div class="form-group">
-      <label class="form-label">Project Name</label>
-      <BaseInput
-        ref="nameInput"
-        v-model="projectData.name"
-        placeholder="Enter project name..."
-      />
-    </div>
+  <div class="project-modal-wrapper">
+    <BaseModal
+      :is-open="isOpen"
+      :title="isEditing ? 'Edit Project' : 'Create Project'"
+      size="md"
+      :show-footer="false"
+      @close="emit('close')"
+    >
+      <!-- Modal Body Content -->
+      <div class="form-group">
+        <label class="form-label">Project Name</label>
+        <BaseInput
+          ref="nameInput"
+          v-model="projectData.name"
+          placeholder="Enter project name..."
+        />
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">Parent Project (Optional)</label>
-      <select
-        v-model="projectData.parentId"
-        class="parent-project-select"
-      >
-        <option :value="null">
-          None (Top Level)
-        </option>
-        <option
-          v-for="proj in availableParentProjects"
-          :key="proj.id"
-          :value="proj.id"
+      <div class="form-group">
+        <label class="form-label">Parent Project (Optional)</label>
+        <select
+          v-model="projectData.parentId"
+          class="parent-project-select"
         >
-          {{ '  '.repeat(proj.depth) }}{{ proj.depth > 0 ? '└─ ' : '' }}{{ proj.name }}
-        </option>
-      </select>
-    </div>
+          <option :value="null">
+            None (Top Level)
+          </option>
+          <option
+            v-for="proj in availableParentProjects"
+            :key="proj.id"
+            :value="proj.id"
+          >
+            {{ '  '.repeat(proj.depth) }}{{ proj.depth > 0 ? '└─ ' : '' }}{{ proj.name }}
+          </option>
+        </select>
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">Project Icon & Color</label>
+      <div class="form-group">
+        <label class="form-label">Project Icon & Color</label>
 
-      <!-- Current Selection Preview -->
-      <div class="selection-preview">
-        <div
-          class="preview-badge"
-          :style="{
-            backgroundColor: projectData.colorType === 'hex' ? projectData.color : 'transparent'
-          }"
-        >
-          <ProjectEmojiIcon
-            v-if="projectData.colorType === 'emoji' && projectData.emoji"
-            :emoji="projectData.emoji"
-            size="sm"
-            class="preview-emoji"
-          />
+        <!-- Current Selection Preview -->
+        <div class="selection-preview">
+          <div
+            class="preview-badge"
+            :style="{
+              backgroundColor: projectData.colorType === 'hex' ? projectData.color : 'transparent'
+            }"
+          >
+            <ProjectEmojiIcon
+              v-if="projectData.colorType === 'emoji' && projectData.emoji"
+              :emoji="projectData.emoji"
+              size="sm"
+              class="preview-emoji"
+            />
+          </div>
+          <button
+            class="change-icon-btn"
+            type="button"
+            @click="isEmojiPickerOpen = true"
+          >
+            {{ projectData.colorType === 'emoji' && projectData.emoji ? 'Change Icon' : 'Choose Icon or Color' }}
+          </button>
         </div>
-        <button
-          class="change-icon-btn"
-          type="button"
-          @click="isEmojiPickerOpen = true"
-        >
-          {{ projectData.colorType === 'emoji' && projectData.emoji ? 'Change Icon' : 'Choose Icon or Color' }}
-        </button>
       </div>
-    </div>
 
-    <!-- Custom Footer -->
-    <template #footer>
-      <div class="modal-actions">
-        <BaseButton
-          variant="secondary"
-          @click="emit('close')"
-        >
-          Cancel
-        </BaseButton>
-        <BaseButton
-          variant="primary"
-          :disabled="!projectData?.name?.trim()"
-          @click="saveProject"
-        >
-          {{ isEditing ? 'Save Changes' : 'Create Project' }}
-        </BaseButton>
-      </div>
-    </template>
-  </BaseModal>
+      <!-- Custom Footer -->
+      <template #footer>
+        <div class="modal-actions">
+          <BaseButton
+            variant="secondary"
+            @click="emit('close')"
+          >
+            Cancel
+          </BaseButton>
+          <BaseButton
+            variant="primary"
+            :disabled="!projectData?.name?.trim()"
+            @click="saveProject"
+          >
+            {{ isEditing ? 'Save Changes' : 'Create Project' }}
+          </BaseButton>
+        </div>
+      </template>
+    </BaseModal>
 
-  <!-- Emoji Picker Modal -->
-  <EmojiPicker
-    :is-open="isEmojiPickerOpen"
-    :current-emoji="projectData.colorType === 'emoji' ? projectData.emoji : undefined"
-    :current-color="projectData.colorType === 'hex' ? projectData.color : undefined"
-    @close="isEmojiPickerOpen = false"
-    @select="handleIconSelect"
-  />
+    <!-- Emoji Picker Modal -->
+    <EmojiPicker
+      :is-open="isEmojiPickerOpen"
+      :current-emoji="projectData.colorType === 'emoji' ? projectData.emoji : undefined"
+      :current-color="projectData.colorType === 'hex' ? projectData.color : undefined"
+      @close="isEmojiPickerOpen = false"
+      @select="handleIconSelect"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">

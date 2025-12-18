@@ -30,7 +30,8 @@ withDefaults(defineProps<Props>(), {
   size: 'md',
   active: false,
   disabled: false,
-  type: 'button'
+  type: 'button',
+  title: undefined
 })
 
 defineEmits<{

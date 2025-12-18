@@ -814,7 +814,7 @@ const applyBrowserOptimizations = () => {
     // Console output removed due to TypeScript conflicts
 
     // Apply performance configuration
-    (performanceMonitor as any).updateConfig({
+    ;(performanceMonitor as any).updateConfig({
       maxQueueSize: (config as any).maxCacheSize,
       batchSize: (config as any).batchSize,
       batchTimeout: (config as any).messageTimeout,

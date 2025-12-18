@@ -38,6 +38,7 @@ const meta = {
     isOpen: true,
     title: 'Confirm Action',
     message: 'Are you sure you want to proceed?',
+    details: [],
     confirmText: 'Confirm'
   }
 } satisfies Meta<typeof ConfirmationModal>

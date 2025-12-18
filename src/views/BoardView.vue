@@ -1,87 +1,89 @@
 <template>
-  <!-- KANBAN BOARD HEADER CONTROLS -->
-  <div class="kanban-header">
-    <div class="header-left">
-      <h2 class="board-title">
-        Kanban Board
-      </h2>
-      <span class="task-count">{{ totalDisplayedTasks }} tasks</span>
-    </div>
-    <div class="header-controls">
-      <!-- Filter Controls -->
-      <FilterControls />
+  <div class="board-view-wrapper">
+    <!-- KANBAN BOARD HEADER CONTROLS -->
+    <div class="kanban-header">
+      <div class="header-left">
+        <h2 class="board-title">
+          Kanban Board
+        </h2>
+        <span class="task-count">{{ totalDisplayedTasks }} tasks</span>
+      </div>
+      <div class="header-controls">
+        <!-- Filter Controls -->
+        <FilterControls />
 
-      <!-- Show Done Column Toggle -->
-      <button
-        class="done-column-toggle icon-only"
-        :class="{ active: showDoneColumn }"
-        :title="showDoneColumn ? 'Hide Done column' : 'Show Done column'"
-        @click="handleToggleDoneColumn"
-      >
-        <CheckCircle v-if="showDoneColumn" :size="16" />
-        <Circle v-else :size="16" />
-      </button>
+        <!-- Show Done Column Toggle -->
+        <button
+          class="done-column-toggle icon-only"
+          :class="{ active: showDoneColumn }"
+          :title="showDoneColumn ? 'Hide Done column' : 'Show Done column'"
+          @click="handleToggleDoneColumn"
+        >
+          <CheckCircle v-if="showDoneColumn" :size="16" />
+          <Circle v-else :size="16" />
+        </button>
+      </div>
     </div>
+
+    <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
+    <div class="kanban-scroll-container">
+      <div class="kanban-board" @click="closeContextMenu">
+        <KanbanSwimlane
+          v-for="project in projectsWithTasks"
+          :key="project.id"
+          :project="project"
+          :tasks="tasksByProject[project.id] || []"
+          :current-filter="taskStore.activeSmartView as any"
+          :density="currentDensity"
+          :show-done-column="showDoneColumn"
+          @select-task="handleSelectTask"
+          @start-timer="handleStartTimer"
+          @edit-task="handleEditTask"
+          @delete-task="handleDeleteTask"
+          @move-task="handleMoveTask"
+          @add-task="handleAddTask"
+          @context-menu="handleContextMenu"
+        />
+      </div>
+    </div>
+
+    <!-- TASK EDIT MODAL -->
+    <TaskEditModal
+      :is-open="showEditModal"
+      :task="selectedTask"
+      @close="closeEditModal"
+    />
+
+    <!-- QUICK TASK CREATE MODAL -->
+    <QuickTaskCreateModal
+      :is-open="showQuickTaskCreate"
+      :loading="false"
+      @cancel="closeQuickTaskCreate"
+      @create="handleQuickTaskCreate"
+    />
+
+    <!-- TASK CONTEXT MENU -->
+    <TaskContextMenu
+      :is-visible="showContextMenu"
+      :x="contextMenuX"
+      :y="contextMenuY"
+      :task="contextMenuTask"
+      :compact-mode="currentDensity === 'ultrathin'"
+      @close="closeContextMenu"
+      @edit="handleEditTask"
+      @confirm-delete="handleConfirmDelete"
+    />
+
+    <!-- CONFIRMATION MODAL -->
+    <ConfirmationModal
+      :is-open="showConfirmModal"
+      title="Delete Task"
+      message="Are you sure you want to delete this task? This action cannot be undone."
+      confirm-text="Delete"
+      @confirm="confirmDeleteTask"
+      @cancel="cancelDeleteTask"
+    />
   </div>
-
-  <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
-  <div class="kanban-scroll-container">
-    <div class="kanban-board" @click="closeContextMenu">
-      <KanbanSwimlane
-        v-for="project in projectsWithTasks"
-        :key="project.id"
-        :project="project"
-        :tasks="tasksByProject[project.id] || []"
-        :current-filter="taskStore.activeSmartView as any"
-        :density="currentDensity"
-        :show-done-column="showDoneColumn"
-        @select-task="handleSelectTask"
-        @start-timer="handleStartTimer"
-        @edit-task="handleEditTask"
-        @delete-task="handleDeleteTask"
-        @move-task="handleMoveTask"
-        @add-task="handleAddTask"
-        @context-menu="handleContextMenu"
-      />
-    </div>
-  </div>
-
-  <!-- TASK EDIT MODAL -->
-  <TaskEditModal
-    :is-open="showEditModal"
-    :task="selectedTask"
-    @close="closeEditModal"
-  />
-
-  <!-- QUICK TASK CREATE MODAL -->
-  <QuickTaskCreateModal
-    :is-open="showQuickTaskCreate"
-    :loading="false"
-    @cancel="closeQuickTaskCreate"
-    @create="handleQuickTaskCreate"
-  />
-
-  <!-- TASK CONTEXT MENU -->
-  <TaskContextMenu
-    :is-visible="showContextMenu"
-    :x="contextMenuX"
-    :y="contextMenuY"
-    :task="contextMenuTask"
-    :compact-mode="currentDensity === 'ultrathin'"
-    @close="closeContextMenu"
-    @edit="handleEditTask"
-    @confirm-delete="handleConfirmDelete"
-  />
-
-  <!-- CONFIRMATION MODAL -->
-  <ConfirmationModal
-    :is-open="showConfirmModal"
-    title="Delete Task"
-    message="Are you sure you want to delete this task? This action cannot be undone."
-    confirm-text="Delete"
-    @confirm="confirmDeleteTask"
-    @cancel="cancelDeleteTask"
-  />
 </template>
 
 <script setup lang="ts">

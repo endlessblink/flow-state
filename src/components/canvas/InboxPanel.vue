@@ -97,6 +97,17 @@
       />
     </div>
 
+    <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
+    <InboxFilters
+      v-if="!isCollapsed"
+      :tasks="baseInboxTasks"
+      :projects="taskStore.rootProjects"
+      v-model:unscheduled-only="unscheduledOnly"
+      v-model:selected-priority="selectedPriority"
+      v-model:selected-project="selectedProject"
+      @clear-all="clearAllFilters"
+    />
+
     <!-- Batch Actions Bar -->
     <div v-if="!isCollapsed && selectedTaskIds.size > 0" class="batch-actions">
       <span class="selected-count">{{ selectedTaskIds.size }} selected</span>
@@ -181,6 +192,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import InboxTimeFilters from './InboxTimeFilters.vue'
+import InboxFilters from './InboxFilters.vue'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 
 const taskStore = useTaskStore()
@@ -195,6 +207,11 @@ const selectedTaskIds = ref<Set<string>>(new Set())
 
 // Time filter state
 const activeTimeFilter = ref<'all' | 'now' | 'today' | 'tomorrow' | 'thisWeek' | 'noDate'>('all')
+
+// Additional filter state (TASK-018)
+const unscheduledOnly = ref(false)
+const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
+const selectedProject = ref<string | null>(null)
 
 // Context menu state
 const showContextMenu = ref(false)
@@ -268,8 +285,21 @@ const hasDate = (task: any) => {
   return !!task.scheduledDate
 }
 
+// Check if task is scheduled on calendar (has instances with dates) - TASK-018
+const isScheduledOnCalendar = (task: any): boolean => {
+  if (!task.instances || task.instances.length === 0) return false
+  return task.instances.some((inst: any) => inst.scheduledDate)
+}
+
+// Clear all additional filters - TASK-018
+const clearAllFilters = () => {
+  unscheduledOnly.value = false
+  selectedPriority.value = null
+  selectedProject.value = null
+}
+
 // Apply time-based filtering to inbox tasks
-const inboxTasks = computed(() => {
+const timeFilteredTasks = computed(() => {
   const tasks = baseInboxTasks.value
 
   switch (activeTimeFilter.value) {
@@ -323,6 +353,34 @@ const inboxTasks = computed(() => {
     default:
       return tasks
   }
+})
+
+// Apply additional filters (TASK-018: Unscheduled, Priority, Project)
+const inboxTasks = computed(() => {
+  let tasks = timeFilteredTasks.value
+
+  // Apply Unscheduled filter - show only tasks NOT on calendar
+  if (unscheduledOnly.value) {
+    tasks = tasks.filter(task => !isScheduledOnCalendar(task))
+  }
+
+  // Apply Priority filter
+  if (selectedPriority.value !== null) {
+    tasks = tasks.filter(task => task.priority === selectedPriority.value)
+  }
+
+  // Apply Project filter
+  if (selectedProject.value !== null) {
+    if (selectedProject.value === 'none') {
+      // Show tasks with no project
+      tasks = tasks.filter(task => !task.projectId)
+    } else {
+      // Show tasks with specific project
+      tasks = tasks.filter(task => task.projectId === selectedProject.value)
+    }
+  }
+
+  return tasks
 })
 
 // Parse brain dump text to count tasks

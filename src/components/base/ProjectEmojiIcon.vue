@@ -39,6 +39,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   size: 'sm',
+  color: undefined,
   clickable: false,
   title: '',
   variant: 'plain' // Default to plain (no background/border) to avoid gray dots

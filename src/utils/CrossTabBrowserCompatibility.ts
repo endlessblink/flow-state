@@ -311,7 +311,7 @@ export class CrossTabBrowserCompatibility {
       postMessage: (data: any) => {
         localStorage.setItem('pomo-flow-polling', JSON.stringify(data))
       },
-      addEventListener: (event: string, handler: Function) => {
+      addEventListener: (_event: string, handler: (event: MessageEvent) => void) => {
         this.startPolling(handler)
       },
       close: () => {
@@ -323,7 +323,7 @@ export class CrossTabBrowserCompatibility {
   /**
    * Start polling for changes
    */
-  private startPolling(handler?: Function): void {
+  private startPolling(handler?: (event: MessageEvent) => void): void {
     if (this.pollingTimer) return
 
     let lastData = localStorage.getItem('pomo-flow-polling')

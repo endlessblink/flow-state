@@ -137,14 +137,14 @@
         <h4 class="error-title">
           Recent Errors ({{ syncErrors.length }})
         </h4>
-        <div v-for="(error, index) in recentErrors" :key="index" class="error-item">
+        <div v-for="(syncError, index) in recentErrors" :key="index" class="error-item">
           <div class="error-message">
-            {{ error.message }}
+            {{ syncError.message }}
           </div>
           <div class="error-meta">
-            {{ formatTimestamp(error.timestamp) }} •
-            {{ error.direction ? error.direction.toUpperCase() : 'UNKNOWN' }}
-            <span v-if="(error as any).retryCount">• Retry {{ (error as any).retryCount }}</span>
+            {{ formatTimestamp(syncError.timestamp) }} •
+            {{ syncError.direction ? syncError.direction.toUpperCase() : 'UNKNOWN' }}
+            <span v-if="(syncError as any).retryCount">• Retry {{ (syncError as any).retryCount }}</span>
           </div>
         </div>
       </div>

@@ -134,6 +134,7 @@ const props = withDefaults(defineProps<Props>(), {
   indeterminate: false,
   disabled: false,
   size: 'md',
+  id: '',
   ariaLabel: 'Select task',
   selectedCount: 0,
   totalCount: 0,

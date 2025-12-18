@@ -143,7 +143,7 @@ class EventBus {
     console.log('Mock EventBus.emit called');
   }
 
-  on(_event: string, _callback: Function): void {
+  on(_event: string, _callback: (...args: unknown[]) => void): void {
     console.log('Mock EventBus.on called');
   }
 }

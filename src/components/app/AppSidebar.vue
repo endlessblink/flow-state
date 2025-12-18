@@ -143,7 +143,7 @@
           :nesting-depth="0"
           :level="1"
           @click="(project) => handleProjectClick(project)"
-          @contextmenu="(event, project) => $emit('project-context-menu', event, project)"
+          @contextmenu="(event, project) => $emit('projectContextMenu', event, project)"
         />
       </nav>
     </div>
@@ -158,7 +158,7 @@ import ProjectTreeItem from '../ProjectTreeItem.vue'
 
 // Emit events for parent component handling
 defineEmits<{
-  'project-context-menu': [event: MouseEvent, project: any]
+  projectContextMenu: [event: MouseEvent, project: any]
 }>()
 
 console.log('🎯 AppSidebar: Using Board view pattern - script running!')

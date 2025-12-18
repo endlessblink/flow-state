@@ -238,6 +238,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  density: 'comfortable',
   disabled: false
 })
 

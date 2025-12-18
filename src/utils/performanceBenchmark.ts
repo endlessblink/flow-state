@@ -536,7 +536,7 @@ export class PerformanceBenchmark {
 
     // Performance comparison
     console.log('\n🎯 PERFORMANCE COMPARISON:')
-    for (const [threshold, value] of Object.entries(PERFORMANCE_THRESHOLDS)) {
+    for (const [threshold, _value] of Object.entries(PERFORMANCE_THRESHOLDS)) {
       const passed = this.checkThreshold(threshold as keyof PerformanceThresholds, results)
       console.log(`   ${threshold}: ${passed ? '✅ PASS' : '❌ FAIL'}`)
     }

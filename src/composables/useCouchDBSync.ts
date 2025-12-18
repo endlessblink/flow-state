@@ -22,8 +22,8 @@ export const useCouchDBSync = () => {
   const remoteConnected = ref(false)
 
   // Sync replication handlers
-  let pushHandler: PouchDB.Replication.Sync<{}> | null = null
-  let pullHandler: PouchDB.Replication.Sync<{}> | null = null
+  let pushHandler: PouchDB.Replication.Sync<Record<string, unknown>> | null = null
+  let pullHandler: PouchDB.Replication.Sync<Record<string, unknown>> | null = null
 
   // Initialize PouchDB database
   const initializeDatabase = (): PouchDB.Database => {
@@ -124,7 +124,7 @@ export const useCouchDBSync = () => {
       })
 
       // Setup sync event handlers
-      const setupSyncEvents = (handler: PouchDB.Replication.Sync<{}>, direction: 'push' | 'pull') => {
+      const setupSyncEvents = (handler: PouchDB.Replication.Sync<Record<string, unknown>>, direction: 'push' | 'pull') => {
         handler.on('change', (info) => {
           console.log(`📤 Sync ${direction}:`, info)
           handleSyncChange(direction, info)

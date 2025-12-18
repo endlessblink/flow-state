@@ -28,7 +28,7 @@
       @click="handleProjectClick(project)"
       @toggle-expand="toggleExpand"
       @contextmenu.prevent="$emit('contextmenu', $event, project)"
-      @project-drop="$emit('project-drop', $event)"
+      @project-drop="$emit('projectDrop', $event)"
     >
       {{ project.name }}
     </BaseNavItem>
@@ -54,9 +54,9 @@
           :nesting-depth="nestingDepth + 1"
           :level="level + 1"
           @click="(project) => $emit('click', project)"
-          @toggle-expand="(projectId) => $emit('toggle-expand', projectId)"
+          @toggle-expand="(projectId) => $emit('toggleExpand', projectId)"
           @contextmenu="(event, project) => $emit('contextmenu', event, project)"
-          @project-drop="(data) => $emit('project-drop', data)"
+          @project-drop="(data) => $emit('projectDrop', data)"
         />
       </div>
     </Transition>
@@ -84,9 +84,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   click: [project: Project]
-  'toggle-expand': [projectId: string]
+  toggleExpand: [projectId: string]
   contextmenu: [event: MouseEvent, project: Project]
-  'project-drop': [data: any]
+  projectDrop: [data: any]
 }>()
 
 const taskStore = useTaskStore()
@@ -108,7 +108,7 @@ const children = computed(() => {
 
 // Toggle expansion
 const toggleExpand = () => {
-  emit('toggle-expand', props.project.id)
+  emit('toggleExpand', props.project.id)
 }
 
 // Handle project click - emit event and set as active project

@@ -480,7 +480,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         await nextTick()
         nextTick().then(() => {
           // Trigger calendarEvents recomputation
-          calendarEvents.value
+          void calendarEvents.value
           console.log('🔄 [CalendarDrag] Forced calendarEvents recomputation after drop')
         })
       } else {

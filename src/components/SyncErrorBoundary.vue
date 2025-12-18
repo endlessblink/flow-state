@@ -190,6 +190,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  fallbackComponent: undefined,
   maxRetries: 3,
   enableRecovery: true
 })

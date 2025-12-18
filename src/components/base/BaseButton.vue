@@ -55,6 +55,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  id: undefined,
   variant: 'secondary',
   size: 'md',
   iconOnly: false,
@@ -62,6 +63,8 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   loading: false,
   pressed: false,
+  ariaLabel: undefined,
+  ariaDescribedBy: undefined,
   loadingText: 'Loading...'
 })
 

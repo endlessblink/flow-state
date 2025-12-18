@@ -400,11 +400,11 @@ export class ConflictResolutionEngine {
         return localValue
       case 'prefer-remote':
         return remoteValue
-      case 'prefer-local':
+      case 'prefer-truthy':
         return (localValue || remoteValue)
-      case 'prefer-local':
+      case 'prefer-either-true':
         return localValue === true || remoteValue === true
-      case 'prefer-local':
+      case 'prefer-longer':
         if (typeof localValue === 'string' && typeof remoteValue === 'string') {
           return localValue.length > remoteValue.length ? localValue : remoteValue
         }

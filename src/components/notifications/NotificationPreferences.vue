@@ -100,7 +100,7 @@
         <div class="space-y-2">
           <label class="flex items-center">
             <input
-              v-model="(preferences.doNotDisturb as any)?.enabled"
+              v-model="(preferences.doNotDisturb as any).enabled"
               type="checkbox"
               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               @change="handleChange"

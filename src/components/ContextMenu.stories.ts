@@ -34,7 +34,8 @@ const meta = {
   args: {
     isVisible: true,
     x: 400,
-    y: 300
+    y: 300,
+    items: []
   }
 } satisfies Meta<typeof ContextMenu>
 

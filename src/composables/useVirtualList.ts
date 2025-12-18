@@ -226,7 +226,7 @@ export const useVirtualList = <T = any>(
   const getItemVisiblePercentage = (index: number): number => {
     if (!isItemVisible(index)) return 0
 
-    const itemTop = offsetY.value + visibleItems.value.find(item => item.index === index)?.top!
+    const itemTop = offsetY.value + (visibleItems.value.find(item => item.index === index)?.top ?? 0)
     const itemBottom = itemTop + getItemHeight(index)
     const viewportTop = scrollTop.value
     const viewportBottom = scrollTop.value + containerHeightInternal.value
@@ -252,7 +252,7 @@ export const useVirtualList = <T = any>(
     () => {
       const start = performance.now()
       // Force recompute visible items
-      visibleRange.value
+      void visibleRange.value
       const end = performance.now()
 
       performanceMetrics.value.renderCount++

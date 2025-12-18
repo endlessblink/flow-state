@@ -56,7 +56,7 @@ export function useContextMenu(options: UseContextMenuOptions) {
 
   const menuPosition = computed(() => {
     // Access trigger to make this computed reactive to manual updates
-    recalcTrigger.value
+    void recalcTrigger.value
 
     if (!currentIsVisible.value) {
       return {
@@ -122,7 +122,7 @@ export function useContextMenu(options: UseContextMenuOptions) {
     isPositioning.value = true
     await nextTick()
     recalcTrigger.value++
-    menuPosition.value
+    void menuPosition.value
     isPositioning.value = false
   }
 

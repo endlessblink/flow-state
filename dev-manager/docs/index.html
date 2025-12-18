@@ -656,44 +656,53 @@
             }
         });
 
-        // Listen for tab activation from parent frame
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'tab-activated') {
-                // Refresh graph when tab becomes visible
-                if (graph) {
-                    graph.zoomToFit(400, 50);
-                }
+        // Track initialization state
+        let isInitialized = false;
+
+        // Safe initialization - ensures container has dimensions
+        function safeInit() {
+            const container = document.getElementById('graph');
+            const rect = container.getBoundingClientRect();
+
+            // Only initialize if container has dimensions
+            if (rect.width > 0 && rect.height > 0) {
+                console.log('Container ready, initializing graph...', rect.width, rect.height);
+                init();
+                isInitialized = true;
+            } else {
+                console.log('Container not ready, deferring initialization...');
+                // Try again in 100ms
+                setTimeout(safeInit, 100);
             }
-        });
+        }
 
         // Initialize on DOMContentLoaded to ensure DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
+            document.addEventListener('DOMContentLoaded', safeInit);
         } else {
-            init();
+            safeInit();
         }
 
         // Listen for tab activation from parent window (dev-manager uses iframes)
         window.addEventListener('message', function(event) {
             if (event.data && event.data.type === 'tab-activated') {
-                console.log('Tab activated via postMessage - reinitializing...');
-                init();
+                console.log('Tab activated via postMessage');
+                // Destroy old graph if exists and reinitialize
+                if (graph) {
+                    graph._destructor && graph._destructor();
+                }
+                // Clear container and reinitialize
+                const container = document.getElementById('graph');
+                container.innerHTML = '';
+                safeInit();
             }
         });
 
-        // Auto-refresh when page is shown (browser navigation, back/forward)
-        window.addEventListener('pageshow', function(event) {
-            console.log('Page show event - persisted:', event.persisted);
-            if (event.persisted) {
-                init();
-            }
-        });
-
-        // Auto-refresh when page becomes visible (tab switch)
+        // Auto-refresh when page becomes visible (tab switch in browser)
         document.addEventListener('visibilitychange', function() {
-            if (document.visibilityState === 'visible') {
-                console.log('Page visible - refreshing data...');
-                init();
+            if (document.visibilityState === 'visible' && !isInitialized) {
+                console.log('Page visible and not initialized - initializing...');
+                safeInit();
             }
         });
     </script>

@@ -161,15 +161,25 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  title: '',
+  message: '',
   showSpinner: true,
   showProgress: false,
   showPercentage: true,
+  progress: 0,
   showError: true,
+  errorTitle: '',
+  errorMessage: '',
   showRetry: true,
   maxRetries: 3,
   retryDelay: 1000,
   showFallback: false,
   showFallbackContent: true,
+  fallbackComponent: undefined,
+  fallbackProps: () => ({}),
+  fallbackMessage: '',
+  emptyMessage: '',
+  componentProps: () => ({}),
   size: 'md',
   variant: 'default'
 })

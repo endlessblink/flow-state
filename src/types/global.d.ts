@@ -57,7 +57,7 @@ declare module 'vue-cal' {
     splitDays?: number[]
     watchRealTime?: boolean
     onEventClick?: (event: any, window: any) => void
-    onEventCreate?: (event: any, deleteEvent: Function) => void
+    onEventCreate?: (event: any, deleteEvent: () => void) => void
     onEventDelete?: (event: any) => void
     onEventDblClick?: (event: any, window: any) => void
     onViewChange?: (view: string, window: any) => void

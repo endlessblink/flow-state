@@ -128,7 +128,9 @@ interface Props {
   selected?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  selected: false
+})
 const emit = defineEmits<{
   update: [data: Partial<SectionData>]
   collect: [sectionId: string]

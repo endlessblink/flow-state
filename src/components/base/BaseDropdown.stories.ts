@@ -41,6 +41,8 @@ const meta = {
     }
   },
   args: {
+    modelValue: '',
+    options: [],
     placeholder: 'Select an option',
     disabled: false,
     multiple: false,

@@ -179,7 +179,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   hasSelectedTasks: false,
-  selectedCount: 0
+  selectedCount: 0,
+  contextSection: undefined
 })
 
 const emit = defineEmits<{

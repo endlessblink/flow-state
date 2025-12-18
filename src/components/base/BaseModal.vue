@@ -131,6 +131,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  title: undefined,
+  description: undefined,
   size: 'md',
   variant: 'default',
   closeOnOverlayClick: true,
@@ -145,6 +147,10 @@ const props = withDefaults(defineProps<Props>(), {
   closeAriaLabel: 'Close modal',
   loading: false,
   confirmDisabled: false,
+  titleClass: undefined,
+  descriptionClass: undefined,
+  bodyClass: undefined,
+  footerClass: undefined,
   trapFocus: true
 })
 

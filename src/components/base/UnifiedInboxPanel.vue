@@ -264,7 +264,9 @@ const props = withDefaults(defineProps<Props>(), {
   context: 'standalone',
   defaultFilter: 'readyNow',
   showBrainDump: true,
-  startCollapsed: false
+  startCollapsed: false,
+  maxCollapsedWidth: '48px',
+  expandedWidth: '320px'
 })
 
 // Stores

@@ -2427,7 +2427,7 @@ const applySectionPropertiesToTask = (taskId: string, section: CanvasSection) =>
 }
 
 // Enhanced error boundary wrapper for Vue Flow operations using comprehensive error handling
-const withVueFlowErrorBoundary = (handlerName: string, handler: Function, options?: {
+const withVueFlowErrorBoundary = (handlerName: string, handler: (...args: unknown[]) => unknown, options?: {
   errorType?: 'validation' | 'rendering' | 'interaction' | 'state' | 'performance' | 'network'
   severity?: 'low' | 'medium' | 'high' | 'critical'
   recoverable?: boolean

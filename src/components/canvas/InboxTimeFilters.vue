@@ -7,7 +7,7 @@
         class="filter-btn"
         :class="{ active: activeFilter === filter.key }"
         :title="`${filter.description} (${filter.count} tasks)`"
-        @click="$emit('filter-changed', filter.key)"
+        @click="$emit('filterChanged', filter.key)"
       >
         <component :is="filter.icon" :size="14" />
         <span v-if="filter.count > 0" class="filter-count">{{ filter.count }}</span>
@@ -44,7 +44,7 @@ interface Props {
 const props = defineProps<Props>()
 
 defineEmits<{
-  'filter-changed': [filterKey: string]
+  filterChanged: [filterKey: string]
 }>()
 
 // Helper functions for date calculations

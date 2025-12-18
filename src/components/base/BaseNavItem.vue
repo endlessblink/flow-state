@@ -24,7 +24,7 @@
       v-if="hasChildren"
       class="expand-chevron"
       :class="{ expanded }"
-      @click.stop="$emit('toggle-expand')"
+      @click.stop="$emit('toggleExpand')"
     >
       <ChevronDown :size="14" />
     </button>
@@ -102,14 +102,18 @@ const props = withDefaults(defineProps<Props>(), {
   nested: false,
   hasChildren: false,
   expanded: false,
-  colorType: 'hex'
+  colorDot: '',
+  colorType: 'hex',
+  emoji: '',
+  count: undefined,
+  projectId: ''
 })
 
 const emit = defineEmits<{
   click: [event: MouseEvent]
-  'toggle-expand': []
-  'task-drop': [data: DragData]
-  'project-drop': [data: DragData]
+  toggleExpand: []
+  taskDrop: [data: DragData]
+  projectDrop: [data: DragData]
 }>()
 
 const { isDragging, dragData, isValidDrop, setDropTarget, startDrag, endDrag } = useDragAndDrop()
@@ -262,7 +266,7 @@ const handleDrop = (event: DragEvent) => {
     // Handle task drop - move task to this project
     if (dragData.value.type === 'task' && dragData.value.taskId) {
       taskStore.moveTaskToProject(dragData.value.taskId, props.projectId)
-      emit('task-drop', dragData.value)
+      emit('taskDrop', dragData.value)
     }
 
     // Handle project drop
@@ -270,13 +274,13 @@ const handleDrop = (event: DragEvent) => {
       // Special case: "__root__" means un-nest the project
       if (props.projectId === '__root__') {
         // The parent component will handle this via @project-drop
-        emit('project-drop', dragData.value)
+        emit('projectDrop', dragData.value)
       } else {
         // Regular nesting: update the dragged project's parentId
         taskStore.updateProject(dragData.value.projectId, {
           parentId: props.projectId
         })
-        emit('project-drop', dragData.value)
+        emit('projectDrop', dragData.value)
         console.log(`Project "${dragData.value.title}" nested under project "${taskStore.getProjectById(props.projectId)?.name}"`)
       }
     }

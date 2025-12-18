@@ -1,42 +1,44 @@
 <template>
-  <div v-if="hasError" class="error-boundary" :class="{ contained }">
-    <div class="error-container">
-      <div class="error-icon">
-        ⚠️
-      </div>
-      <h2 class="error-title">
-        Something went wrong
-      </h2>
-      <p class="error-message">
-        {{ errorMessage }}
-      </p>
+  <div class="error-boundary-wrapper">
+    <div v-if="hasError" class="error-boundary" :class="{ contained }">
+      <div class="error-container">
+        <div class="error-icon">
+          ⚠️
+        </div>
+        <h2 class="error-title">
+          Something went wrong
+        </h2>
+        <p class="error-message">
+          {{ errorMessage }}
+        </p>
 
-      <div class="error-actions">
-        <button class="error-btn primary" @click="handleReload">
-          Reload Page
-        </button>
-        <button class="error-btn secondary" @click="handleReset">
-          Reset & Continue
-        </button>
-        <button class="error-btn copy" @click="copyErrorMessage">
-          <Copy :size="14" />
-          Copy Error
-        </button>
-      </div>
-
-      <details v-if="errorDetails" class="error-details">
-        <summary>Technical Details</summary>
-        <div class="error-details-header">
-          <button class="copy-details-btn" @click="copyErrorDetails">
-            <Copy :size="12" />
-            Copy Details
+        <div class="error-actions">
+          <button class="error-btn primary" @click="handleReload">
+            Reload Page
+          </button>
+          <button class="error-btn secondary" @click="handleReset">
+            Reset & Continue
+          </button>
+          <button class="error-btn copy" @click="copyErrorMessage">
+            <Copy :size="14" />
+            Copy Error
           </button>
         </div>
-        <pre class="error-stack">{{ errorDetails }}</pre>
-      </details>
+
+        <details v-if="errorDetails" class="error-details">
+          <summary>Technical Details</summary>
+          <div class="error-details-header">
+            <button class="copy-details-btn" @click="copyErrorDetails">
+              <Copy :size="12" />
+              Copy Details
+            </button>
+          </div>
+          <pre class="error-stack">{{ errorDetails }}</pre>
+        </details>
+      </div>
     </div>
+    <slot v-else />
   </div>
-  <slot v-else />
 </template>
 
 <script setup lang="ts">

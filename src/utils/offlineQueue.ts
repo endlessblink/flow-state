@@ -97,7 +97,7 @@ export class OfflineQueue {
   private retryManager: any = null
   private totalProcessingTime: number = 0
   private processingHistory: Array<{ timestamp: number; result: QueueProcessingResult }> = []
-  private eventListeners: Map<string, Function[]> = new Map()
+  private eventListeners: Map<string, ((...args: unknown[]) => void)[]> = new Map()
   private processingInterval: number | null = null
   private connectivityMonitor: number | null = null
   private onlineStatus: OnlineStatus
@@ -670,14 +670,14 @@ export class OfflineQueue {
   /**
    * Event handling system
    */
-  on(event: string, callback: Function): void {
+  on(event: string, callback: (...args: unknown[]) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, [])
     }
     this.eventListeners.get(event)!.push(callback)
   }
 
-  off(event: string, callback: Function): void {
+  off(event: string, callback: (...args: unknown[]) => void): void {
     const listeners = this.eventListeners.get(event)
     if (listeners) {
       const index = listeners.indexOf(callback)

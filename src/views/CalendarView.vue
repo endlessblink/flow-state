@@ -2120,6 +2120,59 @@ const _handleToggleDoneTasks = (_event: MouseEvent) => {
   font-size: 10px;
 }
 
+/* 30-minute tasks in day view: horizontal compact layout */
+.slot-task[data-duration="30"] {
+  padding: 0;
+}
+
+.slot-task[data-duration="30"] .task-content {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  padding: 2px var(--space-1);
+}
+
+.slot-task[data-duration="30"] .task-header {
+  flex: 1;
+  min-width: 0; /* Allow text truncation */
+  gap: var(--space-1);
+}
+
+.slot-task[data-duration="30"] .task-title {
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.slot-task[data-duration="30"] .task-duration {
+  font-size: 9px;
+  padding: 1px 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.slot-task[data-duration="30"] .task-actions {
+  gap: 2px;
+}
+
+.slot-task[data-duration="30"] .status-indicator {
+  width: 14px;
+  height: 14px;
+  font-size: 8px;
+}
+
+.slot-task[data-duration="30"] .remove-from-calendar-btn {
+  width: 14px;
+  height: 14px;
+  font-size: 8px;
+}
+
+/* Hide project/priority stripes for 30-min tasks to save space */
+.slot-task[data-duration="30"] .project-stripe,
+.slot-task[data-duration="30"] .priority-stripe {
+  width: 3px;
+}
+
 .event-content {
   flex: 1;
   padding: var(--space-2) var(--space-3);

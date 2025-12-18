@@ -578,6 +578,67 @@ Phase 3 (Mobile) ←────────────────────
 
 ---
 
+### TASK-021: Real-Time Cross-Instance Timer Sync (PLANNED)
+
+**Goal**: Make timer sync immediate and work across different browser instances/devices.
+
+**Priority**: P1-HIGH (part of ROAD-013 Sync Hardening)
+
+**Related**: BUG-016 (timer not syncing), ISSUE-007 (timer sync across instances), TASK-017 (KDE widget)
+
+**Problem Statement**:
+Current cross-tab sync only works within the **same browser instance** (uses localStorage/BroadcastChannel).
+Different Chrome instances, different browsers, or different devices do NOT sync timer state.
+
+#### Current Limitations
+| Sync Type | Works? | Mechanism |
+|-----------|--------|-----------|
+| Same browser, different tabs | ⚠️ Partial | localStorage + BroadcastChannel (leadership conflict) |
+| Different browser instances | ❌ No | No shared state |
+| Different devices | ❌ No | No real-time mechanism |
+
+#### Proposed Solutions
+
+**Option A: CouchDB Changes Feed (Recommended)**
+- Use CouchDB's `_changes` feed with `live: true` for real-time updates
+- Timer state stored in `timer:data` document
+- All instances subscribe to changes feed
+- Immediate sync across all devices/browsers
+- **Pros**: Works everywhere, leverages existing CouchDB infrastructure
+- **Cons**: Requires active internet connection
+
+**Option B: WebSocket Server**
+- Dedicated WebSocket server for real-time timer sync
+- Lower latency than CouchDB polling
+- **Pros**: Sub-100ms latency possible
+- **Cons**: Additional infrastructure, doesn't work offline
+
+**Option C: Hybrid (CouchDB + Local)**
+- Use CouchDB for cross-device sync
+- Use BroadcastChannel for same-browser sync (faster)
+- Fall back gracefully when offline
+- **Pros**: Best of both worlds
+- **Cons**: More complex implementation
+
+#### Implementation Steps
+
+| Step | Description | Effort | Status |
+|------|-------------|--------|--------|
+| 1 | Fix same-browser leadership conflict (BUG-016) | ~2h | IN PROGRESS |
+| 2 | Add timer document to CouchDB sync | ~2h | TODO |
+| 3 | Subscribe to CouchDB changes feed for timer | ~4h | TODO |
+| 4 | Add conflict resolution for concurrent timer updates | ~4h | TODO |
+| 5 | Add offline handling (pause sync, resume on reconnect) | ~2h | TODO |
+| 6 | Test multi-device scenarios | ~2h | TODO |
+
+**Success Criteria**:
+- [ ] Timer starts on Device A → appears on Device B within 2 seconds
+- [ ] Timer pause/resume syncs immediately
+- [ ] Only one "leader" can control the timer at a time
+- [ ] Graceful handling when offline
+
+---
+
 ### TASK-017: KDE Plasma Widget (Plasmoid) for Timer Sync
 
 **Goal**: Create a KDE Plasma 6 taskbar widget that provides bidirectional timer sync with Pomo-Flow via CouchDB.
@@ -944,7 +1005,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | ISSUE-003 | IndexedDB version mismatch errors | P2 | Needs proper DB migration |
 | ISSUE-004 | Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
 | ISSUE-005 | QuotaExceededError unhandled | P2 | Functions exist, not enforced |
-| ISSUE-007 | **Timer not syncing across instances** | P2-MEDIUM | Timer started in one tab should show in all open tabs/windows |
+| ISSUE-007 | **Timer not syncing across instances** | P2-MEDIUM | Timer started in one tab should show in all open tabs/windows. **See TASK-021** for real-time cross-instance sync plan |
 | ISSUE-008 | **Ctrl+Z doesn't work on groups** | P2-MEDIUM | Undo doesn't restore deleted/modified groups on canvas |
 | ISSUE-009 | **15 vue-tsc TypeScript errors** | P2-MEDIUM | Build passes but `vue-tsc` fails. See details below |
 | ISSUE-010 | **Inbox task deletion inconsistent** | P2-MEDIUM | Deleting from calendar/canvas inbox should delete everywhere, recoverable only via Ctrl+Z (like board) |

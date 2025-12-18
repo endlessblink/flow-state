@@ -153,6 +153,52 @@ export const useTimerStore = defineStore('timer', () => {
   // ============================================
 
   /**
+   * Calculate the correct remaining time based on session start time
+   */
+  const calculateRemainingTime = (session: { startTime: Date; duration: number; isPaused: boolean; remainingTime?: number }): number => {
+    if (session.isPaused && session.remainingTime !== undefined) {
+      // If paused, use the stored remaining time
+      return session.remainingTime
+    }
+    // Calculate based on elapsed time since start
+    const elapsedSeconds = Math.floor((Date.now() - session.startTime.getTime()) / 1000)
+    const remaining = Math.max(0, session.duration - elapsedSeconds)
+    return remaining
+  }
+
+  /**
+   * Start a follower interval to update the display (doesn't control timer, just updates UI)
+   */
+  const startFollowerInterval = () => {
+    // Clear any existing interval first
+    if (timerInterval.value) {
+      clearInterval(timerInterval.value)
+      timerInterval.value = null
+    }
+
+    timerInterval.value = setInterval(() => {
+      if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused && !isDeviceLeader.value) {
+        // Calculate and update remaining time based on start time
+        const newRemainingTime = calculateRemainingTime(currentSession.value)
+        currentSession.value.remainingTime = newRemainingTime
+
+        // If timer completed on follower, wait for leader to confirm
+        if (newRemainingTime <= 0) {
+          console.log('⏰ [TIMER CROSS-DEVICE] Timer appears complete on follower, waiting for leader confirmation')
+        }
+      } else if (!currentSession.value || !currentSession.value.isActive) {
+        // No active session, stop follower interval
+        if (timerInterval.value) {
+          clearInterval(timerInterval.value)
+          timerInterval.value = null
+        }
+      }
+    }, 1000)
+
+    console.log('👀 [TIMER CROSS-DEVICE] Follower display interval started')
+  }
+
+  /**
    * Handle timer updates from remote devices (via CouchDB sync)
    */
   const handleRemoteTimerUpdate = async (remoteDoc: any) => {
@@ -174,21 +220,33 @@ export const useTimerStore = defineStore('timer', () => {
       isDeviceLeader.value = false
       stopDeviceHeartbeat()
 
-      // Stop local timer interval - we're now a follower
-      if (timerInterval.value) {
-        clearInterval(timerInterval.value)
-        timerInterval.value = null
-      }
-
       // Update local state from remote
       if (remoteDoc.session) {
-        currentSession.value = {
+        const startTime = new Date(remoteDoc.session.startTime)
+        const session = {
           ...remoteDoc.session,
-          startTime: new Date(remoteDoc.session.startTime),
+          startTime,
           completedAt: remoteDoc.session.completedAt ? new Date(remoteDoc.session.completedAt) : undefined
         }
+
+        // Calculate the correct remaining time based on start time (not stale synced value)
+        session.remainingTime = calculateRemainingTime(session)
+
+        currentSession.value = session
+        console.log('🔄 [TIMER CROSS-DEVICE] Updated session, remaining:', session.remainingTime, 'seconds')
+
+        // Start follower interval to update display
+        if (session.isActive && !session.isPaused) {
+          startFollowerInterval()
+        }
       } else {
+        // Session cleared by leader
+        if (timerInterval.value) {
+          clearInterval(timerInterval.value)
+          timerInterval.value = null
+        }
         currentSession.value = null
+        console.log('🔄 [TIMER CROSS-DEVICE] Session cleared by leader')
       }
     }
   }
@@ -225,16 +283,29 @@ export const useTimerStore = defineStore('timer', () => {
 
   /**
    * Save timer session with device leadership info for cross-device sync
+   * Uses direct PouchDB access with conflict resolution for reliable cross-device sync
    */
   const saveTimerSessionWithLeadership = async () => {
-    try {
-      // Wait for database to be ready
-      while (!db.isReady?.value) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
+    const maxRetries = 5
+    const docId = 'pomo-flow-timer-session:data'
 
-      if (currentSession.value) {
-        const sessionData = {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Wait for database to be ready
+        while (!db.isReady?.value) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+
+        // Access PouchDB directly for better conflict handling
+        // Uses the global singleton exposed by useDatabase
+        const pouchDb = (window as any).pomoFlowDb
+
+        if (!pouchDb) {
+          console.warn('⚠️ [TIMER CROSS-DEVICE] PouchDB not available')
+          return
+        }
+
+        const sessionData = currentSession.value ? {
           session: {
             ...currentSession.value,
             startTime: currentSession.value.startTime.toISOString(),
@@ -242,18 +313,66 @@ export const useTimerStore = defineStore('timer', () => {
           },
           deviceLeaderId: deviceId,
           deviceLeaderLastSeen: Date.now()
-        }
-        await db.save('pomo-flow-timer-session', sessionData)
-      } else {
-        // Clear session but keep device info for cleanup
-        await db.save('pomo-flow-timer-session', {
+        } : {
           session: null,
           deviceLeaderId: null,
           deviceLeaderLastSeen: null
-        })
+        }
+
+        // Try to get existing document with conflicts
+        let existingRev: string | undefined
+        try {
+          const existingDoc = await pouchDb.get(docId, { conflicts: true })
+          existingRev = existingDoc._rev
+
+          // If there are conflicts, resolve them by deleting conflicting revisions
+          if (existingDoc._conflicts && existingDoc._conflicts.length > 0) {
+            console.log(`🔧 [TIMER CROSS-DEVICE] Resolving ${existingDoc._conflicts.length} conflicts`)
+            for (const conflictRev of existingDoc._conflicts) {
+              try {
+                await pouchDb.remove(docId, conflictRev)
+              } catch (e) {
+                // Ignore removal errors
+              }
+            }
+          }
+        } catch (getErr: any) {
+          if (getErr.status !== 404) {
+            throw getErr
+          }
+          // Document doesn't exist, will create new
+        }
+
+        // Save the document
+        const docToSave: any = {
+          _id: docId,
+          data: sessionData,
+          updatedAt: new Date().toISOString()
+        }
+
+        if (existingRev) {
+          docToSave._rev = existingRev
+        }
+
+        await pouchDb.put(docToSave)
+
+        if (attempt > 1) {
+          console.log(`✅ [TIMER CROSS-DEVICE] Saved on attempt ${attempt}`)
+        }
+        return // Success
+
+      } catch (error: any) {
+        if (error.status === 409 && attempt < maxRetries) {
+          // Conflict - retry with fresh _rev
+          console.log(`🔄 [TIMER CROSS-DEVICE] Conflict on attempt ${attempt}, retrying...`)
+          await new Promise(resolve => setTimeout(resolve, 50 * attempt)) // Backoff
+          continue
+        }
+
+        if (attempt === maxRetries) {
+          console.error(`❌ [TIMER CROSS-DEVICE] Failed to save after ${maxRetries} attempts:`, error)
+        }
       }
-    } catch (error) {
-      console.warn('⚠️ [TIMER CROSS-DEVICE] Failed to save session with leadership:', error)
     }
   }
 

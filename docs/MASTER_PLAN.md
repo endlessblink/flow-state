@@ -578,11 +578,13 @@ Phase 3 (Mobile) ←────────────────────
 
 ---
 
-### TASK-021: Real-Time Cross-Instance Timer Sync (PLANNED)
+### TASK-021: Real-Time Cross-Instance Timer Sync (BLOCKED - NEEDS RESEARCH)
 
 **Goal**: Make timer sync immediate and work across different browser instances/devices.
 
 **Priority**: P1-HIGH (part of ROAD-013 Sync Hardening)
+
+**Status**: ⚠️ **BLOCKED** - Implementation attempted but NOT WORKING
 
 **Related**: BUG-016 (timer not syncing), ISSUE-007 (timer sync across instances), TASK-017 (KDE widget)
 
@@ -596,6 +598,61 @@ Different Chrome instances, different browsers, or different devices do NOT sync
 | Same browser, different tabs | ⚠️ Partial | localStorage + BroadcastChannel (leadership conflict) |
 | Different browser instances | ❌ No | No shared state |
 | Different devices | ❌ No | No real-time mechanism |
+
+---
+
+#### ❌ Dec 18, 2025 - Implementation Attempt (FAILED)
+
+**What Was Tried**:
+1. Added device ID system with localStorage persistence (`pomoflow-device-id`)
+2. Added device leadership election with heartbeat (2s interval, 5s timeout)
+3. Listened for `reliable-sync-change` custom events from CouchDB sync system
+4. Added `handleRemoteTimerUpdate()` to sync state from leader
+5. Added `calculateRemainingTime()` to compute correct time from `startTime`
+6. Added `startFollowerInterval()` for local display updates on follower
+7. Direct PouchDB access with conflict resolution (5 retries, deletes conflicting revisions)
+
+**Files Modified**: `src/stores/timer.ts` (lines 155-376 added)
+
+**What Did NOT Work**:
+1. **Sync not triggering** - The `reliable-sync-change` event may not be firing when timer document changes
+2. **Document conflicts** - Timer session had 88+ CouchDB conflicts, save still failing
+3. **Time still not in sync** - Even when sync appeared to work, times were different on devices
+4. **Timer changes on refresh** - When page is refreshed, the timer time changes (should maintain correct time based on startTime)
+
+**Root Cause (Suspected)**:
+- The `reliable-sync-change` event is only emitted during manual sync, NOT on CouchDB live changes
+- Need to properly subscribe to CouchDB's `_changes` feed for real-time updates
+- Current implementation listens to wrong events
+
+---
+
+#### 🔴 NEXT SESSION REQUIREMENTS
+
+**CRITICAL**: Do NOT attempt blind implementation again. Must:
+
+1. **Use Relevant Skill** - Invoke `dev-debugging` or `dev-fix-pinia` skill to properly debug
+2. **Research Online First** - Search for:
+   - "PouchDB CouchDB live sync changes listener"
+   - "PouchDB changes feed subscribe"
+   - "Real-time sync between browser instances PouchDB"
+   - "CouchDB changes feed JavaScript"
+3. **Verify Event System** - Check if `reliable-sync-change` is actually emitted on remote changes
+4. **Consider Alternative** - May need to use PouchDB's native `.changes()` API with `live: true` option directly
+
+**Reference Code to Research**:
+```javascript
+// PouchDB native changes feed (NOT currently implemented)
+db.changes({
+  live: true,
+  since: 'now',
+  include_docs: true
+}).on('change', function(change) {
+  // Handle timer document changes here
+});
+```
+
+---
 
 #### Proposed Solutions
 
@@ -624,12 +681,13 @@ Different Chrome instances, different browsers, or different devices do NOT sync
 
 | Step | Description | Effort | Status |
 |------|-------------|--------|--------|
-| 1 | Fix same-browser leadership conflict (BUG-016) | ~2h | IN PROGRESS |
-| 2 | Add timer document to CouchDB sync | ~2h | TODO |
-| 3 | Subscribe to CouchDB changes feed for timer | ~4h | TODO |
-| 4 | Add conflict resolution for concurrent timer updates | ~4h | TODO |
-| 5 | Add offline handling (pause sync, resume on reconnect) | ~2h | TODO |
-| 6 | Test multi-device scenarios | ~2h | TODO |
+| 1 | Fix same-browser leadership conflict (BUG-016) | ~2h | ⚠️ PARTIAL |
+| 2 | **RESEARCH**: How reliable-sync-change works | ~1h | **TODO - NEXT** |
+| 3 | **RESEARCH**: PouchDB live changes API | ~1h | **TODO - NEXT** |
+| 4 | Implement proper CouchDB changes listener | ~4h | TODO |
+| 5 | Add conflict resolution for concurrent timer updates | ~4h | TODO |
+| 6 | Add offline handling (pause sync, resume on reconnect) | ~2h | TODO |
+| 7 | Test multi-device scenarios | ~2h | TODO |
 
 **Success Criteria**:
 - [ ] Timer starts on Device A → appears on Device B within 2 seconds

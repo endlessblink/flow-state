@@ -166,6 +166,7 @@ const handleDragChange = (event: any) => {
   padding: var(--space-3) var(--space-2);
   background: rgba(0, 0, 0, 0.3);
   border-radius: var(--radius-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .header-left {

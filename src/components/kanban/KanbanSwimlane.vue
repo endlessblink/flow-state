@@ -720,24 +720,17 @@ watch(() => props.tasks, () => {
   margin-bottom: 0;
   cursor: pointer;
   user-select: none;
-  background: linear-gradient(
-    90deg,
-    var(--glass-bg-tint) 0%,
-    var(--surface-hover) 100%
-  );
+  background: rgba(0, 0, 0, 0.3);
   border-radius: var(--radius-md);
   transition: background var(--duration-fast) var(--spring-smooth);
   position: relative;
   width: 100%;
   box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .swimlane-header:hover {
-  background: linear-gradient(
-    90deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .header-content {
@@ -891,20 +884,15 @@ watch(() => props.tasks, () => {
 }
 
 .swimlane-column {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-xl);
   padding: var(--space-3);
   box-shadow:
-    0 20px 40px var(--shadow-xl),
-    0 10px 20px var(--shadow-lg),
-    inset 0 1px 0 var(--glass-bg-heavy);
+    0 32px 64px rgba(0, 0, 0, 0.5),
+    0 16px 32px rgba(0, 0, 0, 0.3);
   transition: all var(--duration-normal) var(--spring-smooth);
   flex: 0 0 var(--kanban-column-width) !important;
   min-width: var(--kanban-column-width) !important;
@@ -912,16 +900,11 @@ watch(() => props.tasks, () => {
 }
 
 .swimlane-column:hover {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
-  border-color: var(--glass-border-soft);
+  background: rgba(0, 0, 0, 0.95);
+  border-color: rgba(255, 255, 255, 0.15);
   box-shadow:
-    0 24px 48px var(--shadow-strong),
-    0 12px 24px var(--shadow-md),
-    inset 0 1px 0 var(--glass-border);
+    0 32px 64px rgba(0, 0, 0, 0.5),
+    0 16px 32px rgba(0, 0, 0, 0.3);
 }
 
 /* Enhanced hover state during drag operations */
@@ -950,17 +933,13 @@ watch(() => props.tasks, () => {
   justify-content: space-between;
   margin-bottom: var(--space-3);
   padding: var(--space-2) var(--space-2);
-  background: linear-gradient(
-    90deg,
-    var(--glass-bg-tint) 0%,
-    var(--surface-hover) 100%
-  );
+  background: rgba(0, 0, 0, 0.3);
   border-radius: var(--radius-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   /* Todoist-inspired sticky headers */
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--surface-primary);
 }
 
 .header-left-mini {
@@ -1049,13 +1028,9 @@ watch(() => props.tasks, () => {
   text-align: center;
   padding: 3rem 1rem;
   color: var(--text-muted);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-weak) 0%,
-    var(--glass-bg-tint) 100%
-  );
+  background: rgba(255, 255, 255, 0.02);
   border-radius: var(--radius-lg);
-  border: 2px dashed var(--glass-border);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
   margin-top: var(--space-4);
 
   .empty-icon {

@@ -109,7 +109,7 @@ export const filterSyncableDocuments = (docs: any[]): any[] => {
  * @param req - PouchDB request object
  * @returns boolean indicating if document should be replicated
  */
-export const pouchDBFilterFunction = (doc: any, req: any): boolean => {
+export const pouchDBFilterFunction = (doc: any, _req: any): boolean => {
   return isSyncableDocument(doc)
 }
 

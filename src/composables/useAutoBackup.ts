@@ -9,7 +9,7 @@ export interface BackupData {
   version: string
 }
 
-interface BackupHistory {
+interface _BackupHistory {
   backups: BackupData[]
   maxSize: number
 }

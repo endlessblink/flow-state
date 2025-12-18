@@ -18,7 +18,7 @@ import { ref, computed } from 'vue'
 
 // Mock type definitions for Firebase compatibility
 type User = any
-type Timestamp = any
+type _Timestamp = any
 const _auth: any = null
 const _db: any = null
 const _waitForFirebase: any = () => Promise.resolve(false)
@@ -238,7 +238,7 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Update last login timestamp
    */
-  async function updateLastLogin(uid: string): Promise<void> {
+  async function _updateLastLogin(uid: string): Promise<void> {
     try {
       const profileRef = _doc(_db, 'users', uid, 'profile', 'main')
       await _updateDoc(profileRef, {

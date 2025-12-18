@@ -38,7 +38,7 @@ async function lintAll() {
       }
     }
 
-    console.clear()
+    // Don't clear on initial lint so output is visible
     console.log('\x1b[36m👀 ESLint watching src/**/*.{ts,vue}...\x1b[0m\n')
 
     if (filesWithIssues.length > 0) {

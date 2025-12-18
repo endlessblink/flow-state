@@ -23,5 +23,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Lint check - currently informational only (TASK-011 in progress)
+      # Will become blocking once lint errors are resolved
+      - name: Lint check
+        run: npm run lint
+        continue-on-error: true
+
       - name: Build application
         run: npm run build
+
+      # Note: Unit tests deferred until test suite is stabilized
+      # See TASK-012 in MASTER_PLAN.md for details
+      # - name: Run unit tests
+      #   run: npx vitest run --config vitest.ci.config.ts

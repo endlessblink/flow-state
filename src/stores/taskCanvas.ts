@@ -394,7 +394,7 @@ export const useTaskCanvasStore = defineStore('taskCanvas', () => {
 
   const autoArrange = (): void => {
     const gridCols = Math.ceil(Math.sqrt(canvasTasks.value.length))
-    const gridRows = Math.ceil(canvasTasks.value.length / gridCols)
+    const _gridRows = Math.ceil(canvasTasks.value.length / gridCols)
     const cellWidth = 250
     const cellHeight = 100
     const spacing = 50

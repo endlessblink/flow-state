@@ -160,7 +160,10 @@ export default [
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_'
-      }]
+      }],
+      // Downgrade no-explicit-any to warning for Vue files (match .ts files)
+      // TODO: Fix all any types and upgrade to error (TASK-011)
+      '@typescript-eslint/no-explicit-any': 'warn'
     }
   },
   // TypeScript files

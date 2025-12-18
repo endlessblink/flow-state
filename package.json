@@ -16,6 +16,7 @@
     "watch:ts": "nodemon --watch src --ext ts,vue --exec \"npx tsc --noEmit --skipLibCheck\"",
     "lint": "eslint src --max-warnings 0",
     "lint:fix": "eslint src --fix",
+    "lint:watch": "node scripts/lint-watch.js",
     "validate:imports": "node scripts/validate-imports.js",
     "validate:css": "node scripts/validate-css.js",
     "validate:dependencies": "vitest run tests/safety/dependencies.test.ts",

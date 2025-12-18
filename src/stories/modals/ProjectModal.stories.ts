@@ -8,18 +8,18 @@ const meta = {
   tags: ['autodocs'],
 
   parameters: {
-    layout: 'centered',
+    layout: 'fullscreen',
+    docs: {
+      story: {
+        height: '600px',
+      },
+    },
   },
 
   decorators: [
-    (story: any) => ({
-      components: { story },
-      template: `
-        <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 12px; min-width: 400px;">
-          <story />
-        </div>
-      `
-    })
+    () => ({
+      template: '<div style="min-height: 100vh; background: #0a0a0f;"><story /></div>',
+    }),
   ],
 } satisfies Meta<typeof ProjectModal>
 

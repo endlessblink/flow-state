@@ -141,7 +141,7 @@ async function handleSubmit() {
     // Success - show confirmation
     emailSent.value = true
     emit('success')
-  } catch (error: any) {
+  } catch (_error: any) {
     // Error message is already set by auth store
     errorMessage.value = authStore.error || 'Failed to send reset email. Please try again.'
   } finally {

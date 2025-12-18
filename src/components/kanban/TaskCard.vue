@@ -224,7 +224,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Task } from '@/stores/tasks'
-import { Play, Edit, Calendar, Check, List, Link, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle } from 'lucide-vue-next'
+import { Play, Edit, Calendar, List, Link, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle } from 'lucide-vue-next'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
 import { useTaskStore } from '@/stores/tasks'
@@ -315,7 +315,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
   switch (event.key) {
     case 'Enter':
-    case ' ':
+    case ' ': {
       event.preventDefault()
       isPressed.value = true
       // Create a synthetic mouse event for keyboard activation
@@ -329,14 +329,16 @@ const handleKeydown = (event: KeyboardEvent) => {
         isPressed.value = false
       }, 150)
       break
+    }
 
     case 'ArrowRight':
-    case 'ArrowDown':
+    case 'ArrowDown': {
       event.preventDefault()
       // Try to focus completion circle
       const completionCircle = taskCardRef.value?.querySelector('.completion-circle') as HTMLElement
       completionCircle?.focus()
       break
+    }
 
     case 'e':
     case 'E':

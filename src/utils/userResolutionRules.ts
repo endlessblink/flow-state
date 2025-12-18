@@ -467,29 +467,32 @@ export class UserResolutionRulesManager {
           reason: `Applied rule: ${rule.name} - prefer remote value`
         }
 
-      case 'prefer-non-empty':
+      case 'prefer-non-empty': {
         const nonEmpty = localValue || remoteValue
         return {
           applied: true,
           value: nonEmpty,
           reason: `Applied rule: ${rule.name} - prefer non-empty value`
         }
+      }
 
-      case 'prefer-true':
+      case 'prefer-true': {
         const trueValue = localValue === true || remoteValue === true
         return {
           applied: true,
           value: trueValue,
           reason: `Applied rule: ${rule.name} - prefer true value`
         }
+      }
 
-      case 'prefer-false':
+      case 'prefer-false': {
         const falseValue = localValue === false || remoteValue === false
         return {
           applied: true,
           value: falseValue,
           reason: `Applied rule: ${rule.name} - prefer false value`
         }
+      }
 
       case 'prefer-longer':
         if (typeof localValue === 'string' && typeof remoteValue === 'string') {

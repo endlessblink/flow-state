@@ -152,7 +152,7 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
           }
           break
 
-        case 'delete':
+        case 'delete': {
           const idsToDelete = operations.map(op => op.data.id)
           for (const id of idsToDelete) {
             const index = currentTasks.findIndex((t: any) => t.id === id)
@@ -161,6 +161,7 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
             }
           }
           break
+        }
       }
     }
 

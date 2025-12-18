@@ -777,7 +777,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       if (task.isInInbox === false) return false
 
       switch (powerKeyword.category) {
-        case 'date':
+        case 'date': {
           const expectedDate = getSmartGroupDate(powerKeyword.value as SmartGroupType)
           if (!expectedDate) return false // "Later" has no date
 
@@ -790,6 +790,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           }
 
           return task.dueDate === expectedDate
+        }
 
         case 'priority':
           return task.priority === powerKeyword.value
@@ -896,7 +897,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     const updates: Partial<Task> = {}
 
     switch (powerKeyword.category) {
-      case 'date':
+      case 'date': {
         const newDate = getSmartGroupDate(powerKeyword.value as SmartGroupType)
         if (newDate) {
           if (overrideMode === 'always') {
@@ -910,8 +911,9 @@ export const useCanvasStore = defineStore('canvas', () => {
           }
         }
         break
+      }
 
-      case 'priority':
+      case 'priority': {
         const newPriority = powerKeyword.value as 'high' | 'medium' | 'low'
         if (overrideMode === 'always') {
           updates.priority = newPriority
@@ -923,8 +925,9 @@ export const useCanvasStore = defineStore('canvas', () => {
           updates.priority = newPriority
         }
         break
+      }
 
-      case 'status':
+      case 'status': {
         const newStatus = powerKeyword.value as Task['status']
         if (overrideMode === 'always') {
           updates.status = newStatus
@@ -940,6 +943,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           updates.status = newStatus
         }
         break
+      }
     }
 
     return Object.keys(updates).length > 0 ? updates : null

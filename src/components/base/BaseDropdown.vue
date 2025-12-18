@@ -24,7 +24,7 @@
       :y="popoverY"
       position="auto"
       variant="dropdown"
-      :close-on-click-outside="true"
+      close-on-click-outside
       @close="closeDropdown"
     >
       <ul

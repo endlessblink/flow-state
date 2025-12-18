@@ -6,8 +6,8 @@
     size="sm"
     variant="danger"
     :show-footer="false"
-    :close-on-overlay-click="true"
-    :close-on-escape="true"
+    close-on-overlay-click
+    close-on-escape
     @close="$emit('cancel')"
     @after-open="handleAfterOpen"
   >

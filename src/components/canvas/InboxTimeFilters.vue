@@ -106,7 +106,7 @@ const filterTasks = (filterKey: string) => {
       case 'all':
         return true
 
-      case 'now':
+      case 'now': {
         // Tasks due today, created today, currently in progress, or currently running (timer active)
         const today = getToday().toISOString().split('T')[0]
         const taskCreatedDate = new Date(task.createdAt)
@@ -129,8 +129,9 @@ const filterTasks = (filterKey: string) => {
         if (task.status === 'in_progress') return true
 
         return false
+      }
 
-      case 'today':
+      case 'today': {
         // Tasks scheduled for today
         const todayStr = getToday().toISOString().split('T')[0]
 
@@ -140,8 +141,9 @@ const filterTasks = (filterKey: string) => {
         }
         // Fallback to legacy scheduledDate
         return task.scheduledDate === todayStr
+      }
 
-      case 'tomorrow':
+      case 'tomorrow': {
         // Tasks scheduled for tomorrow
         const tomorrowStr = getTomorrow().toISOString().split('T')[0]
 
@@ -151,8 +153,9 @@ const filterTasks = (filterKey: string) => {
         }
         // Fallback to legacy scheduledDate
         return task.scheduledDate === tomorrowStr
+      }
 
-      case 'thisWeek':
+      case 'thisWeek': {
         // Tasks scheduled within next 7 days
         const todayWeek = getToday().toISOString().split('T')[0]
         const weekEndStr = getWeekEnd().toISOString().split('T')[0]
@@ -166,6 +169,7 @@ const filterTasks = (filterKey: string) => {
         // Fallback to legacy scheduledDate
         if (!task.scheduledDate) return false
         return task.scheduledDate >= todayWeek && task.scheduledDate <= weekEndStr
+      }
 
       case 'noDate':
         // Tasks without any scheduled date

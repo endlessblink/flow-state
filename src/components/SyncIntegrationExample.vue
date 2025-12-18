@@ -7,10 +7,10 @@
       <!-- Sync Status Indicator (compact mode for header) -->
       <div class="header-sync">
         <SyncStatusIndicator
-          :show-text="true"
+          show-text
           :show-details="false"
-          :show-progress="true"
-          :compact="true"
+          show-progress
+          compact
         />
       </div>
 
@@ -103,9 +103,9 @@
         <div class="sync-details-panel">
           <h3>Sync Details</h3>
           <SyncStatusIndicator
-            :show-text="true"
-            :show-details="true"
-            :show-progress="true"
+            show-text
+            show-details
+            show-progress
           />
         </div>
 

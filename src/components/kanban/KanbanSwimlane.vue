@@ -209,11 +209,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import type { Task, Project, RecurringTaskInstance as _RecurringTaskInstance } from '@/stores/tasks'
-import { useTaskStore, parseDateKey, formatDateKey, getTaskInstances } from '@/stores/tasks'
+import { useTaskStore, parseDateKey, getTaskInstances } from '@/stores/tasks'
 import { ChevronDown, ChevronRight, Calendar, Plus } from 'lucide-vue-next'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import { useHorizontalDragScroll } from '@/composables/useHorizontalDragScroll'

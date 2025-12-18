@@ -1,6 +1,6 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 17, 2025
+**Last Updated**: December 18, 2025
 **Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -140,8 +140,11 @@ Phase 3 (Mobile) ←────────────────────
 | `TaskRow.vue` | Replaced native checkbox with DoneToggle component | ✅ DONE |
 | `HierarchicalTaskRow.vue` | Progress bar updated to stroke-only design | ✅ DONE |
 | `TaskTable.vue` | Progress bar updated to stroke-only design | ⚠️ NEEDS REVIEW |
+| `BatchEditModal.vue` | Modal styling aligned with BaseModal (pure black bg, neutral borders, dark-mode colors) | ✅ DONE |
+| `GroupModal.vue` | Modal styling streamlined: pure black bg, neutral buttons (no purple gradients/glows), clean borders | ✅ DONE |
+| `QuickTaskCreate.vue` | Modal styling streamlined: pure black bg, neutral buttons (no teal), clean property chips | ✅ DONE |
 
-**Where We Stopped** (Dec 17, 2025):
+**Where We Stopped** (Dec 18, 2025):
 - DoneToggle progress indicator fixed to use left-to-right clip-path fill
 - DoneToggle minimal variant now shows stroke-only (not filled) when completed
 - TaskRow.vue updated to use DoneToggle instead of native checkbox
@@ -150,6 +153,34 @@ Phase 3 (Mobile) ←────────────────────
   1. Subtle glass fill (transparent `rgba(--color-primary-rgb, 0.3)`)
   2. Text only (just percentage number)
   3. Different approach TBD
+- **ConfirmationModal.stories.ts** - Fixed docs overlay issue (modals escaping container)
+  - Changed `layout: 'centered'` to `layout: 'fullscreen'`
+  - Added `docs.story.height: '500px'` parameter
+  - Updated decorator for full viewport containment
+- **GroupModal.stories.ts** - Fixed docs overlay issue (same pattern)
+- **ProjectModal.stories.ts** - Fixed docs overlay issue (same pattern)
+- **BatchEditModal.vue** - Fully aligned with BaseModal design system:
+  - Changed modal background from `rgba(20, 24, 32, 0.95)` to pure black `rgba(0, 0, 0, 0.95)`
+  - Updated overlay to `rgba(0, 0, 0, 0.7)` with `saturate(100%)`
+  - Fixed quick action button hovers (was using light theme colors like `var(--green-50)`)
+  - Updated all glass variables to neutral `rgba(255, 255, 255, 0.02-0.05)` backgrounds
+  - Changed animation from `scaleIn` to `slideUp` to match BaseModal
+- **GroupModal.vue** - Fully streamlined to match BaseModal design system:
+  - Changed overlay from `var(--overlay-dark)` with `saturate(150%)` to `rgba(0, 0, 0, 0.7)` with `saturate(100%)`
+  - Changed modal background from gradient to pure black `rgba(0, 0, 0, 0.95)`
+  - Reduced `backdrop-filter` from `blur(32px) saturate(200%)` to `blur(20px) saturate(100%)`
+  - Removed purple gradient buttons and glow effects
+  - Updated btn-primary: neutral `rgba(255, 255, 255, 0.1)` background, no shadows
+  - Updated btn-secondary: transparent background with subtle border
+  - Updated color presets, custom color section to use neutral backgrounds
+  - Changed animation from `scaleIn` to `slideUp`
+- **QuickTaskCreate.vue** - Fully streamlined to match BaseModal design system:
+  - Changed overlay from `var(--overlay-bg)` to `rgba(0, 0, 0, 0.7)` with `blur(12px) saturate(100%)`
+  - Changed modal background from `var(--surface-secondary)` to `rgba(0, 0, 0, 0.95)` with `blur(20px)`
+  - Updated property chips: neutral `rgba(255, 255, 255, 0.03)` background with `0.1` border
+  - Removed teal create button - now uses neutral `rgba(255, 255, 255, 0.1)`
+  - Updated cancel button to transparent with neutral border
+  - Updated actions row border to `rgba(255, 255, 255, 0.08)`
 
 **Remaining Stories** (54 total):
 
@@ -204,13 +235,13 @@ Phase 3 (Mobile) ←────────────────────
 - [x] `GroupEditModal.stories.ts`
 
 **Modals** (9):
-- [ ] `ConfirmationModal.stories.ts`
-- [ ] `GroupModal.stories.ts`
-- [ ] `BatchEditModal.stories.ts`
+- [x] `ConfirmationModal.stories.ts` ✅ Fixed docs overlay issue (Dec 18)
+- [x] `GroupModal.stories.ts` ✅ Fixed docs overlay issue (Dec 18)
+- [x] `BatchEditModal.stories.ts` ✅ Component + story streamlined (Dec 18)
 - [ ] `QuickTaskCreateModal.stories.ts`
 - [ ] `SearchModal.stories.ts`
 - [ ] `SettingsModal.stories.ts`
-- [ ] `ProjectModal.stories.ts`
+- [x] `ProjectModal.stories.ts` ✅ Fixed docs overlay issue (Dec 18)
 - [ ] `QuickTaskCreate.stories.ts`
 - [ ] `BaseModal-Redesign-Preview.stories.ts`
 
@@ -654,7 +685,7 @@ Start with tasks 10.1-10.5 (XP system + character)
 
 | ID | Task | Status |
 |----|------|--------|
-| TASK-014 | Storybook Glass Morphism | IN PROGRESS (7/54) |
+| TASK-014 | Storybook Glass Morphism | IN PROGRESS (10/54) - BatchEditModal done |
 | TASK-011 | Lint Cleanup | 61.5% complete |
 
 **Note**: Pause active work to focus on strategic roadmap priorities.

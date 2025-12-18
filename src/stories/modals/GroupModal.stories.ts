@@ -8,13 +8,22 @@ const meta = {
   tags: ['autodocs'],
 
   parameters: {
-    layout: 'centered',
+    layout: 'fullscreen',
     docs: {
       description: {
         component: 'Modal for creating and editing custom canvas groups with color selection, positioning, and validation.'
-      }
-    }
+      },
+      story: {
+        height: '600px',
+      },
+    },
   },
+
+  decorators: [
+    () => ({
+      template: '<div style="min-height: 100vh; background: #0a0a0f;"><story /></div>',
+    }),
+  ],
 
   argTypes: {
     isOpen: {

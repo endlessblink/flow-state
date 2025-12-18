@@ -280,12 +280,13 @@ const handleKeydown = (event: KeyboardEvent) => {
 
   switch (event.key) {
     case 'Enter':
-    case ' ':
+    case ' ': {
       event.preventDefault()
       const newSelectedState = props.indeterminate ? true : !props.selected
       triggerSelectionAnimation()
       emit('change', newSelectedState)
       break
+    }
     case 'a':
     case 'A':
       if (event.ctrlKey || event.metaKey) {

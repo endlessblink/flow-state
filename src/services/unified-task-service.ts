@@ -460,12 +460,13 @@ export class UnifiedTaskService {
           aValue = a.title.toLowerCase();
           bValue = b.title.toLowerCase();
           break;
-        case 'priority':
+        case 'priority': {
           const priorityOrder: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
           aValue = priorityOrder[a.metadata.priority] || 0;
           bValue = priorityOrder[b.metadata.priority] || 0;
           break;
-        case 'stage':
+        }
+        case 'stage': {
           const stageOrder = [
             TaskStageValues.IDEA, TaskStageValues.BACKLOG, TaskStageValues.PLANNING,
             TaskStageValues.DEVELOPMENT, TaskStageValues.REVIEW, TaskStageValues.TESTING,
@@ -474,6 +475,7 @@ export class UnifiedTaskService {
           aValue = stageOrder.indexOf(a.stage as any);
           bValue = stageOrder.indexOf(b.stage as any);
           break;
+        }
         case 'createdAt':
           aValue = a.createdAt.getTime();
           bValue = b.createdAt.getTime();

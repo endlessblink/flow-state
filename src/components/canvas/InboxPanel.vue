@@ -276,7 +276,7 @@ const inboxTasks = computed(() => {
     case 'all':
       return tasks
 
-    case 'now':
+    case 'now': {
       // Tasks due today, created today, currently in progress, or currently running (timer active)
       const today = getToday().toISOString().split('T')[0]
       const taskCreatedDate = new Date()
@@ -292,6 +292,7 @@ const inboxTasks = computed(() => {
 
         return false
       })
+    }
 
     case 'tomorrow':
       return tasks.filter(task => {
@@ -494,16 +495,18 @@ const handleSetDueDate = (dateType: string) => {
     case 'today':
       dueDate = new Date().toISOString().split('T')[0]
       break
-    case 'tomorrow':
+    case 'tomorrow': {
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       dueDate = tomorrow.toISOString().split('T')[0]
       break
-    case 'thisWeek':
+    }
+    case 'thisWeek': {
       const weekEnd = new Date()
       weekEnd.setDate(weekEnd.getDate() + 7)
       dueDate = weekEnd.toISOString().split('T')[0]
       break
+    }
     case 'noDate':
       dueDate = undefined
       break

@@ -26,7 +26,7 @@
         :fallback-tolerance="0"
         :scroll-sensitivity="100"
         :scroll-speed="20"
-        :bubble-scroll="true"
+        bubble-scroll
         :delay="0"
         :delay-on-touch-start="false"
         :delay-on-touch-only="false"
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, TransitionGroup } from 'vue'
+import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import type { Task } from '@/stores/tasks'

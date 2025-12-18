@@ -256,32 +256,25 @@ watch(() => props.isOpen, async (isOpen) => {
 <style scoped>
 .modal-overlay {
   position: fixed;
-  inset: 0; /* RTL: full screen overlay */
-  background: var(--overlay-dark);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(100%);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);
 }
 
 .modal-content {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-medium) 0%,
-    var(--glass-bg-heavy) 100%
-  );
-  backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid var(--glass-border-strong);
-  border-radius: var(--radius-2xl);
-  box-shadow:
-    0 32px 64px var(--shadow-xl),
-    0 16px 32px var(--shadow-strong),
-    inset 0 2px 0 var(--glass-border-soft);
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px) saturate(100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
   width: 90%;
   max-width: 480px;
-  animation: scaleIn var(--duration-normal) var(--spring-bounce);
+  animation: slideUp var(--duration-normal) var(--spring-smooth);
 }
 
 @keyframes fadeIn {
@@ -289,14 +282,14 @@ watch(() => props.isOpen, async (isOpen) => {
   to { opacity: 1; }
 }
 
-@keyframes scaleIn {
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: scale(0.92);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 }
 
@@ -304,41 +297,34 @@ watch(() => props.isOpen, async (isOpen) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-6) var(--space-6) var(--space-5);
-  border-bottom: 1px solid var(--glass-bg-heavy);
-  background: linear-gradient(
-    180deg,
-    var(--glass-bg-tint) 0%,
-    transparent 100%
-  );
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .modal-title {
   color: var(--text-primary);
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   margin: 0;
-  text-shadow: 0 2px 4px var(--shadow-subtle);
 }
 
 .close-btn {
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-muted);
   cursor: pointer;
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  transition: all var(--duration-normal) var(--spring-smooth);
+  transition: all var(--duration-fast);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .close-btn:hover {
-  background: var(--glass-border);
-  border-color: var(--glass-border-medium);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
-  transform: scale(1.05);
 }
 
 .modal-body {
@@ -363,9 +349,9 @@ watch(() => props.isOpen, async (isOpen) => {
   gap: var(--space-2);
   margin-bottom: var(--space-4);
   padding: var(--space-3);
-  background: var(--glass-bg-soft);
+  background: rgba(255, 255, 255, 0.02);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .color-preset {
@@ -380,12 +366,12 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .color-preset:hover {
   transform: scale(1.1);
-  border-color: var(--glass-border-medium);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .color-preset.active {
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 2px var(--glass-bg-light);
+  border-color: white;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
   transform: scale(1.1);
 }
 
@@ -406,9 +392,9 @@ watch(() => props.isOpen, async (isOpen) => {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--glass-bg-soft);
+  background: rgba(255, 255, 255, 0.02);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .custom-color-input {
@@ -432,8 +418,8 @@ watch(() => props.isOpen, async (isOpen) => {
 .color-text-input {
   flex: 1;
   padding: var(--space-2) var(--space-3);
-  background: var(--surface-primary);
-  border: 1px solid var(--border-medium);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -443,8 +429,8 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .color-text-input:focus {
   outline: none;
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 15%, transparent);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
 }
 
 .color-picker-input {
@@ -461,16 +447,16 @@ watch(() => props.isOpen, async (isOpen) => {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  background: var(--surface-primary);
+  background: rgba(0, 0, 0, 0.4);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-medium);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .preview-box {
   width: 24px;
   height: 24px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .color-value {
@@ -485,72 +471,46 @@ watch(() => props.isOpen, async (isOpen) => {
   justify-content: flex-end;
   gap: var(--space-3);
   padding: var(--space-5) var(--space-6) var(--space-6);
-  border-top: 1px solid var(--glass-bg-heavy);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .btn-primary {
-  background: linear-gradient(
-    135deg,
-    var(--purple-gradient-start) 0%,
-    var(--purple-gradient-end) 100%
-  );
-  border: 1px solid var(--purple-border-medium);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-lg);
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
-  transition: all var(--duration-normal) var(--spring-bounce);
-  box-shadow:
-    0 8px 16px var(--purple-border-medium),
-    0 0 20px var(--purple-glow-subtle);
+  transition: all var(--duration-fast);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(
-    135deg,
-    var(--purple-gradient-hover-start) 0%,
-    var(--purple-gradient-hover-end) 100%
-  );
-  transform: translateY(-2px);
-  box-shadow:
-    0 12px 24px var(--purple-shadow-strong),
-    0 0 30px var(--purple-border-medium);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
 }
 
 .btn-secondary {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-secondary);
   padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-lg);
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: 0 4px 8px var(--shadow-md);
+  transition: all var(--duration-fast);
 }
 
 .btn-secondary:hover {
-  background: linear-gradient(
-    135deg,
-    var(--glass-border) 0%,
-    var(--glass-bg-medium) 100%
-  );
-  border-color: var(--glass-border-medium);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px var(--shadow-lg);
 }
 </style>

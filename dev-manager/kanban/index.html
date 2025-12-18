@@ -1385,8 +1385,8 @@
           }
 
           // Parse TASK- headers in Active Work OR Technical Debt (archive) sections
-          // Handle strikethrough markers (~~) for completed tasks
-          if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^### ~~?(TASK-\d+)~~?:/)) {
+          // Handle strikethrough markers (~~) for completed tasks - use (?:~~)? to match 0 or 2 tildes
+          if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^### (?:~~)?(TASK-\d+)(?:~~)?:/)) {
             // Save previous task's subtasks before starting new one
             if (currentItem && currentItem.id?.startsWith('TASK-')) {
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
@@ -1397,7 +1397,9 @@
 
                 // Try to extract percentage from description (e.g., "61.5% reduction" or "85% complete")
                 // Handle markdown bold markers (**) around percentages
-                const percentMatch = description.match(/\*?\*?(\d+(?:\.\d+)?)\s*%\s*(?:reduction|complete|done)\*?\*?/i);
+                // Use LAST match to get most recent percentage (e.g., latest session progress)
+                const allPercentMatches = [...description.matchAll(/\*?\*?(\d+(?:\.\d+)?)\s*%\s*(?:reduction|complete|done)\*?\*?/gi)];
+                const percentMatch = allPercentMatches.length > 0 ? allPercentMatches[allPercentMatches.length - 1] : null;
 
                 // Done tasks always show 100%
                 if (taskStatus === 'done') {
@@ -1418,7 +1420,7 @@
               }
             }
 
-            const match = trimmed.match(/^### ~~?(TASK-\d+)~~?:\s*(.+?)(?:\s*\(([^)]+)\))?$/);
+            const match = trimmed.match(/^### (?:~~)?(TASK-\d+)(?:~~)?:\s*(.+?)(?:\s*\(([^)]+)\))?$/);
             if (match) {
               const statusText = match[3] ? match[3].toUpperCase() : '';
               const status = parseTaskStatus(statusText);
@@ -3116,6 +3118,20 @@
       statusElements.forEach(el => el.remove());
 
       // Initial render
+      renderKanban();
+    });
+
+    // Auto-refresh when page becomes visible (tab switch, navigation back)
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        console.log('Page visible - refreshing data...');
+        renderKanban();
+      }
+    });
+
+    // Also refresh on window focus (for same-tab navigation)
+    window.addEventListener('focus', function() {
+      console.log('Window focused - refreshing data...');
       renderKanban();
     });
   </script>

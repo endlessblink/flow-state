@@ -578,9 +578,10 @@ export class PerformanceBenchmark {
     switch (threshold) {
       case 'maxAverageRenderTime':
         return results.renderPerformance.averageTime <= PERFORMANCE_THRESHOLDS[threshold]
-      case 'maxMemoryUsage':
+      case 'maxMemoryUsage': {
         const memoryUsage = results.memoryEfficiency.memoryUsage || 0
         return memoryUsage <= PERFORMANCE_THRESHOLDS[threshold]
+      }
       case 'minThroughput':
         return results.taskStoreOperations.throughput >= PERFORMANCE_THRESHOLDS[threshold]
       default:

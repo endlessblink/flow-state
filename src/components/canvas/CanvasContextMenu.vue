@@ -157,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import {
   PlusCircle, Group, AlignLeft as _AlignLeft, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd,
   AlignHorizontalJustifyCenter, AlignVerticalJustifyStart,

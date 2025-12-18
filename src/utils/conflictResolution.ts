@@ -281,7 +281,7 @@ export class ConflictResolutionEngine {
   /**
    * Determine conflict severity
    */
-  private determineConflictSeverity(field: string, localValue: any, remoteValue: any): 'low' | 'medium' | 'high' {
+  private determineConflictSeverity(field: string, _localValue: any, _remoteValue: any): 'low' | 'medium' | 'high' {
     // High severity for critical fields
     const criticalFields = ['id', 'completed', 'dueDate', 'priority']
     if (criticalFields.includes(field)) {
@@ -326,7 +326,7 @@ export class ConflictResolutionEngine {
   /**
    * Suggest resolution for conflict
    */
-  private suggestResolution(field: string, localValue: any, remoteValue: any, baseValue?: any): any {
+  private suggestResolution(field: string, localValue: any, remoteValue: any, _baseValue?: any): any {
     // Use user-defined rules first
     if (this.strategy.automation.userPriorityRules) {
       const rules = this.userRules.get(field)

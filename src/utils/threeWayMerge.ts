@@ -343,7 +343,7 @@ export class ThreeWayMergeEngine {
   /**
    * Check if value should be deleted
    */
-  private shouldDelete(currentValue: any, field: string, baseValue: any): boolean {
+  private shouldDelete(currentValue: any, field: string, _baseValue: any): boolean {
     // Don't delete essential fields
     const essentialFields = ['id', 'createdAt']
     if (essentialFields.includes(field)) {

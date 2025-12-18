@@ -379,11 +379,11 @@ export class MemoryLeakDetector {
     let frameCount = 0
     let lastTime = performance.now()
     let totalFrameTime = 0
-    let longTaskCount = 0
+    let _longTaskCount = 0
 
     this.cpuProfileInterval = window.setInterval(() => {
       const currentTime = performance.now()
-      const deltaTime = currentTime - lastTime
+      const _deltaTime = currentTime - lastTime
       lastTime = currentTime
 
       // Measure frame time
@@ -399,7 +399,7 @@ export class MemoryLeakDetector {
 
         // Count long tasks (>16ms)
         if (frameTime > 16) {
-          longTaskCount++
+          _longTaskCount++
           this.droppedFrames++
         }
 

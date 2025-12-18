@@ -207,7 +207,7 @@ class GitRestorationAnalyzer {
       if (ext) fileTypes.add(ext)
     }
 
-    const fileNames = changes.map(c => c.path.split('/').pop() || c.path).slice(0, 3)
+    const _fileNames = changes.map(c => c.path.split('/').pop() || c.path).slice(0, 3)
 
     if (fileTypes.size === 1) {
       return `${Array.from(fileTypes)[0]} files (${changes.length})`
@@ -228,7 +228,7 @@ class GitRestorationAnalyzer {
   /**
    * Categorize commit type
    */
-  private categorizeCommit(message: string, changes: FileChange[]): 'feature' | 'fix' | 'refactor' | 'cleanup' | 'breaking' {
+  private categorizeCommit(message: string, _changes: FileChange[]): 'feature' | 'fix' | 'refactor' | 'cleanup' | 'breaking' {
     const msg = message.toLowerCase()
 
     if (msg.includes('fix') || msg.includes('bug') || msg.includes('issue')) return 'fix'
@@ -302,7 +302,7 @@ class GitRestorationAnalyzer {
    * Generate restoration options for user
    */
   generateOptions(analysis: CommitAnalysis): string[] {
-    const { category, complexity, changes } = analysis
+    const { category, complexity, changes: _changes } = analysis
 
     const baseOptions = [
       '1. Restore this entire commit',

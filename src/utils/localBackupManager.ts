@@ -51,7 +51,7 @@ export class LocalBackupManager {
   /**
    * Create backup snapshot before operation
    */
-  async createBackup(operation: BackupSnapshot['operation'], description?: string): Promise<string> {
+  async createBackup(operation: BackupSnapshot['operation'], _description?: string): Promise<string> {
     try {
       const snapshotId = `backup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const timestamp = new Date()

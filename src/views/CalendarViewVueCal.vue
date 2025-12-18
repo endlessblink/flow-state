@@ -120,6 +120,7 @@ const handleEventDragDrop = (event: any, _originalEvent: any) => {
     const parentTask = taskStore.tasks.find(t => t.id === event.parentTaskId)
     if (parentTask?.recurrence) {
       // Create exception for this instance
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const recurrenceUtils = require('@/utils/recurrenceUtils')
       if (recurrenceUtils && recurrenceUtils.addException) {
         recurrenceUtils.addException(

@@ -348,7 +348,7 @@
           <!-- ROUTER VIEW FOR DIFFERENT VIEWS - ErrorBoundary removed for debugging -->
           <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
-              <div class="view-wrapper">
+              <div v-if="Component" :key="$route.fullPath" class="view-wrapper">
                 <!-- DEBUG: ErrorBoundary temporarily removed to expose navigation errors -->
                 <component :is="Component" />
               </div>
@@ -1237,6 +1237,7 @@ const handleDeleteSelectedTasks = () => {
 
   // Also check canvas selections if available
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useCanvasStore } = require('@/stores/canvas')
     const canvasStore = useCanvasStore()
 

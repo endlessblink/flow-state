@@ -99,6 +99,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  group: null,
   position: () => ({ x: 100, y: 100 })
 })
 

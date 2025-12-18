@@ -1,6 +1,7 @@
 /**
  * Simple PouchDB import test to diagnose the import issue
  */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 // Try different import methods
 console.log('Testing PouchDB imports...');

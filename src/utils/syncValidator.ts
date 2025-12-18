@@ -431,7 +431,7 @@ export class SyncValidator {
   /**
    * Validate settings document structure
    */
-  private validateSettingsDocument(document: any, issues: ValidationIssue[]): void {
+  private validateSettingsDocument(document: any, _issues: ValidationIssue[]): void {
     // Settings documents can have flexible structure, but basic validation applies
     console.log(`🔍 Validating settings document: ${document._id}`)
   }
@@ -520,7 +520,7 @@ export class SyncValidator {
     // Check for circular references
     try {
       JSON.stringify(document)
-    } catch (error) {
+    } catch {
       issues.push({
         type: ValidationIssueType.CORRUPTED_DATA,
         severity: 'error',

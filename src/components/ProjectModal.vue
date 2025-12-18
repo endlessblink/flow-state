@@ -110,6 +110,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  project: null,
   parentProjectId: null
 })
 

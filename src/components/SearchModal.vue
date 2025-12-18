@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { Search, FileText, FolderOpen, ChevronRight } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'

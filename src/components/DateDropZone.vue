@@ -60,6 +60,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   active: false,
+  count: undefined,
   filterColor: 'teal'
 })
 

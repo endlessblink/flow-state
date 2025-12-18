@@ -228,7 +228,7 @@ export class SyncSystemTester {
       ]
 
       // Import document filter function (assume it's exported)
-      const { isSyncableDocument, filterSyncableDocuments } = await import('@/composables/documentFilters')
+      const { filterSyncableDocuments } = await import('@/composables/documentFilters')
 
       // Test individual document filtering
       const syncableDocs = filterSyncableDocuments(testDocs)

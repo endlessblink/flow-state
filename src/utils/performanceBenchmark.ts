@@ -343,7 +343,7 @@ export class PerformanceBenchmark {
         this.performanceManager.setCache(`dataset-${i}`, largeDataset, 60000)
 
         // Retrieve from cache
-        const cached = this.performanceManager.getCache(`dataset-${i}`)
+        const _cached = this.performanceManager.getCache(`dataset-${i}`)
 
         // Clean up
         this.performanceManager.deleteCache(`dataset-${i}`)

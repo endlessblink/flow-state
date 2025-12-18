@@ -220,6 +220,7 @@ export default [
       'eslint.config.*',
       // Excluded from tsconfig - causes parsing errors
       'src/stories/**',
+      '**/*.stories.ts',  // Storybook story files - documentation only
       'src/composables/adapters/**',
       'src/sync/**',
       'src/utils/emojiDetection.ts',

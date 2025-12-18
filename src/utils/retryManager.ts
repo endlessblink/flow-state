@@ -91,7 +91,7 @@ export class RetryManager {
 
       } catch (error) {
         lastError = error as Error
-        const attemptDuration = Date.now() - startTime
+        const _attemptDuration = Date.now() - startTime
         const delay = this.calculateDelay(attempt)
 
         // Record failed attempt
@@ -232,7 +232,7 @@ export class RetryManager {
   /**
    * Default function to identify non-retryable errors
    */
-  private defaultNonRetryableErrors = (error: any): boolean => {
+  private defaultNonRetryableErrors = (_error: any): boolean => {
     // Add application-specific non-retryable error logic here
     return false
   }

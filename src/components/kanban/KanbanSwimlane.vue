@@ -227,7 +227,11 @@ interface Props {
   showDoneColumn?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  currentFilter: null,
+  density: 'comfortable',
+  showDoneColumn: false
+})
 const emit = defineEmits<{
   selectTask: [taskId: string]
   startTimer: [taskId: string]

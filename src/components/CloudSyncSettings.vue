@@ -122,7 +122,7 @@
         </button>
       </div>
       <div class="token-help">
-        <a href="https://github.com/settings/tokens/new?scopes=gist" target="_blank" rel="noopener">
+        <a href="https://github.com/settings/tokens/new?scopes=gist" target="_blank" rel="noopener noreferrer">
           Create GitHub Token →
         </a>
       </div>

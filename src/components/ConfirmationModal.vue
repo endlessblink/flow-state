@@ -65,6 +65,7 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   title: 'Confirm Action',
   message: 'Are you sure you want to proceed?',
+  details: () => [],
   confirmText: 'Confirm'
 })
 

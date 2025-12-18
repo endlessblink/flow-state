@@ -450,7 +450,7 @@ export class UserResolutionRulesManager {
     rule: UserResolutionRule,
     localValue: any,
     remoteValue: any,
-    baseValue?: any
+    _baseValue?: any
   ): Promise<{ applied: boolean; value?: any; reason: string }> {
     switch (rule.action as any) {
       case 'prefer-local':

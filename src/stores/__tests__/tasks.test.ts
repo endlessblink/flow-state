@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useTaskStore, formatDateKey, parseDateKey, getTaskInstances } from '../tasks'
-import type { Task, TaskInstance } from '../tasks'
+import type { Task } from '../tasks'
 
 // Mock the database composable
 vi.mock('@/composables/useDatabase', () => ({

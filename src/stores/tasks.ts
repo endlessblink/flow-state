@@ -2069,12 +2069,13 @@ export const useTaskStore = defineStore('tasks', () => {
         targetDate = new Date(today)
         targetDate.setDate(today.getDate() + (7 - today.getDay()))
         break
-      case 'nextWeek':
+      case 'nextWeek': {
         // Start of next week (Monday)
         targetDate = new Date(today)
         const daysUntilMonday = (8 - today.getDay()) % 7 || 7
         targetDate.setDate(today.getDate() + daysUntilMonday)
         break
+      }
       case 'later':
         // For "Later", create a special instance with far future date and isLater flag
         targetDate = new Date(today)

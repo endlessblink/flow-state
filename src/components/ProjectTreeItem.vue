@@ -50,7 +50,7 @@
           :key="child.id"
           :project="child"
           :expanded-projects="expandedProjects"
-          :nested="true"
+          nested
           :nesting-depth="nestingDepth + 1"
           :level="level + 1"
           @click="(project) => $emit('click', project)"

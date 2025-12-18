@@ -3,8 +3,8 @@
     :is-open="uiStore.authModalOpen"
     :show-footer="false"
     size="md"
-    :close-on-overlay-click="true"
-    :close-on-escape="true"
+    close-on-overlay-click
+    close-on-escape
     @close="handleClose"
   >
     <template #title>

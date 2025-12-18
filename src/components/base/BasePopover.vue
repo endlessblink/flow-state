@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 
 export type PopoverPosition = 'auto' | 'top' | 'bottom' | 'left' | 'right'
 export type PopoverVariant = 'menu' | 'tooltip' | 'dropdown'

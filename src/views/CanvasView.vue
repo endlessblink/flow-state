@@ -197,15 +197,15 @@
                 :class="{ 'canvas-ready': isCanvasReady }"
                 class="vue-flow-container"
                 :node-types="nodeTypes as any"
-                :edges-focusable="true"
+                edges-focusable
                 :elevate-nodes-on-select="false"
-                :elevate-edges-on-select="true"
-                :zoom-on-scroll="true"
+                elevate-edges-on-select
+                zoom-on-scroll
                 :pan-on-scroll="false"
-                :zoom-on-pinch="true"
-                :pan-on-drag="true"
+                zoom-on-pinch
+                pan-on-drag
                 multi-selection-key-code="Shift"
-                :snap-to-grid="true"
+                snap-to-grid
                 :snap-grid="[16, 16]"
                 :node-extent="dynamicNodeExtent"
                 :min-zoom="0.05"
@@ -214,7 +214,7 @@
                 :connect-on-drag-nodes="false"
                 :zoom-scroll-sensitivity="1.0"
                 :zoom-activation-key-code="null"
-                :prevent-scrolling="true"
+                prevent-scrolling
                 :default-viewport="{ zoom: 1, x: 0, y: 0 }"
                 dir="ltr"
                 tabindex="0"
@@ -247,8 +247,8 @@
                 <MiniMap
                   :node-color="getNodeColor"
                   mask-color="var(--text-secondary)"
-                  :pannable="true"
-                  :zoomable="true"
+                  pannable
+                  zoomable
                   position="bottom-right"
                 />
 
@@ -460,8 +460,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useThrottleFn, useDebounceFn, useMagicKeys, useWindowSize } from '@vueuse/core'
-import { Eye, EyeOff, Filter, X, Plus, Inbox } from 'lucide-vue-next'
+import { useDebounceFn, useMagicKeys, useWindowSize } from '@vueuse/core'
+import { Filter, X, Plus, Inbox } from 'lucide-vue-next'
 import { VueFlow, useVueFlow, useNodesInitialized, PanOnScrollMode } from '@vue-flow/core'
 import { useMessage } from 'naive-ui'
 import { Background } from '@vue-flow/background'

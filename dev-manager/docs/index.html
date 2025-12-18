@@ -666,8 +666,36 @@
             }
         });
 
-        // Initialize
-        init();
+        // Initialize on DOMContentLoaded to ensure DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        // Listen for tab activation from parent window (dev-manager uses iframes)
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'tab-activated') {
+                console.log('Tab activated via postMessage - reinitializing...');
+                init();
+            }
+        });
+
+        // Auto-refresh when page is shown (browser navigation, back/forward)
+        window.addEventListener('pageshow', function(event) {
+            console.log('Page show event - persisted:', event.persisted);
+            if (event.persisted) {
+                init();
+            }
+        });
+
+        // Auto-refresh when page becomes visible (tab switch)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                console.log('Page visible - refreshing data...');
+                init();
+            }
+        });
     </script>
 </body>
 </html>

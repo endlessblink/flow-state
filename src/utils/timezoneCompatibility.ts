@@ -251,7 +251,7 @@ export class TimezoneCompatibilityManager {
       canvasFingerprinting: boolean
     }
   } {
-    const testDate = new Date()
+    const _testDate = new Date()
     const supportsTimezone = !!Intl.DateTimeFormat().resolvedOptions().timeZone
     const supportsLocale = !!Intl.DateTimeFormat().resolvedOptions().locale
 

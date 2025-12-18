@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { reactive, watch } from 'vue'
 import { X, LayoutGrid, LayoutList, Rows } from 'lucide-vue-next'
 import type { CanvasSection } from '@/stores/canvas'
 

@@ -43,6 +43,8 @@ export interface SyncMetrics {
   averageSyncTime: number
   lastSyncTime?: Date
   uptime: number
+  successRate?: number
+  conflictsRate?: number
 }
 
 export const useReliableSyncManager = () => {
@@ -1249,7 +1251,7 @@ export interface ReliableSyncManagerInstance {
   resolutions: Ref<ResolutionResult[]>
   lastValidation: Ref<SyncValidationResult | null>
   metrics: Ref<SyncMetrics>
-  isLiveSyncActive: Ref<boolean>
+  isLiveSyncActive: () => boolean
 
   // Computed properties
   isSyncing: ComputedRef<boolean>
@@ -1267,9 +1269,9 @@ export interface ReliableSyncManagerInstance {
   pauseSync: () => void
   resumeSync: () => void
   toggleSync: () => void
-  throttledSync: () => void
+  throttledSync: (priority?: 'low' | 'normal' | 'high') => Promise<void>
   cancelThrottledSync: () => void
-  startLiveSync: () => Promise<void>
+  startLiveSync: () => Promise<boolean>
   stopLiveSync: () => void
   cleanup: () => Promise<void>
 

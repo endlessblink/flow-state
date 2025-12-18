@@ -232,18 +232,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { getGlobalReliableSyncManager, useReliableSyncManager } from '@/composables/useReliableSyncManager'
+import { getGlobalReliableSyncManager, type ReliableSyncManagerInstance } from '@/composables/useReliableSyncManager'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
 import type { SyncProviderType as _SyncProviderType } from '@/types/sync'
 import {
   Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap
 } from 'lucide-vue-next'
 
-const reliableSyncManager = getGlobalReliableSyncManager() as ReturnType<typeof useReliableSyncManager> & {
+const reliableSyncManager = getGlobalReliableSyncManager() as ReliableSyncManagerInstance & {
   configureProvider?: (config: unknown) => Promise<void>
   enableProvider?: () => Promise<void>
   disableProvider?: () => Promise<void>
-  isLiveSyncActive?: () => boolean
 }
 const _persistentStorage = usePersistentStorage()
 

@@ -223,7 +223,7 @@ export class SecurityScanner {
     const timestamp = Date.now()
 
     // Check for input validation patterns
-    const validationPatterns = [
+    const _validationPatterns = [
       'required',
       'pattern',
       'minlength',

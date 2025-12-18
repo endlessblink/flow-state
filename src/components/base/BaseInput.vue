@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, useSlots } from 'vue'
+import { ref, computed, useSlots } from 'vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {

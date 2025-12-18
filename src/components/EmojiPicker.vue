@@ -134,20 +134,20 @@ const emojiCategories = {
   technology: ['📱', '📲', '💻', '🖥️', '⌨️', '🖱️', '🖨️', '📠', '☎️', '📞', '📷', '📹', '🎥', '📼', '💾', '💿', '📀', '🎮', '🕹️', '🎰', '📡', '📶', '🛰️', '🔌', '🔋', '📟', '📺', '📻', '⏰', '⏳']
 }
 
-// Neon-friendly color palette - muted tones that work well on dark backgrounds
+// Dark theme color palette - deeply muted tones for dark backgrounds
 const colorOptions = [
-  '#4ECDC4', // Teal (brand primary)
-  '#3B82F6', // Blue
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#F97316', // Orange
-  '#EAB308', // Yellow/Gold
-  '#22C55E', // Green
-  '#64748B', // Slate
-  '#A855F7', // Violet
-  '#14B8A6', // Cyan
-  '#F43F5E', // Rose
-  '#6366F1', // Indigo
+  '#2D7A75', // Dark Teal
+  '#1E40AF', // Navy Blue
+  '#5B21B6', // Dark Purple
+  '#9D174D', // Dark Pink
+  '#9A3412', // Dark Orange
+  '#854D0E', // Dark Gold
+  '#166534', // Dark Green
+  '#334155', // Dark Slate
+  '#6B21A8', // Dark Violet
+  '#115E59', // Dark Cyan
+  '#9F1239', // Dark Rose
+  '#3730A3', // Dark Indigo
 ]
 
 const allEmojis = computed(() => Object.values(emojiCategories).flat())

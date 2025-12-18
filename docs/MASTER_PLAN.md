@@ -433,13 +433,13 @@ Phase 3 (Mobile) ←────────────────────
 
 | Step | Description | Status |
 |------|-------------|--------|
-| 1 | Add lint check to CI workflow | ✅ DONE (non-blocking) |
-| 2 | Enable blocking lint in CI | 🔜 READY (0 errors achieved!) |
+| 1 | Add lint check to CI workflow | ✅ DONE |
+| 2 | Enable blocking lint in CI | ✅ DONE (Dec 18, 2025) |
 | 3 | Add unit test run to CI | ⏸️ DEFERRED |
 | 4 | Add build verification | ✅ DONE (already existed) |
 
 **Implementation Notes** (Dec 18, 2025):
-- **Lint check added** as `continue-on-error: true` - ready to become blocking!
+- **Lint check now BLOCKING** - `continue-on-error: true` removed!
 - **Current lint status**: 1,369 problems (**0 errors**, 1,369 warnings) - **100% ERROR REDUCTION**
 - **Unit tests deferred** due to:
   - Vitest/Storybook integration conflict (browser tests override include patterns)
@@ -469,8 +469,8 @@ Phase 3 (Mobile) ←────────────────────
 - `vitest.ci.config.ts` - New CI-specific vitest config (excludes Storybook browser tests)
 - `eslint.config.js` - Downgraded no-explicit-any, added stories ignores
 
-**Remaining for Blocking Lint**: ✅ **NONE - 0 ERRORS!**
-- Can now enable blocking lint by removing `continue-on-error: true` from CI workflow
+**Blocking Lint**: ✅ **ENABLED** (Dec 18, 2025)
+- CI will now fail if any lint errors are introduced
 
 **Blockers for Unit Tests**:
 - Fix circular dependency in `useDatabase` ↔ `useReliableSyncManager` ↔ `localBackupManager`

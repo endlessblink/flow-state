@@ -332,7 +332,7 @@ export class CrossTabBrowserCompatibility {
       const currentData = localStorage.getItem('pomo-flow-polling')
       if (currentData !== lastData && handler) {
         try {
-          handler({ data: JSON.parse(currentData || '{}') })
+          handler({ data: JSON.parse(currentData || '{}') } as MessageEvent)
         } catch (error) {
           console.warn('Failed to parse polling data:', error)
         }

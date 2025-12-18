@@ -69,6 +69,17 @@
       </button>
     </div>
 
+    <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
+    <InboxFilters
+      v-if="!isCollapsed"
+      :tasks="baseInboxTasks"
+      :projects="taskStore.rootProjects"
+      v-model:unscheduled-only="unscheduledOnly"
+      v-model:selected-priority="selectedPriority"
+      v-model:selected-project="selectedProject"
+      @clear-all="clearAllFilters"
+    />
+
     <!-- Quick Add Input -->
     <div v-if="!isCollapsed" class="quick-add">
       <input
@@ -249,6 +260,7 @@ import {
 } from 'lucide-vue-next'
 import BaseBadge from './BaseBadge.vue'
 import ProjectEmojiIcon from './ProjectEmojiIcon.vue'
+import InboxFilters from '@/components/canvas/InboxFilters.vue'
 
 // Props
 interface Props {
@@ -284,6 +296,11 @@ const draggingTaskId = ref<string | null>(null)
 // Multi-select state
 const selectedTaskIds = ref<Set<string>>(new Set())
 const multiSelectMode = computed(() => selectedTaskIds.value.size > 0)
+
+// Additional filter state (TASK-018: Unscheduled, Priority, Project)
+const unscheduledOnly = ref(false)
+const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
+const selectedProject = ref<string | null>(null)
 
 // Base inbox tasks (different filtering based on context)
 const baseInboxTasks = computed(() => {
@@ -341,12 +358,53 @@ const smartFilters = computed(() => [
   }
 ])
 
-// Apply smart filter
-const inboxTasks = computed(() => {
+// Check if task is scheduled on calendar (has instances with dates) - TASK-018
+const isScheduledOnCalendar = (task: Task): boolean => {
+  if (!task.instances || task.instances.length === 0) return false
+  return task.instances.some(inst => inst.scheduledDate)
+}
+
+// Clear all additional filters - TASK-018
+const clearAllFilters = () => {
+  unscheduledOnly.value = false
+  selectedPriority.value = null
+  selectedProject.value = null
+}
+
+// Apply smart filter first
+const smartFilteredTasks = computed(() => {
   if (activeFilter.value === 'all') {
     return baseInboxTasks.value
   }
   return applySmartFilter(baseInboxTasks.value, activeFilter.value)
+})
+
+// Apply additional filters (TASK-018: Unscheduled, Priority, Project)
+const inboxTasks = computed(() => {
+  let tasks = smartFilteredTasks.value
+
+  // Apply Unscheduled filter - show only tasks NOT on calendar
+  if (unscheduledOnly.value) {
+    tasks = tasks.filter(task => !isScheduledOnCalendar(task))
+  }
+
+  // Apply Priority filter
+  if (selectedPriority.value !== null) {
+    tasks = tasks.filter(task => task.priority === selectedPriority.value)
+  }
+
+  // Apply Project filter
+  if (selectedProject.value !== null) {
+    if (selectedProject.value === 'none') {
+      // Show tasks with no project
+      tasks = tasks.filter(task => !task.projectId)
+    } else {
+      // Show tasks with specific project
+      tasks = tasks.filter(task => task.projectId === selectedProject.value)
+    }
+  }
+
+  return tasks
 })
 
 // Smart filter logic

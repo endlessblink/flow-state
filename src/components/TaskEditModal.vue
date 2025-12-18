@@ -45,8 +45,10 @@
 
             <!-- Compact Metadata Bar (ClickUp-inspired) -->
             <div class="metadata-bar">
+              <span class="metadata-label">SCHEDULE</span>
               <div class="metadata-field" title="Due date - When this task must be completed by">
                 <Calendar :size="14" />
+                <span class="field-label">Due</span>
                 <input
                   v-model="editedTask.dueDate"
                   type="date"
@@ -57,6 +59,7 @@
 
               <div class="metadata-field" title="Scheduled for - When you plan to work on this task">
                 <CalendarClock :size="14" />
+                <span class="field-label">Start</span>
                 <input
                   v-model="editedTask.scheduledDate"
                   type="date"
@@ -68,6 +71,7 @@
 
               <div class="metadata-field">
                 <Clock :size="14" />
+                <span class="field-label">Time</span>
                 <input
                   v-model="editedTask.scheduledTime"
                   type="time"
@@ -78,6 +82,7 @@
 
               <div class="metadata-field">
                 <TimerReset :size="14" />
+                <span class="field-label">Duration</span>
                 <input
                   v-model.number="editedTask.estimatedDuration"
                   type="number"
@@ -88,45 +93,33 @@
                 >
               </div>
 
-              <div class="metadata-field">
+              <span class="metadata-label">STATUS</span>
+              <div class="metadata-field metadata-field--dropdown">
                 <component
                   :is="priorityIcon || AlertCircle"
                   :size="14"
                   :class="priorityIconClass"
                 />
-                <select v-model="editedTask.priority" class="inline-select">
-                  <option value="low">
-                    Low
-                  </option>
-                  <option value="medium">
-                    Medium
-                  </option>
-                  <option value="high">
-                    High
-                  </option>
-                </select>
+                <span class="field-label">Priority</span>
+                <CustomSelect
+                  v-model="editedTask.priority"
+                  :options="priorityOptions"
+                  class="inline-custom-select"
+                />
               </div>
 
-              <div class="metadata-field">
+              <div class="metadata-field metadata-field--dropdown">
                 <component
                   :is="statusIcon || Circle"
                   :size="14"
                   :class="statusIconClass"
                 />
-                <select v-model="editedTask.status" class="inline-select">
-                  <option value="planned">
-                    Planned
-                  </option>
-                  <option value="in_progress">
-                    Active
-                  </option>
-                  <option value="done">
-                    ✓
-                  </option>
-                  <option value="backlog">
-                    Backlog
-                  </option>
-                </select>
+                <span class="field-label">Status</span>
+                <CustomSelect
+                  v-model="editedTask.status"
+                  :options="statusOptions"
+                  class="inline-custom-select"
+                />
               </div>
             </div>
           </section>
@@ -296,6 +289,21 @@ import {
   X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
   Calendar, CalendarClock, Clock, TimerReset, ChevronDown
 } from 'lucide-vue-next'
+import CustomSelect from '@/components/CustomSelect.vue'
+
+// Options for Priority and Status dropdowns
+const priorityOptions = [
+  { label: 'Low', value: 'low' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'High', value: 'high' }
+]
+
+const statusOptions = [
+  { label: 'Planned', value: 'planned' },
+  { label: 'Active', value: 'in_progress' },
+  { label: 'Done', value: 'done' },
+  { label: 'Backlog', value: 'backlog' }
+]
 
 interface Props {
   isOpen: boolean
@@ -930,11 +938,36 @@ const saveTask = () => {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
+  align-items: center;
   padding: var(--space-3);
   background: var(--glass-bg-subtle);
   border: 1px solid var(--glass-bg-heavy);
   border-radius: var(--radius-lg);
   margin-top: var(--space-3);
+}
+
+.metadata-label {
+  width: 100%;
+  font-size: 9px;
+  font-weight: var(--font-semibold);
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: var(--space-2);
+  margin-bottom: calc(var(--space-1) * -1);
+}
+
+.metadata-label:first-child {
+  margin-top: 0;
+}
+
+.field-label {
+  font-size: 10px;
+  font-weight: var(--font-medium);
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .metadata-field {
@@ -960,8 +993,7 @@ const saveTask = () => {
   box-shadow: var(--purple-glow-subtle);
 }
 
-.inline-input,
-.inline-select {
+.inline-input {
   background: transparent;
   border: none;
   color: var(--text-primary);
@@ -975,8 +1007,7 @@ const saveTask = () => {
   direction: inherit; /* Inherit direction from parent */
 }
 
-.inline-input:focus,
-.inline-select:focus {
+.inline-input:focus {
   outline: none;
   color: var(--text-primary);
 }
@@ -992,15 +1023,73 @@ const saveTask = () => {
   cursor: pointer;
 }
 
+/* Dark glass morphism select styling */
 .inline-select {
   cursor: pointer;
   appearance: none;
-  background-image: none;
-  padding-inline-end: var(--space-2); /* RTL: end padding */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(20, 20, 20, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  padding: var(--space-1) var(--space-6) var(--space-1) var(--space-2);
+  min-width: 80px;
+  transition: all var(--duration-fast);
+  /* Custom dropdown arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+
+.inline-select:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(30, 30, 30, 0.9);
+}
+
+.inline-select:focus {
+  outline: none;
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.15);
+}
+
+.inline-select option {
+  background: rgb(20, 20, 20);
+  color: var(--text-primary);
+  padding: var(--space-2);
 }
 
 .inline-select::-ms-expand {
   display: none;
+}
+
+/* CustomSelect inline styling */
+.metadata-field--dropdown {
+  flex: 1;
+  min-width: 120px;
+}
+
+.inline-custom-select {
+  flex: 1;
+}
+
+.inline-custom-select :deep(.select-trigger) {
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+}
+
+.inline-custom-select :deep(.select-value) {
+  font-size: var(--text-xs);
+}
+
+.inline-custom-select :deep(.select-icon) {
+  width: 12px;
+  height: 12px;
 }
 
 /* Icon Button Groups for Priority and Status */

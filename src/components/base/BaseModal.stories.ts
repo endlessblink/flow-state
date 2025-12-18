@@ -88,16 +88,7 @@ const meta = {
     loading: false,
     confirmDisabled: false,
     cancelText: 'Cancel',
-    confirmText: 'Confirm',
-    emptyMessage: '',
-    fallbackComponent: '',
-    fallbackMessage: '',
-    fallbackProps: () => ({}),
-    componentProps: () => ({}),
-    errorMessage: '',
-    errorTitle: '',
-    progress: 0,
-    message: ''
+    confirmText: 'Confirm'
   }
 } satisfies Meta<typeof BaseModal>
 

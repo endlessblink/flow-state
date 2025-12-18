@@ -19,7 +19,7 @@ const meta = {
   decorators: [
     (story) => ({
       components: { story },
-      template: '<div style="height: 600px; width: 400px; padding: 20px; background: rgba(0, 0, 0, 0.95); border-radius: 12px;"><story /></div>',
+      template: '<div style="min-height: 700px; width: 380px; padding: 20px; background: rgba(0, 0, 0, 0.95); border-radius: 12px; overflow: visible;"><story /></div>',
       setup() {
         // Mock task store data would be injected here in a real implementation
         return {}

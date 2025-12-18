@@ -47,7 +47,7 @@ export interface UserResolutionRule {
   field: string
   condition: 'always' | 'when-newer' | 'when-empty' | 'when-contains'
   value?: any
-  action: 'prefer-local' | 'prefer-remote' | 'merge' | 'ask'
+  action: 'prefer-local' | 'prefer-remote' | 'merge' | 'ask' | 'prefer-truthy' | 'prefer-either-true' | 'prefer-longer'
   priority: number
 }
 

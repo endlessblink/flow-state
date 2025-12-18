@@ -113,19 +113,20 @@ Phase 3 (Mobile) ←────────────────────
 
 <!-- Active work items use TASK-XXX format -->
 
-### TASK-018: Canvas Inbox Filters (IN PROGRESS)
+### ~~TASK-018~~: Canvas Inbox Filters (COMPLETE)
 
 **Goal**: Add filtering options to the canvas inbox for better task organization.
 
 **Priority**: P2-MEDIUM
 
 **Started**: Dec 18, 2025
+**Completed**: Dec 18, 2025
 
 | Filter | Description | Status |
 |--------|-------------|--------|
-| Unscheduled | Hide tasks that are scheduled on calendar (have `instances`), show only truly unscheduled tasks | IN PROGRESS |
-| By Priority | Filter by high/medium/low priority | PENDING |
-| By Project | Filter by project assignment | PENDING |
+| Unscheduled | Hide tasks that are scheduled on calendar (have `instances`), show only truly unscheduled tasks | ✅ DONE |
+| By Priority | Filter by high/medium/low priority | ✅ DONE |
+| By Project | Filter by project assignment | ✅ DONE |
 
 **Behavior Notes**:
 - "Unscheduled" = tasks WITHOUT calendar `instances` (not on calendar grid)
@@ -133,9 +134,17 @@ Phase 3 (Mobile) ←────────────────────
 - Multiple filters can be combined (e.g., Unscheduled + High Priority)
 - Does NOT affect calendar inbox (separate system per TASK-009)
 
-**Files to Modify**:
-- `src/components/canvas/InboxPanel.vue` - Add filter UI and logic
-- `src/components/base/UnifiedInboxPanel.vue` - If shared filter logic needed
+**Implementation**:
+- Created `src/components/canvas/InboxFilters.vue` - New filter component with chip-based UI
+- Updated `src/components/canvas/InboxPanel.vue` - Added filter logic (for Storybook)
+- Updated `src/components/base/UnifiedInboxPanel.vue` - Added filters to production inbox panel
+
+**Features**:
+- Toggle chip for "Unscheduled" filter
+- Dropdown for Priority filter (High/Medium/Low/All)
+- Dropdown for Project filter (with task counts)
+- Clear all filters button when any filter is active
+- Filters combine with existing smart filters (Ready Now, Upcoming, Backlog, All)
 
 ---
 
@@ -780,55 +789,26 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | BUG-009 | Ghost preview wrong location | MEDIUM | TODO |
 | BUG-010 | Resize creates artifacts | HIGH | TODO |
 | BUG-011 | Resize broken (both sides) | HIGH | TODO |
-| **BUG-017** | **30-minute tasks display issues** | **HIGH** | **TODO** |
+| ~~BUG-017~~ | ~~30-minute tasks display issues~~ | ~~HIGH~~ | ✅ FIXED Dec 18, 2025 |
 
 **SOP**: `docs/debug/sop/calendar-drag-inside-calendar/`
 
-#### BUG-017: 30-Minute Calendar Task Issues (Dec 18, 2025)
+#### ~~BUG-017~~: 30-Minute Calendar Task Issues (FIXED Dec 18, 2025)
 
-**Symptoms**:
-1. 30-min tasks appear very compressed/thin (26px height)
-2. Task title is cut off or not visible
-3. Only "30min" duration badge shows
-4. Content uses vertical layout instead of optimized horizontal layout
+**Problem**: 30-min tasks appeared compressed with title cut off, using vertical layout instead of horizontal.
 
-**Root Cause**: CSS selector mismatch in `CalendarView.vue`
+**Root Cause**: CSS selector mismatch - rules targeted `.calendar-event[data-duration="30"]` but day view uses `.slot-task` class.
 
-The CSS for 30-minute tasks (lines 2109-2121) targets `.calendar-event[data-duration="30"]` but the day view uses `.slot-task` class, NOT `.calendar-event`. This means the horizontal layout optimization is never applied.
+**Fix Applied** (`src/views/CalendarView.vue` lines 2123-2174):
+- Added CSS rules for `.slot-task[data-duration="30"]` with horizontal layout
+- `.task-content`: `flex-direction: row` for compact single-row display
+- Compact styling for title (10px), duration badge (9px), action buttons (14px)
+- Narrower project/priority stripes (3px) to save space
 
-**Technical Details**:
-```css
-/* Line 2109-2121 - targets WRONG selector */
-.calendar-event[data-duration="30"] .event-content {
-  flex-direction: row;  /* Never applied to .slot-task */
-}
-
-/* MISSING - needs to be added */
-.slot-task[data-duration="30"] .task-content {
-  flex-direction: row;
-  align-items: center;
-  /* ... */
-}
-```
-
-**Height Calculation** (line 645):
-```javascript
-const baseHeight = (calEvent.slotSpan * 30) - 4
-// For 30-min: slotSpan=1 → height = 26px (too small for vertical content)
-```
-
-**Verified Issues**:
-- `computedHeight: "26px"` (too small)
-- `computedFlexDirection: "column"` (should be "row" for 30-min)
-- `hasCalendarEventClass: false` (element doesn't have `.calendar-event`)
-
-**Recommended Fixes**:
-1. Add CSS rules for `.slot-task[data-duration="30"]` with horizontal layout
-2. Consider increasing minimum height for 30-min tasks
-3. Optimize content layout (title + duration + status in single row)
-
-**Files to Modify**:
-- `src/views/CalendarView.vue` - Add CSS for `.slot-task[data-duration="30"]`
+**Verification** (Playwright):
+- `computedFlexDirection: "row"` ✅ (was "column")
+- `height: "26px"` ✅ (fits properly now)
+- Title and duration badge both visible in single row ✅
 
 ### Sync Issues
 

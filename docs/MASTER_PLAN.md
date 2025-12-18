@@ -148,6 +148,108 @@ Phase 3 (Mobile) ←────────────────────
 
 ---
 
+### TASK-022: Task Disappearance Logger & Investigation (IN PROGRESS)
+
+**Goal**: Create comprehensive logging system to track and debug mysteriously disappearing tasks (BUG-020).
+
+**Priority**: P1-HIGH
+
+**Started**: Dec 18, 2025
+
+**Problem**: Tasks are randomly disappearing without user deletion - need to identify the source.
+
+#### Analysis Complete
+
+**Critical Task Removal Locations Identified** in `src/stores/tasks.ts`:
+
+| Location | Risk | Code | Description |
+|----------|------|------|-------------|
+| Lines 918, 922, 926 | **HIGH** | `tasks.value = []` | Direct wipe to empty array |
+| Line 229 | **HIGH** | `tasks.value = createSampleTasks()` | Replaces with sample data |
+| Line 193 | MEDIUM | `tasks.value = loadedTasks` | PouchDB load overwrites |
+| Lines 205, 218, 260 | MEDIUM | `tasks.value = backupTasks` | Backup restoration |
+| Line 2826 | MEDIUM | `tasks.value = [...newTasks]` | Undo operation |
+| Line 1769 | LOW | `tasks.value.splice(taskIndex, 1)` | Intentional deletion |
+
+**Other Files with deleteTask**:
+- `useCrossTabSyncIntegration.ts` - Overrides deleteTask for cross-tab sync
+- `useUnifiedUndoRedo.ts` - Undo/redo wrapper
+- Various components call `taskStore.deleteTask()`
+
+#### Progress
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Create `taskDisappearanceLogger.ts` utility | ✅ DONE |
+| 2 | Integrate logger into task store | TODO |
+| 3 | Add logging to all `tasks.value =` assignments | TODO |
+| 4 | Add logging to sync change handlers | TODO |
+| 5 | Add logging to cross-tab sync | TODO |
+| 6 | Monitor for 24-48 hours | TODO |
+| 7 | Analyze logs and identify root cause | TODO |
+
+#### Files Created
+
+- `src/utils/taskDisappearanceLogger.ts` - Comprehensive logging utility
+
+#### Logger Features
+
+```typescript
+// Enable monitoring (run in browser console)
+window.taskLogger.enable()
+
+// Check for disappeared tasks
+window.taskLogger.getDisappearedTasks()
+
+// Search for a specific task in history
+window.taskLogger.findTaskInHistory("task title or id")
+
+// Print summary
+window.taskLogger.printSummary()
+
+// Export logs for analysis
+window.taskLogger.exportLogs()
+```
+
+#### Next Steps (for next session)
+
+1. **Integrate into task store** - Add `takeSnapshot()` calls at all critical points:
+   ```typescript
+   // In tasks.ts, wrap all tasks.value assignments
+   const oldTasks = [...tasks.value]
+   tasks.value = newTasks
+   taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromPouchDB')
+   ```
+
+2. **Hook into deleteTask** - Add `markUserDeletion()` before intentional deletes:
+   ```typescript
+   taskDisappearanceLogger.markUserDeletion(taskId)
+   await deleteTask(taskId)
+   ```
+
+3. **Add to sync handlers** - Log when sync changes come in:
+   ```typescript
+   // In useReliableSyncManager.ts handleSyncChange
+   taskDisappearanceLogger.takeSnapshot(tasks.value, 'sync-change-received')
+   ```
+
+4. **Enable by default temporarily** - Auto-enable on app load for monitoring
+
+5. **Add data-task-count attribute** - For auto-monitoring:
+   ```vue
+   <div :data-task-count="tasks.length">...</div>
+   ```
+
+#### Rollback
+
+```bash
+# Remove logger if not needed
+git checkout -- src/utils/taskDisappearanceLogger.ts
+rm src/utils/taskDisappearanceLogger.ts
+```
+
+---
+
 ### TASK-019: Fix `any` Type Warnings (PLANNED)
 
 **Goal**: Fix 1,369 `no-explicit-any` warnings in batches for better type safety.
@@ -226,7 +328,38 @@ Phase 3 (Mobile) ←────────────────────
 | `GroupModal.vue` | Modal styling streamlined: pure black bg, neutral buttons (no purple gradients/glows), clean borders | ✅ DONE |
 | `QuickTaskCreate.vue` | Modal styling streamlined: pure black bg, neutral buttons (no teal), clean property chips | ✅ DONE |
 
-**Where We Stopped** (Dec 18, 2025):
+**Where We Stopped** (Dec 18, 2025 - Session 2):
+
+#### KanbanSwimlane Streamlining (IN PROGRESS)
+- **Stories reduced**: 7 → 2 stories (Default + ViewTypes), matching KanbanColumn format
+- **CSS updated**: Dark glass morphism applied to swimlane headers and columns
+- **⚠️ NEEDS MORE WORK**: KanbanSwimlane visual appearance still differs from KanbanColumn
+  - KanbanColumn looks cleaner/more polished in Storybook
+  - KanbanSwimlane needs visual refinement to match KanbanColumn's look
+
+**🔴 NEXT SESSION - CONTINUE FROM HERE**:
+1. Open both pages side-by-side:
+   - KanbanColumn: `http://localhost:6006/?path=/docs/%E2%9C%A8-features-%F0%9F%93%8B-board-view-kanbancolumn--docs`
+   - KanbanSwimlane: `http://localhost:6006/?path=/docs/%E2%9C%A8-features-%F0%9F%93%8B-board-view-kanbanswimlane--docs`
+2. **ASK USER**: "What specific visual differences do you see between KanbanColumn and KanbanSwimlane that need fixing?"
+3. Common areas that may need alignment:
+   - Column header styling (borders, backgrounds, spacing)
+   - Task card appearance within swimlanes
+   - Empty state styling
+   - Overall column/swimlane container borders/shadows
+
+**Issues Encountered This Session**:
+- Initial streamlining attempt had correct story count but wrong format
+- Had to read KanbanColumn.stories.ts to understand exact structure expected
+- Event handler syntax needed to be kebab-case (`@select-task` not `@selectTask`)
+
+**Files Modified**:
+- `src/stories/board/KanbanSwimlane.stories.ts` - Reduced to 2 stories, matched KanbanColumn format
+- `src/components/kanban/KanbanSwimlane.vue` - CSS updated for dark glass morphism
+
+---
+
+#### Previous Session Work (Dec 18, 2025 - Session 1):
 - DoneToggle progress indicator fixed to use left-to-right clip-path fill
 - DoneToggle minimal variant now shows stroke-only (not filled) when completed
 - TaskRow.vue updated to use DoneToggle instead of native checkbox
@@ -296,10 +429,10 @@ Phase 3 (Mobile) ←────────────────────
 - [ ] `PerformanceTest.stories.ts`
 
 **Board Components** (6):
-- [ ] `KanbanColumn.stories.ts`
+- [x] `KanbanColumn.stories.ts` ✅ Streamlined (Dec 18 - previous session)
 - [ ] `TaskCard.stories.ts`
 - [ ] `TaskTable.stories.ts`
-- [ ] `KanbanSwimlane.stories.ts`
+- [~] `KanbanSwimlane.stories.ts` ⚠️ IN PROGRESS - Stories done, visual refinement needed
 - [ ] `TaskRow.stories.ts`
 - [ ] `TaskList.stories.ts`
 
@@ -954,6 +1087,7 @@ The `syncNodes()` function in CanvasView.vue was also filtering with `isInInbox 
 | BUG-016 | Timer status not syncing | P2-MEDIUM | **IN PROGRESS** Dec 18 - Cross-tab sync infrastructure added (timer.ts + useCrossTabSync.ts + CrossTabPerformance.ts), but leadership election conflict exists - auto-break starts override leader. |
 | BUG-018 | Canvas smart group header icons cut off | P2-MEDIUM | TODO - Right-side icons overlap when group is narrow |
 | BUG-019 | Canvas section resize preview mispositioned | P2-MEDIUM | TODO - Ghost preview shows wrong position during resize |
+| BUG-020 | Tasks randomly disappearing without user deletion | P1-HIGH | **INVESTIGATING** Dec 18 - Logger utility created, needs integration |
 
 **Details**: See "Open Bug Analysis" section below.
 

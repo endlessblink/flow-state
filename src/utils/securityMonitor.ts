@@ -11,7 +11,7 @@ export interface SecurityEvent {
   severity: 'low' | 'medium' | 'high' | 'critical'
   timestamp: number
   description: string
-  details: Record<string, any>
+  details: Record<string, unknown>
   source: string
   userAgent?: string
   ip?: string
@@ -404,7 +404,7 @@ export class SecurityMonitor {
   }
 
   // Check if error is security-related
-  private isSecurityRelatedError(error: any): boolean {
+  private isSecurityRelatedError(error: unknown): boolean {
     if (!error) return false
 
     const errorString = error.toString().toLowerCase()

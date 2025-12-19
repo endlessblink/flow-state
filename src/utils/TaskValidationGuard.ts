@@ -210,7 +210,7 @@ export class TaskValidationGuard {
    */
   static getValidationReport(): {
     totalFailures: number;
-    recentFailures: any[];
+    recentFailures: unknown[];
     failureTypes: Record<string, number>;
     hasRecentCriticalIssues: boolean;
   } {
@@ -218,8 +218,8 @@ export class TaskValidationGuard {
       const existing = localStorage.getItem(this.VALIDATION_KEY) || '[]';
       const failures = JSON.parse(existing);
 
-      const failureTypes = failures.reduce((acc: Record<string, number>, f: any) => {
-        f.errors?.forEach((error: string) => {
+      const failureTypes = failures.reduce((acc: Record<string, number>, f: unknown) => {
+        (f as { errors?: string[] }).errors?.forEach((error: string) => {
           acc[error] = (acc[error] || 0) + 1;
         });
         return acc;

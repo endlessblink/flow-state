@@ -51,7 +51,7 @@ export class ConflictResolver {
       result.metadata = {
         ...result.metadata,
         resolutionReason: `Auto-resolved using ${strategy} strategy`
-      } as any
+      }
 
       // Store in history
       this.resolutionHistory.push(result)
@@ -147,7 +147,7 @@ export class ConflictResolver {
         mergedFields: [],
         preservedLocalFields,
         preservedRemoteFields
-      } as any
+      }
     }
   }
 

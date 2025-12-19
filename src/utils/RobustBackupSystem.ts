@@ -8,7 +8,7 @@
 export interface BackupData {
   id: string
   timestamp: number
-  data: any
+  data: unknown
   checksum: string
   version: string
 }
@@ -23,7 +23,7 @@ export interface BackupConfig {
 
 export interface ConflictResolution {
   strategy: 'latest' | 'manual' | 'merge'
-  resolutionFn?: (local: any, remote: any) => any
+  resolutionFn?: (local: unknown, remote: unknown) => unknown
 }
 
 // Result of multi-layer backup operation

@@ -158,10 +158,10 @@ export class NetworkOptimizer {
     } catch (_error) {
       // Fallback to Connection API if available
       if ('connection' in navigator) {
-        const connection = (navigator as any).connection
+        const connection = (navigator as { connection?: { downlink?: number; rtt?: number } }).connection
         return {
-          bandwidth: connection.downlink * 125000, // Convert Mbps to bytes/s
-          latency: connection.rtt || 200
+          bandwidth: (connection?.downlink || 1) * 125000, // Convert Mbps to bytes/s
+          latency: connection?.rtt || 200
         }
       }
 

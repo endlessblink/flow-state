@@ -146,7 +146,7 @@ export class ForensicLogger {
             userAgent: navigator.userAgent,
             sessionId: this.SESSION_ID || 'unknown',
             version: '1.0.0'
-          } as any
+          }
         }
       }
 
@@ -191,7 +191,7 @@ export class ForensicLogger {
           userAgent: navigator.userAgent,
           sessionId: this.SESSION_ID || 'unknown',
           version: '1.0.0'
-        } as any
+        }
       }
 
       // Create checksum of the entire snapshot

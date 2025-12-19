@@ -30,7 +30,6 @@ jobs:
       - name: Build application
         run: npm run build
 
-      # Note: Unit tests deferred until test suite is stabilized
-      # See TASK-012 in MASTER_PLAN.md for details
-      # - name: Run unit tests
-      #   run: npx vitest run --config vitest.ci.config.ts
+      # Unit tests - enabled after TASK-020 fix (Dec 19, 2025)
+      - name: Run safety tests
+        run: npx vitest run tests/safety/ --config vitest.ci.config.ts

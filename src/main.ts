@@ -5,6 +5,7 @@ import './utils/consoleFilter'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { PiniaSharedState } from 'pinia-shared-state'
 import router from './router'
 import App from './App.vue'
 import i18n from './i18n'
@@ -44,7 +45,18 @@ import { taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
 
 const app = createApp(App)
 
-app.use(createPinia())
+// Create Pinia with cross-tab state synchronization
+// ROLLBACK: Remove PiniaSharedState plugin and revert to: app.use(createPinia())
+const pinia = createPinia()
+pinia.use(
+  PiniaSharedState({
+    enable: true,       // Enable cross-tab sync globally
+    initialize: true,   // Recover state from other tabs on load
+    type: 'native',     // Use BroadcastChannel API (fastest, best support)
+  })
+)
+
+app.use(pinia)
 app.use(router)
 app.use(i18n)
 

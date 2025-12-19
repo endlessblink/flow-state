@@ -181,93 +181,32 @@ Dec 18, 2025 - Added Unscheduled, Priority, and Project filters to canvas inbox.
 
 ---
 
-### ~~TASK-022~~: Task Disappearance Logger & Investigation (✅ DONE)
+### ~~TASK-022~~: Task Disappearance Logger & Investigation (COMPLETE)
+Dec 19, 2025 - Created comprehensive logging system to debug mysteriously disappearing tasks (BUG-020).
 
-**Goal**: Create comprehensive logging system to track and debug mysteriously disappearing tasks (BUG-020).
+**Features**:
+- Identified 6 critical task removal locations in `tasks.ts`
+- Created `taskDisappearanceLogger.ts` with snapshot, diff, and search capabilities
+- Integrated logging into task store, cross-tab sync, and main.ts
+- Auto-enabled on app startup for monitoring
 
-**Priority**: P1-HIGH
+**Files Created/Modified**:
+- `src/utils/taskDisappearanceLogger.ts` - Logger utility
+- `src/stores/tasks.ts` - Wrapped all `tasks.value =` assignments
+- `src/composables/useCrossTabSync.ts` - Added delete operation logging
+- `src/main.ts` - Auto-enable on startup
 
-**Started**: Dec 18, 2025
-**Completed**: Dec 19, 2025
-
-**Problem**: Tasks are randomly disappearing without user deletion - need to identify the source.
-
-#### Analysis Complete
-
-**Critical Task Removal Locations Identified** in `src/stores/tasks.ts`:
-
-| Location | Risk | Code | Description |
-|----------|------|------|-------------|
-| Lines 918, 922, 926 | **HIGH** | `tasks.value = []` | Direct wipe to empty array |
-| Line 229 | **HIGH** | `tasks.value = createSampleTasks()` | Replaces with sample data |
-| Line 193 | MEDIUM | `tasks.value = loadedTasks` | PouchDB load overwrites |
-| Lines 205, 218, 260 | MEDIUM | `tasks.value = backupTasks` | Backup restoration |
-| Line 2826 | MEDIUM | `tasks.value = [...newTasks]` | Undo operation |
-| Line 1769 | LOW | `tasks.value.splice(taskIndex, 1)` | Intentional deletion |
-
-**Other Files with deleteTask**:
-- `useCrossTabSyncIntegration.ts` - Overrides deleteTask for cross-tab sync
-- `useUnifiedUndoRedo.ts` - Undo/redo wrapper
-- Various components call `taskStore.deleteTask()`
-
-#### Progress
-
-| Step | Description | Status |
-|------|-------------|--------|
-| 1 | Create `taskDisappearanceLogger.ts` utility | ✅ DONE |
-| 2 | Integrate logger into task store | ✅ DONE (Dec 19, 2025) |
-| 3 | Add logging to all `tasks.value =` assignments | ✅ DONE (Dec 19, 2025) |
-| 4 | Add logging to sync change handlers | ✅ DONE (Dec 19, 2025) |
-| 5 | Add logging to cross-tab sync | ✅ DONE (Dec 19, 2025) |
-
-*Monitoring and analysis moved to TASK-024*
-
-#### Files Created
-
-- `src/utils/taskDisappearanceLogger.ts` - Comprehensive logging utility
-
-#### Files Modified (Dec 19, 2025)
-
-- `src/stores/tasks.ts` - Added logger import and wrapped all `tasks.value =` assignments with `logArrayReplacement()`. Added `markUserDeletion()` before intentional deletes. Added `takeSnapshot()` after deletions.
-- `src/composables/useCrossTabSync.ts` - Added logger import and wrapped delete/bulk_delete operations with `logArrayReplacement()`
-- `src/main.ts` - Added auto-enable of logger on app startup (2 second delay for store init)
-
-#### Logger Features
-
-```typescript
-// Enable monitoring (run in browser console)
-window.taskLogger.enable()
-
-// Check for disappeared tasks
-window.taskLogger.getDisappearedTasks()
-
-// Search for a specific task in history
-window.taskLogger.findTaskInHistory("task title or id")
-
-// Print summary
-window.taskLogger.printSummary()
-
-// Export logs for analysis
-window.taskLogger.exportLogs()
-```
-
-#### Rollback
-
-```bash
-# Remove logger if not needed
-git checkout -- src/utils/taskDisappearanceLogger.ts
-rm src/utils/taskDisappearanceLogger.ts
-```
+*Full details: [Archive](./archive/Done-Tasks-Master-Plan.md#task-022-task-disappearance-logger--investigation-complete)*
 
 ---
 
-### TASK-024: Review Task Disappearance Logs (PLANNED)
+### TASK-024: Review Task Disappearance Logs (READY)
 
 **Goal**: After 24-48 hour monitoring period, analyze taskDisappearanceLogger data to identify root cause of BUG-020.
 
 **Priority**: P1-HIGH
 
-**Depends On**: TASK-022 Step 6 (monitoring period)
+**Depends On**: ~~TASK-022~~ (COMPLETE - logger is active)
 
 **Scheduled Review**: Dec 20-21, 2025
 
@@ -904,19 +843,23 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
 | ~~BUG-015~~ | ~~Edit Task modal behind nav tabs~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 16, 2025 - Added Teleport to body |
 | BUG-016 | Timer status not syncing | P2-MEDIUM | **IN PROGRESS** Dec 18 - Cross-tab sync infrastructure added (timer.ts + useCrossTabSync.ts + CrossTabPerformance.ts), but leadership election conflict exists - auto-break starts override leader. |
-| BUG-018 | Canvas smart group header icons cut off | P2-MEDIUM | TODO - Right-side icons overlap when group is narrow |
+| ~~BUG-018~~ | ~~Canvas smart group header icons cut off~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Wrapped actions in overflow container |
 | BUG-019 | Canvas section resize preview mispositioned | P2-MEDIUM | TODO - Ghost preview shows wrong position during resize |
 | BUG-020 | Tasks randomly disappearing without user deletion | P1-HIGH | **INVESTIGATING** Dec 18 - Logger utility created, needs integration |
 | ~~BUG-021~~ | ~~Dev-Manager Skills/Docs tabs show black until manual refresh~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Lazy loading iframes on first tab activation |
 
 **Details**: See "Open Bug Analysis" section below.
 
-#### BUG-018 & BUG-019: Canvas Smart Group UI Issues (Dec 18, 2025)
+#### ~~BUG-018~~ & BUG-019: Canvas Smart Group UI Issues (Dec 18, 2025)
 
-**BUG-018: Header Icons Cut Off**
+**~~BUG-018: Header Icons Cut Off~~ ✅ FIXED Dec 19, 2025**
 - **Symptom**: When smart group (e.g., "Today") is narrow, right-side icons/buttons get cut off or overlap
 - **Root Cause**: Header has 8+ flex items with `flex-shrink: 0`, competing for ~50px reserved space
-- **Fix**: Wrap actions in overflow container with fade mask, allow name input to shrink
+- **Solution Applied**:
+  - Wrapped action buttons in `.header-actions` container with `overflow: hidden`
+  - Set name input to `flex: 1 1 60px` with `min-width: 60px` and `text-overflow: ellipsis`
+  - Added fade mask on hover to indicate clipped content
+- **SOP**: `docs/🐛 debug/sop/canvas-header-overflow-fix-2025-12-19.md`
 
 **BUG-019: Resize Preview Mispositioned**
 - **Symptom**: Blue ghost preview appears at wrong location when resizing section from left/top edges
@@ -924,10 +867,8 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 - **Fix**: Track `currentX/currentY` in resizeState from `event.params.x/y` during resize
 
 **Files**:
-- `src/components/canvas/GroupNodeSimple.vue` (BUG-018)
+- `src/components/canvas/GroupNodeSimple.vue` (~~BUG-018~~ FIXED)
 - `src/views/CanvasView.vue` (BUG-019)
-
-**Plan**: `/home/endlessblink/.claude/plans/wiggly-tumbling-fairy.md`
 
 #### ~~BUG-021~~: Dev-Manager Force-Graph Iframe Issue (FIXED Dec 19, 2025)
 

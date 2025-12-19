@@ -1300,6 +1300,8 @@ const resizeState = ref({
   startY: 0, // Track original section y position
   startWidth: 0,
   startHeight: 0,
+  currentX: 0, // Track live x position during resize (BUG-019 fix)
+  currentY: 0, // Track live y position during resize (BUG-019 fix)
   currentWidth: 0,
   currentHeight: 0,
   handlePosition: null as string | null,
@@ -1308,17 +1310,46 @@ const resizeState = ref({
 })
 
 // Get section resize style for individual sections
+// BUG-019 FIX: Use currentX/currentY from resizeState for live position tracking
+// Also account for Vue Flow container's screen position when using position: fixed
 const getSectionResizeStyle = (section: any): Record<string, string | number> => {
   if (!resizeState.value.isResizing || resizeState.value.sectionId !== section.id) {
     return {}
   }
 
+  // Use live position from resizeState (updated during resize), not stale section.position from store
+  const currentX = resizeState.value.currentX
+  const currentY = resizeState.value.currentY
+
+  // BUG-019 FIX: Use the ACTUAL Vue Flow viewport (vfViewport) instead of the store's viewport
+  // The store viewport may be stale or not properly synchronized during resize operations
+  const zoom = vfViewport.value?.zoom || 1
+  const vpX = vfViewport.value?.x || 0
+  const vpY = vfViewport.value?.y || 0
+
+  // Get the Vue Flow container's position on screen
+  // position: fixed is relative to the browser viewport, so we need the container offset
+  let containerOffsetX = 0
+  let containerOffsetY = 0
+
+  if (vueFlowRef.value?.$el) {
+    const rect = vueFlowRef.value.$el.getBoundingClientRect()
+    containerOffsetX = rect.left
+    containerOffsetY = rect.top
+  }
+
+  // Calculate screen position:
+  // 1. Canvas position (currentX/Y) transformed by Vue Flow viewport (zoom + pan)
+  // 2. Add container offset for position: fixed to work correctly
+  const screenX = currentX * zoom + vpX + containerOffsetX
+  const screenY = currentY * zoom + vpY + containerOffsetY
+
   return {
     position: 'fixed',
-    left: `${section.position.x * viewport.value?.zoom + viewport.value?.x}px`,
-    top: `${section.position.y * viewport.value?.zoom + viewport.value?.y}px`,
-    width: `${resizeState.value.currentWidth * viewport.value?.zoom}px`,
-    height: `${resizeState.value.currentHeight * viewport.value?.zoom}px`,
+    left: `${screenX}px`,
+    top: `${screenY}px`,
+    width: `${resizeState.value.currentWidth * zoom}px`,
+    height: `${resizeState.value.currentHeight * zoom}px`,
     pointerEvents: 'none',
     zIndex: 999
   }
@@ -1344,7 +1375,8 @@ const {
   findNode,
   onEdgeClick,
   onEdgeContextMenu,
-  removeEdges
+  removeEdges,
+  viewport: vfViewport // BUG-019: Get the actual Vue Flow viewport for accurate coordinate transforms
 } = useVueFlow()
 
 
@@ -2704,6 +2736,7 @@ const _handleResizeStart = (event: any) => {
 
     if (section) {
       // Initialize resize state with proper bounds checking and enhanced tracking
+      // BUG-019 FIX: Initialize currentX/currentY for live position tracking
       resizeState.value = {
         isResizing: true,
         sectionId,
@@ -2711,6 +2744,8 @@ const _handleResizeStart = (event: any) => {
         startY: section.position.y || 0,
         startWidth: Math.max(200, Math.min(1200, section.position.width)),
         startHeight: Math.max(150, Math.min(800, section.position.height)),
+        currentX: section.position.x || 0, // BUG-019: Track live X position
+        currentY: section.position.y || 0, // BUG-019: Track live Y position
         currentWidth: Math.max(200, Math.min(1200, section.position.width)),
         currentHeight: Math.max(150, Math.min(800, section.position.height)),
         handlePosition: event.direction || 'se',
@@ -2748,6 +2783,7 @@ const _handleResizeStart = (event: any) => {
 }
 
 // Handle resize with real-time preview - FIXED to prevent coordinate conflicts
+// BUG-019 FIX: Also track live position for correct preview positioning
 const _handleResize = (event: any) => {
   if (!resizeState.value.isResizing || !resizeState.value.sectionId) return
 
@@ -2764,6 +2800,22 @@ const _handleResize = (event: any) => {
     // Update current dimensions for preview
     resizeState.value.currentWidth = newWidth
     resizeState.value.currentHeight = newHeight
+
+    // BUG-019 FIX: Track live position from NodeResizer params or node.position
+    // When resizing from left/top edges, the position changes
+    if (event.params) {
+      // NodeResizer provides x, y in params when position changes
+      if (typeof event.params.x === 'number') {
+        resizeState.value.currentX = event.params.x
+      }
+      if (typeof event.params.y === 'number') {
+        resizeState.value.currentY = event.params.y
+      }
+    } else if (node.position) {
+      // Fallback: get position from node directly
+      resizeState.value.currentX = node.position.x ?? resizeState.value.currentX
+      resizeState.value.currentY = node.position.y ?? resizeState.value.currentY
+    }
   }
 }
 
@@ -2825,6 +2877,8 @@ const _handleResizeEnd = (event: any) => {
       startY: 0,
       startWidth: 0,
       startHeight: 0,
+      currentX: 0, // BUG-019
+      currentY: 0, // BUG-019
       currentWidth: 0,
       currentHeight: 0,
       handlePosition: null,
@@ -2846,6 +2900,8 @@ const handleSectionResizeStart = ({ sectionId, event: _event }: any) => {
       startY: section.position.y,
       startWidth: section.position.width,
       startHeight: section.position.height,
+      currentX: section.position.x, // BUG-019: Track live position
+      currentY: section.position.y, // BUG-019: Track live position
       currentWidth: section.position.width,
       currentHeight: section.position.height,
       handlePosition: null,
@@ -2863,7 +2919,7 @@ const handleSectionResizeStart = ({ sectionId, event: _event }: any) => {
 }
 
 const handleSectionResize = ({ sectionId: _sectionId, event }: any) => {
-  // NodeResizer provides dimensions in event.params as { width, height }
+  // NodeResizer provides dimensions in event.params as { width, height, x, y }
   const width = event?.params?.width || event?.width
   const height = event?.params?.height || event?.height
 
@@ -2871,6 +2927,15 @@ const handleSectionResize = ({ sectionId: _sectionId, event }: any) => {
     // Update resize state for real-time preview overlay
     resizeState.value.currentWidth = width
     resizeState.value.currentHeight = height
+
+    // BUG-019 FIX: Track live position when resizing from left/top edges
+    // NodeResizer provides x, y in params when position changes
+    if (typeof event?.params?.x === 'number') {
+      resizeState.value.currentX = event.params.x
+    }
+    if (typeof event?.params?.y === 'number') {
+      resizeState.value.currentY = event.params.y
+    }
   }
 }
 
@@ -2994,6 +3059,8 @@ const handleSectionResizeEnd = ({ sectionId, event }: any) => {
     startY: 0,
     startWidth: 0,
     startHeight: 0,
+    currentX: 0, // BUG-019
+    currentY: 0, // BUG-019
     currentWidth: 0,
     currentHeight: 0,
     handlePosition: null,

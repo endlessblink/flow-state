@@ -127,8 +127,8 @@ Phase 3 (Mobile) ←────────────────────
 
 | ID | Status | Primary Files | Depends | Blocks |
 |----|--------|---------------|---------|--------|
-| ~~TASK-022~~ | ✅ DONE | `tasks.ts`, `taskDisappearanceLogger.ts` | - | ~~TASK-024~~ |
-| TASK-024 | READY | `tasks.ts` | ~~TASK-022~~ | - |
+| TASK-022 | 👀 MONITORING | `tasks.ts`, `taskDisappearanceLogger.ts` | - | TASK-024 |
+| TASK-024 | READY | `tasks.ts` | TASK-022 (monitoring) | - |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | TASK-014 | IN_PROGRESS | `*.stories.ts`, `*.vue` (UI) | - | - |
 | TASK-019 | PLANNED | `tasks.ts`, stores, views | - | - |
@@ -137,8 +137,9 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
-**Ready**: TASK-024 (TASK-022 complete - can start monitoring review)
-**Conflict Warning**: `tasks.ts` appears in TASK-024, TASK-019 - work sequentially
+**Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
+**Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
+**Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially
 
 ---
 
@@ -181,8 +182,8 @@ Dec 18, 2025 - Added Unscheduled, Priority, and Project filters to canvas inbox.
 
 ---
 
-### ~~TASK-022~~: Task Disappearance Logger & Investigation (COMPLETE)
-Dec 19, 2025 - Created comprehensive logging system to debug mysteriously disappearing tasks (BUG-020).
+### TASK-022: Task Disappearance Logger & Investigation (👀 MONITORING)
+Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance events until Dec 20-21.
 
 **Features**:
 - Identified 6 critical task removal locations in `tasks.ts`
@@ -844,13 +845,13 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-015~~ | ~~Edit Task modal behind nav tabs~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 16, 2025 - Added Teleport to body |
 | BUG-016 | Timer status not syncing | P2-MEDIUM | **IN PROGRESS** Dec 18 - Cross-tab sync infrastructure added (timer.ts + useCrossTabSync.ts + CrossTabPerformance.ts), but leadership election conflict exists - auto-break starts override leader. |
 | ~~BUG-018~~ | ~~Canvas smart group header icons cut off~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Wrapped actions in overflow container |
-| BUG-019 | Canvas section resize preview mispositioned | P2-MEDIUM | TODO - Ghost preview shows wrong position during resize |
+| ~~BUG-019~~ | ~~Canvas section resize preview mispositioned~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Used Vue Flow viewport + container offset for accurate positioning |
 | BUG-020 | Tasks randomly disappearing without user deletion | P1-HIGH | **INVESTIGATING** Dec 18 - Logger utility created, needs integration |
 | ~~BUG-021~~ | ~~Dev-Manager Skills/Docs tabs show black until manual refresh~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Lazy loading iframes on first tab activation |
 
 **Details**: See "Open Bug Analysis" section below.
 
-#### ~~BUG-018~~ & BUG-019: Canvas Smart Group UI Issues (Dec 18, 2025)
+#### ~~BUG-018~~ & ~~BUG-019~~: Canvas Smart Group UI Issues (Dec 18, 2025) ✅ ALL FIXED
 
 **~~BUG-018: Header Icons Cut Off~~ ✅ FIXED Dec 19, 2025**
 - **Symptom**: When smart group (e.g., "Today") is narrow, right-side icons/buttons get cut off or overlap
@@ -861,14 +862,17 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
   - Added fade mask on hover to indicate clipped content
 - **SOP**: `docs/🐛 debug/sop/canvas-header-overflow-fix-2025-12-19.md`
 
-**BUG-019: Resize Preview Mispositioned**
+**~~BUG-019: Resize Preview Mispositioned~~ ✅ FIXED Dec 19, 2025**
 - **Symptom**: Blue ghost preview appears at wrong location when resizing section from left/top edges
-- **Root Cause**: `getSectionResizeStyle()` uses stale `section.position` from store instead of live NodeResizer position
-- **Fix**: Track `currentX/currentY` in resizeState from `event.params.x/y` during resize
+- **Root Cause**: Two issues: (1) `getSectionResizeStyle()` used stale `section.position` from store instead of live NodeResizer position; (2) Used canvas store viewport instead of actual Vue Flow viewport
+- **Solution Applied**:
+  - Added `currentX/currentY` to `resizeState` to track live position from `event.params.x/y` during resize
+  - Used `vfViewport` from `useVueFlow()` instead of store viewport for accurate coordinate transforms
+  - Added container offset calculation for `position: fixed` positioning
 
 **Files**:
 - `src/components/canvas/GroupNodeSimple.vue` (~~BUG-018~~ FIXED)
-- `src/views/CanvasView.vue` (BUG-019)
+- `src/views/CanvasView.vue` (~~BUG-019~~ FIXED)
 
 #### ~~BUG-021~~: Dev-Manager Force-Graph Iframe Issue (FIXED Dec 19, 2025)
 

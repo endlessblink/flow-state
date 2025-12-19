@@ -136,6 +136,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-023~~ | ✅ DONE | `dev-manager/*` | - | - |
 | TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
 | TASK-027 | PAUSED | `stores/*` (done), `utils/*`, `composables/*`, `components/*`, `views/*` | ~~TASK-011~~ | - |
+| ~~TASK-028~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json` | - | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
 **Paused**: TASK-027 (lint warning fixes - 88 fixed, 1,292 remaining)
@@ -220,6 +221,24 @@ Dec 19, 2025 - Added hooks to force Claude Code to use AskUserQuestion tool prop
 - `.claude/hooks/ask-questions-reminder.sh` - Always reminds to use AskUserQuestion
 - `.claude/hooks/misunderstanding-detector.sh` - Detects frustration patterns
 - `.claude/settings.json` - Both hooks registered
+
+---
+
+### ~~TASK-028~~: Auto-Sync Task Status Hook (COMPLETE)
+Dec 19, 2025 - Added PostToolUse hook that auto-updates MASTER_PLAN.md task status when editing tracked files.
+
+**Features**:
+- Triggers after Edit/Write to source files
+- Matches files against Task Dependency Index "Primary Files" column
+- Auto-updates matching task status to IN_PROGRESS
+- Preserves special statuses (MONITORING, DONE, already IN_PROGRESS)
+- Supports glob patterns (*.stories.ts) and direct filename matches
+
+**Files Created**:
+- `.claude/hooks/auto-sync-task-status.sh` - Main hook script
+- `.claude/settings.json` - Hook registered in PostToolUse
+
+**Related**: BUG-022 (dev-manager kanban sync fixes)
 
 ---
 

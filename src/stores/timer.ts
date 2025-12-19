@@ -944,7 +944,7 @@ watch(completedSessions, (newSessions) => {
       // This ensures we load the timer from CouchDB, not stale local data
       try {
         console.log('🔄 [TIMER] Syncing before loading timer session...')
-        await db.sync?.()
+        await db.triggerSync?.()
         console.log('✅ [TIMER] Sync complete, loading timer session...')
       } catch (syncErr) {
         console.warn('⚠️ [TIMER] Sync failed before load, using local data:', syncErr)

@@ -84,6 +84,87 @@ const calculateRemainingTime = (session, leaderTimestamp?) => {
 }
 ```
 
+### Fix 3: Data Structure Mismatch in loadTimerSession (Session 2)
+
+**Problem**: Timer not appearing without page refresh, drift between tabs.
+
+**Root Cause**: `loadTimerSession` expected flat properties but `db.load()` returns nested structure:
+
+```typescript
+// db.load() returns:
+{
+  session: { id, taskId, startTime, duration, isActive, ... },
+  deviceLeaderId: 'device_xxx',
+  deviceLeaderLastSeen: 1734637200000
+}
+
+// Old code expected flat structure:
+if (saved && saved.isActive) {  // ❌ undefined!
+  const startTime = new Date(saved.startTime)  // ❌ undefined!
+```
+
+**Fix** (`timer.ts:945-1042`):
+```typescript
+interface SavedTimerDocument {
+  session?: SavedSessionData | null
+  deviceLeaderId?: string | null
+  deviceLeaderLastSeen?: number | null
+}
+const saved = await db.load<SavedTimerDocument>('pomo-flow-timer-session')
+const savedSession = saved?.session
+
+if (savedSession && savedSession.isActive) {  // ✅ Correct
+  const startTime = new Date(savedSession.startTime)  // ✅ Correct
+```
+
+### Fix 4: Changes Feed Handler Extracting Nested Data (Session 2)
+
+**Problem**: Changes feed callback received raw PouchDB doc but handler expected flat structure.
+
+**Root Cause**: PouchDB changes feed returns `{ _id, _rev, data: {...} }` but handler expected `{ session, deviceLeaderId, ... }`.
+
+**Fix** (`timer.ts:301-324`):
+```typescript
+// Before (wrong):
+timerChangesSync.startListening(async (doc: RemoteTimerDoc) => {
+  await handleRemoteTimerUpdate(doc)  // ❌ doc has wrong structure
+})
+
+// After (correct):
+timerChangesSync.startListening(async (rawDoc: any) => {
+  const timerData = rawDoc.data as RemoteTimerDoc  // ✅ Extract nested data
+  if (!timerData) return
+  await handleRemoteTimerUpdate(timerData)
+})
+```
+
+### Fix 5: Sync Status Debouncing (Session 2)
+
+**Problem**: Sync indicator flickered constantly between "Online" and "Syncing".
+
+**Root Cause**: Live sync triggers status changes every ~500ms during replication.
+
+**Fix** (`SyncStatusIndicator.vue:235-276`):
+```typescript
+const STATUS_DEBOUNCE_MS = 1500  // 1.5 second debounce
+
+watch(() => syncManager.syncStatus.value, (newStatus, oldStatus) => {
+  // Immediate for error/offline (important states)
+  if (['error', 'offline', 'resolving_conflicts'].includes(newStatus)) {
+    stableSyncStatus.value = newStatus
+    return
+  }
+
+  // Debounce syncing<->complete transitions
+  if ((oldStatus === 'syncing' && newStatus === 'complete') ||
+      (oldStatus === 'complete' && newStatus === 'syncing')) {
+    statusDebounceTimer = setTimeout(() => {
+      stableSyncStatus.value = newStatus
+    }, STATUS_DEBOUNCE_MS)
+  }
+})
+```
+
 ---
 
 ## Files Changed
@@ -91,7 +172,21 @@ const calculateRemainingTime = (session, leaderTimestamp?) => {
 | File | Change |
 |------|--------|
 | `src/composables/useTimerChangesSync.ts` | **NEW** - Direct PouchDB changes feed composable |
-| `src/stores/timer.ts` | Integrated new composable, fixed clock sync calculation |
+| `src/stores/timer.ts` | Integrated composable, fixed data structure, fixed changes handler |
+| `src/composables/useDatabase.ts` | Fixed sync manager init order, auto-start live sync |
+| `src/components/SyncStatusIndicator.vue` | Added debounced status to prevent flickering |
+
+---
+
+## Root Causes Summary (All Fixed)
+
+| # | Issue | Root Cause | Fix |
+|---|-------|------------|-----|
+| 1 | Event never dispatched | `reliable-sync-change` dead code | Direct PouchDB changes feed |
+| 2 | Timer not appearing without refresh | Data structure mismatch (`saved.*` vs `saved.session.*`) | Fixed path in loadTimerSession |
+| 3 | Changes feed not updating timer | Raw doc passed (need `rawDoc.data`) | Extract nested data before handler |
+| 4 | Clock drift between devices | Using local `Date.now()` | Leader timestamp compensation |
+| 5 | Sync status flickering | Rapid live sync status changes | 1.5s debounce on transitions |
 
 ---
 

@@ -207,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 
 interface Props {
@@ -232,8 +232,52 @@ const isExpanded = ref(false)
 const syncProgress = ref(0)
 const syncProgressText = ref('')
 
+// TASK-021: Debounced sync status to prevent flickering during live sync
+// The raw status from syncManager changes rapidly during live sync (syncing <-> complete)
+// We debounce to show a stable UI status
+const stableSyncStatus = ref(syncManager.syncStatus.value)
+let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null
+const STATUS_DEBOUNCE_MS = 1500 // Don't show transitions faster than 1.5 seconds
+
+watch(() => syncManager.syncStatus.value, (newStatus, oldStatus) => {
+  // Clear any pending debounce
+  if (statusDebounceTimer) {
+    clearTimeout(statusDebounceTimer)
+    statusDebounceTimer = null
+  }
+
+  // These transitions should be immediate (important state changes)
+  const immediateTransitions = ['error', 'offline', 'resolving_conflicts', 'validating']
+  if (immediateTransitions.includes(newStatus)) {
+    stableSyncStatus.value = newStatus
+    return
+  }
+
+  // During live sync, the status flickers between 'syncing' and 'complete'
+  // Debounce these rapid transitions to reduce visual noise
+  if ((oldStatus === 'syncing' && newStatus === 'complete') ||
+      (oldStatus === 'complete' && newStatus === 'syncing')) {
+    // Show 'Online' (idle) during live sync flickering for stability
+    if (stableSyncStatus.value !== 'syncing' && stableSyncStatus.value !== 'complete') {
+      // Keep current stable status during transitions
+    } else {
+      // Debounce the transition
+      statusDebounceTimer = setTimeout(() => {
+        stableSyncStatus.value = newStatus
+      }, STATUS_DEBOUNCE_MS)
+    }
+    return
+  }
+
+  // For other transitions, use a shorter debounce
+  statusDebounceTimer = setTimeout(() => {
+    stableSyncStatus.value = newStatus
+  }, 300)
+}, { immediate: true })
+
 // Computed properties (adapted for ReliableSyncManager API)
-const syncStatus = computed(() => syncManager.syncStatus.value)
+// Use stableSyncStatus for UI display to prevent flickering
+const syncStatus = computed(() => stableSyncStatus.value)
 const error = computed(() => syncManager.error.value)
 const lastSyncTime = computed(() => syncManager.lastSyncTime.value)
 const isOnline = computed(() => syncManager.isOnline.value)
@@ -440,6 +484,12 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('sync-change', handleSyncChange as EventListener)
   window.removeEventListener('sync-error', handleSyncError as EventListener)
+
+  // Clean up status debounce timer (TASK-021)
+  if (statusDebounceTimer) {
+    clearTimeout(statusDebounceTimer)
+    statusDebounceTimer = null
+  }
 })
 </script>
 

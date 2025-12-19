@@ -326,7 +326,7 @@ export function useDatabase(): UseDatabaseReturn {
         }
 
         // Expose to window for backward compatibility
-        (window as any).pomoFlowDb = singletonDatabase
+        (window as unknown).pomoFlowDb = singletonDatabase
 
         // Verify database is working
         await singletonDatabase.info()
@@ -455,7 +455,7 @@ export function useDatabase(): UseDatabaseReturn {
 
         return // Success - exit retry loop
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         retryCount++
 
         // SAFETY: Handle QuotaExceededError gracefully (don't crash app)
@@ -545,7 +545,7 @@ export function useDatabase(): UseDatabaseReturn {
       }
 
       return data
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Handle 404 as expected case
       if (err.status === 404) {
         if (shouldLogTaskDiagnostics()) {
@@ -596,7 +596,7 @@ export function useDatabase(): UseDatabaseReturn {
       // Reset singleton reference and recreate database
       singletonDatabase = null
       database.value = null
-      delete (window as any).pomoFlowDb
+      delete (window as unknown).pomoFlowDb
       isInitializing = false
       initializationPromise = null
 
@@ -811,7 +811,7 @@ export function useDatabase(): UseDatabaseReturn {
       }
       singletonDatabase = null
       database.value = null
-      delete (window as any).pomoFlowDb
+      delete (window as unknown).pomoFlowDb
       databaseRefCount = 0
     }
   }

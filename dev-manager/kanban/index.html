@@ -1281,21 +1281,33 @@
         '✅', '✓', '[X]', 'VERIFIED'
       ];
 
+      // Review patterns - task needs monitoring or verification
+      const reviewPatterns = [
+        'REVIEW', 'IN REVIEW', 'TESTING', 'QA', 'UNDER REVIEW',
+        'MONITORING', 'AWAITING', 'PENDING REVIEW', 'NEEDS REVIEW',
+        '👀'
+      ];
+
       // In-progress patterns - task is being worked on or temporarily stopped
       const inProgressPatterns = [
         // Active work
-        'IN PROGRESS', 'IN-PROGRESS', 'PROGRESS', 'ACTIVE', 'WORKING',
+        'IN PROGRESS', 'IN-PROGRESS', 'IN_PROGRESS', 'PROGRESS', 'ACTIVE', 'WORKING',
         'WIP', 'STARTED', 'ONGOING', 'DOING',
         // Paused/blocked states (still in-progress, just not active)
         'PAUSED', 'PARTIAL', 'ON HOLD', 'ON-HOLD', 'HOLD', 'BLOCKED',
-        'WAITING', 'PENDING REVIEW', 'NEEDS REVIEW',
-        // Review states
-        'REVIEW', 'IN REVIEW', 'TESTING', 'QA', 'UNDER REVIEW',
+        'WAITING',
         // Emoji indicators
-        '⏳', '🔄', '⏸️', '⏸', '🚧', '👀'
+        '⏳', '🔄', '⏸️', '⏸', '🚧'
       ];
 
-      // Check in-progress patterns FIRST (more specific - "IN PROGRESS" should win over "COMPLETE" in "NEAR COMPLETE")
+      // Check review patterns FIRST (most specific)
+      for (const pattern of reviewPatterns) {
+        if (text.includes(pattern)) {
+          return 'review';
+        }
+      }
+
+      // Check in-progress patterns SECOND
       for (const pattern of inProgressPatterns) {
         if (text.includes(pattern)) {
           return 'in-progress';
@@ -1316,7 +1328,9 @@
     // Parse MASTER_PLAN.md and extract all sections
     async function parseMasterPlan() {
       try {
-        const response = await fetch(CONFIG.files.masterPlan);
+        // Add cache-busting timestamp to prevent stale data
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch(CONFIG.files.masterPlan + cacheBuster);
         const content = await response.text();
 
         const data = {
@@ -1525,7 +1539,12 @@
           if (trimmed.startsWith('| ID ') || trimmed.startsWith('|----')) {
             if (trimmed.startsWith('| ID ')) {
               tableHeaders = trimmed.split('|').map(h => h.trim().toLowerCase()).filter(h => h);
-              inTable = true;
+              // Skip Task Dependency Index tables (column 2 is "status" not "feature/title")
+              // These tables track task dependencies, not task definitions
+              const isDependencyTable = tableHeaders[1] === 'status' ||
+                                        tableHeaders.includes('depends') ||
+                                        tableHeaders.includes('blocks');
+              inTable = !isDependencyTable;
             }
             continue;
           }
@@ -1637,7 +1656,8 @@
     // Legacy: Parse markdown tasks from kanban.md (kept for compatibility)
     async function parseKanbanFile() {
       try {
-        const response = await fetch(CONFIG.files.kanban);
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch(CONFIG.files.kanban + cacheBuster);
         const content = await response.text();
         return parseMarkdownTasks(content);
       } catch (error) {
@@ -1735,7 +1755,7 @@
         const tasks = {
           todo: allItems.filter(i => i.status === 'todo'),
           inProgress: allItems.filter(i => i.status === 'in-progress'),
-          review: [], // Not used in MASTER_PLAN format
+          review: allItems.filter(i => i.status === 'review'),
           done: allItems.filter(i => i.status === 'done')
         };
 
@@ -1854,7 +1874,8 @@
     // Load text files
     async function loadTextFile(filename) {
       try {
-        const response = await fetch(filename);
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch(filename + cacheBuster);
         const content = await response.text();
         return content;
       } catch (error) {

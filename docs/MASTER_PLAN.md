@@ -848,6 +848,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-019~~ | ~~Canvas section resize preview mispositioned~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Used Vue Flow viewport + container offset for accurate positioning |
 | BUG-020 | Tasks randomly disappearing without user deletion | P1-HIGH | **INVESTIGATING** Dec 18 - Logger utility created, needs integration |
 | ~~BUG-021~~ | ~~Dev-Manager Skills/Docs tabs show black until manual refresh~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Lazy loading iframes on first tab activation |
+| ~~BUG-022~~ | ~~Dev-Manager Kanban not syncing with MASTER_PLAN.md updates~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Symlink + `--symlinks` flag for serve |
 
 **Details**: See "Open Bug Analysis" section below.
 
@@ -876,25 +877,44 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 
 #### ~~BUG-021~~: Dev-Manager Force-Graph Iframe Issue (FIXED Dec 19, 2025)
 
-**Problem**: Skills and Docs tabs in dev-manager showed black/empty until manual page refresh.
+**Problem**: Skills and Docs tabs showed black/empty or only edge lines (no nodes) on initial load and after tab switches.
 
-**Root Cause**: Force-graph library requires a container with visible dimensions. When iframes loaded but hidden (Kanban tab active by default), the container had zero dimensions causing the graph to not render properly.
+**Root Causes**:
+1. Force-graph requires visible container with non-zero dimensions at initialization
+2. Chromium canvas bug ([#40459316](https://issues.chromium.org/issues/40459316)) - content disappears after tab switches
+3. Repeated `width()`/`height()` calls cause state corruption ([#230](https://github.com/vasturiano/force-graph/issues/230))
 
-**Solution**: Lazy loading iframes on first tab activation.
-
-Instead of loading all iframes immediately with hidden tabs, the fix delays iframe `src` loading until the tab is first activated. This ensures the container is visible and has correct dimensions when the force-graph initializes.
-
-**Fix Applied** (Dec 19, 2025):
-1. Changed Skills/Docs iframes from `src="..."` to `data-src="..."` (lazy load)
-2. Updated `switchTab()` in `dev-manager/index.html` to set `src` from `data-src` on first activation
-3. Simplified Skills/Docs initialization code - removed failed `safeInit()` loop and message listeners
+**Solution** (3-part fix):
+1. **Lazy loading**: Changed iframes from `src="..."` to `data-src="..."`, load only on first tab activation
+2. **Single setup**: Set dimensions once via `setupGraph()` with `isInitialized` flag
+3. **Pause/resume refresh**: On tab switches, use `pauseAnimation()`/`resumeAnimation()` cycle instead of resize
 
 **Files Modified**:
-- `dev-manager/index.html` - Lines 194-200 (lazy iframe markup), 233-239 (switchTab logic)
-- `dev-manager/skills/index.html` - Lines 634-641 (simplified init)
-- `dev-manager/docs/index.html` - Lines 659-666 (simplified init)
+- `dev-manager/index.html` - Lazy loading + postMessage on tab switch
+- `dev-manager/skills/index.html` - setupGraph, refreshGraph, message listener
+- `dev-manager/docs/index.html` - setupGraph, refreshGraph, message listener
 
-**Verification**: Tested with Playwright - Skills graph renders 69 skills, Docs shows 46 active/65 archived docs on first tab activation.
+**Commit**: `c45c207`
+**SOP**: `dev-manager/SOP-BUG-021-force-graph-iframe-fix.md`
+
+#### ~~BUG-022~~: Dev-Manager Kanban Not Syncing (FIXED Dec 19, 2025)
+
+**Problem**: When Claude instances update task status in `docs/MASTER_PLAN.md`, the dev-manager kanban showed stale data with different task statuses.
+
+**Root Cause**:
+- Dev-manager served from `dev-manager/` directory via `npx serve dev-manager -p 6010`
+- Kanban fetched `/docs/MASTER_PLAN.md` which resolved to `dev-manager/docs/MASTER_PLAN.md` (stale local copy)
+- Claude instances updated `docs/MASTER_PLAN.md` (project root) - a completely different file
+- Three copies existed: `docs/MASTER_PLAN.md` (61KB, current), `dev-manager/docs/MASTER_PLAN.md` (84KB, stale), `dev-manager/MASTER_PLAN.md` (5KB, ancient)
+
+**Solution** (2-part fix):
+1. **Symlink**: Replaced `dev-manager/docs/MASTER_PLAN.md` with symlink → `../../docs/MASTER_PLAN.md`
+2. **Enable symlinks**: Added `--symlinks` flag to serve command in `package.json`
+3. **Cleanup**: Removed ancient `dev-manager/MASTER_PLAN.md` copy
+
+**Files Modified**:
+- `dev-manager/docs/MASTER_PLAN.md` - Now symlink to `../../docs/MASTER_PLAN.md`
+- `package.json` - Added `--symlinks` to `dev:manager` script
 
 #### BUG-004 Investigation & Fix (Dec 16, 2025)
 

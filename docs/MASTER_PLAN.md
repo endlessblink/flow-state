@@ -32,6 +32,23 @@
 
 ---
 
+## 🚨 PENDING: Storybook Issues (Dec 19, 2025)
+
+**BLOCKER**: PouchDB has 178+ document conflicts causing Storybook to fail.
+
+| Issue | Priority | Action |
+|-------|----------|--------|
+| **ISSUE-011**: PouchDB Conflicts | P1-HIGH | Fix 178 conflicts in tasks:data, 171 in projects:data |
+| **TASK-029**: Storybook Audit Skill | CREATED | Use `/storybook-audit` to debug stories |
+| **TASK-014**: Storybook Glass Morphism | IN PROGRESS | 10/54 components done |
+
+**To fix Storybook:**
+1. First resolve ISSUE-011 (PouchDB conflicts) - see details in Known Issues section
+2. Use storybook-audit skill: `.claude/skills/storybook-audit/SKILL.md`
+3. Continue TASK-014 (Glass Morphism streamlining)
+
+---
+
 ## Archived Completed Items
 
 **Completed tasks with full implementation details have been moved to:**

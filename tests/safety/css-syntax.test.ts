@@ -123,30 +123,55 @@ describe('CSS Syntax and Design Token Validation', () => {
     const lines = css.split('\n')
     const issues: Array<{ line: number, issue: string }> = []
 
+    // Helper to extract balanced var() expressions (handles nesting)
+    function extractBalancedVar(str: string, startIndex: number): string | null {
+      if (!str.slice(startIndex).startsWith('var(')) return null
+
+      let depth = 0
+      let i = startIndex + 4 // Skip 'var('
+      depth = 1
+
+      while (i < str.length && depth > 0) {
+        if (str[i] === '(') depth++
+        else if (str[i] === ')') depth--
+        i++
+      }
+
+      if (depth !== 0) return null // Unbalanced
+      return str.slice(startIndex, i)
+    }
+
     lines.forEach((line, index) => {
       const lineNumber = index + 1
 
-      // Check for var() syntax errors
-      const varMatches = line.match(/var\s*\(\s*([^)]+)\s*\)/g)
-      if (varMatches) {
-        for (const varMatch of varMatches) {
-          // Check for missing -- prefix
-          if (varMatch.includes('var(') && !varMatch.includes('--')) {
-            issues.push({
-              line: lineNumber,
-              issue: `Invalid CSS variable syntax: ${varMatch.trim()}. CSS variables must start with '--'`
-            })
-          }
+      // Find all var( occurrences and extract balanced expressions
+      let searchIndex = 0
+      while (true) {
+        const varIndex = line.indexOf('var(', searchIndex)
+        if (varIndex === -1) break
 
-          // Check for mismatched parentheses
-          const openParens = (varMatch.match(/\(/g) || []).length
-          const closeParens = (varMatch.match(/\)/g) || []).length
-          if (openParens !== closeParens) {
+        const varExpr = extractBalancedVar(line, varIndex)
+        if (varExpr === null) {
+          // Could not extract balanced var() - likely mismatched parens
+          // Extract partial for error message
+          const partialEnd = line.indexOf(')', varIndex)
+          const partial = partialEnd !== -1
+            ? line.slice(varIndex, partialEnd + 1)
+            : line.slice(varIndex, Math.min(varIndex + 50, line.length))
+          issues.push({
+            line: lineNumber,
+            issue: `Mismatched parentheses in CSS variable: ${partial.trim()}`
+          })
+          searchIndex = varIndex + 4
+        } else {
+          // Check for missing -- prefix in the variable name
+          if (!varExpr.includes('--')) {
             issues.push({
               line: lineNumber,
-              issue: `Mismatched parentheses in CSS variable: ${varMatch.trim()}`
+              issue: `Invalid CSS variable syntax: ${varExpr.trim()}. CSS variables must start with '--'`
             })
           }
+          searchIndex = varIndex + varExpr.length
         }
       }
 

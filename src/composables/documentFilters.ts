@@ -7,7 +7,7 @@ export interface SyncableDocument {
   _id: string
   _rev?: string
   type?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**
@@ -15,28 +15,31 @@ export interface SyncableDocument {
  * @param doc - The document to check
  * @returns boolean indicating if document should be synced
  */
-export const isSyncableDocument = (doc: any): boolean => {
+export const isSyncableDocument = (doc: unknown): boolean => {
   // Basic validation
   if (!doc || typeof doc !== 'object') {
     console.log(`🚫 Skipping invalid document:`, doc)
     return false
   }
 
+  // Type guard to ensure doc has _id property
+  const docRecord = doc as Record<string, unknown>
+
   // Must have an _id field
-  if (!doc._id || typeof doc._id !== 'string') {
+  if (!docRecord._id || typeof docRecord._id !== 'string') {
     console.log(`🚫 Skipping document without _id:`, doc)
     return false
   }
 
   // NEVER sync local documents (these are PouchDB internal documents)
-  if (doc._id.startsWith('_local/')) {
-    console.log(`🚫 Skipping local document: ${doc._id}`)
+  if (docRecord._id.startsWith('_local/')) {
+    console.log(`🚫 Skipping local document: ${docRecord._id}`)
     return false
   }
 
   // NEVER sync design documents
-  if (doc._id.startsWith('_design/')) {
-    console.log(`🚫 Skipping design document: ${doc._id}`)
+  if (docRecord._id.startsWith('_design/')) {
+    console.log(`🚫 Skipping design document: ${docRecord._id}`)
     return false
   }
 
@@ -55,28 +58,28 @@ export const isSyncableDocument = (doc: any): boolean => {
     // Documents with explicit type field
   ]
 
-  const hasExplicitType = doc.type && typeof doc.type === 'string'
+  const hasExplicitType = docRecord.type && typeof docRecord.type === 'string'
   const explicitSyncableTypes = ['task', 'project', 'canvas', 'timer_session', 'settings', 'user_preferences']
 
-  // Check if document has syncable ID pattern
-  const hasSyncablePattern = syncablePatterns.some(pattern => pattern.test(doc._id))
+  // Check if document has syncable ID pattern (docRecord._id is verified as string above)
+  const hasSyncablePattern = syncablePatterns.some(pattern => pattern.test(docRecord._id as string))
 
   // Check if document has explicit syncable type
-  const hasSyncableType = hasExplicitType && explicitSyncableTypes.includes(doc.type)
+  const hasSyncableType = hasExplicitType && explicitSyncableTypes.includes(docRecord.type as string)
 
   // Allow document if it has either pattern or explicit type
   const isSyncable = hasSyncablePattern || hasSyncableType
 
   if (!isSyncable) {
-    console.log(`🚫 Skipping non-syncable document: ${doc._id} (type: ${doc.type})`)
+    console.log(`🚫 Skipping non-syncable document: ${docRecord._id} (type: ${docRecord.type})`)
     return false
   }
 
   // Additional validation for syncable documents
   if (hasExplicitType && !hasSyncablePattern) {
-    console.log(`✅ Syncing document by type: ${doc._id} (type: ${doc.type})`)
+    console.log(`✅ Syncing document by type: ${docRecord._id} (type: ${docRecord.type})`)
   } else {
-    console.log(`✅ Syncing document by pattern: ${doc._id}`)
+    console.log(`✅ Syncing document by pattern: ${docRecord._id}`)
   }
 
   return true
@@ -87,7 +90,7 @@ export const isSyncableDocument = (doc: any): boolean => {
  * @param docs - Array of documents to filter
  * @returns Array of syncable documents
  */
-export const filterSyncableDocuments = (docs: any[]): any[] => {
+export const filterSyncableDocuments = (docs: unknown[]): unknown[] => {
   if (!Array.isArray(docs)) {
     console.warn('filterSyncableDocuments: docs is not an array', docs)
     return []
@@ -109,7 +112,7 @@ export const filterSyncableDocuments = (docs: any[]): any[] => {
  * @param req - PouchDB request object
  * @returns boolean indicating if document should be replicated
  */
-export const pouchDBFilterFunction = (doc: any, _req: any): boolean => {
+export const pouchDBFilterFunction = (doc: unknown, _req: unknown): boolean => {
   return isSyncableDocument(doc)
 }
 
@@ -118,7 +121,7 @@ export const pouchDBFilterFunction = (doc: any, _req: any): boolean => {
  * @param doc - Document to validate
  * @returns Object with validation result and error message
  */
-export const validateDocumentForSync = (doc: any): { valid: boolean; error?: string } => {
+export const validateDocumentForSync = (doc: unknown): { valid: boolean; error?: string } => {
   if (!doc) {
     return { valid: false, error: 'Document is null or undefined' }
   }
@@ -127,19 +130,21 @@ export const validateDocumentForSync = (doc: any): { valid: boolean; error?: str
     return { valid: false, error: 'Document is not an object' }
   }
 
-  if (!doc._id) {
+  const docRecord = doc as Record<string, unknown>
+
+  if (!docRecord._id) {
     return { valid: false, error: 'Document missing _id field' }
   }
 
-  if (typeof doc._id !== 'string') {
+  if (typeof docRecord._id !== 'string') {
     return { valid: false, error: 'Document _id is not a string' }
   }
 
-  if (doc._id.startsWith('_local/')) {
+  if (docRecord._id.startsWith('_local/')) {
     return { valid: false, error: 'Cannot sync local documents' }
   }
 
-  if (doc._id.startsWith('_design/')) {
+  if (docRecord._id.startsWith('_design/')) {
     return { valid: false, error: 'Cannot sync design documents' }
   }
 
@@ -151,17 +156,21 @@ export const validateDocumentForSync = (doc: any): { valid: boolean; error?: str
  * @param doc - Document to analyze
  * @returns String describing document type
  */
-export const getDocumentTypeDescription = (doc: any): string => {
-  if (!doc || !doc._id) return 'unknown'
+export const getDocumentTypeDescription = (doc: unknown): string => {
+  if (!doc || typeof doc !== 'object') return 'unknown'
 
-  if (doc._id.startsWith('_local/')) return 'local'
-  if (doc._id.startsWith('_design/')) return 'design'
-  if (doc._id.startsWith('tasks:')) return 'task'
-  if (doc._id.startsWith('projects:')) return 'project'
-  if (doc._id.startsWith('canvas:')) return 'canvas'
-  if (doc._id.startsWith('timer:')) return 'timer'
-  if (doc._id.startsWith('settings:')) return 'settings'
-  if (doc.type) return `type:${doc.type}`
+  const docRecord = doc as Record<string, unknown>
+
+  if (!docRecord._id || typeof docRecord._id !== 'string') return 'unknown'
+
+  if (docRecord._id.startsWith('_local/')) return 'local'
+  if (docRecord._id.startsWith('_design/')) return 'design'
+  if (docRecord._id.startsWith('tasks:')) return 'task'
+  if (docRecord._id.startsWith('projects:')) return 'project'
+  if (docRecord._id.startsWith('canvas:')) return 'canvas'
+  if (docRecord._id.startsWith('timer:')) return 'timer'
+  if (docRecord._id.startsWith('settings:')) return 'settings'
+  if (docRecord.type) return `type:${docRecord.type}`
 
   return 'other'
 }
@@ -172,12 +181,12 @@ export const getDocumentTypeDescription = (doc: any): string => {
  * @param docs - Documents being processed
  * @param details - Additional details about the operation
  */
-export const logSyncOperation = (operation: string, docs: any[], details?: any) => {
+export const logSyncOperation = (operation: string, docs: unknown[], details?: unknown) => {
   const docCount = docs?.length || 0
   const types = docs?.map(getDocumentTypeDescription).reduce((acc: Record<string, number>, type: string) => {
     acc[type] = (acc[type] || 0) + 1
     return acc
-  }, {})
+  }, {} as Record<string, number>)
 
   console.log(`🔄 ${operation}: ${docCount} documents`, {
     documentTypes: types,

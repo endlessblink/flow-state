@@ -2,22 +2,24 @@
 // This solves initialization order issues between App.vue and globalKeyboardHandlerSimple.ts
 
 import { ref, computed, nextTick } from 'vue'
+import type { Ref, ComputedRef } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
 import { useTaskStore } from '@/stores/tasks'
+import type { Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 
 // Global singleton refHistory instance - created only ONCE
-let refHistoryInstance: ReturnType<typeof useManualRefHistory<any>> | null = null
-let unifiedState: any = null
-let canUndo: any = null
-let canRedo: any = null
-let undoCount: any = null
-let redoCount: any = null
-let history: any = null
-let undo: any = null
-let redo: any = null
-let commit: any = null
-let clear: any = null
+let refHistoryInstance: ReturnType<typeof useManualRefHistory<Task[]>> | null = null
+let unifiedState: Ref<Task[]> | null = null
+let canUndo: ComputedRef<boolean> | null = null
+let canRedo: ComputedRef<boolean> | null = null
+let undoCount: ComputedRef<number> | null = null
+let redoCount: ComputedRef<number> | null = null
+let history: ComputedRef<unknown[]> | null = null
+let undo: (() => void) | null = null
+let redo: (() => void) | null = null
+let commit: (() => void) | null = null
+let clear: (() => void) | null = null
 
 /**
  * Initialize the single refHistory instance
@@ -38,8 +40,8 @@ function initializeRefHistory() {
   })
 
   // Extract all the reactive properties
-  canUndo = computed(() => refHistoryInstance!.canUndo.value)
-  canRedo = computed(() => refHistoryInstance!.canRedo.value)
+  canUndo = computed(() => refHistoryInstance?.canUndo.value ?? false)
+  canRedo = computed(() => refHistoryInstance?.canRedo.value ?? false)
   // useManualRefHistory provides history tracking
   undoCount = computed(() => {
     if (!refHistoryInstance) return 0
@@ -49,7 +51,7 @@ function initializeRefHistory() {
     if (!refHistoryInstance) return 0
     return refHistoryInstance.redoStack.value.length
   })
-  history = computed(() => refHistoryInstance!.history.value)
+  history = computed(() => refHistoryInstance?.history.value ?? [])
 
   // Bind the methods
   undo = refHistoryInstance.undo.bind(refHistoryInstance)
@@ -91,9 +93,9 @@ const performUndo = async () => {
     console.log('🔄 [VUE-REACTIVITY-FIX] Previous state sample:', previousState.slice(0, 2))
 
     // DEBUG: Log canvas tasks being restored
-    const canvasTasks = previousState.filter((t: any) => t.isInInbox === false && t.canvasPosition)
+    const canvasTasks = previousState.filter(t => t.isInInbox === false && t.canvasPosition)
     console.log(`🔄 [UNDO-DEBUG] Restoring ${canvasTasks.length} canvas tasks:`,
-      canvasTasks.map((t: any) => ({ id: t.id, title: t.title, isInInbox: t.isInInbox, canvasPosition: t.canvasPosition }))
+      canvasTasks.map(t => ({ id: t.id, title: t.title, isInInbox: t.isInInbox, canvasPosition: t.canvasPosition }))
     )
 
     // FIX: Await the async restoreState to ensure it completes before returning
@@ -209,7 +211,7 @@ const deleteTaskWithUndo = async (taskId: string) => {
   }
 }
 
-const updateTaskWithUndo = async (taskId: string, updates: any) => {
+const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
   console.log('✏️ updateTaskWithUndo called for:', taskId, updates)
   const taskStore = useTaskStore()
 
@@ -233,7 +235,7 @@ const updateTaskWithUndo = async (taskId: string, updates: any) => {
   saveState('After task update')
 }
 
-const createTaskWithUndo = async (taskData: any) => {
+const createTaskWithUndo = async (taskData: Partial<Task>) => {
   console.log('➕ createTaskWithUndo called with:', taskData)
 
   // FIXED: Use proper VueUse pattern - save state before operation

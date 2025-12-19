@@ -287,6 +287,14 @@ export function useDatabase(): UseDatabaseReturn {
         // Enable remote sync when configured
         const forceLocalMode = false
 
+        // Initialize sync manager FIRST if remote sync is configured (TASK-021 fix)
+        // This must happen before database creation so live sync works on page refresh
+        if (hasRemoteSync && !forceLocalMode && !syncManager) {
+          console.log('🔄 [DATABASE] Initializing sync manager for cross-device sync...')
+          syncManager = getGlobalReliableSyncManager()
+          syncCleanup = await syncManager.init()
+        }
+
         // Check if database already exists from previous session (page refresh)
         const dbName = config.local.name
 
@@ -304,27 +312,17 @@ export function useDatabase(): UseDatabaseReturn {
 
         } catch {
           // No existing database, create new one
-          if (hasRemoteSync && !forceLocalMode) {
-            syncManager = getGlobalReliableSyncManager()
-            syncCleanup = await syncManager.init()
-
-            const dbConfig: any = {
-              auto_compaction: true,
-              revs_limit: 5
-            }
-
-            if (config.local.adapter) {
-              dbConfig.adapter = config.local.adapter
-            }
-
-            singletonDatabase = new PouchDB(config.local.name, dbConfig)
-          } else {
-            singletonDatabase = new PouchDB(config.local.name, {
-              adapter: 'idb',
-              auto_compaction: true,
-              revs_limit: 5
-            })
+          const dbConfig: PouchDB.Configuration.LocalDatabaseConfiguration = {
+            adapter: 'idb',
+            auto_compaction: true,
+            revs_limit: 5
           }
+
+          if (config.local.adapter) {
+            dbConfig.adapter = config.local.adapter as string
+          }
+
+          singletonDatabase = new PouchDB(config.local.name, dbConfig)
         }
 
         // Expose to window for backward compatibility
@@ -338,11 +336,28 @@ export function useDatabase(): UseDatabaseReturn {
 
         database.value = singletonDatabase
 
+        // Auto-start live sync for real-time cross-device synchronization (TASK-021 enhancement)
+        // This ensures timer and other changes sync instantly across browsers/devices
+        if (syncManager && hasRemoteSync && !forceLocalMode) {
+          try {
+            console.log('🔄 [DATABASE] Auto-starting live sync for cross-device sync...')
+            const liveSyncStarted = await syncManager.startLiveSync()
+            if (liveSyncStarted) {
+              console.log('✅ [DATABASE] Live sync auto-started successfully')
+            } else {
+              console.warn('⚠️ [DATABASE] Live sync could not be started, using manual sync')
+            }
+          } catch (liveSyncError) {
+            console.warn('⚠️ [DATABASE] Live sync auto-start failed, falling back to manual sync:', liveSyncError)
+            // Don't throw - manual sync will still work
+          }
+        }
+
       } catch (err) {
         error.value = err as Error
 
         // Report through unified error handler
-        const errorMessage = (err as Error).message || (err as any).toString() || 'Unknown database initialization error'
+        const errorMessage = (err as Error).message || String(err) || 'Unknown database initialization error'
         errorHandler.report({
           severity: ErrorSeverity.CRITICAL,
           category: ErrorCategory.DATABASE,
@@ -351,7 +366,7 @@ export function useDatabase(): UseDatabaseReturn {
           error: err as Error,
           context: {
             name: (err as Error).name,
-            isPouchDBError: (err as any).name === 'error' || (err as any).status !== undefined
+            isPouchDBError: (err as Error).name === 'error' || ('status' in (err as object))
           },
           showNotification: true
         })
@@ -422,8 +437,9 @@ export function useDatabase(): UseDatabaseReturn {
             updatedAt: new Date().toISOString(),
             saveMethod: 'direct'
           })
-        } catch (getErr: any) {
-          if (getErr.status === 404) {
+        } catch (getErr: unknown) {
+          const pouchErr = getErr as PouchDB.Core.Error
+          if (pouchErr.status === 404) {
             // Document doesn't exist, create new one
             await db.put({
               _id: docId,

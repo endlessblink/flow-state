@@ -1,10 +1,11 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
+import type { Task, Project } from '@/stores/tasks'
 
 export interface BackupData {
-  tasks: any[]
-  projects: any[]
-  canvas: any[]
+  tasks: Task[]
+  projects: Project[]
+  canvas: unknown[]
   timestamp: number
   version: string
 }

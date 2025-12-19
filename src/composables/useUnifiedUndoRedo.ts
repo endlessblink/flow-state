@@ -5,6 +5,7 @@
 
 import { computed } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
+import type { Task } from '@/stores/tasks'
 import { getUndoSystem } from './undoSingleton'
 
 export const useUnifiedUndoRedo = () => {
@@ -38,12 +39,12 @@ export const useUnifiedUndoRedo = () => {
     return await singletonUndo.deleteTaskWithUndo(taskId)
   }
 
-  const updateTaskWithUndo = async (taskId: string, updates: any) => {
+  const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
     console.log('✏️ updateTaskWithUndo called for:', taskId, updates)
     return await singletonUndo.updateTaskWithUndo(taskId, updates)
   }
 
-  const createTaskWithUndo = async (taskData: any) => {
+  const createTaskWithUndo = async (taskData: Partial<Task>) => {
     console.log('➕ createTaskWithUndo called with:', taskData)
     return await singletonUndo.createTaskWithUndo(taskData)
   }
@@ -55,7 +56,7 @@ export const useUnifiedUndoRedo = () => {
 
     try {
       // Just perform the move operation
-      taskStore.moveTask(taskId, newStatus as any)
+      taskStore.moveTask(taskId, newStatus as Task['status'])
       console.log(`✅ Task moved: ${taskId} to ${newStatus}`)
     } catch (error) {
       console.error('❌ Error moving task:', error)

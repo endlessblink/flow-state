@@ -298,10 +298,10 @@ export const useTimerStore = defineStore('timer', () => {
 
     // Use direct PouchDB changes feed for real-time updates (TASK-021 fix)
     // This replaces the unreliable 'reliable-sync-change' event listener
-    timerChangesSync.startListening(async (doc: RemoteTimerDoc) => {
+    timerChangesSync.startListening(async (rawDoc: any) => {
       try {
         // Handle document deletion
-        if (doc.deleted) {
+        if (rawDoc.deleted) {
           console.log('📡 [TIMER CROSS-DEVICE] Timer document deleted remotely')
           if (timerInterval.value) {
             clearInterval(timerInterval.value)
@@ -311,8 +311,16 @@ export const useTimerStore = defineStore('timer', () => {
           return
         }
 
-        console.log('📡 [TIMER CROSS-DEVICE] Received remote timer update via changes feed')
-        await handleRemoteTimerUpdate(doc)
+        // FIXED (TASK-021): Changes feed passes raw PouchDB doc { _id, _rev, data: {...} }
+        // We need to extract the nested data structure
+        const timerData = rawDoc.data as RemoteTimerDoc | undefined
+        if (!timerData) {
+          console.warn('⚠️ [TIMER CROSS-DEVICE] Received doc without data property:', rawDoc._id)
+          return
+        }
+
+        console.log('📡 [TIMER CROSS-DEVICE] Received remote timer update via changes feed, leader:', timerData.deviceLeaderId)
+        await handleRemoteTimerUpdate(timerData)
       } catch (error) {
         console.warn('⚠️ [TIMER CROSS-DEVICE] Error handling changes feed update:', error)
       }
@@ -931,7 +939,20 @@ watch(completedSessions, (newSessions) => {
       while (!db.isReady?.value) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
-      interface SavedTimerSession {
+
+      // Trigger a sync FIRST to get latest timer state from remote (TASK-021 fix)
+      // This ensures we load the timer from CouchDB, not stale local data
+      try {
+        console.log('🔄 [TIMER] Syncing before loading timer session...')
+        await db.sync?.()
+        console.log('✅ [TIMER] Sync complete, loading timer session...')
+      } catch (syncErr) {
+        console.warn('⚠️ [TIMER] Sync failed before load, using local data:', syncErr)
+      }
+
+      // FIXED (TASK-021): db.load returns { session: {...}, deviceLeaderId, deviceLeaderLastSeen }
+      // NOT flat session properties directly
+      interface SavedSessionData {
         id?: string
         taskId?: string
         startTime?: string | Date | number
@@ -942,30 +963,89 @@ watch(completedSessions, (newSessions) => {
         isBreak?: boolean
         completedAt?: string | Date | number
       }
-      const saved = await db.load<SavedTimerSession>('pomo-flow-timer-session')
-      if (saved) {
-        currentSession.value! = {
-          id: saved.id || 'default',
-          taskId: saved.taskId || '',
-          startTime: new Date(saved.startTime || Date.now()),
-          duration: saved.duration || 25 * 60 * 1000,
-          remainingTime: saved.remainingTime || 25 * 60 * 1000,
-          isActive: saved.isActive || false,
-          isPaused: saved.isPaused || false,
-          isBreak: saved.isBreak || false,
-          completedAt: saved.completedAt ? new Date(saved.completedAt) : undefined
+      interface SavedTimerDocument {
+        session?: SavedSessionData | null
+        deviceLeaderId?: string | null
+        deviceLeaderLastSeen?: number | null
+      }
+      const saved = await db.load<SavedTimerDocument>('pomo-flow-timer-session')
+
+      // Extract session from nested structure
+      const savedSession = saved?.session
+
+      if (savedSession && savedSession.isActive) {
+        const startTime = new Date(savedSession.startTime || Date.now())
+        const duration = savedSession.duration || 25 * 60
+
+        // Build session object
+        const session: PomodoroSession = {
+          id: savedSession.id || 'default',
+          taskId: savedSession.taskId || '',
+          startTime,
+          duration,
+          remainingTime: savedSession.remainingTime || duration,
+          isActive: savedSession.isActive || false,
+          isPaused: savedSession.isPaused || false,
+          isBreak: savedSession.isBreak || false,
+          completedAt: savedSession.completedAt ? new Date(savedSession.completedAt) : undefined
         }
 
-        // Restart interval if timer was active
-        if (currentSession.value!.isActive && !currentSession.value!.isPaused) {
+        // CRITICAL: Recalculate remainingTime from startTime to avoid drift (TASK-021 fix)
+        // Use leader timestamp if available for accurate cross-device sync
+        if (session.isActive && !session.isPaused) {
+          const leaderTimestamp = saved?.deviceLeaderLastSeen || 0
+          lastLeaderTimestamp = leaderTimestamp
+          session.remainingTime = calculateRemainingTime(session, leaderTimestamp)
+          console.log('🔄 [TIMER] Recalculated remainingTime from startTime:', session.remainingTime, 'seconds, leaderTimestamp:', leaderTimestamp)
+        }
+
+        // Check if timer already completed
+        if (session.remainingTime <= 0 && session.isActive) {
+          console.log('⏰ [TIMER] Timer already completed, clearing session')
+          currentSession.value = null
+          return
+        }
+
+        currentSession.value = session
+
+        // Check if we're the device leader or a follower
+        const myDeviceId = deviceId
+        const isLeaderDevice = saved?.deviceLeaderId === myDeviceId
+        const leaderStillActive = saved?.deviceLeaderLastSeen &&
+          (Date.now() - saved.deviceLeaderLastSeen) < DEVICE_LEADER_TIMEOUT_MS
+
+        if (isLeaderDevice || !leaderStillActive) {
+          // We're the leader or leader timed out - run full countdown
+          console.log('👑 [TIMER] This device is/becomes leader, starting countdown')
+          isDeviceLeader.value = true
+          startDeviceHeartbeat()
+
           timerInterval.value = setInterval(() => {
-            if (currentSession.value! && currentSession.value!.isActive && !currentSession.value!.isPaused) {
-              currentSession.value!.remainingTime -= 1
-              if (currentSession.value!.remainingTime <= 0) {
+            if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused) {
+              currentSession.value.remainingTime -= 1
+              if (currentSession.value.remainingTime <= 0) {
                 completeSession()
               }
             }
           }, 1000)
+        } else {
+          // We're a follower - use follower interval that recalculates from startTime
+          console.log('👀 [TIMER] This device is follower, device leader:', saved?.deviceLeaderId)
+          isDeviceLeader.value = false
+          startFollowerInterval()
+        }
+      } else if (savedSession && !savedSession.isActive) {
+        // Timer exists but not active - just set the session without interval
+        currentSession.value = {
+          id: savedSession.id || 'default',
+          taskId: savedSession.taskId || '',
+          startTime: new Date(savedSession.startTime || Date.now()),
+          duration: savedSession.duration || 25 * 60,
+          remainingTime: savedSession.remainingTime || 25 * 60,
+          isActive: false,
+          isPaused: savedSession.isPaused || false,
+          isBreak: savedSession.isBreak || false,
+          completedAt: savedSession.completedAt ? new Date(savedSession.completedAt) : undefined
         }
       }
     } catch (error) {
@@ -980,9 +1060,45 @@ watch(completedSessions, (newSessions) => {
     }
   }
 
-  // Watch for session changes and save to PouchDB
+  // Debounced save to reduce PouchDB conflicts
+  // Timer ticks every second but we only save every 5 seconds to reduce conflicts
+  // Other devices calculate remainingTime from startTime anyway
+  let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  let lastSavedState: string | null = null
+
+  const debouncedSaveTimerSession = () => {
+    // Clear any pending save
+    if (saveDebounceTimer) {
+      clearTimeout(saveDebounceTimer)
+    }
+
+    // Get significant state (excludes remainingTime which changes every second)
+    const significantState = currentSession.value ? JSON.stringify({
+      id: currentSession.value.id,
+      taskId: currentSession.value.taskId,
+      isActive: currentSession.value.isActive,
+      isPaused: currentSession.value.isPaused,
+      isBreak: currentSession.value.isBreak,
+      duration: currentSession.value.duration,
+      startTime: currentSession.value.startTime.toISOString()
+    }) : null
+
+    // Save immediately if significant state changed (start/pause/stop)
+    if (significantState !== lastSavedState) {
+      lastSavedState = significantState
+      saveTimerSession()
+      return
+    }
+
+    // Otherwise, debounce remainingTime-only changes to every 5 seconds
+    saveDebounceTimer = setTimeout(() => {
+      saveTimerSession()
+    }, 5000)
+  }
+
+  // Watch for session changes and save to PouchDB (debounced)
   watch(currentSession, () => {
-    saveTimerSession()
+    debouncedSaveTimerSession()
   }, { deep: true })
 
   // Watch for settings changes and save to PouchDB
@@ -1058,5 +1174,11 @@ watch(completedSessions, (newSessions) => {
     requestNotificationPermission,
     playStartSound,
     playEndSound
+  }
+}, {
+  // Disable pinia-shared-state for timer store
+  // Timer has custom cross-tab sync via useCrossTabSync and Date objects don't serialize properly
+  share: {
+    enable: false
   }
 })

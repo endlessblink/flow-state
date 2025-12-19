@@ -234,12 +234,13 @@ export class OfflineQueue {
         }
         break
 
-      case 'merge':
+      case 'merge': {
         const mergeData = operation.data as { local?: unknown; remote?: unknown } | undefined
         if (!mergeData || !mergeData.local || !mergeData.remote) {
           errors.push('Merge operations require local and remote data')
         }
         break
+      }
     }
 
     // Entity-specific validation

@@ -19,7 +19,7 @@ const meta = {
     docs: {
       story: {
         inline: false,
-        iframeHeight: 700,
+        iframeHeight: 900,
       }
     }
   },

@@ -66,7 +66,7 @@ const onLeave = () => {
   border-radius: 50%;
   background-color: var(--brand-primary);
   border: 2px solid var(--surface-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-dark-md);
   transition: all 0.2s ease;
   z-index: 100;
   pointer-events: auto;
@@ -148,8 +148,8 @@ const onLeave = () => {
 /* Hover and active states */
 .custom-resize-handle-component:hover,
 .custom-resize-handle-component.is-resizing {
-  background-color: var(--accent-primary);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+  background-color: var(--brand-active);
+  box-shadow: var(--shadow-dark-xl);
   transform: scale(1.2);
 }
 
@@ -157,7 +157,7 @@ const onLeave = () => {
 .custom-resize-handle-component.is-resizing .handle-inner {
   width: 8px;
   height: 8px;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: var(--glass-bg-heavy);
 }
 
 /* Animation */

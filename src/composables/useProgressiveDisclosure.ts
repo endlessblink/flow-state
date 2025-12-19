@@ -1,6 +1,6 @@
 import { ref, provide, inject, type Ref } from 'vue'
 
-const PROGRESSIVE_DISCLOSURE_KEY = Symbol('progressiveDisclosure')
+export const PROGRESSIVE_DISCLOSURE_KEY = Symbol('progressiveDisclosure')
 const STORAGE_KEY = 'pomo-flow-progressive-disclosure'
 
 export interface ProgressiveDisclosureState {

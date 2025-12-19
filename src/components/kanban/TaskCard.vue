@@ -92,12 +92,12 @@
             v-if="task.dueDate"
             class="meta-badge due-date-badge"
             :class="{ 'meta-badge--icon-only': density === 'ultrathin' }"
-            :title="`Due: ${task.dueDate}`"
-            :aria-label="`Due date: ${task.dueDate}`"
+            :title="`Due: ${formattedDueDate}`"
+            :aria-label="`Due date: ${formattedDueDate}`"
             role="status"
           >
             <Calendar :size="10" aria-hidden="true" />
-            <span v-if="density !== 'ultrathin'">{{ task.dueDate }}</span>
+            <span v-if="density !== 'ultrathin'">{{ formattedDueDate }}</span>
           </span>
 
           <!-- Priority badge -->
@@ -411,6 +411,13 @@ const completedSubtasks = computed(() =>
   props.task.subtasks?.filter(st => st.isCompleted).length || 0
 )
 
+// Format date as DD-MM-YYYY
+const formattedDueDate = computed(() => {
+  if (!props.task.dueDate) return ''
+  const [year, month, day] = props.task.dueDate.split('-')
+  return `${day}-${month}-${year}`
+})
+
 // Project visual indicator (emoji or colored dot)
 const projectVisual = computed(() =>
   taskStore.getProjectVisual(props.task.projectId)
@@ -533,35 +540,35 @@ const cycleStatus = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Status-based color classes for status icons */
+/* Status-based color classes for status icons - using design tokens */
 .status-icon-button.status-planned-icon {
-  border-color: var(--color-info);
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--color-info);
+  border-color: var(--status-planned-border);
+  background: var(--status-planned-bg);
+  color: var(--status-planned-text);
 }
 
 .status-icon-button.status-in_progress-icon {
-  border-color: var(--color-break);
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--color-break);
+  border-color: var(--status-in-progress-border);
+  background: var(--status-in-progress-bg);
+  color: var(--status-in-progress-text);
 }
 
 .status-icon-button.status-done-icon {
-  border-color: var(--color-work);
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--color-work);
+  border-color: var(--status-done-border);
+  background: var(--status-done-bg);
+  color: var(--status-done-text);
 }
 
 .status-icon-button.status-backlog-icon {
-  border-color: var(--text-muted);
-  background: rgba(156, 163, 175, 0.1);
-  color: var(--text-muted);
+  border-color: var(--status-backlog-border);
+  background: var(--status-backlog-bg);
+  color: var(--status-backlog-text);
 }
 
 .status-icon-button.status-on_hold-icon {
-  border-color: var(--color-danger);
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-danger);
+  border-color: var(--status-on-hold-border);
+  background: var(--status-on-hold-bg);
+  color: var(--status-on-hold-text);
 }
 
 /* Active state for status icons */
@@ -641,7 +648,7 @@ const cycleStatus = () => {
 .metadata-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-2);
   align-items: center;
   justify-content: flex-start;
   /* Allow horizontal scrolling if badges overflow */
@@ -649,6 +656,7 @@ const cycleStatus = () => {
   scrollbar-width: thin;
   scrollbar-color: var(--border-subtle) transparent;
   min-height: 20px;
+  margin-top: var(--space-2);
 }
 
 .metadata-badges::-webkit-scrollbar {
@@ -690,9 +698,9 @@ const cycleStatus = () => {
 }
 
 .due-date-badge {
-  color: var(--text-muted);
-  background: var(--surface-hover);
-  border: 1px solid var(--border-subtle);
+  color: var(--due-date-text);
+  background: var(--due-date-bg);
+  border: 1px solid var(--due-date-border);
 }
 
 .priority-badge {
@@ -702,21 +710,21 @@ const cycleStatus = () => {
 }
 
 .priority-badge.priority-high {
-  color: var(--color-danger);
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--priority-high-text);
+  background: var(--priority-high-bg);
+  border: 1px solid var(--priority-high-border);
 }
 
 .priority-badge.priority-medium {
-  color: var(--color-priority-medium);
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: var(--priority-medium-text);
+  background: var(--priority-medium-bg);
+  border: 1px solid var(--priority-medium-border);
 }
 
 .priority-badge.priority-low {
-  color: var(--color-info);
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--priority-low-text);
+  background: var(--priority-low-bg);
+  border: 1px solid var(--priority-low-border);
 }
 
 .priority-dot {
@@ -747,12 +755,14 @@ const cycleStatus = () => {
 /* Enhanced project visual indicators */
 /* ===== PROJECT VISUAL INDICATOR SYSTEM ===== */
 .project-visual-container {
-  /* Perfect centering with CSS Grid - eliminates baseline issues */
-  display: grid;
-  place-items: center;
+  /* Inline-flex for consistent alignment with other badges */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
-  width: var(--project-indicator-size-sm); /* 20px standard container */
-  height: var(--project-indicator-size-sm);
+  /* Match meta-badge sizing and padding */
+  padding: var(--task-card-padding-xs) var(--space-1_5);
+  min-height: 18px;
   /* Base styling - minimal to let ProjectEmojiIcon control appearance */
   color: var(--text-secondary);
   /* Smooth transitions */
@@ -762,6 +772,10 @@ const cycleStatus = () => {
   will-change: transform;
   /* Prevent text selection */
   user-select: none;
+  /* Ensure vertical alignment matches other badges */
+  vertical-align: middle;
+  /* Match meta-badge border-radius */
+  border-radius: var(--radius-full);
 }
 
 /* For CSS circles (not emojis), add background and border styling */

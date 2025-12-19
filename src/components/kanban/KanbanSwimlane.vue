@@ -709,6 +709,7 @@ watch(() => props.tasks, () => {
   width: 100%;
   max-width: 100%;
   overflow: hidden;
+  background: var(--kanban-swimlane-bg);
 }
 
 .kanban-swimlane:last-child {
@@ -720,7 +721,7 @@ watch(() => props.tasks, () => {
   margin-bottom: 0;
   cursor: pointer;
   user-select: none;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--kanban-header-bg);
   border-radius: var(--radius-md);
   transition: background var(--duration-fast) var(--spring-smooth);
   position: relative;
@@ -730,7 +731,7 @@ watch(() => props.tasks, () => {
 }
 
 .swimlane-header:hover {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--kanban-header-bg);
 }
 
 .header-content {
@@ -805,26 +806,26 @@ watch(() => props.tasks, () => {
 
 .view-type-select:focus {
   outline: none;
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px var(--brand-primary-glow);
+  border-color: var(--brand-border-subtle);
+  box-shadow: 0 0 0 2px var(--brand-bg-subtle);
 }
 
 .view-type-select:hover {
   background: var(--surface-elevated);
-  border-color: var(--glass-border-soft);
+  border-color: var(--border-medium);
 }
 
 /* Dark mode dropdown options */
 .view-type-select option {
-  background: var(--surface-tertiary);
+  background: var(--surface-secondary);
   color: var(--text-primary);
   padding: var(--space-2);
 }
 
 .view-type-select option:hover,
 .view-type-select option:checked {
-  background: var(--brand-primary);
-  color: white;
+  background: var(--brand-bg-subtle);
+  color: var(--brand-text);
 }
 
 .table-scroll-container {
@@ -841,6 +842,7 @@ watch(() => props.tasks, () => {
   contain: layout paint style;
   /* Ensure proper scroll boundary behavior */
   max-width: 100%;
+  background: var(--kanban-scroll-container-bg);
 }
 
 /* Drag states for visual feedback */
@@ -864,6 +866,7 @@ watch(() => props.tasks, () => {
   min-height: 0;
   min-width: max-content; /* Allow columns to expand to their natural width */
   width: max-content; /* Force expansion to show all columns */
+  background: var(--kanban-swimlane-bg);
 }
 
 /* Webkit scrollbar styling for Chrome/Safari */
@@ -886,7 +889,7 @@ watch(() => props.tasks, () => {
 }
 
 .swimlane-column {
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--kanban-column-bg);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -902,7 +905,7 @@ watch(() => props.tasks, () => {
 }
 
 .swimlane-column:hover {
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--kanban-column-bg-hover);
   border-color: rgba(255, 255, 255, 0.15);
   box-shadow:
     0 32px 64px rgba(0, 0, 0, 0.5),
@@ -935,7 +938,7 @@ watch(() => props.tasks, () => {
   justify-content: space-between;
   margin-bottom: var(--space-3);
   padding: var(--space-2) var(--space-2);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--kanban-header-bg);
   border-radius: var(--radius-md);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   /* Todoist-inspired sticky headers */
@@ -998,7 +1001,7 @@ watch(() => props.tasks, () => {
 .column-count {
   color: var(--text-muted);
   font-size: var(--text-xs);
-  background: var(--glass-bg-soft);
+  background: var(--kanban-badge-bg);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
 }
@@ -1009,7 +1012,7 @@ watch(() => props.tasks, () => {
   /* Ensure proper scrolling below sticky headers */
   scroll-margin-top: 60px;
   /* Make entire area a valid drop target */
-  background: transparent;
+  background: var(--kanban-drag-area-bg);
   position: relative;
 }
 

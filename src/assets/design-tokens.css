@@ -151,6 +151,63 @@
   --kanban-breakpoint-lg: 75rem;                  /* 1200px - Large breakpoint */
   --kanban-breakpoint-md: 62.5rem;                /* 1000px - Medium breakpoint */
 
+  /* Kanban background colors - adjust these for visual hierarchy */
+  --kanban-bg: hsl(0, 0%, 0%);                    /* Base black - master token */
+  --kanban-swimlane-bg: var(--kanban-bg);         /* Swimlane container background */
+  --kanban-column-bg: var(--kanban-bg);           /* Column card background */
+  --kanban-column-bg-hover: var(--kanban-bg);     /* Column hover state */
+  --kanban-header-bg: var(--kanban-bg);           /* Column headers (Planned, In Progress, etc.) */
+  --kanban-drag-area-bg: var(--kanban-bg);        /* Drag area between cards */
+  --kanban-scroll-container-bg: var(--kanban-bg); /* Scroll container background */
+  --kanban-badge-bg: var(--kanban-bg);            /* Count badges (1, 2, 3...) */
+
+  /* ===== TASKCARD STATUS ICON COLORS ===== */
+  /* Planned status (blue) */
+  --status-planned-bg: rgba(59, 130, 246, 0.25);
+  --status-planned-border: rgba(59, 130, 246, 0.6);
+  --status-planned-text: #60a5fa;
+
+  /* In Progress status (amber) */
+  --status-in-progress-bg: rgba(245, 158, 11, 0.25);
+  --status-in-progress-border: rgba(245, 158, 11, 0.6);
+  --status-in-progress-text: #fbbf24;
+
+  /* Done status (green) */
+  --status-done-bg: rgba(34, 197, 94, 0.25);
+  --status-done-border: rgba(34, 197, 94, 0.6);
+  --status-done-text: #4ade80;
+
+  /* Backlog status (gray) */
+  --status-backlog-bg: rgba(148, 163, 184, 0.15);
+  --status-backlog-border: rgba(148, 163, 184, 0.4);
+  --status-backlog-text: #94a3b8;
+
+  /* On Hold status (orange) */
+  --status-on-hold-bg: rgba(249, 115, 22, 0.25);
+  --status-on-hold-border: rgba(249, 115, 22, 0.6);
+  --status-on-hold-text: #fb923c;
+
+  /* ===== TASKCARD PRIORITY BADGE COLORS ===== */
+  /* High priority (red) */
+  --priority-high-bg: rgba(239, 68, 68, 0.2);
+  --priority-high-border: rgba(239, 68, 68, 0.5);
+  --priority-high-text: #f87171;
+
+  /* Medium priority (orange) */
+  --priority-medium-bg: rgba(249, 115, 22, 0.2);
+  --priority-medium-border: rgba(249, 115, 22, 0.5);
+  --priority-medium-text: #fb923c;
+
+  /* Low priority (blue) */
+  --priority-low-bg: rgba(59, 130, 246, 0.2);
+  --priority-low-border: rgba(59, 130, 246, 0.5);
+  --priority-low-text: #60a5fa;
+
+  /* ===== TASKCARD DUE DATE BADGE ===== */
+  --due-date-bg: rgba(148, 163, 184, 0.15);
+  --due-date-border: rgba(148, 163, 184, 0.3);
+  --due-date-text: #94a3b8;
+
   /* TaskCard-specific sizing */
   --task-card-min-height: 2.5rem;                 /* 40px - Compact card height */
   --task-card-min-width: 0;                       /* Fully responsive - no minimum width constraint */

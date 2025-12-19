@@ -1,42 +1,28 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
+import { ref, provide } from 'vue'
 import TaskCard from '@/components/kanban/TaskCard.vue'
 import type { Task } from '@/stores/tasks'
-import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
-
-// Progressive disclosure provider decorator
-const ProgressiveDisclosureDecorator = (story: any) => {
-  // Mock localStorage for Storybook environment
-  const mockLocalStorage = {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
-    clear: () => {}
-  }
-
-  // Replace localStorage temporarily
-  const originalLocalStorage = global.localStorage
-  global.localStorage = mockLocalStorage
-
-  try {
-    // Provide the context
-    provideProgressiveDisclosure()
-    return story()
-  } finally {
-    // Restore original localStorage
-    global.localStorage = originalLocalStorage
-  }
-}
+import { PROGRESSIVE_DISCLOSURE_KEY } from '@/composables/useProgressiveDisclosure'
 
 const meta = {
   component: TaskCard,
   title: '✨ Features/📋 Board View/TaskCard',
   tags: ['autodocs'],
   decorators: [
-    ProgressiveDisclosureDecorator,
     (story: any) => ({
       components: { story },
+      setup() {
+        // Provide mock progressive disclosure state directly
+        const enabled = ref(false)
+        provide(PROGRESSIVE_DISCLOSURE_KEY, {
+          enabled,
+          toggleEnabled: () => { enabled.value = !enabled.value },
+          setEnabled: (value: boolean) => { enabled.value = value }
+        })
+        return {}
+      },
       template: `
-        <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 12px; min-width: 350px;">
+        <div style="padding: 40px; background: hsl(0, 0%, 0%); border-radius: 12px; min-width: 350px;">
           <story />
         </div>
       `

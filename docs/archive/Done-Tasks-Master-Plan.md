@@ -8,6 +8,86 @@
 
 ## December 2025 Completed Tasks
 
+### ~~TASK-022~~: Task Disappearance Logger & Investigation (COMPLETE)
+
+**Goal**: Create comprehensive logging system to track and debug mysteriously disappearing tasks (BUG-020).
+
+**Priority**: P1-HIGH
+
+**Started**: Dec 18, 2025
+**Completed**: Dec 19, 2025
+
+**Problem**: Tasks are randomly disappearing without user deletion - need to identify the source.
+
+#### Analysis Complete
+
+**Critical Task Removal Locations Identified** in `src/stores/tasks.ts`:
+
+| Location | Risk | Code | Description |
+|----------|------|------|-------------|
+| Lines 918, 922, 926 | **HIGH** | `tasks.value = []` | Direct wipe to empty array |
+| Line 229 | **HIGH** | `tasks.value = createSampleTasks()` | Replaces with sample data |
+| Line 193 | MEDIUM | `tasks.value = loadedTasks` | PouchDB load overwrites |
+| Lines 205, 218, 260 | MEDIUM | `tasks.value = backupTasks` | Backup restoration |
+| Line 2826 | MEDIUM | `tasks.value = [...newTasks]` | Undo operation |
+| Line 1769 | LOW | `tasks.value.splice(taskIndex, 1)` | Intentional deletion |
+
+**Other Files with deleteTask**:
+- `useCrossTabSyncIntegration.ts` - Overrides deleteTask for cross-tab sync
+- `useUnifiedUndoRedo.ts` - Undo/redo wrapper
+- Various components call `taskStore.deleteTask()`
+
+#### Progress
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Create `taskDisappearanceLogger.ts` utility | ✅ DONE |
+| 2 | Integrate logger into task store | ✅ DONE (Dec 19, 2025) |
+| 3 | Add logging to all `tasks.value =` assignments | ✅ DONE (Dec 19, 2025) |
+| 4 | Add logging to sync change handlers | ✅ DONE (Dec 19, 2025) |
+| 5 | Add logging to cross-tab sync | ✅ DONE (Dec 19, 2025) |
+
+*Monitoring and analysis moved to TASK-024*
+
+#### Files Created
+
+- `src/utils/taskDisappearanceLogger.ts` - Comprehensive logging utility
+
+#### Files Modified (Dec 19, 2025)
+
+- `src/stores/tasks.ts` - Added logger import and wrapped all `tasks.value =` assignments with `logArrayReplacement()`. Added `markUserDeletion()` before intentional deletes. Added `takeSnapshot()` after deletions.
+- `src/composables/useCrossTabSync.ts` - Added logger import and wrapped delete/bulk_delete operations with `logArrayReplacement()`
+- `src/main.ts` - Added auto-enable of logger on app startup (2 second delay for store init)
+
+#### Logger Features
+
+```typescript
+// Enable monitoring (run in browser console)
+window.taskLogger.enable()
+
+// Check for disappeared tasks
+window.taskLogger.getDisappearedTasks()
+
+// Search for a specific task in history
+window.taskLogger.findTaskInHistory("task title or id")
+
+// Print summary
+window.taskLogger.printSummary()
+
+// Export logs for analysis
+window.taskLogger.exportLogs()
+```
+
+#### Rollback
+
+```bash
+# Remove logger if not needed
+git checkout -- src/utils/taskDisappearanceLogger.ts
+rm src/utils/taskDisappearanceLogger.ts
+```
+
+---
+
 ### ~~TASK-018~~: Canvas Inbox Filters (COMPLETE)
 
 **Goal**: Add filtering options to the canvas inbox for better task organization.

@@ -125,7 +125,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       return true
     }
 
-    isPermissionGranted.value = (Notification.permission as any) === 'granted'
+    isPermissionGranted.value = (Notification.permission as NotificationPermission) === 'granted'
     return isPermissionGranted.value
   }
 
@@ -268,7 +268,7 @@ export const useNotificationStore = defineStore('notifications', () => {
         badge: '/favicon.ico',
         tag: notification.id,
         requireInteraction: true
-      } as any)
+      } as NotificationOptions)
 
       browserNotification.onclick = () => {
         browserNotification.close()
@@ -356,7 +356,7 @@ export const useNotificationStore = defineStore('notifications', () => {
         task.title,
         instance.scheduledDate,
         instance.scheduledTime,
-        prefs as any
+        prefs as unknown as NotificationPreferences
       )
     }
   }
@@ -438,7 +438,7 @@ export const useNotificationStore = defineStore('notifications', () => {
           task.title,
           task.dueDate,
           undefined, // TODO: Add time field to tasks
-          task.notificationPreferences as any
+          task.notificationPreferences as unknown as NotificationPreferences
         )
       }
 

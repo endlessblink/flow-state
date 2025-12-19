@@ -25,11 +25,35 @@ import { ref, computed, reactive as _reactive } from 'vue';
 // import { ConflictResolutionService } from '@/utils/conflict-resolution';
 
 // Temporary mock types to prevent compilation errors
+interface TaskMetadata {
+  source: string;
+  priority: string;
+  tags: string[];
+  estimatedHours?: number;
+  actualHours?: number;
+}
+
+interface GitHubIssueRef {
+  id: string;
+  url: string;
+}
+
 interface UnifiedTask {
   id: string;
   title: string;
+  description: string;
   stage: string;
-  [key: string]: any;
+  legacyIds: Record<string, string>;
+  metadata: TaskMetadata;
+  parentId?: string;
+  childIds: string[];
+  dependsOn: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  lastSyncAt: Date;
+  syncStatus: string;
+  githubIssue?: GitHubIssueRef;
+  completedAt?: Date;
 }
 
 type TaskStage = 'backlog' | 'planned' | 'in_progress' | 'done' | 'on_hold';
@@ -61,7 +85,7 @@ interface CreateTaskRequest {
   stage?: TaskStage;
   parentId?: string;
   dependsOn?: string[];
-  legacyIds?: string[];
+  legacyIds?: Record<string, string>;
 }
 
 interface UpdateTaskRequest {
@@ -73,15 +97,21 @@ interface UpdateTaskRequest {
 interface TaskEvent {
   type: string;
   timestamp: Date;
-  data: any;
+  data: UnifiedTask | { taskId: string };
 }
 
 interface TaskFilter {
-  [key: string]: any;
+  stage?: string;
+  priority?: string;
+  source?: string;
+  tags?: string[];
+  search?: string;
+  dateRange?: { start: Date; end: Date };
 }
 
 interface TaskSort {
-  [key: string]: any;
+  field: 'title' | 'priority' | 'stage' | 'createdAt' | 'updatedAt';
+  direction: 'asc' | 'desc';
 }
 
 // Mock class implementations to prevent compilation errors
@@ -124,7 +154,7 @@ class GitHubService {
     console.log('Mock GitHubService.sync called');
   }
 
-  async createIssue(_task: UnifiedTask): Promise<any> {
+  async createIssue(_task: UnifiedTask): Promise<GitHubIssueRef> {
     console.log('Mock GitHubService.createIssue called');
     return { id: 'mock-issue-id', url: 'https://github.com/mock' };
   }
@@ -138,8 +168,16 @@ class GitHubService {
   }
 }
 
+interface EventData {
+  type: string;
+  taskId: string;
+  data: UnifiedTask;
+  source: string;
+  timestamp: Date;
+}
+
 class EventBus {
-  emit(_event: string, _data: any): void {
+  emit(_event: string, _data: EventData): void {
     console.log('Mock EventBus.emit called');
   }
 
@@ -171,8 +209,14 @@ class IdMappingService {
   }
 }
 
+interface TaskConflict {
+  taskId: string;
+  localVersion: UnifiedTask;
+  remoteVersion: UnifiedTask;
+}
+
 class ConflictResolutionService {
-  resolve(_conflicts: any[]): any[] {
+  resolve(_conflicts: TaskConflict[]): UnifiedTask[] {
     console.log('Mock ConflictResolutionService.resolve called');
     return [];
   }
@@ -275,7 +319,7 @@ export class UnifiedTaskService {
 
       return task;
     } catch (error) {
-      this._error.value = `Failed to create task: ${(error as any)?.message || 'Unknown error'}`;
+      this._error.value = `Failed to create task: ${error instanceof Error ? error.message : 'Unknown error'}`;
       throw error;
     } finally {
       this._loading.value = false;
@@ -327,7 +371,7 @@ export class UnifiedTaskService {
 
       return updatedTask;
     } catch (error) {
-      this._error.value = `Failed to update task: ${(error as any)?.message || 'Unknown error'}`;
+      this._error.value = `Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`;
       throw error;
     } finally {
       this._loading.value = false;
@@ -373,7 +417,7 @@ export class UnifiedTaskService {
         timestamp: new Date()
       });
     } catch (error) {
-      this._error.value = `Failed to delete task: ${(error as any)?.message || 'Unknown error'}`;
+      this._error.value = `Failed to delete task: ${error instanceof Error ? error.message : 'Unknown error'}`;
       throw error;
     } finally {
       this._loading.value = false;
@@ -423,8 +467,9 @@ export class UnifiedTaskService {
     }
 
     if (filter.tags && filter.tags.length > 0) {
+      const filterTags = filter.tags;
       filtered = filtered.filter(task =>
-        filter.tags!.some((tag: string) => task.metadata.tags.includes(tag))
+        filterTags.some((tag: string) => task.metadata.tags.includes(tag))
       );
     }
 
@@ -437,9 +482,10 @@ export class UnifiedTaskService {
     }
 
     if (filter.dateRange) {
+      const dateRange = filter.dateRange;
       filtered = filtered.filter(task => {
         const taskDate = task.createdAt;
-        return taskDate >= filter.dateRange!.start && taskDate <= filter.dateRange!.end;
+        return taskDate >= dateRange.start && taskDate <= dateRange.end;
       });
     }
 
@@ -453,7 +499,7 @@ export class UnifiedTaskService {
 
   private sortTasks(tasks: UnifiedTask[], sort: TaskSort): UnifiedTask[] {
     return [...tasks].sort((a, b) => {
-      let aValue: any, bValue: any;
+      let aValue: string | number, bValue: string | number;
 
       switch (sort.field) {
         case 'title':
@@ -467,13 +513,13 @@ export class UnifiedTaskService {
           break;
         }
         case 'stage': {
-          const stageOrder = [
+          const stageOrder: string[] = [
             TaskStageValues.IDEA, TaskStageValues.BACKLOG, TaskStageValues.PLANNING,
             TaskStageValues.DEVELOPMENT, TaskStageValues.REVIEW, TaskStageValues.TESTING,
             TaskStageValues.done, TaskStageValues.ARCHIVED
           ];
-          aValue = stageOrder.indexOf(a.stage as any);
-          bValue = stageOrder.indexOf(b.stage as any);
+          aValue = stageOrder.indexOf(a.stage);
+          bValue = stageOrder.indexOf(b.stage);
           break;
         }
         case 'createdAt':
@@ -536,7 +582,7 @@ export class UnifiedTaskService {
         break;
       case TaskStageValues.done:
         // Mark as done - set completion date
-        (task as any).completedAt = new Date();
+        task.completedAt = new Date();
         break;
       case TaskStageValues.ARCHIVED:
         // Archive - might clean up subtasks
@@ -573,7 +619,8 @@ export class UnifiedTaskService {
 
   private async handleExternalTaskDeleted(event: TaskEvent): Promise<void> {
     // Handle task deletion from external systems
-    const taskId = (event.data as any)?.taskId || event.type;
+    const data = event.data;
+    const taskId = 'taskId' in data ? data.taskId : (data as UnifiedTask).id;
     this._tasks.value = this._tasks.value.filter(t => t.id !== taskId);
     await this.storage.delete(taskId);
   }
@@ -588,7 +635,7 @@ export class UnifiedTaskService {
       this._tasks.value = tasks;
       this._lastSyncAt.value = await this.storage.getLastSyncTime();
     } catch (error) {
-      this._error.value = `Failed to load tasks: ${(error as any)?.message || 'Unknown error'}`;
+      this._error.value = `Failed to load tasks: ${error instanceof Error ? error.message : 'Unknown error'}`;
       throw error;
     } finally {
       this._loading.value = false;
@@ -614,7 +661,7 @@ export class UnifiedTaskService {
       await this.storage.setLastSyncTime(new Date());
       this._lastSyncAt.value = new Date();
     } catch (error) {
-      this._error.value = `Failed to sync tasks: ${(error as any)?.message || 'Unknown error'}`;
+      this._error.value = `Failed to sync tasks: ${error instanceof Error ? error.message : 'Unknown error'}`;
       throw error;
     } finally {
       this._loading.value = false;
@@ -707,19 +754,23 @@ export class UnifiedTaskService {
     // Basic markdown parsing - would need enhancement for production
     const tasks: UnifiedTask[] = [];
     const lines = markdown.split('\n');
-    let currentStage = TaskStageValues.IDEA;
+    let currentStage: TaskStage = 'backlog';
     let currentTask: Partial<UnifiedTask> | null = null;
 
     for (const line of lines) {
       if (line.startsWith('## ')) {
-        currentStage = line.substring(3).toLowerCase() as any;
+        const parsedStage = line.substring(3).toLowerCase();
+        // Map stage string to valid TaskStage
+        if (['backlog', 'planned', 'in_progress', 'done', 'on_hold'].includes(parsedStage)) {
+          currentStage = parsedStage as TaskStage;
+        }
       } else if (line.startsWith('### ')) {
         if (currentTask) {
           tasks.push(this.createTaskFromPartial(currentTask, currentStage));
         }
         currentTask = { title: line.substring(4), metadata: { source: 'import', priority: 'medium', tags: [] } };
-      } else if (line.startsWith('- **Priority**: ') && currentTask) {
-        currentTask.metadata!.priority = line.split(': ')[1].toLowerCase() as any;
+      } else if (line.startsWith('- **Priority**: ') && currentTask && currentTask.metadata) {
+        currentTask.metadata.priority = line.split(': ')[1].toLowerCase();
       }
     }
 

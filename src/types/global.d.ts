@@ -1,86 +1,90 @@
 // Global window type declarations for Pomo-Flow backup system
 
-// PouchDB instance type (simplified for window property)
-interface PomoFlowDB {
-  get: (docId: string) => Promise<PouchDBDocument>
-  put: (doc: PouchDBDocument) => Promise<PouchDBResponse>
-  allDocs: (options?: { include_docs?: boolean }) => Promise<PouchDBAllDocsResponse>
-  bulkDocs: (docs: PouchDBDocument[]) => Promise<PouchDBResponse[]>
-  changes: (options?: PouchDBChangesOptions) => PouchDBChanges
-}
-
-interface PouchDBDocument {
-  _id: string
-  _rev?: string
-  [key: string]: unknown
-}
-
-interface PouchDBResponse {
-  ok: boolean
-  id: string
-  rev: string
-}
-
-interface PouchDBRow {
-  id: string
-  key: string
-  value: { rev: string }
-  doc?: PouchDBDocument
-}
-
-interface PouchDBAllDocsResponse {
-  total_rows: number
-  offset: number
-  rows: PouchDBRow[]
-}
-
-interface PouchDBChangesOptions {
-  since?: string | number
-  live?: boolean
-  include_docs?: boolean
-}
-
-interface PouchDBChanges {
-  on: (event: string, callback: (change: PouchDBChange) => void) => PouchDBChanges
-  cancel: () => void
-}
-
-interface PouchDBChange {
-  id: string
-  seq: number | string
-  changes: Array<{ rev: string }>
-  doc?: PouchDBDocument
-  deleted?: boolean
-}
-
-// Backup types
-interface BackupSnapshot {
-  id: string
-  timestamp: string
-  data: unknown
-}
-
-// Undo/Redo system interface
-interface UndoRedoActions {
-  createTask: (taskData: Partial<import('@/types/tasks').Task>) => Promise<import('@/types/tasks').Task>
-  updateTask: (taskId: string, updates: Partial<import('@/types/tasks').Task>) => void
-  deleteTask: (taskId: string) => void
-  deleteTaskWithUndo: (taskId: string) => void
-  undo: () => void
-  redo: () => void
-  canUndo: boolean
-  canRedo: boolean
-}
-
-// Notification options interface
-interface NotificationOptions {
-  title?: string
-  content?: string
-  type?: 'info' | 'success' | 'warning' | 'error'
-  duration?: number
-}
-
 declare global {
+  // PouchDB types - must be in global scope for use across stores
+  interface PouchDBDocument {
+    _id: string
+    _rev?: string
+    _conflicts?: string[]
+    [key: string]: unknown
+  }
+
+  interface PouchDBResponse {
+    ok: boolean
+    id: string
+    rev: string
+  }
+
+  interface PouchDBRow {
+    id: string
+    key: string
+    value: { rev: string }
+    doc?: PouchDBDocument
+  }
+
+  interface PouchDBAllDocsResponse {
+    total_rows: number
+    offset: number
+    rows: PouchDBRow[]
+  }
+
+  interface PouchDBChangesOptions {
+    since?: string | number
+    live?: boolean
+    include_docs?: boolean
+  }
+
+  interface PouchDBChanges {
+    on: (event: string, callback: (change: PouchDBChange) => void) => PouchDBChanges
+    cancel: () => void
+  }
+
+  interface PouchDBChange {
+    id: string
+    seq: number | string
+    changes: Array<{ rev: string }>
+    doc?: PouchDBDocument
+    deleted?: boolean
+  }
+
+  // PouchDB instance type (simplified for window property)
+  interface PomoFlowDB {
+    get: (docId: string, options?: { conflicts?: boolean }) => Promise<PouchDBDocument>
+    put: (doc: PouchDBDocument) => Promise<PouchDBResponse>
+    remove: (docId: string, rev: string) => Promise<PouchDBResponse>
+    allDocs: (options?: { include_docs?: boolean }) => Promise<PouchDBAllDocsResponse>
+    bulkDocs: (docs: PouchDBDocument[]) => Promise<PouchDBResponse[]>
+    changes: (options?: PouchDBChangesOptions) => PouchDBChanges
+  }
+
+  // Backup types
+  interface BackupSnapshot {
+    id: string
+    timestamp: string
+    data: unknown
+  }
+
+  // Undo/Redo system interface
+  interface UndoRedoActions {
+    createTask: (taskData: Partial<import('@/types/tasks').Task>) => Promise<import('@/types/tasks').Task>
+    updateTask: (taskId: string, updates: Partial<import('@/types/tasks').Task>) => void
+    deleteTask: (taskId: string) => void
+    deleteTaskWithUndo: (taskId: string) => void
+    undo: () => void
+    redo: () => void
+    canUndo: boolean
+    canRedo: boolean
+    [key: string]: unknown // Allow index access for dynamic method checks
+  }
+
+  // Notification options interface
+  interface NotificationOptions {
+    title?: string
+    content?: string
+    type?: 'info' | 'success' | 'warning' | 'error'
+    duration?: number
+  }
+
   interface Window {
     pomoFlowDb?: PomoFlowDB
     __pomoFlowUndoSystem?: UndoRedoActions
@@ -108,6 +112,13 @@ declare global {
     vueFlowStore?: unknown
     // Safari WebKit Audio Context (for cross-browser compatibility)
     webkitAudioContext?: typeof AudioContext
+    // Debug properties for development
+    __lastDeletedGroup?: {
+      id: string
+      before: string[]
+      after?: string[]
+      missed?: boolean
+    }
   }
 }
 

@@ -233,7 +233,7 @@ const loadComponent = async () => {
     }
 
     // Load the component
-    const module = await props.loader()
+    const module = await props.loader() as { default?: unknown }
     component.value = module.default || module
 
     emit('loaded', component.value)

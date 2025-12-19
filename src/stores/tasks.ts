@@ -294,7 +294,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // Previously created default "My Tasks" project with ID '1'
 
   // CRITICAL: Write queue to prevent concurrent PouchDB writes causing 409 conflicts
-  const writeQueue = ref(Promise.resolve())
+  const writeQueue = ref<Promise<unknown>>(Promise.resolve())
 
   const queuedWrite = async (updateFn: (latestDoc: PouchDBDocument | null) => Promise<PouchDBResponse>) => {
     writeQueue.value = writeQueue.value.then(async () => {
@@ -2565,6 +2565,8 @@ export const useTaskStore = defineStore('tasks', () => {
     deleteTaskWithUndo: (taskId: string) => void
     undo?: () => void
     redo?: () => void
+    canUndo?: boolean
+    canRedo?: boolean
     startTaskNow?: (taskId: string) => void
     [key: string]: unknown
   }
@@ -2588,7 +2590,7 @@ export const useTaskStore = defineStore('tasks', () => {
           } else {
             undoRedoActions = useUnifiedUndoRedo()
             if (typeof window !== 'undefined') {
-              window.__pomoFlowUndoSystem = undoRedoActions
+              window.__pomoFlowUndoSystem = undoRedoActions as UndoRedoActions
             }
             console.log('✅ Created new global unified undo system instance')
           }

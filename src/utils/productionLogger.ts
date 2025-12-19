@@ -12,7 +12,7 @@ export interface LogEntry {
   level: 'debug' | 'info' | 'warn' | 'error' | 'critical'
   category: 'sync' | 'network' | 'database' | 'performance' | 'security' | 'user'
   message: string
-  data?: any
+  data?: unknown
   userId?: string
   deviceId?: string
   sessionId: string
@@ -134,10 +134,12 @@ export class ProductionLogger {
     // Monitor memory usage
     if ('memory' in performance) {
       setInterval(() => {
-        const memory = (performance as any).memory
-        this.logMetric('memory_used', memory.usedJSHeapSize, 'bytes')
-        this.logMetric('memory_total', memory.totalJSHeapSize, 'bytes')
-        this.logMetric('memory_limit', memory.jsHeapSizeLimit, 'bytes')
+        const memory = (performance as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory
+        if (memory) {
+          this.logMetric('memory_used', memory.usedJSHeapSize, 'bytes')
+          this.logMetric('memory_total', memory.totalJSHeapSize, 'bytes')
+          this.logMetric('memory_limit', memory.jsHeapSizeLimit, 'bytes')
+        }
       }, 60000) // Every minute
     }
   }

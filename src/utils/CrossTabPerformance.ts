@@ -24,7 +24,7 @@ export interface PerformanceMetrics {
 
 export interface BatchedData {
   id: string
-  data: any[]
+  data: unknown[]
   timestamp: number
   size: number
   compressed?: boolean
@@ -32,8 +32,8 @@ export interface BatchedData {
 
 export class CrossTabPerformance {
   private config: PerformanceConfig
-  private dataQueue: any[] = []
-  private cache: Map<string, any> = new Map()
+  private dataQueue: unknown[] = []
+  private cache: Map<string, unknown> = new Map()
   private metrics: PerformanceMetrics
   private throttleTimer: number | null = null
   private memoryMonitor: number

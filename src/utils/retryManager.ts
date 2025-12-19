@@ -9,14 +9,14 @@ export interface RetryConfig {
   maxDelay: number       // Maximum delay in milliseconds
   backoffFactor: number // Multiplier for delay increase
   jitter: boolean        // Add random jitter to prevent thundering herd
-  nonRetryableErrors?: (error: any) => boolean
+  nonRetryableErrors?: (error: unknown) => boolean
 }
 
 export interface RetryAttempt {
   attempt: number
   timestamp: Date
   delay: number
-  error?: any
+  error?: unknown
   success: boolean
 }
 

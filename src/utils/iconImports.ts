@@ -125,12 +125,12 @@ export function preloadCommonIcons() {
 /**
  * Icon import cache to prevent duplicate loading
  */
-const iconCache = new Map<CoreIconName, any>()
+const iconCache = new Map<CoreIconName, { default: unknown }>()
 
 /**
  * Cached icon loader with memory management
  */
-export async function getCachedIcon(name: CoreIconName): Promise<any> {
+export async function getCachedIcon(name: CoreIconName): Promise<{ default: unknown }> {
   if (iconCache.has(name)) {
     return iconCache.get(name)
   }

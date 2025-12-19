@@ -211,7 +211,7 @@ export function useAnimationBatcher() {
 /**
  * Performance-optimized throttling using the global animation batcher
  */
-export function createAnimationThrottle<T extends (...args: any[]) => any>(
+export function createAnimationThrottle<T extends (...args: unknown[]) => unknown>(
   fn: T,
   priority: number = 0
 ): T {

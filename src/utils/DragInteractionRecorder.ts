@@ -18,7 +18,7 @@ export interface DragEventData {
   timestamp: number;
   type: string;
   target: string;
-  data?: any;
+  data?: unknown;
 }
 
 export interface ScreenshotCapture {
@@ -426,7 +426,7 @@ export class DragInteractionRecorder {
     const originalError = console.error;
 
     // Override console methods to capture drag-related logs
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       const message = args.join(' ');
       if (message.includes('drag') || message.includes('Drag') || message.includes('DROP') || message.includes('CALENDAR')) {
         this.eventLog.push(`[${Date.now()}] LOG: ${message}`);

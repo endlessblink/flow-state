@@ -14,7 +14,7 @@ import { ref, computed } from 'vue'
 export interface SaveOperation {
   id: string
   key: string
-  data: any
+  data: unknown
   priority: 'user' | 'auto' | 'critical'
   timestamp: number
   retries: number
@@ -44,9 +44,9 @@ export class SaveQueueManager {
   })
 
   private waitTimes: number[] = []
-  private database: any = null // PouchDB instance
+  private database: PouchDB.Database | null = null // PouchDB instance
 
-  constructor(database: any) {
+  constructor(database: PouchDB.Database) {
     this.database = database
     console.log('🚀 SaveQueueManager initialized - Chief Architect conflict prevention active')
   }

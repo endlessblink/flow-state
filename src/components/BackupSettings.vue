@@ -220,7 +220,7 @@ const useBackupScheduler = () => ({
   start: () => console.log('Backup scheduler started'),
   stop: () => console.log('Backup scheduler stopped'),
   pause: () => console.log('Backup scheduler paused'),
-  updateSchedule: (_options: any) => Promise.resolve(),
+  updateSchedule: (_options: Record<string, unknown>) => Promise.resolve(),
   getStatus: () => ({ active: false, lastBackup: 0, nextBackup: 0 }),
   getNextBackupTime: () => 'Not scheduled',
   triggerBackup: (_manual: boolean = false) => Promise.resolve(true),

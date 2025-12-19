@@ -171,7 +171,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     // If we have the leader's timestamp, calculate time offset for accurate sync
     // This handles clock differences between devices
-    let now = Date.now()
+    const now = Date.now()
     if (leaderTimestamp && leaderTimestamp > 0) {
       // Calculate how much time has passed since leader saved the document
       // This accounts for network latency and clock differences
@@ -319,7 +319,7 @@ export const useTimerStore = defineStore('timer', () => {
   /**
    * Cleanup cross-device sync listener
    */
-  const cleanupCrossDeviceSync = () => {
+  const _cleanupCrossDeviceSync = () => {
     timerChangesSync.stopListening()
     crossDeviceSyncInitialized = false
     console.log('🧹 [TIMER CROSS-DEVICE] Cross-device sync cleaned up')
@@ -375,7 +375,7 @@ export const useTimerStore = defineStore('timer', () => {
             for (const conflictRev of existingDoc._conflicts) {
               try {
                 await pouchDb.remove(docId, conflictRev)
-              } catch (e) {
+              } catch (_e) {
                 // Ignore removal errors
               }
             }

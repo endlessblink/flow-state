@@ -124,7 +124,7 @@ import type { ImportKey } from '@/composables/useDynamicImports'
 interface Props {
   // Required
   importKey: ImportKey
-  loader: () => Promise<any>
+  loader: () => Promise<unknown>
 
   // Loading customization
   title?: string
@@ -145,15 +145,15 @@ interface Props {
   // Fallback options
   showFallback?: boolean
   showFallbackContent?: boolean
-  fallbackComponent?: any
-  fallbackProps?: Record<string, any>
+  fallbackComponent?: unknown
+  fallbackProps?: Record<string, unknown>
   fallbackMessage?: string
 
   // Empty state
   emptyMessage?: string
 
   // Component props
-  componentProps?: Record<string, any>
+  componentProps?: Record<string, unknown>
 
   // Styling
   size?: 'sm' | 'md' | 'lg'
@@ -185,7 +185,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  loaded: [component: any]
+  loaded: [component: unknown]
   error: [error: Error]
   retry: [attempt: number]
   fallback: []
@@ -195,7 +195,7 @@ const emit = defineEmits<{
 const { import: _dynamicImport, getStatus } = useDynamicImports()
 
 // Reactive state
-const component = ref<any>(null)
+const component = ref<unknown>(null)
 const retryCount = ref(0)
 const isLoading = ref(false)
 

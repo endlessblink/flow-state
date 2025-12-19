@@ -850,25 +850,46 @@ export function useCrossTabSync() {
   const _uiStore = useUIStore()
   const _canvasStore = useCanvasStore()
 
+  // Track if this instance has been initialized (prevents double init)
+  let instanceInitialized = false
+
   // Initialize cross-tab sync with compatibility checking
   const initialize = async () => {
     if (typeof window === 'undefined') return
 
+    // BUG-016 FIX: Prevent double initialization
+    // This can be called both immediately (for store contexts) and in onMounted (for component contexts)
+    if (instanceInitialized) {
+      console.log('🔄 Cross-tab sync already initialized, skipping')
+      return
+    }
+
     try {
-      // Check browser compatibility first
+      // BUG-016 FIX: Browser compatibility check should not block initialization
+      // Even if it fails, we should still add the event listener for basic functionality
       if (!isCompatibilityChecked) {
-        await checkBrowserCompatibility()
+        try {
+          await checkBrowserCompatibility()
+        } catch (compatError) {
+          console.warn('⚠️ Browser compatibility check failed, proceeding with basic functionality:', compatError)
+          isCompatibilityChecked = true // Mark as checked to prevent retries
+        }
       }
 
       currentTabId.value = generateTabId()
       isListening.value = true
+      instanceInitialized = true
 
       // saveCoordinator removed - Phase 2 simplification
 
-      // Apply browser-specific optimizations
-      applyBrowserOptimizations()
+      // Apply browser-specific optimizations (also made resilient)
+      try {
+        applyBrowserOptimizations()
+      } catch (optError) {
+        console.warn('⚠️ Failed to apply browser optimizations, using defaults:', optError)
+      }
 
-      // Start listening for storage changes
+      // Start listening for storage changes - THIS IS THE CRITICAL PART
       window.addEventListener('storage', handleStorageChange)
 
       console.log('🔄 Cross-tab sync initialized:', currentTabId.value)
@@ -884,6 +905,7 @@ export function useCrossTabSync() {
     if (typeof window === 'undefined') return
 
     isListening.value = false
+    instanceInitialized = false // BUG-016 FIX: Allow re-initialization after cleanup
     window.removeEventListener('storage', handleStorageChange)
 
     if (messageTimeout) {
@@ -944,7 +966,12 @@ export function useCrossTabSync() {
     })
   }
 
-  // Setup lifecycle hooks
+  // BUG-016 FIX: Initialize IMMEDIATELY for non-component contexts (e.g., Pinia stores)
+  // This ensures cross-tab sync works even when called outside Vue components
+  // The onMounted hook below will also call initialize() but the double-init guard prevents issues
+  initialize()
+
+  // Setup lifecycle hooks (for component contexts - provides proper cleanup)
   onMounted(() => {
     initialize()
     // Send initial heartbeat

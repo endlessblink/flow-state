@@ -235,7 +235,8 @@ export class OfflineQueue {
         break
 
       case 'merge':
-        if (!operation.data || !operation.data.local || !operation.data.remote) {
+        const mergeData = operation.data as { local?: unknown; remote?: unknown } | undefined
+        if (!mergeData || !mergeData.local || !mergeData.remote) {
           errors.push('Merge operations require local and remote data')
         }
         break
@@ -314,7 +315,9 @@ export class OfflineQueue {
       const lastOp = conflictingOps[conflictingOps.length - 1]
       if (lastOp.type === operation.type && operation.type === 'update') {
         // Merge the updates
-        operation.data = { ...lastOp.data, ...operation.data }
+        const lastOpData = (lastOp.data || {}) as Record<string, unknown>
+        const opData = (operation.data || {}) as Record<string, unknown>
+        operation.data = { ...lastOpData, ...opData }
         operation.originalData = lastOp.originalData || lastOp.data
       }
     }

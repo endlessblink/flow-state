@@ -100,7 +100,7 @@ export const useTimerStore = defineStore('timer', () => {
 
       // Set up callbacks for cross-tab timer events
       crossTabSync.setTimerCallbacks({
-        onSessionUpdate: (session: any) => {
+        onSessionUpdate: (session: PomodoroSession | null) => {
           // Another tab updated the timer - sync local state
           if (!isLeader.value && session) {
             console.log('🔄 [TIMER SYNC] Received session update from leader:', session)
@@ -228,7 +228,13 @@ export const useTimerStore = defineStore('timer', () => {
   /**
    * Handle timer updates from remote devices (via CouchDB sync)
    */
-  const handleRemoteTimerUpdate = async (remoteDoc: any) => {
+  interface RemoteTimerDoc {
+    deviceLeaderId?: string
+    deviceLeaderLastSeen?: number
+    session?: PomodoroSession & { startTime: string | Date; completedAt?: string | Date }
+    deleted?: boolean
+  }
+  const handleRemoteTimerUpdate = async (remoteDoc: RemoteTimerDoc) => {
     // If we're the device leader and this is our own update, ignore
     if (isDeviceLeader.value && remoteDoc.deviceLeaderId === deviceId) {
       return
@@ -292,7 +298,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     // Use direct PouchDB changes feed for real-time updates (TASK-021 fix)
     // This replaces the unreliable 'reliable-sync-change' event listener
-    timerChangesSync.startListening(async (doc: any) => {
+    timerChangesSync.startListening(async (doc: RemoteTimerDoc) => {
       try {
         // Handle document deletion
         if (doc.deleted) {
@@ -342,7 +348,7 @@ export const useTimerStore = defineStore('timer', () => {
 
         // Access PouchDB directly for better conflict handling
         // Uses the global singleton exposed by useDatabase
-        const pouchDb = (window as any).pomoFlowDb
+        const pouchDb = window.pomoFlowDb
 
         if (!pouchDb) {
           console.warn('⚠️ [TIMER CROSS-DEVICE] PouchDB not available')
@@ -380,15 +386,22 @@ export const useTimerStore = defineStore('timer', () => {
               }
             }
           }
-        } catch (getErr: any) {
-          if (getErr.status !== 404) {
+        } catch (getErr: unknown) {
+          const pouchErr = getErr as { status?: number }
+          if (pouchErr.status !== 404) {
             throw getErr
           }
           // Document doesn't exist, will create new
         }
 
         // Save the document
-        const docToSave: any = {
+        interface TimerDocToSave {
+          _id: string
+          _rev?: string
+          data: typeof sessionData
+          updatedAt: string
+        }
+        const docToSave: TimerDocToSave = {
           _id: docId,
           data: sessionData,
           updatedAt: new Date().toISOString()
@@ -398,15 +411,16 @@ export const useTimerStore = defineStore('timer', () => {
           docToSave._rev = existingRev
         }
 
-        await pouchDb.put(docToSave)
+        await pouchDb.put(docToSave as PouchDBDocument)
 
         if (attempt > 1) {
           console.log(`✅ [TIMER CROSS-DEVICE] Saved on attempt ${attempt}`)
         }
         return // Success
 
-      } catch (error: any) {
-        if (error.status === 409 && attempt < maxRetries) {
+      } catch (error: unknown) {
+        const pouchErr = error as { status?: number }
+        if (pouchErr.status === 409 && attempt < maxRetries) {
           // Conflict - retry with fresh _rev
           console.log(`🔄 [TIMER CROSS-DEVICE] Conflict on attempt ${attempt}, retrying...`)
           await new Promise(resolve => setTimeout(resolve, 50 * attempt)) // Backoff
@@ -461,7 +475,12 @@ export const useTimerStore = defineStore('timer', () => {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
 
-      const existingSession = await db.load<any>('pomo-flow-timer-session')
+      interface TimerSessionData {
+        deviceLeaderId?: string
+        deviceLeaderLastSeen?: number
+        session?: PomodoroSession
+      }
+      const existingSession = await db.load<TimerSessionData>('pomo-flow-timer-session')
 
       if (existingSession?.deviceLeaderId && existingSession.deviceLeaderId !== deviceId) {
         const elapsed = Date.now() - (existingSession.deviceLeaderLastSeen || 0)
@@ -813,7 +832,7 @@ watch(completedSessions, (newSessions) => {
     if (!settings.value.playNotificationSounds) return
 
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
       const oscillator = audioContext.createOscillator()
       const gainNode = audioContext.createGain()
 
@@ -847,7 +866,7 @@ watch(completedSessions, (newSessions) => {
     if (!settings.value.playNotificationSounds) return
 
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
       const oscillator = audioContext.createOscillator()
       const gainNode = audioContext.createGain()
 
@@ -912,18 +931,29 @@ watch(completedSessions, (newSessions) => {
       while (!db.isReady?.value) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
-      const saved = await db.load('pomo-flow-timer-session')
+      interface SavedTimerSession {
+        id?: string
+        taskId?: string
+        startTime?: string | Date | number
+        duration?: number
+        remainingTime?: number
+        isActive?: boolean
+        isPaused?: boolean
+        isBreak?: boolean
+        completedAt?: string | Date | number
+      }
+      const saved = await db.load<SavedTimerSession>('pomo-flow-timer-session')
       if (saved) {
         currentSession.value! = {
-          id: (saved as any).id || 'default',
-          taskId: (saved as any).taskId || '',
-          startTime: new Date((saved as any).startTime || Date.now()),
-          duration: (saved as any).duration || 25 * 60 * 1000,
-          remainingTime: (saved as any).remainingTime || 25 * 60 * 1000,
-          isActive: (saved as any).isActive || false,
-          isPaused: (saved as any).isPaused || false,
-          isBreak: (saved as any).isBreak || false,
-          completedAt: (saved as any).completedAt ? new Date((saved as any).completedAt) : undefined
+          id: saved.id || 'default',
+          taskId: saved.taskId || '',
+          startTime: new Date(saved.startTime || Date.now()),
+          duration: saved.duration || 25 * 60 * 1000,
+          remainingTime: saved.remainingTime || 25 * 60 * 1000,
+          isActive: saved.isActive || false,
+          isPaused: saved.isPaused || false,
+          isBreak: saved.isBreak || false,
+          completedAt: saved.completedAt ? new Date(saved.completedAt) : undefined
         }
 
         // Restart interval if timer was active

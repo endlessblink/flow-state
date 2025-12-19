@@ -8,7 +8,15 @@ const meta = {
   component: ContextMenu,
   title: '🎭 Overlays/💬 Context Menus/ContextMenu',
   tags: ['autodocs'],
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    docs: {
+      story: {
+        inline: false,
+        iframeHeight: 400,
+      }
+    }
+  },
   argTypes: {
     isVisible: { control: 'boolean' },
     x: { control: 'number' },
@@ -28,27 +36,27 @@ export const Default: Story = {
       return { Edit, Copy, Trash2 }
     },
     template: `
-      <div style="min-height: 280px; background: rgba(0, 0, 0, 0.95); padding: 20px; display: flex; gap: 40px; align-items: flex-start;">
+      <div style="min-height: 280px; background: var(--glass-bg-solid); padding: 20px; display: flex; gap: 40px; align-items: flex-start;">
         <div>
           <h3 style="color: var(--text-primary); margin: 0 0 8px 0;">Basic Context Menu</h3>
           <p style="color: var(--text-secondary); margin: 0;">Standard menu with shortcuts and danger action</p>
         </div>
-        <div style="min-width: 200px; background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3); padding: 8px;">
+        <div style="min-width: 200px; background: var(--surface-elevated); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: var(--shadow-dark-xl); padding: 8px;">
           <button style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--text-primary); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;">
             <Edit :size="16" :stroke-width="1.5" style="flex-shrink: 0;" />
             <span style="flex: 1;">Edit</span>
-            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px;">Enter</span>
+            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border-light); border-radius: 4px;">Enter</span>
           </button>
           <button style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--text-primary); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;">
             <Copy :size="16" :stroke-width="1.5" style="flex-shrink: 0;" />
             <span style="flex: 1;">Copy</span>
-            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px;">Ctrl+C</span>
+            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border-light); border-radius: 4px;">Ctrl+C</span>
           </button>
-          <div style="height: 1px; margin: 8px 12px; background: rgba(255, 255, 255, 0.15);"></div>
-          <button style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: 8px; color: #ef4444; font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;">
+          <div style="height: 1px; margin: 8px 12px; background: var(--border-subtle);"></div>
+          <button style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--danger-text); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;">
             <Trash2 :size="16" :stroke-width="1.5" style="flex-shrink: 0;" />
             <span style="flex: 1;">Delete</span>
-            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px;">Del</span>
+            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border-light); border-radius: 4px;">Del</span>
           </button>
         </div>
       </div>
@@ -88,19 +96,19 @@ export const InteractiveDemo: Story = {
       return { menu, showTaskMenu }
     },
     template: `
-      <div style="min-height: 100vh; background: rgba(0, 0, 0, 0.95); padding: 40px;">
+      <div style="min-height: 100vh; background: var(--glass-bg-solid); padding: 40px;">
         <h3 style="color: var(--text-primary); margin: 0 0 8px 0;">Interactive Demo</h3>
         <p style="color: var(--text-secondary); margin: 0 0 20px 0;">Right-click on the task card below</p>
 
-        <div v-if="menu.lastAction" style="padding: 10px 14px; background: rgba(78, 205, 196, 0.1); border: 1px solid rgba(78, 205, 196, 0.3); border-radius: 8px; margin-bottom: 20px; color: var(--text-primary); font-size: 14px;">
+        <div v-if="menu.lastAction" style="padding: 10px 14px; background: var(--brand-bg-subtle); border: 1px solid var(--brand-border-light); border-radius: 8px; margin-bottom: 20px; color: var(--text-primary); font-size: 14px;">
           Last action: {{ menu.lastAction }}
         </div>
 
         <div
           @contextmenu.prevent="showTaskMenu"
-          style="padding: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; cursor: context-menu; max-width: 400px; transition: border-color 0.2s;"
-          @mouseenter="$event.target.style.borderColor = 'rgba(78, 205, 196, 0.5)'"
-          @mouseleave="$event.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'"
+          style="padding: 16px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border-light); border-radius: 10px; cursor: context-menu; max-width: 400px; transition: border-color 0.2s;"
+          @mouseenter="$event.target.style.borderColor = 'var(--brand-border-medium)'"
+          @mouseleave="$event.target.style.borderColor = 'var(--glass-border-light)'"
         >
           <div style="display: flex; align-items: center; gap: 10px;">
             <div style="width: 18px; height: 18px; border-radius: 4px; background: var(--brand-primary);"></div>

@@ -23,7 +23,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 12px; min-width: 400px;">
+        <div style="padding: 40px; background: var(--glass-bg-solid); border-radius: var(--radius-xl); min-width: 400px;">
           <story />
         </div>
       `

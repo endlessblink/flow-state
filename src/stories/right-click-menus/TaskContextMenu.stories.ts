@@ -10,19 +10,25 @@ const meta = {
   args: {
     isVisible: true,
     x: 50,
-    y: 80,
+    y: 50,
     compactMode: false,
   },
 
   parameters: {
     layout: 'fullscreen',
+    docs: {
+      story: {
+        inline: false,
+        iframeHeight: 500,
+      }
+    }
   },
 
   decorators: [
     (story: any) => ({
       components: { story },
       template: `
-        <div style="min-height: 100vh; width: 100%; padding: 40px; background: rgba(0, 0, 0, 0.95);">
+        <div style="min-height: 100vh; width: 100%; padding: 40px; background: var(--glass-bg-solid);">
           <story />
         </div>
       `
@@ -64,7 +70,7 @@ export const Default: Story = {
   args: {
     isVisible: true,
     x: 50,
-    y: 80,
+    y: 50,
     task: realTask,
     compactMode: false,
     onClose: () => console.log('close'),

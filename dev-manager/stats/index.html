@@ -440,6 +440,79 @@
         .badge.road { background: var(--color-road); color: white; }
         .badge.issue { background: var(--color-issue); color: white; }
         .badge.idea { background: var(--color-idea); color: white; }
+
+        /* Open Bugs List */
+        .open-bugs-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 0.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .open-bug-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            border-left: 3px solid var(--color-bug);
+        }
+
+        .open-bug-item.high {
+            border-left-color: var(--health-critical);
+        }
+
+        .open-bug-item.medium {
+            border-left-color: var(--health-warning);
+        }
+
+        .open-bug-item.low {
+            border-left-color: var(--health-good);
+        }
+
+        .open-bug-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .open-bug-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .open-bug-id {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--color-bug);
+        }
+
+        .open-bug-priority {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .open-bug-priority.high { background: rgba(239, 68, 68, 0.2); color: var(--health-critical); }
+        .open-bug-priority.medium { background: rgba(245, 158, 11, 0.2); color: var(--health-warning); }
+        .open-bug-priority.low { background: rgba(16, 185, 129, 0.2); color: var(--health-good); }
+
+        .open-bug-title {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .open-bug-notes {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            line-height: 1.3;
+        }
     </style>
 </head>
 <body>
@@ -539,6 +612,23 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Open Bugs - Full Width -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🐛</span>
+                        <span>Open Bugs</span>
+                    </div>
+                    <div class="card-subtitle" id="openBugsSubtitle">Bugs that need fixing</div>
+                </div>
+                <div class="open-bugs-list" id="openBugsList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⏳</div>
+                        <div>Loading...</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -561,6 +651,7 @@
                 health: { status: 'good', message: '', completion: 0 },
                 active: [],
                 completed: [],
+                openBugs: [],
                 priorities: {
                     p1: { done: 0, open: 0, items: [] },
                     p2: { done: 0, open: 0, items: [] },
@@ -687,6 +778,33 @@
                     if (isDone) data.priorities.p3.done++;
                     else data.priorities.p3.open++;
                 }
+            }
+
+            // Parse open bugs from bug table
+            // Format: | BUG-XXX | Bug description | Priority | Status |
+            const bugTablePattern = /\|\s*BUG-(\d+)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/g;
+            while ((match = bugTablePattern.exec(text)) !== null) {
+                const id = `BUG-${match[1]}`;
+                // Skip if this bug is already marked as done (~~BUG-XXX~~)
+                const donePattern = new RegExp(`~~BUG-${match[1]}~~`);
+                if (donePattern.test(text)) continue;
+
+                const title = match[2].trim();
+                let priority = match[3].trim().toUpperCase();
+                const notes = match[4].trim();
+
+                // Normalize priority (P1-HIGH → HIGH, P2-MEDIUM → MEDIUM, etc.)
+                if (priority.includes('HIGH') || priority === 'P1' || priority === 'P0') {
+                    priority = 'high';
+                } else if (priority.includes('MEDIUM') || priority === 'P2') {
+                    priority = 'medium';
+                } else if (priority.includes('LOW') || priority === 'P3') {
+                    priority = 'low';
+                } else {
+                    priority = 'low'; // N/A, etc.
+                }
+
+                data.openBugs.push({ id, title, priority, notes });
             }
 
             // Calculate health
@@ -853,6 +971,43 @@
             }).join('');
         }
 
+        function renderOpenBugs(data) {
+            const container = document.getElementById('openBugsList');
+            const subtitle = document.getElementById('openBugsSubtitle');
+
+            if (data.openBugs.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎉</div>
+                        <div>No open bugs!</div>
+                    </div>
+                `;
+                subtitle.textContent = 'All bugs fixed';
+                return;
+            }
+
+            subtitle.textContent = `${data.openBugs.length} bugs need attention`;
+
+            // Sort by priority: high first, then medium, then low
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            const sortedBugs = [...data.openBugs].sort((a, b) =>
+                priorityOrder[a.priority] - priorityOrder[b.priority]
+            );
+
+            container.innerHTML = sortedBugs.map(bug => `
+                <div class="open-bug-item ${bug.priority}">
+                    <div class="open-bug-content">
+                        <div class="open-bug-header">
+                            <span class="open-bug-id">${bug.id}</span>
+                            <span class="open-bug-priority ${bug.priority}">${bug.priority.toUpperCase()}</span>
+                        </div>
+                        <div class="open-bug-title">${bug.title}</div>
+                        ${bug.notes ? `<div class="open-bug-notes">${bug.notes}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
         async function init() {
             try {
                 const data = await fetchAndParse();
@@ -861,6 +1016,7 @@
                 renderCompleted(data);
                 renderPriorityMatrix(data);
                 renderTypeBreakdown(data);
+                renderOpenBugs(data);
             } catch (error) {
                 console.error('Failed to initialize:', error);
                 document.getElementById('healthText').innerHTML = `

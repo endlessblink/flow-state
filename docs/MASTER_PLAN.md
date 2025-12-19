@@ -137,6 +137,7 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
 | TASK-027 | PAUSED | `stores/*` (done), `utils/*`, `composables/*`, `components/*`, `views/*` | ~~TASK-011~~ | - |
 | ~~TASK-028~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json` | - | - |
+| TASK-029 | PLANNED | `.claude/skills/storybook-audit/*`, `src/stories/**` | TASK-014 | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
 **Paused**: TASK-027 (lint warning fixes - 88 fixed, 1,292 remaining)
@@ -190,6 +191,51 @@ Phase 3 (Mobile) ←────────────────────
 - Firebase stubs: Proper function signatures
 - JSON/DB responses: Type guards with interfaces
 - Vue Flow: Proper Node/Edge types from @vue-flow/core
+
+---
+
+### TASK-029: Storybook Audit Skill (PLANNED)
+
+**Goal**: Create a Claude Code skill that automatically audits Storybook stories for common issues and fixes them.
+
+**Priority**: P2-MEDIUM
+**Depends On**: TASK-014 (Storybook work provides patterns to encode in skill)
+
+**Audit Capabilities**:
+
+| Check | Issue | Auto-Fix |
+|-------|-------|----------|
+| `iframeHeight` | Docs pages cut off modals/popups | Suggest height based on component type |
+| Store Dependencies | Stories import real stores → DB errors | Flag for mock store injection |
+| Missing Imports | `ref`, `reactive`, `computed` not imported | Add missing Vue imports |
+| Template `<style>` | Runtime template contains `<style>` tag | Convert to inline styles |
+| Props Mismatch | Story args don't match component props | Compare with `defineProps` |
+| Event Handlers | Missing `@close`, `@submit` handlers | Add noop handlers |
+| Layout Parameter | `layout: 'centered'` for modals (should be fullscreen) | Fix layout type |
+
+**Skill Structure**:
+```
+.claude/skills/storybook-audit/
+├── skill.md           # Main skill definition
+├── rules/
+│   ├── iframe-height.md
+│   ├── store-dependencies.md
+│   └── template-errors.md
+└── examples/
+    ├── before-after-contextmenu.md
+    └── before-after-modal.md
+```
+
+**Trigger Keywords**:
+- "audit storybook"
+- "fix storybook stories"
+- "storybook cut off"
+- "storybook store error"
+
+**Related**:
+- ISSUE-011 (PouchDB conflicts breaking Storybook)
+- TASK-014 (Storybook Glass Morphism work)
+- `.claude/skills/dev-storybook/skill.md` (existing Storybook skill to extend)
 
 ---
 
@@ -993,7 +1039,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Two-part fix: (1) requestSync() in TaskContextMenu (2) spread task object in syncNodes |
 | BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
 | ~~BUG-015~~ | ~~Edit Task modal behind nav tabs~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 16, 2025 - Added Teleport to body |
-| ~~BUG-016~~ | ~~Timer status not syncing~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Cross-tab sync now initializes immediately (not just in onMounted), fixing Pinia store context. |
+| ~~BUG-016~~ | ~~Timer status not syncing~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Added pinia-shared-state@0.5.1 plugin. Timer store excluded with share:false (has Date objects). Rollback: `git checkout pre-pinia-shared-state` |
 | ~~BUG-018~~ | ~~Canvas smart group header icons cut off~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Wrapped actions in overflow container |
 | ~~BUG-019~~ | ~~Canvas section resize preview mispositioned~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Used Vue Flow viewport + container offset for accurate positioning |
 | BUG-020 | Tasks randomly disappearing without user deletion | P3-LOW | ⏸️ PASSIVE MONITORING - Logger integrated, waiting for reproduction. If occurs: run `window.taskLogger.printSummary()` |
@@ -1160,6 +1206,45 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ISSUE-008 | **Ctrl+Z doesn't work on groups** | P2-MEDIUM | Undo doesn't restore deleted/modified groups on canvas |
 | ISSUE-009 | **15 vue-tsc TypeScript errors** | P2-MEDIUM | Build passes but `vue-tsc` fails. See details below |
 | ISSUE-010 | **Inbox task deletion inconsistent** | P2-MEDIUM | Deleting from calendar/canvas inbox should delete everywhere, recoverable only via Ctrl+Z (like board) |
+| ISSUE-011 | **PouchDB Document Conflict Accumulation** | P1-HIGH | 178+ conflicts on tasks:data, 171 on projects:data, 81 on settings:data. Causes Storybook render failures. See details below |
+
+### ISSUE-011: PouchDB Document Conflict Accumulation (CRITICAL)
+
+**Priority**: P1-HIGH
+**Discovered**: December 19, 2025 (during Storybook debugging)
+
+**Symptoms**:
+- Storybook docs pages showing "Document update conflict" error
+- Console warnings on app load:
+  ```
+  ⚠️ [DATABASE] Document tasks:data has 178 conflicts
+  ⚠️ [DATABASE] Document projects:data has 171 conflicts
+  ⚠️ [DATABASE] Document settings:data has 81 conflicts
+  ```
+
+**Root Cause Analysis**:
+1. **Sync race conditions**: Multiple tabs/instances writing simultaneously
+2. **Conflict resolution not running**: Built-in conflict resolution may not be processing accumulated conflicts
+3. **CouchDB sync issues**: Remote sync creating unresolved revision conflicts
+4. **No automatic cleanup**: Conflicts accumulate indefinitely
+
+**Impact**:
+- **Data integrity risk**: 178 conflicts means 178 potentially lost task states
+- **Performance degradation**: PouchDB must track all conflict revisions
+- **Storybook broken**: Components importing stores trigger conflict errors
+- **Sync reliability**: Cross-device sync may lose data silently
+
+**Proposed Fixes**:
+1. **Immediate**: Run conflict resolution to merge/discard old revisions
+2. **Short-term**: Add conflict cleanup routine on app startup
+3. **Long-term**: Implement real-time conflict detection & user notification
+4. **Storybook**: Use mock stores or separate DB instance for stories
+
+**Related Files**:
+- `src/composables/useDatabase.ts` - PouchDB abstraction (line 953)
+- `src/composables/useReliableSyncManager.ts` - Sync orchestration
+- `src/composables/useCouchDBSync.ts` - CouchDB-specific sync
+- `docs/conflict-systems-resolution/` - Conflict resolution docs
 
 ### ISSUE-009: Vue TypeScript Errors (15 total)
 
@@ -1382,7 +1467,7 @@ sync: {
 | Task | Description | Status |
 |------|-------------|--------|
 | 13.1 | Audit current sync issues | PENDING |
-| 13.2 | Fix timer sync across tabs (BUG-016) | ✅ DONE Dec 19, 2025 - Fixed useCrossTabSync.ts initialize() |
+| 13.2 | Fix timer sync across tabs (BUG-016) | ✅ DONE Dec 19, 2025 - pinia-shared-state@0.5.1 for cross-tab sync |
 | 13.3 | Improve conflict resolution UI | PENDING |
 | 13.4 | Add sync status indicator improvements | PENDING |
 | 13.5 | Test multi-device scenarios E2E | PENDING |
@@ -1392,6 +1477,20 @@ sync: {
 - `src/composables/useCouchDBSync.ts`
 - `src/composables/useCrossTabSync.ts`
 - `src/config/database.ts`
+- `src/main.ts` - PiniaSharedState plugin configuration
+- `src/stores/timer.ts` - Timer store with share:false to exclude from plugin
+
+**BUG-016 Fix Details (Dec 19, 2025)**:
+- Installed `pinia-shared-state@0.5.1` for cross-tab Pinia store synchronization
+- Timer store excluded with `share: { enable: false }` - has Date objects that don't serialize + custom sync
+- Git checkpoint: `pre-pinia-shared-state` tag for rollback
+
+**Rollback Procedure** (if pinia-shared-state causes issues):
+```bash
+git checkout pre-pinia-shared-state -- src/main.ts src/stores/timer.ts
+npm uninstall pinia-shared-state
+npm run dev
+```
 
 **Success Criteria**:
 - [ ] Sync works reliably across 2+ devices

@@ -639,13 +639,13 @@ Dec 18, 2025 - Lint now blocking in CI. Unit tests deferred to TASK-020.
 
 ---
 
-### TASK-021: Real-Time Cross-Instance Timer Sync (BLOCKED - NEEDS RESEARCH)
+### TASK-021: Real-Time Cross-Instance Timer Sync (IN PROGRESS)
 
 **Goal**: Make timer sync immediate and work across different browser instances/devices.
 
 **Priority**: P1-HIGH (part of ROAD-013 Sync Hardening)
 
-**Status**: ⚠️ **BLOCKED** - Implementation attempted but NOT WORKING
+**Status**: 🟡 **IN PROGRESS** - Root cause identified, implementing fix
 
 **Related**: BUG-016 (timer not syncing), ISSUE-007 (timer sync across instances), TASK-017 (KDE widget)
 
@@ -662,7 +662,87 @@ Different Chrome instances, different browsers, or different devices do NOT sync
 
 ---
 
-#### ❌ Dec 18, 2025 - Implementation Attempt (FAILED)
+#### ✅ Dec 19, 2025 - Research Complete (ROOT CAUSE CONFIRMED)
+
+**Root Cause Identified**: The `reliable-sync-change` event is **NEVER dispatched** during live sync!
+
+| Location | Code | Issue |
+|----------|------|-------|
+| `useReliableSyncManager.ts:1046-1063` | Live sync `on('change')` handler | Does NOT dispatch `reliable-sync-change` |
+| `useReliableSyncManager.ts:273-316` | `_setupSyncEventHandlers()` | WOULD dispatch event, but NEVER CALLED (dead code) |
+| `timer.ts:260-279` | `handleRemoteSyncChange` | Listens for `reliable-sync-change` that never comes |
+
+**Data Flow Problem**:
+```
+CouchDB Remote ──► Live Sync Handler (line 1046) ──► Task Store ✅ Reloaded
+                         │
+                         │ NO EVENT DISPATCHED!
+                         │
+                         X
+                         │
+                   timer.ts waits for event that never arrives
+```
+
+**Research Sources**:
+- [PouchDB Changes Feed Guide](https://pouchdb.com/guides/changes.html)
+- [PouchDB API Reference](https://pouchdb.com/api.html)
+- [PouchDB Replication Guide](https://pouchdb.com/guides/replication.html)
+
+---
+
+#### 🟢 Implementation Plan: Direct PouchDB Changes Feed
+
+**Chosen Approach**: Use PouchDB's native `db.changes()` API with `doc_ids` filter for real-time timer updates.
+
+**Why This Approach**:
+1. Official PouchDB pattern for real-time updates
+2. Filters to just timer document (efficient)
+3. Independent of sync system complexities
+4. Provides immediate updates when CouchDB receives changes
+
+**Implementation Steps**:
+
+| Step | Description | Effort | Status |
+|------|-------------|--------|--------|
+| 1 | ~~Research: How reliable-sync-change works~~ | ~~1h~~ | ✅ DONE |
+| 2 | ~~Research: PouchDB live changes API~~ | ~~1h~~ | ✅ DONE |
+| 3 | Create `useTimerChangesSync.ts` composable | ~1h | 🟡 IN PROGRESS |
+| 4 | Implement `db.changes()` listener with `doc_ids` filter | ~1h | TODO |
+| 5 | Add proper cleanup (cancel on unmount) | ~30m | TODO |
+| 6 | Add offline/reconnect handling | ~1h | TODO |
+| 7 | Integrate into timer store | ~1h | TODO |
+| 8 | Test cross-device sync scenarios | ~1h | TODO |
+
+**File Changes Required**:
+
+1. **NEW**: `src/composables/useTimerChangesSync.ts`
+   - Direct PouchDB changes feed for timer document
+   - Uses `doc_ids: ['pomo-flow-timer-session:data']` filter
+   - Proper cleanup with `cancel()` method
+
+2. **MODIFY**: `src/stores/timer.ts`
+   - Import and use `useTimerChangesSync`
+   - Replace `reliable-sync-change` listener with direct changes feed
+   - Keep existing `handleRemoteTimerUpdate()` logic
+
+**Success Criteria**:
+- [ ] Timer starts on Device A → appears on Device B within 2 seconds
+- [ ] Timer pause/resume syncs immediately
+- [ ] Only one "leader" can control the timer at a time
+- [ ] Graceful handling when offline
+- [ ] Changes listener properly cleaned up on unmount
+
+**Rollback Command**:
+```bash
+git checkout HEAD -- src/composables/useTimerChangesSync.ts src/stores/timer.ts
+```
+
+---
+
+#### ❌ Dec 18, 2025 - Previous Implementation Attempt (FAILED)
+
+<details>
+<summary>Click to expand failed attempt details</summary>
 
 **What Was Tried**:
 1. Added device ID system with localStorage persistence (`pomoflow-device-id`)
@@ -676,85 +756,12 @@ Different Chrome instances, different browsers, or different devices do NOT sync
 **Files Modified**: `src/stores/timer.ts` (lines 155-376 added)
 
 **What Did NOT Work**:
-1. **Sync not triggering** - The `reliable-sync-change` event may not be firing when timer document changes
-2. **Document conflicts** - Timer session had 88+ CouchDB conflicts, save still failing
-3. **Time still not in sync** - Even when sync appeared to work, times were different on devices
-4. **Timer changes on refresh** - When page is refreshed, the timer time changes (should maintain correct time based on startTime)
+1. **Sync not triggering** - The `reliable-sync-change` event was never being fired (root cause found!)
+2. **Document conflicts** - Timer session had 88+ CouchDB conflicts
+3. **Time still not in sync** - Times were different on devices
+4. **Timer changes on refresh** - Timer time changed on page refresh
 
-**Root Cause (Suspected)**:
-- The `reliable-sync-change` event is only emitted during manual sync, NOT on CouchDB live changes
-- Need to properly subscribe to CouchDB's `_changes` feed for real-time updates
-- Current implementation listens to wrong events
-
----
-
-#### 🔴 NEXT SESSION REQUIREMENTS
-
-**CRITICAL**: Do NOT attempt blind implementation again. Must:
-
-1. **Use Relevant Skill** - Invoke `dev-debugging` or `dev-fix-pinia` skill to properly debug
-2. **Research Online First** - Search for:
-   - "PouchDB CouchDB live sync changes listener"
-   - "PouchDB changes feed subscribe"
-   - "Real-time sync between browser instances PouchDB"
-   - "CouchDB changes feed JavaScript"
-3. **Verify Event System** - Check if `reliable-sync-change` is actually emitted on remote changes
-4. **Consider Alternative** - May need to use PouchDB's native `.changes()` API with `live: true` option directly
-
-**Reference Code to Research**:
-```javascript
-// PouchDB native changes feed (NOT currently implemented)
-db.changes({
-  live: true,
-  since: 'now',
-  include_docs: true
-}).on('change', function(change) {
-  // Handle timer document changes here
-});
-```
-
----
-
-#### Proposed Solutions
-
-**Option A: CouchDB Changes Feed (Recommended)**
-- Use CouchDB's `_changes` feed with `live: true` for real-time updates
-- Timer state stored in `timer:data` document
-- All instances subscribe to changes feed
-- Immediate sync across all devices/browsers
-- **Pros**: Works everywhere, leverages existing CouchDB infrastructure
-- **Cons**: Requires active internet connection
-
-**Option B: WebSocket Server**
-- Dedicated WebSocket server for real-time timer sync
-- Lower latency than CouchDB polling
-- **Pros**: Sub-100ms latency possible
-- **Cons**: Additional infrastructure, doesn't work offline
-
-**Option C: Hybrid (CouchDB + Local)**
-- Use CouchDB for cross-device sync
-- Use BroadcastChannel for same-browser sync (faster)
-- Fall back gracefully when offline
-- **Pros**: Best of both worlds
-- **Cons**: More complex implementation
-
-#### Implementation Steps
-
-| Step | Description | Effort | Status |
-|------|-------------|--------|--------|
-| 1 | Fix same-browser leadership conflict (BUG-016) | ~2h | ⚠️ PARTIAL |
-| 2 | **RESEARCH**: How reliable-sync-change works | ~1h | **TODO - NEXT** |
-| 3 | **RESEARCH**: PouchDB live changes API | ~1h | **TODO - NEXT** |
-| 4 | Implement proper CouchDB changes listener | ~4h | TODO |
-| 5 | Add conflict resolution for concurrent timer updates | ~4h | TODO |
-| 6 | Add offline handling (pause sync, resume on reconnect) | ~2h | TODO |
-| 7 | Test multi-device scenarios | ~2h | TODO |
-
-**Success Criteria**:
-- [ ] Timer starts on Device A → appears on Device B within 2 seconds
-- [ ] Timer pause/resume syncs immediately
-- [ ] Only one "leader" can control the timer at a time
-- [ ] Graceful handling when offline
+</details>
 
 ---
 

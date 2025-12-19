@@ -1067,6 +1067,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | BUG-020 | Tasks randomly disappearing without user deletion | P3-LOW | ⏸️ PASSIVE MONITORING - Logger integrated, waiting for reproduction. If occurs: run `window.taskLogger.printSummary()` |
 | ~~BUG-021~~ | ~~Dev-Manager Skills/Docs tabs show black until manual refresh~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Lazy loading iframes on first tab activation |
 | ~~BUG-022~~ | ~~Dev-Manager Kanban not syncing with MASTER_PLAN.md updates~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Symlink + `--symlinks` flag for serve |
+| ~~BUG-023~~ | ~~Dev-Manager Stats/Kanban showing different Active Work items~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Pattern order fix, regex newline fix, symlink restoration |
 
 **Details**: See "Open Bug Analysis" section below.
 
@@ -1133,6 +1134,26 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 **Files Modified**:
 - `dev-manager/docs/MASTER_PLAN.md` - Now symlink to `../../docs/MASTER_PLAN.md`
 - `package.json` - Added `--symlinks` to `dev:manager` script
+
+#### ~~BUG-023~~: Dev-Manager Stats/Kanban Showing Different Active Work Items (FIXED Dec 19, 2025)
+
+**Problem**: Stats dashboard showed 3 items in Active Work while Kanban showed different items (3 in progress, 2 in review). TASK-012 incorrectly shown as "In Progress" when it was "COMPLETE - Partial". TASK-024 missing from Stats.
+
+**Root Causes**:
+1. **Pattern check order wrong** - Kanban's `parseTaskStatus()` checked in-progress patterns (including "PARTIAL") BEFORE done patterns. For status "COMPLETE - Partial", "PARTIAL" matched first, returning 'in-progress' instead of 'done'.
+2. **Regex spanning newlines** - Stats used `[^|]+` which matched across line breaks. TASK-024 in the Blocks column of TASK-022's row was matched incorrectly, spanning to the next line.
+3. **Symlink became regular file** - `dev-manager/docs/MASTER_PLAN.md` had reverted to a regular file copy instead of symlink.
+
+**Solution** (3-part fix):
+1. **Kanban fix**: Changed pattern order - done patterns checked FIRST before in-progress
+2. **Stats regex fix**: Changed `[^|]+` to `[^|\n]+` to prevent multi-line matching
+3. **Symlink restoration**: Recreated symlink for MASTER_PLAN.md
+
+**Files Modified**:
+- `dev-manager/kanban/index.html` - Pattern check order (done → review → in-progress)
+- `dev-manager/stats/index.html` - Regex `[^|\n]+` to not span lines
+- `dev-manager/docs/MASTER_PLAN.md` - Recreated as symlink
+- `docs/MASTER_PLAN.md` - Updated TASK-024 status to 👀 MONITORING
 
 #### BUG-004 Investigation & Fix (Dec 16, 2025)
 

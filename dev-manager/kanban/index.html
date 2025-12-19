@@ -1300,24 +1300,24 @@
         '⏳', '🔄', '⏸️', '⏸', '🚧'
       ];
 
-      // Check review patterns FIRST (most specific)
+      // Check done patterns FIRST (highest priority)
+      for (const pattern of donePatterns) {
+        if (text.includes(pattern)) {
+          return 'done';
+        }
+      }
+
+      // Check review patterns SECOND
       for (const pattern of reviewPatterns) {
         if (text.includes(pattern)) {
           return 'review';
         }
       }
 
-      // Check in-progress patterns SECOND
+      // Check in-progress patterns THIRD
       for (const pattern of inProgressPatterns) {
         if (text.includes(pattern)) {
           return 'in-progress';
-        }
-      }
-
-      // Check done patterns second
-      for (const pattern of donePatterns) {
-        if (text.includes(pattern)) {
-          return 'done';
         }
       }
 

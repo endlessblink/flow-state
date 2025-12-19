@@ -483,6 +483,25 @@ The application uses port 5546 by default. Vite will auto-allocate alternative p
 4. **Maintain Backward Compatibility** - Especially for data migrations and task scheduling
 5. **Type Safety** - All new code must have proper TypeScript types
 6. **Component Structure** - Follow established patterns for script setup, props, and state management
+7. **Check Task Dependencies** - Before starting work, check the Task Dependency Index in `docs/MASTER_PLAN.md`
+
+### Task Dependency Workflow
+
+**Before starting any task from MASTER_PLAN.md:**
+
+1. **Read the Dependency Index Table** at the top of the Active Work section
+2. **Check for file conflicts** - If your task's Primary Files overlap with an IN_PROGRESS task, warn the user
+3. **Check dependencies** - If task has "Depends" entry, verify that task is DONE first
+4. **Suggest alternatives** - If blocked, recommend parallel-safe tasks that don't conflict
+5. **Update the table** - When starting work: change Status to IN_PROGRESS. When done: change to DONE
+
+**Example conflict detection:**
+```
+TASK-024 wants to modify tasks.ts
+TASK-022 is IN_PROGRESS and also modifies tasks.ts
+→ WARN: "TASK-024 conflicts with IN_PROGRESS TASK-022 (both modify tasks.ts).
+   Recommend working on TASK-014 or TASK-023 instead."
+```
 
 ### Best Practices
 1. **Composables over Mixins** - Use Vue 3 composables for reusable logic

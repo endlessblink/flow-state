@@ -17,6 +17,11 @@
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-disappearance-helper.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/dependency-check-reminder.sh",
+            "timeout": 5
           }
         ]
       }

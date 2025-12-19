@@ -155,9 +155,11 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-027 | PAUSED | `stores/*` (done), `utils/*`, `composables/*`, `components/*`, `views/*` | ~~TASK-011~~ | - |
 | ~~TASK-028~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json` | - | - |
 | TASK-029 | PLANNED | `.claude/skills/storybook-audit/*`, `src/stories/**` | TASK-014 | - |
+| **TASK-030** | **IN_PROGRESS** | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
 **Paused**: TASK-027 (lint warning fixes - 88 fixed, 1,292 remaining)
+**Active**: TASK-030 (TypeScript strict type errors - 236 remaining)
 **Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
 **Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially
@@ -1068,6 +1070,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-021~~ | ~~Dev-Manager Skills/Docs tabs show black until manual refresh~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Lazy loading iframes on first tab activation |
 | ~~BUG-022~~ | ~~Dev-Manager Kanban not syncing with MASTER_PLAN.md updates~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Symlink + `--symlinks` flag for serve |
 | ~~BUG-023~~ | ~~Dev-Manager Stats/Kanban showing different Active Work items~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Pattern order fix, regex newline fix, symlink restoration |
+| ~~BUG-024~~ | ~~Sync status indicator flickering~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Added 1.5s debounce on status transitions during live sync. Part of TASK-021 |
 
 **Details**: See "Open Bug Analysis" section below.
 
@@ -1541,7 +1544,7 @@ sync: {
 | 13.1 | Audit current sync issues | PENDING |
 | 13.2 | Fix timer sync across tabs (BUG-016) | ✅ DONE Dec 19, 2025 - pinia-shared-state@0.5.1 for cross-tab sync |
 | 13.3 | Improve conflict resolution UI | PENDING |
-| 13.4 | Add sync status indicator improvements | PENDING |
+| 13.4 | Add sync status indicator improvements | ✅ DONE Dec 19, 2025 - Added debouncing to prevent flickering (BUG-024) |
 | 13.5 | Test multi-device scenarios E2E | PENDING |
 
 **Critical Files**:

@@ -127,8 +127,8 @@ Phase 3 (Mobile) ←────────────────────
 
 | ID | Status | Primary Files | Depends | Blocks |
 |----|--------|---------------|---------|--------|
-| TASK-022 | IN_PROGRESS | `tasks.ts`, `taskDisappearanceLogger.ts` | - | TASK-024 |
-| TASK-024 | PLANNED | `tasks.ts` | TASK-022 | - |
+| ~~TASK-022~~ | ✅ DONE | `tasks.ts`, `taskDisappearanceLogger.ts` | - | ~~TASK-024~~ |
+| TASK-024 | READY | `tasks.ts` | ~~TASK-022~~ | - |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | TASK-014 | IN_PROGRESS | `*.stories.ts`, `*.vue` (UI) | - | - |
 | TASK-019 | PLANNED | `tasks.ts`, stores, views | - | - |
@@ -137,8 +137,8 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
-**Blocked**: TASK-024 (waiting on TASK-022)
-**Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially
+**Ready**: TASK-024 (TASK-022 complete - can start monitoring review)
+**Conflict Warning**: `tasks.ts` appears in TASK-024, TASK-019 - work sequentially
 
 ---
 
@@ -160,19 +160,35 @@ Dec 19, 2025 - Added dependency tracking to prevent file conflicts when working 
 
 ---
 
+### ~~TASK-026~~: AskUserQuestion Enforcement Hooks (COMPLETE)
+Dec 19, 2025 - Added hooks to force Claude Code to use AskUserQuestion tool properly.
+
+**Features**:
+- General reminder hook to always use AskUserQuestion tool for questions
+- Misunderstanding detector hook that triggers when user indicates confusion
+- Pattern detection for phrases like "you didn't understand", "wrong", "try again"
+
+**Files Created**:
+- `.claude/hooks/ask-questions-reminder.sh` - Always reminds to use AskUserQuestion
+- `.claude/hooks/misunderstanding-detector.sh` - Detects frustration patterns
+- `.claude/settings.json` - Both hooks registered
+
+---
+
 ### ~~TASK-018~~: Canvas Inbox Filters (COMPLETE)
 Dec 18, 2025 - Added Unscheduled, Priority, and Project filters to canvas inbox.
 *Full details: [Archive](./archive/Done-Tasks-Master-Plan.md#task-018-canvas-inbox-filters-complete)*
 
 ---
 
-### TASK-022: Task Disappearance Logger & Investigation (IN PROGRESS)
+### ~~TASK-022~~: Task Disappearance Logger & Investigation (✅ DONE)
 
 **Goal**: Create comprehensive logging system to track and debug mysteriously disappearing tasks (BUG-020).
 
 **Priority**: P1-HIGH
 
 **Started**: Dec 18, 2025
+**Completed**: Dec 19, 2025
 
 **Problem**: Tasks are randomly disappearing without user deletion - need to identify the source.
 
@@ -203,8 +219,8 @@ Dec 18, 2025 - Added Unscheduled, Priority, and Project filters to canvas inbox.
 | 3 | Add logging to all `tasks.value =` assignments | ✅ DONE (Dec 19, 2025) |
 | 4 | Add logging to sync change handlers | ✅ DONE (Dec 19, 2025) |
 | 5 | Add logging to cross-tab sync | ✅ DONE (Dec 19, 2025) |
-| 6 | Monitor for 24-48 hours | **IN PROGRESS** (Started Dec 19) |
-| 7 | Analyze logs and identify root cause | TODO |
+
+*Monitoring and analysis moved to TASK-024*
 
 #### Files Created
 
@@ -234,35 +250,6 @@ window.taskLogger.printSummary()
 // Export logs for analysis
 window.taskLogger.exportLogs()
 ```
-
-#### Next Steps (for next session)
-
-1. **Integrate into task store** - Add `takeSnapshot()` calls at all critical points:
-   ```typescript
-   // In tasks.ts, wrap all tasks.value assignments
-   const oldTasks = [...tasks.value]
-   tasks.value = newTasks
-   taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromPouchDB')
-   ```
-
-2. **Hook into deleteTask** - Add `markUserDeletion()` before intentional deletes:
-   ```typescript
-   taskDisappearanceLogger.markUserDeletion(taskId)
-   await deleteTask(taskId)
-   ```
-
-3. **Add to sync handlers** - Log when sync changes come in:
-   ```typescript
-   // In useReliableSyncManager.ts handleSyncChange
-   taskDisappearanceLogger.takeSnapshot(tasks.value, 'sync-change-received')
-   ```
-
-4. **Enable by default temporarily** - Auto-enable on app load for monitoring
-
-5. **Add data-task-count attribute** - For auto-monitoring:
-   ```vue
-   <div :data-task-count="tasks.length">...</div>
-   ```
 
 #### Rollback
 

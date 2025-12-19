@@ -161,7 +161,7 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
   }
 
   // Component caching
-  const cacheComponent = (key: string, component: any, ttl: number = 300000) => {
+  const cacheComponent = (key: string, component: unknown, ttl: number = 300000) => {
     if (!enableComponentCaching) return
 
     // Clear old entries if cache is full
@@ -183,7 +183,7 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
     renderMetrics.value.cachedComponents = componentCache.value.size
   }
 
-  const getCachedComponent = (key: string): any => {
+  const getCachedComponent = (key: string): unknown => {
     if (!enableComponentCaching) return null
 
     const cached = componentCache.value.get(key)
@@ -213,13 +213,13 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
     dependencyKeys: string[],
     componentId: string
   ) => {
-    let cachedComponent: any = null
-    let lastDependencyValues: any[] = []
+    let cachedComponent: unknown = null
+    let lastDependencyValues: unknown[] = []
 
     return () => {
       const currentDependencyValues = dependencyKeys.map(key => {
         try {
-          return (window as any)[key] || (globalThis as any)[key]
+          return (window as unknown)[key] || (globalThis as unknown)[key]
         } catch {
           return undefined
         }

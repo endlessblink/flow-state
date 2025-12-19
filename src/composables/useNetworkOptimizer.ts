@@ -10,7 +10,7 @@ export interface NetworkRequest {
   id: string
   url: string
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
-  data?: any
+  data?: unknown
   priority: 'high' | 'normal' | 'low'
   timestamp: number
   retryCount?: number
@@ -21,7 +21,7 @@ export interface NetworkRequest {
 export interface NetworkResponse {
   id: string
   status: number
-  data: any
+  data: unknown
   headers: Record<string, string>
   timestamp: number
   duration: number
@@ -141,7 +141,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   }
 
   // Compress data if needed
-  const compressData = async (data: any): Promise<{ compressed: boolean; data: any }> => {
+  const compressData = async (data: unknown): Promise<{ compressed: boolean; data: unknown }> => {
     if (!enableCompression || !data) return { compressed: false, data }
 
     const serialized = typeof data === 'string' ? data : JSON.stringify(data)
@@ -195,7 +195,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   }
 
   // Decompress data
-  const _decompressData = async (compressedData: any): Promise<any> => {
+  const _decompressData = async (compressedData: unknown): Promise<any> => {
     if (!compressedData?._compressed) return compressedData
 
     try {

@@ -37,7 +37,7 @@ export interface BackupInfo {
   checksum: string
   formattedTimestamp: string
   formattedSize: string
-  data?: any // Optional raw backup data for export
+  data?: unknown // Optional raw backup data for export
 }
 
 /**
@@ -108,7 +108,7 @@ export function useBackupRestoration() {
    * Check if backup system is available
    */
   const isBackupSystemAvailable = (): boolean => {
-    return !!(window as any).pomoFlowBackup
+    return !!(window as Window & typeof globalThis).pomoFlowBackup
   }
 
   /**
@@ -118,7 +118,7 @@ export function useBackupRestoration() {
     if (!isBackupSystemAvailable()) {
       throw new Error('Backup system not available')
     }
-    return (window as any).pomoFlowBackup
+    return (window as Window & typeof globalThis).pomoFlowBackup
   }
 
   /**
@@ -167,7 +167,7 @@ export function useBackupRestoration() {
       const _backupAPI = getBackupAPI()
 
       // Try to get backup list - this might need to be implemented in the API
-      let backups: any[] = []
+      let backups: unknown[] = []
 
       // For now, try to get from localStorage as fallback
       try {

@@ -294,7 +294,7 @@ export function useVueFlowStability(
   /**
    * Handle error conditions
    */
-  const handleError = (error: Error, context?: any) => {
+  const handleError = (error: Error, context?: unknown) => {
     console.error('❌ [VUE_FLOW_STABILITY] Error:', error, context)
 
     hasErrors.value = true
@@ -391,7 +391,7 @@ export function useVueFlowStability(
     const snapshot: VueFlowStateSnapshot = {
       nodes: [...nodes.value],
       edges: [...edges.value],
-      selectedNodes: nodes.value.filter((n: any) => (n as any).selected).map((n: any) => n.id),
+      selectedNodes: nodes.value.filter((n: unknown) => (n as any).selected).map((n: unknown) => n.id),
       viewport,
       timestamp: Date.now()
     }
@@ -561,7 +561,7 @@ export function useVueFlowStability(
 /**
  * Debounce utility function
  */
-function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+function debounce<T extends (...args: unknown[]) => any>(func: T, wait: number): T {
   let timeout: NodeJS.Timeout | null = null
 
   return ((...args: Parameters<T>) => {

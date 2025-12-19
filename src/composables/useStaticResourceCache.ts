@@ -187,8 +187,11 @@ export function useStaticResourceCache(config: Partial<CacheConfig> = {}) {
     try {
       // Use CompressionStream API if available
       if ('CompressionStream' in window) {
-        const stream = new Response(data).body!
-        const compressedStream = stream.pipeThrough(new CompressionStream('gzip'))
+        const responseBody = new Response(data).body
+        if (!responseBody) {
+          return { data, compressed: false }
+        }
+        const compressedStream = responseBody.pipeThrough(new CompressionStream('gzip'))
         const compressedArrayBuffer = await new Response(compressedStream).arrayBuffer()
 
         const originalSize = estimateResourceSize(data)
@@ -258,12 +261,12 @@ export function useStaticResourceCache(config: Partial<CacheConfig> = {}) {
 
     // Check cache first
     if (cache.value.has(cacheKey)) {
-      const cached = cache.value.get(cacheKey)!
-      if (isCacheValid(cached, request.ttl)) {
+      const cached = cache.value.get(cacheKey)
+      if (cached && isCacheValid(cached, request.ttl)) {
         metrics.value.cacheHits++
         console.log(`🎯 [STATIC_CACHE] Cache hit: ${url}`)
         return cached.data
-      } else {
+      } else if (cached) {
         // Remove expired entry
         cache.value.delete(cacheKey)
         metrics.value.currentCacheSize -= cached.size

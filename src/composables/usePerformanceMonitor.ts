@@ -220,7 +220,7 @@ export const usePerformanceMonitor = () => {
     const memoryInterval = setInterval(measureMemoryUsage, 2000)
 
     // Store interval for cleanup
-    ;(window as any).__performanceMonitorMemoryInterval = memoryInterval
+    ;(window as Window & typeof globalThis).__performanceMonitorMemoryInterval = memoryInterval
 
     console.log('🚀 Performance monitoring started')
   }
@@ -229,10 +229,10 @@ export const usePerformanceMonitor = () => {
     isMonitoring.value = false
 
     // Clear memory monitoring interval
-    const memoryInterval = (window as any).__performanceMonitorMemoryInterval
+    const memoryInterval = (window as Window & typeof globalThis).__performanceMonitorMemoryInterval
     if (memoryInterval) {
       clearInterval(memoryInterval)
-      delete (window as any).__performanceMonitorMemoryInterval
+      delete (window as Window & typeof globalThis).__performanceMonitorMemoryInterval
     }
 
     console.log('⏹️ Performance monitoring stopped')

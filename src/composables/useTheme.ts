@@ -50,7 +50,7 @@ export function useTheme() {
      * Apply theme-aware styling
      * Usage: :style="utils.themeStyle({ light: '...', dark: '...' })"
      */
-    themeStyle: (styles: { light?: any; dark?: any }) => {
+    themeStyle: (styles: { light?: unknown; dark?: unknown }) => {
       return isDarkMode.value ? styles.dark : styles.light
     },
 

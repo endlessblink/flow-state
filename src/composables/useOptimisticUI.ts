@@ -11,8 +11,8 @@ import type { QueuedOperation, OnlineStatus } from '@/utils/offlineQueue'
 interface OptimisticUpdate {
   id: string
   operation: QueuedOperation
-  originalData: any
-  optimisticData: any
+  originalData: unknown
+  optimisticData: unknown
   timestamp: number
   status: 'pending' | 'success' | 'failed' | 'reverted'
   uiElements: string[] // CSS selectors or component IDs affected
@@ -71,7 +71,7 @@ export function useOptimisticUI() {
   /**
    * Apply optimistic update for task creation
    */
-  const createTaskOptimistic = async (taskData: any): Promise<string> => {
+  const createTaskOptimistic = async (taskData: unknown): Promise<string> => {
     const optimisticId = `optimistic-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
     const optimisticTask = {
@@ -138,7 +138,7 @@ export function useOptimisticUI() {
   /**
    * Apply optimistic update for task update
    */
-  const updateTaskOptimistic = async (taskId: string, updates: any): Promise<void> => {
+  const updateTaskOptimistic = async (taskId: string, updates: unknown): Promise<void> => {
     const originalTask = tasksStore.getTask(taskId)
     if (!originalTask) {
       throw new Error('Task not found for optimistic update')

@@ -23,7 +23,7 @@ const RECONNECT_DELAY_MS = 3000
 const MAX_RECONNECT_ATTEMPTS = 5
 
 export interface TimerChangesHandler {
-  (doc: any): void | Promise<void>
+  (doc: unknown): void | Promise<void>
 }
 
 export interface UseTimerChangesSyncReturn {
@@ -38,7 +38,7 @@ export interface UseTimerChangesSyncReturn {
 }
 
 // Module-level state to ensure single listener
-let changesHandler: any = null
+let changesHandler: unknown = null
 let currentCallback: TimerChangesHandler | null = null
 let reconnectAttempts = 0
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
@@ -47,9 +47,9 @@ const isConnected = ref(false)
 /**
  * Get PouchDB instance from global singleton
  */
-const getPouchDB = (): any | null => {
+const getPouchDB = (): unknown | null => {
   if (typeof window === 'undefined') return null
-  return (window as any).pomoFlowDb || null
+  return (window as Window & typeof globalThis).pomoFlowDb || null
 }
 
 /**
@@ -82,7 +82,7 @@ const startChangesListener = (onTimerChange: TimerChangesHandler): boolean => {
       include_docs: true,
       doc_ids: [TIMER_DOC_ID]
     })
-      .on('change', (change: any) => {
+      .on('change', (change: unknown) => {
         if (change.doc && !change.deleted) {
           console.log('[TIMER CHANGES] Received timer update from changes feed')
           try {
@@ -100,7 +100,7 @@ const startChangesListener = (onTimerChange: TimerChangesHandler): boolean => {
           }
         }
       })
-      .on('error', (err: any) => {
+      .on('error', (err: unknown) => {
         console.error('[TIMER CHANGES] Changes feed error:', err)
         isConnected.value = false
 
@@ -117,7 +117,7 @@ const startChangesListener = (onTimerChange: TimerChangesHandler): boolean => {
           console.error('[TIMER CHANGES] Max reconnect attempts reached')
         }
       })
-      .on('complete', (info: any) => {
+      .on('complete', (info: unknown) => {
         // Live changes feed shouldn't complete unless cancelled
         console.log('[TIMER CHANGES] Changes feed completed (cancelled or error):', info)
         isConnected.value = false

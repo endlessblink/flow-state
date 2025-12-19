@@ -465,8 +465,8 @@ export function useModalFocus(options: {
  * Hook for managing keyboard navigation in lists and menus
  */
 export function useListNavigation(options: {
-  items: any[]
-  onSelect?: (item: any, index: number) => void
+  items: unknown[]
+  onSelect?: (item: unknown, index: number) => void
   loop?: boolean
   orientation?: 'vertical' | 'horizontal'
 }) {

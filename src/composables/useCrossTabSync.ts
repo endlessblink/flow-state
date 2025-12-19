@@ -16,20 +16,20 @@ export interface CrossTabMessage {
   type: 'task_operation' | 'ui_state_change' | 'canvas_change' | 'heartbeat' | 'timer_session'
   timestamp: number
   tabId: string
-  data: any
+  data: unknown
 }
 
 // ========== PHASE 2: TIMER LEADER ELECTION ==========
 export interface TimerLeaderState {
   leaderId: string          // Tab ID of the leader
   lastHeartbeat: number     // Timestamp of last heartbeat
-  sessionState: any         // Current timer session (null if no session)
+  sessionState: unknown         // Current timer session (null if no session)
 }
 
 export interface TimerSessionSync {
   action: 'claim_leadership' | 'heartbeat' | 'session_update' | 'session_stop'
   leaderId: string
-  sessionState?: any
+  sessionState?: unknown
   timestamp: number
 }
 
@@ -37,21 +37,21 @@ export interface TaskOperation {
   operation: 'create' | 'update' | 'delete' | 'bulk_update' | 'bulk_delete'
   taskId?: string
   taskIds?: string[]
-  taskData?: any
-  oldData?: any
+  taskData?: unknown
+  oldData?: unknown
   timestamp: number
 }
 
 export interface UIStateChange {
   store: 'ui' | 'canvas'
   action: string
-  data: any
+  data: unknown
   timestamp: number
 }
 
 export interface CanvasChange {
   action: 'node_move' | 'section_collapse' | 'viewport_change'
-  data: any
+  data: unknown
   timestamp: number
 }
 
@@ -76,7 +76,7 @@ const TIMER_LEADER_TIMEOUT_MS = 5000 // 5 seconds - if no heartbeat, leader is d
 let timerHeartbeatTimer: NodeJS.Timeout | null = null
 
 // Callbacks for timer state updates (set by timer store)
-let onTimerSessionUpdate: ((session: any) => void) | null = null
+let onTimerSessionUpdate: ((session: unknown) => void) | null = null
 let onBecomeLeader: (() => void) | null = null
 let onLoseLeadership: (() => void) | null = null
 
@@ -230,7 +230,7 @@ const handleTimerSessionMessage = (sync: TimerSessionSync) => {
 }
 
 // Broadcast timer session update (only for leader)
-const broadcastTimerSession = (sessionState: any) => {
+const broadcastTimerSession = (sessionState: unknown) => {
   if (!isTimerLeader.value) {
     console.warn('⚠️ [TIMER] Only leader can broadcast timer session')
     return
@@ -512,7 +512,7 @@ const processMessageQueue = async () => {
 }
 
 // Handle task operations with conflict detection
-const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => {
+const handleTaskOperation = async (operation: TaskOperation, taskStore: unknown) => {
   try {
     // Check for conflicts with pending local operations
     const conflicts = await detectTaskConflicts(operation, taskStore)
@@ -536,7 +536,7 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
       case 'update':
         if (operation.taskId && operation.taskData) {
           // Update local store with new data
-          const existingTask = taskStore.tasks.find((t: any) => t.id === operation.taskId)
+          const existingTask = taskStore.tasks.find((t: unknown) => t.id === operation.taskId)
           if (existingTask) {
             Object.assign(existingTask, operation.taskData)
           }
@@ -546,7 +546,7 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
       case 'delete':
         if (operation.taskId) {
           // Remove task from local store
-          const index = taskStore.tasks.findIndex((t: any) => t.id === operation.taskId)
+          const index = taskStore.tasks.findIndex((t: unknown) => t.id === operation.taskId)
           if (index > -1) {
             // Log before splice - mark as cross-tab sync deletion (not user-initiated)
             const oldTasks = [...taskStore.tasks]
@@ -561,7 +561,7 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
           // Remove multiple tasks from local store
           const oldTasks = [...taskStore.tasks]
           operation.taskIds.forEach(taskId => {
-            const index = taskStore.tasks.findIndex((t: any) => t.id === taskId)
+            const index = taskStore.tasks.findIndex((t: unknown) => t.id === taskId)
             if (index > -1) {
               taskStore.tasks.splice(index, 1)
             }
@@ -573,8 +573,8 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
       case 'bulk_update':
         if (operation.taskData && Array.isArray(operation.taskData)) {
           // Update multiple tasks
-          operation.taskData.forEach((taskUpdate: any) => {
-            const existingTask = taskStore.tasks.find((t: any) => t.id === taskUpdate.id)
+          operation.taskData.forEach((taskUpdate: unknown) => {
+            const existingTask = taskStore.tasks.find((t: unknown) => t.id === taskUpdate.id)
             if (existingTask) {
               Object.assign(existingTask, taskUpdate)
             }
@@ -588,7 +588,7 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
 }
 
 // Detect conflicts between remote operation and pending local operations
-const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: any): Promise<ConflictInfo[]> => {
+const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: unknown): Promise<ConflictInfo[]> => {
   const conflicts: ConflictInfo[] = []
 
   if (!remoteOperation.taskId) return conflicts
@@ -612,7 +612,7 @@ const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: a
 }
 
 // Apply conflict resolutions
-const applyConflictResolutions = async (resolutions: ConflictInfo[], remoteOperation: TaskOperation, taskStore: any) => {
+const applyConflictResolutions = async (resolutions: ConflictInfo[], remoteOperation: TaskOperation, taskStore: unknown) => {
   for (const resolution of resolutions) {
     switch ((resolution as any).resolution) {
       case 'local_wins':
@@ -652,7 +652,7 @@ const applyConflictResolutions = async (resolutions: ConflictInfo[], remoteOpera
 }
 
 // Apply a single task operation with save coordination
-const applyTaskOperation = async (operation: TaskOperation, taskStore: any) => {
+const applyTaskOperation = async (operation: TaskOperation, taskStore: unknown) => {
   switch (operation.operation) {
     case 'create':
       if (operation.taskData && operation.taskId) {
@@ -664,7 +664,7 @@ const applyTaskOperation = async (operation: TaskOperation, taskStore: any) => {
 
     case 'update':
       if (operation.taskId && operation.taskData) {
-        const existingTask = taskStore.tasks.find((t: any) => t.id === operation.taskId)
+        const existingTask = taskStore.tasks.find((t: unknown) => t.id === operation.taskId)
         if (existingTask) {
           Object.assign(existingTask, operation.taskData)
           // Save through direct PouchDB (saveCoordinator removed)
@@ -675,7 +675,7 @@ const applyTaskOperation = async (operation: TaskOperation, taskStore: any) => {
 
     case 'delete':
       if (operation.taskId) {
-        const index = taskStore.tasks.findIndex((t: any) => t.id === operation.taskId)
+        const index = taskStore.tasks.findIndex((t: unknown) => t.id === operation.taskId)
         if (index > -1) {
           taskStore.tasks.splice(index, 1)
           // Save through direct PouchDB (saveCoordinator removed)
@@ -687,7 +687,7 @@ const applyTaskOperation = async (operation: TaskOperation, taskStore: any) => {
 }
 
 // Handle UI state changes
-const handleUIStateChange = async (change: UIStateChange, uiStore: any, canvasStore: any) => {
+const handleUIStateChange = async (change: UIStateChange, uiStore: unknown, canvasStore: unknown) => {
   try {
     if (change.store === 'ui') {
       // Update UI store state
@@ -724,12 +724,12 @@ const handleUIStateChange = async (change: UIStateChange, uiStore: any, canvasSt
 }
 
 // Handle canvas changes
-const handleCanvasChange = async (change: CanvasChange, canvasStore: any) => {
+const handleCanvasChange = async (change: CanvasChange, canvasStore: unknown) => {
   try {
     switch (change.action) {
       case 'node_move':
         if (change.data.nodeId && change.data.position) {
-          const node = canvasStore.nodes.find((n: any) => n.id === change.data.nodeId)
+          const node = canvasStore.nodes.find((n: unknown) => n.id === change.data.nodeId)
           if (node) {
             node.position = change.data.position
           }
@@ -738,7 +738,7 @@ const handleCanvasChange = async (change: CanvasChange, canvasStore: any) => {
 
       case 'section_collapse':
         if (change.data.sectionId && typeof change.data.collapsed === 'boolean') {
-          const section = canvasStore.sections.find((s: any) => s.id === change.data.sectionId)
+          const section = canvasStore.sections.find((s: unknown) => s.id === change.data.sectionId)
           if (section) {
             section.collapsed = change.data.collapsed
             if (change.data.collapsedHeight) {
@@ -995,7 +995,7 @@ export function useCrossTabSync() {
     claimTimerLeadership,
     broadcastTimerSession,
     setTimerCallbacks: (callbacks: {
-      onSessionUpdate?: (session: any) => void
+      onSessionUpdate?: (session: unknown) => void
       onBecomeLeader?: () => void
       onLoseLeadership?: () => void
     }) => {

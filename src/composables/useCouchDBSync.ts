@@ -17,7 +17,7 @@ export const useCouchDBSync = () => {
   const syncStatus = ref<SyncStatus>('idle')
   const lastSyncTime = ref<Date | null>(null)
   const pendingChanges = ref(0)
-  const syncErrors = ref<any[]>([])
+  const syncErrors = ref<unknown[]>([])
   const isOnline = ref(navigator.onLine)
   const remoteConnected = ref(false)
 
@@ -173,7 +173,7 @@ export const useCouchDBSync = () => {
   }
 
   // Handle sync change events
-  const handleSyncChange = (direction: 'push' | 'pull', info: any) => {
+  const handleSyncChange = (direction: 'push' | 'pull', info: unknown) => {
     const changeCount = info.change?.docs?.length || 0
     pendingChanges.value += changeCount
 

@@ -231,7 +231,10 @@ export function useCanvasProgressiveLoading(
       if (!nodeGroups.has(priorityKey)) {
         nodeGroups.set(priorityKey, [])
       }
-      nodeGroups.get(priorityKey)!.push(node)
+      const group = nodeGroups.get(priorityKey)
+      if (group) {
+        group.push(node)
+      }
     }
 
     // Create batches from each priority group
@@ -385,8 +388,10 @@ export function useCanvasProgressiveLoading(
     progress.value.phase = 'loading'
 
     while (pendingBatches.value.length > 0 && !isPaused.value) {
-      const batch = pendingBatches.value.shift()!
-      await processBatch(batch)
+      const batch = pendingBatches.value.shift()
+      if (batch) {
+        await processBatch(batch)
+      }
 
       // Small delay between batches to maintain responsiveness
       if (pendingBatches.value.length > 0) {

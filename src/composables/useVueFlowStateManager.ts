@@ -20,7 +20,7 @@ export interface StateOperation {
   type: 'add' | 'update' | 'remove' | 'move' | 'select'
   target: 'node' | 'edge'
   id: string
-  data?: any
+  data?: unknown
   timestamp: number
 }
 

@@ -240,14 +240,14 @@ export class SyncSystemTester {
 
       // Verify correct documents are filtered
       for (const expectedId of expectedSyncable) {
-        const found = syncableDocs.find(doc => doc._id === expectedId)
+        const found = syncableDocs.find((doc) => (doc as { _id: string })._id === expectedId)
         if (!found) {
           throw new Error(`Expected document ${expectedId} not found in filtered results`)
         }
       }
 
       // Verify local documents are filtered out
-      const localDoc = syncableDocs.find(doc => doc._id.startsWith('_local/'))
+      const localDoc = syncableDocs.find((doc) => (doc as { _id: string })._id.startsWith('_local/'))
       if (localDoc) {
         throw new Error('Local document should have been filtered out')
       }

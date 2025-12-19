@@ -128,7 +128,7 @@ export class DynamicImportManager {
   /**
    * Perform the actual import with timeout
    */
-  private async performImport<T>(key: string, config: any): Promise<T> {
+  private async performImport<T>(key: string, config: unknown): Promise<T> {
     loadingStates[key] = true
 
     try {

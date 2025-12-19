@@ -233,7 +233,7 @@ export function useBackupManager(config: Partial<BackupTriggerConfig> = {}) {
   }
 
   // Restore backup function
-  const restoreBackup = async (): Promise<any | null> => {
+  const restoreBackup = async (): Promise<unknown | null> => {
     try {
       console.log('🔄 Starting backup restoration...')
       const restoredData = await RobustBackupSystem.restoreFromBackup()

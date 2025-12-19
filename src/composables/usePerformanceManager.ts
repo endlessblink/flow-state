@@ -60,7 +60,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   })
 
   // Memoization helpers
-  const memoizedComputations = ref<Map<string, { result: any, deps: any[], timestamp: number }>>(new Map())
+  const memoizedComputations = ref<Map<string, { result: unknown, deps: unknown[], timestamp: number }>>(new Map())
   const memoizationStats = ref({ hits: 0, misses: 0 })
 
   // Memory monitoring
@@ -68,7 +68,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   const memoryMonitorInterval = ref<NodeJS.Timeout>()
 
   // Debounce function factory
-  const createDebounced = <T extends (...args: any[]) => any>(
+  const createDebounced = <T extends (...args: unknown[]) => any>(
     fn: T,
     delay: number = debounceDelay
   ) => {
@@ -81,7 +81,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Throttle function factory
-  const createThrottled = <T extends (...args: any[]) => any>(
+  const createThrottled = <T extends (...args: unknown[]) => any>(
     fn: T,
     delay: number = throttleDelay
   ) => {
@@ -94,10 +94,10 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Memoized computation factory
-  const createMemoized = <T extends (...args: any[]) => any>(
+  const createMemoized = <T extends (...args: unknown[]) => any>(
     fn: T,
     key: string,
-    dependencies: any[] = []
+    dependencies: unknown[] = []
   ) => {
     if (!enableMemoization) {
       return fn
@@ -230,7 +230,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Calculate size of object (rough estimation)
-  const calculateSize = (obj: any): number => {
+  const calculateSize = (obj: unknown): number => {
     try {
       return JSON.stringify(obj).length * 2 // 2 bytes per character
     } catch {
@@ -275,9 +275,9 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   const optimizeForLargeLists = <T>(items: T[]) => {
     if (items.length > 1000) {
       // For very large lists, use more aggressive debouncing
-      return createDebounced((fn: any) => fn(), 500)
+      return createDebounced((fn: unknown) => fn(), 500)
     }
-    return createDebounced((fn: any) => fn(), debounceDelay)
+    return createDebounced((fn: unknown) => fn(), debounceDelay)
   }
 
   const optimizeForAnimations = <T>(fn: T) => {

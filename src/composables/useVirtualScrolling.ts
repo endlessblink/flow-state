@@ -9,7 +9,7 @@ import { useVirtualList, useThrottleFn, useResizeObserver } from '@vueuse/core'
 export interface VirtualItem {
   id: string | number
   height?: number
-  data: any
+  data: unknown
 }
 
 export interface VirtualScrollOptions {
@@ -22,10 +22,10 @@ export interface VirtualScrollOptions {
 }
 
 export interface VirtualScrollResult {
-  virtualList: any
-  containerProps: any
-  wrapperProps: any
-  visibleItems: any[]
+  virtualList: unknown
+  containerProps: unknown
+  wrapperProps: unknown
+  visibleItems: unknown[]
   scrollToItem: (index: number) => void
   scrollToTop: () => void
   scrollToBottom: () => void

@@ -129,7 +129,7 @@ export function useCalendarDrag() {
     }
 
     // Set global fallback for browser compatibility
-    (window as any).__draggingTaskId = calendarEvent.taskId
+    (window as Window & typeof globalThis).__draggingTaskId = calendarEvent.taskId
 
     console.log('🎯 [UnifiedDrag] Drag started:', {
       taskId: calendarEvent.taskId,
@@ -148,7 +148,7 @@ export function useCalendarDrag() {
     activeDropTarget.value = target
 
     // Parse drag data
-    let dragData: any = null
+    let dragData: unknown = null
 
     const data = event.dataTransfer?.getData('application/json')
     if (data) {
@@ -160,7 +160,7 @@ export function useCalendarDrag() {
       }
     } else {
       // Fallback to global state
-      const globalTaskId = (window as any).__draggingTaskId
+      const globalTaskId = (window as Window & typeof globalThis).__draggingTaskId
       if (globalTaskId) {
         const task = taskStore.tasks.find(t => t.id === globalTaskId)
         if (task) {
@@ -244,7 +244,7 @@ export function useCalendarDrag() {
     dragGhost.value.visible = false
 
     // Parse drag data
-    let dragData: any = null
+    let dragData: unknown = null
 
     const data = event.dataTransfer?.getData('application/json')
     if (data) {
@@ -256,7 +256,7 @@ export function useCalendarDrag() {
       }
     } else {
       // Fallback to global state
-      const globalTaskId = (window as any).__draggingTaskId
+      const globalTaskId = (window as Window & typeof globalThis).__draggingTaskId
       if (globalTaskId) {
         dragData = { taskId: globalTaskId, source: 'calendar-event' }
       }
@@ -339,7 +339,7 @@ export function useCalendarDrag() {
   /**
    * Handle drop on time slot (day/week views)
    */
-  const handleTimeSlotDrop = async (task: any, target: DropTarget, dragData: any) => {
+  const handleTimeSlotDrop = async (task: unknown, target: DropTarget, dragData: unknown) => {
     if (target.type !== 'time-slot' || !target.time) return
 
     const snappedTime = core.snapTo15Minutes(
@@ -405,7 +405,7 @@ export function useCalendarDrag() {
   /**
    * Handle drop on day cell (month view)
    */
-  const handleDayDrop = async (task: any, target: DropTarget, _dragData: any) => {
+  const handleDayDrop = async (task: unknown, target: DropTarget, _dragData: unknown) => {
     // Keep existing time or default to 9 AM
     const scheduledTime = task.scheduledTime || '09:00'
 
@@ -435,7 +435,7 @@ export function useCalendarDrag() {
   /**
    * Handle drop on week grid (complex positioning)
    */
-  const handleWeekGridDrop = async (task: any, target: DropTarget, _dragData: any) => {
+  const handleWeekGridDrop = async (task: unknown, target: DropTarget, _dragData: unknown) => {
     if (target.dayIndex === undefined || target.slotIndex === undefined) return
 
     const WORKING_HOURS_OFFSET = 6
@@ -494,7 +494,7 @@ export function useCalendarDrag() {
       slotIndex: 0
     }
     activeDropTarget.value = null
-    delete (window as any).__draggingTaskId
+    delete (window as Window & typeof globalThis).__draggingTaskId
   }
 
   /**

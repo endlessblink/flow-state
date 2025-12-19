@@ -361,7 +361,7 @@ export function useCleanupManager(componentName?: string) {
 
     // Force garbage collection if available
     if ('gc' in window) {
-      (window as any).gc()
+      ;(window as Window & typeof globalThis).gc?.()
     }
   }
 

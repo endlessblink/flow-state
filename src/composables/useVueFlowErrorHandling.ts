@@ -13,7 +13,7 @@ export interface VueFlowError {
   id: string
   type: 'validation' | 'rendering' | 'interaction' | 'state' | 'performance' | 'network'
   message: string
-  details?: any
+  details?: unknown
   timestamp: number
   severity: 'low' | 'medium' | 'high' | 'critical'
   recoverable: boolean
@@ -282,7 +282,7 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
   /**
    * Check if error is Vue Flow related
    */
-  const isVueFlowRelatedError = (event: any): boolean => {
+  const isVueFlowRelatedError = (event: unknown): boolean => {
     const errorString = String(event.error?.message || event.reason?.message || event.message || '')
     const filename = event.filename || ''
 
@@ -447,7 +447,7 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
   /**
    * Create error handler wrapper
    */
-  const createErrorHandler = <T extends any[], R>(
+  const createErrorHandler = <T extends unknown[], R>(
     name: string,
     fn: (...args: T) => R,
     options?: {
@@ -564,7 +564,7 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
   /**
    * Generate recommendations based on error patterns
    */
-  const generateRecommendations = (summary: any) => {
+  const generateRecommendations = (summary: unknown) => {
     const recommendations: string[] = []
 
     if (summary.byType.validation > 5) {

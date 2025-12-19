@@ -51,7 +51,7 @@ export interface StateTransitionResult {
   fromState: TaskState
   toState: TaskState
   error?: string
-  metadata?: any
+  metadata?: unknown
 }
 
 export const useTaskLifecycle = () => {
@@ -198,7 +198,7 @@ export const useTaskLifecycle = () => {
   const executeStateTransition = async (
     taskId: string,
     targetState: TaskState,
-    metadata?: any
+    metadata?: unknown
   ): Promise<StateTransitionResult> => {
     const task = taskStore.tasks.find(t => t.id === taskId)
     if (!task) {
@@ -260,7 +260,7 @@ export const useTaskLifecycle = () => {
   const performStateTransition = async (
     task: Task,
     targetState: TaskState,
-    metadata?: any
+    metadata?: unknown
   ): Promise<Partial<Task>> => {
     const updates: Partial<Task> = {
       updatedAt: new Date()

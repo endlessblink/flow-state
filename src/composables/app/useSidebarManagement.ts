@@ -30,13 +30,13 @@ export function useSidebarManagement() {
 
   // Project management state
   const showProjectModal = ref(false)
-  const editingProject = ref<any>(null)
+  const editingProject = ref<unknown>(null)
 
   // Platform detection
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
   // Helper function to filter projects for sidebar display
-  const filterSidebarProjects = (projects: any[]) => {
+  const filterSidebarProjects = (projects: unknown[]) => {
     console.log('🔍 filterSidebarProjects input:', projects.length, 'projects')
 
     // FIX: More robust filtering logic
@@ -278,7 +278,7 @@ export function useSidebarManagement() {
     }
   }
 
-  const selectProject = (project: any) => {
+  const selectProject = (project: unknown) => {
     taskStore.setActiveProject(project.id)
     taskStore.setSmartView(null)
   }
@@ -393,8 +393,8 @@ export function useSidebarManagement() {
 
   // Helper functions for navigation
   const getFlattenedProjectList = () => {
-    const flatten = (projects: any[], level = 1): any[] => {
-      const result: any[] = []
+    const flatten = (projects: unknown[], level = 1): unknown[] => {
+      const result: unknown[] = []
 
       for (const project of projects) {
         if (!project.parentId) { // Only include root projects initially
@@ -445,13 +445,13 @@ export function useSidebarManagement() {
     showProjectModal.value = true
   }
 
-  const openEditProject = (project: any) => {
+  const openEditProject = (project: unknown) => {
     editingProject.value = project
     showProjectModal.value = true
   }
 
   // Handle project un-nesting (drag to "All Projects")
-  const handleProjectUnnest = (data: any) => {
+  const handleProjectUnnest = (data: unknown) => {
     if (data.projectId) {
       // Remove parent relationship by setting parentId to null
       taskStore.updateProject(data.projectId, { parentId: null })

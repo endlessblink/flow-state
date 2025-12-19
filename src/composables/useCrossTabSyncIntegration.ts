@@ -19,7 +19,7 @@ export function useCrossTabSyncIntegration() {
   const _undoSystem = getUndoSystem()
 
   let isIntegrationEnabled = false
-  let _lastKnownTaskState: any[] = []
+  let _lastKnownTaskState: unknown[] = []
   let isProcessingRemoteChange = false
 
   // Initialize integration
@@ -284,7 +284,7 @@ export function useCrossTabSyncIntegration() {
     const originalDeleteTask = taskStore.deleteTask.bind(taskStore)
 
     // Override createTask
-    taskStore.createTask = function(taskData: any) {
+    taskStore.createTask = function(taskData: unknown) {
       const result = originalCreateTask(taskData)
 
       // Broadcast after creation
@@ -304,7 +304,7 @@ export function useCrossTabSyncIntegration() {
     }
 
     // Override updateTask
-    taskStore.updateTask = function(taskId: string, updates: any) {
+    taskStore.updateTask = function(taskId: string, updates: unknown) {
       const _oldTask = taskStore.tasks.find(t => t.id === taskId)
       const result = originalUpdateTask(taskId, updates)
 

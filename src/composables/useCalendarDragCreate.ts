@@ -63,7 +63,7 @@ export function useCalendarDragCreate() {
 
     // Prevent text selection during drag
     document.body.style.userSelect = 'none'
-    ;(document.body.style as any).webkitUserSelect = 'none'
+    ;(document.body.style as unknown).webkitUserSelect = 'none'
   }
 
   const handleCreateDragMove = (event: MouseEvent) => {
@@ -145,7 +145,7 @@ export function useCalendarDragCreate() {
 
     // Restore text selection
     document.body.style.userSelect = ''
-    ;(document.body.style as any).webkitUserSelect = ''
+    ;(document.body.style as unknown).webkitUserSelect = ''
   }
 
   // Check if slot is in create range for visual feedback

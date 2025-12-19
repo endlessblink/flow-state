@@ -83,7 +83,7 @@ export const useReliableSyncManager = () => {
   // PouchDB instances
   let localDB: PouchDB.Database | null = null
   let remoteDB: PouchDB.Database | null = null
-  let syncHandler: any | null = null
+  let syncHandler: PouchDBSyncHandler | null = null
 
   // Phase 2 systems
   const conflictDetector = new ConflictDetector()
@@ -270,14 +270,14 @@ export const useReliableSyncManager = () => {
   /**
    * Setup enhanced sync event handlers
    */
-  const _setupSyncEventHandlers = (handler: any) => {
+  const _setupSyncEventHandlers = (handler: PouchDBSyncHandler) => {
     try {
-      handler.on('change', (info: any) => {
+      handler.on('change', (info: unknown) => {
         console.log(`📤 Reliable sync change:`, info)
         handleSyncChange(info)
       })
 
-      handler.on('paused', (err: any) => {
+      handler.on('paused', (err: unknown) => {
         console.log(`⏸️ Sync paused:`, err)
         if (err) {
           error.value = `Sync paused: ${(err as any).message}`
@@ -289,7 +289,7 @@ export const useReliableSyncManager = () => {
         syncStatus.value = 'syncing'
       })
 
-      handler.on('complete', (info: any) => {
+      handler.on('complete', (info: unknown) => {
         console.log(`✅ Sync complete:`, info)
         if (syncStatus.value === 'syncing') {
           syncStatus.value = 'complete'
@@ -300,7 +300,7 @@ export const useReliableSyncManager = () => {
         }
       })
 
-      handler.on('error', (err: any) => {
+      handler.on('error', (err: unknown) => {
         console.error(`❌ Sync error:`, err)
         syncStatus.value = 'error'
         error.value = (err as any).message
@@ -315,9 +315,10 @@ export const useReliableSyncManager = () => {
   /**
    * Handle sync change events with conflict detection
    */
-  const handleSyncChange = async (info: any) => {
+  const handleSyncChange = async (info: unknown) => {
     try {
-      const docs = info.change?.docs || []
+      const syncInfo = info as PouchDBSyncChange
+      const docs = syncInfo.change?.docs || []
       const syncableDocs = docs.filter(isSyncableDocument)
 
       if (syncableDocs.length > 0) {
@@ -339,7 +340,7 @@ export const useReliableSyncManager = () => {
       }
 
       // Update pending changes count
-      pendingChanges.value = info.pending || 0
+      pendingChanges.value = (info as PouchDBSyncInfo).pending || 0
 
       // Emit custom event for UI components
       window.dispatchEvent(new CustomEvent('reliable-sync-change', {
@@ -384,8 +385,8 @@ export const useReliableSyncManager = () => {
               _id: conflict.documentId,
               conflictResolvedAt: new Date().toISOString()
             })
-          } catch (putError: any) {
-            if (putError.status === 409) {
+          } catch (putError: unknown) {
+            if ((putError as { status?: number }).status === 409) {
               // Document conflict - fetch latest revision and retry
               console.log(`🔄 Fetching latest revision for ${conflict.documentId}`)
               try {
@@ -690,7 +691,7 @@ export const useReliableSyncManager = () => {
   /**
    * Manual conflict resolution
    */
-  const manualConflictResolution = async (conflictId: string, _resolution: any): Promise<void> => {
+  const manualConflictResolution = async (conflictId: string, _resolution: unknown): Promise<void> => {
     // TODO: Implement proper manual conflict resolution
     console.log(`👤 Manual conflict resolution requested for ${conflictId} - temporarily disabled`)
     return Promise.resolve()
@@ -1043,11 +1044,12 @@ export const useReliableSyncManager = () => {
       })
 
       // Setup event handlers
-      syncHandler.on('change', async (info: any) => {
-        console.log('📤 [LIVE SYNC] Change detected:', info.direction, info.change?.docs_written || info.change?.docs_read || 0, 'docs')
+      syncHandler.on('change', async (info: unknown) => {
+        const syncChange = info as PouchDBSyncChange
+        console.log('📤 [LIVE SYNC] Change detected:', syncChange.direction, syncChange.change?.docs?.length || 0, 'docs')
 
         // Reload task store when we receive changes from remote
-        if (info.direction === 'pull' && (info.change?.docs_read || 0) > 0) {
+        if (syncChange.direction === 'pull' && (syncChange.change?.docs?.length || 0) > 0) {
           try {
             const { useTaskStore } = await import('@/stores/tasks')
             const taskStore = useTaskStore()
@@ -1062,7 +1064,7 @@ export const useReliableSyncManager = () => {
         localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())  // Persist to localStorage
       })
 
-      syncHandler.on('paused', (err: any) => {
+      syncHandler.on('paused', (err: unknown) => {
         if (err) {
           console.warn('⏸️ [LIVE SYNC] Paused with error:', err)
           syncStatus.value = 'paused'
@@ -1077,18 +1079,18 @@ export const useReliableSyncManager = () => {
         syncStatus.value = 'syncing'
       })
 
-      syncHandler.on('denied', (err: any) => {
+      syncHandler.on('denied', (err: unknown) => {
         console.error('🚫 [LIVE SYNC] Denied:', err)
-        error.value = 'Sync denied: ' + (err?.message || 'Unknown error')
+        error.value = 'Sync denied: ' + ((err as PouchDBSyncError)?.message || 'Unknown error')
       })
 
-      syncHandler.on('error', (err: any) => {
+      syncHandler.on('error', (err: unknown) => {
         console.error('❌ [LIVE SYNC] Error:', err)
         syncStatus.value = 'error'
-        error.value = err?.message || 'Sync error'
+        error.value = (err as PouchDBSyncError)?.message || 'Sync error'
       })
 
-      syncHandler.on('complete', (info: any) => {
+      syncHandler.on('complete', (info: unknown) => {
         console.log('✅ [LIVE SYNC] Complete:', info)
         // Live sync shouldn't complete unless cancelled
       })

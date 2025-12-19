@@ -6,7 +6,7 @@ export interface DragData {
   projectId?: string
   title: string
   source: 'kanban' | 'calendar' | 'canvas' | 'sidebar'
-  payload?: any
+  payload?: unknown
 }
 
 export interface DragState {
@@ -58,7 +58,7 @@ export function useDragAndDrop() {
     source: 'kanban' | 'calendar' | 'canvas' | 'sidebar',
     taskId?: string,
     projectId?: string,
-    payload?: any
+    payload?: unknown
   ): DragData => ({
     type,
     taskId,

@@ -20,9 +20,9 @@ import { filterMockTasks } from '@/utils/mockTaskDetector'
 
 export interface BackupData {
   id: string
-  tasks: any[]
-  projects: any[]
-  canvas: any
+  tasks: unknown[]
+  projects: unknown[]
+  canvas: unknown
   timestamp: number
   version: string
   checksum: string
@@ -79,7 +79,7 @@ const DEFAULT_CONFIG: BackupConfig = {
 /**
  * Calculate simple checksum for data integrity verification
  */
-function calculateChecksum(data: any): string {
+function calculateChecksum(data: unknown): string {
   const str = JSON.stringify(data)
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -157,8 +157,8 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     try {
       console.log(`[Backup] Creating ${type} backup...`)
 
-      // Get tasks from store (use any[] to allow mock task filtering)
-      let tasks: any[] = taskStore.tasks || []
+      // Get tasks from store (use unknown[] to allow mock task filtering)
+      let tasks: unknown[] = taskStore.tasks || []
 
       // Validate tasks
       if (!Array.isArray(tasks)) {
@@ -273,9 +273,9 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
       state.value.restoreProgress = 80
 
-      // Reload stores (cast to any[] to bypass strict type checking on backup data)
+      // Reload stores (cast to unknown[] to bypass strict type checking on backup data)
       if (taskStore.restoreState) {
-        await taskStore.restoreState(backupData.tasks as any)
+        await taskStore.restoreState(backupData.tasks as unknown)
       }
 
       state.value.restoreProgress = 100

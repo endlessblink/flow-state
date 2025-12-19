@@ -19,7 +19,7 @@ export function useDemoGuard() {
   ]
 
   // Check if content looks like demo data
-  const isDemoData = (data: any): boolean => {
+  const isDemoData = (data: unknown): boolean => {
     if (!data || typeof data !== 'object') {
       return false
     }
@@ -43,7 +43,7 @@ export function useDemoGuard() {
   }
 
   // Check if any tasks in array are real user data
-  const hasRealUserData = (tasks: any[]): boolean => {
+  const hasRealUserData = (tasks: unknown[]): boolean => {
     return tasks.some(task => {
       if (!task || !task.title) return false
 
@@ -73,7 +73,7 @@ export function useDemoGuard() {
   }
 
   // Main guard function - returns whether demo data is allowed
-  const allowDemoData = async (data?: any): Promise<boolean> => {
+  const allowDemoData = async (data?: unknown): Promise<boolean> => {
     // Never allow demo data in production
     if (isProduction) {
       console.warn('🚫 Demo data blocked in production environment')

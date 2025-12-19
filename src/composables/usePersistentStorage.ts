@@ -299,7 +299,7 @@ class PersistentStorage {
   /**
    * Recovery operations
    */
-  async getAllBackups(): Promise<any[]> {
+  async getAllBackups(): Promise<unknown[]> {
     const backups = []
 
     // Check for auto backup
@@ -327,7 +327,7 @@ class PersistentStorage {
     return backups.sort((a, b) => b.timestamp - a.timestamp)
   }
 
-  async restoreFromBackup(backup: any): Promise<boolean> {
+  async restoreFromBackup(backup: unknown): Promise<boolean> {
     try {
       if (backup.tasks) {
         await this.save(STORAGE_KEYS.TASKS, backup.tasks)
@@ -383,7 +383,7 @@ export function usePersistentStorage() {
     load: <T>(key: string) => persistentStorage!.load<T>(key),
     createBackup: () => persistentStorage!.createBackup(),
     getAllBackups: () => persistentStorage!.getAllBackups(),
-    restoreFromBackup: (backup: any) => persistentStorage!.restoreFromBackup(backup),
+    restoreFromBackup: (backup: unknown) => persistentStorage!.restoreFromBackup(backup),
     healthStatus,
     STORAGE_KEYS
   }

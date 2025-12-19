@@ -17,7 +17,7 @@ interface VirtualItem {
   top: number
   bottom: number
   height: number
-  data: any
+  data: unknown
 }
 
 export const useVirtualList = <T = any>(
@@ -129,7 +129,7 @@ export const useVirtualList = <T = any>(
   // Scroll handling
   const handleScroll = useThrottleFn((event: Event) => {
     const target = event.target as any
-    const newScrollTop = target === window ? (window as any).scrollY : (target as HTMLElement).scrollTop
+    const newScrollTop = target === window ? window.scrollY : (target as HTMLElement).scrollTop
 
     // Determine scroll direction
     scrollDirection.value = newScrollTop > lastScrollTop ? 'down' : 'up'

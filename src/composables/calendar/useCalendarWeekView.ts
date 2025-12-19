@@ -340,7 +340,9 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
   // Week drop handlers
   const handleWeekDragOver = (event: DragEvent) => {
     event.preventDefault()
-    event.dataTransfer!.dropEffect = 'move'
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move'
+    }
   }
 
   const handleWeekDrop = (event: DragEvent, dateString: string, hour: number) => {

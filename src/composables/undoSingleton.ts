@@ -61,7 +61,7 @@ function initializeRefHistory() {
 
   // Also store on window for direct access
   if (typeof window !== 'undefined') {
-    (window as any).__pomoFlowUndoSystem = {
+    ;(window as Window & typeof globalThis).__pomoFlowUndoSystem = {
       canUndo,
       canRedo,
       undoCount,
@@ -308,7 +308,7 @@ export function resetUndoSystem() {
   commit = null
   clear = null
   if (typeof window !== 'undefined') {
-    delete (window as any).__pomoFlowUndoSystem
+    delete (window as Window & typeof globalThis).__pomoFlowUndoSystem
   }
   console.log('🔄 UndoSingleton: Reset global refHistory instance')
 }

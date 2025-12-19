@@ -253,7 +253,7 @@ export function useCanvasRenderingOptimization(
     toRemove.forEach(([key]) => renderCache.value.delete(key))
   }
 
-  const optimizeNodeData = (node: Node, lodLevel: number): any => {
+  const optimizeNodeData = (node: Node, lodLevel: number): unknown => {
     const optimized = { ...node.data }
 
     switch (lodLevel) {
@@ -335,7 +335,7 @@ export function useCanvasRenderingOptimization(
     })
   }
 
-  const _createSkeletonNode = (node: Node): any => {
+  const _createSkeletonNode = (node: Node): unknown => {
     return {
       ...node,
       data: {

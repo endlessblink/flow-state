@@ -326,7 +326,7 @@ export function useDatabase(): UseDatabaseReturn {
         }
 
         // Expose to window for backward compatibility
-        (window as unknown).pomoFlowDb = singletonDatabase
+        ;(window as Window & typeof globalThis).pomoFlowDb = singletonDatabase as unknown as PomoFlowDB
 
         // Verify database is working
         await singletonDatabase.info()
@@ -486,7 +486,7 @@ export function useDatabase(): UseDatabaseReturn {
           return
         }
 
-        if (err.status === 409 && retryCount < maxRetries) {
+        if ((err as { status?: number }).status === 409 && retryCount < maxRetries) {
           // Conflict detected - retry with exponential backoff
           console.warn(`⚠️ Conflict on ${key} (attempt ${retryCount}/${maxRetries}), retrying...`)
           await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, retryCount)))
@@ -500,7 +500,7 @@ export function useDatabase(): UseDatabaseReturn {
           category: ErrorCategory.DATABASE,
           message: `Failed to save ${key} after ${retryCount} attempts`,
           error: err as Error,
-          context: { key, retryCount, isConflict: err.status === 409 },
+          context: { key, retryCount, isConflict: (err as { status?: number }).status === 409 },
           showNotification: true
         })
         throw err
@@ -547,7 +547,7 @@ export function useDatabase(): UseDatabaseReturn {
       return data
     } catch (err: unknown) {
       // Handle 404 as expected case
-      if (err.status === 404) {
+      if ((err as { status?: number }).status === 404) {
         if (shouldLogTaskDiagnostics()) {
           console.log(`📭 [DATABASE] No data found for ${key}`)
         }
@@ -596,7 +596,7 @@ export function useDatabase(): UseDatabaseReturn {
       // Reset singleton reference and recreate database
       singletonDatabase = null
       database.value = null
-      delete (window as unknown).pomoFlowDb
+      delete (window as Window & typeof globalThis).pomoFlowDb
       isInitializing = false
       initializationPromise = null
 
@@ -811,7 +811,7 @@ export function useDatabase(): UseDatabaseReturn {
       }
       singletonDatabase = null
       database.value = null
-      delete (window as unknown).pomoFlowDb
+      delete (window as Window & typeof globalThis).pomoFlowDb
       databaseRefCount = 0
     }
   }

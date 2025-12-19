@@ -234,7 +234,7 @@ export function useTaskRecurrence(taskId: string) {
   /**
    * Add exception
    */
-  const addException = (date: string, action: 'skip' | 'modify' | 'delete', modifications?: any) => {
+  const addException = (date: string, action: 'skip' | 'modify' | 'delete', modifications?: unknown) => {
     if (!recurrence.value) {
       recurrence.value = initializeRecurrence()
     }

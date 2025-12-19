@@ -116,7 +116,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
             if (hasInstanceForToday) {
               // Use instance-specific schedule
-              const todayInstance = task.instances!.find(instance => instance && instance.scheduledDate === dateStr)
+              const todayInstance = task.instances?.find(instance => instance && instance.scheduledDate === dateStr)
               if (!todayInstance || !todayInstance.scheduledTime) return
 
               const [hour, minute] = todayInstance.scheduledTime.split(':').map(Number)
@@ -315,7 +315,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     })
 
     const data = event.dataTransfer?.getData('application/json')
-    let parsedData: any = null
+    let parsedData: unknown = null
 
     // FALLBACK: Check for global dragging state when dataTransfer is empty
     // This handles mouse-based dragging where dataTransfer might not be populated
@@ -323,7 +323,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       console.log('🔄 [CalendarDrag] No dataTransfer data, checking global drag state...')
 
       // Try to get dragged task from global state (CalendarInboxPanel sets this)
-      const draggingTaskId = (window as any).__draggingTaskId ||
+      const draggingTaskId = (window as Window & typeof globalThis).__draggingTaskId ||
                             document.querySelector('[data-dragging-task-id]')?.getAttribute('data-dragging-task-id')
 
       if (draggingTaskId) {
@@ -418,7 +418,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     const data = event.dataTransfer?.getData('application/json')
     if (!data) {
       // Try fallback for browser compatibility
-      const draggingTaskId = (window as any).__draggingTaskId
+      const draggingTaskId = (window as Window & typeof globalThis).__draggingTaskId
       if (!draggingTaskId) {
         console.warn('🎯 CALENDAR DROP: No drag data available')
         return
@@ -426,7 +426,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     }
 
     try {
-      const parsedData = data ? JSON.parse(data) : { taskId: (window as any).__draggingTaskId, source: 'calendar-event' }
+      const parsedData = data ? JSON.parse(data) : { taskId: (window as Window & typeof globalThis).__draggingTaskId, source: 'calendar-event' }
       const taskId = parsedData.taskId || parsedData.taskIds?.[0]
       const source = parsedData.source
 

@@ -47,6 +47,36 @@ declare global {
     deleted?: boolean
   }
 
+  // PouchDB sync event types
+  interface PouchDBSyncChange {
+    direction: 'push' | 'pull'
+    change: {
+      docs: PouchDBDocument[]
+      ok?: boolean
+      errors?: unknown[]
+    }
+  }
+
+  interface PouchDBSyncInfo {
+    pending?: number
+    ok?: boolean
+    status?: string
+    docs_read?: number
+    docs_written?: number
+  }
+
+  interface PouchDBSyncError {
+    message?: string
+    status?: number
+    error?: boolean
+    reason?: string
+  }
+
+  interface PouchDBSyncHandler {
+    on: (event: 'change' | 'paused' | 'active' | 'denied' | 'complete' | 'error', callback: (info: unknown) => void) => PouchDBSyncHandler
+    cancel: () => void
+  }
+
   // PouchDB instance type (simplified for window property)
   interface PomoFlowDB {
     get: (docId: string, options?: { conflicts?: boolean }) => Promise<PouchDBDocument>
@@ -118,6 +148,29 @@ declare global {
       before: string[]
       after?: string[]
       missed?: boolean
+    }
+    // Canvas drag state
+    __draggingTaskId?: string | null
+    // Performance monitoring
+    __performanceMonitorMemoryInterval?: ReturnType<typeof setInterval>
+    // Garbage collection (V8 debug mode)
+    gc?: () => void
+    // Task store access for cross-tab sync
+    taskStore?: {
+      tasks: unknown[]
+      loadTasks?: () => Promise<void>
+    }
+    // UI store access
+    uiStore?: {
+      sidebarOpen?: boolean
+      activeView?: string
+      theme?: string
+    }
+    // Canvas store access
+    canvasStore?: {
+      nodes?: unknown[]
+      sections?: unknown[]
+      viewport?: { x: number; y: number; zoom: number }
     }
   }
 }

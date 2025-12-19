@@ -83,7 +83,7 @@
                 Local (This Device)
               </div>
               <div class="timestamp">
-                {{ formatTimestamp(localTask.updatedAt) }}
+                {{ formatTimestamp(localTask.updatedAt as number) }}
               </div>
             </div>
             <div class="value-display">
@@ -125,7 +125,7 @@
                 Remote (Synced)
               </div>
               <div class="timestamp">
-                {{ formatTimestamp(remoteTask.updatedAt) }}
+                {{ formatTimestamp(remoteTask.updatedAt as number) }}
               </div>
             </div>
             <div class="value-display">

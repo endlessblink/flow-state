@@ -234,10 +234,14 @@ function mergeAll(): void {
     }
   } else if (Array.isArray(localValue)) {
     // Combine arrays
-    result = [...new Set([...(localValue || []), ...(remoteValue || [])])]
+    const localArr = (localValue || []) as unknown[]
+    const remoteArr = (remoteValue || []) as unknown[]
+    result = [...new Set([...localArr, ...remoteArr])]
   } else if (localType === 'object' && localValue !== null) {
     // Combine objects (shallow merge)
-    result = { ...(localValue || {}), ...(remoteValue || {}) }
+    const localObj = (localValue || {}) as Record<string, unknown>
+    const remoteObj = (remoteValue || {}) as Record<string, unknown>
+    result = { ...localObj, ...remoteObj }
   } else {
     result = localValue || remoteValue
   }

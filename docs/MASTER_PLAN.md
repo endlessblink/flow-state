@@ -144,6 +144,22 @@ Phase 3 (Mobile) ←────────────────────
 
 <!-- Active work items use TASK-XXX format -->
 
+### ~~TASK-025~~: Task Dependency System for Claude Workflow (COMPLETE)
+Dec 19, 2025 - Added dependency tracking to prevent file conflicts when working on multiple tasks.
+
+**Features**:
+- Dependency Index Table at top of Active Work section
+- CLAUDE.md workflow instructions for conflict detection
+- Reminder hook (`.claude/hooks/dependency-check-reminder.sh`)
+
+**Files Created/Modified**:
+- `docs/MASTER_PLAN.md` - Dependency index table
+- `CLAUDE.md` - Task Dependency Workflow section
+- `.claude/hooks/dependency-check-reminder.sh` - New hook
+- `.claude/settings.json` - Hook registration
+
+---
+
 ### ~~TASK-018~~: Canvas Inbox Filters (COMPLETE)
 Dec 18, 2025 - Added Unscheduled, Priority, and Project filters to canvas inbox.
 *Full details: [Archive](./archive/Done-Tasks-Master-Plan.md#task-018-canvas-inbox-filters-complete)*

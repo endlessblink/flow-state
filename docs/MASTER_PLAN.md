@@ -25,7 +25,7 @@
 | Check | Status | Notes |
 |-------|--------|-------|
 | `npm run build` | ✅ Active | Catches TS errors, broken imports, syntax issues |
-| `npm run lint` | ✅ Ready | **0 ERRORS** achieved (Dec 18), can enable blocking |
+| `npm run lint` | ✅ Active | **0 ERRORS** - blocking in CI (Dec 19: fixed 13 new errors) |
 | `npm run test` | ❌ Skipped | 90 failures (mostly Storybook) need fixing |
 
 **Branch Protection**: Not enabled (solo developer, direct push workflow)
@@ -132,7 +132,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | TASK-014 | IN_PROGRESS | `*.stories.ts`, `*.vue` (UI) | - | - |
 | TASK-019 | PLANNED | `tasks.ts`, stores, views | - | - |
-| TASK-020 | PLANNED | `useDatabase.ts`, `useReliableSyncManager.ts` | - | - |
+| TASK-020 | IN_PROGRESS | `useDatabase.ts`, `useReliableSyncManager.ts` | - | - |
 | TASK-023 | PLANNED | `dev-manager/*` | - | - |
 | TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
 
@@ -523,7 +523,7 @@ Dec 18, 2025 - Lint now blocking in CI. Unit tests deferred to TASK-020.
 
 ---
 
-### TASK-020: Fix Unit Test Infrastructure (PLANNED)
+### TASK-020: Fix Unit Test Infrastructure (IN_PROGRESS)
 
 **Goal**: Fix all blockers preventing unit tests from running in CI.
 

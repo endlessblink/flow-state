@@ -125,7 +125,7 @@ const handleDragChange = (event: any) => {
 
 <style scoped>
 .kanban-column {
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--kanban-column-bg);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -138,7 +138,7 @@ const handleDragChange = (event: any) => {
 }
 
 .kanban-column:hover {
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--kanban-column-bg-hover);
   border-color: rgba(255, 255, 255, 0.15);
   box-shadow:
     0 32px 64px rgba(0, 0, 0, 0.5),
@@ -164,7 +164,7 @@ const handleDragChange = (event: any) => {
   justify-content: space-between;
   margin-bottom: var(--space-4);
   padding: var(--space-3) var(--space-2);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--kanban-header-bg);
   border-radius: var(--radius-md);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -250,6 +250,11 @@ const handleDragChange = (event: any) => {
 
 .tasks-container {
   min-height: var(--kanban-column-min-height);
+  background: var(--kanban-drag-area-bg);
+}
+
+.drag-area {
+  background: var(--kanban-drag-area-bg);
 }
 
 .empty-column {

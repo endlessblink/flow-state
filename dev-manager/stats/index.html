@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Design tokens - Pure black theme (matching dev-manager) */
+        :root {
+            --surface-primary: #000000;
+            --surface-secondary: #0d1117;
+            --surface-tertiary: #161b22;
+            --surface-hover: rgba(255, 255, 255, 0.05);
+            --text-primary: #e6edf3;
+            --text-secondary: #c9d1d9;
+            --text-muted: #8b949e;
+            --text-subtle: #6e7681;
+            --border-subtle: #1a1a1a;
+            --border-medium: #30363d;
+            --brand-primary: #4ECDC4;
+            --brand-hover: #5fd9d1;
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
+            /* Status colors */
+            --color-done: #10b981;
+            --color-progress: #f59e0b;
+            --color-todo: #6366f1;
+            --color-bug: #ef4444;
+            --color-task: #3b82f6;
+            --color-road: #8b5cf6;
+            --color-issue: #f97316;
+            --color-idea: #ec4899;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: auto;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--surface-primary);
+            color: var(--text-secondary);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            padding: 1rem;
+        }
+
+        .header {
+            background: rgba(31, 31, 31, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .last-updated {
+            font-size: 0.75rem;
+            color: var(--text-subtle);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+        }
+
+        .stat-card.done .stat-value { color: var(--color-done); }
+        .stat-card.progress .stat-value { color: var(--color-progress); }
+        .stat-card.todo .stat-value { color: var(--color-todo); }
+        .stat-card.bugs .stat-value { color: var(--color-bug); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1rem;
+        }
+
+        .chart-card {
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .chart-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: var(--text-muted);
+        }
+
+        .error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: var(--color-bug);
+            text-align: center;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-medium);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-subtle);
+        }
+
+        .recent-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .recent-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .recent-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.task { background: var(--color-task); color: white; }
+        .badge.bug { background: var(--color-bug); color: white; }
+        .badge.road { background: var(--color-road); color: white; }
+        .badge.issue { background: var(--color-issue); color: white; }
+        .badge.idea { background: var(--color-idea); color: white; }
+        .badge.done { background: var(--color-done); color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="title">
+                <span>📊</span>
+                <span>Project Statistics</span>
+            </div>
+            <div class="last-updated" id="lastUpdated">Loading...</div>
+        </header>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalItems">-</div>
+                <div class="stat-label">Total Items</div>
+            </div>
+            <div class="stat-card done">
+                <div class="stat-value" id="doneCount">-</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card progress">
+                <div class="stat-value" id="progressCount">-</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+            <div class="stat-card todo">
+                <div class="stat-value" id="todoCount">-</div>
+                <div class="stat-label">To Do</div>
+            </div>
+            <div class="stat-card bugs">
+                <div class="stat-value" id="bugCount">-</div>
+                <div class="stat-label">Bugs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="completionRate">-</div>
+                <div class="stat-label">Completion %</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-title">📈 Status Distribution</div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">🏷️ By Type</div>
+                <div class="chart-container">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">⚡ Priority Distribution</div>
+                <div class="chart-container">
+                    <canvas id="priorityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">✅ Recently Completed</div>
+                <div class="recent-list" id="recentList">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart.js global config for dark theme
+        Chart.defaults.color = '#8b949e';
+        Chart.defaults.borderColor = 'rgba(48, 54, 61, 0.5)';
+
+        let statusChart = null;
+        let typeChart = null;
+        let priorityChart = null;
+
+        // Parse MASTER_PLAN.md for metrics
+        async function fetchAndParse() {
+            try {
+                const response = await fetch('/docs/MASTER_PLAN.md?v=' + Date.now());
+                if (!response.ok) throw new Error('Failed to fetch MASTER_PLAN.md');
+                const text = await response.text();
+                return parseMarkdown(text);
+            } catch (error) {
+                console.error('Error fetching MASTER_PLAN:', error);
+                throw error;
+            }
+        }
+
+        function parseMarkdown(text) {
+            const items = {
+                tasks: { total: 0, done: 0, progress: 0, todo: 0 },
+                bugs: { total: 0, done: 0, progress: 0, todo: 0 },
+                roads: { total: 0, done: 0, progress: 0, todo: 0 },
+                issues: { total: 0, done: 0, progress: 0, todo: 0 },
+                ideas: { total: 0, done: 0, progress: 0, todo: 0 },
+                priorities: { p1: 0, p2: 0, p3: 0 },
+                recentDone: []
+            };
+
+            // Match patterns like TASK-001, BUG-001, ROAD-001, ISSUE-001, IDEA-001
+            const patterns = [
+                { type: 'tasks', regex: /(?:~~)?TASK-(\d+)(?:~~)?/g, doneRegex: /~~TASK-\d+~~/g },
+                { type: 'bugs', regex: /(?:~~)?BUG-(\d+)(?:~~)?/g, doneRegex: /~~BUG-\d+~~/g },
+                { type: 'roads', regex: /(?:~~)?ROAD-(\d+)(?:~~)?/g, doneRegex: /~~ROAD-\d+~~/g },
+                { type: 'issues', regex: /(?:~~)?ISSUE-(\d+)(?:~~)?/g, doneRegex: /~~ISSUE-\d+~~/g },
+                { type: 'ideas', regex: /(?:~~)?IDEA-(\d+)(?:~~)?/g, doneRegex: /~~IDEA-\d+~~/g }
+            ];
+
+            patterns.forEach(({ type, regex, doneRegex }) => {
+                const allMatches = text.match(regex) || [];
+                const doneMatches = text.match(doneRegex) || [];
+
+                // Use Set to count unique IDs
+                const uniqueAll = new Set(allMatches.map(m => m.replace(/~~/g, '')));
+                const uniqueDone = new Set(doneMatches.map(m => m.replace(/~~/g, '')));
+
+                items[type].total = uniqueAll.size;
+                items[type].done = uniqueDone.size;
+            });
+
+            // Count in-progress items (look for "IN PROGRESS" or "IN_PROGRESS" near item IDs)
+            const progressPattern = /(?:TASK|BUG|ROAD|ISSUE|IDEA)-\d+[^|]*(?:IN.?PROGRESS|MONITORING)/gi;
+            const progressMatches = text.match(progressPattern) || [];
+            const progressCount = new Set(progressMatches.map(m => m.match(/(?:TASK|BUG|ROAD|ISSUE|IDEA)-\d+/i)?.[0])).size;
+
+            // Distribute progress count
+            items.tasks.progress = Math.floor(progressCount * 0.5);
+            items.bugs.progress = Math.floor(progressCount * 0.3);
+
+            // Calculate todo counts
+            patterns.forEach(({ type }) => {
+                items[type].todo = Math.max(0, items[type].total - items[type].done - items[type].progress);
+            });
+
+            // Count priorities
+            const p1Matches = text.match(/P1[^a-zA-Z]|P1-HIGH|P1-CRITICAL/gi) || [];
+            const p2Matches = text.match(/P2[^a-zA-Z]|P2-MEDIUM/gi) || [];
+            const p3Matches = text.match(/P3[^a-zA-Z]|P3-LOW/gi) || [];
+            items.priorities.p1 = Math.floor(p1Matches.length / 2); // Divide by 2 to avoid double counting
+            items.priorities.p2 = Math.floor(p2Matches.length / 2);
+            items.priorities.p3 = Math.floor(p3Matches.length / 2);
+
+            // Extract recently completed items
+            const donePattern = /~~((?:TASK|BUG|ROAD|ISSUE|IDEA)-\d+)~~[^\n]*?([A-Z][a-zA-Z\s\-\/]+?)(?:\s*\||$|\n)/gm;
+            let match;
+            while ((match = donePattern.exec(text)) !== null && items.recentDone.length < 10) {
+                const id = match[1];
+                let title = match[2].trim();
+                if (title.length > 40) title = title.substring(0, 37) + '...';
+
+                const type = id.split('-')[0].toLowerCase();
+                items.recentDone.push({ id, title, type });
+            }
+
+            return items;
+        }
+
+        function updateStats(data) {
+            const total = data.tasks.total + data.bugs.total + data.roads.total + data.issues.total + data.ideas.total;
+            const done = data.tasks.done + data.bugs.done + data.roads.done + data.issues.done + data.ideas.done;
+            const progress = data.tasks.progress + data.bugs.progress + data.roads.progress + data.issues.progress + data.ideas.progress;
+            const todo = total - done - progress;
+            const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
+
+            document.getElementById('totalItems').textContent = total;
+            document.getElementById('doneCount').textContent = done;
+            document.getElementById('progressCount').textContent = progress;
+            document.getElementById('todoCount').textContent = todo;
+            document.getElementById('bugCount').textContent = data.bugs.total;
+            document.getElementById('completionRate').textContent = completionRate + '%';
+            document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        }
+
+        function createStatusChart(data) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+
+            const done = data.tasks.done + data.bugs.done + data.roads.done + data.issues.done;
+            const progress = data.tasks.progress + data.bugs.progress + data.roads.progress + data.issues.progress;
+            const todo = data.tasks.todo + data.bugs.todo + data.roads.todo + data.issues.todo;
+
+            if (statusChart) statusChart.destroy();
+
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'In Progress', 'To Do'],
+                    datasets: [{
+                        data: [done, progress, todo],
+                        backgroundColor: ['#10b981', '#f59e0b', '#6366f1'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 15, usePointStyle: true, pointStyle: 'circle' }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        function createTypeChart(data) {
+            const ctx = document.getElementById('typeChart').getContext('2d');
+
+            if (typeChart) typeChart.destroy();
+
+            typeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Tasks', 'Bugs', 'Roadmap', 'Issues', 'Ideas'],
+                    datasets: [
+                        {
+                            label: 'Done',
+                            data: [data.tasks.done, data.bugs.done, data.roads.done, data.issues.done, data.ideas.done],
+                            backgroundColor: '#10b981'
+                        },
+                        {
+                            label: 'In Progress',
+                            data: [data.tasks.progress, data.bugs.progress, data.roads.progress, data.issues.progress, data.ideas.progress],
+                            backgroundColor: '#f59e0b'
+                        },
+                        {
+                            label: 'To Do',
+                            data: [data.tasks.todo, data.bugs.todo, data.roads.todo, data.issues.todo, data.ideas.todo],
+                            backgroundColor: '#6366f1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 10, usePointStyle: true, pointStyle: 'rect' }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function createPriorityChart(data) {
+            const ctx = document.getElementById('priorityChart').getContext('2d');
+
+            if (priorityChart) priorityChart.destroy();
+
+            priorityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['P1 (High)', 'P2 (Medium)', 'P3 (Low)'],
+                    datasets: [{
+                        label: 'Items',
+                        data: [data.priorities.p1, data.priorities.p2, data.priorities.p3],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, grid: { display: false } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderRecentList(data) {
+            const list = document.getElementById('recentList');
+
+            if (data.recentDone.length === 0) {
+                list.innerHTML = '<div class="loading">No recent completions found</div>';
+                return;
+            }
+
+            list.innerHTML = data.recentDone.map(item => `
+                <div class="recent-item">
+                    <span class="badge ${item.type}">${item.type}</span>
+                    <span>${item.id}: ${item.title}</span>
+                </div>
+            `).join('');
+        }
+
+        async function init() {
+            try {
+                const data = await fetchAndParse();
+                updateStats(data);
+                createStatusChart(data);
+                createTypeChart(data);
+                createPriorityChart(data);
+                renderRecentList(data);
+            } catch (error) {
+                document.getElementById('lastUpdated').textContent = 'Error loading data';
+                console.error('Failed to initialize:', error);
+            }
+        }
+
+        // Track if initial setup is done
+        let isInitialized = false;
+
+        // Initial setup - only runs once
+        function setupDashboard() {
+            if (isInitialized) return;
+            init();
+            isInitialized = true;
+        }
+
+        // Listen for tab activation from parent
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'tab-activated') {
+                console.log('Tab activated - refreshing dashboard');
+                init(); // Refresh data on tab switch
+            }
+        });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupDashboard);
+        } else {
+            setupDashboard();
+        }
+    </script>
+</body>
+</html>

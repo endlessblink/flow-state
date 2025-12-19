@@ -82,9 +82,11 @@ const _computedTitle = computed(() => {
 
 <style scoped>
 .project-emoji-icon {
-  /* Container with perfect centering using CSS Grid */
-  display: grid;
-  place-items: center;
+  /* Container with inline-flex for consistent alignment with other inline elements */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
   transition: all var(--duration-fast) var(--spring-smooth);
   position: relative;
   overflow: hidden;
@@ -123,7 +125,9 @@ const _computedTitle = computed(() => {
 
 /* Native emoji styles - optimized for Noto Color Emoji */
 .project-emoji-icon__native {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   /* Enhanced emoji rendering */
   text-rendering: optimizeLegibility;
@@ -133,6 +137,7 @@ const _computedTitle = computed(() => {
   image-rendering: crisp-edges;
   /* Prevent baseline issues */
   line-height: 1;
+  vertical-align: middle;
   /* Prioritize Noto Color Emoji for consistency */
   font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "EmojiSymbols", system-ui, sans-serif;
   /* Ensure consistent sizing */

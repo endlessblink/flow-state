@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
+import { ref, provide } from 'vue'
 import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
+import { PROGRESSIVE_DISCLOSURE_KEY } from '@/composables/useProgressiveDisclosure'
 
 // Mock tasks data
 const mockTasks = {
@@ -31,8 +32,19 @@ const meta = {
     }
   },
   decorators: [
-    () => ({
-      template: '<div style="width: 100%; height: 100vh; background: var(--surface-primary); padding: 16px;"><story /></div>'
+    (story: any) => ({
+      components: { story },
+      setup() {
+        // Provide mock progressive disclosure state directly
+        const enabled = ref(false)
+        provide(PROGRESSIVE_DISCLOSURE_KEY, {
+          enabled,
+          toggleEnabled: () => { enabled.value = !enabled.value },
+          setEnabled: (value: boolean) => { enabled.value = value }
+        })
+        return {}
+      },
+      template: '<div style="width: 100%; height: 100vh; background: hsl(0, 0%, 0%); padding: 16px;"><story /></div>'
     })
   ]
 } satisfies Meta<typeof KanbanColumn>

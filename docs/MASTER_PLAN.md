@@ -1,6 +1,6 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 19, 2025
+**Last Updated**: December 19, 2025 (evening - TASK-030 in progress)
 **Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -158,7 +158,7 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-030** | **IN_PROGRESS** | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
-**Paused**: TASK-027 (lint warning fixes - 88 fixed, 1,292 remaining)
+**Paused**: TASK-027 (lint warning fixes - 159 fixed, 1,134 remaining)
 **Active**: TASK-030 (TypeScript strict type errors - 236 remaining)
 **Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
 **Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
@@ -175,14 +175,15 @@ Phase 3 (Mobile) ←────────────────────
 **Priority**: P2-MEDIUM (code quality, enables stricter CI)
 
 **Baseline** (Dec 19, 2025): 1,380 warnings (0 errors)
-**Session 1** (Dec 19, 2025): 1,292 warnings (0 errors) - 88 fixed (stores batch)
+**Session 1** (Dec 19, 2025): 1,292 warnings - 88 fixed (stores batch)
+**Session 2** (Dec 19, 2025): **1,134 warnings** - 159 total fixed (~12% reduction)
 
 | Step | Description | Status |
 |------|-------------|--------|
 | 1 | Fix stores (88 warnings) | ✅ DONE |
-| 2 | Fix services (21 warnings) | PENDING |
-| 3 | Fix utils (377 warnings) | PENDING |
-| 4 | Fix composables (402 warnings) | PENDING |
+| 2 | Fix services (25 warnings) | ✅ DONE |
+| 3 | Fix utils (~62 fixed) | ✅ DONE |
+| 4 | Fix composables (~47 remaining) | 🔄 IN PROGRESS |
 | 5 | Fix components (205 warnings) | PENDING |
 | 6 | Fix views (102 warnings) | PENDING |
 | 7 | Verify build passes | PENDING |
@@ -197,10 +198,24 @@ Phase 3 (Mobile) ←────────────────────
 - `quickSort.ts` (2→0): Session history parsing
 - `TaskNode.vue`: Fixed defineProps order (1 error)
 
-**Remaining** (1,292 warnings):
-- Services: 21
-- Utils: 377
-- Composables: 402
+**Session 2 Files Fixed** (Dec 19, 2025):
+- `services/unified-task-service.ts`: Task interfaces, error handling, event types
+- `skills/git-restoration-analyzer.ts`: execSync types, error handling
+- `utils/conflictResolution.ts`: ConflictDiff, TaskConflict → `unknown`
+- `utils/inputSanitizer.ts`: ValidationRule, ValidationResult → `unknown`
+- `utils/offlineQueue.ts`: QueuedOperation data types → `unknown`
+- Multiple utils files: `any` → `unknown` conversions
+
+**🚀 NEXT SESSION - START HERE**:
+1. Continue composables batch: `npm run lint 2>&1 | grep "src/composables"`
+2. Then components batch
+3. Then views batch
+4. Final: `npm run build && npm run lint`
+
+**Remaining** (~1,134 warnings):
+- Services: ✅ DONE
+- Utils: ✅ DONE (~62 fixed)
+- Composables: ~47 remaining
 - Components: 205
 - Views: 102
 
@@ -210,6 +225,77 @@ Phase 3 (Mobile) ←────────────────────
 - Firebase stubs: Proper function signatures
 - JSON/DB responses: Type guards with interfaces
 - Vue Flow: Proper Node/Edge types from @vue-flow/core
+
+---
+
+### TASK-030: Fix TypeScript Strict Type Errors (IN PROGRESS)
+
+**Goal**: Fix all `vue-tsc --noEmit` errors to enable strict type checking in CI.
+
+**Priority**: P1-HIGH (blocks type safety enforcement)
+
+**Baseline** (Dec 19, 2025): 267 errors from `npx vue-tsc --noEmit`
+**Current Progress**: ~236 errors remaining (~31 fixed)
+
+**Background**:
+- `npm run build` does NOT catch TypeScript errors (Vite only transpiles)
+- `npx vue-tsc --noEmit` is the authoritative type checker
+- These are **type errors**, not lint warnings (different from TASK-027)
+
+**Root Causes**:
+1. **Window property access** - `(window as unknown).propertyName` loses type information
+2. **PouchDB sync handlers** - `.on()`, `.cancel()` methods typed as `unknown`
+3. **Cross-tab sync** - Store references typed as `unknown`
+4. **Various composables** - Properties accessed on `unknown` types
+
+**Files Fixed This Session**:
+| File | Fixes Applied |
+|------|---------------|
+| `types/global.d.ts` | Added `PouchDBSyncHandler`, `PouchDBSyncChange`, `PouchDBSyncError`, `PouchDBSyncInfo` interfaces; Extended Window with `__draggingTaskId`, `gc`, store refs |
+| `useReliableSyncManager.ts` | `syncHandler: unknown` → `PouchDBSyncHandler`; Cast sync event info |
+| `useDatabase.ts` | Fixed `window.pomoFlowDb` casts; Fixed error `.status` access |
+| `undoSingleton.ts` | Fixed `__pomoFlowUndoSystem` window access |
+| `useBackupRestoration.ts` | Fixed `pomoFlowBackup` window access |
+| `usePerformanceMonitor.ts` | Fixed `__performanceMonitorMemoryInterval` window access |
+| `useCleanupManager.ts` | Fixed `gc()` window access |
+| `useTimerChangesSync.ts` | Fixed `pomoFlowDb` window access |
+| `useVirtualList.ts` | Fixed `scrollY` access |
+| `useCalendarDayView.ts` | Fixed `__draggingTaskId` window access |
+| `useCalendarDrag.ts` | Fixed `__draggingTaskId` window access |
+| `timer.ts` | `db.sync?.()` → `db.triggerSync?.()` |
+| `syncTestSuite.ts` | Cast doc type for `_id` access |
+| `documentFilters.ts` | Cast `docRecord._id` as string |
+| `useSimpleBackup.ts` | Cast `cleanTasks` as `Task[]` |
+
+**Next Steps for Next Session**:
+
+| Priority | File(s) | Est. Errors | Fix Strategy |
+|----------|---------|-------------|--------------|
+| 1 | `useCrossTabSync.ts` | ~49 | Add `TaskStoreType` interface; Fix `.find()` callbacks |
+| 2 | `useCalendarDrag.ts` | ~30 | Create `DragData` interface; Cast dragData |
+| 3 | `useSidebarManagement.ts` | ~24 | Add project/task type interfaces |
+| 4 | `useOptimizedTaskStore.ts` | ~20 | Add task type casts |
+| 5 | `useCanvasVirtualization.ts` | ~18 | Add bounds interface (x/y/width/height) |
+| 6 | Remaining composables | ~95 | Apply similar patterns |
+
+**Pattern to Apply**:
+```typescript
+// WRONG: Loses type info
+(window as unknown).__propertyName
+
+// CORRECT: Preserves Window augmentation
+(window as Window & typeof globalThis).__propertyName
+
+// For store references in callbacks
+taskStore.tasks.find((t: unknown) => t.id === id)
+// →
+taskStore.tasks.find((t: { id: string }) => t.id === id)
+```
+
+**Command to Verify**:
+```bash
+npx vue-tsc --noEmit 2>&1 | grep "error TS" | wc -l
+```
 
 ---
 

@@ -14,7 +14,7 @@
           <ChevronDown v-if="!isCollapsed" :size="16" />
           <ChevronRight v-if="isCollapsed" :size="16" />
         </button>
-        <div class="project-indicator" :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }" />
+        <div class="project-indicator" />
         <h3 class="project-name">
           {{ project.name }}
         </h3>
@@ -762,6 +762,8 @@ watch(() => props.tasks, () => {
   width: 12px;
   height: 12px;
   border-radius: var(--radius-full);
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--glass-bg-medium);
 }
 
 .project-name {
@@ -955,18 +957,30 @@ watch(() => props.tasks, () => {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border: none;
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-heavy) 0%,
+    var(--glass-bg-tint) 100%
+  );
+  border: 1px solid var(--glass-bg-medium);
   border-radius: var(--radius-sm);
-  background: var(--brand-primary);
-  color: white;
+  color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--spring-bounce);
   flex-shrink: 0;
+  box-shadow: 0 2px 4px var(--shadow-md);
 }
 
 .add-task-btn-mini:hover {
-  background: var(--brand-primary-hover);
-  transform: scale(1.05);
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-medium) 0%,
+    var(--glass-bg-soft) 100%
+  );
+  border-color: var(--glass-border-strong);
+  color: var(--text-primary);
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 4px 8px var(--shadow-strong);
 }
 
 .add-task-btn-mini:active {

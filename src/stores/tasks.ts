@@ -15,6 +15,7 @@ import type {
 import type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
 import { useSmartViews } from '@/composables/useSmartViews'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
 
 // Re-export types for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance }
@@ -190,7 +191,9 @@ export const useTaskStore = defineStore('tasks', () => {
       const loadedTasks = await db.load<Task[]>(DB_KEYS.TASKS)
 
       if (loadedTasks && Array.isArray(loadedTasks)) {
+        const oldTasks = [...tasks.value]
         tasks.value = loadedTasks
+        taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromPouchDB')
         console.log(`✅ Loaded ${tasks.value.length} tasks from PouchDB`)
       } else {
         console.log('ℹ️ No tasks in PouchDB, checking localStorage for backup before creating samples')
@@ -202,7 +205,9 @@ export const useTaskStore = defineStore('tasks', () => {
           try {
             const backupTasks = JSON.parse(userBackup)
             if (Array.isArray(backupTasks) && backupTasks.length > 0) {
+              const oldTasks = [...tasks.value]
               tasks.value = backupTasks
+              taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'localStorage-userBackup-restore')
               console.log(`🔄 Restored ${backupTasks.length} tasks from localStorage backup`)
               return
             }
@@ -215,7 +220,9 @@ export const useTaskStore = defineStore('tasks', () => {
           try {
             const parsedImported = JSON.parse(importedTasks)
             if (Array.isArray(parsedImported) && parsedImported.length > 0) {
+              const oldTasks = [...tasks.value]
               tasks.value = parsedImported
+              taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'localStorage-importedTasks-restore')
               console.log(`🔄 Restored ${parsedImported.length} tasks from localStorage import`)
               return
             }
@@ -226,7 +233,9 @@ export const useTaskStore = defineStore('tasks', () => {
 
         // Preserve existing tasks if they exist, only create samples if truly empty
         if (tasks.value.length === 0) {
+          const oldTasks = [...tasks.value]
           tasks.value = createSampleTasks()
+          taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'createSampleTasks-initial')
           addTestCalendarInstances() // Add test instances to sample tasks
           console.log('📝 Created sample tasks for first-time users (no backup found)')
           console.log('📊 Sample tasks created:', tasks.value.map(t => ({ id: t.id, title: t.title, projectId: t.projectId, status: t.status })))
@@ -257,7 +266,9 @@ export const useTaskStore = defineStore('tasks', () => {
         try {
           const backupTasks = JSON.parse(userBackup)
           if (Array.isArray(backupTasks) && backupTasks.length > 0) {
+            const oldTasks = [...tasks.value]
             tasks.value = backupTasks
+            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'error-recovery-localStorage-backup')
             console.log(`🔄 Restored ${backupTasks.length} tasks from localStorage backup during error recovery`)
             return
           }
@@ -269,7 +280,9 @@ export const useTaskStore = defineStore('tasks', () => {
       // Preserve existing tasks on error, only create samples if truly empty
       if (tasks.value.length === 0) {
         console.log('🔄 Creating fallback sample tasks due to PouchDB failure (no existing tasks or backup)')
+        const oldTasks = [...tasks.value]
         tasks.value = createSampleTasks()
+        taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'error-recovery-createSampleTasks')
         addTestCalendarInstances() // Add test instances to sample tasks
       } else {
         console.log(`🔄 Preserving existing ${tasks.value.length} tasks despite PouchDB error`)
@@ -907,23 +920,31 @@ export const useTaskStore = defineStore('tasks', () => {
         }
 
         if (taskArray && taskArray.length > 0) {
+          const oldTasks = [...tasks.value]
           tasks.value = taskArray.map((task: any) => ({
             ...task,
             createdAt: new Date(task.createdAt),
             updatedAt: new Date(task.updatedAt)
           }))
+          taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-fromDoc')
           console.log(`✅ Loaded ${taskArray.length} tasks from tasks:data`)
         } else {
           console.log('ℹ️ tasks:data exists but is empty')
+          const oldTasks = [...tasks.value]
           tasks.value = []
+          taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-emptyDoc')
         }
       } else {
         console.log('ℹ️ No tasks:data document found')
+        const oldTasks = [...tasks.value]
         tasks.value = []
+        taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-noDoc')
       }
     } catch (error) {
       console.error('❌ Failed to load tasks from PouchDB:', error)
+      const oldTasks = [...tasks.value]
       tasks.value = []
+      taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-error')
       return
     }
 
@@ -1761,12 +1782,18 @@ export const useTaskStore = defineStore('tasks', () => {
     const deletedTask = tasks.value[taskIndex]
     console.log(`🗑️ Deleting task: "${deletedTask.title}"`)
 
+    // Mark as user deletion so the disappearance logger knows this is intentional
+    taskDisappearanceLogger.markUserDeletion(taskId)
+
     // Set manual operation flag to prevent watch system interference
     manualOperationInProgress = true
 
     try {
       // Remove from memory
       tasks.value.splice(taskIndex, 1)
+
+      // Take snapshot after deletion (markUserDeletion already called above)
+      taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${deletedTask.title.substring(0, 30)}`)
 
       // EMERGENCY FIX: Single PouchDB operation only (no Promise.all conflicts)
       console.log('💾 Single persistence operation (emergency fix)...')
@@ -2823,7 +2850,9 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log('🔄 [TASK-STORE] BEFORE assignment: tasks.value.length =', tasks.value.length)
 
       // Direct assignment - this should be synchronous
+      const oldTasks = [...tasks.value]
       tasks.value = [...newTasks]
+      taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'undo-restoreTaskState')
 
       console.log('🔄 [TASK-STORE] AFTER assignment: tasks.value.length =', tasks.value.length)
 
@@ -2859,7 +2888,9 @@ export const useTaskStore = defineStore('tasks', () => {
         userMessage: 'Undo failed. Restoring from backup.'
       })
       // Emergency restore from backup
+      const oldTasksEmergency = [...tasks.value]
       tasks.value = backupTasks
+      taskDisappearanceLogger.logArrayReplacement(oldTasksEmergency, tasks.value, 'undo-emergencyRestore')
       try {
         await db.save(DB_KEYS.TASKS, tasks.value)
         await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, tasks.value)

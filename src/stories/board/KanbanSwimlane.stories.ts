@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
 import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
 
-// Mock tasks data
+// Mock tasks data matching KanbanColumn structure
 const mockTasks = [
   { id: '1', title: 'Design dashboard', description: 'Create mockups', status: 'planned', priority: 'high', estimatedTime: 60, projectId: 'proj1', subtasks: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
   { id: '2', title: 'Implement drag & drop', description: 'Add vuedraggable', status: 'in_progress', priority: 'medium', estimatedTime: 90, projectId: 'proj1', subtasks: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
@@ -27,13 +27,18 @@ const meta = {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: 'Swimlane component that groups tasks by project with collapsible header and multiple view types (status, date, priority).'
+        component: 'Swimlane component that groups tasks by project with collapsible header and multiple view types (status, date, priority). Each swimlane takes full width with 360px fixed-width columns that scroll horizontally.'
       }
     }
   },
   decorators: [
     () => ({
-      template: '<div style="width: 100%; height: 100vh; background: var(--surface-primary); padding: 24px;"><story /></div>'
+      template: `<div style="
+        width: 100%;
+        height: 100vh;
+        background: var(--surface-primary);
+        overflow: hidden;
+      "><story /></div>`
     })
   ]
 } satisfies Meta<typeof KanbanSwimlane>
@@ -41,7 +46,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-// Default: Status View Swimlane
+// Default: Single swimlane at full width with natural column widths and horizontal scroll
 export const Default: Story = {
   render: () => ({
     components: { KanbanSwimlane },
@@ -66,12 +71,12 @@ export const Default: Story = {
   })
 }
 
-// View Types: Status, Date, Priority
+// View Types: Status, Date, Priority stacked vertically (like real BoardView)
 export const ViewTypes: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Demonstrates the three view types: Status (workflow stages), Date (Todoist-style scheduling), and Priority (urgency levels).'
+        story: 'Demonstrates the three view types stacked vertically (as in the real app). Each swimlane takes full width with horizontal scrolling. Status shows workflow stages, Date shows Todoist-style scheduling, Priority shows urgency levels.'
       }
     }
   },
@@ -85,47 +90,38 @@ export const ViewTypes: Story = {
       return { statusProject, dateProject, priorityProject, tasks }
     },
     template: `
-      <div style="display: flex; flex-direction: column; gap: 24px;">
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <span style="color: var(--text-muted); font-size: 12px;">Status View (workflow stages)</span>
-          <KanbanSwimlane
-            :project="statusProject"
-            :tasks="tasks"
-            density="comfortable"
-            :show-done-column="true"
-            @select-task="() => {}"
-            @start-timer="() => {}"
-            @edit-task="() => {}"
-            @move-task="() => {}"
-            @context-menu="() => {}"
-          />
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <span style="color: var(--text-muted); font-size: 12px;">Date View (Todoist-style scheduling)</span>
-          <KanbanSwimlane
-            :project="dateProject"
-            :tasks="tasks"
-            density="comfortable"
-            @select-task="() => {}"
-            @start-timer="() => {}"
-            @edit-task="() => {}"
-            @move-task="() => {}"
-            @context-menu="() => {}"
-          />
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <span style="color: var(--text-muted); font-size: 12px;">Priority View (urgency levels)</span>
-          <KanbanSwimlane
-            :project="priorityProject"
-            :tasks="tasks"
-            density="comfortable"
-            @select-task="() => {}"
-            @start-timer="() => {}"
-            @edit-task="() => {}"
-            @move-task="() => {}"
-            @context-menu="() => {}"
-          />
-        </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-3); height: 100%; overflow-y: auto;">
+        <KanbanSwimlane
+          :project="statusProject"
+          :tasks="tasks"
+          density="comfortable"
+          :show-done-column="true"
+          @select-task="() => {}"
+          @start-timer="() => {}"
+          @edit-task="() => {}"
+          @move-task="() => {}"
+          @context-menu="() => {}"
+        />
+        <KanbanSwimlane
+          :project="dateProject"
+          :tasks="tasks"
+          density="comfortable"
+          @select-task="() => {}"
+          @start-timer="() => {}"
+          @edit-task="() => {}"
+          @move-task="() => {}"
+          @context-menu="() => {}"
+        />
+        <KanbanSwimlane
+          :project="priorityProject"
+          :tasks="tasks"
+          density="comfortable"
+          @select-task="() => {}"
+          @start-timer="() => {}"
+          @edit-task="() => {}"
+          @move-task="() => {}"
+          @context-menu="() => {}"
+        />
       </div>
     `
   })

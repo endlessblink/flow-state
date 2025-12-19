@@ -192,10 +192,12 @@
             <iframe src="kanban/index.html" title="Development Kanban"></iframe>
         </div>
         <div id="skills" class="panel">
-            <iframe src="skills/index.html" title="Skills Dashboard"></iframe>
+            <!-- Lazy load: src set on first tab activation to ensure container has dimensions -->
+            <iframe data-src="skills/index.html" title="Skills Dashboard"></iframe>
         </div>
         <div id="docs" class="panel">
-            <iframe src="docs/index.html" title="Documentation Canvas"></iframe>
+            <!-- Lazy load: src set on first tab activation to ensure container has dimensions -->
+            <iframe data-src="docs/index.html" title="Documentation Canvas"></iframe>
         </div>
     </main>
 
@@ -228,13 +230,12 @@
                 activeTab.classList.add('active');
                 activePanel.classList.add('active');
 
-                // Notify iframe that it's now visible so it can refresh its graph
+                // Lazy load iframe on first activation
+                // This ensures force-graph initializes with correct container dimensions
                 const iframe = activePanel.querySelector('iframe');
-                if (iframe && iframe.contentWindow) {
-                    // Small delay to ensure panel is visible before refresh
-                    setTimeout(() => {
-                        iframe.contentWindow.postMessage({ type: 'tab-activated' }, '*');
-                    }, 50);
+                if (iframe && iframe.dataset.src && !iframe.src) {
+                    console.log(`Lazy loading iframe for ${panelId}...`);
+                    iframe.src = iframe.dataset.src;
                 }
             }
         }

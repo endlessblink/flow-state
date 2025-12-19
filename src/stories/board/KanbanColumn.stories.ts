@@ -32,7 +32,7 @@ const meta = {
   },
   decorators: [
     () => ({
-      template: '<div style="width: 100%; height: 100vh; background: var(--surface-primary); padding: 24px;"><story /></div>'
+      template: '<div style="width: 100%; height: 100vh; background: var(--surface-primary); padding: 16px;"><story /></div>'
     })
   ]
 } satisfies Meta<typeof KanbanColumn>
@@ -51,12 +51,13 @@ export const Default: Story = {
       return { todoTasks, inProgressTasks, doneTasks }
     },
     template: `
-      <div style="display: flex; gap: 16px; height: 100%;">
+      <div style="display: flex; gap: 12px; height: 100%; width: 100%;">
         <KanbanColumn
           title="Planned"
           status="planned"
           :tasks="todoTasks"
           :wip-limit="5"
+          style="flex: 1; min-width: 0;"
           @add-task="() => {}"
           @select-task="() => {}"
         />
@@ -65,6 +66,7 @@ export const Default: Story = {
           status="in_progress"
           :tasks="inProgressTasks"
           :wip-limit="3"
+          style="flex: 1; min-width: 0;"
           @add-task="() => {}"
           @select-task="() => {}"
         />
@@ -73,6 +75,7 @@ export const Default: Story = {
           status="done"
           :tasks="doneTasks"
           :wip-limit="10"
+          style="flex: 1; min-width: 0;"
           @add-task="() => {}"
           @select-task="() => {}"
         />
@@ -99,8 +102,8 @@ export const WipStates: Story = {
       return { normalTasks, warningTasks, exceededTasks }
     },
     template: `
-      <div style="display: flex; gap: 16px; height: 100%;">
-        <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; gap: 12px; height: 100%; width: 100%;">
+        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0;">
           <span style="color: var(--text-muted); font-size: 12px; text-align: center;">Normal (1/3)</span>
           <KanbanColumn
             title="In Progress"
@@ -111,7 +114,7 @@ export const WipStates: Story = {
             @select-task="() => {}"
           />
         </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0;">
           <span style="color: var(--text-muted); font-size: 12px; text-align: center;">Warning (2/3)</span>
           <KanbanColumn
             title="In Progress"
@@ -122,7 +125,7 @@ export const WipStates: Story = {
             @select-task="() => {}"
           />
         </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0;">
           <span style="color: var(--text-muted); font-size: 12px; text-align: center;">Exceeded (3/3)</span>
           <KanbanColumn
             title="In Progress"

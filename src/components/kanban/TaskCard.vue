@@ -623,7 +623,7 @@ const cycleStatus = () => {
   overflow-wrap: break-word;
   hyphens: auto;
   flex: 1;
-  min-width: 140px; /* Ensure minimum width for title */
+  min-width: 0; /* Allow full responsive shrinking */
   /* Allow multi-line titles with graceful truncation */
   display: -webkit-box;
   -webkit-line-clamp: 2;

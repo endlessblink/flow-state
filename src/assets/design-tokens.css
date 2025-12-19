@@ -153,8 +153,8 @@
 
   /* TaskCard-specific sizing */
   --task-card-min-height: 2.5rem;                 /* 40px - Compact card height */
-  --task-card-min-width: 18rem;                   /* 288px - Reduced to fit kanban columns (360px) */
-  --task-card-max-width: 24rem;                   /* 384px - Maximum card width for content readability */
+  --task-card-min-width: 0;                       /* Fully responsive - no minimum width constraint */
+  --task-card-max-width: 100%;                    /* Fill available width - let parent control sizing */
   --task-card-responsive-width: auto;             /* Responsive width that adapts to content */
   --task-card-icon-size: 1.25rem;                 /* 20px - Status icon size */
   --task-card-checkbox-size: 1rem;                 /* 16px - Checkbox size */

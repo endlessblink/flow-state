@@ -201,32 +201,33 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 
 ---
 
-### TASK-024: Review Task Disappearance Logs (READY)
+### TASK-024: Review Task Disappearance Logs (⏸️ PASSIVE MONITORING)
 
-**Goal**: After 24-48 hour monitoring period, analyze taskDisappearanceLogger data to identify root cause of BUG-020.
+**Goal**: Analyze taskDisappearanceLogger data IF task disappearance is reproduced.
 
-**Priority**: P1-HIGH
+**Priority**: P3-LOW (passive - only activate if issue recurs)
 
 **Depends On**: ~~TASK-022~~ (COMPLETE - logger is active)
 
-**Scheduled Review**: Dec 20-21, 2025
+**Status**: ⏸️ On hold - User cannot reliably reproduce the issue. Logger remains active for passive monitoring.
 
-#### Steps
+#### If Issue Recurs - Run These Steps
 
 | Step | Description | Status |
 |------|-------------|--------|
-| 1 | Run `window.taskLogger.printSummary()` in browser console | TODO |
-| 2 | Check `window.taskLogger.getDisappearedTasks()` for disappeared tasks | TODO |
-| 3 | If tasks disappeared, analyze logs to identify source | TODO |
-| 4 | Export logs with `window.taskLogger.exportLogs()` for documentation | TODO |
-| 5 | Create fix based on findings | TODO |
-| 6 | Remove auto-enable from `src/main.ts` once issue resolved | TODO |
+| 1 | Run `window.taskLogger.printSummary()` in browser console | WAITING |
+| 2 | Check `window.taskLogger.getDisappearedTasks()` for disappeared tasks | WAITING |
+| 3 | If tasks disappeared, analyze logs to identify source | WAITING |
+| 4 | Export logs with `window.taskLogger.exportLogs()` for documentation | WAITING |
+| 5 | Create fix based on findings | WAITING |
+| 6 | Remove auto-enable from `src/main.ts` once issue resolved | WAITING |
 
-#### Expected Outcomes
+#### Notes
 
-- If no tasks disappeared: BUG-020 may be intermittent or resolved
-- If tasks disappeared: Stack traces will reveal the culprit code path
-- Logger can be disabled once root cause is identified
+- Logger is integrated and running in background
+- If tasks disappear again, immediately run the steps above
+- May be an intermittent issue or already resolved
+- Low priority until reproduction occurs
 
 ---
 
@@ -846,7 +847,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | BUG-016 | Timer status not syncing | P2-MEDIUM | **IN PROGRESS** Dec 18 - Cross-tab sync infrastructure added (timer.ts + useCrossTabSync.ts + CrossTabPerformance.ts), but leadership election conflict exists - auto-break starts override leader. |
 | ~~BUG-018~~ | ~~Canvas smart group header icons cut off~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Wrapped actions in overflow container |
 | ~~BUG-019~~ | ~~Canvas section resize preview mispositioned~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Used Vue Flow viewport + container offset for accurate positioning |
-| BUG-020 | Tasks randomly disappearing without user deletion | P1-HIGH | **INVESTIGATING** Dec 18 - Logger utility created, needs integration |
+| BUG-020 | Tasks randomly disappearing without user deletion | P3-LOW | ⏸️ PASSIVE MONITORING - Logger integrated, waiting for reproduction. If occurs: run `window.taskLogger.printSummary()` |
 | ~~BUG-021~~ | ~~Dev-Manager Skills/Docs tabs show black until manual refresh~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Lazy loading iframes on first tab activation |
 | ~~BUG-022~~ | ~~Dev-Manager Kanban not syncing with MASTER_PLAN.md updates~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Symlink + `--symlinks` flag for serve |
 

@@ -9,7 +9,7 @@ export interface CategoryAction {
   newProjectId?: string
   oldStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   newStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
-  deletedTask?: any // Store full task data for undo of deleted tasks
+  deletedTask?: import('./tasks').Task // Store full task data for undo of deleted tasks
   timestamp: number
 }
 
@@ -168,10 +168,14 @@ export const useQuickSortStore = defineStore('quickSort', () => {
       if (historyData) {
         const parsed = JSON.parse(historyData)
         // Convert date strings back to Date objects
-        sessionHistory.value = parsed.map((s: any) => ({
+        interface ParsedSession {
+          completedAt: string
+          [key: string]: unknown
+        }
+        sessionHistory.value = parsed.map((s: ParsedSession) => ({
           ...s,
           completedAt: new Date(s.completedAt)
-        }))
+        })) as SessionSummary[]
       }
 
       const lastDate = localStorage.getItem('quickSort_lastCompletedDate')

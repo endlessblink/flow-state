@@ -116,11 +116,6 @@
 import { ref, computed, defineAsyncComponent } from 'vue'
 import { Position } from '@vue-flow/core'
 import { Calendar, Timer } from 'lucide-vue-next'
-
-// Lazy load Handle component to prevent Vue Flow context errors in Storybook
-const Handle = defineAsyncComponent(() =>
-  import('@vue-flow/core').then(mod => mod.Handle)
-)
 import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
@@ -154,6 +149,11 @@ const emit = defineEmits<{
   select: [task: Task, multiSelect: boolean]
   contextMenu: [event: MouseEvent, task: Task]
 }>()
+
+// Lazy load Handle component to prevent Vue Flow context errors in Storybook
+const Handle = defineAsyncComponent(() =>
+  import('@vue-flow/core').then(mod => mod.Handle)
+)
 
 // Defensive validation - gracefully handle undefined task prop
 if (!props.task) {

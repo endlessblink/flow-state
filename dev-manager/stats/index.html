@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Statistics Dashboard</title>
+    <title>Project Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Design tokens - Pure black theme (matching dev-manager) */
         :root {
             --surface-primary: #000000;
             --surface-secondary: #0d1117;
@@ -19,7 +18,6 @@
             --border-subtle: #1a1a1a;
             --border-medium: #30363d;
             --brand-primary: #4ECDC4;
-            --brand-hover: #5fd9d1;
             --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
 
             /* Status colors */
@@ -31,13 +29,14 @@
             --color-road: #8b5cf6;
             --color-issue: #f97316;
             --color-idea: #ec4899;
+
+            /* Health colors */
+            --health-good: #10b981;
+            --health-warning: #f59e0b;
+            --health-critical: #ef4444;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         html, body {
             height: 100%;
@@ -55,158 +54,383 @@
             flex-direction: column;
             min-height: 100%;
             padding: 1rem;
+            gap: 1rem;
         }
 
-        .header {
-            background: rgba(31, 31, 31, 0.95);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+        /* Health Status Banner */
+        .health-banner {
+            background: var(--surface-tertiary);
             border: 1px solid var(--border-subtle);
             border-radius: 12px;
             padding: 1rem 1.5rem;
-            margin-bottom: 1rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
 
-        .title {
-            font-size: 1.1rem;
-            font-weight: 600;
+        .health-status {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            color: var(--text-primary);
-        }
-
-        .last-updated {
-            font-size: 0.75rem;
-            color: var(--text-subtle);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stat-card {
-            background: var(--surface-tertiary);
-            border: 1px solid var(--border-subtle);
-            border-radius: 10px;
-            padding: 1rem;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            line-height: 1;
-        }
-
-        .stat-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-top: 0.5rem;
-        }
-
-        .stat-card.done .stat-value { color: var(--color-done); }
-        .stat-card.progress .stat-value { color: var(--color-progress); }
-        .stat-card.todo .stat-value { color: var(--color-todo); }
-        .stat-card.bugs .stat-value { color: var(--color-bug); }
-
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 1rem;
         }
 
-        .chart-card {
+        .health-indicator {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .health-indicator.good { background: rgba(16, 185, 129, 0.2); }
+        .health-indicator.warning { background: rgba(245, 158, 11, 0.2); }
+        .health-indicator.critical { background: rgba(239, 68, 68, 0.2); }
+
+        .health-text h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .health-text p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .health-text.good h2 { color: var(--health-good); }
+        .health-text.warning h2 { color: var(--health-warning); }
+        .health-text.critical h2 { color: var(--health-critical); }
+
+        .health-metrics {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .health-metric {
+            text-align: center;
+        }
+
+        .health-metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .health-metric-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
             background: var(--surface-tertiary);
             border: 1px solid var(--border-subtle);
             border-radius: 12px;
             padding: 1rem;
         }
 
-        .chart-title {
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-primary);
-            margin-bottom: 1rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .chart-container {
-            position: relative;
-            height: 250px;
-        }
-
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 200px;
+        .card-subtitle {
+            font-size: 0.7rem;
             color: var(--text-muted);
         }
 
-        .error {
+        /* Active Work Panel */
+        .active-work-list {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 200px;
-            color: var(--color-bug);
-            text-align: center;
-        }
-
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--surface-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-medium);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-subtle);
-        }
-
-        .recent-list {
-            max-height: 200px;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 280px;
             overflow-y: auto;
         }
 
-        .recent-item {
+        .active-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            border-left: 3px solid var(--color-progress);
+        }
+
+        .active-item.monitoring {
+            border-left-color: var(--color-task);
+        }
+
+        .active-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .active-item-id {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--brand-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .active-item-title {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .active-item-meta {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Completed Tasks Panel */
+        .completed-group {
+            margin-bottom: 1rem;
+        }
+
+        .completed-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .completed-group-header {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .completed-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .completed-item {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             padding: 0.5rem;
             border-radius: 6px;
             font-size: 0.8rem;
-            color: var(--text-secondary);
         }
 
-        .recent-item:hover {
+        .completed-item:hover {
             background: var(--surface-hover);
         }
 
+        .completed-item-check {
+            color: var(--color-done);
+            font-size: 0.9rem;
+        }
+
+        .completed-item-id {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            min-width: 70px;
+        }
+
+        .completed-item-title {
+            flex: 1;
+            color: var(--text-secondary);
+            line-height: 1.3;
+        }
+
+        .completed-item-date {
+            font-size: 0.65rem;
+            color: var(--text-subtle);
+            white-space: nowrap;
+        }
+
+        /* Priority Matrix */
+        .priority-matrix {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .priority-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .priority-label {
+            width: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .priority-label.p1 { color: var(--health-critical); }
+        .priority-label.p2 { color: var(--health-warning); }
+        .priority-label.p3 { color: var(--health-good); }
+
+        .priority-bar-container {
+            flex: 1;
+            display: flex;
+            gap: 2px;
+            height: 28px;
+            background: var(--surface-secondary);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .priority-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+            min-width: 30px;
+            transition: width 0.3s ease;
+        }
+
+        .priority-bar.done { background: var(--color-done); }
+        .priority-bar.open { background: var(--surface-primary); color: var(--text-muted); }
+
+        .priority-counts {
+            width: 80px;
+            text-align: right;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+
+        /* Type breakdown list */
+        .type-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .type-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--surface-secondary);
+            border-radius: 6px;
+        }
+
+        .type-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .type-icon.task { background: rgba(59, 130, 246, 0.2); }
+        .type-icon.bug { background: rgba(239, 68, 68, 0.2); }
+        .type-icon.road { background: rgba(139, 92, 246, 0.2); }
+        .type-icon.issue { background: rgba(249, 115, 22, 0.2); }
+        .type-icon.idea { background: rgba(236, 72, 153, 0.2); }
+
+        .type-info {
+            flex: 1;
+        }
+
+        .type-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .type-progress {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .type-stat {
+            text-align: right;
+        }
+
+        .type-stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .type-stat-value.task { color: var(--color-task); }
+        .type-stat-value.bug { color: var(--color-bug); }
+        .type-stat-value.road { color: var(--color-road); }
+        .type-stat-value.issue { color: var(--color-issue); }
+        .type-stat-value.idea { color: var(--color-idea); }
+
+        .type-stat-label {
+            font-size: 0.65rem;
+            color: var(--text-subtle);
+        }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 150px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .empty-state-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--surface-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
+
+        /* Badge */
         .badge {
             display: inline-block;
             padding: 0.15rem 0.4rem;
             border-radius: 4px;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: 600;
             text-transform: uppercase;
         }
@@ -216,87 +440,110 @@
         .badge.road { background: var(--color-road); color: white; }
         .badge.issue { background: var(--color-issue); color: white; }
         .badge.idea { background: var(--color-idea); color: white; }
-        .badge.done { background: var(--color-done); color: white; }
     </style>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <div class="title">
-                <span>📊</span>
-                <span>Project Statistics</span>
+        <!-- Health Status Banner -->
+        <div class="health-banner">
+            <div class="health-status">
+                <div class="health-indicator" id="healthIndicator">
+                    <span id="healthIcon">⏳</span>
+                </div>
+                <div class="health-text" id="healthText">
+                    <h2>Loading...</h2>
+                    <p>Analyzing project status</p>
+                </div>
             </div>
-            <div class="last-updated" id="lastUpdated">Loading...</div>
-        </header>
-
-        <div class="stats-grid" id="statsGrid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalItems">-</div>
-                <div class="stat-label">Total Items</div>
-            </div>
-            <div class="stat-card done">
-                <div class="stat-value" id="doneCount">-</div>
-                <div class="stat-label">Completed</div>
-            </div>
-            <div class="stat-card progress">
-                <div class="stat-value" id="progressCount">-</div>
-                <div class="stat-label">In Progress</div>
-            </div>
-            <div class="stat-card todo">
-                <div class="stat-value" id="todoCount">-</div>
-                <div class="stat-label">To Do</div>
-            </div>
-            <div class="stat-card bugs">
-                <div class="stat-value" id="bugCount">-</div>
-                <div class="stat-label">Bugs</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="completionRate">-</div>
-                <div class="stat-label">Completion %</div>
+            <div class="health-metrics">
+                <div class="health-metric">
+                    <div class="health-metric-value" id="completionRate">-</div>
+                    <div class="health-metric-label">Complete</div>
+                </div>
+                <div class="health-metric">
+                    <div class="health-metric-value" id="activeCount">-</div>
+                    <div class="health-metric-label">Active</div>
+                </div>
+                <div class="health-metric">
+                    <div class="health-metric-value" id="openBugs">-</div>
+                    <div class="health-metric-label">Open Bugs</div>
+                </div>
             </div>
         </div>
 
-        <div class="charts-grid">
-            <div class="chart-card">
-                <div class="chart-title">📈 Status Distribution</div>
-                <div class="chart-container">
-                    <canvas id="statusChart"></canvas>
+        <div class="dashboard-grid">
+            <!-- Active Work Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🚀</span>
+                        <span>Active Work</span>
+                    </div>
+                    <div class="card-subtitle" id="activeSubtitle">Currently in progress</div>
+                </div>
+                <div class="active-work-list" id="activeWorkList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⏳</div>
+                        <div>Loading...</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="chart-card">
-                <div class="chart-title">🏷️ By Type</div>
-                <div class="chart-container">
-                    <canvas id="typeChart"></canvas>
+            <!-- Recently Completed -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>✅</span>
+                        <span>Recently Completed</span>
+                    </div>
+                    <div class="card-subtitle" id="completedSubtitle">Latest achievements</div>
+                </div>
+                <div class="completed-list" id="completedList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⏳</div>
+                        <div>Loading...</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="chart-card">
-                <div class="chart-title">⚡ Priority Distribution</div>
-                <div class="chart-container">
-                    <canvas id="priorityChart"></canvas>
+            <!-- Priority Matrix -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>⚡</span>
+                        <span>Priority Status</span>
+                    </div>
+                    <div class="card-subtitle">Done vs Open by priority</div>
+                </div>
+                <div class="priority-matrix" id="priorityMatrix">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⏳</div>
+                        <div>Loading...</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="chart-card">
-                <div class="chart-title">✅ Recently Completed</div>
-                <div class="recent-list" id="recentList">
-                    <div class="loading">Loading...</div>
+            <!-- Type Breakdown -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🏷️</span>
+                        <span>By Category</span>
+                    </div>
+                    <div class="card-subtitle">Progress by item type</div>
+                </div>
+                <div class="type-breakdown" id="typeBreakdown">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⏳</div>
+                        <div>Loading...</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Chart.js global config for dark theme
-        Chart.defaults.color = '#8b949e';
-        Chart.defaults.borderColor = 'rgba(48, 54, 61, 0.5)';
-
-        let statusChart = null;
-        let typeChart = null;
-        let priorityChart = null;
-
-        // Parse MASTER_PLAN.md for metrics
+        // Parse MASTER_PLAN.md for detailed metrics
         async function fetchAndParse() {
             try {
                 const response = await fetch('/docs/MASTER_PLAN.md?v=' + Date.now());
@@ -310,244 +557,330 @@
         }
 
         function parseMarkdown(text) {
-            const items = {
-                tasks: { total: 0, done: 0, progress: 0, todo: 0 },
-                bugs: { total: 0, done: 0, progress: 0, todo: 0 },
-                roads: { total: 0, done: 0, progress: 0, todo: 0 },
-                issues: { total: 0, done: 0, progress: 0, todo: 0 },
-                ideas: { total: 0, done: 0, progress: 0, todo: 0 },
-                priorities: { p1: 0, p2: 0, p3: 0 },
-                recentDone: []
+            const data = {
+                health: { status: 'good', message: '', completion: 0 },
+                active: [],
+                completed: [],
+                priorities: {
+                    p1: { done: 0, open: 0, items: [] },
+                    p2: { done: 0, open: 0, items: [] },
+                    p3: { done: 0, open: 0, items: [] }
+                },
+                types: {
+                    tasks: { total: 0, done: 0, label: 'Tasks', icon: '📋' },
+                    bugs: { total: 0, done: 0, label: 'Bugs', icon: '🐛' },
+                    roads: { total: 0, done: 0, label: 'Roadmap', icon: '🗺️' },
+                    issues: { total: 0, done: 0, label: 'Issues', icon: '⚠️' },
+                    ideas: { total: 0, done: 0, label: 'Ideas', icon: '💡' }
+                }
             };
 
-            // Match patterns like TASK-001, BUG-001, ROAD-001, ISSUE-001, IDEA-001
-            const patterns = [
-                { type: 'tasks', regex: /(?:~~)?TASK-(\d+)(?:~~)?/g, doneRegex: /~~TASK-\d+~~/g },
-                { type: 'bugs', regex: /(?:~~)?BUG-(\d+)(?:~~)?/g, doneRegex: /~~BUG-\d+~~/g },
-                { type: 'roads', regex: /(?:~~)?ROAD-(\d+)(?:~~)?/g, doneRegex: /~~ROAD-\d+~~/g },
-                { type: 'issues', regex: /(?:~~)?ISSUE-(\d+)(?:~~)?/g, doneRegex: /~~ISSUE-\d+~~/g },
-                { type: 'ideas', regex: /(?:~~)?IDEA-(\d+)(?:~~)?/g, doneRegex: /~~IDEA-\d+~~/g }
-            ];
+            // Split into lines for parsing
+            const lines = text.split('\n');
 
-            patterns.forEach(({ type, regex, doneRegex }) => {
-                const allMatches = text.match(regex) || [];
-                const doneMatches = text.match(doneRegex) || [];
+            // Parse table rows for items
+            const typeMap = {
+                'TASK': 'tasks',
+                'BUG': 'bugs',
+                'ROAD': 'roads',
+                'ISSUE': 'issues',
+                'IDEA': 'ideas'
+            };
 
-                // Use Set to count unique IDs
-                const uniqueAll = new Set(allMatches.map(m => m.replace(/~~/g, '')));
-                const uniqueDone = new Set(doneMatches.map(m => m.replace(/~~/g, '')));
+            // Track unique IDs
+            const seenIds = new Set();
+            const doneIds = new Set();
 
-                items[type].total = uniqueAll.size;
-                items[type].done = uniqueDone.size;
+            // Find all IDs and their status
+            lines.forEach((line, index) => {
+                // Match item IDs
+                const idMatches = line.match(/(?:~~)?(TASK|BUG|ROAD|ISSUE|IDEA)-(\d+)(?:~~)?/g);
+                if (!idMatches) return;
+
+                idMatches.forEach(match => {
+                    const isDone = match.startsWith('~~') && match.endsWith('~~');
+                    const cleanId = match.replace(/~~/g, '');
+                    const [type] = cleanId.split('-');
+                    const typeKey = typeMap[type];
+
+                    if (!typeKey || seenIds.has(cleanId)) return;
+                    seenIds.add(cleanId);
+
+                    if (isDone) {
+                        doneIds.add(cleanId);
+                        data.types[typeKey].done++;
+                    }
+                    data.types[typeKey].total++;
+                });
             });
 
-            // Count in-progress items (look for "IN PROGRESS" or "IN_PROGRESS" near item IDs)
-            const progressPattern = /(?:TASK|BUG|ROAD|ISSUE|IDEA)-\d+[^|]*(?:IN.?PROGRESS|MONITORING)/gi;
-            const progressMatches = text.match(progressPattern) || [];
-            const progressCount = new Set(progressMatches.map(m => m.match(/(?:TASK|BUG|ROAD|ISSUE|IDEA)-\d+/i)?.[0])).size;
-
-            // Distribute progress count
-            items.tasks.progress = Math.floor(progressCount * 0.5);
-            items.bugs.progress = Math.floor(progressCount * 0.3);
-
-            // Calculate todo counts
-            patterns.forEach(({ type }) => {
-                items[type].todo = Math.max(0, items[type].total - items[type].done - items[type].progress);
-            });
-
-            // Count priorities
-            const p1Matches = text.match(/P1[^a-zA-Z]|P1-HIGH|P1-CRITICAL/gi) || [];
-            const p2Matches = text.match(/P2[^a-zA-Z]|P2-MEDIUM/gi) || [];
-            const p3Matches = text.match(/P3[^a-zA-Z]|P3-LOW/gi) || [];
-            items.priorities.p1 = Math.floor(p1Matches.length / 2); // Divide by 2 to avoid double counting
-            items.priorities.p2 = Math.floor(p2Matches.length / 2);
-            items.priorities.p3 = Math.floor(p3Matches.length / 2);
-
-            // Extract recently completed items
-            const donePattern = /~~((?:TASK|BUG|ROAD|ISSUE|IDEA)-\d+)~~[^\n]*?([A-Z][a-zA-Z\s\-\/]+?)(?:\s*\||$|\n)/gm;
+            // Extract active items (IN_PROGRESS or MONITORING)
+            const activePattern = /\|\s*(TASK|BUG|ROAD|ISSUE|IDEA)-(\d+)\s*\|\s*(IN_PROGRESS|MONITORING|IN PROGRESS)[^|]*\|([^|]+)/gi;
             let match;
-            while ((match = donePattern.exec(text)) !== null && items.recentDone.length < 10) {
-                const id = match[1];
-                let title = match[2].trim();
-                if (title.length > 40) title = title.substring(0, 37) + '...';
+            while ((match = activePattern.exec(text)) !== null) {
+                const id = `${match[1]}-${match[2]}`;
+                const status = match[3].toUpperCase().includes('MONITOR') ? 'monitoring' : 'progress';
+                let files = match[4].trim();
 
-                const type = id.split('-')[0].toLowerCase();
-                items.recentDone.push({ id, title, type });
+                // Find the title from the detailed section
+                const titlePattern = new RegExp(`###\\s*(?:~~)?${id}(?:~~)?[:\\s]+([^\\n(]+)`, 'i');
+                const titleMatch = text.match(titlePattern);
+                let title = titleMatch ? titleMatch[1].trim() : 'No description';
+
+                // Clean up title
+                title = title.replace(/\*\*/g, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+
+                data.active.push({ id, title, status, files });
             }
 
-            return items;
-        }
+            // Extract completed items with dates
+            const completedPattern = /~~(TASK|BUG|ROAD|ISSUE|IDEA)-(\d+)~~[^~\n]*?(?:DONE|FIXED|✅)[^\n]*?(?:Dec\s*(\d+)|(\d{4}))?/gi;
+            while ((match = completedPattern.exec(text)) !== null) {
+                const id = `${match[1]}-${match[2]}`;
+                const type = match[1].toLowerCase();
+                let dateStr = match[3] ? `Dec ${match[3]}` : (match[4] || 'Recently');
 
-        function updateStats(data) {
-            const total = data.tasks.total + data.bugs.total + data.roads.total + data.issues.total + data.ideas.total;
-            const done = data.tasks.done + data.bugs.done + data.roads.done + data.issues.done + data.ideas.done;
-            const progress = data.tasks.progress + data.bugs.progress + data.roads.progress + data.issues.progress + data.ideas.progress;
-            const todo = total - done - progress;
-            const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
+                // Find title
+                const titlePattern = new RegExp(`###\\s*~~${id}~~[:\\s]+([^\\n(]+)`, 'i');
+                const titleMatch = text.match(titlePattern);
+                let title = titleMatch ? titleMatch[1].trim() : '';
 
-            document.getElementById('totalItems').textContent = total;
-            document.getElementById('doneCount').textContent = done;
-            document.getElementById('progressCount').textContent = progress;
-            document.getElementById('todoCount').textContent = todo;
-            document.getElementById('bugCount').textContent = data.bugs.total;
-            document.getElementById('completionRate').textContent = completionRate + '%';
-            document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-        }
+                // If no title from section header, try table
+                if (!title) {
+                    const tablePattern = new RegExp(`\\|\\s*~~${id}~~\\s*\\|[^|]*\\|[^|]*([^|]+)`, 'i');
+                    const tableMatch = text.match(tablePattern);
+                    if (tableMatch) title = tableMatch[1].trim();
+                }
 
-        function createStatusChart(data) {
-            const ctx = document.getElementById('statusChart').getContext('2d');
+                // Clean up
+                title = title.replace(/~~.*?~~/g, '').replace(/\*\*/g, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+                if (!title) title = id;
 
-            const done = data.tasks.done + data.bugs.done + data.roads.done + data.issues.done;
-            const progress = data.tasks.progress + data.bugs.progress + data.roads.progress + data.issues.progress;
-            const todo = data.tasks.todo + data.bugs.todo + data.roads.todo + data.issues.todo;
+                data.completed.push({ id, title, type, date: dateStr });
+            }
 
-            if (statusChart) statusChart.destroy();
-
-            statusChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Completed', 'In Progress', 'To Do'],
-                    datasets: [{
-                        data: [done, progress, todo],
-                        backgroundColor: ['#10b981', '#f59e0b', '#6366f1'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { padding: 15, usePointStyle: true, pointStyle: 'circle' }
-                        }
-                    },
-                    cutout: '60%'
+            // Dedupe completed list
+            const uniqueCompleted = [];
+            const seenCompleted = new Set();
+            data.completed.forEach(item => {
+                if (!seenCompleted.has(item.id)) {
+                    seenCompleted.add(item.id);
+                    uniqueCompleted.push(item);
                 }
             });
-        }
+            data.completed = uniqueCompleted.slice(0, 15);
 
-        function createTypeChart(data) {
-            const ctx = document.getElementById('typeChart').getContext('2d');
+            // Parse priorities
+            const priorityPattern = /\|\s*(?:~~)?(TASK|BUG|ROAD|ISSUE|IDEA)-(\d+)(?:~~)?\s*\|[^|]*\|[^|]*(P[0-3])[^|]*\|/gi;
+            while ((match = priorityPattern.exec(text)) !== null) {
+                const id = `${match[1]}-${match[2]}`;
+                const priority = match[3].toLowerCase();
+                const isDone = doneIds.has(id);
 
-            if (typeChart) typeChart.destroy();
-
-            typeChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Tasks', 'Bugs', 'Roadmap', 'Issues', 'Ideas'],
-                    datasets: [
-                        {
-                            label: 'Done',
-                            data: [data.tasks.done, data.bugs.done, data.roads.done, data.issues.done, data.ideas.done],
-                            backgroundColor: '#10b981'
-                        },
-                        {
-                            label: 'In Progress',
-                            data: [data.tasks.progress, data.bugs.progress, data.roads.progress, data.issues.progress, data.ideas.progress],
-                            backgroundColor: '#f59e0b'
-                        },
-                        {
-                            label: 'To Do',
-                            data: [data.tasks.todo, data.bugs.todo, data.roads.todo, data.issues.todo, data.ideas.todo],
-                            backgroundColor: '#6366f1'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { padding: 10, usePointStyle: true, pointStyle: 'rect' }
-                        }
-                    },
-                    scales: {
-                        x: { stacked: true, grid: { display: false } },
-                        y: { stacked: true, beginAtZero: true }
-                    }
+                if (priority === 'p0' || priority === 'p1') {
+                    if (isDone) data.priorities.p1.done++;
+                    else data.priorities.p1.open++;
+                } else if (priority === 'p2') {
+                    if (isDone) data.priorities.p2.done++;
+                    else data.priorities.p2.open++;
+                } else if (priority === 'p3') {
+                    if (isDone) data.priorities.p3.done++;
+                    else data.priorities.p3.open++;
                 }
-            });
+            }
+
+            // Calculate health
+            const totalItems = Object.values(data.types).reduce((sum, t) => sum + t.total, 0);
+            const doneItems = Object.values(data.types).reduce((sum, t) => sum + t.done, 0);
+            const completion = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+
+            const openP1 = data.priorities.p1.open;
+            const openBugs = data.types.bugs.total - data.types.bugs.done;
+
+            if (openP1 >= 3 || openBugs >= 5) {
+                data.health.status = 'critical';
+                data.health.message = openP1 >= 3 ? `${openP1} critical items need attention` : `${openBugs} bugs need fixing`;
+            } else if (openP1 >= 1 || openBugs >= 3) {
+                data.health.status = 'warning';
+                data.health.message = 'Some high-priority items pending';
+            } else {
+                data.health.status = 'good';
+                data.health.message = 'Project is progressing well';
+            }
+            data.health.completion = completion;
+            data.health.activeCount = data.active.length;
+            data.health.openBugs = openBugs;
+
+            return data;
         }
 
-        function createPriorityChart(data) {
-            const ctx = document.getElementById('priorityChart').getContext('2d');
+        function renderHealth(data) {
+            const indicator = document.getElementById('healthIndicator');
+            const healthText = document.getElementById('healthText');
+            const icon = document.getElementById('healthIcon');
 
-            if (priorityChart) priorityChart.destroy();
+            indicator.className = 'health-indicator ' + data.health.status;
+            healthText.className = 'health-text ' + data.health.status;
 
-            priorityChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['P1 (High)', 'P2 (Medium)', 'P3 (Low)'],
-                    datasets: [{
-                        label: 'Items',
-                        data: [data.priorities.p1, data.priorities.p2, data.priorities.p3],
-                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: { beginAtZero: true, grid: { display: false } },
-                        y: { grid: { display: false } }
-                    }
-                }
-            });
+            if (data.health.status === 'good') {
+                icon.textContent = '✅';
+                healthText.innerHTML = `<h2>On Track</h2><p>${data.health.message}</p>`;
+            } else if (data.health.status === 'warning') {
+                icon.textContent = '⚠️';
+                healthText.innerHTML = `<h2>Needs Attention</h2><p>${data.health.message}</p>`;
+            } else {
+                icon.textContent = '🔴';
+                healthText.innerHTML = `<h2>Action Required</h2><p>${data.health.message}</p>`;
+            }
+
+            document.getElementById('completionRate').textContent = data.health.completion + '%';
+            document.getElementById('activeCount').textContent = data.health.activeCount;
+            document.getElementById('openBugs').textContent = data.health.openBugs;
         }
 
-        function renderRecentList(data) {
-            const list = document.getElementById('recentList');
+        function renderActiveWork(data) {
+            const container = document.getElementById('activeWorkList');
+            const subtitle = document.getElementById('activeSubtitle');
 
-            if (data.recentDone.length === 0) {
-                list.innerHTML = '<div class="loading">No recent completions found</div>';
+            if (data.active.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎉</div>
+                        <div>No items in progress</div>
+                    </div>
+                `;
+                subtitle.textContent = 'All clear!';
                 return;
             }
 
-            list.innerHTML = data.recentDone.map(item => `
-                <div class="recent-item">
-                    <span class="badge ${item.type}">${item.type}</span>
-                    <span>${item.id}: ${item.title}</span>
+            subtitle.textContent = `${data.active.length} items in progress`;
+
+            container.innerHTML = data.active.map(item => `
+                <div class="active-item ${item.status}">
+                    <div class="active-item-content">
+                        <div class="active-item-id">${item.id}</div>
+                        <div class="active-item-title">${item.title}</div>
+                        <div class="active-item-meta">${item.files}</div>
+                    </div>
+                    <span class="badge ${item.status === 'monitoring' ? 'task' : 'bug'}">${item.status}</span>
                 </div>
             `).join('');
+        }
+
+        function renderCompleted(data) {
+            const container = document.getElementById('completedList');
+            const subtitle = document.getElementById('completedSubtitle');
+
+            if (data.completed.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div>No completed items found</div>
+                    </div>
+                `;
+                return;
+            }
+
+            subtitle.textContent = `${data.completed.length} items completed`;
+
+            container.innerHTML = data.completed.map(item => `
+                <div class="completed-item">
+                    <span class="completed-item-check">✓</span>
+                    <span class="badge ${item.type}">${item.type}</span>
+                    <span class="completed-item-id">${item.id}</span>
+                    <span class="completed-item-title">${item.title}</span>
+                    <span class="completed-item-date">${item.date}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderPriorityMatrix(data) {
+            const container = document.getElementById('priorityMatrix');
+
+            const priorities = [
+                { key: 'p1', label: 'P1 Critical', ...data.priorities.p1 },
+                { key: 'p2', label: 'P2 Medium', ...data.priorities.p2 },
+                { key: 'p3', label: 'P3 Low', ...data.priorities.p3 }
+            ];
+
+            container.innerHTML = priorities.map(p => {
+                const total = p.done + p.open;
+                const donePercent = total > 0 ? (p.done / total) * 100 : 0;
+                const openPercent = total > 0 ? (p.open / total) * 100 : 0;
+
+                return `
+                    <div class="priority-row">
+                        <div class="priority-label ${p.key}">${p.label}</div>
+                        <div class="priority-bar-container">
+                            ${p.done > 0 ? `<div class="priority-bar done" style="width: ${donePercent}%">${p.done}</div>` : ''}
+                            ${p.open > 0 ? `<div class="priority-bar open" style="width: ${openPercent}%">${p.open}</div>` : ''}
+                            ${total === 0 ? `<div class="priority-bar open" style="width: 100%">-</div>` : ''}
+                        </div>
+                        <div class="priority-counts">${p.done}/${total}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTypeBreakdown(data) {
+            const container = document.getElementById('typeBreakdown');
+
+            const types = [
+                { key: 'tasks', ...data.types.tasks },
+                { key: 'bugs', ...data.types.bugs },
+                { key: 'roads', ...data.types.roads },
+                { key: 'issues', ...data.types.issues },
+                { key: 'ideas', ...data.types.ideas }
+            ];
+
+            container.innerHTML = types.map(t => {
+                const percent = t.total > 0 ? Math.round((t.done / t.total) * 100) : 0;
+                const key = t.key === 'roads' ? 'road' : t.key.slice(0, -1);
+
+                return `
+                    <div class="type-row">
+                        <div class="type-icon ${key}">${t.icon}</div>
+                        <div class="type-info">
+                            <div class="type-name">${t.label}</div>
+                            <div class="type-progress">${t.done}/${t.total} complete (${percent}%)</div>
+                        </div>
+                        <div class="type-stat">
+                            <div class="type-stat-value ${key}">${t.total - t.done}</div>
+                            <div class="type-stat-label">open</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         async function init() {
             try {
                 const data = await fetchAndParse();
-                updateStats(data);
-                createStatusChart(data);
-                createTypeChart(data);
-                createPriorityChart(data);
-                renderRecentList(data);
+                renderHealth(data);
+                renderActiveWork(data);
+                renderCompleted(data);
+                renderPriorityMatrix(data);
+                renderTypeBreakdown(data);
             } catch (error) {
-                document.getElementById('lastUpdated').textContent = 'Error loading data';
                 console.error('Failed to initialize:', error);
+                document.getElementById('healthText').innerHTML = `
+                    <h2 style="color: var(--health-critical)">Error</h2>
+                    <p>Failed to load project data</p>
+                `;
             }
         }
 
-        // Track if initial setup is done
         let isInitialized = false;
 
-        // Initial setup - only runs once
         function setupDashboard() {
             if (isInitialized) return;
             init();
             isInitialized = true;
         }
 
-        // Listen for tab activation from parent
         window.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'tab-activated') {
-                console.log('Tab activated - refreshing dashboard');
-                init(); // Refresh data on tab switch
+                init();
             }
         });
 

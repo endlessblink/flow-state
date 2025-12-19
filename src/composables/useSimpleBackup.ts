@@ -1,13 +1,14 @@
 import { useTaskStore } from '@/stores/tasks'
+import type { Task, Project } from '@/stores/tasks'
 import { storeToRefs } from 'pinia'
 import { ref, watch } from 'vue'
 import { useDatabase } from './useDatabase'
 import { filterMockTasks } from '@/utils/mockTaskDetector'
 
 export interface SimpleBackupData {
-  tasks: any[]
-  projects: any[]
-  canvas: any
+  tasks: Task[]
+  projects: Project[]
+  canvas: Record<string, unknown>
   timestamp: number
   version: string
   exportedAt?: string
@@ -110,9 +111,9 @@ export const useSimpleBackup = {
       }
 
       const backupData: SimpleBackupData = {
-        tasks: cleanTasks,
-        projects: (projects || []) as any[],
-        canvas: canvas || {},
+        tasks: cleanTasks as Task[],
+        projects: (projects || []) as Project[],
+        canvas: (canvas || {}) as Record<string, unknown>,
         timestamp: Date.now(),
         version: '1.0.0'
       }
@@ -189,7 +190,8 @@ export const useSimpleBackup = {
 
     } catch (error) {
       console.error('❌ Backup restoration failed:', error)
-      throw new Error(`Restore failed: ${(error as any).message}`)
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Restore failed: ${message}`)
     }
   },
 
@@ -218,7 +220,8 @@ export const useSimpleBackup = {
       return JSON.stringify(exportData, null, 2)
     } catch (error) {
       console.error('❌ Export failed:', error)
-      throw new Error(`Export failed: ${(error as any).message}`)
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Export failed: ${message}`)
     }
   },
 
@@ -239,7 +242,8 @@ export const useSimpleBackup = {
       console.log('✅ Tasks imported successfully')
     } catch (error) {
       console.error('❌ Import failed:', error)
-      throw new Error(`Import failed: ${(error as any).message}`)
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Import failed: ${message}`)
     }
   },
 
@@ -265,7 +269,8 @@ export const useSimpleBackup = {
       console.log('💾 Backup downloaded successfully')
     } catch (error) {
       console.error('❌ Download failed:', error)
-      throw new Error(`Download failed: ${(error as any).message}`)
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Download failed: ${message}`)
     }
   },
 

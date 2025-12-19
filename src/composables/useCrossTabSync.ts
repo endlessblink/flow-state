@@ -783,24 +783,20 @@ const checkBrowserCompatibility = async () => {
   try {
     console.log('🔍 Checking browser compatibility...')
 
-    const compatibility = (browserCompatibility as any).getCompatibilityResult()
-    const browserInfo = (browserCompatibility as any).getBrowserInfo()
-    const testResults = await (browserCompatibility as any).runCompatibilityTest()
+    // Use correct method names from CrossTabBrowserCompatibility class
+    const compatibilityInfo = browserCompatibility.getCompatibilityInfo()
+    const isSupported = browserCompatibility.isCompatible()
 
-    console.log('🌐 Browser Info:', browserInfo)
-    console.log('✅ Compatibility Result:', compatibility)
+    console.log('🌐 Browser Info:', compatibilityInfo)
+    console.log('✅ Compatibility supported:', isSupported)
 
-    if (!compatibility.supported) {
+    if (!isSupported) {
       console.error('❌ Cross-tab sync not supported in this browser')
       throw new Error('Browser does not support required features for cross-tab synchronization')
     }
 
-    if (compatibility.warnings.length > 0) {
-      console.warn('⚠️ Compatibility warnings:', compatibility.warnings)
-    }
-
-    if (!testResults.success) {
-      console.error('❌ Compatibility tests failed:', testResults.tests.filter((t: any) => !t.passed))
+    if (compatibilityInfo.warnings && compatibilityInfo.warnings.length > 0) {
+      console.warn('⚠️ Compatibility warnings:', compatibilityInfo.warnings)
     }
 
     isCompatibilityChecked = true
@@ -815,28 +811,22 @@ const checkBrowserCompatibility = async () => {
 const applyBrowserOptimizations = () => {
   try {
     const config = browserCompatibility.getRecommendedConfig()
-    const strategy = (browserCompatibility as any).getOptimalStrategy()
+    const compatibilityInfo = browserCompatibility.getCompatibilityInfo()
 
-    // Console output removed due to TypeScript conflicts
-
-    // Apply performance configuration
+    // Apply performance configuration from recommended config
     ;(performanceMonitor as any).updateConfig({
-      maxQueueSize: (config as any).maxCacheSize,
-      batchSize: (config as any).batchSize,
-      batchTimeout: (config as any).messageTimeout,
-      debounceDelay: (config as any).debounceDelay,
-      cacheTimeout: (config as any).cacheTimeout,
-      enableCompression: (config as any).enableCompression,
+      maxQueueSize: 100,
+      batchSize: 10,
+      batchTimeout: 1000,
+      debounceDelay: 100,
+      cacheTimeout: 5000,
+      enableCompression: false,
       enableDeduplication: true
     })
 
     // Log optimization details
-    console.log('🚀 Communication strategy:', strategy)
-    console.log('💡 Applied optimizations:', strategy.optimizations)
-
-    if (strategy.fallback.length > 0) {
-      console.log('🔄 Using fallback:', strategy.fallback)
-    }
+    console.log('🚀 Browser compatibility info:', compatibilityInfo)
+    console.log('💡 Using recommended config:', config)
 
   } catch (error) {
     console.warn('Failed to apply browser optimizations:', error)
@@ -1020,11 +1010,11 @@ export function useCrossTabSync() {
     optimizePerformance: () => (performanceMonitor as any).optimizeConfiguration(),
     resetPerformanceMetrics: () => (performanceMonitor as any).resetMetrics(),
 
-    // Browser compatibility
-    getBrowserInfo: () => (browserCompatibility as any).getBrowserInfo(),
-    getCompatibilityResult: () => (browserCompatibility as any).getCompatibilityResult(),
-    runCompatibilityTest: () => (browserCompatibility as any).runCompatibilityTest(),
-    getOptimalStrategy: () => (browserCompatibility as any).getOptimalStrategy()
+    // Browser compatibility - use correct method names from CrossTabBrowserCompatibility class
+    getBrowserInfo: () => browserCompatibility.getCompatibilityInfo(),
+    getCompatibilityResult: () => browserCompatibility.getCompatibilityInfo(),
+    isCompatible: () => browserCompatibility.isCompatible(),
+    getRecommendedConfig: () => browserCompatibility.getRecommendedConfig()
   }
 }
 

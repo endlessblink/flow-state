@@ -291,6 +291,16 @@ import {
 } from 'lucide-vue-next'
 import CustomSelect from '@/components/CustomSelect.vue'
 
+interface Props {
+  isOpen: boolean
+  task: Task | null
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  close: []
+}>()
+
 // Options for Priority and Status dropdowns
 const priorityOptions = [
   { label: 'Low', value: 'low' },
@@ -304,16 +314,6 @@ const statusOptions = [
   { label: 'Done', value: 'done' },
   { label: 'Backlog', value: 'backlog' }
 ]
-
-interface Props {
-  isOpen: boolean
-  task: Task | null
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<{
-  close: []
-}>()
 
 const taskStore = useTaskStore()
 

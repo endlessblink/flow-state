@@ -1493,13 +1493,13 @@ const handleSearchSelectProject = (project: Project) => {
 }
 
 // Error boundary handler
-const handleViewError = (error: Error, info: any) => {
+const handleViewError = (error: Error, info: unknown) => {
   console.error('View error caught by boundary:', error, info)
   // Could send to error tracking service here
 }
 
 // Handle project un-nesting (drag to "All Projects")
-const handleProjectUnnest = (data: any) => {
+const handleProjectUnnest = (data: { projectId?: string; title?: string }) => {
   if (data.projectId) {
     // Remove parent relationship by setting parentId to null
     taskStore.updateProject(data.projectId, { parentId: null })
@@ -1513,11 +1513,11 @@ const handleGlobalTaskContextMenu = (event: CustomEvent) => {
 
   // Store calendar-specific data for later use in delete handler
   if (isCalendarEvent && instanceId) {
-    (contextMenuTask.value as any) = {
+    contextMenuTask.value = {
       ...task,
       instanceId,
       isCalendarEvent
-    }
+    } as Task & { instanceId: string; isCalendarEvent: boolean }
   }
 
   handleTaskContextMenu(mouseEvent, task)

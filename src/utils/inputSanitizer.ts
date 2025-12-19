@@ -7,7 +7,7 @@ import { ref as _ref } from 'vue'
 
 export interface ValidationRule {
   name: string
-  validate: (value: any) => boolean
+  validate: (value: unknown) => boolean
   message: string
   severity: 'error' | 'warning'
 }
@@ -16,7 +16,7 @@ export interface ValidationResult {
   isValid: boolean
   errors: string[]
   warnings: string[]
-  sanitizedValue: any
+  sanitizedValue: unknown
 }
 
 export interface SanitizationOptions {

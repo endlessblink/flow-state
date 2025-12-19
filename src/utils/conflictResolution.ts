@@ -21,12 +21,12 @@ export interface ConflictResolutionStrategy {
 
 export interface ConflictDiff {
   field: string
-  localValue: any
-  remoteValue: any
-  baseValue?: any
+  localValue: unknown
+  remoteValue: unknown
+  baseValue?: unknown
   conflictType: 'value' | 'structure' | 'timestamp' | 'deletion'
   severity: 'low' | 'medium' | 'high'
-  suggestedResolution?: any
+  suggestedResolution?: unknown
   autoResolvable: boolean
 }
 
@@ -34,9 +34,9 @@ export interface TaskConflict {
   taskId: string
   conflicts: ConflictDiff[]
   timestamp: number
-  localTask: any
-  remoteTask: any
-  baseTask?: any
+  localTask: Record<string, unknown>
+  remoteTask: Record<string, unknown>
+  baseTask?: Record<string, unknown>
   priority: 'low' | 'medium' | 'high'
   resolution?: ConflictResolution
   status: 'pending' | 'resolving' | 'resolved' | 'failed'
@@ -46,7 +46,7 @@ export interface UserResolutionRule {
   name: string
   field: string
   condition: 'always' | 'when-newer' | 'when-empty' | 'when-contains'
-  value?: any
+  value?: unknown
   action: 'prefer-local' | 'prefer-remote' | 'merge' | 'ask' | 'prefer-truthy' | 'prefer-either-true' | 'prefer-longer'
   priority: number
 }

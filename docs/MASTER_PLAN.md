@@ -145,7 +145,7 @@ Phase 3 (Mobile) ←────────────────────
 | ID | Status | Primary Files | Depends | Blocks |
 |----|--------|---------------|---------|--------|
 | TASK-022 | 👀 MONITORING | `tasks.ts`, `taskDisappearanceLogger.ts` | - | TASK-024 |
-| TASK-024 | READY | `tasks.ts` | TASK-022 (monitoring) | - |
+| TASK-024 | 👀 MONITORING | `tasks.ts` | TASK-022 (monitoring) | - |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | TASK-014 | IN_PROGRESS | `*.stories.ts`, `*.vue` (UI) | - | - |
 | TASK-019 | PLANNED | `tasks.ts`, stores, views | - | - |
@@ -888,6 +888,25 @@ CouchDB Remote ──► Live Sync Handler (line 1046) ──► Task Store ✅ 
    - Added `cleanupCrossDeviceSync()` function
    - Added leader timestamp for clock sync compensation
    - Kept existing `handleRemoteTimerUpdate()` logic
+   - **FIX**: Fixed data structure mismatch in `loadTimerSession()` (lines 945-1042)
+   - **FIX**: Fixed changes feed handler to extract nested `.data` property (lines 301-324)
+
+3. **MODIFIED**: `src/composables/useDatabase.ts` ✅
+   - **FIX**: Initialize sync manager BEFORE database creation (line 285-296)
+   - **FIX**: Auto-start live sync after database initialization (line 345-354)
+
+4. **MODIFIED**: `src/components/SyncStatusIndicator.vue` ✅
+   - **FIX**: Added 1.5s debounced sync status to prevent UI flickering (lines 235-276)
+   - Immediate handling for error/offline states preserved
+
+**Root Causes Fixed** (Dec 19, Session 2):
+
+| Issue | Root Cause | Fix |
+|-------|------------|-----|
+| Timer not appearing without refresh | Data structure mismatch - `loadTimerSession` expected flat props but `db.load()` returns `{session: {...}}` | Access `saved.session.*` instead of `saved.*` |
+| Changes feed not updating timer | Raw PouchDB doc `{_id, _rev, data: {...}}` passed but handler expected flat structure | Extract `rawDoc.data` before passing to handler |
+| Sync status flickering | Live sync rapidly toggles between 'syncing'/'complete' | Added 1.5s debounce on status transitions |
+| Sync not auto-starting on refresh | `syncManager` only initialized in catch block for new DB | Initialize syncManager BEFORE try/catch block |
 
 **Success Criteria** (All verified Dec 19, 2025):
 - [x] Timer starts on Device A → appears on Device B within 2 seconds
@@ -895,6 +914,9 @@ CouchDB Remote ──► Live Sync Handler (line 1046) ──► Task Store ✅ 
 - [x] Only one "leader" can control the timer at a time
 - [x] Graceful handling when offline
 - [x] Changes listener properly cleaned up on unmount
+- [x] Timer appears on other device WITHOUT needing page refresh
+- [x] Timer countdown shows same time on both devices (drift fixed)
+- [x] Sync status indicator doesn't flicker during live sync
 
 **Rollback Command**:
 ```bash

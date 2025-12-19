@@ -45,6 +45,7 @@ export interface ResolutionResult {
     preservedLocalFields?: string[]
     preservedRemoteFields?: string[]
     resolutionReason?: string
+    timeDifference?: number
   }
 }
 

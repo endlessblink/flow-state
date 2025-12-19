@@ -1,11 +1,22 @@
 // Global keyboard handler with undo/redo functionality
 // Handles Ctrl+Z (undo) and Ctrl+Y/Ctrl+Shift+Z (redo) shortcuts
 
+import type { Ref } from 'vue'
+
 interface KeyboardHandlerOptions {
   enabled?: boolean
   preventDefault?: boolean
   ignoreInputs?: boolean
   ignoreModals?: boolean
+}
+
+interface UndoRedoSystem {
+  canUndo: Ref<boolean>
+  canRedo: Ref<boolean>
+  undoCount: Ref<number>
+  redoCount: Ref<number>
+  undo: () => Promise<boolean>
+  redo: () => Promise<boolean>
 }
 
 export class SimpleGlobalKeyboardHandler {
@@ -14,7 +25,7 @@ export class SimpleGlobalKeyboardHandler {
   private ignoreInputs: boolean = true
   private ignoreModals: boolean = true
   private keydownHandler: (event: KeyboardEvent) => void
-  private undoRedo: any = null
+  private undoRedo: UndoRedoSystem | null = null
 
   constructor(options: KeyboardHandlerOptions = {}) {
     this.enabled = options.enabled ?? true
@@ -37,7 +48,7 @@ export class SimpleGlobalKeyboardHandler {
 
         // Use the shared singleton undo system to ensure all instances share the same state
         const { getUndoSystem } = await import('@/composables/undoSingleton')
-        this.undoRedo = getUndoSystem()
+        this.undoRedo = getUndoSystem() as UndoRedoSystem
         console.log('✅ Keyboard handler using shared undo singleton instance:', new Date().toISOString())
         console.log('✅ Unified undo/redo system loaded successfully')
       } catch (error) {

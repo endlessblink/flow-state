@@ -24,13 +24,11 @@ export function sanitizeHTML(input: string): string {
 /**
  * Basic text sanitization - prevents XSS in text fields
  */
-export function sanitizeText(input: any): string {
+export function sanitizeText(input: unknown): string {
   if (!input) return ''
-  if (typeof input !== 'string') {
-    input = String(input)
-  }
+  const str = typeof input === 'string' ? input : String(input)
 
-  return input
+  return str
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')

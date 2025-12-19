@@ -631,13 +631,55 @@
             }
         });
 
-        // Initialize when DOM is ready
-        // Note: This iframe is lazy-loaded by dev-manager, so container
-        // will always have correct dimensions when this code runs
+        // Track if initial setup is done
+        let isInitialized = false;
+
+        // Initial setup - only runs once
+        function setupGraph() {
+            if (!graph || isInitialized) return;
+
+            const container = document.getElementById('graph');
+            const rect = container.getBoundingClientRect();
+
+            if (rect.width > 0 && rect.height > 0) {
+                graph.width(rect.width);
+                graph.height(rect.height);
+                isInitialized = true;
+            }
+        }
+
+        // Refresh canvas on tab switch - fixes Chromium rendering bug
+        // Uses pause/resume cycle instead of resize to avoid state corruption
+        function refreshGraph() {
+            if (!graph) return;
+
+            // Pause and resume to force canvas redraw
+            graph.pauseAnimation();
+            requestAnimationFrame(() => {
+                if (graph) {
+                    graph.resumeAnimation();
+                }
+            });
+        }
+
+        // Initialize graph
+        async function startGraph() {
+            await init();
+            requestAnimationFrame(setupGraph);
+        }
+
+        // Listen for tab activation from parent
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'tab-activated') {
+                console.log('Tab activated - refreshing canvas');
+                refreshGraph();
+            }
+        });
+
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
+            document.addEventListener('DOMContentLoaded', startGraph);
         } else {
-            init();
+            startGraph();
         }
     </script>
 </body>

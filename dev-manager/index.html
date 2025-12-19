@@ -230,12 +230,17 @@
                 activeTab.classList.add('active');
                 activePanel.classList.add('active');
 
-                // Lazy load iframe on first activation
-                // This ensures force-graph initializes with correct container dimensions
                 const iframe = activePanel.querySelector('iframe');
-                if (iframe && iframe.dataset.src && !iframe.src) {
-                    console.log(`Lazy loading iframe for ${panelId}...`);
-                    iframe.src = iframe.dataset.src;
+                if (iframe) {
+                    // Lazy load iframe on first activation
+                    if (iframe.dataset.src && !iframe.src) {
+                        console.log(`Lazy loading iframe for ${panelId}...`);
+                        iframe.src = iframe.dataset.src;
+                    } else if (iframe.contentWindow) {
+                        // Send refresh message on subsequent activations
+                        // This fixes Chromium canvas disappearing bug
+                        iframe.contentWindow.postMessage({ type: 'tab-activated' }, '*');
+                    }
                 }
             }
         }

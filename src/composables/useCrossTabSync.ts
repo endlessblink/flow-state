@@ -8,6 +8,7 @@ import type { ConflictResolutionStrategy as _ConflictResolutionStrategy } from '
 // CrossTabSaveCoordinator removed - Phase 2 simplification
 import CrossTabPerformance from '@/utils/CrossTabPerformance'
 import CrossTabBrowserCompatibility from '@/utils/CrossTabBrowserCompatibility'
+import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
 
 // Types for cross-tab messages
 export interface CrossTabMessage {
@@ -547,7 +548,10 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
           // Remove task from local store
           const index = taskStore.tasks.findIndex((t: any) => t.id === operation.taskId)
           if (index > -1) {
+            // Log before splice - mark as cross-tab sync deletion (not user-initiated)
+            const oldTasks = [...taskStore.tasks]
             taskStore.tasks.splice(index, 1)
+            taskDisappearanceLogger.logArrayReplacement(oldTasks, taskStore.tasks, 'crossTabSync-delete')
           }
         }
         break
@@ -555,12 +559,14 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: any) => 
       case 'bulk_delete':
         if (operation.taskIds && Array.isArray(operation.taskIds)) {
           // Remove multiple tasks from local store
+          const oldTasks = [...taskStore.tasks]
           operation.taskIds.forEach(taskId => {
             const index = taskStore.tasks.findIndex((t: any) => t.id === taskId)
             if (index > -1) {
               taskStore.tasks.splice(index, 1)
             }
           })
+          taskDisappearanceLogger.logArrayReplacement(oldTasks, taskStore.tasks, 'crossTabSync-bulkDelete')
         }
         break
 

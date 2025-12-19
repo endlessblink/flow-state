@@ -589,6 +589,19 @@ SOPs document production fixes with root cause analysis, solution steps, and rol
 3. Test design token application
 4. Verify Tailwind dark mode configuration
 
+### **Tasks Mysteriously Disappearing (BUG-020)**
+A built-in task disappearance logger exists for debugging data loss:
+- **Location**: `src/utils/taskDisappearanceLogger.ts`
+- **Skill**: Use `dev-debug-data-loss` skill for detailed instructions
+- **Currently**: Auto-enabled on app startup (for BUG-020 investigation)
+
+Quick console commands:
+```javascript
+window.taskLogger.getDisappearedTasks()  // Check for disappeared tasks
+window.taskLogger.printSummary()          // Get logging summary
+window.taskLogger.exportLogs()            // Export for analysis
+```
+
 ## File Organization
 
 ### Project Documentation

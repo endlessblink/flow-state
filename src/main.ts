@@ -39,6 +39,9 @@ import { useSecurityMonitor as _useSecurityMonitor } from './utils/securityMonit
 // Initialize local-first authentication system
 import { useLocalAuthStore as _useLocalAuthStore } from './stores/local-auth'
 
+// Task disappearance logger - auto-enable for debugging BUG-020
+import { taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
+
 const app = createApp(App)
 
 app.use(createPinia())
@@ -67,3 +70,10 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 app.mount('#app')
+
+// Auto-enable task disappearance logger for debugging (BUG-020)
+// This will help identify mysterious task disappearances
+setTimeout(() => {
+  taskDisappearanceLogger.enable()
+  console.log('%c[TASK-LOGGER] Auto-enabled for BUG-020 investigation', 'color: #4CAF50; font-weight: bold')
+}, 2000) // Wait 2 seconds for store initialization

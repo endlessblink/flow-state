@@ -296,7 +296,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // CRITICAL: Write queue to prevent concurrent PouchDB writes causing 409 conflicts
   const writeQueue = ref(Promise.resolve())
 
-  const queuedWrite = async (updateFn: (latestDoc: any) => Promise<any>) => {
+  const queuedWrite = async (updateFn: (latestDoc: PouchDBDocument | null) => Promise<PouchDBResponse>) => {
     writeQueue.value = writeQueue.value.then(async () => {
       try {
         return await updateFn(null) // latestDoc will be fetched inside updateFn
@@ -406,7 +406,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const migrateTaskStatuses = () => {
     tasks.value.forEach(task => {
       // Convert old "todo" status to "planned"
-      if ((task.status as any) === 'todo') {
+      if ((task.status as string) === 'todo') {
         task.status = 'planned'
         console.log(`🔄 Migrated task "${task.title}" status from "todo" to "planned"`)
       }
@@ -691,7 +691,7 @@ export const useTaskStore = defineStore('tasks', () => {
       // If no path provided, use the default tasks.json path
       const defaultPath = '/tasks.json'
 
-      let tasksData: any
+      let tasksData: unknown
       if (jsonFilePath) {
         // For future: if a custom path is provided, we'd need to handle file reading
         throw new Error('Custom file paths not yet supported')
@@ -706,7 +706,8 @@ export const useTaskStore = defineStore('tasks', () => {
       }
 
       // Handle JSON data structure (might be direct array or wrapped in data property)
-      const tasksArray = Array.isArray(tasksData) ? tasksData : (tasksData.data || [])
+      const tasksDataObj = tasksData as { data?: unknown[] } | unknown[]
+      const tasksArray = Array.isArray(tasksDataObj) ? tasksDataObj : (tasksDataObj.data || [])
 
       if (!tasksArray || tasksArray.length === 0) {
         console.log('No tasks found in JSON file')
@@ -716,46 +717,68 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log(`📥 Found ${tasksArray.length} tasks in JSON file, importing...`)
 
       // Map JSON tasks to Task interface format
-      const importedTasks: Task[] = tasksArray.map((jsonTask: any) => {
+      interface JsonTask {
+        id?: string
+        title?: string
+        description?: string
+        status?: string
+        priority?: string
+        progress?: number
+        completedPomodoros?: number
+        subtasks?: Array<{ id?: string; title?: string; completed?: boolean }>
+        dueDate?: string
+        instances?: TaskInstance[]
+        project?: string
+        projectId?: string
+        parentTaskId?: string | null
+        createdAt?: string | Date
+        updatedAt?: string | Date
+        canvasPosition?: { x: number; y: number }
+        isInInbox?: boolean
+        dependsOn?: string[]
+        isUncategorized?: boolean
+      }
+      const importedTasks: Task[] = tasksArray.map((jsonTask: unknown) => {
+        const jt = jsonTask as JsonTask
         // Map status values
         let status: Task['status'] = 'planned'
-        if (jsonTask.status === 'done') status = 'done'
-        else if (jsonTask.status === 'todo') status = 'planned'
-        else if (jsonTask.status === 'in_progress') status = 'in_progress'
-        else if (jsonTask.status === 'backlog') status = 'backlog'
-        else if (jsonTask.status === 'on_hold') status = 'on_hold'
+        if (jt.status === 'done') status = 'done'
+        else if (jt.status === 'todo') status = 'planned'
+        else if (jt.status === 'in_progress') status = 'in_progress'
+        else if (jt.status === 'backlog') status = 'backlog'
+        else if (jt.status === 'on_hold') status = 'on_hold'
 
         // Map priority values
         let priority: Task['priority'] = null
-        if (jsonTask.priority === 'high') priority = 'high'
-        else if (jsonTask.priority === 'medium') priority = 'medium'
-        else if (jsonTask.priority === 'low') priority = 'low'
+        if (jt.priority === 'high') priority = 'high'
+        else if (jt.priority === 'medium') priority = 'medium'
+        else if (jt.priority === 'low') priority = 'low'
 
         // Map project to projectId
-        const projectId = jsonTask.project === 'pomo-flow' ? '1' : jsonTask.project || '1'
+        const projectId = jt.project === 'pomo-flow' ? '1' : jt.project || '1'
 
       // FIX: Preserve canvasPosition if it exists in JSON, and set isInInbox based on position
-      const hasCanvasPosition = jsonTask.canvasPosition &&
-        typeof jsonTask.canvasPosition.x === 'number' &&
-        typeof jsonTask.canvasPosition.y === 'number'
+      const hasCanvasPosition = jt.canvasPosition &&
+        typeof jt.canvasPosition.x === 'number' &&
+        typeof jt.canvasPosition.y === 'number'
 
       return {
-          id: jsonTask.id,
-          title: jsonTask.title,
-          description: jsonTask.description || '',
+          id: jt.id || '',
+          title: jt.title || '',
+          description: jt.description || '',
           status,
           priority,
-          progress: jsonTask.progress || 0,
+          progress: jt.progress || 0,
           completedPomodoros: 0,
           subtasks: [],
           dueDate: formatDateKey(new Date()),
           projectId,
-          createdAt: new Date(jsonTask.created || jsonTask.createdAt || Date.now()),
-          updatedAt: new Date(jsonTask.updated || jsonTask.createdAt || Date.now()),
+          createdAt: new Date(jt.createdAt || Date.now()),
+          updatedAt: new Date(jt.updatedAt || jt.createdAt || Date.now()),
           // FIX: Use JSON value if available, otherwise default based on canvasPosition
-          canvasPosition: hasCanvasPosition ? jsonTask.canvasPosition : undefined,
-          isInInbox: hasCanvasPosition ? false : (jsonTask.isInInbox ?? true),
-          instances: jsonTask.instances || [], // Preserve instances if available
+          canvasPosition: hasCanvasPosition ? jt.canvasPosition : undefined,
+          isInInbox: hasCanvasPosition ? false : (jt.isInInbox ?? true),
+          instances: jt.instances || [], // Preserve instances if available
         }
       })
 
@@ -820,34 +843,46 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log(`📥 Found ${tasksData.length} tasks in recovery tool, importing...`)
 
       // Map recovery tool tasks to Task interface format
-      const recoveredTasks: Task[] = tasksData.map((recoveryTask: any, index: number) => {
+      interface RecoveryTask {
+        id?: string
+        title?: string
+        description?: string
+        status?: string
+        priority?: string
+        progress?: number
+        projectId?: string | null
+        createdAt?: string | Date
+        updatedAt?: string | Date
+      }
+      const recoveredTasks: Task[] = tasksData.map((recoveryTask: unknown, index: number) => {
+        const rt = recoveryTask as RecoveryTask
         // Map status values
         let status: Task['status'] = 'planned'
-        if (recoveryTask.status === 'done') status = 'done'
-        else if (recoveryTask.status === 'todo') status = 'planned'
-        else if (recoveryTask.status === 'in_progress') status = 'in_progress'
-        else if (recoveryTask.status === 'backlog') status = 'backlog'
-        else if (recoveryTask.status === 'on_hold') status = 'on_hold'
+        if (rt.status === 'done') status = 'done'
+        else if (rt.status === 'todo') status = 'planned'
+        else if (rt.status === 'in_progress') status = 'in_progress'
+        else if (rt.status === 'backlog') status = 'backlog'
+        else if (rt.status === 'on_hold') status = 'on_hold'
 
         // Map priority values
         let priority: Task['priority'] = null
-        if (recoveryTask.priority === 'high') priority = 'high'
-        else if (recoveryTask.priority === 'medium') priority = 'medium'
-        else if (recoveryTask.priority === 'low') priority = 'low'
+        if (rt.priority === 'high') priority = 'high'
+        else if (rt.priority === 'medium') priority = 'medium'
+        else if (rt.priority === 'low') priority = 'low'
 
         return {
-          id: recoveryTask.id || `recovery-${Date.now()}-${index}`,
-          title: recoveryTask.title || 'Recovered Task',
-          description: recoveryTask.description || '',
+          id: rt.id || `recovery-${Date.now()}-${index}`,
+          title: rt.title || 'Recovered Task',
+          description: rt.description || '',
           status,
           priority,
-          progress: recoveryTask.progress || 0,
+          progress: rt.progress || 0,
           completedPomodoros: 0,
           subtasks: [],
           dueDate: formatDateKey(new Date()),
-          projectId: recoveryTask.projectId || null,
-          createdAt: new Date(recoveryTask.createdAt || Date.now()),
-          updatedAt: new Date(recoveryTask.updatedAt || Date.now()),
+          projectId: rt.projectId || null,
+          createdAt: new Date(rt.createdAt || Date.now()),
+          updatedAt: new Date(rt.updatedAt || Date.now()),
           isInInbox: true, // Start in inbox until positioned on canvas
           instances: [], // No instances initially
         }
@@ -882,12 +917,12 @@ export const useTaskStore = defineStore('tasks', () => {
     isLoadingFromDatabase = true
     // Wait for PouchDB to be available (simple polling)
     let attempts = 0
-    while (!(window as any).pomoFlowDb && attempts < 50) {
+    while (!window.pomoFlowDb && attempts < 50) {
       await new Promise(resolve => setTimeout(resolve, 100))
       attempts++
     }
 
-    const dbInstance = (window as any).pomoFlowDb
+    const dbInstance = window.pomoFlowDb
     if (!dbInstance) {
       console.error('❌ PouchDB not available for task loading')
       return
@@ -898,9 +933,9 @@ export const useTaskStore = defineStore('tasks', () => {
       const result = await dbInstance.allDocs({ include_docs: true })
 
       console.log('🔍 POUCHDB DEBUG: Total documents found:', result.total_rows)
-      console.log('🔍 POUCHDB DEBUG: All document IDs:', result.rows.map((row: any) => row.id))
+      console.log('🔍 POUCHDB DEBUG: All document IDs:', result.rows.map((row) => row.id))
 
-      const tasksDoc = result.rows.find((row: any) => row.id === 'tasks:data')
+      const tasksDoc = result.rows.find((row) => row.id === 'tasks:data')
       console.log('🔍 POUCHDB DEBUG: tasks:data document found:', !!tasksDoc)
 
       if (tasksDoc?.doc) {
@@ -921,11 +956,19 @@ export const useTaskStore = defineStore('tasks', () => {
 
         if (taskArray && taskArray.length > 0) {
           const oldTasks = [...tasks.value]
-          tasks.value = taskArray.map((task: any) => ({
-            ...task,
-            createdAt: new Date(task.createdAt),
-            updatedAt: new Date(task.updatedAt)
-          }))
+          interface TaskDoc {
+            createdAt?: string | Date
+            updatedAt?: string | Date
+            [key: string]: unknown
+          }
+          tasks.value = taskArray.map((task: unknown) => {
+            const t = task as TaskDoc
+            return {
+              ...t,
+              createdAt: new Date(t.createdAt || Date.now()),
+              updatedAt: new Date(t.updatedAt || Date.now())
+            }
+          }) as Task[]
           taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-fromDoc')
           console.log(`✅ Loaded ${taskArray.length} tasks from tasks:data`)
         } else {
@@ -1045,7 +1088,7 @@ export const useTaskStore = defineStore('tasks', () => {
     projectsSaveTimer = setTimeout(async () => {
       try {
         // Use PouchDB like tasks (not IndexedDB)
-        const dbInstance = (window as any).pomoFlowDb
+        const dbInstance = window.pomoFlowDb
         if (!dbInstance) {
           console.error('❌ PouchDB not available for project persistence')
           return
@@ -1629,13 +1672,14 @@ export const useTaskStore = defineStore('tasks', () => {
 
     } catch (error) {
       console.error('❌ Failed to save new task to PouchDB:', error)
+      const err = error as Error & { status?: number; reason?: string }
       console.error('❌ Error details:', {
-        name: (error as any).name,
-        message: (error as any).message,
-        status: (error as any).status,
-        reason: (error as any).reason,
-        stack: (error as any).stack
-      });
+        name: err.name,
+        message: err.message,
+        status: err.status,
+        reason: err.reason,
+        stack: err.stack
+      })
 
       // Rollback if save failed
       const index = tasks.value.findIndex(t => t.id === taskId)
@@ -2514,9 +2558,19 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Undo/Redo enabled actions - simplified to avoid circular dependencies
+  interface UndoRedoActionsLocal {
+    createTask: (taskData: Partial<Task>) => Promise<Task>
+    updateTask: (taskId: string, updates: Partial<Task>) => void
+    deleteTask: (taskId: string) => void
+    deleteTaskWithUndo: (taskId: string) => void
+    undo?: () => void
+    redo?: () => void
+    startTaskNow?: (taskId: string) => void
+    [key: string]: unknown
+  }
   const undoRedoEnabledActions = () => {
     // These functions will be initialized lazily using standardized dynamic imports
-    let undoRedoActions: any = null
+    let undoRedoActions: UndoRedoActionsLocal | null = null
 
     const getUndoRedoActions = async () => {
       if (!undoRedoActions) {
@@ -2528,13 +2582,13 @@ export const useTaskStore = defineStore('tasks', () => {
           console.log('✅ Unified undo/redo system loaded successfully')
 
           // Use global instance to ensure keyboard handler and task operations share the same undo system
-          if (typeof window !== 'undefined' && (window as any).__pomoFlowUndoSystem) {
-            undoRedoActions = (window as any).__pomoFlowUndoSystem
+          if (typeof window !== 'undefined' && window.__pomoFlowUndoSystem) {
+            undoRedoActions = window.__pomoFlowUndoSystem
             console.log('✅ Using existing global unified undo system instance')
           } else {
             undoRedoActions = useUnifiedUndoRedo()
             if (typeof window !== 'undefined') {
-              (window as any).__pomoFlowUndoSystem = undoRedoActions
+              window.__pomoFlowUndoSystem = undoRedoActions
             }
             console.log('✅ Created new global unified undo system instance')
           }
@@ -2543,8 +2597,9 @@ export const useTaskStore = defineStore('tasks', () => {
           console.log('✅ DeleteTask method available:', typeof undoRedoActions.deleteTaskWithUndo)
         } catch (error) {
           console.error('❌ UNIFIED UNDO SYSTEM FAILURE - useUnifiedUndoRedo import failed:', error)
-          console.error('❌ Error details:', (error as any).message)
-          console.error('❌ Error stack:', (error as any).stack)
+          const err = error as Error
+          console.error('❌ Error details:', err.message)
+          console.error('❌ Error stack:', err.stack)
           console.error('❌ This means deleteTaskWithUndo will use fallback direct operations!')
           console.warn('Unified undo/redo system not available, using direct updates:', error)
           // Fallback to direct updates if undo/redo system fails
@@ -2953,13 +3008,13 @@ export const useTaskStore = defineStore('tasks', () => {
     // FIX #5: Wait for PouchDB to be available before trying to load
     // This fixes the race condition where store tries to load before PouchDB is ready
     let attempts = 0
-    while (!(window as any).pomoFlowDb && attempts < 50) {
+    while (!window.pomoFlowDb && attempts < 50) {
       console.log(`⏳ Waiting for PouchDB to be available... attempt ${attempts + 1}/50`)
       await new Promise(resolve => setTimeout(resolve, 100))
       attempts++
     }
 
-    const dbInstance = (window as any).pomoFlowDb
+    const dbInstance = window.pomoFlowDb
     if (!dbInstance) {
       console.error('❌ PouchDB not available for store initialization - skipping database load')
       console.log('⚠️ Store will continue with empty state (no tasks/projects from database)')

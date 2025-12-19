@@ -14,7 +14,8 @@ import {
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 // Task store import for safe sync functionality
-let taskStore: any = null
+// Using unknown to avoid circular import issues - cast when accessing
+let taskStore: ReturnType<typeof import('./tasks').useTaskStore> | null = null
 
 export interface GroupFilter {
   priorities?: ('low' | 'medium' | 'high')[]
@@ -108,8 +109,8 @@ export interface CanvasState {
   selectionMode: 'rectangle' | 'lasso' | 'click'
   isSelecting: boolean
   // Vue Flow integration properties
-  nodes: any[] // Vue Flow nodes
-  edges: any[] // Vue Flow edges
+  nodes: import('@vue-flow/core').Node[] // Vue Flow nodes
+  edges: import('@vue-flow/core').Edge[] // Vue Flow edges
   // Additional state properties
   zoomHistory: { zoom: number; timestamp: number }[]
   multiSelectActive: boolean

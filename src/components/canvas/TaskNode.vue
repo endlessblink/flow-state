@@ -113,9 +113,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { Handle, Position, useVueFlow } from '@vue-flow/core'
+import { ref, computed, defineAsyncComponent } from 'vue'
+import { Position } from '@vue-flow/core'
 import { Calendar, Timer } from 'lucide-vue-next'
+
+// Lazy load Handle component to prevent Vue Flow context errors in Storybook
+const Handle = defineAsyncComponent(() =>
+  import('@vue-flow/core').then(mod => mod.Handle)
+)
 import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
@@ -181,16 +186,18 @@ const toggleDescriptionExpanded = () => {
 }
 
 // Check if we're in a Vue Flow context (works in CanvasView, but not in Storybook)
+// We detect this by checking for the Vue Flow DOM structure instead of calling the hook
 const isInVueFlowContext = computed(() => {
-  // For Storybook, we need to be more defensive about Vue Flow context
+  // For Storybook or SSR, always return false
   if (typeof window === 'undefined') return false
+  if (typeof document === 'undefined') return false
 
-  // Check if we're in a Vue Flow context by looking for the provider
+  // Check if we're inside a Vue Flow container by looking for the DOM structure
+  // This is a safer approach than calling useVueFlow() which throws outside context
   try {
-    const vueFlow = useVueFlow()
-    return !!(vueFlow && typeof vueFlow === 'object')
+    const vueFlowContainer = document.querySelector('.vue-flow')
+    return !!vueFlowContainer
   } catch (_error) {
-    // In Storybook or outside VueFlow context - this is expected
     return false
   }
 })
@@ -396,7 +403,7 @@ const _handleDragEnd = () => {
   transform: scale(0.95) !important;
   opacity: 0.8 !important;
   /* Ensure clean visual state during drag */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: var(--shadow-dark-lg) !important;
   z-index: 1000 !important;
   /* Prevent any blur or filter effects during drag */
   backdrop-filter: none !important;
@@ -538,13 +545,13 @@ body.dragging-active .task-node .vue-flow__handle {
   box-shadow:
     0 16px 32px var(--shadow-strong),
     0 8px 16px var(--shadow-md),
-    0 0 24px rgba(59, 130, 246, 0.3) !important;
+    0 0 24px var(--blue-shadow) !important;
 }
 
 .timer-active::before {
   background: linear-gradient(
     135deg,
-    rgba(59, 130, 246, 0.15) 0%,
+    var(--blue-bg-subtle) 0%,
     var(--glass-bg-soft) 100%
   );
 }
@@ -562,7 +569,7 @@ body.dragging-active .task-node .vue-flow__handle {
   }
   50% {
     transform: scale(1.1);
-    box-shadow: 0 2px 12px var(--brand-primary), 0 0 16px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 2px 12px var(--brand-primary), 0 0 16px var(--blue-border-medium);
   }
 }
 
@@ -571,7 +578,7 @@ body.dragging-active .task-node .vue-flow__handle {
     box-shadow: var(--brand-primary-glow);
   }
   50% {
-    box-shadow: 0 0 20px var(--brand-primary), 0 0 30px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 20px var(--brand-primary), 0 0 30px var(--blue-border-medium);
   }
 }
 

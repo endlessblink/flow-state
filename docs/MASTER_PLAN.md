@@ -135,8 +135,10 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-020 | IN_PROGRESS | `useDatabase.ts`, `useReliableSyncManager.ts` | - | - |
 | TASK-023 | PLANNED | `dev-manager/*` | - | - |
 | TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
+| TASK-027 | IN_PROGRESS | `stores/*`, `utils/*`, `composables/*`, `components/*`, `views/*` | ~~TASK-011~~ | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
+**In Progress**: TASK-027 (lint warning fixes - 1,380 `no-explicit-any` → proper types)
 **Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
 **Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially
@@ -144,6 +146,39 @@ Phase 3 (Mobile) ←────────────────────
 ---
 
 <!-- Active work items use TASK-XXX format -->
+
+### TASK-027: Fix All Lint Warnings (IN PROGRESS)
+
+**Goal**: Replace all 1,380 `no-explicit-any` warnings with proper TypeScript types.
+
+**Priority**: P2-MEDIUM (code quality, enables stricter CI)
+
+**Baseline** (Dec 19, 2025): 1,380 warnings (0 errors)
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Fix stores (88 warnings) | IN PROGRESS |
+| 2 | Fix services (21 warnings) | PENDING |
+| 3 | Fix utils (377 warnings) | PENDING |
+| 4 | Fix composables (402 warnings) | PENDING |
+| 5 | Fix components (205 warnings) | PENDING |
+| 6 | Fix views (102 warnings) | PENDING |
+| 7 | Verify build passes | PENDING |
+
+**Top Files by Warning Count**:
+- `CanvasView.vue` (81)
+- `useCrossTabSync.ts` (71)
+- `useReliableSyncManager.ts` (50)
+- `conflictResolution.ts` (44)
+- `SyncErrorBoundary.vue` (35)
+
+**Common Patterns**:
+- Error handling: `catch (err: any)` → `catch (err: unknown)`
+- Firebase stubs: Mock functions need proper signatures
+- JSON/DB responses: Need type guards
+- Callbacks: Need proper function types
+
+---
 
 ### ~~TASK-025~~: Task Dependency System for Claude Workflow (COMPLETE)
 Dec 19, 2025 - Added dependency tracking to prevent file conflicts when working on multiple tasks.
@@ -456,7 +491,7 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 - [ ] `DateDropZone.stories.ts`
 - [ ] `MultiSelectToggle.stories.ts`
 - [ ] `DragHandle.stories.ts`
-- [ ] `ContextMenu.stories.ts`
+- [x] `ContextMenu.stories.ts` ✅ Tokenized + added inline:false (Dec 19)
 - [ ] `PerformanceTest.stories.ts`
 
 **Board Components** (6):
@@ -472,11 +507,11 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 - [ ] `InboxPanel.stories.ts`
 - [ ] `CanvasSection.stories.ts`
 - [ ] `InboxTimeFilters.stories.ts`
-- [ ] `TaskNode.stories.ts`
+- [x] `TaskNode.stories.ts` ✅ Fixed Vue Flow context error + tokenized CSS (Dec 19)
 - [ ] `SectionManager.stories.ts`
 - [ ] `SectionNodeSimple.stories.ts`
 - [ ] `EdgeContextMenu.stories.ts`
-- [ ] `ResizeHandle.stories.ts`
+- [x] `ResizeHandle.stories.ts` ✅ Fixed + tokenized (Dec 19)
 - [ ] `MultiSelectionOverlay.stories.ts`
 - [x] `GroupEditModal.stories.ts`
 
@@ -492,7 +527,7 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 - [ ] `BaseModal-Redesign-Preview.stories.ts`
 
 **Context Menus** (2):
-- [ ] `TaskContextMenu.stories.ts`
+- [x] `TaskContextMenu.stories.ts` ✅ Fixed positioning + tokenized + added inline:false (Dec 19)
 - [ ] `TaskEditModal.stories.ts`
 
 **Design System** (1):

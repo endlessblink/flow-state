@@ -17,25 +17,31 @@ import { ref, computed } from 'vue'
 // import { auth, db, waitForFirebase } from '@/config/firebase'
 
 // Mock type definitions for Firebase compatibility
-type User = any
-type _Timestamp = any
-const _auth: any = null
-const _db: any = null
-const _waitForFirebase: any = () => Promise.resolve(false)
-const _serverTimestamp: any = () => new Date()
-const _doc: any = () => ({})
-const _getDoc: any = () => Promise.resolve(null)
-const _setDoc: any = () => Promise.resolve()
-const _updateDoc: any = () => Promise.resolve()
-const _createUserWithEmailAndPassword: any = () => Promise.reject(new Error('Firebase disabled'))
-const _signInWithEmailAndPassword: any = () => Promise.reject(new Error('Firebase disabled'))
-const _signInWithPopup: any = () => Promise.reject(new Error('Firebase disabled'))
-const _GoogleAuthProvider: any = class {}
-const _firebaseSignOut: any = () => Promise.resolve()
-const _firebaseSendPasswordResetEmail: any = () => Promise.reject(new Error('Firebase disabled'))
-const _firebaseUpdateProfile: any = () => Promise.reject(new Error('Firebase disabled'))
-const _firebaseUpdatePassword: any = () => Promise.reject(new Error('Firebase disabled'))
-const _onAuthStateChanged: any = () => () => {}
+interface FirebaseUser {
+  uid: string
+  email: string | null
+  displayName: string | null
+  photoURL: string | null
+}
+type User = FirebaseUser | null
+type _Timestamp = Date
+const _auth: null = null
+const _db: null = null
+const _waitForFirebase: () => Promise<boolean> = () => Promise.resolve(false)
+const _serverTimestamp: () => Date = () => new Date()
+const _doc: () => Record<string, unknown> = () => ({})
+const _getDoc: () => Promise<null> = () => Promise.resolve(null)
+const _setDoc: () => Promise<void> = () => Promise.resolve()
+const _updateDoc: () => Promise<void> = () => Promise.resolve()
+const _createUserWithEmailAndPassword: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
+const _signInWithEmailAndPassword: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
+const _signInWithPopup: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
+const _GoogleAuthProvider: { new(): { setCustomParameters: (params: Record<string, string>) => void } } = class { setCustomParameters(_params: Record<string, string>) {} }
+const _firebaseSignOut: () => Promise<void> = () => Promise.resolve()
+const _firebaseSendPasswordResetEmail: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
+const _firebaseUpdateProfile: (user: FirebaseUser, data: { displayName?: string }) => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
+const _firebaseUpdatePassword: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
+const _onAuthStateChanged: () => () => void = () => () => {}
 
 /**
  * User profile data stored in Firestore
@@ -85,11 +91,23 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
 /**
  * Get user-friendly error message from Firebase error code
  */
-function getErrorMessage(error: any): string {
-  if (error?.code && AUTH_ERROR_MESSAGES[error.code]) {
+interface FirebaseError {
+  code?: string
+  message?: string
+}
+
+function isFirebaseError(error: unknown): error is FirebaseError {
+  return typeof error === 'object' && error !== null
+}
+
+function getErrorMessage(error: unknown): string {
+  if (isFirebaseError(error) && error.code && AUTH_ERROR_MESSAGES[error.code]) {
     return AUTH_ERROR_MESSAGES[error.code]
   }
-  return error?.message || 'An unexpected error occurred'
+  if (isFirebaseError(error) && error.message) {
+    return error.message
+  }
+  return 'An unexpected error occurred'
 }
 
 /**
@@ -270,7 +288,7 @@ export const useAuthStore = defineStore('auth', () => {
       await createUserProfile(userCredential.user.uid)
 
       console.log('✅ User signed up:', email)
-    } catch (err: any) {
+    } catch (err: unknown) {
       error.value = getErrorMessage(err)
       console.error('Sign up error:', err)
       throw err
@@ -291,7 +309,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = userCredential.user
 
       console.log('✅ User signed in:', email)
-    } catch (err: any) {
+    } catch (err: unknown) {
       error.value = getErrorMessage(err)
       console.error('Sign in error:', err)
       throw err
@@ -327,7 +345,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       console.log('✅ User signed in with Google:', result.user.email)
-    } catch (err: any) {
+    } catch (err: unknown) {
       error.value = getErrorMessage(err)
       console.error('Google sign in error:', err)
       throw err
@@ -354,7 +372,7 @@ export const useAuthStore = defineStore('auth', () => {
       uiStore.openAuthModal('login', '/')
 
       console.log('👋 User signed out')
-    } catch (err: any) {
+    } catch (err: unknown) {
       error.value = getErrorMessage(err)
       console.error('Sign out error:', err)
       throw err
@@ -370,7 +388,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await _firebaseSendPasswordResetEmail(_auth, email)
       console.log('✅ Password reset email sent to:', email)
-    } catch (err: any) {
+    } catch (err: unknown) {
       error.value = getErrorMessage(err)
       console.error('Password reset error:', err)
       throw err
@@ -390,7 +408,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await _firebaseUpdatePassword(user.value, newPassword)
       console.log('✅ Password updated')
-    } catch (err: any) {
+    } catch (err: unknown) {
       error.value = getErrorMessage(err)
       console.error('Update password error:', err)
       throw err
@@ -431,7 +449,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       console.log('✅ Profile updated')
-    } catch (err: any) {
+    } catch (err: unknown) {
       error.value = getErrorMessage(err)
       console.error('Update profile error:', err)
 

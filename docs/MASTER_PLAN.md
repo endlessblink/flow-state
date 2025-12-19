@@ -1229,6 +1229,35 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 - `src/composables/useCouchDBSync.ts` - CouchDB-specific sync
 - `docs/conflict-systems-resolution/` - Conflict resolution docs
 
+### 🔴 STORYBOOK QUICK REFERENCE (Dec 19, 2025)
+
+**To continue Storybook work:**
+
+| Task | Location | Status |
+|------|----------|--------|
+| **PouchDB Conflicts** | ISSUE-011 (above) | P1-HIGH - 178+ conflicts blocking Storybook |
+| **Storybook Audit Skill** | TASK-029, `.claude/skills/storybook-audit/` | CREATED - Use for debugging |
+| **Storybook Glass Morphism** | TASK-014 | IN PROGRESS (10/54 components) |
+
+**Quick Commands:**
+```bash
+# Run Storybook
+npm run storybook
+
+# Audit all stories for issues
+/storybook-audit   # Or trigger with "audit storybook"
+
+# Fix PouchDB conflicts (ISSUE-011)
+# See proposed fixes in ISSUE-011 section above
+```
+
+**Key Files:**
+- `.claude/skills/storybook-audit/SKILL.md` - Audit skill with self-learning
+- `src/stories/**/*.stories.ts` - Story files to fix
+- `.storybook/preview.ts` - Pinia/store setup
+
+---
+
 ### ISSUE-009: Vue TypeScript Errors (15 total)
 
 **Priority**: P2-MEDIUM

@@ -9,9 +9,9 @@ export interface QueuedOperation {
   entityType: 'task' | 'project' | 'settings' | 'user'
   entityId: string
   documentId?: string // Alias for entityId for compatibility
-  data: any
-  documentData?: any // Alias for data for compatibility
-  originalData?: any
+  data: unknown
+  documentData?: unknown // Alias for data for compatibility
+  originalData?: unknown
   timestamp: number
   priority: 'critical' | 'high' | 'normal' | 'low'
   retryCount: number
@@ -27,7 +27,7 @@ export interface QueuedOperation {
     userId?: string
     deviceId?: string
     sessionId?: string
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   }
 }
 

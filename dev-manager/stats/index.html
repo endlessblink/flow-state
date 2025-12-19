@@ -825,7 +825,7 @@
             // Only parse from the "## Active Work" section
             const activeWorkSection = text.match(/## Active Work[\s\S]*?(?=\n---|\n## |$)/);
             if (activeWorkSection) {
-                const depTablePattern = /\|\s*(TASK|BUG|ROAD|ISSUE)-(\d+)\s*\|\s*([^|]+)\|([^|]+)\|/g;
+                const depTablePattern = /\|\s*(TASK|BUG|ROAD|ISSUE)-(\d+)\s*\|\s*([^|\n]+)\|([^|\n]+)\|/g;
                 let match;
                 const seenActive = new Set();
 

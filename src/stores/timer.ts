@@ -10,6 +10,9 @@ import {
   type TimerSessionSync as _TimerSessionSync
 } from '@/composables/useCrossTabSync'
 
+// Direct PouchDB changes feed for cross-device timer sync (TASK-021)
+import { useTimerChangesSync } from '@/composables/useTimerChangesSync'
+
 export interface PomodoroSession {
   id: string
   taskId: string
@@ -154,17 +157,40 @@ export const useTimerStore = defineStore('timer', () => {
 
   /**
    * Calculate the correct remaining time based on session start time
+   * @param session - The timer session
+   * @param leaderTimestamp - Optional: The leader's timestamp when the data was saved (for clock sync)
    */
-  const calculateRemainingTime = (session: { startTime: Date; duration: number; isPaused: boolean; remainingTime?: number }): number => {
+  const calculateRemainingTime = (
+    session: { startTime: Date; duration: number; isPaused: boolean; remainingTime?: number },
+    leaderTimestamp?: number
+  ): number => {
     if (session.isPaused && session.remainingTime !== undefined) {
       // If paused, use the stored remaining time
       return session.remainingTime
     }
-    // Calculate based on elapsed time since start
-    const elapsedSeconds = Math.floor((Date.now() - session.startTime.getTime()) / 1000)
+
+    // If we have the leader's timestamp, calculate time offset for accurate sync
+    // This handles clock differences between devices
+    let now = Date.now()
+    if (leaderTimestamp && leaderTimestamp > 0) {
+      // Calculate how much time has passed since leader saved the document
+      // This accounts for network latency and clock differences
+      const timeSinceSave = now - leaderTimestamp
+      // Use leader's perspective: startTime + duration - (time elapsed since save + leader's elapsed at save)
+      const leaderElapsedAtSave = leaderTimestamp - session.startTime.getTime()
+      const totalElapsed = leaderElapsedAtSave + timeSinceSave
+      const remaining = Math.max(0, session.duration - Math.floor(totalElapsed / 1000))
+      return remaining
+    }
+
+    // Fallback: Calculate based on local elapsed time since start
+    const elapsedSeconds = Math.floor((now - session.startTime.getTime()) / 1000)
     const remaining = Math.max(0, session.duration - elapsedSeconds)
     return remaining
   }
+
+  // Store the leader's timestamp for accurate time calculation in follower interval
+  let lastLeaderTimestamp = 0
 
   /**
    * Start a follower interval to update the display (doesn't control timer, just updates UI)
@@ -179,7 +205,8 @@ export const useTimerStore = defineStore('timer', () => {
     timerInterval.value = setInterval(() => {
       if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused && !isDeviceLeader.value) {
         // Calculate and update remaining time based on start time
-        const newRemainingTime = calculateRemainingTime(currentSession.value)
+        // Use leader timestamp for accurate cross-device sync
+        const newRemainingTime = calculateRemainingTime(currentSession.value, lastLeaderTimestamp)
         currentSession.value.remainingTime = newRemainingTime
 
         // If timer completed on follower, wait for leader to confirm
@@ -229,11 +256,14 @@ export const useTimerStore = defineStore('timer', () => {
           completedAt: remoteDoc.session.completedAt ? new Date(remoteDoc.session.completedAt) : undefined
         }
 
-        // Calculate the correct remaining time based on start time (not stale synced value)
-        session.remainingTime = calculateRemainingTime(session)
+        // Store leader timestamp for accurate time sync (handles clock differences)
+        lastLeaderTimestamp = remoteDoc.deviceLeaderLastSeen || Date.now()
+
+        // Calculate the correct remaining time based on start time and leader timestamp
+        session.remainingTime = calculateRemainingTime(session, lastLeaderTimestamp)
 
         currentSession.value = session
-        console.log('🔄 [TIMER CROSS-DEVICE] Updated session, remaining:', session.remainingTime, 'seconds')
+        console.log('🔄 [TIMER CROSS-DEVICE] Updated session, remaining:', session.remainingTime, 'seconds, leader timestamp:', lastLeaderTimestamp)
 
         // Start follower interval to update display
         if (session.isActive && !session.isPaused) {
@@ -253,32 +283,46 @@ export const useTimerStore = defineStore('timer', () => {
 
   /**
    * Set up listener for CouchDB sync changes
+   * TASK-021: Now uses direct PouchDB changes feed instead of unreliable sync events
    */
+  const timerChangesSync = useTimerChangesSync()
+
   const setupCrossDeviceSync = () => {
     if (crossDeviceSyncInitialized || typeof window === 'undefined') return
 
-    const handleRemoteSyncChange = async (event: CustomEvent) => {
+    // Use direct PouchDB changes feed for real-time updates (TASK-021 fix)
+    // This replaces the unreliable 'reliable-sync-change' event listener
+    timerChangesSync.startListening(async (doc: any) => {
       try {
-        const { documents } = event.detail || {}
-        if (!documents || !Array.isArray(documents)) return
-
-        // Look for timer session document
-        const timerDoc = documents.find((doc: any) =>
-          doc._id === 'pomo-flow-timer-session:data'
-        )
-
-        if (timerDoc) {
-          console.log('📡 [TIMER CROSS-DEVICE] Received remote timer update')
-          await handleRemoteTimerUpdate(timerDoc)
+        // Handle document deletion
+        if (doc.deleted) {
+          console.log('📡 [TIMER CROSS-DEVICE] Timer document deleted remotely')
+          if (timerInterval.value) {
+            clearInterval(timerInterval.value)
+            timerInterval.value = null
+          }
+          currentSession.value = null
+          return
         }
-      } catch (error) {
-        console.warn('⚠️ [TIMER CROSS-DEVICE] Error handling sync change:', error)
-      }
-    }
 
-    window.addEventListener('reliable-sync-change', handleRemoteSyncChange as EventListener)
+        console.log('📡 [TIMER CROSS-DEVICE] Received remote timer update via changes feed')
+        await handleRemoteTimerUpdate(doc)
+      } catch (error) {
+        console.warn('⚠️ [TIMER CROSS-DEVICE] Error handling changes feed update:', error)
+      }
+    })
+
     crossDeviceSyncInitialized = true
-    console.log('✅ [TIMER CROSS-DEVICE] Cross-device sync initialized (listening for CouchDB changes)')
+    console.log('✅ [TIMER CROSS-DEVICE] Cross-device sync initialized (direct PouchDB changes feed)')
+  }
+
+  /**
+   * Cleanup cross-device sync listener
+   */
+  const cleanupCrossDeviceSync = () => {
+    timerChangesSync.stopListening()
+    crossDeviceSyncInitialized = false
+    console.log('🧹 [TIMER CROSS-DEVICE] Cross-device sync cleaned up')
   }
 
   /**

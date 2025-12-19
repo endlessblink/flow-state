@@ -149,8 +149,8 @@ export const useCanvasStore = defineStore('canvas', () => {
   const collapsedTaskPositions = ref<Map<string, TaskPosition[]>>(new Map())
 
   // Vue Flow integration properties
-  const nodes = ref<any[]>([])
-  const edges = ref<any[]>([])
+  const nodes = ref<import('@vue-flow/core').Node[]>([])
+  const edges = ref<import('@vue-flow/core').Edge[]>([])
 
   // Computed property for collapsed task counts
   const getCollapsedTaskCount = (sectionId: string) => {
@@ -411,19 +411,19 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   const deleteGroup = (id: string) => {
     if (import.meta.env.DEV) {
-      (window as any).__lastDeletedGroup = { id, before: groups.value.map(g => g.id) }
+      window.__lastDeletedGroup = { id, before: groups.value.map(g => g.id) }
     }
     const index = groups.value.findIndex(g => g.id === id)
     if (index > -1) {
       groups.value.splice(index, 1)
       if (import.meta.env.DEV) {
-        (window as any).__lastDeletedGroup.after = groups.value.map(g => g.id)
+        window.__lastDeletedGroup.after = groups.value.map(g => g.id)
       }
       if (activeGroupId.value === id) {
         activeGroupId.value = null
       }
     } else if (import.meta.env.DEV) {
-      (window as any).__lastDeletedGroup.missed = true
+      window.__lastDeletedGroup.missed = true
     }
   }
 
@@ -538,7 +538,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     isSelecting.value = false
   }
 
-  const selectNodesInRect = (rect: { x: number; y: number; width: number; height: number }, nodes: any[]) => {
+  const selectNodesInRect = (rect: { x: number; y: number; width: number; height: number }, nodes: import('@vue-flow/core').Node[]) => {
     const selectedIds: string[] = []
     
     nodes.forEach(node => {
@@ -1474,7 +1474,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
 
       // Bulk actions with undo/redo
-      bulkUpdateTasksWithUndo: async (taskIds: string[], updates: Partial<any>) => {
+      bulkUpdateTasksWithUndo: async (taskIds: string[], updates: Partial<Task>) => {
         try {
           const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
           const useUnifiedUndoRedo = await getUndoRedoComposable()

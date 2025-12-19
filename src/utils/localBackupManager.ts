@@ -1,35 +1,21 @@
 /**
  * Local Backup Manager for Data Loss Prevention
  * Creates snapshots of critical data before remote operations
+ *
+ * TASK-020: Refactored to use dependency injection for data source
+ * to break circular dependency with useDatabase
  */
 
 import PouchDB from 'pouchdb-browser'
-import { useDatabase } from '@/composables/useDatabase'
+import type { IBackupDataSource, BackupSnapshot, BackupConfig } from '@/types/databaseTypes'
 
-export interface BackupSnapshot {
-  id: string
-  timestamp: Date
-  operation: 'sync' | 'conflict_resolution' | 'bulk_update'
-  data: {
-    tasks?: any[]
-    projects?: any[]
-    canvas?: any
-  }
-  checksum: string
-  compressed: boolean
-}
-
-export interface BackupConfig {
-  maxBackups: number          // Maximum number of backups to keep
-  maxAge: number             // Maximum age in milliseconds (default: 7 days)
-  compressThreshold: number // Size threshold for compression in bytes
-  autoCleanup: boolean       // Automatically clean old backups
-}
+// Re-export types for backward compatibility
+export type { BackupSnapshot, BackupConfig }
 
 export class LocalBackupManager {
   private db: PouchDB.Database
   private config: BackupConfig
-  private dbComposable = useDatabase()
+  private dataSource: IBackupDataSource | null = null
 
   constructor(config: Partial<BackupConfig> = {}) {
     this.config = {
@@ -49,6 +35,25 @@ export class LocalBackupManager {
   }
 
   /**
+   * Set the data source for backup operations
+   * This breaks the circular dependency by using dependency injection
+   */
+  setDataSource(source: IBackupDataSource): void {
+    this.dataSource = source
+    console.log('🔒 LocalBackupManager: Data source connected')
+  }
+
+  /**
+   * Check if data source is available
+   */
+  private ensureDataSource(): IBackupDataSource {
+    if (!this.dataSource) {
+      throw new Error('LocalBackupManager: Data source not set. Call setDataSource() first.')
+    }
+    return this.dataSource
+  }
+
+  /**
    * Create backup snapshot before operation
    */
   async createBackup(operation: BackupSnapshot['operation'], _description?: string): Promise<string> {
@@ -58,12 +63,13 @@ export class LocalBackupManager {
 
       console.log(`🔒 Creating backup for ${operation} (${snapshotId})...`)
 
-      // Collect current data
+      // Collect current data using injected data source
       const data: BackupSnapshot['data'] = {}
+      const dataSource = this.ensureDataSource()
 
       try {
         // Backup tasks
-        const tasks = await this.dbComposable.load('tasks')
+        const tasks = await dataSource.load<unknown[]>('tasks')
         if (tasks && Array.isArray(tasks)) {
           data.tasks = tasks
         }
@@ -73,7 +79,7 @@ export class LocalBackupManager {
 
       try {
         // Backup projects if available
-        const projects = await this.dbComposable.load('projects')
+        const projects = await dataSource.load<unknown[]>('projects')
         if (projects && Array.isArray(projects)) {
           data.projects = projects
         }
@@ -83,7 +89,7 @@ export class LocalBackupManager {
 
       try {
         // Backup canvas state if available
-        const canvas = await this.dbComposable.load('canvas')
+        const canvas = await dataSource.load<unknown>('canvas')
         if (canvas) {
           data.canvas = canvas
         }
@@ -145,20 +151,21 @@ export class LocalBackupManager {
       }
 
       const restoreOptions = { tasks: true, projects: true, canvas: true, ...options }
+      const dataSource = this.ensureDataSource()
 
       // Restore data based on options
       if (restoreOptions.tasks && data.tasks) {
-        await this.dbComposable.save('tasks', data.tasks)
+        await dataSource.save('tasks', data.tasks)
         console.log('✅ Tasks restored from backup')
       }
 
       if (restoreOptions.projects && data.projects) {
-        await this.dbComposable.save('projects', data.projects)
+        await dataSource.save('projects', data.projects)
         console.log('✅ Projects restored from backup')
       }
 
       if (restoreOptions.canvas && data.canvas) {
-        await this.dbComposable.save('canvas', data.canvas)
+        await dataSource.save('canvas', data.canvas)
         console.log('✅ Canvas restored from backup')
       }
 
@@ -256,7 +263,7 @@ export class LocalBackupManager {
   /**
    * Calculate checksum for data integrity
    */
-  private calculateChecksum(data: any): string {
+  private calculateChecksum(data: BackupSnapshot['data']): string {
     const str = JSON.stringify(data, Object.keys(data).sort())
     let hash = 0
     for (let i = 0; i < str.length; i++) {
@@ -270,7 +277,7 @@ export class LocalBackupManager {
   /**
    * Simple data compression (placeholder - replace with proper compression)
    */
-  private compressData(data: any): any {
+  private compressData(data: BackupSnapshot['data']): BackupSnapshot['data'] {
     // For now, just return the data as-is
     // In production, you'd use LZ-string or similar compression
     return data
@@ -279,7 +286,7 @@ export class LocalBackupManager {
   /**
    * Simple data decompression (placeholder - replace with proper decompression)
    */
-  private decompressData(data: any): any {
+  private decompressData(data: BackupSnapshot['data']): BackupSnapshot['data'] {
     // For now, just return the data as-is
     // In production, you'd use LZ-string or similar decompression
     return data

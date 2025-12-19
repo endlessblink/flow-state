@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Edit, Copy, Trash2, Archive, CheckCircle, Flag, Clock } from 'lucide-vue-next'
 import ContextMenu from '@/components/ContextMenu.vue'
 import type { ContextMenuItem } from '@/components/ContextMenu.vue'
@@ -15,7 +15,7 @@ const meta = {
         inline: false,
         iframeHeight: 400,
       }
-    }
+    },
   },
   argTypes: {
     isVisible: { control: 'boolean' },
@@ -28,37 +28,54 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-// Basic Context Menu
+// Basic Context Menu - shows the actual component centered in viewport
 export const Default: Story = {
   render: () => ({
-    components: { ContextMenu, Edit, Copy, Trash2 },
+    components: { ContextMenu },
     setup() {
-      return { Edit, Copy, Trash2 }
+      const isVisible = ref(false) // Start hidden, show after positioning
+      const menuX = ref(350)  // Initial centered estimate
+      const menuY = ref(130)
+      const items: ContextMenuItem[] = [
+        { id: 'edit', label: 'Edit', icon: Edit, action: () => console.log('Edit clicked'), shortcut: 'Enter' },
+        { id: 'copy', label: 'Copy', icon: Copy, action: () => console.log('Copy clicked'), shortcut: 'Ctrl+C' },
+        { id: 'sep', label: '', separator: true },
+        { id: 'delete', label: 'Delete', icon: Trash2, action: () => console.log('Delete clicked'), shortcut: 'Del', danger: true },
+      ]
+
+      const handleClose = () => {
+        isVisible.value = false
+        // Re-show after a brief delay for demo purposes
+        setTimeout(() => { isVisible.value = true }, 500)
+      }
+
+      // Calculate center position on mount
+      onMounted(() => {
+        // Menu dimensions (approximate)
+        const menuWidth = 180
+        const menuHeight = 140
+        // Center in viewport (iframe dimensions in Storybook)
+        menuX.value = Math.max(50, (window.innerWidth - menuWidth) / 2)
+        menuY.value = Math.max(50, (window.innerHeight - menuHeight) / 2)
+        // Show menu after positioning
+        setTimeout(() => { isVisible.value = true }, 50)
+      })
+
+      return { isVisible, items, handleClose, menuX, menuY, Edit, Copy, Trash2 }
     },
     template: `
-      <div style="min-height: 280px; background: var(--glass-bg-solid); padding: 20px; display: flex; gap: 40px; align-items: flex-start;">
-        <div>
-          <h3 style="color: var(--text-primary); margin: 0 0 8px 0;">Basic Context Menu</h3>
-          <p style="color: var(--text-secondary); margin: 0;">Standard menu with shortcuts and danger action</p>
+      <div style="min-height: 400px; background: #0a0a0a; padding: 40px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <div style="margin-bottom: 20px; text-align: center;">
+          <h3 style="color: #e5e5e5; margin: 0 0 8px 0;">Basic Context Menu</h3>
+          <p style="color: #a3a3a3; margin: 0;">The ContextMenu component centered in the viewport</p>
         </div>
-        <div style="min-width: 200px; background: var(--surface-elevated); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: var(--shadow-dark-xl); padding: 8px;">
-          <button style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--text-primary); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;">
-            <Edit :size="16" :stroke-width="1.5" style="flex-shrink: 0;" />
-            <span style="flex: 1;">Edit</span>
-            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border-light); border-radius: 4px;">Enter</span>
-          </button>
-          <button style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--text-primary); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;">
-            <Copy :size="16" :stroke-width="1.5" style="flex-shrink: 0;" />
-            <span style="flex: 1;">Copy</span>
-            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border-light); border-radius: 4px;">Ctrl+C</span>
-          </button>
-          <div style="height: 1px; margin: 8px 12px; background: var(--border-subtle);"></div>
-          <button style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--danger-text); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;">
-            <Trash2 :size="16" :stroke-width="1.5" style="flex-shrink: 0;" />
-            <span style="flex: 1;">Delete</span>
-            <span style="flex-shrink: 0; font-size: 12px; color: var(--text-muted); padding: 4px 8px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border-light); border-radius: 4px;">Del</span>
-          </button>
-        </div>
+        <ContextMenu
+          :is-visible="isVisible"
+          :x="menuX"
+          :y="menuY"
+          :items="items"
+          @close="handleClose"
+        />
       </div>
     `,
   })

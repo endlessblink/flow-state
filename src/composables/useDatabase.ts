@@ -11,6 +11,8 @@ import type { Ref } from 'vue'
 import PouchDB from 'pouchdb-browser'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
+import { getBackupManager } from '@/utils/localBackupManager'
+import type { IBackupDataSource } from '@/types/databaseTypes'
 import { getDatabaseConfig, type DatabaseHealth as _DatabaseHealth } from '@/config/database'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { isQuotaExceededError, checkStorageQuota } from '@/utils/storageQuotaMonitor'
@@ -908,6 +910,22 @@ export function useDatabase(): UseDatabaseReturn {
         batchingEnabled: true
       }
     }
+  }
+
+  // TASK-020: Connect backup manager's data source to break circular dependency
+  // This provides the backup manager with load/save capabilities without importing useDatabase
+  const connectBackupManagerDataSource = () => {
+    try {
+      const dataSource: IBackupDataSource = { load, save }
+      getBackupManager().setDataSource(dataSource)
+    } catch (err) {
+      console.warn('⚠️ Failed to connect backup manager data source:', err)
+    }
+  }
+
+  // Connect after a short delay to ensure initialization is complete
+  if (typeof window !== 'undefined') {
+    setTimeout(connectBackupManagerDataSource, 100)
   }
 
   return {

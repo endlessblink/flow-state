@@ -78,7 +78,7 @@ class GitRestorationAnalyzer {
       analyses.push(analysis)
 
       if (this.isDevelopment) {
-        console.log(`  ${(analysis as any).shortHash}: ${(analysis as any).description} (${(analysis as any).fileCount} files, ${(analysis as any).totalLinesAdded}+/${(analysis as any).totalLinesDeleted}-)`)
+        console.log(`  ${analysis.commit.shortHash}: ${analysis.description} (${analysis.fileCount} files, ${analysis.totalLinesAdded}+/${analysis.totalLinesDeleted}-)`)
       }
     }
 
@@ -334,12 +334,14 @@ class GitRestorationAnalyzer {
         encoding: 'utf8'
       })
 
+      // execSync with encoding:'utf8' returns a string directly
       return {
-        stdout: (result as any).stdout || '',
-        stderr: (result as any).stderr || ''
+        stdout: typeof result === 'string' ? result : '',
+        stderr: ''
       }
-    } catch (error: any) {
-      throw new Error(`Git command failed: ${command}\nError: ${error.message}`)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new Error(`Git command failed: ${command}\nError: ${errorMessage}`)
     }
   }
 
@@ -458,5 +460,6 @@ export const {
 // Development-only enhancements
 if (import.meta.env.DEV) {
   // Expose to window for debugging
-  (window as any).gitRestorationAnalyzer = gitRestorationAnalyzer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as unknown as Record<string, unknown>).gitRestorationAnalyzer = gitRestorationAnalyzer
 }

@@ -411,7 +411,7 @@ export const useTimerStore = defineStore('timer', () => {
           docToSave._rev = existingRev
         }
 
-        await pouchDb.put(docToSave as PouchDBDocument)
+        await pouchDb.put(docToSave as unknown as PouchDBDocument)
 
         if (attempt > 1) {
           console.log(`✅ [TIMER CROSS-DEVICE] Saved on attempt ${attempt}`)

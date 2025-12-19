@@ -25,22 +25,35 @@ interface FirebaseUser {
 }
 type User = FirebaseUser | null
 type _Timestamp = Date
+
+// Document reference type for Firestore stubs
+interface _DocumentRef {
+  exists: () => boolean
+  data: () => Record<string, unknown>
+}
+
 const _auth: null = null
 const _db: null = null
-const _waitForFirebase: () => Promise<boolean> = () => Promise.resolve(false)
-const _serverTimestamp: () => Date = () => new Date()
-const _doc: () => Record<string, unknown> = () => ({})
-const _getDoc: () => Promise<null> = () => Promise.resolve(null)
-const _setDoc: () => Promise<void> = () => Promise.resolve()
-const _updateDoc: () => Promise<void> = () => Promise.resolve()
-const _createUserWithEmailAndPassword: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
-const _signInWithEmailAndPassword: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
-const _signInWithPopup: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
+const _waitForFirebase = (_timeout?: number): Promise<boolean> => Promise.resolve(false)
+const _serverTimestamp = (): Date => new Date()
+const _doc = (_db: unknown, ..._path: string[]): _DocumentRef => ({ exists: () => false, data: () => ({}) })
+const _getDoc = (_ref: _DocumentRef): Promise<_DocumentRef> => Promise.resolve({ exists: () => false, data: () => ({}) })
+const _setDoc = (_ref: _DocumentRef, _data: unknown): Promise<void> => Promise.resolve()
+const _updateDoc = (_ref: _DocumentRef, _data: unknown): Promise<void> => Promise.resolve()
+const _createUserWithEmailAndPassword = (_auth: unknown, _email: string, _password: string): Promise<{ user: FirebaseUser }> =>
+  Promise.reject(new Error('Firebase disabled'))
+const _signInWithEmailAndPassword = (_auth: unknown, _email: string, _password: string): Promise<{ user: FirebaseUser }> =>
+  Promise.reject(new Error('Firebase disabled'))
+const _signInWithPopup = (_auth: unknown, _provider: unknown): Promise<{ user: FirebaseUser }> =>
+  Promise.reject(new Error('Firebase disabled'))
 const _GoogleAuthProvider: { new(): { setCustomParameters: (params: Record<string, string>) => void } } = class { setCustomParameters(_params: Record<string, string>) {} }
-const _firebaseSignOut: () => Promise<void> = () => Promise.resolve()
-const _firebaseSendPasswordResetEmail: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
-const _firebaseUpdateProfile: (user: FirebaseUser, data: { displayName?: string }) => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
-const _firebaseUpdatePassword: () => Promise<never> = () => Promise.reject(new Error('Firebase disabled'))
+const _firebaseSignOut = (_auth: unknown): Promise<void> => Promise.resolve()
+const _firebaseSendPasswordResetEmail = (_auth: unknown, _email: string): Promise<void> =>
+  Promise.reject(new Error('Firebase disabled'))
+const _firebaseUpdateProfile = (_user: FirebaseUser, _data: { displayName?: string; photoURL?: string }): Promise<void> =>
+  Promise.reject(new Error('Firebase disabled'))
+const _firebaseUpdatePassword = (_user: FirebaseUser, _newPassword: string): Promise<void> =>
+  Promise.reject(new Error('Firebase disabled'))
 const _onAuthStateChanged: () => () => void = () => () => {}
 
 /**
@@ -195,13 +208,16 @@ export const useAuthStore = defineStore('auth', () => {
       const profileSnap = await _getDoc(profileRef)
 
       if (profileSnap.exists()) {
-        const data = profileSnap.data()
+        const data = profileSnap.data() as Record<string, unknown>
 
-        // Convert Firestore Timestamps to Dates
+        // Convert Firestore Timestamps to Dates (Firebase disabled - just use defaults)
+        const createdAtField = data.createdAt as { toDate?: () => Date } | undefined
+        const lastLoginAtField = data.lastLoginAt as { toDate?: () => Date } | undefined
+
         profile.value = {
           ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          lastLoginAt: data.lastLoginAt?.toDate?.() || new Date()
+          createdAt: createdAtField?.toDate?.() || new Date(),
+          lastLoginAt: lastLoginAtField?.toDate?.() || new Date()
         } as UserProfile
       } else {
         console.warn('Profile document does not exist, creating default profile')

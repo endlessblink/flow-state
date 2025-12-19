@@ -10,7 +10,7 @@ export interface RateLimitConfig {
   maxRequests: number // Maximum requests per window
   skipSuccessfulRequests?: boolean
   skipFailedRequests?: boolean
-  keyGenerator?: (req: any) => string
+  keyGenerator?: (req: unknown) => string
   message?: string
   standardHeaders?: boolean
   legacyHeaders?: boolean
@@ -151,19 +151,20 @@ export class RateLimiter {
   }
 
   // Default key generator
-  private defaultKeyGenerator(req: any): string {
+  private defaultKeyGenerator(req: unknown): string {
+    const request = req as { headers?: Record<string, string>; ip?: string; connection?: { remoteAddress?: string } }
     // Use IP address as default key
-    if (req.headers?.['x-forwarded-for']) {
-      return req.headers['x-forwarded-for'].split(',')[0].trim()
+    if (request.headers?.['x-forwarded-for']) {
+      return request.headers['x-forwarded-for'].split(',')[0].trim()
     }
-    if (req.headers?.['x-real-ip']) {
-      return req.headers['x-real-ip']
+    if (request.headers?.['x-real-ip']) {
+      return request.headers['x-real-ip']
     }
-    if (req.ip) {
-      return req.ip
+    if (request.ip) {
+      return request.ip
     }
-    if (req.connection?.remoteAddress) {
-      return req.connection.remoteAddress
+    if (request.connection?.remoteAddress) {
+      return request.connection.remoteAddress
     }
 
     // Fallback to a unique identifier

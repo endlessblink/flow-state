@@ -107,7 +107,7 @@ export class CrossTabBrowserCompatibility {
   /**
    * Test the communication channel and provide fallbacks
    */
-  async testChannel(channel: any): Promise<boolean> {
+  async testChannel(channel: BroadcastChannel | MessageChannel | Storage): Promise<boolean> {
     const testMessage = {
       id: 'compatibility-test',
       timestamp: Date.now(),
@@ -118,7 +118,7 @@ export class CrossTabBrowserCompatibility {
       if (channel instanceof BroadcastChannel) {
         return await this.testBroadcastChannel(channel, testMessage)
       } else if (channel === window.localStorage || channel === window.sessionStorage) {
-        return await this.testStorageChannel(channel, testMessage)
+        return await this.testStorageChannel(channel as Storage, testMessage)
       } else {
         return false
       }
@@ -247,7 +247,7 @@ export class CrossTabBrowserCompatibility {
   /**
    * Test BroadcastChannel communication
    */
-  private async testBroadcastChannel(channel: BroadcastChannel, testMessage: any): Promise<boolean> {
+  private async testBroadcastChannel(channel: BroadcastChannel, testMessage: { id: string; timestamp: number; data: string }): Promise<boolean> {
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
         channel.close()

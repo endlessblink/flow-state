@@ -102,7 +102,7 @@ export class ConflictDetector {
   /**
    * Detect conflict for a single document
    */
-  async detectDocumentConflict(localDoc: any): Promise<ConflictInfo | null> {
+  async detectDocumentConflict(localDoc: unknown): Promise<ConflictInfo | null> {
     if (!this.localDB) {
       throw new Error('ConflictDetector not initialized')
     }
@@ -111,16 +111,19 @@ export class ConflictDetector {
       return null
     }
 
-    try {
-      const remoteDoc = this.remoteDB ? await this.getRemoteVersion(localDoc._id) : null
+    // After type guard, cast to DocumentVersion for type safety
+    const doc = localDoc as DocumentVersion
 
-      if (remoteDoc && this.hasConflict(localDoc, remoteDoc)) {
-        return this.analyzeConflict(localDoc, remoteDoc)
+    try {
+      const remoteDoc = this.remoteDB ? await this.getRemoteVersion(doc._id) : null
+
+      if (remoteDoc && this.hasConflict(doc, remoteDoc)) {
+        return this.analyzeConflict(doc, remoteDoc)
       }
 
       return null
     } catch (error) {
-      console.warn(`⚠️ Error detecting conflict for ${localDoc._id}:`, error)
+      console.warn(`⚠️ Error detecting conflict for ${doc._id}:`, error)
       return null
     }
   }
@@ -135,7 +138,7 @@ export class ConflictDetector {
       const doc = await this.localDB.get(docId)
       return this.normalizeDocumentVersion(doc, 'local')
     } catch (versionError) {
-      if ((versionError as any).name === 'not_found') {
+      if ((versionError as { name?: string }).name === 'not_found') {
         return null
       }
       throw versionError

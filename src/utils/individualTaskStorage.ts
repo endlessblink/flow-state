@@ -40,9 +40,10 @@ export const extractTaskId = (docId: string): string | null => {
 /**
  * Helper to check if error is a connection closing error
  */
-const isConnectionClosingError = (error: any): boolean => {
-  return error?.message?.includes('connection is closing') ||
-         error?.name === 'InvalidStateError'
+const isConnectionClosingError = (error: unknown): boolean => {
+  const err = error as { message?: string; name?: string }
+  return err?.message?.includes('connection is closing') ||
+         err?.name === 'InvalidStateError'
 }
 
 /**
@@ -58,13 +59,13 @@ const getDbWithRetry = async (db: PouchDB.Database): Promise<PouchDB.Database> =
     if (isConnectionClosingError(error)) {
       console.warn('⚠️ [TASK-STORAGE] Connection closing, getting fresh database instance...')
       // Get fresh database from window
-      const freshDb = (window as any).pomoFlowDb
+      const freshDb = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
       if (freshDb) {
         return freshDb
       }
       // Wait a bit and try again
       await new Promise(resolve => setTimeout(resolve, 300))
-      const retryDb = (window as any).pomoFlowDb
+      const retryDb = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
       if (retryDb) {
         return retryDb
       }

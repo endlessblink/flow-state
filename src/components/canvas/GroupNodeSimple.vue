@@ -20,71 +20,74 @@
         @blur="updateName"
       >
 
-      <!-- Power Mode Indicator -->
-      <div
-        v-if="isPowerMode && !isCollapsed"
-        class="power-indicator"
-        :title="powerModeTooltip"
-      >
-        <Zap :size="12" class="power-icon" />
-      </div>
-
-      <!-- Collect Button (for power groups) -->
-      <div v-if="isPowerMode && !isCollapsed" class="collect-wrapper">
-        <button
-          class="collect-btn"
-          :class="{ 'has-matches': matchingInboxCount > 0 }"
-          :title="`Collect matching tasks (${matchingInboxCount} available)`"
-          @click.stop="toggleCollectMenu"
+      <!-- Actions Container - wraps all action buttons with overflow handling -->
+      <div v-if="!isCollapsed" class="header-actions">
+        <!-- Power Mode Indicator -->
+        <div
+          v-if="isPowerMode"
+          class="power-indicator"
+          :title="powerModeTooltip"
         >
-          <Magnet :size="12" />
-          <span v-if="matchingInboxCount > 0" class="collect-badge">{{ matchingInboxCount }}</span>
+          <Zap :size="12" class="power-icon" />
+        </div>
+
+        <!-- Collect Button (for power groups) -->
+        <div v-if="isPowerMode" class="collect-wrapper">
+          <button
+            class="collect-btn"
+            :class="{ 'has-matches': matchingInboxCount > 0 }"
+            :title="`Collect matching tasks (${matchingInboxCount} available)`"
+            @click.stop="toggleCollectMenu"
+          >
+            <Magnet :size="12" />
+            <span v-if="matchingInboxCount > 0" class="collect-badge">{{ matchingInboxCount }}</span>
+          </button>
+
+          <!-- Collect Dropdown Menu -->
+          <div v-if="showCollectMenu" class="collect-menu" @click.stop>
+            <button class="collect-option" @click="handleCollect('move')">
+              Move {{ matchingInboxCount }} tasks here
+            </button>
+            <button class="collect-option" @click="handleCollect('highlight')">
+              Highlight matching tasks
+            </button>
+          </div>
+        </div>
+
+        <!-- Power Mode Toggle -->
+        <button
+          v-if="powerKeyword"
+          class="power-toggle-btn"
+          :class="{ 'power-active': isPowerMode }"
+          :title="isPowerMode ? 'Disable power mode' : 'Enable power mode'"
+          @click.stop="togglePowerMode"
+        >
+          <Zap :size="12" />
         </button>
 
-        <!-- Collect Dropdown Menu -->
-        <div v-if="showCollectMenu" class="collect-menu" @click.stop>
-          <button class="collect-option" @click="handleCollect('move')">
-            Move {{ matchingInboxCount }} tasks here
-          </button>
-          <button class="collect-option" @click="handleCollect('highlight')">
-            Highlight matching tasks
-          </button>
+        <!-- Settings Button -->
+        <button
+          class="settings-btn"
+          title="Group settings - configure auto-assign properties"
+          @click.stop="openSettings"
+        >
+          <Settings :size="12" />
+        </button>
+
+        <button
+          v-if="section.type !== 'custom'"
+          class="auto-collect-btn"
+          :class="{ active: autoCollectEnabled }"
+          :title="autoCollectEnabled ? 'Auto-collect: ON - Matching tasks auto-placed' : 'Auto-collect: OFF - Manual placement only'"
+          @click="toggleAutoCollect"
+        >
+          🧲
+        </button>
+        <div v-if="section.type !== 'custom'" class="section-type-badge" :title="sectionTypeLabel">
+          {{ sectionTypeIcon }}
         </div>
       </div>
 
-      <!-- Power Mode Toggle -->
-      <button
-        v-if="powerKeyword && !isCollapsed"
-        class="power-toggle-btn"
-        :class="{ 'power-active': isPowerMode }"
-        :title="isPowerMode ? 'Disable power mode' : 'Enable power mode'"
-        @click.stop="togglePowerMode"
-      >
-        <Zap :size="12" />
-      </button>
-
-      <!-- Settings Button -->
-      <button
-        v-if="!isCollapsed"
-        class="settings-btn"
-        title="Group settings - configure auto-assign properties"
-        @click.stop="openSettings"
-      >
-        <Settings :size="12" />
-      </button>
-
-      <button
-        v-if="section.type !== 'custom' && !isCollapsed"
-        class="auto-collect-btn"
-        :class="{ active: autoCollectEnabled }"
-        :title="autoCollectEnabled ? 'Auto-collect: ON - Matching tasks auto-placed' : 'Auto-collect: OFF - Manual placement only'"
-        @click="toggleAutoCollect"
-      >
-        🧲
-      </button>
-      <div v-if="section.type !== 'custom' && !isCollapsed" class="section-type-badge" :title="sectionTypeLabel">
-        {{ sectionTypeIcon }}
-      </div>
       <div class="section-count" :class="{ 'has-tasks': taskCount > 0 }">
         {{ taskCount }}
         <span v-if="isCollapsed && taskCount > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
@@ -321,10 +324,11 @@ const handleResizeEnd = (event: any) => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  padding-right: 50px; /* Make space for badge */
+  padding-right: 50px; /* Make space for count badge */
   border-bottom: 1px solid var(--glass-border-soft);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   min-height: 40px; /* Ensure consistent header height */
+  overflow: hidden; /* Prevent header overflow */
 }
 
 .section-color-dot {
@@ -358,6 +362,36 @@ const handleResizeEnd = (event: any) => {
   outline-offset: 1px;
 }
 
+/* Header Actions Container - handles overflow gracefully */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 1;
+  min-width: 0; /* Allow shrinking below content size */
+  overflow: hidden;
+  position: relative;
+}
+
+/* Fade mask to indicate overflow */
+.header-actions::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  background: linear-gradient(to right, transparent, var(--glass-bg-light));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+/* Show fade mask when container might be overflowing */
+.section-header:hover .header-actions::after {
+  opacity: 0.8;
+}
+
 .auto-collect-btn {
   background: transparent;
   border: 1px solid var(--border-medium);
@@ -389,7 +423,8 @@ const handleResizeEnd = (event: any) => {
 }
 
 .section-name-input {
-  flex: 1;
+  flex: 1 1 60px; /* Grow, shrink, min basis of 60px */
+  min-width: 60px; /* Minimum readable width */
   background: transparent;
   border: none;
   color: var(--text-primary);
@@ -399,6 +434,9 @@ const handleResizeEnd = (event: any) => {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   transition: background var(--duration-fast);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .section-name-input:hover,

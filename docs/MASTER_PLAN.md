@@ -122,6 +122,26 @@ Phase 3 (Mobile) ←────────────────────
 
 ## Active Work
 
+<!-- TASK DEPENDENCY INDEX - Claude: Check this BEFORE starting any task -->
+<!-- Update Status when starting/completing work. Check for file conflicts before starting. -->
+
+| ID | Status | Primary Files | Depends | Blocks |
+|----|--------|---------------|---------|--------|
+| TASK-022 | IN_PROGRESS | `tasks.ts`, `taskDisappearanceLogger.ts` | - | TASK-024 |
+| TASK-024 | PLANNED | `tasks.ts` | TASK-022 | - |
+| ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
+| TASK-014 | IN_PROGRESS | `*.stories.ts`, `*.vue` (UI) | - | - |
+| TASK-019 | PLANNED | `tasks.ts`, stores, views | - | - |
+| TASK-020 | PLANNED | `useDatabase.ts`, `useReliableSyncManager.ts` | - | - |
+| TASK-023 | PLANNED | `dev-manager/*` | - | - |
+| TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
+
+**Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
+**Blocked**: TASK-024 (waiting on TASK-022)
+**Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially
+
+---
+
 <!-- Active work items use TASK-XXX format -->
 
 ### ~~TASK-018~~: Canvas Inbox Filters (COMPLETE)
@@ -639,13 +659,15 @@ Dec 18, 2025 - Lint now blocking in CI. Unit tests deferred to TASK-020.
 
 ---
 
-### TASK-021: Real-Time Cross-Instance Timer Sync (IN PROGRESS)
+### ~~TASK-021~~: Real-Time Cross-Instance Timer Sync (COMPLETE)
 
 **Goal**: Make timer sync immediate and work across different browser instances/devices.
 
 **Priority**: P1-HIGH (part of ROAD-013 Sync Hardening)
 
-**Status**: 🟡 **IN PROGRESS** - Root cause identified, implementing fix
+**Status**: ✅ **COMPLETE** - Dec 19, 2025
+
+**SOP**: `docs/🐛 debug/sop/timer-cross-device-sync-fix-2025-12-19.md`
 
 **Related**: BUG-016 (timer not syncing), ISSUE-007 (timer sync across instances), TASK-017 (KDE widget)
 
@@ -706,31 +728,34 @@ CouchDB Remote ──► Live Sync Handler (line 1046) ──► Task Store ✅ 
 |------|-------------|--------|--------|
 | 1 | ~~Research: How reliable-sync-change works~~ | ~~1h~~ | ✅ DONE |
 | 2 | ~~Research: PouchDB live changes API~~ | ~~1h~~ | ✅ DONE |
-| 3 | Create `useTimerChangesSync.ts` composable | ~1h | 🟡 IN PROGRESS |
-| 4 | Implement `db.changes()` listener with `doc_ids` filter | ~1h | TODO |
-| 5 | Add proper cleanup (cancel on unmount) | ~30m | TODO |
-| 6 | Add offline/reconnect handling | ~1h | TODO |
-| 7 | Integrate into timer store | ~1h | TODO |
-| 8 | Test cross-device sync scenarios | ~1h | TODO |
+| 3 | ~~Create `useTimerChangesSync.ts` composable~~ | ~~1h~~ | ✅ DONE |
+| 4 | ~~Implement `db.changes()` listener with `doc_ids` filter~~ | ~~1h~~ | ✅ DONE |
+| 5 | ~~Add proper cleanup (cancel on unmount)~~ | ~~30m~~ | ✅ DONE |
+| 6 | ~~Add offline/reconnect handling~~ | ~~1h~~ | ✅ DONE |
+| 7 | ~~Integrate into timer store~~ | ~~1h~~ | ✅ DONE |
+| 8 | ~~Test cross-device sync scenarios~~ | ~~1h~~ | ✅ DONE |
 
-**File Changes Required**:
+**Files Created/Modified** (Dec 19, 2025):
 
-1. **NEW**: `src/composables/useTimerChangesSync.ts`
+1. **NEW**: `src/composables/useTimerChangesSync.ts` ✅
    - Direct PouchDB changes feed for timer document
    - Uses `doc_ids: ['pomo-flow-timer-session:data']` filter
    - Proper cleanup with `cancel()` method
+   - Auto-reconnect on error (up to 5 attempts)
 
-2. **MODIFY**: `src/stores/timer.ts`
-   - Import and use `useTimerChangesSync`
-   - Replace `reliable-sync-change` listener with direct changes feed
-   - Keep existing `handleRemoteTimerUpdate()` logic
+2. **MODIFIED**: `src/stores/timer.ts` ✅
+   - Imported `useTimerChangesSync` composable
+   - Replaced `reliable-sync-change` event listener with direct changes feed
+   - Added `cleanupCrossDeviceSync()` function
+   - Added leader timestamp for clock sync compensation
+   - Kept existing `handleRemoteTimerUpdate()` logic
 
-**Success Criteria**:
-- [ ] Timer starts on Device A → appears on Device B within 2 seconds
-- [ ] Timer pause/resume syncs immediately
-- [ ] Only one "leader" can control the timer at a time
-- [ ] Graceful handling when offline
-- [ ] Changes listener properly cleaned up on unmount
+**Success Criteria** (All verified Dec 19, 2025):
+- [x] Timer starts on Device A → appears on Device B within 2 seconds
+- [x] Timer pause/resume syncs immediately
+- [x] Only one "leader" can control the timer at a time
+- [x] Graceful handling when offline
+- [x] Changes listener properly cleaned up on unmount
 
 **Rollback Command**:
 ```bash

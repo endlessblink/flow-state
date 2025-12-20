@@ -326,7 +326,8 @@ export function useDatabase(): UseDatabaseReturn {
         }
 
         // Expose to window for backward compatibility
-        ;(window as Window & typeof globalThis).pomoFlowDb = singletonDatabase as unknown as PomoFlowDB
+        const w = window as Window & typeof globalThis
+        w.pomoFlowDb = singletonDatabase as unknown as PomoFlowDB
 
         // Verify database is working
         await singletonDatabase.info()

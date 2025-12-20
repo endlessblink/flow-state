@@ -176,7 +176,8 @@ Phase 3 (Mobile) ←────────────────────
 
 **Baseline** (Dec 19, 2025): 1,380 warnings (0 errors)
 **Session 1** (Dec 19, 2025): 1,292 warnings - 88 fixed (stores batch)
-**Session 2** (Dec 19, 2025): **1,134 warnings** - 159 total fixed (~12% reduction)
+**Session 2** (Dec 19, 2025): 1,134 warnings - 159 total fixed (~12% reduction)
+**Session 3** (Dec 20, 2025): **791 warnings** - 134 more fixed (utils + composables batch)
 
 | Step | Description | Status |
 |------|-------------|--------|
@@ -206,18 +207,25 @@ Phase 3 (Mobile) ←────────────────────
 - `utils/offlineQueue.ts`: QueuedOperation data types → `unknown`
 - Multiple utils files: `any` → `unknown` conversions
 
+**Session 3 Files Fixed** (Dec 20, 2025):
+- `utils/conflictResolution.ts`: All `any` → `unknown` with proper type guards (36 warnings)
+- `utils/threeWayMerge.ts`: All `any` → `unknown` or `Record<string, unknown>` (31 warnings)
+- `composables/useReliableSyncManager.ts`: 36 `any` patterns fixed with type guards
+- `composables/useDatabase.ts`: Fixed semicolon error + window typing
+- `composables/useCrossTabSync.ts`: 30 `any` patterns fixed with interfaces
+
 **🚀 NEXT SESSION - START HERE**:
-1. Continue composables batch: `npm run lint 2>&1 | grep "src/composables"`
-2. Then components batch
-3. Then views batch
+1. Top files remaining: CanvasView.vue (81), SyncErrorBoundary.vue (35), verificationReportGenerator.ts (27)
+2. Components batch: `npm run lint 2>&1 | grep "src/components"`
+3. Views batch: `npm run lint 2>&1 | grep "src/views"`
 4. Final: `npm run build && npm run lint`
 
-**Remaining** (~1,134 warnings):
+**Remaining** (~791 warnings):
 - Services: ✅ DONE
-- Utils: ✅ DONE (~62 fixed)
-- Composables: ~47 remaining
-- Components: 205
-- Views: 102
+- Utils: ~150 remaining (conflictResolver, syncValidator, etc.)
+- Composables: ~15 remaining
+- Components: ~200 remaining
+- Views: ~102 remaining (CanvasView has 81 alone)
 
 **Common Patterns Applied**:
 - Error handling: `catch (err: any)` → `catch (err: unknown)` + type guards
@@ -689,25 +697,25 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 - **CSS updated**: Dark glass morphism applied to swimlane headers and columns
 - **Visual alignment**: Complete - matches KanbanColumn styling
 
-**🔴 NEXT SESSION - CONTINUE FROM HERE**:
-1. Open both pages side-by-side:
-   - KanbanColumn: `http://localhost:6006/?path=/docs/%E2%9C%A8-features-%F0%9F%93%8B-board-view-kanbancolumn--docs`
-   - KanbanSwimlane: `http://localhost:6006/?path=/docs/%E2%9C%A8-features-%F0%9F%93%8B-board-view-kanbanswimlane--docs`
-2. **ASK USER**: "What specific visual differences do you see between KanbanColumn and KanbanSwimlane that need fixing?"
-3. Common areas that may need alignment:
-   - Column header styling (borders, backgrounds, spacing)
-   - Task card appearance within swimlanes
-   - Empty state styling
-   - Overall column/swimlane container borders/shadows
+**🔴 NEXT SESSION - CREATE AUTH COMPONENT STORIES**:
 
-**Issues Encountered This Session**:
-- Initial streamlining attempt had correct story count but wrong format
-- Had to read KanbanColumn.stories.ts to understand exact structure expected
-- Event handler syntax needed to be kebab-case (`@select-task` not `@selectTask`)
+**Goal**: Create stories for 6 Auth components (0% → 100% coverage)
 
-**Files Modified**:
-- `src/stories/board/KanbanSwimlane.stories.ts` - Reduced to 2 stories, matched KanbanColumn format
-- `src/components/kanban/KanbanSwimlane.vue` - CSS updated for dark glass morphism
+**Components to create stories for**:
+1. `AuthModal.vue` - Main auth modal
+2. `LoginForm.vue` - Login flow
+3. `SignupForm.vue` - Signup flow
+4. `GoogleSignInButton.vue` - OAuth button
+5. `UserProfile.vue` - User settings
+6. `ResetPasswordView.vue` - Password reset
+
+**MANDATORY for each story**:
+- Use design tokens ONLY (no hardcoded colors) - see Check 6 in storybook-audit skill
+- Use mock data, NOT real stores
+- Use `layout: 'fullscreen'` for modals
+- Set appropriate `iframeHeight` based on component type
+
+**Skill upgraded**: `storybook-audit` now includes tokenization enforcement (Check 6)
 
 ---
 

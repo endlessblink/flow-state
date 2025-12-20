@@ -110,7 +110,7 @@ const currentTabId = ref('')
 const messageQueue = ref<CrossTabMessage[]>([])
 const lastProcessedTimestamp = ref(0)
 const isProcessing = ref(false)
-const pendingLocalOperations = ref<Map<string, any>>(new Map())
+const pendingLocalOperations = ref<Map<string, TaskOperation>>(new Map())
 const conflictResolver = new ConflictResolver('cross-tab-sync')
 // saveCoordinator removed - Phase 2 simplification
 const performanceMonitor = new CrossTabPerformance()
@@ -416,8 +416,8 @@ const sendMessageImmediately = (message: Omit<CrossTabMessage, 'id' | 'timestamp
   if (typeof window === 'undefined') return
 
   // Check performance before broadcasting
-  const performanceData = (performanceMonitor as any).exportPerformanceData()
-  if (performanceData.recommendations.length > 0) {
+  const performanceData = performanceMonitor.exportPerformanceData()
+  if (performanceData.recommendations && performanceData.recommendations.length > 0) {
     console.log('⚠️ Performance recommendations detected:', performanceData.recommendations)
   }
 
@@ -429,7 +429,7 @@ const sendMessageImmediately = (message: Omit<CrossTabMessage, 'id' | 'timestamp
   }
 
   // Check for duplicate messages
-  if (!(performanceMonitor as any).shouldProcessMessage(fullMessage.id, fullMessage)) {
+  if (!performanceMonitor.shouldProcessMessage(fullMessage.id, fullMessage)) {
     console.log('🔄 Duplicate broadcast message ignored:', fullMessage.id)
     return
   }
@@ -451,7 +451,7 @@ const sendMessageImmediately = (message: Omit<CrossTabMessage, 'id' | 'timestamp
     }
 
     // Record performance
-    (performanceMonitor as any).recordMessage(fullMessage.id, startTime, Date.now())
+    performanceMonitor.recordMessage(fullMessage.id, startTime, Date.now())
 
   } catch (error) {
     console.warn('Failed to broadcast cross-tab message:', error)
@@ -466,7 +466,7 @@ const debouncedProcessMessages = () => {
   }
 
   // Use performance-configured debounce delay
-  const config = (performanceMonitor as any).getConfig()
+  const config = performanceMonitor.getConfig()
   const debounceDelay = config.debounceDelay
 
   messageTimeout = setTimeout(() => {
@@ -500,7 +500,7 @@ const processMessageQueue = async () => {
       }
 
       // Check if message should be processed (deduplication)
-      if (!(performanceMonitor as any).shouldProcessMessage(message.id, message)) {
+      if (!performanceMonitor.shouldProcessMessage(message.id, message)) {
         continue
       }
 
@@ -526,17 +526,11 @@ const processMessageQueue = async () => {
             break
         }
 
-        // Direct assignment with explicit any cast
-        const maxTimestamp = Math.max(
-          (lastProcessedTimestamp as any).value || 0,
-          (message as any).timestamp || 0
-        )
-        if (lastProcessedTimestamp.value && typeof lastProcessedTimestamp.value === 'object') {
-          (lastProcessedTimestamp as any).value = maxTimestamp
-        }
+        // Update last processed timestamp
+        lastProcessedTimestamp.value = Math.max(lastProcessedTimestamp.value, message.timestamp)
 
         // Record message processing performance
-        (performanceMonitor as any).recordMessage(message.id, messageStartTime, Date.now())
+        performanceMonitor.recordMessage(message.id, messageStartTime, Date.now())
 
       } catch (error) {
         console.error('Failed to process cross-tab message:', error, message)
@@ -550,9 +544,9 @@ const processMessageQueue = async () => {
     console.log(`✅ Message queue processed in ${processingTime}ms`)
 
     // Auto-optimize performance based on metrics
-    const currentMetrics = (performanceMonitor as any).getMetrics()
+    const currentMetrics = performanceMonitor.getMetrics()
     if (currentMetrics.messageCount > 0 && currentMetrics.messageCount % 50 === 0) {
-      (performanceMonitor as any).optimizeConfiguration()
+      performanceMonitor.optimizeConfiguration()
     }
 
   } finally {
@@ -568,8 +562,8 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: TaskStor
 
     if (conflicts.length > 0) {
       console.log(`⚠️ Detected ${conflicts.length} task conflicts, resolving...`)
-      const resolutions = await (conflictResolver as any).resolveConflict(conflicts)
-      await applyConflictResolutions(resolutions as any, operation, taskStore)
+      const resolutions = await conflictResolver.resolveConflict(conflicts[0])
+      await applyConflictResolutions([resolutions] as unknown as ConflictInfo[], operation, taskStore)
       return
     }
 
@@ -649,13 +643,14 @@ const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: T
   const pendingLocalOp = pendingLocalOperations.value.get(remoteOperation.taskId)
 
   if (pendingLocalOp) {
-    const conflict = {
-      type: 'task_update',
-      entityId: remoteOperation.taskId,
-      localOperation: pendingLocalOp,
-      remoteOperation: remoteOperation,
-      timestamp: Date.now()
-    } as any
+    const conflict: ConflictInfo = {
+      documentId: remoteOperation.taskId,
+      localVersion: pendingLocalOp as unknown as Record<string, unknown>,
+      remoteVersion: remoteOperation as unknown as Record<string, unknown>,
+      timestamp: Date.now(),
+      conflictType: 'both_modified',
+      autoResolvable: false
+    }
 
     conflicts.push(conflict)
   }
@@ -664,40 +659,49 @@ const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: T
 }
 
 // Apply conflict resolutions
+interface ResolutionWithStrategy extends ConflictInfo {
+  resolution?: 'local_wins' | 'remote_wins' | 'merge'
+  entityId?: string
+  localOperation?: { taskData?: unknown }
+}
+
 const applyConflictResolutions = async (resolutions: ConflictInfo[], remoteOperation: TaskOperation, taskStore: TaskStoreType) => {
-  for (const resolution of resolutions) {
-    switch ((resolution as any).resolution) {
+  for (const res of resolutions) {
+    const resolution = res as ResolutionWithStrategy
+    const entityId = resolution.entityId || resolution.documentId
+
+    switch (resolution.resolution) {
       case 'local_wins':
-        console.log('🏆 Local operation wins conflict for task:', (resolution as any).entityId)
+        console.log('🏆 Local operation wins conflict for task:', entityId)
         // Keep local changes, ignore remote operation
         break
 
       case 'remote_wins':
-        console.log('🏆 Remote operation wins conflict for task:', (resolution as any).entityId)
+        console.log('🏆 Remote operation wins conflict for task:', entityId)
         // Apply remote operation, discard local changes
         await applyTaskOperation(remoteOperation, taskStore)
         // Remove pending local operation
-        pendingLocalOperations.value.delete((resolution as any).entityId)
+        if (entityId) pendingLocalOperations.value.delete(entityId)
         break
 
       case 'merge':
-        console.log('🔀 Merging conflicting operations for task:', (resolution as any).entityId)
+        console.log('🔀 Merging conflicting operations for task:', entityId)
         // Apply merged operation
-        if ((resolution as any).localOperation && (resolution as any).localOperation.taskData) {
+        if (resolution.localOperation?.taskData) {
           await applyTaskOperation({
             ...remoteOperation,
-            taskData: (resolution as any).localOperation.taskData
+            taskData: resolution.localOperation.taskData
           }, taskStore)
         }
         // Remove pending local operation
-        pendingLocalOperations.value.delete((resolution as any).entityId)
+        if (entityId) pendingLocalOperations.value.delete(entityId)
         break
 
       default:
-        console.warn('Unknown conflict resolution:', (resolution as any).resolution)
+        console.warn('Unknown conflict resolution:', resolution.resolution)
         // Default to remote wins
         await applyTaskOperation(remoteOperation, taskStore)
-        pendingLocalOperations.value.delete((resolution as any).entityId)
+        if (entityId) pendingLocalOperations.value.delete(entityId)
         break
     }
   }
@@ -872,7 +876,7 @@ const applyBrowserOptimizations = () => {
     const compatibilityInfo = browserCompatibility.getCompatibilityInfo()
 
     // Apply performance configuration from recommended config
-    ;(performanceMonitor as any).updateConfig({
+    performanceMonitor.updateConfig({
       maxQueueSize: 100,
       batchSize: 10,
       batchTimeout: 1000,
@@ -1064,9 +1068,9 @@ export function useCrossTabSync() {
 
     // Performance monitoring
     getPerformanceMetrics: () => performanceMonitor.getMetrics(),
-    getPerformanceData: () => (performanceMonitor as any).exportPerformanceData(),
-    optimizePerformance: () => (performanceMonitor as any).optimizeConfiguration(),
-    resetPerformanceMetrics: () => (performanceMonitor as any).resetMetrics(),
+    getPerformanceData: () => performanceMonitor.exportPerformanceData(),
+    optimizePerformance: () => performanceMonitor.optimizeConfiguration(),
+    resetPerformanceMetrics: () => performanceMonitor.resetMetrics(),
 
     // Browser compatibility - use correct method names from CrossTabBrowserCompatibility class
     getBrowserInfo: () => browserCompatibility.getCompatibilityInfo(),

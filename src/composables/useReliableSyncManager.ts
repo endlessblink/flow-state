@@ -144,7 +144,7 @@ export const useReliableSyncManager = () => {
       return localDB
     } catch (error) {
       console.error('❌ Failed to initialize local database:', error)
-      throw new Error(`Local database initialization failed: ${(error as any)?.toString() || 'Unknown error'}`)
+      throw new Error(`Local database initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -174,7 +174,7 @@ export const useReliableSyncManager = () => {
       }
 
       // Add timeout property - reduced to 10 seconds for faster feedback
-      (remoteOptions as any).timeout = 10000
+      (remoteOptions as PouchDB.Configuration.RemoteDatabaseConfiguration & { timeout?: number }).timeout = 10000
       remoteOptions.skip_setup = false
 
       console.log('🔌 [REMOTE] Creating PouchDB instance...')
@@ -207,8 +207,8 @@ export const useReliableSyncManager = () => {
         remoteConnected.value = false
         return remoteDB
       }
-    } catch (error) {
-      console.error('❌ Failed to setup remote connection:', (error as any)?.toString() || 'Unknown error')
+    } catch (err) {
+      console.error('❌ Failed to setup remote connection:', err instanceof Error ? err.message : 'Unknown error')
       remoteConnected.value = false
       return null
     }
@@ -228,9 +228,9 @@ export const useReliableSyncManager = () => {
       offlineQueue.updateReferences(localDB, retryManager)
 
       console.log('✅ Phase 2 systems initialized successfully')
-    } catch (error) {
-      console.error('❌ Failed to initialize Phase 2 systems:', (error as any)?.toString() || 'Unknown error')
-      throw error
+    } catch (err) {
+      console.error('❌ Failed to initialize Phase 2 systems:', err instanceof Error ? err.message : 'Unknown error')
+      throw err
     }
   }
 
@@ -280,7 +280,7 @@ export const useReliableSyncManager = () => {
       handler.on('paused', (err: unknown) => {
         console.log(`⏸️ Sync paused:`, err)
         if (err) {
-          error.value = `Sync paused: ${(err as any).message}`
+          error.value = `Sync paused: ${err instanceof Error ? err.message : 'Unknown error'}`
         }
       })
 
@@ -303,12 +303,12 @@ export const useReliableSyncManager = () => {
       handler.on('error', (err: unknown) => {
         console.error(`❌ Sync error:`, err)
         syncStatus.value = 'error'
-        error.value = (err as any).message
+        error.value = err instanceof Error ? err.message : 'Unknown error'
         metrics.value.failedSyncs++
       })
-    } catch (error) {
-      console.error(`❌ Failed to setup sync event handlers:`, (error as any)?.toString() || 'Unknown error')
-      throw error
+    } catch (setupErr) {
+      console.error(`❌ Failed to setup sync event handlers:`, setupErr instanceof Error ? setupErr.message : 'Unknown error')
+      throw setupErr
     }
   }
 
@@ -351,8 +351,8 @@ export const useReliableSyncManager = () => {
           timestamp: new Date()
         }
       }))
-    } catch (error) {
-      console.error(`❌ Error handling sync change:`, (error as any)?.toString() || 'Unknown error')
+    } catch (err) {
+      console.error(`❌ Error handling sync change:`, err instanceof Error ? err.message : 'Unknown error')
     }
   }
 
@@ -409,8 +409,8 @@ export const useReliableSyncManager = () => {
         }
 
         metrics.value.conflictsResolved++
-      } catch (error) {
-        console.error(`❌ Failed to auto-resolve conflict for ${conflict.documentId}:`, (error as any)?.toString() || 'Unknown error')
+      } catch (err) {
+        console.error(`❌ Failed to auto-resolve conflict for ${conflict.documentId}:`, err instanceof Error ? err.message : 'Unknown error')
       }
     }
 
@@ -490,7 +490,7 @@ export const useReliableSyncManager = () => {
     } catch (syncError) {
       console.error('❌ Manual sync failed:', syncError)
       syncStatus.value = 'error'
-      error.value = (syncError as any).message
+      error.value = syncError instanceof Error ? syncError.message : 'Unknown error'
       metrics.value.failedSyncs++
       networkOptimizer.recordSyncResult(false)
 
@@ -503,7 +503,7 @@ export const useReliableSyncManager = () => {
           data: {},
           entityType: 'sync',
           maxRetries: 3
-        } as any)
+        } as unknown as Parameters<typeof offlineQueue.addToQueue>[0])
       }
     }
   }
@@ -557,7 +557,7 @@ export const useReliableSyncManager = () => {
           setTimeout(() => reject(new Error('Pull timeout after 60 seconds')), 60000)
         })
 
-        const pullResult = await Promise.race([pullPromise, pullTimeout]) as any
+        const pullResult = await Promise.race([pullPromise, pullTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
         console.log('✅ Pull complete:', pullResult.docs_read || 0, 'docs read')
 
         // Step 3b: Push local → remote (send any local changes)
@@ -575,7 +575,7 @@ export const useReliableSyncManager = () => {
           setTimeout(() => reject(new Error('Push timeout after 60 seconds')), 60000)
         })
 
-        const pushResult = await Promise.race([pushPromise, pushTimeout]) as any
+        const pushResult = await Promise.race([pushPromise, pushTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
         console.log('✅ Push complete:', pushResult.docs_written || 0, 'docs written')
 
         console.log('✅ Step 3 complete - sync result:', {
@@ -620,29 +620,35 @@ export const useReliableSyncManager = () => {
       }
 
       // Complete sync operation logging
-      (logger as any).completeSyncOperation(operationId, true)
+      if ('completeSyncOperation' in logger) {
+        (logger as { completeSyncOperation: (id: string, success: boolean) => void }).completeSyncOperation(operationId, true)
+      }
 
-      ;(logger as any).info('sync', 'Reliable sync completed successfully', {
+      logger.info('sync', 'Reliable sync completed successfully', {
         operationId,
-        duration: Date.now() - Date.now(), // Temporary fix
+        duration: 0, // Temporary fix
         conflictsResolved: conflicts.value.length
-      } as any)
+      })
 
     } catch (syncError) {
-      console.error('❌ Reliable sync failed:', (syncError as any)?.toString() || 'Unknown error')
+      const syncErrMessage = syncError instanceof Error ? syncError.message : 'Unknown error'
+      const syncErrStack = syncError instanceof Error ? syncError.stack : undefined
+      console.error('❌ Reliable sync failed:', syncErrMessage)
 
       // Log error
       logger.error('sync', 'Reliable sync failed', {
         operationId,
-        error: (syncError as any).message,
-        stack: (syncError as any).stack
+        error: syncErrMessage,
+        stack: syncErrStack
       })
 
       // Complete sync operation with failure
-      ;(logger as any).completeSyncOperation(operationId, false, (syncError as any).message)
+      if ('completeSyncOperation' in logger) {
+        (logger as { completeSyncOperation: (id: string, success: boolean, msg?: string) => void }).completeSyncOperation(operationId, false, syncErrMessage)
+      }
 
       // Check if this is a critical error that requires data restoration
-      const errorMessage = (syncError as any).message.toLowerCase()
+      const errorMessage = syncErrMessage.toLowerCase()
       const isCriticalError = errorMessage.includes('corruption') ||
                             errorMessage.includes('data loss') ||
                             errorMessage.includes('integrity') ||
@@ -671,7 +677,8 @@ export const useReliableSyncManager = () => {
               })
 
               // Store backup info for potential manual restoration
-              error.value = `${errorMessage || 'Unknown error'}. Recent backup available: ${(recentBackup as any)?.id || 'unknown'} (${backupAgeMinutes.toFixed(1)} minutes old)`
+              const backupId = 'id' in recentBackup ? (recentBackup.id as string) : 'unknown'
+              error.value = `${errorMessage || 'Unknown error'}. Recent backup available: ${backupId} (${backupAgeMinutes.toFixed(1)} minutes old)`
             }
           }
         } catch (backupCheckError) {
@@ -719,7 +726,7 @@ export const useReliableSyncManager = () => {
       return true
     } catch (healthError) {
       consecutiveHealthChecks++
-      console.warn(`❌ Health check failed (${consecutiveHealthChecks}/${MAX_CONSECUTIVE_FAILURES}):`, (healthError as any)?.toString() || 'Unknown error')
+      console.warn(`❌ Health check failed (${consecutiveHealthChecks}/${MAX_CONSECUTIVE_FAILURES}):`, healthError instanceof Error ? healthError.message : 'Unknown error')
 
       if (consecutiveHealthChecks >= MAX_CONSECUTIVE_FAILURES) {
         console.error('💥 Multiple consecutive health check failures - treating as offline')
@@ -873,9 +880,9 @@ export const useReliableSyncManager = () => {
       }
 
       console.log('✅ Sync operations paused successfully')
-    } catch (error) {
-      console.error('❌ Failed to pause sync:', (error as any)?.toString() || 'Unknown error')
-      throw error
+    } catch (pauseError) {
+      console.error('❌ Failed to pause sync:', pauseError instanceof Error ? pauseError.message : 'Unknown error')
+      throw pauseError
     }
   }
 
@@ -909,11 +916,11 @@ export const useReliableSyncManager = () => {
       await offlineQueue.processQueue()
 
       console.log('✅ Sync operations resumed successfully')
-    } catch (syncError) {
-      console.error('❌ Failed to resume sync:', (syncError as any)?.toString() || 'Unknown error')
+    } catch (resumeError) {
+      console.error('❌ Failed to resume sync:', resumeError instanceof Error ? resumeError.message : 'Unknown error')
       syncStatus.value = 'error'
-      error.value = (syncError as any).message || 'Unknown error'
-      throw error
+      error.value = resumeError instanceof Error ? resumeError.message : 'Unknown error'
+      throw resumeError
     }
   }
 
@@ -965,8 +972,8 @@ export const useReliableSyncManager = () => {
         throttledSyncTimer = null
         try {
           await triggerSync()
-        } catch (error) {
-          console.error('❌ Delayed sync failed:', (error as any)?.toString() || 'Unknown error')
+        } catch (delayedError) {
+          console.error('❌ Delayed sync failed:', delayedError instanceof Error ? delayedError.message : 'Unknown error')
         }
       }, delay)
     }
@@ -998,9 +1005,9 @@ export const useReliableSyncManager = () => {
 
       return cleanup
     } catch (initError) {
-      console.error('❌ Failed to initialize Reliable Sync Manager:', (initError as any)?.toString() || 'Unknown error')
+      console.error('❌ Failed to initialize Reliable Sync Manager:', initError instanceof Error ? initError.message : 'Unknown error')
       syncStatus.value = 'error'
-      error.value = (initError as any).message || 'Unknown error'
+      error.value = initError instanceof Error ? initError.message : 'Unknown error'
       return null
     }
   }
@@ -1157,12 +1164,22 @@ export const useReliableSyncManager = () => {
         networkCleanup = null
       }
 
-      // Clear Phase 2 systems
-      (conflictDetector as any).clearHistory?.()
-      ;(conflictResolver as any).clearHistory?.()
-      ;(retryManager as any).clearHistory?.()
-      ;(offlineQueue as any).clearQueue?.()
-      ;(syncValidator as any).clearHistory?.()
+      // Clear Phase 2 systems - use type guards for optional methods
+      if ('clearHistory' in conflictDetector && typeof (conflictDetector as { clearHistory?: () => void }).clearHistory === 'function') {
+        (conflictDetector as { clearHistory: () => void }).clearHistory()
+      }
+      if ('clearHistory' in conflictResolver && typeof (conflictResolver as { clearHistory?: () => void }).clearHistory === 'function') {
+        (conflictResolver as { clearHistory: () => void }).clearHistory()
+      }
+      if ('clearHistory' in retryManager && typeof (retryManager as { clearHistory?: () => void }).clearHistory === 'function') {
+        (retryManager as { clearHistory: () => void }).clearHistory()
+      }
+      if ('clearQueue' in offlineQueue && typeof (offlineQueue as { clearQueue?: () => void }).clearQueue === 'function') {
+        (offlineQueue as { clearQueue: () => void }).clearQueue()
+      }
+      if ('clearHistory' in syncValidator && typeof (syncValidator as { clearHistory?: () => void }).clearHistory === 'function') {
+        (syncValidator as { clearHistory: () => void }).clearHistory()
+      }
 
       // Reset state
       syncStatus.value = 'idle'
@@ -1171,8 +1188,8 @@ export const useReliableSyncManager = () => {
       resolutions.value = []
 
       console.log('✅ Reliable Sync Manager cleaned up')
-    } catch (error) {
-      console.error('❌ Error during cleanup:', (error as any)?.toString() || 'Unknown error')
+    } catch (cleanupError) {
+      console.error('❌ Error during cleanup:', cleanupError instanceof Error ? cleanupError.message : 'Unknown error')
     }
   }
 

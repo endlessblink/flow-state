@@ -113,7 +113,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
         if (depsMatch) {
           memoizationStats.value.hits++
           metrics.value.memoizedComputations++
-          return cached.result
+          return cached.result as ReturnType<T>
         }
       }
 
@@ -275,9 +275,9 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   const optimizeForLargeLists = <T>(items: T[]) => {
     if (items.length > 1000) {
       // For very large lists, use more aggressive debouncing
-      return createDebounced((fn: unknown) => fn(), 500)
+      return createDebounced(<R>(fn: () => R) => fn(), 500)
     }
-    return createDebounced((fn: unknown) => fn(), debounceDelay)
+    return createDebounced(<R>(fn: () => R) => fn(), debounceDelay)
   }
 
   const optimizeForAnimations = <T>(fn: T) => {

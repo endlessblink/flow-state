@@ -11,6 +11,13 @@ import { ref as _ref, reactive } from 'vue'
 type _DynamicImport<T = any> = () => Promise<T>
 type ImportCache = Map<string, any>
 
+// Import configuration interface
+interface ImportConfig {
+  path: () => Promise<unknown>
+  preload?: boolean
+  timeout: number
+}
+
 // Global import cache to prevent duplicate loading
 const _importCache: ImportCache = new Map()
 
@@ -128,7 +135,7 @@ export class DynamicImportManager {
   /**
    * Perform the actual import with timeout
    */
-  private async performImport<T>(key: string, config: unknown): Promise<T> {
+  private async performImport<T>(key: string, config: ImportConfig): Promise<T> {
     loadingStates[key] = true
 
     try {
@@ -141,10 +148,10 @@ export class DynamicImportManager {
         }, config.timeout)
       })
 
-      const module = await Promise.race([importPromise, timeoutPromise])
+      const module = await Promise.race([importPromise, timeoutPromise]) as { default?: T } | T
 
       console.log(`✅ Successfully imported: ${key}`)
-      return module.default || module
+      return (module as { default?: T }).default || module as T
 
     } catch (error) {
       console.error(`❌ Failed to import: ${key}`, error)

@@ -6,7 +6,7 @@
 import type { ConflictDiff, ConflictResolution } from './conflictResolution'
 
 export interface ThreeWayMergeResult {
-  mergedTask: any
+  mergedTask: Record<string, unknown>
   conflicts: ConflictDiff[]
   resolution: ConflictResolution
   success: boolean
@@ -30,9 +30,9 @@ export interface MergeStrategy {
  */
 export class ThreeWayMergeEngine {
   private strategy: MergeStrategy
-  private conflictResolver: any
+  private conflictResolver: unknown
 
-  constructor(conflictResolver?: any, strategy?: MergeStrategy) {
+  constructor(conflictResolver?: unknown, strategy?: MergeStrategy) {
     this.conflictResolver = conflictResolver
     this.strategy = strategy || this.getDefaultStrategy()
   }
@@ -40,9 +40,9 @@ export class ThreeWayMergeEngine {
   /**
    * Perform three-way merge
    */
-  merge(localTask: any, remoteTask: any, baseTask: any): ThreeWayMergeResult {
+  merge(localTask: Record<string, unknown>, remoteTask: Record<string, unknown>, baseTask: Record<string, unknown>): ThreeWayMergeResult {
     const conflicts: ConflictDiff[] = []
-    const mergedTask: any = { ...baseTask }
+    const mergedTask: Record<string, unknown> = { ...baseTask }
 
     // Start with base task and apply changes
     Object.keys(baseTask).forEach(key => {
@@ -79,9 +79,9 @@ export class ThreeWayMergeEngine {
    * Apply changes from one version to merged result
    */
   private applyChanges(
-    sourceTask: any,
-    baseTask: any,
-    mergedTask: any,
+    sourceTask: Record<string, unknown>,
+    baseTask: Record<string, unknown>,
+    mergedTask: Record<string, unknown>,
     source: 'local' | 'remote',
     conflicts: ConflictDiff[]
   ): void {
@@ -152,12 +152,12 @@ export class ThreeWayMergeEngine {
   /**
    * Get changes between two tasks
    */
-  private getChanges(sourceTask: any, baseTask: any): Array<{
+  private getChanges(sourceTask: Record<string, unknown>, baseTask: Record<string, unknown>): Array<{
     type: 'add' | 'modify' | 'delete'
     field: string
-    value?: any
-    oldValue?: any
-    newValue?: any
+    value?: unknown
+    oldValue?: unknown
+    newValue?: unknown
   }> {
     const changes = []
     const allKeys = new Set([...Object.keys(sourceTask || {}), ...Object.keys(baseTask || {})])
@@ -193,7 +193,7 @@ export class ThreeWayMergeEngine {
       }
     }
 
-    return changes as Array<{ type: 'add' | 'modify' | 'delete'; field: string; value?: any; oldValue?: any; newValue?: any }>
+    return changes as Array<{ type: 'add' | 'modify' | 'delete'; field: string; value?: unknown; oldValue?: unknown; newValue?: unknown }>
   }
 
   /**
@@ -234,7 +234,7 @@ export class ThreeWayMergeEngine {
   /**
    * Apply resolved conflicts to merged task
    */
-  private applyConflictResolutions(mergedTask: any, conflicts: ConflictDiff[]): any {
+  private applyConflictResolutions(mergedTask: Record<string, unknown>, conflicts: ConflictDiff[]): Record<string, unknown> {
     conflicts.forEach(conflict => {
       if (conflict.suggestedResolution !== undefined) {
         mergedTask[conflict.field] = conflict.suggestedResolution
@@ -247,17 +247,11 @@ export class ThreeWayMergeEngine {
    * Generate conflict resolution summary
    */
   private generateResolution(
-    originalConflicts: ConflictDiff[],
+    _originalConflicts: ConflictDiff[],
     resolvedConflicts: ConflictDiff[]
   ): ConflictResolution {
-    return {
-      strategy: 'merge' as any,
-      timestamp: Date.now(),
-      conflicts: originalConflicts,
-      resolvedConflicts,
-      autoResolved: originalConflicts.length - resolvedConflicts.length,
-      userInterventionRequired: resolvedConflicts.length > 0
-    } as unknown as ConflictResolution
+    // ConflictResolution is a simple string union type, so return the appropriate value
+    return resolvedConflicts.length > 0 ? 'ask' : 'merge'
   }
 
   /**
@@ -284,7 +278,7 @@ export class ThreeWayMergeEngine {
   /**
    * Suggest value resolution
    */
-  private suggestValueResolution(field: string, value: any): any {
+  private suggestValueResolution(field: string, value: unknown): unknown {
     // Use conflict resolver if available
     if (this.conflictResolver) {
       // Delegate to conflict resolution engine
@@ -306,7 +300,7 @@ export class ThreeWayMergeEngine {
   /**
    * Attempt to merge two values
    */
-  private attemptMerge(localValue: any, remoteValue: any): any {
+  private attemptMerge(localValue: unknown, remoteValue: unknown): unknown {
     // String merging
     if (typeof localValue === 'string' && typeof remoteValue === 'string') {
       const localClean = localValue.trim()
@@ -328,8 +322,8 @@ export class ThreeWayMergeEngine {
     }
 
     // Object merging (shallow)
-    if (typeof localValue === 'object' && typeof remoteValue === 'object') {
-      return { ...localValue, ...remoteValue }
+    if (typeof localValue === 'object' && localValue !== null && typeof remoteValue === 'object' && remoteValue !== null) {
+      return { ...(localValue as Record<string, unknown>), ...(remoteValue as Record<string, unknown>) }
     }
 
     // Number merging (average)
@@ -343,7 +337,7 @@ export class ThreeWayMergeEngine {
   /**
    * Check if value should be deleted
    */
-  private shouldDelete(currentValue: any, field: string, _baseValue: any): boolean {
+  private shouldDelete(currentValue: unknown, field: string, _baseValue: unknown): boolean {
     // Don't delete essential fields
     const essentialFields = ['id', 'createdAt']
     if (essentialFields.includes(field)) {
@@ -361,18 +355,18 @@ export class ThreeWayMergeEngine {
   /**
    * Check if value is empty
    */
-  private isEmpty(value: any): boolean {
+  private isEmpty(value: unknown): boolean {
     if (value === null || value === undefined) return true
     if (typeof value === 'string') return value.trim() === ''
     if (Array.isArray(value)) return value.length === 0
-    if (typeof value === 'object') return Object.keys(value).length === 0
+    if (typeof value === 'object') return Object.keys(value as Record<string, unknown>).length === 0
     return false
   }
 
   /**
    * Check if two values are equal
    */
-  private valuesEqual(a: any, b: any): boolean {
+  private valuesEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true
     if (a == null || b == null) return false
     if (typeof a !== typeof b) return false

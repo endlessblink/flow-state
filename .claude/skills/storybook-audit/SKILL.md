@@ -14,7 +14,8 @@ AUDIT Storybook stories for common issues like cutoff modals, store dependency e
 3. **Template Validation**: Check for invalid `<style>`/`<script>` tags in runtime templates
 4. **Props Verification**: Ensure story args match component prop definitions
 5. **Layout Validation**: Check modals/overlays use `layout: 'fullscreen'`
-6. **Self-Learning**: Update this skill when new issues/solutions are discovered and approved
+6. **Design Token Enforcement**: Detect hardcoded colors/styles that should use CSS variables
+7. **Self-Learning**: Update this skill when new issues/solutions are discovered and approved
 
 ## Trigger Keywords
 
@@ -386,6 +387,104 @@ parameters: {
 }
 ```
 
+### Check 6: Design Token Enforcement
+
+**Issue**: Stories or decorators use hardcoded colors instead of CSS design tokens
+
+**CRITICAL**: When creating stories, ALL colors must use CSS variables. No hardcoded hex, rgb, or rgba values.
+
+**Detection**:
+```bash
+# Find hardcoded hex colors in stories
+grep -rn "#[0-9a-fA-F]\{3,8\}" src/stories/ --include="*.ts" --include="*.vue"
+
+# Find hardcoded rgba values
+grep -rn "rgba\s*(" src/stories/ --include="*.ts" --include="*.vue"
+
+# Find hardcoded rgb values
+grep -rn "rgb\s*(" src/stories/ --include="*.ts" --include="*.vue"
+
+# Find inline styles with color/background
+grep -rn "style=\"[^\"]*\(color\|background\|border\)" src/stories/
+```
+
+**Forbidden Patterns** (from token_definitions.json):
+| Pattern | Issue | Fix With |
+|---------|-------|----------|
+| `#ef4444` | Hardcoded high priority red | `var(--color-priority-high)` |
+| `#f59e0b` | Hardcoded medium priority orange | `var(--color-priority-medium)` |
+| `#3b82f6` | Hardcoded low priority blue | `var(--color-priority-low)` |
+| `#feca57`, `#fbbf24` | Wrong yellow variants | `var(--color-priority-medium)` |
+| `rgba(255, 255, 255, 0.1)` | Hardcoded glass border | `var(--glass-border)` |
+| `rgba(0, 0, 0, 0.95)` | Hardcoded solid bg | `var(--glass-bg-solid)` |
+| `rgba(20, 20, 20, 0.95)` | Hardcoded modal bg | `var(--modal-bg)` |
+
+**Token Categories to Use**:
+
+| Purpose | CSS Variable |
+|---------|-------------|
+| Priority High | `var(--color-priority-high)` |
+| Priority Medium | `var(--color-priority-medium)` |
+| Priority Low | `var(--color-priority-low)` |
+| Work/Active | `var(--color-work)` |
+| Glass background | `var(--glass-bg)`, `var(--glass-bg-solid)`, `var(--glass-bg-medium)` |
+| Glass border | `var(--glass-border)`, `var(--glass-border-hover)` |
+| Modal/Dropdown bg | `var(--modal-bg)`, `var(--dropdown-bg)` |
+| Text primary | `var(--text-primary)` |
+| Text secondary | `var(--text-secondary)` |
+| Surface colors | `var(--surface-primary)`, `var(--surface-secondary)` |
+
+**Fix Patterns**:
+
+```typescript
+// ❌ BAD - hardcoded colors
+const wrapperStyle = {
+  background: '#1a1a2e',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  color: '#ffffff',
+}
+
+// ✅ GOOD - using CSS variables
+const wrapperStyle = {
+  background: 'var(--glass-bg-solid)',
+  border: '1px solid var(--glass-border)',
+  color: 'var(--text-primary)',
+}
+
+// ❌ BAD - inline hardcoded in template
+template: `<div style="background: #000; color: #fff;">...</div>`
+
+// ✅ GOOD - CSS variables in template
+template: `<div style="background: var(--surface-primary); color: var(--text-primary);">...</div>`
+
+// ❌ BAD - hardcoded priority color in mock data render
+template: `<span style="color: #ef4444;">High Priority</span>`
+
+// ✅ GOOD - tokenized priority color
+template: `<span style="color: var(--color-priority-high);">High Priority</span>`
+```
+
+**Story Decorator Template** (use this for all new stories):
+```typescript
+// Standard dark background decorator with tokens
+const darkBgDecorator = () => ({
+  template: `
+    <div style="
+      background: var(--surface-primary);
+      min-height: 400px;
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <story />
+    </div>
+  `,
+})
+```
+
+**Token Reference Location**: `.claude/skills/🎨 css-design-token-enforcer/assets/token_definitions.json`
+
 ---
 
 ## Audit Workflow
@@ -409,6 +508,12 @@ for f in $(find src/stories -name "*.stories.ts" 2>/dev/null); do
     echo "$f: NEEDS FULLSCREEN"
   fi
 done
+echo ""
+echo "=== 5. Hardcoded Colors (Token Violations) ==="
+echo "--- Hex colors ---"
+grep -rn "#[0-9a-fA-F]\{3,8\}" src/stories/ --include="*.ts" 2>/dev/null | head -15 || echo "None found"
+echo "--- Hardcoded rgba ---"
+grep -rn "rgba(" src/stories/ --include="*.ts" 2>/dev/null | head -10 || echo "None found"
 echo ""
 echo "=== Audit Complete ==="
 ```

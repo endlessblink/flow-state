@@ -1,5 +1,12 @@
 import { ref as _ref } from 'vue'
 
+// Interface for task-like objects in demo guard
+interface TaskLike {
+  title?: string
+  description?: string
+  [key: string]: unknown
+}
+
 export function useDemoGuard() {
   const isProduction = import.meta.env.PROD
   const isDevelopment = import.meta.env.DEV
@@ -24,9 +31,11 @@ export function useDemoGuard() {
       return false
     }
 
+    const taskData = data as TaskLike
+
     // Check for demo task patterns
-    if (data.title && typeof data.title === 'string') {
-      return demoPatterns.some(pattern => pattern.test(data.title))
+    if (taskData.title && typeof taskData.title === 'string') {
+      return demoPatterns.some(pattern => pattern.test(taskData.title as string))
     }
 
     // Check arrays of tasks
@@ -35,15 +44,15 @@ export function useDemoGuard() {
     }
 
     // Check for demo descriptions
-    if (data.description && typeof data.description === 'string') {
-      return demoPatterns.some(pattern => pattern.test(data.description))
+    if (taskData.description && typeof taskData.description === 'string') {
+      return demoPatterns.some(pattern => pattern.test(taskData.description as string))
     }
 
     return false
   }
 
   // Check if any tasks in array are real user data
-  const hasRealUserData = (tasks: unknown[]): boolean => {
+  const hasRealUserData = (tasks: TaskLike[]): boolean => {
     return tasks.some(task => {
       if (!task || !task.title) return false
 
@@ -86,7 +95,7 @@ export function useDemoGuard() {
     }
 
     // Check if data contains real user data
-    const hasRealData = Array.isArray(data) ? hasRealUserData(data) : hasRealUserData([data])
+    const hasRealData = Array.isArray(data) ? hasRealUserData(data as TaskLike[]) : hasRealUserData([data as TaskLike])
 
     if (hasRealData) {
       console.warn('🚫 Demo data blocked: real user data detected')

@@ -96,14 +96,19 @@ declare global {
 
   // Undo/Redo system interface
   interface UndoRedoActions {
-    createTask: (taskData: Partial<import('@/types/tasks').Task>) => Promise<import('@/types/tasks').Task>
-    updateTask: (taskId: string, updates: Partial<import('@/types/tasks').Task>) => void
-    deleteTask: (taskId: string) => void
-    deleteTaskWithUndo: (taskId: string) => void
-    undo: () => void
-    redo: () => void
-    canUndo: boolean
-    canRedo: boolean
+    createTask?: (taskData: Partial<import('@/types/tasks').Task>) => Promise<import('@/types/tasks').Task>
+    updateTask?: (taskId: string, updates: Partial<import('@/types/tasks').Task>) => void
+    deleteTask?: (taskId: string) => void
+    deleteTaskWithUndo?: (taskId: string) => void
+    undo?: () => void
+    redo?: () => void
+    canUndo: import('vue').ComputedRef<boolean> | boolean
+    canRedo: import('vue').ComputedRef<boolean> | boolean
+    undoCount?: import('vue').ComputedRef<number>
+    redoCount?: import('vue').ComputedRef<number>
+    history?: import('vue').Ref<unknown[]>
+    commit?: () => void
+    clear?: () => void
     [key: string]: unknown // Allow index access for dynamic method checks
   }
 

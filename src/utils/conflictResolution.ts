@@ -84,14 +84,14 @@ export class ConflictResolutionEngine {
         name: 'Prefer non-empty titles',
         field: 'title',
         condition: 'when-empty',
-        action: 'prefer-local' as any,
+        action: 'prefer-local',
         priority: 1
       },
       {
         name: 'Prefer longer titles',
         field: 'title',
         condition: 'always',
-        action: 'prefer-local' as any,
+        action: 'prefer-local',
         priority: 2
       }
     ])
@@ -111,7 +111,7 @@ export class ConflictResolutionEngine {
         name: 'Prefer completed status',
         field: 'completed',
         condition: 'always',
-        action: 'prefer-local' as any,
+        action: 'prefer-local',
         priority: 1
       }
     ])
@@ -120,7 +120,7 @@ export class ConflictResolutionEngine {
   /**
    * Detect conflicts between local and remote tasks
    */
-  detectConflicts(localTask: any, remoteTask: any, baseTask?: any): TaskConflict {
+  detectConflicts(localTask: Record<string, unknown>, remoteTask: Record<string, unknown>, baseTask?: Record<string, unknown>): TaskConflict {
     const conflicts: ConflictDiff[] = []
     const allFields = this.getAllFields(localTask, remoteTask, baseTask)
 
@@ -136,7 +136,7 @@ export class ConflictResolutionEngine {
     }
 
     return {
-      taskId: localTask.id || remoteTask.id,
+      taskId: (localTask.id as string) || (remoteTask.id as string),
       conflicts,
       timestamp: Date.now(),
       localTask,
@@ -150,17 +150,18 @@ export class ConflictResolutionEngine {
   /**
    * Get all unique fields from tasks
    */
-  private getAllFields(localTask: any, remoteTask: any, baseTask?: any): string[] {
+  private getAllFields(localTask: Record<string, unknown>, remoteTask: Record<string, unknown>, baseTask?: Record<string, unknown>): string[] {
     const fields = new Set<string>()
 
-    const addFields = (task: any) => {
+    const addFields = (task: Record<string, unknown>) => {
       if (task && typeof task === 'object') {
         Object.keys(task).forEach(key => fields.add(key))
         // Add subtask fields if present
-        if (task.subtasks && Array.isArray(task.subtasks)) {
-          task.subtasks.forEach((subtask: any, index: number) => {
+        const subtasks = task.subtasks
+        if (subtasks && Array.isArray(subtasks)) {
+          subtasks.forEach((subtask: unknown, index: number) => {
             if (subtask && typeof subtask === 'object') {
-              Object.keys(subtask).forEach(key => fields.add(`subtask.${index}.${key}`))
+              Object.keys(subtask as Record<string, unknown>).forEach(key => fields.add(`subtask.${index}.${key}`))
             }
           })
         }
@@ -177,15 +178,15 @@ export class ConflictResolutionEngine {
   /**
    * Get field value from task, supporting nested fields
    */
-  private getFieldValue(task: any, field: string): any {
+  private getFieldValue(task: Record<string, unknown>, field: string): unknown {
     if (!task || typeof task !== 'object') return undefined
 
     const parts = field.split('.')
-    let value = task
+    let value: unknown = task
 
     for (const part of parts) {
-      if (value && typeof value === 'object' && part in value) {
-        value = value[part]
+      if (value && typeof value === 'object' && part in (value as Record<string, unknown>)) {
+        value = (value as Record<string, unknown>)[part]
       } else {
         return undefined
       }
@@ -199,9 +200,9 @@ export class ConflictResolutionEngine {
    */
   private analyzeFieldConflict(
     field: string,
-    localValue: any,
-    remoteValue: any,
-    baseValue?: any
+    localValue: unknown,
+    remoteValue: unknown,
+    baseValue?: unknown
   ): ConflictDiff | null {
     // Handle deletions
     if (localValue === undefined && remoteValue !== undefined) {
@@ -266,7 +267,7 @@ export class ConflictResolutionEngine {
   /**
    * Determine conflict type based on values and field
    */
-  private determineConflictType(localValue: any, remoteValue: any, field: string): 'value' | 'timestamp' | 'structure' | 'deletion' {
+  private determineConflictType(localValue: unknown, remoteValue: unknown, field: string): 'value' | 'timestamp' | 'structure' | 'deletion' {
     if (field.includes('time') || field.includes('date') || field.includes('updated')) {
       return 'timestamp'
     }
@@ -281,7 +282,7 @@ export class ConflictResolutionEngine {
   /**
    * Determine conflict severity
    */
-  private determineConflictSeverity(field: string, _localValue: any, _remoteValue: any): 'low' | 'medium' | 'high' {
+  private determineConflictSeverity(field: string, _localValue: unknown, _remoteValue: unknown): 'low' | 'medium' | 'high' {
     // High severity for critical fields
     const criticalFields = ['id', 'completed', 'dueDate', 'priority']
     if (criticalFields.includes(field)) {
@@ -301,7 +302,7 @@ export class ConflictResolutionEngine {
   /**
    * Check if conflict can be auto-resolved
    */
-  private canAutoResolve(field: string, localValue: any, remoteValue: any): boolean {
+  private canAutoResolve(field: string, localValue: unknown, remoteValue: unknown): boolean {
     // Always auto-resolve with last-write-wins strategy
     if (this.strategy.strategy === 'last-write-wins') {
       return true
@@ -326,7 +327,7 @@ export class ConflictResolutionEngine {
   /**
    * Suggest resolution for conflict
    */
-  private suggestResolution(field: string, localValue: any, remoteValue: any, _baseValue?: any): any {
+  private suggestResolution(field: string, localValue: unknown, remoteValue: unknown, _baseValue?: unknown): unknown {
     // Use user-defined rules first
     if (this.strategy.automation.userPriorityRules) {
       const rules = this.userRules.get(field)
@@ -354,7 +355,7 @@ export class ConflictResolutionEngine {
   /**
    * Check if two values are similar enough to merge
    */
-  private isSimilarValue(localValue: any, remoteValue: any): boolean {
+  private isSimilarValue(localValue: unknown, remoteValue: unknown): boolean {
     // Same value or same reference
     if (localValue === remoteValue) return true
 
@@ -374,7 +375,7 @@ export class ConflictResolutionEngine {
   /**
    * Check if rule should be applied
    */
-  private shouldApplyRule(rule: UserResolutionRule, localValue: any, remoteValue: any): boolean {
+  private shouldApplyRule(rule: UserResolutionRule, localValue: unknown, remoteValue: unknown): boolean {
     switch (rule.condition) {
       case 'always':
         return true
@@ -394,7 +395,7 @@ export class ConflictResolutionEngine {
   /**
    * Apply resolution rule
    */
-  private applyRule(rule: UserResolutionRule, localValue: any, remoteValue: any): any {
+  private applyRule(rule: UserResolutionRule, localValue: unknown, remoteValue: unknown): unknown {
     switch (rule.action) {
       case 'prefer-local':
         return localValue
@@ -426,7 +427,7 @@ export class ConflictResolutionEngine {
   /**
    * Extract timestamp from value
    */
-  private extractTimestamp(value: any): number | null {
+  private extractTimestamp(value: unknown): number | null {
     if (typeof value === 'number') {
       return value
     }
@@ -435,7 +436,8 @@ export class ConflictResolutionEngine {
       return isNaN(parsed) ? null : parsed
     }
     if (value && typeof value === 'object' && 'timestamp' in value) {
-      return typeof value.timestamp === 'number' ? value.timestamp : null
+      const ts = (value as { timestamp: unknown }).timestamp
+      return typeof ts === 'number' ? ts : null
     }
     return null
   }
@@ -443,7 +445,7 @@ export class ConflictResolutionEngine {
   /**
    * Check if two values are equal (deep comparison)
    */
-  private valuesEqual(a: any, b: any): boolean {
+  private valuesEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true
     if (a == null || b == null) return false
     if (typeof a !== typeof b) return false

@@ -1,6 +1,6 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 19, 2025 (evening - TASK-030 in progress)
+**Last Updated**: December 20, 2025 (TASK-030: 114 errors remaining, 57% fixed)
 **Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -235,7 +235,8 @@ Phase 3 (Mobile) ←────────────────────
 **Priority**: P1-HIGH (blocks type safety enforcement)
 
 **Baseline** (Dec 19, 2025): 267 errors from `npx vue-tsc --noEmit`
-**Current Progress**: ~236 errors remaining (~31 fixed)
+**Session 1** (Dec 19, 2025): ~236 errors remaining (~31 fixed)
+**Session 2** (Dec 20, 2025): **114 errors remaining** (~153 fixed, 57% reduction)
 
 **Background**:
 - `npm run build` does NOT catch TypeScript errors (Vite only transpiles)
@@ -248,35 +249,41 @@ Phase 3 (Mobile) ←────────────────────
 3. **Cross-tab sync** - Store references typed as `unknown`
 4. **Various composables** - Properties accessed on `unknown` types
 
-**Files Fixed This Session**:
+**Files Fixed Session 1** (Dec 19):
 | File | Fixes Applied |
 |------|---------------|
-| `types/global.d.ts` | Added `PouchDBSyncHandler`, `PouchDBSyncChange`, `PouchDBSyncError`, `PouchDBSyncInfo` interfaces; Extended Window with `__draggingTaskId`, `gc`, store refs |
-| `useReliableSyncManager.ts` | `syncHandler: unknown` → `PouchDBSyncHandler`; Cast sync event info |
-| `useDatabase.ts` | Fixed `window.pomoFlowDb` casts; Fixed error `.status` access |
+| `types/global.d.ts` | Added PouchDB interfaces; Extended Window types |
+| `useReliableSyncManager.ts` | `syncHandler: unknown` → `PouchDBSyncHandler` |
+| `useDatabase.ts` | Fixed `window.pomoFlowDb` casts |
 | `undoSingleton.ts` | Fixed `__pomoFlowUndoSystem` window access |
-| `useBackupRestoration.ts` | Fixed `pomoFlowBackup` window access |
-| `usePerformanceMonitor.ts` | Fixed `__performanceMonitorMemoryInterval` window access |
-| `useCleanupManager.ts` | Fixed `gc()` window access |
-| `useTimerChangesSync.ts` | Fixed `pomoFlowDb` window access |
-| `useVirtualList.ts` | Fixed `scrollY` access |
-| `useCalendarDayView.ts` | Fixed `__draggingTaskId` window access |
-| `useCalendarDrag.ts` | Fixed `__draggingTaskId` window access |
 | `timer.ts` | `db.sync?.()` → `db.triggerSync?.()` |
-| `syncTestSuite.ts` | Cast doc type for `_id` access |
-| `documentFilters.ts` | Cast `docRecord._id` as string |
-| `useSimpleBackup.ts` | Cast `cleanTasks` as `Task[]` |
 
-**Next Steps for Next Session**:
+**Files Fixed Session 2** (Dec 20):
+| File | Fixes Applied |
+|------|---------------|
+| `useSidebarManagement.ts` | Import `Project` type; Fix `filterSidebarProjects`, `getFlattenedProjectList` |
+| `useCalendarDrag.ts` | Add `DragData` interface; Type drop handlers with `Task`, `DragData` |
+| `useOptimizedTaskStore.ts` | Import `Task`; Add `TaskData` interface; Type batch operations |
+| `useVueFlowErrorHandling.ts` | Add `ErrorEvent`, `ErrorSummary` interfaces |
+| `usePerformanceManager.ts` | Cast cached result as `ReturnType<T>`; Fix `optimizeForLargeLists` |
+| `useCalendarDayView.ts` | Add `CalendarDragData` interface; Fix parsedData typing |
+| `usePersistentStorage.ts` | Add `BackupData` interface |
+| `useTaskLifecycle.ts` | Add `TransitionMetadata` interface |
+| `useTimerChangesSync.ts` | Add PouchDB change feed interfaces |
+| `useVueFlowStability.ts` | Use `Node` type in filter/map callbacks |
+| `useCalendarDragCreate.ts` | Fix `webkitUserSelect` CSSStyleDeclaration cast |
+| `types/global.d.ts` | Extended `UndoRedoActions` with ComputedRef types |
+
+**Next Steps for Next Session** (114 errors remaining):
 
 | Priority | File(s) | Est. Errors | Fix Strategy |
 |----------|---------|-------------|--------------|
-| 1 | `useCrossTabSync.ts` | ~49 | Add `TaskStoreType` interface; Fix `.find()` callbacks |
-| 2 | `useCalendarDrag.ts` | ~30 | Create `DragData` interface; Cast dragData |
-| 3 | `useSidebarManagement.ts` | ~24 | Add project/task type interfaces |
-| 4 | `useOptimizedTaskStore.ts` | ~20 | Add task type casts |
-| 5 | `useCanvasVirtualization.ts` | ~18 | Add bounds interface (x/y/width/height) |
-| 6 | Remaining composables | ~95 | Apply similar patterns |
+| 1 | `useCrossTabSync.ts` | ~50 | Add store type interfaces; Fix property access |
+| 2 | `useCanvasVirtualization.ts` | ~18 | Add bounds interface (x/y/width/height) |
+| 3 | `useBackupSystem.ts` | ~6 | Add task typing in callbacks |
+| 4 | `useBackupRestoration.ts` | ~8 | Add backup data interfaces |
+| 5 | `useDemoGuard.ts` | ~9 | Type object parameters |
+| 6 | Remaining | ~23 | Apply similar patterns |
 
 **Pattern to Apply**:
 ```typescript
@@ -684,12 +691,10 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 
 **Where We Stopped** (Dec 18, 2025 - Session 2):
 
-#### KanbanSwimlane Streamlining (IN PROGRESS)
+#### KanbanSwimlane Streamlining (✅ DONE - Dec 20, 2025)
 - **Stories reduced**: 7 → 2 stories (Default + ViewTypes), matching KanbanColumn format
 - **CSS updated**: Dark glass morphism applied to swimlane headers and columns
-- **⚠️ NEEDS MORE WORK**: KanbanSwimlane visual appearance still differs from KanbanColumn
-  - KanbanColumn looks cleaner/more polished in Storybook
-  - KanbanSwimlane needs visual refinement to match KanbanColumn's look
+- **Visual alignment**: Complete - matches KanbanColumn styling
 
 **🔴 NEXT SESSION - CONTINUE FROM HERE**:
 1. Open both pages side-by-side:

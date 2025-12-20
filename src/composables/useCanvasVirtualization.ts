@@ -63,6 +63,15 @@ export interface ViewportBounds {
   zoom: number
 }
 
+export interface NodeBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+  centerX: number
+  centerY: number
+}
+
 export function useCanvasVirtualization(
   allNodes: Ref<Node[]>,
   allEdges: Ref<Edge[]>,
@@ -142,7 +151,7 @@ export function useCanvasVirtualization(
     }
   }
 
-  const isInViewport = (nodeBounds: unknown, bounds: ViewportBounds, buffer: number) => {
+  const isInViewport = (nodeBounds: NodeBounds, bounds: ViewportBounds, buffer: number) => {
     return (
       nodeBounds.x + nodeBounds.width + buffer >= bounds.x &&
       nodeBounds.x - buffer <= bounds.x + bounds.width &&
@@ -151,7 +160,7 @@ export function useCanvasVirtualization(
     )
   }
 
-  const getDistanceToViewport = (nodeBounds: unknown, bounds: ViewportBounds) => {
+  const getDistanceToViewport = (nodeBounds: NodeBounds, bounds: ViewportBounds) => {
     const centerX = bounds.x + bounds.width / 2
     const centerY = bounds.y + bounds.height / 2
 

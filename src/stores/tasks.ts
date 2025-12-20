@@ -2559,14 +2559,14 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // Undo/Redo enabled actions - simplified to avoid circular dependencies
   interface UndoRedoActionsLocal {
-    createTask: (taskData: Partial<Task>) => Promise<Task>
-    updateTask: (taskId: string, updates: Partial<Task>) => void
-    deleteTask: (taskId: string) => void
-    deleteTaskWithUndo: (taskId: string) => void
+    createTask?: (taskData: Partial<Task>) => Promise<Task>
+    updateTask?: (taskId: string, updates: Partial<Task>) => void
+    deleteTask?: (taskId: string) => void
+    deleteTaskWithUndo?: (taskId: string) => void
     undo?: () => void
     redo?: () => void
-    canUndo?: boolean
-    canRedo?: boolean
+    canUndo?: boolean | import('vue').ComputedRef<boolean>
+    canRedo?: boolean | import('vue').ComputedRef<boolean>
     startTaskNow?: (taskId: string) => void
     [key: string]: unknown
   }

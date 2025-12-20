@@ -22,6 +22,26 @@ const TIMER_DOC_ID = 'pomo-flow-timer-session:data'
 const RECONNECT_DELAY_MS = 3000
 const MAX_RECONNECT_ATTEMPTS = 5
 
+// PouchDB changes feed types
+interface PouchDBChange {
+  doc?: unknown
+  deleted?: boolean
+}
+
+interface PouchDBChangesEmitter {
+  on: (event: string, callback: (data: PouchDBChange | unknown) => void) => PouchDBChangesEmitter
+  cancel: () => void
+}
+
+interface PouchDBDatabase {
+  changes: (options: {
+    live: boolean
+    since: string
+    include_docs: boolean
+    doc_ids: string[]
+  }) => PouchDBChangesEmitter
+}
+
 export interface TimerChangesHandler {
   (doc: unknown): void | Promise<void>
 }
@@ -38,7 +58,7 @@ export interface UseTimerChangesSyncReturn {
 }
 
 // Module-level state to ensure single listener
-let changesHandler: unknown = null
+let changesHandler: PouchDBChangesEmitter | null = null
 let currentCallback: TimerChangesHandler | null = null
 let reconnectAttempts = 0
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
@@ -47,9 +67,9 @@ const isConnected = ref(false)
 /**
  * Get PouchDB instance from global singleton
  */
-const getPouchDB = (): unknown | null => {
+const getPouchDB = (): PouchDBDatabase | null => {
   if (typeof window === 'undefined') return null
-  return (window as Window & typeof globalThis).pomoFlowDb || null
+  return (window as Window & typeof globalThis).pomoFlowDb as PouchDBDatabase | null
 }
 
 /**
@@ -82,7 +102,7 @@ const startChangesListener = (onTimerChange: TimerChangesHandler): boolean => {
       include_docs: true,
       doc_ids: [TIMER_DOC_ID]
     })
-      .on('change', (change: unknown) => {
+      .on('change', (change: PouchDBChange) => {
         if (change.doc && !change.deleted) {
           console.log('[TIMER CHANGES] Received timer update from changes feed')
           try {

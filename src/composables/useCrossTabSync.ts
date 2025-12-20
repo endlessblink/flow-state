@@ -5,10 +5,59 @@ import { useCanvasStore } from '@/stores/canvas'
 import { ConflictResolver } from '@/utils/conflictResolver'
 import type { ConflictInfo } from '@/types/conflicts'
 import type { ConflictResolutionStrategy as _ConflictResolutionStrategy } from '@/types/sync'
+import type { Task } from '@/types/tasks'
 // CrossTabSaveCoordinator removed - Phase 2 simplification
 import CrossTabPerformance from '@/utils/CrossTabPerformance'
 import CrossTabBrowserCompatibility from '@/utils/CrossTabBrowserCompatibility'
 import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
+
+// Store type interfaces for cross-tab sync
+interface TaskStoreType {
+  tasks: Task[]
+  loadTasks: () => Promise<void>
+}
+
+interface UIStoreType {
+  mainSidebarVisible: boolean
+  theme: string
+  activeView: string
+  [key: string]: unknown
+}
+
+interface CanvasStoreType {
+  viewport: { x: number; y: number; zoom: number }
+  nodes: Array<{ id: string; position: { x: number; y: number }; [key: string]: unknown }>
+  sections: Array<{ id: string; collapsed?: boolean; collapsedHeight?: number; [key: string]: unknown }>
+  [key: string]: unknown
+}
+
+// Change data interfaces
+interface SidebarChangeData {
+  isOpen?: boolean
+}
+
+interface ThemeChangeData {
+  theme?: string
+}
+
+interface ViewChangeData {
+  view?: string
+}
+
+interface ViewportChangeData {
+  viewport?: { x: number; y: number; zoom: number }
+}
+
+interface NodeMoveData {
+  nodeId?: string
+  position?: { x: number; y: number }
+}
+
+interface SectionCollapseData {
+  sectionId?: string
+  collapsed?: boolean
+  collapsedHeight?: number
+}
 
 // Types for cross-tab messages
 export interface CrossTabMessage {
@@ -460,13 +509,13 @@ const processMessageQueue = async () => {
       try {
         switch (message.type) {
           case 'task_operation':
-            await handleTaskOperation(message.data as TaskOperation, taskStore)
+            await handleTaskOperation(message.data as TaskOperation, taskStore as unknown as TaskStoreType)
             break
           case 'ui_state_change':
-            await handleUIStateChange(message.data as UIStateChange, uiStore, canvasStore)
+            await handleUIStateChange(message.data as UIStateChange, uiStore as unknown as UIStoreType, canvasStore as unknown as CanvasStoreType)
             break
           case 'canvas_change':
-            await handleCanvasChange(message.data as CanvasChange, canvasStore)
+            await handleCanvasChange(message.data as CanvasChange, canvasStore as unknown as CanvasStoreType)
             break
           case 'heartbeat':
             // Handle heartbeat if needed
@@ -512,7 +561,7 @@ const processMessageQueue = async () => {
 }
 
 // Handle task operations with conflict detection
-const handleTaskOperation = async (operation: TaskOperation, taskStore: unknown) => {
+const handleTaskOperation = async (operation: TaskOperation, taskStore: TaskStoreType) => {
   try {
     // Check for conflicts with pending local operations
     const conflicts = await detectTaskConflicts(operation, taskStore)
@@ -529,14 +578,14 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: unknown)
       case 'create':
         if (operation.taskData && operation.taskId) {
           // Refresh tasks from database to get new task
-          await taskStore.loadTasks()
+          await (taskStore as TaskStoreType).loadTasks()
         }
         break
 
       case 'update':
         if (operation.taskId && operation.taskData) {
           // Update local store with new data
-          const existingTask = taskStore.tasks.find((t: unknown) => t.id === operation.taskId)
+          const existingTask = (taskStore as TaskStoreType).tasks.find(t => t.id === operation.taskId)
           if (existingTask) {
             Object.assign(existingTask, operation.taskData)
           }
@@ -546,12 +595,13 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: unknown)
       case 'delete':
         if (operation.taskId) {
           // Remove task from local store
-          const index = taskStore.tasks.findIndex((t: unknown) => t.id === operation.taskId)
+          const store = taskStore as TaskStoreType
+          const index = store.tasks.findIndex(t => t.id === operation.taskId)
           if (index > -1) {
             // Log before splice - mark as cross-tab sync deletion (not user-initiated)
-            const oldTasks = [...taskStore.tasks]
-            taskStore.tasks.splice(index, 1)
-            taskDisappearanceLogger.logArrayReplacement(oldTasks, taskStore.tasks, 'crossTabSync-delete')
+            const oldTasks = [...store.tasks]
+            store.tasks.splice(index, 1)
+            taskDisappearanceLogger.logArrayReplacement(oldTasks, store.tasks, 'crossTabSync-delete')
           }
         }
         break
@@ -559,22 +609,24 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: unknown)
       case 'bulk_delete':
         if (operation.taskIds && Array.isArray(operation.taskIds)) {
           // Remove multiple tasks from local store
-          const oldTasks = [...taskStore.tasks]
+          const store = taskStore as TaskStoreType
+          const oldTasks = [...store.tasks]
           operation.taskIds.forEach(taskId => {
-            const index = taskStore.tasks.findIndex((t: unknown) => t.id === taskId)
+            const index = store.tasks.findIndex(t => t.id === taskId)
             if (index > -1) {
-              taskStore.tasks.splice(index, 1)
+              store.tasks.splice(index, 1)
             }
           })
-          taskDisappearanceLogger.logArrayReplacement(oldTasks, taskStore.tasks, 'crossTabSync-bulkDelete')
+          taskDisappearanceLogger.logArrayReplacement(oldTasks, store.tasks, 'crossTabSync-bulkDelete')
         }
         break
 
       case 'bulk_update':
         if (operation.taskData && Array.isArray(operation.taskData)) {
           // Update multiple tasks
-          operation.taskData.forEach((taskUpdate: unknown) => {
-            const existingTask = taskStore.tasks.find((t: unknown) => t.id === taskUpdate.id)
+          const store = taskStore as TaskStoreType
+          ;(operation.taskData as Array<{ id: string; [key: string]: unknown }>).forEach((taskUpdate) => {
+            const existingTask = store.tasks.find(t => t.id === taskUpdate.id)
             if (existingTask) {
               Object.assign(existingTask, taskUpdate)
             }
@@ -588,7 +640,7 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: unknown)
 }
 
 // Detect conflicts between remote operation and pending local operations
-const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: unknown): Promise<ConflictInfo[]> => {
+const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: TaskStoreType): Promise<ConflictInfo[]> => {
   const conflicts: ConflictInfo[] = []
 
   if (!remoteOperation.taskId) return conflicts
@@ -612,7 +664,7 @@ const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: u
 }
 
 // Apply conflict resolutions
-const applyConflictResolutions = async (resolutions: ConflictInfo[], remoteOperation: TaskOperation, taskStore: unknown) => {
+const applyConflictResolutions = async (resolutions: ConflictInfo[], remoteOperation: TaskOperation, taskStore: TaskStoreType) => {
   for (const resolution of resolutions) {
     switch ((resolution as any).resolution) {
       case 'local_wins':
@@ -652,7 +704,7 @@ const applyConflictResolutions = async (resolutions: ConflictInfo[], remoteOpera
 }
 
 // Apply a single task operation with save coordination
-const applyTaskOperation = async (operation: TaskOperation, taskStore: unknown) => {
+const applyTaskOperation = async (operation: TaskOperation, taskStore: TaskStoreType) => {
   switch (operation.operation) {
     case 'create':
       if (operation.taskData && operation.taskId) {
@@ -664,7 +716,7 @@ const applyTaskOperation = async (operation: TaskOperation, taskStore: unknown) 
 
     case 'update':
       if (operation.taskId && operation.taskData) {
-        const existingTask = taskStore.tasks.find((t: unknown) => t.id === operation.taskId)
+        const existingTask = taskStore.tasks.find(t => t.id === operation.taskId)
         if (existingTask) {
           Object.assign(existingTask, operation.taskData)
           // Save through direct PouchDB (saveCoordinator removed)
@@ -675,7 +727,7 @@ const applyTaskOperation = async (operation: TaskOperation, taskStore: unknown) 
 
     case 'delete':
       if (operation.taskId) {
-        const index = taskStore.tasks.findIndex((t: unknown) => t.id === operation.taskId)
+        const index = taskStore.tasks.findIndex(t => t.id === operation.taskId)
         if (index > -1) {
           taskStore.tasks.splice(index, 1)
           // Save through direct PouchDB (saveCoordinator removed)
@@ -687,33 +739,35 @@ const applyTaskOperation = async (operation: TaskOperation, taskStore: unknown) 
 }
 
 // Handle UI state changes
-const handleUIStateChange = async (change: UIStateChange, uiStore: unknown, canvasStore: unknown) => {
+const handleUIStateChange = async (change: UIStateChange, uiStore: UIStoreType, canvasStore: CanvasStoreType) => {
   try {
     if (change.store === 'ui') {
       // Update UI store state
+      const data = change.data as SidebarChangeData & ThemeChangeData & ViewChangeData
       switch (change.action) {
         case 'sidebar_toggle':
-          if (typeof change.data.isOpen === 'boolean') {
-            uiStore.sidebarOpen = change.data.isOpen
+          if (typeof data.isOpen === 'boolean') {
+            uiStore.sidebarOpen = data.isOpen
           }
           break
         case 'theme_change':
-          if (change.data.theme) {
-            uiStore.theme = change.data.theme
+          if (data.theme) {
+            uiStore.theme = data.theme
           }
           break
         case 'view_change':
-          if (change.data.view) {
-            uiStore.activeView = change.data.view
+          if (data.view) {
+            uiStore.activeView = data.view
           }
           break
       }
     } else if (change.store === 'canvas') {
       // Handle canvas state changes
+      const data = change.data as ViewportChangeData
       switch (change.action) {
         case 'viewport_change':
-          if (change.data.viewport) {
-            Object.assign(canvasStore.viewport, change.data.viewport)
+          if (data.viewport) {
+            Object.assign(canvasStore.viewport, data.viewport)
           }
           break
       }
@@ -724,29 +778,33 @@ const handleUIStateChange = async (change: UIStateChange, uiStore: unknown, canv
 }
 
 // Handle canvas changes
-const handleCanvasChange = async (change: CanvasChange, canvasStore: unknown) => {
+const handleCanvasChange = async (change: CanvasChange, canvasStore: CanvasStoreType) => {
   try {
     switch (change.action) {
-      case 'node_move':
-        if (change.data.nodeId && change.data.position) {
-          const node = canvasStore.nodes.find((n: unknown) => n.id === change.data.nodeId)
+      case 'node_move': {
+        const data = change.data as NodeMoveData
+        if (data.nodeId && data.position) {
+          const node = canvasStore.nodes.find(n => n.id === data.nodeId)
           if (node) {
-            node.position = change.data.position
+            node.position = data.position
           }
         }
         break
+      }
 
-      case 'section_collapse':
-        if (change.data.sectionId && typeof change.data.collapsed === 'boolean') {
-          const section = canvasStore.sections.find((s: unknown) => s.id === change.data.sectionId)
+      case 'section_collapse': {
+        const data = change.data as SectionCollapseData
+        if (data.sectionId && typeof data.collapsed === 'boolean') {
+          const section = canvasStore.sections.find(s => s.id === data.sectionId)
           if (section) {
-            section.collapsed = change.data.collapsed
-            if (change.data.collapsedHeight) {
-              section.collapsedHeight = change.data.collapsedHeight
+            section.collapsed = data.collapsed
+            if (data.collapsedHeight) {
+              section.collapsedHeight = data.collapsedHeight
             }
           }
         }
         break
+      }
     }
   } catch (error) {
     console.error('Failed to handle canvas change:', error, change)

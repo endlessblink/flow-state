@@ -3,6 +3,13 @@ import PouchDB from 'pouchdb-browser'
 import type { DatabaseConfig as _DatabaseConfig, SyncStatus, SyncEvent, DatabaseHealth } from '@/config/database'
 import { getDatabaseConfig, DOCUMENT_IDS as _DOCUMENT_IDS } from '@/config/database'
 
+// Sync change info from PouchDB
+interface SyncChangeInfo {
+  change?: {
+    docs?: unknown[]
+  }
+}
+
 // Global PouchDB instance
 let globalPouchDB: PouchDB.Database | null = null
 
@@ -173,7 +180,7 @@ export const useCouchDBSync = () => {
   }
 
   // Handle sync change events
-  const handleSyncChange = (direction: 'push' | 'pull', info: unknown) => {
+  const handleSyncChange = (direction: 'push' | 'pull', info: SyncChangeInfo) => {
     const changeCount = info.change?.docs?.length || 0
     pendingChanges.value += changeCount
 

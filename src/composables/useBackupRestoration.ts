@@ -190,18 +190,18 @@ export function useBackupRestoration() {
               integrityValid: true, // Would validate checksum here
               checksum: data.metadata?.checksum || '',
               data: data
-            }
+            } as BackupInfo
           } catch (parseError) {
             console.warn(`Failed to parse backup ${key}:`, parseError)
             return null
           }
-        }).filter(Boolean)
+        }).filter((b): b is BackupInfo => b !== null)
       } catch (localStorageError) {
         console.warn('Failed to load backups from localStorage:', localStorageError)
       }
 
       // Format backup info
-      availableBackups.value = backups.map(backup => ({
+      availableBackups.value = (backups as BackupInfo[]).map(backup => ({
         ...backup,
         formattedTimestamp: formatTimestamp(backup.timestamp),
         formattedSize: formatSize(backup.size)
@@ -282,9 +282,10 @@ export function useBackupRestoration() {
         }
       }
 
-      // Use backup API to save current state
-      if (backupAPI.saveTasks) {
-        await backupAPI.saveTasks(currentState.tasks, currentState.metadata)
+      // Use backup API to save current state (check for optional method)
+      const api = backupAPI as Record<string, unknown>
+      if (typeof api.saveTasks === 'function') {
+        await (api.saveTasks as (tasks: unknown, metadata: unknown) => Promise<void>)(currentState.tasks, currentState.metadata)
       } else {
         // Fallback to localStorage
         const backupId = `pre_restore_${Date.now()}`
@@ -515,8 +516,10 @@ export function useBackupRestoration() {
     try {
       const backupAPI = getBackupAPI()
 
-      if (backupAPI.deleteBackup) {
-        await backupAPI.deleteBackup(backupId)
+      // Check for optional deleteBackup method
+      const api = backupAPI as Record<string, unknown>
+      if (typeof api.deleteBackup === 'function') {
+        await (api.deleteBackup as (id: string) => Promise<void>)(backupId)
       } else {
         // Fallback: remove from localStorage
         localStorage.removeItem(`backup_${backupId}`)

@@ -69,8 +69,8 @@ export interface UseDatabaseReturn {
   hasData: (key: string) => Promise<boolean>
 
   // Advanced operations
-  exportAll: () => Promise<Record<string, any>>
-  importAll: (data: Record<string, any>) => Promise<void>
+  exportAll: () => Promise<Record<string, unknown>>
+  importAll: (data: Record<string, unknown>) => Promise<void>
   atomicTransaction: <T>(operations: Array<() => Promise<T>>, context?: string) => Promise<T[]>
 
   // Reactive state
@@ -97,14 +97,14 @@ export interface UseDatabaseReturn {
   database: Ref<PouchDB.Database | null>
 
   // Database health monitoring
-  checkHealth: () => Promise<any>
-  getHealthStatus: () => any
+  checkHealth: () => Promise<unknown>
+  getHealthStatus: () => unknown
   resetHealthMonitoring: () => void
 
   // Network optimization features
   loadBatch: <T>(keys: string[]) => Promise<Record<string, T | null>>
   saveBatch: <T>(data: Record<string, T>) => Promise<void>
-  getDatabaseMetrics: () => any
+  getDatabaseMetrics: () => unknown
 
   // Cleanup
   cleanup: () => void
@@ -523,7 +523,11 @@ export function useDatabase(): UseDatabaseReturn {
       const doc = await db.get(docId, { conflicts: true })
 
       // Check for conflicts and log them (data safety feature)
-      const docWithConflicts = doc as any
+      interface DocWithConflicts extends PouchDB.Core.IdMeta, PouchDB.Core.GetMeta {
+        _conflicts?: string[]
+        data?: unknown
+      }
+      const docWithConflicts = doc as DocWithConflicts
       if (docWithConflicts._conflicts && docWithConflicts._conflicts.length > 0) {
         console.warn(`⚠️ [DATABASE] Document ${docId} has ${docWithConflicts._conflicts.length} conflicts`)
         // Add to detected conflicts (don't auto-resolve - user must decide)
@@ -657,12 +661,12 @@ export function useDatabase(): UseDatabaseReturn {
   /**
    * Export all data from database
    */
-  const exportAll = async (): Promise<Record<string, any>> => {
+  const exportAll = async (): Promise<Record<string, unknown>> => {
     try {
       const db = await waitForDatabase()
       const docs = await db.allDocs({ include_docs: true })
 
-      const result: Record<string, any> = {}
+      const result: Record<string, unknown> = {}
       docs.rows.forEach(row => {
         if (row.doc && row.id?.endsWith(':data')) {
           const key = row.id.replace(':data', '')
@@ -687,7 +691,7 @@ export function useDatabase(): UseDatabaseReturn {
   /**
    * Import data into database
    */
-  const importAll = async (data: Record<string, any>): Promise<void> => {
+  const importAll = async (data: Record<string, unknown>): Promise<void> => {
     try {
       for (const [key, value] of Object.entries(data)) {
         await save(key, value)
@@ -836,13 +840,19 @@ export function useDatabase(): UseDatabaseReturn {
       const result: Record<string, T | null> = {}
 
       // Process results
+      interface BatchRow {
+        id?: string
+        key?: string
+        doc?: { data?: unknown }
+      }
       docs.rows.forEach(row => {
-        if ((row as any).doc) {
-          const key = (row as any).id.replace(':data', '')
-          result[key] = ((row as any).doc as any).data as T
-        } else if ((row as any).key) {
+        const batchRow = row as BatchRow
+        if (batchRow.doc) {
+          const key = (batchRow.id || '').replace(':data', '')
+          result[key] = batchRow.doc.data as T
+        } else if (batchRow.key) {
           // Document doesn't exist
-          const key = (row as any).key.replace(':data', '')
+          const key = batchRow.key.replace(':data', '')
           result[key] = null
         }
       })

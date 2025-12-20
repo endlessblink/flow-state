@@ -64,7 +64,7 @@ export class RobustBackupSystem {
   /**
    * Static method to create multi-layer backup
    */
-  static async createMultiLayerBackup(data: any): Promise<BackupResult[]> {
+  static async createMultiLayerBackup(data: unknown): Promise<BackupResult[]> {
     const instance = RobustBackupSystem.getInstance()
     const results: BackupResult[] = []
 
@@ -99,7 +99,7 @@ export class RobustBackupSystem {
   /**
    * Static method to restore from backup
    */
-  static async restoreFromBackup(): Promise<any> {
+  static async restoreFromBackup(): Promise<unknown> {
     const instance = RobustBackupSystem.getInstance()
     const backups = instance.listBackups()
 
@@ -140,7 +140,7 @@ export class RobustBackupSystem {
   /**
    * Create a backup with integrity checking
    */
-  async createBackup(data: any): Promise<BackupData> {
+  async createBackup(data: unknown): Promise<BackupData> {
     const backup: BackupData = {
       id: this.generateId(),
       timestamp: Date.now(),
@@ -158,7 +158,7 @@ export class RobustBackupSystem {
   /**
    * Restore from backup with verification
    */
-  async restoreBackup(backupId: string): Promise<any> {
+  async restoreBackup(backupId: string): Promise<unknown> {
     const backup = this.backups.find(b => b.id === backupId)
 
     if (!backup) {
@@ -175,7 +175,7 @@ export class RobustBackupSystem {
   /**
    * Resolve conflicts between local and remote data
    */
-  async resolveConflict(localData: any, remoteData: any, resolution: ConflictResolution): Promise<any> {
+  async resolveConflict(localData: unknown, remoteData: unknown, resolution: ConflictResolution): Promise<unknown> {
     switch (resolution.strategy) {
       case 'latest':
         return this.resolveByTimestamp(localData, remoteData)
@@ -224,7 +224,7 @@ export class RobustBackupSystem {
     return Date.now().toString(36) + Math.random().toString(36).substr(2)
   }
 
-  private calculateChecksum(data: any): string {
+  private calculateChecksum(data: unknown): string {
     const str = JSON.stringify(data)
     let hash = 0
     for (let i = 0; i < str.length; i++) {
@@ -235,20 +235,22 @@ export class RobustBackupSystem {
     return hash.toString(16)
   }
 
-  private resolveByTimestamp(localData: any, remoteData: any): any {
+  private resolveByTimestamp(_localData: unknown, remoteData: unknown): unknown {
     // Assume remote data is newer (in a real implementation, compare timestamps)
     return remoteData
   }
 
-  private async promptManualResolution(localData: any, remoteData: any): Promise<any> {
+  private async promptManualResolution(_localData: unknown, remoteData: unknown): Promise<unknown> {
     // In a real implementation, this would show a UI for manual resolution
     console.warn('Manual conflict resolution not implemented, using remote data')
     return remoteData
   }
 
-  private mergeData(localData: any, remoteData: any): any {
-    // Simple merge implementation
-    return { ...localData, ...remoteData }
+  private mergeData(localData: unknown, remoteData: unknown): unknown {
+    // Simple merge implementation - spread only works on objects
+    const local = localData as Record<string, unknown>
+    const remote = remoteData as Record<string, unknown>
+    return { ...local, ...remote }
   }
 }
 

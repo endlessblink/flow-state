@@ -175,7 +175,7 @@ export class ProductionLogger {
   /**
    * Log a message
    */
-  public log(level: LogEntry['level'], category: LogEntry['category'], message: string, data?: any): void {
+  public log(level: LogEntry['level'], category: LogEntry['category'], message: string, data?: unknown): void {
     if (!this.shouldLog(level)) {
       return
     }
@@ -220,23 +220,23 @@ export class ProductionLogger {
   /**
    * Convenience methods for different log levels
    */
-  public debug(category: LogEntry['category'], message: string, data?: any): void {
+  public debug(category: LogEntry['category'], message: string, data?: unknown): void {
     this.log('debug', category, message, data)
   }
 
-  public info(category: LogEntry['category'], message: string, data?: any): void {
+  public info(category: LogEntry['category'], message: string, data?: unknown): void {
     this.log('info', category, message, data)
   }
 
-  public warn(category: LogEntry['category'], message: string, data?: any): void {
+  public warn(category: LogEntry['category'], message: string, data?: unknown): void {
     this.log('warn', category, message, data)
   }
 
-  public error(category: LogEntry['category'], message: string, data?: any): void {
+  public error(category: LogEntry['category'], message: string, data?: unknown): void {
     this.log('error', category, message, data)
   }
 
-  public critical(category: LogEntry['category'], message: string, data?: any): void {
+  public critical(category: LogEntry['category'], message: string, data?: unknown): void {
     this.log('critical', category, message, data)
   }
 

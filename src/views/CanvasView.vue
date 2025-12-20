@@ -681,7 +681,7 @@ const message = useMessage()
 const undoHistory = getUndoSystem()
 
 if (import.meta.env.DEV) {
-  (window as any).__canvasStore = canvasStore
+  (window as unknown as Record<string, unknown>).__canvasStore = canvasStore
 }
 
 // ============================================================================
@@ -733,7 +733,7 @@ const editingSection = computed(() => {
 const showCanvasContextMenu = ref(false)
 const canvasContextMenuX = ref(0)
 const canvasContextMenuY = ref(0)
-const canvasContextSection = ref<any>(null)
+const canvasContextSection = ref<CanvasSection | null>(null)
 
 // Connection state tracking
 const isConnecting = ref(false)
@@ -949,7 +949,7 @@ const resourceManager = {
       const remainingNodes = document.querySelectorAll('.vue-flow__node, .vue-flow__edge, .vue-flow__controls, .vue-flow__panel')
       if (remainingNodes.length > 0) {
         console.log(`🧹 [VUE_FLOW] Removing ${remainingNodes.length} orphaned Vue Flow DOM elements`)
-        remainingNodes.forEach((node: any) => {
+        remainingNodes.forEach((node) => {
           if (node.parentNode) {
             node.parentNode.removeChild(node)
           }
@@ -958,8 +958,9 @@ const resourceManager = {
 
       // Clear any global Vue Flow references
       if (typeof window !== 'undefined') {
-        delete (window as any).__vueFlow
-        delete (window as any).__vueFlowInstances
+        const windowExt = window as unknown as Record<string, unknown>
+        delete windowExt.__vueFlow
+        delete windowExt.__vueFlowInstances
       }
 
     } catch (error) {
@@ -1028,9 +1029,10 @@ const performSystemRestart = async () => {
 
     // Reinitialize database connection
     console.log('🔄 [SYSTEM] Reinitializing database connection...')
-    if (typeof window !== 'undefined' && (window as any).pomoFlowDb) {
+    const windowDb = (window as unknown as { pomoFlowDb?: { info: () => Promise<{ db_name: string; doc_count: number }> } }).pomoFlowDb
+    if (typeof window !== 'undefined' && windowDb) {
       try {
-        const dbInfo = await (window as any).pomoFlowDb.info()
+        const dbInfo = await windowDb.info()
         console.log('✅ [SYSTEM] Database connection verified:', {
           name: dbInfo.db_name,
           doc_count: dbInfo.doc_count
@@ -1112,7 +1114,7 @@ const retryFailedOperation = async () => {
 const showEdgeContextMenu = ref(false)
 const edgeContextMenuX = ref(0)
 const edgeContextMenuY = ref(0)
-const selectedEdge = ref<any>(null)
+const selectedEdge = ref<Edge | null>(null)
 
 // Edge disconnection tracking - prevent recently removed edges from being recreated
 const recentlyRemovedEdges = ref(new Set<string>())
@@ -1121,16 +1123,16 @@ const recentlyRemovedEdges = ref(new Set<string>())
 const showNodeContextMenu = ref(false)
 const nodeContextMenuX = ref(0)
 const nodeContextMenuY = ref(0)
-const selectedNode = ref<any>(null)
+const selectedNode = ref<Node | null>(null)
 
 // Group Modal state (unified modal for create + edit with smart settings)
 const isGroupModalOpen = ref(false)
-const selectedGroup = ref<any>(null)
+const selectedGroup = ref<CanvasSection | null>(null)
 const groupModalPosition = ref({ x: 100, y: 100 })
 
 // Group Edit Modal state
 const isGroupEditModalOpen = ref(false)
-const selectedSectionForEdit = ref<any>(null)
+const selectedSectionForEdit = ref<CanvasSection | null>(null)
 
 
 // Computed properties
@@ -1583,10 +1585,12 @@ onEdgeClick((param: EdgeMouseEvent) => {
   })
 
   // Vue Flow sometimes doesn't pass the edge parameter, extract it from event
-  const actualEdge = edge || (event as any).edge || (event as any).selected?.edge
+  // Extended event type for Vue Flow edge events
+  const extendedEvent = event as unknown as EdgeMouseEvent & { edge?: Edge; selected?: { edge?: Edge } }
+  const actualEdge = edge || extendedEvent.edge || extendedEvent.selected?.edge
 
   console.log('🖱️ Edge click detected:', {
-    shiftKey: event.shiftKey,
+    shiftKey: (event as MouseEvent).shiftKey,
     edgeId: actualEdge?.id,
     source: actualEdge?.source,
     target: actualEdge?.target,
@@ -1598,9 +1602,9 @@ onEdgeClick((param: EdgeMouseEvent) => {
   if (!actualEdge) {
     console.warn('⚠️ Edge click event received but edge parameter is undefined, available event data:', {
       event,
-      hasEdge: !!(event as any).edge,
-      hasSelected: !!(event as any).selected,
-      selectedEdge: (event as any).selected?.edge
+      hasEdge: !!extendedEvent.edge,
+      hasSelected: !!extendedEvent.selected,
+      selectedEdge: extendedEvent.selected?.edge
     })
     return
   }
@@ -1661,15 +1665,17 @@ onEdgeContextMenu((param: EdgeMouseEvent) => {
   })
 
   // Vue Flow sometimes doesn't pass the edge parameter, extract it from event
-  const actualEdge = edge || (event as any).edge || (event as any).selected?.edge
+  // Extended event type for Vue Flow edge events
+  const extendedEvent = event as unknown as EdgeMouseEvent & { edge?: Edge; selected?: { edge?: Edge } }
+  const actualEdge = edge || extendedEvent.edge || extendedEvent.selected?.edge
 
   // Guard against undefined edge parameter
   if (!actualEdge) {
     console.warn('⚠️ Edge context menu event received but edge parameter is undefined, available event data:', {
       event,
-      hasEdge: !!(event as any).edge,
-      hasSelected: !!(event as any).selected,
-      selectedEdge: (event as any).selected?.edge
+      hasEdge: !!extendedEvent.edge,
+      hasSelected: !!extendedEvent.selected,
+      selectedEdge: extendedEvent.selected?.edge
     })
     return
   }
@@ -2067,9 +2073,9 @@ resourceManager.addWatcher(
     let _updateCount = 0
     nodes.value.forEach(node => {
       const shouldBeSelected = newSelectedIds.includes(node.id)
-      const nodeAny = node as any
-      if (nodeAny.selected !== shouldBeSelected) {
-        nodeAny.selected = shouldBeSelected
+      const nodeWithSelection = node as Node & { selected?: boolean }
+      if (nodeWithSelection.selected !== shouldBeSelected) {
+        nodeWithSelection.selected = shouldBeSelected
         _updateCount++
       }
     })
@@ -2522,8 +2528,8 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
         position: {
           x: node.position.x,
           y: node.position.y,
-          width: node.style?.width ? parseInt(node.style.width) : 300,
-          height: node.style?.height ? parseInt(node.style.height) : 200
+          width: node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : 300,
+          height: node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : 200
         }
       })
 
@@ -2731,11 +2737,11 @@ const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes
 })
 
 // Handle resize start with enhanced state tracking - FIXED to prevent coordinate conflicts
-const _handleResizeStart = (event: { node?: Node; direction?: string }) => {
+const _handleResizeStart = (event: Node | { node?: Node; direction?: string }) => {
   console.log('🔧 Resize start:', event)
-  const node = event.node || event
+  const node = ('node' in event && event.node) ? event.node : event as Node
 
-  if (node && node.id && node.id.startsWith('section-')) {
+  if (node && 'id' in node && node.id && node.id.startsWith('section-')) {
     const sectionId = node.id.replace('section-', '')
     const section = canvasStore.sections.find(s => s.id === sectionId)
 
@@ -2753,7 +2759,7 @@ const _handleResizeStart = (event: { node?: Node; direction?: string }) => {
         currentY: section.position.y || 0, // BUG-019: Track live Y position
         currentWidth: Math.max(200, Math.min(1200, section.position.width)),
         currentHeight: Math.max(150, Math.min(800, section.position.height)),
-        handlePosition: event.direction || 'se',
+        handlePosition: ('direction' in event ? event.direction : undefined) || 'se',
         isDragging: false,
         resizeStartTime: Date.now()
       }
@@ -2789,14 +2795,18 @@ const _handleResizeStart = (event: { node?: Node; direction?: string }) => {
 
 // Handle resize with real-time preview - FIXED to prevent coordinate conflicts
 // BUG-019 FIX: Also track live position for correct preview positioning
-const _handleResize = (event: { node?: Node & { style?: { width?: string; height?: string }; position?: { x: number; y: number } } }) => {
+interface ResizeEventData {
+  node?: Node & { style?: { width?: string; height?: string }; position?: { x: number; y: number } }
+  params?: { x?: number; y?: number }
+}
+const _handleResize = (event: ResizeEventData) => {
   if (!resizeState.value.isResizing || !resizeState.value.sectionId) return
 
-  const node = event.node || event
+  const node = event.node
   if (node && node.style) {
     // Calculate dimensions more reliably to prevent coordinate conflicts
-    let newWidth = parseInt(node.style.width) || resizeState.value.startWidth
-    let newHeight = parseInt(node.style.height) || resizeState.value.startHeight
+    let newWidth = parseInt(String(node.style.width)) || resizeState.value.startWidth
+    let newHeight = parseInt(String(node.style.height)) || resizeState.value.startHeight
 
     // Apply bounds constraints immediately to prevent invalid states
     newWidth = Math.max(200, Math.min(1200, newWidth))
@@ -2825,11 +2835,11 @@ const _handleResize = (event: { node?: Node & { style?: { width?: string; height
 }
 
 // Handle resize end with cleanup and validation - FIXED to prevent coordinate conflicts
-const _handleResizeEnd = (event: { node?: Node }) => {
+const _handleResizeEnd = (event: Node | { node?: Node }) => {
   console.log('🔧 Resize end:', event)
-  const node = event.node || event
+  const node = ('node' in event && event.node) ? event.node : event as Node
 
-  if (node && node.id && node.id.startsWith('section-')) {
+  if (node && 'id' in node && node.id && node.id.startsWith('section-')) {
     const sectionId = node.id.replace('section-', '')
 
     // Find the node element - Vue Flow nodes don't have data-id attribute
@@ -3470,7 +3480,7 @@ const handleGroupEditSave = (updatedSection: Partial<CanvasSection> & { id: stri
 }
 
 // Node context menu handlers (for sections)
-const handleNodeContextMenu = (event: { node: Node; event: MouseEvent }) => {
+const handleNodeContextMenu = (event: { node: Node; event: MouseEvent | TouchEvent }) => {
   console.log('Node context menu triggered for:', event.node.id, event.node)
 
   // Prevent default behavior and event bubbling for all nodes
@@ -3482,8 +3492,9 @@ const handleNodeContextMenu = (event: { node: Node; event: MouseEvent }) => {
     return
   }
 
-  nodeContextMenuX.value = event.event.clientX
-  nodeContextMenuY.value = event.event.clientY
+  const mouseEvent = event.event as MouseEvent
+  nodeContextMenuX.value = mouseEvent.clientX || 0
+  nodeContextMenuY.value = mouseEvent.clientY || 0
   selectedNode.value = event.node
   showNodeContextMenu.value = true
   closeCanvasContextMenu()
@@ -3593,12 +3604,13 @@ const handleEdgeClick = (event: EdgeMouseEvent) => {
 }
 
 const handleEdgeContextMenu = (event: EdgeMouseEvent) => {
+  const mouseEvent = event.event as MouseEvent
   console.log('🖱️ Edge context menu triggered (component handler):', {
     edgeId: event.edge?.id,
     source: event.edge?.source,
     target: event.edge?.target,
-    clientX: event.event?.clientX,
-    clientY: event.event?.clientY
+    clientX: mouseEvent?.clientX,
+    clientY: mouseEvent?.clientY
   })
 
   // Pass through to the composable handler
@@ -4202,7 +4214,7 @@ const handleConnectStart = (event: { nodeId?: string; handleId?: string; handleT
 }
 
 // Handle connection end - clear connection state
-const handleConnectEnd = (event: { nodeId?: string; handleId?: string; handleType?: string }) => {
+const handleConnectEnd = (event?: MouseEvent | { nodeId?: string; handleId?: string; handleType?: string }) => {
   console.log('🔗 Connection ended:', event)
   // Add a small delay to ensure all connection logic completes - using resourceManager
   const timerId = setTimeout(() => {
@@ -4768,15 +4780,16 @@ const _handleSectionActivate = (sectionId: string) => {
   canvasStore.setActiveSection(sectionId)
 }
 
-const handleSectionContextMenu = (event: MouseEvent, section: CanvasSection) => {
+const handleSectionContextMenu = (event: MouseEvent, section: { id: string; name: string; color: string; taskCount: number; type?: string; propertyValue?: string }) => {
   console.log('🎯 Section context menu triggered for:', section)
 
   // Prevent event from bubbling to Vue Flow's node context menu
   event.stopPropagation()
   event.preventDefault()
 
-  // Set the section for context menu
-  canvasContextSection.value = section
+  // Set the section for context menu - look up full section from store
+  const fullSection = canvasStore.sections.find(s => s.id === section.id)
+  canvasContextSection.value = fullSection || null
 
   // Set menu position
   canvasContextMenuX.value = event.clientX
@@ -4810,8 +4823,8 @@ const _handleBulkAction = (action: string, params: { nodeIds: string[]; status?:
     case 'updateStatus':
       nodeIds.forEach((nodeId: string) => {
         const task = taskStore.tasks.find(t => t.id === nodeId)
-        if (task) {
-          taskStore.updateTaskWithUndo(nodeId, { status: params.status })
+        if (task && params.status) {
+          taskStore.updateTaskWithUndo(nodeId, { status: params.status as 'done' | 'planned' | 'in_progress' | 'backlog' | 'on_hold' })
         }
       })
       break
@@ -4820,7 +4833,7 @@ const _handleBulkAction = (action: string, params: { nodeIds: string[]; status?:
       nodeIds.forEach((nodeId: string) => {
         const task = taskStore.tasks.find(t => t.id === nodeId)
         if (task) {
-          taskStore.updateTaskWithUndo(nodeId, { priority: params.priority })
+          taskStore.updateTaskWithUndo(nodeId, { priority: params.priority as 'low' | 'medium' | 'high' | null })
         }
       })
       break

@@ -239,9 +239,10 @@ export function useBackupManager(config: Partial<BackupTriggerConfig> = {}) {
       const restoredData = await RobustBackupSystem.restoreFromBackup()
 
       if (restoredData) {
+        const data = restoredData as { tasks?: unknown[]; projects?: unknown[] }
         console.log('✅ Backup restored successfully:', {
-          tasksCount: restoredData.tasks?.length || 0,
-          projectsCount: restoredData.projects?.length || 0
+          tasksCount: data.tasks?.length || 0,
+          projectsCount: data.projects?.length || 0
         })
 
         // NOTE: Data restoration to stores requires careful state merging logic

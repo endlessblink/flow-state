@@ -160,14 +160,16 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-031~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json`, `.claude/locks/*` | - | - |
 | ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
 | TASK-033 | PLANNED | `~/claude-plugins/*` (new) | - | - |
+| TASK-034 | PLANNED | `tasks.ts`, `individualTaskStorage.ts`, `database.ts` | - | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-017 (plasmoid) + TASK-033 (plugin) - no file overlap
+**New**: TASK-034 (Individual Task Docs migration - Part of ROAD-013 Sync Hardening)
 **Paused**: TASK-027 (lint warning fixes - 894 fixed, 486 remaining - 65% complete)
 **Completed**: TASK-032 (npm scripts check hook), TASK-031 (Multi-instance task locking), TASK-030 (TypeScript strict type errors)
 **Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
 **Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
 **Planned**: TASK-033 (Claude Dev Infrastructure Plugin - creates ~/claude-plugins/)
-**Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially
+**Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019, TASK-034 - work sequentially
 
 ---
 
@@ -484,6 +486,68 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 **Plan File**: `/home/endlessblink/.claude/plans/magical-coalescing-wreath.md`
 
 **Rollback**: `rm -rf ~/claude-plugins/claude-dev-infrastructure`
+
+---
+
+### TASK-034: Migrate to Individual Task Documents (PLANNED)
+
+**Goal**: Replace single `tasks:data` array document with individual `task-{id}` documents to prevent conflict accumulation.
+
+**Priority**: P1-HIGH (Part of ROAD-013 - Sync Hardening)
+**Risk Level**: HIGH (Data migration)
+**Estimated Effort**: 2-3 sessions
+
+**Background**:
+- **Current**: All tasks stored in single `tasks:data` PouchDB document as array
+- **Problem**: 376+ conflicts accumulated on this document, wrong winner = data loss (ISSUE-011)
+- **Solution**: Individual docs = conflicts isolated to single tasks, not entire collection
+
+**Key Files**:
+- `src/utils/individualTaskStorage.ts` - **Already implemented (460 lines, UNUSED)**
+- `src/stores/tasks.ts` - Needs integration
+- `src/config/database.ts` - Feature flag
+- `src/composables/documentFilters.ts` - Add `task-*` sync pattern
+
+**Implementation Phases**:
+
+| Phase | Description | Risk |
+|-------|-------------|------|
+| 1 | Preparation - Add feature flag, backup, conflict monitoring | LOW |
+| 2 | Dual-Write - Write to BOTH formats simultaneously | MEDIUM |
+| 3 | Migration - Run `migrateFromLegacyFormat()` one-time | HIGH |
+| 4 | Read Switch - Load from individual docs instead of array | HIGH |
+| 5 | Cleanup - Remove old format after 1 week stability | LOW |
+
+**Rollback Points**:
+- Phase 2: Disable feature flag → reverts to single-doc mode
+- Phase 3: `tasks:data` still exists as backup
+- Phase 4: Re-enable reading from `tasks:data`
+- Phase 5: Cannot rollback after cleanup - ensure stable first
+
+**Existing Code (Ready to Integrate)**:
+```typescript
+// src/utils/individualTaskStorage.ts - 460 lines, production-ready
+saveTask(db, task)              // Save single task as task-{id}
+saveTasks(db, tasks)            // Bulk save with bulkDocs()
+deleteTask(db, taskId)          // Delete task document
+loadAllTasks(db)                // Load all task-* documents
+loadTask(db, taskId)            // Load single task
+migrateFromLegacyFormat(db)     // Migrate from tasks:data
+syncDeletedTasks(db, taskIds)   // Clean orphaned documents
+```
+
+**Success Criteria**:
+- [ ] All tasks migrated to individual documents
+- [ ] No data loss during migration
+- [ ] Conflict accumulation stops (conflicts per-task only)
+- [ ] Multi-device sync works correctly
+- [ ] Rollback tested before Phase 5 cleanup
+
+**Plan File**: `/home/endlessblink/.claude/plans/parallel-drifting-tower.md`
+
+**Depends On**: - (TASK-022 monitoring should be complete first)
+**Blocks**: -
+**Related**: ROAD-013 (Sync Hardening), ISSUE-011 (Resolved conflicts)
 
 ---
 

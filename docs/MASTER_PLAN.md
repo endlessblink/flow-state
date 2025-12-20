@@ -1,6 +1,6 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 20, 2025 (ISSUE-011 & ISSUE-012: ✅ RESOLVED - 1,487 PouchDB conflicts deleted, user data restored)
+**Last Updated**: December 20, 2025 (TASK-033: Claude Dev Infrastructure Plugin planned)
 **Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -159,12 +159,14 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-030~~ | ✅ DONE | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
 | ~~TASK-031~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json`, `.claude/locks/*` | - | - |
 | ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
+| TASK-033 | PLANNED | `~/claude-plugins/*` (new) | - | - |
 
-**Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
+**Parallel Safe**: TASK-014 (UI) + TASK-017 (plasmoid) + TASK-033 (plugin) - no file overlap
 **Paused**: TASK-027 (lint warning fixes - 894 fixed, 486 remaining - 65% complete)
 **Completed**: TASK-032 (npm scripts check hook), TASK-031 (Multi-instance task locking), TASK-030 (TypeScript strict type errors)
 **Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
 **Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
+**Planned**: TASK-033 (Claude Dev Infrastructure Plugin - creates ~/claude-plugins/)
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially
 
 ---
@@ -370,6 +372,118 @@ npx vue-tsc --noEmit  # Should output nothing (0 errors)
 - ISSUE-011 (PouchDB conflicts breaking Storybook)
 - TASK-014 (Storybook Glass Morphism work)
 - `.claude/skills/dev-storybook/skill.md` (existing Storybook skill to extend)
+
+---
+
+### TASK-033: Create Claude Dev Infrastructure Plugin (PLANNED)
+
+**Goal**: Package Pomo-Flow's AI development infrastructure as a reusable Claude Code plugin for use in new projects.
+
+**Priority**: P2-MEDIUM (infrastructure, not blocking current work)
+
+**Background**:
+This project has developed a sophisticated AI development ecosystem including:
+- Constitutional AI enforcement (truthfulness mandates, verification protocols)
+- Multi-instance session locking (prevents Claude sessions from conflicting)
+- MASTER_PLAN.md task tracking with ID formats (TASK-XXX, BUG-XXX, ROAD-XXX)
+- Hooks system for behavioral reminders and validation
+- 11+ core skills for AI-assisted development
+- Dev-manager kanban dashboard
+
+**Plugin Architecture**:
+
+```
+claude-dev-infrastructure/                    # Core plugin (stack-agnostic)
+├── .claude-plugin/plugin.json               # Plugin manifest
+├── standards/                               # 5 standards documents
+│   ├── TRUTHFULNESS_MANDATE.md
+│   ├── FILE_CREATION_STANDARDS.md
+│   ├── REFACTORING_STANDARDS.md
+│   ├── MAINTENANCE_STANDARDS.md
+│   └── FEATURE_DEVELOPMENT_STANDARDS.md
+├── hooks/                                   # 14 hooks
+│   ├── hooks.json
+│   ├── session-lock-awareness.sh
+│   ├── task-lock-enforcer.sh
+│   ├── master-plan-reminder.sh
+│   └── ... (11 more)
+├── skills/                                  # 11 core skills
+│   ├── chief-architect/
+│   ├── master-plan-manager/
+│   ├── meta-skill-router/
+│   ├── skill-creator-doctor/
+│   ├── skills-manager/
+│   ├── ai-truthfulness-enforcer/
+│   ├── document-sync/
+│   ├── safe-project-organizer/
+│   ├── data-safety-auditor/
+│   ├── crisis-debugging-advisor/
+│   └── qa-testing/
+├── templates/                               # Project scaffolding
+│   ├── MASTER_PLAN.template.md
+│   ├── SOP.template.md
+│   ├── CLAUDE.template.md
+│   └── settings.template.json
+├── dev-manager/                             # Visual kanban dashboard
+│   ├── index.html
+│   ├── kanban/
+│   ├── skills/
+│   └── docs/
+├── init/setup.sh                            # Project scaffolding script
+└── README.md
+
+vue3-typescript-skills/                      # Add-on package (Vue-specific)
+├── .claude-plugin/plugin.json
+├── skills/
+│   ├── dev-vue/
+│   ├── dev-typescript/
+│   ├── dev-vueuse/
+│   ├── dev-fix-pinia/
+│   ├── dev-refactoring/
+│   ├── dev-lint-cleanup/
+│   └── ... (6 more)
+└── README.md
+```
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Create plugin directory structure at `~/claude-plugins/` | PENDING |
+| 2 | Copy and adapt standards documents (remove Pomo-Flow specifics) | PENDING |
+| 3 | Copy and adapt hooks (make paths configurable) | PENDING |
+| 4 | Copy 11 core skills (stack-agnostic) | PENDING |
+| 5 | Create templates (MASTER_PLAN, SOP, CLAUDE.md, settings.json) | PENDING |
+| 6 | Copy dev-manager dashboard | PENDING |
+| 7 | Create plugin manifest (.claude-plugin/plugin.json) | PENDING |
+| 8 | Create init/setup.sh scaffolding script | PENDING |
+| 9 | Create Vue 3 add-on package | PENDING |
+| 10 | Write README documentation | PENDING |
+| 11 | Test plugin installation in fresh project | PENDING |
+| 12 | Initialize git repo and commit | PENDING |
+
+**Core Skills Included**:
+| Skill | Purpose |
+|-------|---------|
+| chief-architect | Strategic orchestrator, ideas processing, decision-making |
+| master-plan-manager | Safe MASTER_PLAN.md updates with backups |
+| meta-skill-router | Intelligent skill selection/routing |
+| skill-creator-doctor | Create, repair, consolidate skills |
+| skills-manager | Skills management & analytics |
+| ai-truthfulness-enforcer | Verification protocols, banned phrases |
+| document-sync | Documentation synchronization |
+| safe-project-organizer | Safe file organization |
+| data-safety-auditor | Data safety auditing |
+| crisis-debugging-advisor | Crisis debugging (stack-agnostic) |
+| qa-testing | Playwright-based testing |
+
+**Key Adaptations for Portability**:
+- Replace `$CLAUDE_PROJECT_DIR` with relative/configurable paths
+- Generalize file patterns in task-lock-enforcer.sh
+- Remove Pomo-Flow specific examples from standards
+- Keep Vue/TS patterns as examples (not requirements)
+
+**Plan File**: `/home/endlessblink/.claude/plans/magical-coalescing-wreath.md`
+
+**Rollback**: `rm -rf ~/claude-plugins/claude-dev-infrastructure`
 
 ---
 

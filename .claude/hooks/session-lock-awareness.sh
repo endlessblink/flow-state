@@ -22,7 +22,7 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""')
 current_time=$(date +%s)
 expiry_seconds=$((LOCK_EXPIRY_HOURS * 3600))
 
-for lock_file in "$LOCKS_DIR"/*.lock 2>/dev/null; do
+while IFS= read -r -d '' lock_file; do
   if [[ -f "$lock_file" ]]; then
     lock_time=$(jq -r '.timestamp // 0' "$lock_file" 2>/dev/null || echo "0")
     age=$((current_time - lock_time))
@@ -30,11 +30,11 @@ for lock_file in "$LOCKS_DIR"/*.lock 2>/dev/null; do
       rm -f "$lock_file"
     fi
   fi
-done
+done < <(find "$LOCKS_DIR" -maxdepth 1 -name "*.lock" -print0 2>/dev/null)
 
 # Check for active locks from other sessions
 ACTIVE_LOCKS=""
-for lock_file in "$LOCKS_DIR"/*.lock 2>/dev/null; do
+while IFS= read -r -d '' lock_file; do
   if [[ -f "$lock_file" ]]; then
     locked_session=$(jq -r '.session_id // ""' "$lock_file" 2>/dev/null || echo "")
     task_id=$(jq -r '.task_id // ""' "$lock_file" 2>/dev/null || echo "")
@@ -44,7 +44,7 @@ for lock_file in "$LOCKS_DIR"/*.lock 2>/dev/null; do
       ACTIVE_LOCKS="${ACTIVE_LOCKS}  - $task_id (locked at $locked_at by session ${locked_session:0:8}...)\n"
     fi
   fi
-done
+done < <(find "$LOCKS_DIR" -maxdepth 1 -name "*.lock" -print0 2>/dev/null)
 
 if [[ -n "$ACTIVE_LOCKS" ]]; then
   cat << EOF

@@ -22,7 +22,7 @@ fi
 
 # Release all locks owned by this session
 RELEASED=""
-for lock_file in "$LOCKS_DIR"/*.lock 2>/dev/null; do
+while IFS= read -r -d '' lock_file; do
   if [[ -f "$lock_file" ]]; then
     locked_session=$(jq -r '.session_id // ""' "$lock_file" 2>/dev/null || echo "")
     task_id=$(jq -r '.task_id // ""' "$lock_file" 2>/dev/null || echo "")
@@ -32,7 +32,7 @@ for lock_file in "$LOCKS_DIR"/*.lock 2>/dev/null; do
       RELEASED="${RELEASED}$task_id "
     fi
   fi
-done
+done < <(find "$LOCKS_DIR" -maxdepth 1 -name "*.lock" -print0 2>/dev/null)
 
 if [[ -n "$RELEASED" ]]; then
   echo "LOCKS RELEASED: $RELEASED"

@@ -1,6 +1,6 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 20, 2025 (TASK-030: ✅ COMPLETED - 0 TypeScript errors)
+**Last Updated**: December 20, 2025 (TASK-031: ✅ COMPLETED - Multi-instance task locking)
 **Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -156,10 +156,12 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-028~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json` | - | - |
 | TASK-029 | PLANNED | `.claude/skills/storybook-audit/*`, `src/stories/**` | TASK-014 | - |
 | ~~TASK-030~~ | ✅ DONE | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
+| ~~TASK-031~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json`, `.claude/locks/*` | - | - |
+| ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
 **Paused**: TASK-027 (lint warning fixes - 159 fixed, 1,134 remaining)
-**Completed**: TASK-030 (TypeScript strict type errors - ✅ All fixed!)
+**Completed**: TASK-032 (npm scripts check hook), TASK-031 (Multi-instance task locking), TASK-030 (TypeScript strict type errors)
 **Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
 **Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially

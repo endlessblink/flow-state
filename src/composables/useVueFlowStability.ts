@@ -391,7 +391,7 @@ export function useVueFlowStability(
     const snapshot: VueFlowStateSnapshot = {
       nodes: [...nodes.value],
       edges: [...edges.value],
-      selectedNodes: nodes.value.filter((n: unknown) => (n as any).selected).map((n: unknown) => n.id),
+      selectedNodes: nodes.value.filter((n: Node) => (n as Node & { selected?: boolean }).selected).map((n: Node) => n.id),
       viewport,
       timestamp: Date.now()
     }

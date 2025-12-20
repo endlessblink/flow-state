@@ -13,14 +13,22 @@ import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import { filterMockTasks } from '@/utils/mockTaskDetector'
+import type { Task } from '@/types/tasks'
 
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
 
+// Task-like interface for backup data (minimal type for backup operations)
+interface BackupTaskLike {
+  title?: string
+  description?: string
+  [key: string]: unknown
+}
+
 export interface BackupData {
   id: string
-  tasks: unknown[]
+  tasks: BackupTaskLike[]
   projects: unknown[]
   canvas: unknown
   timestamp: number
@@ -157,8 +165,8 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     try {
       console.log(`[Backup] Creating ${type} backup...`)
 
-      // Get tasks from store (use unknown[] to allow mock task filtering)
-      let tasks: unknown[] = taskStore.tasks || []
+      // Get tasks from store
+      let tasks: BackupTaskLike[] = (taskStore.tasks || []) as BackupTaskLike[]
 
       // Validate tasks
       if (!Array.isArray(tasks)) {
@@ -172,7 +180,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
         if (filterResult.mockTasks.length > 0) {
           console.log(`[Backup] Filtered ${filterResult.mockTasks.length} mock tasks`)
         }
-        tasks = filterResult.cleanTasks
+        tasks = filterResult.cleanTasks as BackupTaskLike[]
       }
 
       // Get other data
@@ -273,9 +281,9 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
       state.value.restoreProgress = 80
 
-      // Reload stores (cast to unknown[] to bypass strict type checking on backup data)
+      // Reload stores (cast backup data to Task[] for restoreState)
       if (taskStore.restoreState) {
-        await taskStore.restoreState(backupData.tasks as unknown)
+        await taskStore.restoreState(backupData.tasks as unknown as Task[])
       }
 
       state.value.restoreProgress = 100
@@ -675,13 +683,13 @@ export const backupSystem = {
   hasHebrewContent(backup: BackupData) {
     if (!backup?.tasks) return false
     const hebrewRegex = /[\u0590-\u05FF]/
-    return backup.tasks.some(task => task.title && hebrewRegex.test(task.title))
+    return backup.tasks.some((task: BackupTaskLike) => task.title && hebrewRegex.test(task.title))
   },
 
   getHebrewTaskCount(backup: BackupData) {
     if (!backup?.tasks) return 0
     const hebrewRegex = /[\u0590-\u05FF]/
-    return backup.tasks.filter(task => task.title && hebrewRegex.test(task.title)).length
+    return backup.tasks.filter((task: BackupTaskLike) => task.title && hebrewRegex.test(task.title)).length
   }
 }
 

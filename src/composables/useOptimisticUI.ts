@@ -71,14 +71,14 @@ export function useOptimisticUI() {
   /**
    * Apply optimistic update for task creation
    */
-  const createTaskOptimistic = async (taskData: unknown): Promise<string> => {
+  const createTaskOptimistic = async (taskData: Record<string, unknown>): Promise<string> => {
     const optimisticId = `optimistic-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
     const optimisticTask = {
       id: optimisticId,
       ...taskData,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
       optimistic: true,
       pendingSync: true
     }
@@ -138,7 +138,7 @@ export function useOptimisticUI() {
   /**
    * Apply optimistic update for task update
    */
-  const updateTaskOptimistic = async (taskId: string, updates: unknown): Promise<void> => {
+  const updateTaskOptimistic = async (taskId: string, updates: Record<string, unknown>): Promise<void> => {
     const originalTask = tasksStore.getTask(taskId)
     if (!originalTask) {
       throw new Error('Task not found for optimistic update')
@@ -148,7 +148,7 @@ export function useOptimisticUI() {
     const optimisticTask = {
       ...originalTask,
       ...updates,
-      updatedAt: Date.now(),
+      updatedAt: new Date(),
       optimistic: true,
       pendingSync: true
     }
@@ -266,9 +266,10 @@ export function useOptimisticUI() {
     update.status = 'success'
 
     // Remove optimistic flags from the actual data
-    if (update.optimisticData) {
-      const { optimistic: _optimistic, pendingSync: _pendingSync, ...cleanData } = update.optimisticData
-      if (serverId && cleanData.id?.toString().startsWith('optimistic-')) {
+    if (update.optimisticData && typeof update.optimisticData === 'object') {
+      const data = update.optimisticData as Record<string, unknown>
+      const { optimistic: _optimistic, pendingSync: _pendingSync, ...cleanData } = data
+      if (serverId && typeof cleanData.id === 'string' && cleanData.id.startsWith('optimistic-')) {
         cleanData.id = serverId
       }
 

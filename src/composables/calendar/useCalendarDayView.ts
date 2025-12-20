@@ -11,6 +11,14 @@ export interface TimeSlot {
   date: string
 }
 
+// Drag data from calendar drag operations
+interface CalendarDragData {
+  taskId?: string
+  title?: string
+  source?: string
+  [key: string]: unknown
+}
+
 // Re-export for consumers
 export type { DragGhost } from '@/types/tasks'
 
@@ -315,7 +323,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     })
 
     const data = event.dataTransfer?.getData('application/json')
-    let parsedData: unknown = null
+    let parsedData: CalendarDragData | null = null
 
     // FALLBACK: Check for global dragging state when dataTransfer is empty
     // This handles mouse-based dragging where dataTransfer might not be populated
@@ -346,12 +354,16 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     } else {
       // Parse dataTransfer data
       try {
-        parsedData = JSON.parse(data)
+        parsedData = JSON.parse(data) as CalendarDragData
         console.log('📥 [CalendarDrag] Drag data received from dataTransfer:', parsedData)
       } catch (error) {
         console.error('❌ [CalendarDrag] Error parsing drag data:', error)
         return
       }
+    }
+
+    if (!parsedData) {
+      return
     }
 
     // Use the parsedData we already created above

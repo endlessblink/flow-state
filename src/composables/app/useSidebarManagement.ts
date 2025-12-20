@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useRouter } from 'vue-router'
+import type { Project } from '@/types/tasks'
 
 /**
  * Sidebar Management State Management Composable
@@ -30,17 +31,17 @@ export function useSidebarManagement() {
 
   // Project management state
   const showProjectModal = ref(false)
-  const editingProject = ref<unknown>(null)
+  const editingProject = ref<Project | null>(null)
 
   // Platform detection
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
   // Helper function to filter projects for sidebar display
-  const filterSidebarProjects = (projects: unknown[]) => {
+  const filterSidebarProjects = (projects: Project[]): Project[] => {
     console.log('🔍 filterSidebarProjects input:', projects.length, 'projects')
 
     // FIX: More robust filtering logic
-    const filtered = projects.filter(p => {
+    const filtered = projects.filter((p): p is Project => {
       if (!p) return false // Remove null/undefined projects
 
       if (!p.id) {
@@ -278,7 +279,7 @@ export function useSidebarManagement() {
     }
   }
 
-  const selectProject = (project: unknown) => {
+  const selectProject = (project: Project) => {
     taskStore.setActiveProject(project.id)
     taskStore.setSmartView(null)
   }
@@ -392,9 +393,9 @@ export function useSidebarManagement() {
   }
 
   // Helper functions for navigation
-  const getFlattenedProjectList = () => {
-    const flatten = (projects: unknown[], level = 1): unknown[] => {
-      const result: unknown[] = []
+  const getFlattenedProjectList = (): Project[] => {
+    const flatten = (projects: Project[], _level = 1): Project[] => {
+      const result: Project[] = []
 
       for (const project of projects) {
         if (!project.parentId) { // Only include root projects initially
@@ -402,7 +403,7 @@ export function useSidebarManagement() {
 
           if (expandedProjects.value.includes(project.id)) {
             const children = taskStore.projects.filter(p => p.parentId === project.id)
-            result.push(...flatten(children, level + 1))
+            result.push(...flatten(children, _level + 1))
           }
         }
       }
@@ -445,13 +446,13 @@ export function useSidebarManagement() {
     showProjectModal.value = true
   }
 
-  const openEditProject = (project: unknown) => {
+  const openEditProject = (project: Project) => {
     editingProject.value = project
     showProjectModal.value = true
   }
 
   // Handle project un-nesting (drag to "All Projects")
-  const handleProjectUnnest = (data: unknown) => {
+  const handleProjectUnnest = (data: { projectId?: string; title?: string }) => {
     if (data.projectId) {
       // Remove parent relationship by setting parentId to null
       taskStore.updateProject(data.projectId, { parentId: null })

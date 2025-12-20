@@ -195,8 +195,9 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   }
 
   // Decompress data
-  const _decompressData = async (compressedData: unknown): Promise<any> => {
-    if (!compressedData?._compressed) return compressedData
+  const _decompressData = async (compressedData: unknown): Promise<unknown> => {
+    const compressed = compressedData as { _compressed?: boolean; data?: ArrayLike<number> } | null
+    if (!compressed?._compressed) return compressedData
 
     try {
       if ('DecompressionStream' in window) {
@@ -204,7 +205,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
         const writer = stream.writable.getWriter()
         const reader = stream.readable.getReader()
 
-        const uint8Array = new Uint8Array(compressedData.data)
+        const uint8Array = new Uint8Array(compressed.data || [])
         writer.write(uint8Array)
         writer.close()
 

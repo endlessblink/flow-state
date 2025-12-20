@@ -36,6 +36,21 @@ export interface ErrorHandlingConfig {
   enablePerformanceMonitoring?: boolean
 }
 
+// Error event from browser error handlers
+export interface ErrorEvent {
+  error?: { message?: string }
+  reason?: { message?: string }
+  message?: string
+  filename?: string
+}
+
+// Error summary for recommendations
+export interface ErrorSummary {
+  byType: Record<string, number>
+  uncovered?: number
+  critical?: number
+}
+
 /**
  * Vue Flow Error Handler
  */
@@ -282,7 +297,7 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
   /**
    * Check if error is Vue Flow related
    */
-  const isVueFlowRelatedError = (event: unknown): boolean => {
+  const isVueFlowRelatedError = (event: ErrorEvent): boolean => {
     const errorString = String(event.error?.message || event.reason?.message || event.message || '')
     const filename = event.filename || ''
 
@@ -564,22 +579,22 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
   /**
    * Generate recommendations based on error patterns
    */
-  const generateRecommendations = (summary: unknown) => {
+  const generateRecommendations = (summary: ErrorSummary) => {
     const recommendations: string[] = []
 
-    if (summary.byType.validation > 5) {
+    if ((summary.byType.validation || 0) > 5) {
       recommendations.push('Consider improving data validation before creating nodes/edges')
     }
 
-    if (summary.byType.performance > 3) {
+    if ((summary.byType.performance || 0) > 3) {
       recommendations.push('Consider optimizing canvas performance or reducing complexity')
     }
 
-    if (summary.uncovered > 0) {
+    if ((summary.uncovered || 0) > 0) {
       recommendations.push('Review unrecoverable errors and implement manual fixes')
     }
 
-    if (summary.critical > 0) {
+    if ((summary.critical || 0) > 0) {
       recommendations.push('Address critical errors immediately to prevent data loss')
     }
 

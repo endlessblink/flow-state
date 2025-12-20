@@ -61,7 +61,7 @@ function initializeRefHistory() {
 
   // Also store on window for direct access
   if (typeof window !== 'undefined') {
-    ;(window as Window & typeof globalThis).__pomoFlowUndoSystem = {
+    (window as Window & typeof globalThis).__pomoFlowUndoSystem = {
       canUndo,
       canRedo,
       undoCount,

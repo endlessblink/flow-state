@@ -1,7 +1,7 @@
 import { ref, type Ref as _Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
-import type { CalendarEvent, DragGhost } from '@/types/tasks'
+import type { CalendarEvent, DragGhost, Task } from '@/types/tasks'
 
 export interface DragState {
   isDragging: boolean
@@ -20,6 +20,13 @@ export interface DropTarget {
   time?: string // for time slots
   slotIndex?: number // for time slots
   dayIndex?: number // for week grid
+}
+
+export interface DragData {
+  taskId: string
+  instanceId?: string
+  title?: string
+  source: 'calendar-event' | 'calendar-inbox' | 'sidebar' | 'unified-inbox' | string
 }
 
 /**
@@ -148,12 +155,12 @@ export function useCalendarDrag() {
     activeDropTarget.value = target
 
     // Parse drag data
-    let dragData: unknown = null
+    let dragData: DragData | null = null
 
     const data = event.dataTransfer?.getData('application/json')
     if (data) {
       try {
-        dragData = JSON.parse(data)
+        dragData = JSON.parse(data) as DragData
       } catch (error) {
         console.error('❌ [UnifiedDrag] Error parsing drag data:', error)
         return
@@ -244,12 +251,12 @@ export function useCalendarDrag() {
     dragGhost.value.visible = false
 
     // Parse drag data
-    let dragData: unknown = null
+    let dragData: DragData | null = null
 
     const data = event.dataTransfer?.getData('application/json')
     if (data) {
       try {
-        dragData = JSON.parse(data)
+        dragData = JSON.parse(data) as DragData
       } catch (error) {
         console.error('❌ [UnifiedDrag] Error parsing drop data:', error)
         return
@@ -339,7 +346,7 @@ export function useCalendarDrag() {
   /**
    * Handle drop on time slot (day/week views)
    */
-  const handleTimeSlotDrop = async (task: unknown, target: DropTarget, dragData: unknown) => {
+  const handleTimeSlotDrop = async (task: Task, target: DropTarget, dragData: DragData) => {
     if (target.type !== 'time-slot' || !target.time) return
 
     const snappedTime = core.snapTo15Minutes(
@@ -358,12 +365,14 @@ export function useCalendarDrag() {
       })
 
       // Update instance if it exists
-      if (task.instances?.length > 0) {
+      if (task.instances && task.instances.length > 0) {
         const instance = task.instances[0] // Use first instance for simplicity
-        taskStore.updateTaskInstance(task.id, instance.id, {
-          scheduledDate: target.date,
-          scheduledTime: timeStr
-        })
+        if (instance.id) {
+          taskStore.updateTaskInstance(task.id, instance.id, {
+            scheduledDate: target.date,
+            scheduledTime: timeStr
+          })
+        }
       }
     } else if (dragData.source && dragData.source.includes('unified-inbox')) {
       // Drag from inbox - CRITICAL FIX: Handle inbox drag sources properly
@@ -405,7 +414,7 @@ export function useCalendarDrag() {
   /**
    * Handle drop on day cell (month view)
    */
-  const handleDayDrop = async (task: unknown, target: DropTarget, _dragData: unknown) => {
+  const handleDayDrop = async (task: Task, target: DropTarget, _dragData: DragData) => {
     // Keep existing time or default to 9 AM
     const scheduledTime = task.scheduledTime || '09:00'
 
@@ -435,7 +444,7 @@ export function useCalendarDrag() {
   /**
    * Handle drop on week grid (complex positioning)
    */
-  const handleWeekGridDrop = async (task: unknown, target: DropTarget, _dragData: unknown) => {
+  const handleWeekGridDrop = async (task: Task, target: DropTarget, _dragData: DragData) => {
     if (target.dayIndex === undefined || target.slotIndex === undefined) return
 
     const WORKING_HOURS_OFFSET = 6

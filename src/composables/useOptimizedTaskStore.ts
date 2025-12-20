@@ -7,6 +7,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { usePerformanceManager } from './usePerformanceManager'
 import { useDatabase } from './useDatabase'
 import { DB_KEYS } from './useDatabase'
+import type { Task } from '@/types/tasks'
 
 export interface OptimizedTaskStoreOptions {
   debounceDelay?: number
@@ -17,10 +18,16 @@ export interface OptimizedTaskStoreOptions {
   enableCompression?: boolean
 }
 
+// Minimal task data for batch operations
+export interface TaskData {
+  id: string
+  [key: string]: unknown
+}
+
 export interface BatchOperation {
   id: string
   type: 'create' | 'update' | 'delete'
-  data: unknown
+  data: TaskData
   timestamp: number
   priority?: 'high' | 'normal' | 'low'
 }
@@ -65,7 +72,7 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
   })
 
   // Create debounced save function
-  const debouncedSave = performance.createDebounced(async (tasks: unknown[], operationType: string) => {
+  const debouncedSave = performance.createDebounced(async (tasks: Task[], operationType: string) => {
     const startTime = Date.now()
 
     try {
@@ -130,24 +137,24 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
   // Process batch operations
   const processBatchOperations = async (groupedOps: Record<string, BatchOperation[]>) => {
     // Load current tasks
-    const currentTasks = ((await db.load(DB_KEYS.TASKS) || []) as unknown[]) as unknown[]
+    const currentTasks = ((await db.load(DB_KEYS.TASKS)) || []) as Task[]
 
     // Apply operations in order
     for (const [operationType, operations] of Object.entries(groupedOps)) {
       switch (operationType) {
         case 'create':
           for (const op of operations) {
-            if (!currentTasks.find((t: unknown) => t.id === op.data.id)) {
-              currentTasks.push(op.data)
+            if (!currentTasks.find(t => t.id === op.data.id)) {
+              currentTasks.push(op.data as unknown as Task)
             }
           }
           break
 
         case 'update':
           for (const op of operations) {
-            const index = currentTasks.findIndex((t: unknown) => t.id === op.data.id)
+            const index = currentTasks.findIndex(t => t.id === op.data.id)
             if (index !== -1) {
-              currentTasks[index] = { ...currentTasks[index], ...op.data }
+              currentTasks[index] = { ...currentTasks[index], ...op.data } as Task
             }
           }
           break
@@ -155,7 +162,7 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
         case 'delete': {
           const idsToDelete = operations.map(op => op.data.id)
           for (const id of idsToDelete) {
-            const index = currentTasks.findIndex((t: unknown) => t.id === id)
+            const index = currentTasks.findIndex(t => t.id === id)
             if (index !== -1) {
               currentTasks.splice(index, 1)
             }
@@ -170,7 +177,7 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
   }
 
   // Optimized save task function
-  const saveTask = async (task: unknown, operationType: 'create' | 'update' = 'update') => {
+  const saveTask = async (task: TaskData, operationType: 'create' | 'update' = 'update') => {
     const operation: BatchOperation = {
       id: `task_${task.id}_${Date.now()}`,
       type: operationType,
@@ -189,14 +196,14 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
       await batchedSave()
     } else {
       // Immediate debounced save
-      const currentTasks = (await db.load(DB_KEYS.TASKS) || []) as unknown[]
+      const currentTasks = ((await db.load(DB_KEYS.TASKS)) || []) as Task[]
 
-      if (operationType === 'create' && !currentTasks.find((t: unknown) => t.id === task.id)) {
-        currentTasks.push(task)
+      if (operationType === 'create' && !currentTasks.find(t => t.id === task.id)) {
+        currentTasks.push(task as unknown as Task)
       } else if (operationType === 'update') {
-        const index = currentTasks.findIndex((t: unknown) => t.id === task.id)
+        const index = currentTasks.findIndex(t => t.id === task.id)
         if (index !== -1) {
-          currentTasks[index] = { ...currentTasks[index], ...task }
+          currentTasks[index] = { ...currentTasks[index], ...task } as Task
         }
       }
 
@@ -221,8 +228,8 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
       operationQueue.value.unshift(operation)
       await batchedSave()
     } else {
-      const currentTasks = (await db.load(DB_KEYS.TASKS) || []) as unknown[]
-      const index = currentTasks.findIndex((t: unknown) => t.id === taskId)
+      const currentTasks = ((await db.load(DB_KEYS.TASKS)) || []) as Task[]
+      const index = currentTasks.findIndex(t => t.id === taskId)
 
       if (index !== -1) {
         currentTasks.splice(index, 1)
@@ -232,7 +239,7 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
   }
 
   // Optimized bulk operations
-  const bulkSaveTasks = async (tasks: unknown[], operationType: 'create' | 'update' = 'update') => {
+  const bulkSaveTasks = async (tasks: TaskData[], operationType: 'create' | 'update' = 'update') => {
     if (!enableBatching) {
       // Fall back to individual saves
       for (const task of tasks) {
@@ -259,11 +266,11 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
   }
 
   // Optimized load with caching
-  const loadTasks = async (): Promise<unknown[]> => {
+  const loadTasks = async (): Promise<Task[]> => {
     const cacheKey = 'tasks_current'
 
     // Check cache first
-    const cached = performance.getCache<unknown[]>(cacheKey)
+    const cached = performance.getCache<Task[]>(cacheKey)
     if (cached) {
       metrics.value.cacheHits++
       return cached
@@ -272,7 +279,7 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
     metrics.value.cacheMisses++
 
     // Load from database
-    const tasks = (await db.load(DB_KEYS.TASKS) || []) as unknown[]
+    const tasks = ((await db.load(DB_KEYS.TASKS)) || []) as Task[]
 
     // Cache the result
     performance.setCache(cacheKey, tasks)
@@ -281,9 +288,9 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
   }
 
   // Memoized computed properties for task filtering
-  const createMemoizedFilter = (filterFn: (task: unknown) => boolean, deps: unknown[] = []) => {
+  const createMemoizedFilter = (filterFn: (task: Task) => boolean, deps: unknown[] = []) => {
     return performance.createMemoized(
-      (tasks: unknown[]) => tasks.filter(filterFn),
+      (tasks: Task[]) => tasks.filter(filterFn),
       `filter_${filterFn.name || 'anonymous'}`,
       deps
     )
@@ -291,17 +298,17 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
 
   // Common memoized filters
   const activeTasksFilter = createMemoizedFilter(
-    (task: unknown) => task.status !== 'done',
+    (task: Task) => task.status !== 'done',
     ['status']
   )
 
   const completedTasksFilter = createMemoizedFilter(
-    (task: unknown) => task.status === 'done',
+    (task: Task) => task.status === 'done',
     ['status']
   )
 
   const highPriorityTasksFilter = createMemoizedFilter(
-    (task: unknown) => task.priority === 'high',
+    (task: Task) => task.priority === 'high',
     ['priority']
   )
 
@@ -318,9 +325,9 @@ export function useOptimizedTaskStore(options: OptimizedTaskStoreOptions = {}) {
   }))
 
   // Force immediate save (bypasses debouncing)
-  const forceSave = async (tasks?: unknown[]) => {
+  const forceSave = async (tasks?: Task[]) => {
     try {
-      const tasksToSave = tasks || await db.load(DB_KEYS.TASKS)
+      const tasksToSave = tasks || (await db.load(DB_KEYS.TASKS)) as Task[]
       await db.save(DB_KEYS.TASKS, tasksToSave)
       lastSaveTime.value = Date.now()
 

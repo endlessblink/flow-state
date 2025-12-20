@@ -54,6 +54,18 @@ export interface StateTransitionResult {
   metadata?: unknown
 }
 
+// Metadata for state transitions
+export interface TransitionMetadata {
+  canvasPosition?: { x: number; y: number }
+  instanceData?: {
+    id?: string
+    scheduledDate: string
+    scheduledTime?: string
+    duration?: number
+  }
+  [key: string]: unknown
+}
+
 export const useTaskLifecycle = () => {
   const taskStore = useTaskStore()
 
@@ -198,7 +210,7 @@ export const useTaskLifecycle = () => {
   const executeStateTransition = async (
     taskId: string,
     targetState: TaskState,
-    metadata?: unknown
+    metadata?: TransitionMetadata
   ): Promise<StateTransitionResult> => {
     const task = taskStore.tasks.find(t => t.id === taskId)
     if (!task) {
@@ -260,7 +272,7 @@ export const useTaskLifecycle = () => {
   const performStateTransition = async (
     task: Task,
     targetState: TaskState,
-    metadata?: unknown
+    metadata?: TransitionMetadata
   ): Promise<Partial<Task>> => {
     const updates: Partial<Task> = {
       updatedAt: new Date()

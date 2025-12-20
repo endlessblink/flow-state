@@ -72,11 +72,11 @@
     <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
     <InboxFilters
       v-if="!isCollapsed"
-      :tasks="baseInboxTasks"
-      :projects="taskStore.rootProjects"
       v-model:unscheduled-only="unscheduledOnly"
       v-model:selected-priority="selectedPriority"
       v-model:selected-project="selectedProject"
+      :tasks="baseInboxTasks"
+      :projects="taskStore.rootProjects"
       @clear-all="clearAllFilters"
     />
 

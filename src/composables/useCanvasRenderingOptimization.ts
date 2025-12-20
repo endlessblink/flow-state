@@ -9,6 +9,15 @@ import { ref, computed, watch, onMounted as _onMounted, onUnmounted, nextTick as
 import { useThrottleFn, useDebounceFn } from '@vueuse/core'
 import type { Node } from '@vue-flow/core'
 
+// Optimized node data with optional fields
+export interface OptimizedNodeData {
+  title?: string
+  description?: string
+  subtasks?: unknown[]
+  image?: string
+  [key: string]: unknown
+}
+
 export interface RenderingConfig {
   /** Enable level-of-detail rendering */
   enableLOD?: boolean
@@ -253,8 +262,8 @@ export function useCanvasRenderingOptimization(
     toRemove.forEach(([key]) => renderCache.value.delete(key))
   }
 
-  const optimizeNodeData = (node: Node, lodLevel: number): unknown => {
-    const optimized = { ...node.data }
+  const optimizeNodeData = (node: Node, lodLevel: number): OptimizedNodeData => {
+    const optimized: OptimizedNodeData = { ...node.data }
 
     switch (lodLevel) {
       case 1: // Full detail

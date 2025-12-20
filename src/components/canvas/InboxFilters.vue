@@ -13,7 +13,7 @@
     </button>
 
     <!-- Priority Filter -->
-    <div class="filter-dropdown" ref="priorityDropdownRef">
+    <div ref="priorityDropdownRef" class="filter-dropdown">
       <button
         class="filter-chip"
         :class="{ active: selectedPriority !== null }"
@@ -46,7 +46,7 @@
     </div>
 
     <!-- Project Filter -->
-    <div class="filter-dropdown" ref="projectDropdownRef">
+    <div ref="projectDropdownRef" class="filter-dropdown">
       <button
         class="filter-chip"
         :class="{ active: selectedProject !== null }"

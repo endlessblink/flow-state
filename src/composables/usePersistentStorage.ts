@@ -23,6 +23,14 @@ const STORAGE_KEYS = {
   BACKUP_TIMESTAMP: 'pomo-flow-last-backup'
 }
 
+// Backup data structure
+interface BackupData {
+  tasks?: unknown
+  projects?: unknown
+  settings?: unknown
+  timestamp?: number
+}
+
 // Error handling with fallback
 class PersistentStorage {
   private availableLayers: string[] = []
@@ -327,7 +335,7 @@ class PersistentStorage {
     return backups.sort((a, b) => b.timestamp - a.timestamp)
   }
 
-  async restoreFromBackup(backup: unknown): Promise<boolean> {
+  async restoreFromBackup(backup: BackupData): Promise<boolean> {
     try {
       if (backup.tasks) {
         await this.save(STORAGE_KEYS.TASKS, backup.tasks)

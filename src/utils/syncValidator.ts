@@ -20,8 +20,8 @@ export interface ValidationResult {
 export interface ValidationIssue {
   type: ValidationIssueType
   field?: string
-  expected?: any
-  actual?: any
+  expected?: unknown
+  actual?: unknown
   severity: 'error' | 'warning' | 'info'
   message: string
   suggestions?: string[]
@@ -87,7 +87,7 @@ export class SyncValidator {
   /**
    * Validate a single document
    */
-  async validateDocument(document: any): Promise<ValidationResult> {
+  async validateDocument(document: Record<string, unknown>): Promise<ValidationResult> {
     const startTime = Date.now()
     const issues: ValidationIssue[] = []
 
@@ -98,12 +98,12 @@ export class SyncValidator {
         severity: 'error',
         message: 'Document is not a valid object or is null'
       })
-      return this.createValidationResult(document?._id || 'unknown', issues, Date.now() - startTime)
+      return this.createValidationResult((document?._id as string) || 'unknown', issues, Date.now() - startTime)
     }
 
     // Skip validation for non-syncable documents
     if (!isSyncableDocument(document)) {
-      return this.createValidationResult(document._id, issues, Date.now() - startTime)
+      return this.createValidationResult(document._id as string, issues, Date.now() - startTime)
     }
 
     // Required field validation
@@ -145,7 +145,7 @@ export class SyncValidator {
     }
 
     const duration = Date.now() - startTime
-    const result = this.createValidationResult(document._id, issues, duration, docType)
+    const result = this.createValidationResult(document._id as string, issues, duration, docType)
 
     if (!result.isValid) {
       console.error(`❌ Validation failed for ${result.documentId}:`, issues)
@@ -157,7 +157,7 @@ export class SyncValidator {
   /**
    * Validate sync integrity between local and remote documents
    */
-  async validateSync(localDocs: any[], remoteDocs: any[]): Promise<SyncValidationResult> {
+  async validateSync(localDocs: Record<string, unknown>[], remoteDocs: Record<string, unknown>[]): Promise<SyncValidationResult> {
     console.log(`🔍 Validating sync integrity (${localDocs.length} local, ${remoteDocs.length} remote)`)
     const startTime = Date.now()
 
@@ -171,7 +171,7 @@ export class SyncValidator {
       results.push(result)
 
       if (this.options.includeChecksums && result.checksum) {
-        checksums.set(doc._id, result.checksum)
+        checksums.set(doc._id as string, result.checksum)
       }
     }
 
@@ -181,7 +181,7 @@ export class SyncValidator {
       results.push(result)
 
       if (this.options.includeChecksums && result.checksum) {
-        checksums.set(doc._id, result.checksum)
+        checksums.set(doc._id as string, result.checksum)
       }
     }
 
@@ -219,7 +219,7 @@ export class SyncValidator {
   /**
    * Validate required fields for all documents
    */
-  private validateRequiredFields(document: any, issues: ValidationIssue[]): void {
+  private validateRequiredFields(document: Record<string, unknown>, issues: ValidationIssue[]): void {
     const requiredFields = ['_id']
 
     for (const field of requiredFields) {
@@ -249,8 +249,8 @@ export class SyncValidator {
   /**
    * Get document type for type-specific validation
    */
-  private getDocumentType(document: any): string {
-    const id = document._id || ''
+  private getDocumentType(document: Record<string, unknown>): string {
+    const id = typeof document._id === 'string' ? document._id : ''
 
     if (id.startsWith('tasks:')) return 'task'
     if (id.startsWith('projects:')) return 'project'
@@ -264,7 +264,7 @@ export class SyncValidator {
   /**
    * Validate document type-specific rules
    */
-  private async validateDocumentType(document: any, type: string, issues: ValidationIssue[]): Promise<void> {
+  private async validateDocumentType(document: Record<string, unknown>, type: string, issues: ValidationIssue[]): Promise<void> {
     switch (type) {
       case 'task':
         this.validateTaskDocument(document, issues)
@@ -287,8 +287,8 @@ export class SyncValidator {
   /**
    * Validate task document structure
    */
-  private validateTaskDocument(document: any, issues: ValidationIssue[]): void {
-    const data = document.data || document
+  private validateTaskDocument(document: Record<string, unknown>, issues: ValidationIssue[]): void {
+    const data = (document.data || document) as Record<string, unknown>
 
     // Required task fields
     if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
@@ -304,7 +304,7 @@ export class SyncValidator {
     // Status validation
     if (data.status) {
       const validStatuses = ['planned', 'in_progress', 'done', 'backlog', 'on_hold']
-      if (!validStatuses.includes(data.status)) {
+      if (!validStatuses.includes(data.status as string)) {
         issues.push({
           type: ValidationIssueType.INVALID_TYPE,
           field: 'status',
@@ -320,7 +320,7 @@ export class SyncValidator {
     // Priority validation
     if (data.priority && data.priority !== null) {
       const validPriorities = ['low', 'medium', 'high']
-      if (!validPriorities.includes(data.priority)) {
+      if (!validPriorities.includes(data.priority as string)) {
         issues.push({
           type: ValidationIssueType.INVALID_TYPE,
           field: 'priority',
@@ -353,8 +353,8 @@ export class SyncValidator {
   /**
    * Validate project document structure
    */
-  private validateProjectDocument(document: any, issues: ValidationIssue[]): void {
-    const data = document.data || document
+  private validateProjectDocument(document: Record<string, unknown>, issues: ValidationIssue[]): void {
+    const data = (document.data || document) as Record<string, unknown>
 
     // Required project fields
     if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
@@ -382,8 +382,8 @@ export class SyncValidator {
   /**
    * Validate canvas document structure
    */
-  private validateCanvasDocument(document: any, issues: ValidationIssue[]): void {
-    const data = document.data || document
+  private validateCanvasDocument(document: Record<string, unknown>, issues: ValidationIssue[]): void {
+    const data = (document.data || document) as Record<string, unknown>
 
     // Canvas-specific validations
     if (data.nodes && !Array.isArray(data.nodes)) {
@@ -410,8 +410,8 @@ export class SyncValidator {
   /**
    * Validate timer document structure
    */
-  private validateTimerDocument(document: any, issues: ValidationIssue[]): void {
-    const data = document.data || document
+  private validateTimerDocument(document: Record<string, unknown>, issues: ValidationIssue[]): void {
+    const data = (document.data || document) as Record<string, unknown>
 
     // Timer-specific validations
     if (data.duration !== undefined) {
@@ -431,7 +431,7 @@ export class SyncValidator {
   /**
    * Validate settings document structure
    */
-  private validateSettingsDocument(document: any, _issues: ValidationIssue[]): void {
+  private validateSettingsDocument(document: Record<string, unknown>, _issues: ValidationIssue[]): void {
     // Settings documents can have flexible structure, but basic validation applies
     console.log(`🔍 Validating settings document: ${document._id}`)
   }
@@ -439,12 +439,12 @@ export class SyncValidator {
   /**
    * Validate timestamp fields
    */
-  private validateTimestamps(document: any, issues: ValidationIssue[]): void {
+  private validateTimestamps(document: Record<string, unknown>, issues: ValidationIssue[]): void {
     const timestampFields = ['updatedAt', 'createdAt', 'timestamp']
 
     for (const field of timestampFields) {
       if (document[field]) {
-        const timestamp = new Date(document[field])
+        const timestamp = new Date(document[field] as string | number | Date)
         if (isNaN(timestamp.getTime())) {
           issues.push({
             type: ValidationIssueType.TIMESTAMP_ISSUE,
@@ -471,7 +471,7 @@ export class SyncValidator {
   /**
    * Validate ID formats
    */
-  private validateIds(document: any, issues: ValidationIssue[]): void {
+  private validateIds(document: Record<string, unknown>, issues: ValidationIssue[]): void {
     if (document._id && typeof document._id === 'string') {
       // Check for valid ID patterns
       if (document._id.length === 0) {
@@ -496,9 +496,9 @@ export class SyncValidator {
   /**
    * Validate checksums for data integrity
    */
-  private validateChecksums(document: any, issues: ValidationIssue[]): void {
+  private validateChecksums(document: Record<string, unknown>, issues: ValidationIssue[]): void {
     if (document.checksum) {
-      const calculatedChecksum = this.calculateChecksum(document.data || document)
+      const calculatedChecksum = this.calculateChecksum((document.data || document) as Record<string, unknown>)
 
       if (document.checksum !== calculatedChecksum) {
         issues.push({
@@ -516,7 +516,7 @@ export class SyncValidator {
   /**
    * Validate document structure
    */
-  private validateStructure(document: any, issues: ValidationIssue[]): void {
+  private validateStructure(document: Record<string, unknown>, issues: ValidationIssue[]): void {
     // Check for circular references
     try {
       JSON.stringify(document)
@@ -544,7 +544,7 @@ export class SyncValidator {
   /**
    * Validate business rules
    */
-  private async validateBusinessRules(document: any, type: string, issues: ValidationIssue[]): Promise<void> {
+  private async validateBusinessRules(document: Record<string, unknown>, type: string, issues: ValidationIssue[]): Promise<void> {
     // Type-specific business rule validation
     switch (type) {
       case 'task':
@@ -559,8 +559,8 @@ export class SyncValidator {
   /**
    * Validate task business rules
    */
-  private validateTaskBusinessRules(document: any, issues: ValidationIssue[]): void {
-    const data = document.data || document
+  private validateTaskBusinessRules(document: Record<string, unknown>, issues: ValidationIssue[]): void {
+    const data = (document.data || document) as Record<string, unknown>
 
     // Business rules for tasks
     if (data.status === 'done' && data.progress !== undefined && data.progress !== 100) {
@@ -573,7 +573,7 @@ export class SyncValidator {
     }
 
     if (data.dueDate) {
-      const dueDate = new Date(data.dueDate)
+      const dueDate = new Date(data.dueDate as string | number | Date)
       if (isNaN(dueDate.getTime())) {
         issues.push({
           type: ValidationIssueType.INVALID_TYPE,
@@ -589,8 +589,8 @@ export class SyncValidator {
   /**
    * Validate project business rules
    */
-  private validateProjectBusinessRules(document: any, issues: ValidationIssue[]): void {
-    const data = document.data || document
+  private validateProjectBusinessRules(document: Record<string, unknown>, issues: ValidationIssue[]): void {
+    const data = (document.data || document) as Record<string, unknown>
 
     // Business rules for projects
     if (data.parentId && data.parentId === document._id) {
@@ -606,7 +606,7 @@ export class SyncValidator {
   /**
    * Check consistency between local and remote documents
    */
-  private checkConsistency(localDocs: any[], remoteDocs: any[], checksums: Map<string, string>): ConflictInfo[] {
+  private checkConsistency(localDocs: Record<string, unknown>[], remoteDocs: Record<string, unknown>[], checksums: Map<string, string>): ConflictInfo[] {
     const conflicts: ConflictInfo[] = []
     const localMap = new Map(localDocs.map(doc => [doc._id, doc]))
     const remoteMap = new Map(remoteDocs.map(doc => [doc._id, doc]))
@@ -620,22 +620,22 @@ export class SyncValidator {
 
         if (localChecksum && remoteChecksum && localChecksum !== remoteChecksum) {
           conflicts.push({
-            documentId: id,
+            documentId: id as string,
             localVersion: {
-              _id: localDoc._id,
-              _rev: localDoc._rev || 'unknown',
-              data: localDoc.data || localDoc,
-              updatedAt: localDoc.updatedAt || new Date().toISOString(),
+              _id: localDoc._id as string,
+              _rev: (localDoc._rev as string) || 'unknown',
+              data: (localDoc.data || localDoc) as Record<string, unknown>,
+              updatedAt: (localDoc.updatedAt as string) || new Date().toISOString(),
               deviceId: 'local',
-              version: localDoc.version || 1
+              version: (localDoc.version as number) || 1
             },
             remoteVersion: {
-              _id: remoteDoc._id,
-              _rev: remoteDoc._rev || 'unknown',
-              data: remoteDoc.data || remoteDoc,
-              updatedAt: remoteDoc.updatedAt || new Date().toISOString(),
+              _id: remoteDoc._id as string,
+              _rev: (remoteDoc._rev as string) || 'unknown',
+              data: (remoteDoc.data || remoteDoc) as Record<string, unknown>,
+              updatedAt: (remoteDoc.updatedAt as string) || new Date().toISOString(),
               deviceId: 'remote',
-              version: remoteDoc.version || 1
+              version: (remoteDoc.version as number) || 1
             },
             conflictType: ConflictType.CHECKSUM_MISMATCH,
             timestamp: new Date(),
@@ -727,7 +727,7 @@ export class SyncValidator {
   /**
    * Calculate checksum for document data
    */
-  private calculateChecksum(data: any): string {
+  private calculateChecksum(data: Record<string, unknown>): string {
     try {
       const sortedData = JSON.stringify(data, Object.keys(data || {}).sort())
       return btoa(sortedData).slice(0, 16)

@@ -5,6 +5,7 @@
 
 import { ForensicLogger, AuditEvent as _AuditEvent, BackupSnapshot as _BackupSnapshot } from './forensicBackupLogger'
 import { filterMockTasks } from './mockTaskDetector'
+import type { Task } from '@/types/tasks'
 
 export interface VerificationReport {
   // Metadata
@@ -297,8 +298,8 @@ export class VerificationReportGenerator {
         totalTasks: tasks.length,
         realTasks: mockFilter.cleanTasks.length,
         mockTasks: mockFilter.mockTasks.length,
-        taskHash: ForensicLogger.computeTaskHash(tasks),
-        taskFingerprint: ForensicLogger.createTaskFingerprint(tasks),
+        taskHash: ForensicLogger.computeTaskHash(tasks as Task[]),
+        taskFingerprint: ForensicLogger.createTaskFingerprint(tasks as Task[]),
         tasks: tasks.slice(0, 10) // Sample for analysis
       }
     } catch (error) {
@@ -432,8 +433,12 @@ export class VerificationReportGenerator {
   /**
    * Perform security assessment
    */
-  private static performSecurityAssessment(systemState: any, auditReport: any, testResults: any) {
-    const vulnerabilities = []
+  private static performSecurityAssessment(
+    systemState: { mockTasks: number; totalTasks: number; realTasks: number; taskHash: string; taskFingerprint: string; tasks: unknown[] },
+    auditReport: { summary: { errors: number; warnings: number; mockTasksFiltered: number; lastTimestamp?: string }; events: Array<{ id: string; timestamp: string; operation: string; status: string; details: string; checksum: string }>; chainOfCustody: boolean },
+    testResults: Record<string, { name: string; status: 'PASS' | 'FAIL' | 'NOT_RUN'; details: string; evidence: Record<string, unknown> }>
+  ) {
+    const vulnerabilities: Array<{ type: string; severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'; description: string; recommendation: string }> = []
     let securityScore = 100
 
     if (systemState.mockTasks > 0) {
@@ -456,7 +461,7 @@ export class VerificationReportGenerator {
       securityScore -= auditReport.summary.errors * 10
     }
 
-    const failedTests = Object.values(testResults).filter((test: any) => test.status === 'FAIL').length
+    const failedTests = Object.values(testResults).filter((test) => test.status === 'FAIL').length
     if (failedTests > 0) {
       vulnerabilities.push({
         type: 'Test Failures',
@@ -467,22 +472,26 @@ export class VerificationReportGenerator {
       securityScore -= failedTests * 20
     }
 
-    const overallRisk = securityScore >= 90 ? 'LOW' : securityScore >= 70 ? 'MEDIUM' : securityScore >= 50 ? 'HIGH' : 'CRITICAL'
-    const complianceLevel = vulnerabilities.length === 0 ? 'COMPLIANT' : vulnerabilities.length <= 2 ? 'PARTIAL' : 'NON_COMPLIANT'
+    const overallRisk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = securityScore >= 90 ? 'LOW' : securityScore >= 70 ? 'MEDIUM' : securityScore >= 50 ? 'HIGH' : 'CRITICAL'
+    const complianceLevel: 'COMPLIANT' | 'PARTIAL' | 'NON_COMPLIANT' = vulnerabilities.length === 0 ? 'COMPLIANT' : vulnerabilities.length <= 2 ? 'PARTIAL' : 'NON_COMPLIANT'
 
     return {
-      overallRisk: overallRisk as any,
+      overallRisk,
       vulnerabilities,
       securityScore: Math.max(0, securityScore),
-      complianceLevel: complianceLevel as any
+      complianceLevel
     }
   }
 
   /**
    * Generate recommendations
    */
-  private static generateRecommendations(systemState: any, auditReport: any, securityAssessment: any) {
-    const recommendations = []
+  private static generateRecommendations(
+    systemState: { mockTasks: number; totalTasks: number; realTasks: number; taskHash: string; taskFingerprint: string; tasks: unknown[] },
+    _auditReport: { summary: { errors: number; warnings: number; mockTasksFiltered: number; lastTimestamp?: string }; events: unknown[]; chainOfCustody: boolean },
+    securityAssessment: { overallRisk: string; vulnerabilities: Array<{ type: string; severity: string; description: string; recommendation: string }>; securityScore: number; complianceLevel: string }
+  ) {
+    const recommendations: Array<{ priority: 'HIGH' | 'MEDIUM' | 'LOW'; category: 'SECURITY' | 'INTEGRITY' | 'PERFORMANCE' | 'MAINTENANCE'; title: string; description: string; actionItems: string[] }> = []
 
     if (systemState.mockTasks > 0) {
       recommendations.push({
@@ -504,7 +513,7 @@ export class VerificationReportGenerator {
         category: 'SECURITY' as const,
         title: 'Address Security Vulnerabilities',
         description: 'Resolve identified security issues',
-        actionItems: securityAssessment.vulnerabilities.map((v: any) => v.recommendation)
+        actionItems: securityAssessment.vulnerabilities.map((v) => v.recommendation)
       })
     }
 
@@ -526,7 +535,11 @@ export class VerificationReportGenerator {
   /**
    * Generate cryptographic evidence
    */
-  private static async generateCryptographicEvidence(systemState: any, backupStatus: any, auditReport: any) {
+  private static async generateCryptographicEvidence(
+    systemState: { mockTasks: number; totalTasks: number; realTasks: number; taskHash: string; taskFingerprint: string; tasks: unknown[] },
+    backupStatus: { backupAvailable: boolean; lastBackupTime: string; tasksInBackup: number; backupHash: string; backupVerified: boolean; mockTasksFiltered: number; backupIntegrity: number; chainOfCustody: boolean },
+    auditReport: { summary: Record<string, unknown>; events: unknown[]; chainOfCustody: boolean }
+  ) {
     const evidenceData = {
       systemState,
       backupStatus,
@@ -553,7 +566,10 @@ export class VerificationReportGenerator {
     return 'HIGH'
   }
 
-  private static calculateSystemIntegrity(systemState: any, auditReport: any): number {
+  private static calculateSystemIntegrity(
+    systemState: { mockTasks: number; totalTasks: number; realTasks: number; taskHash: string; taskFingerprint: string; tasks: unknown[] },
+    auditReport: { summary: { errors: number }; chainOfCustody: boolean }
+  ): number {
     let integrity = 100
 
     if (systemState.mockTasks > 0) integrity -= systemState.mockTasks * 10
@@ -563,9 +579,9 @@ export class VerificationReportGenerator {
     return Math.max(0, integrity)
   }
 
-  private static analyzeRecoveryHistory(auditReport: any) {
-    const restoreEvents = auditReport.events.filter((e: any) => e.operation.includes('restore'))
-    const successfulRestores = restoreEvents.filter((e: any) => e.status === 'SUCCESS').length
+  private static analyzeRecoveryHistory(auditReport: { summary: { lastTimestamp?: string; mockTasksFiltered: number }; events: Array<{ operation: string; status: string }> }) {
+    const restoreEvents = auditReport.events.filter((e) => e.operation.includes('restore'))
+    const successfulRestores = restoreEvents.filter((e) => e.status === 'SUCCESS').length
 
     return {
       totalOperations: auditReport.events.length,
@@ -578,33 +594,37 @@ export class VerificationReportGenerator {
     }
   }
 
-  private static generateExecutiveSummary(systemState: any, auditReport: any, testResults: any) {
-    const passedTests = Object.values(testResults).filter((test: any) => test.status === 'PASS').length
+  private static generateExecutiveSummary(
+    systemState: { mockTasks: number; totalTasks: number; realTasks: number; taskHash: string; taskFingerprint: string; tasks: unknown[] },
+    _auditReport: unknown,
+    testResults: Record<string, { name: string; status: 'PASS' | 'FAIL' | 'NOT_RUN'; details: string; evidence: Record<string, unknown> }>
+  ) {
+    const passedTests = Object.values(testResults).filter((test) => test.status === 'PASS').length
     const totalTests = Object.keys(testResults).length
-    const systemStatus = systemState.mockTasks === 0 ? 'VERIFIED_CLEAN' : 'CONTAMINATED'
+    const systemStatus: 'VERIFIED_CLEAN' | 'NEEDS_INVESTIGATION' | 'CONTAMINATED' = systemState.mockTasks === 0 ? 'VERIFIED_CLEAN' : 'CONTAMINATED'
     const confidenceLevel = systemState.mockTasks === 0 ? 99.9 : Math.max(50, 99.9 - (systemState.mockTasks * 25))
 
     return {
-      systemStatus: systemStatus as any,
+      systemStatus,
       confidenceLevel,
       lastVerification: new Date().toISOString(),
       totalTests,
       passedTests,
-      overallSecurity: passedTests === totalTests ? 'SECURE' : 'VULNERABLE' as any
+      overallSecurity: (passedTests === totalTests ? 'SECURE' : 'VULNERABLE') as 'SECURE' | 'VULNERABLE' | 'UNKNOWN'
     }
   }
 
-  private static verifyEventEvidence(event: any): boolean {
+  private static verifyEventEvidence(event: { checksum: string }): boolean {
     // Check if event checksum is valid
     return !!event.checksum && event.checksum.length > 10
   }
 
-  private static detectTampering(events: any[]): boolean {
+  private static detectTampering(events: Array<{ checksum: string }>): boolean {
     // Simple tampering detection - check for gaps in timestamps or invalid checksums
     return events.some(event => !event.checksum || event.checksum.length < 10)
   }
 
-  private static async getIndexedDBTasks(): Promise<any[]> {
+  private static async getIndexedDBTasks(): Promise<unknown[]> {
     return new Promise((resolve) => {
       try {
         const request = indexedDB.open('pomo-flow', 1)

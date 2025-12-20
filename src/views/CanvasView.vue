@@ -586,7 +586,7 @@ const _getVisibleProjectIds = () => {
 // 🎯 FIXED: Canvas should match sidebar behavior exactly with graceful degradation
 // The sidebar shows tasks based on smart views (Today, All Tasks, etc.) regardless of project filtering
 // CPU Optimization: Memoized filtered tasks with shallow comparison
-let lastFilteredTasks: any[] = []
+let lastFilteredTasks: Task[] = []
 let lastFilteredTasksHash = ''
 
 const filteredTasksWithProjectFiltering = computed(() => {
@@ -643,7 +643,7 @@ const systemHealthMessage = computed(() => {
 })
 
 // CPU Optimization: Memoized filtered tasks with canvas positions
-let lastCanvasTasks: any[] = []
+let lastCanvasTasks: Task[] = []
 let lastCanvasTasksHash = ''
 
 const filteredTasksWithCanvasPosition = computed(() => {
@@ -789,7 +789,7 @@ const resourceManager = {
   // Store all active watchers for cleanup
   watchers: [] as Array<() => void>,
   // Store all event listeners for cleanup
-  eventListeners: [] as Array<any>,
+  eventListeners: [] as Array<{ element: EventTarget; event: string; handler: EventListener; options?: AddEventListenerOptions | boolean }>,
   // Store all timers for cleanup
   timers: [] as Array<number>,
   // Store all intervals for cleanup
@@ -797,11 +797,11 @@ const resourceManager = {
   // Store all cleanup callbacks for cleanup
   cleanupCallbacks: [] as Array<() => void>,
   // Store Vue Flow instance for cleanup
-  vueFlowInstance: null as any,
+  vueFlowInstance: null as ReturnType<typeof useVueFlow> | null,
   // Store Vue Flow ref for cleanup
-  vueFlowRef: null as any,
+  vueFlowRef: null as InstanceType<typeof VueFlow> | null,
   // Store node update batcher for cleanup
-  nodeBatcher: null as any,
+  nodeBatcher: null as { flush: () => void } | null,
   addWatcher(unwatch: () => void) {
     this.watchers.push(unwatch)
   },
@@ -812,7 +812,7 @@ const resourceManager = {
   },
 
   // Add event listener to cleanup list
-  addEventListener(element: any, event: string, handler: any, options?: any) {
+  addEventListener(element: EventTarget | null | undefined, event: string, handler: EventListener, options?: AddEventListenerOptions | boolean) {
     // Add null check to prevent errors when element is not available
     if (!element) {
       console.warn(`⚠️ [RESOURCE_MANAGER] Cannot add event listener for "${event}" - element is null or undefined`)
@@ -970,12 +970,12 @@ const resourceManager = {
   },
 
   // Set Vue Flow ref for cleanup
-  setVueFlowRef(ref: any) {
+  setVueFlowRef(ref: InstanceType<typeof VueFlow> | null) {
     this.vueFlowRef = ref
   },
 
   // Set node update batcher for cleanup
-  setNodeBatcher(batcher: any) {
+  setNodeBatcher(batcher: { flush: () => void } | null) {
     this.nodeBatcher = batcher
   }
 }
@@ -1150,7 +1150,7 @@ const hasNoTasks = computed(() => {
 })
 
 // CPU Optimization: Cached tasks with canvas positions
-let lastTasksWithCanvasPositions: any[] = []
+let lastTasksWithCanvasPositions: Task[] = []
 let lastTasksWithCanvasPositionsHash = ''
 
 const tasksWithCanvasPositions = computed(() => {
@@ -1312,7 +1312,7 @@ const resizeState = ref({
 // Get section resize style for individual sections
 // BUG-019 FIX: Use currentX/currentY from resizeState for live position tracking
 // Also account for Vue Flow container's screen position when using position: fixed
-const getSectionResizeStyle = (section: any): Record<string, string | number> => {
+const getSectionResizeStyle = (section: CanvasSection): Record<string, string | number> => {
   if (!resizeState.value.isResizing || resizeState.value.sectionId !== section.id) {
     return {}
   }
@@ -1498,7 +1498,8 @@ class NodeUpdateBatcher {
 
       // Update Vue Flow internals once after all updates
       nextTick(() => {
-        (vueFlowRef.value as any)?.updateNodeInternals()
+        const vueFlowInstance = vueFlowRef.value as { updateNodeInternals?: () => void } | null
+        vueFlowInstance?.updateNodeInternals?.()
       })
 
     } catch (error) {
@@ -2078,7 +2079,7 @@ resourceManager.addWatcher(
 // Watch for Vue Flow node selection changes and sync back to canvas store (bidirectional sync)
 // NOTE: Console logs removed to fix 0-2 FPS issue
 resourceManager.addWatcher(
-  watch(() => nodes.value.filter(n => (n as any).selected).map(n => n.id), (vueFlowSelectedIds) => {
+  watch(() => nodes.value.filter(n => 'selected' in n && n.selected).map(n => n.id), (vueFlowSelectedIds) => {
     // Only update canvas store if there's an actual difference (prevents infinite loops)
     const currentStoreIds = canvasStore.selectedNodeIds
     const hasChanged = vueFlowSelectedIds.length !== currentStoreIds.length ||
@@ -2125,7 +2126,7 @@ const validateAlignmentState = (minNodes: number = 2): { canProceed: boolean; re
   }
 
   // Check selection synchronization
-  const vueFlowSelected = nodes.value.filter(n => (n as any).selected && n.type === 'taskNode')
+  const vueFlowSelected = nodes.value.filter(n => 'selected' in n && n.selected && n.type === 'taskNode')
   console.log(`  Selected in Vue Flow: ${vueFlowSelected.length}`)
 
   if (vueFlowSelected.length < minNodes) {
@@ -2202,7 +2203,8 @@ resourceManager.addWatcher(
 // CPU Optimization: Debounced viewport watch to prevent excessive updates
 const debouncedViewportUpdate = useDebounceFn(() => {
   nextTick(() => {
-    (vueFlowRef.value as any)?.updateNodeInternals()
+    const vueFlowInstance = vueFlowRef.value as { updateNodeInternals?: () => void } | null
+    vueFlowInstance?.updateNodeInternals?.()
   })
 }, 50) // 50ms debounce for viewport changes
 
@@ -2213,12 +2215,14 @@ const debouncedResizeSync = useDebounceFn(() => {
 
 // Register debounced functions with resource manager for cleanup
 resourceManager.addCleanupCallback(() => {
-  // VueUse debounced functions cleanup
-  if (typeof (debouncedViewportUpdate as any).cancel === 'function') {
-    (debouncedViewportUpdate as any).cancel()
+  // VueUse debounced functions cleanup - useDebounceFn returns function with cancel method
+  const viewportFn = debouncedViewportUpdate as { cancel?: () => void }
+  if (typeof viewportFn.cancel === 'function') {
+    viewportFn.cancel()
   }
-  if (typeof (debouncedResizeSync as any).cancel === 'function') {
-    (debouncedResizeSync as any).cancel()
+  const resizeFn = debouncedResizeSync as { cancel?: () => void }
+  if (typeof resizeFn.cancel === 'function') {
+    resizeFn.cancel()
   }
 })
 
@@ -2336,7 +2340,7 @@ const getContainingSection = (taskX: number, taskY: number, taskWidth: number = 
 }
 
 // Helper: Check if coordinates are within section bounds
-const isTaskInSectionBounds = (x: number, y: number, section: any, taskWidth: number = 220, taskHeight: number = 100) => {
+const isTaskInSectionBounds = (x: number, y: number, section: CanvasSection, taskWidth: number = 220, taskHeight: number = 100) => {
   const { x: sx, y: sy, width, height } = section.position
   const taskCenterX = x + taskWidth / 2
   const taskCenterY = y + taskHeight / 2
@@ -2467,7 +2471,7 @@ const withVueFlowErrorBoundary = (handlerName: string, handler: (...args: unknow
   // Use the comprehensive error handling system
   return vueFlowErrorHandling.createErrorHandler(
     handlerName,
-    async (...args: any[]) => {
+    async (...args: unknown[]) => {
       return await handler(...args)
     },
     {
@@ -2479,7 +2483,7 @@ const withVueFlowErrorBoundary = (handlerName: string, handler: (...args: unknow
 }
 
 // Handle node drag start - Vue Flow handles parent-child automatically now
-const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: any) => {
+const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: { node: Node }) => {
   const { node } = event
 
   // FIXED: Set drag guard to prevent syncNodes during drag
@@ -2497,7 +2501,7 @@ const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (eve
 })
 
 // Handle node drag stop - save position and apply section properties with parent-child support - FIXED to preserve group selection
-const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event: any) => {
+const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event: { node: Node }) => {
   const { node } = event
 
   // Preserve selection state during drag operations
@@ -2647,7 +2651,8 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
 
       // Ensure Vue Flow nodes reflect the restored selection
       nodes.value.forEach(node => {
-        (node as any).selected = selectedIdsBeforeDrag.includes(node.id)
+        const nodeWithSelection = node as Node & { selected?: boolean }
+        nodeWithSelection.selected = selectedIdsBeforeDrag.includes(node.id)
       })
     }
   }
@@ -2661,7 +2666,7 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
 })
 
 // Handle node drag - Vue Flow handles parent-child automatically now
-const handleNodeDrag = (event: any) => {
+const handleNodeDrag = (event: { node: Node }) => {
   const { node } = event
 
   // Optional: Add real-time drag feedback if needed
@@ -2676,11 +2681,11 @@ const handleNodeDrag = (event: any) => {
 }
 
 // Handle nodes change (for selection tracking and resize) - FIXED to prevent position updates during resize
-const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes: any) => {
-  changes.forEach((change: any) => {
+const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes: Array<{ type: string; id?: string; dimensions?: { width: number; height: number } }>) => {
+  changes.forEach((change) => {
     // Track selection changes - FIXED to maintain group connection
     if (change.type === 'select') {
-      const currentSelected = nodes.value.filter(n => (n as any).selected).map(n => n.id)
+      const currentSelected = nodes.value.filter(n => 'selected' in n && n.selected).map(n => n.id)
 
       // Only update canvas store if selection actually changed to prevent disconnection
       const selectedChanged = JSON.stringify(currentSelected) !== JSON.stringify(canvasStore.selectedNodeIds)
@@ -2726,7 +2731,7 @@ const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes
 })
 
 // Handle resize start with enhanced state tracking - FIXED to prevent coordinate conflicts
-const _handleResizeStart = (event: any) => {
+const _handleResizeStart = (event: { node?: Node; direction?: string }) => {
   console.log('🔧 Resize start:', event)
   const node = event.node || event
 
@@ -2784,7 +2789,7 @@ const _handleResizeStart = (event: any) => {
 
 // Handle resize with real-time preview - FIXED to prevent coordinate conflicts
 // BUG-019 FIX: Also track live position for correct preview positioning
-const _handleResize = (event: any) => {
+const _handleResize = (event: { node?: Node & { style?: { width?: string; height?: string }; position?: { x: number; y: number } } }) => {
   if (!resizeState.value.isResizing || !resizeState.value.sectionId) return
 
   const node = event.node || event
@@ -2820,7 +2825,7 @@ const _handleResize = (event: any) => {
 }
 
 // Handle resize end with cleanup and validation - FIXED to prevent coordinate conflicts
-const _handleResizeEnd = (event: any) => {
+const _handleResizeEnd = (event: { node?: Node }) => {
   console.log('🔧 Resize end:', event)
   const node = event.node || event
 
@@ -2889,7 +2894,7 @@ const _handleResizeEnd = (event: any) => {
 }
 
 // New NodeResizer event handlers with comprehensive logging
-const handleSectionResizeStart = ({ sectionId, event: _event }: any) => {
+const handleSectionResizeStart = ({ sectionId, event: _event }: { sectionId: string; event: MouseEvent }) => {
   // Capture original section position to track position changes during resize
   const section = canvasStore.sections.find(s => s.id === sectionId)
   if (section) {
@@ -2918,7 +2923,7 @@ const handleSectionResizeStart = ({ sectionId, event: _event }: any) => {
   }
 }
 
-const handleSectionResize = ({ sectionId: _sectionId, event }: any) => {
+const handleSectionResize = ({ sectionId: _sectionId, event }: { sectionId: string; event: { params?: { width?: number; height?: number; x?: number; y?: number }; width?: number; height?: number } }) => {
   // NodeResizer provides dimensions in event.params as { width, height, x, y }
   const width = event?.params?.width || event?.width
   const height = event?.params?.height || event?.height
@@ -2939,7 +2944,7 @@ const handleSectionResize = ({ sectionId: _sectionId, event }: any) => {
   }
 }
 
-const handleSectionResizeEnd = ({ sectionId, event }: any) => {
+const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event: { params?: { width?: number; height?: number }; width?: number; height?: number } }) => {
   console.log('🎯 [CanvasView] Section resize END:', {
     sectionId,
     eventKeys: event ? Object.keys(event) : [],
@@ -3330,25 +3335,25 @@ const closeGroupModal = () => {
   groupModalPosition.value = { x: 100, y: 100 }
 }
 
-const handleGroupCreated = (group: any) => {
+const handleGroupCreated = (group: CanvasSection) => {
   console.log('Group created:', group)
   syncNodes() // Refresh VueFlow to show the new group
 }
 
-const handleGroupUpdated = (group: any) => {
+const handleGroupUpdated = (group: CanvasSection) => {
   console.log('Group updated:', group)
   syncNodes() // Refresh VueFlow to show the updated group
 }
 
 // Group edit handlers
-const editGroup = (section: any) => {
+const editGroup = (section: CanvasSection) => {
   console.log('Editing group:', section)
   selectedSectionForEdit.value = section
   isGroupEditModalOpen.value = true
   closeCanvasContextMenu()
 }
 
-const deleteGroup = (section: any) => {
+const deleteGroup = (section: CanvasSection) => {
   console.log('Deleting group:', section)
   if (!section) return
 
@@ -3455,7 +3460,7 @@ const closeGroupEditModal = () => {
   selectedSectionForEdit.value = null
 }
 
-const handleGroupEditSave = (updatedSection: any) => {
+const handleGroupEditSave = (updatedSection: Partial<CanvasSection> & { id: string }) => {
   console.log('Saving group edit:', updatedSection)
   if (!updatedSection) return
 
@@ -3465,7 +3470,7 @@ const handleGroupEditSave = (updatedSection: any) => {
 }
 
 // Node context menu handlers (for sections)
-const handleNodeContextMenu = (event: any) => {
+const handleNodeContextMenu = (event: { node: Node; event: MouseEvent }) => {
   console.log('Node context menu triggered for:', event.node.id, event.node)
 
   // Prevent default behavior and event bubbling for all nodes
@@ -3573,7 +3578,7 @@ const disconnectEdge = () => {
 }
 
 // Edge event handler bridges
-const handleEdgeClick = (event: any) => {
+const handleEdgeClick = (event: EdgeMouseEvent) => {
   console.log('🖱️ Edge click triggered (component handler):', {
     edgeId: event.edge?.id,
     source: event.edge?.source,
@@ -3587,7 +3592,7 @@ const handleEdgeClick = (event: any) => {
   }
 }
 
-const handleEdgeContextMenu = (event: any) => {
+const handleEdgeContextMenu = (event: EdgeMouseEvent) => {
   console.log('🖱️ Edge context menu triggered (component handler):', {
     edgeId: event.edge?.id,
     source: event.edge?.source,
@@ -3606,7 +3611,7 @@ const handleEdgeContextMenu = (event: any) => {
 // Enhanced alignment operation helper with comprehensive error handling
 const executeAlignmentOperation = (
   operationName: string,
-  operation: (selectedNodes: any[]) => void,
+  operation: (selectedNodes: Node[]) => void,
   minNodes: number = 2
 ) => {
   console.log(`🔧 ${operationName}: Starting alignment operation`)
@@ -4100,7 +4105,8 @@ const handleKeyDown = async (event: KeyboardEvent) => {
   }
 
   if (import.meta.env.DEV) {
-    (window as any).__canvasDeleteDebug = {
+    const debugWindow = window as Window & { __canvasDeleteDebug?: unknown }
+    debugWindow.__canvasDeleteDebug = {
       selectedIds: selectedNodes.map(node => node.id),
       targetTag: target ? target.tagName : null,
       shiftKey: event.shiftKey
@@ -4145,7 +4151,7 @@ const handleKeyDown = async (event: KeyboardEvent) => {
         console.log('✅ deleteTask completed successfully')
         console.log('✅ After deleteTask - undo count:', undoHistory.undoCount.value)
         console.log('✅ After deleteTask - can undo:', undoHistory.canUndo.value)
-        console.log('✅ After deleteTask - last action:', (undoHistory as any).lastAction?.value)
+        console.log('✅ After deleteTask - last action:', (undoHistory as { lastAction?: { value?: unknown } }).lastAction?.value)
       } catch (error) {
         console.error('❌ deleteTask failed:', error)
       }
@@ -4167,7 +4173,7 @@ const handleKeyDown = async (event: KeyboardEvent) => {
         console.log('✅ updateTaskWithUndo completed successfully')
         console.log('✅ After updateTaskWithUndo - undo count:', undoHistory.undoCount.value)
         console.log('✅ After updateTaskWithUndo - can undo:', undoHistory.canUndo.value)
-        console.log('✅ After updateTaskWithUndo - last action:', (undoHistory as any).lastAction?.value)
+        console.log('✅ After updateTaskWithUndo - last action:', (undoHistory as { lastAction?: { value?: unknown } }).lastAction?.value)
       } catch (error) {
         console.error('❌ updateTaskWithUndo failed:', error)
       }
@@ -4185,7 +4191,7 @@ const handleKeyDown = async (event: KeyboardEvent) => {
 }
 
 // Handle connection start - set connection state to prevent context menus
-const handleConnectStart = (event: any) => {
+const handleConnectStart = (event: { nodeId?: string; handleId?: string; handleType?: string }) => {
   console.log('🔗 Connection started:', event)
   isConnecting.value = true
 
@@ -4196,7 +4202,7 @@ const handleConnectStart = (event: any) => {
 }
 
 // Handle connection end - clear connection state
-const handleConnectEnd = (event: any) => {
+const handleConnectEnd = (event: { nodeId?: string; handleId?: string; handleType?: string }) => {
   console.log('🔗 Connection ended:', event)
   // Add a small delay to ensure all connection logic completes - using resourceManager
   const timerId = setTimeout(() => {
@@ -4206,7 +4212,7 @@ const handleConnectEnd = (event: any) => {
 }
 
 // Handle connection creation - creates task dependency
-const handleConnect = withVueFlowErrorBoundary('handleConnect', (connection: any) => {
+const handleConnect = withVueFlowErrorBoundary('handleConnect', (connection: { source: string; target: string; sourceHandle?: string; targetHandle?: string }) => {
   console.log('🔗 Connection attempt:', connection)
   const { source, target } = connection
 
@@ -4709,13 +4715,13 @@ const handleSectionSettingsSave = (settings: { assignOnDrop: AssignOnDropSetting
 // Section management methods
 
   
-const _getTasksForSection = (section: any) => {
+const _getTasksForSection = (section: CanvasSection) => {
   const tasks = canvasStore.getTasksInSection(section, Array.isArray(filteredTasks.value) ? filteredTasks.value : [])
   // If section is collapsed, return empty array to hide tasks
   return section.isCollapsed ? [] : tasks
 }
 
-const _handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
+const _handleSectionTaskDrop = (event: DragEvent, slot: { position?: { x?: number }; y?: number }, section: CanvasSection) => {
   const data = event.dataTransfer?.getData('application/json')
   if (!data) return
 
@@ -4732,7 +4738,7 @@ const _handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
   // Why: applySectionPropertiesToTask calls moveTaskToSmartGroup which triggers syncNodes()
   // Problem: If isInInbox is still true when syncNodes runs, the task gets filtered out
   // Solution: Set isInInbox: false FIRST, then apply section properties (like dueDate for "Today")
-  const updates: any = {
+  const updates: Partial<Task> = {
     canvasPosition: { x, y },
     isInInbox: false  // Required for canvas visibility - applies to ALL sections
   }
@@ -4746,7 +4752,7 @@ const _handleSectionTaskDrop = (event: DragEvent, slot: any, section: any) => {
   applySectionPropertiesToTask(taskId, section)
 }
 
-const handleSectionUpdate = (data: any) => {
+const handleSectionUpdate = (data: { id?: string; name?: string }) => {
   // Update section name when edited in SectionNodeSimple
   if (data.name) {
     const sectionId = data.id || canvasStore.activeSectionId
@@ -4762,7 +4768,7 @@ const _handleSectionActivate = (sectionId: string) => {
   canvasStore.setActiveSection(sectionId)
 }
 
-const handleSectionContextMenu = (event: MouseEvent, section: any) => {
+const handleSectionContextMenu = (event: MouseEvent, section: CanvasSection) => {
   console.log('🎯 Section context menu triggered for:', section)
 
   // Prevent event from bubbling to Vue Flow's node context menu
@@ -4797,7 +4803,7 @@ const handleSelectionChange = withVueFlowErrorBoundary('handleSelectionChange', 
   console.log('🔄 Selection synchronization complete')
 })
 
-const _handleBulkAction = (action: string, params: any) => {
+const _handleBulkAction = (action: string, params: { nodeIds: string[]; status?: string; priority?: string | null }) => {
   const { nodeIds } = params
 
   switch (action) {
@@ -4873,9 +4879,9 @@ const handleTaskSelect = (task: Task, multiSelect: boolean) => {
   if (nodeIndex > -1) {
     // Update the Vue Flow node selection state to match canvas store
     const isSelected = canvasStore.selectedNodeIds.includes(task.id)
-    const nodeAny = nodes.value[nodeIndex] as any
-    if (nodeAny.selected !== isSelected) {
-      nodeAny.selected = isSelected
+    const nodeWithSelection = nodes.value[nodeIndex] as Node & { selected?: boolean }
+    if (nodeWithSelection.selected !== isSelected) {
+      nodeWithSelection.selected = isSelected
     }
   }
 }

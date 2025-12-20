@@ -3,7 +3,8 @@ import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useCanvasStore } from '@/stores/canvas'
 import { ConflictResolver } from '@/utils/conflictResolver'
-import type { ConflictInfo } from '@/types/conflicts'
+import type { ConflictInfo, DocumentVersion } from '@/types/conflicts'
+import { ConflictType } from '@/types/conflicts'
 import type { ConflictResolutionStrategy as _ConflictResolutionStrategy } from '@/types/sync'
 import type { Task } from '@/types/tasks'
 // CrossTabSaveCoordinator removed - Phase 2 simplification
@@ -465,13 +466,13 @@ const debouncedProcessMessages = () => {
     clearTimeout(messageTimeout)
   }
 
-  // Use performance-configured debounce delay
+  // Use performance-configured throttle delay
   const config = performanceMonitor.getConfig()
-  const debounceDelay = config.debounceDelay
+  const throttleDelay = config.throttleDelay
 
   messageTimeout = setTimeout(() => {
     processMessageQueue()
-  }, debounceDelay) // Dynamic debounce delay based on performance config
+  }, throttleDelay) // Dynamic throttle delay based on performance config
 }
 
 // Process queued messages with performance monitoring
@@ -545,7 +546,7 @@ const processMessageQueue = async () => {
 
     // Auto-optimize performance based on metrics
     const currentMetrics = performanceMonitor.getMetrics()
-    if (currentMetrics.messageCount > 0 && currentMetrics.messageCount % 50 === 0) {
+    if (currentMetrics.batchCount > 0 && currentMetrics.batchCount % 50 === 0) {
       performanceMonitor.optimizeConfiguration()
     }
 
@@ -643,12 +644,32 @@ const detectTaskConflicts = async (remoteOperation: TaskOperation, _taskStore: T
   const pendingLocalOp = pendingLocalOperations.value.get(remoteOperation.taskId)
 
   if (pendingLocalOp) {
+    // Create proper DocumentVersion objects for conflict detection
+    const localVersion: DocumentVersion = {
+      _id: remoteOperation.taskId || '',
+      _rev: '1-local',
+      data: pendingLocalOp.taskData || {},
+      updatedAt: new Date(pendingLocalOp.timestamp).toISOString(),
+      deviceId: 'local-tab',
+      version: 1
+    }
+
+    const remoteVersion: DocumentVersion = {
+      _id: remoteOperation.taskId || '',
+      _rev: '1-remote',
+      data: remoteOperation.taskData || {},
+      updatedAt: new Date(remoteOperation.timestamp).toISOString(),
+      deviceId: 'remote-tab',
+      version: 1
+    }
+
     const conflict: ConflictInfo = {
       documentId: remoteOperation.taskId,
-      localVersion: pendingLocalOp as unknown as Record<string, unknown>,
-      remoteVersion: remoteOperation as unknown as Record<string, unknown>,
-      timestamp: Date.now(),
-      conflictType: 'both_modified',
+      localVersion,
+      remoteVersion,
+      timestamp: new Date(),
+      conflictType: ConflictType.EDIT_EDIT,
+      severity: 'medium',
       autoResolvable: false
     }
 
@@ -876,14 +897,14 @@ const applyBrowserOptimizations = () => {
     const compatibilityInfo = browserCompatibility.getCompatibilityInfo()
 
     // Apply performance configuration from recommended config
+    // Only use valid PerformanceConfig properties
     performanceMonitor.updateConfig({
-      maxQueueSize: 100,
       batchSize: 10,
-      batchTimeout: 1000,
-      debounceDelay: 100,
-      cacheTimeout: 5000,
-      enableCompression: false,
-      enableDeduplication: true
+      throttleDelay: 100,
+      maxMemoryUsage: 50,
+      compressionEnabled: false,
+      cachingEnabled: true,
+      maxCacheSize: 1000
     })
 
     // Log optimization details

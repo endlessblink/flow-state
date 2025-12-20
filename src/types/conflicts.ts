@@ -46,6 +46,9 @@ export interface ResolutionResult {
     preservedRemoteFields?: string[]
     resolutionReason?: string
     timeDifference?: number
+    winnerDevice?: string
+    localDeleted?: boolean
+    remoteDeleted?: boolean
   }
 }
 

@@ -189,6 +189,26 @@ interface Props {
   enableRecovery?: boolean
 }
 
+interface HealthStatus {
+  status: string
+  lastSync: Date
+  isHealthy?: boolean
+  consecutiveFailures?: number
+  maxFailures?: number
+  isOnline?: boolean
+  remoteConnected?: boolean
+  errorCount?: number
+  needsUserIntervention?: boolean
+}
+
+interface SyncError {
+  message?: string
+  direction?: string
+  timestamp?: Date
+  retryCount?: number
+  isRetryable?: boolean
+}
+
 const props = withDefaults(defineProps<Props>(), {
   fallbackComponent: undefined,
   maxRetries: 3,
@@ -200,10 +220,20 @@ const props = withDefaults(defineProps<Props>(), {
 const { clear: clearDatabase } = useDatabase()
 
 // Mock syncManager to prevent undefined references (temporary until enhanced sync manager is re-enabled)
-const syncManager = {
+const syncManager: {
+  getHealthStatus: () => HealthStatus
+  hasErrors: { value: boolean }
+  syncErrors: { value: SyncError[] }
+  pauseSync: () => Promise<void>
+  resumeSync: () => Promise<void>
+  forceSync: () => Promise<void>
+  clearSyncErrors?: () => void
+  cleanup?: () => Promise<void>
+  init?: () => Promise<void>
+} = {
   getHealthStatus: () => ({ status: 'healthy', lastSync: new Date() }),
   hasErrors: { value: false },
-  syncErrors: { value: [] as string[] },
+  syncErrors: { value: [] },
   pauseSync: async () => console.log('Mock: pauseSync called'),
   resumeSync: async () => console.log('Mock: resumeSync called'),
   forceSync: async () => console.log('Mock: forceSync called')
@@ -238,16 +268,16 @@ const checkForCriticalErrors = () => {
   const health = healthStatus.value
 
   // Check if we need user intervention
-  if ((health as any).needsUserIntervention && retryCount.value >= props.maxRetries) {
+  if (health.needsUserIntervention && retryCount.value >= props.maxRetries) {
     hasCriticalError.value = true
     errorMessage.value = 'The sync system has encountered repeated failures and needs your attention.'
     errorDetails.value = formatErrorDetails()
   }
 
   // Check for warnings
-  if ((health as any).consecutiveFailures > 0 && !(health as any).needsUserIntervention) {
+  if ((health.consecutiveFailures ?? 0) > 0 && !health.needsUserIntervention) {
     hasWarnings.value = true
-    warningMessage.value = `Sync experiencing issues (${(health as any).consecutiveFailures} consecutive failures)`
+    warningMessage.value = `Sync experiencing issues (${health.consecutiveFailures} consecutive failures)`
   } else {
     hasWarnings.value = false
   }
@@ -260,22 +290,22 @@ const formatErrorDetails = (): string => {
 
   let details = `Health Status:\n`
   details += `- Status: ${health.status}\n`
-  details += `- Is Healthy: ${(health as any).isHealthy}\n`
-  details += `- Consecutive Failures: ${(health as any).consecutiveFailures}/${(health as any).maxFailures}\n`
-  details += `- Is Online: ${(health as any).isOnline}\n`
-  details += `- Remote Connected: ${(health as any).remoteConnected}\n`
-  details += `- Error Count: ${(health as any).errorCount}\n`
+  details += `- Is Healthy: ${health.isHealthy}\n`
+  details += `- Consecutive Failures: ${health.consecutiveFailures}/${health.maxFailures}\n`
+  details += `- Is Online: ${health.isOnline}\n`
+  details += `- Remote Connected: ${health.remoteConnected}\n`
+  details += `- Error Count: ${health.errorCount}\n`
 
   if (errors.length > 0) {
     details += `\nRecent Errors:\n`
     errors.forEach((error, index) => {
-      details += `${index + 1}. ${(error as any).message} (${(error as any).direction || 'unknown'})\n`
-      details += `   Time: ${(error as any).timestamp?.toISOString() || 'Unknown'}\n`
-      if ((error as any).retryCount) {
-        details += `   Retry Count: ${(error as any).retryCount}\n`
+      details += `${index + 1}. ${error.message ?? 'Unknown'} (${error.direction || 'unknown'})\n`
+      details += `   Time: ${error.timestamp?.toISOString() || 'Unknown'}\n`
+      if (error.retryCount) {
+        details += `   Retry Count: ${error.retryCount}\n`
       }
-      if ((error as any).isRetryable !== undefined) {
-        details += `   Retryable: ${(error as any).isRetryable}\n`
+      if (error.isRetryable !== undefined) {
+        details += `   Retryable: ${error.isRetryable}\n`
       }
     })
   }
@@ -293,15 +323,15 @@ const retryInitialization = async () => {
   try {
     await startRecovery('Reinitializing Sync System')
 
-    // Clear existing errors - use available method or cast
-    ;(syncManager as any).clearSyncErrors?.()
+    // Clear existing errors - use available method
+    syncManager.clearSyncErrors?.()
 
-    // Reset sync manager - use available method or cast
-    await (syncManager as any).cleanup?.()
+    // Reset sync manager - use available method
+    await syncManager.cleanup?.()
 
     // Reinitialize
     await nextTick()
-    await (syncManager as any).init?.()
+    await syncManager.init?.()
 
     // Check if recovery was successful
     await nextTick()
@@ -316,8 +346,9 @@ const retryInitialization = async () => {
 
   } catch (error) {
     console.error('Retry initialization failed:', error)
-    errorMessage.value = `Retry failed: ${(error as any).message || (error as any).toString()}`
-    errorDetails.value = (error as any).stack || (error as any).toString()
+    const errorObj = error instanceof Error ? error : { message: String(error), stack: undefined }
+    errorMessage.value = `Retry failed: ${errorObj.message}`
+    errorDetails.value = errorObj.stack || String(error)
   } finally {
     isRetrying.value = false
     isRecovering.value = false
@@ -332,7 +363,7 @@ const resetToOfflineMode = async () => {
     await syncManager.pauseSync()
 
     // Clear errors and work offline
-    ;(syncManager as any).clearSyncErrors?.()
+    syncManager.clearSyncErrors?.()
     hasCriticalError.value = false
     errorMessage.value = ''
     errorDetails.value = ''
@@ -360,7 +391,7 @@ const clearAllData = async () => {
     await clearDatabase()
 
     // Clear sync errors
-    ;(syncManager as any).clearSyncErrors?.()
+    syncManager.clearSyncErrors?.()
 
     // Reset error state
     hasCriticalError.value = false
@@ -375,7 +406,8 @@ const clearAllData = async () => {
 
   } catch (error) {
     console.error('Failed to clear data:', error)
-    errorMessage.value = `Failed to clear data: ${(error as any).message || (error as any).toString()}`
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    errorMessage.value = `Failed to clear data: ${errorMsg}`
   } finally {
     isRecovering.value = false
   }
@@ -390,11 +422,11 @@ const exportErrorLog = () => {
       timestamp: new Date().toISOString(),
       health: health,
       errors: errors.map(e => ({
-        message: (e as any).message || 'Unknown error',
-        direction: (e as any).direction || 'unknown',
-        timestamp: (e as any).timestamp?.toISOString() || new Date().toISOString(),
-        retryCount: (e as any).retryCount,
-        isRetryable: (e as any).isRetryable
+        message: e.message || 'Unknown error',
+        direction: e.direction || 'unknown',
+        timestamp: e.timestamp?.toISOString() || new Date().toISOString(),
+        retryCount: e.retryCount,
+        isRetryable: e.isRetryable
       })),
       userAgent: navigator.userAgent,
       url: window.location.href
@@ -435,7 +467,8 @@ const checkConnection = async () => {
     }
 
   } catch (error) {
-    connectionStatus.value = `❌ Connection error: ${(error as any).message || (error as any).toString()}`
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    connectionStatus.value = `❌ Connection error: ${errorMsg}`
   }
 }
 

@@ -27,6 +27,9 @@ Activate this skill when user mentions:
 - "storybook database error"
 - "storybook modal cutoff"
 - "storybook rendering issues"
+- "create story" / "create stories"
+- "storybook tokens" / "hardcoded colors"
+- "tokenize storybook"
 
 ---
 
@@ -587,7 +590,11 @@ When stores are imported in Storybook:
 3. **Test in docs view** - Docs pages render differently than story pages
 4. **Check console** - Database errors appear in browser console
 5. **Use realistic data** - Mock data should match real interface types
-6. **Use design tokens** - Style with `var(--token)` not hardcoded values
+6. **MANDATORY: Use design tokens** - ALL colors must use `var(--token)` not hardcoded values:
+   - No hex colors (`#xxx`)
+   - No rgb/rgba values
+   - Use tokens from `design-tokens.css` or `token_definitions.json`
+   - Run token audit before completing any story
 
 ---
 

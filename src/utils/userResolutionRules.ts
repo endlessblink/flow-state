@@ -29,7 +29,7 @@ export interface UserRuleSet {
 export interface RuleExecutionResult {
   rule: UserResolutionRule
   applied: boolean
-  result?: any
+  result?: unknown
   reason: string
   executionTime: number
 }
@@ -63,7 +63,7 @@ export class UserResolutionRulesManager {
           name: 'Prefer longer titles',
           field: 'title',
           condition: 'always',
-          action: 'prefer-longer' as any,
+          action: 'prefer-longer',
           priority: 1
         },
         fields: ['title'],
@@ -93,7 +93,7 @@ export class UserResolutionRulesManager {
           name: 'Prefer completed status',
           field: 'completed',
           condition: 'always',
-          action: 'prefer-true' as any,
+          action: 'prefer-true',
           priority: 1
         },
         fields: ['completed'],
@@ -108,7 +108,7 @@ export class UserResolutionRulesManager {
           name: 'Use higher priority',
           field: 'priority',
           condition: 'always',
-          action: 'prefer-higher' as any,
+          action: 'prefer-higher',
           priority: 1
         },
         fields: ['priority'],
@@ -123,7 +123,7 @@ export class UserResolutionRulesManager {
           name: 'Prefer sooner due date',
           field: 'dueDate',
           condition: 'always',
-          action: 'prefer-earlier' as any,
+          action: 'prefer-earlier',
           priority: 1
         },
         fields: ['dueDate'],
@@ -140,7 +140,7 @@ export class UserResolutionRulesManager {
           name: 'Prefer newer timestamp',
           field: 'updatedAt',
           condition: 'when-newer',
-          action: 'prefer-newer' as any,
+          action: 'prefer-newer',
           priority: 1
         },
         fields: ['updatedAt', 'createdAt', 'modifiedAt'],
@@ -155,7 +155,7 @@ export class UserResolutionRulesManager {
           name: 'Prefer non-empty values',
           field: '',
           condition: 'when-empty',
-          action: 'prefer-non-empty' as any,
+          action: 'prefer-non-empty',
           priority: 1
         },
         fields: ['*'],
@@ -169,8 +169,8 @@ export class UserResolutionRulesManager {
         template: {
           name: 'Prefer longer content',
           field: '',
-          condition: 'when-longer' as any,
-          action: 'prefer-longer' as any,
+          condition: 'when-longer',
+          action: 'prefer-longer',
           priority: 1
         },
         fields: ['title', 'description', 'notes'],
@@ -187,7 +187,7 @@ export class UserResolutionRulesManager {
           name: 'Union all tags',
           field: 'tags',
           condition: 'always',
-          action: 'union' as any,
+          action: 'union',
           priority: 1
         },
         fields: ['tags', 'categories', 'labels'],
@@ -202,7 +202,7 @@ export class UserResolutionRulesManager {
           name: 'Merge metadata',
           field: 'metadata',
           condition: 'always',
-          action: 'merge-deep' as any,
+          action: 'merge-deep',
           priority: 1
         },
         fields: ['metadata', 'properties', 'settings'],
@@ -365,7 +365,7 @@ export class UserResolutionRulesManager {
   /**
    * Get applicable rules for a conflict
    */
-  getApplicableRules(fieldName: string, localValue: any, remoteValue: any): UserResolutionRule[] {
+  getApplicableRules(fieldName: string, localValue: unknown, remoteValue: unknown): UserResolutionRule[] {
     const allRules: UserResolutionRule[] = []
 
     // Add global rules
@@ -397,9 +397,9 @@ export class UserResolutionRulesManager {
    */
   async applyResolutionRules(
     fieldName: string,
-    localValue: any,
-    remoteValue: any,
-    baseValue?: any
+    localValue: unknown,
+    remoteValue: unknown,
+    baseValue?: unknown
   ): Promise<RuleExecutionResult[]> {
     const applicableRules = this.getApplicableRules(fieldName, localValue, remoteValue)
     const results: RuleExecutionResult[] = []
@@ -448,11 +448,11 @@ export class UserResolutionRulesManager {
    */
   private async executeRule(
     rule: UserResolutionRule,
-    localValue: any,
-    remoteValue: any,
-    _baseValue?: any
-  ): Promise<{ applied: boolean; value?: any; reason: string }> {
-    switch (rule.action as any) {
+    localValue: unknown,
+    remoteValue: unknown,
+    _baseValue?: unknown
+  ): Promise<{ applied: boolean; value?: unknown; reason: string }> {
+    switch (rule.action) {
       case 'prefer-local':
         return {
           applied: true,
@@ -611,8 +611,8 @@ export class UserResolutionRulesManager {
   /**
    * Evaluate rule condition
    */
-  private evaluateCondition(rule: UserResolutionRule, localValue: any, remoteValue: any): boolean {
-    switch (rule.condition as any) {
+  private evaluateCondition(rule: UserResolutionRule, localValue: unknown, remoteValue: unknown): boolean {
+    switch (rule.condition) {
       case 'always':
         return true
 
@@ -647,7 +647,7 @@ export class UserResolutionRulesManager {
   /**
    * Check if value is a timestamp
    */
-  private isTimestamp(value: any): boolean {
+  private isTimestamp(value: unknown): boolean {
     if (typeof value === 'number') {
       return value > 1000000000 && value < 2000000000 // Reasonable timestamp range
     }
@@ -656,7 +656,8 @@ export class UserResolutionRulesManager {
       return !isNaN(date.getTime())
     }
     if (value && typeof value === 'object' && 'timestamp' in value) {
-      return typeof value.timestamp === 'number'
+      const ts = (value as { timestamp: unknown }).timestamp
+      return typeof ts === 'number'
     }
     return false
   }
@@ -664,11 +665,12 @@ export class UserResolutionRulesManager {
   /**
    * Extract timestamp from value
    */
-  private extractTimestamp(value: any): number {
+  private extractTimestamp(value: unknown): number {
     if (typeof value === 'number') return value
     if (typeof value === 'string') return new Date(value).getTime()
     if (value && typeof value === 'object' && 'timestamp' in value) {
-      return typeof value.timestamp === 'number' ? value.timestamp : 0
+      const ts = (value as { timestamp: unknown }).timestamp
+      return typeof ts === 'number' ? ts : 0
     }
     return 0
   }

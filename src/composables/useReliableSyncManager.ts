@@ -515,7 +515,8 @@ export const useReliableSyncManager = () => {
   const performReliableSync = async (): Promise<void> => {
     console.log('🔄 [SYNC] Performing reliable sync...')
 
-    const operationId = logger.startSyncOperation('full_sync')
+    const syncOperation = logger.startSyncOperation('full_sync')
+    const operationId = syncOperation.operationId
 
     try {
       if (!localDB) {

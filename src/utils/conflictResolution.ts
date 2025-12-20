@@ -45,9 +45,9 @@ export interface TaskConflict {
 export interface UserResolutionRule {
   name: string
   field: string
-  condition: 'always' | 'when-newer' | 'when-empty' | 'when-contains'
+  condition: 'always' | 'when-newer' | 'when-empty' | 'when-contains' | 'when-longer'
   value?: unknown
-  action: 'prefer-local' | 'prefer-remote' | 'merge' | 'ask' | 'prefer-truthy' | 'prefer-either-true' | 'prefer-longer'
+  action: 'prefer-local' | 'prefer-remote' | 'merge' | 'ask' | 'prefer-truthy' | 'prefer-either-true' | 'prefer-longer' | 'prefer-true' | 'prefer-false' | 'prefer-higher' | 'prefer-earlier' | 'prefer-newer' | 'prefer-non-empty' | 'union' | 'merge-deep'
   priority: number
 }
 

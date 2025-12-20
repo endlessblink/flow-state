@@ -203,10 +203,10 @@ export class ConflictResolver {
         winnerDevice,
         localDeleted,
         remoteDeleted,
-        mergedFields: [],
+        mergedFields: [] as string[],
         preservedLocalFields: winnerDevice === 'local' ? Object.keys(winnerData) : [],
         preservedRemoteFields: winnerDevice === 'remote' ? Object.keys(winnerData) : []
-      } as any
+      }
     }
   }
 
@@ -284,11 +284,11 @@ export class ConflictResolver {
       timestamp: new Date(),
       conflictData: conflict,
       metadata: {
-        winnerDevice: 'local' as any,
-        mergedFields: [],
+        winnerDevice: 'local',
+        mergedFields: [] as string[],
         preservedLocalFields: Object.keys(localData),
-        preservedRemoteFields: []
-      } as any
+        preservedRemoteFields: [] as string[]
+      }
     }
   }
 
@@ -315,11 +315,11 @@ export class ConflictResolver {
       timestamp: new Date(),
       conflictData: conflict,
       metadata: {
-        winnerDevice: 'remote' as any,
-        mergedFields: [],
-        preservedLocalFields: [],
+        winnerDevice: 'remote',
+        mergedFields: [] as string[],
+        preservedLocalFields: [] as string[],
         preservedRemoteFields: Object.keys(remoteData)
-      } as any
+      }
     }
   }
 
@@ -336,17 +336,15 @@ export class ConflictResolver {
       ...lastWriteResult,
       resolutionType: ResolutionType.MANUAL,
       metadata: {
-        ...lastWriteResult.metadata,
-        // requiresManualReview: true,
-        // autoResolvedWithFallback: true
-      } as any
+        ...lastWriteResult.metadata
+      }
     }
   }
 
   /**
    * Smart merge data from two versions
    */
-  private smartMergeData(localData: any, remoteData: any): any {
+  private smartMergeData(localData: Record<string, unknown>, remoteData: Record<string, unknown>): Record<string, unknown> {
     const merged = { ...localData }
 
     // Merge fields from remote that don't conflict
@@ -375,7 +373,7 @@ export class ConflictResolver {
   /**
    * Check if a specific field can be merged
    */
-  private canMergeField(key: string, localValue: any, remoteValue: any): boolean {
+  private canMergeField(key: string, localValue: unknown, remoteValue: unknown): boolean {
     // Never merge critical identifier fields
     const criticalFields = ['id', 'title', 'name', '_id']
     if (criticalFields.includes(key)) {
@@ -400,7 +398,7 @@ export class ConflictResolver {
   /**
    * Merge values for a specific field
    */
-  private mergeFieldValues(key: string, localValue: any, remoteValue: any): any {
+  private mergeFieldValues(_key: string, localValue: unknown, remoteValue: unknown): unknown {
     // Merge arrays (concatenate and dedupe)
     if (Array.isArray(localValue) && Array.isArray(remoteValue)) {
       const merged = [...localValue, ...remoteValue]
@@ -420,7 +418,7 @@ export class ConflictResolver {
   /**
    * Get list of fields that were merged
    */
-  private getMergedFields(localData: any, remoteData: any): string[] {
+  private getMergedFields(localData: Record<string, unknown>, remoteData: Record<string, unknown>): string[] {
     const merged: string[] = []
 
     for (const [key, remoteValue] of Object.entries(remoteData)) {
@@ -437,7 +435,7 @@ export class ConflictResolver {
   /**
    * Get fields preserved from a version in the final merged result
    */
-  private getPreservedFields(sourceData: any, mergedData: any): string[] {
+  private getPreservedFields(sourceData: Record<string, unknown>, mergedData: Record<string, unknown>): string[] {
     return Object.keys(sourceData).filter(key => mergedData[key] === sourceData[key])
   }
 
@@ -471,7 +469,7 @@ export class ConflictResolver {
   /**
    * Prepare resolved document with conflict metadata
    */
-  private prepareResolvedDocument(version: DocumentVersion, conflict: ConflictInfo): any {
+  private prepareResolvedDocument(version: DocumentVersion, conflict: ConflictInfo): Record<string, unknown> {
     // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
     if (!version) {
       console.error(`❌ prepareResolvedDocument called with null version for conflict ${conflict.documentId}`)
@@ -508,7 +506,7 @@ export class ConflictResolver {
   /**
    * Calculate checksum for data
    */
-  private calculateChecksum(data: any): string {
+  private calculateChecksum(data: Record<string, unknown>): string {
     try {
       const sortedData = JSON.stringify(data, Object.keys(data || {}).sort())
       return btoa(sortedData).slice(0, 16)

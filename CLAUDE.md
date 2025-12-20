@@ -503,6 +503,38 @@ TASK-022 is IN_PROGRESS and also modifies tasks.ts
    Recommend working on TASK-014 or TASK-023 instead."
 ```
 
+### Automatic Task Locking (Multi-Instance Coordination)
+
+**This project has automatic task locking to prevent multiple Claude Code instances from editing the same task files simultaneously.**
+
+**How it works:**
+1. **PreToolUse hook** (`task-lock-enforcer.sh`) runs before every Edit/Write operation
+2. If the file belongs to a MASTER_PLAN tracked task, the hook checks `.claude/locks/`
+3. If another session owns the lock → **Edit is BLOCKED with exit code 2**
+4. If no lock exists → Lock is acquired and edit proceeds
+
+**What you'll see when blocked:**
+```
+TASK CONFLICT BLOCKED: Cannot edit tasks.ts
+
+TASK-022 is currently locked by another Claude Code session.
+  - Locked by session: abc123...
+  - Locked at: 2025-12-20 09:58:58
+
+To resolve:
+1. Wait for the other session to complete
+2. Or manually delete: .claude/locks/TASK-022.lock
+```
+
+**Session lifecycle:**
+- **SessionStart**: You'll be informed of any active locks from other sessions
+- **SessionEnd**: Your locks are automatically released
+
+**Lock files location:** `.claude/locks/TASK-XXX.lock`
+**Lock expiry:** 4 hours (stale locks auto-cleaned)
+
+**SOP Reference:** `docs/🐛 debug/sop/multi-instance-task-locking-2025-12-20.md`
+
 ### Best Practices
 1. **Composables over Mixins** - Use Vue 3 composables for reusable logic
 2. **Pinia for State** - Centralized state management with proper reactivity

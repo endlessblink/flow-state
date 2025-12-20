@@ -187,7 +187,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { NButton, NBadge, NTag, NIcon as _NIcon } from 'naive-ui'
 import { Plus as _Plus, Zap as _Zap, Clock as _Clock, ChevronLeft, ChevronRight, Timer } from 'lucide-vue-next'
-import { useTaskStore } from '@/stores/tasks'
+import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
@@ -217,7 +217,7 @@ const selectedProject = ref<string | null>(null)
 const showContextMenu = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
-const contextMenuTask = ref<any>(null) // Task that was right-clicked
+const contextMenuTask = ref<Task | null>(null) // Task that was right-clicked
 
 // Get ONLY inbox tasks (tasks without canvas position, excluding done tasks)
 // Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
@@ -276,19 +276,19 @@ const isThisWeek = (dateStr?: string) => {
   return date >= today && date < weekEnd
 }
 
-const hasDate = (task: any) => {
+const hasDate = (task: Task) => {
   // Check instances first (new format)
   if (task.instances && task.instances.length > 0) {
-    return task.instances.some((inst: any) => inst.scheduledDate)
+    return task.instances.some((inst) => inst.scheduledDate)
   }
   // Fallback to legacy scheduledDate
   return !!task.scheduledDate
 }
 
 // Check if task is scheduled on calendar (has instances with dates) - TASK-018
-const isScheduledOnCalendar = (task: any): boolean => {
+const isScheduledOnCalendar = (task: Task): boolean => {
   if (!task.instances || task.instances.length === 0) return false
-  return task.instances.some((inst: any) => inst.scheduledDate)
+  return task.instances.some((inst) => inst.scheduledDate)
 }
 
 // Clear all additional filters - TASK-018
@@ -315,7 +315,7 @@ const timeFilteredTasks = computed(() => {
       return tasks.filter(task => {
         // Check instances for today scheduling
         if (task.instances && task.instances.length > 0) {
-          if (task.instances.some((inst: any) => inst.scheduledDate === today)) return true
+          if (task.instances.some((inst) => inst.scheduledDate === today)) return true
         }
         // Fallback to legacy scheduledDate
         if (task.scheduledDate === today) return true
@@ -329,7 +329,7 @@ const timeFilteredTasks = computed(() => {
         const tomorrow = getTomorrow().toISOString().split('T')[0]
         // Check instances for tomorrow scheduling
         if (task.instances && task.instances.length > 0) {
-          if (task.instances.some((inst: any) => inst.scheduledDate === tomorrow)) return true
+          if (task.instances.some((inst) => inst.scheduledDate === tomorrow)) return true
         }
         // Fallback to legacy scheduledDate
         if (task.scheduledDate === tomorrow) return true
@@ -340,7 +340,7 @@ const timeFilteredTasks = computed(() => {
       return tasks.filter(task => {
         // Check instances for this week scheduling
         if (task.instances && task.instances.length > 0) {
-          if (task.instances.some((inst: any) => isThisWeek(inst.scheduledDate))) return true
+          if (task.instances.some((inst) => isThisWeek(inst.scheduledDate))) return true
         }
         // Fallback to legacy scheduledDate
         if (isThisWeek(task.scheduledDate)) return true
@@ -415,7 +415,7 @@ const processBrainDump = () => {
     // Parse task line for priority, duration, etc.
     const cleanedLine = line.trim()
     let title = cleanedLine
-    let priority: any = null
+    let priority: 'high' | 'medium' | 'low' | null = null
     let estimatedDuration: number | undefined
 
     // Extract priority (e.g., "!!!", "!!", "!")
@@ -453,7 +453,7 @@ const processBrainDump = () => {
 }
 
 // Task interaction handlers
-const handleTaskClick = (event: MouseEvent, task: any) => {
+const handleTaskClick = (event: MouseEvent, task: Task) => {
   if (event.ctrlKey || event.metaKey) {
     // Toggle selection with Ctrl/Cmd
     if (selectedTaskIds.value.has(task.id)) {
@@ -468,12 +468,12 @@ const handleTaskClick = (event: MouseEvent, task: any) => {
   }
 }
 
-const handleTaskDoubleClick = (task: any) => {
+const handleTaskDoubleClick = (task: Task) => {
   // TODO: Implement task editing functionality
   console.log('Edit task:', task.id)
 }
 
-const handleTaskKeydown = (event: KeyboardEvent, task: any) => {
+const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
   // Handle Delete/Backspace key to delete task
   if (event.key === 'Delete' || event.key === 'Backspace') {
     event.preventDefault()
@@ -489,14 +489,14 @@ const handleTaskKeydown = (event: KeyboardEvent, task: any) => {
   }
 }
 
-const handleTaskContextMenu = (event: MouseEvent, task: any) => {
+const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
   contextMenuTask.value = task
   contextMenuX.value = event.clientX
   contextMenuY.value = event.clientY
   showContextMenu.value = true
 }
 
-const handleDragStart = (event: DragEvent, task: any) => {
+const handleDragStart = (event: DragEvent, task: Task) => {
   if (event.dataTransfer) {
     event.dataTransfer.setData('application/json', JSON.stringify({
       type: 'task',
@@ -519,7 +519,7 @@ const handleSetPriority = (priority: string) => {
 
   tasksToUpdate.forEach(taskId => {
     if (taskId) {
-      updateTaskWithUndo(taskId, { priority: priority as any })
+      updateTaskWithUndo(taskId, { priority: priority as Task['priority'] })
     }
   })
 
@@ -534,7 +534,7 @@ const handleSetStatus = (status: string) => {
 
   tasksToUpdate.forEach(taskId => {
     if (taskId) {
-      updateTaskWithUndo(taskId, { status: status as any })
+      updateTaskWithUndo(taskId, { status: status as Task['status'] })
     }
   })
 

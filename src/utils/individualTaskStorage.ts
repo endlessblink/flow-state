@@ -12,6 +12,27 @@
 
 import type { Task } from '@/types/tasks'
 
+// PouchDB document interfaces
+interface TaskDocument extends PouchDB.Core.IdMeta, PouchDB.Core.GetMeta {
+  type: 'task'
+  data: Record<string, unknown>
+}
+
+interface LegacyTasksDocument extends PouchDB.Core.IdMeta, PouchDB.Core.GetMeta {
+  data?: Task[]
+}
+
+interface DeletedDocument {
+  _id: string
+  _rev: string
+  _deleted: true
+}
+
+// Helper type for window with database
+interface WindowWithDb {
+  pomoFlowDb?: PouchDB.Database
+}
+
 // Document prefix for individual task storage
 export const TASK_DOC_PREFIX = 'task-'
 
@@ -107,20 +128,21 @@ export const saveTask = async (
       }
 
       return await validDb.put(doc)
-    } catch (error: any) {
+    } catch (error) {
       retryCount++
+      const pouchError = error as { status?: number; message?: string }
 
       // Handle connection closing error - retry
       if (isConnectionClosingError(error) && retryCount < maxRetries) {
         console.warn(`⚠️ [TASK-STORAGE] Connection closing on task ${task.id} (attempt ${retryCount}/${maxRetries}), retrying...`)
         await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
         // Update db reference from window
-        db = (window as any).pomoFlowDb || db
+        db = (window as unknown as WindowWithDb).pomoFlowDb || db
         continue
       }
 
       // Handle conflict by refetching and retrying
-      if (error.status === 409) {
+      if (pouchError.status === 409) {
         console.log(`🔄 Conflict saving task ${task.id}, refetching and retrying...`)
         const freshDoc = await db.get(docId)
         const doc = {
@@ -191,14 +213,15 @@ export const saveTasks = async (
       const results = await validDb.bulkDocs(docs)
 
       // Log any errors
-      results.forEach((result: any, index) => {
-        if (result.error) {
-          console.error(`❌ Failed to save task ${tasks[index].id}:`, result.message)
+      results.forEach((result, index) => {
+        const errorResult = result as PouchDB.Core.Error
+        if (errorResult.error) {
+          console.error(`❌ Failed to save task ${tasks[index].id}:`, errorResult.message)
         }
       })
 
       return results
-    } catch (error: any) {
+    } catch (error) {
       retryCount++
 
       // Handle connection closing error - retry
@@ -206,7 +229,7 @@ export const saveTasks = async (
         console.warn(`⚠️ [TASK-STORAGE] Connection closing on bulk save (attempt ${retryCount}/${maxRetries}), retrying...`)
         await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
         // Update db reference from window
-        db = (window as any).pomoFlowDb || db
+        db = (window as unknown as WindowWithDb).pomoFlowDb || db
         continue
       }
 
@@ -232,8 +255,9 @@ export const deleteTask = async (
       const validDb = await getDbWithRetry(db)
       const doc = await validDb.get(docId)
       return await validDb.remove(doc)
-    } catch (error: any) {
-      if (error.status === 404) {
+    } catch (error) {
+      const pouchError = error as { status?: number }
+      if (pouchError.status === 404) {
         console.log(`Task ${taskId} not found, already deleted`)
         return null
       }
@@ -244,7 +268,7 @@ export const deleteTask = async (
       if (isConnectionClosingError(error) && retryCount < maxRetries) {
         console.warn(`⚠️ [TASK-STORAGE] Connection closing on delete ${taskId} (attempt ${retryCount}/${maxRetries}), retrying...`)
         await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as any).pomoFlowDb || db
+        db = (window as unknown as WindowWithDb).pomoFlowDb || db
         continue
       }
 
@@ -276,27 +300,28 @@ export const loadAllTasks = async (
 
       for (const row of result.rows) {
         if (row.doc && 'data' in row.doc) {
-          const taskData = (row.doc as any).data
+          const taskDoc = row.doc as TaskDocument
+          const taskData = taskDoc.data as Record<string, unknown>
           if (taskData && taskData.id) {
             tasks.push({
               ...taskData,
-              createdAt: new Date(taskData.createdAt),
-              updatedAt: new Date(taskData.updatedAt)
-            })
+              createdAt: new Date(taskData.createdAt as string),
+              updatedAt: new Date(taskData.updatedAt as string)
+            } as Task)
           }
         }
       }
 
       console.log(`📂 Loaded ${tasks.length} tasks from individual documents`)
       return tasks
-    } catch (error: any) {
+    } catch (error) {
       retryCount++
 
       // Handle connection closing error - retry
       if (isConnectionClosingError(error) && retryCount < maxRetries) {
         console.warn(`⚠️ [TASK-STORAGE] Connection closing on loadAllTasks (attempt ${retryCount}/${maxRetries}), retrying...`)
         await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as any).pomoFlowDb || db
+        db = (window as unknown as WindowWithDb).pomoFlowDb || db
         continue
       }
 
@@ -320,17 +345,19 @@ export const loadTask = async (
   while (retryCount < maxRetries) {
     try {
       const validDb = await getDbWithRetry(db)
-      const doc = await validDb.get(docId) as any
+      const doc = await validDb.get(docId) as TaskDocument
       if (doc.data) {
+        const taskData = doc.data as Record<string, unknown>
         return {
-          ...doc.data,
-          createdAt: new Date(doc.data.createdAt),
-          updatedAt: new Date(doc.data.updatedAt)
-        }
+          ...taskData,
+          createdAt: new Date(taskData.createdAt as string),
+          updatedAt: new Date(taskData.updatedAt as string)
+        } as Task
       }
       return null
-    } catch (error: any) {
-      if (error.status === 404) {
+    } catch (error) {
+      const pouchError = error as { status?: number }
+      if (pouchError.status === 404) {
         return null
       }
 
@@ -340,7 +367,7 @@ export const loadTask = async (
       if (isConnectionClosingError(error) && retryCount < maxRetries) {
         console.warn(`⚠️ [TASK-STORAGE] Connection closing on loadTask ${taskId} (attempt ${retryCount}/${maxRetries}), retrying...`)
         await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as any).pomoFlowDb || db
+        db = (window as unknown as WindowWithDb).pomoFlowDb || db
         continue
       }
 
@@ -361,7 +388,7 @@ export const migrateFromLegacyFormat = async (
 
   try {
     // Try to get legacy tasks:data document
-    const legacyDoc = await db.get('tasks:data') as any
+    const legacyDoc = await db.get('tasks:data') as LegacyTasksDocument
 
     if (legacyDoc && legacyDoc.data && Array.isArray(legacyDoc.data)) {
       const tasks: Task[] = legacyDoc.data
@@ -382,8 +409,9 @@ export const migrateFromLegacyFormat = async (
 
       console.log(`✅ Migration complete: ${migrated} tasks migrated`)
     }
-  } catch (error: any) {
-    if (error.status === 404) {
+  } catch (error) {
+    const pouchError = error as { status?: number }
+    if (pouchError.status === 404) {
       console.log('ℹ️ No legacy tasks:data document found, no migration needed')
     } else {
       console.error('❌ Migration error:', error)
@@ -408,7 +436,7 @@ export const syncDeletedTasks = async (
   })
 
   let deletedCount = 0
-  const docsToDelete: any[] = []
+  const docsToDelete: DeletedDocument[] = []
 
   for (const row of result.rows) {
     const taskId = extractTaskId(row.id)

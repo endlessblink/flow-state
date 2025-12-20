@@ -59,7 +59,7 @@ export class InputSanitizer {
   ]
 
   // Main sanitization method
-  static sanitize(input: any, options: SanitizationOptions = {}): any {
+  static sanitize(input: unknown, options: SanitizationOptions = {}): unknown {
     if (input === null || input === undefined) {
       return input
     }

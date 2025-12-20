@@ -52,7 +52,7 @@ export interface QueueProcessingResult {
   remaining: number
   processingTime: number
   errors: Array<{ operation: QueuedOperation; error: Error }>
-  conflictDetails: Array<{ operation: QueuedOperation; conflict: any }>
+  conflictDetails: Array<{ operation: QueuedOperation; conflict: unknown }>
 }
 
 export interface ExponentialBackoff {
@@ -83,7 +83,7 @@ export interface OperationResult {
   success: boolean
   operationId: string
   serverId?: string
-  conflict?: any
+  conflict?: unknown
   error?: string
   retry: boolean
   nextRetryTime?: number
@@ -93,8 +93,8 @@ export class OfflineQueue {
   private queue: QueuedOperation[] = []
   private isOnline: boolean = navigator.onLine
   private processing: boolean = false
-  private db: any = null
-  private retryManager: any = null
+  private db: PouchDB.Database | null = null
+  private retryManager: unknown = null
   private totalProcessingTime: number = 0
   private processingHistory: Array<{ timestamp: number; result: QueueProcessingResult }> = []
   private eventListeners: Map<string, ((...args: unknown[]) => void)[]> = new Map()
@@ -104,7 +104,7 @@ export class OfflineQueue {
   private retryStrategy: ExponentialBackoff
   private conflictHandling: DeferredResolution
 
-  constructor(db?: any, retryManager?: any) {
+  constructor(db?: PouchDB.Database, retryManager?: unknown) {
     this.db = db
     this.retryManager = retryManager
 

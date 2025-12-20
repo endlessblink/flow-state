@@ -136,7 +136,7 @@ export class ConflictDetector {
 
     try {
       const doc = await this.localDB.get(docId)
-      return this.normalizeDocumentVersion(doc, 'local')
+      return this.normalizeDocumentVersion(doc as unknown as Record<string, unknown>, 'local')
     } catch (versionError) {
       if ((versionError as { name?: string }).name === 'not_found') {
         return null
@@ -153,9 +153,10 @@ export class ConflictDetector {
 
     try {
       const doc = await this.remoteDB.get(docId)
-      return this.normalizeDocumentVersion(doc, 'remote')
+      return this.normalizeDocumentVersion(doc as unknown as Record<string, unknown>, 'remote')
     } catch (versionError) {
-      if ((versionError as any).name === 'not_found') {
+      const pouchError = versionError as { name?: string }
+      if (pouchError.name === 'not_found') {
         return null
       }
       throw versionError
@@ -165,32 +166,32 @@ export class ConflictDetector {
   /**
    * Normalize document to DocumentVersion format
    */
-  private normalizeDocumentVersion(doc: any, source: 'local' | 'remote'): DocumentVersion {
+  private normalizeDocumentVersion(doc: Record<string, unknown>, source: 'local' | 'remote'): DocumentVersion {
     const data = this.extractData(doc)
 
     return {
-      _id: doc._id,
-      _rev: doc._rev,
+      _id: doc._id as string,
+      _rev: doc._rev as string,
       data,
-      updatedAt: doc.updatedAt || doc.timestamp || new Date().toISOString(),
-      deviceId: doc.deviceId || (source === 'local' ? this.deviceId : 'unknown'),
-      version: doc.version || 1,
+      updatedAt: (doc.updatedAt || doc.timestamp || new Date().toISOString()) as string,
+      deviceId: (doc.deviceId || (source === 'local' ? this.deviceId : 'unknown')) as string,
+      version: (doc.version || 1) as number,
       checksum: this.calculateChecksum(data),
-      _deleted: doc._deleted || false
+      _deleted: (doc._deleted || false) as boolean
     }
   }
 
   /**
    * Extract data payload from document
    */
-  private extractData(doc: any): any {
+  private extractData(doc: Record<string, unknown>): unknown {
     // Handle different document structures
     if (doc.data) {
       return doc.data
     }
 
     // Create data object excluding PouchDB metadata
-    const { _id, _rev, _deleted, _attachments, _conflicts, _revisions, ...data } = doc
+    const { _id: _discardId, _rev: _discardRev, _deleted: _discardDeleted, _attachments: _discardAttachments, _conflicts: _discardConflicts, _revisions: _discardRevisions, ...data } = doc
     return data
   }
 
@@ -305,7 +306,7 @@ export class ConflictDetector {
   /**
    * Check if conflict involves critical fields
    */
-  private hasCriticalFieldConflict(localData: any, remoteData: any): boolean {
+  private hasCriticalFieldConflict(localData: Record<string, unknown>, remoteData: Record<string, unknown>): boolean {
     const criticalFields = ['title', 'name', 'id']
 
     return criticalFields.some(field => {
@@ -318,7 +319,7 @@ export class ConflictDetector {
   /**
    * Check if conflict involves status changes
    */
-  private hasStatusConflict(localData: any, remoteData: any): boolean {
+  private hasStatusConflict(localData: Record<string, unknown>, remoteData: Record<string, unknown>): boolean {
     const localStatus = localData?.status
     const remoteStatus = remoteData?.status
 
@@ -356,7 +357,7 @@ export class ConflictDetector {
   /**
    * Check if changes can be merged
    */
-  private areChangesMergeable(localData: any, remoteData: any): boolean {
+  private areChangesMergeable(localData: unknown, remoteData: unknown): boolean {
     // If data structures are compatible
     if (this.hasCompatibleStructure(localData, remoteData)) {
       return true
@@ -373,9 +374,11 @@ export class ConflictDetector {
   /**
    * Check if data structures are compatible
    */
-  private hasCompatibleStructure(localData: any, remoteData: any): boolean {
-    const localKeys = Object.keys(localData || {}).sort()
-    const remoteKeys = Object.keys(remoteData || {}).sort()
+  private hasCompatibleStructure(localData: unknown, remoteData: unknown): boolean {
+    const localObj = (localData || {}) as Record<string, unknown>
+    const remoteObj = (remoteData || {}) as Record<string, unknown>
+    const localKeys = Object.keys(localObj).sort()
+    const remoteKeys = Object.keys(remoteObj).sort()
 
     return JSON.stringify(localKeys) === JSON.stringify(remoteKeys)
   }
@@ -383,13 +386,15 @@ export class ConflictDetector {
   /**
    * Check if changes are in non-overlapping fields
    */
-  private hasNonOverlappingChanges(localData: any, remoteData: any): boolean {
-    const localKeys = new Set(Object.keys(localData || {}))
-    const remoteKeys = new Set(Object.keys(remoteData || {}))
+  private hasNonOverlappingChanges(localData: unknown, remoteData: unknown): boolean {
+    const localObj = (localData || {}) as Record<string, unknown>
+    const remoteObj = (remoteData || {}) as Record<string, unknown>
+    const localKeys = new Set(Object.keys(localObj))
+    const remoteKeys = new Set(Object.keys(remoteObj))
 
     // Find keys that exist in both but have different values
     const overlappingKeys = [...localKeys].filter(key =>
-      remoteKeys.has(key) && localData[key] !== remoteData[key]
+      remoteKeys.has(key) && localObj[key] !== remoteObj[key]
     )
 
     // If no overlapping conflicts, can merge
@@ -399,9 +404,10 @@ export class ConflictDetector {
   /**
    * Calculate checksum for data integrity
    */
-  private calculateChecksum(data: any): string {
+  private calculateChecksum(data: unknown): string {
     try {
-      const sortedData = JSON.stringify(data, Object.keys(data || {}).sort())
+      const dataObj = (data || {}) as Record<string, unknown>
+      const sortedData = JSON.stringify(data, Object.keys(dataObj).sort())
       return btoa(sortedData).slice(0, 16)
     } catch (error) {
       console.warn('⚠️ Error calculating checksum:', error)

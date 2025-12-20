@@ -1,6 +1,6 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 20, 2025 (TASK-030: 114 errors remaining, 57% fixed)
+**Last Updated**: December 20, 2025 (TASK-030: ✅ COMPLETED - 0 TypeScript errors)
 **Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -155,11 +155,11 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-027 | PAUSED | `stores/*` (done), `utils/*`, `composables/*`, `components/*`, `views/*` | ~~TASK-011~~ | - |
 | ~~TASK-028~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json` | - | - |
 | TASK-029 | PLANNED | `.claude/skills/storybook-audit/*`, `src/stories/**` | TASK-014 | - |
-| **TASK-030** | **IN_PROGRESS** | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
+| ~~TASK-030~~ | ✅ DONE | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-023 (dev-manager) + TASK-017 (plasmoid) - no file overlap
 **Paused**: TASK-027 (lint warning fixes - 159 fixed, 1,134 remaining)
-**Active**: TASK-030 (TypeScript strict type errors - 236 remaining)
+**Completed**: TASK-030 (TypeScript strict type errors - ✅ All fixed!)
 **Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
 **Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019 - work sequentially
@@ -228,7 +228,7 @@ Phase 3 (Mobile) ←────────────────────
 
 ---
 
-### TASK-030: Fix TypeScript Strict Type Errors (IN PROGRESS)
+### ~~TASK-030~~: Fix TypeScript Strict Type Errors (✅ DONE)
 
 **Goal**: Fix all `vue-tsc --noEmit` errors to enable strict type checking in CI.
 
@@ -236,7 +236,8 @@ Phase 3 (Mobile) ←────────────────────
 
 **Baseline** (Dec 19, 2025): 267 errors from `npx vue-tsc --noEmit`
 **Session 1** (Dec 19, 2025): ~236 errors remaining (~31 fixed)
-**Session 2** (Dec 20, 2025): **114 errors remaining** (~153 fixed, 57% reduction)
+**Session 2** (Dec 20, 2025): 114 errors remaining (~153 fixed, 57% reduction)
+**Session 3** (Dec 20, 2025): ✅ **0 errors** - All TypeScript errors fixed!
 
 **Background**:
 - `npm run build` does NOT catch TypeScript errors (Vite only transpiles)
@@ -274,34 +275,26 @@ Phase 3 (Mobile) ←────────────────────
 | `useCalendarDragCreate.ts` | Fix `webkitUserSelect` CSSStyleDeclaration cast |
 | `types/global.d.ts` | Extended `UndoRedoActions` with ComputedRef types |
 
-**Next Steps for Next Session** (114 errors remaining):
+**Files Fixed Session 3** (Dec 20 - Final):
+| File | Fixes Applied |
+|------|---------------|
+| `useCrossTabSync.ts` | Updated `UIStoreType`, `CanvasStoreType` interfaces; Fixed store casts |
+| `useBackupSystem.ts` | Added `BackupTaskLike` interface; Import `Task` type |
+| `useBackupRestoration.ts` | Type guards for optional API methods; Fix spread types |
+| `useDynamicImports.ts` | Added `ImportConfig` interface; Type module return |
+| `useNetworkOptimizer.ts` | Cast compressed data with interface |
+| `useOptimisticUI.ts` | `Record<string, unknown>` params; Fix `Date` types |
+| `useOptimizedTaskStore.ts` | Cast through `unknown` for Task conversion |
+| `useTaskLifecycle.ts` | Type `TransitionMetadata` in function signature |
+| `useDemoGuard.ts` | Cast data to `TaskLike[]` for type checking |
+| `types/global.d.ts` | Make task methods optional in `UndoRedoActions` |
+| `stores/tasks.ts` | Update `UndoRedoActionsLocal` to accept `ComputedRef` |
 
-| Priority | File(s) | Est. Errors | Fix Strategy |
-|----------|---------|-------------|--------------|
-| 1 | `useCrossTabSync.ts` | ~50 | Add store type interfaces; Fix property access |
-| 2 | `useCanvasVirtualization.ts` | ~18 | Add bounds interface (x/y/width/height) |
-| 3 | `useBackupSystem.ts` | ~6 | Add task typing in callbacks |
-| 4 | `useBackupRestoration.ts` | ~8 | Add backup data interfaces |
-| 5 | `useDemoGuard.ts` | ~9 | Type object parameters |
-| 6 | Remaining | ~23 | Apply similar patterns |
-
-**Pattern to Apply**:
-```typescript
-// WRONG: Loses type info
-(window as unknown).__propertyName
-
-// CORRECT: Preserves Window augmentation
-(window as Window & typeof globalThis).__propertyName
-
-// For store references in callbacks
-taskStore.tasks.find((t: unknown) => t.id === id)
-// →
-taskStore.tasks.find((t: { id: string }) => t.id === id)
-```
+**Result**: ✅ Zero TypeScript errors - Strict type checking enabled!
 
 **Command to Verify**:
 ```bash
-npx vue-tsc --noEmit 2>&1 | grep "error TS" | wc -l
+npx vue-tsc --noEmit  # Should output nothing (0 errors)
 ```
 
 ---
@@ -1343,45 +1336,143 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ISSUE-008 | **Ctrl+Z doesn't work on groups** | P2-MEDIUM | Undo doesn't restore deleted/modified groups on canvas |
 | ISSUE-009 | **15 vue-tsc TypeScript errors** | P2-MEDIUM | Build passes but `vue-tsc` fails. See details below |
 | ISSUE-010 | **Inbox task deletion inconsistent** | P2-MEDIUM | Deleting from calendar/canvas inbox should delete everywhere, recoverable only via Ctrl+Z (like board) |
-| ISSUE-011 | **PouchDB Document Conflict Accumulation** | P1-HIGH | 178+ conflicts on tasks:data, 171 on projects:data, 81 on settings:data. Causes Storybook render failures. See details below |
+| ISSUE-011 | **PouchDB Document Conflict Accumulation** | P0-CRITICAL | 376+ conflicts on tasks:data, 406 on projects:data. **CAUSING DATA LOSS**. See details below |
+| ISSUE-012 | **Data Loss Investigation - E2E Analysis** | P0-CRITICAL | Sync loads wrong revision due to conflicts. Task disappearance logger needs enhancement. See details below |
 
-### ISSUE-011: PouchDB Document Conflict Accumulation (CRITICAL)
+### ISSUE-011: PouchDB Document Conflict Accumulation (CRITICAL - ESCALATED)
 
-**Priority**: P1-HIGH
+**Priority**: P0-CRITICAL (escalated from P1-HIGH)
 **Discovered**: December 19, 2025 (during Storybook debugging)
+**Updated**: December 20, 2025 - **CONFLICTS DOUBLED, CAUSING DATA LOSS**
+
+**Current Conflict Counts (Dec 20, 2025)**:
+```
+⚠️ [DATABASE] Document tasks:data has 376 conflicts   (was 178)
+⚠️ [DATABASE] Document projects:data has 406 conflicts (was 171)
+⚠️ [DATABASE] Document canvas:data has 397 conflicts
+⚠️ [DATABASE] Document settings:data has 113 conflicts (was 81)
+⚠️ [DATABASE] Document notifications:data has 146 conflicts
+```
 
 **Symptoms**:
 - Storybook docs pages showing "Document update conflict" error
-- Console warnings on app load:
-  ```
-  ⚠️ [DATABASE] Document tasks:data has 178 conflicts
-  ⚠️ [DATABASE] Document projects:data has 171 conflicts
-  ⚠️ [DATABASE] Document settings:data has 81 conflicts
-  ```
+- **App shows 0 tasks when CouchDB has data** (Dec 20 - ACTIVE DATA LOSS)
+- PouchDB picks wrong "winning" revision due to conflicts
+- Sync reports "0 docs read" even when remote has newer data
 
-**Root Cause Analysis**:
+**Root Cause Analysis (Updated)**:
 1. **Sync race conditions**: Multiple tabs/instances writing simultaneously
-2. **Conflict resolution not running**: Built-in conflict resolution may not be processing accumulated conflicts
-3. **CouchDB sync issues**: Remote sync creating unresolved revision conflicts
-4. **No automatic cleanup**: Conflicts accumulate indefinitely
+2. **Conflict resolution never runs**: Auto-resolve only runs on new conflicts, not accumulated ones
+3. **Wrong winner selection**: With 376 revisions, PouchDB may pick a stale/empty revision as winner
+4. **No conflict compaction**: Old conflicting revisions never cleaned up
+5. **Orphaned documents**: Individual `task-XXXX` docs exist alongside `tasks:data` array
 
 **Impact**:
-- **Data integrity risk**: 178 conflicts means 178 potentially lost task states
-- **Performance degradation**: PouchDB must track all conflict revisions
+- **🔴 ACTIVE DATA LOSS**: User sees empty task list despite CouchDB having data
+- **Exponential growth**: Conflicts doubled in 1 day (178→376)
+- **Performance degradation**: PouchDB tracking 1000+ conflict revisions
 - **Storybook broken**: Components importing stores trigger conflict errors
-- **Sync reliability**: Cross-device sync may lose data silently
+- **Sync unreliable**: Cross-device sync fails silently
 
 **Proposed Fixes**:
-1. **Immediate**: Run conflict resolution to merge/discard old revisions
-2. **Short-term**: Add conflict cleanup routine on app startup
-3. **Long-term**: Implement real-time conflict detection & user notification
-4. **Storybook**: Use mock stores or separate DB instance for stories
+1. **IMMEDIATE**: Create conflict cleanup utility with backup/rollback (IN PROGRESS)
+2. **IMMEDIATE**: Manually delete all conflicting revisions, keep latest
+3. **Short-term**: Add conflict cleanup routine on app startup
+4. **Short-term**: Prevent conflicts from accumulating (sync debouncing)
+5. **Long-term**: Implement real-time conflict detection & user notification
+6. **Storybook**: Use mock stores or separate DB instance for stories
 
 **Related Files**:
-- `src/composables/useDatabase.ts` - PouchDB abstraction (line 953)
+- `src/composables/useDatabase.ts` - PouchDB abstraction
 - `src/composables/useReliableSyncManager.ts` - Sync orchestration
-- `src/composables/useCouchDBSync.ts` - CouchDB-specific sync
+- `src/utils/conflictDetector.ts` - Conflict detection (not resolving accumulated)
+- `src/utils/conflictResolver.ts` - Conflict resolution logic
 - `docs/conflict-systems-resolution/` - Conflict resolution docs
+
+---
+
+### ISSUE-012: Data Loss Investigation - E2E Analysis (NEW)
+
+**Priority**: P0-CRITICAL
+**Discovered**: December 20, 2025
+**Status**: INVESTIGATION IN PROGRESS
+
+**Symptom**: User sees stale/old tasks instead of current data after sync.
+
+**Investigation Findings**:
+
+1. **Database Architecture Mismatch**:
+   - App saves all tasks as single document: `tasks:data` (array of tasks)
+   - But database also contains orphaned individual docs: `task-XXXX` (8 documents)
+   - Individual task docs may be from older app version or failed migration
+   - App only reads from `tasks:data`, ignoring individual task docs
+
+2. **Conflict Accumulation**:
+   - `tasks:data` has 376 conflicting revisions
+   - PouchDB's automatic winner selection may pick wrong revision
+   - The "winning" revision contains only 3 sample tasks
+   - User's real tasks may be in a non-winning conflicting revision
+
+3. **Sync Behavior**:
+   - Sync reports: `Pull complete: 0 docs read`
+   - This happens because local revision matches remote "winner"
+   - But the winner is wrong due to conflict accumulation
+
+4. **Task Disappearance Logger Gap**:
+   - Current `taskDisappearanceLogger.ts` only tracks in-memory changes
+   - Does NOT track PouchDB/CouchDB sync-related data loss
+   - Cannot detect when sync loads wrong revision
+
+**Required Logger Enhancements**:
+```typescript
+// NEW: Track database sync events
+logDatabaseSync(event: 'pull' | 'push', docsCount: number, source: string)
+
+// NEW: Track conflict count changes
+logConflictChange(docId: string, oldCount: number, newCount: number)
+
+// NEW: Compare loaded data with expected
+logDataMismatch(expected: number, actual: number, source: string)
+
+// NEW: Track revision changes
+logRevisionChange(docId: string, oldRev: string, newRev: string)
+```
+
+**Root Cause Chain**:
+```
+1. Multiple devices/tabs write to same document
+2. CouchDB/PouchDB creates conflicting revisions
+3. Conflicts never resolved, accumulate over time
+4. Eventually 376+ revisions exist for tasks:data
+5. PouchDB picks arbitrary "winner" based on revision sorting
+6. Winner happens to be old revision with 3 sample tasks
+7. Sync sees local matches remote winner, reports "0 docs read"
+8. User sees old data, real tasks trapped in non-winning revision
+```
+
+**Immediate Action Plan**:
+1. [ ] Query CouchDB for all revisions of tasks:data
+2. [ ] Find revision with user's actual tasks
+3. [ ] Delete all conflicting revisions except correct one
+4. [ ] Force PouchDB to use correct revision
+5. [ ] Verify user sees correct tasks
+
+**Preventive Measures**:
+1. Add conflict count monitoring to dashboard
+2. Auto-resolve conflicts when count exceeds threshold (e.g., 10)
+3. Enhance taskDisappearanceLogger to track sync events
+4. Add data integrity check comparing local vs remote
+5. Implement revision cleanup on app startup
+
+**Related Issues**:
+- ISSUE-011 (PouchDB conflicts - root cause)
+- BUG-020 (Task disappearance investigation)
+
+**Related Files**:
+- `src/utils/taskDisappearanceLogger.ts` - Needs enhancement
+- `src/stores/tasks.ts:loadFromDatabase()` - Line 913-980
+- `src/composables/useReliableSyncManager.ts` - Sync logic
+- `src/composables/useDatabase.ts` - PouchDB abstraction
 
 ### 🔴 STORYBOOK QUICK REFERENCE (Dec 19, 2025)
 

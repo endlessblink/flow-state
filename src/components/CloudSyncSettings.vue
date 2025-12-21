@@ -245,7 +245,7 @@ const {
   remoteConnected,
   hasConnectedEver,
   lastSyncTime,
-  isLiveSyncActive,
+  _isLiveSyncActive,
 } = reliableSyncManager as ReliableSyncManagerInstance & {
   configureProvider?: (config: unknown) => Promise<void>
   enableProvider?: () => Promise<void>

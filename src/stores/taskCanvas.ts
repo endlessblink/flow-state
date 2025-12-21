@@ -170,19 +170,20 @@ export const useTaskCanvasStore = defineStore('taskCanvas', () => {
   const getTasksForSection = (section: CanvasSection): Task[] => {
     if (!section.filter) return []
 
+    const filter = section.filter
     return allTasks.value.filter(task => {
-      if (section.filter!.priority && task.priority !== section.filter!.priority) {
+      if (filter.priority && task.priority !== filter.priority) {
         return false
       }
-      if (section.filter!.status && task.status !== section.filter!.status) {
+      if (filter.status && task.status !== filter.status) {
         return false
       }
-      if (section.filter!.projectId && task.projectId !== section.filter!.projectId) {
+      if (filter.projectId && task.projectId !== filter.projectId) {
         return false
       }
-      if (section.filter!.custom) {
+      if (filter.custom) {
         // Custom filter logic could be implemented here
-        return task.title.toLowerCase().includes(section.filter!.custom.toLowerCase())
+        return task.title.toLowerCase().includes(filter.custom.toLowerCase())
       }
       return true
     })
@@ -207,7 +208,7 @@ export const useTaskCanvasStore = defineStore('taskCanvas', () => {
         position: { x: 100 + (index * 350), y: 100 },
         size: { width: 300, height: 400 },
         filter: { priority },
-        color: colors[priority!]
+        color: priority ? colors[priority] : colors.null
       })
     })
   }

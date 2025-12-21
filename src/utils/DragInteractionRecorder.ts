@@ -426,28 +426,28 @@ export class DragInteractionRecorder {
     const originalError = console.error;
 
     // Override console methods to capture drag-related logs
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       const message = args.join(' ');
       if (message.includes('drag') || message.includes('Drag') || message.includes('DROP') || message.includes('CALENDAR')) {
         this.eventLog.push(`[${Date.now()}] LOG: ${message}`);
       }
-      originalLog.apply(console, args);
+      originalLog.apply(console, args as Parameters<typeof console.log>);
     };
 
-    console.warn = (...args: any[]) => {
+    console.warn = (...args: unknown[]) => {
       const message = args.join(' ');
       if (message.includes('drag') || message.includes('Drag')) {
         this.eventLog.push(`[${Date.now()}] WARN: ${message}`);
       }
-      originalWarn.apply(console, args);
+      originalWarn.apply(console, args as Parameters<typeof console.warn>);
     };
 
-    console.error = (...args: any[]) => {
+    console.error = (...args: unknown[]) => {
       const message = args.join(' ');
       if (message.includes('drag') || message.includes('Drag')) {
         this.eventLog.push(`[${Date.now()}] ERROR: ${message}`);
       }
-      originalError.apply(console, args);
+      originalError.apply(console, args as Parameters<typeof console.error>);
     };
   }
 

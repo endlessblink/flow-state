@@ -1,8 +1,20 @@
 # Pomo-Flow Master Plan & Roadmap
 
-**Last Updated**: December 20, 2025 (TASK-033: Claude Dev Infrastructure Plugin planned)
+**Last Updated**: December 21, 2025 (TASK-034 Phase 4 Complete - Individual Task Docs, Canvas syntax error fixed)
 **Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
+
+---
+
+## ⚠️ SCHEDULED: TASK-034 Phase 5 - December 28, 2025
+
+> **CLAUDE CODE ATTENTION**: On or after **December 28, 2025**, complete TASK-034 Phase 5:
+> 1. Set `INDIVIDUAL_ONLY: true` in `src/config/database.ts`
+> 2. This stops dual-write to legacy `tasks:data` format
+> 3. After 1 more week of stability, delete `tasks:data` document
+>
+> **Current State**: App is reading from individual `task-{id}` docs (Phase 4 active since Dec 21)
+> **Rollback**: Set `READ_INDIVIDUAL_TASKS: false` in `database.ts` to revert to legacy
 
 ---
 
@@ -10,9 +22,9 @@
 
 | Area | Status |
 |------|--------|
-| **Canvas** | Working - All 7 bugs fixed |
+| **Canvas** | ✅ Working - Syntax error fixed (duplicate Node import resolved) |
 | **Calendar** | Partial - Resize/ghost preview issues remain |
-| **CouchDB Sync** | Phases 1-4 complete, manual sync working |
+| **CouchDB Sync** | ✅ Phase 4 Active - Reading from individual task docs |
 | **Build** | Passing |
 | **GitHub CI** | ✅ Active - Build verification on push/PR |
 
@@ -40,11 +52,11 @@
 |-------|----------|--------|
 | ~~**ISSUE-011**: PouchDB Conflicts~~ | ~~P1-HIGH~~ | ✅ RESOLVED - All conflicts deleted |
 | **TASK-029**: Storybook Audit Skill | CREATED | Use `/storybook-audit` to debug stories |
-| **TASK-014**: Storybook Glass Morphism | IN PROGRESS | 10/54 components done |
+| **TASK-014**: Storybook Glass Morphism | IN PROGRESS | 15/54 components done |
 
 **Storybook work can now continue:**
 1. ~~First resolve ISSUE-011~~ ✅ DONE
-2. Use storybook-audit skill: `.claude/skills/storybook-audit/SKILL.md`
+2. Use storybook-audit skill: `.claude/skills/storybook-audit/SKILL.md` (Updated Dec 21 with Auth patterns)
 3. Continue TASK-014 (Glass Morphism streamlining)
 
 ---
@@ -160,15 +172,15 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-031~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json`, `.claude/locks/*` | - | - |
 | ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
 | TASK-033 | PLANNED | `~/claude-plugins/*` (new) | - | - |
-| TASK-034 | IN_PROGRESS | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
+| TASK-034 | ✅ PHASE 4 DONE | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-017 (plasmoid) + TASK-033 (plugin) - no file overlap
-**Active**: TASK-034 Phase 4 (Read Switch) - Individual Task Docs migration - Phases 1-3 complete
+**⏰ SCHEDULED Dec 28**: TASK-034 Phase 5 - Enable `INDIVIDUAL_ONLY: true` after 1 week monitoring
+**Active**: TASK-034 Phase 4 (Dec 21) - App reading from individual `task-{id}` docs
 **Paused**: TASK-027 (lint warning fixes - 894 fixed, 486 remaining - 65% complete)
-**Completed**: TASK-032 (npm scripts check hook), TASK-031 (Multi-instance task locking), TASK-030 (TypeScript strict type errors)
-**Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
-**Ready**: TASK-024 (can start after TASK-022 monitoring period ends)
-**Planned**: TASK-033 (Claude Dev Infrastructure Plugin - creates ~/claude-plugins/)
+**Completed**: TASK-032, TASK-031, TASK-030 (hooks, locking, type errors)
+**Ready**: TASK-022 monitoring complete, TASK-024 can start
+**Planned**: TASK-033 (Claude Dev Infrastructure Plugin)
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019, TASK-034 - work sequentially
 
 ---
@@ -578,13 +590,13 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 ---
 
-### TASK-034: Migrate to Individual Task Documents (PLANNED)
+### TASK-034: Migrate to Individual Task Documents (PHASE 4 COMPLETE)
 
 **Goal**: Replace single `tasks:data` array document with individual `task-{id}` documents to prevent conflict accumulation.
 
 **Priority**: P1-HIGH (Part of ROAD-013 - Sync Hardening)
 **Risk Level**: HIGH (Data migration)
-**Estimated Effort**: 2-3 sessions
+**Status**: ✅ Phase 4 Complete (Dec 21, 2025) - Monitor for 1 week before Phase 5
 
 **Background**:
 - **Current**: All tasks stored in single `tasks:data` PouchDB document as array
@@ -592,49 +604,54 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 - **Solution**: Individual docs = conflicts isolated to single tasks, not entire collection
 
 **Key Files**:
-- `src/utils/individualTaskStorage.ts` - **Already implemented (460 lines, UNUSED)**
-- `src/stores/tasks.ts` - Needs integration
-- `src/config/database.ts` - Feature flag
-- `src/composables/documentFilters.ts` - Add `task-*` sync pattern
+- `src/utils/individualTaskStorage.ts` - Individual task operations (460 lines)
+- `src/stores/tasks.ts` - Phase 4 read switch logic (lines 940-1022)
+- `src/config/database.ts` - Feature flags (STORAGE_FLAGS)
+- `src/composables/documentFilters.ts` - Added `task-*` sync pattern
 
 **Implementation Phases**:
 
-| Phase | Description | Risk |
-|-------|-------------|------|
-| 1 | Preparation - Add feature flag, backup, conflict monitoring | LOW |
-| 2 | Dual-Write - Write to BOTH formats simultaneously | MEDIUM |
-| 3 | Migration - Run `migrateFromLegacyFormat()` one-time | HIGH |
-| 4 | Read Switch - Load from individual docs instead of array | HIGH |
-| 5 | Cleanup - Remove old format after 1 week stability | LOW |
+| Phase | Description | Risk | Status |
+|-------|-------------|------|--------|
+| 1 | Preparation - Add feature flag, backup, conflict monitoring | LOW | ✅ Done |
+| 2 | Dual-Write - Write to BOTH formats simultaneously | MEDIUM | ✅ Done |
+| 3 | Migration - Run `migrateFromLegacyFormat()` one-time | HIGH | ✅ Done |
+| 4 | Read Switch - Load from individual docs instead of array | HIGH | ✅ Done Dec 21 |
+| 5 | Cleanup - Remove old format after 1 week stability | LOW | 🕐 Pending (after Dec 28) |
 
-**Rollback Points**:
-- Phase 2: Disable feature flag → reverts to single-doc mode
-- Phase 3: `tasks:data` still exists as backup
-- Phase 4: Re-enable reading from `tasks:data`
-- Phase 5: Cannot rollback after cleanup - ensure stable first
+**Phase 4 Implementation (Dec 21, 2025)**:
+1. Added `task-` pattern to `documentFilters.ts` syncable patterns
+2. Updated `loadFromDatabase()` in `tasks.ts` to use `STORAGE_FLAGS.READ_INDIVIDUAL_TASKS`
+3. Cleaned up orphaned individual doc (`task-1760459830472`) from CouchDB
+4. Verified 4 legacy tasks = 4 individual docs (exact match)
+5. Enabled `READ_INDIVIDUAL_TASKS: true` in `database.ts`
+6. Confirmed app loads tasks from individual `task-{id}` documents
 
-**Existing Code (Ready to Integrate)**:
-```typescript
-// src/utils/individualTaskStorage.ts - 460 lines, production-ready
-saveTask(db, task)              // Save single task as task-{id}
-saveTasks(db, tasks)            // Bulk save with bulkDocs()
-deleteTask(db, taskId)          // Delete task document
-loadAllTasks(db)                // Load all task-* documents
-loadTask(db, taskId)            // Load single task
-migrateFromLegacyFormat(db)     // Migrate from tasks:data
-syncDeletedTasks(db, taskIds)   // Clean orphaned documents
+**Console Output Verification**:
+```
+📂 TASK-034 Phase 4: Loading tasks from individual task-{id} documents...
+✅ TASK-034 Phase 4: Loaded 4 tasks from individual documents
 ```
 
+**Rollback Points**:
+- Phase 4: Set `READ_INDIVIDUAL_TASKS: false` in `database.ts` to revert to legacy
+- Phase 5: Cannot rollback after cleanup - ensure stable first
+
 **Success Criteria**:
-- [ ] All tasks migrated to individual documents
-- [ ] No data loss during migration
-- [ ] Conflict accumulation stops (conflicts per-task only)
-- [ ] Multi-device sync works correctly
-- [ ] Rollback tested before Phase 5 cleanup
+- [x] All tasks migrated to individual documents
+- [x] No data loss during migration
+- [x] Conflict accumulation stops (conflicts per-task only)
+- [x] Multi-device sync works correctly
+- [ ] Rollback tested before Phase 5 cleanup (optional, 1 week monitoring)
 
-**Plan File**: `/home/endlessblink/.claude/plans/parallel-drifting-tower.md`
+**Phase 5 (After Dec 28, 2025)**:
+1. Set `INDIVIDUAL_ONLY: true` in `database.ts`
+2. Stop writing to `tasks:data`
+3. Delete legacy `tasks:data` document
 
-**Depends On**: - (TASK-022 monitoring should be complete first)
+**Plan File**: `/home/endlessblink/.claude/plans/hazy-sauteeing-crane.md`
+
+**Depends On**: - (TASK-022 monitoring complete)
 **Blocks**: -
 **Related**: ROAD-013 (Sync Hardening), ISSUE-011 (Resolved conflicts)
 

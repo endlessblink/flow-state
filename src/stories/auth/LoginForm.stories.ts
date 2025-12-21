@@ -10,21 +10,32 @@ const meta: Meta<typeof LoginForm> = {
     layout: 'fullscreen',
     docs: {
       story: {
-        inline: false,
-        iframeHeight: 700,
+        inline: true,
       }
     }
   },
   decorators: [
     () => ({
       template: `
-        <div style="
-          background: var(--surface-primary);
-          min-height: 100vh;
+        <div class="login-form-story-container" style="
+          background: var(--glass-bg-solid);
+          height: 600px;
+          width: 100%;
+          position: relative;
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
+          border-radius: 8px;
         ">
+          <!-- Force absolute positioning for the container within this wrapper -->
+          <style>
+             .login-form-story-container .auth-container {
+               margin: 0 !important;
+               max-height: 90% !important;
+               overflow-y: auto !important;
+             }
+          </style>
           <story />
         </div>
       `

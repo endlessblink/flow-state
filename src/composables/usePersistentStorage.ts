@@ -382,16 +382,19 @@ export function usePersistentStorage() {
   const healthStatus = ref(persistentStorage.getHealthStatus())
 
   // Update health status periodically
+  const storage = persistentStorage
+
+  // Update health status periodically
   setInterval(() => {
-    healthStatus.value = persistentStorage!.getHealthStatus()
+    healthStatus.value = storage.getHealthStatus()
   }, 30000) // Every 30 seconds
 
   return {
-    save: <T>(key: string, data: T) => persistentStorage!.save(key, data),
-    load: <T>(key: string) => persistentStorage!.load<T>(key),
-    createBackup: () => persistentStorage!.createBackup(),
-    getAllBackups: () => persistentStorage!.getAllBackups(),
-    restoreFromBackup: (backup: unknown) => persistentStorage!.restoreFromBackup(backup),
+    save: <T>(key: string, data: T) => storage.save(key, data),
+    load: <T>(key: string) => storage.load<T>(key),
+    createBackup: () => storage.createBackup(),
+    getAllBackups: () => storage.getAllBackups(),
+    restoreFromBackup: (backup: unknown) => storage.restoreFromBackup(backup),
     healthStatus,
     STORAGE_KEYS
   }

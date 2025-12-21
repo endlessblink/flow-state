@@ -285,12 +285,12 @@ export class ConflictDetector {
     conflictType: ConflictType
   ): 'low' | 'medium' | 'high' {
     // High severity for critical field conflicts
-    if (this.hasCriticalFieldConflict(local.data, remote.data)) {
+    if (this.hasCriticalFieldConflict((local.data || {}) as Record<string, unknown>, (remote.data || {}) as Record<string, unknown>)) {
       return 'high'
     }
 
     // Medium severity for status changes
-    if (this.hasStatusConflict(local.data, remote.data)) {
+    if (this.hasStatusConflict((local.data || {}) as Record<string, unknown>, (remote.data || {}) as Record<string, unknown>)) {
       return 'medium'
     }
 

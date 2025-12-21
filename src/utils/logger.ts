@@ -21,7 +21,7 @@ class Logger {
 
   constructor() {
     // Read from environment variable, default to ERROR in production
-    const envLevel = import.meta.env.VITE_LOG_LEVEL?.toLowerCase() || 'error'
+    const envLevel = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_LOG_LEVEL?.toLowerCase() || 'error'
 
     switch (envLevel) {
       case 'debug':
@@ -120,6 +120,6 @@ class Logger {
 export const logger = new Logger()
 
 // Export for direct access in development
-if (import.meta.env.DEV) {
+if ((import.meta as unknown as { env: { DEV: boolean } }).env?.DEV) {
   ; (window as unknown as { logger: Logger }).logger = logger
 }

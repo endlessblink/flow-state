@@ -51,7 +51,7 @@ export interface ProjectDatabaseAdapter {
  */
 export interface CanvasDatabaseAdapter {
   saveCanvasState(userId: string, canvasData: unknown): Promise<void>
-  loadCanvasState(userId: string): Promise<any>
+  loadCanvasState(userId: string): Promise<unknown>
   subscribeToCanvas(userId: string, callback: (canvasData: unknown) => void): () => void
 }
 

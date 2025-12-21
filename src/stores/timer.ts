@@ -527,75 +527,76 @@ export const useTimerStore = defineStore('timer', () => {
   )
 
   const displayTime = computed(() => {
-    if (!currentSession.value!) {
+    if (!currentSession.value) {
       const minutes = Math.floor(settings.value.workDuration / 60)
       return `${minutes.toString().padStart(2, '0')}:00`
     }
 
-    const minutes = Math.floor(currentSession.value!.remainingTime / 60)
-    const seconds = currentSession.value!.remainingTime % 60
+    const minutes = Math.floor(currentSession.value.remainingTime / 60)
+    const seconds = currentSession.value.remainingTime % 60
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   })
 
   const currentTaskName = computed(() => {
-    if (!currentSession.value! || !currentSession.value!.taskId) return null
+    const session = currentSession.value
+    if (!session?.taskId) return null
 
-    if (currentSession.value!.isBreak) {
-      return currentSession.value!.taskId === 'break' ? 'Break Time' : 'Short Break'
+    if (session.isBreak) {
+      return session.taskId === 'break' ? 'Break Time' : 'Short Break'
     }
 
-    if (currentSession.value!.taskId === 'general') return 'Focus Session'
+    if (session.taskId === 'general') return 'Focus Session'
 
     const taskStore = useTaskStore()
-    const task = taskStore.tasks.find(t => t.id === currentSession.value!.taskId)
+    const task = taskStore.tasks.find(t => t.id === session.taskId)
     return task?.title || 'Unknown Task'
   })
 
   const sessionTypeIcon = computed(() => {
-    if (!currentSession.value!) return '🍅'
-    return currentSession.value!.isBreak ? '🧎' : '🍅'
+    return currentSession.value?.isBreak ? '🧎' : '🍅'
   })
 
   // Tab-friendly computed properties
   const tabDisplayTime = computed(() => {
-    if (!currentSession.value!) return ''
-    const minutes = Math.floor(currentSession.value!.remainingTime / 60)
-    const seconds = currentSession.value!.remainingTime % 60
+    if (!currentSession.value) return ''
+    const minutes = Math.floor(currentSession.value.remainingTime / 60)
+    const seconds = currentSession.value.remainingTime % 60
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   })
 
   const sessionStatusText = computed(() => {
-    if (!currentSession.value!) return ''
-    if (currentSession.value!.isBreak) {
-      return currentSession.value!.taskId === 'break' ? 'Short Break' : 'Long Break'
+    const session = currentSession.value
+    if (!session) return ''
+    if (session.isBreak) {
+      return session.taskId === 'break' ? 'Short Break' : 'Long Break'
     }
-    if (currentSession.value!.taskId === 'general') return 'Focus Session'
+    if (session.taskId === 'general') return 'Focus Session'
 
     const taskStore = useTaskStore()
-    const task = taskStore.tasks.find(t => t.id === currentSession.value!.taskId)
+    const task = taskStore.tasks.find(t => t.id === session.taskId)
     return task?.title || 'Work Session'
   })
 
   const timerPercentage = computed(() => {
-    if (!currentSession.value!) return 0
-    const totalDuration = currentSession.value!.duration
-    const remainingTime = currentSession.value!.remainingTime
+    if (!currentSession.value) return 0
+    const totalDuration = currentSession.value.duration
+    const remainingTime = currentSession.value.remainingTime
     return Math.round(((totalDuration - remainingTime) / totalDuration) * 100)
   })
 
   const faviconStatus = computed(() => {
-    if (!currentSession.value!) return 'inactive'
-    return currentSession.value!.isBreak ? 'break' : 'work'
+    if (!currentSession.value) return 'inactive'
+    return currentSession.value.isBreak ? 'break' : 'work'
   })
 
   const tabTitleWithTimer = computed(() => {
     const baseTitle = 'Pomo-Flow'
-    if (!currentSession.value! || !isTimerActive.value) {
+    if (!currentSession.value || !isTimerActive.value) {
       return baseTitle
     }
 
     const time = tabDisplayTime.value
-    const icon = currentSession.value!.isBreak ? '🧎' : '🍅'
+    const icon = currentSession.value.isBreak ? '🧎' : '🍅'
     const status = sessionStatusText.value
     return `${status} - ${time} ${icon} | ${baseTitle}`
   })
@@ -626,14 +627,14 @@ export const useTimerStore = defineStore('timer', () => {
     }
 
     // Stop any existing timer
-    if (currentSession.value!) {
+    if (currentSession.value) {
       console.log('🍅 DEBUG: Stopping existing timer')
       stopTimer()
     }
 
     const sessionDuration = duration || settings.value.workDuration
 
-    currentSession.value! = {
+    currentSession.value = {
       id: Date.now().toString(),
       taskId,
       startTime: new Date(),
@@ -648,18 +649,20 @@ export const useTimerStore = defineStore('timer', () => {
     isDeviceLeader.value = true
     startDeviceHeartbeat()
 
-    console.log('🍅 DEBUG: Timer session created:', {
-      id: currentSession.value!.id,
-      taskId,
-      duration: sessionDuration,
-      remainingTime: sessionDuration,
-      isActive: true,
-      isPaused: false,
-      isBreak,
-      computedIsActive: isTimerActive.value,
-      deviceId,
-      isDeviceLeader: isDeviceLeader.value
-    })
+    if (currentSession.value) {
+      console.log('🍅 DEBUG: Timer session created:', {
+        id: currentSession.value.id,
+        taskId,
+        duration: sessionDuration,
+        remainingTime: sessionDuration,
+        isActive: true,
+        isPaused: false,
+        isBreak,
+        computedIsActive: isTimerActive.value,
+        deviceId,
+        isDeviceLeader: isDeviceLeader.value
+      })
+    }
 
     // Broadcast to other tabs (same browser)
     broadcastSession()
@@ -671,33 +674,35 @@ export const useTimerStore = defineStore('timer', () => {
     playStartSound()
 
     // Start countdown
-    timerInterval.value = setInterval(() => {
-      if (currentSession.value! && currentSession.value!.isActive && !currentSession.value!.isPaused) {
-        currentSession.value!.remainingTime -= 1
+    const timerIntervalId = setInterval(() => {
+      const session = currentSession.value
+      if (session && session.isActive && !session.isPaused) {
+        session.remainingTime -= 1
 
         // Broadcast every 5 seconds to reduce overhead (or on significant changes)
-        if (currentSession.value!.remainingTime % 5 === 0) {
+        if (session.remainingTime % 5 === 0) {
           broadcastSession()
         }
 
-        if (currentSession.value!.remainingTime <= 0) {
+        if (session.remainingTime <= 0) {
           completeSession()
         }
       }
     }, 1000)
+    timerInterval.value = timerIntervalId
   }
 
   const pauseTimer = () => {
-    if (currentSession.value!) {
-      currentSession.value!.isPaused = true
+    if (currentSession.value) {
+      currentSession.value.isPaused = true
       // Broadcast pause to other tabs
       broadcastSession()
     }
   }
 
   const resumeTimer = () => {
-    if (currentSession.value!) {
-      currentSession.value!.isPaused = false
+    if (currentSession.value) {
+      currentSession.value.isPaused = false
       // Broadcast resume to other tabs
       broadcastSession()
     }
@@ -713,10 +718,10 @@ export const useTimerStore = defineStore('timer', () => {
     stopDeviceHeartbeat()
     isDeviceLeader.value = false
 
-    if (currentSession.value!) {
+    if (currentSession.value) {
       // Save incomplete session
       completedSessions.value.push({
-        ...currentSession.value!,
+        ...currentSession.value,
         isActive: false,
         completedAt: new Date()
       })
@@ -732,7 +737,8 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   const completeSession = async () => {
-    if (!currentSession.value!) return
+    const session = currentSession.value
+    if (!session) return
 
     // Clear interval
     if (timerInterval.value) {
@@ -745,7 +751,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     // Mark session as completed
     const completedSession = {
-      ...currentSession.value!,
+      ...session,
       isActive: false,
       completedAt: new Date()
     }
@@ -753,20 +759,20 @@ export const useTimerStore = defineStore('timer', () => {
     completedSessions.value.push(completedSession)
 
     // Store session info for auto-transition
-    const wasBreakSession = currentSession.value!.isBreak
-    const lastTaskId = currentSession.value!.taskId
+    const wasBreakSession = session.isBreak
+    const lastTaskId = session.taskId
     const sessionType = wasBreakSession ? 'Break' : 'Work session'
 
     // Update task pomodoro count if this was a work session
-    if (currentSession.value!.taskId && currentSession.value!.taskId !== 'general' && !currentSession.value!.isBreak) {
+    if (session.taskId && session.taskId !== 'general' && !session.isBreak) {
       const taskStore = useTaskStore()
-      const task = taskStore.tasks.find(t => t.id === currentSession.value!.taskId)
+      const task = taskStore.tasks.find(t => t.id === session.taskId)
 
       if (task) {
         const newCount = task.completedPomodoros + 1
         const newProgress = Math.min(100, Math.round((newCount / (task.estimatedPomodoros || 0)) * 100))
 
-        taskStore.updateTask(currentSession.value!.taskId, {
+        taskStore.updateTask(session.taskId, {
           completedPomodoros: newCount,
           progress: newProgress
         })
@@ -911,11 +917,11 @@ export const useTimerStore = defineStore('timer', () => {
       while (!db.isReady?.value) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
-      if (currentSession.value!) {
+      if (currentSession.value) {
         const sessionData = {
-          ...currentSession.value!,
-          startTime: currentSession.value!.startTime.toISOString(),
-          completedAt: currentSession.value!.completedAt?.toISOString()
+          ...currentSession.value,
+          startTime: currentSession.value.startTime.toISOString(),
+          completedAt: currentSession.value.completedAt?.toISOString()
         }
         await db.save('pomo-flow-timer-session', sessionData)
       } else {

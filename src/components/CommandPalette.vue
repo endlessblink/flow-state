@@ -57,6 +57,7 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
+import type { Task } from '@/types/tasks'
 import { Plus } from 'lucide-vue-next'
 import CustomSelect from './CustomSelect.vue'
 

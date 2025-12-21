@@ -207,8 +207,8 @@ export function useHorizontalDragScroll(
     // Add global listeners when drag starts
     if (isDragging.value && scrollContainer.value) {
       const container = scrollContainer.value as HTMLElement & { _globalMouseMoveHandler?: (e: MouseEvent) => void, _globalMouseUpHandler?: (e: MouseEvent) => void }
-      container._globalMouseMoveHandler && document.addEventListener('mousemove', container._globalMouseMoveHandler)
-      container._globalMouseUpHandler && document.addEventListener('mouseup', container._globalMouseUpHandler)
+      if (container._globalMouseMoveHandler) document.addEventListener('mousemove', container._globalMouseMoveHandler)
+      if (container._globalMouseUpHandler) document.addEventListener('mouseup', container._globalMouseUpHandler)
     }
   }
 

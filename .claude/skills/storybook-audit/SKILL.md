@@ -146,7 +146,7 @@ grep -L "iframeHeight" src/stories/**/*.stories.ts
 | Full-page overlays | 100vh | Use fullscreen layout |
 | Components with submenus | 900px+ | Cascading menus need more |
 
-**Fix Pattern**:
+**Fix Pattern A: Iframe Height (Standard)**:
 ```typescript
 parameters: {
   layout: 'fullscreen',
@@ -157,6 +157,46 @@ parameters: {
     }
   }
 },
+```
+
+**Fix Pattern B: Inline Relative Container (Robust for Storybook 8/10)**:
+Use this when `iframeHeight` is ignored or global CSS (`preview-head.html`) overrides it.
+```typescript
+parameters: {
+  layout: 'fullscreen',
+  docs: {
+    story: { inline: true }
+  }
+},
+decorators: [
+  () => ({
+    template: `
+      <div class="story-container" style="
+        background: var(--glass-bg-solid); /* Dark glass overlay */
+        height: 850px; /* Adjust based on component needs */
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        /* No border for auth/overlay components to match BaseDropdown style */
+      ">
+        <style>
+           .story-container .modal-overlay,
+           .story-container .auth-container {
+             position: absolute !important;
+             width: 100% !important;
+             height: 100% !important;
+             z-index: 10 !important;
+           }
+        </style>
+        <story />
+      </div>
+    `
+  })
+]
 ```
 
 **Dynamic Height Script** (for preview.ts):
@@ -580,6 +620,14 @@ When stores are imported in Storybook:
 - Wrap in full-height container div
 - Provide toggle mechanism for interactive demos
 - Test both open and closed states
+
+### Auth Components (Added: 2025-12-21)
+- **Styling**: Must use "Dark Glass" aesthetic to match `BaseDropdown` reference.
+  - Background: `var(--glass-bg-solid)` (alias for `rgba(0, 0, 0, 0.95)`)
+  - Border: None (clean glass look)
+  - Layout: `inline: true` with fixed height relative container (600px-800px)
+- **Labels**: Use descriptive names ("Default View", "Loading State") instead of generic exports.
+- **Positioning**: Use relative container pattern (Fix Pattern B) to prevent cutoff.
 
 ---
 

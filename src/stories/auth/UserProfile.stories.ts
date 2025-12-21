@@ -10,19 +10,20 @@ const meta: Meta<typeof UserProfile> = {
     layout: 'fullscreen',
     docs: {
       story: {
-        inline: false,
-        iframeHeight: 600,
+        inline: true,
       }
     }
   },
   decorators: [
     () => ({
       template: `
-        <div style="
-          background: var(--surface-primary);
-          min-height: 100vh;
+        <div class="story-container" style="
+          background: var(--glass-bg-solid);
+          height: 800px;
+          position: relative;
+          overflow-y: auto;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           justify-content: center;
           padding: 2rem;
         ">

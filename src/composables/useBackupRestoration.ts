@@ -19,7 +19,7 @@ import { ref, computed, reactive as _reactive } from 'vue'
 import type { Task, Project } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
-import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useDatabase } from './useDatabase'
 
 /**
@@ -381,7 +381,27 @@ export function useBackupRestoration() {
       // Step 3: Load backup data from storage
       restoreProgress.value = 30
       const backupKey = `pomo-flow-backup-${backup.id}`
-      const backupData = await db.load(backupKey) as { data: { tasks?: Task[]; projects?: Project[]; canvas?: any; settings?: any } } | null
+      // Proper typing for backup structure
+      interface BackupData {
+        data: {
+          tasks?: Task[]
+          projects?: Project[]
+          canvas?: {
+            sections?: CanvasSection[]
+            viewport?: { x: number; y: number; zoom: number }
+          }
+          settings?: {
+            timer?: unknown
+            ui?: {
+              theme?: string
+              sidebarCollapsed?: boolean
+              showCompleted?: boolean
+            }
+          }
+        }
+      }
+
+      const backupData = await db.load(backupKey) as BackupData | null
 
       if (!backupData || !backupData.data) {
         throw new Error('Backup data is corrupted or missing')
@@ -422,7 +442,10 @@ export function useBackupRestoration() {
       if (backupData.data.settings) {
         restoreProgress.value = 95
         if (backupData.data.settings.timer) {
-          timerStore.settings = backupData.data.settings.timer
+          // Explicit cast to match store expectations.
+          // Using 'any' here effectively tells TS "trust me, this matches the store's shape"
+          // which is appropriate for restoring raw backup data.
+          timerStore.settings = backupData.data.settings.timer as typeof timerStore.settings
           // Timer settings are reactive and will be saved automatically
         }
 
@@ -430,8 +453,8 @@ export function useBackupRestoration() {
           if (backupData.data.settings.ui.theme) {
             localStorage.setItem('theme', backupData.data.settings.ui.theme)
           }
-          if (backupData.data.settings.ui.sidebarCollapsed) {
-            localStorage.setItem('sidebarCollapsed', backupData.data.settings.ui.sidebarCollapsed)
+          if (backupData.data.settings.ui.sidebarCollapsed !== undefined) {
+            localStorage.setItem('sidebarCollapsed', String(backupData.data.settings.ui.sidebarCollapsed))
           }
         }
         result.settingsRestored = true

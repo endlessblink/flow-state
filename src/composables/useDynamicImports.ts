@@ -315,9 +315,9 @@ export const getDatabaseComposable = async () => {
 }
 
 // Undo/Redo composable with caching
-export const getUndoRedoComposable = async () => {
+export const getUndoRedoComposable = async (): Promise<(...args: any[]) => any> => {
   const module = await dynamicImportManager.import<ModuleShape>('useUnifiedUndoRedo')
-  return module.useUnifiedUndoRedo || module
+  return (module.useUnifiedUndoRedo || module) as (...args: any[]) => any
 }
 
 // Sync manager with caching (consolidated)

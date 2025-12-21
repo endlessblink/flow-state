@@ -228,8 +228,8 @@ export class ConflictResolver {
     }
 
     // Safe access to data with fallback to empty objects
-    const localData = conflict.localVersion.data || {}
-    const remoteData = conflict.remoteVersion.data || {}
+    const localData = (conflict.localVersion.data || {}) as Record<string, unknown>
+    const remoteData = (conflict.remoteVersion.data || {}) as Record<string, unknown>
 
     const merged = this.smartMergeData(localData, remoteData)
     const mergedFields = this.getMergedFields(localData, remoteData)
@@ -254,8 +254,8 @@ export class ConflictResolver {
       conflictData: conflict,
       metadata: {
         mergedFields,
-        preservedLocalFields: this.getPreservedFields(conflict.localVersion.data, merged),
-        preservedRemoteFields: this.getPreservedFields(conflict.remoteVersion.data, merged),
+        preservedLocalFields: this.getPreservedFields((conflict.localVersion.data || {}) as Record<string, unknown>, merged),
+        preservedRemoteFields: this.getPreservedFields((conflict.remoteVersion.data || {}) as Record<string, unknown>, merged),
         // mergeComplexity: this.assessMergeComplexity(conflict)
       }
     }
@@ -387,7 +387,7 @@ export class ConflictResolver {
 
     // Merge objects by combining properties
     if (typeof localValue === 'object' && typeof remoteValue === 'object' &&
-        localValue !== null && remoteValue !== null && !Array.isArray(localValue) && !Array.isArray(remoteValue)) {
+      localValue !== null && remoteValue !== null && !Array.isArray(localValue) && !Array.isArray(remoteValue)) {
       return true
     }
 
@@ -407,7 +407,7 @@ export class ConflictResolver {
 
     // Merge objects (combine properties, remote takes precedence)
     if (typeof localValue === 'object' && typeof remoteValue === 'object' &&
-        localValue !== null && remoteValue !== null && !Array.isArray(localValue) && !Array.isArray(remoteValue)) {
+      localValue !== null && remoteValue !== null && !Array.isArray(localValue) && !Array.isArray(remoteValue)) {
       return { ...localValue, ...remoteValue }
     }
 
@@ -482,7 +482,7 @@ export class ConflictResolver {
     }
 
     // Safe access to version.data with fallback to empty object
-    const versionData = version.data || {}
+    const versionData = (version.data || {}) as Record<string, unknown>
 
     const doc = {
       ...versionData,
@@ -491,7 +491,7 @@ export class ConflictResolver {
       updatedAt: version.updatedAt || new Date().toISOString(),
       version: version.version || 1,
       deviceId: version.deviceId || 'unknown'
-    }
+    } as Record<string, unknown>
 
     // Add conflict resolution metadata
     if (version.deviceId !== 'merged') {

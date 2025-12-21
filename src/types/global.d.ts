@@ -82,7 +82,7 @@ declare global {
     get: (docId: string, options?: { conflicts?: boolean }) => Promise<PouchDBDocument>
     put: (doc: PouchDBDocument) => Promise<PouchDBResponse>
     remove: (docId: string, rev: string) => Promise<PouchDBResponse>
-    allDocs: (options?: { include_docs?: boolean }) => Promise<PouchDBAllDocsResponse>
+    allDocs: (options?: { include_docs?: boolean } & Record<string, unknown>) => Promise<PouchDBAllDocsResponse>
     bulkDocs: (docs: PouchDBDocument[]) => Promise<PouchDBResponse[]>
     changes: (options?: PouchDBChangesOptions) => PouchDBChanges
   }

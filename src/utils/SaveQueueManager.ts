@@ -122,7 +122,9 @@ export class SaveQueueManager {
 
     try {
       while (this.queue.length > 0) {
-        const operation = this.queue.shift()!
+        const operation = this.queue.shift()
+        if (!operation) continue // Should not happen given while condition, but safest for types
+
         this.metrics.value.queueLength = this.queue.length
 
         const startTime = Date.now()
@@ -322,10 +324,10 @@ export function useSaveQueue() {
 
   // Watch for changes if manager exists to keep local ref in sync
   if (saveQueueManager) {
-    const managerMetrics = saveQueueManager.getMetrics()
+    // const managerMetrics = saveQueueManager.getMetrics()
     // We can't watch inside a non-setup function easily in vanilla TS/JS without Vue context,
     // but this composable seems to be used within Vue setup.
-    // However, to be safe and simple, let's returning the computed ref directly if it exists,
+    // However, to be safe and simple, let's return the computed ref directly if it exists,
     // or a static ref if not.
   }
 

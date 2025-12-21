@@ -10,22 +10,32 @@ const meta: Meta<typeof ResetPasswordView> = {
     layout: 'fullscreen',
     docs: {
       story: {
-        inline: false,
-        iframeHeight: 700,
+        inline: true,
       }
     }
   },
   decorators: [
     () => ({
       template: `
-        <div style="
-          background: var(--surface-primary);
-          min-height: 100vh;
+        <div class="reset-password-story-container" style="
+          background: var(--glass-bg-solid);
+          height: 600px;
+          width: 100%;
+          position: relative;
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 2rem;
+          border-radius: 8px;
         ">
+          <!-- Force absolute positioning for the container within this wrapper -->
+          <style>
+             .reset-password-story-container .auth-container {
+               margin: 0 !important;
+               max-height: 90% !important;
+               overflow-y: auto !important;
+             }
+          </style>
           <story />
         </div>
       `
@@ -37,69 +47,41 @@ export default meta
 type Story = StoryObj<typeof ResetPasswordView>
 
 export const Default: Story = {
+  name: 'Default View',
   args: {
-    prefilledEmail: '',
+    email: '',
+    isLoading: false,
     errorMessage: null,
-    isLoading: false
-  }
-}
-
-export const WithEmail: Story = {
-  args: {
-    prefilledEmail: 'user@example.com',
-    errorMessage: null,
-    isLoading: false
-  }
-}
-
-export const WithError: Story = {
-  args: {
-    prefilledEmail: 'user@example.com',
-    errorMessage: 'Email not found',
-    isLoading: false
+    successMessage: null
   }
 }
 
 export const Loading: Story = {
+  name: 'Loading State',
   args: {
-    prefilledEmail: 'user@example.com',
+    email: 'test@example.com',
+    isLoading: true,
     errorMessage: null,
-    isLoading: true
+    successMessage: null
   }
 }
 
 export const Success: Story = {
+  name: 'Success State',
   args: {
-    prefilledEmail: 'user@example.com',
+    email: 'test@example.com',
+    isLoading: false,
     errorMessage: null,
-    isLoading: false
-  },
-  render: (args) => ({
-    components: { ResetPasswordView },
-    setup() {
-      const showSuccess = ref(true)
-      const successMessage = ref('Password reset email sent successfully!')
+    successMessage: 'Password reset link sent! Check your inbox.'
+  }
+}
 
-      const handleSuccess = () => {
-        showSuccess.value = true
-        console.log('Password reset successful')
-      }
-
-      return { args, showSuccess, successMessage, handleSuccess }
-    },
-    template: `
-      <div>
-        <ResetPasswordView
-          :prefilled-email="args.prefilledEmail"
-          :errorMessage="args.errorMessage"
-          :isLoading="args.isLoading"
-          @success="handleSuccess"
-          @switch-to-login="console.log('Switch to login')"
-        />
-        <div v-if="showSuccess" class="success-message" style="margin-top: 1rem; color: var(--color-success);">
-          {{ successMessage }}
-        </div>
-      </div>
-    `
-  })
+export const WithError: Story = {
+  name: 'Error State',
+  args: {
+    email: 'invalid-email',
+    isLoading: false,
+    errorMessage: 'Please enter a valid email address',
+    successMessage: null
+  }
 }

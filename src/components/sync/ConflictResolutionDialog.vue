@@ -282,18 +282,18 @@ import ManualMergeModal from './ManualMergeModal.vue'
 
 interface Props {
   taskConflict: TaskConflict
-  onResolve: (resolutions: Record<string, any>) => void
+  onResolve: (resolutions: Record<string, unknown>) => void
   onCancel: () => void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
-  resolve: [resolutions: Record<string, any>]
+  resolve: [resolutions: Record<string, unknown>]
   cancel: []
 }>()
 
 const selectedResolution = ref<Record<string, 'local' | 'remote' | 'suggested' | 'custom'>>({})
-const customValues = ref<Record<string, any>>({})
+const customValues = ref<Record<string, unknown>>({})
 const showManualMerge = ref(false)
 const currentMergeConflict = ref<ConflictDiff | null>(null)
 
@@ -410,7 +410,7 @@ function enterManualMerge(conflict: ConflictDiff): void {
 }
 
 // Save manual merge
-function saveManualMerge(mergedValue: any): void {
+function saveManualMerge(mergedValue: unknown): void {
   if (currentMergeConflict.value) {
     selectedResolution.value[currentMergeConflict.value.field] = 'custom'
     customValues.value[currentMergeConflict.value.field] = mergedValue
@@ -437,7 +437,7 @@ function getInputComponent(field: string): string {
 }
 
 // Get input props
-function getInputProps(field: string): Record<string, any> {
+function getInputProps(field: string): Record<string, unknown> {
   const fieldType = getFieldType(field)
   switch (fieldType) {
     case 'datetime':
@@ -473,15 +473,15 @@ function acceptAllSuggestions(): void {
 
 // Apply resolutions
 function applyResolutions(): void {
-  const resolutions: Record<string, any> = {}
+  const resolutions: Record<string, unknown> = {}
 
   Object.entries(selectedResolution.value).forEach(([field, resolution]) => {
     switch (resolution) {
       case 'local':
-        resolutions[field] = localTask.value[field] || getNestedValue(localTask.value, field)
+        resolutions[field] = localTask.value[field] || getNestedValue(localTask.value as Record<string, unknown>, field)
         break
       case 'remote':
-        resolutions[field] = remoteTask.value[field] || getNestedValue(remoteTask.value, field)
+        resolutions[field] = remoteTask.value[field] || getNestedValue(remoteTask.value as Record<string, unknown>, field)
         break
       case 'suggested':
       case 'custom':
@@ -499,8 +499,8 @@ function cancelResolution(): void {
 }
 
 // Get nested value from object
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj)
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce((current, key) => (current as Record<string, unknown>)?.[key], obj)
 }
 
 onMounted(() => {

@@ -89,12 +89,29 @@ export interface OperationResult {
   nextRetryTime?: number
 }
 
+// Extended Database interface to support custom methods or plugins
+// Using Omit to handle the custom remove signature that differs from PouchDB standard
+interface ExtendedDatabase extends Omit<PouchDB.Database, 'remove'> {
+  save(id: string, data: unknown): Promise<PouchDB.Core.Response>
+  remove(id: string): Promise<PouchDB.Core.Response>
+  // Re-include standard remove signatures if needed, or just relying on the custom one used here
+}
+
+// Retry Manager interface
+interface RetryManager {
+  executeWithRetry<T>(
+    fn: () => Promise<T>,
+    context: string,
+    options?: { documentId?: string }
+  ): Promise<{ success: boolean; result?: T; error?: Error }>
+}
+
 export class OfflineQueue {
   private queue: QueuedOperation[] = []
   private isOnline: boolean = navigator.onLine
   private processing: boolean = false
-  private db: PouchDB.Database | null = null
-  private retryManager: unknown = null
+  private db: ExtendedDatabase | null = null
+  private retryManager: RetryManager | null = null
   private totalProcessingTime: number = 0
   private processingHistory: Array<{ timestamp: number; result: QueueProcessingResult }> = []
   private eventListeners: Map<string, ((...args: unknown[]) => void)[]> = new Map()
@@ -105,8 +122,9 @@ export class OfflineQueue {
   private conflictHandling: DeferredResolution
 
   constructor(db?: PouchDB.Database, retryManager?: unknown) {
-    this.db = db
-    this.retryManager = retryManager
+    // Double cast to handle the interface mismatch during initialization
+    this.db = (db as unknown as ExtendedDatabase) || null
+    this.retryManager = (retryManager as RetryManager) || null
 
     // Initialize advanced configuration
     this.onlineStatus = this.initializeOnlineStatus()
@@ -258,34 +276,36 @@ export class OfflineQueue {
   /**
    * Validate task-specific data
    */
-  private async validateTaskData(data: any): Promise<string[]> {
+  private async validateTaskData(data: unknown): Promise<string[]> {
     const errors: string[] = []
 
     if (data && typeof data === 'object') {
+      const task = data as Record<string, unknown>
+
       // Title validation
-      if (data.title && (typeof data.title !== 'string' || data.title.trim().length === 0)) {
+      if (task.title && (typeof task.title !== 'string' || task.title.trim().length === 0)) {
         errors.push('Task title must be a non-empty string')
       }
 
-      if (data.title && data.title.length > 500) {
+      if (task.title && typeof task.title === 'string' && task.title.length > 500) {
         errors.push('Task title is too long (max 500 characters)')
       }
 
       // Priority validation
-      if (data.priority && !['low', 'medium', 'high'].includes(data.priority)) {
+      if (task.priority && typeof task.priority === 'string' && !['low', 'medium', 'high'].includes(task.priority)) {
         errors.push('Invalid priority level')
       }
 
       // Due date validation
-      if (data.dueDate) {
-        const dueDate = new Date(data.dueDate)
+      if (task.dueDate && typeof task.dueDate === 'string') {
+        const dueDate = new Date(task.dueDate)
         if (isNaN(dueDate.getTime())) {
           errors.push('Invalid due date format')
         }
       }
 
       // Tags validation
-      if (data.tags && (!Array.isArray(data.tags) || data.tags.some((tag: any) => typeof tag !== 'string'))) {
+      if (task.tags && (!Array.isArray(task.tags) || (task.tags as unknown[]).some((tag: unknown) => typeof tag !== 'string'))) {
         errors.push('Tags must be an array of strings')
       }
     }
@@ -559,7 +579,7 @@ export class OfflineQueue {
     this.queue = this.queue.filter(op => op.id !== operationId)
   }
 
-  
+
   /**
    * Start advanced connectivity monitoring
    */
@@ -567,7 +587,7 @@ export class OfflineQueue {
     // Periodic connectivity check with quality assessment
     this.connectivityMonitor = setInterval(() => {
       this.checkConnectivity()
-    }, 30000) as any // Check every 30 seconds
+    }, 30000) as unknown as number // Check every 30 seconds
   }
 
   /**
@@ -691,7 +711,7 @@ export class OfflineQueue {
     }
   }
 
-  private emitEvent(event: string, data?: any): void {
+  private emitEvent(event: string, data?: unknown): void {
     const listeners = this.eventListeners.get(event)
     if (listeners) {
       listeners.forEach(callback => {
@@ -767,12 +787,17 @@ export class OfflineQueue {
     try {
       const persisted = localStorage.getItem('pomoflow-offline-queue')
       if (persisted) {
-        const queueData = JSON.parse(persisted)
-        this.queue = queueData.queue || []
-        this.queue = this.queue.map((op: any) => ({
-          ...op,
-          timestamp: new Date(op.timestamp)
-        }))
+        const queueData = JSON.parse(persisted) as { queue: unknown[] }
+        const ops = queueData.queue || []
+
+        this.queue = ops.map((op: unknown) => {
+          const operation = op as QueuedOperation
+          return {
+            ...operation,
+            timestamp: new Date(operation.timestamp as unknown as string).getTime()
+          }
+        }) as QueuedOperation[]
+
         console.log(`📂 Loaded ${this.queue.length} operations from offline queue`)
 
         // Process queue if online

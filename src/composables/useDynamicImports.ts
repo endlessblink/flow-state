@@ -8,8 +8,8 @@
 import { ref as _ref, reactive } from 'vue'
 
 // Type definitions for dynamic imports
-type _DynamicImport<T = any> = () => Promise<T>
-type ImportCache = Map<string, any>
+type _DynamicImport<T = unknown> = () => Promise<T>
+type ImportCache = Map<string, unknown>
 
 // Import configuration interface
 interface ImportConfig {
@@ -93,12 +93,12 @@ type ImportKey = keyof typeof IMPORT_CONFIG
  */
 export class DynamicImportManager {
   private cache: ImportCache = new Map()
-  private loadingPromises: Map<string, Promise<any>> = new Map()
+  private loadingPromises: Map<string, Promise<unknown>> = new Map()
 
   /**
    * Import a module with caching, timeout, and error handling
    */
-  async import<T = any>(key: ImportKey): Promise<T> {
+  async import<T = unknown>(key: ImportKey): Promise<T> {
     const config = IMPORT_CONFIG[key]
 
     if (!config) {
@@ -107,12 +107,12 @@ export class DynamicImportManager {
 
     // Return cached version if available
     if (this.cache.has(key)) {
-      return this.cache.get(key)
+      return this.cache.get(key) as T
     }
 
     // Return existing promise if currently loading
     if (this.loadingPromises.has(key)) {
-      return this.loadingPromises.get(key)
+      return this.loadingPromises.get(key) as Promise<T>
     }
 
     // Create and store loading promise
@@ -242,14 +242,14 @@ export function useDynamicImports() {
   /**
    * Import a composable or component
    */
-  const importModule = async <T = any>(key: ImportKey): Promise<T> => {
+  const importModule = async <T = unknown>(key: ImportKey): Promise<T> => {
     return await dynamicImportManager.import<T>(key)
   }
 
   /**
    * Import multiple modules in parallel
    */
-  const importModules = async <T = any>(keys: ImportKey[]): Promise<T[]> => {
+  const importModules = async <T = unknown>(keys: ImportKey[]): Promise<T[]> => {
     const promises = keys.map(key => dynamicImportManager.import<T>(key))
     return await Promise.all(promises)
   }
@@ -257,15 +257,15 @@ export function useDynamicImports() {
   /**
    * Import with fallback
    */
-  const importWithFallback = async <T = any>(
+  const importWithFallback = async <T = unknown>(
     key: ImportKey,
     fallback: T | (() => T)
   ): Promise<T> => {
     try {
       return await dynamicImportManager.import<T>(key)
     } catch (error) {
-      console.warn(`⚠️ Import failed for ${key}, using fallback:`, (error as any).message)
-      return typeof fallback === 'function' ? (fallback as any)() : fallback
+      console.warn(`⚠️ Import failed for ${key}, using fallback:`, (error as Error).message)
+      return typeof fallback === 'function' ? (fallback as () => T)() : fallback
     }
   }
 
@@ -305,43 +305,46 @@ export function useDynamicImports() {
  * Convenience functions for common imports
  */
 
+// Helper type for dynamic modules
+type ModuleShape = Record<string, unknown>
+
 // Database composable with caching
 export const getDatabaseComposable = async () => {
-  const module = await dynamicImportManager.import('useDatabase')
+  const module = await dynamicImportManager.import<ModuleShape>('useDatabase')
   return module.useDatabase || module
 }
 
 // Undo/Redo composable with caching
 export const getUndoRedoComposable = async () => {
-  const module = await dynamicImportManager.import('useUnifiedUndoRedo')
+  const module = await dynamicImportManager.import<ModuleShape>('useUnifiedUndoRedo')
   return module.useUnifiedUndoRedo || module
 }
 
 // Sync manager with caching (consolidated)
 export const getSyncManager = async () => {
-  const module = await dynamicImportManager.import('useReliableSyncManager')
+  const module = await dynamicImportManager.import<ModuleShape>('useReliableSyncManager')
   return module.getGlobalReliableSyncManager || module
 }
 
 // Store imports with caching
 export const getTasksStore = async () => {
-  const module = await dynamicImportManager.import('useTasksStore')
+  const module = await dynamicImportManager.import<ModuleShape>('useTasksStore')
   return module.useTasksStore || module.default || module
 }
 
 export const getCanvasStore = async () => {
-  const module = await dynamicImportManager.import('useCanvasStore')
+  const module = await dynamicImportManager.import<ModuleShape>('useCanvasStore')
   return module.useCanvasStore || module.default || module
 }
 
 // Vue component imports
 export const getSyncStatusIndicator = async () => {
-  const module = await dynamicImportManager.import('SyncStatusIndicator')
+  const module = await dynamicImportManager.import<ModuleShape>('SyncStatusIndicator')
   return module.default || module.SyncStatusIndicator
 }
 
 export const getSyncErrorBoundary = async () => {
-  const module = await dynamicImportManager.import('SyncErrorBoundary')
+  const module = await dynamicImportManager.import<ModuleShape>('SyncErrorBoundary')
   return module.default || module.SyncErrorBoundary
 }
 

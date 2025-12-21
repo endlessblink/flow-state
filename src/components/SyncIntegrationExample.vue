@@ -231,21 +231,30 @@
 import { ref, computed, onMounted } from 'vue'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getDatabaseComposable } from '@/composables/useDynamicImports'
-import { runSyncSystemTests } from '@/utils/syncTestSuite'
+import { runSyncSystemTests, type TestSuite } from '@/utils/syncTestSuite'
 import SyncStatusIndicator from './SyncStatusIndicator.vue'
 import SyncErrorBoundary from './SyncErrorBoundary.vue'
+
+// Define interface for the database composable return
+interface DatabaseComposable {
+  save?: (key: string, data: unknown) => Promise<void>
+  load?: (key: string) => Promise<any>
+  remove?: (key: string) => Promise<void>
+  [key: string]: unknown
+}
 
 // Sync manager and database
 const syncManager = getGlobalReliableSyncManager()
 
 // Reactive state
 const databaseReady = ref(false)
-const database = ref(null)
+const database = ref<DatabaseComposable | null>(null)
 
 // Initialize database composable
 const initializeDatabase = async () => {
   try {
-    database.value = await getDatabaseComposable()
+    const dbModule = await getDatabaseComposable()
+    database.value = dbModule as DatabaseComposable
     databaseReady.value = true
   } catch (error) {
     console.error('Failed to initialize database composable:', error)
@@ -262,7 +271,7 @@ const testKey = ref('example-key')
 const testValue = ref('example-value')
 const operationResult = ref('')
 const isTesting = ref(false)
-const testResults = ref<any>(null)
+const testResults = ref<TestSuite | null>(null)
 
 // Computed properties (adapted for ReliableSyncManager API)
 const _syncStatus = computed(() => syncManager.syncStatus.value)
@@ -305,6 +314,11 @@ const recentErrors = computed(() => {
   return errors.slice(-5) // Show last 5
 })
 
+// Helper for error messages
+const getErrorMessage = (error: unknown): string => {
+  return error instanceof Error ? error.message : String(error)
+}
+
 // Methods
 const triggerManualSync = async () => {
   try {
@@ -312,7 +326,7 @@ const triggerManualSync = async () => {
     await syncManager.triggerSync()
     operationResult.value = 'Manual sync completed successfully'
   } catch (error) {
-    operationResult.value = `Manual sync failed: ${(error as any).message}`
+    operationResult.value = `Manual sync failed: ${getErrorMessage(error)}`
   }
 }
 
@@ -322,7 +336,7 @@ const pauseSync = async () => {
     await syncManager.cleanup()
     operationResult.value = 'Sync stopped (cleanup performed)'
   } catch (error) {
-    operationResult.value = `Failed to stop sync: ${(error as any).message}`
+    operationResult.value = `Failed to stop sync: ${getErrorMessage(error)}`
   }
 }
 
@@ -332,7 +346,7 @@ const resumeSync = async () => {
     await syncManager.init()
     operationResult.value = 'Sync resumed (reinitialized)'
   } catch (error) {
-    operationResult.value = `Failed to resume sync: ${(error as any).message}`
+    operationResult.value = `Failed to resume sync: ${getErrorMessage(error)}`
   }
 }
 
@@ -344,16 +358,16 @@ const clearErrors = () => {
 const saveTestData = async () => {
   try {
     const data = { value: testValue.value, timestamp: Date.now() }
-    await (database.value as any)?.save?.(testKey.value, data)
+    await database.value?.save?.(testKey.value, data)
     operationResult.value = `Saved: ${testKey.value} = ${testValue.value}`
   } catch (error) {
-    operationResult.value = `Save failed: ${(error as any).message}`
+    operationResult.value = `Save failed: ${getErrorMessage(error)}`
   }
 }
 
 const loadTestData = async () => {
   try {
-    const data = await (database.value as any)?.load?.(testKey.value)
+    const data = await database.value?.load?.(testKey.value)
     if (data) {
       testValue.value = data.value
       operationResult.value = `Loaded: ${testKey.value} = ${data.value}`
@@ -361,16 +375,16 @@ const loadTestData = async () => {
       operationResult.value = `No data found for key: ${testKey.value}`
     }
   } catch (error) {
-    operationResult.value = `Load failed: ${(error as any).message}`
+    operationResult.value = `Load failed: ${getErrorMessage(error)}`
   }
 }
 
 const removeTestData = async () => {
   try {
-    await (database.value as any)?.remove?.(testKey.value)
+    await database.value?.remove?.(testKey.value)
     operationResult.value = `Removed: ${testKey.value}`
   } catch (error) {
-    operationResult.value = `Remove failed: ${(error as any).message}`
+    operationResult.value = `Remove failed: ${getErrorMessage(error)}`
   }
 }
 
@@ -381,7 +395,7 @@ const runTests = async () => {
     testResults.value = await runSyncSystemTests()
     operationResult.value = `Tests completed: ${testResults.value.passed}/${testResults.value.tests.length} passed`
   } catch (error) {
-    operationResult.value = `Test suite failed: ${(error as any).message}`
+    operationResult.value = `Test suite failed: ${getErrorMessage(error)}`
   } finally {
     isTesting.value = false
   }

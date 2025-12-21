@@ -197,7 +197,7 @@ export class InputSanitizer {
   }
 
   // Validate input against rules
-  static validate(input: any, rules: ValidationRule[]): ValidationResult {
+  static validate(input: unknown, rules: ValidationRule[]): ValidationResult {
     const errors: string[] = []
     const warnings: string[] = []
 
@@ -224,7 +224,7 @@ export class InputSanitizer {
   }
 
   // Validate and sanitize in one step
-  static validateAndSanitize(input: any, rules: ValidationRule[], options: SanitizationOptions = {}): ValidationResult {
+  static validateAndSanitize(input: unknown, rules: ValidationRule[], options: SanitizationOptions = {}): ValidationResult {
     const sanitized = this.sanitize(input, options)
     const validation = this.validate(sanitized, rules)
 
@@ -238,7 +238,7 @@ export class InputSanitizer {
   static readonly CommonRules = {
     required: {
       name: 'required',
-      validate: (value: any) => value !== null && value !== undefined && value !== '',
+      validate: (value: unknown) => value !== null && value !== undefined && value !== '',
       message: 'This field is required',
       severity: 'error' as const
     },
@@ -348,7 +348,7 @@ export class InputSanitizer {
   }
 
   // Sanitize task data
-  static sanitizeTaskData(task: any): any {
+  static sanitizeTaskData(task: Record<string, unknown>): Record<string, unknown> {
     return {
       id: this.sanitize(task.id, { allowHTML: false, maxLength: 50 }),
       title: this.sanitize(task.title, {
@@ -366,7 +366,7 @@ export class InputSanitizer {
       priority: this.sanitize(task.priority, { allowHTML: false, maxLength: 20 }),
       projectId: this.sanitize(task.projectId, { allowHTML: false, maxLength: 50 }),
       dueDate: this.sanitize(task.dueDate, { allowHTML: false, maxLength: 50 }),
-      tags: Array.isArray(task.tags) ? task.tags.map((tag: any) =>
+      tags: Array.isArray(task.tags) ? task.tags.map((tag: unknown) =>
         this.sanitize(tag, { allowHTML: false, maxLength: 50 })
       ) : [],
       // Add other task fields as needed
@@ -380,16 +380,16 @@ export class InputSanitizer {
       maxLength: 500,
       trimWhitespace: true,
       normalizeWhitespace: true
-    })
+    }) as string
   }
 
   // Sanitize file names
   static sanitizeFileName(input: string): string {
-    return this.sanitize(input, {
+    return (this.sanitize(input, {
       allowHTML: false,
       maxLength: 255,
       trimWhitespace: true
-    }).replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
+    }) as string).replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
   }
 
   // Check for XSS attempts
@@ -414,7 +414,7 @@ export class InputSanitizer {
     const matches = text.match(urlRegex) || []
 
     return matches.filter(url => {
-      const sanitized = this.sanitize(url, { allowHTML: false })
+      const sanitized = this.sanitize(url, { allowHTML: false }) as string
       return !this.hasXSS(sanitized)
     })
   }
@@ -422,19 +422,19 @@ export class InputSanitizer {
 
 // Vue composable for easy integration
 export function useInputSanitizer() {
-  const sanitize = (input: any, options?: SanitizationOptions) => {
+  const sanitize = (input: unknown, options?: SanitizationOptions) => {
     return InputSanitizer.sanitize(input, options)
   }
 
-  const validate = (input: any, rules: ValidationRule[]) => {
+  const validate = (input: unknown, rules: ValidationRule[]) => {
     return InputSanitizer.validate(input, rules)
   }
 
-  const validateAndSanitize = (input: any, rules: ValidationRule[], options?: SanitizationOptions) => {
+  const validateAndSanitize = (input: unknown, rules: ValidationRule[], options?: SanitizationOptions) => {
     return InputSanitizer.validateAndSanitize(input, rules, options)
   }
 
-  const sanitizeTaskData = (task: any) => {
+  const sanitizeTaskData = (task: Record<string, unknown>) => {
     return InputSanitizer.sanitizeTaskData(task)
   }
 

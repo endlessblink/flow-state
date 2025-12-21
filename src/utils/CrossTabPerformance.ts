@@ -204,7 +204,7 @@ export class CrossTabPerformance {
   private calculateDataSize(data: unknown[]): number {
     try {
       return JSON.stringify(data).length * 2 // Rough estimate (UTF-16)
-    } catch (e) {
+    } catch (_e) {
       return 0
     }
   }
@@ -234,7 +234,7 @@ export class CrossTabPerformance {
       const cacheSize = JSON.stringify(Array.from(this.cache.values())).length * 2
       const queueSize = JSON.stringify(this.dataQueue).length * 2
       return (cacheSize + queueSize) / (1024 * 1024) // Convert to MB
-    } catch (e) {
+    } catch (_e) {
       return 0
     }
   }

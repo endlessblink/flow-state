@@ -133,7 +133,7 @@ export class PerformanceBenchmark {
     // Warmup
     await this.warmupVirtualScrolling()
 
-    for (let i = 0; i < this.config.iterations!; i++) {
+    for (let i = 0; i < (this.config.iterations || 5); i++) {
       const itemCount = itemCounts[i % itemCounts.length]
       const items = Array.from({ length: itemCount }, (_, index) => ({
         id: index,
@@ -170,7 +170,7 @@ export class PerformanceBenchmark {
         errors.push(error instanceof Error ? error.message : String(error))
       }
 
-      this.progress.value = (i / this.config.iterations!) * 20 // 20% of total
+      this.progress.value = (i / (this.config.iterations || 5)) * 20 // 20% of total
     }
 
     return this.calculateBenchmarkResult('Virtual Scrolling', times, errors)
@@ -187,7 +187,7 @@ export class PerformanceBenchmark {
     // Warmup
     await this.warmupTaskStore()
 
-    for (let i = 0; i < this.config.iterations!; i++) {
+    for (let i = 0; i < (this.config.iterations || 5); i++) {
       const operation = operations[i % operations.length]
       const task = {
         id: `task-${i}`,
@@ -223,7 +223,7 @@ export class PerformanceBenchmark {
         errors.push(error instanceof Error ? error.message : String(error))
       }
 
-      this.progress.value = 20 + (i / this.config.iterations!) * 15 // 20-35% of total
+      this.progress.value = 20 + (i / (this.config.iterations || 5)) * 15 // 20-35% of total
     }
 
     return this.calculateBenchmarkResult('Task Store Operations', times, errors)
@@ -245,7 +245,7 @@ export class PerformanceBenchmark {
     // Warmup
     await this.warmupNetworkRequests()
 
-    for (let i = 0; i < this.config.iterations!; i++) {
+    for (let i = 0; i < (this.config.iterations || 5); i++) {
       const endpoint = endpoints[i % endpoints.length]
       const data = i % 2 === 0 ? null : { test: 'data', index: i }
 
@@ -267,7 +267,7 @@ export class PerformanceBenchmark {
         errors.push(error instanceof Error ? error.message : String(error))
       }
 
-      this.progress.value = 35 + (i / this.config.iterations!) * 15 // 35-50% of total
+      this.progress.value = 35 + (i / (this.config.iterations || 5)) * 15 // 35-50% of total
     }
 
     return this.calculateBenchmarkResult('Network Requests', times, errors)
@@ -284,7 +284,7 @@ export class PerformanceBenchmark {
     // Warmup
     await this.warmupRenderPerformance()
 
-    for (let i = 0; i < this.config.iterations!; i++) {
+    for (let i = 0; i < (this.config.iterations || 5); i++) {
       const componentCount = componentCounts[i % componentCounts.length]
 
       try {
@@ -308,7 +308,7 @@ export class PerformanceBenchmark {
         errors.push(error instanceof Error ? error.message : String(error))
       }
 
-      this.progress.value = 50 + (i / this.config.iterations!) * 15 // 50-65% of total
+      this.progress.value = 50 + (i / (this.config.iterations || 5)) * 15 // 50-65% of total
     }
 
     return this.calculateBenchmarkResult('Render Performance', times, errors)
@@ -324,7 +324,7 @@ export class PerformanceBenchmark {
 
     const initialMemory = this.getMemoryUsage()
 
-    for (let i = 0; i < this.config.iterations!; i++) {
+    for (let i = 0; i < (this.config.iterations || 5); i++) {
       try {
         const startTime = performance.now()
 
@@ -358,7 +358,7 @@ export class PerformanceBenchmark {
         errors.push(error instanceof Error ? error.message : String(error))
       }
 
-      this.progress.value = 65 + (i / this.config.iterations!) * 15 // 65-80% of total
+      this.progress.value = 65 + (i / (this.config.iterations || 5)) * 15 // 65-80% of total
     }
 
     const finalMemory = this.getMemoryUsage()
@@ -418,7 +418,7 @@ export class PerformanceBenchmark {
 
   // Warmup functions
   private async warmupVirtualScrolling() {
-    for (let i = 0; i < this.config.warmupIterations!; i++) {
+    for (let i = 0; i < (this.config.warmupIterations || 2); i++) {
       const items = Array.from({ length: 100 }, (_, index) => ({ id: index, data: null }))
       useVirtualScrolling(items, { threshold: 50 })
       await new Promise(resolve => setTimeout(resolve, 10))
@@ -426,13 +426,13 @@ export class PerformanceBenchmark {
   }
 
   private async warmupTaskStore() {
-    for (let i = 0; i < this.config.warmupIterations!; i++) {
+    for (let i = 0; i < (this.config.warmupIterations || 2); i++) {
       await this.simulateTaskCreate({ id: `warmup-${i}`, title: 'Warmup Task' })
     }
   }
 
   private async warmupNetworkRequests() {
-    for (let i = 0; i < this.config.warmupIterations!; i++) {
+    for (let i = 0; i < (this.config.warmupIterations || 2); i++) {
       try {
         await fetch('https://httpbin.org/status/200')
       } catch {
@@ -442,7 +442,7 @@ export class PerformanceBenchmark {
   }
 
   private async warmupRenderPerformance() {
-    for (let i = 0; i < this.config.warmupIterations!; i++) {
+    for (let i = 0; i < (this.config.warmupIterations || 2); i++) {
       this.renderOptimizer.optimizedRender(() => {
         document.createElement('div')
       })

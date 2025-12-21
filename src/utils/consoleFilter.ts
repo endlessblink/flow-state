@@ -179,22 +179,22 @@ function shouldFilter(message: string): boolean {
 
 // Apply console filtering
 export function applyConsoleFiltering(): void {
-  console.log = (...args: any[]) => {
-    const firstArg = args[0]
+  console.log = (...args: unknown[]) => {
+    const firstArg = String(args[0])
     if (!shouldFilter(firstArg)) {
       originalConsole.log(...args)
     }
   }
 
-  console.warn = (...args: any[]) => {
-    const firstArg = args[0]
+  console.warn = (...args: unknown[]) => {
+    const firstArg = String(args[0])
     if (!shouldFilter(firstArg)) {
       originalConsole.warn(...args)
     }
   }
 
-  console.info = (...args: any[]) => {
-    const firstArg = args[0]
+  console.info = (...args: unknown[]) => {
+    const firstArg = String(args[0])
     if (!shouldFilter(firstArg)) {
       originalConsole.info(...args)
     }

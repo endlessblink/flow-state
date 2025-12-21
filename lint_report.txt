@@ -1,0 +1,204 @@
+
+> pomo-flow@1.0.0 lint
+> eslint src --max-warnings 0
+
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/GroupModal.vue
+  113:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/SearchModal.vue
+  39:41  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+  64:41  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/diffs/CharacterDiff.vue
+  8:9  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/diffs/LineDiff.vue
+  13:35  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+  15:38  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/diffs/WordDiff.vue
+  8:9  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useBackupRestoration.ts
+  384:111  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  384:127  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useCrossTabSync.ts
+  859:43  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useDatabase.ts
+  635:35  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useDatabaseAdapter.ts
+  54:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useNetworkOptimizer.ts
+  241:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  367:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  369:71  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  417:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/usePersistentStorage.ts
+  386:26  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  390:40  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  391:31  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  392:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  393:26  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  394:45  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useReliableSyncManager.ts
+  225:41  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  549:29  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  549:53  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  567:29  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  567:51  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useRenderOptimization.ts
+  57:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useStaticResourceCache.ts
+  377:26  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/canvas.ts
+  473:26  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  475:16  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  476:16  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  614:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  614:58  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  619:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  619:39  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  624:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  624:39  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  629:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  631:13  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  631:58  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  634:13  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  634:56  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/taskCanvas.ts
+  174:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  174:57  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  177:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  177:53  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  180:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  180:59  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  183:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  185:50  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  210:23  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/timer.ts
+  530:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  535:32  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  536:21  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  541:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  541:36  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  543:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  544:14  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  547:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  550:53  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  555:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  556:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  561:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  562:32  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  563:21  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  568:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  569:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  570:14  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  572:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  575:53  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  580:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  581:27  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  582:27  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  587:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  588:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  593:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  598:18  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  629:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  636:5   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  652:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  675:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  675:36  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  675:71  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  676:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  679:13  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  683:13  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  691:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  692:7   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  699:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  700:7   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  716:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  719:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  735:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  748:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  756:29  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  757:24  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  761:9   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  761:41  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  761:88  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  763:55  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  769:30  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  914:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  916:14  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  917:22  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  918:24  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/DragInteractionRecorder.ts
+  434:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  442:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  450:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/SaveQueueManager.ts
+  125:27  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/conflictResolution.ts
+  480:5  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  482:5  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/cspManager.ts
+  484:19  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/memoryLeakDetector.ts
+  218:47  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/mockTaskDetector.ts
+  113:7  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/performanceBenchmark.ts
+  136:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  173:34  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  190:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  226:39  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  248:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  270:39  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  287:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  311:39  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  327:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  361:39  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  421:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  429:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  435:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  445:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/productionLogger.ts
+  411:66  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/rateLimiter.ts
+  165:50  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  166:44  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/securityHeaders.ts
+  192:18  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/syncBatchManager.ts
+  196:19  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/syncCircuitBreaker.ts
+  352:43  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  365:36  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  428:32  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  495:36  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+✖ 138 problems (0 errors, 138 warnings)
+
+ESLint found too many warnings (maximum: 0).

@@ -464,28 +464,28 @@ import {
   computed,
   watch,
   onMounted,
-  onUnmounted,
+  onBeforeUnmount,
   nextTick,
-  markRaw,
-  defineAsyncComponent,
-  onErrorCaptured
+  markRaw
 } from 'vue'
 import {
   VueFlow,
   useVueFlow,
-  Panel,
-  Position,
-  type Node,
+  useNodesInitialized,
   type Edge,
-  type XYPosition,
-  type NodeTypes
+  type NodeTypes,
+  type EdgeMouseEvent
 } from '@vue-flow/core'
+import {
+  useWindowSize,
+  useMagicKeys,
+  useDebounceFn
+} from '@vueuse/core'
 import { Filter, X, Plus, Inbox } from 'lucide-vue-next'
 import { useMessage } from 'naive-ui'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
 import '@vue-flow/node-resizer/dist/style.css'
-import type { Node, Edge, EdgeMouseEvent } from '@vue-flow/core'
 import { useVueFlowStability } from '@/composables/useVueFlowStability'
 import { useVueFlowStateManager } from '@/composables/useVueFlowStateManager'
 import { useVueFlowErrorHandling } from '@/composables/useVueFlowErrorHandling'
@@ -2558,29 +2558,34 @@ const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event
           if (!task.canvasPosition) return false
           const taskSection = canvasStore.sections.find(s => {
             const { x, y, width, height } = s.position
-            return task.canvasPosition!.x >= x &&
-                   task.canvasPosition!.x <= x + width &&
-                   task.canvasPosition!.y >= y &&
-                   task.canvasPosition!.y <= y + height
+            // Safe guard against missing canvasPosition
+            if (!task.canvasPosition) return false
+            return task.canvasPosition.x >= x &&
+                   task.canvasPosition.x <= x + width &&
+                   task.canvasPosition.y >= y &&
+                   task.canvasPosition.y <= y + height
           })
           return taskSection?.id === sectionId
         })
         .forEach(task => {
-          taskStore.updateTaskWithUndo(task.id, {
-            canvasPosition: {
-              x: task.canvasPosition!.x + deltaX,
-              y: task.canvasPosition!.y + deltaY
-            }
-          })
+          if (task.canvasPosition) {
+            taskStore.updateTaskWithUndo(task.id, {
+              canvasPosition: {
+                x: task.canvasPosition.x + deltaX,
+                y: task.canvasPosition.y + deltaY
+              }
+            })
+          }
         })
       }
 
       console.log(`Section dragged to: (${node.position.x}, ${node.position.y}) with ${Array.isArray(filteredTasks.value) ? filteredTasks.value.filter(t => {
         if (!t.canvasPosition) return false
         const taskSection = canvasStore.sections.find(s => {
+          if (!t.canvasPosition) return false
           const { x, y, width, height } = s.position
-          return t.canvasPosition!.x >= x && t.canvasPosition!.x <= x + width &&
-                 t.canvasPosition!.y >= y && t.canvasPosition!.y <= y + height
+          return t.canvasPosition.x >= x && t.canvasPosition.x <= x + width &&
+                 t.canvasPosition.y >= y && t.canvasPosition.y <= y + height
         })
         return taskSection?.id === sectionId
       }).length : 0} child tasks`)
@@ -3062,15 +3067,18 @@ const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event
         console.log(`📦 [CanvasView] Found ${tasksInSection.length} tasks to adjust`)
 
         // Update each task's absolute position by the delta
+        // Update each task's absolute position by the delta
         tasksInSection.forEach(task => {
-          const newTaskX = task.canvasPosition!.x + deltaX
-          const newTaskY = task.canvasPosition!.y + deltaY
+          if (task.canvasPosition) {
+            const newTaskX = task.canvasPosition.x + deltaX
+            const newTaskY = task.canvasPosition.y + deltaY
 
-          console.log(`  📍 Adjusting task "${task.title}": (${task.canvasPosition!.x}, ${task.canvasPosition!.y}) → (${newTaskX}, ${newTaskY})`)
+            console.log(`  📍 Adjusting task "${task.title}": (${task.canvasPosition.x}, ${task.canvasPosition.y}) → (${newTaskX}, ${newTaskY})`)
 
-          taskStore.updateTask(task.id, {
-            canvasPosition: { x: newTaskX, y: newTaskY }
-          })
+            taskStore.updateTask(task.id, {
+              canvasPosition: { x: newTaskX, y: newTaskY }
+            })
+          }
         })
 
         console.log('✅ [CanvasView] Task absolute positions adjusted')

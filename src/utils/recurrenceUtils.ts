@@ -12,7 +12,12 @@ import type {
   RecurrenceException,
   RecurringTaskInstance,
   RecurrencePreviewOptions,
-  RecurrenceValidationResult
+  RecurrenceValidationResult,
+  DailyRecurrenceRule,
+  WeeklyRecurrenceRule,
+  MonthlyRecurrenceRule,
+  YearlyRecurrenceRule,
+  Weekday
 } from '@/types/recurrence'
 
 /**

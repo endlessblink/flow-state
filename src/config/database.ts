@@ -144,7 +144,7 @@ export const STORAGE_FLAGS = {
    * When true: Read from individual task-{id} documents instead of tasks:data
    * Only enable after confirming dual-write has populated all task-{id} docs
    */
-  READ_INDIVIDUAL_TASKS: import.meta.env.VITE_READ_INDIVIDUAL_TASKS === 'true' || false, // Default OFF
+  READ_INDIVIDUAL_TASKS: import.meta.env.VITE_READ_INDIVIDUAL_TASKS === 'true' || true, // TASK-034 Phase 4: ENABLED 2025-12-21
 
   /**
    * When true: Stop writing to tasks:data entirely (final phase)

@@ -21,7 +21,7 @@ import { STORAGE_FLAGS } from '@/config/database'
 import {
   saveTasks as saveIndividualTasks,
   loadAllTasks as loadIndividualTasks,
-  deleteTask as deleteIndividualTask,
+  deleteTask as _deleteIndividualTask,
   syncDeletedTasks,
   migrateFromLegacyFormat
 } from '@/utils/individualTaskStorage'
@@ -390,7 +390,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const _initializeSampleTasks = () => {
     // Disabled - users add their own tasks
     return
-}
+  }
 
   // Migrate legacy tasks to use instances array
   const migrateLegacyTasks = () => {
@@ -766,12 +766,12 @@ export const useTaskStore = defineStore('tasks', () => {
         // Map project to projectId
         const projectId = jt.project === 'pomo-flow' ? '1' : jt.project || '1'
 
-      // FIX: Preserve canvasPosition if it exists in JSON, and set isInInbox based on position
-      const hasCanvasPosition = jt.canvasPosition &&
-        typeof jt.canvasPosition.x === 'number' &&
-        typeof jt.canvasPosition.y === 'number'
+        // FIX: Preserve canvasPosition if it exists in JSON, and set isInInbox based on position
+        const hasCanvasPosition = jt.canvasPosition &&
+          typeof jt.canvasPosition.x === 'number' &&
+          typeof jt.canvasPosition.y === 'number'
 
-      return {
+        return {
           id: jt.id || '',
           title: jt.title || '',
           description: jt.description || '',
@@ -942,7 +942,7 @@ export const useTaskStore = defineStore('tasks', () => {
       if (STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
         console.log('📂 TASK-034 Phase 4: Loading tasks from individual task-{id} documents...')
         try {
-          const loadedTasks = await loadIndividualTasks(dbInstance)
+          const loadedTasks = await loadIndividualTasks(dbInstance as any)
           if (loadedTasks && loadedTasks.length > 0) {
             const oldTasks = [...tasks.value]
             tasks.value = loadedTasks
@@ -1047,7 +1047,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
         if (existingIndividualDocs.total_rows === 0) {
           console.log('📂 TASK-034: No individual task documents found. Running migration...')
-          const migrationResult = await migrateFromLegacyFormat(dbInstance)
+          const migrationResult = await migrateFromLegacyFormat(dbInstance as any)
           console.log(`✅ TASK-034: Migration complete - ${migrationResult.migrated} tasks migrated, legacy deleted: ${migrationResult.deleted}`)
         } else {
           console.log(`ℹ️ TASK-034: Found ${existingIndividualDocs.total_rows} individual task documents, skipping migration`)
@@ -1132,12 +1132,12 @@ export const useTaskStore = defineStore('tasks', () => {
 
           // 2. Also save as individual task-{id} documents
           try {
-            await saveIndividualTasks(dbInstance, newTasks)
+            await saveIndividualTasks(dbInstance as any, newTasks)
             console.log(`📋 Tasks saved as ${newTasks.length} individual documents (new format)`)
 
             // 3. Clean up orphaned task documents (deleted tasks)
             const currentTaskIds = new Set(newTasks.map(t => t.id))
-            const deletedCount = await syncDeletedTasks(dbInstance, currentTaskIds)
+            const deletedCount = await syncDeletedTasks(dbInstance as any, currentTaskIds)
             if (deletedCount > 0) {
               console.log(`🗑️ Cleaned up ${deletedCount} orphaned task documents`)
             }
@@ -1147,12 +1147,12 @@ export const useTaskStore = defineStore('tasks', () => {
           }
         } else if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
           // Phase 3: Individual docs only (after migration is proven stable)
-          await saveIndividualTasks(dbInstance, newTasks)
+          await saveIndividualTasks(dbInstance as any, newTasks)
           console.log(`📋 Tasks saved as ${newTasks.length} individual documents ONLY`)
 
           // Clean up orphaned task documents
           const currentTaskIds = new Set(newTasks.map(t => t.id))
-          await syncDeletedTasks(dbInstance, currentTaskIds)
+          await syncDeletedTasks(dbInstance as any, currentTaskIds)
         } else {
           // Fallback: Legacy-only mode (both flags off)
           await db.save(DB_KEYS.TASKS, newTasks)
@@ -1502,7 +1502,7 @@ export const useTaskStore = defineStore('tasks', () => {
       today.setHours(0, 0, 0, 0)
 
       doneTasks = doneTasks.filter(task => {
-        
+
         // Tasks created today
         const taskCreatedDate = new Date(task.createdAt)
         taskCreatedDate.setHours(0, 0, 0, 0)
@@ -1514,7 +1514,7 @@ export const useTaskStore = defineStore('tasks', () => {
           if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) return true
         }
 
-        
+
         return false
       })
     }
@@ -1556,7 +1556,7 @@ export const useTaskStore = defineStore('tasks', () => {
         // Check if task is on the calendar (has instances or legacy schedule)
         const hasInstances = task.instances && task.instances.length > 0
         const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
-                                 (task.scheduledTime && task.scheduledTime.trim() !== '')
+          (task.scheduledTime && task.scheduledTime.trim() !== '')
         const isNotOnCalendar = !hasInstances && !hasLegacySchedule
 
         // Apply project filter if active
@@ -2944,7 +2944,7 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // REMOVED: getTaskInstances function - using only dueDate now
-// No more complex instance system - tasks are organized by dueDate only
+  // No more complex instance system - tasks are organized by dueDate only
 
   // Restore state for undo/redo functionality
   const restoreState = async (newTasks: Task[]) => {

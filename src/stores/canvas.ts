@@ -194,7 +194,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   })
 
   // Zoom history for undo/redo functionality
-  const zoomHistory = ref<Array<{zoom: number, timestamp: number}>>([])
+  const zoomHistory = ref<Array<{ zoom: number, timestamp: number }>>([])
   const maxZoomHistory = 50 // Maximum history entries to keep
 
   // Safe Task Sync Functionality
@@ -467,15 +467,18 @@ export const useCanvasStore = defineStore('canvas', () => {
     } else {
       // COLLAPSE: Store task positions and group height before hiding
       const taskPositions: TaskPosition[] = groupTasks
-        .filter(task => task.canvasPosition) // Only tasks with canvas positions
-        .map(task => ({
-          id: task.id,
-          position: { ...task.canvasPosition! }, // Store absolute position
-          relativePosition: {
-            x: task.canvasPosition!.x - group.position.x,
-            y: task.canvasPosition!.y - group.position.y
+        .filter(task => !!task.canvasPosition) // Only tasks with canvas positions
+        .map(task => {
+          const pos = task.canvasPosition || { x: 0, y: 0 }
+          return {
+            id: task.id,
+            position: { ...pos }, // Store absolute position
+            relativePosition: {
+              x: pos.x - group.position.x,
+              y: pos.y - group.position.y
+            }
           }
-        }))
+        })
 
       // Store current height before collapsing
       group.collapsedHeight = group.position.height
@@ -516,10 +519,10 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   const updateSelection = (currentX: number, currentY: number) => {
     if (!isSelecting.value || !selectionRect.value) return
-    
+
     const startX = selectionRect.value.x
     const startY = selectionRect.value.y
-    
+
     selectionRect.value = {
       x: Math.min(startX, currentX),
       y: Math.min(startY, currentY),
@@ -540,13 +543,13 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   const selectNodesInRect = (rect: { x: number; y: number; width: number; height: number }, nodes: import('@vue-flow/core').Node[]) => {
     const selectedIds: string[] = []
-    
+
     nodes.forEach(node => {
       const nodeX = node.position.x
       const nodeY = node.position.y
       const nodeWidth = 200 // Approximate node width
       const nodeHeight = 80 // Approximate node height
-      
+
       if (
         nodeX < rect.x + rect.width &&
         nodeX + nodeWidth > rect.x &&
@@ -556,7 +559,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         selectedIds.push(node.id)
       }
     })
-    
+
     selectedNodeIds.value = selectedIds
   }
 
@@ -1285,7 +1288,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
-  
+
   // Undo/Redo enabled actions - simplified to avoid circular dependencies
   const undoRedoEnabledActions = () => {
     // Create local references to ensure proper closure access

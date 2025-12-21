@@ -227,8 +227,8 @@ const useBackupScheduler = () => ({
   getSchedule: () => ({ frequency: 'daily' as const, lastBackup: 0, nextBackup: 0, autoDownload: true, maxBackups: 10, storageLocation: 'local' as const }),
   getStats: () => ({ totalBackups: 0, totalSize: 0, averageSize: 0, successRate: 100, lastBackupTime: 0, nextBackupTime: 0 }),
   getHistory: () => [],
-  onBackup: (callback: (success: boolean, error?: string) => void) => { console.log('Backup event listener added') },
-  offBackup: (callback: (success: boolean, error?: string) => void) => { console.log('Backup event listener removed') },
+  onBackup: (_callback: (success: boolean, error?: string) => void) => { console.log('Backup event listener added') },
+  offBackup: (_callback: (success: boolean, error?: string) => void) => { console.log('Backup event listener removed') },
   isRunning: () => false,
   isPaused: () => false
 })

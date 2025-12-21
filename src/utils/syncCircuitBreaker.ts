@@ -349,7 +349,7 @@ export class SyncCircuitBreaker {
 
     // Factor 3: Conflict rate (20% weight)
     const conflictRate = this.metrics.attempts > 0 ? (this.metrics.conflictCount / this.metrics.attempts) * 100 : 0
-    healthScore -= Math.min(conflictRate, this.config.maxConflictRate!) * 0.2
+    healthScore -= Math.min(conflictRate, this.config.maxConflictRate || 10) * 0.2
 
     // Factor 4: Performance (10% weight)
     if (this.metrics.averageDuration > 5000) { // 5 seconds is slow
@@ -362,7 +362,7 @@ export class SyncCircuitBreaker {
     console.log(`🏥 [CIRCUIT BREAKER] Health check: ${this.metrics.healthScore.toFixed(1)}% (success: ${successRate.toFixed(1)}%, errors: ${errorRate.toFixed(1)}%, conflicts: ${conflictRate.toFixed(1)}%)`)
 
     // Auto-rollback if health is critically low
-    if (this.metrics.healthScore < this.config.autoRollbackThreshold! && !this.rollbackTriggered) {
+    if (this.metrics.healthScore < (this.config.autoRollbackThreshold || 50) && !this.rollbackTriggered) {
       this.triggerAutoRollback()
     }
   }
@@ -425,7 +425,7 @@ export class SyncCircuitBreaker {
    */
   isReadyForProgressiveSync(): boolean {
     return this.metrics.healthScore >= 70 && // Good health
-      this.getConflictRate() < this.config.maxConflictRate! && // Low conflict rate
+      this.getConflictRate() < (this.config.maxConflictRate || 10) && // Low conflict rate
       this.metrics.consecutiveErrors === 0 // No recent errors
   }
 
@@ -492,7 +492,7 @@ export class SyncCircuitBreaker {
     } else if (health >= 50) {
       overall = 'warning'
       recommendations.push('Monitor system closely')
-      if (this.getConflictRate() > this.config.maxConflictRate!) {
+      if (this.getConflictRate() > (this.config.maxConflictRate || 10)) {
         recommendations.push('Consider reducing sync frequency')
       }
     } else {

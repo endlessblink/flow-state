@@ -381,7 +381,7 @@ export const useReliableSyncManager = () => {
           try {
             // Try to put the resolved document first
             await localDB.put({
-              ...resolution.resolvedDocument,
+              ...(resolution.resolvedDocument as Record<string, unknown>),
               _id: conflict.documentId,
               conflictResolvedAt: new Date().toISOString()
             })
@@ -392,7 +392,7 @@ export const useReliableSyncManager = () => {
               try {
                 const latestDoc = await localDB.get(conflict.documentId)
                 await localDB.put({
-                  ...resolution.resolvedDocument,
+                  ...(resolution.resolvedDocument as Record<string, unknown>),
                   _id: conflict.documentId,
                   _rev: latestDoc._rev, // Use latest revision
                   conflictResolvedAt: new Date().toISOString()
@@ -542,11 +542,14 @@ export const useReliableSyncManager = () => {
       // Step 3: Perform sync (CORE OPERATION) with timeout
       // IMPORTANT: PULL FIRST to get authoritative remote data before pushing local changes
       // This prevents stale local data from overwriting good remote data
+      const local = localDB
+      const remote = remoteDB
+
       try {
         // Step 3a: Pull remote → local FIRST (get authoritative data)
         console.log('🔄 Step 3a: Pulling remote changes FIRST (authoritative data)...')
 
-        const pullPromise = localDB!.replicate.from(remoteDB!, {
+        const pullPromise = local.replicate.from(remote, {
           live: false,
           retry: false,
           batch_size: 50,
@@ -564,7 +567,7 @@ export const useReliableSyncManager = () => {
         // Step 3b: Push local → remote (send any local changes)
         console.log('🔄 Step 3b: Pushing local changes to remote...')
 
-        const pushPromise = localDB!.replicate.to(remoteDB!, {
+        const pushPromise = local.replicate.to(remote, {
           live: false,
           retry: false,
           batch_size: 50,
@@ -651,9 +654,9 @@ export const useReliableSyncManager = () => {
       // Check if this is a critical error that requires data restoration
       const errorMessage = syncErrMessage.toLowerCase()
       const isCriticalError = errorMessage.includes('corruption') ||
-                            errorMessage.includes('data loss') ||
-                            errorMessage.includes('integrity') ||
-                            errorMessage.includes('validation failed')
+        errorMessage.includes('data loss') ||
+        errorMessage.includes('integrity') ||
+        errorMessage.includes('validation failed')
 
       if (isCriticalError) {
         logger.critical('sync', 'Critical sync error detected - data restoration may be needed', {
@@ -1294,6 +1297,9 @@ export interface ReliableSyncManagerInstance {
   startLiveSync: () => Promise<boolean>
   stopLiveSync: () => void
   cleanup: () => Promise<void>
+  configureProvider?: (config: unknown) => Promise<void>
+  enableProvider?: () => Promise<void>
+  disableProvider?: () => Promise<void>
 
   // Underlying systems (for advanced usage)
   conflictDetector: unknown

@@ -224,7 +224,7 @@ export function filterMockTasks<T extends Record<string, unknown>>(
     return {
       cleanTasks: tasks as T[],
       mockTasks: [],
-      results: (tasks as T[]).map(t => ({
+      results: (tasks as T[]).map(_t => ({
         isMock: false,
         confidence: 'low' as const,
         matchedPatterns: [],

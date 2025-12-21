@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import SignupForm from '@/components/auth/SignupForm.vue'
-import { ref } from 'vue'
+import { ref, h } from 'vue'
 
 const meta: Meta<typeof SignupForm> = {
   title: 'Auth/SignupForm',
@@ -10,21 +10,32 @@ const meta: Meta<typeof SignupForm> = {
     layout: 'fullscreen',
     docs: {
       story: {
-        inline: false,
-        iframeHeight: 800,
+        inline: true,
       }
     }
   },
   decorators: [
     () => ({
       template: `
-        <div style="
-          background: var(--surface-primary);
-          min-height: 100vh;
+        <div class="signup-form-story-container" style="
+          background: var(--glass-bg-solid);
+          height: 800px;
+          width: 100%;
+          position: relative;
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
+          border-radius: 8px;
         ">
+          <!-- Force absolute positioning for the container within this wrapper -->
+          <style>
+             .signup-form-story-container .auth-container {
+               margin: 0 !important;
+               max-height: 90% !important;
+               overflow-y: auto !important;
+             }
+          </style>
           <story />
         </div>
       `
@@ -36,6 +47,7 @@ export default meta
 type Story = StoryObj<typeof SignupForm>
 
 export const Default: Story = {
+  name: 'Default View',
   args: {
     displayName: '',
     email: '',
@@ -47,6 +59,7 @@ export const Default: Story = {
 }
 
 export const WithError: Story = {
+  name: 'Error State',
   args: {
     displayName: 'Test User',
     email: 'test@example.com',
@@ -58,6 +71,7 @@ export const WithError: Story = {
 }
 
 export const Loading: Story = {
+  name: 'Loading State',
   args: {
     displayName: '',
     email: '',
@@ -69,6 +83,7 @@ export const Loading: Story = {
 }
 
 export const Filled: Story = {
+  name: 'Filled State',
   args: {
     displayName: 'John Doe',
     email: 'john@example.com',
@@ -80,6 +95,7 @@ export const Filled: Story = {
 }
 
 export const StrongPassword: Story = {
+  name: 'Strong Password',
   args: {
     displayName: 'Strong User',
     email: 'strong@example.com',
@@ -91,6 +107,7 @@ export const StrongPassword: Story = {
 }
 
 export const WeakPassword: Story = {
+  name: 'Weak Password',
   args: {
     displayName: 'Weak User',
     email: 'weak@example.com',
@@ -102,6 +119,7 @@ export const WeakPassword: Story = {
 }
 
 export const WithGoogleSignIn: Story = {
+  name: 'With Google Sign-In',
   args: {
     displayName: '',
     email: '',
@@ -111,7 +129,7 @@ export const WithGoogleSignIn: Story = {
     isLoading: false
   },
   render: (args) => ({
-    components: { SignupForm, GoogleSignInButton: () => <div class="google-signin-placeholder" style="height: 40px; background: var(--surface-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-primary);">Google Sign-In Button</div> },
+    components: { SignupForm, GoogleSignInButton: () => h('div', { class: 'google-signin-placeholder', style: 'height: 40px; background: var(--surface-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-primary);' }, 'Google Sign-In Button') },
     setup() {
       const displayName = ref(args.displayName)
       const email = ref(args.email)

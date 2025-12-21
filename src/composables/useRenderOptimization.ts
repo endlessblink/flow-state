@@ -54,7 +54,13 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
     lastRenderTime: 0
   })
 
-  const componentCache = ref<Map<string, any>>(new Map())
+  interface CachedComponent {
+    timestamp: number
+    ttl: number
+    component: unknown
+  }
+
+  const componentCache = ref<Map<string, CachedComponent>>(new Map())
   const pendingRenders = ref<Set<() => void>>(new Set())
   const isProcessingBatch = ref(false)
   const renderQueue = ref<(() => void)[]>([])

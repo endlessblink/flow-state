@@ -118,7 +118,7 @@ try {
   // Mock canvas store for Storybook environment
   canvasStore = {
     sections: [],
-    createSection: (section: any) => {
+    createSection: (section: Record<string, unknown>) => {
       const newSection = {
         ...section,
         id: `section-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
@@ -126,7 +126,7 @@ try {
       console.log('🔧 Storybook Canvas Store: Created section', newSection)
       return newSection
     },
-    updateSection: (id: string, updates: any) => {
+    updateSection: (id: string, updates: Record<string, unknown>) => {
       console.log('🔧 Storybook Canvas Store: Updated section', id, updates)
     }
   }

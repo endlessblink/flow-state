@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, type User } from '@/stores/auth'
 
 interface Props {
   buttonText?: string
@@ -61,7 +61,7 @@ const _props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 interface Emits {
-  success: [user: any]
+  success: [user: User]
   error: [error: Error]
 }
 
@@ -85,9 +85,9 @@ async function handleGoogleSignIn() {
 
     // Success - emit event
     emit('success', authStore.user)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Google sign-in error:', error)
-    emit('error', error)
+    emit('error', error as Error)
   } finally {
     isLoading.value = false
     console.log('🔵 Google Sign-In complete, loading:', isLoading.value)

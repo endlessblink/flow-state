@@ -426,7 +426,7 @@ export class DragInteractionRecorder {
     const originalError = console.error;
 
     // Override console methods to capture drag-related logs
-    console.log = (...args: unknown[]) => {
+    console.log = (...args: any[]) => {
       const message = args.join(' ');
       if (message.includes('drag') || message.includes('Drag') || message.includes('DROP') || message.includes('CALENDAR')) {
         this.eventLog.push(`[${Date.now()}] LOG: ${message}`);

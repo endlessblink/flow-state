@@ -148,7 +148,7 @@ export function detectMockTask(task: {
 /**
  * Filter mock tasks from an array of tasks
  */
-export function filterMockTasks<T extends Record<string, any>>(
+export function filterMockTasks<T extends Record<string, unknown>>(
   tasks: unknown,
   options: {
     confidence?: 'high' | 'medium' | 'low'
@@ -224,7 +224,12 @@ export function filterMockTasks<T extends Record<string, any>>(
     return {
       cleanTasks: tasks as T[],
       mockTasks: [],
-      results: (tasks as T[]).map(t => ({ task: t, isMock: false, confidence: 'low' as const, matchedPatterns: [], reasons: [] }))
+      results: (tasks as T[]).map(t => ({
+        isMock: false,
+        confidence: 'low' as const,
+        matchedPatterns: [],
+        reasons: []
+      }))
     }
   }
 }
@@ -239,7 +244,7 @@ export function getMockTaskSummary(results: MockTaskDetectionResult[]): {
   highConfidence: number
   mediumConfidence: number
   lowConfidence: number
-  mostCommonPatterns: Array<{pattern: string; count: number}>
+  mostCommonPatterns: Array<{ pattern: string; count: number }>
 } {
   const total = results.length
   const mock = results.filter(r => r.isMock).length

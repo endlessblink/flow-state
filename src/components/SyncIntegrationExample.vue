@@ -238,7 +238,7 @@ import SyncErrorBoundary from './SyncErrorBoundary.vue'
 // Define interface for the database composable return
 interface DatabaseComposable {
   save?: (key: string, data: unknown) => Promise<void>
-  load?: (key: string) => Promise<any>
+  load?: (key: string) => Promise<unknown>
   remove?: (key: string) => Promise<void>
   [key: string]: unknown
 }

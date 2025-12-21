@@ -139,8 +139,8 @@ import { ref, computed } from 'vue'
 import ValueDisplay from '../ValueDisplay.vue'
 
 interface Props {
-  value: any
-  compareValue: any
+  value: unknown
+  compareValue: unknown
   mode: 'local' | 'remote'
 }
 
@@ -150,11 +150,11 @@ const showMergeOptions = ref(false)
 const mergeStrategy = ref<'union' | 'local' | 'remote' | 'merge'>('merge')
 
 const localObject = computed(() => {
-  return props.value && typeof props.value === 'object' ? props.value : {}
+  return props.value && typeof props.value === 'object' ? props.value as Record<string, unknown> : {}
 })
 
 const remoteObject = computed(() => {
-  return props.compareValue && typeof props.compareValue === 'object' ? props.compareValue : {}
+  return props.compareValue && typeof props.compareValue === 'object' ? props.compareValue as Record<string, unknown> : {}
 })
 
 const hasObjects = computed(() => {
@@ -166,8 +166,8 @@ const remoteFieldCount = computed(() => Object.keys(remoteObject.value).length)
 
 interface FieldDiff {
   name: string
-  localValue: any
-  remoteValue: any
+  localValue: unknown
+  remoteValue: unknown
   status: 'unchanged' | 'added' | 'removed' | 'changed'
   localExists: boolean
   remoteExists: boolean

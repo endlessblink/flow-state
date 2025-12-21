@@ -145,8 +145,15 @@ const emit = defineEmits<{
   celebrationEnd: []
 }>()
 
+interface Ripple {
+  id: number
+  x: number
+  y: number
+  timestamp: number
+}
+
 // Advanced interaction states
-const ripples = ref<Array<{ id: number; x: number; y: number; timestamp: number }>>([])
+const ripples = ref<Ripple[]>([])
 const isHovered = ref(false)
 const isFocused = ref(false)
 const showCelebration = ref(false)
@@ -178,11 +185,11 @@ const triggerRipple = (event?: MouseEvent) => {
   }, 600)
 }
 
-const getRippleClasses = (ripple: any) => [
+const getRippleClasses = (ripple: Ripple) => [
   ripple.id === ripples.value[ripples.value.length - 1]?.id ? 'done-toggle__ripple--active' : ''
 ]
 
-const getRippleStyle = (ripple: any) => ({
+const getRippleStyle = (ripple: Ripple) => ({
   left: `${ripple.x}%`,
   top: `${ripple.y}%`,
   transform: 'translate(-50%, -50%)'

@@ -114,7 +114,7 @@ export class OfflineQueue {
   private retryManager: RetryManager | null = null
   private totalProcessingTime: number = 0
   private processingHistory: Array<{ timestamp: number; result: QueueProcessingResult }> = []
-  private eventListeners: Map<string, ((...args: unknown[]) => void)[]> = new Map()
+  private eventListeners: Map<string, ((...args: unknown[]) => void)[]> = new Map() // We can keep any[] here for generic event args, or use unknown[] if we type guard
   private processingInterval: number | null = null
   private connectivityMonitor: number | null = null
   private onlineStatus: OnlineStatus
@@ -695,10 +695,12 @@ export class OfflineQueue {
    * Event handling system
    */
   on(event: string, callback: (...args: unknown[]) => void): void {
-    if (!this.eventListeners.has(event)) {
-      this.eventListeners.set(event, [])
+    const listeners = this.eventListeners.get(event)
+    if (listeners) {
+      listeners.push(callback)
+    } else {
+      this.eventListeners.set(event, [callback])
     }
-    this.eventListeners.get(event)!.push(callback)
   }
 
   off(event: string, callback: (...args: unknown[]) => void): void {
@@ -829,6 +831,11 @@ export class OfflineQueue {
       ? this.queue.reduce((oldest, op) => op.timestamp < oldest.timestamp ? op : oldest).timestamp
       : undefined
 
+    const byStatus = this.queue.reduce((acc, op) => {
+      acc[op.status] = (acc[op.status] || 0) + 1
+      return acc
+    }, {} as Record<QueuedOperation['status'], number>)
+
     return {
       length: this.queue.length,
       processing: this.processing,
@@ -837,9 +844,9 @@ export class OfflineQueue {
       byPriority,
       oldestOperation,
       totalProcessingTime: this.totalProcessingTime,
-      byStatus: {} as any, // Add missing property
-      estimatedProcessingTime: 0, // Add missing property
-      conflictCount: 0 // Add missing property
+      byStatus,
+      estimatedProcessingTime: this.getEstimatedProcessingTime(),
+      conflictCount: 0
     }
   }
 
@@ -912,9 +919,13 @@ export class OfflineQueue {
   /**
    * Update database and retry manager references
    */
-  updateReferences(db: any, retryManager: any): void {
-    this.db = db
-    this.retryManager = retryManager
+  /**
+   * Update database and retry manager references
+   */
+  updateReferences(db: unknown, retryManager: unknown): void {
+    // Cast to internal types
+    this.db = (db as unknown as ExtendedDatabase) || null
+    this.retryManager = (retryManager as RetryManager) || null
     console.log('🔄 OfflineQueue references updated')
   }
 

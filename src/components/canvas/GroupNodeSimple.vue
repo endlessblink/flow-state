@@ -139,9 +139,9 @@ const emit = defineEmits<{
   collect: [sectionId: string]
   contextMenu: [event: MouseEvent, section: SectionData]
   openSettings: [sectionId: string]
-  resizeStart: [data: { sectionId: string; event: any }]
-  resize: [data: { sectionId: string; event: any }]
-  resizeEnd: [data: { sectionId: string; event: any }]
+  resizeStart: [data: { sectionId: string; event: unknown }]
+  resize: [data: { sectionId: string; event: unknown }]
+  resizeEnd: [data: { sectionId: string; event: unknown }]
 }>()
 
 const section = computed(() => props.data)
@@ -272,13 +272,15 @@ const handleCollect = async (mode: 'move' | 'highlight') => {
 }
 
 // Resize event handlers
-const handleResizeStart = (event: any) => {
+const handleResizeStart = (event: unknown) => {
   emit('resizeStart', { sectionId: props.data.id, event })
 }
 
-const handleResize = (event: any) => {
+const handleResize = (event: unknown) => {
+  // Try to cast for logging
+  const resizeEvent = event as { height?: number; params?: { height?: number } }
   // Extract height being requested by NodeResizer
-  const nodeResizerHeight = event?.height || event?.params?.height
+  const nodeResizerHeight = resizeEvent?.height || resizeEvent?.params?.height
 
   // Only log when near constraints to reduce noise
   const nearMin = nodeResizerHeight && nodeResizerHeight <= 120
@@ -290,17 +292,17 @@ const handleResize = (event: any) => {
       nodeResizerHeight,
       minHeight: 80,
       maxHeight: 2000,
-      hitMinConstraint: nodeResizerHeight <= 80,
-      hitMaxConstraint: nodeResizerHeight >= 2000,
-      distanceFromMin: nodeResizerHeight - 80,
-      distanceFromMax: 2000 - nodeResizerHeight
+      hitMinConstraint: nodeResizerHeight && nodeResizerHeight <= 80,
+      hitMaxConstraint: nodeResizerHeight && nodeResizerHeight >= 2000,
+      distanceFromMin: nodeResizerHeight ? nodeResizerHeight - 80 : 0,
+      distanceFromMax: nodeResizerHeight ? 2000 - nodeResizerHeight : 0
     })
   }
 
   emit('resize', { sectionId: props.data.id, event })
 }
 
-const handleResizeEnd = (event: any) => {
+const handleResizeEnd = (event: unknown) => {
   emit('resizeEnd', { sectionId: props.data.id, event })
 }
 </script>

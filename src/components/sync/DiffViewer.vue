@@ -65,8 +65,8 @@ import DateTimeDiff from './diffs/DateTimeDiff.vue'
 import BooleanDiff from './diffs/BooleanDiff.vue'
 
 interface Props {
-  value: any
-  compareValue: any
+  value: unknown
+  compareValue: unknown
   fieldType: string
   mode: 'local' | 'remote'
 }
@@ -74,7 +74,7 @@ interface Props {
 const _props = defineProps<Props>()
 
 // Format value for display
-function formatValue(value: any): string {
+function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '(empty)'
   if (typeof value === 'string') return value
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'

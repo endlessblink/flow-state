@@ -153,9 +153,9 @@ export class ForensicLogger {
       // ✅ Validation 3: Each task structure
       const validTasks = tasks.filter(task => {
         return task &&
-               typeof task === 'object' &&
-               task.id &&
-               task.title
+          typeof task === 'object' &&
+          task.id &&
+          task.title
       })
 
       if (validTasks.length === 0) {
@@ -176,10 +176,10 @@ export class ForensicLogger {
         mockTasksDetected: mockFilter.mockTasks.length,
         realTasks: mockFilter.cleanTasks.length,
         mockTaskDetails: mockFilter.mockTasks.map(task => {
-          const detection = detectMockTask(task)
+          const detection = detectMockTask(task as { id?: string; title?: string })
           return {
-            id: task.id,
-            title: task.title,
+            id: String(task.id || 'unknown'),
+            title: String(task.title || 'Untitled'),
             matchedPatterns: detection.matchedPatterns,
             confidence: detection.confidence
           }
@@ -371,9 +371,9 @@ export class ForensicLogger {
     })
 
     return {
-      events: [...events] as any, // Make mutable copy
+      events: [...events] as AuditEvent[], // Make mutable copy
       summary: Object.freeze(summary),
-      chainOfCustody: chainOfCustody as any
+      chainOfCustody: chainOfCustody
     }
   }
 

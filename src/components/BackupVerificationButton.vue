@@ -161,9 +161,9 @@ interface VerificationResult {
   tests: Record<string, {
     status: 'PASS' | 'FAIL'
     details: string
-    evidence: any
+    evidence: Record<string, unknown>
   }>
-  recommendations: string[]
+  recommendations?: string[]
 }
 
 const { getLatestBackup, createBackup } = useSimpleBackup
@@ -211,13 +211,13 @@ const buttonText = computed(() => {
 const mockTasksCount = computed(() => {
   if (!verificationResult.value) return 0
   const mockTest = verificationResult.value.tests.mockDetection
-  return mockTest?.evidence?.mockTasksFiltered || 0
+  return (mockTest?.evidence?.mockTasksFiltered as number) || 0
 })
 
 const realTasksCount = computed(() => {
   if (!verificationResult.value) return 0
   const mockTest = verificationResult.value.tests.mockDetection
-  return mockTest?.evidence?.cleanTasksPreserved || 0
+  return (mockTest?.evidence?.cleanTasksPreserved as number) || 0
 })
 
 const statusClass = computed(() => {

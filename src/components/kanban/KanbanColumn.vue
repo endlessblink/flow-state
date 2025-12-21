@@ -113,8 +113,24 @@ const wipStatusClass = computed(() => {
   return ''
 })
 
+interface DraggableChangeEvent {
+  added?: {
+    element: Task
+    newIndex: number
+  }
+  removed?: {
+    element: Task
+    oldIndex: number
+  }
+  moved?: {
+    element: Task
+    newIndex: number
+    oldIndex: number
+  }
+}
+
 // Handle drag-drop changes
-const handleDragChange = (event: any) => {
+const handleDragChange = (event: DraggableChangeEvent) => {
   if (event.added) {
     // Task was dropped into this column
     const task = event.added.element

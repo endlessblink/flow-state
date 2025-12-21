@@ -582,7 +582,7 @@ export function useCanvasProgressiveLoading(
 
     // Load initial data progressively
     if (initialNodes.value.length > 0 || initialEdges.value.length > 0) {
-      await loadProgressively(initialNodes.value, initialEdges.value as any)
+      await loadProgressively(initialNodes.value, initialEdges.value)
     }
 
     // Start periodic cleanup
@@ -615,8 +615,8 @@ export function useCanvasProgressiveLoading(
 
   const needsOptimization = computed(() => {
     return metrics.value.averageBatchSize < finalConfig.initialBatchSize ||
-           metrics.value.processingTime > metrics.value.totalTime * 0.8 ||
-           metrics.value.throughput < 50
+      metrics.value.processingTime > metrics.value.totalTime * 0.8 ||
+      metrics.value.throughput < 50
   })
 
   return {

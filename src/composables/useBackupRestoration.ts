@@ -16,6 +16,7 @@
  */
 
 import { ref, computed, reactive as _reactive } from 'vue'
+import type { Task, Project } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
@@ -380,7 +381,7 @@ export function useBackupRestoration() {
       // Step 3: Load backup data from storage
       restoreProgress.value = 30
       const backupKey = `pomo-flow-backup-${backup.id}`
-      const backupData = await db.load(backupKey) as any
+      const backupData = await db.load(backupKey) as { data: { tasks?: Task[]; projects?: Project[]; canvas?: any; settings?: any } } | null
 
       if (!backupData || !backupData.data) {
         throw new Error('Backup data is corrupted or missing')

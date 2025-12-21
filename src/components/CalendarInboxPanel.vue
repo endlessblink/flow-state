@@ -367,7 +367,7 @@ const onDragStart = (e: DragEvent, task: Task) => {
   e.dataTransfer.effectAllowed = 'move'
 
   // Set global drag state for fallback mechanism (when dataTransfer is not available)
-  ;(window as any).__draggingTaskId = task.id
+  ;(window as Window & { __draggingTaskId?: string }).__draggingTaskId = task.id
   document.documentElement.setAttribute('data-dragging-task-id', task.id)
 
   // Include taskId explicitly for handleDrop compatibility
@@ -424,7 +424,7 @@ const onDragEnd = () => {
   draggingTaskId.value = null
 
   // Clean up global drag state
-  delete (window as any).__draggingTaskId
+  delete (window as Window & { __draggingTaskId?: string }).__draggingTaskId
   document.documentElement.removeAttribute('data-dragging-task-id')
 
   console.log('[Drag] Drag ended')

@@ -44,7 +44,7 @@ export interface TaskRecurrence {
   endDate?: string
   maxOccurrences?: number
   isEnabled?: boolean // Whether recurrence is currently active
-  generatedInstances?: any[] // Generated recurring task instances (compatibility)
+  generatedInstances?: TaskInstance[] // Generated recurring task instances (compatibility)
 }
 
 export interface RecurringTaskInstance {

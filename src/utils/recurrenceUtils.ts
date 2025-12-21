@@ -89,16 +89,16 @@ export function getNextOccurrence(currentDate: Date, rule: RecurrenceRule): Date
       return next
 
     case RecurrencePattern.DAILY:
-      next.setDate(next.getDate() + (rule as any).interval)
+      next.setDate(next.getDate() + (rule as DailyRecurrenceRule).interval)
       return next
 
     case RecurrencePattern.WEEKLY:
-      const weeklyRule = rule as any
-      const currentDayOfWeek = next.getDay()
-      const targetDays = weeklyRule.weekdays.sort()
+      const weeklyRule = rule as WeeklyRecurrenceRule
+      const currentDayOfWeek = next.getDay() as Weekday
+      const targetDays = [...weeklyRule.weekdays].sort((a, b) => a - b)
 
       // Find the next target day
-      let nextDay = targetDays.find((day: any) => day > currentDayOfWeek)
+      let nextDay = targetDays.find((day: Weekday) => day > currentDayOfWeek)
       if (nextDay === undefined) {
         // Wrap to next week
         nextDay = targetDays[0]
@@ -109,7 +109,7 @@ export function getNextOccurrence(currentDate: Date, rule: RecurrenceRule): Date
       return next
 
     case RecurrencePattern.MONTHLY:
-      const monthlyRule = rule as any
+      const monthlyRule = rule as MonthlyRecurrenceRule
       if (monthlyRule.weekday !== undefined && monthlyRule.weekOfMonth !== undefined) {
         // Nth weekday of month (e.g., "2nd Tuesday")
         return getNextNthWeekdayOfMonth(next, monthlyRule.interval, monthlyRule.weekday, monthlyRule.weekOfMonth)
@@ -119,7 +119,7 @@ export function getNextOccurrence(currentDate: Date, rule: RecurrenceRule): Date
       }
 
     case RecurrencePattern.YEARLY:
-      const yearlyRule = rule as any
+      const yearlyRule = rule as YearlyRecurrenceRule
       next.setFullYear(next.getFullYear() + yearlyRule.interval)
       next.setMonth(yearlyRule.month - 1) // Convert 1-12 to 0-11
       next.setDate(Math.min(yearlyRule.dayOfMonth, getDaysInMonth(next.getFullYear(), next.getMonth())))
@@ -238,7 +238,7 @@ export function validateRecurrenceRule(rule: RecurrenceRule): RecurrenceValidati
 
   switch (rule.pattern) {
     case RecurrencePattern.DAILY:
-      const dailyRule = rule as any
+      const dailyRule = rule as DailyRecurrenceRule
       if (dailyRule.interval < 1) {
         errors.push('Daily interval must be at least 1 day')
       }
@@ -248,7 +248,7 @@ export function validateRecurrenceRule(rule: RecurrenceRule): RecurrenceValidati
       break
 
     case RecurrencePattern.WEEKLY:
-      const weeklyRule = rule as any
+      const weeklyRule = rule as WeeklyRecurrenceRule
       if (weeklyRule.interval < 1) {
         errors.push('Weekly interval must be at least 1 week')
       }
@@ -261,7 +261,7 @@ export function validateRecurrenceRule(rule: RecurrenceRule): RecurrenceValidati
       break
 
     case RecurrencePattern.MONTHLY:
-      const monthlyRule = rule as any
+      const monthlyRule = rule as MonthlyRecurrenceRule
       if (monthlyRule.interval < 1) {
         errors.push('Monthly interval must be at least 1 month')
       }
@@ -274,7 +274,7 @@ export function validateRecurrenceRule(rule: RecurrenceRule): RecurrenceValidati
       break
 
     case RecurrencePattern.YEARLY:
-      const yearlyRule = rule as any
+      const yearlyRule = rule as YearlyRecurrenceRule
       if (yearlyRule.interval < 1) {
         errors.push('Yearly interval must be at least 1 year')
       }
@@ -336,7 +336,7 @@ export function isDateInRecurrence(date: Date, rule: RecurrenceRule, startDate: 
   // to see if it could be generated from the start date with the given rule
   const instances = generateRecurringInstances('temp', rule, { type: 'on_date', date: new Date().toISOString().split('T')[0] } as RecurrenceEndCondition, [], startDate)
   const dateStr = formatDateKey(date)
-  return instances.some((instance: any) => instance.scheduledDate === dateStr)
+  return instances.some((instance: RecurringTaskInstance) => instance.scheduledDate === dateStr)
 }
 
 /**

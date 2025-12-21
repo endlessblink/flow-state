@@ -216,7 +216,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useTaskRecurrence } from '@/composables/useTaskRecurrence'
-import { RecurrencePattern, EndCondition  } from '@/types/recurrence'
+import { RecurrencePattern, EndCondition, type TaskRecurrence } from '@/types/recurrence'
 import { formatDateKey as _formatDateKey, parseDateKey } from '@/stores/tasks'
 
 interface Props {
@@ -228,7 +228,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  recurrenceChanged: [recurrence: any]
+  recurrenceChanged: [recurrence: TaskRecurrence | null]
 }>()
 
 // Use the recurrence composable

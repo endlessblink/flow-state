@@ -191,7 +191,7 @@ interface SyncAlert {
   autoDismiss?: number
   recoveryActions?: RecoveryAction[]
   category?: 'sync' | 'network' | 'database' | 'security' | 'performance'
-  data?: any
+  data?: unknown
 }
 
 const reliableSync = useReliableSyncManager()
@@ -223,13 +223,16 @@ const addAlert = (alert: Omit<SyncAlert, 'id' | 'timestamp'>): string => {
 
   // Log alert
   const logLevel = alert.level === 'critical' ? 'critical' : alert.level === 'warning' ? 'warn' : 'info'
-  ;(logger[logLevel] as any)('alert', alert.title, {
-    alertId,
-    message: alert.message,
-    category: (alert.category as any) || 'sync',
-    level: alert.level,
-    data: alert.data
-  })
+  const logMethod = logger[logLevel as keyof typeof logger]
+  if (typeof logMethod === 'function') {
+    (logMethod as (cat: string, title: string, data: Record<string, unknown>) => void)('alert', alert.title, {
+      alertId,
+      message: alert.message,
+      category: alert.category || 'sync',
+      level: alert.level,
+      data: alert.data as Record<string, unknown>
+    })
+  }
 
   // Auto-dismiss for non-critical alerts
   if (newAlert.autoDismiss) {
@@ -386,7 +389,7 @@ const setupAutoAlerts = () => {
   // Monitor sync health
   const monitorSyncHealth = () => {
     const health = reliableSync.getSyncHealth()
-    const lastSuccessfulSync = (health as any).lastSuccessfulSync
+    const lastSuccessfulSync = (health as { lastSuccessfulSync?: Date }).lastSuccessfulSync
 
     if (lastSuccessfulSync) {
       const timeSinceLastSync = Date.now() - lastSuccessfulSync.getTime()

@@ -86,7 +86,7 @@ const emit = defineEmits<{
   click: [project: Project]
   toggleExpand: [projectId: string]
   contextmenu: [event: MouseEvent, project: Project]
-  projectDrop: [data: any]
+  projectDrop: [data: unknown]
 }>()
 
 const taskStore = useTaskStore()

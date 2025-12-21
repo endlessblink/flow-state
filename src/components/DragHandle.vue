@@ -395,7 +395,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
     case 'Escape':
       if (isDragging.value) {
         event.preventDefault()
-        endDragOperation(event as any)
+        endDragOperation(event as unknown as MouseEvent)
       }
       break
   }
@@ -407,7 +407,7 @@ const handleEscape = (event: KeyboardEvent) => {
 
   if (isDragging.value) {
     event.preventDefault()
-    endDragOperation(event as any)
+    endDragOperation(event as unknown as MouseEvent)
   }
 }
 
@@ -469,7 +469,7 @@ const handleGlobalKeydown = (event: KeyboardEvent) => {
   // Handle global shortcuts when drag handle is focused
   if (event.key === 'Escape' && isDragging.value) {
     event.preventDefault()
-    endDragOperation(event as any)
+    endDragOperation(event as unknown as MouseEvent)
   }
 }
 

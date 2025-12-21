@@ -33,7 +33,7 @@
           :key="project.id"
           :project="project"
           :tasks="tasksByProject[project.id] || []"
-          :current-filter="taskStore.activeSmartView as any"
+          :current-filter="taskStore.activeSmartView || 'none'"
           :density="currentDensity"
           :show-done-column="showDoneColumn"
           @select-task="handleSelectTask"
@@ -285,7 +285,7 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
     const newTask = await taskStore.createTaskWithUndo({
       title: title,
       description: description,
-      status: pendingTaskStatus.value as any,
+      status: pendingTaskStatus.value as 'planned' | 'in-progress' | 'done',
       projectId: taskStore.activeProjectId || undefined // No default project - tasks go to Uncategorized
     })
 
@@ -351,7 +351,7 @@ const cancelDeleteTask = () => {
 
 const handleMoveTask = async (taskId: string, newStatus: string) => {
   try {
-    await taskStore.moveTaskWithUndo(taskId, newStatus as any)
+    await taskStore.moveTaskWithUndo(taskId, newStatus as 'planned' | 'in-progress' | 'done')
     console.log('Moved task:', taskId, 'to', newStatus)
   } catch (error) {
     console.error('❌ Error moving task:', error)

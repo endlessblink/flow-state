@@ -54,8 +54,8 @@ import WordDiff from './WordDiff.vue'
 import LineDiff from './LineDiff.vue'
 
 interface Props {
-  value: any
-  compareValue: any
+  value: unknown
+  compareValue: unknown
   mode: 'local' | 'remote'
 }
 

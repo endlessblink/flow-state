@@ -153,17 +153,17 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-020~~ | ✅ DONE | `useDatabase.ts`, `useReliableSyncManager.ts`, test files | - | - |
 | ~~TASK-023~~ | ✅ DONE | `dev-manager/*` | - | - |
 | TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
-| TASK-027 | PAUSED | `stores/*` ✅, `utils/*` ✅, `composables/*` ✅, `components/*`, `views/*` | ~~TASK-011~~ | 486 warnings remaining |
+| TASK-027 | IN_PROGRESS | `stores/*` ✅, `utils/*` ✅, `composables/*` ✅, `components/*` ✅, `views/*` ✅ (Current Count: 79 warnings remaining. Dec 21, 2025) | ~~TASK-011~~ | - |
 | ~~TASK-028~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json` | - | - |
 | TASK-029 | PLANNED | `.claude/skills/storybook-audit/*`, `src/stories/**` | TASK-014 | - |
 | ~~TASK-030~~ | ✅ DONE | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
 | ~~TASK-031~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json`, `.claude/locks/*` | - | - |
 | ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
 | TASK-033 | PLANNED | `~/claude-plugins/*` (new) | - | - |
-| TASK-034 | PLANNED | `tasks.ts`, `individualTaskStorage.ts`, `database.ts` | - | - |
+| TASK-034 | IN_PROGRESS | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
 
 **Parallel Safe**: TASK-014 (UI) + TASK-017 (plasmoid) + TASK-033 (plugin) - no file overlap
-**New**: TASK-034 (Individual Task Docs migration - Part of ROAD-013 Sync Hardening)
+**Active**: TASK-034 Phase 4 (Read Switch) - Individual Task Docs migration - Phases 1-3 complete
 **Paused**: TASK-027 (lint warning fixes - 894 fixed, 486 remaining - 65% complete)
 **Completed**: TASK-032 (npm scripts check hook), TASK-031 (Multi-instance task locking), TASK-030 (TypeScript strict type errors)
 **Monitoring**: TASK-022 (logger active, collecting data until Dec 20-21)
@@ -172,8 +172,6 @@ Phase 3 (Mobile) ←────────────────────
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019, TASK-034 - work sequentially
 
 ---
-
-<!-- Active work items use TASK-XXX format -->
 
 ### TASK-027: Fix All Lint Warnings (IN PROGRESS - PAUSED)
 
@@ -187,14 +185,24 @@ Phase 3 (Mobile) ←────────────────────
 **Session 3** (Dec 20, 2025): 791 warnings - 134 more fixed (utils + composables batch)
 **Session 4** (Dec 20, 2025): **601 warnings** - 190 more fixed (CanvasView, SyncErrorBoundary, utils)
 **Session 5** (Dec 20, 2025): **486 warnings** - 115 more fixed (views, utils, composables, components)
+**Session 6** (Dec 21, 2025): **354 warnings** - 132 more fixed (Batch 3: Stories, Utils, Composables)
+**Session 7** (Dec 21, 2025): **243 warnings** - 111 more fixed (Batch 4: Components, Utils, Stories)
+**Session 8** (Dec 21, 2025): **205 warnings** - 38 more fixed (Batch 5: Sync, Components, Composables)
+**Session 9** (Dec 21, 2025): **179 warnings** - 26 more fixed (Batch 6: Network, Performance, Vue Flow)
+**Session 10** (Dec 21, 2025): **153 warnings** - 26 more fixed (Batch 7: Sync Conflict UI)
+**Session 11** (Dec 21, 2025): **130 warnings** - 23 more fixed (Batch 8: Performance, Security & Utilities)
+**Session 12** (Dec 21, 2025): **109 warnings** - 21 more fixed (Batch 9: Database & Components)
+**Session 13** (Dec 21, 2025): **102 warnings** - 7 more fixed (Batch 10: Calendar, Board & Sync Queues)
+**Session 14** (Dec 21, 2025): **95 warnings** - 7 more fixed (Batch 11: Security & Diagnostics)
+**Session 15** (Dec 21, 2025): **79 warnings** - 16 more fixed (Batch 12: Canvas & Stability)
 
 | Step | Description | Status |
 |------|-------------|--------|
 | 1 | Fix stores (88 warnings) | ✅ DONE |
 | 2 | Fix services (25 warnings) | ✅ DONE |
-| 3 | Fix utils (~100 fixed) | ✅ DONE |
-| 4 | Fix composables (~60 fixed) | ✅ DONE |
-| 5 | Fix components (~30 fixed) | 🔄 IN PROGRESS |
+| 3 | Fix utils (~200 fixed) | ✅ DONE |
+| 4 | Fix composables (~150 fixed) | ✅ DONE |
+| 5 | Fix components (~180 fixed) | 🔄 IN PROGRESS |
 | 6 | Fix views (~100 fixed) | 🔄 IN PROGRESS |
 | 7 | Verify build passes | ✅ DONE (verified each session) |
 
@@ -239,18 +247,99 @@ Phase 3 (Mobile) ←────────────────────
 - `utils/inputSanitizer.ts` (partial): Fixed sanitize input/output → `unknown`
 - `utils/productionLogger.ts` (partial): Fixed data parameters → `unknown`
 
-**🚀 NEXT SESSION - START HERE**:
-1. Run: `npm run lint 2>&1 > /tmp/lint-output.txt && tail -5 /tmp/lint-output.txt`
-2. Find top files: `awk -F: '/^\// {file=$1} /no-explicit-any|no-undef/ {count[file]++} END {for(f in count) print count[f], f}' /tmp/lint-output.txt | sort -rn | head -20`
-3. Focus on remaining high-warning files in components and views
-4. Build verified passing - continue fixing patterns established in Session 5
+**Session 6 Files Fixed** (Dec 21, 2025) [Batch 3]:
+- `src/stories/right-click-menus/TaskContextMenu.stories.ts`: (16→0) Typed story decorators and event callbacks
+- `src/types/global.d.ts`: (13→0) Fixed generic component types and VueVueCal/events
+- `src/stories/modals/GroupModal.stories.ts`: (11→0) Added MockGroup interface, typed refs and callbacks
+- `src/utils/SaveQueueManager.ts`: (7→0) Typed `enqueueSave` data, error handling, and fixed readonly ref issue
+- `src/composables/useDynamicImports.ts`: (9→0) Refined generic types for import manager
 
-**Remaining** (~486 warnings):
+**Session 7 Files Fixed** (Dec 21, 2025) [Batch 4]:
+- `src/stories/modals/QuickTaskCreate.stories.ts`: (7→0) Replaced `any` with `unknown` and `MockTask` interface
+- `src/utils/CrossTabPerformance.ts`: (6→0) Replaced `any` with `unknown`, fixed memory usage estimation
+- `src/components/canvas/GroupNodeSimple.vue`: (6→0) Fixed resize event signatures
+- `src/utils/simpleSanitizer.ts`: (5→0) Typed input and property access
+- `src/utils/recurrenceUtils.ts`: (8→0) Replaced `as any` with proper RecurrenceRule sub-types
+
+**Session 8 Files Fixed** (Dec 21, 2025) [Batch 5]:
+- `src/utils/retryManager.ts`: (7→0) Typed error handling and context
+- `src/types/sync.ts`: (7→0) Typed data packages and operation payloads
+- `src/components/SyncHealthDashboard.vue`: (7→0) Typed recent operations and errors
+- `src/views/CalendarViewVueCal.vue`: (6→0) Typed vue-cal events and handlers
+- `src/utils/syncTestSuite.ts`: (6→0) Typed test results and database loads
+- `src/composables/useVueFlowStability.ts`: (6→0) Typed vue-flow store transforms
+
+**Session 9 Files Fixed** (Dec 21, 2025) [Batch 6]:
+- `src/composables/useNetworkOptimizer.ts`: (6→0) Replaced `Promise<any>` with `Promise<unknown>`, typed navigator extensions
+- `src/utils/syncCircuitBreaker.ts`: (5→0) Typed generics and change detection guards
+- `src/utils/performanceBenchmark.ts`: (5→0) Typed simulations and memory checks
+- `src/composables/useVueFlowErrorHandling.ts`: (5→0) Fixed Naive UI message type casts
+- `src/composables/useVirtualScrolling.ts`: (5→0) Correctly typed VueUse virtual list integration
+
+**Session 10 Files Fixed** (Dec 21, 2025) [Batch 7]:
+- `src/components/sync/ManualMergeModal.vue`: (6→0) Typed merged value and history
+- `src/components/sync/diffs/BooleanDiff.vue`: (5→0) Typed boolean comparisons
+- `src/components/sync/diffs/ObjectDiff.vue`: (4→0) Typed object field diffs
+- `src/components/sync/ValueDisplay.vue`: (4→0) Typed field value formatting
+- `src/components/sync/DiffViewer.vue`: (3→0) Typed diff component props
+- `src/types/conflicts.ts`: (4→0) Typed resolution interfaces and type guards
+
+**Session 11 Files Fixed** (Dec 21, 2025) [Batch 8]:
+- `src/composables/usePerformanceManager.ts`: (5→0) Typed cache entries and memoized factory
+- `src/components/canvas/GroupManager.vue`: (5→0) Fixed lookup table casts and store calls
+- `src/utils/securityMonitor.ts`: (4→0) Typed security event details and composable helpers
+- `src/utils/productionLogger.ts`: (4→0) Fixed navigator/performance API casts
+- `src/utils/CrossTabBrowserCompatibility.ts`: (4→0) Typed polling channel and message handling
+- `src/composables/useHorizontalDragScroll.ts`: (4→0) Removed unsafe container property assignments
+
+**Session 12 Files Fixed** (Dec 21, 2025) [Batch 9]:
+- `src/database/simple-pouchdb-test.ts`: (4→0) Refactored diagnostic tests
+- `src/composables/useVirtualList.ts`: (4→0) Updated generic default and fixed event target casting
+- `src/components/SyncAlertSystem.vue`: (4→0) Updated SyncAlert interface and logger calls
+- `src/components/PersistentMemoryManager.vue`: (4→0) Defined Backup interface and fixed unsafe casts
+- `src/components/base/UnifiedInboxPanel.vue`: (3→0) Fixed brain dump parsing and window extensions
+- `src/utils/TaskValidationGuard.ts`: (2→0) Typed validation reports and failure checks
+
+**Session 13 Files Fixed** (Dec 21, 2025) [Batch 10]:
+- `src/views/CalendarViewVueCal.vue`: (2→0) Fixed event handlers and recurrenceUtils require
+- `src/views/BoardView.vue`: (3→0) Fixed status casts and template filters
+- `src/utils/offlineQueue.ts`: (2→0) Defined event listener types and used unknown for data
+- `src/utils/unifiedSyncQueue.ts`: (2→0) Typed SyncOperation data as unknown
+- `src/utils/memoryLeakDetector.ts`: (3→0) Typed performance memory and export/import data
+- `src/utils/DragInteractionRecorder.ts`: (2→0) Refined console capture types
+
+**Session 14 Files Fixed** (Dec 21, 2025) [Batch 11]:
+- `src/utils/cspManager.ts`: (1→0) Typed report timers and violation events
+- `src/utils/forensicBackupLogger.ts`: (2→0) Refined AuditEvent and snapshot types
+- `src/utils/rateLimiter.ts`: (2→0) Added RateLimitRequest interface and typed headers
+- `src/utils/mockTaskDetector.ts`: (1→0) Refined filterMockTasks and detectMockTask types
+- `src/utils/taskDisappearanceLogger.ts`: (1→0) Fixed window cast for global taskLogger
+
+**Session 15 Files Fixed** (Dec 21, 2025) [Batch 12]:
+- `src/composables/useVueFlowStability.ts`
+- `src/composables/useVueFlowStateManager.ts`
+- `src/components/canvas/CanvasContextMenu.vue`
+- `src/components/canvas/MultiSelectionOverlay.vue`
+- `src/components/canvas/TaskNode.vue`
+- `src/composables/useCanvasProgressiveLoading.ts`
+- `src/components/canvas/EdgeContextMenu.vue`
+- `src/components/canvas/GroupEditModal.vue`
+- `src/components/canvas/InboxTimeFilters.vue`
+- `src/views/CanvasView.vue`
+- `src/types/tasks.ts`
+
+**🚀 NEXT SESSION - START HERE**:
+1. Run: `npm run lint > /tmp/lint-output-batch13.txt 2>&1`
+2. Focus on:
+   - Batch 13: Authentication & Account components (e.g., `AuthModal.vue`, `LoginForm.vue`, `SignupForm.vue`, `BackupSettings.vue`)
+3. Continue systematically reducing warnings towards 0.
+
+**Remaining** (79 warnings):
 - Services: ✅ DONE
-- Utils: ~50 remaining (sync validators, helpers)
-- Composables: ~20 remaining
-- Components: ~200 remaining (main focus)
-- Views: ~150 remaining
+- Utils: ~15 remaining (sync validators, helpers)
+- Composables: ~10 remaining
+- Components: ~30 remaining (main focus)
+- Views: ~20 remaining
 
 **Common Patterns Applied**:
 - Error handling: `catch (err: any)` → `catch (err: unknown)` + type guards
@@ -896,7 +985,7 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 - **CSS updated**: Dark glass morphism applied to swimlane headers and columns
 - **Visual alignment**: Complete - matches KanbanColumn styling
 
-**🔴 NEXT SESSION - CREATE AUTH COMPONENT STORIES**:
+**🔴 NEXT SESSION - CREATE AUTH COMPONENT STORIES (COMPLETED)**:
 
 **Goal**: Create stories for 6 Auth components (0% → 100% coverage)
 
@@ -915,6 +1004,8 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 - Set appropriate `iframeHeight` based on component type
 
 **Skill upgraded**: `storybook-audit` now includes tokenization enforcement (Check 6)
+
+**Status**: ✅ COMPLETED - All 6 Auth component stories created and verified to work correctly
 
 ---
 

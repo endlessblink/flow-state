@@ -226,8 +226,8 @@ export class TaskValidationGuard {
       }, {});
 
       // Check for recent critical issues (last 10 failures)
-      const recentFailures = failures.slice(-10);
-      const hasRecentCriticalIssues = recentFailures.some((f: any) =>
+      const recentFailures = failures.slice(-10) as Array<{ errors?: string[] }>
+      const hasRecentCriticalIssues = recentFailures.some((f) =>
         f.errors && f.errors.some((e: string) => e.includes('EMERGENCY'))
       );
 
@@ -262,8 +262,8 @@ export class TaskValidationGuard {
   private static reportValidationIssue(report: {
     errors: string[];
     warnings: string[];
-    originalData: any;
-    cleanedData: any;
+    originalData: Partial<Task>;
+    cleanedData: Partial<Task>;
     timestamp: string;
   }): void {
     try {

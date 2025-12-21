@@ -268,7 +268,16 @@ const backupStatus = ref<BackupStatus>({
 })
 
 const testResults = ref<TestResult[]>([])
-const auditEvents = ref<any[]>([])
+interface AuditEvent {
+  id: string
+  timestamp: string | number
+  operation: string
+  status: string
+  details: string
+  filteredTasks?: unknown[] // Changed from any[] to unknown[]
+}
+
+const auditEvents = ref<AuditEvent[]>([])
 
 // Computed
 const allTestsPassed = computed(() => {

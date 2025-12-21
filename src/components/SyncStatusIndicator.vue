@@ -2,7 +2,7 @@
   <div class="sync-status-indicator" :class="statusClasses">
     <!-- Status Icon -->
     <div class="sync-icon" :title="statusTooltip">
-      <div v-if="syncStatus === 'syncing' || (syncStatus as any) === 'retrying'" class="sync-spinner">
+      <div v-if="syncStatus === 'syncing' || syncStatus === 'retrying'" class="sync-spinner">
         <svg
           class="animate-spin h-4 w-4"
           xmlns="http://www.w3.org/2000/svg"
@@ -144,7 +144,7 @@
           <div class="error-meta">
             {{ formatTimestamp(syncError.timestamp) }} •
             {{ syncError.direction ? syncError.direction.toUpperCase() : 'UNKNOWN' }}
-            <span v-if="(syncError as any).retryCount">• Retry {{ (syncError as any).retryCount }}</span>
+            <span v-if="syncError.retryCount">• Retry {{ syncError.retryCount }}</span>
           </div>
         </div>
       </div>
@@ -161,7 +161,7 @@
         </button>
 
         <button
-          v-if="(syncStatus as any) === 'paused'"
+          v-if="syncStatus === 'paused'"
           class="btn btn-primary btn-sm"
           @click="resumeSync"
         >
@@ -169,7 +169,7 @@
         </button>
 
         <button
-          v-if="syncStatus === 'syncing' || (syncStatus as any) === 'retrying'"
+          v-if="syncStatus === 'syncing' || syncStatus === 'retrying'"
           class="btn btn-secondary btn-sm"
           @click="pauseSync"
         >
@@ -195,7 +195,7 @@
     </div>
 
     <!-- Progress Bar (when syncing) -->
-    <div v-if="showProgress && (syncStatus === 'syncing' || (syncStatus as any) === 'retrying')" class="sync-progress">
+    <div v-if="showProgress && (syncStatus === 'syncing' || syncStatus === 'retrying')" class="sync-progress">
       <div class="progress-bar">
         <div class="progress-fill" :style="{ width: `${syncProgress}%` }" />
       </div>
@@ -208,7 +208,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
+import { getGlobalReliableSyncManager, type SyncStatus as ReliableSyncStatus } from '@/composables/useReliableSyncManager'
 
 interface Props {
   showText?: boolean
@@ -235,7 +235,7 @@ const syncProgressText = ref('')
 // TASK-021: Debounced sync status to prevent flickering during live sync
 // The raw status from syncManager changes rapidly during live sync (syncing <-> complete)
 // We debounce to show a stable UI status
-const stableSyncStatus = ref(syncManager.syncStatus.value)
+const stableSyncStatus = ref<ReliableSyncStatus | 'retrying'>(syncManager.syncStatus.value as ReliableSyncStatus)
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null
 const STATUS_DEBOUNCE_MS = 1500 // Don't show transitions faster than 1.5 seconds
 
@@ -247,9 +247,9 @@ watch(() => syncManager.syncStatus.value, (newStatus, oldStatus) => {
   }
 
   // These transitions should be immediate (important state changes)
-  const immediateTransitions = ['error', 'offline', 'resolving_conflicts', 'validating']
-  if (immediateTransitions.includes(newStatus)) {
-    stableSyncStatus.value = newStatus
+  const immediateTransitions: (ReliableSyncStatus | 'retrying')[] = ['error', 'offline', 'resolving_conflicts', 'validating']
+  if (immediateTransitions.includes(newStatus as ReliableSyncStatus)) {
+    stableSyncStatus.value = newStatus as ReliableSyncStatus
     return
   }
 
@@ -263,7 +263,7 @@ watch(() => syncManager.syncStatus.value, (newStatus, oldStatus) => {
     } else {
       // Debounce the transition
       statusDebounceTimer = setTimeout(() => {
-        stableSyncStatus.value = newStatus
+        stableSyncStatus.value = newStatus as ReliableSyncStatus
       }, STATUS_DEBOUNCE_MS)
     }
     return
@@ -271,7 +271,7 @@ watch(() => syncManager.syncStatus.value, (newStatus, oldStatus) => {
 
   // For other transitions, use a shorter debounce
   statusDebounceTimer = setTimeout(() => {
-    stableSyncStatus.value = newStatus
+    stableSyncStatus.value = newStatus as ReliableSyncStatus
   }, 300)
 }, { immediate: true })
 
@@ -288,7 +288,7 @@ const conflicts = computed(() => syncManager.conflicts.value)
 
 // Create compatibility properties for the UI
 const syncErrors = computed(() => {
-  const errors = []
+  const errors: { message: string, timestamp: Date, direction: string, retryCount?: number }[] = []
   if (error.value) {
     errors.push({
       message: error.value,
@@ -311,11 +311,11 @@ const averageLatency = computed(() => 0) // Not directly available in ReliableSy
 
 // Status classes for styling
 const statusClasses = computed(() => ({
-  'syncing': syncStatus.value === 'syncing' || (syncStatus.value as any) === 'retrying',
+  'syncing': syncStatus.value === 'syncing' || syncStatus.value === 'retrying',
   'offline': syncStatus.value === 'offline',
   'error': syncStatus.value === 'error' || needsUserIntervention.value,
   'complete': syncStatus.value === 'complete',
-  'paused': (syncStatus.value as any) === 'paused',
+  'paused': syncStatus.value === 'paused',
   'compact': props.compact,
   'expanded': isExpanded.value,
   'has-errors': hasErrors.value

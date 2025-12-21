@@ -134,7 +134,8 @@ export class ProductionLogger {
     // Monitor memory usage
     if ('memory' in performance) {
       setInterval(() => {
-        const memory = (performance as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory
+        const perf = performance as unknown as Record<string, unknown>
+        const memory = perf.memory as { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number }
         if (memory) {
           this.logMetric('memory_used', memory.usedJSHeapSize, 'bytes')
           this.logMetric('memory_total', memory.totalJSHeapSize, 'bytes')
@@ -369,7 +370,8 @@ export class ProductionLogger {
       syncStatus = 'degraded'
     }
 
-    const memoryUsage = (performance as any).memory?.usedJSHeapSize || 0
+    const perf = performance as unknown as Record<string, unknown>
+    const memoryUsage = (perf.memory as { usedJSHeapSize: number })?.usedJSHeapSize || 0
     const storageQuota = await this.getStorageQuota()
 
     return {
@@ -535,7 +537,8 @@ export class ProductionLogger {
    * Collect system metrics
    */
   private collectSystemMetrics(): void {
-    const connection = (navigator as any).connection
+    const nav = navigator as unknown as Record<string, unknown>
+    const connection = nav.connection as { downlink: number; rtt: number }
     if (connection) {
       this.logMetric('network_bandwidth', connection.downlink, 'kbps')
       this.logMetric('network_rtt', connection.rtt, 'ms')
@@ -543,7 +546,7 @@ export class ProductionLogger {
 
     // Battery API if available
     if ('getBattery' in navigator) {
-      (navigator as any).getBattery().then((battery: any) => {
+      (navigator as unknown as { getBattery: () => Promise<{ level: number, charging: boolean }> }).getBattery().then((battery) => {
         this.logMetric('battery_level', battery.level * 100, 'percent')
         this.logMetric('battery_charging', battery.charging ? 1 : 0, 'count')
       })

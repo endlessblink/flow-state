@@ -59,7 +59,7 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, type User } from '@/stores/auth'
 import BaseModal from '@/components/base/BaseModal.vue'
 import LoginForm from './LoginForm.vue'
 import SignupForm from './SignupForm.vue'
@@ -92,7 +92,7 @@ watch(() => authStore.isAuthenticated, (isAuth) => {
 })
 
 // ===== Methods =====
-async function handleAuthSuccess(user: any) {
+async function handleAuthSuccess(user: User) {
   console.log('✅ Authentication successful:', user?.email)
   console.log('🔍 Auth modal state before close:', {
     isOpen: uiStore.authModalOpen,
@@ -148,14 +148,14 @@ function handleClose() {
 
 .auth-modal-body {
   padding: var(--space-6) 0;
-  min-height: 400px;
+  min-height: 800px;
 }
 
 /* Responsive */
 @media (max-width: 640px) {
   .auth-modal-body {
     padding: var(--space-4) 0;
-    min-height: 350px;
+    min-height: 600px;
   }
 }
 </style>

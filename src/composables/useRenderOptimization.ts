@@ -144,7 +144,7 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
   // Shallow reactive wrapper for large arrays/objects
   const createShallowReactive = <T>(value: T): { value: T; trigger: () => void } => {
     if (!enableShallowReactive) {
-      return { value, trigger: () => {} }
+      return { value, trigger: () => { } }
     }
 
     const shallowRefValue = shallowRef(value)
@@ -209,7 +209,7 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
 
   // Memoized component factory
   const createMemoizedComponent = (
-    componentFactory: () => any,
+    componentFactory: () => unknown,
     dependencyKeys: string[],
     componentId: string
   ) => {
@@ -312,9 +312,9 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
 
   // Memory monitoring
   const updateMemoryUsage = () => {
-    if ('memory' in performance) {
-      const memory = (performance as any).memory
-      renderMetrics.value.memoryUsage = memory.usedJSHeapSize
+    const perf = performance as unknown as { memory?: { usedJSHeapSize: number } }
+    if (perf.memory) {
+      renderMetrics.value.memoryUsage = perf.memory.usedJSHeapSize
     }
   }
 

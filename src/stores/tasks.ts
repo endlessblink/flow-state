@@ -16,6 +16,15 @@ import type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from
 import { useSmartViews } from '@/composables/useSmartViews'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
+// TASK-034: Individual task document storage
+import { STORAGE_FLAGS } from '@/config/database'
+import {
+  saveTasks as saveIndividualTasks,
+  loadAllTasks as loadIndividualTasks,
+  deleteTask as deleteIndividualTask,
+  syncDeletedTasks,
+  migrateFromLegacyFormat
+} from '@/utils/individualTaskStorage'
 
 // Re-export types for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance }
@@ -929,60 +938,87 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     try {
-      // ✅ CORRECT: Tasks are stored as array in tasks:data document
-      const result = await dbInstance.allDocs({ include_docs: true })
+      // TASK-034: Phase 4 - Read from individual task documents if enabled
+      if (STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
+        console.log('📂 TASK-034 Phase 4: Loading tasks from individual task-{id} documents...')
+        try {
+          const loadedTasks = await loadIndividualTasks(dbInstance)
+          if (loadedTasks && loadedTasks.length > 0) {
+            const oldTasks = [...tasks.value]
+            tasks.value = loadedTasks
+            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-Phase4-individualDocs')
+            console.log(`✅ TASK-034 Phase 4: Loaded ${loadedTasks.length} tasks from individual documents`)
 
-      console.log('🔍 POUCHDB DEBUG: Total documents found:', result.total_rows)
-      console.log('🔍 POUCHDB DEBUG: All document IDs:', result.rows.map((row) => row.id))
-
-      const tasksDoc = result.rows.find((row) => row.id === 'tasks:data')
-      console.log('🔍 POUCHDB DEBUG: tasks:data document found:', !!tasksDoc)
-
-      if (tasksDoc?.doc) {
-        let taskArray = null
-
-        // Check if doc itself is the array
-        if (Array.isArray(tasksDoc.doc)) {
-          taskArray = tasksDoc.doc
-        }
-        // Check if doc has tasks property
-        else if (Array.isArray(tasksDoc.doc.tasks)) {
-          taskArray = tasksDoc.doc.tasks
-        }
-        // Check if doc has data property (useDatabase composable structure)
-        else if (Array.isArray(tasksDoc.doc.data)) {
-          taskArray = tasksDoc.doc.data
-        }
-
-        if (taskArray && taskArray.length > 0) {
-          const oldTasks = [...tasks.value]
-          interface TaskDoc {
-            createdAt?: string | Date
-            updatedAt?: string | Date
-            [key: string]: unknown
+            // Skip legacy read - individual docs loaded successfully
+            // Continue to migrations below
+          } else {
+            console.warn('⚠️ TASK-034 Phase 4: No individual task docs found, falling back to legacy format')
+            // Fall through to legacy read below
           }
-          tasks.value = taskArray.map((task: unknown) => {
-            const t = task as TaskDoc
-            return {
-              ...t,
-              createdAt: new Date(t.createdAt || Date.now()),
-              updatedAt: new Date(t.updatedAt || Date.now())
+        } catch (phase4Error) {
+          console.error('❌ TASK-034 Phase 4: Individual task load failed, falling back to legacy:', phase4Error)
+          // Fall through to legacy read below
+        }
+      }
+
+      // Phase 1 (Legacy): Read from tasks:data if Phase 4 not enabled or failed
+      // Skip if tasks were already loaded from individual docs
+      if (tasks.value.length === 0 || !STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
+        console.log('📂 Loading tasks from tasks:data (legacy format)...')
+
+        const result = await dbInstance.allDocs({ include_docs: true })
+        console.log('🔍 POUCHDB DEBUG: Total documents found:', result.total_rows)
+        console.log('🔍 POUCHDB DEBUG: All document IDs:', result.rows.map((row) => row.id))
+
+        const tasksDoc = result.rows.find((row) => row.id === 'tasks:data')
+        console.log('🔍 POUCHDB DEBUG: tasks:data document found:', !!tasksDoc)
+
+        if (tasksDoc?.doc) {
+          let taskArray = null
+
+          // Check if doc itself is the array
+          if (Array.isArray(tasksDoc.doc)) {
+            taskArray = tasksDoc.doc
+          }
+          // Check if doc has tasks property
+          else if (Array.isArray(tasksDoc.doc.tasks)) {
+            taskArray = tasksDoc.doc.tasks
+          }
+          // Check if doc has data property (useDatabase composable structure)
+          else if (Array.isArray(tasksDoc.doc.data)) {
+            taskArray = tasksDoc.doc.data
+          }
+
+          if (taskArray && taskArray.length > 0) {
+            const oldTasks = [...tasks.value]
+            interface TaskDoc {
+              createdAt?: string | Date
+              updatedAt?: string | Date
+              [key: string]: unknown
             }
-          }) as Task[]
-          taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-fromDoc')
-          console.log(`✅ Loaded ${taskArray.length} tasks from tasks:data`)
+            tasks.value = taskArray.map((task: unknown) => {
+              const t = task as TaskDoc
+              return {
+                ...t,
+                createdAt: new Date(t.createdAt || Date.now()),
+                updatedAt: new Date(t.updatedAt || Date.now())
+              }
+            }) as Task[]
+            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-legacyFormat')
+            console.log(`✅ Loaded ${taskArray.length} tasks from tasks:data (legacy)`)
+          } else {
+            console.log('ℹ️ tasks:data exists but is empty')
+            const oldTasks = [...tasks.value]
+            tasks.value = []
+            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-emptyLegacyDoc')
+          }
         } else {
-          console.log('ℹ️ tasks:data exists but is empty')
+          console.log('ℹ️ No tasks:data document found')
           const oldTasks = [...tasks.value]
           tasks.value = []
-          taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-emptyDoc')
+          taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-noLegacyDoc')
         }
-      } else {
-        console.log('ℹ️ No tasks:data document found')
-        const oldTasks = [...tasks.value]
-        tasks.value = []
-        taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-noDoc')
-      }
+      } // End of legacy format loading block
     } catch (error) {
       console.error('❌ Failed to load tasks from PouchDB:', error)
       const oldTasks = [...tasks.value]
@@ -997,6 +1033,29 @@ export const useTaskStore = defineStore('tasks', () => {
     migrateInboxFlag()
     migrateNestedTaskProjectIds() // Fix nested tasks to inherit parent's projectId
     migrateTaskUncategorizedFlag() // Set isUncategorized flag for existing tasks
+
+    // TASK-034: Phase 2 - Check if migration is needed
+    if (STORAGE_FLAGS.DUAL_WRITE_TASKS && tasks.value.length > 0) {
+      console.log('🔄 TASK-034: Checking if individual task documents exist...')
+
+      // Check if individual docs already exist
+      try {
+        const existingIndividualDocs = await dbInstance.allDocs({
+          startkey: 'task-',
+          endkey: 'task-\ufff0'
+        })
+
+        if (existingIndividualDocs.total_rows === 0) {
+          console.log('📂 TASK-034: No individual task documents found. Running migration...')
+          const migrationResult = await migrateFromLegacyFormat(dbInstance)
+          console.log(`✅ TASK-034: Migration complete - ${migrationResult.migrated} tasks migrated, legacy deleted: ${migrationResult.deleted}`)
+        } else {
+          console.log(`ℹ️ TASK-034: Found ${existingIndividualDocs.total_rows} individual task documents, skipping migration`)
+        }
+      } catch (error) {
+        console.warn('⚠️ TASK-034: Migration check failed:', error)
+      }
+    }
 
     // DEBUG: DISABLED - was causing infinite sync loop by modifying tasks on every load
     // addTestCalendarInstances()
@@ -1058,9 +1117,47 @@ export const useTaskStore = defineStore('tasks', () => {
           await new Promise(resolve => setTimeout(resolve, 100))
         }
 
-        // Chief Architect: Use SaveQueueManager for conflict prevention
-        await db.save(DB_KEYS.TASKS, newTasks)
-        console.log('📋 Tasks auto-saved via SaveQueueManager')
+        const dbInstance = window.pomoFlowDb
+        if (!dbInstance) {
+          console.error('❌ PouchDB not available for task persistence')
+          return
+        }
+
+        // TASK-034: Dual-write mode - save to BOTH formats for safe migration
+        if (STORAGE_FLAGS.DUAL_WRITE_TASKS && !STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+          // Phase 1 & 2: Write to both formats
+          // 1. Save to legacy tasks:data (existing behavior)
+          await db.save(DB_KEYS.TASKS, newTasks)
+          console.log('📋 Tasks saved to tasks:data (legacy format)')
+
+          // 2. Also save as individual task-{id} documents
+          try {
+            await saveIndividualTasks(dbInstance, newTasks)
+            console.log(`📋 Tasks saved as ${newTasks.length} individual documents (new format)`)
+
+            // 3. Clean up orphaned task documents (deleted tasks)
+            const currentTaskIds = new Set(newTasks.map(t => t.id))
+            const deletedCount = await syncDeletedTasks(dbInstance, currentTaskIds)
+            if (deletedCount > 0) {
+              console.log(`🗑️ Cleaned up ${deletedCount} orphaned task documents`)
+            }
+          } catch (individualError) {
+            // Don't fail the whole save if individual docs fail - legacy format is still saved
+            console.warn('⚠️ Individual task save failed (legacy format still saved):', individualError)
+          }
+        } else if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+          // Phase 3: Individual docs only (after migration is proven stable)
+          await saveIndividualTasks(dbInstance, newTasks)
+          console.log(`📋 Tasks saved as ${newTasks.length} individual documents ONLY`)
+
+          // Clean up orphaned task documents
+          const currentTaskIds = new Set(newTasks.map(t => t.id))
+          await syncDeletedTasks(dbInstance, currentTaskIds)
+        } else {
+          // Fallback: Legacy-only mode (both flags off)
+          await db.save(DB_KEYS.TASKS, newTasks)
+          console.log('📋 Tasks auto-saved via SaveQueueManager (legacy only)')
+        }
 
         // PHASE 1: Use safe sync wrapper
         await safeSync('tasks-auto-save')

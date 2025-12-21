@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, type CSSProperties } from 'vue'
 import { Unlink } from 'lucide-vue-next'
 
 interface Props {
@@ -36,12 +36,12 @@ const emit = defineEmits<{
 
 const menuRef = ref<HTMLElement | null>(null)
 
-const menuPosition = computed(() => ({
+const menuPosition = computed((): CSSProperties => ({
   position: 'fixed' as const,
   left: `${props.x}px`,
   top: `${props.y}px`,
   zIndex: 9999
-}) as any)
+}))
 
 // Close menu on click outside
 const handleClickOutside = (event: MouseEvent) => {

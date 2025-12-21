@@ -227,8 +227,8 @@ const useBackupScheduler = () => ({
   getSchedule: () => ({ frequency: 'daily' as const, lastBackup: 0, nextBackup: 0, autoDownload: true, maxBackups: 10, storageLocation: 'local' as const }),
   getStats: () => ({ totalBackups: 0, totalSize: 0, averageSize: 0, successRate: 100, lastBackupTime: 0, nextBackupTime: 0 }),
   getHistory: () => [],
-  onBackup: (_callback: any) => { console.log('Backup event listener added') },
-  offBackup: (_callback: any) => { console.log('Backup event listener removed') },
+  onBackup: (callback: (success: boolean, error?: string) => void) => { console.log('Backup event listener added') },
+  offBackup: (callback: (success: boolean, error?: string) => void) => { console.log('Backup event listener removed') },
   isRunning: () => false,
   isPaused: () => false
 })
@@ -240,6 +240,13 @@ type BackupSchedule = {
   autoDownload: boolean
   maxBackups: number
   storageLocation: 'local' | 'cloud' | 'both'
+}
+
+interface BackupEntry {
+  timestamp: number
+  success: boolean
+  size: number
+  error?: string
 }
 import {
   Shield, Clock, Calendar, Database, RefreshCw, Download,
@@ -268,7 +275,7 @@ const stats = ref({
   lastBackupTime: 0,
   nextBackupTime: 0
 })
-const backupHistory = ref<any[]>([])
+const backupHistory = ref<BackupEntry[]>([])
 const isCreatingBackup = ref(false)
 const isValidating = ref(false)
 const isSchedulerRunning = ref(false)

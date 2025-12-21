@@ -658,7 +658,23 @@ const handleColumnDragLeave = (event: DragEvent) => {
   // Remove visual feedback if needed
 }
 
-const handleDragChange = (event: any, viewType: string, columnKey: string) => {
+interface DraggableChangeEvent {
+  added?: {
+    element: Task
+    newIndex: number
+  }
+  removed?: {
+    element: Task
+    oldIndex: number
+  }
+  moved?: {
+    element: Task
+    newIndex: number
+    oldIndex: number
+  }
+}
+
+const handleDragChange = (event: DraggableChangeEvent, viewType: string, columnKey: string) => {
   if (event.added) {
     const task = event.added.element
 
@@ -680,7 +696,8 @@ const handleDragChange = (event: any, viewType: string, columnKey: string) => {
         taskStore.moveTaskToDate(task.id, columnKey)
       }
     } else if (viewType === 'priority') {
-      taskStore.moveTaskToPriority(task.id, columnKey as any)
+      // Cast to specific priority type which matches the store's expectation
+      taskStore.moveTaskToPriority(task.id, columnKey as Task['priority'] | 'no_priority')
     }
   }
   // No need to manually refresh - localTasks is computed and reactive

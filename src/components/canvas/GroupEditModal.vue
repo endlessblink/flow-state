@@ -62,7 +62,7 @@
                 :key="layout.value"
                 class="layout-btn"
                 :class="{ active: formData.layout === layout.value }"
-                @click="formData.layout = layout.value as any"
+                @click="formData.layout = layout.value as 'grid' | 'vertical' | 'horizontal'"
               >
                 <component :is="layout.icon" :size="16" />
                 <span>{{ layout.label }}</span>
@@ -177,7 +177,7 @@ watch(() => props.section, (newSection) => {
   if (newSection) {
     formData.name = newSection.name || ''
     formData.color = newSection.color || '#6366f1'
-    formData.layout = (newSection.layout || 'grid') as any
+    formData.layout = (newSection.layout || 'grid') as 'grid' | 'vertical' | 'horizontal'
     formData.isCollapsed = newSection.isCollapsed || false
     formData.isVisible = newSection.isVisible !== false
   } else {

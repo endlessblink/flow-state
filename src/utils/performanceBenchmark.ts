@@ -450,18 +450,18 @@ export class PerformanceBenchmark {
   }
 
   // Simulation functions
-  private async simulateTaskCreate(_task: any): Promise<void> {
+  private async simulateTaskCreate(_task: unknown): Promise<void> {
     // Simulate database operation
     await new Promise(resolve => setTimeout(resolve, Math.random() * 10))
   }
 
-  private async simulateTaskRead(id: string): Promise<any> {
+  private async simulateTaskRead(id: string): Promise<unknown> {
     // Simulate database operation
     await new Promise(resolve => setTimeout(resolve, Math.random() * 5))
     return { id, title: `Task ${id}` }
   }
 
-  private async simulateTaskUpdate(_task: any): Promise<void> {
+  private async simulateTaskUpdate(_task: unknown): Promise<void> {
     // Simulate database operation
     await new Promise(resolve => setTimeout(resolve, Math.random() * 8))
   }
@@ -500,7 +500,7 @@ export class PerformanceBenchmark {
 
   private getMemoryUsage(): number {
     if ('memory' in performance) {
-      return (performance as any).memory.usedJSHeapSize
+      return (performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
     }
     return 0
   }
@@ -602,7 +602,7 @@ export class PerformanceBenchmark {
     return this.results.value
   }
 
-  async getLatestReport(): Promise<any> {
+  async getLatestReport(): Promise<unknown> {
     try {
       const report = localStorage.getItem('pomo-flow-benchmark-report')
       return report ? JSON.parse(report) : null

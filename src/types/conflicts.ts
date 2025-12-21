@@ -17,7 +17,7 @@ export interface ConflictInfo {
 export interface DocumentVersion {
   _id: string
   _rev: string
-  data: any
+  data: unknown
   updatedAt: string
   deviceId: string
   version: number
@@ -36,7 +36,7 @@ export enum ConflictType {
 export interface ResolutionResult {
   documentId: string
   resolutionType: ResolutionType
-  resolvedDocument: any
+  resolvedDocument: unknown
   winner: string
   timestamp: Date
   conflictData: ConflictInfo
@@ -85,25 +85,29 @@ export interface ConflictHistory {
 }
 
 // Helper type guards
-export function isConflictInfo(obj: any): obj is ConflictInfo {
-  return obj &&
-    typeof obj === 'object' &&
-    typeof obj.documentId === 'string' &&
-    typeof obj.localVersion === 'object' &&
-    typeof obj.remoteVersion === 'object' &&
-    Object.values(ConflictType).includes(obj.conflictType) &&
-    obj.timestamp instanceof Date &&
-    ['low', 'medium', 'high'].includes(obj.severity) &&
-    typeof obj.autoResolvable === 'boolean'
+export function isConflictInfo(obj: unknown): obj is ConflictInfo {
+  if (!obj || typeof obj !== 'object') return false
+  const c = obj as Record<string, unknown>
+  return (
+    typeof c.documentId === 'string' &&
+    typeof c.localVersion === 'object' &&
+    typeof c.remoteVersion === 'object' &&
+    Object.values(ConflictType).includes(c.conflictType as ConflictType) &&
+    c.timestamp instanceof Date &&
+    ['low', 'medium', 'high'].includes(c.severity as string) &&
+    typeof c.autoResolvable === 'boolean'
+  )
 }
 
-export function isResolutionResult(obj: any): obj is ResolutionResult {
-  return obj &&
-    typeof obj === 'object' &&
-    typeof obj.documentId === 'string' &&
-    Object.values(ResolutionType).includes(obj.resolutionType) &&
-    obj.resolvedDocument &&
-    typeof obj.winner === 'string' &&
-    obj.timestamp instanceof Date &&
-    isConflictInfo(obj.conflictData)
+export function isResolutionResult(obj: unknown): obj is ResolutionResult {
+  if (!obj || typeof obj !== 'object') return false
+  const r = obj as Record<string, unknown>
+  return (
+    typeof r.documentId === 'string' &&
+    Object.values(ResolutionType).includes(r.resolutionType as ResolutionType) &&
+    r.resolvedDocument !== undefined &&
+    typeof r.winner === 'string' &&
+    r.timestamp instanceof Date &&
+    isConflictInfo(r.conflictData)
+  )
 }

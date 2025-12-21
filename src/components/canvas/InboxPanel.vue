@@ -93,7 +93,7 @@
       <InboxTimeFilters
         :tasks="baseInboxTasks"
         :active-filter="activeTimeFilter"
-        @filter-changed="activeTimeFilter = $event as any"
+        @filter-changed="activeTimeFilter = $event"
       />
     </div>
 

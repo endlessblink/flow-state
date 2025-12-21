@@ -167,6 +167,7 @@ import {
 } from 'lucide-vue-next'
 import { useContextMenuEvents } from '@/composables/useContextMenuEvents'
 import { useContextMenuPositioning } from '@/composables/useContextMenuPositioning'
+import type { CanvasSection } from '@/stores/canvas'
 
 interface Props {
   isVisible: boolean
@@ -174,7 +175,7 @@ interface Props {
   y: number
   hasSelectedTasks?: boolean
   selectedCount?: number
-  contextSection?: any // CanvasSection for group context
+  contextSection?: CanvasSection // CanvasSection for group context
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -187,8 +188,8 @@ const emit = defineEmits<{
   close: []
   createTaskHere: []
   createGroup: []
-  editGroup: [section: any]
-  deleteGroup: [section: any]
+  editGroup: [section: CanvasSection]
+  deleteGroup: [section: CanvasSection]
   moveToInbox: []
   deleteTasks: []
   alignLeft: []

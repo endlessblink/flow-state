@@ -130,7 +130,7 @@
             style="display: none"
             @change="handleFileImport"
           >
-          <BaseButton @click="($refs.fileInput as any).click()">
+          <BaseButton @click="fileInput?.click()">
             <Upload :size="16" />
             Choose File
           </BaseButton>
@@ -172,11 +172,22 @@ import {
 const persistentStorage = usePersistentStorage()
 const taskStore = useTaskStore()
 
+interface Backup {
+  timestamp: number
+  tasks?: unknown[]
+  projects?: unknown[]
+  metadata?: {
+    totalTasks?: number
+    totalProjects?: number
+    [key: string]: unknown
+  }
+}
+
 // State
 const showRestoreDialog = ref(false)
 const showImportDialog = ref(false)
-const selectedBackup = ref<any>(null)
-const availableBackups = ref<any[]>([])
+const selectedBackup = ref<Backup | null>(null)
+const availableBackups = ref<Backup[]>([])
 const isCreatingBackup = ref(false)
 const isRestoring = ref(false)
 const lastBackupTime = ref<number>(0)
@@ -226,11 +237,11 @@ const loadBackups = async () => {
   }
 }
 
-const selectBackup = (backup: any) => {
+const selectBackup = (backup: Backup) => {
   selectedBackup.value = backup
 }
 
-const restoreBackup = async (backup: any) => {
+const restoreBackup = async (backup: Backup) => {
   if (isRestoring.value) return
 
   if (!confirm('Are you sure you want to restore from this backup? This will replace all current tasks and settings.')) {

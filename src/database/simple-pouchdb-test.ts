@@ -11,16 +11,16 @@ try {
   const _PouchDB1 = require('pouchdb');
   console.log('✅ Method 1 (require): PouchDB imported successfully');
   console.log('   PouchDB type:', typeof _PouchDB1);
-  console.log('   PouchDB default:', typeof (_PouchDB1 as any).default);
+  console.log('   PouchDB default:', typeof (_PouchDB1 as Record<string, unknown>).default);
 } catch (error) {
-  console.error('❌ Method 1 failed:', (error as any).message);
+  console.error('❌ Method 1 failed:', (error as Error).message);
 }
 
 // Method 2: ES6 import
 import * as _PouchDB2 from 'pouchdb';
 console.log('✅ Method 2 (ES6): PouchDB imported successfully');
 console.log('   PouchDB type:', typeof _PouchDB2);
-console.log('   PouchDB default:', typeof (_PouchDB2 as any).default);
+console.log('   PouchDB default:', typeof (_PouchDB2 as unknown as Record<string, unknown>).default);
 
 // Method 3: Named import if available
 try {
@@ -28,7 +28,7 @@ try {
   console.log('✅ Method 3 (fallback): PouchDB imported successfully');
   console.log('   PouchDB type:', typeof _PouchDB3);
 } catch (error) {
-  console.error('❌ Method 3 failed:', (error as any).message);
+  console.error('❌ Method 3 failed:', (error as Error).message);
 }
 
-export {};
+export { };

@@ -357,7 +357,7 @@ class TaskDisappearanceLogger {
     // Check if we already recorded this disappearance
     const exists = this.disappearedTasks.some(
       d => d.task.id === disappeared.task.id &&
-           Math.abs(d.disappearedAt - disappeared.disappearedAt) < 60000
+        Math.abs(d.disappearedAt - disappeared.disappearedAt) < 60000
     )
 
     if (!exists) {
@@ -445,7 +445,7 @@ export const taskDisappearanceLogger = new TaskDisappearanceLogger()
 
 // Expose to window for debugging
 if (typeof window !== 'undefined') {
-  (window as any).taskLogger = taskDisappearanceLogger
+  (window as unknown as { taskLogger: TaskDisappearanceLogger }).taskLogger = taskDisappearanceLogger
 }
 
 // Convenience functions for console usage

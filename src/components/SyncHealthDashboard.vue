@@ -374,7 +374,7 @@ const resolvedConflicts = computed(() => reliableSync.resolutions.value.length)
 
 // Network metrics
 const networkMetrics = computed(() => {
-  const optimizer = reliableSync.networkOptimizer
+  const optimizer = reliableSync.networkOptimizer as any
   return optimizer ? optimizer.getMetrics().currentCondition : {
     type: 'good' as const,
     bandwidth: 1000000,
@@ -512,13 +512,15 @@ const loadDashboardData = async () => {
 const runHealthCheck = async () => {
   isHealthCheckRunning.value = true
   try {
-    const systemHealth = logger.getSystemHealth()
-    logger.info('monitoring', 'Health check completed', {
-        syncStatus: systemHealth?.syncStatus,
-        errorRate: systemHealth?.errorRate,
-        consecutiveFailures: systemHealth?.consecutiveFailures
-      })
-
+    // Use syncMetrics for health check
+    const healthData = {
+      syncStatus: syncStatus.value,
+      failureRate: syncMetrics.value.successRate ? (1 - syncMetrics.value.successRate) : 0,
+      conflicts: syncMetrics.value.conflictsDetected
+    }
+    
+    logger.info('sync', 'Health check completed', healthData)
+    
     // Show results
     console.log('Health Check Result: COMPLETED')
 

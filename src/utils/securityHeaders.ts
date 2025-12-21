@@ -189,7 +189,9 @@ export class SecurityHeaders {
 
   // Generate HSTS header
   private generateHSTSHeader(): string {
-    const hsts = this.config.strictTransportSecurity!
+    const hsts = this.config.strictTransportSecurity
+    if (!hsts) return ''
+
     let header = `max-age=${hsts.maxAge}`
 
     if (hsts.includeSubDomains) {
@@ -208,8 +210,8 @@ export class SecurityHeaders {
     return (
       typeof window !== 'undefined' &&
       (window.location.protocol === 'https:' ||
-       window.location.hostname === 'localhost' ||
-       window.location.hostname === '127.0.0.1')
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1')
     )
   }
 

@@ -111,7 +111,7 @@ const emit = defineEmits<{
 
 // Try to get canvas store, fallback to mock for Storybook environment
 // Try to get canvas store, fallback to mock for Storybook environment
-let canvasStore: ReturnType<typeof useCanvasStore> | { sections: CanvasSection[], createSection: (name: string) => Promise<string> }
+let canvasStore: ReturnType<typeof useCanvasStore> | { sections: CanvasSection[], createSection: (section: any) => any, updateSection: (id: string, updates: any) => void }
 try {
   canvasStore = useCanvasStore()
 } catch (error) {

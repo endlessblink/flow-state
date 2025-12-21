@@ -19,6 +19,9 @@ import { getBatchManager } from '@/utils/syncBatchManager'
 import { getLogger } from '@/utils/productionLogger'
 import type { ConflictInfo, ResolutionResult } from '@/types/conflicts'
 import type { SyncValidationResult } from '@/utils/syncValidator'
+
+export type { ConflictInfo, ResolutionResult }
+export type { SyncValidationResult }
 import type { SyncMetadata as _SyncMetadata } from '@/utils/timezoneCompatibility'
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'complete' | 'resolving_conflicts' | 'validating' | 'offline' | 'paused'

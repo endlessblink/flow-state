@@ -238,7 +238,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   const makeRequest = async (requestConfig: Partial<NetworkRequest>): Promise<unknown> => {
     const request: NetworkRequest = {
       id: generateRequestId(requestConfig),
-      url: requestConfig.url!,
+      url: requestConfig.url || '',
       method: requestConfig.method || 'GET',
       data: requestConfig.data,
       priority: requestConfig.priority || 'normal',
@@ -364,8 +364,10 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
       metrics.value.errorRate = metrics.value.failedRequests / metrics.value.totalRequests
 
       // Retry logic
-      if (request.retryCount! < maxRetries) {
-        request.retryCount = (request.retryCount || 0) + 1
+      // Retry logic
+      const currentRetries = request.retryCount || 0
+      if (currentRetries < maxRetries) {
+        request.retryCount = currentRetries + 1
         await new Promise(resolve => setTimeout(resolve, retryDelay * request.retryCount!))
         return executeRequest(request)
       }
@@ -414,7 +416,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
 
     const request: NetworkRequest = {
       id: generateRequestId(requestConfig),
-      url: requestConfig.url!,
+      url: requestConfig.url || '',
       method: requestConfig.method || 'GET',
       data: requestConfig.data,
       priority: requestConfig.priority || 'normal',

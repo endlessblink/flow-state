@@ -28,6 +28,10 @@ export interface TaskInstance {
   }
   createdAt?: Date
   updatedAt?: Date
+  // Recurrence fields
+  isModified?: boolean
+  isSkipped?: boolean
+  parentTaskId?: string
 }
 
 export interface NotificationPreferences {

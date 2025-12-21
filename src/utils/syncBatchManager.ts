@@ -193,7 +193,9 @@ export class SyncBatchManager {
       return
     }
 
-    const batch = this.pendingBatches.get(batchId)!
+    const batch = this.pendingBatches.get(batchId)
+    if (!batch) return
+
     this.pendingBatches.delete(batchId)
     this.processingBatches.set(batchId, batch)
 
@@ -311,12 +313,12 @@ export class SyncBatchManager {
    */
   public getMetrics(): BatchMetrics {
     const totalBatches = this.pendingBatches.size + this.processingBatches.size +
-                        this.completedBatches.length + this.failedBatches.length
+      this.completedBatches.length + this.failedBatches.length
 
     const totalDataSize = this.completedBatches.reduce((sum, batch) => sum + batch.sizeBytes, 0) +
-                         this.failedBatches.reduce((sum, batch) => sum + batch.sizeBytes, 0) +
-                         Array.from(this.pendingBatches.values()).reduce((sum, batch) => sum + batch.sizeBytes, 0) +
-                         Array.from(this.processingBatches.values()).reduce((sum, batch) => sum + batch.sizeBytes, 0)
+      this.failedBatches.reduce((sum, batch) => sum + batch.sizeBytes, 0) +
+      Array.from(this.pendingBatches.values()).reduce((sum, batch) => sum + batch.sizeBytes, 0) +
+      Array.from(this.processingBatches.values()).reduce((sum, batch) => sum + batch.sizeBytes, 0)
 
     const averageBatchSize = totalBatches > 0 ? totalDataSize / totalBatches : 0
 
@@ -336,10 +338,10 @@ export class SyncBatchManager {
    */
   public getBatch(batchId: string): SyncBatch | null {
     return this.pendingBatches.get(batchId) ||
-           this.processingBatches.get(batchId) ||
-           this.completedBatches.find(b => b.id === batchId) ||
-           this.failedBatches.find(b => b.id === batchId) ||
-           null
+      this.processingBatches.get(batchId) ||
+      this.completedBatches.find(b => b.id === batchId) ||
+      this.failedBatches.find(b => b.id === batchId) ||
+      null
   }
 
   /**

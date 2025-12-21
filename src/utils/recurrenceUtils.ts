@@ -392,3 +392,36 @@ export function updateRecurringInstances(
     removedInstances
   }
 }
+
+/**
+ * Add an exception to the recurrence exceptions list
+ */
+export function addException(
+  exceptions: RecurrenceException[],
+  date: string,
+  action: 'skip' | 'modify' | 'delete' = 'skip',
+  newDetails?: Partial<RecurringTaskInstance>
+): RecurrenceException[] {
+  const existingIndex = exceptions.findIndex(ex => ex.date === date)
+
+  const newException: RecurrenceException = {
+    id: `ex-${date}-${action}-${Date.now()}`,
+    date,
+    action
+  }
+
+  // If modification, add details
+  if (type === 'modify' && newDetails) {
+    // implementation details for modification would go here
+    // For now we just track that it's modified in the exception object if strictly needed types match
+  }
+
+  const result = [...exceptions]
+  if (existingIndex >= 0) {
+    result[existingIndex] = newException
+  } else {
+    result.push(newException)
+  }
+
+  return result
+}

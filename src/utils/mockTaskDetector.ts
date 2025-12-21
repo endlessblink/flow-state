@@ -110,7 +110,7 @@ export function detectMockTask(task: {
   if (task.description) {
     const testKeywords = ['test', 'demo', 'sample', 'example', 'mock']
     const hasTestKeywords = testKeywords.some(keyword =>
-      task.description!.toLowerCase().includes(keyword)
+      task.description?.toLowerCase().includes(keyword) || false
     )
 
     if (hasTestKeywords && matchedPatterns.length === 0) {

@@ -162,8 +162,11 @@ export class RateLimiter {
     // Use IP address as default key
     const headers = request.headers
     if (headers instanceof Headers) {
-      if (headers.get('x-forwarded-for')) return headers.get('x-forwarded-for')!.split(',')[0].trim()
-      if (headers.get('x-real-ip')) return headers.get('x-real-ip')!
+      const forwardedFor = headers.get('x-forwarded-for')
+      if (forwardedFor) return forwardedFor.split(',')[0].trim()
+
+      const realIp = headers.get('x-real-ip')
+      if (realIp) return realIp
     } else if (headers) {
       if (headers['x-forwarded-for']) return headers['x-forwarded-for'].split(',')[0].trim()
       if (headers['x-real-ip']) return headers['x-real-ip']

@@ -239,7 +239,14 @@ import {
   Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap
 } from 'lucide-vue-next'
 
-const reliableSyncManager = getGlobalReliableSyncManager() as ReliableSyncManagerInstance & {
+const reliableSyncManager = getGlobalReliableSyncManager()
+const {
+  isOnline,
+  remoteConnected,
+  hasConnectedEver,
+  lastSyncTime,
+  isLiveSyncActive,
+} = reliableSyncManager as ReliableSyncManagerInstance & {
   configureProvider?: (config: unknown) => Promise<void>
   enableProvider?: () => Promise<void>
   disableProvider?: () => Promise<void>
@@ -248,12 +255,11 @@ const _persistentStorage = usePersistentStorage()
 
 // State - Initialize from localStorage for persistence across page refreshes
 // If hasConnectedEver is true, default to 'couchdb' even if pomo-cloud-provider wasn't explicitly set
-const hasConnectedEver = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
 const savedProvider = localStorage.getItem('pomo-cloud-provider')
-const selectedProvider = ref(savedProvider || (hasConnectedEver ? 'couchdb' : ''))
+const selectedProvider = ref(savedProvider || (hasConnectedEver.value ? 'couchdb' : ''))
 const githubToken = ref(localStorage.getItem('github-token') || '')
-const isSyncing = ref(false)
-const syncEnabled = ref(!!savedProvider || hasConnectedEver)
+const isSyncing = ref(false) // Local UI state for sync in progress
+const syncEnabled = ref(!!savedProvider || hasConnectedEver.value)
 const syncProgress = ref('')
 const progressPercent = ref(0)
 const syncHistory = ref<Array<{
@@ -282,10 +288,8 @@ let pollInterval: ReturnType<typeof setInterval> | null = null
 const syncStatus = computed(() => {
   // Force re-evaluation via counter (workaround for reactivity issues)
   void forceUpdateCounter.value
-
-  const health = reliableSyncManager.getSyncHealth()
   // Check localStorage for persistent connection status
-  const hasConnectedEver = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
+  // const hasConnectedEver = localStorage.getItem('pomoflow_hasConnectedEver') === 'true' // Now using destructured hasConnectedEver
   // Read lastSyncTime from localStorage for reliable persistence
   const storedLastSync = localStorage.getItem('pomoflow_lastSyncTime')
   const lastSyncTimestamp = storedLastSync ? new Date(storedLastSync).getTime() : 0
@@ -293,24 +297,21 @@ const syncStatus = computed(() => {
   // Determine provider name based on selection, connection status, or connection history
   let providerName = 'Local Only'
 
-  // Check multiple conditions for CouchDB connection
-  const isCouchdbConnected = selectedProvider.value === 'couchdb' ||
-                              couchdbConnectionStatus.value === 'success' ||
-                              hasConnectedEver ||
-                              reliableSyncManager.remoteConnected?.value
+  // Check multiple conditions for connection
+  const hasConnected = hasConnectedEver.value || remoteConnected.value
 
-  if (isCouchdbConnected) {
+  if (selectedProvider.value === 'couchdb') {
     providerName = 'CouchDB'
-  } else if (selectedProvider.value === 'jsonbin' && syncEnabled.value) {
+  } else if (selectedProvider.value === 'jsonbin' && (syncEnabled.value || hasConnected)) {
     providerName = 'JSONBin'
-  } else if (selectedProvider.value === 'github' && syncEnabled.value) {
+  } else if (selectedProvider.value === 'github' && (syncEnabled.value || hasConnected)) {
     providerName = 'GitHub Gist'
   }
 
   return {
-    isOnline: health.isOnline || isCouchdbConnected,
+    isOnline: isOnline.value || hasConnected, // Use the manager's isOnline or our derived hasConnected
     provider: providerName,
-    lastSyncTime: lastSyncTimestamp || reliableSyncManager.lastSyncTime.value?.getTime() || 0,
+    lastSyncTime: lastSyncTimestamp || lastSyncTime.value?.getTime() || 0,
     syncUrl: selectedProvider.value === 'couchdb' ? couchdbUrl.value : '',
     deviceName: 'PomoFlow Device',
     deviceId: localStorage.getItem('pomo-device-id') || 'device-' + Math.random().toString(36).substring(7),

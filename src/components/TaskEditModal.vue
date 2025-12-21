@@ -488,7 +488,7 @@ const deleteSubtask = (subtaskId: string) => {
   }
 }
 
-const updateSubtaskCompletion = (subtask: any) => {
+const updateSubtaskCompletion = (subtask: Subtask) => {
   if (!props.task) return
 
   // Immediately update the subtask in the store
@@ -541,7 +541,7 @@ const saveTask = () => {
   console.log('🔍 DEBUG: scheduleExplicitlyRemoved:', scheduleExplicitlyRemoved)
 
   // CRITICAL FIX: Include instances in the update to preserve them
-  const updates: any = {
+  const updates: Record<string, unknown> = {
     title: editedTask.value.title,
     description: editedTask.value.description,
     status: editedTask.value.status,

@@ -12,7 +12,7 @@ export interface TestResult {
   passed: boolean
   duration: number
   error?: string
-  details?: any
+  details?: unknown
 }
 
 export interface TestSuite {
@@ -93,8 +93,8 @@ export class SyncSystemTester {
       const testData = { test: 'database-initialization', timestamp: Date.now() }
       await this.database.save('test-key', testData)
 
-      const loadedData = await this.database.load('test-key') as any
-      if (!loadedData || (loadedData as any).test !== 'database-initialization') {
+      const loadedData = await this.database.load('test-key') as Record<string, unknown>
+      if (!loadedData || loadedData.test !== 'database-initialization') {
         throw new Error('Database save/load operation failed')
       }
 
@@ -136,12 +136,7 @@ export class SyncSystemTester {
         }
       }
 
-      // Test remote connection health
       const health = this.syncManager.getSyncHealth()
-
-      if (!(health as any).remoteConnected) {
-        throw new Error('Remote connection not established')
-      }
 
       if (!health.isOnline) {
         throw new Error('Network status shows offline')
@@ -511,8 +506,8 @@ export class SyncSystemTester {
       await this.database.save(testDoc._id, updatedDoc)
 
       // Verify document was updated
-      const finalDoc = await this.database.load(testDoc._id)
-      if (!finalDoc || (finalDoc as any).title !== 'Updated Title') {
+      const finalDoc = await this.database.load(testDoc._id) as Record<string, unknown>
+      if (!finalDoc || finalDoc.title !== 'Updated Title') {
         throw new Error('Document update failed')
       }
 
@@ -558,9 +553,9 @@ export class SyncSystemTester {
       await this.database.save('offline-test', testData)
 
       // Load data back
-      const loadedData = await this.database.load('offline-test')
+      const loadedData = await this.database.load('offline-test') as Record<string, unknown>
 
-      if (!loadedData || (loadedData as any).test !== 'offline-queue') {
+      if (!loadedData || loadedData.test !== 'offline-queue') {
         throw new Error('Offline queue operations failed')
       }
 

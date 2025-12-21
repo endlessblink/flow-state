@@ -382,16 +382,17 @@ export function useVueFlowStability(
    * Create state snapshot
    */
   const createStateSnapshot = async (): Promise<VueFlowStateSnapshot> => {
-    const viewport = vueFlowStore.value ? {
-      x: (vueFlowStore.value as any).getTransform?.()[0] || 0,
-      y: (vueFlowStore.value as any).getTransform?.()[1] || 0,
-      zoom: (vueFlowStore.value as any).getTransform?.()[2] || 1
+    const store = vueFlowStore.value as unknown as { getTransform: () => number[] } | null
+    const viewport = store ? {
+      x: store.getTransform?.()[0] || 0,
+      y: store.getTransform?.()[1] || 0,
+      zoom: store.getTransform?.()[2] || 1
     } : { x: 0, y: 0, zoom: 1 }
 
     const snapshot: VueFlowStateSnapshot = {
       nodes: [...nodes.value],
       edges: [...edges.value],
-      selectedNodes: nodes.value.filter((n: Node) => (n as Node & { selected?: boolean }).selected).map((n: Node) => n.id),
+      selectedNodes: nodes.value.filter((n: Node) => (n as { selected?: boolean }).selected).map((n: Node) => n.id),
       viewport,
       timestamp: Date.now()
     }
@@ -440,8 +441,9 @@ export function useVueFlowStability(
     // Restore viewport
     if (vueFlowStore.value) {
       nextTick(() => {
-        if (vueFlowStore.value) {
-          (vueFlowStore.value as any).setTransform?.(snapshot.viewport.x, snapshot.viewport.y, snapshot.viewport.zoom)
+        const store = vueFlowStore.value as unknown as { setTransform: (x: number, y: number, zoom: number) => void } | null
+        if (store) {
+          store.setTransform?.(snapshot.viewport.x, snapshot.viewport.y, snapshot.viewport.zoom)
         }
       })
     }
@@ -492,7 +494,7 @@ export function useVueFlowStability(
    */
   const getMemoryUsage = (): number | null => {
     if (typeof window !== 'undefined' && 'performance' in window && 'memory' in performance) {
-      const memory = (performance as any).memory
+      const memory = (performance as unknown as { memory: { usedJSHeapSize: number } }).memory
       return memory ? memory.usedJSHeapSize : null
     }
     return null
@@ -561,13 +563,13 @@ export function useVueFlowStability(
 /**
  * Debounce utility function
  */
-function debounce<T extends (...args: unknown[]) => any>(func: T, wait: number): T {
+function debounce<T extends (...args: never[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null
 
-  return ((...args: Parameters<T>) => {
+  return (...args: Parameters<T>) => {
     if (timeout) {
       clearTimeout(timeout)
     }
     timeout = setTimeout(() => func(...args), wait)
-  }) as T
+  }
 }

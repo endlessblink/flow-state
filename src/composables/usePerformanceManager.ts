@@ -27,7 +27,7 @@ export interface PerformanceMetrics {
   lastCleanupTime: number
 }
 
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   key: string
   value: T
   timestamp: number
@@ -68,7 +68,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   const memoryMonitorInterval = ref<NodeJS.Timeout>()
 
   // Debounce function factory
-  const createDebounced = <T extends (...args: unknown[]) => any>(
+  const createDebounced = <T extends (...args: unknown[]) => unknown>(
     fn: T,
     delay: number = debounceDelay
   ) => {
@@ -81,7 +81,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Throttle function factory
-  const createThrottled = <T extends (...args: unknown[]) => any>(
+  const createThrottled = <T extends (...args: unknown[]) => unknown>(
     fn: T,
     delay: number = throttleDelay
   ) => {
@@ -94,7 +94,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   }
 
   // Memoized computation factory
-  const createMemoized = <T extends (...args: unknown[]) => any>(
+  const createMemoized = <T extends (...args: unknown[]) => unknown>(
     fn: T,
     key: string,
     dependencies: unknown[] = []
@@ -126,7 +126,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
 
       memoizationStats.value.misses++
       metrics.value.memoizedComputations++
-      return result
+      return result as ReturnType<T>
     }
   }
 
@@ -251,7 +251,8 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   const startMemoryMonitoring = () => {
     if (typeof performance !== 'undefined' && 'memory' in performance) {
       memoryMonitorInterval.value = setInterval(() => {
-        const memory = (performance as any).memory
+        const perf = performance as unknown as Record<string, unknown>
+        const memory = perf.memory as Record<string, number>
         if (memory) {
           memoryUsage.value = memory.usedJSHeapSize
 

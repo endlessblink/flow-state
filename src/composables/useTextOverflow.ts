@@ -43,7 +43,7 @@ export function useTextOverflow(elementRef?: Ref<HTMLElement | null>, _textRef?:
       // Show tooltip after a short delay
       tooltipTimeout = setTimeout(() => {
         showTooltip.value = true
-      }, 300) as any
+      }, 300) as unknown as number
     }
   }
 

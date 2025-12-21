@@ -123,12 +123,42 @@ export const DOCUMENT_IDS = {
 // Sync status types
 export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error' | 'paused'
 
+/**
+ * Feature Flags for Database Storage
+ *
+ * TASK-034: Individual Task Documents Migration
+ *
+ * Phases:
+ * - Phase 1 (DUAL_WRITE): Write to BOTH formats (safe, can rollback)
+ * - Phase 2 (INDIVIDUAL_READ): Read from individual docs, write to both
+ * - Phase 3 (INDIVIDUAL_ONLY): Full migration, stop writing to tasks:data
+ */
+export const STORAGE_FLAGS = {
+  /**
+   * When true: Save tasks to BOTH tasks:data (legacy) AND task-{id} (new)
+   * This is the safest phase - can rollback by disabling flag
+   */
+  DUAL_WRITE_TASKS: import.meta.env.VITE_DUAL_WRITE_TASKS === 'true' || true, // Default ON for Phase 1
+
+  /**
+   * When true: Read from individual task-{id} documents instead of tasks:data
+   * Only enable after confirming dual-write has populated all task-{id} docs
+   */
+  READ_INDIVIDUAL_TASKS: import.meta.env.VITE_READ_INDIVIDUAL_TASKS === 'true' || false, // Default OFF
+
+  /**
+   * When true: Stop writing to tasks:data entirely (final phase)
+   * Only enable after READ_INDIVIDUAL_TASKS has been stable for 1+ week
+   */
+  INDIVIDUAL_ONLY: import.meta.env.VITE_INDIVIDUAL_ONLY === 'true' || false // Default OFF
+} as const
+
 // Sync event types
 export interface SyncEvent {
   direction: 'push' | 'pull'
   changeCount: number
-  docs: any[]
-  errors?: any[]
+  docs: Record<string, unknown>[]
+  errors?: unknown[]
 }
 
 // Database health check interface

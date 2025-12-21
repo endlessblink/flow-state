@@ -247,8 +247,8 @@ export class SyncCircuitBreaker {
    */
   isHealthy(): boolean {
     return !this.isDestroyed &&
-           this.metrics.consecutiveErrors < this.config.maxConsecutiveErrors &&
-           !this.syncInProgress
+      this.metrics.consecutiveErrors < this.config.maxConsecutiveErrors &&
+      !this.syncInProgress
   }
 
   /**
@@ -305,7 +305,7 @@ export class SyncCircuitBreaker {
   /**
    * Create a debounced version of a sync function
    */
-  createDebouncedSync<T extends any[], R>(
+  createDebouncedSync<T extends unknown[], R>(
     fn: (...args: T) => Promise<R>,
     context: string
   ): (...args: T) => Promise<R> {
@@ -393,7 +393,7 @@ export class SyncCircuitBreaker {
   /**
    * Phase 1: Record a conflict event
    */
-  recordConflict(context: string, details?: any): void {
+  recordConflict(context: string, details?: unknown): void {
     this.metrics.conflictCount++
     this.conflictHistory.push(Date.now())
 
@@ -425,8 +425,8 @@ export class SyncCircuitBreaker {
    */
   isReadyForProgressiveSync(): boolean {
     return this.metrics.healthScore >= 70 && // Good health
-           this.getConflictRate() < this.config.maxConflictRate! && // Low conflict rate
-           this.metrics.consecutiveErrors === 0 // No recent errors
+      this.getConflictRate() < this.config.maxConflictRate! && // Low conflict rate
+      this.metrics.consecutiveErrors === 0 // No recent errors
   }
 
   /**
@@ -463,7 +463,7 @@ export class SyncCircuitBreaker {
   /**
    * Phase 1: Emit health events for monitoring systems
    */
-  private emitHealthEvent(event: string, data: any): void {
+  private emitHealthEvent(event: string, data: unknown): void {
     // Emit custom event for monitoring dashboard
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('sync-circuit-breaker-health', {
@@ -544,11 +544,11 @@ export const executeSyncWithCircuitBreaker = async <T>(
  * Create change detection guard to prevent Vue.js reactivity loops
  */
 export const createChangeDetectionGuard = () => {
-  let lastValue: any = null
+  let lastValue: unknown = null
   let isUpdating = false
 
   return {
-    shouldUpdate: (newValue: any): boolean => {
+    shouldUpdate: (newValue: unknown): boolean => {
       if (isUpdating) return false
 
       // Deep compare using JSON serialization

@@ -116,7 +116,7 @@
 import { ref, computed, defineAsyncComponent } from 'vue'
 import { Position } from '@vue-flow/core'
 import { Calendar, Timer } from 'lucide-vue-next'
-import type { Task } from '@/stores/tasks'
+import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTimerStore } from '@/stores/timer'
@@ -203,13 +203,14 @@ const isInVueFlowContext = computed(() => {
 })
 
 const statusLabel = computed(() => {
-  const labels = {
+  const labels: Record<TaskStatus, string> = {
     planned: 'Plan',
     in_progress: 'Active',
     done: 'Done',
-    backlog: 'Back'
+    backlog: 'Back',
+    on_hold: 'Hold'
   }
-  return (labels as any)[props.task.status] || 'Unknown'
+  return labels[props.task.status] || 'Unknown'
 })
 
 const hasSchedule = computed(() =>

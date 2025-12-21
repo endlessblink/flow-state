@@ -206,9 +206,9 @@ export function useHorizontalDragScroll(
 
     // Add global listeners when drag starts
     if (isDragging.value && scrollContainer.value) {
-      const container = scrollContainer.value as any
-      document.addEventListener('mousemove', container._globalMouseMoveHandler)
-      document.addEventListener('mouseup', container._globalMouseUpHandler)
+      const container = scrollContainer.value as HTMLElement & { _globalMouseMoveHandler?: (e: MouseEvent) => void, _globalMouseUpHandler?: (e: MouseEvent) => void }
+      container._globalMouseMoveHandler && document.addEventListener('mousemove', container._globalMouseMoveHandler)
+      container._globalMouseUpHandler && document.addEventListener('mouseup', container._globalMouseUpHandler)
     }
   }
 
@@ -298,9 +298,9 @@ export function useHorizontalDragScroll(
       }
     }
 
-    // Store global handlers for cleanup
-    ;(container as any)._globalMouseMoveHandler = handleGlobalMouseMove
-    ;(container as any)._globalMouseUpHandler = handleGlobalMouseUp
+      // Store global handlers for cleanup
+      ; (container as unknown as Record<string, unknown>)._globalMouseMoveHandler = handleGlobalMouseMove as unknown
+      ; (container as unknown as Record<string, unknown>)._globalMouseUpHandler = handleGlobalMouseUp as unknown
 
     // Touch events
     if (touchEnabled) {
@@ -322,7 +322,7 @@ export function useHorizontalDragScroll(
 
     if (!scrollContainer.value) return
 
-    const container = scrollContainer.value as any
+    const container = scrollContainer.value as HTMLElement & { _globalMouseMoveHandler?: (e: MouseEvent) => void, _globalMouseUpHandler?: (e: MouseEvent) => void }
 
     container.removeEventListener('mousedown', handleMouseDown)
 
@@ -343,9 +343,9 @@ export function useHorizontalDragScroll(
 
     container.removeEventListener('wheel', handleWheel)
 
-    // Clean up stored handlers
-    delete container._globalMouseMoveHandler
-    delete container._globalMouseUpHandler
+    const containerCleanup = container as unknown as Record<string, unknown>
+    delete containerCleanup._globalMouseMoveHandler
+    delete containerCleanup._globalMouseUpHandler
   })
 
   // Public methods

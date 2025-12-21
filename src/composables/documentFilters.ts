@@ -45,7 +45,9 @@ export const isSyncableDocument = (doc: unknown): boolean => {
 
   // Only sync user data documents with specific patterns
   const syncablePatterns = [
-    // Tasks with standard prefix
+    // TASK-034: Individual task documents (task-abc123) - Phase 4
+    /^task-/,
+    // Tasks with standard prefix (legacy: tasks:data)
     /^tasks:/,
     // Projects with standard prefix
     /^projects:/,
@@ -165,7 +167,8 @@ export const getDocumentTypeDescription = (doc: unknown): string => {
 
   if (docRecord._id.startsWith('_local/')) return 'local'
   if (docRecord._id.startsWith('_design/')) return 'design'
-  if (docRecord._id.startsWith('tasks:')) return 'task'
+  if (docRecord._id.startsWith('task-')) return 'task-individual' // TASK-034: Individual task docs
+  if (docRecord._id.startsWith('tasks:')) return 'task-legacy'    // Legacy tasks:data
   if (docRecord._id.startsWith('projects:')) return 'project'
   if (docRecord._id.startsWith('canvas:')) return 'canvas'
   if (docRecord._id.startsWith('timer:')) return 'timer'

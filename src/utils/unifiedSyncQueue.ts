@@ -36,7 +36,7 @@ export interface SyncOperation {
   id: string                    // Unique operation ID
   type: SyncOperationType       // Type of operation
   entityId: string              // ID of the entity being synced
-  data: any                     // Data to sync
+  data: unknown                     // Data to sync
   priority: SyncPriority        // Operation priority
   timestamp: number             // When operation was queued
   retryCount?: number           // Number of retry attempts
@@ -70,7 +70,7 @@ const getCoalesceKey = (op: SyncOperation): string => {
 export const enqueueSyncOperation = (
   type: SyncOperationType,
   entityId: string,
-  data: any,
+  data: unknown,
   priority: SyncPriority = SyncPriority.NORMAL
 ): void => {
   const operation: SyncOperation = {

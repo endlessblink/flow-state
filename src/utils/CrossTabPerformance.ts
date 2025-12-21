@@ -56,13 +56,13 @@ export class CrossTabPerformance {
       cacheHitRate: 0
     }
 
-    this.memoryMonitor = setInterval(() => this.checkMemoryUsage(), 5000) as any
+    this.memoryMonitor = setInterval(() => this.checkMemoryUsage(), 5000) as unknown as number
   }
 
   /**
    * Add data to the processing queue with batching
    */
-  addToQueue(data: any): void {
+  addToQueue(data: unknown): void {
     this.dataQueue.push(data)
 
     if (this.dataQueue.length >= this.config.batchSize) {
@@ -119,7 +119,7 @@ export class CrossTabPerformance {
   /**
    * Retrieve data from cache
    */
-  getCachedData(id: string): any | null {
+  getCachedData(id: string): unknown | null {
     if (!this.config.cachingEnabled) return null
 
     const cached = this.cache.get(id)
@@ -182,13 +182,16 @@ export class CrossTabPerformance {
   /**
    * Compress data to reduce transmission size
    */
-  private compressData(data: any[]): any[] {
+  private compressData(data: unknown[]): unknown[] {
     // Simple compression - remove null/undefined values and duplicate objects
     return data.map(item => {
-      const compressed: any = {}
-      for (const key in item) {
-        if (item[key] !== null && item[key] !== undefined) {
-          compressed[key] = item[key]
+      if (!item || typeof item !== 'object') return item
+
+      const compressed: Record<string, unknown> = {}
+      const record = item as Record<string, unknown>
+      for (const key in record) {
+        if (record[key] !== null && record[key] !== undefined) {
+          compressed[key] = record[key]
         }
       }
       return compressed
@@ -198,8 +201,12 @@ export class CrossTabPerformance {
   /**
    * Calculate approximate data size in bytes
    */
-  private calculateDataSize(data: any[]): number {
-    return JSON.stringify(data).length * 2 // Rough estimate (UTF-16)
+  private calculateDataSize(data: unknown[]): number {
+    try {
+      return JSON.stringify(data).length * 2 // Rough estimate (UTF-16)
+    } catch (e) {
+      return 0
+    }
   }
 
   /**
@@ -222,10 +229,14 @@ export class CrossTabPerformance {
    * Get current memory usage estimate
    */
   private getMemoryUsage(): number {
-    // Estimate based on cache size and queue size
-    const cacheSize = JSON.stringify(Array.from(this.cache.values())).length * 2
-    const queueSize = JSON.stringify(this.dataQueue).length * 2
-    return (cacheSize + queueSize) / (1024 * 1024) // Convert to MB
+    try {
+      // Estimate based on cache size and queue size
+      const cacheSize = JSON.stringify(Array.from(this.cache.values())).length * 2
+      const queueSize = JSON.stringify(this.dataQueue).length * 2
+      return (cacheSize + queueSize) / (1024 * 1024) // Convert to MB
+    } catch (e) {
+      return 0
+    }
   }
 
   /**
@@ -278,7 +289,7 @@ export class CrossTabPerformance {
   /**
    * Check if a message should be processed (deduplication)
    */
-  shouldProcessMessage(messageId: string, _message: any): boolean {
+  shouldProcessMessage(messageId: string, _message: unknown): boolean {
     this.cleanupExpiredMessages()
 
     if (this.processedMessages.has(messageId)) {

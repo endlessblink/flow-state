@@ -134,7 +134,7 @@ export function useVirtualScrolling<T extends VirtualItem>(
       itemHeight: (index: number) => getItemHeight(index),
       overscan,
       getScrollElement: () => containerRef.value
-    } as any
+    } as Parameters<typeof useVirtualList>[1]
   )
 
   // Throttled scroll handler
@@ -218,8 +218,7 @@ export function useVirtualScrolling<T extends VirtualItem>(
       }))
     } else {
       // Use virtual list for large lists
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result = (virtualList as any).value
+      result = virtualList.list.value
     }
 
     // Update performance metrics
@@ -298,9 +297,9 @@ export function useVirtualScrolling<T extends VirtualItem>(
 
   return {
     virtualList,
-    containerProps: containerProps as any, // keeping as any locally to match complex return type, but interface is typed
-    wrapperProps: wrapperProps as any,
-    visibleItems: visibleItems as any,
+    containerProps: containerProps as unknown as VirtualScrollResult['containerProps'],
+    wrapperProps: wrapperProps as unknown as VirtualScrollResult['wrapperProps'],
+    visibleItems: visibleItems as unknown as VirtualScrollResult['visibleItems'],
     scrollToItem,
     scrollToTop,
     scrollToBottom,
@@ -308,7 +307,7 @@ export function useVirtualScrolling<T extends VirtualItem>(
     containerHeight: containerHeight as unknown as number,
     isVisible,
     updateItemHeight,
-    performance: performance as any
+    performance: performance as unknown as VirtualScrollResult['performance']
   } as VirtualScrollResult
 }
 

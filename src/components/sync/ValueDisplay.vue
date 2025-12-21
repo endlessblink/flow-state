@@ -77,7 +77,7 @@
 
 <script setup lang="ts">
 interface Props {
-  value: any
+  value: unknown
   fieldType: string
   maxItems?: number
 }
@@ -87,14 +87,14 @@ const _props = withDefaults(defineProps<Props>(), {
 })
 
 // Format array item for display
-function formatArrayItem(item: any): string {
+function formatArrayItem(item: unknown): string {
   if (typeof item === 'string') return item
   if (typeof item === 'object') return JSON.stringify(item)
   return String(item)
 }
 
 // Format datetime
-function formatDateTime(value: any): string {
+function formatDateTime(value: unknown): string {
   if (!value) return '(not set)'
 
   try {
@@ -106,7 +106,7 @@ function formatDateTime(value: any): string {
 }
 
 // Format default value
-function formatDefaultValue(value: any): string {
+function formatDefaultValue(value: unknown): string {
   if (value === null || value === undefined) return '(empty)'
   if (typeof value === 'string') return value
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'

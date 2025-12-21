@@ -5,6 +5,12 @@
 
 import { ref as _ref } from 'vue'
 
+export interface RateLimitRequest {
+  headers?: Record<string, string> | Headers
+  ip?: string
+  connection?: { remoteAddress?: string }
+}
+
 export interface RateLimitConfig {
   windowMs: number // Time window in milliseconds
   maxRequests: number // Maximum requests per window
@@ -154,11 +160,13 @@ export class RateLimiter {
   private defaultKeyGenerator(req: unknown): string {
     const request = req as { headers?: Record<string, string>; ip?: string; connection?: { remoteAddress?: string } }
     // Use IP address as default key
-    if (request.headers?.['x-forwarded-for']) {
-      return request.headers['x-forwarded-for'].split(',')[0].trim()
-    }
-    if (request.headers?.['x-real-ip']) {
-      return request.headers['x-real-ip']
+    const headers = request.headers
+    if (headers instanceof Headers) {
+      if (headers.get('x-forwarded-for')) return headers.get('x-forwarded-for')!.split(',')[0].trim()
+      if (headers.get('x-real-ip')) return headers.get('x-real-ip')!
+    } else if (headers) {
+      if (headers['x-forwarded-for']) return headers['x-forwarded-for'].split(',')[0].trim()
+      if (headers['x-real-ip']) return headers['x-real-ip']
     }
     if (request.ip) {
       return request.ip
@@ -172,7 +180,7 @@ export class RateLimiter {
   }
 
   // Check if request should be rate limited
-  checkLimit(req?: any): RateLimitResult {
+  checkLimit(req?: RateLimitRequest): RateLimitResult {
     const key = this.config.keyGenerator(req || {})
     const now = Date.now()
 
@@ -308,7 +316,7 @@ export class RateLimiter {
 
     // Get top blocked keys (simplified - in real implementation you'd track blocked counts)
     const topBlockedKeys = Array.from(this.statistics.keyCounts.entries())
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
       .map(([key, count]) => ({ key, count }))
 
@@ -362,7 +370,7 @@ export class RateLimiter {
 export function useRateLimiter(config: RateLimitConfig) {
   const rateLimiter = new RateLimiter(config)
 
-  const checkLimit = (req?: any) => rateLimiter.checkLimit(req)
+  const checkLimit = (req?: RateLimitRequest) => rateLimiter.checkLimit(req)
   const resetKey = (key: string) => rateLimiter.resetKey(key)
   const resetAll = () => rateLimiter.resetAll()
   const getStatistics = () => rateLimiter.getStatistics()

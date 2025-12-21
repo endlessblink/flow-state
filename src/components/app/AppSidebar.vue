@@ -153,12 +153,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
+import type { Project } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import ProjectTreeItem from '../ProjectTreeItem.vue'
 
 // Emit events for parent component handling
 defineEmits<{
-  projectContextMenu: [event: MouseEvent, project: any]
+  projectContextMenu: [event: MouseEvent, project: Project]
 }>()
 
 console.log('🎯 AppSidebar: Using Board view pattern - script running!')
@@ -193,7 +194,7 @@ const uncategorizedTaskCount = computed(() => taskStore.smartViewTaskCounts.unca
 const activeSmartView = computed(() => taskStore.activeSmartView)
 const activeProjectId = computed(() => taskStore.activeProjectId)
 
-const handleProjectClick = (project: any) => {
+const handleProjectClick = (project: Project) => {
   console.log('🎯 AppSidebar: Project clicked:', project.name)
   taskStore.setActiveProject(project.id)
 }

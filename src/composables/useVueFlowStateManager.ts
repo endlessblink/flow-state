@@ -539,10 +539,10 @@ export function useVueFlowStateManager(
 
           if (sourceTask && targetTask) {
             // Ensure dependency exists
-            if (!((targetTask as any).dependencies?.includes(sourceTaskId))) {
+            if (!(targetTask.dependsOn?.includes(sourceTaskId))) {
               taskStore.updateTask(targetTaskId, {
-                dependencies: [...((targetTask as any).dependencies || []), sourceTaskId]
-              } as any)
+                dependsOn: [...(targetTask.dependsOn || []), sourceTaskId]
+              })
             }
           }
         }

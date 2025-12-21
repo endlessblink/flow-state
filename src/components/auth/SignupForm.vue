@@ -152,13 +152,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, type User } from '@/stores/auth'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { EyeIcon, EyeOffIcon, AlertCircle } from 'lucide-vue-next'
 
 interface Emits {
-  success: [user: any]
+  success: [user: User]
   switchToLogin: []
 }
 
@@ -245,7 +245,7 @@ async function handleSubmit() {
     password.value = ''
     confirmPassword.value = ''
     displayName.value = ''
-  } catch (_error: any) {
+  } catch (_error: unknown) {
     // Error message is already set by auth store
     errorMessage.value = authStore.error || 'Sign up failed. Please try again.'
   } finally {

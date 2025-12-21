@@ -56,7 +56,7 @@ class Logger {
   /**
    * Debug-level logging (most verbose)
    */
-  debug(message: string, ...args: any[]) {
+  debug(message: string, ...args: unknown[]) {
     if (this.level >= LogLevel.DEBUG) {
       console.log(`🔍 ${message}`, ...args)
     }
@@ -65,7 +65,7 @@ class Logger {
   /**
    * Info-level logging
    */
-  info(message: string, ...args: any[]) {
+  info(message: string, ...args: unknown[]) {
     if (this.level >= LogLevel.INFO) {
       console.log(`ℹ️  ${message}`, ...args)
     }
@@ -74,7 +74,7 @@ class Logger {
   /**
    * Warning-level logging
    */
-  warn(message: string, ...args: any[]) {
+  warn(message: string, ...args: unknown[]) {
     if (this.level >= LogLevel.WARN) {
       console.warn(`⚠️  ${message}`, ...args)
     }
@@ -83,7 +83,7 @@ class Logger {
   /**
    * Error-level logging (always shown)
    */
-  error(message: string, ...args: any[]) {
+  error(message: string, ...args: unknown[]) {
     if (this.level >= LogLevel.ERROR) {
       console.error(`❌ ${message}`, ...args)
     }
@@ -121,5 +121,5 @@ export const logger = new Logger()
 
 // Export for direct access in development
 if (import.meta.env.DEV) {
-  ;(window as any).logger = logger
+  ; (window as unknown as { logger: Logger }).logger = logger
 }

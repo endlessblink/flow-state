@@ -23,7 +23,7 @@
           v-if="isDropdownOpen"
           class="user-dropdown"
           role="menu"
-          :style="dropdownStyle as any"
+          :style="dropdownStyle"
         >
           <!-- User Info -->
           <div class="dropdown-header">
@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useUIStore } from '@/stores/ui'
 import { Settings, LogOut } from 'lucide-vue-next'
@@ -89,8 +89,8 @@ const displayName = computed(() => {
   return authStore.user?.displayName || authStore.user?.email?.split('@')[0] || 'User'
 })
 
-const dropdownStyle = computed(() => {
-  if (!wrapperRef.value) return { position: undefined, top: undefined, left: undefined }
+const dropdownStyle = computed((): CSSProperties => {
+  if (!wrapperRef.value) return {}
 
   const rect = wrapperRef.value.getBoundingClientRect()
   return {
@@ -186,7 +186,7 @@ onUnmounted(() => {
   console.log('🔴 UserProfile component unmounting - cleaning up event listener')
 
   if (profileRef.value && pointerHandler) {
-    profileRef.value.removeEventListener('pointerdown', pointerHandler, { capture: true } as any)
+    profileRef.value.removeEventListener('pointerdown', pointerHandler, { capture: true })
   }
 
   document.removeEventListener('click', handleClickOutside)

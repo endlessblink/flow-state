@@ -113,11 +113,11 @@ const resetForm = () => {
 const createTask = async () => {
   if (!taskTitle.value.trim()) return
 
-  const newTask: any = {
+  const newTask: Partial<Task> = {
     title: taskTitle.value.trim(),
     description: '',
     status: 'planned',
-    priority: priority.value,
+    priority: priority.value as Task['priority'], // Cast to Task priority type
     projectId: selectedProject.value || taskStore.activeProjectId || null
   }
 
@@ -139,11 +139,11 @@ const createTask = async () => {
 const createAndContinue = async () => {
   if (!taskTitle.value.trim()) return
 
-  const newTask: any = {
+  const newTask: Partial<Task> = {
     title: taskTitle.value.trim(),
     description: '',
     status: 'planned',
-    priority: priority.value,
+    priority: priority.value as Task['priority'], // Cast to Task priority type
     projectId: selectedProject.value || taskStore.activeProjectId || null
   }
 

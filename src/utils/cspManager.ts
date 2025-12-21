@@ -383,13 +383,13 @@ export class CSPManager {
         documentURI: event.documentURI || '',
         effectiveDirective: event.effectiveDirective || '',
         originalPolicy: event.originalPolicy || '',
-        referrer: event.referrer || '',
-        sample: event.sample || '',
         sourceFile: event.sourceFile || '',
         lineNumber: event.lineNumber || 0,
         columnNumber: event.columnNumber || 0,
         disposition: event.disposition === 'report' ? 'report' : 'enforce',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        sample: event.sample || '',
+        referrer: event.referrer || ''
       }
 
       this.processViolation(violation)
@@ -468,9 +468,9 @@ export class CSPManager {
     if (!this.config.reporting.endpoint) return
 
     // Batch reports to avoid overwhelming the endpoint
-    this.reportTimer = setInterval(() => {
+    this.reportTimer = window.setInterval(() => {
       this.sendBatchReports()
-    }, this.config.reporting.reportInterval) as any
+    }, this.config.reporting.reportInterval)
   }
 
   // Send batch reports

@@ -42,9 +42,24 @@ import { useTimerStore } from '@/stores/timer'
 const taskStore = useTaskStore()
 const _timerStore = useTimerStore()
 
+interface VueCalEvent {
+  id: string
+  start: Date
+  end: Date
+  title: string
+  content?: string
+  class: string
+  taskId: string
+  isRecurring: boolean
+  instanceId?: string
+  isModified?: boolean
+  parentTaskId?: string
+  scheduledDate?: string
+}
+
 // Convert Pinia tasks to vue-cal event format
-const vueCalEvents = computed(() => {
-  const events: any[] = []
+const vueCalEvents = computed<VueCalEvent[]>(() => {
+  const events: VueCalEvent[] = []
 
   // Add regular tasks
   taskStore.filteredTasks
@@ -107,7 +122,7 @@ const _getPriorityColor = (priority: string) => {
 }
 
 // Event handlers
-const handleEventDragDrop = (event: any, _originalEvent: any) => {
+const handleEventDragDrop = (event: VueCalEvent, _originalEvent: unknown) => {
   console.log('Event dropped:', event)
 
   const newStart = new Date(event.start)
@@ -120,19 +135,19 @@ const handleEventDragDrop = (event: any, _originalEvent: any) => {
     const parentTask = taskStore.tasks.find(t => t.id === event.parentTaskId)
     if (parentTask?.recurrence) {
       // Create exception for this instance
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const recurrenceUtils = require('@/utils/recurrenceUtils')
-      if (recurrenceUtils && recurrenceUtils.addException) {
-        recurrenceUtils.addException(
-          event.parentTaskId,
-          event.scheduledDate,
-          'modify',
-          {
-            newDate: dateStr,
-            newTime: timeStr
-          }
-        )
-      }
+      import('@/utils/recurrenceUtils').then(recurrenceUtils => {
+        if (recurrenceUtils && recurrenceUtils.addException) {
+          recurrenceUtils.addException(
+            event.parentTaskId!,
+            event.scheduledDate!,
+            'modify',
+            {
+              newDate: dateStr,
+              newTime: timeStr
+            }
+          )
+        }
+      })
     }
   } else {
     // Regular task update
@@ -143,7 +158,7 @@ const handleEventDragDrop = (event: any, _originalEvent: any) => {
   }
 }
 
-const handleEventResize = (event: any, _originalEvent: any) => {
+const handleEventResize = (event: VueCalEvent, _originalEvent: unknown) => {
   console.log('Event resized:', event)
 
   const start = new Date(event.start)
@@ -155,7 +170,7 @@ const handleEventResize = (event: any, _originalEvent: any) => {
   })
 }
 
-const handleEventDblClick = (event: any, _e: MouseEvent) => {
+const handleEventDblClick = (event: VueCalEvent, _e: MouseEvent) => {
   console.log('Event double-clicked:', event)
   window.dispatchEvent(new CustomEvent('open-task-edit', {
     detail: { taskId: event.id }

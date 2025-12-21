@@ -30,7 +30,7 @@
           📝 {{ queueStats.length }}
         </span>
         <span v-if="lastValidation && !lastValidation.isValid" class="validation-error">
-          ❌ {{ lastValidation.issues.filter((i: any) => i.severity === 'error').length }}
+          ❌ {{ lastValidation.issues.filter(i => i.severity === 'error').length }}
         </span>
       </div>
     </div>
@@ -58,12 +58,12 @@
       <button
         v-if="remoteConnected"
         class="sync-btn"
-        :class="{ 'active': (syncStatus as any) !== 'paused' }"
-        :title="(syncStatus as any) === 'paused' ? 'Resume sync' : 'Pause sync'"
+        :class="{ 'active': syncStatus !== 'paused' }"
+        :title="syncStatus === 'paused' ? 'Resume sync' : 'Pause sync'"
         @click="toggleSync"
       >
         <component
-          :is="(syncStatus as any) === 'paused' ? Play : Pause"
+          :is="syncStatus === 'paused' ? Play : Pause"
           :size="14"
         />
       </button>
@@ -272,11 +272,11 @@
           </div>
           <div class="metric-item">
             <span class="metric-label">Success Rate:</span>
-            <span class="metric-value">{{ Math.round(((syncMetrics as any).successRate || 0) * 100) }}%</span>
+            <span class="metric-value">{{ Math.round((syncMetrics.successRate || 0) * 100) }}%</span>
           </div>
           <div class="metric-item">
             <span class="metric-label">Conflicts Rate:</span>
-            <span class="metric-value">{{ Math.round(((syncMetrics as any).conflictsRate || 0) * 100) }}%</span>
+            <span class="metric-value">{{ Math.round((syncMetrics.conflictsRate || 0) * 100) }}%</span>
           </div>
           <div class="metric-item">
             <span class="metric-label">Avg Time:</span>
@@ -290,7 +290,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch as _watch } from 'vue'
-import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
+import { getGlobalReliableSyncManager, type SyncValidationResult } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
 import type { QueueStats } from '@/utils/offlineQueue'
 import { RefreshCw, Wifi, WifiOff, Cloud, CloudOff, AlertCircle, Pause, Play, Shield, Activity, Clock, Settings, Database, Trash2, Heart, Download } from 'lucide-vue-next'
@@ -369,7 +369,7 @@ const queueStats = computed(() => getOfflineQueueStats() as QueueStats)
 // Reactive state
 const isManualSyncing = ref(false)
 const showDetailsPanel = ref(false)
-const lastValidation = ref<any>(null)
+const lastValidation = ref<SyncValidationResult | null>(null)
 const syncHealth = computed(() => getSyncHealth())
 const syncMetrics = computed(() => metrics.value)
 
@@ -387,7 +387,7 @@ const statusClass = computed(() => ({
   'sync-status--syncing': isSyncing?.value || isManualSyncing.value,
   'sync-status--error': hasErrors?.value,
   'sync-status--complete': syncStatus?.value === 'complete',
-  'sync-status--paused': (syncStatus?.value as any) === 'paused',
+  'sync-status--paused': syncStatus?.value === 'paused',
   'sync-status--compact': props.compact,
   'has-remote-sync': remoteConnected?.value
 }))

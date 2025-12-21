@@ -116,7 +116,7 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, type User } from '@/stores/auth'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { EyeIcon, EyeOffIcon, AlertCircle } from 'lucide-vue-next'
@@ -130,7 +130,7 @@ const _props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 interface Emits {
-  success: [user: any]
+  success: [user: User]
   switchToSignup: []
   forgotPassword: [email: string]
 }
@@ -171,7 +171,7 @@ async function handleSubmit() {
     // Clear form
     email.value = ''
     password.value = ''
-  } catch (_error: any) {
+  } catch (_error: unknown) {
     // Error message is already set by auth store
     errorMessage.value = authStore.error || 'Sign in failed. Please try again.'
   } finally {

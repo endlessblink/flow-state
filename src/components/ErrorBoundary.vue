@@ -52,7 +52,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  error: [error: Error, info: any]
+  error: [error: Error, info: unknown]
 }>()
 
 // Try to get router safely (may not be available in Storybook)

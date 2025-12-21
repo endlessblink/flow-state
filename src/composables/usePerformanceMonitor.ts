@@ -60,8 +60,10 @@ export const usePerformanceMonitor = () => {
 
   // Memory usage monitoring
   const measureMemoryUsage = () => {
-    if ('memory' in performance) {
-      const memory = (performance as any).memory
+    // Chrome-specific memory API
+    const perf = performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }
+    if (perf.memory) {
+      const memory = perf.memory
       const usedMemory = Math.round(memory.usedJSHeapSize / 1024 / 1024) // MB
 
       metrics.value.memoryUsage = usedMemory
@@ -219,8 +221,8 @@ export const usePerformanceMonitor = () => {
     // Start memory monitoring
     const memoryInterval = setInterval(measureMemoryUsage, 2000)
 
-    // Store interval for cleanup
-    ;(window as Window & typeof globalThis).__performanceMonitorMemoryInterval = memoryInterval
+      // Store interval for cleanup
+      ; (window as Window & typeof globalThis).__performanceMonitorMemoryInterval = memoryInterval
 
     console.log('🚀 Performance monitoring started')
   }

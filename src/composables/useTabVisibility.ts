@@ -29,10 +29,15 @@ export function useTabVisibility() {
     }
 
     // Legacy browser support
+    const doc = document as Document & {
+      webkitHidden?: boolean
+      mozHidden?: boolean
+      msHidden?: boolean
+    }
     return !(
-      (document as any).webkitHidden ||
-      (document as any).mozHidden ||
-      (document as any).msHidden ||
+      doc.webkitHidden ||
+      doc.mozHidden ||
+      doc.msHidden ||
       document.hidden
     )
   }

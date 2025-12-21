@@ -10,7 +10,7 @@
 // Helper function to check if task diagnostics should be logged
 export const shouldLogTaskDiagnostics = () => {
   return import.meta.env.DEV &&
-         localStorage.getItem('DEV_LOG_TASK_DIAGNOSTICS') === 'true'
+    localStorage.getItem('DEV_LOG_TASK_DIAGNOSTICS') === 'true'
 }
 
 interface LogToggles {
@@ -88,9 +88,9 @@ function shouldFilter(message: string): boolean {
   // Timer logs
   if (!logToggles.timer) {
     if (msg.includes('🍅 DEBUG tabDisplayTime') ||
-        msg.includes('🍅 DEBUG tabTitleWithTimer') ||
-        msg.includes('🍅 DEBUG timerPercentage') ||
-        msg.includes('🍅 DEBUG faviconStatus')) {
+      msg.includes('🍅 DEBUG tabTitleWithTimer') ||
+      msg.includes('🍅 DEBUG timerPercentage') ||
+      msg.includes('🍅 DEBUG faviconStatus')) {
       return true
     }
   }
@@ -106,10 +106,10 @@ function shouldFilter(message: string): boolean {
 
   if (!logToggles.taskUpdates) {
     if (msg.includes('📝 taskStore') ||
-        msg.includes('✅ Task updated') ||
-        msg.includes('✏️ updateTaskWithUndo') ||
-        msg.includes('📝 TaskId:') ||
-        msg.includes('⚡ Using singleton')) {
+      msg.includes('✅ Task updated') ||
+      msg.includes('✏️ updateTaskWithUndo') ||
+      msg.includes('📝 TaskId:') ||
+      msg.includes('⚡ Using singleton')) {
       return true
     }
   }
@@ -117,20 +117,20 @@ function shouldFilter(message: string): boolean {
   // Undo logs
   if (!logToggles.undoSystem) {
     if (msg.includes('🔍 [DEBUG] getUndoSystem') ||
-        msg.includes('🔍 [DEBUG] refHistory') ||
-        msg.includes('Creating SINGLE refHistory') ||
-        msg.includes('✅ SINGLE refHistory')) {
+      msg.includes('🔍 [DEBUG] refHistory') ||
+      msg.includes('Creating SINGLE refHistory') ||
+      msg.includes('✅ SINGLE refHistory')) {
       return true
     }
   }
 
   if (!logToggles.undoOperations) {
     if (msg.includes('💾 State saved') ||
-        msg.includes('🔄 Executing undo') ||
-        msg.includes('🔄 Executing redo') ||
-        msg.includes('📋 Before execution') ||
-        msg.includes('✅ Undo count after') ||
-        msg.includes('✅ Can undo:')) {
+      msg.includes('🔄 Executing undo') ||
+      msg.includes('🔄 Executing redo') ||
+      msg.includes('📋 Before execution') ||
+      msg.includes('✅ Undo count after') ||
+      msg.includes('✅ Can undo:')) {
       return true
     }
   }
@@ -138,20 +138,20 @@ function shouldFilter(message: string): boolean {
   // Canvas logs
   if (!logToggles.canvasResize) {
     if (msg.includes('📐 [SectionNode]') ||
-        msg.includes('🎯 [CanvasView] Section resize') ||
-        msg.includes('📏 [CanvasView]') ||
-        msg.includes('🔍 Resize Debug') ||
-        msg.includes('Undo/Redo updateSection')) {
+      msg.includes('🎯 [CanvasView] Section resize') ||
+      msg.includes('📏 [CanvasView]') ||
+      msg.includes('🔍 Resize Debug') ||
+      msg.includes('Undo/Redo updateSection')) {
       return true
     }
   }
 
   if (!logToggles.canvasDrag) {
     if (msg.includes('Started dragging') ||
-        msg.includes('Section dragged') ||
-        msg.includes('[handleNodeDragStop]') ||
-        msg.includes('[getContainingSection]') ||
-        msg.includes('[applySectionPropertiesToTask]')) {
+      msg.includes('Section dragged') ||
+      msg.includes('[handleNodeDragStop]') ||
+      msg.includes('[getContainingSection]') ||
+      msg.includes('[applySectionPropertiesToTask]')) {
       return true
     }
   }
@@ -161,11 +161,11 @@ function shouldFilter(message: string): boolean {
   // Database logs
   if (!logToggles.database) {
     if (msg.includes('📂 Loaded') ||
-        msg.includes('💾 Saved') ||
-        msg.includes('📥 Successfully loaded') ||
-        msg.includes('❌ Failed to load') ||
-        msg.includes('💾 Save results') ||
-        msg.includes('🔄 Auto backup')) {
+      msg.includes('💾 Saved') ||
+      msg.includes('📥 Successfully loaded') ||
+      msg.includes('❌ Failed to load') ||
+      msg.includes('💾 Save results') ||
+      msg.includes('🔄 Auto backup')) {
       return true
     }
   }
@@ -234,7 +234,7 @@ applyConsoleFiltering()
 
 // Expose to window for debugging
 if (import.meta.env.DEV) {
-  (window as any).consoleFilter = {
+  (window as unknown as { consoleFilter: unknown }).consoleFilter = {
     getToggles: getLogToggles,
     saveToggles: saveLogToggles,
     restore: restoreConsole,

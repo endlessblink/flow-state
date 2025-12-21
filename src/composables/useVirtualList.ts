@@ -20,7 +20,7 @@ interface VirtualItem {
   data: unknown
 }
 
-export const useVirtualList = <T = any>(
+export const useVirtualList = <T = unknown>(
   items: T[],
   options: VirtualListOptions
 ) => {
@@ -128,7 +128,7 @@ export const useVirtualList = <T = any>(
 
   // Scroll handling
   const handleScroll = useThrottleFn((event: Event) => {
-    const target = event.target as any
+    const target = event.target as HTMLElement | Window
     const newScrollTop = target === window ? window.scrollY : (target as HTMLElement).scrollTop
 
     // Determine scroll direction
@@ -282,7 +282,7 @@ export const useVirtualList = <T = any>(
 
     // Add scroll listener
     if (typeof scrollElement === 'string') {
-      const element = document.querySelector(scrollElement) as any as HTMLElement
+      const element = document.querySelector(scrollElement) as HTMLElement
       if (element) {
         element.addEventListener('scroll', handleScroll, { passive: true })
       }
@@ -304,7 +304,7 @@ export const useVirtualList = <T = any>(
 
     // Remove scroll listener
     if (typeof scrollElement === 'string') {
-      const element = document.querySelector(scrollElement) as any as HTMLElement
+      const element = document.querySelector(scrollElement) as HTMLElement
       if (element) {
         element.removeEventListener('scroll', handleScroll)
       }

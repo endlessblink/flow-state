@@ -136,7 +136,7 @@ export type SyncProviderConfig =
 export interface SyncDataPackage {
   id: string
   type: 'tasks' | 'projects' | 'settings' | 'canvas' | 'full'
-  data: any
+  data: unknown
   metadata: SyncDataMetadata
   timestamp: Date
   checksum: string
@@ -349,7 +349,7 @@ export interface SyncError {
   timestamp: Date
   retryable: boolean
   severity: 'low' | 'medium' | 'high' | 'critical'
-  context?: Record<string, any>
+  context?: Record<string, unknown>
   originalError?: Error
 }
 
@@ -419,9 +419,9 @@ export interface SyncEvent {
   timestamp: Date
   provider?: SyncProviderType
   operationId?: string
-  data?: any
+  data?: unknown
   error?: SyncError
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 // ============================================================================
@@ -490,41 +490,47 @@ export interface SyncUserPreferences {
 /**
  * Type guard for sync provider
  */
-export function isSyncProvider(obj: any): obj is SyncProvider {
-  return obj &&
-    typeof obj === 'object' &&
-    Object.values(SyncProviderType).includes(obj.type) &&
-    typeof obj.name === 'string' &&
-    typeof obj.isConfigured === 'boolean' &&
-    typeof obj.isOnline === 'boolean' &&
-    obj.capabilities &&
-    obj.config
+export function isSyncProvider(obj: unknown): obj is SyncProvider {
+  if (!obj || typeof obj !== 'object') return false
+  const p = obj as Record<string, unknown>
+  return (
+    Object.values(SyncProviderType).includes(p.type as SyncProviderType) &&
+    typeof p.name === 'string' &&
+    typeof p.isConfigured === 'boolean' &&
+    typeof p.isOnline === 'boolean' &&
+    typeof p.capabilities === 'object' &&
+    typeof p.config === 'object'
+  )
 }
 
 /**
  * Type guard for sync operation
  */
-export function isSyncOperation(obj: any): obj is SyncOperation {
-  return obj &&
-    typeof obj === 'object' &&
-    typeof obj.id === 'string' &&
-    ['sync', 'upload', 'download', 'validate', 'resolve-conflicts'].includes(obj.type) &&
-    Object.values(SyncProviderType).includes(obj.provider) &&
-    ['upload', 'download', 'bidirectional'].includes(obj.direction) &&
-    ['low', 'medium', 'high', 'critical'].includes(obj.priority)
+export function isSyncOperation(obj: unknown): obj is SyncOperation {
+  if (!obj || typeof obj !== 'object') return false
+  const op = obj as Record<string, unknown>
+  return (
+    typeof op.id === 'string' &&
+    ['sync', 'upload', 'download', 'validate', 'resolve-conflicts'].includes(op.type as string) &&
+    Object.values(SyncProviderType).includes(op.provider as SyncProviderType) &&
+    ['upload', 'download', 'bidirectional'].includes(op.direction as string) &&
+    ['low', 'medium', 'high', 'critical'].includes(op.priority as string)
+  )
 }
 
 /**
  * Type guard for unified sync health
  */
-export function isUnifiedSyncHealth(obj: any): obj is UnifiedSyncHealth {
-  return obj &&
-    typeof obj === 'object' &&
-    obj.overall &&
-    Array.isArray(obj.providers) &&
-    obj.conflicts &&
-    obj.performance &&
-    Array.isArray(obj.errors)
+export function isUnifiedSyncHealth(obj: unknown): obj is UnifiedSyncHealth {
+  if (!obj || typeof obj !== 'object') return false
+  const h = obj as Record<string, unknown>
+  return (
+    typeof h.overall === 'object' &&
+    Array.isArray(h.providers) &&
+    typeof h.conflicts === 'object' &&
+    typeof h.performance === 'object' &&
+    Array.isArray(h.errors)
+  )
 }
 
 /**

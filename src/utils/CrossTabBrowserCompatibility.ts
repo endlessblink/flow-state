@@ -30,6 +30,12 @@ export interface CompatibilityInfo {
   warnings: string[]
 }
 
+export interface CommunicationChannel {
+  postMessage: (data: unknown) => void
+  addEventListener: (event: string, handler: (event: MessageEvent) => void) => void
+  close: () => void
+}
+
 export class CrossTabBrowserCompatibility {
   private config: CompatibilityConfig
   private capabilities: BrowserCapabilities
@@ -53,7 +59,7 @@ export class CrossTabBrowserCompatibility {
   /**
    * Get the best available communication channel for this browser
    */
-  getBestChannel(): BroadcastChannel | Storage | null {
+  getBestChannel(): BroadcastChannel | Storage | CommunicationChannel | null {
     // Priority order: BroadcastChannel > SharedWorker > Storage > Polling
     if (this.capabilities.broadcastChannel) {
       try {
@@ -92,9 +98,9 @@ export class CrossTabBrowserCompatibility {
    */
   isCompatible(): boolean {
     return !!(this.capabilities.broadcastChannel ||
-             this.capabilities.localStorage ||
-             this.capabilities.sessionStorage ||
-             this.config.enablePolling)
+      this.capabilities.localStorage ||
+      this.capabilities.sessionStorage ||
+      this.config.enablePolling)
   }
 
   /**
@@ -107,7 +113,7 @@ export class CrossTabBrowserCompatibility {
   /**
    * Test the communication channel and provide fallbacks
    */
-  async testChannel(channel: BroadcastChannel | MessageChannel | Storage): Promise<boolean> {
+  async testChannel(channel: BroadcastChannel | MessageChannel | Storage | CommunicationChannel): Promise<boolean> {
     const testMessage = {
       id: 'compatibility-test',
       timestamp: Date.now(),
@@ -203,9 +209,9 @@ export class CrossTabBrowserCompatibility {
     }
 
     const recommendedStrategy = this.capabilities.broadcastChannel ? 'BroadcastChannel' :
-                                this.capabilities.localStorage ? 'localStorage' :
-                                this.capabilities.sessionStorage ? 'sessionStorage' :
-                                'polling'
+      this.capabilities.localStorage ? 'localStorage' :
+        this.capabilities.sessionStorage ? 'sessionStorage' :
+          'polling'
 
     return {
       browser,
@@ -271,7 +277,7 @@ export class CrossTabBrowserCompatibility {
   /**
    * Test storage-based communication
    */
-  private async testStorageChannel(storage: Storage, testMessage: any): Promise<boolean> {
+  private async testStorageChannel(storage: Storage, testMessage: unknown): Promise<boolean> {
     const testKey = 'pomo-flow-compatibility-test'
 
     return new Promise((resolve) => {
@@ -297,7 +303,7 @@ export class CrossTabBrowserCompatibility {
   /**
    * Create SharedWorker-based communication channel
    */
-  private createSharedWorkerChannel(): any {
+  private createSharedWorkerChannel(): CommunicationChannel | null {
     // This is a simplified implementation
     // In a real implementation, you would create and manage a SharedWorker
     return null
@@ -306,9 +312,9 @@ export class CrossTabBrowserCompatibility {
   /**
    * Create polling-based communication channel
    */
-  private createPollingChannel(): any {
+  private createPollingChannel(): { postMessage: (data: unknown) => void, addEventListener: (event: string, handler: (event: MessageEvent) => void) => void, close: () => void } {
     return {
-      postMessage: (data: any) => {
+      postMessage: (data: unknown) => {
         localStorage.setItem('pomo-flow-polling', JSON.stringify(data))
       },
       addEventListener: (_event: string, handler: (event: MessageEvent) => void) => {

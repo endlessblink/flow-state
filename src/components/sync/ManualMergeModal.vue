@@ -131,11 +131,11 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
-  save: [value: any]
+  save: [value: unknown]
   cancel: []
 }>()
 
-const mergedValue = ref<any>(null)
+const mergedValue = ref<unknown>(null)
 const mergeHistory = ref<Array<{
   action: string
   value: string
@@ -179,7 +179,7 @@ function getEditorComponent(): string {
 }
 
 // Get editor props
-function getEditorProps(): Record<string, any> {
+function getEditorProps(): Record<string, unknown> {
   const fieldType = getFieldType()
   switch (fieldType) {
     case 'datetime':
@@ -220,7 +220,7 @@ function mergeAll(): void {
   const { localValue, remoteValue } = props.conflict
   const localType = typeof localValue
 
-  let result: any
+  let result: unknown
 
   if (localType === 'string') {
     // Combine strings
@@ -262,7 +262,7 @@ function useRemoteOnly(): void {
   addToHistory('Used remote only', props.conflict.remoteValue)
 }
 
-function addToHistory(action: string, value: any): void {
+function addToHistory(action: string, value: unknown): void {
   mergeHistory.value.unshift({
     action,
     value: formatValueForHistory(value),
@@ -284,7 +284,7 @@ function formatFieldName(field: string): string {
 }
 
 // Format value for history display
-function formatValueForHistory(value: any): string {
+function formatValueForHistory(value: unknown): string {
   if (value === null || value === undefined) return '(empty)'
   if (typeof value === 'string') return value.length > 50 ? value.substring(0, 50) + '...' : value
   if (Array.isArray(value)) return `[${value.length} items]`

@@ -196,7 +196,7 @@
                 v-model:edges="safeEdges"
                 :class="{ 'canvas-ready': isCanvasReady }"
                 class="vue-flow-container"
-                :node-types="nodeTypes as any"
+                :node-types="nodeTypes"
                 edges-focusable
                 :elevate-nodes-on-select="false"
                 elevate-edges-on-select
@@ -459,10 +459,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, markRaw, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useDebounceFn, useMagicKeys, useWindowSize } from '@vueuse/core'
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted,
+  nextTick,
+  markRaw,
+  defineAsyncComponent,
+  onErrorCaptured
+} from 'vue'
+import {
+  VueFlow,
+  useVueFlow,
+  Panel,
+  Position,
+  type Node,
+  type Edge,
+  type XYPosition,
+  type NodeTypes
+} from '@vue-flow/core'
 import { Filter, X, Plus, Inbox } from 'lucide-vue-next'
-import { VueFlow, useVueFlow, useNodesInitialized } from '@vue-flow/core'
 import { useMessage } from 'naive-ui'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
@@ -1358,7 +1376,7 @@ const getSectionResizeStyle = (section: CanvasSection): Record<string, string | 
 }
 
 // Register custom node types
-const nodeTypes = markRaw({
+const nodeTypes: NodeTypes = markRaw({
   taskNode: TaskNode,
   sectionNode: GroupNodeSimple
 })

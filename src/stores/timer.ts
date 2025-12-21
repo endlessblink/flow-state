@@ -246,8 +246,8 @@ export const useTimerStore = defineStore('timer', () => {
 
     // If there's an active remote leader that's not us, become a follower
     if (remoteDoc.deviceLeaderId &&
-        remoteDoc.deviceLeaderId !== deviceId &&
-        remoteLeaderActive) {
+      remoteDoc.deviceLeaderId !== deviceId &&
+      remoteLeaderActive) {
 
       console.log('🔄 [TIMER CROSS-DEVICE] Syncing with remote device leader:', remoteDoc.deviceLeaderId)
       isDeviceLeader.value = false
@@ -298,7 +298,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     // Use direct PouchDB changes feed for real-time updates (TASK-021 fix)
     // This replaces the unreliable 'reliable-sync-change' event listener
-    timerChangesSync.startListening(async (rawDoc: any) => {
+    timerChangesSync.startListening(async (rawDoc: Record<string, unknown>) => {
       try {
         // Handle document deletion
         if (rawDoc.deleted) {
@@ -505,10 +505,10 @@ export const useTimerStore = defineStore('timer', () => {
     }
   }
 
-// Keep sessions in sync with completedSessions for compatibility
-watch(completedSessions, (newSessions) => {
-  sessions.value = [...newSessions]
-}, { immediate: true, deep: true })
+  // Keep sessions in sync with completedSessions for compatibility
+  watch(completedSessions, (newSessions) => {
+    sessions.value = [...newSessions]
+  }, { immediate: true, deep: true })
 
   // Settings with PouchDB persistence
   const settings = ref(defaultSettings)

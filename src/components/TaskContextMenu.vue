@@ -399,14 +399,16 @@ const deleteText = computed(() => {
   if (isBatchOperation.value) {
     return `Delete ${props.selectedCount} tasks`
   }
-  return (currentTask.value as any)?.isCalendarEvent ? 'Remove from Calendar' : 'Delete'
+  const task = currentTask.value as unknown as { isCalendarEvent?: boolean }
+  return task?.isCalendarEvent ? 'Remove from Calendar' : 'Delete'
 })
 
 const deleteShortcut = computed(() => {
   if (isBatchOperation.value) {
     return 'Delete'
   }
-  return (currentTask.value as any)?.isCalendarEvent ? 'Remove' : 'Delete'
+  const task = currentTask.value as unknown as { isCalendarEvent?: boolean }
+  return task?.isCalendarEvent ? 'Remove' : 'Delete'
 })
 
 // Smart positioning to prevent cutoff
@@ -620,7 +622,7 @@ const deleteTask = () => {
     emit('deleteSelected')
   } else if (currentTask.value) {
     // Check if this is a calendar event by checking for calendar-specific properties
-    const taskData = currentTask.value as any
+    const taskData = currentTask.value as unknown as { instanceId?: string; isCalendarEvent?: boolean }
     const instanceId = taskData.instanceId
     const isCalendarEvent = taskData.isCalendarEvent
 

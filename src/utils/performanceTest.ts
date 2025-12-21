@@ -1,5 +1,6 @@
 // Performance test utility for kanban optimizations
 import { useTaskStore } from '@/stores/tasks'
+import type { Task } from '@/types/tasks'
 
 interface PerformanceResult {
   test: string
@@ -33,8 +34,8 @@ export class KanbanPerformanceTest {
         id: `test-task-${i}`,
         title: `Test Task ${i} - Performance Testing`,
         description: `This is a test task for performance validation with larger data sets. Testing drag and drop responsiveness with multiple tasks.`,
-        status: status as any,
-        priority: priority as any,
+        status: status as Task['status'],
+        priority: priority as Task['priority'],
         projectId: projectId,
         progress: status === 'done' ? 100 : (status === 'in_progress' ? 50 : 0),
         dueDate: new Date(Date.now() + (i * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
@@ -60,7 +61,7 @@ export class KanbanPerformanceTest {
   testStatusChangePerformance(iterations: number = 20) {
     console.log(`🔄 Testing status change performance (${iterations} iterations)...`)
 
-    const tasks = this.taskStore.tasks.filter(t => t.id.startsWith('test-task-'))
+    const tasks = this.taskStore.tasks.filter((t: Task) => t.id.startsWith('test-task-'))
     if (tasks.length === 0) {
       console.error('❌ No test tasks found. Run generateTestData() first.')
       return
@@ -73,9 +74,9 @@ export class KanbanPerformanceTest {
       // Simulate task status change (equivalent to drag operation)
       const originalStatus = task.status
       const newStatus = originalStatus === 'planned' ? 'in_progress' :
-                       originalStatus === 'in_progress' ? 'done' : 'planned'
+        originalStatus === 'in_progress' ? 'done' : 'planned'
 
-      this.taskStore.moveTask(task.id, newStatus as any)
+      this.taskStore.moveTask(task.id, newStatus as Task['status'])
 
       const endTime = performance.now()
       const duration = Math.round(endTime - startTime)
@@ -110,9 +111,9 @@ export class KanbanPerformanceTest {
       const startTime = performance.now()
 
       // Simulate the filtering operations that happen in kanban view
-      const plannedTasks = tasks.filter(t => t.status === 'planned')
-      const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
-      const doneTasks = tasks.filter(t => t.status === 'done')
+      const plannedTasks = tasks.filter((t: Task) => t.status === 'planned')
+      const inProgressTasks = tasks.filter((t: Task) => t.status === 'in_progress')
+      const doneTasks = tasks.filter((t: Task) => t.status === 'done')
 
       const endTime = performance.now()
       const duration = Math.round(endTime - startTime)
@@ -137,9 +138,9 @@ export class KanbanPerformanceTest {
 
       // Simulate computed property recalculations
       const totalTasks = this.taskStore.tasks.length
-      const completedTasks = this.taskStore.tasks.filter(t => t.status === 'done').length
-      const inProgressTasks = this.taskStore.tasks.filter(t => t.status === 'in_progress').length
-      const plannedTasks = this.taskStore.tasks.filter(t => t.status === 'planned').length
+      const completedTasks = this.taskStore.tasks.filter((t: Task) => t.status === 'done').length
+      const inProgressTasks = this.taskStore.tasks.filter((t: Task) => t.status === 'in_progress').length
+      const plannedTasks = this.taskStore.tasks.filter((t: Task) => t.status === 'planned').length
 
       const endTime = performance.now()
       const duration = Math.round(endTime - startTime)
@@ -163,8 +164,8 @@ export class KanbanPerformanceTest {
     this.results = []
 
     // Clear existing test data
-    const existingTestTasks = this.taskStore.tasks.filter(t => t.id.startsWith('test-task-'))
-    existingTestTasks.forEach(task => {
+    const existingTestTasks = this.taskStore.tasks.filter((t: Task) => t.id.startsWith('test-task-'))
+    existingTestTasks.forEach((task: Task) => {
       this.taskStore.deleteTask(task.id)
     })
 
@@ -191,7 +192,7 @@ export class KanbanPerformanceTest {
 
   // Calculate averages for different test types
   private calculateAverages() {
-    const statusChangeResults = this.results.filter(r => r.test.includes('Status Change'))
+    const statusChangeResults = this.results.filter((r: PerformanceResult) => r.test.includes('Status Change'))
     if (statusChangeResults.length > 0) {
       const avgDuration = Math.round(
         statusChangeResults.reduce((sum, r) => sum + r.duration, 0) / statusChangeResults.length
@@ -256,8 +257,8 @@ export class KanbanPerformanceTest {
 
   // Clear test data
   clearTestData() {
-    const testTasks = this.taskStore.tasks.filter(t => t.id.startsWith('test-task-'))
-    testTasks.forEach(task => {
+    const testTasks = this.taskStore.tasks.filter((t: Task) => t.id.startsWith('test-task-'))
+    testTasks.forEach((task: Task) => {
       this.taskStore.deleteTask(task.id)
     })
     console.log(`🧹 Cleared ${testTasks.length} test tasks`)

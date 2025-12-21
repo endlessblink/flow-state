@@ -20,7 +20,7 @@ export interface RetryAttempt {
   success: boolean
 }
 
-export interface RetryResult<T = any> {
+export interface RetryResult<T = unknown> {
   success: boolean
   value?: T
   error?: Error
@@ -52,7 +52,7 @@ export class RetryManager {
   async executeWithRetry<T>(
     operation: () => Promise<T>,
     operationName: string,
-    context: Record<string, any> = {}
+    context: Record<string, unknown> = {}
   ): Promise<RetryResult<T>> {
     const operationId = this.generateOperationId(operationName, context)
     const attempts: RetryAttempt[] = []
@@ -134,7 +134,7 @@ export class RetryManager {
    * Execute multiple operations with retry, returning aggregated results
    */
   async executeMultipleWithRetry<T>(
-    operations: Array<{ operation: () => Promise<T>; name: string; context?: Record<string, any> }>
+    operations: Array<{ operation: () => Promise<T>; name: string; context?: Record<string, unknown> }>
   ): Promise<{ results: RetryResult<T>[]; summary: { successful: number; failed: number; totalDuration: number } }> {
     const results: RetryResult<T>[] = []
     let successful = 0
@@ -200,22 +200,24 @@ export class RetryManager {
   /**
    * Check if an error should not be retried
    */
-  private isNonRetryableError(error: any): boolean {
+  private isNonRetryableError(error: unknown): boolean {
     // Use custom non-retryable function if provided
     if (this.config.nonRetryableErrors && this.config.nonRetryableErrors(error)) {
       return true
     }
 
     // Check for HTTP status codes
-    const httpStatus = error?.status || error?.response?.status
+    const errorObj = error as Record<string, unknown>
+    const responseObj = errorObj?.response as Record<string, unknown>
+    const httpStatus = (errorObj?.status as number) || (responseObj?.status as number)
     const nonRetryableStatuses = [401, 403, 404, 422, 429, 500, 501, 502, 503]
 
-    if (nonRetryableStatuses.includes(httpStatus)) {
+    if (httpStatus && nonRetryableStatuses.includes(httpStatus)) {
       return true
     }
 
     // Check for specific error messages
-    const errorMessage = (error?.message || '').toLowerCase()
+    const errorMessage = (typeof errorObj?.message === 'string' ? errorObj.message : '').toLowerCase()
     const nonRetryableKeywords = [
       'authentication',
       'unauthorized',
@@ -232,7 +234,7 @@ export class RetryManager {
   /**
    * Default function to identify non-retryable errors
    */
-  private defaultNonRetryableErrors = (_error: any): boolean => {
+  private defaultNonRetryableErrors = (_error: unknown): boolean => {
     // Add application-specific non-retryable error logic here
     return false
   }
@@ -249,10 +251,14 @@ export class RetryManager {
   /**
    * Format error for logging
    */
-  private formatError(error: any): string {
+  private formatError(error: unknown): string {
     if (!error) return 'Unknown error'
-    if (error.message) return error.message
+    if (error instanceof Error) return error.message
     if (typeof error === 'string') return error
+
+    const errorObj = error as Record<string, unknown>
+    if (typeof errorObj.message === 'string') return errorObj.message
+
     // Handle cyclic objects safely
     try {
       return JSON.stringify(error)
@@ -264,7 +270,7 @@ export class RetryManager {
   /**
    * Generate unique operation ID
    */
-  private generateOperationId(name: string, context: Record<string, any>): string {
+  private generateOperationId(name: string, context: Record<string, unknown>): string {
     const contextStr = Object.entries(context)
       .map(([key, value]) => `${key}=${value}`)
       .join('&')

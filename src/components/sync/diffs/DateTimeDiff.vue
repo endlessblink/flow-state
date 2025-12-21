@@ -106,8 +106,8 @@
 import { ref, computed } from 'vue'
 
 interface Props {
-  value: any
-  compareValue: any
+  value: unknown
+  compareValue: unknown
   mode: 'local' | 'remote'
 }
 
@@ -118,7 +118,7 @@ const selectedDate = ref<'local' | 'remote' | 'newer' | 'now' | null>(null)
 const localDate = computed(() => {
   if (!props.value) return null
   try {
-    return new Date(props.value)
+    return new Date(props.value as string | number | Date)
   } catch {
     return null
   }
@@ -127,7 +127,7 @@ const localDate = computed(() => {
 const remoteDate = computed(() => {
   if (!props.compareValue) return null
   try {
-    return new Date(props.compareValue)
+    return new Date(props.compareValue as string | number | Date)
   } catch {
     return null
   }

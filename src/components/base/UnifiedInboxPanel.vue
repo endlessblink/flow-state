@@ -55,7 +55,7 @@
         :aria-label="`${filter.label}: ${filter.count} tasks`"
         role="tab"
         :aria-selected="activeFilter === filter.key"
-        @click="activeFilter = filter.key as any"
+        @click="activeFilter = filter.key as string"
       >
         <span class="filter-icon">{{ filter.icon }}</span>
         <span class="filter-label">{{ filter.label }}</span>
@@ -466,6 +466,10 @@ const isTimerActive = (taskId: string) => {
   return timerStore.isTimerActive && timerStore.currentTaskId === taskId
 }
 
+interface WindowWithDrag extends Window {
+  __draggingTaskId?: string
+}
+
 const getStatusIndicator = (status: string) => {
   const indicators: Record<string, string> = {
     planned: '📝',
@@ -553,7 +557,7 @@ const processBrainDump = () => {
   lines.forEach(line => {
     const cleanedLine = line.trim()
     let title = cleanedLine
-    let priority: any = null
+    let priority: 'high' | 'medium' | 'low' | null = null
     let estimatedDuration: number | undefined
 
     // Extract priority (e.g., "!!!", "!!", "!")
@@ -705,13 +709,13 @@ const onDragStart = (e: DragEvent, task: Task) => {
   e.dataTransfer.setData('application/json', JSON.stringify(dragData))
 
   // Set global drag state
-  ;(window as any).__draggingTaskId = task.id
+  ;(window as WindowWithDrag).__draggingTaskId = task.id
   document.documentElement.setAttribute('data-dragging-task-id', task.id)
 }
 
 const onDragEnd = () => {
   draggingTaskId.value = null
-  delete (window as any).__draggingTaskId
+  delete (window as WindowWithDrag).__draggingTaskId
   document.documentElement.removeAttribute('data-dragging-task-id')
 }
 
@@ -766,7 +770,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // Cleanup
   window.removeEventListener('keydown', handleKeydown)
-  delete (window as any).__draggingTaskId
+  delete (window as WindowWithDrag).__draggingTaskId
   document.documentElement.removeAttribute('data-dragging-task-id')
 })
 </script>

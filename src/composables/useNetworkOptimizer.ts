@@ -82,7 +82,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
 
   // Reactive state
   const requestQueue = ref<Map<string, NetworkRequest>>(new Map())
-  const pendingRequests = ref<Map<string, Promise<any>>>(new Map())
+  const pendingRequests = ref<Map<string, Promise<unknown>>>(new Map())
   const responseCache = ref<Map<string, NetworkResponse>>(new Map())
   const isProcessingBatch = ref(false)
 
@@ -235,7 +235,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   }
 
   // Make HTTP request with optimization
-  const makeRequest = async (requestConfig: Partial<NetworkRequest>): Promise<any> => {
+  const makeRequest = async (requestConfig: Partial<NetworkRequest>): Promise<unknown> => {
     const request: NetworkRequest = {
       id: generateRequestId(requestConfig),
       url: requestConfig.url!,
@@ -407,7 +407,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   }, batchDelay)
 
   // Queue request for batching
-  const queueRequest = (requestConfig: Partial<NetworkRequest>): Promise<any> => {
+  const queueRequest = (requestConfig: Partial<NetworkRequest>): Promise<unknown> => {
     if (!enableBatching) {
       return makeRequest(requestConfig)
     }
@@ -459,7 +459,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   // Get network information
   const getNetworkInfo = () => {
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection
+      const connection = (navigator as unknown as { connection: { effectiveType: string; downlink: number; rtt: number; saveData: boolean } }).connection
       effectiveType.value = connection.effectiveType || 'unknown'
       return {
         effectiveType: connection.effectiveType,
@@ -502,7 +502,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
     window.addEventListener('offline', handleOffline)
 
     if ('connection' in navigator) {
-      (navigator as any).connection.addEventListener('change', handleConnectionChange)
+      (navigator as unknown as { connection: EventTarget }).connection.addEventListener('change', handleConnectionChange)
     }
 
     return () => {
@@ -510,7 +510,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
       window.removeEventListener('offline', handleOffline)
 
       if ('connection' in navigator) {
-        (navigator as any).connection.removeEventListener('change', handleConnectionChange)
+        (navigator as unknown as { connection: EventTarget }).connection.removeEventListener('change', handleConnectionChange)
       }
     }
   }

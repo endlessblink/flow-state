@@ -564,7 +564,7 @@ export function useSecurityMonitor(config?: Partial<SecurityMonitorConfig>) {
   const resolveEvent = (eventId: string) => monitor.resolveEvent(eventId)
 
   // Convenience methods for common events
-  const logCSRFViolation = (details: Record<string, any> = {}) => {
+  const logCSRFViolation = (details: Record<string, unknown> = {}) => {
     return logEvent({
       type: 'csrf_violation',
       severity: 'high',
@@ -574,7 +574,7 @@ export function useSecurityMonitor(config?: Partial<SecurityMonitorConfig>) {
     })
   }
 
-  const logXSSAttempt = (details: Record<string, any> = {}) => {
+  const logXSSAttempt = (details: Record<string, unknown> = {}) => {
     return logEvent({
       type: 'xss_attempt',
       severity: 'high',
@@ -584,7 +584,7 @@ export function useSecurityMonitor(config?: Partial<SecurityMonitorConfig>) {
     })
   }
 
-  const logRateLimitExceeded = (details: Record<string, any> = {}) => {
+  const logRateLimitExceeded = (details: Record<string, unknown> = {}) => {
     return logEvent({
       type: 'rate_limit_exceeded',
       severity: 'medium',
@@ -594,7 +594,7 @@ export function useSecurityMonitor(config?: Partial<SecurityMonitorConfig>) {
     })
   }
 
-  const logUnauthorizedAccess = (details: Record<string, any> = {}) => {
+  const logUnauthorizedAccess = (details: Record<string, unknown> = {}) => {
     return logEvent({
       type: 'unauthorized_access',
       severity: 'high',

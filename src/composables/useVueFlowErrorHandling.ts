@@ -251,7 +251,7 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
     // Monitor memory usage
     if (typeof window !== 'undefined' && 'performance' in window && 'memory' in performance) {
       setInterval(() => {
-        const memory = (performance as any).memory
+        const memory = (performance as unknown as { memory: { usedJSHeapSize: number } }).memory
         if (memory && memory.usedJSHeapSize > 100 * 1024 * 1024) { // 100MB
           console.warn('⚠️ [VUE_FLOW_ERROR] High memory usage detected:', Math.round(memory.usedJSHeapSize / 1024 / 1024) + 'MB')
         }
@@ -384,12 +384,12 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
     const notificationType = error.severity === 'critical' ? 'error' : 'warning'
     const duration = error.severity === 'critical' ? 0 : 5000
 
-    ;(message as any)[notificationType]({
-      content: error.message,
+    const notificationMethod = notificationType === 'error' ? message.error : message.warning
+    notificationMethod(error.message, {
       duration,
       closable: true,
       keepAliveOnHover: true
-    } as any)
+    })
   }
 
   /**
@@ -406,8 +406,8 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
     try {
       // Get recovery strategies for this error type
       const strategies = recoveryStrategies.value.get(`${error.type}-${error.id}`) ||
-                       recoveryStrategies.value.get(error.type) ||
-                       []
+        recoveryStrategies.value.get(error.type) ||
+        []
 
       if (strategies.length === 0) {
         console.warn(`⚠️ [VUE_FLOW_ERROR] No recovery strategies for error type: ${error.type}`)
@@ -434,10 +434,9 @@ export function useVueFlowErrorHandling(config: ErrorHandlingConfig = {}) {
 
             // Show success notification
             if (enableUserNotifications) {
-              (message as any).success({
-                content: `Recovered: ${error.message}`,
+              message.success(`Recovered: ${error.message}`, {
                 duration: 3000
-              } as any)
+              })
             }
 
             return true

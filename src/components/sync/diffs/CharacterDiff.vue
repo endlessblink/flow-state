@@ -15,8 +15,8 @@
 import { computed } from 'vue'
 
 interface Props {
-  value: any
-  compareValue: any
+  value: unknown
+  compareValue: unknown
   mode: 'local' | 'remote'
 }
 

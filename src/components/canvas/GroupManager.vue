@@ -215,7 +215,7 @@
                 :key="layout"
                 class="layout-btn"
                 :class="{ active: sectionForm.layout === layout }"
-                @click="sectionForm.layout = layout as any"
+                @click="sectionForm.layout = layout as string"
               >
                 {{ layout.charAt(0).toUpperCase() + layout.slice(1) }}
               </button>
@@ -287,7 +287,7 @@ const availableProjects = computed(() => {
 })
 
 const getSectionTypeLabel = (type: CanvasSection['type']) => {
-  const labels = {
+  const labels: Record<CanvasSection['type'], string> = {
     custom: 'Custom',
     priority: 'Priority',
     status: 'Status',
@@ -295,17 +295,17 @@ const getSectionTypeLabel = (type: CanvasSection['type']) => {
     date: 'Date Range',
     tags: 'Tags'
   }
-  return (labels as any)[type]
+  return labels[type]
 }
 
 const getStatusLabel = (status: string) => {
-  const labels = {
+  const labels: Record<string, string> = {
     planned: 'Planned',
     in_progress: 'In Progress',
     done: 'Done',
     backlog: 'Backlog'
   }
-  return (labels as any)[status] || status
+  return labels[status] || status
 }
 
 const toggleSectionVisibility = (sectionId: string) => {
@@ -323,7 +323,7 @@ const editSection = (section: CanvasSection) => {
       priorities: section.filters?.priorities || [],
       statuses: section.filters?.statuses || [],
       projects: section.filters?.projects || [],
-      dateRange: (section.filters?.dateRange as any) || { start: '', end: '' }
+      dateRange: (section.filters?.dateRange as { start: string, end: string }) || { start: '', end: '' }
     }
   }
 }
@@ -380,9 +380,9 @@ const saveSection = () => {
   }
 
   if (editingSection.value) {
-    canvasStore.updateSection(editingSection.value.id, sectionData as any)
+    canvasStore.updateSection(editingSection.value.id, sectionData)
   } else {
-    canvasStore.createSection(sectionData as any)
+    canvasStore.createSection(sectionData as Omit<CanvasSection, 'id' | 'createdAt' | 'updatedAt'>)
   }
 
   closeModal()

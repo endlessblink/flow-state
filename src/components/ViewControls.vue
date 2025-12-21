@@ -51,7 +51,7 @@
       <CustomSelect
         :model-value="sortBy"
         :options="sortOptions"
-        @update:model-value="$emit('update:sortBy', $event as any)"
+        @update:model-value="$emit('update:sortBy', $event as string)"
       />
     </div>
 
@@ -60,7 +60,7 @@
       <CustomSelect
         :model-value="filterStatus"
         :options="filterOptions"
-        @update:model-value="$emit('update:filterStatus', $event as any)"
+        @update:model-value="$emit('update:filterStatus', $event as string)"
       />
     </div>
   </div>

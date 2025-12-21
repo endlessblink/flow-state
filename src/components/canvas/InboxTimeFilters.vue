@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import {
   Inbox,
   Clock,
@@ -32,7 +32,7 @@ interface TimeFilter {
   key: 'all' | 'now' | 'today' | 'tomorrow' | 'thisWeek' | 'noDate'
   label: string
   description: string
-  icon: any
+  icon: Component
   count: number
 }
 

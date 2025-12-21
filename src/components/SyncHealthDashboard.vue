@@ -141,15 +141,15 @@
           <div class="network-metrics">
             <div class="metric-row">
               <span class="metric-label">Bandwidth:</span>
-              <span class="metric-value">{{ formatBandwidth((networkMetrics as any).bandwidth || 0) }}</span>
+              <span class="metric-value">{{ formatBandwidth(networkMetrics.bandwidth || 0) }}</span>
             </div>
             <div class="metric-row">
               <span class="metric-label">Latency:</span>
-              <span class="metric-value">{{ (networkMetrics as any).latency || 0 }}ms</span>
+              <span class="metric-value">{{ networkMetrics.latency || 0 }}ms</span>
             </div>
             <div class="metric-row">
               <span class="metric-label">Reliability:</span>
-              <span class="metric-value">{{ (((networkMetrics as any).reliability || 0) * 100).toFixed(1) }}%</span>
+              <span class="metric-value">{{ ((networkMetrics.reliability || 0) * 100).toFixed(1) }}%</span>
             </div>
             <div class="metric-row">
               <span class="metric-label">Success Rate:</span>
@@ -331,6 +331,23 @@ interface DashboardSettings {
   enableCompression: boolean
 }
 
+interface RecentOperation {
+  id: string
+  type: string
+  startTime: Date
+  duration: number
+  documentsProcessed: number
+  success: boolean
+}
+
+interface RecentError {
+  id: string
+  level: string
+  message: string
+  category?: string
+  timestamp: Date
+}
+
 const reliableSync = useReliableSyncManager()
 const logger = getLogger()
 
@@ -358,11 +375,11 @@ const resolvedConflicts = computed(() => reliableSync.resolutions.value.length)
 // Network metrics
 const networkMetrics = computed(() => {
   const optimizer = reliableSync.networkOptimizer
-  return optimizer ? optimizer.getMetrics() : {
-    currentCondition: { type: 'good', bandwidth: 1000000, latency: 100, reliability: 0.95 },
-    averageBandwidth: 1000000,
-    averageLatency: 100,
-    successRate: 1.0
+  return optimizer ? optimizer.getMetrics().currentCondition : {
+    type: 'good' as const,
+    bandwidth: 1000000,
+    latency: 100,
+    reliability: 0.95
   }
 })
 
@@ -383,8 +400,8 @@ const totalDocuments = ref(0)
 const dataHealth = ref('Good')
 
 // Recent operations
-const recentOperations = ref<any[]>([])
-const recentErrors = ref<any[]>([])
+const recentOperations = ref<RecentOperation[]>([])
+const recentErrors = ref<RecentError[]>([])
 
 // Computed properties
 const overallHealthStatus = computed(() => {
@@ -474,7 +491,7 @@ const loadDashboardData = async () => {
 
   // Load document count
   try {
-    const taskStore = (window as any).taskStore
+    const taskStore = (window as unknown as { taskStore: { tasks: unknown[] } }).taskStore
     if (taskStore) {
       totalDocuments.value = taskStore.tasks?.length || 0
     }
@@ -495,20 +512,18 @@ const loadDashboardData = async () => {
 const runHealthCheck = async () => {
   isHealthCheckRunning.value = true
   try {
-    (logger.info as any)('monitoring', 'Health check completed', await (async () => {
-      const systemHealth: any = await (logger.getSystemHealth as any)()
-      return {
+    const systemHealth = logger.getSystemHealth()
+    logger.info('monitoring', 'Health check completed', {
         syncStatus: systemHealth?.syncStatus,
         errorRate: systemHealth?.errorRate,
         consecutiveFailures: systemHealth?.consecutiveFailures
-      }
-    })())
+      })
 
     // Show results
     console.log('Health Check Result: COMPLETED')
 
   } catch (error) {
-    (logger.error as any)('monitoring', 'Health check failed', { error: (error as Error).message })
+    logger.error('monitoring', 'Health check failed', { error: (error as Error).message })
   } finally {
     isHealthCheckRunning.value = false
   }

@@ -103,8 +103,8 @@
 import { ref, computed } from 'vue'
 
 interface Props {
-  value: any
-  compareValue: any
+  value: unknown
+  compareValue: unknown
   mode: 'local' | 'remote'
 }
 
@@ -116,19 +116,19 @@ const valuesEqual = computed(() => {
   return props.value === props.compareValue
 })
 
-function getBooleanIcon(value: any): string {
+function getBooleanIcon(value: unknown): string {
   if (value === true) return 'svg-true'
   if (value === false) return 'svg-false'
   return 'svg-undefined'
 }
 
-function getBooleanIconClass(value: any): string {
+function getBooleanIconClass(value: unknown): string {
   if (value === true) return 'w-5 h-5 text-green-500'
   if (value === false) return 'w-5 h-5 text-red-500'
   return 'w-5 h-5 text-gray-400'
 }
 
-function formatBoolean(value: any): string {
+function formatBoolean(value: unknown): string {
   if (value === true) return 'True'
   if (value === false) return 'False'
   return 'Not set'

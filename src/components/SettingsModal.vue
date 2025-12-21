@@ -247,8 +247,8 @@ const updateLongBreak = (minutes: number) => {
   saveSettings()
 }
 
-const updateSetting = (key: string, value: any) => {
-  (timerStore.settings as any)[key] = value
+const updateSetting = <K extends keyof typeof timerStore.settings>(key: K, value: (typeof timerStore.settings)[K]) => {
+  timerStore.settings[key] = value
   saveSettings()
 }
 

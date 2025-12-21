@@ -17,7 +17,7 @@
           class="mode-btn"
           :class="{ active: selectionMode === mode.value }"
           :title="mode.description"
-          @click="setSelectionMode(mode.value as any)"
+          @click="setSelectionMode(mode.value as 'nodes' | 'edges' | 'both')"
         >
           <component :is="mode.icon" :size="14" />
           <span>{{ mode.label }}</span>
@@ -123,6 +123,7 @@ import {
 } from 'lucide-vue-next'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import type { TaskStatus, TaskPriority } from '@/types/tasks'
 import type { Node } from '@vue-flow/core'
 
 interface Props {
@@ -134,7 +135,11 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   selectionChange: [selectedIds: string[]]
-  bulkAction: [action: string, params: any]
+  bulkAction: [action: string, params: {
+    nodeIds: string[]
+    status?: TaskStatus
+    priority?: TaskPriority
+  } | { nodeIds: string[] }]
 }>()
 
 const canvasStore = useCanvasStore()
@@ -195,7 +200,7 @@ const invertSelection = () => {
   emit('selectionChange', inverted)
 }
 
-const bulkUpdateStatus = (status: any) => {
+const bulkUpdateStatus = (status: TaskStatus) => {
   emit('bulkAction', 'updateStatus', { 
     nodeIds: props.selectedNodeIds, 
     status 
@@ -203,7 +208,7 @@ const bulkUpdateStatus = (status: any) => {
   showBulkMenu.value = false
 }
 
-const bulkUpdatePriority = (priority: any) => {
+const bulkUpdatePriority = (priority: TaskPriority) => {
   emit('bulkAction', 'updatePriority', { 
     nodeIds: props.selectedNodeIds, 
     priority 

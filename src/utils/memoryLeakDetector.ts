@@ -180,7 +180,7 @@ export class MemoryLeakDetector {
 
   // Take memory snapshot
   private takeMemorySnapshot(): MemorySnapshot {
-    const memory = (performance as any).memory || {}
+    const memory = (performance as unknown as { memory?: { usedJSHeapSize?: number; totalJSHeapSize?: number; jsHeapSizeLimit?: number } }).memory || {}
 
     return {
       timestamp: Date.now(),
@@ -472,25 +472,25 @@ export class MemoryLeakDetector {
   }
 
   // Export data for analysis
-  exportMonitoringData(): any {
+  exportMonitoringData(): Record<string, unknown> {
     return {
-      snapshots: this.snapshots,
-      componentProfiles: this.componentProfiles,
-      baselineMemory: this.baselineMemory,
+      snapshots: this.snapshots as unknown as unknown[],
+      componentProfiles: this.componentProfiles as unknown as unknown[],
+      baselineMemory: this.baselineMemory as unknown as unknown,
       isActive: this.isMonitoring.value
     }
   }
 
   // Import monitoring data
-  importMonitoringData(data: any): void {
-    if (data.snapshots) this.snapshots = data.snapshots
+  importMonitoringData(data: Record<string, unknown>): void {
+    if (data.snapshots) this.snapshots = data.snapshots as MemorySnapshot[]
     if (data.componentProfiles) {
       this.componentRegistry.clear()
-      data.componentProfiles.forEach((profile: ComponentMemoryProfile) => {
-        this.componentRegistry.set(profile.componentName, profile)
-      })
+        ; (data.componentProfiles as ComponentMemoryProfile[]).forEach((profile: ComponentMemoryProfile) => {
+          this.componentRegistry.set(profile.componentName, profile)
+        })
     }
-    if (data.baselineMemory) this.baselineMemory = data.baselineMemory
+    if (data.baselineMemory) this.baselineMemory = data.baselineMemory as MemorySnapshot
   }
 }
 

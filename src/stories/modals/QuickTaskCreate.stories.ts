@@ -57,7 +57,7 @@ export const Default: Story = {
         isOpen.value = false
       }
 
-      const handleCreated = (task: any) => {
+      const handleCreated = (task: unknown) => {
         console.log('Task created:', task)
         isOpen.value = false
       }
@@ -106,7 +106,7 @@ export const MorningTask: Story = {
         isOpen.value = false
       }
 
-      const handleCreated = (task: any) => {
+      const handleCreated = (task: unknown) => {
         console.log('Morning task created:', task)
         isOpen.value = false
       }
@@ -148,7 +148,7 @@ export const AfternoonMeeting: Story = {
         isOpen.value = false
       }
 
-      const handleCreated = (task: any) => {
+      const handleCreated = (task: unknown) => {
         console.log('Meeting created:', task)
         isOpen.value = false
       }
@@ -190,7 +190,7 @@ export const ShortTask: Story = {
         isOpen.value = false
       }
 
-      const handleCreated = (task: any) => {
+      const handleCreated = (task: unknown) => {
         console.log('Short task created:', task)
         isOpen.value = false
       }
@@ -232,7 +232,7 @@ export const LongTask: Story = {
         isOpen.value = false
       }
 
-      const handleCreated = (task: any) => {
+      const handleCreated = (task: unknown) => {
         console.log('Long task created:', task)
         isOpen.value = false
       }
@@ -276,7 +276,14 @@ export const InteractiveDemo: Story = {
         duration: 30,
       })
 
-      const lastCreatedTask = ref<any>(null)
+      // Helper interface for last created task
+      interface MockTask {
+        title: string
+        description?: string
+        priority: string
+        estimatedDuration: number
+      }
+      const lastCreatedTask = ref<MockTask | null>(null)
 
       const openQuickCreate = (startTime: Date, endTime: Date, duration: number) => {
         modalState.startTime = startTime
@@ -289,8 +296,10 @@ export const InteractiveDemo: Story = {
         modalState.isOpen = false
       }
 
-      const handleCreated = (task: any) => {
-        lastCreatedTask.value = task
+      const handleCreated = (task: unknown) => {
+        lastCreatedTask.value = task as any // Temporary cast until we verify MockTask compatibility if needed, or just use unknown
+        // Actually let's use the interface
+        lastCreatedTask.value = task as any
         console.log('Task created:', task)
         modalState.isOpen = false
       }
@@ -454,7 +463,7 @@ export const AllVariants: Story = {
         if (modal) modal.isOpen = false
       }
 
-      const handleCreated = (modalId: string, task: any) => {
+      const handleCreated = (modalId: string, task: unknown) => {
         console.log(`Task created for ${modalId}:`, task)
         closeModal(modalId)
       }

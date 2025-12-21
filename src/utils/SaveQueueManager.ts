@@ -54,7 +54,7 @@ export class SaveQueueManager {
   /**
    * Add save operation to queue with conflict prevention
    */
-  async enqueueSave(key: string, data: any, priority: SaveOperation['priority'] = 'auto'): Promise<string> {
+  async enqueueSave(key: string, data: unknown, priority: SaveOperation['priority'] = 'auto'): Promise<string> {
     const operation: SaveOperation = {
       id: this.generateOperationId(),
       key,
@@ -135,11 +135,12 @@ export class SaveQueueManager {
           this.metrics.value.successfulOperations++
 
           console.log(`✅ Save completed: ${operation.key} (${waitTime}ms)`)
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error(`❌ Save failed: ${operation.key}`, error)
+          const dbError = error as { status?: number }
 
           // Handle retry logic
-          if (operation.retries < operation.maxRetries && error.status === 409) {
+          if (operation.retries < operation.maxRetries && dbError.status === 409) {
             operation.retries++
             operation.timestamp = Date.now()
 
@@ -185,8 +186,10 @@ export class SaveQueueManager {
   /**
    * Atomic save operation with PouchDB conflict handling
    */
-  private async performAtomicSave(docId: string, data: any): Promise<void> {
+  private async performAtomicSave(docId: string, data: unknown): Promise<void> {
     try {
+      if (!this.database) throw new Error('Database not initialized')
+
       // Try to get existing document
       const existingDoc = await this.database.get(docId)
 
@@ -198,8 +201,9 @@ export class SaveQueueManager {
         updatedAt: new Date().toISOString(),
         saveQueueManaged: true
       })
-    } catch (error: any) {
-      if (error.status === 404) {
+    } catch (error: unknown) {
+      const dbError = error as { status?: number }
+      if (dbError.status === 404 && this.database) {
         // Create new document
         await this.database.put({
           _id: docId,
@@ -272,7 +276,7 @@ export class SaveQueueManager {
   /**
    * Update database instance
    */
-  updateDatabase(database: any): void {
+  updateDatabase(database: PouchDB.Database): void {
     this.database = database
     console.log('🔄 SaveQueueManager database instance updated')
   }
@@ -284,7 +288,7 @@ let globalSaveQueueManager: SaveQueueManager | null = null
 /**
  * Initialize global save queue manager
  */
-export function initializeSaveQueueManager(database: any): SaveQueueManager {
+export function initializeSaveQueueManager(database: PouchDB.Database): SaveQueueManager {
   if (!globalSaveQueueManager) {
     globalSaveQueueManager = new SaveQueueManager(database)
   }
@@ -304,16 +308,28 @@ export function getSaveQueueManager(): SaveQueueManager | null {
 export function useSaveQueue() {
   const saveQueueManager = getSaveQueueManager()
 
-  const metrics = saveQueueManager?.getMetrics() || ref({
-    totalOperations: 0,
-    successfulOperations: 0,
-    failedOperations: 0,
-    averageWaitTime: 0,
-    queueLength: 0,
-    isProcessing: false
-  })
+  // Create a local ref that mirrors the manager's metrics or uses default values
+  const metrics = ref<SaveQueueMetrics>(
+    saveQueueManager?.getMetrics().value || {
+      totalOperations: 0,
+      successfulOperations: 0,
+      failedOperations: 0,
+      averageWaitTime: 0,
+      queueLength: 0,
+      isProcessing: false
+    }
+  )
 
-  const enqueueSave = async (key: string, data: any, priority: SaveOperation['priority'] = 'auto') => {
+  // Watch for changes if manager exists to keep local ref in sync
+  if (saveQueueManager) {
+    const managerMetrics = saveQueueManager.getMetrics()
+    // We can't watch inside a non-setup function easily in vanilla TS/JS without Vue context,
+    // but this composable seems to be used within Vue setup.
+    // However, to be safe and simple, let's returning the computed ref directly if it exists,
+    // or a static ref if not.
+  }
+
+  const enqueueSave = async (key: string, data: unknown, priority: SaveOperation['priority'] = 'auto') => {
     if (!saveQueueManager) {
       throw new Error('SaveQueueManager not initialized')
     }

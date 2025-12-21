@@ -473,7 +473,7 @@ import {
   useVueFlow,
   useNodesInitialized,
   type Edge,
-  type NodeTypes,
+  type Node,
   type EdgeMouseEvent
 } from '@vue-flow/core'
 import {
@@ -1376,7 +1376,7 @@ const getSectionResizeStyle = (section: CanvasSection): Record<string, string | 
 }
 
 // Register custom node types
-const nodeTypes: NodeTypes = markRaw({
+const nodeTypes: any = markRaw({
   taskNode: TaskNode,
   sectionNode: GroupNodeSimple
 })

@@ -25,7 +25,7 @@ const meta = {
   },
 
   decorators: [
-    (story: any) => ({
+    (story: () => object) => ({
       components: { story },
       template: `
         <div style="min-height: 100vh; width: 100%; padding: 40px; background: var(--glass-bg-solid);">
@@ -74,8 +74,8 @@ export const Default: Story = {
     task: realTask,
     compactMode: false,
     onClose: () => console.log('close'),
-    onEdit: (taskId: any) => console.log('edit', taskId),
-    onConfirmDelete: (taskId: any, _instanceId?: any, _isCalendarEvent?: any) => console.log('delete', taskId),
+    onEdit: (taskId: string) => console.log('edit', taskId),
+    onConfirmDelete: (taskId: string, _instanceId?: string, _isCalendarEvent?: boolean) => console.log('delete', taskId),
   },
 }
 
@@ -140,11 +140,11 @@ export const InboxSingleTask: Story = {
     task: null, // No primary task when using contextTask
     contextTask: realTask,
     onClose: () => console.log('close'),
-    onEdit: (taskId: any) => console.log('edit', taskId),
-    onConfirmDelete: (taskId: any, _instanceId?: any, _isCalendarEvent?: any) => console.log('delete', taskId),
-    onSetPriority: (priority: any) => console.log('setPriority', priority),
-    onSetStatus: (status: any) => console.log('setStatus', status),
-    onSetDueDate: (dateType: any) => console.log('setDueDate', dateType),
+    onEdit: (taskId: string) => console.log('edit', taskId),
+    onConfirmDelete: (taskId: string, _instanceId?: string, _isCalendarEvent?: boolean) => console.log('delete', taskId),
+    onSetPriority: (priority: unknown) => console.log('setPriority', priority),
+    onSetStatus: (status: unknown) => console.log('setStatus', status),
+    onSetDueDate: (dateType: unknown) => console.log('setDueDate', dateType),
     onEnterFocusMode: () => console.log('enterFocusMode'),
     onDeleteSelected: () => console.log('deleteSelected'),
     onClearSelection: () => console.log('clearSelection'),
@@ -160,9 +160,9 @@ export const InboxBatchSelection: Story = {
     task: null, // No primary task in batch mode
     selectedCount: 5, // Multiple tasks selected
     onClose: () => console.log('close'),
-    onSetPriority: (priority: any) => console.log('setPriority', priority),
-    onSetStatus: (status: any) => console.log('setStatus', status),
-    onSetDueDate: (dateType: any) => console.log('setDueDate', dateType),
+    onSetPriority: (priority: unknown) => console.log('setPriority', priority),
+    onSetStatus: (status: unknown) => console.log('setStatus', status),
+    onSetDueDate: (dateType: unknown) => console.log('setDueDate', dateType),
     onEnterFocusMode: () => console.log('enterFocusMode'),
     onDeleteSelected: () => console.log('deleteSelected'),
     onClearSelection: () => console.log('clearSelection'),
@@ -179,11 +179,11 @@ export const InboxSingleSelected: Story = {
     selectedCount: 1,
     contextTask: realTask,
     onClose: () => console.log('close'),
-    onEdit: (taskId: any) => console.log('edit', taskId),
-    onConfirmDelete: (taskId: any, _instanceId?: any, _isCalendarEvent?: any) => console.log('delete', taskId),
-    onSetPriority: (priority: any) => console.log('setPriority', priority),
-    onSetStatus: (status: any) => console.log('setStatus', status),
-    onSetDueDate: (dateType: any) => console.log('setDueDate', dateType),
+    onEdit: (taskId: string) => console.log('edit', taskId),
+    onConfirmDelete: (taskId: string, _instanceId?: string, _isCalendarEvent?: boolean) => console.log('delete', taskId),
+    onSetPriority: (priority: unknown) => console.log('setPriority', priority),
+    onSetStatus: (status: unknown) => console.log('setStatus', status),
+    onSetDueDate: (dateType: unknown) => console.log('setDueDate', dateType),
     onEnterFocusMode: () => console.log('enterFocusMode'),
     onDeleteSelected: () => console.log('deleteSelected'),
     onClearSelection: () => console.log('clearSelection'),

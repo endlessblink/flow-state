@@ -44,6 +44,14 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+// Helper interface for story grouping
+interface MockGroup {
+  id: string
+  name: string
+  color: string
+  [key: string]: unknown
+}
+
 // Default create modal
 export const Default: Story = {
   args: {
@@ -63,11 +71,11 @@ export const Default: Story = {
         console.log('GroupModal closed')
       }
 
-      const handleCreated = (newGroup: any) => {
+      const handleCreated = (newGroup: unknown) => {
         console.log('Group created:', newGroup)
       }
 
-      const handleUpdated = (updatedGroup: any) => {
+      const handleUpdated = (updatedGroup: unknown) => {
         console.log('Group updated:', updatedGroup)
       }
 
@@ -120,11 +128,11 @@ export const EditGroup: Story = {
         console.log('Edit GroupModal closed')
       }
 
-      const handleCreated = (newGroup: any) => {
+      const handleCreated = (newGroup: unknown) => {
         console.log('Group created:', newGroup)
       }
 
-      const handleUpdated = (updatedGroup: any) => {
+      const handleUpdated = (updatedGroup: unknown) => {
         console.log('Group updated:', updatedGroup)
       }
 
@@ -168,8 +176,9 @@ export const ColorSelection: Story = {
         console.log('Color selection modal closed')
       }
 
-      const handleCreated = (newGroup: any) => {
-        console.log('Group created with color:', newGroup.color)
+      const handleCreated = (newGroup: unknown) => {
+        const groupData = newGroup as MockGroup
+        console.log('Group created with color:', groupData?.color)
       }
 
       return {
@@ -248,7 +257,7 @@ export const MultiplePositions: Story = {
         console.log('Modal closed')
       }
 
-      const handleCreated = (newGroup: any, position: { x: number, y: number }) => {
+      const handleCreated = (newGroup: unknown, position: { x: number, y: number }) => {
         console.log(`Group created at position (${position.x}, ${position.y}):`, newGroup)
       }
 
@@ -397,11 +406,11 @@ export const ValidationStates: Story = {
         scenarios.value.forEach(scenario => scenario.isOpen = false)
       }
 
-      const handleCreated = (newGroup: any) => {
+      const handleCreated = (newGroup: unknown) => {
         console.log('Group created:', newGroup)
       }
 
-      const handleUpdated = (updatedGroup: any) => {
+      const handleUpdated = (updatedGroup: unknown) => {
         console.log('Group updated:', updatedGroup)
       }
 
@@ -487,7 +496,7 @@ export const InteractiveWorkflow: Story = {
     components: { GroupModal },
     setup() {
       const isOpen = ref(false)
-      const createdGroups = ref([])
+      const createdGroups = ref<MockGroup[]>([])
       const editingGroup = ref(null)
       const mode = ref('create') // 'create' or 'edit'
 
@@ -497,7 +506,7 @@ export const InteractiveWorkflow: Story = {
         isOpen.value = true
       }
 
-      const openEditModal = (group: any) => {
+      const openEditModal = (group: unknown) => {
         mode.value = 'edit'
         editingGroup.value = group
         isOpen.value = true
@@ -507,21 +516,23 @@ export const InteractiveWorkflow: Story = {
         isOpen.value = false
       }
 
-      const handleCreated = (newGroup: any) => {
+      const handleCreated = (newGroup: unknown) => {
+        const groupData = newGroup as MockGroup
         createdGroups.value.push({
-          ...newGroup,
+          ...groupData,
           id: `group-${Date.now()}`,
           createdAt: new Date().toLocaleTimeString()
         })
         console.log('Group created:', newGroup)
       }
 
-      const handleUpdated = (updatedGroup: any) => {
-        const index = createdGroups.value.findIndex(g => g.id === updatedGroup.id)
+      const handleUpdated = (updatedGroup: unknown) => {
+        const groupData = updatedGroup as MockGroup
+        const index = createdGroups.value.findIndex(g => g.id === groupData.id)
         if (index !== -1) {
           createdGroups.value[index] = {
             ...createdGroups.value[index],
-            ...updatedGroup,
+            ...groupData,
             updatedAt: new Date().toLocaleTimeString()
           }
         }

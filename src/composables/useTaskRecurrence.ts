@@ -11,7 +11,11 @@ import type {
   TaskRecurrence,
   RecurringTaskInstance as _RecurringTaskInstance,
   RecurrenceValidationResult,
-  NotificationPreferences as _NotificationPreferences
+  NotificationPreferences as _NotificationPreferences,
+  WeeklyRecurrenceRule,
+  MonthlyRecurrenceRule,
+  DailyRecurrenceRule,
+  YearlyRecurrenceRule
 } from '@/types/recurrence'
 import { RecurrencePattern, EndCondition } from '@/types/recurrence'
 import {
@@ -143,7 +147,7 @@ export function useTaskRecurrence(taskId: string) {
       return
     }
 
-    (recurrence.value.rule as any).weekdays = weekdays
+    (recurrence.value.rule as WeeklyRecurrenceRule).weekdays = weekdays
   }
 
   /**
@@ -154,7 +158,7 @@ export function useTaskRecurrence(taskId: string) {
       return
     }
 
-    (recurrence.value.rule as any).dayOfMonth = dayOfMonth
+    (recurrence.value.rule as MonthlyRecurrenceRule).dayOfMonth = dayOfMonth
   }
 
   /**
@@ -318,14 +322,14 @@ export function useTaskRecurrence(taskId: string) {
 
     switch (rule.pattern) {
       case RecurrencePattern.DAILY: {
-        const dailyInterval = (rule as any).interval
+        const dailyInterval = (rule as DailyRecurrenceRule).interval
         description = dailyInterval === 1 ? 'Daily' : `Every ${dailyInterval} days`
         break
       }
 
       case RecurrencePattern.WEEKLY: {
-        const weeklyInterval = (rule as any).interval
-        const weekdays = (rule as any).weekdays
+        const weeklyInterval = (rule as WeeklyRecurrenceRule).interval
+        const weekdays = (rule as WeeklyRecurrenceRule).weekdays
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         const dayList = weekdays.map((d: number) => dayNames[d]).join(', ')
         description = weeklyInterval === 1
@@ -335,8 +339,8 @@ export function useTaskRecurrence(taskId: string) {
       }
 
       case RecurrencePattern.MONTHLY: {
-        const monthlyInterval = (rule as any).interval
-        const dayOfMonth = (rule as any).dayOfMonth
+        const monthlyInterval = (rule as MonthlyRecurrenceRule).interval
+        const dayOfMonth = (rule as MonthlyRecurrenceRule).dayOfMonth
         const suffix = getDaySuffix(dayOfMonth)
         description = monthlyInterval === 1
           ? `Monthly on the ${dayOfMonth}${suffix}`
@@ -345,9 +349,9 @@ export function useTaskRecurrence(taskId: string) {
       }
 
       case RecurrencePattern.YEARLY: {
-        const yearlyInterval = (rule as any).interval
-        const month = (rule as any).month
-        const yearDay = (rule as any).dayOfMonth
+        const yearlyInterval = (rule as YearlyRecurrenceRule).interval
+        const month = (rule as YearlyRecurrenceRule).month
+        const yearDay = (rule as YearlyRecurrenceRule).dayOfMonth
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         description = yearlyInterval === 1
           ? `Yearly on ${monthNames[month - 1]} ${yearDay}`

@@ -339,7 +339,7 @@
                 :key="event.id"
                 class="week-event"
                 :data-duration="event.duration"
-                :style="getWeekEventStyle(event) as any"
+                :style="getWeekEventStyle(event)"
                 :class="{
                   'multi-slot': event.slotSpan > 1,
                   'timer-active-event': timerStore.currentTaskId === event.taskId
@@ -542,6 +542,14 @@ import ProjectFilterDropdown from '@/components/ProjectFilterDropdown.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { ChevronLeft, ChevronRight, Calendar, Eye as _Eye, EyeOff as _EyeOff, ListTodo as _ListTodo, Play as _Play, Check as _Check, Video as _Video, VideoOff as _VideoOff, Download as _Download } from 'lucide-vue-next'
 import { dragRecorder as _dragRecorder, type InteractionAnalysis } from '@/utils/DragInteractionRecorder'
+import type { CalendarEvent } from '@/types/tasks'
+import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
+
+interface SortableEvent {
+  item: HTMLElement
+  newIndex: number
+  [key: string]: unknown
+}
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
@@ -592,7 +600,7 @@ const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
 
 // Calendar event selection state for keyboard operations - now supports multi-select
-const selectedCalendarEvents = ref<any[]>([])
+const selectedCalendarEvents = ref<CalendarEvent[]>([])
 
 // Hover state for slot tasks - used to show resize handles (draggable elements have inconsistent :hover)
 const hoveredEventId = ref<string | null>(null)
@@ -624,7 +632,7 @@ const { formatHour, formatEventTime, getPriorityClass, getPriorityLabel,
 const { setupScrollSync, cleanupScrollSync, scrollToCurrentTime } = calendarScroll
 
 // Wrapper for isCurrentTimeSlot that passes current time
-const isCurrentTimeSlot = (slot: any) => checkCurrentTimeSlot(slot, currentTime.value)
+const isCurrentTimeSlot = (slot: TimeSlot) => checkCurrentTimeSlot(slot, currentTime.value)
 
 // Time indicator computeds
 const isViewingToday = computed(() => {
@@ -641,7 +649,7 @@ const timeIndicatorPosition = computed(() => {
 })
 
 // Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
-const getSlotTaskStyle = (calEvent: any) => {
+const getSlotTaskStyle = (calEvent: CalendarEvent) => {
   const baseHeight = (calEvent.slotSpan * 30) - 4
 
   // If no overlap (totalColumns is 1 or undefined), use normal flow with full width
@@ -673,9 +681,9 @@ const getSlotTaskStyle = (calEvent: any) => {
 
 // vuedraggable integration for calendar time grid drop zone
 // This provides an alternative to native HTML5 drag-drop for better mobile support
-const timeGridDropList = ref<any[]>([])
+const timeGridDropList = ref<unknown[]>([])
 
-const _handleVueDraggableAdd = (evt: any) => {
+const _handleVueDraggableAdd = (evt: SortableEvent) => {
   // When a task is dropped via vuedraggable, schedule it to the drop time
   const droppedElement = evt.item
   const taskId = droppedElement?.dataset?.taskId
@@ -701,7 +709,7 @@ const _handleVueDraggableAdd = (evt: any) => {
   timeGridDropList.value = []
 }
 
-const _handleVueDraggableChange = (evt: any) => {
+const _handleVueDraggableChange = (evt: unknown) => {
   // Optional: handle change events for debugging
   console.log('[Calendar] vuedraggable change:', evt)
 }
@@ -709,7 +717,7 @@ const _handleVueDraggableChange = (evt: any) => {
 // Native HTML5 Drag-Drop handlers for inbox → calendar (per PomoFlow Development Prompt)
 // CRITICAL: @dragover.prevent is required or @drop never fires
 // These wrap the composable handlers with proper event handling
-const onDragOver = (e: DragEvent, slot: any) => {
+const onDragOver = (e: DragEvent, slot: TimeSlot) => {
   // CRITICAL: preventDefault() already called by @dragover.prevent modifier
   // BUT we must set dropEffect to validate this as a drop target
   if (e.dataTransfer) {
@@ -722,7 +730,7 @@ const onDragOver = (e: DragEvent, slot: any) => {
   handleDragOver(e, slot)
 }
 
-const onDragEnter = (e: DragEvent, slot: any) => {
+const onDragEnter = (e: DragEvent, slot: TimeSlot) => {
   // CRITICAL: preventDefault() already called by @dragenter.prevent modifier
   // Set dropEffect to validate this as a drop target
   if (e.dataTransfer) {
@@ -739,7 +747,7 @@ const onDragLeave = () => {
   handleDragLeave()
 }
 
-const onDropSlot = (e: DragEvent, slot: any) => {
+const onDropSlot = (e: DragEvent, slot: TimeSlot) => {
   // CRITICAL: preventDefault() already called by @drop.prevent modifier
   // BUT be explicit for clarity and add stopPropagation
   e.preventDefault()
@@ -1027,11 +1035,11 @@ const handleTaskCreated = (task: Task) => {
 }
 
 // Event interaction handlers
-const handleEventDblClick = (calendarEvent: any) => {
+const handleEventDblClick = (calendarEvent: CalendarEvent) => {
   handleEditTask(calendarEvent.taskId)
 }
 
-const handleEventContextMenu = (mouseEvent: MouseEvent, calendarEvent: any) => {
+const handleEventContextMenu = (mouseEvent: MouseEvent, calendarEvent: CalendarEvent) => {
   mouseEvent.preventDefault()
   mouseEvent.stopPropagation()
 
@@ -1046,7 +1054,7 @@ const handleEventContextMenu = (mouseEvent: MouseEvent, calendarEvent: any) => {
 }
 
 // Remove task from calendar timeline and move to inbox
-const handleRemoveFromCalendar = (calendarEvent: any) => {
+const handleRemoveFromCalendar = (calendarEvent: CalendarEvent) => {
   console.log(`🗑️ Removing task "${calendarEvent.title}" from calendar`)
 
   // Find the task
@@ -1063,7 +1071,7 @@ const handleRemoveFromCalendar = (calendarEvent: any) => {
 }
 
 // Calendar event selection for keyboard operations - now supports multi-select
-const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: any) => {
+const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: CalendarEvent) => {
   const eventElement = mouseEvent.currentTarget as HTMLElement
   const isCtrlOrCmd = mouseEvent.ctrlKey || mouseEvent.metaKey
 

@@ -173,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, nextTick, type CSSProperties } from 'vue'
 import {
   Edit2, Copy, Trash2, CheckCircle, Play, ChevronDown, ChevronUp,
   ArrowUpDown, LayoutGrid, ChevronRight, AlignHorizontalJustifyStart,
@@ -182,14 +182,27 @@ import {
   Rows, LayoutList, Grid3x3, Layers, Package
 } from 'lucide-vue-next'
 
+// Define a flexible node interface for the context menu
+interface CanvasNode {
+  id: string
+  type?: string
+  name?: string
+  title?: string
+  completed?: boolean
+  collapsed?: boolean
+  taskData?: unknown
+  sectionData?: unknown
+  [key: string]: unknown
+}
+
 interface Props {
   isVisible: boolean
   x: number
   y: number
   hasSelectedTasks?: boolean
   selectedCount?: number
-  node?: any // Canvas node or section
-  section?: any // Canvas section (legacy)
+  node?: CanvasNode
+  section?: CanvasNode // Legacy support
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -201,13 +214,13 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   close: []
-  editNode: [node: any]
-  duplicateNode: [node: any]
-  deleteNode: [node: any]
-  toggleComplete: [node: any]
-  startTimer: [node: any]
-  toggleCollapse: [node: any]
-  sortSection: [node: any]
+  editNode: [node: CanvasNode]
+  duplicateNode: [node: CanvasNode]
+  deleteNode: [node: CanvasNode]
+  toggleComplete: [node: CanvasNode]
+  startTimer: [node: CanvasNode]
+  toggleCollapse: [node: CanvasNode]
+  sortSection: [node: CanvasNode]
   alignLeft: []
   alignRight: []
   alignTop: []
@@ -227,12 +240,12 @@ const showLayoutSubmenu = ref(false)
 const submenuTimeout = ref<number | null>(null)
 const submenuPosition = ref({ flipHorizontal: false, adjustVertical: 0 })
 
-const menuPosition = computed(() => ({
-  position: 'fixed' as const,
+const menuPosition = computed((): CSSProperties => ({
+  position: 'fixed',
   left: `${props.x}px`,
   top: `${props.y}px`,
   zIndex: 99999
-}) as any)
+}))
 
 // Determine node type
 const isTaskNode = computed(() => {

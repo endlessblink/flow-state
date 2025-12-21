@@ -21,11 +21,24 @@ export interface VirtualScrollOptions {
   threshold?: number
 }
 
+import type { StyleValue } from 'vue'
+
 export interface VirtualScrollResult {
   virtualList: unknown
-  containerProps: unknown
-  wrapperProps: unknown
-  visibleItems: unknown[]
+  containerProps: {
+    ref: typeof ref<HTMLElement>
+    style: StyleValue
+    onScroll: (event: Event) => void
+    'data-virtual-scroll': boolean
+  }
+  wrapperProps: {
+    style: StyleValue
+  }
+  visibleItems: {
+    data: unknown
+    index: number
+    style: StyleValue
+  }[]
   scrollToItem: (index: number) => void
   scrollToTop: () => void
   scrollToBottom: () => void
@@ -38,6 +51,10 @@ export interface VirtualScrollResult {
     visibleItems: number
     renderedItems: number
     scrollPercentage: number
+    isScrolling: boolean
+    scrollDirection: 'up' | 'down' | null
+    lastRenderTime: number
+    memoryEfficiency: number
   }
 }
 
@@ -183,7 +200,7 @@ export function useVirtualScrolling<T extends VirtualItem>(
 
   // Visible items
   const visibleItems = computed(() => {
-    const startTime = (performance as any).now()
+    const startTime = globalThis.performance.now()
 
     let result
     if (!shouldUseVirtual.value) {
@@ -201,11 +218,12 @@ export function useVirtualScrolling<T extends VirtualItem>(
       }))
     } else {
       // Use virtual list for large lists
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       result = (virtualList as any).value
     }
 
     // Update performance metrics
-    const renderTime = (performance as any).now() - startTime
+    const renderTime = globalThis.performance.now() - startTime
     performanceMetrics.value.lastRenderTime = renderTime
     performanceMetrics.value.totalItems = items.length
     performanceMetrics.value.visibleItems = result.length
@@ -220,8 +238,8 @@ export function useVirtualScrolling<T extends VirtualItem>(
 
     const targetHeight = dynamicHeight
       ? Array.from(itemHeights.value.entries())
-          .filter(([i]) => i < index)
-          .reduce((sum, [, height]) => sum + height, 0)
+        .filter(([i]) => i < index)
+        .reduce((sum, [, height]) => sum + height, 0)
       : index * defaultItemHeight
 
     containerRef.value.scrollTo({
@@ -250,8 +268,8 @@ export function useVirtualScrolling<T extends VirtualItem>(
     const scrollTop = containerRef.value.scrollTop
     const itemTop = dynamicHeight
       ? Array.from(itemHeights.value.entries())
-          .filter(([i]) => i < index)
-          .reduce((sum, [, height]) => sum + height, 0)
+        .filter(([i]) => i < index)
+        .reduce((sum, [, height]) => sum + height, 0)
       : index * defaultItemHeight
     const itemHeight = getItemHeight(index)
     const itemBottom = itemTop + itemHeight
@@ -279,19 +297,19 @@ export function useVirtualScrolling<T extends VirtualItem>(
   })
 
   return {
-    virtualList: virtualList as any,
-    containerProps,
-    wrapperProps,
+    virtualList,
+    containerProps: containerProps as any, // keeping as any locally to match complex return type, but interface is typed
+    wrapperProps: wrapperProps as any,
     visibleItems: visibleItems as any,
     scrollToItem,
     scrollToTop,
     scrollToBottom,
-    totalSize: totalSize as any,
-    containerHeight: containerHeight as any,
+    totalSize: totalSize as unknown as number,
+    containerHeight: containerHeight as unknown as number,
     isVisible,
     updateItemHeight,
     performance: performance as any
-  } as any
+  } as VirtualScrollResult
 }
 
 // Preset configurations for common use cases

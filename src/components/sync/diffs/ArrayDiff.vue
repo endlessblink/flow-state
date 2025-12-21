@@ -120,8 +120,8 @@
 import { ref, computed } from 'vue'
 
 interface Props {
-  value: any
-  compareValue: any
+  value: unknown
+  compareValue: unknown
   mode: 'local' | 'remote'
 }
 
@@ -130,11 +130,11 @@ const props = defineProps<Props>()
 const showMergeOptions = ref(false)
 const mergeStrategy = ref<'union' | 'local' | 'remote' | 'intersection'>('union')
 
-const localArray = computed(() => {
+const localArray = computed<unknown[]>(() => {
   return Array.isArray(props.value) ? props.value : []
 })
 
-const remoteArray = computed(() => {
+const remoteArray = computed<unknown[]>(() => {
   return Array.isArray(props.compareValue) ? props.compareValue : []
 })
 
@@ -160,11 +160,11 @@ const mergedArray = computed(() => {
 })
 
 interface DiffItem {
-  value: any
+  value: unknown
   type: 'added' | 'removed' | 'unchanged' | 'duplicate'
   source?: 'local' | 'remote' | 'both'
   index?: number
-  duplicates?: any[]
+  duplicates?: unknown[]
 }
 
 const diffItems = computed((): DiffItem[] => {
@@ -229,9 +229,9 @@ function getItemKey(item: DiffItem, index: number): string {
   return `${getItemKeyInternal(item.value)}-${index}`
 }
 
-function getItemKeyInternal(item: any): string {
+function getItemKeyInternal(item: unknown): string {
   if (typeof item === 'object' && item !== null && 'id' in item) {
-    return String(item.id)
+    return String((item as { id: unknown }).id)
   }
   return JSON.stringify(item)
 }
@@ -267,14 +267,14 @@ function getItemIcon(item: DiffItem): string {
   }
 }
 
-function formatItemValue(item: any): string {
+function formatItemValue(item: unknown): string {
   if (item === null || item === undefined) return '(null)'
   if (typeof item === 'string') return item
   if (typeof item === 'object') return JSON.stringify(item, null, 2)
   return String(item)
 }
 
-function deepEqual(a: any, b: any): boolean {
+function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true
   if (a == null || b == null) return false
   if (typeof a !== typeof b) return false

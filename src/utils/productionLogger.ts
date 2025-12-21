@@ -408,7 +408,8 @@ export class ProductionLogger {
     }
 
     if (options.since) {
-      filteredLogs = filteredLogs.filter(log => log.timestamp >= options.since!)
+      const sinceDate = options.since
+      filteredLogs = filteredLogs.filter(log => log.timestamp >= sinceDate)
     }
 
     if (options.limit) {

@@ -477,9 +477,12 @@ export class ConflictResolutionEngine {
     if (!this.userRules.has(field)) {
       this.userRules.set(field, [])
     }
-    this.userRules.get(field)!.push(rule)
-    // Sort by priority
-    this.userRules.get(field)!.sort((a, b) => a.priority - b.priority)
+    const rules = this.userRules.get(field)
+    if (rules) {
+      rules.push(rule)
+      // Sort by priority
+      rules.sort((a, b) => a.priority - b.priority)
+    }
   }
 
   /**

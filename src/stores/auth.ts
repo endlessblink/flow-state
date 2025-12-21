@@ -17,13 +17,13 @@ import { ref, computed } from 'vue'
 // import { auth, db, waitForFirebase } from '@/config/firebase'
 
 // Mock type definitions for Firebase compatibility
-interface FirebaseUser {
+export interface FirebaseUser {
   uid: string
   email: string | null
   displayName: string | null
   photoURL: string | null
 }
-type User = FirebaseUser | null
+export type User = FirebaseUser | null
 type _Timestamp = Date
 
 // Document reference type for Firestore stubs
@@ -46,7 +46,7 @@ const _signInWithEmailAndPassword = (_auth: unknown, _email: string, _password: 
   Promise.reject(new Error('Firebase disabled'))
 const _signInWithPopup = (_auth: unknown, _provider: unknown): Promise<{ user: FirebaseUser }> =>
   Promise.reject(new Error('Firebase disabled'))
-const _GoogleAuthProvider: { new(): { setCustomParameters: (params: Record<string, string>) => void } } = class { setCustomParameters(_params: Record<string, string>) {} }
+const _GoogleAuthProvider: { new(): { setCustomParameters: (params: Record<string, string>) => void } } = class { setCustomParameters(_params: Record<string, string>) { } }
 const _firebaseSignOut = (_auth: unknown): Promise<void> => Promise.resolve()
 const _firebaseSendPasswordResetEmail = (_auth: unknown, _email: string): Promise<void> =>
   Promise.reject(new Error('Firebase disabled'))
@@ -54,7 +54,7 @@ const _firebaseUpdateProfile = (_user: FirebaseUser, _data: { displayName?: stri
   Promise.reject(new Error('Firebase disabled'))
 const _firebaseUpdatePassword = (_user: FirebaseUser, _newPassword: string): Promise<void> =>
   Promise.reject(new Error('Firebase disabled'))
-const _onAuthStateChanged: () => () => void = () => () => {}
+const _onAuthStateChanged: () => () => void = () => () => { }
 
 /**
  * User profile data stored in Firestore

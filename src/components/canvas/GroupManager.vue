@@ -154,6 +154,7 @@
                     v-model="sectionForm.filters.priorities"
                     type="checkbox"
                     :value="priority"
+                    @change="updatePriorityFilter(priority, ($event.target as HTMLInputElement).checked)"
                   >
                   <span class="checkbox-label">{{ priority.charAt(0).toUpperCase() + priority.slice(1) }}</span>
                 </label>
@@ -215,7 +216,7 @@
                 :key="layout"
                 class="layout-btn"
                 :class="{ active: sectionForm.layout === layout }"
-                @click="sectionForm.layout = layout as string"
+                @click="sectionForm.layout = layout as CanvasSection['layout']"
               >
                 {{ layout.charAt(0).toUpperCase() + layout.slice(1) }}
               </button>
@@ -287,7 +288,7 @@ const availableProjects = computed(() => {
 })
 
 const getSectionTypeLabel = (type: CanvasSection['type']) => {
-  const labels: Record<CanvasSection['type'], string> = {
+  const labels: Record<CanvasSection['type'] | 'date', string> = {
     custom: 'Custom',
     priority: 'Priority',
     status: 'Status',
@@ -323,7 +324,10 @@ const editSection = (section: CanvasSection) => {
       priorities: section.filters?.priorities || [],
       statuses: section.filters?.statuses || [],
       projects: section.filters?.projects || [],
-      dateRange: (section.filters?.dateRange as { start: string, end: string }) || { start: '', end: '' }
+      dateRange: (section.filters?.dateRange ? { 
+        start: (section.filters.dateRange as any).start || '', 
+        end: (section.filters.dateRange as any).end || '' 
+      } : { start: '', end: '' }) as { start: string, end: string }
     }
   }
 }

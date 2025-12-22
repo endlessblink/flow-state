@@ -138,6 +138,82 @@
           </div>
         </div>
 
+        <!-- By Duration Section -->
+        <div class="projects-divider" />
+        <div class="section-header">
+          <h3 class="section-title">
+            <Clock :size="16" class="section-icon" />
+            By Duration
+          </h3>
+        </div>
+
+        <div class="smart-views duration-views">
+          <DateDropZone
+            :active="taskStore.activeSmartView === 'quick'"
+            :count="quickCount"
+            target-type="nodate"
+            filter-color="green"
+            @click="selectSmartView('quick')"
+          >
+            <template #icon>
+              <Zap :size="16" />
+            </template>
+            Quick (< 15m)
+          </DateDropZone>
+
+          <DateDropZone
+            :active="taskStore.activeSmartView === 'short'"
+            :count="shortCount"
+            target-type="nodate"
+            filter-color="lime"
+            @click="selectSmartView('short')"
+          >
+            <template #icon>
+              <Timer :size="16" />
+            </template>
+            Short (15-30m)
+          </DateDropZone>
+
+          <DateDropZone
+            :active="taskStore.activeSmartView === 'medium'"
+            :count="mediumCount"
+            target-type="nodate"
+            filter-color="orange"
+            @click="selectSmartView('medium')"
+          >
+            <template #icon>
+              <Timer :size="16" />
+            </template>
+            Medium (30-60m)
+          </DateDropZone>
+
+          <DateDropZone
+            :active="taskStore.activeSmartView === 'long'"
+            :count="longCount"
+            target-type="nodate"
+            filter-color="red"
+            @click="selectSmartView('long')"
+          >
+            <template #icon>
+              <Clock :size="16" />
+            </template>
+            Long (> 60m)
+          </DateDropZone>
+
+          <DateDropZone
+            :active="taskStore.activeSmartView === 'unestimated'"
+            :count="unestimatedCount"
+            target-type="nodate"
+            filter-color="gray"
+            @click="selectSmartView('unestimated')"
+          >
+            <template #icon>
+              <HelpCircle :size="16" />
+            </template>
+            Unestimated
+          </DateDropZone>
+        </div>
+
         <!-- Projects Section Header -->
         <div class="projects-divider" />
 
@@ -174,7 +250,7 @@ import { useTaskStore, type Project } from '@/stores/tasks'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { 
   Plus, PanelLeftClose, Settings, FolderOpen, 
-  Calendar, List, Inbox, Zap 
+  Calendar, List, Inbox, Zap, Clock, Timer, HelpCircle 
 } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -211,6 +287,11 @@ const todayTaskCount = computed(() => taskStore.smartViewTaskCounts.today)
 const weekTaskCount = computed(() => taskStore.smartViewTaskCounts.week)
 const allActiveCount = computed(() => taskStore.smartViewTaskCounts.allActive)
 const uncategorizedCount = computed(() => taskStore.getUncategorizedTaskCount())
+const quickCount = computed(() => taskStore.smartViewTaskCounts.quick)
+const shortCount = computed(() => taskStore.smartViewTaskCounts.short)
+const mediumCount = computed(() => taskStore.smartViewTaskCounts.medium)
+const longCount = computed(() => taskStore.smartViewTaskCounts.long)
+const unestimatedCount = computed(() => taskStore.smartViewTaskCounts.unestimated)
 
 // Methods
 const selectSmartView = (view: string) => {

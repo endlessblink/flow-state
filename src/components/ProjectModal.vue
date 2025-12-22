@@ -213,12 +213,12 @@ watch(() => props.isOpen, async (isOpen) => {
   }
 })
 
-const saveProject = () => {
+const saveProject = async () => {
   if (!projectData?.value?.name?.trim()) return
 
   if (isEditing.value && props.project) {
     // Update existing project using store method
-    taskStore.updateProject(props.project.id, {
+    await taskStore.updateProject(props.project.id, {
       name: projectData?.value?.name?.trim() || '',
       color: projectData.value.color,
       colorType: projectData.value.colorType,
@@ -232,7 +232,7 @@ const saveProject = () => {
     }
   } else {
     // Create new project
-    const newProject = taskStore.createProject({
+    const newProject = await taskStore.createProject({
       name: projectData?.value?.name?.trim() || '',
       color: projectData.value.color,
       colorType: projectData.value.colorType,
@@ -240,7 +240,7 @@ const saveProject = () => {
       parentId: projectData.value.parentId
     })
 
-    emit('created', newProject)
+    emit('created', newProject as Project)
   }
 
   emit('close')

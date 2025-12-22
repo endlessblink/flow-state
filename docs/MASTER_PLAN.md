@@ -1,4 +1,4 @@
-**Last Updated**: December 22, 2025 (BUG-029, BUG-030, BUG-031, TASK-050, TASK-051 added)
+**Last Updated**: December 23, 2025 (TASK-044, ISSUE-013 DONE)
 **Version**: 5.4 (Stabilized + Conflict Prevention)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -18,9 +18,9 @@
 
 **Examples:**
 ```markdown
-### TASK-050: Add sorting to kanban (🔄 IN PROGRESS)
-### ~~TASK-049~~: Fix TypeScript errors (✅ COMPLETE)
-### BUG-027: Database timeout fix (✅ DONE)
+### TASK-XXX: Add sorting to kanban (🔄 IN PROGRESS)
+### ~~TASK-ZZZ~~: Fix TypeScript errors (✅ COMPLETE)
+### BUG-YYY: Database timeout fix (✅ DONE)
 ```
 
 ### Status Keywords (Parser Detection)
@@ -61,8 +61,8 @@ Parser calculates progress from checkbox subtasks:
 ```markdown
 | ID | Status | Primary Files | Depends | Blocks |
 |----|--------|---------------|---------|--------|
-| TASK-050 | 🔄 **IN PROGRESS** | `file.ts` | - | TASK-051 |
-| ~~TASK-049~~ | ✅ **DONE** | `file.ts` | - | - |
+| TASK-XXX | 🔄 **IN PROGRESS** | `file.ts` | - | TASK-ZZZ |
+| ~~TASK-YYY~~ | ✅ **DONE** | `file.ts` | - | - |
 ```
 
 ### Quick Reference
@@ -177,25 +177,16 @@ Parser calculates progress from checkbox subtasks:
 - [x] Implemented logic to trigger animation if task is < 5s old on mount. ✅
 - [x] Unified pulse and glow effect with teal theme. ✅
 
-### 🔴 BUG-031: Creating New Project Doesn't Work (Dec 22, 2025)
+### ✅ ~~BUG-031~~: Creating New Project Doesn't Work (✅ DONE)
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| New project creation fails | HIGH | 🔴 **OPEN** |
+| New project creation fails | HIGH | ✅ **FIXED** |
 
 **User Report**: "creating a new project doesnt work at all"
 
 **Files to investigate**: `tasks.ts` (project CRUD), `ProjectModal.vue`, dual-write logic
 
-### 🟡 TASK-050: Canvas Task Creation Animation (Dec 22, 2025)
-
-| Feature | Priority | Status |
-|---------|----------|--------|
-| Gentle animation on new task | LOW | 🟡 **BACKLOG** |
-
-**User Request**: "when a new task is created on the canvas there should be some sort of gentle animation to show where it was created"
-
-**Implementation idea**: CSS animation on TaskNode when newly created (pulse, glow, or scale-in)
 
 ### ✅ E2E Recovery Initiative (Dec 22, 2025)
 
@@ -239,7 +230,7 @@ Parser calculates progress from checkbox subtasks:
 |------|--------|------------|
 | Storybook regressions | Visual consistency | Standardized Pinia initialization |
 | Firebase dependency (stubbed) | Limited auth features | Consider CouchDB auth or backend |
-| `App.vue` 3.3k lines | Maintenance risk | TASK-044 planned |
+| ~~`App.vue` 3.3k lines~~ | ~~Maintenance risk~~ | ~~TASK-044~~ ✅ DONE |
 | `tasks.ts` 3k lines | Maintenance risk | ISSUE-014 tracking |
 
 ---
@@ -482,8 +473,7 @@ Phase 3 (Mobile) ←────────────────────
 
 | ID | Status | Primary Files | Depends | Blocks |
 |----|--------|---------------|---------|--------|
-| TASK-022 | 👀 MONITORING | `tasks.ts`, `taskDisappearanceLogger.ts` | - | TASK-024 |
-| TASK-024 | 👀 MONITORING | `tasks.ts` | TASK-022 (monitoring) | - |
+| TASK-022 | 👀 MONITORING | `tasks.ts`, `taskDisappearanceLogger.ts` | - | TASK-034 |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | TASK-014 | IN_PROGRESS | `*.stories.ts`, `*.vue` (UI) | - | - |
 | ~~TASK-019~~ | ✅ DONE | ~~`tasks.ts`, stores, views~~ | - | Superseded by TASK-027 |
@@ -498,7 +488,8 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
 | TASK-033 | PLANNED | `~/claude-plugins/*` (new) | - | - |
 | TASK-034 | ✅ PHASE 4 COMPLETE | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
-| TASK-035 | IN_PROGRESS | `useSmartViews.ts`, `tasks.ts`, `AppSidebar.vue`, `canvas.ts` | - | - |
+| ~~BUG-031~~ | ✅ DONE | `tasks.ts`, `ProjectModal.vue` | - | - |
+| **TASK-035** | 📋 **PLANNED** | `useSmartViews.ts`, `tasks.ts`, `AppSidebar.vue`, `canvas.ts` | - | - |
 | ~~TASK-036~~ | ✅ COMPLETE | `*.stories.ts` | - | - |
 | TASK-037 | PLANNED | `src/components/*` | - | - |
 | TASK-038 | PLANNED | `src/**/*.ts`, `src/**/*.vue` | - | - |
@@ -507,7 +498,7 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-041 | PLANNED | `src/utils/recurrenceUtils.ts`, `src/types/recurrence.ts` | - | - |
 | TASK-042 | PLANNED | `src/views/CanvasView.vue` (section dialog) | - | - |
 | TASK-043 | 🔄 **PLANNING** | `src/views/CanvasView.vue` | - | High Risk - Needs Analysis |
-| TASK-044 | 👀 **IN REVIEW** | `src/App.vue`, `src/layouts/*` (new) | - | Monitored by Antigravity |
+| ~~TASK-044~~ | ✅ **DONE** | `src/App.vue`, `src/layouts/*` (new) | - | Monitored by Antigravity |
 | TASK-045 | PLANNED | `src/composables/useSimpleBackup.ts`, `useBackupSystem.ts`, `useAutoBackup.ts` | - | - |
 | TASK-046 | PLANNED | `src/utils/performanceBenchmark.ts`, Canvas performance | - | - |
 | ~~**BUG-026**~~ | ✅ **DONE** | `useReliableSyncManager.ts`, `tasks.ts` | - | ~~TASK-047~~ |
@@ -516,15 +507,17 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**BUG-028**~~ | ✅ **DONE** | `useDatabase.ts` | - | - |
 | ~~**TASK-048**~~ | ✅ **DONE** | `useDatabase.ts` (Conflict Pruning) | - | - |
 | ~~**TASK-049**~~ | ✅ **DONE** | `useDatabase.ts` (Init Optimization) | - | - |
+| ~~TASK-050~~ | ✅ DONE | `TaskNode.vue` | - | - |
+| ~~TASK-051~~ | ✅ DONE | `UnifiedInboxPanel.vue`, `InboxFilters.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 **Parallel Safe**: TASK-014 (UI) + TASK-033 (plugin) + TASK-036 (storybook)
 **⏰ SCHEDULED Dec 28**: TASK-034 Phase 5 - Cleanup legacy task document
-**Active**: TASK-014 (Storybook UI), TASK-035 (Smart Groups), TASK-044 (App.vue Review)
-**Completed**: Recovery Initiative (BUG-026, BUG-027, TASK-047, TASK-048, TASK-049) + Zero Lint (TASK-027)
-**Ready**: TASK-022 monitoring complete, TASK-024 can start
+**Active**: TASK-014 (Storybook UI), TASK-035 (Smart Groups)
+**Completed**: Recovery Initiative (BUG-026, BUG-027, TASK-047, TASK-048, TASK-049) + Zero Lint (TASK-027) + App Refactor (TASK-044)
+**Ready**: TASK-022 monitoring active
 **Planned**: TASK-036-046 (code quality & architecture improvements)
-**Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-034 - work sequentially
+**Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-034 - work sequentially
 
 ---
 
@@ -793,13 +786,23 @@ Phase 3 (Mobile) ←────────────────────
 npx vue-tsc --noEmit  # Should output nothing (0 errors)
 ```
 
+### ~~TASK-031~~: Claude Code Hooks & Settings (✅ DONE)
+
+**Goal**: Configure Claude Code hooks for build/test verification and lock management.
+
+---
+
+### TASK-032: NPM Script Verification Hook (✅ DONE)
+
+**Goal**: Implement `check-npm-scripts.sh` to prevent pushing code with broken build scripts.
+
 ---
 
 ### TASK-029: Storybook Audit Skill (PLANNED)
 
 **Goal**: Create a Claude Code skill that automatically audits Storybook stories for common issues and fixes them.
 
-**Priority**: P1-HIGH
+**Priority**: P2
 **Depends On**: TASK-014 (Storybook work provides patterns to encode in skill)
 
 **Audit Capabilities**:
@@ -1019,7 +1022,7 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 ---
 
-### TASK-035: Duration-based Smart Groups (PLANNED)
+### 🔄 TASK-035: Duration-based Smart Groups (🔄 IN PROGRESS)
 
 **Goal**: Add smart groups for organizing tasks by estimated duration (Quick/Short/Medium/Long/Unestimated).
 
@@ -1058,30 +1061,32 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 ---
 
-### TASK-044: Refactor App.vue into Sub-Layouts (👀 IN REVIEW)
+### ~~TASK-044~~: Refactor App.vue into Sub-Layouts (✅ DONE)
 
 **Goal**: Extract sub-components from the monolithic `App.vue` (3.3k lines) into dedicated layout components to improve maintainability and performance.
 
 **Priority**: P1-HIGH (Technical Debt / Stability)
 **Assigned to**: Antigravity
-**Status**: 👀 IN REVIEW (Monitoring for stability Dec 22-25)
+**Status**: ✅ DONE (Dec 23, 2025)
 
 **Extracted Components**:
 - [x] **`src/layouts/ModalManager.vue`**: Centralizes all global modals (Settings, Project, Task Edit, Search, etc.).
 - [x] **`src/layouts/AppSidebar.vue`**: Extracted main sidebar navigation, smart views, and project tree.
 - [x] **`src/layouts/AppHeader.vue`**: Main application header including Title, Timer, and Sync status.
-- [ ] **`src/layouts/AppNavigation.vue`**: (Optional) Further navigation cleanup if needed.
+- [x] **`src/layouts/MainLayout.vue`**: New main layout shell containing sidebar and content area.
+- [x] **`src/composables/app/useAppInitialization.ts`**: Extracted app startup logic.
+- [x] **`src/composables/app/useAppShortcuts.ts`**: Extracted global keyboard shortcut management.
 
 **Implementation Strategy**:
 1. **Extraction**: Move template, script logic, and scoped styles to new component.
 2. **Integration**: Import and mount new component in `App.vue` using `ref` for communication.
 3. **Cleanup**: Remove redundant logic/styles from `App.vue`.
-4. **Verification**: `npm run build` and manual functionality check.
+4. **Verification**: Build passes and manual functionality check.
 
-**Current Activity**:
-- `App.vue` reduced from ~3.3k lines to ~1.4k lines.
-- `AppHeader`, `AppSidebar`, `ModalManager` successfully extracted.
-- Monitoring for regressions.
+**Final Result**:
+- `App.vue` reduced from ~3,300 lines to ~75 lines.
+- Logic decoupled into testable composables.
+- Global styles consolidated into `assets/global-overrides.css`.
 
 ---
 
@@ -1350,39 +1355,6 @@ Dec 22, 2025 - Fixed 4 failing Storybook tests and standardized Pinia initializa
 **Risk**: HIGH - Core view, tightly integrated with Vue Flow
 **Note**: May decide NOT to refactor after analysis
 
----
-
-### TASK-044: Refactor App.vue into Sub-Layouts (🔄 **IN PROGRESS**)
-
-**Goal**: Break down the 3,300-line root component into logical sub-layouts.
-
-**Priority**: P2-MEDIUM (maintenance risk mitigation)
-**Created**: December 22, 2025
-**Related**: ISSUE-013
-
-**Current State**:
-- `src/App.vue` is 3,300+ lines
-- Contains routing, modals, global state, layout logic
-- Maintenance complexity increasing
-
-**Proposed Structure**:
-```
-src/
-├── App.vue              # Slim root (< 500 lines)
-├── layouts/
-│   ├── MainLayout.vue   # Navigation + sidebar
-│   ├── ModalManager.vue # Global modal handling
-│   └── AuthLayout.vue   # Auth wrapper
-```
-
-**Steps**:
-1. Audit current App.vue responsibilities
-2. Extract modal management to ModalManager
-3. Extract navigation/sidebar to MainLayout
-4. Keep minimal routing in App.vue
-5. Test all views after extraction
-
-**Risk**: MEDIUM - Core component, test thoroughly
 
 ---
 
@@ -1496,34 +1468,14 @@ Dec 18, 2025 - Added Unscheduled, Priority, and Project filters to canvas inbox.
 
 ---
 
-### TASK-022: Task Disappearance Logger & Investigation (👀 MONITORING)
-Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance events until Dec 20-21.
+### TASK-022: Task Disappearance Monitoring & Review (👀 MONITORING)
+Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance events. This task combines the previous logger setup (TASK-022) and review SOP (TASK-024).
 
 **Features**:
 - Identified 6 critical task removal locations in `tasks.ts`
 - Created `taskDisappearanceLogger.ts` with snapshot, diff, and search capabilities
 - Integrated logging into task store, cross-tab sync, and main.ts
 - Auto-enabled on app startup for monitoring
-
-**Files Created/Modified**:
-- `src/utils/taskDisappearanceLogger.ts` - Logger utility
-- `src/stores/tasks.ts` - Wrapped all `tasks.value =` assignments
-- `src/composables/useCrossTabSync.ts` - Added delete operation logging
-- `src/main.ts` - Auto-enable on startup
-
-*Full details: [Archive](./archive/Done-Tasks-Master-Plan.md#task-022-task-disappearance-logger--investigation-complete)*
-
----
-
-### TASK-024: Review Task Disappearance Logs (⏸️ PASSIVE MONITORING)
-
-**Goal**: Analyze taskDisappearanceLogger data IF task disappearance is reproduced.
-
-**Priority**: P3-LOW (passive - only activate if issue recurs)
-
-**Depends On**: ~~TASK-022~~ (COMPLETE - logger is active)
-
-**Status**: ⏸️ On hold - User cannot reliably reproduce the issue. Logger remains active for passive monitoring.
 
 #### If Issue Recurs - Run These Steps
 
@@ -2439,7 +2391,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ISSUE-010 | **Inbox task deletion inconsistent** | P2-MEDIUM | Deleting from calendar/canvas inbox should delete everywhere, recoverable only via Ctrl+Z (like board) |
 | ~~ISSUE-011~~ | ~~**PouchDB Document Conflict Accumulation**~~ | ~~P0-CRITICAL~~ | ✅ RESOLVED Dec 20, 2025 - All 1,487 conflicts deleted |
 | ~~ISSUE-012~~ | ~~**Data Loss Investigation - E2E Analysis**~~ | ~~P0-CRITICAL~~ | ✅ RESOLVED Dec 20, 2025 - User data restored from conflicting revision |
-| ISSUE-013 | **App.vue 3,300 lines - maintenance risk** | P2-MEDIUM | Break into sub-layouts. See TASK-044 |
+| ~~ISSUE-013~~ | ~~**App.vue 3,300 lines - maintenance risk**~~ | ~~P2-MEDIUM~~ | ✅ RESOLVED Dec 23, 2025 - See TASK-044 |
 | ISSUE-014 | **tasks.ts 3,000 lines - maintenance risk** | P2-MEDIUM | Large store complexity. Monitor for extraction opportunities |
 | ISSUE-015 | **Firebase dependency (stubbed)** | P3-LOW | Auth features stubbed. Consider CouchDB auth or full backend migration |
 

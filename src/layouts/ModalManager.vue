@@ -256,6 +256,40 @@ const confirmDeleteProject = (project: Project) => {
   showConfirmModal.value = true
 }
 
+const handleConfirmDeleteSelected = () => {
+  const selectedTaskIds = [...taskStore.selectedTaskIds]
+  if (selectedTaskIds.length === 0) return
+
+  const selectedTasks = taskStore.tasks.filter(task => selectedTaskIds.includes(task.id))
+  let message = ''
+  let details: string[] = []
+
+  if (selectedTasks.length === 1) {
+    const task = selectedTasks[0]
+    message = `Delete task "${task.title}"?`
+    details = ['This will permanently remove the task from all views.']
+  } else {
+    message = `Delete ${selectedTasks.length} selected tasks?`
+    const taskTitles = selectedTasks.map(task => `• ${task.title}`)
+    details = [
+      'This will permanently remove the following tasks from all views:',
+      ...taskTitles
+    ]
+  }
+
+  confirmAction.value = async () => {
+    const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+    const undoRedoActions = useUnifiedUndoRedo()
+    for (const taskId of selectedTaskIds) {
+      await undoRedoActions.deleteTaskWithUndo(taskId)
+    }
+    taskStore.clearSelection()
+  }
+  confirmMessage.value = message
+  confirmDetails.value = details
+  showConfirmModal.value = true
+}
+
 // Global Event Handlers
 const handleOpenTaskEdit = (event: Event) => {
   const customEvent = event as CustomEvent
@@ -296,12 +330,18 @@ onMounted(() => {
   window.addEventListener('open-task-edit', handleOpenTaskEdit)
   window.addEventListener('task-context-menu', handleTaskContextMenu)
   window.addEventListener('project-context-menu', handleProjectContextMenu)
+  window.addEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
+  window.addEventListener('open-search', () => { showSearchModal.value = true })
+  window.addEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
 })
 
 onUnmounted(() => {
   window.removeEventListener('open-task-edit', handleOpenTaskEdit)
   window.removeEventListener('task-context-menu', handleTaskContextMenu)
   window.removeEventListener('project-context-menu', handleProjectContextMenu)
+  window.removeEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
+  window.removeEventListener('open-search', () => { showSearchModal.value = true })
+  window.removeEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
 })
 
 // Expose methods for App.vue or parent triggers

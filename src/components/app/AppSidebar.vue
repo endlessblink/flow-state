@@ -11,7 +11,7 @@
         <span class="brand-icon">🍅</span>
         <span class="brand-text">Pomo-Flow v9 - DEBUGGING TEST</span>
       </div>
-      <BaseButton variant="secondary" size="md" @click="() => {}">
+      <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
         <Plus :size="14" />
         Create project
       </BaseButton>
@@ -58,7 +58,7 @@
           <FolderOpen :size="16" class="section-icon" />
           Projects
         </h3>
-        <button class="add-project-btn" title="Add Project" @click="() => {}">
+        <button class="add-project-btn" title="Add Project" @click="sidebar.openCreateProject">
           <Plus :size="14" />
         </button>
       </div>
@@ -169,6 +169,10 @@ const taskStore = useTaskStore()
 const _uiStore = useUIStore()
 
 // Quick task creation
+import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
+import BaseButton from '@/components/base/BaseButton.vue'
+
+const sidebar = useSidebarManagement()
 const newTaskTitle = ref('')
 
 // Use the exact same pattern as Board view (line 168-177) but for root projects only

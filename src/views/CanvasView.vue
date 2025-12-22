@@ -494,8 +494,7 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { storeToRefs } from 'pinia'
-import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
-import { resolveDueDate } from '@/composables/useGroupSettings'
+import { useCanvasDragDrop } from '@/composables/canvas/useCanvasDragDrop'
 import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
@@ -1694,7 +1693,7 @@ const {
     batchedSyncNodes,
     syncNodes,
     closeCanvasContextMenu,
-    closeEdgeContextMenu: () => closeEdgeContextMenu() // Delayed init
+    closeEdgeContextMenu: () => closeEdgeContextMenu()
   },
   {
     isQuickTaskCreateOpen,
@@ -1711,10 +1710,28 @@ const {
     showNodeContextMenu,
     nodeContextMenuX,
     nodeContextMenuY,
-    filteredTasks: filteredTasks as any // Type assertion for computed ref
+    filteredTasks: filteredTasks as any
   },
   undoHistory
 )
+
+const {
+  handleNodeDragStart,
+  handleNodeDragStop,
+  handleNodeDrag,
+  getContainingSection,
+  isTaskInSectionBounds,
+  applySectionPropertiesToTask
+} = useCanvasDragDrop({
+  taskStore,
+  canvasStore,
+  nodes,
+  filteredTasks,
+  withVueFlowErrorBoundary,
+  syncNodes
+}, {
+  isNodeDragging
+})
 
 const {
   handleConnectStart,
@@ -1727,7 +1744,7 @@ const {
   {
     syncEdges,
     closeCanvasContextMenu,
-    closeEdgeContextMenu: () => showEdgeContextMenu.value = false, // Self-referential handling
+    closeEdgeContextMenu: () => showEdgeContextMenu.value = false,
     closeNodeContextMenu,
     addTimer: (id) => resourceManager.addTimer(id),
     withVueFlowErrorBoundary
@@ -2199,369 +2216,12 @@ const collectTasksForSection = (sectionId: string) => {
 // Note: Auto-collect is triggered manually via magnet button (@collect event in SectionNodeSimple)
 // No automatic watcher needed - prevents infinite recursion
 
-// Helper: Check if task is inside a section
-const getContainingSection = (taskX: number, taskY: number, taskWidth: number = 220, taskHeight: number = 100) => {
-  return canvasStore.sections.find(section => {
-    const { x, y, width, height } = section.position
-    const taskCenterX = taskX + taskWidth / 2
-    const taskCenterY = taskY + taskHeight / 2
-
-    // For collapsed sections, use the full/original height for containment detection
-    // This allows tasks positioned in the logical area to trigger property updates
-    const detectionHeight = section.isCollapsed ? height : height
-
-    console.log('[getContainingSection] Checking section:', {
-      name: section.name,
-      isCollapsed: section.isCollapsed,
-      visualHeight: section.isCollapsed ? 80 : height,
-      detectionHeight,
-      bounds: { x, y, width, height: detectionHeight },
-      taskCenter: { x: taskCenterX, y: taskCenterY }
-    })
-
-    const isInside = (
-      taskCenterX >= x &&
-      taskCenterX <= x + width &&
-      taskCenterY >= y &&
-      taskCenterY <= y + detectionHeight
-    )
-
-    if (isInside) {
-      console.log('[getContainingSection] ✓ Task is inside section:', section.name)
-    }
-
-    return isInside
-  })
-}
-
-// Helper: Check if coordinates are within section bounds
-const isTaskInSectionBounds = (x: number, y: number, section: CanvasSection, taskWidth: number = 220, taskHeight: number = 100) => {
-  const { x: sx, y: sy, width, height } = section.position
-  const taskCenterX = x + taskWidth / 2
-  const taskCenterY = y + taskHeight / 2
-
-  return (
-    taskCenterX >= sx &&
-    taskCenterX <= sx + width &&
-    taskCenterY >= sy &&
-    taskCenterY <= sy + height
-  )
-}
-
-// Helper: Apply section properties to task
-// UNIFIED SYSTEM: Uses assignOnDrop settings first, falls back to legacy type-based behavior
-const applySectionPropertiesToTask = (taskId: string, section: CanvasSection) => {
-  console.log('[applySectionPropertiesToTask] Called with:', {
-    taskId,
-    sectionName: section.name,
-    sectionType: section.type,
-    assignOnDrop: section.assignOnDrop,
-    propertyValue: section.propertyValue
-  })
-
-  const updates: Partial<Task> = {}
-
-  // 1. UNIFIED APPROACH: Check for explicit assignOnDrop settings first
-  if (section.assignOnDrop) {
-    const settings = section.assignOnDrop
-
-    if (settings.priority) {
-      updates.priority = settings.priority
-    }
-    if (settings.status) {
-      updates.status = settings.status
-    }
-    if (settings.projectId) {
-      updates.projectId = settings.projectId
-    }
-    if (settings.dueDate) {
-      // Resolve smart date values like 'today', 'tomorrow' to actual dates
-      const resolvedDate = resolveDueDate(settings.dueDate)
-      if (resolvedDate !== null) {
-        updates.dueDate = resolvedDate
-      }
-    }
-
-    if (Object.keys(updates).length > 0) {
-      console.log('[applySectionPropertiesToTask] Applying assignOnDrop updates:', updates)
-      taskStore.updateTaskWithUndo(taskId, updates)
-      return
-    }
-  }
-
-  // 2. AUTO-DETECT: If no assignOnDrop settings, try keyword detection on section name
-  const keyword = detectPowerKeyword(section.name)
-  if (keyword) {
-    console.log('[applySectionPropertiesToTask] Auto-detected keyword:', keyword)
-
-    switch (keyword.category) {
-      case 'date':
-        // Use smart group logic for dates - handles keeping in inbox correctly
-        taskStore.moveTaskToSmartGroup(taskId, keyword.value)
-        console.log(`[applySectionPropertiesToTask] Called moveTaskToSmartGroup for ${keyword.value}`)
-        return
-
-      case 'priority':
-        updates.priority = keyword.value as 'high' | 'medium' | 'low'
-        break
-
-      case 'status':
-        updates.status = keyword.value as Task['status']
-        break
-    }
-
-    if (Object.keys(updates).length > 0) {
-      console.log('[applySectionPropertiesToTask] Applying keyword-based updates:', updates)
-      taskStore.updateTaskWithUndo(taskId, updates)
-      return
-    }
-  }
-
-  // 3. LEGACY FALLBACK: Use old type-based behavior for backward compatibility
-  switch (section.type) {
-    case 'priority':
-      if (!section.propertyValue) return
-      updates.priority = section.propertyValue as 'high' | 'medium' | 'low'
-      break
-    case 'status':
-      if (!section.propertyValue) return
-      updates.status = section.propertyValue as Task['status']
-      break
-    case 'project':
-      if (!section.propertyValue) return
-      updates.projectId = section.propertyValue
-      break
-    case 'custom':
-    case 'timeline':
-      // Check if this is a smart group (today, tomorrow, weekend, etc.)
-      if (shouldUseSmartGroupLogic(section.name)) {
-        const smartGroupType = getSmartGroupType(section.name)
-        if (smartGroupType) {
-          console.log(`[applySectionPropertiesToTask] Detected smart group: ${smartGroupType}`)
-          taskStore.moveTaskToSmartGroup(taskId, smartGroupType)
-          console.log(`[applySectionPropertiesToTask] Called moveTaskToSmartGroup for ${smartGroupType}`)
-        } else {
-          taskStore.moveTaskToDate(taskId, section.propertyValue || section.name)
-        }
-      } else {
-        taskStore.moveTaskToDate(taskId, section.propertyValue || section.name)
-      }
-      return
-  }
-
-  if (Object.keys(updates).length > 0) {
-    console.log('[applySectionPropertiesToTask] Applying legacy updates:', updates)
-    taskStore.updateTaskWithUndo(taskId, updates)
-  } else {
-    console.log('[applySectionPropertiesToTask] No updates to apply')
-  }
-}
+// Enhanced error boundary wrapper for Vue Flow operations using comprehensive error handling
 
 // Enhanced error boundary wrapper for Vue Flow operations using comprehensive error handling
 
 
-// Handle node drag start - Vue Flow handles parent-child automatically now
-const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: { node: Node }) => {
-  const { node } = event
-
-  // FIXED: Set drag guard to prevent syncNodes during drag
-  isNodeDragging.value = true
-
-  if (node.id.startsWith('section-')) {
-    const sectionId = node.id.replace('section-', '')
-    const section = canvasStore.sections.find(s => s.id === sectionId)
-
-    if (section) {
-      // Just track the start position - Vue Flow will handle child dragging
-      console.log(`Started dragging section: ${section.name}`)
-    }
-  }
-})
-
-// Handle node drag stop - save position and apply section properties with parent-child support - FIXED to preserve group selection
-const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event: { node: Node }) => {
-  const { node } = event
-
-  // Preserve selection state during drag operations
-  const selectedIdsBeforeDrag = [...canvasStore.selectedNodeIds]
-
-  // Check if it's a section node or task node
-  if (node.id.startsWith('section-')) {
-    const sectionId = node.id.replace('section-', '')
-    const section = canvasStore.sections.find(s => s.id === sectionId)
-
-    if (section) {
-      // Calculate position delta and update all child tasks
-      const deltaX = node.position.x - section.position.x
-      const deltaY = node.position.y - section.position.y
-
-      // Update section position in store
-      canvasStore.updateSectionWithUndo(sectionId, {
-        position: {
-          x: node.position.x,
-          y: node.position.y,
-          width: node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : 300,
-          height: node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : 200
-        }
-      })
-
-      // Update all child task positions to maintain relative positioning
-      if (Array.isArray(filteredTasks.value)) {
-        filteredTasks.value
-          .filter(task => {
-          if (!task.canvasPosition) return false
-          const taskSection = canvasStore.sections.find(s => {
-            const { x, y, width, height } = s.position
-            // Safe guard against missing canvasPosition
-            if (!task.canvasPosition) return false
-            return task.canvasPosition.x >= x &&
-                   task.canvasPosition.x <= x + width &&
-                   task.canvasPosition.y >= y &&
-                   task.canvasPosition.y <= y + height
-          })
-          return taskSection?.id === sectionId
-        })
-        .forEach(task => {
-          if (task.canvasPosition) {
-            taskStore.updateTaskWithUndo(task.id, {
-              canvasPosition: {
-                x: task.canvasPosition.x + deltaX,
-                y: task.canvasPosition.y + deltaY
-              }
-            })
-          }
-        })
-      }
-
-      console.log(`Section dragged to: (${node.position.x}, ${node.position.y}) with ${Array.isArray(filteredTasks.value) ? filteredTasks.value.filter(t => {
-        if (!t.canvasPosition) return false
-        const taskSection = canvasStore.sections.find(s => {
-          if (!t.canvasPosition) return false
-          const { x, y, width, height } = s.position
-          return t.canvasPosition.x >= x && t.canvasPosition.x <= x + width &&
-                 t.canvasPosition.y >= y && t.canvasPosition.y <= y + height
-        })
-        return taskSection?.id === sectionId
-      }).length : 0} child tasks`)
-    }
-  } else {
-    // For task nodes, update position with improved section handling
-    if (node.parentNode) {
-      // Task was in a section - convert relative to absolute position
-      const sectionId = node.parentNode.replace('section-', '')
-      const section = canvasStore.sections.find(s => s.id === sectionId)
-
-      if (section) {
-        const absoluteX = section.position.x + node.position.x
-        const absoluteY = section.position.y + node.position.y
-
-        taskStore.updateTaskWithUndo(node.id, {
-          canvasPosition: { x: absoluteX, y: absoluteY }
-        })
-
-        // Check if task moved outside the original section
-        const movedOutside = !isTaskInSectionBounds(absoluteX, absoluteY, section)
-        if (movedOutside) {
-          console.log(`Task ${node.id} moved outside section ${sectionId}`)
-          // FIX: Clear parentNode to break Vue Flow parent-child relationship
-          // This prevents orphaned tasks from moving with their old section
-          // and prevents them from being deleted when the section is deleted
-          const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
-          if (nodeIndex !== -1) {
-            nodes.value[nodeIndex] = {
-              ...nodes.value[nodeIndex],
-              parentNode: undefined,
-              position: { x: absoluteX, y: absoluteY }
-            }
-          }
-        }
-      }
-    } else {
-      // Task was not in a section - update absolute position directly
-      taskStore.updateTaskWithUndo(node.id, {
-        canvasPosition: { x: node.position.x, y: node.position.y }
-      })
-    }
-
-    // Check if task is inside a smart section and apply properties (works for all tasks)
-    // CRITICAL: Use absolute coordinates, not relative node.position
-    let checkX, checkY
-
-    if (node.parentNode) {
-      // Task was in a section - need to use absolute coordinates
-      const sectionId = node.parentNode.replace('section-', '')
-      const section = canvasStore.sections.find(s => s.id === sectionId)
-      if (section) {
-        checkX = section.position.x + node.position.x
-        checkY = section.position.y + node.position.y
-      } else {
-        checkX = node.position.x
-        checkY = node.position.y
-      }
-    } else {
-      // Task has no parent - position is already absolute
-      checkX = node.position.x
-      checkY = node.position.y
-    }
-
-    console.log('[handleNodeDragStop] Checking containment with coordinates:', { checkX, checkY, hasParent: !!node.parentNode })
-    const containingSection = getContainingSection(checkX, checkY)
-    console.log('[handleNodeDragStop] Found section:', containingSection ? { name: containingSection.name, type: containingSection.type, propertyValue: containingSection.propertyValue } : 'null')
-
-    if (containingSection) {
-      // FIX Dec 5, 2025: Use centralized smart group detection instead of incomplete inline check
-      // This ensures 'today', 'tomorrow', 'this week', 'this weekend', 'later' all work
-      const isSmartGroupSection = shouldUseSmartGroupLogic(containingSection.name)
-
-      // Apply properties for non-custom sections OR custom sections that are smart groups
-      if (containingSection.type !== 'custom' || isSmartGroupSection) {
-        console.log('[handleNodeDragStop] Applying properties for section:', containingSection.name, 'isSmartGroup:', isSmartGroupSection)
-        applySectionPropertiesToTask(node.id, containingSection)
-
-        // FIX BUG-005 Dec 16, 2025: Sync nodes after applying section properties
-        // Without this, the node data (snapshot) doesn't reflect updated task properties (dueDate, priority, etc.)
-        // This ensures the UI shows the updated values immediately after drop
-        syncNodes()
-        console.log('[handleNodeDragStop] syncNodes() called after property application')
-      } else {
-        console.log('[handleNodeDragStop] ⚠️ Skipping property application for custom section:', containingSection.name)
-      }
-    }
-
-    // Restore selection state after drag operation to maintain group connection
-    if (selectedIdsBeforeDrag.length > 0) {
-      canvasStore.setSelectedNodes(selectedIdsBeforeDrag)
-
-      // Ensure Vue Flow nodes reflect the restored selection
-      nodes.value.forEach(node => {
-        const nodeWithSelection = node as Node & { selected?: boolean }
-        nodeWithSelection.selected = selectedIdsBeforeDrag.includes(node.id)
-      })
-    }
-  }
-
-  // FIXED: Clear drag guard after position is saved
-  // Use setTimeout instead of nextTick to prevent race condition where syncNodes
-  // runs before position is fully persisted, causing position to reset
-  setTimeout(() => {
-    isNodeDragging.value = false
-  }, 50)
-})
-
-// Handle node drag - Vue Flow handles parent-child automatically now
-const handleNodeDrag = (event: { node: Node }) => {
-  const { node } = event
-
-  // Optional: Add real-time drag feedback if needed
-  // For now, Vue Flow handles the visual dragging
-  if (node.id.startsWith('section-')) {
-    const sectionId = node.id.replace('section-', '')
-    const section = canvasStore.sections.find(s => s.id === sectionId)
-    if (section) {
-      console.log(`Dragging section: ${section.name}`)
-    }
-  }
-}
+// handleNodeDragStart, handleNodeDragStop, handleNodeDrag extracted to useCanvasDragDrop.ts
 
 // Handle nodes change (for selection tracking and resize) - FIXED to prevent position updates during resize
 const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes: Array<{ type: string; id?: string; dimensions?: { width: number; height: number } }>) => {

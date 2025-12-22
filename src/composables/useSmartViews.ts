@@ -2,7 +2,8 @@
 // Single source of truth for all smart view filtering logic
 import type { Task } from '@/types/tasks'
 
-export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null
+export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' |
+  'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
 
 /**
  * Centralized smart view filtering composable
@@ -199,6 +200,29 @@ export const useSmartViews = () => {
   }
 
   /**
+   * Duration-based check helpers
+   */
+  const isQuickTask = (task: Task): boolean => {
+    return !!task.estimatedDuration && task.estimatedDuration <= 15 && task.status !== 'done'
+  }
+
+  const isShortTask = (task: Task): boolean => {
+    return !!task.estimatedDuration && task.estimatedDuration > 15 && task.estimatedDuration <= 30 && task.status !== 'done'
+  }
+
+  const isMediumTask = (task: Task): boolean => {
+    return !!task.estimatedDuration && task.estimatedDuration > 30 && task.estimatedDuration <= 60 && task.status !== 'done'
+  }
+
+  const isLongTask = (task: Task): boolean => {
+    return !!task.estimatedDuration && task.estimatedDuration > 60 && task.status !== 'done'
+  }
+
+  const isUnestimatedTask = (task: Task): boolean => {
+    return !task.estimatedDuration && task.status !== 'done'
+  }
+
+  /**
    * Apply smart view filter to an array of tasks
    */
   const applySmartViewFilter = (tasks: Task[], smartView: SmartView): Task[] => {
@@ -216,6 +240,16 @@ export const useSmartViews = () => {
           return isUnscheduledTask(task)
         case 'in_progress':
           return isInProgressTask(task)
+        case 'quick':
+          return isQuickTask(task)
+        case 'short':
+          return isShortTask(task)
+        case 'medium':
+          return isMediumTask(task)
+        case 'long':
+          return isLongTask(task)
+        case 'unestimated':
+          return isUnestimatedTask(task)
         default:
           return true
       }
@@ -240,6 +274,16 @@ export const useSmartViews = () => {
           return isUnscheduledTask(task)
         case 'in_progress':
           return isInProgressTask(task)
+        case 'quick':
+          return isQuickTask(task)
+        case 'short':
+          return isShortTask(task)
+        case 'medium':
+          return isMediumTask(task)
+        case 'long':
+          return isLongTask(task)
+        case 'unestimated':
+          return isUnestimatedTask(task)
         default:
           return true
       }
@@ -253,6 +297,11 @@ export const useSmartViews = () => {
     isUncategorizedTask,
     isUnscheduledTask,
     isInProgressTask,
+    isQuickTask,
+    isShortTask,
+    isMediumTask,
+    isLongTask,
+    isUnestimatedTask,
 
     // Unified filter and count functions
     applySmartViewFilter,

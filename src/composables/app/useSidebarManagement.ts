@@ -19,19 +19,17 @@ import type { Project } from '@/types/tasks'
  * - Drag and drop functionality for projects
  */
 
+// Shared state instances to ensure all components see the same sidebar state
+const newTaskTitle = ref('')
+const showCreateProject = ref(false)
+const expandedProjects = ref<string[]>([]) // For nested project expand/collapse
+const showProjectModal = ref(false)
+const editingProject = ref<Project | null>(null)
+
 export function useSidebarManagement() {
   const taskStore = useTaskStore()
   const _uiStore = useUIStore()
   const router = useRouter()
-
-  // Quick task creation state
-  const newTaskTitle = ref('')
-  const showCreateProject = ref(false)
-  const expandedProjects = ref<string[]>([]) // For nested project expand/collapse
-
-  // Project management state
-  const showProjectModal = ref(false)
-  const editingProject = ref<Project | null>(null)
 
   // Platform detection
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0

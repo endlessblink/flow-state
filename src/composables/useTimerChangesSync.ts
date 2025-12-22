@@ -13,7 +13,7 @@
  * @see https://pouchdb.com/guides/changes.html
  */
 
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, getCurrentInstance } from 'vue'
 
 // Timer document ID in PouchDB/CouchDB
 const TIMER_DOC_ID = 'pomo-flow-timer-session:data'
@@ -202,10 +202,12 @@ const stopChangesListener = () => {
  */
 export function useTimerChangesSync(): UseTimerChangesSyncReturn {
   // Auto-cleanup when component unmounts (if used in component)
-  onUnmounted(() => {
-    // Note: In a store context, this won't fire, so manual cleanup is needed
-    // But if used in a component, this provides automatic cleanup
-  })
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      // Note: In a store context, this won't fire, so manual cleanup is needed
+      stopChangesListener()
+    })
+  }
 
   return {
     isConnected,

@@ -12,6 +12,13 @@ import {
   type PowerKeywordResult
 } from '@/composables/useTaskSmartGroups'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+// TASK-048: Individual section document storage
+import { STORAGE_FLAGS } from '@/config/database'
+import {
+  saveSections as saveIndividualSections,
+  loadAllSections as loadIndividualSections,
+  migrateFromLegacyFormat as migrateSectionsFromLegacy
+} from '@/utils/individualSectionStorage'
 
 // Task store import for safe sync functionality
 // Using unknown to avoid circular import issues - cast when accessing
@@ -960,13 +967,36 @@ export const useCanvasStore = defineStore('canvas', () => {
   const getSectionPowerKeyword = getGroupPowerKeyword
 
   // Auto-save groups to IndexedDB via SaveQueueManager (Chief Architect conflict prevention)
+  // TASK-048: Updated to support individual document storage
   let groupsSaveTimer: ReturnType<typeof setTimeout> | null = null
   watch(groups, (newGroups) => {
     if (groupsSaveTimer) clearTimeout(groupsSaveTimer)
     groupsSaveTimer = setTimeout(async () => {
+      // BUG-026: Only save if database is ready
+      if (!db.isReady?.value) {
+        console.log('📋 Canvas auto-save skipped: DB not ready')
+        return
+      }
+
+      const dbInstance = window.pomoFlowDb
+      if (!dbInstance) {
+        console.error('❌ PouchDB not available for canvas persistence')
+        return
+      }
+
       try {
-        await db.save(DB_KEYS.CANVAS, newGroups)
-        console.log('📋 Canvas groups auto-saved via SaveQueueManager')
+        // TASK-048: Individual section document storage
+        if (STORAGE_FLAGS.DUAL_WRITE_SECTIONS || STORAGE_FLAGS.INDIVIDUAL_SECTIONS_ONLY) {
+          // Save to individual section-{id} documents
+          await saveIndividualSections(dbInstance as unknown as PouchDB.Database, newGroups)
+          console.log(`📐 [TASK-048] Sections saved to individual docs: ${newGroups.length} sections`)
+        }
+
+        // Write to legacy format unless INDIVIDUAL_SECTIONS_ONLY is true
+        if (!STORAGE_FLAGS.INDIVIDUAL_SECTIONS_ONLY) {
+          await db.save(DB_KEYS.CANVAS, newGroups)
+          console.log('📋 Canvas groups auto-saved to legacy format')
+        }
       } catch (error) {
         console.error('❌ Canvas auto-save failed:', error)
       }
@@ -1205,27 +1235,59 @@ export const useCanvasStore = defineStore('canvas', () => {
   const findNearestSection = findNearestGroup
   const getTaskCountInSection = getTaskCountInGroup
 
+  // Centralized initialization state
+  const isDataLoading = ref(false)
+  const isFirstLoadComplete = ref(false)
+
+  const isReady = _computed(() => {
+    return db.isReady.value && isFirstLoadComplete.value && !isDataLoading.value
+  })
+
   // Load canvas state from IndexedDB
+  // TASK-048: Updated to support individual document storage
   const loadFromDatabase = async () => {
+    if (isDataLoading.value) return
+    isDataLoading.value = true
+
     try {
-      // Wait for database to be ready before loading
-      if (db.isLoading.value) {
-        await new Promise<void>((resolve) => {
-          const unwatch = watch(db.isLoading, (loading) => {
-            if (!loading) {
-              unwatch()
-              resolve()
-            }
-          }, { immediate: true })
-        })
+      // Wait for database to be ready
+      // BUG-027: Increased timeout and made loading graceful
+      if (!db.isReady.value) {
+        let waitAttempts = 0
+        while (!db.isReady.value && waitAttempts < 300) { // 30s max (sync can take up to 20s on slow connections)
+          await new Promise(r => setTimeout(r, 100))
+          waitAttempts++
+        }
       }
 
       if (!db.isReady.value) {
-        console.warn('⚠️ Database not ready, skipping canvas load')
-        return
+        // BUG-027: Don't throw - just log warning and proceed with empty state
+        console.warn('⚠️ [STABILIZATION] Database not ready after 30s timeout - proceeding with local data')
+        isFirstLoadComplete.value = true
+        isDataLoading.value = false
+        return // Graceful exit - canvas will be empty but functional
       }
 
-      const savedGroups = await db.load<CanvasGroup[]>(DB_KEYS.CANVAS)
+      const dbInstance = window.pomoFlowDb
+      let savedGroups: CanvasGroup[] | null = null
+
+      // TASK-048: Check if we should read from individual documents
+      if (STORAGE_FLAGS.READ_INDIVIDUAL_SECTIONS && dbInstance) {
+        console.log('📐 [TASK-048] Loading sections from individual documents...')
+        savedGroups = await loadIndividualSections(dbInstance as unknown as PouchDB.Database)
+
+        // If no individual docs, try migrating from legacy format
+        if (!savedGroups || savedGroups.length === 0) {
+          console.log('🔄 [TASK-048] No individual section docs, checking for legacy format...')
+          const { migrated } = await migrateSectionsFromLegacy(dbInstance as unknown as PouchDB.Database)
+          if (migrated > 0) {
+            savedGroups = await loadIndividualSections(dbInstance as unknown as PouchDB.Database)
+          }
+        }
+      } else {
+        // Legacy: Load from canvas:data via db composable
+        savedGroups = await db.load<CanvasGroup[]>(DB_KEYS.CANVAS)
+      }
       if (savedGroups && savedGroups.length > 0) {
         // Migrate old propertyValue to new assignOnDrop format
         const migratedGroups = savedGroups.map(group => {
@@ -1284,8 +1346,11 @@ export const useCanvasStore = defineStore('canvas', () => {
         groups.value = migratedGroups
         console.log(`📂 Loaded ${groups.value.length} canvas groups from IndexedDB`)
       }
+      isFirstLoadComplete.value = true
     } catch (error) {
       console.warn('⚠️ Failed to load canvas from database:', error)
+    } finally {
+      isDataLoading.value = false
     }
   }
 

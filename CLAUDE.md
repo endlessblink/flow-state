@@ -704,6 +704,38 @@ window.taskLogger.exportLogs()            // Export for analysis
 - Adding new ideas → use `IDEA-XXX`
 - Documenting known issues → use `ISSUE-XXX`
 
+### Dev-Manager Kanban Compatibility (IMPORTANT)
+
+The dev-manager at `http://localhost:6010` parses MASTER_PLAN.md. For tasks to display correctly:
+
+**Task Header Format:**
+```markdown
+### TASK-XXX: Task Title (STATUS)
+### ~~TASK-XXX~~: Completed Task Title (✅ DONE)
+```
+
+**Status Keywords** (parser detects these in header or body):
+| Status | Keywords Detected | Column |
+|--------|-------------------|--------|
+| Done | `DONE`, `COMPLETE`, `✅`, `~~strikethrough~~` | Done |
+| In Progress | `IN PROGRESS`, `IN_PROGRESS`, `🔄`, `ACTIVE` | In Progress |
+| Review | `REVIEW`, `MONITORING`, `👀` | Review |
+| Todo | Default (no status keyword) | To Do |
+
+**Priority Format:**
+- In header: `(P1)`, `(HIGH)`, `(P2-MEDIUM)`
+- Or as line: `**Priority**: P1-HIGH`
+
+**Progress via Subtasks:**
+```markdown
+- [x] Completed step ✅
+- [x] Another done step
+- [ ] Pending step
+```
+Parser calculates: 2/3 = 67% progress
+
+**Full formatting guide**: See `docs/MASTER_PLAN.md` → "Formatting Guide for AI/Automation"
+
 - **`README.md`** - User-facing project overview
   - Update for major feature additions
   - Keep setup instructions accurate

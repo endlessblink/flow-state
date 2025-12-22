@@ -127,18 +127,21 @@ export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error' | 'paused'
  * Feature Flags for Database Storage
  *
  * TASK-034: Individual Task Documents Migration
+ * TASK-048: Individual Project & Section Documents Migration
  *
  * Phases:
  * - Phase 1 (DUAL_WRITE): Write to BOTH formats (safe, can rollback)
  * - Phase 2 (INDIVIDUAL_READ): Read from individual docs, write to both
- * - Phase 3 (INDIVIDUAL_ONLY): Full migration, stop writing to tasks:data
+ * - Phase 3 (INDIVIDUAL_ONLY): Full migration, stop writing to legacy format
  */
 export const STORAGE_FLAGS = {
+  // ============ TASKS (TASK-034) ============
   /**
    * When true: Save tasks to BOTH tasks:data (legacy) AND task-{id} (new)
    * This is the safest phase - can rollback by disabling flag
+   * BUG-025: DISABLED - dual-write causes massive conflicts (121+ on tasks:data)
    */
-  DUAL_WRITE_TASKS: import.meta.env.VITE_DUAL_WRITE_TASKS === 'true' || true, // Default ON for Phase 1
+  DUAL_WRITE_TASKS: import.meta.env.VITE_DUAL_WRITE_TASKS === 'true' || false, // DISABLED 2025-12-22 to fix conflicts
 
   /**
    * When true: Read from individual task-{id} documents instead of tasks:data
@@ -148,9 +151,43 @@ export const STORAGE_FLAGS = {
 
   /**
    * When true: Stop writing to tasks:data entirely (final phase)
-   * Only enable after READ_INDIVIDUAL_TASKS has been stable for 1+ week
+   * BUG-025: ENABLED - eliminates conflict source by only using individual task-{id} docs
    */
-  INDIVIDUAL_ONLY: import.meta.env.VITE_INDIVIDUAL_ONLY === 'true' || false // Default OFF
+  INDIVIDUAL_ONLY: import.meta.env.VITE_INDIVIDUAL_ONLY === 'true' || true, // ENABLED 2025-12-22 - fixes conflict root cause
+
+  // ============ PROJECTS (TASK-048) ============
+  /**
+   * When true: Save projects to BOTH projects:data (legacy) AND project-{id} (new)
+   * Phase 1: Safe dual-write for migration
+   */
+  DUAL_WRITE_PROJECTS: import.meta.env.VITE_DUAL_WRITE_PROJECTS === 'true' || true, // TASK-048: Start with dual-write
+
+  /**
+   * When true: Read from individual project-{id} documents instead of projects:data
+   */
+  READ_INDIVIDUAL_PROJECTS: import.meta.env.VITE_READ_INDIVIDUAL_PROJECTS === 'true' || false, // TASK-048: Enable after dual-write verified
+
+  /**
+   * When true: Stop writing to projects:data entirely
+   */
+  INDIVIDUAL_PROJECTS_ONLY: import.meta.env.VITE_INDIVIDUAL_PROJECTS_ONLY === 'true' || false, // TASK-048: Final phase
+
+  // ============ CANVAS SECTIONS (TASK-048) ============
+  /**
+   * When true: Save sections to BOTH canvas:data (legacy) AND section-{id} (new)
+   * Phase 1: Safe dual-write for migration
+   */
+  DUAL_WRITE_SECTIONS: import.meta.env.VITE_DUAL_WRITE_SECTIONS === 'true' || true, // TASK-048: Start with dual-write
+
+  /**
+   * When true: Read from individual section-{id} documents instead of canvas:data
+   */
+  READ_INDIVIDUAL_SECTIONS: import.meta.env.VITE_READ_INDIVIDUAL_SECTIONS === 'true' || false, // TASK-048: Enable after dual-write verified
+
+  /**
+   * When true: Stop writing to canvas:data entirely
+   */
+  INDIVIDUAL_SECTIONS_ONLY: import.meta.env.VITE_INDIVIDUAL_SECTIONS_ONLY === 'true' || false // TASK-048: Final phase
 } as const
 
 // Sync event types

@@ -69,6 +69,34 @@ export const useReliableSyncManager = () => {
   const conflicts = ref<ConflictInfo[]>([])
   const resolutions = ref<ResolutionResult[]>([])
   const lastValidation = ref<SyncValidationResult | null>(null)
+
+  // BUG-025 FIX: Track initial sync completion to prevent race condition with UI loading
+  const initialSyncComplete = ref(false)
+
+  /**
+   * BUG-025 FIX: Wait for initial sync to complete before loading UI data
+   * This prevents the race condition where App.vue loads stale local data
+   * before CouchDB sync has completed
+   */
+  const waitForInitialSync = async (timeoutMs = 10000): Promise<boolean> => {
+    if (initialSyncComplete.value) return true
+
+    console.log(`⏳ [SYNC] Waiting for initial sync (timeout: ${timeoutMs}ms)...`)
+    const startTime = Date.now()
+
+    while (!initialSyncComplete.value && Date.now() - startTime < timeoutMs) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    if (initialSyncComplete.value) {
+      console.log('✅ [SYNC] Initial sync complete - safe to load data')
+    } else {
+      console.warn(`⚠️ [SYNC] Initial sync timeout after ${timeoutMs}ms - loading local data`)
+    }
+
+    return initialSyncComplete.value
+  }
+
   const metrics = ref<SyncMetrics>({
     totalSyncs: 0,
     successfulSyncs: 0,
@@ -244,7 +272,8 @@ export const useReliableSyncManager = () => {
    * SYNC RE-ENABLED: Safe after Phase 1 watcher fixes (Dec 2025)
    */
   const initializeSync = async (): Promise<void> => {
-    console.log('🚀 [SYNC] Initializing sync system...')
+    // REDUCED LOGGING
+    console.log('🚀 [SYNC] Initializing...')
 
     try {
       // Initialize the database connection using internal function
@@ -252,7 +281,6 @@ export const useReliableSyncManager = () => {
 
       const w = window as any
       w.pomoFlowDb = localDB
-      console.log('✅ [SYNC] Set window.pomoFlowDb for task store access')
 
       remoteDB = await setupRemoteConnection()
 
@@ -265,27 +293,26 @@ export const useReliableSyncManager = () => {
       // Initialize Phase 2 systems
       await initializePhase2Systems()
 
-      // BUG-025 FIX: BIDIRECTIONAL sync BEFORE loading UI
-      // This ensures local changes push to remote AND remote changes pull to local
+      // BUG-025 FIX: One-time bidirectional sync on startup only
+      // DO NOT reload task store here - let App.vue handle that
       if (remoteDB && isOnline.value) {
-        console.log('🔄 [INITIAL SYNC] Bidirectional sync before UI load...')
         syncStatus.value = 'syncing'
         try {
           const result = await localDB.sync(remoteDB, {
             batch_size: 100,
             batches_limit: 10
           })
-          console.log(`✅ [INITIAL SYNC] pushed ${result.push?.docs_written || 0}, pulled ${result.pull?.docs_written || 0}`)
-
-          // Reload task store with fresh data
-          const { useTaskStore } = await import('@/stores/tasks')
-          await useTaskStore().loadFromDatabase()
-          console.log('✅ [INITIAL SYNC] Task store reloaded with synced data')
+          console.log(`✅ [SYNC] Initial: pushed ${result.push?.docs_written || 0}, pulled ${result.pull?.docs_written || 0}`)
+          // DO NOT reload task store here - causes loop
         } catch (syncError) {
-          console.warn('⚠️ [INITIAL SYNC] Failed, using local data:', syncError)
-          // Don't block startup - offline mode is valid
+          console.warn('⚠️ [SYNC] Initial sync failed, using local data')
         }
       }
+
+      // BUG-025 FIX: Mark initial sync as complete so App.vue can proceed with loading data
+      // This is set even if sync failed, since we want the UI to proceed with local data
+      initialSyncComplete.value = true
+      console.log('✅ [SYNC] Initial sync complete signal sent')
 
       syncStatus.value = 'idle'
       error.value = null
@@ -545,8 +572,6 @@ export const useReliableSyncManager = () => {
    * SYNC RE-ENABLED: Safe after Phase 1 watcher fixes (Dec 2025)
    */
   const performReliableSync = async (): Promise<void> => {
-    console.log('🔄 [SYNC] Performing reliable sync...')
-
     const syncOperation = logger.startSyncOperation('full_sync')
     const operationId = syncOperation.operationId
 
@@ -555,46 +580,34 @@ export const useReliableSyncManager = () => {
         throw new Error('Local database not initialized')
       }
 
-      console.log('🔄 [SYNC] Setting up remote connection...')
-
       const remoteDB = await setupRemoteConnection()
       if (!remoteDB) {
         throw new Error('Remote database not available')
       }
-      console.log('✅ [SYNC] Remote connection established')
 
       syncStatus.value = 'syncing'
 
-      // Step 0: Backup before sync (safety first)
-      console.log('🔒 Step 0: Creating pre-sync backup...')
+      // Step 0: Backup before sync (safety first) - SILENT
       try {
         await backupManager.createBackup('sync', 'Automatic backup before reliable sync')
-        console.log('✅ Pre-sync backup created')
-      } catch (backupErr) {
-        console.warn('⚠️ Backup failed, but proceeding with sync:', backupErr)
+      } catch (_backupErr) {
+        // Silent fail - backup is optional
       }
 
-      // Step 1: Pre-sync validation
-      console.log('🔍 Step 1: Validating database state...')
+      // Step 1: Pre-sync validation - SILENT unless critical
       const validationResult = await syncValidator.validateDatabase(localDB)
       lastValidation.value = validationResult
-      if (!validationResult.valid) {
-        console.warn('⚠️ Database validation issues found:', validationResult.errors)
-        if (validationResult.critical) {
-          throw new Error(`Critical database validation failure: ${validationResult.errors[0]}`)
-        }
+      if (validationResult.critical) {
+        throw new Error(`Critical database validation failure: ${validationResult.errors[0]}`)
       }
-      console.log('✅ Database validation complete')
 
-      // Step 2: Conflict detection (check for unresolved conflicts)
-      console.log('⚔️ Step 2: Checking for unresolved conflicts...')
+      // Step 2: Conflict detection - only log if conflicts found
       const existingConflicts = await conflictDetector.detectAllConflicts()
       if (existingConflicts.length > 0) {
-        console.log(`⚔️ Found ${existingConflicts.length} existing conflicts`)
+        console.log(`⚔️ ${existingConflicts.length} conflicts found`)
         conflicts.value = existingConflicts
         await resolveAutoResolvableConflicts()
       }
-      console.log('✅ Conflict check complete')
 
       // Step 3: Perform sync (CORE OPERATION) with timeout
       // IMPORTANT: PULL FIRST to get authoritative remote data before pushing local changes
@@ -603,93 +616,56 @@ export const useReliableSyncManager = () => {
       const remote = remoteDB
 
       try {
-        // Step 3a: Pull remote → local FIRST (get authoritative data)
-        console.log('🔄 Step 3a: Pulling remote changes FIRST (authoritative data)...')
-
+        // Pull remote → local FIRST (get authoritative data)
         const pullPromise = local.replicate.from(remote, {
           live: false,
           retry: false,
           batch_size: 50,
           batches_limit: 10
         })
-
-        // Add 60-second timeout for pull
         const pullTimeout = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Pull timeout after 60 seconds')), 60000)
         })
-
         const pullResult = await Promise.race([pullPromise, pullTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
-        console.log('✅ Pull complete:', pullResult.docs_read || 0, 'docs read')
 
-        // Step 3b: Push local → remote (send any local changes)
-        console.log('🔄 Step 3b: Pushing local changes to remote...')
-
+        // Push local → remote
         const pushPromise = local.replicate.to(remote, {
           live: false,
           retry: false,
           batch_size: 50,
           batches_limit: 5
         })
-
-        // Add 60-second timeout for push
         const pushTimeout = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Push timeout after 60 seconds')), 60000)
         })
-
         const pushResult = await Promise.race([pushPromise, pushTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
-        console.log('✅ Push complete:', pushResult.docs_written || 0, 'docs written')
 
-        console.log('✅ Step 3 complete - sync result:', {
-          pull: pullResult.docs_read || 0,
-          push: pushResult.docs_written || 0
-        })
+        // Only log if docs were actually transferred
+        const pulled = pullResult.docs_read || 0
+        const pushed = pushResult.docs_written || 0
+        if (pulled > 0 || pushed > 0) {
+          console.log(`✅ [SYNC] Pulled ${pulled}, pushed ${pushed} docs`)
+        }
       } catch (syncError) {
-        console.error('❌ Sync operation failed:', syncError)
-        throw new Error(`Sync operation failed: ${(syncError as Error).message}`)
+        throw new Error(`Sync failed: ${(syncError as Error).message}`)
       }
 
-      // Step 4: SKIPPED - Post-sync validation was part of the hang issue
-      // TODO: Re-enable once basic sync is working
-      console.log('⏭️ Skipping post-sync validation')
-
-      // Success - update metrics and status
-      console.log('🔧 [SYNC SUCCESS] Setting syncStatus=complete, remoteConnected=true')
-      console.log('🔧 [SYNC SUCCESS] Before: syncStatus=', syncStatus.value, 'remoteConnected=', remoteConnected.value)
+      // Success - update metrics and status (SILENT)
       syncStatus.value = 'complete'
-      remoteConnected.value = true  // Ensure UI shows Synced/Online status
+      remoteConnected.value = true
       hasConnectedEver.value = true
-      localStorage.setItem('pomoflow_hasConnectedEver', 'true')  // Persist to localStorage
+      localStorage.setItem('pomoflow_hasConnectedEver', 'true')
       triggerRef(syncStatus)
       triggerRef(remoteConnected)
-      console.log('🔧 [SYNC SUCCESS] After: syncStatus=', syncStatus.value, 'remoteConnected=', remoteConnected.value, '(refs triggered)')
       lastSyncTime.value = new Date()
-      localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())  // Persist to localStorage
+      localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())
       metrics.value.lastSyncTime = new Date()
       metrics.value.successfulSyncs++
 
-      // CRITICAL: Reload task store from synced database
-      // Without this, the UI won't show the synced data!
-      try {
-        console.log('🔄 Reloading task store from synced database...')
-        const { useTaskStore } = await import('@/stores/tasks')
-        const taskStore = useTaskStore()
-        await taskStore.loadFromDatabase()
-        console.log('✅ Task store reloaded with synced data')
-      } catch (reloadError) {
-        console.error('⚠️ Failed to reload task store after sync:', reloadError)
-        // Don't throw - sync was still successful, just reload failed
-      }
-
-      // Complete sync operation logging
+      // Complete sync operation logging (internal only)
       if ('completeSyncOperation' in logger) {
         (logger as { completeSyncOperation: (id: string, success: boolean) => void }).completeSyncOperation(operationId, true)
       }
-
-      logger.info('sync', 'Reliable sync completed successfully', {
-        operationId,
-        duration: 0, // Temporary fix
-        conflictsResolved: conflicts.value.length
-      })
 
     } catch (syncError) {
       const syncErrMessage = syncError instanceof Error ? syncError.message : 'Unknown error'
@@ -1115,22 +1091,24 @@ export const useReliableSyncManager = () => {
       // Setup event handlers
       syncHandler.on('change', async (info) => {
         const syncChange = info as { direction: 'pull' | 'push'; change: { docs: unknown[] } }
-        console.log('📤 [LIVE SYNC] Change detected:', syncChange.direction, syncChange.change?.docs?.length || 0, 'docs')
-
-        // Reload task store when we receive changes from remote
-        if (syncChange.direction === 'pull' && (syncChange.change?.docs?.length || 0) > 0) {
-          try {
-            const { useTaskStore } = await import('@/stores/tasks')
-            const taskStore = useTaskStore()
-            await taskStore.loadFromDatabase()
-            console.log('✅ [LIVE SYNC] Task store reloaded after pull')
-          } catch (reloadError) {
-            console.error('⚠️ [LIVE SYNC] Failed to reload task store:', reloadError)
-          }
+        // REDUCED LOGGING: Only log significant changes
+        const docCount = syncChange.change?.docs?.length || 0
+        if (docCount > 0) {
+          console.log('📤 [LIVE SYNC] Change:', syncChange.direction, docCount, 'docs')
         }
 
+        // BUG-025 FIX: DO NOT auto-reload task store on every sync change!
+        // This was causing an infinite loop:
+        // 1. Sync pulls changes → loadFromDatabase()
+        // 2. loadFromDatabase() triggers debouncedSave()
+        // 3. Save triggers another sync change
+        // 4. Repeat forever
+        //
+        // Instead, user must manually refresh or we use a different approach
+        // The task store's own change listeners will handle reactivity
+
         lastSyncTime.value = new Date()
-        localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())  // Persist to localStorage
+        localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())
       })
 
       syncHandler.on('paused', (err: unknown) => {
@@ -1270,6 +1248,10 @@ export const useReliableSyncManager = () => {
     remoteConnected,
     hasConnectedEver,  // Persistent flag for UI - true after first successful connection
 
+    // BUG-025 FIX: Sync completion signal for App.vue initialization
+    initialSyncComplete,
+    waitForInitialSync,
+
     // Computed properties for component usage
     isSyncing,
     hasErrors,
@@ -1333,6 +1315,10 @@ export interface ReliableSyncManagerInstance {
   lastValidation: Ref<SyncValidationResult | null>
   metrics: Ref<SyncMetrics>
   isLiveSyncActive: () => boolean
+
+  // BUG-025 FIX: Sync completion signal
+  initialSyncComplete: Ref<boolean>
+  waitForInitialSync: (timeoutMs?: number) => Promise<boolean>
 
   // Computed properties
   isSyncing: ComputedRef<boolean>

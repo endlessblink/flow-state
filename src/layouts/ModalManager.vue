@@ -1,0 +1,333 @@
+<template>
+  <!-- MODAL MANAGER - Extracted from App.vue to reduce complexity -->
+  <div class="modal-manager">
+    <!-- SETTINGS MODAL -->
+    <SettingsModal
+      :is-open="uiStore.settingsModalOpen"
+      @close="uiStore.closeSettingsModal()"
+    />
+
+    <!-- PROJECT MODAL -->
+    <ProjectModal
+      :is-open="sidebar.showProjectModal.value"
+      :project="sidebar.editingProject.value"
+      @close="sidebar.showProjectModal.value = false"
+    />
+
+    <!-- TASK EDIT MODAL -->
+    <TaskEditModal
+      :is-open="showTaskEditModal"
+      :task="editingTask"
+      @close="showTaskEditModal = false"
+    />
+
+    <!-- TASK CONTEXT MENU -->
+    <TaskContextMenu
+      :is-visible="showTaskContextMenu"
+      :x="contextMenuX"
+      :y="contextMenuY"
+      :task="contextMenuTask"
+      :compact-mode="uiStore.boardDensity === 'ultrathin'"
+      @close="closeTaskContextMenu"
+      @edit="(taskId: string) => {
+        const task = taskStore.tasks.find(t => t.id === taskId)
+        if (task) openEditTask(task)
+      }"
+      @confirm-delete="handleContextMenuDelete"
+    />
+
+    <!-- PROJECT CONTEXT MENU -->
+    <ContextMenu
+      :is-visible="showProjectContextMenu"
+      :x="projectContextMenuX"
+      :y="projectContextMenuY"
+      :items="projectContextMenuItems"
+      @close="showProjectContextMenu = false"
+    />
+
+    <!-- CONFIRMATION MODAL -->
+    <ConfirmationModal
+      :is-open="showConfirmModal"
+      title="Confirm Action"
+      :message="confirmMessage"
+      :details="confirmDetails"
+      confirm-text="Delete"
+      @confirm="executeConfirmAction"
+      @cancel="cancelConfirmAction"
+    />
+
+    <!-- SEARCH MODAL -->
+    <SearchModal
+      :is-open="showSearchModal"
+      @close="showSearchModal = false"
+      @select-task="handleSearchSelectTask"
+      @select-project="handleSearchSelectProject"
+    />
+
+    <!-- QUICK TASK CREATE MODAL -->
+    <QuickTaskCreateModal
+      :is-open="showQuickTaskCreate"
+      :loading="false"
+      @cancel="closeQuickTaskCreate"
+      @create="handleQuickTaskCreate"
+    />
+
+    <!-- COMMAND PALETTE -->
+    <CommandPalette ref="commandPaletteRef" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useUIStore } from '@/stores/ui'
+import { useTaskStore, type Task, type Project } from '@/stores/tasks'
+import { useTimerStore } from '@/stores/timer'
+import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
+import { createLazyModal } from '@/composables/useLazyComponent'
+import { Edit, Palette, Copy, Trash2 } from 'lucide-vue-next'
+
+// Components
+import SettingsModal from '@/components/SettingsModal.vue'
+import ProjectModal from '@/components/ProjectModal.vue'
+import TaskEditModal from '@/components/TaskEditModal.vue'
+import TaskContextMenu from '@/components/TaskContextMenu.vue'
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
+import SearchModal from '@/components/SearchModal.vue'
+import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
+const CommandPalette = createLazyModal(() => import('@/components/CommandPalette.vue'))
+
+// Stores
+const uiStore = useUIStore()
+const taskStore = useTaskStore()
+const timerStore = useTimerStore()
+const sidebar = useSidebarManagement()
+
+// State
+const showTaskEditModal = ref(false)
+const editingTask = ref<Task | null>(null)
+
+const showTaskContextMenu = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const contextMenuTask = ref<Task | null>(null)
+
+const showProjectContextMenu = ref(false)
+const projectContextMenuX = ref(0)
+const projectContextMenuY = ref(0)
+const contextMenuProject = ref<Project | null>(null)
+
+const showConfirmModal = ref(false)
+const confirmAction = ref<() => void | Promise<void>>(() => {})
+const confirmMessage = ref('')
+const confirmDetails = ref<string[]>([])
+
+const showSearchModal = ref(false)
+const showQuickTaskCreate = ref(false)
+const commandPaletteRef = ref<{ open: () => void; close: () => void } | null>(null)
+
+// Methods
+const openEditTask = (task: Task) => {
+  editingTask.value = task
+  showTaskEditModal.value = true
+}
+
+const closeTaskContextMenu = () => {
+  showTaskContextMenu.value = false
+  contextMenuTask.value = null
+}
+
+const confirmDeleteTask = async (task: Task) => {
+  confirmMessage.value = `Delete task "${task.title}"?`
+  confirmAction.value = async () => {
+    const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
+    const undoRedoActions = useUnifiedUndoRedo()
+    await undoRedoActions.deleteTaskWithUndo(task.id)
+  }
+  showConfirmModal.value = true
+}
+
+const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendarEvent?: boolean) => {
+  const task = taskStore.tasks.find(t => t.id === taskId)
+  if (!task) return
+
+  if (isCalendarEvent && instanceId) {
+    confirmMessage.value = `Remove "${task.title}" from calendar?`
+    confirmAction.value = () => {
+      taskStore.deleteTaskInstance(taskId, instanceId)
+      showTaskContextMenu.value = false
+    }
+    confirmDetails.value = ['This will remove the scheduled instance and return the task to the sidebar.']
+    showConfirmModal.value = true
+  } else {
+    confirmDeleteTask(task)
+  }
+}
+
+const executeConfirmAction = async () => {
+  await confirmAction.value()
+  showConfirmModal.value = false
+  confirmAction.value = () => {}
+  confirmMessage.value = ''
+}
+
+const cancelConfirmAction = () => {
+  showConfirmModal.value = false
+  confirmAction.value = () => {}
+  confirmMessage.value = ''
+  confirmDetails.value = []
+}
+
+const handleSearchSelectTask = (task: Task) => {
+  openEditTask(task)
+}
+
+const handleSearchSelectProject = (project: Project) => {
+  console.log('Selected project:', project)
+  // Logic from App.vue: // TODO: Navigate to project view or filter by project
+}
+
+const closeQuickTaskCreate = () => {
+  showQuickTaskCreate.value = false
+}
+
+const handleQuickTaskCreate = async (title: string, description: string) => {
+  try {
+    await taskStore.createTaskWithUndo({
+      title,
+      description,
+      status: 'planned',
+      projectId: undefined
+    })
+    closeQuickTaskCreate()
+  } catch (error) {
+    console.error('Error creating quick task:', error)
+    closeQuickTaskCreate()
+  }
+}
+
+const projectContextMenuItems = computed<ContextMenuItem[]>(() => {
+  if (!contextMenuProject.value) return []
+  const project = contextMenuProject.value
+  const isDefaultProject = project.id === '1'
+
+  return [
+    { id: 'edit', label: 'Edit Project', icon: Edit, action: () => sidebar.openEditProject(project) },
+    { id: 'change-icon', label: 'Change Icon', icon: Palette, action: () => sidebar.openEditProject(project) },
+    { id: 'duplicate', label: 'Duplicate Project', icon: Copy, action: () => duplicateProject(project) },
+    {
+      id: 'delete',
+      label: 'Delete Project',
+      icon: Trash2,
+      action: () => confirmDeleteProject(project),
+      danger: true,
+      disabled: isDefaultProject
+    }
+  ]
+})
+
+const duplicateProject = async (project: Project) => {
+  if (!project || !project.id) return
+  taskStore.createProject({
+    name: `${project.name} (Copy)`,
+    color: project.color,
+    colorType: project.colorType,
+    emoji: project.emoji,
+    viewType: project.viewType,
+    parentId: project.parentId
+  })
+  showProjectContextMenu.value = false
+}
+
+const confirmDeleteProject = (project: Project) => {
+  if (!project || !project.id) return
+  const taskCount = taskStore.tasks.filter(t => t.projectId === project.id).length
+  const childCount = taskStore.projects.filter(p => p.parentId === project.id).length
+  const details: string[] = []
+  if (taskCount > 0) details.push(`${taskCount} task${taskCount > 1 ? 's' : ''} will become uncategorized`)
+  if (childCount > 0) details.push(`${childCount} child project${childCount > 1 ? 's' : ''} will be un-nested`)
+
+  confirmMessage.value = `Delete project "${project.name}"?`
+  confirmAction.value = () => {
+    taskStore.deleteProject(project.id)
+    showProjectContextMenu.value = false
+  }
+  confirmDetails.value = details
+  showConfirmModal.value = true
+}
+
+// Global Event Handlers
+const handleOpenTaskEdit = (event: Event) => {
+  const customEvent = event as CustomEvent
+  const task = taskStore.tasks.find(t => t.id === customEvent.detail.taskId)
+  if (task) openEditTask(task)
+}
+
+const handleTaskContextMenu = (event: Event) => {
+  const customEvent = event as CustomEvent
+  const { event: mouseEvent, task, instanceId, isCalendarEvent } = customEvent.detail
+
+  if (isCalendarEvent && instanceId) {
+    contextMenuTask.value = {
+      ...task,
+      instanceId,
+      isCalendarEvent
+    } as Task & { instanceId: string; isCalendarEvent: boolean }
+  } else {
+    contextMenuTask.value = task
+  }
+
+  contextMenuX.value = mouseEvent.clientX
+  contextMenuY.value = mouseEvent.clientY
+  showTaskContextMenu.value = true
+}
+
+const handleProjectContextMenu = (event: Event) => {
+  const customEvent = event as CustomEvent
+  const { event: mouseEvent, project } = customEvent.detail
+
+  projectContextMenuX.value = mouseEvent.clientX
+  projectContextMenuY.value = mouseEvent.clientY
+  contextMenuProject.value = project
+  showProjectContextMenu.value = true
+}
+
+onMounted(() => {
+  window.addEventListener('open-task-edit', handleOpenTaskEdit)
+  window.addEventListener('task-context-menu', handleTaskContextMenu)
+  window.addEventListener('project-context-menu', handleProjectContextMenu)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('open-task-edit', handleOpenTaskEdit)
+  window.removeEventListener('task-context-menu', handleTaskContextMenu)
+  window.removeEventListener('project-context-menu', handleProjectContextMenu)
+})
+
+// Expose methods for App.vue or parent triggers
+defineExpose({
+  openEditTask,
+  openSearch: () => { showSearchModal.value = true },
+  openQuickTask: () => { showQuickTaskCreate.value = true },
+  openCommandPalette: () => { commandPaletteRef.value?.open() },
+  openConfirmationModal: (title: string, message: string, action: () => void, details: string[] = []) => {
+    confirmMessage.value = message
+    confirmAction.value = action
+    confirmDetails.value = details
+    showConfirmModal.value = true
+  },
+  openTaskContextMenu: (event: MouseEvent, task: Task) => {
+    contextMenuX.value = event.clientX
+    contextMenuY.value = event.clientY
+    contextMenuTask.value = task
+    showTaskContextMenu.value = true
+  },
+  openProjectContextMenu: (event: MouseEvent, project: Project) => {
+    projectContextMenuX.value = event.clientX
+    projectContextMenuY.value = event.clientY
+    contextMenuProject.value = project
+    showProjectContextMenu.value = true
+  },
+  closeTaskContextMenu
+})
+</script>

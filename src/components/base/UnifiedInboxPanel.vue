@@ -17,7 +17,7 @@
     <!-- Collapsed state task count indicators -->
     <div v-if="isCollapsed" class="collapsed-badges-container">
       <BaseBadge
-        v-if="activeFilter === 'all'"
+        v-if="!unscheduledOnly && !selectedPriority && !selectedProject"
         variant="count"
         size="sm"
         rounded
@@ -42,31 +42,6 @@
           {{ inboxTasks.length }}
         </BaseBadge>
       </div>
-    </div>
-
-    <!-- Smart Filter Bar - Horizontal Compact Tabs -->
-    <div v-if="!isCollapsed" class="smart-filters-horizontal">
-      <button
-        v-for="filter in smartFilters"
-        :key="filter.key"
-        class="filter-tab"
-        :class="[{ active: activeFilter === filter.key }]"
-        :title="filter.description"
-        :aria-label="`${filter.label}: ${filter.count} tasks`"
-        role="tab"
-        :aria-selected="activeFilter === filter.key"
-        @click="activeFilter = filter.key as 'readyNow' | 'upcoming' | 'backlog' | 'all'"
-      >
-        <span class="filter-icon">{{ filter.icon }}</span>
-        <span class="filter-label">{{ filter.label }}</span>
-        <BaseBadge
-          variant="count"
-          size="sm"
-          :class="{ 'count-active': activeFilter === filter.key }"
-        >
-          {{ filter.count }}
-        </BaseBadge>
-      </button>
     </div>
 
     <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
@@ -127,7 +102,7 @@ Call client"
           📋
         </div>
         <p class="empty-text">
-          No tasks in this filter
+          No tasks found
         </p>
         <p class="empty-subtext">
           {{ getEmptyMessage() }}
@@ -265,7 +240,6 @@ import InboxFilters from '@/components/canvas/InboxFilters.vue'
 // Props
 interface Props {
   context?: 'calendar' | 'canvas' | 'standalone'
-  defaultFilter?: 'readyNow' | 'upcoming' | 'backlog' | 'all'
   showBrainDump?: boolean
   startCollapsed?: boolean
   maxCollapsedWidth?: string
@@ -274,7 +248,6 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   context: 'standalone',
-  defaultFilter: 'readyNow',
   showBrainDump: true,
   startCollapsed: false,
   maxCollapsedWidth: '48px',
@@ -288,7 +261,6 @@ const timerStore = useTimerStore()
 // State
 const isCollapsed = ref(props.startCollapsed)
 const newTaskTitle = ref('')
-const activeFilter = ref(props.defaultFilter)
 const brainDumpMode = ref(false)
 const brainDumpText = ref('')
 const draggingTaskId = ref<string | null>(null)
@@ -302,61 +274,24 @@ const unscheduledOnly = ref(false)
 const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
 const selectedProject = ref<string | null>(null)
 
-// Base inbox tasks (different filtering based on context)
+// Base inbox tasks (Source from filteredTasks to satisfy global filter requirements)
 const baseInboxTasks = computed(() => {
-  // Use taskStore.tasks directly to avoid conflicts with smart view filtering
-  return taskStore.tasks.filter(task => {
-    if (task.status === 'done') return false
-
+  // Use taskStore.filteredTasks to respect global sidebar filters (Uncategorized, Project, Smart Views)
+  return taskStore.filteredTasks.filter(task => {
+    // Keep context-specific filtering (Canvas/Calendar)
     if (props.context === 'calendar') {
       // CALENDAR INBOX: Show tasks NOT on the calendar grid
-      // "On calendar" = has instances (time slots), NOT just dueDate
-      // IGNORE canvasPosition - that's for Canvas inbox only
       const hasInstances = task.instances && task.instances.length > 0
       const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
                                (task.scheduledTime && task.scheduledTime.trim() !== '')
       return !hasInstances && !hasLegacySchedule
     } else {
       // CANVAS INBOX: Show tasks NOT on the canvas
-      // Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
-      // isInInbox was conflating calendar and canvas state - now we only care about position
-      // A task without canvasPosition should appear here, regardless of isInInbox value
+      // Dec 16, 2025 FIX: ONLY check canvasPosition
       return !task.canvasPosition
     }
   })
 })
-
-// Smart filters with counts
-const smartFilters = computed(() => [
-  {
-    key: 'readyNow',
-    label: 'Ready Now',
-    icon: '🎯',
-    description: 'Tasks that need attention now',
-    count: applySmartFilter(baseInboxTasks.value, 'readyNow').length
-  },
-  {
-    key: 'upcoming',
-    label: 'Upcoming',
-    icon: '📅',
-    description: 'Tasks scheduled for near future',
-    count: applySmartFilter(baseInboxTasks.value, 'upcoming').length
-  },
-  {
-    key: 'backlog',
-    label: 'Backlog',
-    icon: '📋',
-    description: 'Tasks without specific dates',
-    count: applySmartFilter(baseInboxTasks.value, 'backlog').length
-  },
-  {
-    key: 'all',
-    label: 'All',
-    icon: '🗂️',
-    description: 'Complete inbox view',
-    count: baseInboxTasks.value.length
-  }
-])
 
 // Check if task is scheduled on calendar (has instances with dates) - TASK-018
 const isScheduledOnCalendar = (task: Task): boolean => {
@@ -371,17 +306,10 @@ const clearAllFilters = () => {
   selectedProject.value = null
 }
 
-// Apply smart filter first
-const smartFilteredTasks = computed(() => {
-  if (activeFilter.value === 'all') {
-    return baseInboxTasks.value
-  }
-  return applySmartFilter(baseInboxTasks.value, activeFilter.value)
-})
-
 // Apply additional filters (TASK-018: Unscheduled, Priority, Project)
+// NOTE: "Show Everything" is now the default since we removed restrictive tabs
 const inboxTasks = computed(() => {
-  let tasks = smartFilteredTasks.value
+  let tasks = baseInboxTasks.value
 
   // Apply Unscheduled filter - show only tasks NOT on calendar
   if (unscheduledOnly.value) {
@@ -406,56 +334,6 @@ const inboxTasks = computed(() => {
 
   return tasks
 })
-
-// Smart filter logic
-function applySmartFilter(tasks: Task[], filter: string): Task[] {
-  const today = new Date().toISOString().split('T')[0]
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const tomorrowStr = tomorrow.toISOString().split('T')[0]
-  const weekEnd = new Date()
-  weekEnd.setDate(weekEnd.getDate() + 7)
-
-  return tasks.filter(task => {
-    // Check if task has date (instances or legacy)
-    const hasInstances = task.instances && task.instances.length > 0
-    const _hasScheduledDate = task.scheduledDate || (hasInstances &&
-      task.instances.some(inst => inst.scheduledDate))
-
-    // Get effective date for filtering
-    const effectiveDate = task.scheduledDate ||
-      (hasInstances && task.instances.find(inst => inst.scheduledDate)?.scheduledDate)
-
-    switch (filter) {
-      case 'readyNow':
-        return (
-          // Due today or overdue
-          (task.dueDate && task.dueDate <= today) ||
-          // Scheduled today
-          (effectiveDate === today) ||
-          // In progress
-          task.status === 'in_progress' ||
-          // High priority due soon
-          (task.priority === 'high' && task.dueDate && task.dueDate <= weekEnd.toISOString().split('T')[0])
-        )
-
-      case 'upcoming':
-        return (
-          // Due tomorrow
-          task.dueDate === tomorrowStr ||
-          // Scheduled tomorrow or this week (but not today)
-          (effectiveDate && effectiveDate > today && effectiveDate <= weekEnd.toISOString().split('T')[0])
-        )
-
-      case 'backlog':
-        // No due date AND no scheduled date
-        return !task.dueDate && !effectiveDate
-
-      default:
-        return true
-    }
-  })
-}
 
 // Helper functions
 const projectVisual = computed(() => (projectId: string) =>
@@ -515,18 +393,10 @@ const getDueStatus = (task: Task) => {
 }
 
 const getEmptyMessage = () => {
-  switch (activeFilter.value) {
-    case 'readyNow':
-      return 'No tasks need immediate attention'
-    case 'upcoming':
-      return 'No tasks scheduled for the near future'
-    case 'backlog':
-      return 'All tasks have dates assigned'
-    case 'all':
-      return 'All tasks are scheduled or completed'
-    default:
-      return 'No tasks found'
+  if (taskStore.filteredTasks.length === 0) {
+    return 'No tasks match your current view filters'
   }
+  return 'All filtered tasks are already on the board/calendar'
 }
 
 const parsedTaskCount = computed(() => {

@@ -1,0 +1,155 @@
+/* GLOBAL OVERRIDES - Extracted from App.vue */
+
+/* RTL Support */
+[dir="rtl"] .sidebar {
+    border-right: none !important;
+    border-left: 1px solid var(--glass-border-hover) !important;
+    box-shadow: var(--shadow-2xl), inset 1px 0 0 var(--glass-bg-heavy) !important;
+}
+
+[dir="rtl"] .sidebar-slide-enter-from,
+[dir="rtl"] .sidebar-slide-leave-to {
+    transform: translateX(100%) !important;
+}
+
+/* KANBAN STYLES */
+.kanban-column {
+    background: transparent;
+}
+
+.column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0 var(--space-1);
+}
+
+.column-title {
+    color: var(--text-muted);
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+}
+
+/* TASK CARDS - ULTRA REFINED */
+.task-card {
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 2px 0 var(--surface-hover);
+    transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.task-card:hover {
+    border-color: var(--border-medium);
+    box-shadow: var(--shadow-medium);
+}
+
+/* SMART VIEW BADGES AND FILTERS */
+.uncategorized-filter {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.uncategorized-filter.active {
+    background: var(--brand-primary-bg-subtle);
+    border-color: var(--brand-primary-border-medium);
+    color: var(--brand-primary);
+    font-weight: var(--font-semibold);
+}
+
+/* REUSABLE GLOBAL THEME OVERRIDES */
+.app {
+    background: var(--surface-primary);
+    color: var(--text-primary);
+}
+
+.breadcrumb-item {
+    color: var(--text-muted);
+}
+
+.breadcrumb-item:hover {
+    color: var(--text-secondary);
+}
+
+.breadcrumb-item.current {
+    color: var(--text-primary);
+}
+
+.title-main {
+    color: var(--text-primary);
+}
+
+.timer-display.timer-active {
+    background: var(--orange-bg-subtle);
+    border-color: var(--color-break);
+    box-shadow: var(--orange-glow-subtle);
+}
+
+.timer-display.timer-break {
+    background: var(--success-bg-start);
+    border-color: var(--color-work);
+    box-shadow: var(--blue-glow-subtle);
+}
+
+/* VIEW TRANSITIONS */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fade-enter-from {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+.fade-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+
+/* CUSTOM SCROLLBAR - Minimal & Modern */
+.view-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+
+.view-wrapper::-webkit-scrollbar-track {
+    background: var(--glass-bg-soft);
+    border-radius: var(--radius-full);
+}
+
+.view-wrapper::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: var(--radius-full);
+    transition: background var(--duration-fast) ease;
+}
+
+.view-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--glass-border-soft);
+}
+
+/* VIEW WRAPPER LAYOUT */
+.view-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    padding-inline-end: var(--space-2);
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 1px;
+}

@@ -11,6 +11,7 @@ import {
   type SmartGroupType,
   type PowerKeywordResult
 } from '@/composables/useTaskSmartGroups'
+import { useSmartViews } from '@/composables/useSmartViews'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // TASK-048: Individual section document storage
 import { STORAGE_FLAGS } from '@/config/database'
@@ -810,6 +811,21 @@ export const useCanvasStore = defineStore('canvas', () => {
         case 'status':
           return task.status === powerKeyword.value
 
+        case 'duration': {
+          const {
+            isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask
+          } = useSmartViews()
+
+          switch (powerKeyword.value) {
+            case 'quick': return isQuickTask(task)
+            case 'short': return isShortTask(task)
+            case 'medium': return isMediumTask(task)
+            case 'long': return isLongTask(task)
+            case 'unestimated': return isUnestimatedTask(task)
+            default: return false
+          }
+        }
+
         default:
           return false
       }
@@ -953,6 +969,30 @@ export const useCanvasStore = defineStore('canvas', () => {
           return 'ask'
         } else {
           updates.status = newStatus
+        }
+        break
+      }
+
+      case 'duration': {
+        const durationValue = powerKeyword.value // 'quick', 'short', etc.
+        let estimatedDuration: number | undefined
+
+        // Map category to default duration
+        if (durationValue === 'quick') estimatedDuration = 15
+        else if (durationValue === 'short') estimatedDuration = 30
+        else if (durationValue === 'medium') estimatedDuration = 60
+        else if (durationValue === 'long') estimatedDuration = 120
+
+        if (estimatedDuration !== undefined) {
+          if (overrideMode === 'always') {
+            updates.estimatedDuration = estimatedDuration
+          } else if (overrideMode === 'only_empty') {
+            if (!task.estimatedDuration) updates.estimatedDuration = estimatedDuration
+          } else if (overrideMode === 'ask' && task.estimatedDuration && task.estimatedDuration !== estimatedDuration) {
+            return 'ask'
+          } else {
+            updates.estimatedDuration = estimatedDuration
+          }
         }
         break
       }

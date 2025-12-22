@@ -191,10 +191,10 @@ describe('TaskStore', () => {
   })
 
   describe('Project Management', () => {
-    it('creates a project', () => {
+    it('creates a project', async () => {
       const store = useTaskStore()
 
-      const project = store.createProject({
+      const project = await store.createProject({
         name: 'Test Project',
         color: '#ff0000',
         colorType: 'hex'
@@ -207,11 +207,11 @@ describe('TaskStore', () => {
       expect(project.viewType).toBe('status')
     })
 
-    it('updates a project', () => {
+    it('updates a project', async () => {
       const store = useTaskStore()
-      const project = store.createProject({ name: 'Original' })
+      const project = await store.createProject({ name: 'Original' })
 
-      store.updateProject(project.id, {
+      await store.updateProject(project.id, {
         name: 'Updated',
         color: '#00ff00'
       })
@@ -223,29 +223,29 @@ describe('TaskStore', () => {
 
     it('deletes a project and moves tasks to default project', async () => {
       const store = useTaskStore()
-      const project = store.createProject({ name: 'To Delete' })
+      const project = await store.createProject({ name: 'To Delete' })
       const task = await store.createTask({ title: 'Task', projectId: project.id })
 
-      store.deleteProject(project.id)
+      await store.deleteProject(project.id)
 
       expect(store.projects.find(p => p.id === project.id)).toBeUndefined()
       const movedTask = store.tasks.find(t => t.id === task.id)
-      expect(movedTask?.projectId).toBe('1') // Moved to default project
+      expect(movedTask?.projectId).toBeNull() // Moved to uncategorized (null)
     })
 
-    it('prevents deletion of default project', () => {
+    it('prevents deletion of default project', async () => {
       const store = useTaskStore()
       const initialCount = store.projects.length
 
-      store.deleteProject('1')
+      await store.deleteProject('1')
 
       expect(store.projects.length).toBe(initialCount)
     })
 
-    it('supports nested projects', () => {
+    it('supports nested projects', async () => {
       const store = useTaskStore()
-      const parent = store.createProject({ name: 'Parent' })
-      const child = store.createProject({
+      const parent = await store.createProject({ name: 'Parent' })
+      const child = await store.createProject({
         name: 'Child',
         parentId: parent.id
       })
@@ -257,11 +257,11 @@ describe('TaskStore', () => {
       expect(children[0].id).toBe(child.id)
     })
 
-    it('detects project hierarchy correctly', () => {
+    it('detects project hierarchy correctly', async () => {
       const store = useTaskStore()
-      const grandparent = store.createProject({ name: 'Grandparent' })
-      const parent = store.createProject({ name: 'Parent', parentId: grandparent.id })
-      const child = store.createProject({ name: 'Child', parentId: parent.id })
+      const grandparent = await store.createProject({ name: 'Grandparent' })
+      const parent = await store.createProject({ name: 'Parent', parentId: grandparent.id })
+      const child = await store.createProject({ name: 'Child', parentId: parent.id })
 
       // Wait a tick for the hierarchy to be fully established
       const isDescendant = store.isDescendantOf(child.id, grandparent.id)
@@ -285,9 +285,9 @@ describe('TaskStore', () => {
 
       // Note: Store initializes with default "My Tasks" project (id: '1')
       // Create new projects for testing
-      const project1 = store.createProject({ name: 'Project 1' })
+      const project1 = await store.createProject({ name: 'Project 1' })
       await new Promise(resolve => setTimeout(resolve, 2))
-      const project2 = store.createProject({ name: 'Project 2' })
+      const project2 = await store.createProject({ name: 'Project 2' })
 
       // Create tasks with delays to ensure unique IDs
       const task1 = await store.createTask({ title: 'Task 1', projectId: project1.id })

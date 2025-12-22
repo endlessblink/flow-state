@@ -27,7 +27,7 @@ export type SmartGroupType = typeof SMART_GROUPS[keyof typeof SMART_GROUPS]
 /**
  * Power keyword categories
  */
-export type PowerKeywordCategory = 'date' | 'priority' | 'status'
+export type PowerKeywordCategory = 'date' | 'priority' | 'status' | 'duration'
 
 /**
  * Priority keywords
@@ -46,6 +46,17 @@ export const STATUS_KEYWORDS = {
   IN_PROGRESS: ['in progress', 'working', 'active'],
   BACKLOG: ['backlog', 'later'],
   PLANNED: ['planned', 'todo', 'to do']
+} as const
+
+/**
+ * Duration keywords
+ */
+export const DURATION_KEYWORDS = {
+  QUICK: ['quick task', 'tiny task', 'less than 15m'],
+  SHORT: ['short task', 'fast task', '15-30m'],
+  MEDIUM: ['medium task', 'regular task', '30-60m'],
+  LONG: ['long task', 'big task', 'more than 60m'],
+  UNESTIMATED: ['unestimated', 'unknown duration', 'needs estimate']
 } as const
 
 /**
@@ -111,6 +122,20 @@ export function detectPowerKeyword(groupName: string): PowerKeywordResult | null
     }
   }
 
+  // Check duration keywords
+  for (const [duration, keywords] of Object.entries(DURATION_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (normalizedName.includes(keyword)) {
+        return {
+          keyword,
+          category: 'duration',
+          value: duration.toLowerCase(),
+          displayName: duration.charAt(0) + duration.slice(1).toLowerCase()
+        }
+      }
+    }
+  }
+
   return null
 }
 
@@ -137,6 +162,10 @@ export function getAllPowerKeywords(): { category: PowerKeywordCategory; keyword
     {
       category: 'status',
       keywords: Object.values(STATUS_KEYWORDS).flat()
+    },
+    {
+      category: 'duration',
+      keywords: Object.values(DURATION_KEYWORDS).flat()
     }
   ]
 }

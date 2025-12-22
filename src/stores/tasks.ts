@@ -181,8 +181,53 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   /**
-   * BUG-025 FIX: Centralized task save function that respects INDIVIDUAL_ONLY mode
-   * All task saves MUST go through this function to avoid writing to stale tasks:data
+   * Centralized project save function that respects storage flags
+   */
+  const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {
+    const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
+    if (!dbInstance) {
+      console.error(`❌ [SAVE-PROJECTS] PouchDB not available (${context})`)
+      return
+    }
+
+    try {
+      // TASK-048: Individual project document storage
+      if (STORAGE_FLAGS.DUAL_WRITE_PROJECTS || STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
+        await saveIndividualProjects(dbInstance, projectsToSave)
+        console.log(`📋 [SAVE-PROJECTS] Projects saved to individual docs (${context}): ${projectsToSave.length} projects`)
+      }
+
+      // Write to legacy format unless INDIVIDUAL_PROJECTS_ONLY is true
+      if (!STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
+        await queuedWrite(async () => {
+          const existingDoc = await dbInstance.get('projects:data').catch(() => null)
+          return await dbInstance.put({
+            _id: 'projects:data',
+            _rev: existingDoc?._rev || undefined,
+            data: projectsToSave,
+            createdAt: existingDoc?.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })
+        })
+        console.log(`📋 [SAVE-PROJECTS] Projects saved to legacy format (${context})`)
+      }
+
+      // PHASE 1: Trigger sync if needed
+      await safeSync(`projects-save-${context}`)
+    } catch (error) {
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Projects save failed',
+        error: error as Error,
+        context: { projectCount: projectsToSave.length, context },
+        showNotification: false
+      })
+    }
+  }
+
+  /**
+   * Centralized task save function that respects INDIVIDUAL_ONLY mode
    */
   const saveTasksToStorage = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
     const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
@@ -1356,67 +1401,21 @@ export const useTaskStore = defineStore('tasks', () => {
   // Original: watch(() => projects.value.map(...), ..., { deep: true, immediate: true })
   // Removed to improve performance - debugging should use Vue DevTools instead
 
-  // 🔧 CRITICAL: Fix project persistence to use PouchDB instead of IndexedDB
   // TASK-048: Updated to support individual document storage
   watch(projects, (newProjects) => {
+    if (manualOperationInProgress) {
+      console.log('⏸️ Skipping projects auto-save during manual operation')
+      return
+    }
+
+    if (isLoadingFromDatabase) {
+      console.log('⏸️ Skipping projects auto-save during database load')
+      return
+    }
+
     if (projectsSaveTimer) clearTimeout(projectsSaveTimer)
     projectsSaveTimer = setTimeout(async () => {
-      try {
-        // Use PouchDB like tasks (not IndexedDB)
-        const dbInstance = window.pomoFlowDb
-        if (!dbInstance) {
-          console.error('❌ PouchDB not available for project persistence')
-          return
-        }
-
-        // TASK-048: Individual project document storage
-        if (STORAGE_FLAGS.DUAL_WRITE_PROJECTS || STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-          // Save to individual project-{id} documents
-          await saveIndividualProjects(dbInstance as unknown as PouchDB.Database, newProjects)
-          console.log(`📋 [TASK-048] Projects saved to individual docs: ${newProjects.length} projects`)
-        }
-
-        // Write to legacy format unless INDIVIDUAL_PROJECTS_ONLY is true
-        if (!STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-          // CRITICAL FIX: Use write queue to prevent concurrent writes and fetch latest _rev
-          await queuedWrite(async () => {
-            try {
-              const existingDoc = await dbInstance.get('projects:data').catch(() => null)
-              return await dbInstance.put({
-                _id: 'projects:data',
-                _rev: existingDoc?._rev || undefined, // Always use latest revision
-                data: newProjects,
-                createdAt: existingDoc?.createdAt || new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              })
-            } catch (conflictError) {
-              console.error('❌ Projects save conflict, retrying with fresh fetch:', conflictError)
-              // Retry once with completely fresh document
-              const freshDoc = await dbInstance.get('projects:data')
-              return await dbInstance.put({
-                _id: 'projects:data',
-                _rev: freshDoc._rev,
-                data: newProjects,
-                createdAt: freshDoc.createdAt || new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              })
-            }
-          })
-          console.log(`📋 Projects saved to legacy format: ${newProjects.length} projects`)
-        }
-
-        // PHASE 1: Use safe sync wrapper
-        await safeSync('projects-auto-save')
-      } catch (error) {
-        errorHandler.report({
-          severity: ErrorSeverity.ERROR,
-          category: ErrorCategory.DATABASE,
-          message: 'Projects auto-save failed',
-          error: error as Error,
-          context: { projectCount: newProjects?.length },
-          showNotification: false // Less critical than tasks
-        })
-      }
+      await saveProjectsToStorage([...projects.value], 'auto-save')
     }, 1000) // Debounce 1 second
   }, { deep: true, flush: 'post' })
 
@@ -1790,7 +1789,10 @@ export const useTaskStore = defineStore('tasks', () => {
   // These counts respect the active project filter (if set) to show relevant counts
   // Updated: Fixed timezone bug using local date strings
   const smartViewTaskCounts = computed(() => {
-    const { isTodayTask, isWeekTask, isUncategorizedTask, isUnscheduledTask, isInProgressTask } = useSmartViews()
+    const {
+      isTodayTask, isWeekTask, isUncategorizedTask, isUnscheduledTask, isInProgressTask,
+      isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask
+    } = useSmartViews()
 
     // Get the base tasks - either all tasks or project-filtered tasks
     let baseTasks = tasks.value
@@ -1820,6 +1822,11 @@ export const useTaskStore = defineStore('tasks', () => {
     const uncategorized = baseTasks.filter(task => isUncategorizedTask(task)).length
     const unscheduled = baseTasks.filter(task => isUnscheduledTask(task)).length
     const inProgress = baseTasks.filter(task => isInProgressTask(task)).length
+    const quick = baseTasks.filter(task => isQuickTask(task)).length
+    const short = baseTasks.filter(task => isShortTask(task)).length
+    const medium = baseTasks.filter(task => isMediumTask(task)).length
+    const long = baseTasks.filter(task => isLongTask(task)).length
+    const unestimated = baseTasks.filter(task => isUnestimatedTask(task)).length
 
     // 'all_active' counts all non-done tasks (previously 'above_my_tasks')
     const allActive = baseTasks.filter(task => task.status !== 'done').length
@@ -1834,7 +1841,12 @@ export const useTaskStore = defineStore('tasks', () => {
       unscheduled,
       inProgress,
       allActive,
-      all
+      all,
+      quick,
+      short,
+      medium,
+      long,
+      unestimated
     }
   })
 
@@ -2609,92 +2621,123 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Project management actions
-  const createProject = (projectData: Partial<Project>) => {
+  const createProject = async (projectData: Partial<Project>) => {
     console.log('🔥 [DEBUG] tasks.ts createProject called with:', projectData)
-    console.trace('🔥 [DEBUG] Call stack for createProject')
+    // Removed trace to reduce log noise
 
-    const newProject: Project = {
-      id: Date.now().toString(),
-      name: projectData.name || 'New Project',
-      color: projectData.color || '#4ECDC4',
-      colorType: projectData.colorType || 'hex',
-      emoji: projectData.emoji,
-      viewType: projectData.viewType || 'status',
-      parentId: projectData.parentId || null, // FIX: Ensure null for root projects
-      createdAt: new Date(),
-      ...projectData
+    manualOperationInProgress = true
+
+    try {
+      const newProject: Project = {
+        id: Date.now().toString(),
+        name: projectData.name || 'New Project',
+        color: projectData.color || '#4ECDC4',
+        colorType: projectData.colorType || 'hex',
+        emoji: projectData.emoji,
+        viewType: projectData.viewType || 'status',
+        parentId: projectData.parentId || null,
+        createdAt: new Date(),
+        ...projectData
+      }
+
+      projects.value.push(newProject)
+
+      console.log('📋 [DEBUG] Projects array after creation:', projects.value.length, 'projects')
+
+      // Persist immediately
+      await saveProjectsToStorage(projects.value, `createProject-${newProject.id}`)
+
+      return newProject
+    } finally {
+      manualOperationInProgress = false
     }
-
-    console.log('🎯 [DEBUG] Creating new project object:', {
-      id: newProject.id,
-      name: newProject.name,
-      parentId: newProject.parentId,
-      colorType: newProject.colorType
-    })
-
-    projects.value.push(newProject)
-
-    // FIX: Log projects array after creation
-    console.log('📋 [DEBUG] Projects array after creation:', projects.value.length, 'projects')
-    console.log('📋 [DEBUG] All projects in store:', projects.value.map(p => ({ id: p.id, name: p.name, parentId: p.parentId })))
-
-    return newProject
   }
 
-  const updateProject = (projectId: string, updates: Partial<Project>) => {
+  const updateProject = async (projectId: string, updates: Partial<Project>) => {
     const projectIndex = projects.value.findIndex(p => p.id === projectId)
     if (projectIndex !== -1) {
-      projects.value[projectIndex] = {
-        ...projects.value[projectIndex],
-        ...updates
+      manualOperationInProgress = true
+      try {
+        projects.value[projectIndex] = {
+          ...projects.value[projectIndex],
+          ...updates
+        }
+        await saveProjectsToStorage(projects.value, `updateProject-${projectId}`)
+      } finally {
+        manualOperationInProgress = false
       }
     }
   }
 
-  const deleteProject = (projectId: string) => {
+  const deleteProject = async (projectId: string) => {
     const projectIndex = projects.value.findIndex(p => p.id === projectId)
     if (projectIndex !== -1) {
-      // REMOVED: "My Tasks" protection - no more default project with ID '1'
+      manualOperationInProgress = true
+      try {
+        const projectToDelete = projects.value[projectIndex]
+        const parentId = projectToDelete.parentId
 
-      // Move all tasks from this project to uncategorized (null)
-      tasks.value.forEach(task => {
-        if (task.projectId === projectId) {
-          task.projectId = null
-          task.isUncategorized = true
-          task.updatedAt = new Date()
+        // Move all tasks from this project to uncategorized (null)
+        let tasksModified = false
+        tasks.value.forEach(task => {
+          if (task.projectId === projectId) {
+            task.projectId = null
+            task.isUncategorized = true
+            task.updatedAt = new Date()
+            tasksModified = true
+          }
+        })
+
+        // Move child projects to parent of deleted project
+        projects.value.forEach(project => {
+          if (project.parentId === projectId) {
+            project.parentId = parentId
+          }
+        })
+
+        if (tasksModified) {
+          await saveTasksToStorage(tasks.value, `deleteProject-taskCleanup-${projectId}`)
         }
-      })
 
-      // Move child projects to parent of deleted project
-      projects.value.forEach(project => {
-        if (project.parentId === projectId) {
-          project.parentId = projects.value[projectIndex].parentId
-        }
-      })
-
-      projects.value.splice(projectIndex, 1)
+        projects.value.splice(projectIndex, 1)
+        await saveProjectsToStorage(projects.value, `deleteProject-${projectId}`)
+      } finally {
+        manualOperationInProgress = false
+      }
     }
   }
 
-  const setProjectColor = (projectId: string, color: string, colorType: 'hex' | 'emoji', emoji?: string) => {
+  const setProjectColor = async (projectId: string, color: string, colorType: 'hex' | 'emoji', emoji?: string) => {
     const project = projects.value.find(p => p.id === projectId)
     if (project) {
-      project.color = color
-      project.colorType = colorType
-      if (colorType === 'emoji' && emoji) {
-        project.emoji = emoji
-      } else {
-        project.emoji = undefined
+      manualOperationInProgress = true
+      try {
+        project.color = color
+        project.colorType = colorType
+        if (colorType === 'emoji' && emoji) {
+          project.emoji = emoji
+        } else {
+          project.emoji = undefined
+        }
+        await saveProjectsToStorage(projects.value, `setProjectColor-${projectId}`)
+      } finally {
+        manualOperationInProgress = false
       }
     }
   }
 
-  const moveTaskToProject = (taskId: string, targetProjectId: string) => {
+  const moveTaskToProject = async (taskId: string, targetProjectId: string) => {
     const task = tasks.value.find(t => t.id === taskId)
     if (task) {
-      task.projectId = targetProjectId
-      task.updatedAt = new Date()
-      console.log(`Task "${task.title}" moved to project "${getProjectById(targetProjectId)?.name}"`)
+      manualOperationInProgress = true
+      try {
+        task.projectId = targetProjectId
+        task.updatedAt = new Date()
+        console.log(`Task "${task.title}" moved to project "${getProjectById(targetProjectId)?.name}"`)
+        await saveTasksToStorage(tasks.value, `moveTaskToProject-${taskId}`)
+      } finally {
+        manualOperationInProgress = false
+      }
     }
   }
 

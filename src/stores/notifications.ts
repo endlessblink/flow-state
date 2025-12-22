@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import type {
@@ -466,6 +466,17 @@ export const useNotificationStore = defineStore('notifications', () => {
       })
     }
   }
+
+  // BUG-025 FIX: Auto-save notifications when they change
+  // This eliminates the need for manual saveScheduledNotifications() calls
+  let notificationSaveTimer: ReturnType<typeof setTimeout> | null = null
+  watch(scheduledNotifications, () => {
+    if (notificationSaveTimer) clearTimeout(notificationSaveTimer)
+    notificationSaveTimer = setTimeout(async () => {
+      await saveScheduledNotifications()
+      console.log('📬 [BUG-025] Notifications auto-saved')
+    }, 500) // 500ms debounce
+  }, { deep: true })
 
   /**
    * Clean up old notifications (older than 7 days)

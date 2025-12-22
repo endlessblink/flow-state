@@ -374,6 +374,7 @@ const resolvedConflicts = computed(() => reliableSync.resolutions.value.length)
 
 // Network metrics
 const networkMetrics = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const optimizer = reliableSync.networkOptimizer as { getMetrics: () => { currentCondition: any } } | null
   return optimizer ? optimizer.getMetrics().currentCondition : {
     type: 'good' as const,

@@ -91,6 +91,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
+import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
 import TaskEditModal from '@/components/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
@@ -104,6 +105,7 @@ import FilterControls from '@/components/base/FilterControls.vue'
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
+const db = useDatabase()
 
 // Density state from global UI store
 const currentDensity = computed(() => uiStore.boardDensity)
@@ -111,17 +113,53 @@ const currentDensity = computed(() => uiStore.boardDensity)
 // Show done column setting
 const showDoneColumn = ref(false)
 
+// BUG-025 P4: Load kanban settings from PouchDB
+interface KanbanSettings {
+  showDoneColumn: boolean
+}
+
+// Load from localStorage first (always available)
+const loadKanbanSettingsFromLocalStorage = () => {
+  try {
+    const localSaved = localStorage.getItem('pomo-flow-kanban-settings')
+    if (localSaved) {
+      const settings = JSON.parse(localSaved)
+      showDoneColumn.value = settings.showDoneColumn || false
+      console.log('🎛️ Kanban settings loaded from localStorage:', settings)
+    }
+  } catch (e) {
+    console.warn('Failed to load kanban settings from localStorage:', e)
+  }
+}
+
+const loadKanbanSettings = async () => {
+  // Load from localStorage first (instant)
+  loadKanbanSettingsFromLocalStorage()
+
+  // Then try PouchDB for cross-device sync
+  if (!db.isReady?.value) {
+    console.log('🎛️ [BUG-025] Kanban settings loaded from localStorage (DB not ready)')
+    return
+  }
+
+  try {
+    const saved = await db.load<KanbanSettings>(DB_KEYS.KANBAN_SETTINGS)
+    if (saved) {
+      showDoneColumn.value = saved.showDoneColumn || false
+      console.log('🎛️ [BUG-025] Kanban settings loaded from PouchDB:', saved)
+    }
+  } catch (error) {
+    console.warn('Failed to load kanban settings from PouchDB (localStorage already loaded):', error)
+  }
+}
+
 // Load saved settings on mount
 onMounted(() => {
   // Initialize UI store (includes density loading)
   uiStore.loadState()
 
-  // Load kanban settings
-  const savedKanbanSettings = localStorage.getItem('pomo-flow-kanban-settings')
-  if (savedKanbanSettings) {
-    const settings = JSON.parse(savedKanbanSettings)
-    showDoneColumn.value = settings.showDoneColumn || false
-  }
+  // Load kanban settings from PouchDB
+  loadKanbanSettings()
 
   // Listen for kanban settings changes
   window.addEventListener('kanban-settings-changed', handleKanbanSettingsChange)
@@ -402,13 +440,22 @@ const handleToggleDoneColumn = (event: MouseEvent) => {
   }
 }
 
-// Save kanban settings to localStorage
-const saveKanbanSettings = () => {
-  const settings = {
+// BUG-025 P4: Save kanban settings to PouchDB
+const saveKanbanSettings = async () => {
+  const settings: KanbanSettings = {
     showDoneColumn: showDoneColumn.value
   }
+  // Always save to localStorage first (fast, reliable)
   localStorage.setItem('pomo-flow-kanban-settings', JSON.stringify(settings))
-  console.log('🔧 BoardView: Kanban settings saved:', settings)
+  // Then try PouchDB for cross-device sync
+  if (db.isReady?.value) {
+    try {
+      await db.save(DB_KEYS.KANBAN_SETTINGS, settings)
+      console.log('🎛️ [BUG-025] Kanban settings saved to PouchDB:', settings)
+    } catch (error) {
+      console.warn('Failed to save kanban settings to PouchDB (localStorage already saved):', error)
+    }
+  }
 }
 
 // Toggle Today filter

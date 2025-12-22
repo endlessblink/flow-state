@@ -1,11 +1,11 @@
 <template>
   <div class="character-diff">
     <div class="diff-line">
+      <!-- eslint-disable-next-line vue/no-v-html -->
       <span
         v-for="(char, index) in diffTokens"
         :key="index"
         :class="getTokenClass(char)"
-        <!-- eslint-disable-next-line vue/no-v-html -->
         v-html="char.content"
       />
     </div>

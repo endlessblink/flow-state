@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
+import { ref } from 'vue'
 import MultiSelectToggle from '@/components/MultiSelectToggle.vue'
 
 const meta = {

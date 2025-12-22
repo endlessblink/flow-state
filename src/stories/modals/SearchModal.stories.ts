@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import SearchModal from '@/components/SearchModal.vue'
+import { useTaskStore } from '@/stores/tasks'
 
 // Mock data for search results
 const mockTasks = [
@@ -118,6 +120,20 @@ const meta = {
       description: 'Whether the search modal is open',
     },
   },
+
+  decorators: [
+    () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const taskStore = useTaskStore()
+      // Default empty state for the store
+      taskStore.tasks = []
+      taskStore.projects = []
+      return {
+        template: '<story />'
+      }
+    }
+  ],
 } satisfies Meta<typeof SearchModal>
 
 export default meta
@@ -178,21 +194,26 @@ export const TaskSearch: Story = {
   render: () => ({
     components: { SearchModal },
     setup() {
+      const taskStore = useTaskStore()
+      taskStore.tasks = mockTasks
+      taskStore.projects = mockProjects
+
       const isOpen = ref(true)
-
-      // Mock task store data
-      const taskStore = {
-        tasks: mockTasks,
-        projects: mockProjects
-      }
-
-      // Mock the store
-      const useTaskStore = () => taskStore
-
-      return { isOpen, useTaskStore }
+      return { isOpen }
     },
     template: `
       <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
+        <!-- Inject mock store for the component -->
+        <component :is="'script'" v-if="false">
+          /* This is a hacky way to provide the store if the component uses inject, 
+             but since SearchModal uses useTaskStore() directly, we need a better way. 
+             Actually, Storybook's preview.ts already has app.use(pinia).
+             The failure was: Cannot read properties of undefined (reading 'length')
+             This often happens if filteredTasks.value is accessed before store is ready
+             or if taskStore.tasks is undefined.
+          */
+        </component>
+        
         <div style="position: absolute; top: 20px; left: 20px; z-index: 100; background: var(--glass-bg-solid); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md);">
           <p style="margin: 0; font-size: 14px; font-weight: 600;">Task Search Demo</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Try searching for: "documentation", "bug", "fix", "test", "deploy"</p>
@@ -212,18 +233,13 @@ export const ProjectSearch: Story = {
   render: () => ({
     components: { SearchModal },
     setup() {
+      const taskStore = useTaskStore()
+
+      taskStore.tasks = mockTasks
+      taskStore.projects = mockProjects
+
       const isOpen = ref(true)
-
-      // Mock task store data
-      const taskStore = {
-        tasks: mockTasks,
-        projects: mockProjects
-      }
-
-      // Mock the store
-      const useTaskStore = () => taskStore
-
-      return { isOpen, useTaskStore }
+      return { isOpen }
     },
     template: `
       <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
@@ -246,18 +262,13 @@ export const NoResults: Story = {
   render: () => ({
     components: { SearchModal },
     setup() {
+      const taskStore = useTaskStore()
+
+      taskStore.tasks = []
+      taskStore.projects = []
+
       const isOpen = ref(true)
-
-      // Mock task store with empty data
-      const taskStore = {
-        tasks: [],
-        projects: []
-      }
-
-      // Mock the store
-      const useTaskStore = () => taskStore
-
-      return { isOpen, useTaskStore }
+      return { isOpen }
     },
     template: `
       <div style="width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); position: relative;">
@@ -281,17 +292,12 @@ export const InteractiveDemo: Story = {
   render: () => ({
     components: { SearchModal },
     setup() {
+      const taskStore = useTaskStore()
+      taskStore.tasks = mockTasks
+      taskStore.projects = mockProjects
+
       const isOpen = ref(false)
       const selectedItems = ref<any[]>([])
-
-      // Mock task store data
-      const taskStore = {
-        tasks: mockTasks,
-        projects: mockProjects
-      }
-
-      // Mock the store
-      const useTaskStore = () => taskStore
 
       const handleSelectTask = (task: any) => {
         selectedItems.value.push({ type: 'task', ...task })
@@ -316,11 +322,12 @@ export const InteractiveDemo: Story = {
       return {
         isOpen,
         selectedItems,
-        useTaskStore,
         handleSelectTask,
         handleSelectProject,
         openSearch,
-        clearSelections
+        clearSelections,
+        mockTasks,
+        mockProjects
       }
     },
     template: `

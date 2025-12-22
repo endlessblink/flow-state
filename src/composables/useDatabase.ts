@@ -46,7 +46,13 @@ export const DB_KEYS = {
   SETTINGS: 'settings',
   NOTIFICATIONS: 'notifications',
   HIDE_DONE_TASKS: 'hide_done_tasks',
-  VERSION: 'version'
+  VERSION: 'version',
+  // BUG-025: Timer session key for consistency
+  TIMER_SESSION: 'pomo-flow-timer-session',
+  // BUG-025 P4: New keys for cross-device sync (migrated from localStorage)
+  QUICK_SORT_SESSIONS: 'quick_sort_sessions',
+  FILTER_STATE: 'filter_state',
+  KANBAN_SETTINGS: 'kanban_settings'
 } as const
 
 // Conflict detection state for data safety monitoring

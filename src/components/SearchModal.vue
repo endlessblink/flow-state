@@ -112,12 +112,12 @@ const selectedIndex = ref(0)
 
 // Computed properties for search results
 const filteredTasks = computed(() => {
-  if (!searchQuery.value.trim()) return []
+  if (!searchQuery.value.trim() || !taskStore?.tasks) return []
   
   const query = searchQuery.value.toLowerCase()
-  return taskStore.tasks.filter(task => {
+  return (taskStore.tasks || []).filter(task => {
     const titleMatch = task.title.toLowerCase().includes(query)
-    const projectMatch = task.projectId ? 
+    const projectMatch = (task.projectId && taskStore.projects) ? 
       taskStore.projects.find(p => p.id === task.projectId)?.name.toLowerCase().includes(query) : 
       false
     const statusMatch = task.status?.toLowerCase().includes(query)
@@ -125,12 +125,12 @@ const filteredTasks = computed(() => {
     return titleMatch || projectMatch || statusMatch
   }).map(task => ({
     ...task,
-    projectName: task.projectId ? taskStore.projects.find(p => p.id === task.projectId)?.name : undefined
+    projectName: (task.projectId && taskStore.projects) ? taskStore.projects.find(p => p.id === task.projectId)?.name : undefined
   })).slice(0, 8) // Limit results
 })
 
 const filteredProjects = computed(() => {
-  if (!searchQuery.value.trim()) return []
+  if (!searchQuery.value.trim() || !taskStore?.projects) return []
   
   const query = searchQuery.value.toLowerCase()
   return taskStore.projects.filter(project => 

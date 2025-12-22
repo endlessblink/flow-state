@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
+import { ref } from 'vue'
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton.vue'
 
 const meta: Meta<typeof GoogleSignInButton> = {

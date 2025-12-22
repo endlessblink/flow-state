@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 
 export interface CategoryAction {
   id: string
@@ -100,8 +101,8 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     sessionHistory.value.push(summary)
     lastCompletedDate.value = new Date().toISOString()
 
-    // Persist to localStorage
-    saveToLocalStorage()
+    // BUG-025: Persist to PouchDB (auto-save watcher handles this, but explicit call for immediate save)
+    saveToDatabase()
 
     isActive.value = false
     currentSessionId.value = null
@@ -153,6 +154,58 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     redoStack.value = []
   }
 
+  // BUG-025 P4: Use PouchDB for cross-device sync instead of localStorage
+  const db = useDatabase()
+
+  async function saveToDatabase() {
+    // Always save to localStorage first (fast, reliable)
+    saveToLocalStorage()
+    // Then try PouchDB for cross-device sync
+    if (db.isReady?.value) {
+      try {
+        await db.save(DB_KEYS.QUICK_SORT_SESSIONS, {
+          history: sessionHistory.value,
+          lastCompletedDate: lastCompletedDate.value
+        })
+        console.log('📊 [BUG-025] Quick Sort data saved to PouchDB')
+      } catch (error) {
+        console.warn('Failed to save Quick Sort data to PouchDB (localStorage already saved):', error)
+      }
+    }
+  }
+
+  async function loadFromDatabase() {
+    // Load from localStorage first (always available)
+    loadFromLocalStorage()
+    // Then try PouchDB for cross-device updates
+    if (!db.isReady?.value) {
+      console.log('📊 [BUG-025] Quick Sort loaded from localStorage (DB not ready)')
+      return
+    }
+    try {
+      interface QuickSortData {
+        history?: Array<{ completedAt: string; [key: string]: unknown }>
+        lastCompletedDate?: string | null
+      }
+      const saved = await db.load<QuickSortData>(DB_KEYS.QUICK_SORT_SESSIONS)
+      if (saved) {
+        if (saved.history && Array.isArray(saved.history)) {
+          sessionHistory.value = saved.history.map((s) => ({
+            ...s,
+            completedAt: new Date(s.completedAt)
+          })) as SessionSummary[]
+        }
+        if (saved.lastCompletedDate) {
+          lastCompletedDate.value = saved.lastCompletedDate
+        }
+        console.log('📊 [BUG-025] Quick Sort data loaded from PouchDB')
+      }
+    } catch (error) {
+      console.warn('Failed to load Quick Sort data from PouchDB (localStorage already loaded):', error)
+    }
+  }
+
+  // Legacy localStorage functions (for fallback/migration)
   function saveToLocalStorage() {
     try {
       localStorage.setItem('quickSort_sessionHistory', JSON.stringify(sessionHistory.value))
@@ -187,8 +240,17 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     }
   }
 
-  // Load data on store creation
-  loadFromLocalStorage()
+  // BUG-025: Auto-save when data changes
+  let quickSortSaveTimer: ReturnType<typeof setTimeout> | null = null
+  watch([sessionHistory, lastCompletedDate], () => {
+    if (quickSortSaveTimer) clearTimeout(quickSortSaveTimer)
+    quickSortSaveTimer = setTimeout(() => {
+      saveToDatabase()
+    }, 500) // 500ms debounce
+  }, { deep: true })
+
+  // Load data on store creation (async)
+  loadFromDatabase()
 
   return {
     // State

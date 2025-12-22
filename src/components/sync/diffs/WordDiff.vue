@@ -1,11 +1,11 @@
 <template>
   <div class="word-diff">
     <div class="diff-content">
+      <!-- eslint-disable-next-line vue/no-v-html -->
       <span
         v-for="(token, index) in diffTokens"
         :key="index"
         :class="getTokenClass(token)"
-        <!-- eslint-disable-next-line vue/no-v-html -->
         v-html="token.content"
       />
     </div>

@@ -1628,7 +1628,7 @@
           // (?:~~)?          - Optional strikethrough end
           if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE)-\d+)(?:~~)?/)) {
             // Save previous task's subtasks before starting new one
-            if (currentItem && currentItem.id?.startsWith('TASK-')) {
+            if (currentItem && currentItem.id?.match(/^(?:TASK|BUG|ISSUE)-/)) {
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
               if (taskIdx >= 0) {
                 data.activeWork[taskIdx].subtasks = currentItem.subtasks || [];
@@ -1672,7 +1672,7 @@
                 status = parseTaskStatus(titleText);
               }
               // Also check if task ID has strikethrough (~~TASK-XXX~~) - usually means done
-              const hasStrikethrough = trimmed.includes('~~TASK-');
+              const hasStrikethrough = trimmed.match(/~~(?:TASK|BUG|ISSUE)-\d+~~/);
               if (status === 'todo' && hasStrikethrough) {
                 status = 'done';
               }
@@ -1844,7 +1844,7 @@
         }
 
         // Finalize last task's subtasks and progress
-        if (currentItem && currentItem.id?.startsWith('TASK-')) {
+        if (currentItem && currentItem.id?.match(/^(?:TASK|BUG|ISSUE)-/)) {
           const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
           if (taskIdx >= 0) {
             data.activeWork[taskIdx].subtasks = currentItem.subtasks || [];

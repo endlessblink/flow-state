@@ -68,7 +68,6 @@
     "skill-dashboard": "node simple-skill-monitor.js",
     "skill-monitor:full": "node start-skill-monitoring-simple.js",
     "skills:dashboard": "cd .claude/skills-management && npm run dev -- --port 6008",
-    "dev:manager": "npx serve dev-manager -p 6010 --symlinks",
     "backup-tasks": "node scripts/backup-tasks.cjs",
     "restore-tasks": "node scripts/restore-tasks.cjs",
     "checkpoint": "bash scripts/checkpoint-with-backup.sh",

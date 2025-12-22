@@ -11,7 +11,8 @@
       'selected': isSelected,
       'multi-select-mode': multiSelectMode,
       'is-dragging': isNodeDragging,
-      'is-connecting': isConnecting
+      'is-connecting': isConnecting,
+      'is-recently-created': isRecentlyCreated
     }"
     @dblclick="$emit('edit', task)"
     @click="handleClick"
@@ -113,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
 import { Calendar, Timer } from 'lucide-vue-next'
 import type { Task, TaskStatus } from '@/types/tasks'
@@ -170,6 +171,26 @@ const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task?.tit
 
 // Track local dragging state to prevent visual artifacts
 const isNodeDragging = ref(false)
+
+// Track if task was recently created for animation feedback
+const isRecentlyCreated = ref(false)
+
+onMounted(() => {
+  if (props.task?.createdAt) {
+    const createdDate = new Date(props.task.createdAt)
+    const now = new Date()
+    const ageInSeconds = (now.getTime() - createdDate.getTime()) / 1000
+
+    // If task was created in the last 5 seconds, trigger the animation
+    if (ageInSeconds < 5) {
+      isRecentlyCreated.value = true
+      // Remove the class after the animation completes
+      setTimeout(() => {
+        isRecentlyCreated.value = false
+      }, 2500)
+    }
+  }
+})
 
 // Description expansion state
 const isDescriptionExpanded = ref(false)
@@ -410,6 +431,38 @@ const _handleDragEnd = () => {
   will-change: transform !important;
   outline: none !important;
   border: none !important;
+}
+
+/* Creation Pulse Animation - Gentle feedback when task is first added to canvas */
+.task-node.is-recently-created {
+  animation: animate-creation 2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 50; /* Ensure it stays above others while animating */
+}
+
+@keyframes animate-creation {
+  0% {
+    transform: scale(0.6) translateZ(0);
+    box-shadow: 0 0 0 0 var(--brand-primary);
+    filter: brightness(1.5);
+  }
+  20% {
+    transform: scale(1.1) translateZ(0);
+    box-shadow: 0 0 40px 10px var(--brand-primary);
+    filter: brightness(1.2);
+  }
+  40% {
+    transform: scale(0.95) translateZ(0);
+    box-shadow: 0 0 20px 5px var(--brand-primary);
+  }
+  60% {
+    transform: scale(1.02) translateZ(0);
+    box-shadow: 0 0 15px 2px var(--brand-primary);
+  }
+  100% {
+    transform: scale(1) translateZ(0);
+    box-shadow: var(--shadow-md);
+    filter: brightness(1);
+  }
 }
 
 /* Connection mode styles - no opacity changes, keep handles visible */

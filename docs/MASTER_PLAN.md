@@ -136,7 +136,7 @@ Parser calculates progress from checkbox subtasks:
 
 **Files to investigate**: `useReliableSyncManager.ts`, `canvas.ts`, `tasks.ts`
 
-### ✅ ~~BUG-030~~: Uncategorized Tasks Filter Not Working (Dec 22, 2025)
+### ✅ ~~BUG-030~~: Uncategorized Tasks Filter Not Working (✅ DONE)
 
 | Issue | Severity | Status |
 |-------|----------|--------|
@@ -147,11 +147,11 @@ Parser calculates progress from checkbox subtasks:
 **Root Cause**: Inconsistent logic for identifying "uncategorized" tasks across stores and components. Some checked for `null`, others for `'uncategorized'`, leading to mismatches.
 
 **Fix Applied**:
-1. ✅ Standardized logic in `isUncategorizedTask` (stores/tasks.ts).
-2. ✅ Updated `AppSidebar` to prevent forced navigation when selecting smart views.
-3. ✅ Updated `UnifiedInboxPanel` to correctly source filtered tasks.
+- [x] Standardized logic in `isUncategorizedTask` (stores/tasks.ts). ✅
+- [x] Updated `AppSidebar` to prevent forced navigation when selecting smart views. ✅
+- [x] Updated `UnifiedInboxPanel` to correctly source filtered tasks. ✅
 
-### ✅ ~~TASK-051~~: Simplify Inbox Interface (Dec 22, 2025)
+### ✅ ~~TASK-051~~: Simplify Inbox Interface (✅ DONE)
 
 | Feature | Priority | Status |
 |---------|----------|--------|
@@ -160,9 +160,22 @@ Parser calculates progress from checkbox subtasks:
 **Problem**: Inbox had "Ready/Upcoming/Backlog" tabs that hid tasks based on dates, conflicting with global sidebar filters (like "Uncategorized").
 
 **Changes**:
-1. ✅ Removed internal tabs from `UnifiedInboxPanel.vue`.
-2. ✅ Added explicit **"All"** filter chip to `InboxFilters.vue` to clear secondary filters.
-3. ✅ Inbox now strictly respects the global sidebar selection.
+- [x] Removed internal tabs from `UnifiedInboxPanel.vue`. ✅
+- [x] Added explicit **"All"** filter chip to `InboxFilters.vue` to clear secondary filters. ✅
+- [x] Inbox now strictly respects the global sidebar selection. ✅
+
+### ✅ ~~TASK-050~~: Canvas Task Creation Animation (✅ DONE)
+
+| Feature | Priority | Status |
+|---------|----------|--------|
+| Add animation on canvas creation | LOW | ✅ **DONE** |
+
+**Problem**: New tasks "pop" into existence without visual feedback.
+
+**Changes**:
+- [x] Added `animate-creation` CSS keyframes to `TaskNode.vue`. ✅
+- [x] Implemented logic to trigger animation if task is < 5s old on mount. ✅
+- [x] Unified pulse and glow effect with teal theme. ✅
 
 ### 🔴 BUG-031: Creating New Project Doesn't Work (Dec 22, 2025)
 

@@ -64,7 +64,7 @@ export const extractTaskId = (docId: string): string | null => {
 const isConnectionClosingError = (error: unknown): boolean => {
   const err = error as { message?: string; name?: string }
   return err?.message?.includes('connection is closing') ||
-         err?.name === 'InvalidStateError'
+    err?.name === 'InvalidStateError'
 }
 
 /**
@@ -179,17 +179,17 @@ export const saveTasks = async (
       // Get valid database connection
       const validDb = await getDbWithRetry(db)
 
-      // Get all existing task documents for revisions
+      // Get all existing task documents for revisions (metadata only is faster)
       const existingDocs = await validDb.allDocs({
-        include_docs: true,
+        include_docs: false,
         startkey: TASK_DOC_PREFIX,
         endkey: `${TASK_DOC_PREFIX}\ufff0`
       })
 
       const revMap = new Map<string, string>()
       existingDocs.rows.forEach(row => {
-        if (row.doc?._rev) {
-          revMap.set(row.id, row.doc._rev)
+        if (row.value?.rev) {
+          revMap.set(row.id, row.value.rev)
         }
       })
 

@@ -395,6 +395,7 @@ const saveSection = () => {
   }
 
   if (editingSection.value) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     canvasStore.updateSection(editingSection.value.id, sectionData as any)
   } else {
     canvasStore.createSection(sectionData as Omit<CanvasSection, 'id' | 'createdAt' | 'updatedAt'>)

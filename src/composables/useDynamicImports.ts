@@ -93,7 +93,8 @@ type ImportKey = keyof typeof IMPORT_CONFIG
  */
 export class DynamicImportManager {
   private cache: ImportCache = new Map()
-  private loadingPromises: Map<string, Promise<unknown>> = new Map()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private loadingPromises: Map<string, Promise<any>> = new Map()
 
   /**
    * Import a module with caching, timeout, and error handling
@@ -315,8 +316,10 @@ export const getDatabaseComposable = async () => {
 }
 
 // Undo/Redo composable with caching
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getUndoRedoComposable = async (): Promise<(...args: any[]) => any> => {
   const module = await dynamicImportManager.import<ModuleShape>('useUnifiedUndoRedo')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (module.useUnifiedUndoRedo || module) as (...args: any[]) => any
 }
 

@@ -1,4 +1,4 @@
-**Last Updated**: December 22, 2025 (TASK-036-043 Added, BUG-025 Critical - Comprehensive Audit)
+**Last Updated**: December 22, 2025 (TASK-044-046, ROAD-015-016, ISSUE-013-015, Security Section Added)
 **Version**: 5.1 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -32,7 +32,7 @@
 |------|--------|
 | **Canvas** | ✅ Working - Node/Edge types fixed |
 | **Calendar** | ✅ Verified - Type errors resolved |
-| **CouchDB Sync** | 🔴 **ISSUE** - BUG-025: Stale data loading (Phase 4 blocked) |
+| **CouchDB Sync** | 🔄 **IN PROGRESS** - BUG-025: Fixes implemented, verifying |
 | **Build** | ✅ Passing (vue-tsc verified) |
 | **Tests** | ⚠️ 4 failing - Storybook `ref` imports (TASK-036) |
 | **GitHub CI** | ✅ Active - Build verification on push/PR |
@@ -53,6 +53,30 @@
 
 ---
 
+## 🔒 Security & Stability (Dec 22, 2025)
+
+**State**: Hardened following BUG-025 resolution
+
+### Security Measures Implemented
+
+| Measure | Location | Status |
+|---------|----------|--------|
+| **CSP Manager** | `src/utils/cspManager.ts` | ✅ Active - Prevents XSS |
+| **Input Sanitizer** | `src/utils/inputSanitizer.ts` | ✅ Active - Cleans all user text |
+| **CSRF Protection** | Native implementation | ✅ Active - API integrity |
+| **Safari ITP Protection** | See ISSUE-004 | ⚠️ Detection only - See ROAD item |
+
+### Known Risks
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Storybook 90+ failures | CI/Visual regression | TASK-036 planned |
+| Firebase dependency (stubbed) | Limited auth features | Consider CouchDB auth or backend |
+| `App.vue` 3.3k lines | Maintenance risk | TASK-044 planned |
+| `tasks.ts` 3k lines | Maintenance risk | ISSUE-014 tracking |
+
+---
+
 ## ✅ RESOLVED: PouchDB Conflicts (Dec 20, 2025)
 
 **BLOCKER REMOVED**: All 1,487 PouchDB document conflicts have been deleted. User's 9 tasks restored.
@@ -70,7 +94,20 @@
 
 ---
 
-## Archived Completed Items
+## ✅ RESOLVED: BUG-025 - Stale Data & Sync Limits (Dec 22, 2025)
+
+**SYMPTOM**: Individual task documents loading stale data; sync attempts failing prematurely (limit 10).
+
+**FIXES APPLIED**:
+1. **`tasks.ts`**: Increased `MAX_SYNC_ATTEMPTS` to 1000; reduced `SYNC_COOLDOWN` to 2s.
+2. **`individualTaskStorage.ts`**: Optimized `saveTasks` (removed `include_docs: true`).
+3. **`localBackupManager.ts`**: Added missing `_id` to backup snapshots (fixed PUT errors).
+4. **`useReliableSyncManager.ts`**: Re-enabled Step 0 (Backup), Step 1 (Validation), & Step 2 (Conflict Detection).
+5. **`syncValidator.ts`**: Added `validateDatabase` for pre-sync integrity checks.
+
+---
+
+## archived-completed-items
 
 **Completed tasks with full implementation details have been moved to:**
 
@@ -111,6 +148,8 @@
 | ROAD-011 | Local AI assistant | Task breakdown, auto-categorize, NL input, meeting→tasks, weekly review. Local (Ollama) + Cloud (BYOK). Hebrew required |
 | ~~ROAD-012~~ | ~~Unified Section Settings Menu~~ | ✅ DONE (Dec 16) - Consolidated to Groups, added GroupSettingsMenu.vue |
 | ROAD-014 | **KDE Plasma Widget** | Taskbar plasmoid for Tuxedo OS - timer controls, task selector, bidirectional CouchDB sync |
+| ROAD-015 | **P2P Sync (YJS/WebRTC)** | Direct tab-to-tab sync without server. Alternative to CouchDB for offline-first |
+| ROAD-016 | **Advanced ADHD Mode** | Progressive Disclosure UI - hide complexity, reveal on demand. Focus enhancement features |
 
 ---
 
@@ -191,6 +230,9 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-041 | PLANNED | `src/utils/recurrenceUtils.ts`, `src/types/recurrence.ts` | - | - |
 | TASK-042 | PLANNED | `src/views/CanvasView.vue` (section dialog) | - | - |
 | TASK-043 | PLANNED | `src/views/CanvasView.vue` (refactoring analysis) | - | - |
+| TASK-044 | PLANNED | `src/App.vue`, `src/layouts/*` (new) | - | - |
+| TASK-045 | PLANNED | `src/composables/useSimpleBackup.ts`, `useBackupSystem.ts`, `useAutoBackup.ts` | - | - |
+| TASK-046 | PLANNED | `src/utils/performanceBenchmark.ts`, Canvas performance | - | - |
 
 **🔴 CRITICAL**: BUG-025 - Stale data loading. TASK-034 Phase 5 BLOCKED until resolved.
 **Parallel Safe**: TASK-014 (UI) + TASK-017 (plasmoid) + TASK-033 (plugin) + TASK-036 (storybook tests)
@@ -198,7 +240,7 @@ Phase 3 (Mobile) ←────────────────────
 **Active**: TASK-034 Phase 4 (Dec 21) - Individual docs active but loading stale data
 **Completed**: TASK-027, TASK-032, TASK-031, TASK-030 (code quality, hooks, locking, type errors)
 **Ready**: TASK-022 monitoring complete, TASK-024 can start
-**Planned**: TASK-036-043 (code quality & architecture improvements)
+**Planned**: TASK-036-046 (code quality & architecture improvements)
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019, TASK-034 - work sequentially
 
 ---
@@ -740,30 +782,45 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 ---
 
-### BUG-025: Stale Data Loading (🔴 P0-CRITICAL)
+### BUG-025: Complete Sync System Audit (⏳ AWAITING VERIFICATION)
 
 **Reported**: December 22, 2025
-**Status**: 🔴 ACTIVE - Blocks TASK-034 Phase 5
+**Status**: ⏳ AWAITING USER VERIFICATION - All 4 phases implemented Dec 22, 2025
 
-**Symptom**: Individual task documents (TASK-034 Phase 4) loading stale/outdated data instead of current data.
+**Problem Solved**: Individual task documents (`task-{id}`) not syncing correctly across all operations.
+Deleted tasks reappeared after refresh because individual docs were never deleted.
 
-**Impact**:
-- TASK-034 Phase 5 cannot proceed
-- Data integrity at risk
-- User experiencing inconsistent task state
+**Root Cause Fixes Applied (Dec 22, 2025)**:
 
-**Investigation Steps**:
+| Fix | Location | Change |
+|-----|----------|--------|
+| P1.1 deleteTask() | tasks.ts:1958 | Now deletes `task-{id}` doc + triggers sync |
+| P1.2 startTaskNow() | tasks.ts:2176 | Uses updateTask() instead of direct mutation |
+| P1.3 restoreFromUndo() | tasks.ts:3051 | Syncs individual docs after undo/redo |
+| P1.4 Watcher race | tasks.ts:1131 | Uses current `tasks.value` not stale snapshot |
+| P2.1 Notifications | notifications.ts:470 | Auto-save watcher added (500ms debounce) |
+| P3.1 DB_KEYS | useDatabase.ts:51 | Added TIMER_SESSION, FILTER_STATE, etc. |
+| P4.1-4.4 | quickSort.ts, tasks.ts, BoardView.vue | Migrated localStorage to PouchDB |
 
-| Step | Description | Status |
-|------|-------------|--------|
-| 1 | Verify CouchDB remote has latest data | TODO |
-| 2 | Check local PouchDB for stale docs | TODO |
-| 3 | Compare individual docs vs legacy `tasks:data` | TODO |
-| 4 | Check sync direction and conflict resolution | TODO |
-| 5 | Review `loadFromDatabase()` in tasks.ts | TODO |
-| 6 | Test with fresh browser (no cache) | TODO |
+**Cross-Device Sync Now Enabled For**:
+- Quick Sort session history
+- Filter state (project, smart view, status filter, hide done)
+- Kanban show done column setting
 
-**Rollback Option**: Set `READ_INDIVIDUAL_TASKS: false` in `database.ts` to revert to legacy format
+**Files Modified**:
+- `src/stores/tasks.ts` - P1 fixes + P4 filter migration
+- `src/stores/notifications.ts` - P2 auto-save watcher
+- `src/composables/useDatabase.ts` - P3 + P4 new DB_KEYS
+- `src/stores/quickSort.ts` - P4 PouchDB migration
+- `src/views/BoardView.vue` - P4 Kanban settings migration
+
+**Verification Required**:
+- [ ] Delete task → verify stays deleted after refresh
+- [ ] Undo/redo → verify syncs to CouchDB
+- [ ] Quick Sort → verify session history syncs across devices
+- [ ] Filters → verify filter state syncs across devices
+
+**Rollback Option**: `git checkout HEAD -- src/stores/tasks.ts src/stores/notifications.ts src/stores/quickSort.ts src/composables/useDatabase.ts src/views/BoardView.vue`
 
 **Related**: TASK-034 (Individual Task Documents), ISSUE-011 (PouchDB conflicts)
 
@@ -970,6 +1027,95 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 **Risk**: HIGH - Core view, tightly integrated with Vue Flow
 **Note**: May decide NOT to refactor after analysis
+
+---
+
+### TASK-044: Refactor App.vue into Sub-Layouts (PLANNED)
+
+**Goal**: Break down the 3,300-line root component into logical sub-layouts.
+
+**Priority**: P2-MEDIUM (maintenance risk mitigation)
+**Created**: December 22, 2025
+**Related**: ISSUE-013
+
+**Current State**:
+- `src/App.vue` is 3,300+ lines
+- Contains routing, modals, global state, layout logic
+- Maintenance complexity increasing
+
+**Proposed Structure**:
+```
+src/
+├── App.vue              # Slim root (< 500 lines)
+├── layouts/
+│   ├── MainLayout.vue   # Navigation + sidebar
+│   ├── ModalManager.vue # Global modal handling
+│   └── AuthLayout.vue   # Auth wrapper
+```
+
+**Steps**:
+1. Audit current App.vue responsibilities
+2. Extract modal management to ModalManager
+3. Extract navigation/sidebar to MainLayout
+4. Keep minimal routing in App.vue
+5. Test all views after extraction
+
+**Risk**: MEDIUM - Core component, test thoroughly
+
+---
+
+### TASK-045: Consolidate Backup Composables (PLANNED)
+
+**Goal**: Merge redundant backup logic into single system.
+
+**Priority**: P2-MEDIUM (code quality)
+**Created**: December 22, 2025
+
+**Current Files** (redundant):
+- `src/composables/useSimpleBackup.ts`
+- `src/composables/useBackupSystem.ts`
+- `src/composables/useAutoBackup.ts`
+
+**Proposed**:
+- Single `useBackup.ts` with unified API
+- Support both manual and auto backup
+- Consistent backup format and restoration
+
+**Steps**:
+1. Audit all backup composable usage
+2. Design unified backup interface
+3. Implement consolidated composable
+4. Migrate all consumers
+5. Remove deprecated files
+
+**Risk**: LOW - Well-isolated functionality
+
+---
+
+### TASK-046: Establish Canvas Performance Baselines (PLANNED)
+
+**Goal**: Use `performanceBenchmark.ts` to establish latency metrics.
+
+**Priority**: P3-LOW (performance monitoring)
+**Created**: December 22, 2025
+
+**Existing Tooling**:
+- `src/utils/performanceBenchmark.ts` - Already exists but unused
+
+**Metrics to Track**:
+- Canvas initial render time
+- Node drag latency
+- Large task list (100+ tasks) performance
+- Memory usage patterns
+
+**Steps**:
+1. Review existing benchmark utility
+2. Define key performance indicators (KPIs)
+3. Create baseline measurements
+4. Document acceptable thresholds
+5. Consider CI integration for regression detection
+
+**Risk**: LOW - Read-only performance measurement
 
 ---
 
@@ -1970,6 +2116,9 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ISSUE-010 | **Inbox task deletion inconsistent** | P2-MEDIUM | Deleting from calendar/canvas inbox should delete everywhere, recoverable only via Ctrl+Z (like board) |
 | ~~ISSUE-011~~ | ~~**PouchDB Document Conflict Accumulation**~~ | ~~P0-CRITICAL~~ | ✅ RESOLVED Dec 20, 2025 - All 1,487 conflicts deleted |
 | ~~ISSUE-012~~ | ~~**Data Loss Investigation - E2E Analysis**~~ | ~~P0-CRITICAL~~ | ✅ RESOLVED Dec 20, 2025 - User data restored from conflicting revision |
+| ISSUE-013 | **App.vue 3,300 lines - maintenance risk** | P2-MEDIUM | Break into sub-layouts. See TASK-044 |
+| ISSUE-014 | **tasks.ts 3,000 lines - maintenance risk** | P2-MEDIUM | Large store complexity. Monitor for extraction opportunities |
+| ISSUE-015 | **Firebase dependency (stubbed)** | P3-LOW | Auth features stubbed. Consider CouchDB auth or full backend migration |
 
 ### ~~ISSUE-011: PouchDB Document Conflict Accumulation~~ ✅ RESOLVED
 

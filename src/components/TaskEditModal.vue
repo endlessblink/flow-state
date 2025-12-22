@@ -553,8 +553,10 @@ const saveTask = () => {
   }
 
   // CRITICAL: Preserve existing instances if we're not updating them separately
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (editedTask.value.instances && (editedTask.value.instances as unknown as any[]).length > 0) {
     updates.instances = editedTask.value.instances
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.log('🔍 DEBUG: Including instances in update:', (updates.instances as unknown as any[]).length)
   }
 

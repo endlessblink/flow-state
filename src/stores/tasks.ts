@@ -154,12 +154,15 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // Safe sync wrapper to prevent infinite loops (moved to store scope)
   let lastSyncTime = 0
-  const SYNC_COOLDOWN = 5000 // 5 seconds minimum between syncs
+  const SYNC_COOLDOWN = 2000 // 2 seconds minimum between syncs (was 5s)
   let syncAttempts = 0
-  const MAX_SYNC_ATTEMPTS = 10 // Maximum sync attempts per session
+  const MAX_SYNC_ATTEMPTS = 1000 // Effectively removing common session limit (was 10)
 
   // Flag to prevent auto-save during database loads (prevents sync loops)
   let isLoadingFromDatabase = false
+
+  // BUG-025: Initial sync is now handled by useReliableSyncManager.initializeSync()
+  // which calls loadFromDatabase() after completing bidirectional sync
 
   const safeSync = async (context: string) => {
     const now = Date.now()
@@ -644,7 +647,8 @@ export const useTaskStore = defineStore('tasks', () => {
   const hideDoneTasks = ref(false) // Global setting to hide done tasks across all views (disabled by default to show completed tasks for logging)
 
   // Filter persistence
-  const FILTER_STORAGE_KEY = 'pomo-flow-filters'
+  const FILTER_STORAGE_KEY = 'pomo-flow-filters' // Legacy localStorage key
+  let isLoadingFilters = false // Prevent auto-save during load
 
   interface PersistedFilterState {
     activeProjectId: string | null
@@ -653,45 +657,87 @@ export const useTaskStore = defineStore('tasks', () => {
     hideDoneTasks: boolean
   }
 
-  // Load persisted filters on store initialization
-  const loadPersistedFilters = () => {
+  // BUG-025 P4: Load persisted filters from PouchDB (with localStorage fallback)
+  const loadPersistedFilters = async () => {
+    isLoadingFilters = true
     try {
-      const saved = localStorage.getItem(FILTER_STORAGE_KEY)
+      // Check if database is ready first
+      if (!db.isReady?.value) {
+        throw new Error('Database not ready yet')
+      }
+      // Try PouchDB first
+      const saved = await db.load<PersistedFilterState>(DB_KEYS.FILTER_STATE)
       if (saved) {
-        const state: PersistedFilterState = JSON.parse(saved)
         // Validate project still exists before restoring
+        if (saved.activeProjectId && !projects.value.find(p => p.id === saved.activeProjectId)) {
+          saved.activeProjectId = null
+        }
+        activeProjectId.value = saved.activeProjectId
+        activeSmartView.value = saved.activeSmartView
+        activeStatusFilter.value = saved.activeStatusFilter
+        hideDoneTasks.value = saved.hideDoneTasks ?? false
+        console.log('🔧 [BUG-025] Filter state loaded from PouchDB:', saved)
+      } else {
+        // Fallback to localStorage for migration
+        loadFiltersFromLocalStorage()
+      }
+    } catch (error) {
+      // Database not ready or failed - use localStorage immediately
+      console.log('🔧 [BUG-025] Loading filters from localStorage (DB not ready):', (error as Error).message)
+      loadFiltersFromLocalStorage()
+    } finally {
+      isLoadingFilters = false
+    }
+  }
+
+  // Helper to load filters from localStorage
+  const loadFiltersFromLocalStorage = () => {
+    try {
+      const localSaved = localStorage.getItem(FILTER_STORAGE_KEY)
+      if (localSaved) {
+        const state: PersistedFilterState = JSON.parse(localSaved)
         if (state.activeProjectId && !projects.value.find(p => p.id === state.activeProjectId)) {
           state.activeProjectId = null
         }
         activeProjectId.value = state.activeProjectId
         activeSmartView.value = state.activeSmartView
         activeStatusFilter.value = state.activeStatusFilter
-        hideDoneTasks.value = state.hideDoneTasks
+        hideDoneTasks.value = state.hideDoneTasks ?? false
         console.log('🔧 Filter state loaded from localStorage:', state)
       }
-    } catch (error) {
-      console.warn('Failed to load persisted filters:', error)
+    } catch (e) {
+      console.warn('Failed to load filters from localStorage:', e)
     }
   }
 
-  // Debounced persist function
+  // BUG-025 P4: Debounced persist function - uses PouchDB with localStorage fallback
   let persistTimeout: ReturnType<typeof setTimeout> | null = null
-  const persistFilters = () => {
+  const persistFilters = async () => {
+    if (isLoadingFilters) return // Don't save while loading
     if (persistTimeout) clearTimeout(persistTimeout)
-    persistTimeout = setTimeout(() => {
+    persistTimeout = setTimeout(async () => {
       const state: PersistedFilterState = {
         activeProjectId: activeProjectId.value,
         activeSmartView: activeSmartView.value,
         activeStatusFilter: activeStatusFilter.value,
         hideDoneTasks: hideDoneTasks.value
       }
+      // Always save to localStorage first (fast, reliable)
       localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
-      console.log('🔧 Filter state persisted to localStorage:', state)
+      // Then try PouchDB for cross-device sync
+      if (db.isReady?.value) {
+        try {
+          await db.save(DB_KEYS.FILTER_STATE, state)
+          console.log('🔧 [BUG-025] Filter state persisted to PouchDB:', state)
+        } catch (error) {
+          console.warn('Failed to persist filters to PouchDB (localStorage already saved):', error)
+        }
+      }
     }, 500)
   }
 
   // Load filters (will be called after projects are loaded)
-  // Note: Delayed to ensure projects are available for validation
+  // Note: Loads from localStorage immediately, then retries PouchDB later if available
   setTimeout(() => loadPersistedFilters(), 100)
 
   // Import tasks from JSON file (for migration from external storage)
@@ -924,18 +970,29 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // Set flag to prevent auto-save during load (prevents sync loop)
     isLoadingFromDatabase = true
-    // Wait for PouchDB to be available (simple polling)
+
+    // Wait for window.pomoFlowDb to be available (set by useReliableSyncManager)
+    // The sync manager handles the initial bidirectional sync before calling this
+    console.log('🔍 [BUG-025] Waiting for PouchDB to be available...')
     let attempts = 0
-    while (!window.pomoFlowDb && attempts < 50) {
+    while (!window.pomoFlowDb && attempts < 100) {
       await new Promise(resolve => setTimeout(resolve, 100))
       attempts++
+      if (attempts % 20 === 0) {
+        console.log(`🔍 [BUG-025] Still waiting for PouchDB... attempt ${attempts}`)
+      }
     }
 
     const dbInstance = window.pomoFlowDb
     if (!dbInstance) {
-      console.error('❌ PouchDB not available for task loading')
+      console.error('❌ PouchDB not available for task loading after 10s timeout')
+      isLoadingFromDatabase = false
       return
     }
+    console.log('✅ [BUG-025] PouchDB ready, loading tasks...')
+
+    // NOTE: Bidirectional sync is now handled by useReliableSyncManager.initializeSync()
+    // before it calls loadFromDatabase(). No need for redundant sync here.
 
     try {
       // TASK-034: Phase 4 - Read from individual task documents if enabled
@@ -1112,6 +1169,10 @@ export const useTaskStore = defineStore('tasks', () => {
     if (tasksSaveTimer) clearTimeout(tasksSaveTimer)
     tasksSaveTimer = setTimeout(async () => {
       try {
+        // BUG-025 FIX: Get CURRENT state when timer fires, not stale captured state
+        // This prevents race conditions where rapid edits cause stale data to be saved
+        const currentTasks = [...tasks.value]
+
         // Wait for database to be ready before saving
         while (!db.isReady?.value) {
           await new Promise(resolve => setTimeout(resolve, 100))
@@ -1127,16 +1188,16 @@ export const useTaskStore = defineStore('tasks', () => {
         if (STORAGE_FLAGS.DUAL_WRITE_TASKS && !STORAGE_FLAGS.INDIVIDUAL_ONLY) {
           // Phase 1 & 2: Write to both formats
           // 1. Save to legacy tasks:data (existing behavior)
-          await db.save(DB_KEYS.TASKS, newTasks)
+          await db.save(DB_KEYS.TASKS, currentTasks)
           console.log('📋 Tasks saved to tasks:data (legacy format)')
 
           // 2. Also save as individual task-{id} documents
           try {
-            await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, newTasks)
-            console.log(`📋 Tasks saved as ${newTasks.length} individual documents (new format)`)
+            await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, currentTasks)
+            console.log(`📋 Tasks saved as ${currentTasks.length} individual documents (new format)`)
 
             // 3. Clean up orphaned task documents (deleted tasks)
-            const currentTaskIds = new Set(newTasks.map(t => t.id))
+            const currentTaskIds = new Set(currentTasks.map(t => t.id))
             const deletedCount = await syncDeletedTasks(dbInstance as unknown as PouchDB.Database, currentTaskIds)
             if (deletedCount > 0) {
               console.log(`🗑️ Cleaned up ${deletedCount} orphaned task documents`)
@@ -1147,15 +1208,15 @@ export const useTaskStore = defineStore('tasks', () => {
           }
         } else if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
           // Phase 3: Individual docs only (after migration is proven stable)
-          await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, newTasks)
-          console.log(`📋 Tasks saved as ${newTasks.length} individual documents ONLY`)
+          await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, currentTasks)
+          console.log(`📋 Tasks saved as ${currentTasks.length} individual documents ONLY`)
 
           // Clean up orphaned task documents
-          const currentTaskIds = new Set(newTasks.map(t => t.id))
+          const currentTaskIds = new Set(currentTasks.map(t => t.id))
           await syncDeletedTasks(dbInstance as unknown as PouchDB.Database, currentTaskIds)
         } else {
           // Fallback: Legacy-only mode (both flags off)
-          await db.save(DB_KEYS.TASKS, newTasks)
+          await db.save(DB_KEYS.TASKS, currentTasks)
           console.log('📋 Tasks auto-saved via SaveQueueManager (legacy only)')
         }
 
@@ -1167,7 +1228,7 @@ export const useTaskStore = defineStore('tasks', () => {
           category: ErrorCategory.DATABASE,
           message: 'Tasks auto-save failed',
           error: error as Error,
-          context: { taskCount: newTasks?.length },
+          context: { taskCount: tasks.value?.length },
           showNotification: true,
           userMessage: 'Failed to save tasks. Your changes may not be persisted.'
         })
@@ -1941,6 +2002,22 @@ export const useTaskStore = defineStore('tasks', () => {
 
       await db.save(DB_KEYS.TASKS, tasks.value)
 
+      // BUG-025 FIX: Delete individual task document from PouchDB
+      if (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+        const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
+        if (dbInstance) {
+          try {
+            await _deleteIndividualTask(dbInstance, taskId)
+            console.log(`🗑️ [BUG-025] Individual task-${taskId} deleted from PouchDB`)
+          } catch (e) {
+            console.warn(`⚠️ [BUG-025] Delete individual doc failed:`, e)
+          }
+        }
+      }
+
+      // Trigger sync to push deletion to CouchDB
+      await safeSync('task-delete')
+
       console.log('✅ Task deletion persisted successfully')
 
       // Optional: Background sync to persistent storage (non-critical, won't fail operation)
@@ -1963,6 +2040,16 @@ export const useTaskStore = defineStore('tasks', () => {
       try {
         console.log('🔄 Retrying task deletion...')
         await db.save(DB_KEYS.TASKS, tasks.value)
+
+        // BUG-025 FIX: Also delete individual doc on retry
+        if (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+          const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
+          if (dbInstance) {
+            await _deleteIndividualTask(dbInstance, taskId).catch(() => {})
+          }
+        }
+        await safeSync('task-delete-retry')
+
         console.log('✅ Retry successful')
       } catch (retryError) {
         errorHandler.report({
@@ -2108,6 +2195,7 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Start task now - move to current time and mark as in progress
+  // BUG-025 FIX: Use updateTask() to properly trigger watcher and sync
   const startTaskNow = (taskId: string) => {
     const task = tasks.value.find(t => t.id === taskId)
     if (!task) return
@@ -2124,14 +2212,6 @@ export const useTaskStore = defineStore('tasks', () => {
     const todayStr = formatDateKey(now)
     const timeStr = `${roundedTime.getHours().toString().padStart(2, '0')}:${roundedTime.getMinutes().toString().padStart(2, '0')}`
 
-    // Initialize instances array if it doesn't exist
-    if (!task.instances) {
-      task.instances = []
-    }
-
-    // Clear existing instances to avoid duplicates
-    task.instances = []
-
     // Create new instance for current time
     const newInstance = {
       id: `instance-${taskId}-${Date.now()}`,
@@ -2140,11 +2220,12 @@ export const useTaskStore = defineStore('tasks', () => {
       duration: task.estimatedDuration || 60
     }
 
-    task.instances.push(newInstance)
-
-    // Update task status to in_progress
-    task.status = 'in_progress'
-    task.updatedAt = new Date()
+    // BUG-025 FIX: Use updateTask instead of direct mutation to trigger proper sync
+    updateTask(taskId, {
+      instances: [newInstance], // Replace all instances with new one
+      status: 'in_progress',
+      updatedAt: new Date()
+    })
 
     console.log(`Task "${task.title}" scheduled for today at ${timeStr} and marked as in_progress`)
   }
@@ -3013,6 +3094,24 @@ export const useTaskStore = defineStore('tasks', () => {
       // Save to database sequentially (not in parallel)
       await db.save(DB_KEYS.TASKS, tasks.value)
       console.log('🔄 [TASK-STORE] AFTER db.save: tasks.value.length =', tasks.value.length)
+
+      // BUG-025 FIX: Sync to individual task documents
+      if (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+        const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
+        if (dbInstance) {
+          try {
+            // Save all tasks to individual documents
+            await saveIndividualTasks(dbInstance, tasks.value)
+            // Remove orphaned documents (tasks that no longer exist)
+            const currentIds = new Set(tasks.value.map(t => t.id))
+            await syncDeletedTasks(dbInstance, currentIds)
+            console.log(`🔄 [BUG-025] Individual docs synced after undo/redo (${tasks.value.length} tasks)`)
+          } catch (e) {
+            console.warn('⚠️ [BUG-025] Individual doc sync failed in restoreState:', e)
+          }
+        }
+      }
+      await safeSync('undo-restore')
 
       // Also save to persistent storage for redundancy
       await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, tasks.value)

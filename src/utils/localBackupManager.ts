@@ -97,7 +97,8 @@ export class LocalBackupManager {
         console.warn('⚠️ Failed to backup canvas:', error)
       }
 
-      const snapshot: BackupSnapshot = {
+      const snapshot: BackupSnapshot & { _id: string } = {
+        _id: snapshotId,
         id: snapshotId,
         timestamp,
         operation,
@@ -189,7 +190,8 @@ export class LocalBackupManager {
       return result.rows
         .map(row => row.doc as unknown as BackupSnapshot)
         .filter(doc => doc.id.startsWith('backup_'))
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        // BUG-025: PouchDB serializes Date as string, convert before getTime()
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     } catch (error) {
       console.error('❌ Failed to list backups:', error)
       return []
@@ -218,7 +220,8 @@ export class LocalBackupManager {
       const now = Date.now()
 
       for (const backup of backups) {
-        const age = now - backup.timestamp.getTime()
+        // BUG-025: PouchDB serializes Date as string, convert before getTime()
+        const age = now - new Date(backup.timestamp).getTime()
         const shouldDeleteByAge = age > this.config.maxAge
         const shouldDeleteByCount = backups.indexOf(backup) >= this.config.maxBackups
 

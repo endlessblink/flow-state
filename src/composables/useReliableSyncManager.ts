@@ -249,6 +249,11 @@ export const useReliableSyncManager = () => {
     try {
       // Initialize the database connection using internal function
       localDB = initializeLocalDatabase()
+
+      const w = window as any
+      w.pomoFlowDb = localDB
+      console.log('✅ [SYNC] Set window.pomoFlowDb for task store access')
+
       remoteDB = await setupRemoteConnection()
 
       if (!remoteDB) {
@@ -259,6 +264,28 @@ export const useReliableSyncManager = () => {
 
       // Initialize Phase 2 systems
       await initializePhase2Systems()
+
+      // BUG-025 FIX: BIDIRECTIONAL sync BEFORE loading UI
+      // This ensures local changes push to remote AND remote changes pull to local
+      if (remoteDB && isOnline.value) {
+        console.log('🔄 [INITIAL SYNC] Bidirectional sync before UI load...')
+        syncStatus.value = 'syncing'
+        try {
+          const result = await localDB.sync(remoteDB, {
+            batch_size: 100,
+            batches_limit: 10
+          })
+          console.log(`✅ [INITIAL SYNC] pushed ${result.push?.docs_written || 0}, pulled ${result.pull?.docs_written || 0}`)
+
+          // Reload task store with fresh data
+          const { useTaskStore } = await import('@/stores/tasks')
+          await useTaskStore().loadFromDatabase()
+          console.log('✅ [INITIAL SYNC] Task store reloaded with synced data')
+        } catch (syncError) {
+          console.warn('⚠️ [INITIAL SYNC] Failed, using local data:', syncError)
+          // Don't block startup - offline mode is valid
+        }
+      }
 
       syncStatus.value = 'idle'
       error.value = null
@@ -538,11 +565,36 @@ export const useReliableSyncManager = () => {
 
       syncStatus.value = 'syncing'
 
-      // Steps 0-2: SKIPPED for minimal sync
-      // - Backup was failing with "_id is required for puts"
-      // - Validation and conflict detection were causing hangs
-      // TODO: Re-enable once basic sync is working
-      console.log('⏭️ Skipping backup, validation, and conflict detection for minimal sync')
+      // Step 0: Backup before sync (safety first)
+      console.log('🔒 Step 0: Creating pre-sync backup...')
+      try {
+        await backupManager.createBackup('sync', 'Automatic backup before reliable sync')
+        console.log('✅ Pre-sync backup created')
+      } catch (backupErr) {
+        console.warn('⚠️ Backup failed, but proceeding with sync:', backupErr)
+      }
+
+      // Step 1: Pre-sync validation
+      console.log('🔍 Step 1: Validating database state...')
+      const validationResult = await syncValidator.validateDatabase(localDB)
+      lastValidation.value = validationResult
+      if (!validationResult.valid) {
+        console.warn('⚠️ Database validation issues found:', validationResult.errors)
+        if (validationResult.critical) {
+          throw new Error(`Critical database validation failure: ${validationResult.errors[0]}`)
+        }
+      }
+      console.log('✅ Database validation complete')
+
+      // Step 2: Conflict detection (check for unresolved conflicts)
+      console.log('⚔️ Step 2: Checking for unresolved conflicts...')
+      const existingConflicts = await conflictDetector.detectAllConflicts()
+      if (existingConflicts.length > 0) {
+        console.log(`⚔️ Found ${existingConflicts.length} existing conflicts`)
+        conflicts.value = existingConflicts
+        await resolveAutoResolvableConflicts()
+      }
+      console.log('✅ Conflict check complete')
 
       // Step 3: Perform sync (CORE OPERATION) with timeout
       // IMPORTANT: PULL FIRST to get authoritative remote data before pushing local changes
@@ -675,7 +727,8 @@ export const useReliableSyncManager = () => {
           const recentBackup = backups[0] // Most recent backup
 
           if (recentBackup) {
-            const backupAge = Date.now() - recentBackup.timestamp.getTime()
+            // BUG-025: PouchDB serializes Date as string, convert before getTime()
+            const backupAge = Date.now() - new Date(recentBackup.timestamp).getTime()
             const backupAgeMinutes = backupAge / (1000 * 60)
 
             if (backupAgeMinutes < 30) { // Only consider backups less than 30 minutes old

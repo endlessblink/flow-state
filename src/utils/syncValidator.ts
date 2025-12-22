@@ -3,7 +3,7 @@
  * Verifies data integrity after sync operations and ensures consistency
  */
 
-import type { ConflictInfo} from '@/types/conflicts';
+import type { ConflictInfo } from '@/types/conflicts';
 import { ConflictType } from '@/types/conflicts'
 import { isSyncableDocument } from '@/composables/documentFilters'
 
@@ -82,6 +82,62 @@ export class SyncValidator {
     }
 
     console.log('🔍 SyncValidator initialized:', this.options)
+  }
+
+  /**
+   * Validate all syncable documents in a database
+   */
+  async validateDatabase(db: PouchDB.Database): Promise<SyncValidationResult & { valid?: boolean; critical?: boolean; errors?: string[] }> {
+    console.log(`🔍 Validating entire database: ${db.name}`)
+    const errors: string[] = []
+    const startTime = Date.now()
+    let critical = false
+    try {
+      const allDocs = await db.allDocs({ include_docs: true })
+      const syncableDocs = allDocs.rows
+        .filter(row => isSyncableDocument(row.doc))
+        .map(row => (row.doc as unknown) as Record<string, unknown>)
+
+      for (const doc of syncableDocs) {
+        const result = await this.validateDocument(doc as unknown as Record<string, unknown>)
+        if (!result.isValid) {
+          const docErrors = result.issues
+            .filter(i => i.severity === 'error')
+            .map(i => `${(doc as any)._id}: ${i.message}`)
+
+          errors.push(...docErrors)
+
+          if (result.issues.some(i => i.type === ValidationIssueType.CORRUPTED_DATA)) {
+            critical = true
+          }
+        }
+      }
+
+      const duration = Date.now() - startTime
+      return {
+        totalValidated: syncableDocs.length,
+        validDocuments: syncableDocs.length - (new Set(errors.map(e => e.split(':')[0])).size),
+        issues: [] as ValidationIssue[], // Simplified for database level
+        conflicts: [] as ConflictInfo[],
+        timestamp: new Date(),
+        duration,
+        stats: {} as ValidationStats,
+        checksums: new Map()
+      } as unknown as SyncValidationResult
+    } catch (error) {
+      console.error('❌ Failed to validate database:', error)
+      return {
+        totalValidated: 0,
+        validDocuments: 0,
+        issues: [] as ValidationIssue[],
+        conflicts: [] as ConflictInfo[],
+        timestamp: new Date(),
+        duration: 0,
+        stats: {} as ValidationStats,
+        checksums: new Map(),
+        errors: [(error as Error).message]
+      } as unknown as SyncValidationResult
+    }
   }
 
   /**
@@ -712,7 +768,7 @@ export class SyncValidator {
   ): ValidationResult {
     const hasErrors = issues.some(i => i.severity === 'error')
     const severity = hasErrors ? 'error' :
-                   issues.some(i => i.severity === 'warning') ? 'warning' : 'info'
+      issues.some(i => i.severity === 'warning') ? 'warning' : 'info'
 
     return {
       isValid: !hasErrors,

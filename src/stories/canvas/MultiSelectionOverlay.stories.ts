@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
+import { ref } from 'vue'
 import MultiSelectionOverlay from '@/components/canvas/MultiSelectionOverlay.vue'
 
 // Mock nodes data

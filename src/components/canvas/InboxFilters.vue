@@ -231,7 +231,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
-  background: var(--glass-bg-soft);
+  background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
@@ -242,7 +242,7 @@ onBeforeUnmount(() => {
 }
 
 .filter-chip:hover {
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-medium);
   border-color: var(--glass-border-hover);
   color: var(--text-primary);
 }
@@ -301,7 +301,7 @@ onBeforeUnmount(() => {
   background: var(--glass-bg-solid);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl);
   padding: var(--space-1);
 }
 
@@ -322,7 +322,7 @@ onBeforeUnmount(() => {
 }
 
 .dropdown-item:hover {
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-medium);
   color: var(--text-primary);
 }
 
@@ -366,7 +366,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: var(--glass-bg-soft);
+  background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
   color: var(--text-muted);

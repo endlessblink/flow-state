@@ -339,13 +339,13 @@ defineExpose({
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal);
-  backdrop-filter: blur(12px) saturate(100%);
-  -webkit-backdrop-filter: blur(12px) saturate(100%);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);
   padding: var(--space-4);
 }
@@ -356,10 +356,10 @@ defineExpose({
 
 /* Modal Container */
 .modal-container {
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-2xl);
   box-shadow:
     0 32px 64px rgba(0, 0, 0, 0.5),
@@ -467,7 +467,7 @@ defineExpose({
 /* Close Button */
 .modal-close-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border);
   color: var(--text-muted);
   cursor: pointer;
   padding: var(--space-2);
@@ -480,8 +480,8 @@ defineExpose({
 }
 
 .modal-close-btn:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
   color: var(--text-primary);
   transform: scale(1.05);
 }

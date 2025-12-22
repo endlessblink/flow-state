@@ -345,14 +345,11 @@ const _handleDragEnd = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    135deg,
-    var(--glass-border) 0%,
-    var(--glass-bg-soft) 100%
-  );
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
   z-index: -1;
 }
 
@@ -603,7 +600,7 @@ body.dragging-active .task-node .vue-flow__handle {
 
 .selected {
   border: none !important;
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow) !important;
+  box-shadow: 0 0 0 2px var(--brand-primary), var(--state-hover-shadow), var(--state-hover-glow) !important;
 }
 
 .multi-select-mode {
@@ -744,9 +741,9 @@ body.dragging-active .task-node .vue-flow__handle {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
-  background: var(--surface-elevated);
+  background: var(--glass-bg-light);
   backdrop-filter: blur(8px);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
   font-weight: var(--font-medium);
   box-shadow: 0 2px 4px var(--shadow-subtle);

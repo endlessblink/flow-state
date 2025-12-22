@@ -225,7 +225,9 @@ export const useReliableSyncManager = () => {
 
     try {
       // Initialize conflict detector with databases
-      await conflictDetector.initialize(localDB!, remoteDB)
+      if (localDB) {
+        await conflictDetector.initialize(localDB, remoteDB || undefined)
+      }
 
       // Update references in offline queue
       offlineQueue.updateReferences(localDB, retryManager)
@@ -1058,8 +1060,8 @@ export const useReliableSyncManager = () => {
       })
 
       // Setup event handlers
-      syncHandler.on('change', async (info: unknown) => {
-        const syncChange = info as PouchDBSyncChange
+      syncHandler.on('change', async (info) => {
+        const syncChange = info as { direction: 'pull' | 'push'; change: { docs: unknown[] } }
         console.log('📤 [LIVE SYNC] Change detected:', syncChange.direction, syncChange.change?.docs?.length || 0, 'docs')
 
         // Reload task store when we receive changes from remote
@@ -1095,13 +1097,13 @@ export const useReliableSyncManager = () => {
 
       syncHandler.on('denied', (err: unknown) => {
         console.error('🚫 [LIVE SYNC] Denied:', err)
-        error.value = 'Sync denied: ' + ((err as PouchDBSyncError)?.message || 'Unknown error')
+        error.value = 'Sync denied: ' + ((err as { message?: string })?.message || 'Unknown error')
       })
 
       syncHandler.on('error', (err: unknown) => {
         console.error('❌ [LIVE SYNC] Error:', err)
         syncStatus.value = 'error'
-        error.value = (err as PouchDBSyncError)?.message || 'Sync error'
+        error.value = (err as { message?: string })?.message || 'Sync error'
       })
 
       syncHandler.on('complete', (info: unknown) => {

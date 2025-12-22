@@ -74,43 +74,43 @@ withDefaults(defineProps<Props>(), {
 /* Variant: Default (neutral stroke badge) */
 .base-badge.variant-default {
   background: transparent;
-  color: var(--text-muted);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
 }
 
 /* Variant: Count (subtle stroke for count badges) */
 .base-badge.variant-count {
-  background: transparent;
+  background: var(--glass-bg-light);
   color: var(--text-muted);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   font-weight: var(--font-medium);
 }
 
 /* Variant: Success (green stroke) */
 .base-badge.variant-success {
-  background: transparent;
-  color: rgba(16, 185, 129, 1);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.05);
+  color: #4ade80;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 /* Variant: Warning (orange stroke) */
 .base-badge.variant-warning {
-  background: transparent;
-  color: rgba(245, 158, 11, 1);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.05);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 /* Variant: Danger (red stroke) */
 .base-badge.variant-danger {
-  background: transparent;
-  color: rgba(239, 68, 68, 1);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.05);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 /* Variant: Info (blue stroke) */
 .base-badge.variant-info {
-  background: transparent;
-  color: rgba(59, 130, 246, 1);
-  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.05);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 </style>

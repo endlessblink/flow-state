@@ -5,6 +5,7 @@
         v-for="(char, index) in diffTokens"
         :key="index"
         :class="getTokenClass(char)"
+        <!-- eslint-disable-next-line vue/no-v-html -->
         v-html="char.content"
       />
     </div>

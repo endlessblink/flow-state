@@ -339,6 +339,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--glass-bg-solid);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -348,7 +349,7 @@ onUnmounted(() => {
   grid-template-columns: 40px 1fr 80px 120px 120px 100px 100px;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--glass-bg-medium);
   border-bottom: 1px solid var(--glass-border);
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
@@ -361,12 +362,12 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-2) var(--space-4);
-  background-color: var(--color-primary-alpha-10);
-  border: 1px solid var(--color-primary-alpha-30);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
   grid-column: 2 / -1;
   margin: var(--space-2) 0;
-  backdrop-filter: var(--glass-backdrop);
+  backdrop-filter: blur(12px);
 }
 
 .selection-count {
@@ -435,7 +436,8 @@ onUnmounted(() => {
 }
 
 .table-row.row-selected {
-  background-color: var(--color-primary-alpha-10);
+  background-color: rgba(78, 205, 196, 0.05);
+  border-left: 2px solid var(--brand-primary);
 }
 
 /* Density Variants */
@@ -481,15 +483,13 @@ onUnmounted(() => {
 
 /* Enhanced project indicator styles matching canvas implementation */
 .project-emoji-badge {
-  background: var(--brand-bg-subtle);
-  border-color: var(--brand-border-subtle);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--spring-smooth) ease;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 2px 4px var(--shadow-subtle);
   display: inline-flex;
   align-items: center;
   justify-content: center;

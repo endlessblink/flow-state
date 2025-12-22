@@ -402,9 +402,9 @@ onUnmounted(() => {
 <style scoped>
 .canvas-section {
   position: absolute;
-  border: 2px dashed;
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  background: var(--surface-hover);
+  background: var(--glass-bg-soft);
   backdrop-filter: blur(8px);
   transition: all var(--duration-normal) var(--spring-smooth);
   user-select: none;
@@ -417,9 +417,9 @@ onUnmounted(() => {
 }
 
 .section-active {
-  border-color: var(--glass-border-active);
-  background: var(--glass-bg-soft);
-  box-shadow: 0 0 0 1px var(--glass-border-strong);
+  border-color: var(--brand-primary);
+  background: var(--state-active-bg);
+  box-shadow: 0 0 0 1px var(--brand-primary), var(--state-hover-shadow);
 }
 
 .section-dragging {
@@ -437,7 +437,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid;
+  border-bottom: 1px solid var(--glass-border);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   cursor: move;
 }
@@ -645,10 +645,8 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   padding: var(--space-2);
   transition: all var(--duration-fast);
-}
-
-.task-slot:hover {
-  border-color: var(--glass-border-hover);
+}.task-slot:hover {
+  border-color: var(--glass-border-active);
   background: var(--glass-bg-medium);
 }
 

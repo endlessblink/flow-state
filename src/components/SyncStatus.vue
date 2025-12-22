@@ -29,7 +29,7 @@
         <span v-if="queueStats.length > 0" class="queue-indicator">
           📝 {{ queueStats.length }}
         </span>
-        <span v-if="lastValidation && !lastValidation.isValid" class="validation-error">
+        <span v-if="lastValidation && lastValidation.issues.length > 0" class="validation-error">
           ❌ {{ lastValidation.issues.filter(i => i.severity === 'error').length }}
         </span>
       </div>

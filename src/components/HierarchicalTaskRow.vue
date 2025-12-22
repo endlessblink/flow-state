@@ -624,7 +624,7 @@ onUnmounted(() => {
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--glass-border);
-  background: var(--glass-bg-solid);
+  background: transparent;
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;
   position: relative;
@@ -637,7 +637,8 @@ onUnmounted(() => {
 }
 
 .task-row--selected {
-  background-color: var(--color-primary-alpha-10);
+  background-color: rgba(78, 205, 196, 0.05);
+  border-left: 3px solid var(--brand-primary);
 }
 
 .task-row--completed {
@@ -699,15 +700,13 @@ onUnmounted(() => {
 
 /* Enhanced project indicator styles matching canvas implementation */
 .project-emoji-badge {
-  background: var(--brand-bg-subtle);
-  border-color: var(--brand-border-subtle);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--spring-smooth) ease;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 2px 4px var(--shadow-subtle);
 }
 
 .project-emoji-badge:hover {

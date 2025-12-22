@@ -347,8 +347,8 @@ defineExpose({
   background: var(--glass-bg-light);
   border-color: var(--glass-border);
   color: var(--text-secondary);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .base-button.variant-secondary:hover:not(:disabled):not(.loading) {

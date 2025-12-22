@@ -93,7 +93,7 @@
       <InboxTimeFilters
         :tasks="baseInboxTasks"
         :active-filter="activeTimeFilter"
-        @filter-changed="activeTimeFilter = $event"
+        @filter-changed="activeTimeFilter = $event as 'all' | 'now' | 'today' | 'tomorrow' | 'thisWeek' | 'noDate'"
       />
     </div>
 
@@ -633,7 +633,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .inbox-panel {
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
@@ -656,7 +656,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .collapse-btn {
@@ -679,15 +679,15 @@ onBeforeUnmount(() => {
 
 .quick-add {
   padding: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 /* Native input styling for quick add */
 .quick-add-input {
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -711,7 +711,7 @@ onBeforeUnmount(() => {
 
 .brain-dump {
   padding: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -721,8 +721,8 @@ onBeforeUnmount(() => {
 .brain-dump-textarea {
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -752,8 +752,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-2);
-  background: var(--glass-bg-light);
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--glass-bg-medium);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .selected-count {
@@ -789,8 +789,8 @@ onBeforeUnmount(() => {
 }
 
 .inbox-task-card.selected {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary);
 }
 
 .inbox-task-card.timer-active {

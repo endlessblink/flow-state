@@ -98,7 +98,7 @@ function formatDateTime(value: unknown): string {
   if (!value) return '(not set)'
 
   try {
-    const date = new Date(value)
+    const date = new Date(value as string | number | Date)
     return date.toLocaleString()
   } catch {
     return String(value)

@@ -610,31 +610,32 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const getTasksInGroup = (group: CanvasGroup, allTasks: Task[]) => {
-    if (!group.filters) return allTasks
+    const filters = group.filters
+    if (!filters) return allTasks
 
     return allTasks.filter(task => {
       // Priority filter
-      if (group.filters!.priorities && task.priority && !group.filters!.priorities.includes(task.priority)) {
+      if (filters.priorities && task.priority && !filters.priorities.includes(task.priority)) {
         return false
       }
 
       // Status filter
-      if (group.filters!.statuses && !group.filters!.statuses.includes(task.status)) {
+      if (filters.statuses && !filters.statuses.includes(task.status)) {
         return false
       }
 
       // Project filter
-      if (group.filters!.projects && !group.filters!.projects.includes(task.projectId)) {
+      if (filters.projects && !filters.projects.includes(task.projectId)) {
         return false
       }
 
       // Date range filter
-      if (group.filters!.dateRange) {
+      if (filters.dateRange) {
         const taskDate = new Date(task.createdAt)
-        if (group.filters!.dateRange.start && taskDate < group.filters!.dateRange.start) {
+        if (filters.dateRange.start && taskDate < filters.dateRange.start) {
           return false
         }
-        if (group.filters!.dateRange.end && taskDate > group.filters!.dateRange.end) {
+        if (filters.dateRange.end && taskDate > filters.dateRange.end) {
           return false
         }
       }

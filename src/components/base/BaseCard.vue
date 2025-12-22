@@ -54,13 +54,13 @@ defineEmits<{
   -webkit-backdrop-filter: blur(20px) saturate(100%);
 
   /* Stroke border - no fills */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
 
   /* Layered shadow for depth */
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 4px 16px rgba(0, 0, 0, 0.2);
+    0 8px 32px rgba(0, 0, 0, 0.8),
+    0 4px 16px rgba(0, 0, 0, 0.4);
 
   /* Animation */
   transition: all var(--duration-normal) var(--spring-smooth);
@@ -77,12 +77,11 @@ defineEmits<{
 }
 
 .base-card.has-hover:hover {
-  border-color: rgba(78, 205, 196, 0.4);
+  border-color: var(--glass-border-hover);
+  background: var(--glass-bg-medium);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.5),
-    0 6px 20px rgba(0, 0, 0, 0.3),
-    0 0 20px rgba(78, 205, 196, 0.15),
-    inset 0 1px 0 rgba(78, 205, 196, 0.1);
+    0 12px 40px rgba(0, 0, 0, 0.9),
+    0 6px 20px rgba(0, 0, 0, 0.5);
   transform: translateY(-2px);
 }
 
@@ -140,8 +139,8 @@ defineEmits<{
 
 /* Variant: Filled - subtle glass fill (not solid) */
 .base-card.filled {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
 }
 
 /* Card sections */

@@ -10,8 +10,10 @@
         <div class="line-number">
           {{ line.lineNumber }}
         </div>
+        <!-- eslint-disable-next-line vue/no-v-html -->
         <div class="line-content" v-html="line.content" />
         <div v-if="line.type === 'changed'" class="line-comparison">
+          <!-- eslint-disable-next-line vue/no-v-html -->
           <div class="original-line" v-html="line.originalContent" />
         </div>
       </div>

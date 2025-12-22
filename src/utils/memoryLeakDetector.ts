@@ -215,7 +215,8 @@ export class MemoryLeakDetector {
 
     const recentSnapshots = this.snapshots.slice(-5)
     const averageGrowth = recentSnapshots.reduce((sum, snapshot) => {
-      return sum + (snapshot.usedJSHeapSize - this.baselineMemory!.usedJSHeapSize)
+      const baseline = this.baselineMemory?.usedJSHeapSize || 0
+      return sum + (snapshot.usedJSHeapSize - baseline)
     }, 0) / recentSnapshots.length
 
     const growthPercentage = (averageGrowth / this.baselineMemory.usedJSHeapSize) * 100

@@ -372,9 +372,9 @@ export function useStaticResourceCache(config: Partial<CacheConfig> = {}) {
     let cleared = 0
 
     if (pattern) {
-      cache.value.forEach((_, key) => {
+      cache.value.forEach((value, key) => {
         if (typeof pattern === 'string' ? key.includes(pattern) : pattern.test(key)) {
-          const cached = cache.value.get(key)!
+          const cached = value
           cache.value.delete(key)
           metrics.value.currentCacheSize -= cached.size
           cleared++

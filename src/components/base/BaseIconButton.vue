@@ -50,7 +50,7 @@ defineEmits<{
 
   /* Stroke-based design - transparent with border */
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   border-radius: var(--radius-md);
 
@@ -66,11 +66,10 @@ defineEmits<{
 }
 
 .base-icon-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
   color: var(--text-primary);
   transform: translateY(-1px);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
 }
 
 .base-icon-button:active:not(:disabled) {
@@ -100,62 +99,61 @@ defineEmits<{
 
 /* Active State - Teal stroke */
 .base-icon-button.is-active {
-  background: transparent;
-  border-color: rgba(78, 205, 196, 0.5);
-  color: rgba(78, 205, 196, 1);
-  box-shadow: 0 0 8px rgba(78, 205, 196, 0.2);
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .base-icon-button.is-active:hover:not(:disabled) {
-  border-color: rgba(78, 205, 196, 0.7);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.3);
+  border-color: var(--brand-hover);
+  background: rgba(78, 205, 196, 0.15);
 }
 
 /* Variant: Primary (teal) */
 .base-icon-button.variant-primary {
-  background: transparent;
-  border-color: rgba(78, 205, 196, 0.4);
-  color: rgba(78, 205, 196, 1);
+  background: rgba(78, 205, 196, 0.05);
+  border-color: rgba(78, 205, 196, 0.3);
+  color: var(--brand-primary);
 }
 
 .base-icon-button.variant-primary:hover:not(:disabled) {
-  border-color: rgba(78, 205, 196, 0.6);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.2);
+  border-color: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.1);
 }
 
 /* Variant: Success (green) - stroke only */
 .base-icon-button.variant-success {
-  background: transparent;
-  border-color: rgba(16, 185, 129, 0.4);
-  color: rgba(16, 185, 129, 1);
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #4ade80;
 }
 
 .base-icon-button.variant-success:hover:not(:disabled) {
-  border-color: rgba(16, 185, 129, 0.6);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.1);
 }
 
 /* Variant: Warning (orange) - stroke only */
 .base-icon-button.variant-warning {
-  background: transparent;
-  border-color: rgba(245, 158, 11, 0.4);
-  color: rgba(245, 158, 11, 1);
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
 }
 
 .base-icon-button.variant-warning:hover:not(:disabled) {
-  border-color: rgba(245, 158, 11, 0.6);
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.1);
 }
 
 /* Variant: Danger (red) - stroke only */
 .base-icon-button.variant-danger {
-  background: transparent;
-  border-color: rgba(239, 68, 68, 0.4);
-  color: rgba(239, 68, 68, 1);
+  background: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
 
 .base-icon-button.variant-danger:hover:not(:disabled) {
-  border-color: rgba(239, 68, 68, 0.6);
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.1);
 }
 </style>

@@ -411,7 +411,7 @@ export function addException(
   }
 
   // If modification, add details
-  if (type === 'modify' && newDetails) {
+  if (action === 'modify' && newDetails) {
     // implementation details for modification would go here
     // For now we just track that it's modified in the exception object if strictly needed types match
   }

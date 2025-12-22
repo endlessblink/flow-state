@@ -736,8 +736,8 @@ const cycleStatus = () => {
 
 .subtasks-badge {
   color: var(--text-secondary);
-  background: var(--surface-hover);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
 }
 
 .dependency-badge {
@@ -748,8 +748,8 @@ const cycleStatus = () => {
 
 .pomodoro-badge {
   color: var(--text-muted);
-  background: var(--surface-hover);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
 }
 
 /* Enhanced project visual indicators */
@@ -780,8 +780,8 @@ const cycleStatus = () => {
 
 /* For CSS circles (not emojis), add background and border styling */
 .project-visual-container:has(.project-css-circle) {
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
 }
 

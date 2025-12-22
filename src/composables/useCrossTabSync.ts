@@ -27,8 +27,8 @@ interface UIStoreType {
 
 interface CanvasStoreType {
   viewport: { x: number; y: number; zoom: number }
-  nodes: Array<{ id: string; position: { x: number; y: number }; [key: string]: unknown }>
-  sections: Array<{ id: string; collapsed?: boolean; collapsedHeight?: number; [key: string]: unknown }>
+  nodes: Array<{ id: string; position: { x: number; y: number };[key: string]: unknown }>
+  sections: Array<{ id: string; collapsed?: boolean; collapsedHeight?: number;[key: string]: unknown }>
   [key: string]: unknown
 }
 
@@ -620,12 +620,12 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: TaskStor
         if (operation.taskData && Array.isArray(operation.taskData)) {
           // Update multiple tasks
           const store = taskStore as TaskStoreType
-          ;(operation.taskData as Array<{ id: string; [key: string]: unknown }>).forEach((taskUpdate) => {
-            const existingTask = store.tasks.find(t => t.id === taskUpdate.id)
-            if (existingTask) {
-              Object.assign(existingTask, taskUpdate)
-            }
-          })
+            ; (operation.taskData as Array<{ id: string;[key: string]: unknown }>).forEach((taskUpdate) => {
+              const existingTask = store.tasks.find(t => t.id === taskUpdate.id)
+              if (existingTask) {
+                Object.assign(existingTask, taskUpdate)
+              }
+            })
         }
         break
     }
@@ -856,7 +856,7 @@ const trackLocalOperation = (operation: TaskOperation) => {
 
     // Auto-cleanup after 5 seconds to prevent memory leaks
     setTimeout(() => {
-      pendingLocalOperations.value.delete(operation.taskId!)
+      pendingLocalOperations.value.delete(operation.taskId)
     }, 5000)
   }
 }

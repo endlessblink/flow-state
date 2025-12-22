@@ -311,17 +311,16 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .base-nav-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-light);
+  border-color: var(--glass-border);
 }
 
 /* Active State - Stroke + Glass with teal accent */
 .base-nav-item.is-active {
-  background: transparent;
-  border: 1px solid rgba(78, 205, 196, 0.4);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--state-active-border);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.15), inset 0 1px 0 rgba(78, 205, 196, 0.1);
 }
 
 /* Nested items - dynamic indentation based on CSS custom property */

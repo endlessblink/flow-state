@@ -167,13 +167,14 @@ defineExpose({
 }
 
 .base-input:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 8px rgba(78, 205, 196, 0.1);
+  border-color: var(--glass-border-hover);
+  background: var(--glass-bg-medium);
 }
 
 .base-input:focus {
-  border-color: rgba(78, 205, 196, 0.5);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 12px rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-medium);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1), 0 0 12px rgba(78, 205, 196, 0.05);
 }
 
 .base-input:disabled {

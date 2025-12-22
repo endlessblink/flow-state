@@ -334,10 +334,14 @@ onBeforeUnmount(() => {
 <style scoped>
 .context-menu {
   position: fixed;
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
   padding: var(--space-2) 0;
   min-width: 240px;
   z-index: 99999 !important;
@@ -372,7 +376,8 @@ onBeforeUnmount(() => {
 }
 
 .menu-item:hover {
-  background: var(--bg-hover);
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
 }
 
 .menu-item.danger {
@@ -402,14 +407,14 @@ onBeforeUnmount(() => {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   padding: var(--space-1) var(--space-2);
-  background: var(--surface-tertiary);
+  background: var(--glass-bg-light);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-secondary);
+  border: 1px solid var(--glass-border);
 }
 
 .menu-divider {
   height: 1px;
-  background: var(--border-secondary);
+  background: var(--glass-border);
   margin: var(--space-2) 0;
 }
 
@@ -440,10 +445,14 @@ onBeforeUnmount(() => {
   position: absolute;
   left: calc(100% + var(--space-1));
   top: 0;
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-secondary);
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
   padding: var(--space-2) 0;
   min-width: 200px;
   z-index: 100000;

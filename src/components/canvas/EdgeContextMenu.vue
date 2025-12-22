@@ -75,20 +75,14 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .context-menu {
-  background: linear-gradient(
-    135deg,
-    var(--surface-primary) 0%,
-    var(--surface-secondary) 100%
-  );
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(32px) saturate(150%);
   -webkit-backdrop-filter: blur(32px) saturate(150%);
-  border: 1px solid var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   box-shadow:
-    0 24px 48px var(--shadow-xl),
-    0 12px 24px var(--shadow-xl),
-    0 0 0 1px var(--glass-bg-medium),
-    inset 0 1px 0 var(--glass-border);
+    0 24px 48px rgba(0, 0, 0, 0.5),
+    0 12px 24px rgba(0, 0, 0, 0.3);
   padding: var(--space-2);
   min-width: 180px;
   animation: menuSlideIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -150,8 +144,8 @@ onBeforeUnmount(() => {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   padding: var(--space-1) var(--space-2);
-  background: var(--glass-bg-tint);
+  background: var(--glass-bg-light);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-bg-heavy);
+  border: 1px solid var(--glass-border);
 }
 </style>

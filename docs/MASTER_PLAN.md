@@ -1,17 +1,27 @@
-**Last Updated**: December 21, 2025 (TASK-027 Completed - Zero Lint Warnings)
-**Version**: 5.0 (Strategic Roadmap: Personal Daily Driver)
+**Last Updated**: December 22, 2025 (TASK-036-043 Added, BUG-025 Critical - Comprehensive Audit)
+**Version**: 5.1 (Strategic Roadmap: Personal Daily Driver)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
 
-## ⚠️ SCHEDULED: TASK-034 Phase 5 - December 28, 2025
+## 🔴 CRITICAL: BUG-025 - Stale Data Loading
 
-> **CLAUDE CODE ATTENTION**: On or after **December 28, 2025**, complete TASK-034 Phase 5:
+> **BLOCKER**: Individual task documents (TASK-034 Phase 4) are loading stale data instead of current data.
+> This must be investigated and resolved before TASK-034 Phase 5 can proceed.
+> See BUG-025 section below for investigation steps.
+
+---
+
+## ⚠️ SCHEDULED: TASK-034 Phase 5 - December 28, 2025 (BLOCKED BY BUG-025)
+
+> **CLAUDE CODE ATTENTION**: BLOCKED - Do not proceed until BUG-025 (stale data) is resolved.
+>
+> **Original Plan** (on hold):
 > 1. Set `INDIVIDUAL_ONLY: true` in `src/config/database.ts`
 > 2. This stops dual-write to legacy `tasks:data` format
 > 3. After 1 more week of stability, delete `tasks:data` document
 >
-> **Current State**: App is reading from individual `task-{id}` docs (Phase 4 active since Dec 21)
+> **Current State**: ⚠️ Phase 4 active but BUG-025 reports stale data loading
 > **Rollback**: Set `READ_INDIVIDUAL_TASKS: false` in `database.ts` to revert to legacy
 
 ---
@@ -22,8 +32,9 @@
 |------|--------|
 | **Canvas** | ✅ Working - Node/Edge types fixed |
 | **Calendar** | ✅ Verified - Type errors resolved |
-| **CouchDB Sync** | ✅ Phase 4 Active - Reading from individual task docs |
+| **CouchDB Sync** | 🔴 **ISSUE** - BUG-025: Stale data loading (Phase 4 blocked) |
 | **Build** | ✅ Passing (vue-tsc verified) |
+| **Tests** | ⚠️ 4 failing - Storybook `ref` imports (TASK-036) |
 | **GitHub CI** | ✅ Active - Build verification on push/PR |
 
 **Branch**: `master`
@@ -170,14 +181,24 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-031~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json`, `.claude/locks/*` | - | - |
 | ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
 | TASK-033 | PLANNED | `~/claude-plugins/*` (new) | - | - |
-| TASK-034 | ✅ PHASE 4 DONE | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
+| TASK-034 | ⚠️ PHASE 4 BLOCKED | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
+| TASK-035 | PLANNED | `useSmartViews.ts`, `tasks.ts`, `AppSidebar.vue`, `canvas.ts` | - | - |
+| TASK-036 | PLANNED | `*.stories.ts` | - | - |
+| TASK-037 | PLANNED | `src/components/*` | - | - |
+| TASK-038 | PLANNED | `src/**/*.ts`, `src/**/*.vue` | - | - |
+| TASK-039 | PLANNED | `src/utils/conflict*.ts`, `src/utils/*Backup*.ts`, `src/utils/sync*.ts` | - | - |
+| TASK-040 | PLANNED | `src/locales/*`, `src/composables/useI18n.ts` | - | - |
+| TASK-041 | PLANNED | `src/utils/recurrenceUtils.ts`, `src/types/recurrence.ts` | - | - |
+| TASK-042 | PLANNED | `src/views/CanvasView.vue` (section dialog) | - | - |
+| TASK-043 | PLANNED | `src/views/CanvasView.vue` (refactoring analysis) | - | - |
 
-**Parallel Safe**: TASK-014 (UI) + TASK-017 (plasmoid) + TASK-033 (plugin) - no file overlap
-**⏰ SCHEDULED Dec 28**: TASK-034 Phase 5 - Enable `INDIVIDUAL_ONLY: true` after 1 week monitoring
-**Active**: TASK-034 Phase 4 (Dec 21) - App reading from individual `task-{id}` docs
+**🔴 CRITICAL**: BUG-025 - Stale data loading. TASK-034 Phase 5 BLOCKED until resolved.
+**Parallel Safe**: TASK-014 (UI) + TASK-017 (plasmoid) + TASK-033 (plugin) + TASK-036 (storybook tests)
+**⏰ SCHEDULED Dec 28**: TASK-034 Phase 5 - BLOCKED by BUG-025
+**Active**: TASK-034 Phase 4 (Dec 21) - Individual docs active but loading stale data
 **Completed**: TASK-027, TASK-032, TASK-031, TASK-030 (code quality, hooks, locking, type errors)
 **Ready**: TASK-022 monitoring complete, TASK-024 can start
-**Planned**: TASK-033 (Claude Dev Infrastructure Plugin)
+**Planned**: TASK-036-043 (code quality & architecture improvements)
 **Conflict Warning**: `tasks.ts` appears in TASK-022, TASK-024, TASK-019, TASK-034 - work sequentially
 
 ---
@@ -606,13 +627,13 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 ---
 
-### TASK-034: Migrate to Individual Task Documents (PHASE 4 COMPLETE)
+### TASK-034: Migrate to Individual Task Documents (⚠️ PHASE 4 BLOCKED BY BUG-025)
 
 **Goal**: Replace single `tasks:data` array document with individual `task-{id}` documents to prevent conflict accumulation.
 
 **Priority**: P1-HIGH (Part of ROAD-013 - Sync Hardening)
 **Risk Level**: HIGH (Data migration)
-**Status**: ✅ Phase 4 Complete (Dec 21, 2025) - Monitor for 1 week before Phase 5
+**Status**: ⚠️ Phase 4 Complete but BLOCKED - BUG-025 reports stale data loading. Phase 5 delayed.
 
 **Background**:
 - **Current**: All tasks stored in single `tasks:data` PouchDB document as array
@@ -670,6 +691,285 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 **Depends On**: - (TASK-022 monitoring complete)
 **Blocks**: -
 **Related**: ROAD-013 (Sync Hardening), ISSUE-011 (Resolved conflicts)
+
+---
+
+### TASK-035: Duration-based Smart Groups (PLANNED)
+
+**Goal**: Add smart groups for organizing tasks by estimated duration (Quick/Short/Medium/Long/Unestimated).
+
+**Priority**: P2-MEDIUM (UX enhancement, research-backed)
+**Created**: December 22, 2025
+
+**Research**:
+- [2025 ACM study](https://dl.acm.org/doi/10.1145/3729176.3729182): Duration feedback improves productivity
+- Competitor validation: Todoist Pro & TickTick both have duration features
+
+**Time Ranges** (Pomodoro-aligned):
+
+| Group | Range | Pomodoro Equiv |
+|-------|-------|----------------|
+| Quick (~15 min) | 1-15 min | < 1 pom |
+| Short (~30 min) | 15-30 min | ~1 pom |
+| Medium (~60 min) | 30-60 min | 1-2 pom |
+| Long (60+ min) | 60+ min | 2+ pom |
+| Unestimated | null | - |
+
+**Scope**:
+- Sidebar: Collapsible "By Duration" section with counts
+- Filters: Duration dropdown in AllTasks, Canvas views
+- Canvas: Power Groups with auto-collect and drag-to-assign
+
+**Implementation Steps**:
+
+| Step | File | Changes |
+|------|------|---------|
+| 1 | `src/composables/useSmartViews.ts` | Add `isQuickTask()`, `isShortTask()`, `isMediumTask()`, `isLongTask()`, `isUnestimatedTask()` |
+| 2 | `src/stores/tasks.ts` | Extend `smartViewTaskCounts` with duration counts |
+| 3 | `src/composables/useTaskSmartGroups.ts` | Add `DURATION_KEYWORDS` for Power Groups |
+| 4 | `src/stores/canvas.ts` | Add duration handling to `getMatchingTasksForPowerGroup()` |
+| 5 | `src/components/app/AppSidebar.vue` | Add "By Duration" section with DateDropZone components |
+| 6 | `src/components/canvas/InboxFilters.vue` | Add duration filter dropdown |
+
+**Rollback**: Revert all 6 files to pre-implementation state
+
+**Plan File**: `/home/endlessblink/.claude/plans/toasty-swimming-hartmanis.md`
+
+**Depends On**: - (no dependencies)
+**Blocks**: -
+
+---
+
+### BUG-025: Stale Data Loading (🔴 P0-CRITICAL)
+
+**Reported**: December 22, 2025
+**Status**: 🔴 ACTIVE - Blocks TASK-034 Phase 5
+
+**Symptom**: Individual task documents (TASK-034 Phase 4) loading stale/outdated data instead of current data.
+
+**Impact**:
+- TASK-034 Phase 5 cannot proceed
+- Data integrity at risk
+- User experiencing inconsistent task state
+
+**Investigation Steps**:
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Verify CouchDB remote has latest data | TODO |
+| 2 | Check local PouchDB for stale docs | TODO |
+| 3 | Compare individual docs vs legacy `tasks:data` | TODO |
+| 4 | Check sync direction and conflict resolution | TODO |
+| 5 | Review `loadFromDatabase()` in tasks.ts | TODO |
+| 6 | Test with fresh browser (no cache) | TODO |
+
+**Rollback Option**: Set `READ_INDIVIDUAL_TASKS: false` in `database.ts` to revert to legacy format
+
+**Related**: TASK-034 (Individual Task Documents), ISSUE-011 (PouchDB conflicts)
+
+---
+
+### TASK-036: Fix Storybook Test Failures (PLANNED)
+
+**Goal**: Fix 4 failing Storybook tests caused by missing `ref` import.
+
+**Priority**: P2-MEDIUM (test suite health)
+**Created**: December 22, 2025
+
+**Failing Tests**:
+1. `src/stories/canvas/MultiSelectionOverlay.stories.ts:176` - `ref is not defined`
+2. `src/stories/ui/MultiSelectToggle.stories.ts:252` - `ref is not defined`
+3. `src/stories/modals/SearchModal.stories.ts` - `Cannot read properties of undefined (reading 'length')`
+
+**Fix**: Add missing `import { ref } from 'vue'` to each story file.
+
+**Files to Fix**:
+- `src/stories/canvas/MultiSelectionOverlay.stories.ts`
+- `src/stories/ui/MultiSelectToggle.stories.ts`
+- `src/stories/modals/SearchModal.stories.ts`
+
+**Verification**: `npm run test` should show 0 failures
+
+---
+
+### TASK-037: Component Directory Organization (PLANNED)
+
+**Goal**: Organize 51 root-level components into appropriate subdirectories.
+
+**Priority**: P3-LOW (code organization, maintainability)
+**Created**: December 22, 2025
+
+**Current State**:
+- 51 components at root `/src/components/`
+- Only 15 in `canvas/`, 13 in `base/`, 6 in `auth/`, 3 in `kanban/`, 3 in `ui/`
+
+**Proposed Categories**:
+
+| Category | Components | Description |
+|----------|------------|-------------|
+| `sync/` | CloudSyncSettings, SyncHealth*, SyncAlert*, etc. | Sync-related components |
+| `modals/` | TaskEditModal, GroupModal, ConfirmationModal | Modal dialogs |
+| `task/` | TaskCard, TaskManager*, TaskContext* | Task-related components |
+| `settings/` | *Settings.vue components | Settings panels |
+| `debug/` | Forensic*, Diagnostic* | Debug/diagnostic components |
+
+**Steps**:
+1. Create subdirectories
+2. Move components with `git mv`
+3. Update all imports across codebase
+4. Verify build passes
+
+**Risk**: HIGH - Many import paths will change
+**Recommendation**: Do in dedicated session with thorough testing
+
+---
+
+### TASK-038: Console.log Cleanup (PLANNED)
+
+**Goal**: Remove 2,536+ debug console statements before public release.
+
+**Priority**: P2-MEDIUM (production readiness)
+**Created**: December 22, 2025
+
+**Current State**:
+- 2,536+ `console.log/warn/error` statements in codebase
+- Example in `tasks.ts`: `console.log('🔥 TASKS.TS LOADING...')`
+- Many contain emoji debug prefixes (🔍, 🔥, ✅, etc.)
+
+**Approach**:
+1. Keep essential error logging (actual errors, not debug)
+2. Remove all emoji-prefixed debug logs
+3. Replace with proper logging utility if needed
+4. Consider environment-based logging (dev vs prod)
+
+**Files with Most Console Statements** (top 10):
+- Stores: `tasks.ts`, `canvas.ts`, `timer.ts`
+- Composables: `useReliableSyncManager.ts`, `useCrossTabSync.ts`
+- Components: `CanvasView.vue`, `CalendarView.vue`
+
+**Verification**: `grep -r "console\." src/ | wc -l` should decrease significantly
+
+---
+
+### TASK-039: Duplicate Systems Consolidation (PLANNED)
+
+**Goal**: Consolidate overlapping utility systems to reduce complexity.
+
+**Priority**: P3-LOW (technical debt reduction)
+**Created**: December 22, 2025
+
+**Duplicate Systems Identified**:
+
+| Area | Files | Issue |
+|------|-------|-------|
+| **Conflict Management** | `conflictDetector.ts`, `conflictResolution.ts`, `conflictResolver.ts` | 3 overlapping systems |
+| **Backup System** | `forensicBackupLogger.ts`, `localBackupManager.ts`, `RobustBackupSystem.ts` | 3 backup systems |
+| **Sync Management** | `syncBatchManager.ts`, `syncCircuitBreaker.ts`, `syncTestSuite.ts`, `syncValidator.ts`, `unifiedSyncQueue.ts` | 5 sync utilities |
+
+**Approach**:
+1. Analyze which functions are actually used
+2. Identify primary system for each area
+3. Migrate functionality to primary system
+4. Remove deprecated files
+5. Update all imports
+
+**Risk**: HIGH - Core systems, requires careful testing
+**Recommendation**: Create SOP before consolidation
+
+---
+
+### TASK-040: Fix i18n System (PLANNED)
+
+**Goal**: Restore working internationalization (currently broken, hardcoded English).
+
+**Priority**: P2-MEDIUM (feature restoration)
+**Created**: December 22, 2025
+
+**Current State**:
+- Multiple components have: `// RESTORE I18N - hardcoded English due to Vue i18n error`
+- Affected files: `LanguageSettings.vue`, `LoginForm.vue`, others
+- Root cause: Vue i18n initialization error
+
+**Files to Fix**:
+- `src/components/settings/LanguageSettings.vue`
+- `src/components/auth/LoginForm.vue`
+- Any other files with `RESTORE I18N` comment
+
+**Steps**:
+1. Identify all affected files with `grep -r "RESTORE I18N" src/`
+2. Debug Vue i18n initialization in `main.ts`
+3. Restore `$t()` translation calls
+4. Test language switching
+
+---
+
+### TASK-041: Implement Custom Recurrence Patterns (PLANNED)
+
+**Goal**: Implement the TODO for custom recurrence patterns.
+
+**Priority**: P3-LOW (feature enhancement)
+**Created**: December 22, 2025
+
+**Current State**:
+- `src/utils/recurrenceUtils.ts` has: `// TODO: Implement custom recurrence patterns`
+- Basic recurrence works (daily, weekly, monthly)
+- Custom patterns (e.g., "every 3 days", "2nd Tuesday of month") not supported
+
+**Scope**:
+- Define custom recurrence syntax
+- Implement parsing logic
+- Add UI for custom pattern input
+- Store custom patterns in task data
+
+**Files**:
+- `src/utils/recurrenceUtils.ts`
+- `src/types/recurrence.ts`
+- `src/components/recurrence/*.vue`
+
+---
+
+### TASK-042: Implement Section Selection Dialog (PLANNED)
+
+**Goal**: Implement the TODO for canvas section selection dialog.
+
+**Priority**: P3-LOW (UX enhancement)
+**Created**: December 22, 2025
+
+**Current State**:
+- `src/views/CanvasView.vue` has: `// TODO: Implement section selection dialog`
+- Users cannot easily select which section to add tasks to
+
+**Scope**:
+- Create modal/dropdown for section selection
+- Show available sections with counts
+- Allow quick section switching
+- Integrate with task creation flow
+
+---
+
+### TASK-043: CanvasView Refactoring Analysis (PLANNED)
+
+**Goal**: Analyze whether CanvasView.vue (6,205 lines) should be refactored.
+
+**Priority**: P3-LOW (architecture review)
+**Created**: December 22, 2025
+
+**Current State**:
+- `CanvasView.vue` is 6,205 lines - significantly oversized
+- Contains 57 reactive variables
+- Has explicit warning: "Vue Flow integration - do not extract"
+- Core functionality tightly coupled with Vue Flow
+
+**Analysis Questions**:
+1. Which parts can be safely extracted to composables?
+2. What is truly locked to the component (Vue Flow integration)?
+3. Would splitting improve maintainability or cause more issues?
+4. Is the "do not extract" warning still valid?
+
+**Recommendation**: Create analysis document before any refactoring attempt.
+
+**Risk**: HIGH - Core view, tightly integrated with Vue Flow
+**Note**: May decide NOT to refactor after analysis
 
 ---
 
@@ -1486,6 +1786,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-022~~ | ~~Dev-Manager Kanban not syncing with MASTER_PLAN.md updates~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Symlink + `--symlinks` flag for serve |
 | ~~BUG-023~~ | ~~Dev-Manager Stats/Kanban showing different Active Work items~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Pattern order fix, regex newline fix, symlink restoration |
 | ~~BUG-024~~ | ~~Sync status indicator flickering~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Added 1.5s debounce on status transitions during live sync. Part of TASK-021 |
+| **BUG-025** | **Stale data loading instead of current data** | **P0-CRITICAL** | 🔴 ACTIVE - Individual task docs (TASK-034 Phase 4) loading stale data. Blocks Phase 5. |
 
 **Details**: See "Open Bug Analysis" section below.
 

@@ -3,7 +3,7 @@
  * Handles Vue Flow component lifecycle, state management, error recovery, and performance optimization
  */
 
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, getCurrentInstance, type Ref } from 'vue'
 import type { Node, Edge, NodeChange as _NodeChange, EdgeChange as _EdgeChange, Connection as _Connection, VueFlowStore } from '@vue-flow/core'
 
 export interface VueFlowStabilityConfig {
@@ -522,13 +522,15 @@ export function useVueFlowStability(
   }
 
   // Auto-initialize on mount
-  onMounted(() => {
-    initialize()
-  })
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      initialize()
+    })
 
-  onBeforeUnmount(() => {
-    cleanup()
-  })
+    onBeforeUnmount(() => {
+      cleanup()
+    })
+  }
 
   return {
     // State

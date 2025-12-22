@@ -161,6 +161,11 @@ export const useSmartViews = () => {
       return true
     }
 
+    // Check for explicit "uncategorized" projectId value
+    if (task.projectId === 'uncategorized') {
+      return true
+    }
+
     // Backward compatibility: also treat tasks without proper project assignment as uncategorized
     if (!task.projectId || task.projectId === '' || task.projectId === null) {
       return true

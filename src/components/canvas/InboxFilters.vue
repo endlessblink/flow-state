@@ -1,5 +1,16 @@
 <template>
   <div class="inbox-filters">
+    <!-- All Tasks (Reset Filters) -->
+    <button
+      class="filter-chip"
+      :class="{ active: !hasActiveFilters }"
+      title="Show all tasks"
+      @click="clearAllFilters"
+    >
+      <List :size="14" />
+      <span class="chip-label">All</span>
+    </button>
+
     <!-- Unscheduled Toggle -->
     <button
       class="filter-chip"
@@ -101,7 +112,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { CalendarOff, Flag, FolderOpen, ChevronDown, X } from 'lucide-vue-next'
+import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
 
 interface Props {

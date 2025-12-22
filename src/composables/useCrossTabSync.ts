@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useCanvasStore } from '@/stores/canvas'
@@ -1045,15 +1045,17 @@ export function useCrossTabSync() {
   initialize()
 
   // Setup lifecycle hooks (for component contexts - provides proper cleanup)
-  onMounted(() => {
-    initialize()
-    // Send initial heartbeat
-    sendHeartbeat()
-  })
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      initialize()
+      // Send initial heartbeat
+      sendHeartbeat()
+    })
 
-  onUnmounted(() => {
-    cleanup()
-  })
+    onUnmounted(() => {
+      cleanup()
+    })
+  }
 
   return {
     // State

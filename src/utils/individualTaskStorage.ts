@@ -299,20 +299,35 @@ export const loadAllTasks = async (
       const tasks: Task[] = []
 
       for (const row of result.rows) {
-        if (row.doc && 'data' in row.doc) {
-          const taskDoc = row.doc as TaskDocument
-          const taskData = taskDoc.data as Record<string, unknown>
+        if (row.doc) {
+          const doc = row.doc as unknown as Record<string, unknown>
+          let taskData: Record<string, unknown> | null = null
+
+          // Handle nested format: { data: { id, title, ... } }
+          if ('data' in doc && doc.data && typeof doc.data === 'object') {
+            taskData = doc.data as Record<string, unknown>
+          }
+          // Handle flat format: { id, title, ... } (legacy/direct format)
+          else if ('id' in doc && 'title' in doc) {
+            // Extract task data from root, excluding PouchDB internal fields
+            const { _id, _rev, _attachments, _conflicts, ...rest } = doc
+            taskData = rest as Record<string, unknown>
+          }
+
           if (taskData && taskData.id) {
             tasks.push({
               ...taskData,
-              createdAt: new Date(taskData.createdAt as string),
-              updatedAt: new Date(taskData.updatedAt as string)
+              createdAt: new Date(taskData.createdAt as string || Date.now()),
+              updatedAt: new Date(taskData.updatedAt as string || Date.now())
             } as Task)
           }
         }
       }
 
-      console.log(`📂 Loaded ${tasks.length} tasks from individual documents`)
+      // BUG-026: Reduced logging - only log if significant
+      if (tasks.length > 0) {
+        console.log(`📂 Loaded ${tasks.length} tasks`)
+      }
       return tasks
     } catch (error) {
       retryCount++

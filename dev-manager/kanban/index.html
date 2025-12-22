@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -379,6 +380,7 @@
         transform: translateX(100%);
         opacity: 0;
       }
+
       to {
         transform: translateX(0);
         opacity: 1;
@@ -448,28 +450,72 @@
     }
 
     /* Ideas view columns */
-    .column-header.raw { border-color: #4a5568; }
-    .column-header.developing { border-color: #3182ce; }
-    .column-header.ready { border-color: #805ad5; }
-    .column-header.promoted { border-color: #2f855a; }
+    .column-header.raw {
+      border-color: #4a5568;
+    }
+
+    .column-header.developing {
+      border-color: #3182ce;
+    }
+
+    .column-header.ready {
+      border-color: #805ad5;
+    }
+
+    .column-header.promoted {
+      border-color: #2f855a;
+    }
 
     /* Roadmap view columns */
-    .column-header.current { border-color: #2c5282; }
-    .column-header.next { border-color: #3182ce; }
-    .column-header.future { border-color: #4a5568; }
-    .column-header.completed { border-color: #2f855a; }
+    .column-header.current {
+      border-color: #2c5282;
+    }
+
+    .column-header.next {
+      border-color: #3182ce;
+    }
+
+    .column-header.future {
+      border-color: #4a5568;
+    }
+
+    .column-header.completed {
+      border-color: #2f855a;
+    }
 
     /* Archive view columns */
-    .column-header.recent { border-color: #2d3748; }
-    .column-header.features { border-color: #2c5282; }
-    .column-header.bugs { border-color: #c53030; }
-    .column-header.old { border-color: #4a5568; }
+    .column-header.recent {
+      border-color: #2d3748;
+    }
+
+    .column-header.features {
+      border-color: #2c5282;
+    }
+
+    .column-header.bugs {
+      border-color: #c53030;
+    }
+
+    .column-header.old {
+      border-color: #4a5568;
+    }
 
     /* Status view columns */
-    .column-header.critical { border-color: #c53030; }
-    .column-header.warning { border-color: #d69e2e; }
-    .column-header.info { border-color: #3182ce; }
-    .column-header.success { border-color: #2f855a; }
+    .column-header.critical {
+      border-color: #c53030;
+    }
+
+    .column-header.warning {
+      border-color: #d69e2e;
+    }
+
+    .column-header.info {
+      border-color: #3182ce;
+    }
+
+    .column-header.success {
+      border-color: #2f855a;
+    }
 
     .column-content {
       flex: 1;
@@ -595,7 +641,8 @@
       padding-bottom: 14px;
     }
 
-    .task-date, .task-tags {
+    .task-date,
+    .task-tags {
       display: flex;
       align-items: center;
       gap: 4px;
@@ -648,7 +695,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
       border-radius: 4px;
       pointer-events: none;
     }
@@ -680,8 +727,14 @@
       margin-right: 0.25rem;
       transition: color var(--transition-fast);
     }
-    .expand-toggle:hover { color: var(--text-muted); }
-    .task-card:not(.has-subtasks) .expand-toggle { display: none; }
+
+    .expand-toggle:hover {
+      color: var(--text-muted);
+    }
+
+    .task-card:not(.has-subtasks) .expand-toggle {
+      display: none;
+    }
 
     .task-expanded {
       margin-top: 0.75rem;
@@ -690,8 +743,15 @@
       max-height: 400px;
       overflow-y: auto;
     }
-    .task-expanded::-webkit-scrollbar { width: 4px; }
-    .task-expanded::-webkit-scrollbar-thumb { background: var(--surface-elevated); border-radius: 2px; }
+
+    .task-expanded::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .task-expanded::-webkit-scrollbar-thumb {
+      background: var(--surface-elevated);
+      border-radius: 2px;
+    }
 
     /* Structured Sections */
     .detail-section {
@@ -701,11 +761,26 @@
       border-radius: 8px;
       border-left: 3px solid var(--brand-primary);
     }
-    .detail-section.goal { border-left-color: var(--color-success); }
-    .detail-section.priority { border-left-color: var(--color-warning); }
-    .detail-section.reference { border-left-color: #8b5cf6; }
-    .detail-section.progress { border-left-color: #06b6d4; }
-    .detail-section.notes { border-left-color: var(--text-subtle); }
+
+    .detail-section.goal {
+      border-left-color: var(--color-success);
+    }
+
+    .detail-section.priority {
+      border-left-color: var(--color-warning);
+    }
+
+    .detail-section.reference {
+      border-left-color: #8b5cf6;
+    }
+
+    .detail-section.progress {
+      border-left-color: #06b6d4;
+    }
+
+    .detail-section.notes {
+      border-left-color: var(--text-subtle);
+    }
 
     .detail-label {
       font-size: 0.65rem;
@@ -715,11 +790,13 @@
       color: var(--text-subtle);
       margin-bottom: 0.25rem;
     }
+
     .detail-content {
       font-size: 0.8rem;
       color: var(--text-secondary);
       line-height: 1.5;
     }
+
     .detail-content code {
       background: var(--surface-primary);
       padding: 1px 4px;
@@ -732,6 +809,7 @@
     .task-subtasks {
       margin-top: 0.5rem;
     }
+
     .subtask-header {
       font-size: 0.7rem;
       font-weight: 700;
@@ -743,11 +821,13 @@
       align-items: center;
       gap: 0.5rem;
     }
+
     .subtask-progress {
       font-size: 0.7rem;
       color: var(--color-success);
       font-weight: 600;
     }
+
     .subtask-category {
       font-size: 0.75rem;
       color: var(--text-muted);
@@ -756,6 +836,7 @@
       padding-bottom: 0.25rem;
       border-bottom: 1px solid var(--border-subtle);
     }
+
     .subtask {
       font-size: 0.8rem;
       color: var(--text-muted);
@@ -765,15 +846,18 @@
       align-items: flex-start;
       gap: 0.35rem;
     }
+
     .subtask-icon {
       flex-shrink: 0;
       width: 14px;
       text-align: center;
     }
+
     .subtask.completed {
       color: var(--color-success);
       opacity: 0.8;
     }
+
     .subtask.completed .subtask-text {
       text-decoration: line-through;
       opacity: 0.7;
@@ -786,6 +870,7 @@
       flex-wrap: wrap;
       margin-bottom: 0.75rem;
     }
+
     .stat-badge {
       font-size: 0.7rem;
       padding: 0.2rem 0.5rem;
@@ -796,9 +881,21 @@
       align-items: center;
       gap: 0.25rem;
     }
-    .stat-badge.priority-high { color: var(--color-danger); border: 1px solid rgba(239, 68, 68, 0.3); }
-    .stat-badge.priority-medium { color: var(--color-warning); border: 1px solid rgba(245, 158, 11, 0.3); }
-    .stat-badge.subtasks { color: var(--brand-primary); border: 1px solid var(--brand-subtle); }
+
+    .stat-badge.priority-high {
+      color: var(--color-danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .stat-badge.priority-medium {
+      color: var(--color-warning);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .stat-badge.subtasks {
+      color: var(--brand-primary);
+      border: 1px solid var(--brand-subtle);
+    }
 
     /* Task Modal */
     .task-modal {
@@ -936,6 +1033,96 @@
       border-color: var(--brand-hover);
     }
 
+    /* MODAL EDIT CONTROLS */
+    .modal-edit-select {
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-medium);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text-primary);
+      font-size: 13px;
+      cursor: pointer;
+      min-width: 150px;
+    }
+
+    .modal-edit-select:hover {
+      border-color: var(--brand-primary);
+    }
+
+    .modal-edit-select:focus {
+      outline: none;
+      border-color: var(--brand-primary);
+      box-shadow: 0 0 0 2px var(--brand-subtle);
+    }
+
+    .modal-progress-edit {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-progress-edit input[type="range"] {
+      width: 120px;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--surface-tertiary);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .modal-progress-edit input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--brand-primary);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .modal-progress-edit input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: var(--brand-primary);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+
+    #modalProgressValue {
+      min-width: 40px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .task-modal-sync-status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .task-modal-sync-status.success {
+      display: block;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--color-success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .task-modal-sync-status.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--color-danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .task-modal-sync-status.loading {
+      display: block;
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--color-info);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
     /* TEXT VIEWS */
     .text-view {
       flex: 1;
@@ -995,6 +1182,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <!-- SIDEBAR -->
@@ -1025,7 +1213,8 @@
         <h1 id="view-title">Kanban Board</h1>
         <div class="header-actions">
           <div class="search-container">
-            <input type="text" id="search-input" class="search-input" placeholder="🔍 Search tasks..." oninput="handleSearch(this.value)">
+            <input type="text" id="search-input" class="search-input" placeholder="🔍 Search tasks..."
+              oninput="handleSearch(this.value)">
             <button class="search-clear" onclick="clearSearch()" title="Clear search">✕</button>
             <span id="search-results-count" class="search-results-count"></span>
           </div>
@@ -1041,6 +1230,16 @@
             <option value="p1">P1 / HIGH</option>
             <option value="p2">P2 / MEDIUM</option>
             <option value="p3">P3 / LOW</option>
+          </select>
+          <select id="sort-select" class="filter-select" onchange="applySorting()">
+            <option value="priority-desc">🔥 Priority (High→Low)</option>
+            <option value="priority-asc">Priority (Low→High)</option>
+            <option value="progress-desc">📈 Progress (High→Low)</option>
+            <option value="progress-asc">Progress (Low→High)</option>
+            <option value="date-desc">📅 Newest First</option>
+            <option value="date-asc">Oldest First</option>
+            <option value="alpha-asc">🔤 A→Z</option>
+            <option value="alpha-desc">Z→A</option>
           </select>
           <button class="btn" onclick="refreshData()">🔄 Refresh</button>
         </div>
@@ -1223,15 +1422,27 @@
         </div>
         <div class="task-modal-meta-item">
           <span class="task-modal-meta-label">Status</span>
-          <span class="task-modal-meta-value" id="modalStatus">To Do</span>
+          <select id="modalStatusSelect" class="modal-edit-select" onchange="updateTaskStatus()">
+            <option value="todo">📋 To Do</option>
+            <option value="in-progress">🔄 In Progress</option>
+            <option value="review">👀 Review</option>
+            <option value="done">✅ Done</option>
+          </select>
         </div>
         <div class="task-modal-meta-item">
           <span class="task-modal-meta-label">Priority</span>
-          <span class="task-modal-meta-value" id="modalPriority">High</span>
+          <select id="modalPrioritySelect" class="modal-edit-select" onchange="updateTaskPriority()">
+            <option value="P1">🔥 P1 / HIGH</option>
+            <option value="P2">⚡ P2 / MEDIUM</option>
+            <option value="P3">📝 P3 / LOW</option>
+          </select>
         </div>
         <div class="task-modal-meta-item">
-          <span class="task-modal-meta-label">Created</span>
-          <span class="task-modal-meta-value" id="modalCreated">2025-11-15</span>
+          <span class="task-modal-meta-label">Progress</span>
+          <div class="modal-progress-edit">
+            <input type="range" id="modalProgressSlider" min="0" max="100" value="0" onchange="updateTaskProgress()">
+            <span id="modalProgressValue">0%</span>
+          </div>
         </div>
       </div>
 
@@ -1239,9 +1450,11 @@
         Task description will appear here...
       </div>
 
+      <div class="task-modal-sync-status" id="modalSyncStatus"></div>
+
       <div class="task-modal-actions">
         <button class="task-modal-btn" onclick="closeTaskModal()">Close</button>
-        <button class="task-modal-btn primary" onclick="editTask()">Edit Task</button>
+        <button class="task-modal-btn primary" onclick="saveAndClose()">💾 Save & Close</button>
       </div>
     </div>
   </div>
@@ -1364,6 +1577,12 @@
             currentSubSection = '';
             continue;
           }
+          if (trimmed.startsWith('## Current Status')) {
+            currentSection = 'activeWork'; // Map Current Status to Active Work so tasks get picked up
+            currentSubSection = '';
+            continue;
+          }
+
           if (trimmed.startsWith('## Active Work')) {
             currentSection = 'activeWork';
             currentSubSection = '';
@@ -1400,7 +1619,14 @@
 
           // Parse TASK- headers in Active Work OR Technical Debt (archive) sections
           // Handle strikethrough markers (~~) for completed tasks - use (?:~~)? to match 0 or 2 tildes
-          if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^### (?:~~)?(TASK-\d+)(?:~~)?:/)) {
+          // Regex explanation:
+          // ^###             - Start with ### header
+          // \s+              - At least one space
+          // (?:~~)?          - Optional strikethrough start
+          // (?:.*?)          - Non-greedy match for any chars (emojis like ✅, 🔴, text like "BUG:")
+          // ((?:TASK|BUG|ISSUE)-\d+) - CAPTURE GROUP 1: The ID itself
+          // (?:~~)?          - Optional strikethrough end
+          if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE)-\d+)(?:~~)?/)) {
             // Save previous task's subtasks before starting new one
             if (currentItem && currentItem.id?.startsWith('TASK-')) {
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
@@ -1434,10 +1660,22 @@
               }
             }
 
-            const match = trimmed.match(/^### (?:~~)?(TASK-\d+)(?:~~)?:\s*(.+?)(?:\s*\(([^)]+)\))?$/);
+            const match = trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE)-\d+)(?:~~)?(?::| - | )?\s*(.+?)(?:\s*\(([^)]+)\))?$/);
             if (match) {
-              const statusText = match[3] ? match[3].toUpperCase() : '';
-              const status = parseTaskStatus(statusText);
+              // Check both parentheses status AND title for status indicators
+              // Title might contain "✅ DONE" or similar without parentheses
+              const parenStatus = match[3] ? match[3].toUpperCase() : '';
+              const titleText = match[2] ? match[2].toUpperCase() : '';
+              // Prioritize parentheses status, fallback to title status
+              let status = parseTaskStatus(parenStatus);
+              if (status === 'todo' && titleText) {
+                status = parseTaskStatus(titleText);
+              }
+              // Also check if task ID has strikethrough (~~TASK-XXX~~) - usually means done
+              const hasStrikethrough = trimmed.includes('~~TASK-');
+              if (status === 'todo' && hasStrikethrough) {
+                status = 'done';
+              }
 
               currentItem = {
                 id: match[1],
@@ -1504,8 +1742,8 @@
           if ((currentSection === 'activeWork' || currentSection === 'archive') && currentItem && trimmed.startsWith('|') && !trimmed.includes('---')) {
             // Skip header rows (contain "Step" or "Description" or "Status")
             const isHeaderRow = trimmed.toLowerCase().includes('| step') ||
-                               trimmed.toLowerCase().includes('| description') ||
-                               trimmed.toLowerCase().includes('| status');
+              trimmed.toLowerCase().includes('| description') ||
+              trimmed.toLowerCase().includes('| status');
 
             if (!isHeaderRow) {
               // Count this table row as a subtask
@@ -1514,7 +1752,7 @@
               // Check if row is completed (DONE status in table)
               const rowUpper = trimmed.toUpperCase();
               if (rowUpper.includes('| DONE') || rowUpper.includes('|DONE') ||
-                  rowUpper.includes('✅') || rowUpper.includes('COMPLETE')) {
+                rowUpper.includes('✅') || rowUpper.includes('COMPLETE')) {
                 currentItem.completedSubtasks = (currentItem.completedSubtasks || 0) + 1;
               }
             }
@@ -1542,8 +1780,8 @@
               // Skip Task Dependency Index tables (column 2 is "status" not "feature/title")
               // These tables track task dependencies, not task definitions
               const isDependencyTable = tableHeaders[1] === 'status' ||
-                                        tableHeaders.includes('depends') ||
-                                        tableHeaders.includes('blocks');
+                tableHeaders.includes('depends') ||
+                tableHeaders.includes('blocks');
               inTable = !isDependencyTable;
             }
             continue;
@@ -1555,9 +1793,9 @@
             if (cells.length >= 2) {
               // Extract ID (handle strikethrough)
               const rawId = cells[0];
-              const id = rawId.replace(/~~/g, '');
+              const id = rawId.replace(/[~*`]/g, '').trim();
               const isDone = rawId.includes('~~') ||
-                            cells.some(c => c.includes('DONE') || c.includes('FIXED') || c.includes('✅'));
+                cells.some(c => c.includes('DONE') || c.includes('FIXED') || c.includes('✅'));
 
               // Map columns based on headers
               const item = {
@@ -1753,66 +1991,77 @@
         ];
 
         const tasks = {
-          todo: allItems.filter(i => i.status === 'todo'),
-          inProgress: allItems.filter(i => i.status === 'in-progress'),
-          review: allItems.filter(i => i.status === 'review'),
+          todo: allItems.filter(i => {
+            // Keep in todo ONLY if progress is 0 and not marked done
+            return i.status === 'todo' && (i.progress === 0 || i.progress === undefined);
+          }),
+          inProgress: allItems.filter(i => {
+            // In progress if explicitly set OR (progress > 0 and < 100 and not done)
+            // Note: Review requires EXPLICIT assignment, never auto-promoted by progress
+            return (i.status === 'in-progress' && i.progress < 100) ||
+              (i.status === 'todo' && i.progress > 0 && i.progress < 100 && i.status !== 'review');
+          }),
+          review: allItems.filter(i => {
+            // Review ONLY if explicitly set
+            return i.status === 'review' && i.status !== 'done';
+          }),
           done: allItems.filter(i => i.status === 'done')
         };
 
-      const columns = {
-        todo: document.getElementById('column-todo'),
-        inProgress: document.getElementById('column-in-progress'),
-        review: document.getElementById('column-review'),
-        done: document.getElementById('column-done')
-      };
+        const columns = {
+          todo: document.getElementById('column-todo'),
+          inProgress: document.getElementById('column-in-progress'),
+          review: document.getElementById('column-review'),
+          done: document.getElementById('column-done')
+        };
 
-      // Clear columns
-      Object.values(columns).forEach(col => col.innerHTML = '');
+        // Clear columns
+        Object.values(columns).forEach(col => col.innerHTML = '');
 
-      // Populate columns
-      for (const [column, taskList] of Object.entries(tasks)) {
-        if (taskList.length === 0) {
-          columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No tasks</div></div>';
-        } else {
-          taskList.forEach(task => {
-            const card = document.createElement('div');
-            const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-            const hasExpandableContent = task.description || hasSubtasks;
-            card.className = `task-card${hasExpandableContent ? ' has-subtasks' : ''}`;
-            card.draggable = true;
-            card.setAttribute('data-id', task.id);
+        // Populate columns
+        for (const [column, taskList] of Object.entries(tasks)) {
+          if (taskList.length === 0) {
+            columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No tasks</div></div>';
+          } else {
+            taskList.forEach(task => {
+              const card = document.createElement('div');
+              const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+              const hasExpandableContent = task.description || hasSubtasks;
+              card.className = `task-card${hasExpandableContent ? ' has-subtasks' : ''}`;
+              card.draggable = true;
+              card.setAttribute('data-id', task.id);
 
-            // Use direct properties from MASTER_PLAN parser
-            const priority = task.priority || '';
-            const priorityClass = priority.toLowerCase().includes('p1') || priority.toLowerCase().includes('high') ? 'high' :
-                                  priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' : 'low';
+              // Use direct properties from MASTER_PLAN parser
+              const priority = task.priority || '';
+              const priorityClass = priority.toLowerCase().includes('p1') || priority.toLowerCase().includes('high') ? 'high' :
+                priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' : 'low';
 
-            // Get type badge based on ID prefix
-            const typeLabel = task.id.startsWith('BUG-') ? '🐛 Bug' :
-                             task.id.startsWith('ISSUE-') ? '⚠️ Issue' :
-                             task.id.startsWith('ROAD-') ? '🗺️ Roadmap' :
-                             task.id.startsWith('TASK-') ? '📋 Task' : '';
+              // Get type badge based on ID prefix
+              const typeLabel = task.id.startsWith('BUG-') ? '🐛 Bug' :
+                task.id.startsWith('ISSUE-') ? '⚠️ Issue' :
+                  task.id.startsWith('ROAD-') ? '🗺️ Roadmap' :
+                    task.id.startsWith('TASK-') ? '📋 Task' : '';
 
-            // Use task's calculated progress, or default based on status
-            const progress = task.progress !== undefined ? task.progress :
-                            (task.status === 'done' ? 100 : task.status === 'in-progress' ? 50 : 0);
-            const progressClass = getProgressClass(progress);
+              // Use task's calculated progress, or default based on status
+              const progress = task.progress !== undefined ? task.progress :
+                (task.status === 'done' ? 100 : task.status === 'in-progress' ? 50 : 0);
+              const progressClass = getProgressClass(progress);
 
-            // Short description from notes only (not full description)
-            // Full description shows in expanded section
-            const description = task.notes || '';
+              // Short description from notes only (not full description)
+              // Full description shows in expanded section
+              const description = task.notes || '';
 
-            // Get expand state from localStorage
-            const isExpanded = getExpandState(task.id);
+              // Get expand state from localStorage
+              const isExpanded = getExpandState(task.id);
 
-            // Build structured expanded content HTML (uses hasExpandableContent from above)
-            const expandedHtml = hasExpandableContent ? `
+              // Build structured expanded content HTML (uses hasExpandableContent from above)
+              const expandedHtml = hasExpandableContent ? `
               <div class="task-expanded" style="display: ${isExpanded ? 'block' : 'none'}">
                 ${buildExpandedContentHtml(task)}
               </div>
             ` : '';
 
-            card.innerHTML = `
+              card.innerHTML = `
               <div class="task-header">
                 <button class="expand-toggle" onclick="toggleExpand('${task.id}', event)">${isExpanded ? '▼' : '▶'}</button>
                 <div class="task-id">${task.id}</div>
@@ -1835,40 +2084,41 @@
               </div>
             `;
 
-            // Add click handler to show modal
-            card.addEventListener('click', (e) => {
-              console.log('Task card clicked:', task.title);
-              e.stopPropagation();
-              card.blur(); // Remove focus state
-              showTaskModal(task);
+              // Add click handler to show modal
+              card.addEventListener('click', (e) => {
+                console.log('Task card clicked:', task.title);
+                e.stopPropagation();
+                card.blur(); // Remove focus state
+                showTaskModal(task);
+              });
+              card.tabIndex = -1; // Prevent keyboard focus
+              columns[column].appendChild(card);
             });
-            card.tabIndex = -1; // Prevent keyboard focus
-            columns[column].appendChild(card);
-          });
+          }
         }
-      }
 
-      // Initialize features after render
-      loadSavedFilters();
-      applyFilters();
-      updateStats();
-      initDragAndDrop();
-      loadDoneColumnState();
-      updateDoneCount();
-    } catch (error) {
-      console.error('Error rendering kanban:', error);
-      // Show error message on page instead of white overlay
-      const board = document.getElementById('kanban-board');
-      if (board) {
-        board.innerHTML = `
+        // Initialize features after render
+        loadSavedFilters();
+        applyFilters();
+        applySorting();
+        updateStats();
+        initDragAndDrop();
+        loadDoneColumnState();
+        updateDoneCount();
+      } catch (error) {
+        console.error('Error rendering kanban:', error);
+        // Show error message on page instead of white overlay
+        const board = document.getElementById('kanban-board');
+        if (board) {
+          board.innerHTML = `
           <div style="text-align: center; padding: 40px; color: #ef4444;">
             <h3>⚠️ Error Loading Kanban Board</h3>
             <p>Failed to load tasks: ${error.message}</p>
             <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer;">Reload</button>
           </div>
         `;
+        }
       }
-    }
     }
 
     // Load text files
@@ -2034,7 +2284,7 @@
               const card = document.createElement('div');
               card.className = 'task-card';
               const priorityClass = item.priority?.includes('P1') || item.priority?.includes('HIGH') ? 'high' :
-                                   item.priority?.includes('P2') || item.priority?.includes('MEDIUM') ? 'medium' : 'low';
+                item.priority?.includes('P2') || item.priority?.includes('MEDIUM') ? 'medium' : 'low';
 
               card.innerHTML = `
                 <div class="task-header">
@@ -2175,12 +2425,12 @@
 
             const priority = task.priority || '';
             const priorityClass = priority.toLowerCase().includes('p1') || priority.toLowerCase().includes('high') ? 'high' :
-                                  priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' : 'low';
+              priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' : 'low';
 
             // Get type badge based on ID prefix
             const typeLabel = task.id.startsWith('BUG-') ? '🐛 Bug Fixed' :
-                             task.id.startsWith('ROAD-') ? '🗺️ Roadmap' :
-                             task.id.startsWith('TASK-') ? '✅ Task' : '✅ Done';
+              task.id.startsWith('ROAD-') ? '🗺️ Roadmap' :
+                task.id.startsWith('TASK-') ? '✅ Task' : '✅ Done';
 
             card.innerHTML = `
               <div class="task-header">
@@ -2257,9 +2507,9 @@
 
             // Get type badge based on ID prefix
             const typeLabel = task.id.startsWith('BUG-') ? '🐛 Bug' :
-                             task.id.startsWith('ISSUE-') ? '⚠️ Issue' :
-                             task.id.startsWith('TASK-') ? '📋 Task' :
-                             task.id.startsWith('ROAD-') ? '🗺️ Roadmap' : '';
+              task.id.startsWith('ISSUE-') ? '⚠️ Issue' :
+                task.id.startsWith('TASK-') ? '📋 Task' :
+                  task.id.startsWith('ROAD-') ? '🗺️ Roadmap' : '';
 
             // Status badge
             const statusLabel = task.status === 'in-progress' ? 'In Progress' : task.status === 'todo' ? 'To Do' : task.status;
@@ -2521,16 +2771,37 @@
       return 'completed';
     }
 
+    // Track current task being edited
+    let currentEditTask = null;
+    let pendingChanges = {};
+
     function showTaskModal(item) {
       console.log('Opening modal for item:', item);
+      currentEditTask = item;
+      pendingChanges = {};
+
       const modal = document.getElementById('taskModal');
 
       // Update modal content
       document.getElementById('modalTitle').textContent = item.title;
       document.getElementById('modalId').textContent = item.id || 'N/A';
-      document.getElementById('modalStatus').textContent = formatStatus(item.column || item.section);
-      document.getElementById('modalPriority').textContent = extractPriority(item) || 'N/A';
-      document.getElementById('modalCreated').textContent = extractCreated(item) || new Date().toLocaleDateString();
+
+      // Set status dropdown
+      const statusSelect = document.getElementById('modalStatusSelect');
+      statusSelect.value = item.status || 'todo';
+
+      // Set priority dropdown
+      const prioritySelect = document.getElementById('modalPrioritySelect');
+      const priority = extractPriority(item) || 'P2';
+      prioritySelect.value = priority.toUpperCase().replace(/HIGH|CRITICAL/, 'P1').replace(/MEDIUM/, 'P2').replace(/LOW/, 'P3');
+      if (!['P1', 'P2', 'P3'].includes(prioritySelect.value)) {
+        prioritySelect.value = 'P2';
+      }
+
+      // Set progress slider
+      const progress = item.progress !== undefined ? item.progress : (item.status === 'done' ? 100 : 0);
+      document.getElementById('modalProgressSlider').value = progress;
+      document.getElementById('modalProgressValue').textContent = progress + '%';
 
       // Use structured HTML rendering for description
       const descElement = document.getElementById('modalDescription');
@@ -2539,6 +2810,11 @@
       } else {
         descElement.textContent = 'No description available.';
       }
+
+      // Clear sync status
+      const syncStatus = document.getElementById('modalSyncStatus');
+      syncStatus.className = 'task-modal-sync-status';
+      syncStatus.textContent = '';
 
       // Show modal
       modal.classList.add('active');
@@ -2551,6 +2827,109 @@
       const modal = document.getElementById('taskModal');
       modal.classList.remove('active');
       document.body.style.overflow = 'auto';
+      currentEditTask = null;
+      pendingChanges = {};
+    }
+
+    // API base URL - uses current origin when running on server
+    const API_BASE = window.location.origin;
+
+    // Update task status via API
+    async function updateTaskStatus() {
+      if (!currentEditTask) return;
+
+      const newStatus = document.getElementById('modalStatusSelect').value;
+      pendingChanges.status = newStatus;
+      showSyncStatus('loading', 'Saving status...');
+
+      try {
+        const response = await fetch(`${API_BASE}/api/task/${currentEditTask.id}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showSyncStatus('success', `✓ Status updated to ${newStatus}`);
+          currentEditTask.status = newStatus;
+          // Refresh the kanban to reflect changes from MASTER_PLAN.md
+          setTimeout(() => renderKanban(), 500);
+        } else {
+          showSyncStatus('error', `✗ ${result.error || 'Failed to update status'}`);
+        }
+      } catch (error) {
+        showSyncStatus('error', `✗ Server not running. Start with: cd dev-manager && npm start`);
+      }
+    }
+
+    // Update task priority via API
+    async function updateTaskPriority() {
+      if (!currentEditTask) return;
+
+      const newPriority = document.getElementById('modalPrioritySelect').value;
+      pendingChanges.priority = newPriority;
+      showSyncStatus('loading', 'Saving priority...');
+
+      try {
+        const response = await fetch(`${API_BASE}/api/task/${currentEditTask.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property: 'priority', value: newPriority })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showSyncStatus('success', `✓ Priority updated to ${newPriority}`);
+          currentEditTask.priority = newPriority;
+          // Update card display immediately
+          const card = document.querySelector(`[data-task-id="${currentEditTask.id}"]`);
+          if (card) {
+            const priorityEl = card.querySelector('.task-priority');
+            if (priorityEl) {
+              priorityEl.textContent = newPriority;
+              priorityEl.className = 'task-priority ' + getPriorityClass(newPriority);
+            }
+          }
+          // Refresh the kanban to reflect changes from MASTER_PLAN.md
+          setTimeout(() => renderKanban(), 500);
+        } else {
+          showSyncStatus('error', `✗ ${result.error || 'Failed to update priority'}`);
+        }
+      } catch (error) {
+        showSyncStatus('error', `✗ Server not running. Start with: cd dev-manager && npm start`);
+      }
+    }
+
+    function getPriorityClass(priority) {
+      const p = (priority || '').toLowerCase();
+      if (p.includes('p1') || p.includes('high')) return 'high';
+      if (p.includes('p2') || p.includes('medium')) return 'medium';
+      return 'low';
+    }
+
+    // Update progress slider display (live)
+    function updateTaskProgress() {
+      const slider = document.getElementById('modalProgressSlider');
+      const valueDisplay = document.getElementById('modalProgressValue');
+      valueDisplay.textContent = slider.value + '%';
+      pendingChanges.progress = parseInt(slider.value);
+    }
+
+    // Save and close
+    async function saveAndClose() {
+      showSyncStatus('success', '✓ Changes saved to MASTER_PLAN.md');
+      setTimeout(() => {
+        closeTaskModal();
+        refreshData(); // Reload kanban to reflect changes
+      }, 800);
+    }
+
+    // Show sync status message
+    function showSyncStatus(type, message) {
+      const syncStatus = document.getElementById('modalSyncStatus');
+      syncStatus.className = `task-modal-sync-status ${type}`;
+      syncStatus.textContent = message;
     }
 
     function formatStatus(status) {
@@ -2608,14 +2987,14 @@
     }
 
     // Close modal when clicking outside
-    document.getElementById('taskModal').addEventListener('click', function(e) {
+    document.getElementById('taskModal').addEventListener('click', function (e) {
       if (e.target === this) {
         closeTaskModal();
       }
     });
 
     // Close modal with Escape key
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         closeTaskModal();
       }
@@ -2763,6 +3142,7 @@
     function loadSavedFilters() {
       const savedType = localStorage.getItem('kanban-type-filter');
       const savedPriority = localStorage.getItem('kanban-priority-filter');
+      const savedSort = localStorage.getItem('kanban-sort');
 
       if (savedType) {
         document.getElementById('type-filter').value = savedType;
@@ -2770,6 +3150,92 @@
       if (savedPriority) {
         document.getElementById('priority-filter').value = savedPriority;
       }
+      if (savedSort) {
+        document.getElementById('sort-select').value = savedSort;
+      }
+    }
+
+    // SORTING FUNCTIONALITY
+    function applySorting() {
+      const sortValue = document.getElementById('sort-select').value;
+      localStorage.setItem('kanban-sort', sortValue);
+
+      // Sort cards within each column
+      const columns = ['column-todo', 'column-in-progress', 'column-review', 'column-done'];
+
+      columns.forEach(columnId => {
+        const column = document.getElementById(columnId);
+        if (!column) return;
+
+        const cards = Array.from(column.querySelectorAll('.task-card'));
+        if (cards.length === 0) return;
+
+        // Sort based on selected criteria
+        cards.sort((a, b) => {
+          const [sortBy, direction] = sortValue.split('-');
+          const multiplier = direction === 'desc' ? -1 : 1;
+
+          switch (sortBy) {
+            case 'priority':
+              return multiplier * comparePriority(a, b);
+            case 'progress':
+              return multiplier * compareProgress(a, b);
+            case 'date':
+              return multiplier * compareDate(a, b);
+            case 'alpha':
+              return multiplier * compareAlpha(a, b);
+            default:
+              return 0;
+          }
+        });
+
+        // Re-append cards in sorted order
+        cards.forEach(card => column.appendChild(card));
+      });
+    }
+
+    // Priority comparison (P1/HIGH > P2/MEDIUM > P3/LOW)
+    function comparePriority(cardA, cardB) {
+      const getPriorityValue = (card) => {
+        const priorityEl = card.querySelector('.task-priority');
+        if (!priorityEl) return 0;
+        const text = priorityEl.textContent.toLowerCase();
+        if (text.includes('p1') || text.includes('high')) return 3;
+        if (text.includes('p2') || text.includes('medium')) return 2;
+        if (text.includes('p3') || text.includes('low')) return 1;
+        return 0;
+      };
+      return getPriorityValue(cardA) - getPriorityValue(cardB);
+    }
+
+    // Progress comparison (by percentage)
+    function compareProgress(cardA, cardB) {
+      const getProgress = (card) => {
+        const progressEl = card.querySelector('.progress-percent');
+        if (!progressEl) return 0;
+        return parseInt(progressEl.textContent) || 0;
+      };
+      return getProgress(cardA) - getProgress(cardB);
+    }
+
+    // Date comparison (by task ID number - higher = newer)
+    function compareDate(cardA, cardB) {
+      const getIdNumber = (card) => {
+        const idEl = card.querySelector('.task-id');
+        if (!idEl) return 0;
+        const match = idEl.textContent.match(/(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      };
+      return getIdNumber(cardA) - getIdNumber(cardB);
+    }
+
+    // Alphabetical comparison (by title)
+    function compareAlpha(cardA, cardB) {
+      const getTitle = (card) => {
+        const titleEl = card.querySelector('.task-title');
+        return titleEl ? titleEl.textContent.toLowerCase() : '';
+      };
+      return getTitle(cardA).localeCompare(getTitle(cardB));
     }
 
     // STATISTICS FUNCTIONALITY
@@ -3038,7 +3504,7 @@
 
           // Check if this is a category header (e.g., "Base Components (8):" or "**UI Components**:")
           const categoryMatch = trimmed.match(/^\*?\*?([^*]+)\*?\*?\s*\(\d+\):?$/) ||
-                               trimmed.match(/^\*?\*?([^*:]+)\*?\*?:$/);
+            trimmed.match(/^\*?\*?([^*:]+)\*?\*?:$/);
 
           if (categoryMatch) {
             currentCategory = categoryMatch[1].trim();
@@ -3047,8 +3513,8 @@
           }
 
           const isCompleted = st.includes('[x]') || st.includes('✅') ||
-                             st.includes('~~') || st.toLowerCase().includes('done') ||
-                             st.includes('✓');
+            st.includes('~~') || st.toLowerCase().includes('done') ||
+            st.includes('✓');
           const text = st.replace(/\[x\]|\[\s?\]|✅|✓|-\s+/gi, '').trim();
 
           html += `<div class="subtask ${isCompleted ? 'completed' : ''}">`;
@@ -3146,7 +3612,7 @@
     document.head.appendChild(style);
 
     // Initial load
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       // Safety: Close any stuck modals
       closeTaskModal();
       document.body.style.overflow = 'auto';
@@ -3164,7 +3630,7 @@
     });
 
     // Auto-refresh when page becomes visible (tab switch, navigation back)
-    document.addEventListener('visibilitychange', function() {
+    document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
         console.log('Page visible - refreshing data...');
         renderKanban();
@@ -3172,10 +3638,11 @@
     });
 
     // Also refresh on window focus (for same-tab navigation)
-    window.addEventListener('focus', function() {
+    window.addEventListener('focus', function () {
       console.log('Window focused - refreshing data...');
       renderKanban();
     });
   </script>
 </body>
+
 </html>

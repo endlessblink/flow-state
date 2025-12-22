@@ -121,6 +121,7 @@ try {
 } catch (error) {
   console.warn('🔧 GroupModal: Canvas store not available, using mock for Storybook', error)
   // Mock canvas store for Storybook environment
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   canvasStore = {
     sections: [],
     createSection: (section: Record<string, unknown>) => {
@@ -134,7 +135,7 @@ try {
     updateSection: (id: string, updates: Record<string, unknown>) => {
       console.log('🔧 Storybook Canvas Store: Updated section', id, updates)
     }
-  }
+  } as any // Storybook mock doesn't need full type compliance
 }
 const nameInput = ref()
 

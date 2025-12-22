@@ -26,6 +26,13 @@ import {
   migrateFromLegacyFormat
 } from '@/utils/individualTaskStorage'
 
+// TASK-048: Individual project document storage
+import {
+  saveProjects as saveIndividualProjects,
+  loadAllProjects as loadIndividualProjects,
+  migrateFromLegacyFormat as migrateProjectsFromLegacy
+} from '@/utils/individualProjectStorage'
+
 // Re-export types for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance }
 
@@ -164,29 +171,63 @@ export const useTaskStore = defineStore('tasks', () => {
   // BUG-025: Initial sync is now handled by useReliableSyncManager.initializeSync()
   // which calls loadFromDatabase() after completing bidirectional sync
 
-  const safeSync = async (context: string) => {
-    const now = Date.now()
+  // BUG-026 FIX: Disable automatic sync calls - was causing infinite loops
+  // User can trigger manual sync via CloudSyncSettings
+  const safeSync = async (_context: string) => {
+    // DISABLED - was causing sync loop (BUG-026)
+    // Syncs were triggering: sync → loadFromDatabase → save → sync → repeat
+    // Will re-enable after fixing the root cause
+    return
+  }
 
-    // Cooldown check
-    if (now - lastSyncTime < SYNC_COOLDOWN) {
-      console.log(`⏳ [SAFE-SYNC] Skipping sync (${context}) - cooldown active`)
+  /**
+   * BUG-025 FIX: Centralized task save function that respects INDIVIDUAL_ONLY mode
+   * All task saves MUST go through this function to avoid writing to stale tasks:data
+   */
+  const saveTasksToStorage = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
+    const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
+    if (!dbInstance) {
+      console.error(`❌ [SAVE-TASKS] PouchDB not available (${context})`)
       return
     }
 
-    // Max attempts check
-    if (syncAttempts >= MAX_SYNC_ATTEMPTS) {
-      console.log(`🛑 [SAFE-SYNC] Max sync attempts reached for this session`)
-      return
+    if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+      // Phase 3: Individual docs ONLY - DO NOT write to tasks:data
+      await saveIndividualTasks(dbInstance, tasksToSave)
+      const currentIds = new Set(tasksToSave.map(t => t.id))
+      await syncDeletedTasks(dbInstance, currentIds)
+      // BUG-026: Reduced logging
+    } else if (STORAGE_FLAGS.DUAL_WRITE_TASKS) {
+      // Phase 1/2: Write to BOTH formats
+      await db.save(DB_KEYS.TASKS, tasksToSave)
+      await saveIndividualTasks(dbInstance, tasksToSave)
+      const currentIds = new Set(tasksToSave.map(t => t.id))
+      await syncDeletedTasks(dbInstance, currentIds)
+    } else {
+      // Legacy mode - write to tasks:data only
+      await db.save(DB_KEYS.TASKS, tasksToSave)
     }
+  }
 
-    lastSyncTime = now
-    syncAttempts++
+  /**
+   * BUG-025 FIX: Delete stale local tasks:data document
+   * Called during initialization to clean up legacy data
+   */
+  const deleteLegacyTasksDocument = async (): Promise<void> => {
+    if (!STORAGE_FLAGS.INDIVIDUAL_ONLY) return // Only in INDIVIDUAL_ONLY mode
+
+    const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
+    if (!dbInstance) return
 
     try {
-      console.log(`🔄 [SAFE-SYNC] Triggering sync (${context}) - attempt ${syncAttempts}/${MAX_SYNC_ATTEMPTS}`)
-      await reliableSyncManager.triggerSync()
-    } catch (error) {
-      console.error(`❌ [SAFE-SYNC] Sync failed (${context}):`, error)
+      const legacyDoc = await dbInstance.get('tasks:data').catch(() => null)
+      if (legacyDoc) {
+        await dbInstance.remove(legacyDoc)
+        console.log('🗑️ [BUG-025] Deleted stale local tasks:data document')
+      }
+    } catch (_error) {
+      // Ignore errors - document might not exist or already deleted
+      console.log('ℹ️ [BUG-025] No local tasks:data to delete or already deleted')
     }
   }
 
@@ -200,9 +241,33 @@ export const useTaskStore = defineStore('tasks', () => {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
 
-      const loadedTasks = await db.load<Task[]>(DB_KEYS.TASKS)
+      // BUG-025 FIX: Delete stale local tasks:data document in INDIVIDUAL_ONLY mode
+      await deleteLegacyTasksDocument()
 
-      if (loadedTasks && Array.isArray(loadedTasks)) {
+      // BUG-025 FIX: Use Phase 4 individual task documents instead of legacy tasks:data
+      // The legacy tasks:data often has stale/empty data that overwrites good tasks
+      let loadedTasks: Task[] | null = null
+
+      if (STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
+        try {
+          const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
+          if (dbInstance) {
+            loadedTasks = await loadIndividualTasks(dbInstance)
+            console.log(`📂 [PHASE 4] Loaded ${loadedTasks?.length || 0} tasks from individual documents on init`)
+          }
+        } catch (phase4Error) {
+          console.warn('⚠️ Phase 4 load failed in loadTasksFromPouchDB, falling back to legacy:', phase4Error)
+          loadedTasks = null
+        }
+      }
+
+      // Only fall back to legacy if Phase 4 returned nothing
+      if (!loadedTasks || loadedTasks.length === 0) {
+        console.log('📂 [LEGACY FALLBACK] Trying tasks:data...')
+        loadedTasks = await db.load<Task[]>(DB_KEYS.TASKS)
+      }
+
+      if (loadedTasks && Array.isArray(loadedTasks) && loadedTasks.length > 0) {
         const oldTasks = [...tasks.value]
         tasks.value = loadedTasks
         taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromPouchDB')
@@ -252,9 +317,8 @@ export const useTaskStore = defineStore('tasks', () => {
           console.log('📝 Created sample tasks for first-time users (no backup found)')
           console.log('📊 Sample tasks created:', tasks.value.map(t => ({ id: t.id, title: t.title, projectId: t.projectId, status: t.status })))
 
-          // Save sample tasks to database immediately
-          await db.save(DB_KEYS.TASKS, tasks.value)
-          console.log('💾 Sample tasks saved to database')
+          // Save sample tasks to database immediately (respects INDIVIDUAL_ONLY)
+          await saveTasksToStorage(tasks.value, 'sample-tasks-creation')
         } else {
           console.log(`🔄 Keeping existing ${tasks.value.length} tasks`)
         }
@@ -555,11 +619,39 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log('📂 Loading projects from PouchDB on store init...')
 
       // Wait for database to be ready using modern composable
-      while (!db.isReady?.value) {
+      // BUG-027: Added timeout to prevent infinite wait
+      let waitAttempts = 0
+      while (!db.isReady?.value && waitAttempts < 150) { // 15s max
         await new Promise(resolve => setTimeout(resolve, 100))
+        waitAttempts++
       }
 
-      const loadedProjects = await db.load<Project[]>(DB_KEYS.PROJECTS)
+      const dbInstance = window.pomoFlowDb
+      if (!dbInstance) {
+        console.warn('⚠️ PouchDB not available for project loading - proceeding with empty projects')
+        return
+      }
+
+      let loadedProjects: Project[] | null = null
+
+      // TASK-048: Check if we should read from individual documents
+      if (STORAGE_FLAGS.READ_INDIVIDUAL_PROJECTS) {
+        console.log('📂 [TASK-048] Loading projects from individual documents...')
+        loadedProjects = await loadIndividualProjects(dbInstance as unknown as PouchDB.Database)
+
+        // If no individual docs, try migrating from legacy format
+        if (!loadedProjects || loadedProjects.length === 0) {
+          console.log('🔄 [TASK-048] No individual project docs, checking for legacy format...')
+          const { migrated } = await migrateProjectsFromLegacy(dbInstance as unknown as PouchDB.Database)
+          if (migrated > 0) {
+            loadedProjects = await loadIndividualProjects(dbInstance as unknown as PouchDB.Database)
+          }
+        }
+      } else {
+        // Legacy: Load from projects:data
+        loadedProjects = await db.load<Project[]>(DB_KEYS.PROJECTS)
+      }
+
       if (!loadedProjects) {
         console.log('ℹ️ No projects in PouchDB, creating and saving default project')
         // Save default project to database
@@ -975,17 +1067,17 @@ export const useTaskStore = defineStore('tasks', () => {
     // The sync manager handles the initial bidirectional sync before calling this
     console.log('🔍 [BUG-025] Waiting for PouchDB to be available...')
     let attempts = 0
-    while (!window.pomoFlowDb && attempts < 100) {
+    while (!window.pomoFlowDb && attempts < 300) { // 30s max (300 * 100ms)
       await new Promise(resolve => setTimeout(resolve, 100))
       attempts++
-      if (attempts % 20 === 0) {
+      if (attempts % 50 === 0) {
         console.log(`🔍 [BUG-025] Still waiting for PouchDB... attempt ${attempts}`)
       }
     }
 
     const dbInstance = window.pomoFlowDb
     if (!dbInstance) {
-      console.error('❌ PouchDB not available for task loading after 10s timeout')
+      console.warn('⚠️ [STABILIZATION] PouchDB not available for task loading after 30s timeout - proceeding with local memory')
       isLoadingFromDatabase = false
       return
     }
@@ -1002,9 +1094,28 @@ export const useTaskStore = defineStore('tasks', () => {
           const loadedTasks = await loadIndividualTasks(dbInstance as unknown as PouchDB.Database)
           if (loadedTasks && loadedTasks.length > 0) {
             const oldTasks = [...tasks.value]
-            tasks.value = loadedTasks
+
+            // BUG-025 FIX: MERGE instead of REPLACE to prevent losing in-memory tasks
+            // that haven't been saved to individual docs yet
+            const loadedTaskIds = new Set(loadedTasks.map(t => t.id))
+            const tasksOnlyInMemory = oldTasks.filter(t => !loadedTaskIds.has(t.id))
+
+            if (tasksOnlyInMemory.length > 0) {
+              console.warn(`⚠️ [BUG-025] Found ${tasksOnlyInMemory.length} tasks in memory not in individual docs - preserving and saving:`,
+                tasksOnlyInMemory.map(t => ({ id: t.id, title: t.title })))
+
+              // Save these tasks to individual docs so they don't get lost
+              await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, tasksOnlyInMemory)
+              console.log(`✅ [BUG-025] Saved ${tasksOnlyInMemory.length} in-memory tasks to individual docs`)
+
+              // Merge: loaded tasks + in-memory only tasks
+              tasks.value = [...loadedTasks, ...tasksOnlyInMemory]
+            } else {
+              tasks.value = loadedTasks
+            }
+
             taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-Phase4-individualDocs')
-            console.log(`✅ TASK-034 Phase 4: Loaded ${loadedTasks.length} tasks from individual documents`)
+            console.log(`✅ TASK-034 Phase 4: Loaded ${loadedTasks.length} tasks from individual documents (final: ${tasks.value.length})`)
 
             // Skip legacy read - individual docs loaded successfully
             // Continue to migrations below
@@ -1064,23 +1175,21 @@ export const useTaskStore = defineStore('tasks', () => {
             taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-legacyFormat')
             console.log(`✅ Loaded ${taskArray.length} tasks from tasks:data (legacy)`)
           } else {
-            console.log('ℹ️ tasks:data exists but is empty')
-            const oldTasks = [...tasks.value]
-            tasks.value = []
-            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-emptyLegacyDoc')
+            // BUG-025 FIX: DON'T wipe tasks if legacy doc is empty - preserve existing tasks
+            console.log('ℹ️ tasks:data exists but is empty - PRESERVING existing tasks to prevent data loss')
+            // tasks.value = [] // DANGEROUS - removed to prevent data loss
           }
         } else {
-          console.log('ℹ️ No tasks:data document found')
-          const oldTasks = [...tasks.value]
-          tasks.value = []
-          taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-noLegacyDoc')
+          // BUG-025 FIX: DON'T wipe tasks if legacy doc missing - preserve existing tasks
+          console.log('ℹ️ No tasks:data document found - PRESERVING existing tasks to prevent data loss')
+          // tasks.value = [] // DANGEROUS - removed to prevent data loss
         }
       } // End of legacy format loading block
     } catch (error) {
       console.error('❌ Failed to load tasks from PouchDB:', error)
-      const oldTasks = [...tasks.value]
-      tasks.value = []
-      taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'debugLoadTasksDirectly-error')
+      // BUG-025 FIX: DON'T wipe tasks on error - preserve existing tasks
+      console.warn('⚠️ PRESERVING existing tasks despite error to prevent data loss')
+      // tasks.value = [] // DANGEROUS - removed to prevent data loss
       return
     }
 
@@ -1133,9 +1242,16 @@ export const useTaskStore = defineStore('tasks', () => {
     // Projects are now loaded exclusively by the main database composable (see loadProjectsFromPouchDB function)
 
     // Load hide done tasks setting (defaults to false to show completed tasks for logging)
-    const savedHideDoneTasks = await db.load<boolean>(DB_KEYS.HIDE_DONE_TASKS)
-    if (savedHideDoneTasks !== null) {
-      hideDoneTasks.value = savedHideDoneTasks
+    // BUG-025: Check if database is ready first, fall back to localStorage
+    if (db.isReady?.value) {
+      try {
+        const savedHideDoneTasks = await db.load<boolean>(DB_KEYS.HIDE_DONE_TASKS)
+        if (savedHideDoneTasks !== null) {
+          hideDoneTasks.value = savedHideDoneTasks
+        }
+      } catch (_e) {
+        console.log('🔧 [BUG-025] hide_done_tasks: DB load failed, using default')
+      }
     }
     // If no saved setting exists, keep the default value of false (show done tasks)
 
@@ -1153,7 +1269,7 @@ export const useTaskStore = defineStore('tasks', () => {
   let projectsSaveTimer: ReturnType<typeof setTimeout> | null = null
   let settingsSaveTimer: ReturnType<typeof setTimeout> | null = null
 
-  watch(tasks, (newTasks) => {
+  watch(tasks, (_newTasks) => {
     // EMERGENCY FIX: Skip watch during manual operations to prevent conflicts
     if (manualOperationInProgress) {
       console.log('⏸️ Skipping auto-save during manual operation')
@@ -1241,6 +1357,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // Removed to improve performance - debugging should use Vue DevTools instead
 
   // 🔧 CRITICAL: Fix project persistence to use PouchDB instead of IndexedDB
+  // TASK-048: Updated to support individual document storage
   watch(projects, (newProjects) => {
     if (projectsSaveTimer) clearTimeout(projectsSaveTimer)
     projectsSaveTimer = setTimeout(async () => {
@@ -1252,32 +1369,41 @@ export const useTaskStore = defineStore('tasks', () => {
           return
         }
 
-        // CRITICAL FIX: Use write queue to prevent concurrent writes and fetch latest _rev
-        await queuedWrite(async () => {
-          try {
-            const existingDoc = await dbInstance.get('projects:data').catch(() => null)
-            return await dbInstance.put({
-              _id: 'projects:data',
-              _rev: existingDoc?._rev || undefined, // Always use latest revision
-              data: newProjects,
-              createdAt: existingDoc?.createdAt || new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            })
-          } catch (conflictError) {
-            console.error('❌ Projects save conflict, retrying with fresh fetch:', conflictError)
-            // Retry once with completely fresh document
-            const freshDoc = await dbInstance.get('projects:data')
-            return await dbInstance.put({
-              _id: 'projects:data',
-              _rev: freshDoc._rev,
-              data: newProjects,
-              createdAt: freshDoc.createdAt || new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            })
-          }
-        })
+        // TASK-048: Individual project document storage
+        if (STORAGE_FLAGS.DUAL_WRITE_PROJECTS || STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
+          // Save to individual project-{id} documents
+          await saveIndividualProjects(dbInstance as unknown as PouchDB.Database, newProjects)
+          console.log(`📋 [TASK-048] Projects saved to individual docs: ${newProjects.length} projects`)
+        }
 
-        console.log(`📋 Projects saved to PouchDB: ${newProjects.length} projects`)
+        // Write to legacy format unless INDIVIDUAL_PROJECTS_ONLY is true
+        if (!STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
+          // CRITICAL FIX: Use write queue to prevent concurrent writes and fetch latest _rev
+          await queuedWrite(async () => {
+            try {
+              const existingDoc = await dbInstance.get('projects:data').catch(() => null)
+              return await dbInstance.put({
+                _id: 'projects:data',
+                _rev: existingDoc?._rev || undefined, // Always use latest revision
+                data: newProjects,
+                createdAt: existingDoc?.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              })
+            } catch (conflictError) {
+              console.error('❌ Projects save conflict, retrying with fresh fetch:', conflictError)
+              // Retry once with completely fresh document
+              const freshDoc = await dbInstance.get('projects:data')
+              return await dbInstance.put({
+                _id: 'projects:data',
+                _rev: freshDoc._rev,
+                data: newProjects,
+                createdAt: freshDoc.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              })
+            }
+          })
+          console.log(`📋 Projects saved to legacy format: ${newProjects.length} projects`)
+        }
 
         // PHASE 1: Use safe sync wrapper
         await safeSync('projects-auto-save')
@@ -1369,8 +1495,10 @@ export const useTaskStore = defineStore('tasks', () => {
     // Order: Smart View → Project → Status → Hide Done
 
     // Step 1: Apply smart view filter FIRST (if active)
+    const { applySmartViewFilter, isUncategorizedTask } = useSmartViews()
+
+    // Step 1: Apply smart view filter FIRST (if active)
     if (activeSmartView.value) {
-      const { applySmartViewFilter } = useSmartViews()
       filtered = applySmartViewFilter(filtered, activeSmartView.value)
     }
 
@@ -1478,9 +1606,7 @@ export const useTaskStore = defineStore('tasks', () => {
               if (!task.dueDate) return false
               return task.dueDate >= todayStr && task.dueDate <= weekEndStr
             } else if (activeSmartView.value === 'uncategorized') {
-              if (task.isUncategorized === true) return true
-              if (!task.projectId || task.projectId === '' || task.projectId === null) return true
-              return false
+              return isUncategorizedTask(task)
             }
 
             // Apply status filter to nested tasks
@@ -1821,11 +1947,9 @@ export const useTaskStore = defineStore('tasks', () => {
         newTaskId: newTask.id
       });
 
-      // Save to PouchDB for persistence
-      await db.save(DB_KEYS.TASKS, tasks.value)
-      console.log('✅ Task saved to PouchDB:', newTask.id)
-
-      console.log('✅ Task created and saved to PouchDB:', newTask.id)
+      // Save to PouchDB for persistence (respects INDIVIDUAL_ONLY)
+      await saveTasksToStorage(tasks.value, `createTask-${newTask.id}`)
+      console.log('✅ Task created and saved:', newTask.id)
       return newTask
 
     } catch (error) {
@@ -1997,12 +2121,10 @@ export const useTaskStore = defineStore('tasks', () => {
       // Take snapshot after deletion (markUserDeletion already called above)
       taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${deletedTask.title.substring(0, 30)}`)
 
-      // EMERGENCY FIX: Single PouchDB operation only (no Promise.all conflicts)
-      console.log('💾 Single persistence operation (emergency fix)...')
+      // BUG-025 FIX: Use centralized save that respects INDIVIDUAL_ONLY mode
+      console.log('💾 [DELETE-TASK] Persisting remaining tasks...')
 
-      await db.save(DB_KEYS.TASKS, tasks.value)
-
-      // BUG-025 FIX: Delete individual task document from PouchDB
+      // Delete the individual task document first
       if (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY) {
         const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
         if (dbInstance) {
@@ -2014,6 +2136,9 @@ export const useTaskStore = defineStore('tasks', () => {
           }
         }
       }
+
+      // Save remaining tasks (respects INDIVIDUAL_ONLY - won't write to tasks:data)
+      await saveTasksToStorage(tasks.value, `deleteTask-${taskId}`)
 
       // Trigger sync to push deletion to CouchDB
       await safeSync('task-delete')
@@ -2039,15 +2164,17 @@ export const useTaskStore = defineStore('tasks', () => {
       // Simple retry mechanism
       try {
         console.log('🔄 Retrying task deletion...')
-        await db.save(DB_KEYS.TASKS, tasks.value)
 
-        // BUG-025 FIX: Also delete individual doc on retry
+        // BUG-025 FIX: Delete individual doc on retry first
         if (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY) {
           const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
           if (dbInstance) {
-            await _deleteIndividualTask(dbInstance, taskId).catch(() => {})
+            await _deleteIndividualTask(dbInstance, taskId).catch(() => { })
           }
         }
+
+        // Save remaining tasks (respects INDIVIDUAL_ONLY)
+        await saveTasksToStorage(tasks.value, `deleteTask-retry-${taskId}`)
         await safeSync('task-delete-retry')
 
         console.log('✅ Retry successful')
@@ -2632,25 +2759,16 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const getUncategorizedTaskCount = (): number => {
     // Apply the exact same filtering logic as the uncategorized smart view in filteredTasks
+    const { isUncategorizedTask } = useSmartViews()
+
+    // Use tasks.value directly (baseTasks)
     let filteredTasks = tasks.value
 
-    // Apply project filter (include all projects for uncategorized count)
-    // No project filtering needed for uncategorized tasks
+    // Apply done visibility filter if needed (usually uncategorized shouldn't count done tasks)
+    filteredTasks = filteredTasks.filter(task => task.status !== 'done')
 
-    // Apply uncategorized smart view filter
-    filteredTasks = filteredTasks.filter(task => {
-      // Check isUncategorized flag first
-      if (task.isUncategorized === true) {
-        return true
-      }
-
-      // Backward compatibility: also treat tasks without proper project assignment as uncategorized
-      if (!task.projectId || task.projectId === '' || task.projectId === null) {
-        return true
-      }
-
-      return false
-    })
+    // Apply standard uncategorized filter matching useSmartViews logic
+    filteredTasks = filteredTasks.filter(task => isUncategorizedTask(task))
 
     // Always exclude done tasks for uncategorized count
     // This ensures uncategorized ≤ allActive (which always excludes done)
@@ -3044,19 +3162,13 @@ export const useTaskStore = defineStore('tasks', () => {
       return
     }
 
-    if (newTasks.length === 0 && tasks.value.length > 0) {
-      errorHandler.report({
-        severity: ErrorSeverity.CRITICAL,
-        category: ErrorCategory.STATE,
-        message: 'restoreState: Blocked attempt to restore empty array',
-        context: { currentTaskCount: tasks.value.length, newTaskCount: 0 },
-        showNotification: true,
-        userMessage: 'Undo blocked to prevent data loss'
-      })
-      return
-    }
+    // BUG-026: Removed over-aggressive empty array check
+    // This was blocking legitimate undo operations when user wants to restore to empty state
+    // The undo system (VueUse useManualRefHistory) already has proper state tracking
+    // If user explicitly triggered undo, they want to go back to the previous state
+    // Previous check: if (newTasks.length === 0 && tasks.value.length > 0) { ... block ... }
 
-    // Validate task objects have required fields
+    // Validate task objects have required fields (only if there are tasks to validate)
     const invalidTasks = newTasks.filter(task =>
       !task || typeof task !== 'object' || !task.id || !task.title
     )
@@ -3092,28 +3204,17 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log('🔄 [TASK-STORE] AFTER assignment: tasks.value.length =', tasks.value.length)
 
       // Save to database sequentially (not in parallel)
-      await db.save(DB_KEYS.TASKS, tasks.value)
-      console.log('🔄 [TASK-STORE] AFTER db.save: tasks.value.length =', tasks.value.length)
-
-      // BUG-025 FIX: Sync to individual task documents
-      if (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY) {
-        const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
-        if (dbInstance) {
-          try {
-            // Save all tasks to individual documents
-            await saveIndividualTasks(dbInstance, tasks.value)
-            // Remove orphaned documents (tasks that no longer exist)
-            const currentIds = new Set(tasks.value.map(t => t.id))
-            await syncDeletedTasks(dbInstance, currentIds)
-            console.log(`🔄 [BUG-025] Individual docs synced after undo/redo (${tasks.value.length} tasks)`)
-          } catch (e) {
-            console.warn('⚠️ [BUG-025] Individual doc sync failed in restoreState:', e)
-          }
-        }
+      // BUG-026: Only save to database if it's ready, otherwise skip DB save
+      if (db.isReady?.value) {
+        // BUG-025 FIX: Use centralized save that respects INDIVIDUAL_ONLY
+        await saveTasksToStorage(tasks.value, 'undo-restoreTaskState')
+        console.log('🔄 [TASK-STORE] AFTER saveTasksToStorage: tasks.value.length =', tasks.value.length)
+        await safeSync('undo-restore')
+      } else {
+        console.log('🔄 [TASK-STORE] DB not ready, skipping DB save in restoreState')
       }
-      await safeSync('undo-restore')
 
-      // Also save to persistent storage for redundancy
+      // Also save to persistent storage for redundancy (always works)
       await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, tasks.value)
       console.log('🔄 [TASK-STORE] AFTER persistentStorage.save: tasks.value.length =', tasks.value.length)
 
@@ -3145,7 +3246,10 @@ export const useTaskStore = defineStore('tasks', () => {
       tasks.value = backupTasks
       taskDisappearanceLogger.logArrayReplacement(oldTasksEmergency, tasks.value, 'undo-emergencyRestore')
       try {
-        await db.save(DB_KEYS.TASKS, tasks.value)
+        // BUG-025 FIX: Use centralized save that respects INDIVIDUAL_ONLY
+        if (db.isReady?.value) {
+          await saveTasksToStorage(tasks.value, 'undo-emergencyRestore')
+        }
         await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, tasks.value)
         console.log('✅ [EMERGENCY-RECOVERY] Successfully restored from backup')
       } catch (backupError) {
@@ -3189,9 +3293,9 @@ export const useTaskStore = defineStore('tasks', () => {
         }
       })
 
-      // Save migrated tasks to database
-      await db.save(DB_KEYS.TASKS, tasks.value)
-      console.log(`💾 Migration completed: ${migratedCount} tasks converted to uncategorized and saved to database`)
+      // Save migrated tasks to database (respects INDIVIDUAL_ONLY)
+      await saveTasksToStorage(tasks.value, 'my-tasks-migration')
+      console.log(`💾 Migration completed: ${migratedCount} tasks converted to uncategorized and saved`)
 
     } catch (error) {
       console.error('❌ Failed to migrate "My Tasks" tasks to uncategorized:', error)

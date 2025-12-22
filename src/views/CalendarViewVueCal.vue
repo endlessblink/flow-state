@@ -38,6 +38,7 @@ import VueCal from 'vue-cal'
 import 'vue-cal/dist/vuecal.css'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import type { RecurrenceException } from '@/types/recurrence'
 
 const taskStore = useTaskStore()
 const _timerStore = useTimerStore()
@@ -138,7 +139,7 @@ const handleEventDragDrop = (event: VueCalEvent, _originalEvent: unknown) => {
       import('@/utils/recurrenceUtils').then(recurrenceUtils => {
         if (recurrenceUtils && recurrenceUtils.addException && parentTask.recurrence) {
           parentTask.recurrence.exceptions = recurrenceUtils.addException(
-            parentTask.recurrence.exceptions,
+            (parentTask.recurrence.exceptions || []) as RecurrenceException[],
             event.scheduledDate!,
             'modify',
             {

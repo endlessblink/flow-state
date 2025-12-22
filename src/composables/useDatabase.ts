@@ -84,10 +84,12 @@ export interface UseDatabaseReturn {
   error: Ref<Error | null>
   isReady: Ref<boolean>
 
-  // Conflict detection (data safety)
+  // Conflict detection and pruning (data safety)
   detectedConflicts: Ref<DetectedConflict[]>
   conflictCount: Ref<number>
   clearConflicts: () => void
+  pruneConflicts: (key: string) => Promise<{ resolved: number; failed: number }>
+  autoPruneBacklog: () => Promise<Record<string, { resolved: number; failed: number }>>
 
   // Sync state (from useSimpleSyncManager)
   syncStatus: Ref<'idle' | 'syncing' | 'complete' | 'error' | 'paused' | 'offline'>
@@ -267,126 +269,106 @@ export function useDatabase(): UseDatabaseReturn {
 
   // Initialize database with singleton support
   const initializeDatabase = async () => {
+    // STARTING INITIALIZATION: Set loading immediately to block concurrent calls
+    if (isLoading.value) return
+    isLoading.value = true
+
     // If we already have a database instance, just reuse it
     if (singletonDatabase) {
       database.value = singletonDatabase
-      databaseRefCount++
       isLoading.value = false
       return
     }
 
     // If we're currently initializing, wait for it to complete
     if (isInitializing && initializationPromise) {
-      await initializationPromise
-      database.value = singletonDatabase
-      databaseRefCount++
-      isLoading.value = false
+      try {
+        await initializationPromise
+        database.value = singletonDatabase
+      } finally {
+        isLoading.value = false
+      }
       return
     }
 
     // Start initialization
     isInitializing = true
-    databaseRefCount++
 
     initializationPromise = (async () => {
       try {
-        // Enable remote sync when configured
+        const config = getDatabaseConfig()
+        const hasRemoteSync = !!config.remote?.url
         const forceLocalMode = false
 
-        // Initialize sync manager FIRST if remote sync is configured (TASK-021 fix)
-        // This must happen before database creation so live sync works on page refresh
-        if (hasRemoteSync && !forceLocalMode && !syncManager) {
-          console.log('🔄 [DATABASE] Initializing sync manager for cross-device sync...')
-          syncManager = getGlobalReliableSyncManager()
-          syncCleanup = await syncManager.init()
-        }
-
-        // Check if database already exists from previous session (page refresh)
         const dbName = config.local.name
-
         try {
-          // Try to open existing database without recreating it
           const existingDB = new PouchDB(dbName, {
             adapter: 'idb',
             auto_compaction: true,
             revs_limit: 5
           })
-
-          // Test if it's accessible
           await existingDB.info()
           singletonDatabase = existingDB
-
         } catch {
-          // No existing database, create new one
           const dbConfig: PouchDB.Configuration.LocalDatabaseConfiguration = {
             adapter: 'idb',
             auto_compaction: true,
             revs_limit: 5
           }
-
           if (config.local.adapter) {
             dbConfig.adapter = config.local.adapter as string
           }
-
           singletonDatabase = new PouchDB(config.local.name, dbConfig)
         }
 
-        // Expose to window for backward compatibility
         const w = window as Window & typeof globalThis
         w.pomoFlowDb = singletonDatabase as unknown as PomoFlowDB
 
-        // Verify database is working
         await singletonDatabase.info()
-
-        // Perform initial health check (silent)
         await performDatabaseHealthCheck(singletonDatabase)
 
         database.value = singletonDatabase
 
-        // Auto-start live sync for real-time cross-device synchronization (TASK-021 enhancement)
-        // This ensures timer and other changes sync instantly across browsers/devices
-        if (syncManager && hasRemoteSync && !forceLocalMode) {
-          try {
-            console.log('🔄 [DATABASE] Auto-starting live sync for cross-device sync...')
-            const liveSyncStarted = await syncManager.startLiveSync()
-            if (liveSyncStarted) {
-              console.log('✅ [DATABASE] Live sync auto-started successfully')
-            } else {
-              console.warn('⚠️ [DATABASE] Live sync could not be started, using manual sync')
-            }
-          } catch (liveSyncError) {
-            console.warn('⚠️ [DATABASE] Live sync auto-start failed, falling back to manual sync:', liveSyncError)
-            // Don't throw - manual sync will still work
-          }
-        }
+        // BUG-028 FIX: Set isLoading=false IMMEDIATELY so isReady becomes true
+        // This allows UI to load local data while sync happens in background
+        isLoading.value = false
+        console.log('✅ [DATABASE] Local database ready - UI can load data now')
 
+        // BUG-028 FIX: Start sync in BACKGROUND (don't await)
+        // This way UI loads immediately with local data, sync merges in background
+        if (hasRemoteSync && !forceLocalMode && !syncManager) {
+          syncManager = getGlobalReliableSyncManager()
+          console.log('🔄 [DATABASE] Starting background sync...')
+          // Don't await - let sync happen in background
+          syncManager.init().then(cleanup => {
+            syncCleanup = cleanup
+            console.log('✅ [DATABASE] Background sync initialized')
+          }).catch(syncError => {
+            console.warn('⚠️ [DATABASE] Background sync init failed:', syncError)
+          })
+        }
       } catch (err) {
         error.value = err as Error
-
-        // Report through unified error handler
-        const errorMessage = (err as Error).message || String(err) || 'Unknown database initialization error'
         errorHandler.report({
           severity: ErrorSeverity.CRITICAL,
           category: ErrorCategory.DATABASE,
           message: 'Failed to initialize database',
-          userMessage: 'Database initialization failed. Please refresh the page.',
           error: err as Error,
-          context: {
-            name: (err as Error).name,
-            isPouchDBError: (err as Error).name === 'error' || ('status' in (err as object))
-          },
           showNotification: true
         })
-
-        throw new Error(`Singleton database initialization failed: ${errorMessage}`)
+        throw err
       } finally {
         isInitializing = false
-        initializationPromise = null
+        // Don't null the promise yet so concurrent calls can still wait for it if they just missed the flag
       }
     })()
 
-    await initializationPromise
-    isLoading.value = false
+    try {
+      await initializationPromise
+    } finally {
+      isLoading.value = false
+      initializationPromise = null // Clear it after the await is done
+    }
   }
 
   // Helper function to wait for database initialization
@@ -410,7 +392,13 @@ export function useDatabase(): UseDatabaseReturn {
   }
 
   // Initialize immediately (non-blocking)
-  initializeDatabase()
+  initializeDatabase().then(() => {
+    // BUG-RECOVERY: Automatically prune conflicts on initialization if backlog is expected
+    // This addresses the "Document X has 200+ conflicts" issue
+    setTimeout(() => {
+      autoPruneBacklog().catch(err => console.warn('⚠️ Auto-pruning failed:', err))
+    }, 2000) // Delay to ensure stability first
+  })
 
 
   /**
@@ -423,10 +411,10 @@ export function useDatabase(): UseDatabaseReturn {
   }
 
   /**
-   * Direct save method with verification
+   * Direct save method with verification and last-write-wins conflict resolution
    */
   const performDirectSave = async <T>(key: string, data: T): Promise<void> => {
-    const maxRetries = 3
+    const maxRetries = 5 // Increased retries for conflict resolution
     let retryCount = 0
 
     while (retryCount < maxRetries) {
@@ -434,80 +422,61 @@ export function useDatabase(): UseDatabaseReturn {
         const db = await waitForDatabase()
         const docId = `${key}:data`
 
-        // Try to get existing document
+        // Try to get existing document to get current _rev
+        let existingDoc: PouchDB.Core.IdMeta & PouchDB.Core.GetMeta | null = null
         try {
-          const existingDoc = await db.get(docId)
-          await db.put({
-            _id: docId,
-            _rev: existingDoc._rev,
-            data,
-            updatedAt: new Date().toISOString(),
-            saveMethod: 'direct'
-          })
+          existingDoc = await db.get(docId)
         } catch (getErr: unknown) {
           const pouchErr = getErr as PouchDB.Core.Error
-          if (pouchErr.status === 404) {
-            // Document doesn't exist, create new one
-            await db.put({
-              _id: docId,
-              data,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              saveMethod: 'direct'
-            })
-          } else {
-            throw getErr
-          }
+          if (pouchErr.status !== 404) throw getErr
         }
 
+        const docToSave = {
+          _id: docId,
+          _rev: existingDoc?._rev,
+          data,
+          updatedAt: new Date().toISOString(),
+          saveMethod: 'direct'
+        }
+
+        await db.put(docToSave)
         return // Success - exit retry loop
 
       } catch (err: unknown) {
         retryCount++
+        const status = (err as { status?: number }).status
 
-        // SAFETY: Handle QuotaExceededError gracefully (don't crash app)
+        // Handle QuotaExceededError
         if (isQuotaExceededError(err)) {
           console.error(`🛑 [DATABASE] Storage quota exceeded while saving ${key}`)
-
-          // Check and log current quota status
-          const quotaState = await checkStorageQuota()
-
           error.value = new Error('Storage quota exceeded')
           errorHandler.report({
             severity: ErrorSeverity.CRITICAL,
             category: ErrorCategory.DATABASE,
             message: 'Storage quota exceeded - cannot save data',
-            userMessage: 'Storage is full. Please export your data and delete old tasks to free up space.',
+            userMessage: 'Storage is full. Please export your data.',
             error: err as Error,
-            context: {
-              key,
-              quotaUsed: quotaState.percentUsed,
-              quotaUsage: quotaState.usage,
-              quotaLimit: quotaState.quota
-            },
             showNotification: true
           })
-
-          // Don't throw - graceful degradation allows app to continue
-          // User can still view data and export, just can't save new data
           return
         }
 
-        if ((err as { status?: number }).status === 409 && retryCount < maxRetries) {
-          // Conflict detected - retry with exponential backoff
-          console.warn(`⚠️ Conflict on ${key} (attempt ${retryCount}/${maxRetries}), retrying...`)
-          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, retryCount)))
+        // Handle Conflicts (409) - Fetch latest and retry (Last-Write-Wins)
+        if (status === 409 && retryCount < maxRetries) {
+          console.warn(`⚠️ Conflict on ${key} (attempt ${retryCount}/${maxRetries}), retrying with latest _rev...`)
+          // Small delay to allow sync/other process to finish
+          await new Promise(resolve => setTimeout(resolve, 50 * retryCount))
           continue
         }
 
-        // Out of retries or non-conflict error
+        // Other errors or out of retries
         error.value = err as Error
         errorHandler.report({
           severity: ErrorSeverity.ERROR,
           category: ErrorCategory.DATABASE,
           message: `Failed to save ${key} after ${retryCount} attempts`,
           error: err as Error,
-          context: { key, retryCount, isConflict: (err as { status?: number }).status === 409 },
+          context: { key, retryCount, status },
           showNotification: true
         })
         throw err
@@ -713,6 +682,70 @@ export function useDatabase(): UseDatabaseReturn {
       })
       throw err
     }
+  }
+
+  /**
+   * Prune legacy conflicts for a specific document key
+   * This clears redundant revision branches to improve performance and stability
+   */
+  const pruneConflicts = async (key: string): Promise<{ resolved: number; failed: number }> => {
+    const docId = `${key}:data`
+    let resolved = 0
+    let failed = 0
+
+    try {
+      const db = await waitForDatabase()
+      const doc = await db.get(docId, { conflicts: true }) as any
+
+      if (doc._conflicts && doc._conflicts.length > 0) {
+        console.log(`🧹 [DATABASE] Pruning ${doc._conflicts.length} conflicts for doc: ${docId}`)
+
+        for (const rev of doc._conflicts) {
+          try {
+            await db.remove(docId, rev)
+            resolved++
+          } catch (err) {
+            console.warn(`⚠️ [DATABASE] Failed to remove revision ${rev} for doc ${docId}:`, err)
+            failed++
+          }
+        }
+
+        console.log(`✅ [DATABASE] Pruned ${resolved} revisions for ${docId}. (Failed: ${failed})`)
+      }
+
+      return { resolved, failed }
+    } catch (err) {
+      if ((err as any).status !== 404) {
+        console.error(`❌ [DATABASE] Error during conflict pruning for ${docId}:`, err)
+      }
+      return { resolved: 0, failed: 0 }
+    }
+  }
+
+  /**
+   * Scan all database keys and resolve any accumulated conflicts
+   * Resolves the "Document has X conflicts" issue reported in logs
+   */
+  const autoPruneBacklog = async (): Promise<Record<string, { resolved: number; failed: number }>> => {
+    console.log('🧹 [DATABASE] Starting automatic conflict pruning backlog scan...')
+    const dbKeys = await keys()
+    const results: Record<string, { resolved: number; failed: number }> = {}
+
+    for (const key of dbKeys) {
+      const result = await pruneConflicts(key)
+      if (result.resolved > 0) {
+        results[key] = result
+      }
+    }
+
+    const totalPruned = Object.values(results).reduce((sum, r) => sum + r.resolved, 0)
+    if (totalPruned > 0) {
+      console.log(`✨ [DATABASE] Completed auto-pruning. Resolved ${totalPruned} conflicts across ${Object.keys(results).length} documents.`)
+    } else {
+      console.log('✅ [DATABASE] No conflicts found to prune during backlog scan.')
+    }
+
+    return results
   }
 
   /**
@@ -975,10 +1008,12 @@ export function useDatabase(): UseDatabaseReturn {
     error,
     isReady,
 
-    // Conflict detection (data safety)
+    // Conflict detection and pruning (data safety)
     detectedConflicts,
     conflictCount,
     clearConflicts,
+    pruneConflicts,
+    autoPruneBacklog,
 
     // Database health monitoring
     checkHealth,

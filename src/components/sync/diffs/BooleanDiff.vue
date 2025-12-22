@@ -67,14 +67,14 @@
         <button
           class="action-btn local"
           :class="{ active: selectedValue === props.value }"
-          @click="selectValue(props.value)"
+          @click="selectValue(props.value as boolean)"
         >
           Use Local ({{ formatBoolean(props.value) }})
         </button>
         <button
           class="action-btn remote"
           :class="{ active: selectedValue === props.compareValue }"
-          @click="selectValue(props.compareValue)"
+          @click="selectValue(props.compareValue as boolean)"
         >
           Use Remote ({{ formatBoolean(props.compareValue) }})
         </button>

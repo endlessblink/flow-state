@@ -481,7 +481,8 @@ export class CSPManager {
     this.violationQueue = []
 
     try {
-      await fetch(this.config.reporting.endpoint!, {
+      if (!this.config.reporting.endpoint) return
+      await fetch(this.config.reporting.endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

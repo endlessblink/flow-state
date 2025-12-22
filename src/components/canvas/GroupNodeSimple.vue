@@ -443,7 +443,7 @@ const handleResizeEnd = (event: unknown) => {
 
 .section-name-input:hover,
 .section-name-input:focus {
-  background: var(--glass-bg-heavy);
+  background: var(--glass-bg-medium);
 }
 
 .section-type-badge {
@@ -610,10 +610,12 @@ const handleResizeEnd = (event: unknown) => {
   top: 100%;
   right: 0;
   margin-top: 4px;
-  background: var(--glass-bg-heavy);
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl);
   z-index: 100;
   min-width: 180px;
   overflow: hidden;
@@ -641,7 +643,7 @@ const handleResizeEnd = (event: unknown) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--glass-bg-soft);
+  background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
   padding: 2px;
@@ -667,7 +669,7 @@ const handleResizeEnd = (event: unknown) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--glass-bg-soft);
+  background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
   padding: 2px;

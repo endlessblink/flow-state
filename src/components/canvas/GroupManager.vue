@@ -295,7 +295,7 @@ const getSectionTypeLabel = (type: CanvasSection['type']) => {
     project: 'Project',
     date: 'Date Range',
     tags: 'Tags'
-  }
+  } as Record<string, string>
   return labels[type]
 }
 
@@ -325,8 +325,8 @@ const editSection = (section: CanvasSection) => {
       statuses: section.filters?.statuses || [],
       projects: section.filters?.projects || [],
       dateRange: (section.filters?.dateRange ? { 
-        start: (section.filters.dateRange as any).start || '', 
-        end: (section.filters.dateRange as any).end || '' 
+        start: (section.filters.dateRange as unknown as { start: string }).start || '', 
+        end: (section.filters.dateRange as unknown as { end: string }).end || '' 
       } : { start: '', end: '' }) as { start: string, end: string }
     }
   }
@@ -342,6 +342,17 @@ const closeModal = () => {
   showCreateModal.value = false
   editingSection.value = null
   resetForm()
+}
+
+const updatePriorityFilter = (priority: string, checked: boolean) => {
+  const currentPriorities = sectionForm.value.filters.priorities || []
+  if (checked) {
+    if (!currentPriorities.includes(priority)) {
+      sectionForm.value.filters.priorities = [...currentPriorities, priority]
+    }
+  } else {
+    sectionForm.value.filters.priorities = currentPriorities.filter(p => p !== priority)
+  }
 }
 
 const resetForm = () => {
@@ -384,7 +395,7 @@ const saveSection = () => {
   }
 
   if (editingSection.value) {
-    canvasStore.updateSection(editingSection.value.id, sectionData)
+    canvasStore.updateSection(editingSection.value.id, sectionData as any)
   } else {
     canvasStore.createSection(sectionData as Omit<CanvasSection, 'id' | 'createdAt' | 'updatedAt'>)
   }

@@ -250,6 +250,7 @@ const {
   configureProvider?: (config: unknown) => Promise<void>
   enableProvider?: () => Promise<void>
   disableProvider?: () => Promise<void>
+  _isLiveSyncActive?: import('vue').Ref<boolean>
 }
 const _persistentStorage = usePersistentStorage()
 

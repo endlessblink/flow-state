@@ -245,11 +245,7 @@ const timeFilters = computed((): TimeFilter[] => [
   position: relative;
   width: 32px;
   height: 32px;
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
+  background: var(--glass-bg-light);
   backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
@@ -260,12 +256,8 @@ const timeFilters = computed((): TimeFilter[] => [
 }
 
 .filter-btn:hover {
-  background: linear-gradient(
-    135deg,
-    var(--state-hover-bg) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--state-hover-border);
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
   color: var(--text-primary);
   transform: translateY(-1px) scale(1.05);
   box-shadow: var(--state-hover-shadow);

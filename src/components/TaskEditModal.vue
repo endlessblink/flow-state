@@ -553,9 +553,9 @@ const saveTask = () => {
   }
 
   // CRITICAL: Preserve existing instances if we're not updating them separately
-  if (editedTask.value.instances && editedTask.value.instances.length > 0) {
+  if (editedTask.value.instances && (editedTask.value.instances as unknown as any[]).length > 0) {
     updates.instances = editedTask.value.instances
-    console.log('🔍 DEBUG: Including instances in update:', updates.instances.length)
+    console.log('🔍 DEBUG: Including instances in update:', (updates.instances as unknown as any[]).length)
   }
 
   console.log('🔍 DEBUG: Updates being applied:', updates)

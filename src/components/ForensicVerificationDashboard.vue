@@ -295,7 +295,7 @@ const formatDate = (dateString: string | null) => {
   return new Date(dateString).toLocaleDateString()
 }
 
-const formatDateTime = (dateString: string) => {
+const formatDateTime = (dateString: string | number) => {
   return new Date(dateString).toLocaleString()
 }
 

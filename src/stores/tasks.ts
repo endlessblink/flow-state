@@ -942,7 +942,7 @@ export const useTaskStore = defineStore('tasks', () => {
       if (STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
         console.log('📂 TASK-034 Phase 4: Loading tasks from individual task-{id} documents...')
         try {
-          const loadedTasks = await loadIndividualTasks(dbInstance as any)
+          const loadedTasks = await loadIndividualTasks(dbInstance as unknown as PouchDB.Database)
           if (loadedTasks && loadedTasks.length > 0) {
             const oldTasks = [...tasks.value]
             tasks.value = loadedTasks
@@ -1047,7 +1047,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
         if (existingIndividualDocs.total_rows === 0) {
           console.log('📂 TASK-034: No individual task documents found. Running migration...')
-          const migrationResult = await migrateFromLegacyFormat(dbInstance as any)
+          const migrationResult = await migrateFromLegacyFormat(dbInstance as unknown as PouchDB.Database)
           console.log(`✅ TASK-034: Migration complete - ${migrationResult.migrated} tasks migrated, legacy deleted: ${migrationResult.deleted}`)
         } else {
           console.log(`ℹ️ TASK-034: Found ${existingIndividualDocs.total_rows} individual task documents, skipping migration`)
@@ -1132,12 +1132,12 @@ export const useTaskStore = defineStore('tasks', () => {
 
           // 2. Also save as individual task-{id} documents
           try {
-            await saveIndividualTasks(dbInstance as any, newTasks)
+            await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, newTasks)
             console.log(`📋 Tasks saved as ${newTasks.length} individual documents (new format)`)
 
             // 3. Clean up orphaned task documents (deleted tasks)
             const currentTaskIds = new Set(newTasks.map(t => t.id))
-            const deletedCount = await syncDeletedTasks(dbInstance as any, currentTaskIds)
+            const deletedCount = await syncDeletedTasks(dbInstance as unknown as PouchDB.Database, currentTaskIds)
             if (deletedCount > 0) {
               console.log(`🗑️ Cleaned up ${deletedCount} orphaned task documents`)
             }
@@ -1147,12 +1147,12 @@ export const useTaskStore = defineStore('tasks', () => {
           }
         } else if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
           // Phase 3: Individual docs only (after migration is proven stable)
-          await saveIndividualTasks(dbInstance as any, newTasks)
+          await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, newTasks)
           console.log(`📋 Tasks saved as ${newTasks.length} individual documents ONLY`)
 
           // Clean up orphaned task documents
           const currentTaskIds = new Set(newTasks.map(t => t.id))
-          await syncDeletedTasks(dbInstance as any, currentTaskIds)
+          await syncDeletedTasks(dbInstance as unknown as PouchDB.Database, currentTaskIds)
         } else {
           // Fallback: Legacy-only mode (both flags off)
           await db.save(DB_KEYS.TASKS, newTasks)

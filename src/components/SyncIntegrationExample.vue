@@ -367,7 +367,7 @@ const saveTestData = async () => {
 
 const loadTestData = async () => {
   try {
-    const data = await database.value?.load?.(testKey.value)
+    const data = await database.value?.load?.(testKey.value) as { value: string } | null
     if (data) {
       testValue.value = data.value
       operationResult.value = `Loaded: ${testKey.value} = ${data.value}`

@@ -136,14 +136,14 @@ const handleEventDragDrop = (event: VueCalEvent, _originalEvent: unknown) => {
     if (parentTask?.recurrence) {
       // Create exception for this instance
       import('@/utils/recurrenceUtils').then(recurrenceUtils => {
-        if (recurrenceUtils && recurrenceUtils.addException) {
-          recurrenceUtils.addException(
-            event.parentTaskId!,
+        if (recurrenceUtils && recurrenceUtils.addException && parentTask.recurrence) {
+          parentTask.recurrence.exceptions = recurrenceUtils.addException(
+            parentTask.recurrence.exceptions,
             event.scheduledDate!,
             'modify',
             {
-              newDate: dateStr,
-              newTime: timeStr
+              scheduledDate: dateStr,
+              scheduledTime: timeStr
             }
           )
         }

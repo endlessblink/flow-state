@@ -194,8 +194,8 @@ async function performDatabaseHealthCheck(db: PouchDB.Database): Promise<{
 
     try {
       await db.put(healthDoc)
-      await db.get(healthDocId)
-      await db.remove((await db.get(healthDocId)))
+      const healthCheckDoc = await db.get(healthDocId)
+      await db.remove(healthCheckDoc)
     } catch (writeError) {
       console.warn('⚠️ [HEALTH-CHECK] Write test failed:', writeError)
       // Don't fail health check for write issues, but log them
@@ -632,7 +632,7 @@ export function useDatabase(): UseDatabaseReturn {
         endkey: 'data:\ufff0'
       })
 
-      return docs.rows.map(row => row.id!.replace(':data', ''))
+      return docs.rows.map(row => (row.id || '').replace(':data', ''))
     } catch (err) {
       error.value = err as Error
       errorHandler.report({

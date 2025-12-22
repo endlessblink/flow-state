@@ -166,6 +166,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   background-color: var(--glass-bg-solid);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   contain: layout style; /* Performance optimization */
@@ -184,7 +185,7 @@ defineExpose({
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--glass-bg-medium);
   border-bottom: 1px solid var(--glass-border);
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;

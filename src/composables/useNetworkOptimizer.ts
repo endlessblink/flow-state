@@ -82,7 +82,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
 
   // Reactive state
   const requestQueue = ref<Map<string, NetworkRequest>>(new Map())
-  const pendingRequests = ref<Map<string, Promise<unknown>>>(new Map())
+  const pendingRequests = ref<Map<string, Promise<any>>>(new Map())
   const responseCache = ref<Map<string, NetworkResponse>>(new Map())
   const isProcessingBatch = ref(false)
 
@@ -364,11 +364,10 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
       metrics.value.errorRate = metrics.value.failedRequests / metrics.value.totalRequests
 
       // Retry logic
-      // Retry logic
       const currentRetries = request.retryCount || 0
       if (currentRetries < maxRetries) {
         request.retryCount = currentRetries + 1
-        await new Promise(resolve => setTimeout(resolve, retryDelay * request.retryCount!))
+        await new Promise(resolve => setTimeout(resolve, retryDelay * (request.retryCount || 1)))
         return executeRequest(request)
       }
 
@@ -444,7 +443,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   const measureConnectionSpeed = async (): Promise<number> => {
     try {
       const startTime = Date.now()
-      const _response = await fetch('https://httpbin.org/bytes/1024', {
+      await fetch('https://httpbin.org/bytes/1024', {
         method: 'GET',
         cache: 'no-cache'
       })
@@ -458,7 +457,6 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
     }
   }
 
-  // Get network information
   const getNetworkInfo = () => {
     if ('connection' in navigator) {
       const connection = (navigator as unknown as { connection: { effectiveType: string; downlink: number; rtt: number; saveData: boolean } }).connection

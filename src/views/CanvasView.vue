@@ -1376,7 +1376,7 @@ const getSectionResizeStyle = (section: CanvasSection): Record<string, string | 
 }
 
 // Register custom node types
-const nodeTypes: any = markRaw({
+const nodeTypes = markRaw({
   taskNode: TaskNode,
   sectionNode: GroupNodeSimple
 })

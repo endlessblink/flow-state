@@ -349,7 +349,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     const instances = task.recurrence.generatedInstances || []
 
     for (const instance of instances) {
-      if (instance.isSkipped) continue
+      if ((instance as { isSkipped?: boolean }).isSkipped) continue
 
       await scheduleTaskNotifications(
         instance.id,
@@ -422,10 +422,10 @@ export const useNotificationStore = defineStore('notifications', () => {
     // CRITICAL FIX: Ensure taskStore.tasks is an array before calling .filter()
     const tasks = Array.isArray(taskStore.tasks)
       ? taskStore.tasks.filter(t =>
-          t.dueDate &&
-          t.notificationPreferences?.enabled &&
-          new Date(t.dueDate) > new Date()
-        )
+        t.dueDate &&
+        t.notificationPreferences?.enabled &&
+        new Date(t.dueDate) > new Date()
+      )
       : []
 
     for (const task of tasks) {

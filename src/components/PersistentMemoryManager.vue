@@ -228,7 +228,7 @@ const createBackup = async () => {
 
 const loadBackups = async () => {
   try {
-    availableBackups.value = await persistentStorage.getAllBackups()
+    availableBackups.value = (await persistentStorage.getAllBackups()) as Backup[]
     if (availableBackups.value.length > 0) {
       lastBackupTime.value = availableBackups.value[0].timestamp
     }

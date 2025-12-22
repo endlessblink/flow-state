@@ -17,7 +17,7 @@
           class="mode-btn"
           :class="{ active: selectionMode === mode.value }"
           :title="mode.description"
-          @click="setSelectionMode(mode.value as 'nodes' | 'edges' | 'both')"
+          @click="setSelectionMode(mode.value as 'rectangle' | 'click' | 'lasso')"
         >
           <component :is="mode.icon" :size="14" />
           <span>{{ mode.label }}</span>
@@ -307,26 +307,34 @@ onUnmounted(() => {
 
 .selection-rectangle {
   position: absolute;
-  border: 2px solid var(--purple-border-active);
-  background: var(--purple-bg-subtle);
+  border: 2px solid var(--brand-primary);
+  background: rgba(78, 205, 196, 0.1);
   pointer-events: none;
   animation: selectionPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes selectionPulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 0.4; }
+  0%, 100% { 
+    opacity: 0.8;
+    border-color: var(--brand-primary);
+  }
+  50% { 
+    opacity: 0.4;
+    border-color: var(--brand-hover);
+  }
 }
 
 .selection-controls {
   position: absolute;
   top: var(--space-4);
   left: var(--space-4);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-primary);
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-3);
-  box-shadow: 0 4px 12px var(--shadow-strong);
+  box-shadow: var(--shadow-xl);
   pointer-events: auto;
   min-width: 300px;
 }
@@ -354,8 +362,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  background: var(--surface-primary);
-  border: 1px solid var(--border-secondary);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
@@ -366,8 +374,8 @@ onUnmounted(() => {
 
 .mode-btn:hover,
 .action-btn:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
   color: var(--text-primary);
 }
 
@@ -382,7 +390,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding-top: var(--space-2);
-  border-top: 1px solid var(--border-secondary);
+  border-top: 1px solid var(--glass-border);
 }
 
 .selected-count {
@@ -418,10 +426,12 @@ onUnmounted(() => {
   top: 100%;
   right: 0;
   margin-top: var(--space-1);
-  background: var(--surface-primary);
-  border: 1px solid var(--border-primary);
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px var(--shadow-strong);
+  box-shadow: var(--shadow-xl);
   min-width: 150px;
   z-index: 1001;
 }
@@ -431,7 +441,7 @@ onUnmounted(() => {
 }
 
 .bulk-menu-section:not(:last-child) {
-  border-bottom: 1px solid var(--border-secondary);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .bulk-menu-title {
@@ -459,7 +469,7 @@ onUnmounted(() => {
 }
 
 .bulk-menu-item:hover {
-  background: var(--bg-hover);
+  background: var(--glass-bg-medium);
 }
 
 .bulk-menu-item.priority-high {

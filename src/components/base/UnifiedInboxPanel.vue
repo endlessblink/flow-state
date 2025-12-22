@@ -55,7 +55,7 @@
         :aria-label="`${filter.label}: ${filter.count} tasks`"
         role="tab"
         :aria-selected="activeFilter === filter.key"
-        @click="activeFilter = filter.key as string"
+        @click="activeFilter = filter.key as 'readyNow' | 'upcoming' | 'backlog' | 'all'"
       >
         <span class="filter-icon">{{ filter.icon }}</span>
         <span class="filter-label">{{ filter.label }}</span>

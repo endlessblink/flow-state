@@ -176,7 +176,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
   }
 
   // Event styling for week grid
-  const getWeekEventStyle = (event: WeekEvent) => {
+  const getWeekEventStyle = (event: WeekEvent): Record<string, string | number> => {
     const HALF_HOUR_HEIGHT = 30
     const dayColumnWidth = 100 / 7
 

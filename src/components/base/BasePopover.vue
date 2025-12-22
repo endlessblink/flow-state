@@ -187,19 +187,19 @@ onUnmounted(() => {
 .base-popover {
   position: fixed;
 
-  /* Glass morphism - transparent with blur */
-  background: rgba(20, 20, 20, 0.5);
+  /* Glass morphism - darker solid base for overlays */
+  background: var(--glass-bg-solid);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
 
   /* Stroke border */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
 
-  /* Layered shadow */
+  /* Layered shadow - much deeper for overlays */
   box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+    0 24px 64px rgba(0, 0, 0, 0.8),
+    0 8px 24px rgba(0, 0, 0, 0.4);
 
   z-index: 3001;
   animation: popoverSlideIn var(--duration-fast) var(--spring-bounce);

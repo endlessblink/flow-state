@@ -253,12 +253,12 @@ watch(isOpen, (newVal) => {
   padding: var(--space-3) var(--space-4);
 
   /* Glass morphism base - matches BaseCard/BaseModal */
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px) saturate(100%);
-  -webkit-backdrop-filter: blur(12px) saturate(100%);
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
 
   /* Stroke border */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
 
   color: var(--text-primary);
@@ -269,19 +269,19 @@ watch(isOpen, (newVal) => {
 }
 
 .dropdown-trigger:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
+  border-color: var(--glass-border-hover);
+  background: var(--glass-bg-medium);
 }
 
 .dropdown-trigger:focus {
   outline: none;
-  border-color: rgba(78, 205, 196, 0.5);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
 }
 
 .dropdown-trigger.is-open {
-  border-color: rgba(78, 205, 196, 0.5);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.15);
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-medium);
 }
 
 .dropdown-trigger.is-disabled {
@@ -303,7 +303,7 @@ watch(isOpen, (newVal) => {
 
 .trigger-icon.is-open {
   transform: rotate(180deg);
-  color: rgba(78, 205, 196, 0.8);
+  color: var(--brand-primary);
 }
 
 .dropdown-list {
@@ -331,25 +331,25 @@ watch(isOpen, (newVal) => {
 }
 
 .dropdown-option:hover:not(.is-disabled) {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-light);
+  border-color: var(--glass-border);
 }
 
 .dropdown-option.is-focused {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-light);
+  border-color: var(--glass-border-hover);
 }
 
 .dropdown-option.is-selected {
   /* Stroke-based selection - no fill */
-  background: transparent;
-  border-color: rgba(78, 205, 196, 0.5);
-  color: rgba(78, 205, 196, 1);
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
   font-weight: var(--font-semibold);
 }
 
 .dropdown-option.is-selected:hover {
-  background: rgba(78, 205, 196, 0.05);
+  background: rgba(78, 205, 196, 0.1);
 }
 
 .dropdown-option.is-disabled {
@@ -368,6 +368,6 @@ watch(isOpen, (newVal) => {
 
 .selected-icon {
   flex-shrink: 0;
-  color: rgba(78, 205, 196, 1);
+  color: var(--brand-primary);
 }
 </style>

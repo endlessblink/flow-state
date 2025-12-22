@@ -36,6 +36,7 @@
             @mouseenter="selectedIndex = tasksStartIndex + index"
           >
             <div class="result-content">
+              <!-- eslint-disable-next-line vue/no-v-html -->
               <div class="result-title" v-html="highlightMatch(task.title)" />
               <div class="result-meta">
                 <span v-if="task.projectName" class="result-project">{{ task.projectName }}</span>
@@ -61,6 +62,7 @@
             @mouseenter="selectedIndex = projectsStartIndex + index"
           >
             <div class="result-content">
+              <!-- eslint-disable-next-line vue/no-v-html -->
               <div class="result-title" v-html="highlightMatch(project.name)" />
               <div class="result-meta">
                 <span class="project-color" :style="{ backgroundColor: project.color as string }" />

@@ -111,7 +111,7 @@ export const useSimpleBackup = {
       }
 
       const backupData: SimpleBackupData = {
-        tasks: cleanTasks as Task[],
+        tasks: cleanTasks as unknown as Task[],
         projects: (projects || []) as Project[],
         canvas: (canvas || {}) as Record<string, unknown>,
         timestamp: Date.now(),

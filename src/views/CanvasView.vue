@@ -241,8 +241,8 @@
            </div>
         </div>
 
-        <!-- Inbox Sidebar - Using UnifiedInboxPanel for consistency with CalendarView -->
-        <UnifiedInboxPanel context="canvas" />
+        <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
+        <UnifiedInboxPanel />
 
         <!-- Always show VueFlow canvas, even when empty -->
         <div>

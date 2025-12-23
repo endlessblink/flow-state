@@ -154,8 +154,6 @@ interface Props {
   projects: Project[]
   unscheduledOnly: boolean
   selectedPriority: 'high' | 'medium' | 'low' | null
-  unscheduledOnly: boolean
-  selectedPriority: 'high' | 'medium' | 'low' | null
   selectedProject: string | null
   selectedDuration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
 }
@@ -164,7 +162,6 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'update:unscheduledOnly': [value: boolean]
-  'update:selectedPriority': [value: 'high' | 'medium' | 'low' | null]
   'update:selectedPriority': [value: 'high' | 'medium' | 'low' | null]
   'update:selectedProject': [value: string | null]
   'update:selectedDuration': [value: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null]
@@ -392,7 +389,8 @@ onBeforeUnmount(() => {
   min-width: 160px;
   max-height: 240px;
   overflow-y: auto;
-  background: var(--glass-bg-solid);
+  background: var(--dropdown-bg);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);

@@ -438,6 +438,14 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
+  // Restore groups from undo state (ISSUE-008 fix)
+  const restoreGroups = (newGroups: CanvasGroup[]) => {
+    console.log('🔄 [CANVAS] Restoring groups:', newGroups.length)
+    groups.value = [...newGroups]
+    // Request sync to update Vue Flow
+    requestSync()
+  }
+
   const toggleGroupVisibility = (id: string) => {
     const group = groups.value.find(g => g.id === id)
     if (group) {
@@ -1523,9 +1531,15 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
 
     const deleteGroupWithUndo = async (groupId: string) => {
-      // Unified undo/redo doesn't support group deletion yet
-      // Using direct deletion for now
-      return deleteGroup(groupId)
+      // ISSUE-008 FIX: Now uses unified undo/redo system
+      try {
+        const { getUndoSystem } = await import('@/composables/undoSingleton')
+        const undoSystem = getUndoSystem()
+        return await undoSystem.deleteGroupWithUndo(groupId)
+      } catch (error) {
+        console.warn('Undo/Redo system not available for group deletion, using direct deletion:', error)
+        return deleteGroup(groupId)
+      }
     }
 
     const toggleGroupVisibilityWithUndo = async (groupId: string) => {
@@ -1732,6 +1746,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     createGroup,         // Primary method name
     updateGroup,         // Primary method name
     deleteGroup,         // Primary method name
+    restoreGroups,       // For undo system (ISSUE-008)
     toggleGroupVisibility,   // Primary method name
     toggleGroupCollapse,     // Primary method name
     setActiveGroup,          // Primary method name

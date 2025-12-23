@@ -11,7 +11,7 @@
       </h3>
 
       <!-- Expanded state count -->
-      <span v-if="!isCollapsed" class="inbox-count">{{ inboxTasks.length }}</span>
+      <NBadge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
     </div>
 
     <!-- Collapsed state task count indicators -->
@@ -67,15 +67,19 @@
     </div>
 
     <!-- Brain Dump Mode (optional) -->
-    <div v-if="!isCollapsed && showBrainDump">
-      <button
+    <div v-if="!isCollapsed && showBrainDump" class="brain-dump-section">
+      <NButton
+        secondary
+        block
+        size="small"
         class="brain-dump-toggle"
         @click="brainDumpMode = !brainDumpMode"
       >
         {{ brainDumpMode ? 'Quick Add Mode' : 'Brain Dump Mode' }}
-      </button>
+      </NButton>
 
-      <div v-if="brainDumpMode" class="brain-dump">
+      <!-- Brain Dump Textarea -->
+      <div v-if="brainDumpMode" class="brain-dump-container">
         <textarea
           v-model="brainDumpText"
           placeholder="Paste or type tasks (one per line):
@@ -83,15 +87,16 @@ Write proposal !!!
 Review code 2h
 Call client"
           class="brain-dump-textarea"
-          rows="8"
+          rows="5"
         />
-        <button
-          class="process-brain-dump-btn"
+        <NButton
+          type="primary"
+          block
           :disabled="parsedTaskCount === 0"
           @click="processBrainDump"
         >
           Add {{ parsedTaskCount }} Tasks
-        </button>
+        </NButton>
       </div>
     </div>
 
@@ -159,7 +164,7 @@ Call client"
               <ProjectEmojiIcon
                 v-if="projectVisual(task.projectId).type === 'emoji'"
                 :emoji="projectVisual(task.projectId).content"
-                size="sm"
+                size="xs"
               />
               <span
                 v-else-if="projectVisual(task.projectId).type === 'css-circle'"
@@ -171,8 +176,19 @@ Call client"
               <span v-else>{{ projectVisual(task.projectId).content }}</span>
             </span>
 
+            <!-- Priority Tag -->
+            <NTag
+              v-if="task.priority"
+              :type="task.priority === 'high' ? 'error' : task.priority === 'medium' ? 'warning' : 'info'"
+              size="small"
+              round
+              class="priority-badge"
+            >
+              {{ task.priority }}
+            </NTag>
+
             <!-- Due Date Badge -->
-            <span v-if="getDueStatus(task)" class="metadata-badge" :class="`due-badge-${getDueStatus(task).type}`">
+            <span v-if="getDueStatus(task)" class="metadata-badge due-date-badge" :class="`due-badge-${getDueStatus(task).type}`">
               <Calendar :size="12" />
               {{ getDueStatus(task).text }}
             </span>
@@ -212,14 +228,18 @@ Call client"
 
     <!-- Quick Add Task Button -->
     <div v-if="!isCollapsed" class="quick-add-task">
-      <button
-        class="add-task-btn"
+      <NButton
+        type="primary"
+        block
+        dashed
         title="Add new task to inbox"
         @click="handleQuickAddTask"
       >
-        <Plus :size="14" />
+        <template #icon>
+          <Plus :size="14" />
+        </template>
         Add Task
-      </button>
+      </NButton>
     </div>
   </div>
 </template>
@@ -234,6 +254,7 @@ import {
   ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock,
   Target as _Target, Calendar as _CalendarIcon, Clipboard as _Clipboard, Folder as _Folder, Trash2, X
 } from 'lucide-vue-next'
+import { NButton, NBadge, NTag } from 'naive-ui'
 import BaseBadge from './BaseBadge.vue'
 import ProjectEmojiIcon from './ProjectEmojiIcon.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
@@ -667,30 +688,34 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .unified-inbox-panel {
+  width: 320px;
+  max-height: calc(100vh - 220px);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow: visible;
+  transition: width var(--duration-normal) var(--spring-smooth), padding var(--duration-normal);
+  position: relative;
+  z-index: 100;
   background: var(--inbox-panel-bg);
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  height: 100%;
-  width: 320px;
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--overlay-component-shadow);
 }
 
 .unified-inbox-panel.collapsed {
   width: 60px;
-  min-width: 60px;
+  padding: var(--space-4) var(--space-2);
 }
 
 .inbox-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-4);
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -698,43 +723,27 @@ onBeforeUnmount(() => {
   background: transparent;
   border: 1px solid var(--border-medium);
   color: var(--text-muted);
-  padding: var(--space-2);
+  padding: var(--space-1);
   cursor: pointer;
   border-radius: var(--radius-md);
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: var(--shadow-sm);
 }
 
 .collapse-btn:hover {
   background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
   color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow);
 }
 
 .inbox-title {
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   margin: 0;
   flex: 1;
-}
-
-.inbox-count {
-  background: var(--glass-bg-heavy);
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  min-width: 20px;
-  text-align: center;
-  flex-shrink: 0;
 }
 
 .collapsed-badges-container {
@@ -853,8 +862,7 @@ onBeforeUnmount(() => {
 }
 
 .quick-add {
-  padding: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 0;
 }
 
 .quick-add-input {
@@ -862,55 +870,30 @@ onBeforeUnmount(() => {
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  transition: all 0.2s ease;
 }
 
-.quick-add-input:focus {
-  outline: none;
-  border-color: var(--state-active-border);
-  background: var(--glass-bg-soft);
-  box-shadow: var(--state-hover-shadow);
-}
-
-.quick-add-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.7;
+/* Naive UI components handle their own basic layout,
+   but we can add spacing as needed */
+.brain-dump-section {
+  padding: 0 var(--space-1);
 }
 
 .brain-dump-toggle {
-  width: 100%;
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all 0.2s ease;
   margin-bottom: var(--space-2);
 }
 
 .brain-dump-toggle:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border-hover);
-  color: var(--text-primary);
-  transform: translateY(-1px);
+  background: var(--state-hover-bg);
+  color: var(--text-secondary);
 }
 
-.brain-dump {
-  padding: var(--space-3);
+.brain-dump-container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-2);
 }
 
 .brain-dump-textarea {
@@ -918,12 +901,12 @@ onBeforeUnmount(() => {
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-family: inherit;
   resize: vertical;
-  min-height: 120px;
+  margin-bottom: var(--space-2);
 }
 
 .brain-dump-textarea:focus {
@@ -932,80 +915,41 @@ onBeforeUnmount(() => {
   box-shadow: var(--state-hover-shadow);
 }
 
-.process-brain-dump-btn {
-  width: 100%;
-  background: var(--state-active-bg);
-  border: 1px solid var(--state-active-border);
-  color: var(--text-primary);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-weight: var(--font-semibold);
-  transition: all 0.2s ease;
-}
-
-.process-brain-dump-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow);
-}
-
-.process-brain-dump-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .inbox-tasks {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-2);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-height: 0;
+  margin-top: var(--space-2);
 }
 
 .empty-inbox {
   text-align: center;
-  padding: var(--space-8) var(--space-4);
+  padding: var(--space-4);
   color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 
 .empty-icon {
-  font-size: var(--text-4xl);
-  margin-bottom: var(--space-3);
+  font-size: 24px;
+  margin-bottom: var(--space-2);
   opacity: 0.5;
-}
-
-.empty-text {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  margin: 0 0 var(--space-1) 0;
-}
-
-.empty-subtext {
-  font-size: var(--text-xs);
-  margin: 0;
-  opacity: 0.7;
 }
 
 .task-card {
   position: relative;
+  padding: var(--space-3);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-3);
-  cursor: move;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+  cursor: grab;
+  transition: all var(--duration-fast) ease;
 }
 
 .task-card:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border-hover);
+  background: var(--state-hover-bg);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
 }
 
 .task-card:hover .task-actions {
@@ -1079,26 +1023,14 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 4px;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  width: 3px;
+  height: 100%;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
 }
 
-.priority-stripe.priority-high {
-  background: var(--color-priority-high);
-}
-
-.priority-stripe.priority-medium {
-  background: var(--color-priority-medium);
-}
-
-.priority-stripe.priority-low {
-  background: var(--color-priority-low);
-}
-
-.priority-stripe.priority-none {
-  background: var(--glass-bg-heavy);
-}
+.priority-high { background: var(--color-priority-high); }
+.priority-medium { background: var(--color-priority-medium); }
+.priority-low { background: var(--color-priority-low); }
 
 .timer-indicator {
   position: absolute;
@@ -1136,42 +1068,30 @@ onBeforeUnmount(() => {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-primary);
-  line-height: var(--leading-tight);
-  margin-bottom: var(--space-2);
-  word-wrap: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  margin-bottom: var(--space-1);
 }
 
 .task-metadata {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1_5);
+  gap: var(--space-1);
   align-items: center;
 }
 
 .metadata-badge {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  padding: var(--space-1) var(--space-2);
-  background: var(--surface-elevated);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  font-weight: var(--font-medium);
-  white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  flex-shrink: 0;
+  gap: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  background: var(--glass-bg-medium);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
 }
 
 .project-badge {
-  background: var(--brand-bg-subtle);
-  border-color: var(--brand-border-subtle);
+  background: var(--glass-bg-medium);
 }
 
 .project-circle {
@@ -1187,24 +1107,17 @@ onBeforeUnmount(() => {
   font-weight: var(--font-bold);
 }
 
+.priority-badge {
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+}
+
 .due-badge-overdue {
-  background: var(--color-error-bg);
-  color: var(--color-error-text);
-  border-color: var(--color-error-border);
+  color: var(--status-error);
 }
 
-.due-badge-today,
-.due-badge-scheduled-today {
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-  border-color: var(--color-warning-border);
-}
-
-.due-badge-tomorrow,
-.due-badge-scheduled-tomorrow {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-  border-color: var(--color-info-border);
+.due-badge-today {
+  color: var(--status-warning);
 }
 
 .status-badge {
@@ -1212,62 +1125,34 @@ onBeforeUnmount(() => {
 }
 
 .task-actions {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
   display: flex;
   gap: var(--space-1);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-fast);
 }
 
 .action-btn {
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  color: var(--text-muted);
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
+  background: var(--glass-bg-heavy);
+  border: none;
+  color: var(--text-secondary);
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
 .action-btn:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--glass-border-medium);
-  color: var(--text-secondary);
-  transform: scale(1.05);
+  color: var(--brand-primary);
 }
 
 .quick-add-task {
-  border-top: 1px solid var(--glass-border);
-  padding-top: var(--space-3);
-}
-
-.add-task-btn {
-  width: 100%;
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  color: var(--text-muted);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all 0.2s ease;
-}
-
-.add-task-btn:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border-hover);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  margin-top: var(--space-2);
 }
 
 /* Collapsed state adjustments */
@@ -1277,8 +1162,7 @@ onBeforeUnmount(() => {
 
 .unified-inbox-panel.collapsed .smart-filters-horizontal,
 .unified-inbox-panel.collapsed .quick-add,
-.unified-inbox-panel.collapsed .brain-dump-toggle,
-.unified-inbox-panel.collapsed .brain-dump,
+.unified-inbox-panel.collapsed .brain-dump-section,
 .unified-inbox-panel.collapsed .inbox-tasks,
 .unified-inbox-panel.collapsed .quick-add-task {
   display: none;

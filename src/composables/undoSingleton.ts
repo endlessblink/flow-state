@@ -1,16 +1,23 @@
 // Undo System Singleton - Ensures shared instance across the entire application
 // This solves initialization order issues between App.vue and globalKeyboardHandlerSimple.ts
+// UPDATED: Now tracks both tasks AND canvas groups for unified undo/redo (ISSUE-008 fix)
 
 import { ref, computed, nextTick } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasStore, type CanvasGroup } from '@/stores/canvas'
+
+// Combined state interface for tracking both tasks and groups
+interface UnifiedUndoState {
+  tasks: Task[]
+  groups: CanvasGroup[]
+}
 
 // Global singleton refHistory instance - created only ONCE
-let refHistoryInstance: ReturnType<typeof useManualRefHistory<Task[]>> | null = null
-let unifiedState: Ref<Task[]> | null = null
+let refHistoryInstance: ReturnType<typeof useManualRefHistory<UnifiedUndoState>> | null = null
+let unifiedState: Ref<UnifiedUndoState> | null = null
 let canUndo: ComputedRef<boolean> | null = null
 let canRedo: ComputedRef<boolean> | null = null
 let undoCount: ComputedRef<number> | null = null
@@ -27,10 +34,16 @@ let clear: (() => void) | null = null
 function initializeRefHistory() {
   if (refHistoryInstance) return
 
-  console.log('🔄 Creating SINGLE refHistory instance for entire application...')
+  console.log('🔄 Creating SINGLE refHistory instance for entire application (tasks + groups)...')
 
   const taskStore = useTaskStore()
-  unifiedState = ref([...taskStore.tasks])
+  const canvasStore = useCanvasStore()
+
+  // Initialize with combined state (tasks + groups)
+  unifiedState = ref<UnifiedUndoState>({
+    tasks: [...taskStore.tasks],
+    groups: [...canvasStore.groups]
+  })
 
   // Create the SINGLE useManualRefHistory instance with proper VueUse configuration
   // NOTE: deep: true was intentionally removed for performance reasons (deep watchers issue)
@@ -79,34 +92,35 @@ function initializeRefHistory() {
 
 // ✅ FIXED - Functions defined at module level (outside return object)
 // FIX: Made async to properly await restoreState which is an async function
+// UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
 const performUndo = async () => {
   if (!refHistoryInstance || !unifiedState) return false
-  console.log('🔄 Executing undo with SHARED refHistory instance...')
+  console.log('🔄 Executing undo with SHARED refHistory instance (tasks + groups)...')
   refHistoryInstance.undo()
 
   // After undo, unifiedState.value now contains the previous state
-  // Restore it to the task store
+  // Restore both tasks and groups
   const previousState = unifiedState.value
-  if (previousState && Array.isArray(previousState)) {
+  if (previousState && typeof previousState === 'object' && 'tasks' in previousState) {
     const taskStore = useTaskStore()
-    console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for:', previousState.length, 'tasks')
-    console.log('🔄 [VUE-REACTIVITY-FIX] Previous state sample:', previousState.slice(0, 2))
+    const canvasStore = useCanvasStore()
+
+    console.log('🔄 [UNDO] Restoring:', previousState.tasks.length, 'tasks,', previousState.groups.length, 'groups')
 
     // DEBUG: Log canvas tasks being restored
-    const canvasTasks = previousState.filter(t => t.isInInbox === false && t.canvasPosition)
-    console.log(`🔄 [UNDO-DEBUG] Restoring ${canvasTasks.length} canvas tasks:`,
-      canvasTasks.map(t => ({ id: t.id, title: t.title, isInInbox: t.isInInbox, canvasPosition: t.canvasPosition }))
-    )
+    const canvasTasks = previousState.tasks.filter(t => t.isInInbox === false && t.canvasPosition)
+    console.log(`🔄 [UNDO-DEBUG] Restoring ${canvasTasks.length} canvas tasks`)
 
-    // FIX: Await the async restoreState to ensure it completes before returning
-    await taskStore.restoreState(previousState)
+    // Restore tasks
+    await taskStore.restoreState(previousState.tasks)
+    console.log('🔄 [UNDO] Task store now has:', taskStore.tasks.length, 'tasks')
 
-    console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
+    // Restore groups (ISSUE-008 fix)
+    canvasStore.restoreGroups(previousState.groups)
+    console.log('🔄 [UNDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
-    // FIX: Request canvas sync to refresh Vue Flow nodes after undo
-    // This ensures deleted canvas tasks are visually restored
+    // Request canvas sync to refresh Vue Flow nodes after undo
     try {
-      const canvasStore = useCanvasStore()
       canvasStore.requestSync()
       console.log('🔄 [UNDO] Requested canvas sync after restore')
     } catch (error) {
@@ -119,27 +133,31 @@ const performUndo = async () => {
 }
 
 // FIX: Made async to properly await restoreState which is an async function
+// UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
 const performRedo = async () => {
   if (!refHistoryInstance || !unifiedState) return false
-  console.log('🔄 Executing redo with SHARED refHistory instance...')
+  console.log('🔄 Executing redo with SHARED refHistory instance (tasks + groups)...')
   refHistoryInstance.redo()
 
   // After redo, unifiedState.value now contains the next state
-  // Restore it to the task store
+  // Restore both tasks and groups
   const nextState = unifiedState.value
-  if (nextState && Array.isArray(nextState)) {
+  if (nextState && typeof nextState === 'object' && 'tasks' in nextState) {
     const taskStore = useTaskStore()
-    console.log('🔄 [VUE-REACTIVITY-FIX] Using store.restoreState for redo:', nextState.length, 'tasks')
-    console.log('🔄 [VUE-REACTIVITY-FIX] Next state sample:', nextState.slice(0, 2))
+    const canvasStore = useCanvasStore()
 
-    // FIX: Await the async restoreState to ensure it completes before returning
-    await taskStore.restoreState(nextState)
+    console.log('🔄 [REDO] Restoring:', nextState.tasks.length, 'tasks,', nextState.groups.length, 'groups')
 
-    console.log('🔄 [VUE-REACTIVITY-FIX] Task store now has:', taskStore.tasks.length, 'tasks')
+    // Restore tasks
+    await taskStore.restoreState(nextState.tasks)
+    console.log('🔄 [REDO] Task store now has:', taskStore.tasks.length, 'tasks')
 
-    // FIX: Request canvas sync to refresh Vue Flow nodes after redo
+    // Restore groups (ISSUE-008 fix)
+    canvasStore.restoreGroups(nextState.groups)
+    console.log('🔄 [REDO] Canvas store now has:', canvasStore.groups.length, 'groups')
+
+    // Request canvas sync to refresh Vue Flow nodes after redo
     try {
-      const canvasStore = useCanvasStore()
       canvasStore.requestSync()
       console.log('🔄 [REDO] Requested canvas sync after restore')
     } catch (error) {
@@ -151,6 +169,7 @@ const performRedo = async () => {
   return false
 }
 
+// UPDATED: Now saves both tasks AND groups (ISSUE-008 fix)
 const saveState = (description?: string) => {
   if (!refHistoryInstance) return false
   // FIX: Add null check for commit function to prevent silent failures
@@ -164,14 +183,17 @@ const saveState = (description?: string) => {
   }
   try {
     const taskStore = useTaskStore()
-    // FIXED: Use raw tasks, not filteredTasks to prevent state synchronization issues
-    unifiedState.value = [...taskStore.tasks]
+    const canvasStore = useCanvasStore()
 
-    // DEBUG: Log canvas tasks being saved
+    // Save combined state (tasks + groups)
+    unifiedState!.value = {
+      tasks: [...taskStore.tasks],
+      groups: [...canvasStore.groups]
+    }
+
+    // DEBUG: Log what's being saved
     const canvasTasks = taskStore.tasks.filter(t => t.isInInbox === false && t.canvasPosition)
-    console.log(`💾 [UNDO-DEBUG] Saving state with ${canvasTasks.length} canvas tasks:`,
-      canvasTasks.map(t => ({ id: t.id, title: t.title, isInInbox: t.isInInbox, canvasPosition: t.canvasPosition }))
-    )
+    console.log(`💾 [UNDO-DEBUG] Saving state: ${canvasTasks.length} canvas tasks, ${canvasStore.groups.length} groups`)
 
     commit()
     console.log(`💾 State saved: ${description || 'Operation'}. History length: ${refHistoryInstance.history.value.length}`)
@@ -252,6 +274,36 @@ const createTaskWithUndo = async (taskData: Partial<Task>) => {
   return newTask
 }
 
+// NEW: Delete group with undo support (ISSUE-008 fix)
+const deleteGroupWithUndo = async (groupId: string) => {
+  console.log('🗑️ deleteGroupWithUndo called for:', groupId)
+  const canvasStore = useCanvasStore()
+
+  const groupToDelete = canvasStore.groups.find(g => g.id === groupId)
+  if (!groupToDelete) {
+    console.warn('⚠️ Group not found for deletion:', groupId)
+    return
+  }
+
+  console.log(`🗑️ Deleting group: ${groupToDelete.name}`)
+
+  // Save state before operation
+  saveState('Before group deletion')
+
+  try {
+    // Perform the deletion
+    canvasStore.deleteGroup(groupId)
+    console.log(`✅ Group deleted. Current groups count: ${canvasStore.groups.length}`)
+
+    // Save state after operation
+    await nextTick()
+    saveState('After group deletion')
+  } catch (error) {
+    console.error('❌ deleteGroupWithUndo failed:', error)
+    throw error
+  }
+}
+
 /**
  * Get the global undo system functions that use the shared refHistory instance
  */
@@ -281,7 +333,10 @@ export function getUndoSystem() {
     // Task operations that use the shared refHistory
     deleteTaskWithUndo,
     updateTaskWithUndo,
-    createTaskWithUndo
+    createTaskWithUndo,
+
+    // Group operations with undo (ISSUE-008 fix)
+    deleteGroupWithUndo
   }
 }
 

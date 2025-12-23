@@ -2534,10 +2534,10 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~ISSUE-001~~ | ~~**Live sync lost on refresh**~~ | ~~P1-HIGH~~ | ✅ ALREADY FIXED - See CloudSyncSettings.vue lines 239, 485, 502, 519-555, 649 |
 | ~~ISSUE-002~~ | ~~**This Week shows 0 when tasks exist**~~ | ~~P2~~ | ✅ FIXED - Smart views corrected |
 | ~~ISSUE-003~~ | ~~IndexedDB version mismatch errors~~ | ~~P2~~ | ✅ FIXED Dec 20, 2025 - Individual document storage eliminates version conflicts |
-| ISSUE-004 | Safari ITP 7-day expiration | P2 | Detection exists, no mitigation |
-| ISSUE-005 | QuotaExceededError unhandled | P2 | Functions exist, not enforced |
-| ISSUE-007 | **Timer not syncing across instances** | P2-MEDIUM | Timer started in one tab should show in all open tabs/windows. **See TASK-021** for real-time cross-instance sync plan |
-| ISSUE-008 | **Ctrl+Z doesn't work on groups** | P2-MEDIUM | Undo doesn't restore deleted/modified groups on canvas |
+| ~~ISSUE-004~~ | ~~Safari ITP 7-day expiration~~ | ~~P2~~ | ✅ FIXED - Full protection in safariITPProtection.ts (detection, tracking, warnings) |
+| ~~ISSUE-005~~ | ~~QuotaExceededError unhandled~~ | ~~P2~~ | ✅ FIXED - Full handling in storageQuotaMonitor.ts + useDatabase.ts |
+| ~~ISSUE-007~~ | ~~**Timer not syncing across instances**~~ | ~~P2-MEDIUM~~ | ✅ FIXED - TASK-021 complete: Cross-tab (BroadcastChannel) + Cross-device (PouchDB changes feed) |
+| ~~ISSUE-008~~ | ~~**Ctrl+Z doesn't work on groups**~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 23, 2025 - Extended undoSingleton to track groups + tasks |
 | ISSUE-009 | **15 vue-tsc TypeScript errors** | P2-MEDIUM | Build passes but `vue-tsc` fails. See details below |
 | ISSUE-010 | **Inbox task deletion inconsistent** | P2-MEDIUM | Deleting from calendar/canvas inbox should delete everywhere, recoverable only via Ctrl+Z (like board) |
 | ~~ISSUE-011~~ | ~~**PouchDB Document Conflict Accumulation**~~ | ~~P0-CRITICAL~~ | ✅ RESOLVED Dec 20, 2025 - All 1,487 conflicts deleted |

@@ -122,7 +122,14 @@
             </div>
             <div class="slot-task-meta">
               <span class="priority-badge" :class="slot.task.priority">{{ slot.task.priority }}</span>
-              <span v-if="slot.task.estimatedDuration" class="duration">{{ slot.task.estimatedDuration }}m</span>
+              <span 
+                v-if="slot.task.estimatedDuration" 
+                class="duration"
+                :class="getDurationClass(slot.task.estimatedDuration)"
+              >
+                <component :is="getDurationIcon(slot.task.estimatedDuration)" :size="10" />
+                {{ formatDuration(slot.task.estimatedDuration) }}
+              </span>
             </div>
           </div>
         </div>
@@ -148,7 +155,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted as _onMounted, onUnmounted } from 'vue'
-import { ChevronDown, ChevronRight, Eye, Maximize2, Archive, Zap, Magnet } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Eye, Maximize2, Archive, Zap, Magnet, Timer, Clock } from 'lucide-vue-next'
 import type { CanvasSection } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
@@ -230,7 +237,8 @@ const powerModeTooltip = computed(() => {
   const categoryLabels = {
     date: 'Sets due date',
     priority: 'Sets priority',
-    status: 'Sets status'
+    status: 'Sets status',
+    duration: 'Sets duration'
   }
   return `Power Group: ${categoryLabels[powerKeyword.value.category]} to "${powerKeyword.value.displayName}"`
 })
@@ -390,6 +398,27 @@ const toggleCollectMenu = (event: MouseEvent) => {
 // Close collect menu when clicking outside
 const _closeCollectMenu = () => {
   showCollectMenu.value = false
+}
+
+// Duration Helpers
+const getDurationClass = (d: number) => {
+  if (d <= 15) return 'duration-quick'
+  if (d <= 30) return 'duration-short'
+  if (d <= 60) return 'duration-medium'
+  return 'duration-long'
+}
+
+const getDurationIcon = (d: number) => {
+  if (d <= 15) return Zap
+  if (d <= 60) return Timer
+  return Clock
+}
+
+const formatDuration = (d: number) => {
+  if (d < 60) return `${d}m`
+  const h = Math.floor(d / 60)
+  const m = d % 60
+  return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
 // Cleanup
@@ -703,7 +732,31 @@ onUnmounted(() => {
 
 .duration {
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
+}
+
+.duration-quick {
+  color: var(--green-text);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.duration-short {
+  color: var(--color-work);
+  background: var(--blue-bg-subtle);
+}
+
+.duration-medium {
+  color: var(--orange-text);
+  background: var(--orange-bg-subtle);
+}
+
+.duration-long {
+  color: var(--danger-text);
+  background: var(--danger-bg-subtle);
 }
 
 .resize-handle {

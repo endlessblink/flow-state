@@ -21,7 +21,7 @@ const createMockNodes = (count: number) => {
 
 const meta = {
   component: MultiSelectionOverlay,
-  title: '✨ Features/🎨 Canvas View/MultiSelectionOverlay',
+  title: '🎨 Canvas/MultiSelectionOverlay',
   tags: ['autodocs'],
 
   parameters: {

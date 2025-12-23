@@ -6,7 +6,7 @@ import EmojiPicker from '@/components/EmojiPicker.vue'
 
 const meta = {
   component: BaseModal,
-  title: '🎭 Overlays/🪟 Modals/BaseModal Redesign Preview',
+  title: '🪟 Modals & Dialogs/BaseModal Redesign Preview',
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',

@@ -25,6 +25,7 @@ const showCreateProject = ref(false)
 const expandedProjects = ref<string[]>([]) // For nested project expand/collapse
 const showProjectModal = ref(false)
 const editingProject = ref<Project | null>(null)
+const isDurationSectionExpanded = ref(true) // Default to expanded
 
 export function useSidebarManagement() {
   const taskStore = useTaskStore()
@@ -251,6 +252,13 @@ export function useSidebarManagement() {
     return finalCount
   })
 
+  // Duration Counts - Proxy from store
+  const quickCount = computed(() => taskStore.smartViewTaskCounts.quick)
+  const shortCount = computed(() => taskStore.smartViewTaskCounts.short)
+  const mediumCount = computed(() => taskStore.smartViewTaskCounts.medium)
+  const longCount = computed(() => taskStore.smartViewTaskCounts.long)
+  const unestimatedCount = computed(() => taskStore.smartViewTaskCounts.unestimated)
+
   // Task management methods
   const createQuickTask = async () => {
     if (newTaskTitle.value.trim()) {
@@ -342,7 +350,7 @@ export function useSidebarManagement() {
 
   const expandCurrentProject = () => {
     const currentProjectId = taskStore.activeProjectId
-    if (currentProjectId && hasProjectChildren(currentProjectId)) {
+    if (currentProjectId && hasChildren(currentProjectId)) {
       if (!expandedProjects.value.includes(currentProjectId)) {
         expandedProjects.value.push(currentProjectId)
       }
@@ -354,7 +362,7 @@ export function useSidebarManagement() {
     if (!currentProjectId) return
 
     // If project has children and is expanded, collapse it
-    if (hasProjectChildren(currentProjectId) && expandedProjects.value.includes(currentProjectId)) {
+    if (hasChildren(currentProjectId) && expandedProjects.value.includes(currentProjectId)) {
       const index = expandedProjects.value.indexOf(currentProjectId)
       expandedProjects.value.splice(index, 1)
     } else {
@@ -412,12 +420,14 @@ export function useSidebarManagement() {
     return flatten(taskStore.projects)
   }
 
-  const hasProjectChildren = (projectId: string) => {
-    return taskStore.projects.some(p => p.parentId === projectId)
+
+
+  const toggleDurationSection = () => {
+    isDurationSectionExpanded.value = !isDurationSectionExpanded.value
   }
 
-  const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active') => {
-    taskStore.setSmartView(view)
+  const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active' | 'quick' | 'short' | 'medium' | 'long' | 'unestimated') => {
+    taskStore.setSmartView(view as any)
   }
 
   // Start Quick Sort from uncategorized view
@@ -466,6 +476,7 @@ export function useSidebarManagement() {
     showProjectModal,
     editingProject,
     isMac,
+    isDurationSectionExpanded,
 
     // Computed properties
     rootProjects,
@@ -473,12 +484,18 @@ export function useSidebarManagement() {
     weekTaskCount,
     allActiveCount,
     uncategorizedCount,
+    quickCount,
+    shortCount,
+    mediumCount,
+    longCount,
+    unestimatedCount,
 
     // Task management methods
     createQuickTask,
 
     // Project navigation methods
     toggleProjectExpansion,
+    toggleDurationSection,
     selectProject,
     handleProjectTreeKeydown,
     selectSmartView,

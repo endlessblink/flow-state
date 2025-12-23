@@ -4,7 +4,7 @@ import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
 
 const meta = {
   component: CanvasContextMenu,
-  title: '🎭 Overlays/💬 Context Menus/CanvasContextMenu',
+  title: '🎨 Canvas/CanvasContextMenu',
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',

@@ -738,13 +738,15 @@ watch(() => props.tasks, () => {
   margin-bottom: 0;
   cursor: pointer;
   user-select: none;
-  background: var(--kanban-header-bg);
+  background: var(--glass-bg-medium);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
   border-radius: var(--radius-md);
-  transition: background var(--duration-fast) var(--spring-smooth);
+  transition: all var(--duration-fast) var(--spring-smooth);
   position: relative;
   width: 100%;
   box-sizing: border-box;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .swimlane-header:hover {
@@ -907,14 +909,12 @@ watch(() => props.tasks, () => {
 
 .swimlane-column {
   background: var(--kanban-column-bg);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(var(--blur-lg)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(160%);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-xl);
   padding: var(--space-3);
-  box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.5),
-    0 16px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-2xl);
   transition: all var(--duration-normal) var(--spring-smooth);
   flex: 0 0 var(--kanban-column-width) !important;
   min-width: var(--kanban-column-width) !important;
@@ -923,10 +923,8 @@ watch(() => props.tasks, () => {
 
 .swimlane-column:hover {
   background: var(--kanban-column-bg-hover);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.5),
-    0 16px 32px rgba(0, 0, 0, 0.3);
+  border-color: var(--border-interactive);
+  box-shadow: var(--shadow-2xl);
 }
 
 /* Enhanced hover state during drag operations */
@@ -955,9 +953,9 @@ watch(() => props.tasks, () => {
   justify-content: space-between;
   margin-bottom: var(--space-3);
   padding: var(--space-2) var(--space-2);
-  background: var(--kanban-header-bg);
+  background: var(--surface-hover);
   border-radius: var(--radius-md);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
   /* Todoist-inspired sticky headers */
   position: sticky;
   top: 0;

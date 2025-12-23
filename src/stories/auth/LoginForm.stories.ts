@@ -3,7 +3,7 @@ import LoginForm from '@/components/auth/LoginForm.vue'
 import { ref, h } from 'vue'
 
 const meta: Meta<typeof LoginForm> = {
-  title: 'Auth/LoginForm',
+  title: '🔐 Auth/LoginForm',
   component: LoginForm,
   tags: ['autodocs'],
   parameters: {

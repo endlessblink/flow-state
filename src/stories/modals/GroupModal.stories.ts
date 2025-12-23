@@ -4,7 +4,7 @@ import GroupModal from '@/components/GroupModal.vue'
 
 const meta = {
   component: GroupModal,
-  title: '🎭 Overlays/🪟 Modals/GroupModal',
+  title: '🪟 Modals & Dialogs/GroupModal',
   tags: ['autodocs'],
 
   parameters: {

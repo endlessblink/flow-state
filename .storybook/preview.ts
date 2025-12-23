@@ -91,9 +91,9 @@ const preview: Preview = {
   decorators: [
     (story: any) => {
       if (typeof document !== 'undefined') {
-        // Apply pure black background
-        document.documentElement.style.setProperty('background-color', '#000000', 'important')
-        document.body.style.backgroundColor = '#000000'
+        const appLayoutGradient = 'linear-gradient(135deg, hsl(220, 13%, 9%) 0%, hsl(240, 21%, 15%) 25%, hsl(250, 24%, 12%) 50%, hsl(260, 20%, 14%) 75%, hsl(220, 13%, 11%) 100%)'
+        document.documentElement.style.setProperty('background', appLayoutGradient, 'important')
+        document.body.style.background = appLayoutGradient
         document.body.style.color = '#e6edf3'
         document.documentElement.classList.add('dark-theme')
         document.documentElement.style.colorScheme = 'dark'

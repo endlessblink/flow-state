@@ -103,6 +103,7 @@
       v-model:unscheduled-only="unscheduledOnly"
       v-model:selected-priority="selectedPriority"
       v-model:selected-project="selectedProject"
+      v-model:selected-duration="selectedDuration"
       :tasks="baseInboxTasks"
       :projects="taskStore.rootProjects"
       @clear-all="clearAllFilters"
@@ -212,6 +213,7 @@ const activeTimeFilter = ref<'all' | 'now' | 'today' | 'tomorrow' | 'thisWeek' |
 const unscheduledOnly = ref(false)
 const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
 const selectedProject = ref<string | null>(null)
+const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
 
 // Context menu state
 const showContextMenu = ref(false)
@@ -296,6 +298,7 @@ const clearAllFilters = () => {
   unscheduledOnly.value = false
   selectedPriority.value = null
   selectedProject.value = null
+  selectedDuration.value = null
 }
 
 // Apply time-based filtering to inbox tasks
@@ -378,6 +381,23 @@ const inboxTasks = computed(() => {
       // Show tasks with specific project
       tasks = tasks.filter(task => task.projectId === selectedProject.value)
     }
+  }
+
+  // Apply Duration filter
+  if (selectedDuration.value !== null) {
+    tasks = tasks.filter(task => {
+      const d = task.estimatedDuration
+      if (selectedDuration.value === 'unestimated') return !d
+      if (!d) return false
+      
+      switch (selectedDuration.value) {
+        case 'quick': return d <= 15
+        case 'short': return d > 15 && d <= 30
+        case 'medium': return d > 30 && d <= 60
+        case 'long': return d > 60
+        default: return false
+      }
+    })
   }
 
   return tasks

@@ -8,7 +8,7 @@ import GoogleSignInButton from '@/components/auth/GoogleSignInButton.vue'
 import ResetPasswordViewComponent from '@/components/auth/ResetPasswordView.vue'
 
 const meta: Meta<typeof AuthModal> = {
-  title: '🎭 Overlays/🪟 Modals/Auth Modal',
+  title: '🔐 Auth/AuthModal',
   component: AuthModal,
   tags: ['autodocs'],
   parameters: {

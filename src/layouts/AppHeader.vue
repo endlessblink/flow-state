@@ -383,10 +383,9 @@ const startLongBreak = () => {
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
-              0 1px 3px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  box-shadow: var(--shadow-xl);
   pointer-events: auto;
   transition: all var(--duration-normal) var(--spring-smooth);
 }
@@ -588,7 +587,7 @@ const startLongBreak = () => {
   background: var(--state-hover-bg);
   border-color: var(--state-hover-border);
   backdrop-filter: var(--state-active-glass);
-  box-shadow: var(--state-hover-shadow);
+  box-shadow: var(--shadow-md);
 }
 
 .view-tab.active {
@@ -597,7 +596,7 @@ const startLongBreak = () => {
   border-color: var(--state-active-border);
   backdrop-filter: var(--state-active-glass);
   font-weight: var(--font-semibold);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+  box-shadow: var(--shadow-md), var(--state-hover-glow);
 }
 
 .tab-badge {

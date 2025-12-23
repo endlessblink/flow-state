@@ -4,7 +4,7 @@ import type { Project } from '@/stores/tasks'
 
 const meta = {
   component: ProjectModal,
-  title: '🎭 Overlays/🪟 Modals/ProjectModal',
+  title: '🪟 Modals & Dialogs/ProjectModal',
   tags: ['autodocs'],
 
   parameters: {

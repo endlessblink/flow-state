@@ -151,15 +151,15 @@
   --kanban-breakpoint-lg: 75rem;                  /* 1200px - Large breakpoint */
   --kanban-breakpoint-md: 62.5rem;                /* 1000px - Medium breakpoint */
 
-  /* Kanban background colors - adjust these for visual hierarchy */
-  --kanban-bg: hsl(0, 0%, 0%);                    /* Base black - master token */
-  --kanban-swimlane-bg: var(--kanban-bg);         /* Swimlane container background */
-  --kanban-column-bg: var(--kanban-bg);           /* Column card background */
-  --kanban-column-bg-hover: var(--kanban-bg);     /* Column hover state */
-  --kanban-header-bg: var(--kanban-bg);           /* Column headers (Planned, In Progress, etc.) */
-  --kanban-drag-area-bg: var(--kanban-bg);        /* Drag area between cards */
-  --kanban-scroll-container-bg: var(--kanban-bg); /* Scroll container background */
-  --kanban-badge-bg: var(--kanban-bg);            /* Count badges (1, 2, 3...) */
+  /* Kanban background colors - Glassy updates */
+  --kanban-bg: transparent;                       /* Base black - master token */
+  --kanban-swimlane-bg: transparent;              /* Swimlane container background */
+  --kanban-column-bg: var(--glass-bg-medium);     /* Column card background */
+  --kanban-column-bg-hover: var(--glass-bg-heavy);/* Column hover state */
+  --kanban-header-bg: var(--surface-hover);       /* Column headers */
+  --kanban-drag-area-bg: transparent;             /* Drag area between cards */
+  --kanban-scroll-container-bg: transparent;      /* Scroll container background */
+  --kanban-badge-bg: var(--glass-bg-heavy);       /* Count badges */
 
   /* ===== TASKCARD STATUS ICON COLORS ===== */
   /* Planned status (blue) */

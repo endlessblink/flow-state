@@ -4,7 +4,7 @@ import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
 
 const meta = {
   component: QuickTaskCreateModal,
-  title: '🧩 Components/🔧 UI/QuickTaskCreateModal',
+  title: '🪟 Modals & Dialogs/QuickTaskCreateModal',
   tags: ['autodocs'],
 
   parameters: {

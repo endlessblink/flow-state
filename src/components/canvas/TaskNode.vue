@@ -84,8 +84,14 @@
       <span v-if="showSchedule && hasSchedule" class="schedule-badge" title="Scheduled">
         📅
       </span>
-      <span v-if="showDuration && task?.estimatedDuration" class="duration-badge">
-        {{ task.estimatedDuration }}m
+      <span
+        v-if="showDuration && task?.estimatedDuration"
+        class="duration-badge"
+        :class="durationBadgeClass"
+        :title="`Duration: ${formattedDuration}`"
+      >
+        <component :is="durationIcon" :size="12" />
+        {{ formattedDuration }}
       </span>
     </div>
 
@@ -116,7 +122,7 @@
 <script setup lang="ts">
 import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
-import { Calendar, Timer } from 'lucide-vue-next'
+import { Calendar, Timer, Zap, Clock, HelpCircle } from 'lucide-vue-next'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
@@ -319,6 +325,30 @@ const _handleDragEnd = () => {
   // Call the global endDrag from composable
   endDrag()
 }
+
+// Duration Badge Logic
+const durationBadgeClass = computed(() => {
+  const d = props.task?.estimatedDuration || 0
+  if (d <= 15) return 'duration-quick'
+  if (d <= 30) return 'duration-short'
+  if (d <= 60) return 'duration-medium'
+  return 'duration-long'
+})
+
+const durationIcon = computed(() => {
+  const d = props.task?.estimatedDuration || 0
+  if (d <= 15) return Zap
+  if (d <= 60) return Timer
+  return Clock
+})
+
+const formattedDuration = computed(() => {
+  const d = props.task?.estimatedDuration || 0
+  if (d < 60) return `${d}m`
+  const h = Math.floor(d / 60)
+  const m = d % 60
+  return m > 0 ? `${h}h ${m}m` : `${h}h`
+})
 </script>
 
 <style scoped>
@@ -798,6 +828,32 @@ body.dragging-active .task-node .vue-flow__handle {
   backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
+}
+
+.duration-badge.duration-quick {
+  color: var(--green-text);
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.duration-badge.duration-short {
+  color: var(--color-work);
+  background: var(--blue-bg-subtle);
+  border: 1px solid var(--blue-border-light);
+}
+
+.duration-badge.duration-medium {
+  color: var(--orange-text);
+  background: var(--orange-bg-subtle);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.duration-badge.duration-long {
+  color: var(--danger-text);
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border-light);
+}
+.duration-badge {
   font-weight: var(--font-medium);
   box-shadow: 0 2px 4px var(--shadow-subtle);
   white-space: nowrap;

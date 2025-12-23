@@ -3,7 +3,7 @@ import InboxPanel from '@/components/canvas/InboxPanel.vue'
 
 const meta = {
   component: InboxPanel,
-  title: '🧩 Components/🎨 Canvas/InboxPanel',
+  title: '🎨 Canvas/InboxPanel',
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',

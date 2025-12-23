@@ -170,7 +170,6 @@
                   </option>
                 </select>
               </div>
-
               <!-- Project -->
               <div class="form-group compact">
                 <label class="form-label">Project</label>
@@ -180,6 +179,31 @@
                   </option>
                   <option v-for="project in projects" :key="project.id" :value="project.id">
                     {{ project.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Duration -->
+              <div class="form-group compact">
+                <label class="form-label">Duration</label>
+                <select v-model="smartSettings.estimatedDuration" class="form-select">
+                  <option :value="null">
+                    Don't change
+                  </option>
+                  <option :value="15">
+                    Quick (<15m)
+                  </option>
+                  <option :value="30">
+                    Short (15-30m)
+                  </option>
+                  <option :value="60">
+                    Medium (30-60m)
+                  </option>
+                  <option :value="120">
+                    Long (>60m)
+                  </option>
+                  <option :value="-1">
+                    Unestimated
                   </option>
                 </select>
               </div>
@@ -276,7 +300,8 @@ const smartSettings = reactive<AssignOnDropSettings>({
   priority: null,
   status: null,
   dueDate: null,
-  projectId: null
+  projectId: null,
+  estimatedDuration: null
 })
 
 const customColor = ref('#6366f1')
@@ -287,7 +312,7 @@ const isEditing = computed(() => !!props.group)
 const projects = computed(() => taskStore.projects || [])
 
 const hasSmartSettings = computed(() => {
-  return smartSettings.priority || smartSettings.status || smartSettings.dueDate || smartSettings.projectId
+  return smartSettings.priority || smartSettings.status || smartSettings.dueDate || smartSettings.projectId || smartSettings.estimatedDuration !== null
 })
 
 const settingsPreview = computed(() => {
@@ -339,6 +364,13 @@ const handleNameInput = () => {
       case 'status':
         smartSettings.status = keyword.value as AssignOnDropSettings['status']
         break
+      case 'duration':
+        if (keyword.value === 'quick') smartSettings.estimatedDuration = 15
+        else if (keyword.value === 'short') smartSettings.estimatedDuration = 30
+        else if (keyword.value === 'medium') smartSettings.estimatedDuration = 60
+        else if (keyword.value === 'long') smartSettings.estimatedDuration = 120
+        else if (keyword.value === 'unestimated') smartSettings.estimatedDuration = -1 // Use -1 as internal sentinel for unestimated in modal
+        break
     }
   }
 }
@@ -355,6 +387,7 @@ const clearSmartSettings = () => {
   smartSettings.status = null
   smartSettings.dueDate = null
   smartSettings.projectId = null
+  smartSettings.estimatedDuration = null
 }
 
 const inferGroupType = (): CanvasGroup['type'] => {
@@ -363,7 +396,8 @@ const inferGroupType = (): CanvasGroup['type'] => {
     smartSettings.priority,
     smartSettings.status,
     smartSettings.dueDate,
-    smartSettings.projectId
+    smartSettings.projectId,
+    smartSettings.estimatedDuration !== null
   ].filter(Boolean).length
 
   if (settingsCount === 0) return 'custom'
@@ -373,6 +407,7 @@ const inferGroupType = (): CanvasGroup['type'] => {
   if (smartSettings.status) return 'status'
   if (smartSettings.dueDate) return 'timeline'
   if (smartSettings.projectId) return 'project'
+  if (smartSettings.estimatedDuration !== null) return 'custom' // Or create a 'duration' type if preferred
 
   return 'custom'
 }
@@ -386,6 +421,9 @@ const saveGroup = () => {
   if (smartSettings.status) assignOnDrop.status = smartSettings.status
   if (smartSettings.dueDate) assignOnDrop.dueDate = smartSettings.dueDate
   if (smartSettings.projectId) assignOnDrop.projectId = smartSettings.projectId
+  if (smartSettings.estimatedDuration !== null) {
+    assignOnDrop.estimatedDuration = smartSettings.estimatedDuration === -1 ? null : smartSettings.estimatedDuration
+  }
 
   if (isEditing.value && props.group) {
     // Update existing group
@@ -451,6 +489,12 @@ watch(() => props.group, (newGroup) => {
       smartSettings.status = newGroup.assignOnDrop.status || null
       smartSettings.dueDate = newGroup.assignOnDrop.dueDate || null
       smartSettings.projectId = newGroup.assignOnDrop.projectId || null
+      // Load duration, mapping null (unestimated) to -1 for the dropdown sentinel
+      if (newGroup.assignOnDrop.estimatedDuration === null) {
+        smartSettings.estimatedDuration = -1
+      } else {
+        smartSettings.estimatedDuration = newGroup.assignOnDrop.estimatedDuration || null
+      }
 
       // Show smart settings if any are configured
       if (Object.keys(newGroup.assignOnDrop).length > 0) {

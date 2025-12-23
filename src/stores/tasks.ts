@@ -781,6 +781,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const activeProjectId = ref<string | null>(null) // null = show all projects
   const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null>(null)
   const activeStatusFilter = ref<string | null>(null) // null = show all statuses, 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
+  const activeDurationFilter = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
   const hideDoneTasks = ref(false) // Global setting to hide done tasks across all views (disabled by default to show completed tasks for logging)
 
   // Filter persistence
@@ -1466,6 +1467,7 @@ export const useTaskStore = defineStore('tasks', () => {
       console.log('🚨 TaskStore.filteredTasks: activeProjectId:', activeProjectId.value)
       console.log('🚨 TaskStore.filteredTasks: activeSmartView:', activeSmartView.value)
       console.log('🚨 TaskStore.filteredTasks: activeStatusFilter:', activeStatusFilter.value)
+      console.log('🚨 TaskStore.filteredTasks: activeDurationFilter:', activeDurationFilter.value)
       console.log('🚨 TaskStore.filteredTasks: hideDoneTasks:', hideDoneTasks.value)
 
       // Log all tasks with their basic info
@@ -1491,10 +1493,10 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     // NEW ARCHITECTURE: Filters are applied SEQUENTIALLY and can be COMBINED
-    // Order: Smart View → Project → Status → Hide Done
+    // Order: Smart View → Project → Status → Duration → Hide Done
 
     // Step 1: Apply smart view filter FIRST (if active)
-    const { applySmartViewFilter, isUncategorizedTask } = useSmartViews()
+    const { applySmartViewFilter, isUncategorizedTask, isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
 
     // Step 1: Apply smart view filter FIRST (if active)
     if (activeSmartView.value) {
@@ -1521,12 +1523,30 @@ export const useTaskStore = defineStore('tasks', () => {
       }
     }
 
-    // Apply status filter (NEW GLOBAL STATUS FILTER)
+    // Step 3: Apply status filter (NEW GLOBAL STATUS FILTER)
     if (activeStatusFilter.value) {
       filtered = filtered.filter(task => task.status === activeStatusFilter.value)
     }
 
-    // Apply done task visibility based on user preference
+    // Step 4: Apply duration filter (NEW GLOBAL DURATION FILTER)
+    if (activeDurationFilter.value) {
+      const beforeDurationFilter = filtered.length
+      filtered = filtered.filter(t => {
+        switch (activeDurationFilter.value) {
+          case 'quick': return isQuickTask(t)
+          case 'short': return isShortTask(t)
+          case 'medium': return isMediumTask(t)
+          case 'long': return isLongTask(t)
+          case 'unestimated': return isUnestimatedTask(t)
+          default: return true
+        }
+      })
+      if (shouldLogTaskDiagnostics()) {
+        console.log(`🔧 TaskStore.filteredTasks: Duration filter enabled - removed ${beforeDurationFilter - filtered.length} tasks, ${filtered.length} remaining`)
+      }
+    }
+
+    // Step 5: Apply done task visibility based on user preference
     if (hideDoneTasks.value) {
       const beforeHideDone = filtered.length
       filtered = filtered.filter(task => task.status !== 'done')
@@ -1611,6 +1631,17 @@ export const useTaskStore = defineStore('tasks', () => {
             // Apply status filter to nested tasks
             if (activeStatusFilter.value && task.status !== activeStatusFilter.value) return false
 
+            // Apply duration filter to nested tasks
+            if (activeDurationFilter.value) {
+              switch (activeDurationFilter.value) {
+                case 'quick': if (!isQuickTask(task)) return false; break;
+                case 'short': if (!isShortTask(task)) return false; break;
+                case 'medium': if (!isMediumTask(task)) return false; break;
+                case 'long': if (!isLongTask(task)) return false; break;
+                case 'unestimated': if (!isUnestimatedTask(task)) return false; break;
+              }
+            }
+
             // Apply global done task exclusion to nested tasks
             if (task.status === 'done') return false
 
@@ -1654,10 +1685,49 @@ export const useTaskStore = defineStore('tasks', () => {
   })
 
   // Filtered tasks that have canvas positions (for Canvas view with sidebar filters)
+  let lastFilteredTasksWithCanvasPosition: Task[] = []
+  let lastFilteredTasksWithCanvasPositionHash: string = ''
+
   const filteredTasksWithCanvasPosition = computed(() => {
-    return filteredTasks.value.filter(task => task.canvasPosition &&
+    const currentTasks = filteredTasks.value.filter(task => task.canvasPosition &&
       typeof task.canvasPosition.x === 'number' &&
       typeof task.canvasPosition.y === 'number')
+
+    const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}`).join('|')
+
+    // Check if we need to re-filter based on active canvas filters
+    if (activeStatusFilter.value || activeDurationFilter.value) {
+      // We always re-filter if there's an active canvas filter
+      // Force update regardless of hash if filters changed (handled by computed dependencies activeStatusFilter/activeDurationFilter)
+    } else if (currentHash === lastFilteredTasksWithCanvasPositionHash && lastFilteredTasksWithCanvasPosition.length > 0) {
+      return lastFilteredTasksWithCanvasPosition
+    }
+
+    lastFilteredTasksWithCanvasPositionHash = currentHash
+
+    // Apply canvas-specific filters (Status & Duration)
+    let filtered = [...currentTasks]
+
+    if (activeStatusFilter.value) {
+      filtered = filtered.filter(t => t.status === activeStatusFilter.value)
+    }
+
+    if (activeDurationFilter.value) {
+      const { isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
+      filtered = filtered.filter(t => {
+        switch (activeDurationFilter.value) {
+          case 'quick': return isQuickTask(t)
+          case 'short': return isShortTask(t)
+          case 'medium': return isMediumTask(t)
+          case 'long': return isLongTask(t)
+          case 'unestimated': return isUnestimatedTask(t)
+          default: return true
+        }
+      })
+    }
+
+    lastFilteredTasksWithCanvasPosition = filtered
+    return filtered
   })
 
   const totalTasks = computed(() => tasks.value.filter(task => task.status !== 'done').length)
@@ -1761,6 +1831,18 @@ export const useTaskStore = defineStore('tasks', () => {
 
         // Apply status filter if active
         if (activeStatusFilter.value && task.status !== activeStatusFilter.value) return false
+
+        // Apply duration filter if active
+        if (activeDurationFilter.value) {
+          const { isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
+          switch (activeDurationFilter.value) {
+            case 'quick': if (!isQuickTask(task)) return false; break;
+            case 'short': if (!isShortTask(task)) return false; break;
+            case 'medium': if (!isMediumTask(task)) return false; break;
+            case 'long': if (!isLongTask(task)) return false; break;
+            case 'unestimated': if (!isUnestimatedTask(task)) return false; break;
+          }
+        }
 
         // Calendar inbox: show if not on calendar grid (ignore canvas state)
         return isNotOnCalendar
@@ -1873,6 +1955,21 @@ export const useTaskStore = defineStore('tasks', () => {
     // Apply status filter if active
     if (activeStatusFilter.value) {
       projectTasks = projectTasks.filter(task => task.status === activeStatusFilter.value)
+    }
+
+    // Apply duration filter if active
+    if (activeDurationFilter.value) {
+      const { isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
+      projectTasks = projectTasks.filter(t => {
+        switch (activeDurationFilter.value) {
+          case 'quick': return isQuickTask(t)
+          case 'short': return isShortTask(t)
+          case 'medium': return isMediumTask(t)
+          case 'long': return isLongTask(t)
+          case 'unestimated': return isUnestimatedTask(t)
+          default: return true
+        }
+      })
     }
 
     // Apply hideDoneTasks if enabled
@@ -2594,6 +2691,10 @@ export const useTaskStore = defineStore('tasks', () => {
     console.log('🔧 TaskStore: Setting status filter from:', activeStatusFilter.value, 'to:', status)
 
     activeStatusFilter.value = status
+    // Clear duration filter when setting status
+    if (status) {
+      activeDurationFilter.value = null
+    }
     persistFilters()
 
     console.log('🔧 TaskStore: Status filter updated to:', activeStatusFilter.value)
@@ -2611,6 +2712,35 @@ export const useTaskStore = defineStore('tasks', () => {
     setActiveStatusFilter(newFilter)
 
     console.log('🔧 TaskStore: toggleStatusFilter completed successfully')
+  }
+
+  // Global duration filter management
+  const setActiveDurationFilter = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null) => {
+    console.log('🔧 TaskStore: setActiveDurationFilter called!')
+    console.log('🔧 TaskStore: Setting duration filter from:', activeDurationFilter.value, 'to:', duration)
+
+    activeDurationFilter.value = duration
+    // Clear status filter when setting duration
+    if (duration) {
+      activeStatusFilter.value = null
+    }
+    persistFilters()
+
+    console.log('🔧 TaskStore: Duration filter updated to:', activeDurationFilter.value)
+    console.log('🔧 TaskStore: setActiveDurationFilter completed successfully')
+  }
+
+  const toggleDurationFilter = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated') => {
+    console.log('🔧 TaskStore: toggleDurationFilter called!')
+    console.log('🔧 TaskStore: Toggling duration filter for:', duration)
+    console.log('🔧 TaskStore: Current duration filter:', activeDurationFilter.value)
+
+    // If clicking the same filter that's already active, clear it
+    // Otherwise, set the new filter
+    const newFilter = activeDurationFilter.value === duration ? null : duration
+    setActiveDurationFilter(newFilter)
+
+    console.log('🔧 TaskStore: toggleDurationFilter completed successfully')
   }
 
   const setProjectViewType = (projectId: string, viewType: Project['viewType']) => {
@@ -3041,7 +3171,6 @@ export const useTaskStore = defineStore('tasks', () => {
           const result = undoHistory.updateTaskWithUndo(taskId, updates)
           console.log('✅ Task updated with undo successfully')
           console.log(`✅ Undo count after update: ${undoHistory.undoCount.value}`)
-          console.log(`✅ Can undo: ${undoHistory.canUndo.value}`)
 
           return result
         } catch (error) {

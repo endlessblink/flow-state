@@ -1,7 +1,7 @@
 # Pomo-Flow Task Board
 
-**Last Updated**: December 5, 2025
-**Source**: Extracted from MASTER_PLAN.md
+**Last Updated**: December 23, 2025
+**Source**: Synced with MASTER_PLAN.md
 
 ## 📋 To Do
 
@@ -10,80 +10,46 @@
 **Tags**: #sync #couchdb
 **Created**: 2025-12-05
 Prerequisites: Test sync from both devices, verify tasks on both sides, run 5-10 successful manual syncs.
-
-### TASK-002 | Calendar Ghost Preview Fix
-**Priority**: MEDIUM
-**Tags**: #calendar #bug
-**Created**: 2025-12-04
-Ghost preview appears in wrong location during drag operations.
-
-### TASK-003 | Calendar Resize Artifacts Fix
-**Priority**: HIGH
-**Tags**: #calendar #bug
-**Created**: 2025-12-04
-Visual glitches appear during calendar event resize operations.
-
-### TASK-004 | Calendar Resize Both Sides Fix
-**Priority**: HIGH
-**Tags**: #calendar #bug
-**Created**: 2025-12-04
-Resize only works on one side, should work on both.
+**Status**: Roadmap item ROAD-005
 
 ### TASK-005 | Safari ITP Protection
 **Priority**: CRITICAL
 **Tags**: #data-safety #safari
 **Created**: 2025-12-04
 Safari ITP deletes IndexedDB data after 7 days. Need warning toast and manual sync button.
+**Status**: ISSUE-004 - Detection exists, no mitigation yet
 
 ### TASK-006 | QuotaExceededError Handling
 **Priority**: CRITICAL
 **Tags**: #data-safety #error
 **Created**: 2025-12-04
 App crashes when storage full. Need graceful error catch and quota display.
-
-### TASK-007 | PouchDB Conflict Detection
-**Priority**: HIGH
-**Tags**: #data-safety #sync
-**Created**: 2025-12-04
-Add conflicts:true to db.get(), log conflicts, show warning banner.
-
-### TASK-008 | Calendar System Consolidation
-**Priority**: MEDIUM
-**Tags**: #tech-debt #calendar
-**Created**: 2025-12-01
-Unify 6 calendar files into single useCalendar() composable. 180+ conflicts.
+**Status**: ISSUE-005 - Functions exist, not enforced
 
 ### TASK-009 | Drag-and-Drop Unification
 **Priority**: MEDIUM
 **Tags**: #tech-debt #dnd
 **Created**: 2025-12-01
 Create unified useDraggable() for 18 D&D implementations. 150+ conflicts.
+**Status**: Roadmap item ROAD-007
 
 ### TASK-010 | Database Layer Consolidation
 **Priority**: MEDIUM
 **Tags**: #tech-debt #database
 **Created**: 2025-12-01
 Consolidate 574 database conflicts into unified data access layer.
+**Status**: Roadmap item ROAD-007
 
 ### TASK-011 | Validation System Standardization
 **Priority**: LOW
 **Tags**: #tech-debt #validation
 **Created**: 2025-12-01
 Consolidate 4,199 validation conflicts into unified framework.
+**Status**: Roadmap item ROAD-007
 
 ## 🚀 In Progress
 
-### TASK-012 | IndexedDB Version Mismatch Fix
-**Priority**: MEDIUM
-**Tags**: #database #bug
-**Created**: 2025-12-01
-Database version mismatch error needs proper migration handling.
-
-### TASK-013 | Manual CouchDB Sync Testing
-**Priority**: HIGH
-**Tags**: #sync #testing
-**Created**: 2025-12-05
-Manual sync working on Linux. Need to test on second device.
+*(No tasks currently in progress from this legacy board)*
 
 ## 👀 Review
 
@@ -94,6 +60,62 @@ Manual sync working on Linux. Need to test on second device.
 Strategic minimum complete. 116 files deferred for organic migration.
 
 ## ✅ Done
+
+### TASK-002 | Calendar Ghost Preview Fix
+**Priority**: MEDIUM
+**Tags**: #calendar #bug
+**Created**: 2025-12-04
+**Completed**: 2025-12-02
+Ghost preview appears in wrong location during drag operations.
+**Resolution**: BUG-009 FIXED - SOP verified
+
+### TASK-003 | Calendar Resize Artifacts Fix
+**Priority**: HIGH
+**Tags**: #calendar #bug
+**Created**: 2025-12-04
+**Completed**: 2025-12-19
+Visual glitches appear during calendar event resize operations.
+**Resolution**: BUG-010 VERIFIED WORKING
+
+### TASK-004 | Calendar Resize Both Sides Fix
+**Priority**: HIGH
+**Tags**: #calendar #bug
+**Created**: 2025-12-04
+**Completed**: 2025-12-19
+Resize only works on one side, should work on both.
+**Resolution**: BUG-011 VERIFIED WORKING
+
+### TASK-007 | PouchDB Conflict Detection
+**Priority**: HIGH
+**Tags**: #data-safety #sync
+**Created**: 2025-12-04
+**Completed**: 2025-12-20
+Add conflicts:true to db.get(), log conflicts, show warning banner.
+**Resolution**: ISSUE-011 RESOLVED - All 1,487 conflicts deleted
+
+### TASK-008 | Calendar System Consolidation
+**Priority**: MEDIUM
+**Tags**: #tech-debt #calendar
+**Created**: 2025-12-01
+**Completed**: 2025-12-05
+Unify 6 calendar files into single useCalendar() composable.
+**Resolution**: TASK-005 in MASTER_PLAN archive - Phase 2 complete
+
+### TASK-012 | IndexedDB Version Mismatch Fix
+**Priority**: MEDIUM
+**Tags**: #database #bug
+**Created**: 2025-12-01
+**Completed**: 2025-12-20
+Database version mismatch error needs proper migration handling.
+**Resolution**: Individual document storage eliminates version conflicts
+
+### TASK-013 | Manual CouchDB Sync Testing
+**Priority**: HIGH
+**Tags**: #sync #testing
+**Created**: 2025-12-05
+**Completed**: 2025-12-22
+Manual sync working on Linux. Need to test on second device.
+**Resolution**: Live sync enabled and verified across devices
 
 ### TASK-100 | Canvas Auto-Update Fix
 **Priority**: CRITICAL

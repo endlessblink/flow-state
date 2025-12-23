@@ -44,7 +44,7 @@ const meta = {
         })
         return {}
       },
-      template: '<div style="width: 100%; height: 100vh; padding: 16px; background: #1a1b2e; font-family: sans-serif;"><story /></div>'
+      template: '<div style="width: 100%; height: 100vh; padding: 16px; background: var(--app-background-gradient); font-family: sans-serif;"><story /></div>'
     })
   ]
 } satisfies Meta<typeof KanbanColumn>

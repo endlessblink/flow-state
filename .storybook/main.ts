@@ -25,7 +25,7 @@ const config: StorybookConfig = {
           ...config.resolve?.alias,
           '@': fileURLToPath(new URL('../src', import.meta.url))
         },
-        dedupe: ['vue', 'pinia'],
+        dedupe: ['vue', 'pinia', 'vue-router'],
       },
     }
   },

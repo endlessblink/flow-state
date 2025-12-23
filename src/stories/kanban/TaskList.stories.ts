@@ -1,4 +1,4 @@
-import TaskList from '@/components/kanban/TaskList.vue'
+import TaskList from '@/components/TaskList.vue'
 
 const meta = {
   title: '📊 Kanban/TaskList',
@@ -6,7 +6,17 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'padded',
-  }
+  },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 24px; background: var(--app-background-gradient); border-radius: 12px; min-height: 200px;">
+          <story />
+        </div>
+      `
+    })
+  ],
 }
 
 export default meta

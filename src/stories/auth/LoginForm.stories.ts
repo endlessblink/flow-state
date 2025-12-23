@@ -18,7 +18,7 @@ const meta: Meta<typeof LoginForm> = {
     () => ({
       template: `
         <div class="login-form-story-container" style="
-          background: var(--glass-bg-solid);
+          background: var(--app-background-gradient);
           height: 600px;
           width: 100%;
           position: relative;

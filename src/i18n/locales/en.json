@@ -53,13 +53,16 @@
     "duplicate": "Duplicate Project"
   },
   "settings": {
-    "general": "General",
+    "general": "General Settings",
     "appearance": "Appearance",
     "language": "Language",
     "direction": "Text Direction",
-    "ltr": "Left to Right (LTR)",
-    "rtl": "Right to Left (RTL)",
-    "auto": "Auto-detect"
+    "ltr": "LTR",
+    "ltrDescription": "Left to right text direction",
+    "rtl": "RTL",
+    "rtlDescription": "Right to left text direction",
+    "auto": "Auto",
+    "autoDescription": "Automatically detect from language"
   },
   "auth": {
     "login": {

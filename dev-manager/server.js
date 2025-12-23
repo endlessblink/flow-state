@@ -114,6 +114,7 @@ function updateTaskProperty(content, taskId, property, value) {
   const lines = content.split('\n');
   let updated = false;
   let inTargetSection = false;  // Track if we're in the target task's section
+  let foundPriorityLines = [];  // Debug: track all priority lines found
 
   // Patterns for different task ID formats
   const taskIdPattern = taskId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -124,11 +125,18 @@ function updateTaskProperty(content, taskId, property, value) {
     // Check if we're entering a new task section (any ### TASK-XXX header)
     const anyTaskHeader = line.match(/^### (?:~~)?([A-Z]+-\d+)(?:~~)?:/);
     if (anyTaskHeader) {
+      const wasInTarget = inTargetSection;
       // Check if this is OUR target task
       inTargetSection = anyTaskHeader[1] === taskId;
+      if (inTargetSection) {
+        console.log(`[updateTaskProperty] FOUND target section at line ${i}: "${line.substring(0, 60)}..."`);
+      }
     }
     // Also reset on major section dividers
     if (line.startsWith('## ') || line === '---') {
+      if (inTargetSection) {
+        console.log(`[updateTaskProperty] EXITED target section at line ${i}: "${line.substring(0, 40)}"`);
+      }
       inTargetSection = false;
     }
 
@@ -181,12 +189,19 @@ function updateTaskProperty(content, taskId, property, value) {
     }
 
     // Update **Priority**: line within task section (only if we're in the target task)
+    // Check for any line containing **Priority** for debugging
+    if (line.includes('**Priority**')) {
+      foundPriorityLines.push({ lineNum: i, line: line.substring(0, 50), inTargetSection });
+    }
+
     if (line.startsWith('**Priority**:') && property === 'priority' && inTargetSection) {
+      console.log(`[updateTaskProperty] UPDATING priority at line ${i}: "${line}" -> "**Priority**: ${value}"`);
       lines[i] = `**Priority**: ${value}`;
       updated = true;
     }
   }
 
+  console.log(`[updateTaskProperty] Result: updated=${updated}, foundPriorityLines=`, JSON.stringify(foundPriorityLines));
   return lines.join('\n');
 }
 

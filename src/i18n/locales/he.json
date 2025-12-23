@@ -53,13 +53,16 @@
     "duplicate": "שכפל פרויקט"
   },
   "settings": {
-    "general": "כללי",
+    "general": "הגדרות כלליות",
     "appearance": "מראה",
     "language": "שפה",
     "direction": "כיוון טקסט",
-    "ltr": "משמאל לימין (LTR)",
-    "rtl": "מימין לשמאל (RTL)",
-    "auto": "זיהוי אוטומטי"
+    "ltr": "LTR",
+    "ltrDescription": "כיוון טקסט משמאל לימין",
+    "rtl": "RTL",
+    "rtlDescription": "כיוון טקסט מימין לשמאל",
+    "auto": "אוטומטי",
+    "autoDescription": "זיהוי אוטומטי לפי שפה"
   },
   "auth": {
     "login": {

@@ -148,8 +148,9 @@
 </template>
 
 <script setup lang="ts">
+// TASK-045: Migrated from useSimpleBackup to useBackupSystem (Dec 23, 2025)
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useSimpleBackup } from '@/composables/useSimpleBackup'
+import { backupSystem, type BackupData as BackupSystemData } from '@/composables/useBackupSystem'
 import { useTaskStore } from '@/stores/tasks'
 import { filterMockTasks } from '@/utils/mockTaskDetector'
 import { ForensicLogger as _ForensicLogger } from '@/utils/forensicBackupLogger'
@@ -166,7 +167,6 @@ interface VerificationResult {
   recommendations?: string[]
 }
 
-const { getLatestBackup, createBackup } = useSimpleBackup
 const taskStore = useTaskStore()
 
 // Reactive state
@@ -274,8 +274,8 @@ const runVerification = async () => {
     const mockDetectionResult = filterMockTasks(tasks, { confidence: 'medium' })
     const mockTasksCount = mockDetectionResult.mockTasks.length
 
-    // Create backup for verification
-    const _backup = await createBackup()
+    // Create backup for verification using unified backup system
+    const _backup = await backupSystem.createBackup() as BackupSystemData | null
 
     // Run forensic verification
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -388,7 +388,7 @@ const generateRecommendations = (mockTasks: number, totalTasks: number): string[
 
 const checkBackupAvailability = async () => {
   try {
-    const backup = getLatestBackup()
+    const backup = backupSystem.getLatestBackup() as BackupSystemData | null
     isBackupAvailable.value = !!backup && !!backup.tasks
   } catch (_error) {
     isBackupAvailable.value = false

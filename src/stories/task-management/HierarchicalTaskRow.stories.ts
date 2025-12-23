@@ -48,7 +48,7 @@ const meta = {
                 ]
                 return {}
             },
-            template: '<div style="max-width: 800px; margin: 0 auto;"><story /></div>'
+            template: '<div style="padding: 40px; background: var(--app-background-gradient); min-height: 100vh;"><div style="max-width: 800px; margin: 0 auto;"><story /></div></div>'
         })
     ],
     argTypes: {

@@ -6,7 +6,17 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
-  }
+  },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px; min-width: 400px;">
+          <story />
+        </div>
+      `
+    })
+  ],
 }
 
 export default meta

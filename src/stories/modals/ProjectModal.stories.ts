@@ -17,8 +17,9 @@ const meta = {
   },
 
   decorators: [
-    () => ({
-      template: '<div style="min-height: 100vh; background: #0a0a0f;"><story /></div>',
+    (story: any) => ({
+      components: { story },
+      template: '<div style="min-height: 100vh; background: var(--app-background-gradient);"><story /></div>',
     }),
   ],
 } satisfies Meta<typeof ProjectModal>

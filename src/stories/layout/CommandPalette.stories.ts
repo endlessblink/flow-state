@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import CommandPalette from '@/components/CommandPalette.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
 
 // Mock the task store for Storybook
 const mockTaskStore = {
@@ -33,23 +34,33 @@ const meta = {
     },
     // Provide mocked store to component
     vue3: {
-      beforeMount(app) {
+      beforeMount(app: any) {
         app.config.globalProperties.$taskStore = mockTaskStore
         app.provide('taskStore', mockTaskStore)
       }
     }
   },
-  argTypes: {
-    // Component uses methods (open/close) instead of props for visibility
-  }
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      setup() {
+        // Apply background to body for Teleport support
+        onMounted(() => {
+          document.body.style.background = 'var(--app-background-gradient)'
+          document.body.style.minHeight = '100vh'
+        })
+      },
+      template: '<story />'
+    })
+  ],
 } satisfies Meta<typeof CommandPalette>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  render: (args) => ({
-    components: { CommandPalette },
+  render: (args: any) => ({
+    components: { CommandPalette, BaseButton },
     setup() {
       const commandPaletteRef = ref()
       const isOpen = ref(true)
@@ -62,16 +73,17 @@ export const Default: Story = {
       return { args, commandPaletteRef, isOpen, openCommandPalette }
     },
     template: `
-      <div style="position: relative; width: 100vw; height: 100vh; background: #0f0f0f; padding: 40px;">
+      <div style="position: relative; width: 100%; height: 100vh; padding: 40px;">
         <div style="text-align: center; color: white;">
           <h1>Command Palette Demo</h1>
           <p style="margin-bottom: 20px;">Click the button below or press Cmd+K (Ctrl+K) to open the command palette</p>
-          <button
+          <BaseButton
+            variant="secondary"
+            size="lg"
             @click="openCommandPalette"
-            style="padding: 12px 24px; background: #374151; color: white; border: none; border-radius: 8px; cursor: pointer;"
           >
             Open Command Palette (Cmd+K)
-          </button>
+          </BaseButton>
         </div>
 
         <CommandPalette
@@ -84,7 +96,7 @@ export const Default: Story = {
 }
 
 export const WithPreOpened: Story = {
-  render: (args) => ({
+  render: (args: any) => ({
     components: { CommandPalette },
     setup() {
       const commandPaletteRef = ref()
@@ -97,7 +109,7 @@ export const WithPreOpened: Story = {
       return { args, commandPaletteRef }
     },
     template: `
-      <div style="position: relative; width: 100vw; height: 100vh; background: #0f0f0f;">
+      <div style="position: relative; width: 100%; height: 100vh;">
         <CommandPalette
           ref="commandPaletteRef"
           v-bind="args"
@@ -108,8 +120,8 @@ export const WithPreOpened: Story = {
 }
 
 export const IntegrationExample: Story = {
-  render: (args) => ({
-    components: { CommandPalette },
+  render: (args: any) => ({
+    components: { CommandPalette, BaseButton },
     setup() {
       const commandPaletteRef = ref()
       const tasks = ref([
@@ -125,21 +137,22 @@ export const IntegrationExample: Story = {
       return { args, commandPaletteRef, tasks, openCommandPalette }
     },
     template: `
-      <div style="position: relative; width: 100vw; height: 100vh; background: #0f0f0f; padding: 40px;">
+      <div style="position: relative; width: 100%; height: 100vh; padding: 40px;">
         <div style="max-width: 800px; margin: 0 auto;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <h1 style="color: white; margin: 0;">Task Management</h1>
-            <button
+            <BaseButton
+              variant="secondary"
+              size="sm"
               @click="openCommandPalette"
-              style="padding: 8px 16px; background: #374151; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
             >
               + Quick Add (Cmd+K)
-            </button>
+            </BaseButton>
           </div>
 
-          <div style="background: #1a1a1a; border-radius: 8px; padding: 20px;">
+          <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-radius: 8px; padding: 20px;">
             <h2 style="color: white; margin-top: 0;">Today's Tasks</h2>
-            <div v-for="task in tasks" :key="task.id" style="background: #2d2d2d; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+            <div v-for="task in tasks" :key="task.id" style="background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 6px; margin-bottom: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
               <span style="color: white;">{{ task.title }}</span>
               <span style="color: #9ca3af; margin-left: 10px; font-size: 12px;">{{ task.status }}</span>
             </div>

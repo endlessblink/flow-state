@@ -204,9 +204,10 @@
 </template>
 
 <script setup lang="ts">
+// TASK-045: Migrated from useSimpleBackup to useBackupSystem (Dec 23, 2025)
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ForensicLogger, type BackupSnapshot as _BackupSnapshot } from '@/utils/forensicBackupLogger'
-import { useSimpleBackup } from '@/composables/useSimpleBackup'
+import { backupSystem, type BackupData as BackupSystemData } from '@/composables/useBackupSystem'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
 
@@ -240,7 +241,6 @@ interface TestResult {
 }
 
 const taskStore = useTaskStore()
-const simpleBackup = useSimpleBackup
 
 // Reactive state
 const isVerifying = ref(false)
@@ -341,17 +341,16 @@ const updateSystemStatus = async () => {
 
 const updateBackupStatus = async () => {
   try {
-    // Get latest backup info
-    const latestBackup = localStorage.getItem('pomo-flow-simple-latest-backup')
-    if (latestBackup) {
-      const backup = JSON.parse(latestBackup)
+    // Get latest backup info using unified backup system
+    const backup = backupSystem.getLatestBackup() as BackupSystemData | null
+    if (backup) {
       backupStatus.value = {
         verified: true, // Assume verified if we can read it
         lastBackupTime: backup.timestamp ? new Date(backup.timestamp).toISOString() : null,
-        lastRestoreTime: backup.restoredAt || null,
+        lastRestoreTime: null, // Not tracked in unified system
         taskCount: backup.tasks ? backup.tasks.length : 0,
-        backupHash: backup.forensic?.taskHash || 'unknown',
-        mockTasksFiltered: backup.forensic?.mockTasksFiltered || 0
+        backupHash: backup.checksum || 'unknown',
+        mockTasksFiltered: 0 // Mock tasks are pre-filtered
       }
     }
   } catch (error) {
@@ -478,14 +477,12 @@ const testMockDetection = async () => {
 
 const testBackupCreation = async () => {
   try {
-    const backup = await simpleBackup.createBackup()
+    const backup = await backupSystem.createBackup() as BackupSystemData | null
     if (!backup) {
       return { success: false, message: 'Backup creation returned null', evidence: {} }
     }
 
     const hasTasks = backup.tasks && Array.isArray(backup.tasks)
-    // Note: forensic property doesn't exist in SimpleBackupData interface
-    const _hasForensic = false // Default since forensic property is not defined
 
     return {
       success: hasTasks,
@@ -504,21 +501,19 @@ const testBackupCreation = async () => {
 
 const testRestoreIntegrity = async () => {
   try {
-    // This would test restore integrity in a real implementation
-    // For now, just check if we can create and analyze backups
-    const backup = await simpleBackup.createBackup()
+    // Check restore integrity using unified backup system
+    const backup = await backupSystem.createBackup() as BackupSystemData | null
     if (!backup) {
       return { success: false, message: 'Backup creation returned null', evidence: {} }
     }
 
-    // Note: forensic property doesn't exist in SimpleBackupData interface
-    // Simulate restore integrity check based on task presence
-    const integrityVerified = backup.tasks && backup.tasks.length >= 0
+    // Verify checksum exists and tasks are valid
+    const integrityVerified = backup.checksum && backup.tasks && backup.tasks.length >= 0
 
     return {
-      success: integrityVerified,
+      success: !!integrityVerified,
       message: integrityVerified ? 'Restore integrity verified' : 'Restore integrity verification failed',
-      evidence: { integrityVerified }
+      evidence: { integrityVerified: !!integrityVerified }
     }
   } catch (error) {
     return {

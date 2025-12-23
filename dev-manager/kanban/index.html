@@ -1711,7 +1711,8 @@
             continue;
           }
 
-          // Parse TASK- headers in Active Work OR Technical Debt (archive) sections
+          // Parse TASK- headers in Active Work section ONLY
+          // Skip archive/Technical Debt section - those are historical completed tasks
           // Handle strikethrough markers (~~) for completed tasks - use (?:~~)? to match 0 or 2 tildes
           // Regex explanation:
           // ^###             - Start with ### header
@@ -1720,7 +1721,7 @@
           // (?:.*?)          - Non-greedy match for any chars (emojis like ✅, 🔴, text like "BUG:")
           // ((?:TASK|BUG|ISSUE)-\d+) - CAPTURE GROUP 1: The ID itself
           // (?:~~)?          - Optional strikethrough end
-          if ((currentSection === 'activeWork' || currentSection === 'archive') && trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE)-\d+)(?:~~)?/)) {
+          if (currentSection === 'activeWork' && trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE)-\d+)(?:~~)?/)) {
             // Save previous task's subtasks before starting new one
             if (currentItem && currentItem.id?.match(/^(?:TASK|BUG|ISSUE)-/)) {
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
@@ -1781,7 +1782,7 @@
                 id: match[1],
                 title: match[2].trim(),
                 status: status,
-                priority: 'P1',
+                priority: '', // Will be set by **Priority**: line if present
                 section: 'activeWork',
                 description: '',
                 subtasks: [],
@@ -1793,12 +1794,28 @@
 
           // Capture description content (Goal, Priority, Design Reference, etc.)
           // Lines that are NOT bullets, tables, or headers go into description
-          if ((currentSection === 'activeWork' || currentSection === 'archive') && currentItem && trimmed) {
+          if (currentSection === 'activeWork' && currentItem && trimmed) {
             const isBullet = trimmed.startsWith('- ');
             const isTable = trimmed.startsWith('|');
             const isHeader = trimmed.startsWith('###') || trimmed.startsWith('##');
             const isHorizontalRule = trimmed === '---';
             const isComment = trimmed.startsWith('<!--');
+
+            // Extract **Priority**: line as the task's priority (don't add to description)
+            if (trimmed.startsWith('**Priority**:')) {
+              const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
+              if (taskIdx >= 0) {
+                const priorityValue = trimmed.replace('**Priority**:', '').trim();
+                // Extract just the priority code (P1, P2, P3) with optional level
+                const priorityMatch = priorityValue.match(/^(P[0-3](?:-(?:CRITICAL|HIGH|MEDIUM|LOW))?)/i);
+                if (priorityMatch) {
+                  data.activeWork[taskIdx].priority = priorityMatch[1].toUpperCase();
+                } else {
+                  data.activeWork[taskIdx].priority = priorityValue;
+                }
+              }
+              continue; // Don't add priority line to description
+            }
 
             // Capture description text (Goal, Priority, Design Reference, etc.)
             if (!isBullet && !isTable && !isHeader && !isHorizontalRule && !isComment) {
@@ -1816,7 +1833,7 @@
           // Parse ONLY checkbox-style bullet points as subtasks
           // Regular informational bullets (like file lists) are ignored
           // Format: - [ ] incomplete or - [x] complete
-          if ((currentSection === 'activeWork' || currentSection === 'archive') && currentItem && trimmed.startsWith('- ')) {
+          if (currentSection === 'activeWork' && currentItem && trimmed.startsWith('- ')) {
             // Only count checkbox-style bullets as actual subtasks
             const isCheckbox = trimmed.match(/^- \[[x ]\]/i);
 
@@ -1833,7 +1850,7 @@
           }
 
           // Parse table rows as subtasks (for step tables like | 1 | Description | DONE |)
-          if ((currentSection === 'activeWork' || currentSection === 'archive') && currentItem && trimmed.startsWith('|') && !trimmed.includes('---')) {
+          if (currentSection === 'activeWork' && currentItem && trimmed.startsWith('|') && !trimmed.includes('---')) {
             // Skip header rows (contain "Step" or "Description" or "Status")
             const isHeaderRow = trimmed.toLowerCase().includes('| step') ||
               trimmed.toLowerCase().includes('| description') ||
@@ -2084,16 +2101,15 @@
         // Log TASK-033 specifically
         const task033 = data.activeWork.find(t => t.id === 'TASK-033');
         if (task033) {
-          console.log('[renderKanban] TASK-033 status:', task033.status, 'progress:', task033.progress);
+          console.log('[renderKanban] TASK-033 status:', task033.status, 'priority:', task033.priority, 'progress:', task033.progress);
         }
 
-        // Combine all tasks into kanban columns (including roadmap items!)
+        // Combine active tasks into kanban columns
+        // (Roadmap items have their own dedicated Roadmap tab)
         const allItems = [
           ...data.activeWork,
           ...data.bugs,
-          ...data.issues,
-          ...data.roadmap.nearTerm,
-          ...data.roadmap.later
+          ...data.issues
         ];
 
         const tasks = {

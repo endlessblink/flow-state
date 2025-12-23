@@ -28,7 +28,7 @@ const meta = {
     (story: () => object) => ({
       components: { story },
       template: `
-        <div style="min-height: 100vh; width: 100%; padding: 40px; background: var(--glass-bg-solid);">
+        <div style="min-height: 100vh; width: 100%; padding: 40px; background: var(--app-background-gradient);">
           <story />
         </div>
       `

@@ -660,6 +660,9 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // CRITICAL: IMMEDIATE LOAD PROJECTS FROM POUCHDB ON STORE INITIALIZATION
   const loadProjectsFromPouchDB = async () => {
+    // BUG-032 FIX: Set flag to prevent auto-save during load (prevents project deletion)
+    isLoadingFromDatabase = true
+
     try {
       console.log('📂 Loading projects from PouchDB on store init...')
 
@@ -698,10 +701,9 @@ export const useTaskStore = defineStore('tasks', () => {
       }
 
       if (!loadedProjects) {
-        console.log('ℹ️ No projects in PouchDB, creating and saving default project')
-        // Save default project to database
-        await db.save(DB_KEYS.PROJECTS, projects.value)
-        console.log('💾 Default project saved to database')
+        // BUG-032 FIX: Don't save empty projects.value - this would overwrite any existing data
+        // If no projects loaded, just leave projects.value as empty array without persisting
+        console.log('ℹ️ No projects in PouchDB - starting with empty projects array')
         return
       }
 
@@ -722,14 +724,15 @@ export const useTaskStore = defineStore('tasks', () => {
         projects.value = filteredProjects
         console.log(`✅ Loaded ${projects.value.length} projects from PouchDB (after "My Tasks" migration)`)
       } else {
-        console.log('ℹ️ No projects in PouchDB, saving default project')
-        // Save default project to database
-        await db.save(DB_KEYS.PROJECTS, projects.value)
-        console.log('💾 Default project saved to database')
+        // BUG-032 FIX: Don't save empty projects.value - this would overwrite any existing data
+        console.log('ℹ️ No projects loaded (empty array from database) - keeping empty state')
       }
     } catch (error) {
       console.error('❌ Failed to load projects from PouchDB:', error)
       // Keep default projects on error
+    } finally {
+      // BUG-032 FIX: Always reset flag after load attempt
+      isLoadingFromDatabase = false
     }
   }
 

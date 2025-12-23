@@ -4,65 +4,75 @@ import BasePopover from '@/components/base/BasePopover.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 
 const meta = {
-    title: '🧩 Primitives/BasePopover',
-    component: BasePopover,
-    parameters: {
-        layout: 'centered',
-        docs: {
-            description: {
-                component: 'Low-level popover component with glass morphism styling, used as a foundation for dropdowns, menus, and tooltips.'
-            }
-        }
-    },
-    argTypes: {
-        isVisible: {
-            control: 'boolean',
-            description: 'Whether the popover is visible'
-        },
-        variant: {
-            control: 'select',
-            options: ['menu', 'tooltip', 'dropdown'],
-            description: 'Visual variant of the popover'
-        },
-        position: {
-            control: 'select',
-            options: ['auto', 'top', 'bottom', 'left', 'right'],
-            description: 'Preferred position relative to anchor'
-        }
-    },
-    args: {
-        isVisible: false,
-        variant: 'menu',
-        position: 'auto',
-        x: 0,
-        y: 0
+  title: '🧩 Primitives/BasePopover',
+  component: BasePopover,
+  parameters: {
+    layout: 'centered',
+    docs: {
+      description: {
+        component: 'Low-level popover component with glass morphism styling, used as a foundation for dropdowns, menus, and tooltips.'
+      }
     }
+  },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 100px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; min-width: 400px; min-height: 200px;">
+          <story />
+        </div>
+      `
+    })
+  ],
+  argTypes: {
+    isVisible: {
+      control: 'boolean',
+      description: 'Whether the popover is visible'
+    },
+    variant: {
+      control: 'select',
+      options: ['menu', 'tooltip', 'dropdown'],
+      description: 'Visual variant of the popover'
+    },
+    position: {
+      control: 'select',
+      options: ['auto', 'top', 'bottom', 'left', 'right'],
+      description: 'Preferred position relative to anchor'
+    }
+  },
+  args: {
+    isVisible: false,
+    variant: 'menu',
+    position: 'auto',
+    x: 0,
+    y: 0
+  }
 } satisfies Meta<typeof BasePopover>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Interactive: Story = {
-    render: (args) => ({
-        components: { BasePopover, BaseButton },
-        setup() {
-            const isVisible = ref(false)
-            const buttonRef = ref<HTMLElement | null>(null)
-            const popoverX = ref(0)
-            const popoverY = ref(0)
+  render: (args) => ({
+    components: { BasePopover, BaseButton },
+    setup() {
+      const isVisible = ref(false)
+      const buttonRef = ref<HTMLElement | null>(null)
+      const popoverX = ref(0)
+      const popoverY = ref(0)
 
-            const togglePopover = () => {
-                if (buttonRef.value) {
-                    const rect = buttonRef.value.getBoundingClientRect()
-                    popoverX.value = rect.left + rect.width / 2
-                    popoverY.value = rect.bottom
-                }
-                isVisible.value = !isVisible.value
-            }
+      const togglePopover = () => {
+        if (buttonRef.value) {
+          const rect = buttonRef.value.getBoundingClientRect()
+          popoverX.value = rect.left + rect.width / 2
+          popoverY.value = rect.bottom
+        }
+        isVisible.value = !isVisible.value
+      }
 
-            return { args, isVisible, togglePopover, buttonRef, popoverX, popoverY }
-        },
-        template: `
+      return { args, isVisible, togglePopover, buttonRef, popoverX, popoverY }
+    },
+    template: `
       <div>
         <BaseButton ref="buttonRef" @click="togglePopover">
           Toggle Popover
@@ -84,25 +94,25 @@ export const Interactive: Story = {
         </BasePopover>
       </div>
     `
-    })
+  })
 }
 
 export const TooltipVariant: Story = {
-    args: {
-        variant: 'tooltip',
-        isVisible: true,
-        x: 100,
-        y: 100
+  args: {
+    variant: 'tooltip',
+    isVisible: true,
+    x: 100,
+    y: 100
+  },
+  render: (args) => ({
+    components: { BasePopover },
+    setup() {
+      return { args }
     },
-    render: (args) => ({
-        components: { BasePopover },
-        setup() {
-            return { args }
-        },
-        template: `
+    template: `
       <BasePopover v-bind="args">
         Tooltip content
       </BasePopover>
     `
-    })
+  })
 }

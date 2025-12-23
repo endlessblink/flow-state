@@ -4,47 +4,63 @@ import SidebarSmartItem from '@/components/SidebarSmartItem.vue'
 import { Calendar, Inbox, List, Clock, Zap } from 'lucide-vue-next'
 
 const meta = {
-    component: SidebarSmartItem,
-    title: '🏢 Layout/SidebarSmartItem',
-    tags: ['autodocs'],
-    parameters: {
-        layout: 'centered',
-        docs: {
-            description: {
-                component: 'A unified smart filter item for the sidebar, supporting glassmorphism, drag-and-drop targets, and various color themes.'
-            }
-        }
+  component: SidebarSmartItem,
+  title: '🏢 Layout/SidebarSmartItem',
+  tags: ['autodocs'],
+  parameters: {
+    layout: 'centered',
+    backgrounds: {
+      default: 'dark',
+      values: [
+        { name: 'dark', value: '#0f172a' }, // Approximates the gradient for docs view
+      ],
     },
-    argTypes: {
-        active: { control: 'boolean' },
-        count: { control: 'number' },
-        compact: { control: 'boolean' },
-        color: {
-            control: 'select',
-            options: ['green', 'purple', 'gray', 'orange', 'blue', 'azure', 'azure-dark']
-        },
-        dropType: {
-            control: 'select',
-            options: ['date', 'duration', 'status']
-        },
-        dropValue: { control: 'text' }
+    docs: {
+      description: {
+        component: 'A unified smart filter item for the sidebar, supporting glassmorphism, drag-and-drop targets, and various color themes.'
+      }
     }
+  },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 100px; background: var(--app-background-gradient); min-height: 300px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+          <story />
+        </div>
+      `
+    })
+  ],
+  argTypes: {
+    active: { control: 'boolean' },
+    count: { control: 'number' },
+    compact: { control: 'boolean' },
+    color: {
+      control: 'select',
+      options: ['green', 'purple', 'gray', 'orange', 'blue', 'azure', 'azure-dark']
+    },
+    dropType: {
+      control: 'select',
+      options: ['date', 'duration', 'status']
+    },
+    dropValue: { control: 'text' }
+  }
 } satisfies Meta<typeof SidebarSmartItem>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-    args: {
-        active: false,
-        count: 5,
-        color: 'azure',
-        compact: false
-    },
-    render: (args) => ({
-        components: { SidebarSmartItem, Calendar },
-        setup() { return { args } },
-        template: `
+  args: {
+    active: false,
+    count: 5,
+    color: 'azure',
+    compact: false
+  },
+  render: (args: any) => ({
+    components: { SidebarSmartItem, Calendar },
+    setup() { return { args } },
+    template: `
       <div style="width: 300px; padding: 20px;">
         <SidebarSmartItem v-bind="args">
           <template #icon><Calendar :size="16" /></template>
@@ -52,18 +68,18 @@ export const Default: Story = {
         </SidebarSmartItem>
       </div>
     `
-    })
+  })
 }
 
 export const Active: Story = {
-    args: {
-        ...Default.args,
-        active: true
-    },
-    render: (args) => ({
-        components: { SidebarSmartItem, Calendar },
-        setup() { return { args } },
-        template: `
+  args: {
+    ...Default.args,
+    active: true
+  },
+  render: (args: any) => ({
+    components: { SidebarSmartItem, Calendar },
+    setup() { return { args } },
+    template: `
       <div style="width: 300px; padding: 20px;">
         <SidebarSmartItem v-bind="args">
           <template #icon><Calendar :size="16" /></template>
@@ -71,18 +87,18 @@ export const Active: Story = {
         </SidebarSmartItem>
       </div>
     `
-    })
+  })
 }
 
 export const Compact: Story = {
-    args: {
-        ...Default.args,
-        compact: true
-    },
-    render: (args) => ({
-        components: { SidebarSmartItem, Calendar },
-        setup() { return { args } },
-        template: `
+  args: {
+    ...Default.args,
+    compact: true
+  },
+  render: (args: any) => ({
+    components: { SidebarSmartItem, Calendar },
+    setup() { return { args } },
+    template: `
       <div style="width: 300px; padding: 20px;">
         <SidebarSmartItem v-bind="args">
           <template #icon><Calendar :size="14" /></template>
@@ -90,13 +106,13 @@ export const Compact: Story = {
         </SidebarSmartItem>
       </div>
     `
-    })
+  })
 }
 
 export const AllColors: Story = {
-    render: () => ({
-        components: { SidebarSmartItem, Calendar, Inbox, List, Clock, Zap },
-        template: `
+  render: () => ({
+    components: { SidebarSmartItem, Calendar, Inbox, List, Clock, Zap },
+    template: `
       <div style="display: grid; grid-template-columns: repeat(2, 240px); gap: 16px; padding: 20px;">
         <SidebarSmartItem color="azure" :active="true" :count="3">
           <template #icon><Calendar :size="14" /></template>
@@ -128,18 +144,18 @@ export const AllColors: Story = {
         </SidebarSmartItem>
       </div>
     `
-    })
+  })
 }
 
 export const InteractiveDragging: Story = {
-    render: () => ({
-        components: { SidebarSmartItem, List },
-        setup() {
-            const isDragging = ref(false)
-            return { isDragging }
-        },
-        template: `
-      <div style="width: 300px; padding: 20px;">
+  render: () => ({
+    components: { SidebarSmartItem, List },
+    setup() {
+      const isDragging = ref(false)
+      return { isDragging }
+    },
+    template: `
+      <div style="width: 340px; padding: 40px; background: var(--app-background-gradient);">
         <div 
           draggable="true" 
           @dragstart="isDragging = true" 
@@ -164,5 +180,5 @@ export const InteractiveDragging: Story = {
         </p>
       </div>
     `
-    })
+  })
 }

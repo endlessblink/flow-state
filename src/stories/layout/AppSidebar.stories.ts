@@ -35,7 +35,7 @@ const meta = {
 
                 return {}
             },
-            template: '<div style="height: 100vh; display: flex;"><story /></div>'
+            template: '<div style="height: 100vh; display: flex; background: var(--app-background-gradient);"><story /></div>'
         })
     ]
 } satisfies Meta<typeof AppSidebar>
@@ -73,7 +73,7 @@ export const ManyProjects: Story = {
                 taskStore.projects = projects
                 return {}
             },
-            template: '<div style="height: 100vh; display: flex;"><story /></div>'
+            template: '<div style="height: 100vh; display: flex; background: var(--app-background-gradient);"><story /></div>'
         })
     ],
     render: () => ({

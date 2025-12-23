@@ -1,17 +1,12 @@
-<!--
-TODO: RESTORE I18N - This component has hardcoded English due to Vue i18n error
-Originally: const { t } = useI18n()
-Error: "Unexpected return type in composer" at line 89:33
-Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
--->
+<!-- TASK-040: i18n restored Dec 23, 2025 -->
 <template>
   <div class="login-form">
     <div class="form-header">
       <h2 class="form-title">
-        Sign In
+        {{ $t('auth.login.title', 'Sign In') }}
       </h2>
       <p class="form-subtitle">
-        Welcome back to your productivity hub
+        {{ $t('auth.login.subtitle', 'Welcome back! Sign in to access your tasks') }}
       </p>
     </div>
 
@@ -26,8 +21,8 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
       <BaseInput
         v-model="email"
         type="email"
-        label="Email"
-        placeholder="Enter your email"
+        :label="$t('auth.login.email', 'Email')"
+        :placeholder="$t('auth.login.emailPlaceholder', 'Enter your email')"
         required
         :disabled="isLoading"
         data-testid="email-input"
@@ -40,8 +35,8 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
         <BaseInput
           v-model="password"
           :type="showPassword ? 'text' : 'password'"
-          label="Password"
-          placeholder="Enter your password"
+          :label="$t('auth.login.password', 'Password')"
+          :placeholder="$t('auth.login.passwordPlaceholder', 'Enter your password')"
           required
           :disabled="isLoading"
           data-testid="password-input"
@@ -71,7 +66,7 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
           :disabled="isLoading"
           @click="$emit('forgotPassword', email)"
         >
-          Forgot Password?
+          {{ $t('auth.login.forgotPassword', 'Forgot password?') }}
         </button>
       </div>
 
@@ -85,12 +80,12 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
         class="submit-button"
         data-testid="login-button"
       >
-        {{ isLoading ? 'Signing In...' : 'Sign In' }}
+        {{ isLoading ? $t('auth.login.signingIn', 'Signing In...') : $t('auth.login.signIn', 'Sign In') }}
       </BaseButton>
 
       <!-- Divider -->
       <div class="divider">
-        <span>or</span>
+        <span>{{ $t('auth.login.or', 'or') }}</span>
       </div>
 
       <!-- Google Sign-In (will be separate component) -->
@@ -99,7 +94,7 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
       <!-- Sign Up Link -->
       <div class="form-footer">
         <span class="footer-text">
-          Don't have an account?
+          {{ $t('auth.login.noAccount', "Don't have an account?") }}
         </span>
         <button
           type="button"
@@ -107,7 +102,7 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
           :disabled="isLoading"
           @click="$emit('switchToSignup')"
         >
-          Sign Up
+          {{ $t('auth.login.signUp', 'Sign Up') }}
         </button>
       </div>
     </form>

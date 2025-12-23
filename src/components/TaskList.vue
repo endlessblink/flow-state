@@ -165,12 +165,14 @@ defineExpose({
 .task-list {
   display: flex;
   flex-direction: column;
-  background-color: var(--glass-bg-solid);
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   contain: layout style; /* Performance optimization */
-}
+  box-shadow: var(--shadow-xl);
 
 .project-group {
   border-bottom: 1px solid var(--glass-border);
@@ -185,14 +187,15 @@ defineExpose({
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background-color: var(--glass-bg-medium);
+  background-color: var(--glass-bg-soft);
   border-bottom: 1px solid var(--glass-border);
   cursor: pointer;
-  transition: background-color var(--duration-fast) ease;
+  transition: all var(--duration-fast) ease;
 }
 
 .project-header:hover {
   background-color: var(--glass-bg-medium);
+  transform: translateX(4px);
 }
 
 .project-expand-icon {

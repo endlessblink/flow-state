@@ -338,10 +338,13 @@ onUnmounted(() => {
 .task-table {
   display: flex;
   flex-direction: column;
-  background-color: var(--glass-bg-solid);
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--blur-regular));
+  -webkit-backdrop-filter: blur(var(--blur-regular));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 .table-header {

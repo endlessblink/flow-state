@@ -5,8 +5,20 @@ const meta = {
     component: CanvasGroup,
     tags: ['autodocs'],
     parameters: {
-        layout: 'padded',
-    }
+        layout: 'fullscreen',
+    },
+    decorators: [
+        (story: any) => ({
+            components: { story },
+            template: `
+        <div style="min-height: 500px; width: 100%; padding: 40px; background: var(--app-background-gradient); display: flex; align-items: center; justify-content: center;">
+          <div style="position: relative; width: 400px; height: 300px;">
+            <story />
+          </div>
+        </div>
+      `
+        })
+    ],
 }
 
 export default meta

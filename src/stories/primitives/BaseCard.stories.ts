@@ -13,6 +13,16 @@ const meta = {
             }
         }
     },
+    decorators: [
+        (story: any) => ({
+            components: { story },
+            template: `
+        <div style="padding: 100px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+          <story />
+        </div>
+      `
+        })
+    ],
     argTypes: {
         variant: {
             control: 'select',
@@ -111,7 +121,7 @@ export const GlassVariant: Story = {
             return { args }
         },
         template: `
-      <div style="background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%); padding: 40px; border-radius: 12px;">
+      <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px;">
         <BaseCard v-bind="args" style="width: 400px;">
           <h3 style="color: white; margin-bottom: 8px;">Glass Highlight</h3>
           <p style="color: white; opacity: 0.8;">The glass variant adds an inset highlight that works best on colorful backgrounds.</p>

@@ -12,6 +12,16 @@ const meta = {
             }
         }
     },
+    decorators: [
+        (story: any) => ({
+            components: { story },
+            template: `
+        <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+          <story />
+        </div>
+      `
+        })
+    ],
     argTypes: {
         variant: {
             control: 'select',

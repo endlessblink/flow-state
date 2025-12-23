@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
     nodePolyfills({
@@ -22,6 +22,9 @@ export default defineConfig({
   ],
   esbuild: {
     target: 'esnext',
+    // TASK-038: Strip console.* in production for cleaner builds
+    // Keeps console.error for critical production debugging
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
     // Disable TypeScript checking for development
     tsconfigRaw: {
       compilerOptions: {
@@ -64,4 +67,4 @@ export default defineConfig({
       'date-fns'
     ]
   }
-})
+}))

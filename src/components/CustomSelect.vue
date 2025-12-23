@@ -276,7 +276,7 @@ watch(isOpen, (newVal) => {
   z-index: 9999;
 
   /* Glass morphism - transparent with blur (matches BasePopover) */
-  background: rgba(20, 20, 20, 0.95);
+  background: rgba(20, 20, 20, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 

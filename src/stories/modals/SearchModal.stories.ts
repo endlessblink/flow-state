@@ -5,8 +5,18 @@ const meta = {
   component: SearchModal,
   tags: ['autodocs'],
   parameters: {
-    layout: 'centered',
-  }
+    layout: 'fullscreen',
+  },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient);">
+          <story />
+        </div>
+      `
+    })
+  ],
 }
 
 export default meta

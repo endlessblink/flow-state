@@ -57,7 +57,7 @@ html, body, #app {
   padding: 0;
   width: 100%;
   height: 100%;
-  background: var(--surface-primary);
+  background: var(--app-background-gradient);
   color: var(--text-primary);
   overflow: hidden;
 }

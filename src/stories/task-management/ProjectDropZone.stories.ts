@@ -56,7 +56,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 400px;">
+      <div style="padding: 40px; min-height: 400px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Project Drop Zone</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Drag and drop zone for task organization</p>
 
@@ -160,7 +160,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px;">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Interactive Drop Zone Demo</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Drag tasks to different project drop zones</p>
 

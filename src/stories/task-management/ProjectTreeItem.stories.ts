@@ -79,7 +79,7 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 400px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 400px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Project Tree Item</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Interactive project tree component</p>
 
@@ -190,7 +190,7 @@ export const NestedProjects: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 500px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 500px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Nested Project Tree</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Multi-level project hierarchy</p>
 
@@ -297,7 +297,7 @@ export const ProjectStates: Story = {
       return { projectStates }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Project States</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Different project statuses and progress</p>
 

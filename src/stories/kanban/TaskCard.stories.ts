@@ -22,7 +22,7 @@ const meta = {
         return {}
       },
       template: `
-        <div style="padding: 40px; background: #1a1b2e; border-radius: 12px; min-width: 350px;">
+        <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px; min-width: 350px;">
           <story />
         </div>
       `

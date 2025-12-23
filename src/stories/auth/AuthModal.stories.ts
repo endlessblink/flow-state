@@ -23,7 +23,7 @@ const meta: Meta<typeof AuthModal> = {
     () => ({
       template: `
         <div class="auth-modal-story-container" style="
-          background: var(--surface-primary);
+          background: var(--app-background-gradient);
           height: 850px;
           width: 100%;
           position: relative;

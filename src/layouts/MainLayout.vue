@@ -55,14 +55,7 @@ defineExpose({
 
 <style scoped>
 .app-layout {
-  background: linear-gradient(
-    135deg,
-    hsl(220, 13%, 9%) 0%,
-    hsl(240, 21%, 15%) 25%,
-    hsl(250, 24%, 12%) 50%,
-    hsl(260, 20%, 14%) 75%,
-    hsl(220, 13%, 11%) 100%
-  );
+  background: var(--app-background-gradient);
   width: 100vw;
   height: 100vh;
   min-height: 100vh;

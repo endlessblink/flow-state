@@ -1,15 +1,10 @@
-<!--
-TODO: RESTORE I18N - This component has hardcoded English due to Vue i18n error
-Originally: const { t } = useI18n()
-Error: "Unexpected return type in composer" at line 5
-Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
--->
+<!-- TASK-040: i18n restored Dec 23, 2025 -->
 <template>
   <div class="language-settings">
     <!-- Language Selection -->
     <div class="setting-group">
       <h3 class="setting-title">
-        Language
+        {{ $t('settings.language', 'Language') }}
       </h3>
       <div class="language-options">
         <button
@@ -31,7 +26,7 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
     <!-- Text Direction -->
     <div class="setting-group">
       <h3 class="setting-title">
-        Text Direction
+        {{ $t('settings.direction', 'Text Direction') }}
       </h3>
       <div class="direction-options">
         <button
@@ -61,7 +56,7 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
     <!-- Current Status -->
     <div class="setting-group">
       <h3 class="setting-title">
-        General Settings
+        {{ $t('settings.general', 'General Settings') }}
       </h3>
       <div class="status-info">
         <div class="status-item">
@@ -83,9 +78,12 @@ Fix by: Nov 22, 2025 (see docs/tech-debt/i18n-bypass-nov15.md)
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
+
+const { t } = useI18n()
 
 interface Language {
   code: 'en' | 'he'
@@ -113,20 +111,20 @@ const currentLanguage = computed(() => uiStore.currentLanguage as Language)
 const directionOptions = computed<DirectionOption[]>(() => [
   {
     value: 'auto',
-    label: 'Auto',
-    description: 'Automatically detect from language',
+    label: t('settings.auto', 'Auto'),
+    description: t('settings.autoDescription', 'Automatically detect from language'),
     icon: ChevronLeft
   },
   {
     value: 'ltr',
-    label: 'LTR',
-    description: 'Left to right text direction',
+    label: t('settings.ltr', 'LTR'),
+    description: t('settings.ltrDescription', 'Left to right text direction'),
     icon: ChevronLeft
   },
   {
     value: 'rtl',
-    label: 'RTL',
-    description: 'Right to left text direction',
+    label: t('settings.rtl', 'RTL'),
+    description: t('settings.rtlDescription', 'Right to left text direction'),
     icon: ChevronRight
   }
 ])
@@ -134,7 +132,7 @@ const directionOptions = computed<DirectionOption[]>(() => [
 // Current direction label
 const currentDirectionLabel = computed(() => {
   const option = directionOptions.value.find(opt => opt.value === directionPreference.value)
-  return option?.label || 'Auto'
+  return option?.label || t('settings.auto', 'Auto')
 })
 
 // Auto-detection status

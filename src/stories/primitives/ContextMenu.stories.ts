@@ -4,9 +4,8 @@ import ContextMenu from '@/components/ContextMenu.vue'
 import type { ContextMenuItem } from '@/components/ContextMenu.vue'
 
 const meta = {
-  title: 'PLACEHOLDER',
-  component: ContextMenu,
   title: '🧩 Primitives/ContextMenu',
+  component: ContextMenu,
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
@@ -63,7 +62,7 @@ export const Default = {
       return { isVisible, items, handleClose, menuX, menuY, Edit, Copy, Trash2 }
     },
     template: `
-      <div style="min-height: 400px; background: #0a0a0a; padding: 40px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div style="min-height: 400px; background: var(--app-background-gradient); padding: 40px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
         <div style="margin-bottom: 20px; text-align: center;">
           <h3 style="color: #e5e5e5; margin: 0 0 8px 0;">Basic Context Menu</h3>
           <p style="color: #a3a3a3; margin: 0;">The ContextMenu component centered in the viewport</p>

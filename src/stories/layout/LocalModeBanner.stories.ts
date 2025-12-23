@@ -16,6 +16,6 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
     render: () => ({
         components: { LocalModeBanner },
-        template: '<LocalModeBanner />'
+        template: '<div style="width: 100vw; height: 100vh; background: var(--app-background-gradient);"><LocalModeBanner /></div>'
     })
 }

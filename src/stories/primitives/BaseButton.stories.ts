@@ -52,7 +52,7 @@ export const Default: Story = {
       return { args }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); border-radius: 12px;">
+      <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px;">
         <BaseButton v-bind="args">Button</BaseButton>
       </div>
     `,
@@ -64,7 +64,7 @@ export const AllVariants: Story = {
   render: () => ({
     components: { BaseButton },
     template: `
-      <div style="padding: 40px; min-height: 400px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 400px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">BaseButton Variants</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">All button variants with stroke-only design (no fills)</p>
 
@@ -125,7 +125,7 @@ export const States: Story = {
   render: () => ({
     components: { BaseButton },
     template: `
-      <div style="padding: 40px; min-height: 300px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 300px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Button States</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Different interaction states</p>
 
@@ -160,7 +160,7 @@ export const IconButtons: Story = {
   render: () => ({
     components: { BaseButton },
     template: `
-      <div style="padding: 40px; min-height: 300px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 300px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Icon Buttons</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Square buttons for icons</p>
 
@@ -205,7 +205,7 @@ export const InteractiveDemo: Story = {
       return { counter, isLoading, handleClick }
     },
     template: `
-      <div style="padding: 40px; min-height: 300px; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 300px; background: var(--app-background-gradient);">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Interactive Demo</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Click the button to see loading state</p>
 

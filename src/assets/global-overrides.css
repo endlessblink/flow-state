@@ -73,7 +73,7 @@
 
 /* REUSABLE GLOBAL THEME OVERRIDES */
 .app {
-    background: var(--surface-primary);
+    background: var(--app-background-gradient);
     color: var(--text-primary);
 }
 

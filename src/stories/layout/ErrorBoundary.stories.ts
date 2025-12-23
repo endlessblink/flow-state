@@ -14,6 +14,6 @@ export default meta
 export const Default = {
   render: () => ({
     components: { ErrorBoundary },
-    template: '<ErrorBoundary><div>Content</div></ErrorBoundary>'
+    template: '<div style="padding: 40px; background: var(--app-background-gradient); min-height: 200px;"><ErrorBoundary><div>Content</div></ErrorBoundary></div>'
   })
 }

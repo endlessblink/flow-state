@@ -3,60 +3,70 @@ import { Inbox, Calendar, Hash, Folder, Star, Clock } from 'lucide-vue-next'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
 
 const meta = {
-    title: '🧩 Primitives/BaseNavItem',
-    component: BaseNavItem,
-    parameters: {
-        layout: 'centered',
-        docs: {
-            description: {
-                component: 'Navigation item used in sidebars and lists, supporting icons, badges, and nested hierarchy.'
-            }
-        }
-    },
-    argTypes: {
-        active: {
-            control: 'boolean',
-            description: 'Whether the item is currently active'
-        },
-        nested: {
-            control: 'boolean',
-            description: 'Whether the item is nested under another item'
-        },
-        hasChildren: {
-            control: 'boolean',
-            description: 'Whether the item has child items'
-        },
-        expanded: {
-            control: 'boolean',
-            description: 'Whether child items are expanded'
-        },
-        count: {
-            control: 'number',
-            description: 'Optional count badge'
-        },
-        colorDot: {
-            control: 'color',
-            description: 'Optional project color dot'
-        }
-    },
-    args: {
-        active: false,
-        nested: false,
-        hasChildren: false,
-        expanded: false
+  title: '🧩 Primitives/BaseNavItem',
+  component: BaseNavItem,
+  parameters: {
+    layout: 'centered',
+    docs: {
+      description: {
+        component: 'Navigation item used in sidebars and lists, supporting icons, badges, and nested hierarchy.'
+      }
     }
+  },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+          <story />
+        </div>
+      `
+    })
+  ],
+  argTypes: {
+    active: {
+      control: 'boolean',
+      description: 'Whether the item is currently active'
+    },
+    nested: {
+      control: 'boolean',
+      description: 'Whether the item is nested under another item'
+    },
+    hasChildren: {
+      control: 'boolean',
+      description: 'Whether the item has child items'
+    },
+    expanded: {
+      control: 'boolean',
+      description: 'Whether child items are expanded'
+    },
+    count: {
+      control: 'number',
+      description: 'Optional count badge'
+    },
+    colorDot: {
+      control: 'color',
+      description: 'Optional project color dot'
+    }
+  },
+  args: {
+    active: false,
+    nested: false,
+    hasChildren: false,
+    expanded: false
+  }
 } satisfies Meta<typeof BaseNavItem>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const AppNavigation: Story = {
-    render: (args) => ({
-        components: { BaseNavItem, Inbox, Calendar, Clock },
-        setup() {
-            return { args }
-        },
-        template: `
+  render: (args) => ({
+    components: { BaseNavItem, Inbox, Calendar, Clock },
+    setup() {
+      return { args }
+    },
+    template: `
       <div style="width: 240px; display: flex; flex-direction: column; gap: 4px;">
         <BaseNavItem active>
           <template #icon><Inbox :size="18" /></template>
@@ -73,16 +83,16 @@ export const AppNavigation: Story = {
         </BaseNavItem>
       </div>
     `
-    })
+  })
 }
 
 export const Projects: Story = {
-    render: (args) => ({
-        components: { BaseNavItem, Hash, Folder },
-        setup() {
-            return { args }
-        },
-        template: `
+  render: (args) => ({
+    components: { BaseNavItem, Hash, Folder },
+    setup() {
+      return { args }
+    },
+    template: `
       <div style="width: 240px; display: flex; flex-direction: column; gap: 4px;">
         <BaseNavItem hasChildren expanded>
           <template #icon><Hash :size="18" /></template>
@@ -97,19 +107,19 @@ export const Projects: Story = {
         </BaseNavItem>
       </div>
     `
-    })
+  })
 }
 
 export const ActiveState: Story = {
-    args: {
-        active: true
+  args: {
+    active: true
+  },
+  render: (args) => ({
+    components: { BaseNavItem, Star },
+    setup() {
+      return { args }
     },
-    render: (args) => ({
-        components: { BaseNavItem, Star },
-        setup() {
-            return { args }
-        },
-        template: `
+    template: `
       <div style="width: 240px;">
         <BaseNavItem v-bind="args">
           <template #icon><Star :size="18" /></template>
@@ -117,5 +127,5 @@ export const ActiveState: Story = {
         </BaseNavItem>
       </div>
     `
-    })
+  })
 }

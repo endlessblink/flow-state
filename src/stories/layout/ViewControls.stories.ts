@@ -38,6 +38,16 @@ const meta = {
       description: 'Current filter status',
     },
   },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 40px; background: var(--app-background-gradient); min-height: 200px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+          <story />
+        </div>
+      `
+    })
+  ],
 } satisfies Meta<typeof ViewControls>
 
 export default meta
@@ -51,7 +61,7 @@ export const Default: Story = {
     sortBy: 'dueDate',
     filterStatus: 'all',
   },
-  render: (args) => ({
+  render: (args: any) => ({
     components: { ViewControls },
     setup() {
       const viewType = ref(args.viewType)
@@ -101,20 +111,18 @@ export const Default: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); max-width: 800px; overflow: visible;">
-        <ViewControls
-          :view-type="viewType"
-          :density="density"
-          :sort-by="sortBy"
-          :filter-status="filterStatus"
-          @update:view-type="handleUpdateViewType"
-          @update:density="handleUpdateDensity"
-          @update:sort-by="handleUpdateSortBy"
-          @update:filter-status="handleUpdateFilterStatus"
-          @expand-all="handleExpandAll"
-          @collapse-all="handleCollapseAll"
-        />
-      </div>
+      <ViewControls
+        :view-type="viewType"
+        :density="density"
+        :sort-by="sortBy"
+        :filter-status="filterStatus"
+        @update:view-type="handleUpdateViewType"
+        @update:density="handleUpdateDensity"
+        @update:sort-by="handleUpdateSortBy"
+        @update:filter-status="handleUpdateFilterStatus"
+        @expand-all="handleExpandAll"
+        @collapse-all="handleCollapseAll"
+      />
     `,
   }),
 }
@@ -127,7 +135,7 @@ export const ListViewMode: Story = {
     sortBy: 'priority',
     filterStatus: 'in_progress',
   },
-  render: (args) => ({
+  render: (args: any) => ({
     components: { ViewControls },
     setup() {
       const viewType = ref(args.viewType)
@@ -173,7 +181,7 @@ export const ListViewMode: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); max-width: 800px; overflow: visible;">
+      <div>
         <div style="margin-bottom: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
           <h4 style="margin: 0 0 8px 0; font-size: 16px; color: var(--text-primary);">List View Mode</h4>
           <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
@@ -223,7 +231,7 @@ export const DensityVariations: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); overflow: visible;">
+      <div style="width: 100%; max-width: 800px; overflow: visible;">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Density Variations</h3>
 
         <div style="display: grid; gap: 24px;">
@@ -326,7 +334,7 @@ export const InteractiveDemo: Story = {
             case 'dueDate':
               return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
             case 'priority':
-              const priorityOrder = { high: 3, medium: 2, low: 1 }
+              const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 }
               return priorityOrder[b.priority] - priorityOrder[a.priority]
             case 'title':
               return a.title.localeCompare(b.title)
@@ -383,7 +391,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); overflow: visible;">
+      <div style="width: 100%; max-width: 800px; overflow: visible;">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Interactive View Controls Demo</h3>
 
         <div style="margin-bottom: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
@@ -518,7 +526,7 @@ export const AllControlsShowcase: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; background: rgba(0, 0, 0, 0.95); overflow: visible;">
+      <div style="width: 100%; max-width: 800px; overflow: visible;">
         <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">All Controls Showcase</h3>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">

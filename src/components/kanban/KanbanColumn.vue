@@ -34,7 +34,6 @@
         :disabled="false"
         easing="cubic-bezier(0.25, 0.46, 0.45, 0.94)"
         tag="div"
-        style="min-height: var(--kanban-column-min-height); padding: var(--space-2);"
         @change="handleDragChange"
       >
         <template #item="{ element: task }">
@@ -49,15 +48,17 @@
             @context-menu="(event, task) => $emit('contextMenu', event, task)"
           />
         </template>
-      </draggable>
 
-      <div v-if="tasks.length === 0" class="empty-column">
-        <span class="empty-message">No {{ title.toLowerCase() }} tasks</span>
-        <button class="add-first-task" @click="$emit('addTask', status)">
-          <Plus :size="16" />
-          Add {{ title.toLowerCase() }} task
-        </button>
-      </div>
+        <template #footer>
+          <div v-if="tasks.length === 0" class="empty-column">
+            <span class="empty-message">No {{ title.toLowerCase() }} tasks</span>
+            <button class="add-first-task" @click="$emit('addTask', status)">
+              <Plus :size="16" />
+              Add {{ title.toLowerCase() }} task
+            </button>
+          </div>
+        </template>
+      </draggable>
     </div>
   </div>
 </template>
@@ -140,246 +141,228 @@ const handleDragChange = (event: DraggableChangeEvent) => {
 </script>
 
 <style scoped>
+/* Glass Morphism Column Container */
 .kanban-column {
-  background: var(--kanban-column-bg);
-  backdrop-filter: blur(var(--blur-lg)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(160%);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-2xl);
-  transition: all var(--duration-normal) var(--spring-smooth);
+  background: var(--glass-bg-light); /* Subtle glass base */
+  backdrop-filter: blur(var(--blur-regular));
+  -webkit-backdrop-filter: blur(var(--blur-regular));
+  border: 1px solid var(--border-subtle); /* Consistent border */
+  border-radius: var(--radius-lg); /* Softer rounded corners */
+  padding: var(--space-3); /* Consistent padding */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Deep ambient shadow */
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 320px;
 }
 
 .kanban-column:hover {
-  background: var(--kanban-column-bg-hover);
-  border-color: var(--border-interactive);
-  box-shadow: var(--shadow-2xl);
+  background: var(--glass-bg-medium); /* Slightly lighter on hover */
+  border-color: var(--glass-border-hover);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
 }
 
 /* WIP Limit Warning States */
 .kanban-column.wip-warning {
-  border-inline-start: 3px solid var(--color-break); /* RTL: WIP warning indicator */
+  border-left: 2px solid var(--color-break);
+  background: linear-gradient(to bottom, rgba(245, 158, 11, 0.05), rgba(255, 255, 255, 0.03));
 }
 
 .kanban-column.wip-exceeded {
-  border-inline-start: 3px solid var(--color-danger); /* RTL: WIP exceeded indicator */
-  box-shadow:
-    0 20px 40px var(--shadow-xl),
-    0 0 0 1px var(--color-danger),
-    inset 0 1px 0 var(--glass-bg-heavy);
+  border-left: 2px solid var(--color-danger);
+  background: linear-gradient(to bottom, rgba(239, 68, 68, 0.05), rgba(255, 255, 255, 0.03));
+  box-shadow: 
+    0 20px 40px rgba(0,0,0,0.4),
+    inset 0 0 20px rgba(239, 68, 68, 0.1);
 }
 
+/* Header - Floating Glass */
 .column-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-4);
-  padding: var(--space-3) var(--space-2);
-  background: var(--surface-hover);
-  border-radius: var(--radius-md);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-medium);
+  border-radius: var(--radius-6);
+  border: 1px solid var(--glass-bg-medium);
+  backdrop-filter: blur(var(--blur-xs));
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .column-title {
-  color: var(--text-secondary);
-  font-weight: var(--font-semibold);
-  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
+/* Task Count Badge */
 .task-count {
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
-  color: var(--text-muted);
-  padding: var(--space-1) var(--space-2);
-  background: var(--glass-bg-soft);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--glass-border);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 24px;
+  text-align: center;
 }
 
 .task-count.wip-warning {
-  background: var(--orange-bg-subtle);
-  color: var(--color-break);
-  border-color: var(--color-break);
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
 }
 
 .task-count.wip-exceeded {
-  background: var(--danger-bg-subtle);
-  color: var(--color-danger);
-  border-color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
   animation: wipPulse 2s ease-in-out infinite;
 }
 
 @keyframes wipPulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
 }
 
+/* Add Task Button */
 .add-task-btn {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
-  border: 1px solid var(--glass-bg-medium);
-  color: var(--text-muted);
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--duration-normal) var(--spring-bounce);
-  box-shadow: 0 4px 8px var(--shadow-md);
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .add-task-btn:hover {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-medium) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--glass-border-strong);
-  color: var(--text-primary);
-  transform: translateY(-2px) scale(1.05);
-  box-shadow:
-    0 8px 16px var(--shadow-strong),
-    0 0 16px var(--purple-bg-subtle);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateY(-1px) rotate(90deg);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
+/* Tasks Container */
 .tasks-container {
-  min-height: var(--kanban-column-min-height);
-  background: var(--kanban-drag-area-bg);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-1); /* Added padding to prevent hover effects from being clipped */
+  padding-right: var(--space-1); /* Maintain space for scrollbar */
+  min-height: 100px;
 }
 
-.drag-area {
-  background: var(--kanban-drag-area-bg);
+/* Custom Scrollbar */
+.tasks-container::-webkit-scrollbar {
+  width: 4px;
 }
 
+.tasks-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tasks-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.tasks-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Empty State */
 .empty-column {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-10) var(--space-6);
+  padding: 32px 16px;
   text-align: center;
   background: rgba(255, 255, 255, 0.02);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   border: 1px dashed rgba(255, 255, 255, 0.1);
+  margin-top: 8px;
+  transition: all 0.2s ease;
+}
+
+.empty-column:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .empty-message {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  margin-bottom: var(--space-4);
-  opacity: 0.8;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  margin-bottom: 12px;
 }
 
 .add-first-task {
-  background: linear-gradient(
-    135deg,
-    var(--purple-bg-subtle) 0%,
-    var(--purple-bg-end) 100%
-  );
-  border: 1px solid var(--purple-border-medium);
-  color: var(--text-secondary);
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-lg);
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-bounce);
-  box-shadow: 0 4px 12px var(--purple-bg-subtle);
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .add-first-task:hover {
-  background: linear-gradient(
-    135deg,
-    var(--purple-border-subtle) 0%,
-    var(--purple-bg-subtle) 100%
-  );
-  border-color: var(--purple-border-strong);
-  color: var(--text-primary);
-  transform: translateY(-2px) scale(1.02);
-  box-shadow:
-    0 8px 20px var(--purple-shadow-medium),
-    0 0 20px var(--purple-glow-subtle);
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
-/* Light theme overrides */
-:root:not(.dark-theme) .column-title {
-  color: var(--text-muted);
-}
-
-:root:not(.dark-theme) .add-task-btn {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
-  color: var(--text-muted);
-}
-
-:root:not(.dark-theme) .add-task-btn:hover {
-  background: var(--surface-tertiary);
-  border-color: var(--border-strong);
-  color: var(--text-muted);
-}
-
-:root:not(.dark-theme) .empty-message {
-  color: var(--text-muted);
-}
-
-:root:not(.dark-theme) .add-first-task {
-  background: var(--surface-tertiary);
-  border-color: var(--border-medium);
-  color: var(--text-muted);
-}
-
-:root:not(.dark-theme) .add-first-task:hover {
-  background: var(--surface-tertiary);
-  border-color: var(--border-strong);
-  color: var(--text-secondary);
-}
-
-/* Task item ultra-fast transitions */
+/* Task Item Transitions */
 .task-item {
-  transition: all 80ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  will-change: transform, opacity;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* Drag feedback states with instant response */
 .ghost-card {
   opacity: 0.4;
-  background: var(--blue-bg-medium) !important;
-  border: 2px dashed var(--brand-primary) !important;
-  transform: rotate(1deg);
-  transition: all 80ms ease-out;
+  background: rgba(59, 130, 246, 0.1) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.5) !important;
 }
 
 .chosen-card {
-  transform: scale(1.01);
-  box-shadow: 0 4px 12px -2px var(--shadow-subtle);
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: scale(1.02);
   z-index: 1000;
-  transition: transform 0ms, box-shadow 20ms ease-out !important;
 }
 
 .drag-card {
-  transform: rotate(2deg) scale(1.03);
-  box-shadow: 0 8px 20px -3px var(--shadow-md);
-  transition: transform 0ms, box-shadow 20ms ease-out !important;
+  opacity: 1;
+  background: rgba(40, 40, 50, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  cursor: grabbing;
 }
 </style>

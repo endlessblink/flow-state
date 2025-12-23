@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref, reactive, onMounted } from 'vue'
 import { Edit, Copy, Trash2, Archive, CheckCircle, Flag, Clock } from 'lucide-vue-next'
 import ContextMenu from '@/components/ContextMenu.vue'
 import type { ContextMenuItem } from '@/components/ContextMenu.vue'
 
 const meta = {
+  title: 'PLACEHOLDER',
   component: ContextMenu,
   title: '🧩 Primitives/ContextMenu',
   tags: ['autodocs'],
@@ -23,13 +23,12 @@ const meta = {
     y: { control: 'number' },
     items: { control: 'object' },
   },
-} satisfies Meta<typeof ContextMenu>
+}
 
 export default meta
-type Story = StoryObj<typeof meta>
 
 // Basic Context Menu - shows the actual component centered in viewport
-export const Default: Story = {
+export const Default = {
   render: () => ({
     components: { ContextMenu },
     setup() {
@@ -82,7 +81,7 @@ export const Default: Story = {
 }
 
 // Interactive Demo
-export const InteractiveDemo: Story = {
+export const InteractiveDemo = {
   render: () => ({
     components: { ContextMenu },
     setup() {

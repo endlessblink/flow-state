@@ -14,19 +14,29 @@
   /* ===== TIER 1: BASE PALETTE (HSL for flexibility) ===== */
 
   /* Grayscale - Neutral gray palette (no blue tint) */
-  --gray-950: 0, 0%, 12%;   /* Neutral dark gray - Deep background */
-  --gray-900: 0, 0%, 17%;   /* Neutral dark gray - Primary background */
-  --gray-800: 0, 0%, 22%;   /* Neutral dark gray - Card backgrounds */
-  --gray-700: 0, 0%, 27%;   /* Neutral dark gray - Elevated surfaces */
-  --gray-600: 0, 0%, 47%;   /* Neutral gray - Muted text */
-  --gray-400: 0, 0%, 58%;   /* Neutral gray - Secondary text */
-  --gray-200: 0, 0%, 91%;   /* Neutral light gray - Light text */
-  --gray-100: 0, 0%, 96%;   /* Neutral light gray - Primary text */
+  --gray-950: 0, 0%, 12%;
+  /* Neutral dark gray - Deep background */
+  --gray-900: 0, 0%, 17%;
+  /* Neutral dark gray - Primary background */
+  --gray-800: 0, 0%, 22%;
+  /* Neutral dark gray - Card backgrounds */
+  --gray-700: 0, 0%, 27%;
+  /* Neutral dark gray - Elevated surfaces */
+  --gray-600: 0, 0%, 47%;
+  /* Neutral gray - Muted text */
+  --gray-400: 0, 0%, 58%;
+  /* Neutral gray - Secondary text */
+  --gray-200: 0, 0%, 91%;
+  /* Neutral light gray - Light text */
+  --gray-100: 0, 0%, 96%;
+  /* Neutral light gray - Primary text */
   --gray-50: 210, 40%, 98%;
 
   /* Brand Colors - Primary palette */
-  --teal-500: 174, 62%, 58%;   /* #4ECDC4 - Primary brand color */
-  --teal-400: 174, 62%, 68%;   /* Lighter teal for hover states */
+  --teal-500: 174, 62%, 58%;
+  /* #4ECDC4 - Primary brand color */
+  --teal-400: 174, 62%, 68%;
+  /* Lighter teal for hover states */
   --blue-500: 217, 91%, 60%;
   --blue-400: 217, 91%, 65%;
   --green-500: 142, 76%, 36%;
@@ -47,7 +57,8 @@
   --overlay-bg: rgba(0, 0, 0, 0.6);
 
   /* Glass Surfaces - SUBTLE glassmorphism (use sparingly!) */
-  --glass-bg-solid: rgba(0, 0, 0, 0.95);     /* Solid black for cards/panels */
+  --glass-bg-solid: rgba(0, 0, 0, 0.95);
+  /* Solid black for cards/panels */
   --glass-bg-light: rgba(255, 255, 255, 0.03);
   --glass-bg-medium: rgba(255, 255, 255, 0.05);
   --glass-bg-heavy: rgba(255, 255, 255, 0.08);
@@ -58,7 +69,8 @@
   /* Text Hierarchy - Foreground colors */
   --text-primary: hsl(var(--gray-100));
   --text-secondary: hsl(var(--gray-200));
-  --text-tertiary: hsl(214, 32%, 91%);   /* Between secondary and muted */
+  --text-tertiary: hsl(214, 32%, 91%);
+  /* Between secondary and muted */
   --text-muted: hsl(var(--gray-400));
   --text-subtle: hsl(220, 9%, 40%);
   --text-disabled: hsl(var(--gray-600));
@@ -85,81 +97,141 @@
   /* Based on 0.25rem (4px) base unit */
   --space-0: 0;
   --space-px: 1px;
-  --space-0_5: 0.125rem;  /* 2px */
-  --space-1: 0.25rem;     /* 4px */
-  --space-1_5: 0.375rem;  /* 6px */
-  --space-2: 0.5rem;      /* 8px */
-  --space-2_5: 0.625rem;  /* 10px */
-  --space-3: 0.75rem;      /* 12px */
-  --space-3_5: 0.875rem;  /* 14px */
-  --space-4: 1rem;        /* 16px */
-  --space-5: 1.25rem;     /* 20px */
-  --space-6: 1.5rem;      /* 24px */
-  --space-7: 1.75rem;     /* 28px */
-  --space-8: 2rem;        /* 32px */
-  --space-9: 2.25rem;     /* 36px */
-  --space-10: 2.5rem;     /* 40px */
-  --space-12: 3rem;       /* 48px */
-  --space-14: 3.5rem;     /* 56px */
-  --space-16: 4rem;       /* 64px */
-  --space-20: 5rem;       /* 80px */
-  --space-24: 6rem;       /* 96px */
-  --space-32: 8rem;       /* 128px */
+  --space-0_5: 0.125rem;
+  /* 2px */
+  --space-1: 0.25rem;
+  /* 4px */
+  --space-1_5: 0.375rem;
+  /* 6px */
+  --space-2: 0.5rem;
+  /* 8px */
+  --space-2_5: 0.625rem;
+  /* 10px */
+  --space-3: 0.75rem;
+  /* 12px */
+  --space-3_5: 0.875rem;
+  /* 14px */
+  --space-4: 1rem;
+  /* 16px */
+  --space-5: 1.25rem;
+  /* 20px */
+  --space-6: 1.5rem;
+  /* 24px */
+  --space-7: 1.75rem;
+  /* 28px */
+  --space-8: 2rem;
+  /* 32px */
+  --space-9: 2.25rem;
+  /* 36px */
+  --space-10: 2.5rem;
+  /* 40px */
+  --space-12: 3rem;
+  /* 48px */
+  --space-14: 3.5rem;
+  /* 56px */
+  --space-16: 4rem;
+  /* 64px */
+  --space-20: 5rem;
+  /* 80px */
+  --space-24: 6rem;
+  /* 96px */
+  --space-32: 8rem;
+  /* 128px */
 
   /* ===== SEMANTIC SPACING ALIASES ===== */
   /* Use these for better clarity in your code */
 
   /* Gaps between items */
-  --gap-xs: var(--space-1);      /* 4px - Tight gaps (badges, icons) */
-  --gap-sm: var(--space-2);      /* 8px - Small gaps (flex items, lists) */
-  --gap-md: var(--space-3);      /* 8px - Medium gaps */
-  --gap-lg: var(--space-4);      /* 16px - Large gaps (sections) */
+  --gap-xs: var(--space-1);
+  /* 4px - Tight gaps (badges, icons) */
+  --gap-sm: var(--space-2);
+  /* 8px - Small gaps (flex items, lists) */
+  --gap-md: var(--space-3);
+  /* 8px - Medium gaps */
+  --gap-lg: var(--space-4);
+  /* 16px - Large gaps (sections) */
 
   /* Padding for components */
-  --padding-xs: var(--space-1);      /* 4px - Minimal padding */
-  --padding-sm: var(--space-2);      /* 8px - Compact components */
-  --padding-md: var(--space-4);      /* 16px - Standard components */
-  --padding-lg: var(--space-6);      /* 24px - Spacious components */
-  --padding-xl: var(--space-10);     /* 40px - Large containers */
-  --padding-2xl: var(--space-12);    /* 48px - Main layout containers */
+  --padding-xs: var(--space-1);
+  /* 4px - Minimal padding */
+  --padding-sm: var(--space-2);
+  /* 8px - Compact components */
+  --padding-md: var(--space-4);
+  /* 16px - Standard components */
+  --padding-lg: var(--space-6);
+  /* 24px - Spacious components */
+  --padding-xl: var(--space-10);
+  /* 40px - Large containers */
+  --padding-2xl: var(--space-12);
+  /* 48px - Main layout containers */
 
   /* Margins between sections */
-  --margin-xs: var(--space-1);      /* 4px - Tight margins */
-  --margin-sm: var(--space-2);      /* 8px - Small margins */
-  --margin-md: var(--space-4);      /* 16px - Standard margins */
-  --margin-lg: var(--space-6);      /* 24px - Large margins */
+  --margin-xs: var(--space-1);
+  /* 4px - Tight margins */
+  --margin-sm: var(--space-2);
+  /* 8px - Small margins */
+  --margin-md: var(--space-4);
+  /* 16px - Standard margins */
+  --margin-lg: var(--space-6);
+  /* 24px - Large margins */
 
   /* Layout-specific spacing */
-  --sidebar-padding: var(--space-6);              /* 24px - Sidebar section padding */
-  --content-padding: var(--space-12);             /* 48px - Main content area padding */
-  --card-padding: var(--space-4);                 /* 16px - Card/panel padding */
+  --sidebar-padding: var(--space-6);
+  /* 24px - Sidebar section padding */
+  --content-padding: var(--space-12);
+  /* 48px - Main content area padding */
+  --card-padding: var(--space-4);
+  /* 16px - Card/panel padding */
 
   /* Sidebar width sizing */
-  --sidebar-width-normal: 280px;                  /* 280px - Normal sidebar width */
-  --sidebar-width-collapsed: 0px;                  /* 0px - Collapsed sidebar width */
+  --sidebar-width-normal: 280px;
+  /* 280px - Normal sidebar width */
+  --sidebar-width-collapsed: 0px;
+  /* 0px - Collapsed sidebar width */
 
   /* Kanban-specific sizing */
-  --kanban-column-min-height: 12.5rem;            /* 200px - Minimum column height */
-  --kanban-column-width: 22.5rem;                 /* 360px - Standard column width */
-  --kanban-column-width-lg: 21.25rem;             /* 340px - Large screen column width */
-  --kanban-column-width-md: 20rem;                /* 320px - Medium screen column width */
-  --kanban-column-width-sm: 18.75rem;             /* 300px - Small screen column width */
-  --kanban-gap: 1rem;                             /* 16px - Gap between columns */
-  --kanban-scrollbar-height: 0.5rem;              /* 8px - Scrollbar height */
-  --kanban-drag-area-min-height: 7.5rem;          /* 120px - Minimum drag area height */
-  --kanban-breakpoint-xl: 87.5rem;                /* 1400px - Extra large breakpoint */
-  --kanban-breakpoint-lg: 75rem;                  /* 1200px - Large breakpoint */
-  --kanban-breakpoint-md: 62.5rem;                /* 1000px - Medium breakpoint */
+  --kanban-column-min-height: 12.5rem;
+  /* 200px - Minimum column height */
+  --kanban-column-width: 22.5rem;
+  /* 360px - Standard column width */
+  --kanban-column-width-lg: 21.25rem;
+  /* 340px - Large screen column width */
+  --kanban-column-width-md: 20rem;
+  /* 320px - Medium screen column width */
+  --kanban-column-width-sm: 18.75rem;
+  /* 300px - Small screen column width */
+  --kanban-gap: 1rem;
+  /* 16px - Gap between columns */
+  --kanban-scrollbar-height: 0.5rem;
+  /* 8px - Scrollbar height */
+  --kanban-drag-area-min-height: 7.5rem;
+  /* 120px - Minimum drag area height */
+  --kanban-breakpoint-xl: 87.5rem;
+  /* 1400px - Extra large breakpoint */
+  --kanban-breakpoint-lg: 75rem;
+  /* 1200px - Large breakpoint */
+  --kanban-breakpoint-md: 62.5rem;
+  /* 1000px - Medium breakpoint */
 
   /* Kanban background colors - Glassy updates */
-  --kanban-bg: transparent;                       /* Base black - master token */
-  --kanban-swimlane-bg: transparent;              /* Swimlane container background */
-  --kanban-column-bg: var(--glass-bg-medium);     /* Column card background */
-  --kanban-column-bg-hover: var(--glass-bg-heavy);/* Column hover state */
-  --kanban-header-bg: var(--surface-hover);       /* Column headers */
-  --kanban-drag-area-bg: transparent;             /* Drag area between cards */
-  --kanban-scroll-container-bg: transparent;      /* Scroll container background */
-  --kanban-badge-bg: var(--glass-bg-heavy);       /* Count badges */
+  --kanban-bg: transparent;
+  /* Base black - master token */
+  --kanban-swimlane-bg: transparent;
+  /* Swimlane container background */
+  --kanban-column-bg: var(--glass-bg-medium);
+  /* Column card background */
+  --kanban-column-bg-hover: var(--glass-bg-heavy);
+  /* Column hover state */
+  --kanban-header-bg: var(--surface-hover);
+  /* Column headers */
+  --kanban-drag-area-bg: transparent;
+  /* Drag area between cards */
+  --kanban-scroll-container-bg: transparent;
+  /* Scroll container background */
+  --kanban-badge-bg: var(--glass-bg-heavy);
+  /* Count badges */
+  --kanban-card-glass-bg: rgba(30, 30, 46, 0.7);
+  /* Dark semi-transparent card background */
 
   /* ===== TASKCARD STATUS ICON COLORS ===== */
   /* Planned status (blue) */
@@ -209,40 +281,67 @@
   --due-date-text: #94a3b8;
 
   /* TaskCard-specific sizing */
-  --task-card-min-height: 2.5rem;                 /* 40px - Compact card height */
-  --task-card-min-width: 0;                       /* Fully responsive - no minimum width constraint */
-  --task-card-max-width: 100%;                    /* Fill available width - let parent control sizing */
-  --task-card-responsive-width: auto;             /* Responsive width that adapts to content */
-  --task-card-icon-size: 1.25rem;                 /* 20px - Status icon size */
-  --task-card-checkbox-size: 1rem;                 /* 16px - Checkbox size */
-  --task-card-font-size-xs: 0.625rem;             /* 10px - Extra small font */
-  --task-card-padding-xs: 0.125rem;               /* 2px - Extra small padding */
-  --task-card-badge-max-width: 6rem;              /* 96px - Maximum badge width before truncation */
-  --task-card-title-max-lines: 2;                 /* Maximum title lines before truncation */
-  --task-card-content-spacing: 0.5rem;            /* 8px - Spacing for content areas */
-  --task-card-selection-offset: -0.125rem;        /* -2px - Selection border offset */
-  --task-card-selection-border: 0.125rem;         /* 2px - Selection border width */
-  --task-card-border-width: 0.0625rem;            /* 1px - Standard border width */
-  --task-card-focus-width: 0.125rem;              /* 2px - Focus ring width */
+  --task-card-min-height: 2.5rem;
+  /* 40px - Compact card height */
+  --task-card-min-width: 0;
+  /* Fully responsive - no minimum width constraint */
+  --task-card-max-width: 100%;
+  /* Fill available width - let parent control sizing */
+  --task-card-responsive-width: auto;
+  /* Responsive width that adapts to content */
+  --task-card-icon-size: 1.25rem;
+  /* 20px - Status icon size */
+  --task-card-checkbox-size: 1rem;
+  /* 16px - Checkbox size */
+  --task-card-font-size-xs: 0.625rem;
+  /* 10px - Extra small font */
+  --task-card-padding-xs: 0.125rem;
+  /* 2px - Extra small padding */
+  --task-card-badge-max-width: 6rem;
+  /* 96px - Maximum badge width before truncation */
+  --task-card-title-max-lines: 2;
+  /* Maximum title lines before truncation */
+  --task-card-content-spacing: 0.5rem;
+  /* 8px - Spacing for content areas */
+  --task-card-selection-offset: -0.125rem;
+  /* -2px - Selection border offset */
+  --task-card-selection-border: 0.125rem;
+  /* 2px - Selection border width */
+  --task-card-border-width: 0.0625rem;
+  /* 1px - Standard border width */
+  --task-card-focus-width: 0.125rem;
+  /* 2px - Focus ring width */
 
   /* Navigation header spacing */
-  --nav-tabs-spacing-below: 1.0rem;               /* 24px - Space below navigation tabs (Board/Calendar/etc) */
-  --nav-tabs-padding-bottom: 0.5rem;              /* 8px - Space between tab text and border line */
+  --nav-tabs-spacing-below: 1.0rem;
+  /* 24px - Space below navigation tabs (Board/Calendar/etc) */
+  --nav-tabs-padding-bottom: 0.5rem;
+  /* 8px - Space between tab text and border line */
 
   /* Sidebar quick-add section spacing */
-  --sidebar-quickadd-padding-y: var(--space-2);   /* 16px - Vertical padding for "Add a task" section */
-  --sidebar-quickadd-padding-x: var(--space-6);   /* 24px - Horizontal padding for "Add a task" section */
+  --sidebar-quickadd-padding-y: var(--space-2);
+  /* 16px - Vertical padding for "Add a task" section */
+  --sidebar-quickadd-padding-x: var(--space-6);
+  /* 24px - Horizontal padding for "Add a task" section */
 
   /* ===== TYPOGRAPHY SCALE ===== */
   /* Font sizes */
-  --text-xs: 0.75rem;     /* 12px */
-  --text-sm: 0.875rem;    /* 14px */
-  --text-base: 1rem;      /* 16px */
-  --text-lg: 1.125rem;    /* 18px */
-  --text-xl: 1.25rem;     /* 20px */
-  --text-2xl: 1.5rem;     /* 24px */
-  --text-3xl: 1.875rem;   /* 30px */
-  --text-4xl: 2.25rem;    /* 36px */
+  --text-xs: 0.75rem;
+  /* 12px */
+  --text-sm: 0.875rem;
+  /* 14px */
+  --text-base: 1rem;
+  /* 16px */
+  --text-lg: 1.125rem;
+  /* 18px */
+  --text-xl: 1.25rem;
+  /* 20px */
+  --text-2xl: 1.5rem;
+  /* 24px */
+  --text-3xl: 1.875rem;
+  /* 30px */
+  --text-4xl: 2.25rem;
+  /* 36px */
 
   /* Font weights */
   --font-light: 300;
@@ -261,13 +360,20 @@
 
   /* ===== BORDER RADIUS SCALE ===== */
   --radius-none: 0;
-  --radius-xs: 2px;       /* 2px */
-  --radius-sm: 0.375rem;  /* 6px */
-  --radius-6: 0.5rem;     /* 8px */
-  --radius-md: 0.5rem;    /* 8px */
-  --radius-lg: 1rem;      /* 16px */
-  --radius-xl: 1.25rem;   /* 20px (more rounded!) */
-  --radius-2xl: 1.5rem;   /* 24px */
+  --radius-xs: 2px;
+  /* 2px */
+  --radius-sm: 0.375rem;
+  /* 6px */
+  --radius-6: 0.5rem;
+  /* 8px */
+  --radius-md: 0.5rem;
+  /* 8px */
+  --radius-lg: 1rem;
+  /* 16px */
+  --radius-xl: 1.25rem;
+  /* 20px (more rounded!) */
+  --radius-2xl: 1.5rem;
+  /* 24px */
   --radius-full: 9999px;
 
   /* ===== TRANSITIONS & ANIMATIONS ===== */
@@ -297,49 +403,73 @@
   /* ===== TIER 3: FUNCTIONAL COLORS (Context-specific) ===== */
 
   /* Pomodoro States */
-  --color-work: #10b981;           /* Green - Active work, productivity */
-  --color-break: #f59e0b;          /* Orange - Breaks, attention */
-  --color-focus: #8b5cf6;          /* Purple - Deep work, meditation */
-  --color-navigation: #3b82f6;     /* Blue - Links, navigation */
-  --color-neutral: #6b7280;        /* Gray - Secondary elements */
+  --color-work: #10b981;
+  /* Green - Active work, productivity */
+  --color-break: #f59e0b;
+  /* Orange - Breaks, attention */
+  --color-focus: #8b5cf6;
+  /* Purple - Deep work, meditation */
+  --color-navigation: #3b82f6;
+  /* Blue - Links, navigation */
+  --color-neutral: #6b7280;
+  /* Gray - Secondary elements */
 
   /* Interactive States - THE ONE unified system: OUTLINED + GLASS */
-  --state-active-border: rgba(78, 205, 196, 0.60);  /* Teal border when active */
-  --state-active-bg: rgba(78, 205, 196, 0.15);      /* Glass background tint */
-  --state-active-glass: blur(16px) saturate(180%); /* Glass blur effect */
-  --state-active-text: var(--text-primary);         /* Text color for active states */
-  --state-hover-border: rgba(78, 205, 196, 0.40);   /* Teal border on hover */
-  --state-hover-bg: rgba(78, 205, 196, 0.10);       /* Subtle glass tint */
-  --state-hover-shadow: 0 8px 16px rgba(78, 205, 196, 0.25); /* Dramatic shadow */
-  --state-hover-glow: 0 0 20px rgba(78, 205, 196, 0.20); /* Glow effect */
+  --state-active-border: rgba(78, 205, 196, 0.60);
+  /* Teal border when active */
+  --state-active-bg: rgba(78, 205, 196, 0.15);
+  /* Glass background tint */
+  --state-active-glass: blur(16px) saturate(180%);
+  /* Glass blur effect */
+  --state-active-text: var(--text-primary);
+  /* Text color for active states */
+  --state-hover-border: rgba(78, 205, 196, 0.40);
+  /* Teal border on hover */
+  --state-hover-bg: rgba(78, 205, 196, 0.10);
+  /* Subtle glass tint */
+  --state-hover-shadow: 0 8px 16px rgba(78, 205, 196, 0.25);
+  /* Dramatic shadow */
+  --state-hover-glow: 0 0 20px rgba(78, 205, 196, 0.20);
+  /* Glow effect */
 
   /* Filter Selection Colors - Distinct colors for sidebar filters */
-  --filter-today-bg: rgba(56, 189, 248, 0.15);      /* Azure/Sky Blue */
+  --filter-today-bg: rgba(56, 189, 248, 0.15);
+  /* Azure/Sky Blue */
   --filter-today-border: rgba(56, 189, 248, 0.50);
   --filter-today-glow: 0 0 16px rgba(56, 189, 248, 0.25);
 
-  --filter-week-bg: rgba(14, 165, 233, 0.15);       /* Azure/Sky Blue (darker) */
+  --filter-week-bg: rgba(14, 165, 233, 0.15);
+  /* Azure/Sky Blue (darker) */
   --filter-week-border: rgba(14, 165, 233, 0.50);
   --filter-week-glow: 0 0 16px rgba(14, 165, 233, 0.25);
 
-  --filter-tasks-bg: rgba(59, 130, 246, 0.15);      /* Blue */
+  --filter-tasks-bg: rgba(59, 130, 246, 0.15);
+  /* Blue */
   --filter-tasks-border: rgba(59, 130, 246, 0.50);
   --filter-tasks-glow: 0 0 16px rgba(59, 130, 246, 0.25);
 
-  --filter-uncategorized-bg: rgba(245, 158, 11, 0.12); /* Orange */
+  --filter-uncategorized-bg: rgba(245, 158, 11, 0.12);
+  /* Orange */
   --filter-uncategorized-border: rgba(245, 158, 11, 0.45);
   --filter-uncategorized-glow: 0 0 16px rgba(245, 158, 11, 0.25);
 
   /* Selection State - Calendar events and interactive elements */
-  --state-selected-bg: rgba(59, 130, 246, 0.20);    /* Blue tinted background for selection */
-  --state-selected-border: rgba(59, 130, 246, 0.60); /* Bright blue border for selection */
-  --state-selected-shadow: 0 8px 16px rgba(59, 130, 246, 0.25); /* Shadow with blue tint */
-  --state-selected-glow: 0 0 20px rgba(59, 130, 246, 0.30); /* Blue glow for selection emphasis */
+  --state-selected-bg: rgba(59, 130, 246, 0.20);
+  /* Blue tinted background for selection */
+  --state-selected-border: rgba(59, 130, 246, 0.60);
+  /* Bright blue border for selection */
+  --state-selected-shadow: 0 8px 16px rgba(59, 130, 246, 0.25);
+  /* Shadow with blue tint */
+  --state-selected-glow: 0 0 20px rgba(59, 130, 246, 0.30);
+  /* Blue glow for selection emphasis */
 
   /* Priority System */
-  --color-priority-high: #ef4444;  /* Red - Urgent tasks */
-  --color-priority-medium: #f59e0b; /* Orange - Default priority */
-  --color-priority-low: #3b82f6;   /* Blue - Low urgency */
+  --color-priority-high: #ef4444;
+  /* Red - Urgent tasks */
+  --color-priority-medium: #f59e0b;
+  /* Orange - Default priority */
+  --color-priority-low: #3b82f6;
+  /* Blue - Low urgency */
 
   /* Priority backgrounds for calendar events */
   --priority-high-bg: rgba(239, 68, 68, 0.3);
@@ -495,28 +625,41 @@
 
   /* Status Indicators */
   --color-success: hsl(var(--green-500));
-  --color-warning: var(--color-priority-medium); /* Use medium priority orange instead of yellow */
+  --color-warning: var(--color-priority-medium);
+  /* Use medium priority orange instead of yellow */
   --color-danger: hsl(var(--red-500));
   --color-info: hsl(var(--blue-500));
 
   /* ===== PROJECT INDICATOR SYSTEM ===== */
   /* Container sizes for consistent emoji/colored dot rendering */
-  --project-indicator-size-xs: 16px;   /* Ultra-compact - minimal UI */
-  --project-indicator-size-sm: 20px;   /* Standard - TaskCard, TaskRow, TaskTable */
-  --project-indicator-size-md: 24px;   /* Large - TaskNode, canvas */
-  --project-indicator-size-lg: 32px;   /* Prominent - featured displays */
+  --project-indicator-size-xs: 16px;
+  /* Ultra-compact - minimal UI */
+  --project-indicator-size-sm: 20px;
+  /* Standard - TaskCard, TaskRow, TaskTable */
+  --project-indicator-size-md: 24px;
+  /* Large - TaskNode, canvas */
+  --project-indicator-size-lg: 32px;
+  /* Prominent - featured displays */
 
   /* Emoji sizing within containers */
-  --project-emoji-size-xs: 12px;     /* Emoji within 16px container */
-  --project-emoji-size-sm: 14px;     /* Emoji within 20px container - standard */
-  --project-emoji-size-md: 18px;     /* Emoji within 24px container */
-  --project-emoji-size-lg: 24px;     /* Emoji within 32px container */
+  --project-emoji-size-xs: 12px;
+  /* Emoji within 16px container */
+  --project-emoji-size-sm: 14px;
+  /* Emoji within 20px container - standard */
+  --project-emoji-size-md: 18px;
+  /* Emoji within 24px container */
+  --project-emoji-size-lg: 24px;
+  /* Emoji within 32px container */
 
   /* CSS circle dot sizes (for colored dots fallback) */
-  --project-circle-size-xs: 6px;     /* Small dot for ultra-compact */
-  --project-circle-size-sm: 7px;     /* Standard dot for regular components */
-  --project-circle-size-md: 8px;     /* Larger dot for canvas visibility */
-  --project-circle-size-lg: 12px;    /* Prominent dot for featured displays */
+  --project-circle-size-xs: 6px;
+  /* Small dot for ultra-compact */
+  --project-circle-size-sm: 7px;
+  /* Standard dot for regular components */
+  --project-circle-size-md: 8px;
+  /* Larger dot for canvas visibility */
+  --project-circle-size-lg: 12px;
+  /* Prominent dot for featured displays */
 
   /* Glow intensity variations */
   --project-indicator-glow-subtle: 0 0 6px currentColor, 0 0 12px currentColor;
@@ -584,13 +727,20 @@
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
 
   /* Type Scale (1.25 ratio - Major Third) */
-  --text-xs: 0.75rem;      /* 12px - Metadata, labels */
-  --text-sm: 0.875rem;     /* 14px - UI text, buttons */
-  --text-base: 1rem;       /* 16px - Body text */
-  --text-lg: 1.125rem;     /* 18px - Section headers */
-  --text-xl: 1.25rem;      /* 20px - Page titles */
-  --text-2xl: 1.5rem;      /* 24px - Display text */
-  --text-3xl: 1.875rem;    /* 30px - Hero text */
+  --text-xs: 0.75rem;
+  /* 12px - Metadata, labels */
+  --text-sm: 0.875rem;
+  /* 14px - UI text, buttons */
+  --text-base: 1rem;
+  /* 16px - Body text */
+  --text-lg: 1.125rem;
+  /* 18px - Section headers */
+  --text-xl: 1.25rem;
+  /* 20px - Page titles */
+  --text-2xl: 1.5rem;
+  /* 24px - Display text */
+  --text-3xl: 1.875rem;
+  /* 30px - Hero text */
 
   /* Font Weights */
   --font-normal: 400;
@@ -607,16 +757,26 @@
   /* ===== SPACING SCALE (8px grid system) ===== */
 
   --space-0: 0;
-  --space-1: 0.25rem;   /* 4px - Micro spacing */
-  --space-2: 0.5rem;    /* 8px - Tight spacing */
-  --space-3: 0.75rem;    /* 12px - Small gaps */
-  --space-4: 1rem;      /* 16px - Standard gaps */
-  --space-5: 1.25rem;   /* 20px - Medium gaps */
-  --space-6: 1.5rem;    /* 24px - Large gaps */
-  --space-8: 2rem;      /* 32px - Section spacing */
-  --space-10: 2.5rem;   /* 40px - XL spacing */
-  --space-12: 3rem;     /* 48px - XXL spacing */
-  --space-16: 4rem;     /* 64px - Section breaks */
+  --space-1: 0.25rem;
+  /* 4px - Micro spacing */
+  --space-2: 0.5rem;
+  /* 8px - Tight spacing */
+  --space-3: 0.75rem;
+  /* 12px - Small gaps */
+  --space-4: 1rem;
+  /* 16px - Standard gaps */
+  --space-5: 1.25rem;
+  /* 20px - Medium gaps */
+  --space-6: 1.5rem;
+  /* 24px - Large gaps */
+  --space-8: 2rem;
+  /* 32px - Section spacing */
+  --space-10: 2.5rem;
+  /* 40px - XL spacing */
+  --space-12: 3rem;
+  /* 48px - XXL spacing */
+  --space-16: 4rem;
+  /* 64px - Section breaks */
 
   /* ===== SIZING SCALE ===== */
 
@@ -629,23 +789,34 @@
   --icon-2xl: 24px;
 
   /* Button Heights */
-  --btn-sm: 1.75rem;    /* 28px - Compact */
-  --btn-md: 2rem;       /* 32px - Standard */
-  --btn-lg: 2.25rem;    /* 36px - Large */
+  --btn-sm: 1.75rem;
+  /* 28px - Compact */
+  --btn-md: 2rem;
+  /* 32px - Standard */
+  --btn-lg: 2.25rem;
+  /* 36px - Large */
 
   /* ===== BORDER RADIUS ===== */
 
-  --radius-sm: 0.375rem;  /* 6px - Tight corners */
-  --radius-md: 0.5rem;    /* 8px - Standard */
-  --radius-lg: 1rem;      /* 16px - Large */
-  --radius-xl: 1.25rem;   /* 20px - XL (more rounded!) */
-  --radius-2xl: 1.5rem;   /* 24px - XXL */
-  --radius-full: 9999px;  /* Pill shape */
+  --radius-sm: 0.375rem;
+  /* 6px - Tight corners */
+  --radius-md: 0.5rem;
+  /* 8px - Standard */
+  --radius-lg: 1rem;
+  /* 16px - Large */
+  --radius-xl: 1.25rem;
+  /* 20px - XL (more rounded!) */
+  --radius-2xl: 1.5rem;
+  /* 24px - XXL */
+  --radius-full: 9999px;
+  /* Pill shape */
 
   /* ===== ELEVATION SYSTEM ===== */
 
   /* Blur Effects */
+  --blur-xs: 8px;
   --blur-sm: 10px;
+  --blur-regular: 12px;
   --blur-md: 16px;
   --blur-lg: 24px;
   --blur-xl: 32px;
@@ -671,7 +842,7 @@
 
   /* OPTIONAL Glass Effect - use sparingly */
   --shadow-glass: 0 4px 12px rgba(0, 0, 0, 0.15),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   --shadow-glow: 0 0 12px var(--glass-glow);
 
@@ -807,7 +978,7 @@
 
 .hover-lift {
   transition: transform var(--duration-normal) var(--spring-smooth),
-              box-shadow var(--duration-normal) var(--spring-smooth);
+    box-shadow var(--duration-normal) var(--spring-smooth);
 }
 
 .hover-lift:hover {
@@ -826,13 +997,33 @@
 /* ===== UTILITY CLASSES (from legacy design-system.css) ===== */
 
 /* Icon Color Classes */
-.icon { flex-shrink: 0; }
-.icon-work { color: var(--color-work); }
-.icon-break { color: var(--color-break); }
-.icon-focus { color: var(--color-focus); }
-.icon-navigation { color: var(--color-navigation); }
-.icon-neutral { color: var(--color-neutral); }
-.icon-danger { color: var(--color-danger); }
+.icon {
+  flex-shrink: 0;
+}
+
+.icon-work {
+  color: var(--color-work);
+}
+
+.icon-break {
+  color: var(--color-break);
+}
+
+.icon-focus {
+  color: var(--color-focus);
+}
+
+.icon-navigation {
+  color: var(--color-navigation);
+}
+
+.icon-neutral {
+  color: var(--color-neutral);
+}
+
+.icon-danger {
+  color: var(--color-danger);
+}
 
 /* ===== ACCESSIBILITY & COMPATIBILITY ===== */
 

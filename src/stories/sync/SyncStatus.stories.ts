@@ -1,9 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
 import SyncStatus from '@/components/SyncStatus.vue'
 
 const meta = {
-    component: SyncStatus,
     title: '🔄 Sync & Reliability/SyncStatus',
+    component: SyncStatus,
     tags: ['autodocs'],
     parameters: {
         layout: 'centered',
@@ -21,12 +20,11 @@ const meta = {
         showMetrics: { control: 'boolean' },
         showQueue: { control: 'boolean' }
     }
-} satisfies Meta<typeof SyncStatus>
+}
 
 export default meta
-type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Default = {
     args: {
         showControls: true,
         showText: true,
@@ -34,23 +32,14 @@ export const Default: Story = {
     }
 }
 
-export const Compact: Story = {
+export const Compact = {
     args: {
         compact: true,
         showText: true
     }
 }
 
-export const Syncing: Story = {
-    args: {
-        showControls: true,
-        showText: true
-    },
-    // We cannot easily trigger the internal sync state without deeper mocking,
-    // but we can demonstrate the UI components
-}
-
-export const DetailedDashboard: Story = {
+export const DetailedDashboard = {
     args: {
         showControls: true,
         showText: true,

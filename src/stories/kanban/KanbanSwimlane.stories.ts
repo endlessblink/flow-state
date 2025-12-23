@@ -49,6 +49,10 @@ const meta = {
         width: 100%;
         height: 100vh;
         overflow: hidden;
+        background: #1a1b2e;
+        color: #fff;
+        padding: 32px;
+        font-family: sans-serif;
       "><story /></div>`
     })
   ]

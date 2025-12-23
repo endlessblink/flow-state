@@ -43,155 +43,62 @@
 
     <!-- Scrollable Table Container (only visible when not collapsed) -->
     <div v-if="!isCollapsed" ref="scrollContainer" class="table-scroll-container">
-      <div class="swimlane-columns">
+      <div class="swimlane-body">
         <!-- Status View Columns -->
         <template v-if="currentViewType === 'status'">
-          <div
+          <KanbanColumn
             v-for="column in statusColumns"
             :key="column.key"
+            :title="column.label"
+            :status="column.key"
+            :tasks="localTasks.status[column.key]"
             class="swimlane-column"
-            @dragover="handleColumnDragOver"
-            @drop="handleColumnDrop"
-            @dragenter="handleColumnDragEnter"
-            @dragleave="handleColumnDragLeave"
-          >
-            <div class="column-header-mini">
-              <div class="header-left-mini">
-                <span class="column-title-mini">{{ column.label }}</span>
-                <span class="column-count">{{ getTasksByStatus(column.key).length }}</span>
-              </div>
-              <button
-                class="add-task-btn-mini"
-                :title="`Add task to ${column.label}`"
-                @click="handleAddTask(column.key)"
-              >
-                <Plus :size="12" />
-              </button>
-            </div>
-            <draggable
-              v-model="localTasks.status[column.key]"
-              group="swimlane-tasks"
-              item-key="id"
-              class="drag-area-mini"
-              :animation="30"
-              ghost-class="ghost-card"
-              @change="handleDragChange($event, 'status', column.key)"
-              @dragstart="handleDragStart"
-              @dragend="handleDragEnd"
-              @dragover="handleDragOver"
-            >
-              <template #item="{ element: task }">
-                <TaskCard
-                  :key="task.id"
-                  :task="task"
-                  :density="props.density || 'comfortable'"
-                  class="task-item-mini"
-                  @select="$emit('selectTask', $event)"
-                  @start-timer="$emit('startTimer', $event)"
-                  @edit="$emit('editTask', $event)"
-                  @delete="$emit('deleteTask', $event)"
-                  @context-menu="(event, task) => $emit('contextMenu', event, task)"
-                />
-              </template>
-            </draggable>
-          </div>
+            @add-task="handleAddTask"
+            @move-task="handleMoveTask"
+            @select-task="$emit('selectTask', $event)"
+            @start-timer="$emit('startTimer', $event)"
+            @edit-task="$emit('editTask', $event)"
+            @delete-task="$emit('deleteTask', $event)"
+            @context-menu="(event, task) => $emit('contextMenu', event, task)"
+          />
         </template>
 
         <!-- Date View Columns - Todoist Style -->
         <template v-if="currentViewType === 'date'">
-          <div
+          <KanbanColumn
             v-for="column in dateColumns"
             :key="column.key"
+            :title="column.label"
+            :status="column.key"
+            :tasks="localTasks.date[column.key]"
             class="swimlane-column"
-            @dragover="handleColumnDragOver"
-            @drop="handleColumnDrop"
-            @dragenter="handleColumnDragEnter"
-            @dragleave="handleColumnDragLeave"
-          >
-            <div class="column-header-mini">
-              <div class="header-left-mini">
-                <span class="column-title-mini">{{ column.label }}</span>
-                <span class="column-count">{{ getTasksByDate(column.key).length }}</span>
-              </div>
-              <button
-                class="add-task-btn-mini"
-                :title="`Add task to ${column.label}`"
-                @click="handleAddTask(column.key)"
-              >
-                <Plus :size="12" />
-              </button>
-            </div>
-            <draggable
-              v-model="localTasks.date[column.key]"
-              group="swimlane-tasks"
-              item-key="id"
-              class="drag-area-mini"
-              :animation="30"
-              ghost-class="ghost-card"
-              @change="handleDragChange($event, 'date', column.key)"
-              @dragstart="handleDragStart"
-              @dragend="handleDragEnd"
-              @dragover="handleDragOver"
-            >
-              <template #item="{ element: task }">
-                <TaskCard
-                  :key="task.id"
-                  :task="task"
-                  :density="props.density || 'comfortable'"
-                  class="task-item-mini"
-                  @select="$emit('selectTask', $event)"
-                  @start-timer="$emit('startTimer', $event)"
-                  @edit="$emit('editTask', $event)"
-                  @delete="$emit('deleteTask', $event)"
-                  @context-menu="(event, task) => $emit('contextMenu', event, task)"
-                />
-              </template>
-            </draggable>
-          </div>
+            @add-task="handleAddTask"
+            @move-task="handleMoveTask"
+            @select-task="$emit('selectTask', $event)"
+            @start-timer="$emit('startTimer', $event)"
+            @edit-task="$emit('editTask', $event)"
+            @delete-task="$emit('deleteTask', $event)"
+            @context-menu="(event, task) => $emit('contextMenu', event, task)"
+          />
         </template>
 
         <!-- Priority View Columns -->
         <template v-if="currentViewType === 'priority'">
-          <div
+          <KanbanColumn
             v-for="column in priorityColumns"
             :key="column.key"
+            :title="column.label"
+            :status="column.key"
+            :tasks="localTasks.priority[column.key]"
             class="swimlane-column"
-            @dragover="handleColumnDragOver"
-            @drop="handleColumnDrop"
-            @dragenter="handleColumnDragEnter"
-            @dragleave="handleColumnDragLeave"
-          >
-            <div class="column-header-mini">
-              <span class="column-title-mini">{{ column.label }}</span>
-              <span class="column-count">{{ getTasksByPriority(column.key).length }}</span>
-            </div>
-            <draggable
-              v-model="localTasks.priority[column.key]"
-              group="swimlane-tasks"
-              item-key="id"
-              class="drag-area-mini"
-              :animation="30"
-              ghost-class="ghost-card"
-              @change="handleDragChange($event, 'priority', column.key)"
-              @dragstart="handleDragStart"
-              @dragend="handleDragEnd"
-              @dragover="handleDragOver"
-            >
-              <template #item="{ element: task }">
-                <TaskCard
-                  :key="task.id"
-                  :task="task"
-                  :density="props.density || 'comfortable'"
-                  class="task-item-mini"
-                  @select="$emit('selectTask', $event)"
-                  @start-timer="$emit('startTimer', $event)"
-                  @edit="$emit('editTask', $event)"
-                  @delete="$emit('deleteTask', $event)"
-                  @context-menu="(event, task) => $emit('contextMenu', event, task)"
-                />
-              </template>
-            </draggable>
-          </div>
+            @add-task="handleAddTask"
+            @move-task="handleMoveTask"
+            @select-task="$emit('selectTask', $event)"
+            @start-timer="$emit('startTimer', $event)"
+            @edit-task="$emit('editTask', $event)"
+            @delete-task="$emit('deleteTask', $event)"
+            @context-menu="(event, task) => $emit('contextMenu', event, task)"
+          />
         </template>
       </div>
 
@@ -211,6 +118,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
+import KanbanColumn from './KanbanColumn.vue' 
 import TaskCard from './TaskCard.vue'
 import type { Task, Project, RecurringTaskInstance as _RecurringTaskInstance } from '@/stores/tasks'
 import { useTaskStore, parseDateKey, getTaskInstances } from '@/stores/tasks'
@@ -618,89 +526,29 @@ const handleViewTypeChange = (event: Event) => {
   taskStore.setProjectViewType(props.project.id, newViewType)
 }
 
-const handleDragStart = (event: DragEvent) => {
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    // Don't set dropEffect here - let the browser determine it based on the drop target
-  }
-}
-
-const handleDragEnd = (_event: DragEvent) => {
-  // Clean up any drag state if needed
-}
-
-const handleDragOver = (event: DragEvent) => {
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
-  }
-}
-
-// Column-level drag handlers to make entire column a drop target
-const handleColumnDragOver = (event: DragEvent) => {
-  event.preventDefault()
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
-  }
-}
-
-const handleColumnDrop = (event: DragEvent) => {
-  event.preventDefault()
-  // Let the draggable component handle the actual drop
-}
-
-const handleColumnDragEnter = (event: DragEvent) => {
-  event.preventDefault()
-  // Could add visual feedback here if needed
-}
-
-const handleColumnDragLeave = (event: DragEvent) => {
-  event.preventDefault()
-  // Remove visual feedback if needed
-}
-
-interface DraggableChangeEvent {
-  added?: {
-    element: Task
-    newIndex: number
-  }
-  removed?: {
-    element: Task
-    oldIndex: number
-  }
-  moved?: {
-    element: Task
-    newIndex: number
-    oldIndex: number
-  }
-}
-
-const handleDragChange = (event: DraggableChangeEvent, viewType: string, columnKey: string) => {
-  if (event.added) {
-    const task = event.added.element
-
-    if (viewType === 'status') {
-      emit('moveTask', task.id, columnKey as Task['status'])
-    } else if (viewType === 'date') {
-      // Check if this is a smart group (today, tomorrow, etc.)
-      if (shouldUseSmartGroupLogic(columnKey)) {
-        const smartGroupType = getSmartGroupType(columnKey)
-        if (smartGroupType) {
-          // Use smart group logic - set dueDate but keep in inbox
-          taskStore.moveTaskToSmartGroup(task.id, smartGroupType)
-        } else {
-          // Fallback to original behavior
-          taskStore.moveTaskToDate(task.id, columnKey)
-        }
+const handleMoveTask = (taskId: string, targetKey: string) => {
+  // Logic adapted from handleDragChange to support different view types
+  if (currentViewType.value === 'status') {
+    emit('moveTask', taskId, targetKey as Task['status'])
+  } else if (currentViewType.value === 'date') {
+    // Check if this is a smart group (today, tomorrow, etc.)
+    if (shouldUseSmartGroupLogic(targetKey)) {
+      const smartGroupType = getSmartGroupType(targetKey)
+      if (smartGroupType) {
+        // Use smart group logic - set dueDate but keep in inbox
+        taskStore.moveTaskToSmartGroup(taskId, smartGroupType)
       } else {
-        // Regular calendar date - use original scheduling logic
-        taskStore.moveTaskToDate(task.id, columnKey)
+        // Fallback to original behavior
+        taskStore.moveTaskToDate(taskId, targetKey)
       }
-    } else if (viewType === 'priority') {
-      // Cast to specific priority type which matches the store's expectation
-      taskStore.moveTaskToPriority(task.id, columnKey as Task['priority'] | 'no_priority')
+    } else {
+      // Regular calendar date - use original scheduling logic
+      taskStore.moveTaskToDate(taskId, targetKey)
     }
+  } else if (currentViewType.value === 'priority') {
+    // Cast to specific priority type which matches the store's expectation
+    taskStore.moveTaskToPriority(taskId, targetKey as Task['priority'] | 'no_priority')
   }
-  // No need to manually refresh - localTasks is computed and reactive
 }
 
 // Get empty state message based on current filter
@@ -735,7 +583,7 @@ watch(() => props.tasks, () => {
 
 .swimlane-header {
   padding: var(--space-2) var(--space-8);
-  margin-bottom: 0;
+  margin-bottom: var(--space-4); /* Increased space to prevent collision */
   cursor: pointer;
   user-select: none;
   background: var(--glass-bg-medium);
@@ -806,9 +654,11 @@ watch(() => props.tasks, () => {
 }
 
 .view-type-select {
-  background: var(--surface-tertiary);
+  background: var(--glass-bg-medium);
+  backdrop-filter: blur(var(--blur-xs));
+  -webkit-backdrop-filter: blur(var(--blur-xs));
   border: 1px solid var(--glass-border);
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.9);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
@@ -816,289 +666,100 @@ watch(() => props.tasks, () => {
   transition: all var(--duration-fast) var(--spring-smooth);
   min-width: 80px;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='rgba(255,255,255,0.7)' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 0.5rem center;
   background-repeat: no-repeat;
   background-size: 1.5em 1.5em;
   padding-inline-end: 2.5rem; /* RTL: dropdown chevron spacing */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .view-type-select:focus {
   outline: none;
-  border-color: var(--brand-border-subtle);
-  box-shadow: 0 0 0 2px var(--brand-bg-subtle);
+  background: var(--glass-bg-heavy);
+  border-color: var(--glass-border-hover);
+  box-shadow: 0 0 0 2px var(--glass-bg-medium);
 }
 
 .view-type-select:hover {
-  background: var(--surface-elevated);
-  border-color: var(--border-medium);
+  background: var(--glass-bg-heavy);
+  border-color: var(--glass-border-hover);
 }
 
 /* Dark mode dropdown options */
 .view-type-select option {
-  background: var(--surface-secondary);
+  background: var(--gray-900); /* Solid dark background for options */
   color: var(--text-primary);
   padding: var(--space-2);
 }
 
 .view-type-select option:hover,
 .view-type-select option:checked {
-  background: var(--brand-bg-subtle);
-  color: var(--brand-text);
+  background: var(--glass-bg-light);
+  color: #fff;
 }
 
-.table-scroll-container {
-  overflow-x: auto;
-  overflow-y: visible;
-  margin-bottom: var(--space-3);
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-medium) transparent;
-  width: 100%;
-  /* Enhanced containment to prevent overflow propagation */
-  touch-action: pan-x;
-  position: relative;
-  /* Contain paint operations to prevent performance issues */
-  contain: layout paint style;
-  /* Ensure proper scroll boundary behavior */
-  max-width: 100%;
-  background: var(--kanban-scroll-container-bg);
-}
-
-/* Drag states for visual feedback */
-.kanban-swimlane.dragging .table-scroll-container {
-  cursor: grabbing;
-  user-select: none;
-}
-
-.kanban-swimlane.dragging .swimlane-columns {
-  transition: none;
-}
-
-.kanban-swimlane.scrolling .table-scroll-container {
-  scroll-behavior: auto;
-}
-
-.swimlane-columns {
+.swimlane-body {
   display: flex;
-  gap: var(--kanban-gap);
-  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-8);
-  min-height: 0;
-  min-width: max-content; /* Allow columns to expand to their natural width */
-  width: max-content; /* Force expansion to show all columns */
-  background: var(--kanban-swimlane-bg);
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-3);
+  padding-right: var(--space-1);
+  align-items: flex-start; /* Prevent columns from stretching to match tallest */
 }
 
-/* Webkit scrollbar styling for Chrome/Safari */
-.table-scroll-container::-webkit-scrollbar {
-  height: var(--kanban-scrollbar-height);
+/* ... existing scrollbar styles ... */
+
+.swimlane-column {
+  /* Using exact widths to prevent collapsing */
+  flex: 0 0 320px !important;
+  min-width: 320px !important;
+  width: 320px !important;
+  height: auto !important; /* Force auto height to override component 100% */
+  transition: opacity 0.3s ease;
 }
 
-.table-scroll-container::-webkit-scrollbar-track {
+/* Collapsed State */
+.kanban-swimlane.collapsed .swimlane-header {
+  margin-bottom: 0;
+  border-color: transparent;
   background: transparent;
 }
 
-.table-scroll-container::-webkit-scrollbar-thumb {
-  background-color: var(--border-medium);
-  border-radius: var(--radius-full);
-  border: 2px solid transparent;
+.kanban-swimlane.collapsed .swimlane-header:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.table-scroll-container::-webkit-scrollbar-thumb:hover {
-  background-color: var(--border-strong);
-}
-
-.swimlane-column {
-  background: var(--kanban-column-bg);
-  backdrop-filter: blur(var(--blur-lg)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(160%);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-xl);
-  padding: var(--space-3);
-  box-shadow: var(--shadow-2xl);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  flex: 0 0 var(--kanban-column-width) !important;
-  min-width: var(--kanban-column-width) !important;
-  width: var(--kanban-column-width) !important;
-}
-
-.swimlane-column:hover {
-  background: var(--kanban-column-bg-hover);
-  border-color: var(--border-interactive);
-  box-shadow: var(--shadow-2xl);
-}
-
-/* Enhanced hover state during drag operations */
-.swimlane-column.drag-over {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--brand-primary) 15%, transparent) 0%,
-    color-mix(in srgb, var(--brand-primary) 25%, transparent) 100%
-  ) !important;
-  border-color: var(--brand-primary) !important;
-  box-shadow:
-    0 24px 48px color-mix(in srgb, var(--brand-primary) 30%, transparent),
-    0 12px 24px color-mix(in srgb, var(--brand-primary) 20%, transparent),
-    inset 0 0 0 2px color-mix(in srgb, var(--brand-primary) 20%, transparent),
-    inset 0 1px 0 var(--glass-border) !important;
-}
-
-.swimlane-column.drag-over .column-header-mini {
-  background: color-mix(in srgb, var(--brand-primary) 10%, transparent) !important;
-  border-bottom-color: var(--brand-primary) !important;
-}
-
-.column-header-mini {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-3);
-  padding: var(--space-2) var(--space-2);
-  background: var(--surface-hover);
-  border-radius: var(--radius-md);
-  border-bottom: 1px solid var(--border-subtle);
-  /* Todoist-inspired sticky headers */
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.header-left-mini {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1;
-}
-
-.add-task-btn-mini {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
-  border: 1px solid var(--glass-bg-medium);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--spring-bounce);
-  flex-shrink: 0;
-  box-shadow: 0 2px 4px var(--shadow-md);
-}
-
-.add-task-btn-mini:hover {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-medium) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--glass-border-strong);
-  color: var(--text-primary);
-  transform: translateY(-1px) scale(1.05);
-  box-shadow: 0 4px 8px var(--shadow-strong);
-}
-
-.add-task-btn-mini:active {
-  transform: scale(0.95);
-}
-
-.column-title-mini {
-  color: var(--text-secondary);
-  font-weight: var(--font-semibold);
-  font-size: var(--text-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.column-count {
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  background: var(--kanban-badge-bg);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-}
-
-.drag-area-mini {
-  min-height: var(--kanban-drag-area-min-height);
-  padding: var(--space-3);
-  /* Ensure proper scrolling below sticky headers */
-  scroll-margin-top: 60px;
-  /* Make entire area a valid drop target */
-  background: var(--kanban-drag-area-bg);
-  position: relative;
-}
-
-/* Add visual feedback for valid drop zones during drag */
-.drag-area-mini.drag-over {
-  background: color-mix(in srgb, var(--brand-primary) 5%, transparent);
-  border-radius: var(--radius-md);
-}
-
-.task-item-mini {
-  transition: all 80ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  will-change: transform, opacity;
-}
-
-.ghost-card {
-  opacity: 0.4;
-  background: var(--blue-bg-medium) !important;
-  border: 2px dashed var(--brand-primary) !important;
-  transform: rotate(1deg);
-}
-
-/* Hierarchical task styles removed - they break the kanban layout */
-
-.kanban-swimlane.collapsed .swimlane-header {
-  border-bottom: none;
-}
-
+/* Empty State */
 .empty-filter-state {
-  grid-column: 1 / -1;
+  flex: 1;
   text-align: center;
-  padding: 3rem 1rem;
-  color: var(--text-muted);
+  padding: 48px;
+  color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.02);
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   border: 1px dashed rgba(255, 255, 255, 0.1);
-  margin-top: var(--space-4);
-
-  .empty-icon {
-    margin-bottom: 1rem;
-    opacity: 0.5;
-  }
-
-  .empty-message {
-    font-size: var(--text-sm);
-    margin: 0;
-    font-weight: var(--font-medium);
-  }
 }
 
-/* Compact column widths for different screen sizes */
+/* Responsive */
 @media (max-width: 1400px) {
   .swimlane-column {
-    flex: 0 0 var(--kanban-column-width-lg) !important;
-    min-width: var(--kanban-column-width-lg) !important;
-    width: var(--kanban-column-width-lg) !important;
+    flex: 0 0 300px !important;
+    min-width: 300px !important;
+    width: 300px !important;
   }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 768px) {
   .swimlane-column {
-    flex: 0 0 var(--kanban-column-width-md) !important;
-    min-width: var(--kanban-column-width-md) !important;
-    width: var(--kanban-column-width-md) !important;
+    flex: 0 0 280px !important;
+    min-width: 280px !important;
+    width: 280px !important;
   }
-}
-
-@media (max-width: 1000px) {
-  .swimlane-column {
-    flex: 0 0 var(--kanban-column-width-sm) !important;
-    min-width: var(--kanban-column-width-sm) !important;
-    width: var(--kanban-column-width-sm) !important;
+  
+  .swimlane-header {
+    margin-left: -50px; /* Offset for mobile if needed */
   }
 }
 </style>
+```

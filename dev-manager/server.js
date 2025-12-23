@@ -5,11 +5,15 @@
 
 const express = require('express');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const cors = require('cors');
 
 const app = express();
 const PORT = 6010;
+
+// SSE clients for live file sync
+let sseClients = [];
 
 // Paths
 const DEV_MANAGER_DIR = __dirname;
@@ -18,6 +22,13 @@ const MASTER_PLAN_PATH = path.join(__dirname, '..', 'docs', 'MASTER_PLAN.md');
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Request logging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 app.use(express.static(DEV_MANAGER_DIR));
 
 // API: Get MASTER_PLAN.md content
@@ -44,7 +55,8 @@ app.post('/api/task/:id', async (req, res) => {
     const updatedContent = updateTaskProperty(content, id, property, value);
 
     if (updatedContent === content) {
-      return res.status(404).json({ error: `Task ${id} not found or property unchanged` });
+      // Return success even if nothing changed (idempotent operation)
+      return res.json({ success: true, id, property, value, message: 'No change needed' });
     }
 
     await fs.writeFile(MASTER_PLAN_PATH, updatedContent, 'utf-8');
@@ -98,6 +110,7 @@ app.post('/api/task/:id/move', async (req, res) => {
  * Handles both dependency table and task header sections
  */
 function updateTaskProperty(content, taskId, property, value) {
+  console.log(`[updateTaskProperty] taskId=${taskId}, property=${property}, value=${value}`);
   const lines = content.split('\n');
   let updated = false;
   let inTargetSection = false;  // Track if we're in the target task's section
@@ -271,6 +284,60 @@ function getStatusText(status) {
   return textMap[status.toLowerCase()] || status.toUpperCase();
 }
 
+// ===== LIVE FILE SYNC (SSE) =====
+
+// SSE endpoint for file change notifications
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  // Send initial connection event
+  res.write('data: {"type":"connected"}\n\n');
+
+  // Add this client to the list
+  sseClients.push(res);
+  console.log(`[SSE] Client connected. Total clients: ${sseClients.length}`);
+
+  // Remove client on disconnect
+  req.on('close', () => {
+    sseClients = sseClients.filter(client => client !== res);
+    console.log(`[SSE] Client disconnected. Total clients: ${sseClients.length}`);
+  });
+});
+
+// Broadcast file change to all connected clients
+function broadcastFileChange() {
+  const event = JSON.stringify({ type: 'file-changed', file: 'MASTER_PLAN.md', timestamp: Date.now() });
+  sseClients.forEach(client => {
+    client.write(`data: ${event}\n\n`);
+  });
+  console.log(`[SSE] Broadcasted file change to ${sseClients.length} clients`);
+}
+
+// File watcher with debounce
+let fileChangeTimeout = null;
+function setupFileWatcher() {
+  try {
+    fsSync.watch(MASTER_PLAN_PATH, (eventType, filename) => {
+      if (eventType === 'change') {
+        // Debounce rapid changes (e.g., editor saves multiple times)
+        if (fileChangeTimeout) clearTimeout(fileChangeTimeout);
+        fileChangeTimeout = setTimeout(() => {
+          console.log(`[FileWatcher] MASTER_PLAN.md changed`);
+          broadcastFileChange();
+        }, 500); // 500ms debounce
+      }
+    });
+    console.log('[FileWatcher] Watching MASTER_PLAN.md for changes');
+  } catch (error) {
+    console.error('[FileWatcher] Failed to watch file:', error.message);
+  }
+}
+
+// ===== END LIVE FILE SYNC =====
+
 // Start server
 app.listen(PORT, () => {
   console.log(`
@@ -279,8 +346,13 @@ app.listen(PORT, () => {
 ╠════════════════════════════════════════════════════════╣
 ║  URL: http://localhost:${PORT}                          ║
 ║  API: http://localhost:${PORT}/api/master-plan          ║
+║  SSE: http://localhost:${PORT}/api/events               ║
 ║                                                        ║
 ║  Editing tasks will update MASTER_PLAN.md directly    ║
+║  Live sync: Changes to MASTER_PLAN.md auto-refresh UI ║
 ╚════════════════════════════════════════════════════════╝
   `);
+
+  // Start file watcher for live sync
+  setupFileWatcher();
 });

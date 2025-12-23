@@ -503,9 +503,10 @@ const formattedDuration = computed(() => {
 <style scoped>
 .task-card {
   /* Todoist-inspired compact card */
-  background: var(--glass-bg-solid);
+  background: var(--kanban-card-glass-bg); /* Deep semi-transparent blue/black */
+  backdrop-filter: blur(var(--blur-xs));
+  -webkit-backdrop-filter: blur(var(--blur-xs));
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-2);
   cursor: pointer;

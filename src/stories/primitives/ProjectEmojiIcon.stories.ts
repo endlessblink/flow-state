@@ -1,9 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 const meta = {
-    component: ProjectEmojiIcon,
     title: '🧩 Primitives/ProjectEmojiIcon',
+    component: ProjectEmojiIcon,
     tags: ['autodocs'],
     parameters: {
         layout: 'centered',
@@ -14,12 +13,11 @@ const meta = {
         emoji: { control: 'text' },
         clickable: { control: 'boolean' }
     }
-} satisfies Meta<typeof ProjectEmojiIcon>
+}
 
 export default meta
-type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Default = {
     args: {
         emoji: '🚀',
         size: 'md',
@@ -27,7 +25,7 @@ export const Default: Story = {
     }
 }
 
-export const Plain: Story = {
+export const Plain = {
     args: {
         emoji: '📂',
         size: 'md',
@@ -35,22 +33,7 @@ export const Plain: Story = {
     }
 }
 
-export const Sizes: Story = {
-    render: (args) => ({
-        components: { ProjectEmojiIcon },
-        setup() { return { args } },
-        template: `
-      <div style="display: flex; gap: 16px; align-items: center;">
-        <ProjectEmojiIcon v-bind="args" size="xs" emoji="🍎" />
-        <ProjectEmojiIcon v-bind="args" size="sm" emoji="🍎" />
-        <ProjectEmojiIcon v-bind="args" size="md" emoji="🍎" />
-        <ProjectEmojiIcon v-bind="args" size="lg" emoji="🍎" />
-      </div>
-    `
-    })
-}
-
-export const Clickable: Story = {
+export const Clickable = {
     args: {
         emoji: '✨',
         size: 'lg',

@@ -1,4 +1,4 @@
-**Last Updated**: December 23, 2025 (TASK-034 DONE, TASK-043 Phase 3, TASK-035 ~80%, Stories 76)
+**Last Updated**: December 23, 2025 (TASK-034 DONE, TASK-035 DONE, TASK-043 Phase 3, Stories 76)
 **Version**: 5.5 (Document Sync Audit)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -242,7 +242,7 @@ Parser calculates progress from checkbox subtasks:
 | Issue | Priority | Action |
 |-------|----------|--------|
 | ~~**ISSUE-011**: PouchDB Conflicts~~ | ~~P1-HIGH~~ | ✅ RESOLVED - All conflicts deleted |
-| **TASK-029**: Storybook Audit Skill | CREATED | Use `/storybook-audit` to debug stories |
+| ~~**TASK-029**~~: Storybook Audit Skill | ✅ DONE | Use `/storybook-audit` to debug stories |
 | **TASK-014**: Storybook Glass Morphism | ✅ COMPLETE | 76 story files in new taxonomy |
 
 **Storybook work can now continue:**
@@ -482,11 +482,11 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-017 | READY | `plasmoid/*` (new) | ~~TASK-021~~ | - |
 | ~~TASK-027~~ | ✅ DONE | `stores/*`, `components/*`, `utils/*` (Zero Lint Warnings) | ~~TASK-011~~ | - |
 | ~~TASK-028~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json` | - | - |
-| TASK-029 | PLANNED | `.claude/skills/storybook-audit/*`, `src/stories/**` | TASK-014 | - |
+| ~~TASK-029~~ | ✅ **DONE** | `.claude/skills/storybook-audit/*`, `src/stories/**` | - | - |
 | ~~TASK-030~~ | ✅ DONE | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
 | ~~TASK-031~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json`, `.claude/locks/*` | - | - |
 | ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
-| TASK-033 | PLANNED | `~/claude-plugins/*` (new) | - | - |
+| **TASK-033** | 📋 **PLANNED** | `~/claude-plugins/*` (new) | - | - |
 | ~~TASK-034~~ | ✅ **DONE** | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
 | ~~BUG-031~~ | ✅ DONE | `tasks.ts`, `ProjectModal.vue` | - | - |
 | ~~TASK-035~~ | ✅ **DONE** | `useSmartViews.ts`, `tasks.ts`, `AppSidebar.vue`, `canvas.ts` | - | - |
@@ -510,12 +510,13 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-050~~ | ✅ DONE | `TaskNode.vue` | - | - |
 | ~~TASK-051~~ | ✅ DONE | `UnifiedInboxPanel.vue`, `InboxFilters.vue` | - | - |
 | ~~**TASK-052**~~ | ✅ **DONE** | `src/stories/**/*` | - | - |
+| TASK-053 | 🔄 **IN PROGRESS** | `dev-manager/kanban/index.html`, `dev-manager/server.js` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 **Parallel Safe**: TASK-014 (UI) + TASK-033 (plugin) + TASK-036 (storybook)
 ~~**⏰ SCHEDULED Dec 28**: TASK-034 Phase 5~~ ✅ **DONE Dec 22** - INDIVIDUAL_ONLY enabled
-**Active**: TASK-035 (~80% done), TASK-043 (Phase 4 pending), TASK-014 (71% coverage)
-**Completed (Dec 23)**: TASK-034 (all phases), TASK-044 (App refactor), TASK-052 (Stories audit)
+**Active**: TASK-043 (Phase 4 pending), TASK-014 (71% coverage)
+**Completed (Dec 23)**: TASK-034 (all phases), TASK-035 (Duration groups), TASK-044 (App refactor), TASK-052 (Stories audit)
 **Ready**: TASK-022 monitoring active
 **Planned**: TASK-037-046 (code quality & architecture improvements)
 **Note**: ~~TASK-034 conflict~~ resolved - now monitoring TASK-022 only
@@ -799,7 +800,7 @@ npx vue-tsc --noEmit  # Should output nothing (0 errors)
 
 ---
 
-### TASK-029: Storybook Audit Skill (PLANNED)
+### ~~TASK-029~~: Storybook Audit Skill (✅ DONE)
 
 **Goal**: Create a Claude Code skill that automatically audits Storybook stories for common issues and fixes them.
 
@@ -844,11 +845,11 @@ npx vue-tsc --noEmit  # Should output nothing (0 errors)
 
 ---
 
-### TASK-033: Create Claude Dev Infrastructure Plugin (PLANNED)
+### TASK-033: Create Claude Dev Infrastructure Plugin (📋 PLANNED)
 
 **Goal**: Package Pomo-Flow's AI development infrastructure as a reusable Claude Code plugin for use in new projects.
 
-**Priority**: P2-MEDIUM (infrastructure, not blocking current work)
+**Priority**: P2-MEDIUM
 
 **Background**:
 This project has developed a sophisticated AI development ecosystem including:
@@ -1052,12 +1053,12 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 **Implementation Steps**:
 
 - [x] 0. Task Initialization & Planning ✅
-- [x] 1. `src/composables/useSmartViews.ts`: Add `isQuickTask()`, `isShortTask()`, `isMediumTask()`, `isLongTask()`, `isUnestimatedTask()` ✅ EXISTS
-- [ ] 2. `src/stores/tasks.ts`: Extend `smartViewTaskCounts` with duration counts
-- [x] 3. `src/composables/useTaskSmartGroups.ts`: Add `DURATION_KEYWORDS` for Power Groups ✅ EXISTS
-- [ ] 4. `src/stores/canvas.ts`: Add duration handling to `getMatchingTasksForPowerGroup()`
-- [x] 5. `src/layouts/AppSidebar.vue`: Add "By Duration" section ✅ EXISTS (line 131)
-- [x] 6. `src/components/canvas/InboxFilters.vue`: Add duration filter dropdown ✅ EXISTS (line 59)
+- [x] 1. `src/composables/useSmartViews.ts`: Add `isQuickTask()`, `isShortTask()`, `isMediumTask()`, `isLongTask()`, `isUnestimatedTask()` ✅ (lines 205-222)
+- [x] 2. `src/stores/tasks.ts`: Extend `smartViewTaskCounts` with duration counts ✅ (lines 1907-1911, 1927-1930)
+- [x] 3. `src/composables/useTaskSmartGroups.ts`: Add `DURATION_KEYWORDS` for Power Groups ✅ (line 54)
+- [x] 4. `src/stores/canvas.ts`: Add duration handling to `getMatchingTasksForPowerGroup()` ✅ (lines 825, 860)
+- [x] 5. `src/layouts/AppSidebar.vue`: Add "By Duration" section ✅ (line 131)
+- [x] 6. `src/components/canvas/InboxFilters.vue`: Add duration filter dropdown ✅ (line 59)
 
 ---
 
@@ -1087,6 +1088,41 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 - `App.vue` reduced from ~3,300 lines to ~75 lines.
 - Logic decoupled into testable composables.
 - Global styles consolidated into `assets/global-overrides.css`.
+
+---
+
+### TASK-053: Dev-Manager Bidirectional Editing (🔄 IN PROGRESS)
+
+**Goal**: Enable inline editing of task status and priority directly in the dev-manager kanban UI, with changes syncing bidirectionally to MASTER_PLAN.md.
+
+**Priority**: P2-MEDIUM (Developer Experience)
+**Status**: 🔄 IN PROGRESS (Phase 1 & 2 DONE - Awaiting Testing)
+
+**Features**:
+1. **Inline Badge Editing**: Click status/priority badge on task card → dropdown appears → select new value → auto-saves to MASTER_PLAN.md
+2. **Live File Sync**: File watcher monitors MASTER_PLAN.md for external changes → auto-refreshes kanban board
+
+**Implementation Checklist**:
+- [x] **Phase 1: Inline Badge Editing** ✅
+    - [x] Add click handlers to status/priority badges in task cards
+    - [x] Create dropdown component for status selection (TODO, IN_PROGRESS, REVIEW, DONE)
+    - [x] Create dropdown component for priority selection (P1-HIGH, P2-MEDIUM, P3-LOW)
+    - [x] Wire dropdowns to existing `POST /api/task/:id/status` and `POST /api/task/:id` endpoints
+    - [x] Add visual feedback (loading state, success toast)
+
+- [x] **Phase 2: Live File Sync** ✅
+    - [x] Add fs.watch file watcher to server.js for MASTER_PLAN.md
+    - [x] Create SSE endpoint (`/api/events`) for real-time updates
+    - [x] Add client-side EventSource listener to auto-refresh kanban on file change
+    - [x] Debounce rapid file changes (500ms) to prevent UI flickering
+
+**Files to Modify**:
+- `dev-manager/kanban/index.html` - Add badge click handlers and dropdowns
+- `dev-manager/server.js` - Add file watcher and real-time notification endpoint
+
+**API Endpoints (Existing)**:
+- `POST /api/task/:id/status` - Update task status
+- `POST /api/task/:id` - Update task properties (priority, etc.)
 
 ---
 
@@ -2486,7 +2522,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | Task | Location | Status |
 |------|----------|--------|
 | ~~**PouchDB Conflicts**~~ | ~~ISSUE-011~~ | ✅ RESOLVED - All 1,487 conflicts deleted |
-| **Storybook Audit Skill** | TASK-029, `.claude/skills/storybook-audit/` | CREATED - Use for debugging |
+| **Storybook Audit Skill** | ~~TASK-029~~, `.claude/skills/storybook-audit/` | ✅ DONE - Use `/storybook-audit` |
 | **Storybook Glass Morphism** | TASK-014 | ✅ COMPLETE (76 story files) |
 
 **Quick Commands:**

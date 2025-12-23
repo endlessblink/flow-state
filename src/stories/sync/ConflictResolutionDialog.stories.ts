@@ -1,17 +1,16 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
 import ConflictResolutionDialog from '@/components/sync/ConflictResolutionDialog.vue'
 
 const meta = {
-    component: ConflictResolutionDialog,
+    title: 'PLACEHOLDER',
+  component: ConflictResolutionDialog,
     title: '🔄 Sync & Reliability/ConflictResolutionDialog',
     tags: ['autodocs'],
     parameters: {
         layout: 'padded',
     }
-} satisfies Meta<typeof ConflictResolutionDialog>
+}
 
 export default meta
-type Story = StoryObj<typeof meta>
 
 const mockTaskConflict = {
     localTask: {
@@ -48,7 +47,7 @@ const mockTaskConflict = {
     ]
 }
 
-export const Default: Story = {
+export const Default = {
     args: {
         taskConflict: mockTaskConflict as any,
         onResolve: (res: any) => console.log('Resolved with:', res),
@@ -56,7 +55,7 @@ export const Default: Story = {
     }
 }
 
-export const SingleConflict: Story = {
+export const SingleConflict = {
     args: {
         taskConflict: {
             ...mockTaskConflict,

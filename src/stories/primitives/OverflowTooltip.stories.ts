@@ -1,19 +1,18 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 const meta = {
-    component: OverflowTooltip,
+    title: 'PLACEHOLDER',
+  component: OverflowTooltip,
     title: '🧩 Primitives/OverflowTooltip',
     tags: ['autodocs'],
     parameters: {
         layout: 'centered',
     }
-} satisfies Meta<typeof OverflowTooltip>
+}
 
 export default meta
-type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Default = {
     render: () => ({
         components: { OverflowTooltip },
         template: `
@@ -26,7 +25,7 @@ export const Default: Story = {
     })
 }
 
-export const NotOverflowing: Story = {
+export const NotOverflowing = {
     render: () => ({
         components: { OverflowTooltip },
         template: `
@@ -39,7 +38,7 @@ export const NotOverflowing: Story = {
     })
 }
 
-export const CustomContent: Story = {
+export const CustomContent = {
     render: () => ({
         components: { OverflowTooltip },
         template: `

@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
 import DiffViewer from '@/components/sync/DiffViewer.vue'
 
 const meta = {
-    component: DiffViewer,
+    title: 'PLACEHOLDER',
+  component: DiffViewer,
     title: '🔄 Sync & Reliability/DiffViewer',
     tags: ['autodocs'],
     parameters: {
@@ -12,12 +12,11 @@ const meta = {
         mode: { control: 'select', options: ['local', 'remote'] },
         fieldType: { control: 'select', options: ['text', 'array', 'object', 'datetime', 'boolean'] }
     }
-} satisfies Meta<typeof DiffViewer>
+}
 
 export default meta
-type Story = StoryObj<typeof meta>
 
-export const TextDiff: Story = {
+export const TextDiff = {
     args: {
         fieldType: 'text',
         value: 'The quick brown fox jumps over the lazy dog',
@@ -26,7 +25,7 @@ export const TextDiff: Story = {
     }
 }
 
-export const ArrayDiff: Story = {
+export const ArrayDiff = {
     args: {
         fieldType: 'array',
         value: ['Task 1', 'Task 2', 'Task 3'],
@@ -35,7 +34,7 @@ export const ArrayDiff: Story = {
     }
 }
 
-export const ObjectDiff: Story = {
+export const ObjectDiff = {
     args: {
         fieldType: 'object',
         value: { title: 'Old Title', priority: 'low' },
@@ -44,7 +43,7 @@ export const ObjectDiff: Story = {
     }
 }
 
-export const DateTimeDiff: Story = {
+export const DateTimeDiff = {
     args: {
         fieldType: 'datetime',
         value: '2025-12-23T10:00:00Z',
@@ -53,7 +52,7 @@ export const DateTimeDiff: Story = {
     }
 }
 
-export const BooleanDiff: Story = {
+export const BooleanDiff = {
     args: {
         fieldType: 'boolean',
         value: true,

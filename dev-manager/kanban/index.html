@@ -608,6 +608,100 @@
       color: white;
     }
 
+    /* Editable badge styles */
+    .task-priority.editable,
+    .task-status.editable {
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .task-priority.editable:hover,
+    .task-status.editable:hover {
+      filter: brightness(1.15);
+      transform: scale(1.05);
+    }
+
+    .task-status {
+      font-weight: 600;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 4px;
+    }
+
+    .task-status.todo {
+      background: #6b7280;
+      color: white;
+    }
+
+    .task-status.in-progress {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .task-status.review {
+      background: #8b5cf6;
+      color: white;
+    }
+
+    .task-status.done {
+      background: #10b981;
+      color: white;
+    }
+
+    /* Inline dropdown for badge editing */
+    .badge-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      z-index: 1000;
+      min-width: 120px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .badge-dropdown.visible {
+      display: block;
+    }
+
+    .badge-dropdown-option {
+      display: block;
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: left;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-primary);
+      transition: background 0.1s ease;
+    }
+
+    .badge-dropdown-option:hover {
+      background: var(--bg-hover);
+    }
+
+    .badge-dropdown-option.selected {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* Badge wrapper for positioning dropdown */
+    .badge-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
     .task-title {
       font-weight: 700;
       font-size: 15px;
@@ -1979,7 +2073,19 @@
     // Render kanban board from MASTER_PLAN.md
     async function renderKanban() {
       try {
+        console.log('[renderKanban] Starting render...');
         const data = await parseMasterPlan();
+        console.log('[renderKanban] Parsed data:', {
+          activeWork: data.activeWork.length,
+          bugs: data.bugs.length,
+          sample: data.activeWork.slice(0, 3).map(t => ({ id: t.id, status: t.status }))
+        });
+
+        // Log TASK-033 specifically
+        const task033 = data.activeWork.find(t => t.id === 'TASK-033');
+        if (task033) {
+          console.log('[renderKanban] TASK-033 status:', task033.status, 'progress:', task033.progress);
+        }
 
         // Combine all tasks into kanban columns (including roadmap items!)
         const allItems = [
@@ -2007,6 +2113,12 @@
           }),
           done: allItems.filter(i => i.status === 'done')
         };
+        console.log('[renderKanban] Column counts:', {
+          todo: tasks.todo.length,
+          inProgress: tasks.inProgress.length,
+          review: tasks.review.length,
+          done: tasks.done.length
+        });
 
         const columns = {
           todo: document.getElementById('column-todo'),
@@ -2061,11 +2173,37 @@
               </div>
             ` : '';
 
+              // Get status class for badge
+              const statusClass = task.status === 'done' ? 'done' :
+                task.status === 'in-progress' ? 'in-progress' :
+                task.status === 'review' ? 'review' : 'todo';
+              const statusLabel = task.status === 'done' ? 'DONE' :
+                task.status === 'in-progress' ? 'IN PROGRESS' :
+                task.status === 'review' ? 'REVIEW' : 'TODO';
+
               card.innerHTML = `
               <div class="task-header">
                 <button class="expand-toggle" onclick="toggleExpand('${task.id}', event)">${isExpanded ? '▼' : '▶'}</button>
                 <div class="task-id">${task.id}</div>
-                ${priority ? `<div class="task-priority ${priorityClass}">${priority}</div>` : ''}
+                <div class="badge-wrapper">
+                  <div class="task-status ${statusClass} editable" onclick="toggleStatusDropdown('${task.id}', event)" title="Click to change status">${statusLabel}</div>
+                  <div class="badge-dropdown status-dropdown" id="status-dropdown-${task.id}">
+                    <button class="badge-dropdown-option${task.status === 'todo' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'todo', event)">📋 TODO</button>
+                    <button class="badge-dropdown-option${task.status === 'in-progress' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'in-progress', event)">🔄 IN PROGRESS</button>
+                    <button class="badge-dropdown-option${task.status === 'review' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'review', event)">👀 REVIEW</button>
+                    <button class="badge-dropdown-option${task.status === 'done' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'done', event)">✅ DONE</button>
+                  </div>
+                </div>
+                ${priority ? `
+                <div class="badge-wrapper">
+                  <div class="task-priority ${priorityClass} editable" onclick="togglePriorityDropdown('${task.id}', event)" title="Click to change priority">${priority}</div>
+                  <div class="badge-dropdown priority-dropdown" id="priority-dropdown-${task.id}">
+                    <button class="badge-dropdown-option${priorityClass === 'high' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P1-HIGH', event)">🔴 P1-HIGH</button>
+                    <button class="badge-dropdown-option${priorityClass === 'medium' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P2-MEDIUM', event)">🟠 P2-MEDIUM</button>
+                    <button class="badge-dropdown-option${priorityClass === 'low' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P3-LOW', event)">🟢 P3-LOW</button>
+                  </div>
+                </div>
+                ` : ''}
               </div>
               <div class="task-title">${task.title}</div>
               ${description ? `<div class="task-description">${description}</div>` : ''}
@@ -2789,6 +2927,7 @@
       // Set status dropdown
       const statusSelect = document.getElementById('modalStatusSelect');
       statusSelect.value = item.status || 'todo';
+      console.log('[Modal] Status select initial value:', statusSelect.value);
 
       // Set priority dropdown
       const prioritySelect = document.getElementById('modalPrioritySelect');
@@ -2797,6 +2936,25 @@
       if (!['P1', 'P2', 'P3'].includes(prioritySelect.value)) {
         prioritySelect.value = 'P2';
       }
+      console.log('[Modal] Priority select initial value:', prioritySelect.value);
+
+      // Re-attach event listeners (in case inline handlers aren't working)
+      statusSelect.onchange = function() {
+        console.log('[Modal] Status onchange fired!');
+        updateTaskStatus();
+      };
+      prioritySelect.onchange = function() {
+        console.log('[Modal] Priority onchange fired!');
+        updateTaskPriority();
+      };
+
+      // Debug: Add click listener to verify interaction
+      statusSelect.onclick = function() {
+        console.log('[Modal] Status select clicked');
+      };
+      prioritySelect.onclick = function() {
+        console.log('[Modal] Priority select clicked');
+      };
 
       // Set progress slider
       const progress = item.progress !== undefined ? item.progress : (item.status === 'done' ? 100 : 0);
@@ -2836,20 +2994,28 @@
 
     // Update task status via API
     async function updateTaskStatus() {
-      if (!currentEditTask) return;
+      console.log('[Modal] updateTaskStatus called');
+      if (!currentEditTask) {
+        console.log('[Modal] No currentEditTask!');
+        return;
+      }
 
       const newStatus = document.getElementById('modalStatusSelect').value;
+      console.log(`[Modal] Updating ${currentEditTask.id} status to: ${newStatus}`);
       pendingChanges.status = newStatus;
       showSyncStatus('loading', 'Saving status...');
 
       try {
+        console.log(`[Modal] Calling API: ${API_BASE}/api/task/${currentEditTask.id}/status`);
         const response = await fetch(`${API_BASE}/api/task/${currentEditTask.id}/status`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus })
         });
 
+        console.log(`[Modal] Response status: ${response.status}`);
         const result = await response.json();
+        console.log(`[Modal] Response:`, result);
         if (result.success) {
           showSyncStatus('success', `✓ Status updated to ${newStatus}`);
           currentEditTask.status = newStatus;
@@ -2859,15 +3025,21 @@
           showSyncStatus('error', `✗ ${result.error || 'Failed to update status'}`);
         }
       } catch (error) {
+        console.error(`[Modal] Error:`, error);
         showSyncStatus('error', `✗ Server not running. Start with: cd dev-manager && npm start`);
       }
     }
 
     // Update task priority via API
     async function updateTaskPriority() {
-      if (!currentEditTask) return;
+      console.log('[Modal] updateTaskPriority called');
+      if (!currentEditTask) {
+        console.log('[Modal] No currentEditTask!');
+        return;
+      }
 
       const newPriority = document.getElementById('modalPrioritySelect').value;
+      console.log(`[Modal] Updating ${currentEditTask.id} priority to: ${newPriority}`);
       pendingChanges.priority = newPriority;
       showSyncStatus('loading', 'Saving priority...');
 
@@ -2907,6 +3079,125 @@
       if (p.includes('p2') || p.includes('medium')) return 'medium';
       return 'low';
     }
+
+    // ===== INLINE BADGE EDITING =====
+
+    // Close all dropdowns
+    function closeAllDropdowns() {
+      document.querySelectorAll('.badge-dropdown').forEach(d => d.classList.remove('visible'));
+    }
+
+    // Toggle status dropdown
+    function toggleStatusDropdown(taskId, event) {
+      event.stopPropagation();
+      const dropdown = document.getElementById(`status-dropdown-${taskId}`);
+      const wasVisible = dropdown.classList.contains('visible');
+      closeAllDropdowns();
+      if (!wasVisible) {
+        dropdown.classList.add('visible');
+      }
+    }
+
+    // Toggle priority dropdown
+    function togglePriorityDropdown(taskId, event) {
+      event.stopPropagation();
+      const dropdown = document.getElementById(`priority-dropdown-${taskId}`);
+      const wasVisible = dropdown.classList.contains('visible');
+      closeAllDropdowns();
+      if (!wasVisible) {
+        dropdown.classList.add('visible');
+      }
+    }
+
+    // Update status inline (from badge dropdown)
+    async function updateInlineStatus(taskId, newStatus, event) {
+      console.log(`[InlineStatus] Updating ${taskId} to ${newStatus}`);
+      event.stopPropagation();
+      closeAllDropdowns();
+
+      // Show loading indicator
+      const dropdownEl = document.querySelector(`#status-dropdown-${taskId}`);
+      if (!dropdownEl) {
+        console.error(`[InlineStatus] Dropdown not found for ${taskId}`);
+        showToast(`✗ Dropdown not found for ${taskId}`, 'error');
+        return;
+      }
+      const badge = dropdownEl.previousElementSibling;
+      const originalText = badge.textContent;
+      badge.textContent = '...';
+
+      try {
+        console.log(`[InlineStatus] Calling API: ${API_BASE}/api/task/${taskId}/status`);
+        const response = await fetch(`${API_BASE}/api/task/${taskId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        const result = await response.json();
+        console.log(`[InlineStatus] API response:`, result);
+        if (result.success) {
+          showToast(`✓ ${taskId} status → ${newStatus.toUpperCase()}`, 'success');
+          // Refresh kanban to move card to correct column
+          console.log(`[InlineStatus] Refreshing kanban in 300ms...`);
+          setTimeout(() => {
+            console.log(`[InlineStatus] Calling renderKanban()`);
+            renderKanban();
+          }, 300);
+        } else {
+          badge.textContent = originalText;
+          showToast(`✗ ${result.error || 'Failed to update status'}`, 'error');
+        }
+      } catch (error) {
+        console.error(`[InlineStatus] Error:`, error);
+        badge.textContent = originalText;
+        showToast('✗ Server not running. Start with: cd dev-manager && npm start', 'error');
+      }
+    }
+
+    // Update priority inline (from badge dropdown)
+    async function updateInlinePriority(taskId, newPriority, event) {
+      event.stopPropagation();
+      closeAllDropdowns();
+
+      // Show loading indicator
+      const badge = document.querySelector(`#priority-dropdown-${taskId}`).previousElementSibling;
+      const originalText = badge.textContent;
+      badge.textContent = '...';
+
+      try {
+        const response = await fetch(`${API_BASE}/api/task/${taskId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property: 'priority', value: newPriority })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showToast(`✓ ${taskId} priority → ${newPriority}`, 'success');
+          // Update badge immediately
+          badge.textContent = newPriority;
+          badge.className = 'task-priority ' + getPriorityClass(newPriority) + ' editable';
+          // Refresh to update any sorting
+          setTimeout(() => renderKanban(), 500);
+        } else {
+          badge.textContent = originalText;
+          showToast(`✗ ${result.error || 'Failed to update priority'}`, 'error');
+        }
+      } catch (error) {
+        badge.textContent = originalText;
+        showToast('✗ Server not running. Start with: cd dev-manager && npm start', 'error');
+      }
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.badge-wrapper')) {
+        closeAllDropdowns();
+      }
+    });
+
+    // ===== END INLINE BADGE EDITING =====
 
     // Update progress slider display (live)
     function updateTaskProgress() {
@@ -3642,6 +3933,71 @@
       console.log('Window focused - refreshing data...');
       renderKanban();
     });
+
+    // ===== LIVE FILE SYNC (SSE) =====
+    let eventSource = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+
+    function connectSSE() {
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      console.log('[SSE] Connecting to live sync...');
+      eventSource = new EventSource(`${API_BASE}/api/events`);
+
+      eventSource.onopen = () => {
+        console.log('[SSE] Connected to live sync');
+        reconnectAttempts = 0;
+        showToast('🔄 Live sync connected', 'success');
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[SSE] Received:', data);
+
+          if (data.type === 'file-changed') {
+            console.log('[SSE] MASTER_PLAN.md changed externally - refreshing...');
+            showToast('📄 MASTER_PLAN.md updated - refreshing...', 'info');
+            // Debounce to avoid multiple rapid refreshes
+            setTimeout(() => renderKanban(), 300);
+          }
+        } catch (e) {
+          console.error('[SSE] Parse error:', e);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('[SSE] Connection error:', error);
+        eventSource.close();
+
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+          console.log(`[SSE] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+          setTimeout(connectSSE, delay);
+        } else {
+          console.log('[SSE] Max reconnect attempts reached. Live sync disabled.');
+          showToast('⚠️ Live sync disconnected', 'warning');
+        }
+      };
+    }
+
+    // Start SSE connection on load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Delay SSE connection to let server start
+      setTimeout(connectSSE, 1000);
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    });
+    // ===== END LIVE FILE SYNC =====
   </script>
 </body>
 

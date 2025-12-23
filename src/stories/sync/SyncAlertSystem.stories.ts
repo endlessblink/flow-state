@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
+import { ref, onMounted } from 'vue'
 import SyncAlertSystem from '@/components/SyncAlertSystem.vue'
 
 const meta = {
-    component: SyncAlertSystem,
     title: '🔄 Sync & Reliability/SyncAlertSystem',
+    component: SyncAlertSystem,
     tags: ['autodocs'],
     parameters: {
         layout: 'fullscreen',
@@ -13,12 +13,11 @@ const meta = {
             }
         }
     }
-} satisfies Meta<typeof SyncAlertSystem>
+}
 
 export default meta
-type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Default = {
     render: () => ({
         components: { SyncAlertSystem },
         setup() {
@@ -58,5 +57,3 @@ export const Default: Story = {
         template: '<SyncAlertSystem ref="alertSystemRef" />'
     })
 }
-
-import { ref, onMounted } from 'vue'

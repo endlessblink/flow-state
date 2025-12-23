@@ -199,54 +199,66 @@ const formatStatus = (status: string): string => {
 
 <style scoped>
 /* Base Row - 32px height optimized for scanning */
+/* Base Row - 32px height optimized for scanning */
 .task-row {
   display: grid;
   grid-template-columns: 40px 1fr 40px 100px 100px 140px 80px;
   grid-template-areas: "checkbox title project due status tags actions";
   height: 32px;
-  position: relative; /* Needed for absolute positioned priority indicator */
+  position: relative;
   padding: 0 var(--space-3);
   align-items: center;
   gap: var(--space-2);
-  border-bottom: 1px solid var(--glass-border);
-  background-color: transparent;
+  
+  /* Glass Morphism Base - More visible */
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08); /* All-around border like cards */
+  border-bottom-color: rgba(255, 255, 255, 0.1); /* Slightly stronger bottom */
+  border-radius: 6px; /* Rounded corners like cards */
+  margin-bottom: 4px; /* Separation */
+  backdrop-filter: blur(8px);
+  
   cursor: pointer;
-  transition: background-color var(--duration-fast) ease;
-  contain: layout style size; /* Performance optimization */
+  transition: all 0.2s ease-out;
+  contain: layout style size;
 }
 
 .task-row:hover {
-  background-color: var(--glass-bg-medium);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .task-row--selected {
-  background-color: rgba(78, 205, 196, 0.05);
+  background: rgba(78, 205, 196, 0.08) !important; /* Brand tint */
   border-left: 3px solid var(--brand-primary);
+  border-bottom-color: rgba(78, 205, 196, 0.2);
 }
 
 /* ADHD Visual Anchor - Every 5th row */
 .task-row--anchor {
-  background-color: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .task-row--anchor:hover {
-  background-color: var(--glass-bg-medium);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* Density Variants */
 .task-row--compact {
   height: 28px;
-  font-size: var(--text-sm);
+  font-size: 13px;
 }
 
 .task-row--comfortable {
-  height: 32px;
-  font-size: var(--text-base);
+  height: 36px;
+  font-size: 14px;
 }
 
 .task-row--spacious {
-  height: 36px;
-  font-size: var(--text-base);
+  height: 44px;
+  font-size: 14px;
   padding: 0 var(--space-4);
 }
 
@@ -256,222 +268,148 @@ const formatStatus = (status: string): string => {
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s;
 }
 
-/* Title Cell - Flexible, main focus */
+.task-row:hover .task-row__checkbox {
+  opacity: 1;
+}
+
+/* Title Cell */
 .task-row__title {
   grid-area: title;
-  min-width: 0; /* Critical for text truncation */
+  min-width: 0;
   overflow: hidden;
 }
 
 .task-row__title-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
+  transition: color 0.2s;
+  letter-spacing: 0.01em;
 }
 
-/* Project Emoji Cell - Enhanced to match canvas implementation */
+.task-row:hover .task-row__title-text {
+  color: #fff;
+}
+
+.task-row--selected .task-row__title-text {
+  color: var(--brand-primary-light, #7fffd4);
+  text-shadow: 0 0 10px rgba(78, 205, 196, 0.3);
+}
+
+/* Project Emoji Cell */
 .task-row__project {
   grid-area: project;
   display: grid;
-  place-items: center; /* Perfect centering with CSS Grid */
-  transform: translateZ(0); /* Hardware acceleration */
-  will-change: transform;
+  place-items: center;
 }
 
-/* Enhanced project indicator styles matching canvas implementation */
+/* Project Indicator Glass */
 .project-emoji-badge {
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: all var(--spring-smooth) ease;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-full);
+  transition: all 0.2s ease;
+  padding: 2px 6px;
+  border-radius: 6px; /* Softer radius */
 }
 
 .project-emoji-badge:hover {
-  background: var(--brand-bg-subtle-hover);
-  border-color: var(--brand-border);
-  transform: translateY(-1px) translateZ(0);
-  box-shadow: 0 4px 8px var(--shadow-subtle);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transform: translateY(-1px);
 }
-
-.project-emoji {
-  font-size: var(--project-indicator-size-md); /* 24px to match canvas */
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: translateZ(0); /* Hardware acceleration */
-  transition: all var(--spring-smooth) ease;
-}
-
-.project-emoji.project-css-circle {
-  width: var(--project-indicator-size-md); /* 24px to match canvas */
-  height: var(--project-indicator-size-md); /* 24px to match canvas */
-  border-radius: 50%;
-  background: var(--project-color);
-  box-shadow: var(--project-indicator-shadow-inset);
-  position: relative;
-  font-size: var(--project-indicator-font-size-md); /* Proper font scaling */
-  color: white;
-  font-weight: var(--font-bold);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--spring-smooth) ease;
-  backdrop-filter: var(--project-indicator-backdrop);
-  /* Enhanced glow to match canvas */
-  box-shadow:
-    var(--project-indicator-shadow-inset),
-    var(--project-indicator-glow-strong);
-}
-
-.project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: translateZ(0) scale(1.15); /* Match canvas scaling */
-  box-shadow:
-    var(--project-indicator-shadow-inset),
-    0 0 16px var(--project-color),
-    0 0 32px var(--project-color);
-}
-
-/* Add radial gradient glow effect like canvas */
-.project-emoji-badge:hover .project-emoji.project-css-circle::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(
-    circle,
-    var(--project-color) 0%,
-    transparent 70%
-  );
-  opacity: 0.3;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: -1;
-}
-
-.project-emoji-badge.project-visual--colored {
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
-}
-
 
 /* Due Date Cell */
 .task-row__due-date {
   grid-area: due;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 6px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .task-row__icon {
   flex-shrink: 0;
-  color: var(--text-tertiary);
+  opacity: 0.6;
 }
 
 .task-row__date--overdue {
-  color: var(--color-error);
-  font-weight: 600;
+  color: #ff6b6b;
+  text-shadow: 0 0 8px rgba(255, 107, 107, 0.2);
 }
 
 .task-row__date--today {
-  color: var(--color-warning);
+  color: #feca57;
   font-weight: 500;
 }
 
 .task-row__date--soon {
-  color: var(--color-info);
+  color: #54a0ff;
 }
 
-/* Priority Indicator - Subtle left border */
-.priority-indicator {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.priority-high .priority-indicator {
-  background: var(--color-priority-high);
-}
-
-.priority-medium .priority-indicator {
-  background: var(--color-priority-medium);
-}
-
-.priority-low .priority-indicator {
-  background: var(--color-priority-low);
-}
-
-.timer-active .priority-indicator {
-  background: var(--brand-primary) !important;
-  animation: priorityPulse 2s ease-in-out infinite;
-}
-
-@keyframes priorityPulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-
-/* Status Badge */
+/* Status Badge - Glass Pills */
 .task-row__status {
   grid-area: status;
+  display: flex;
+  align-items: center;
+}
+
+.task-row__badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  backdrop-filter: blur(4px);
 }
 
 .task-row__badge--planned {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .task-row__badge--in_progress {
-  background-color: var(--blue-bg-light);
-  color: var(--color-info);
+  background: rgba(52, 152, 219, 0.15);
+  border-color: rgba(52, 152, 219, 0.3);
+  color: #5dade2;
 }
 
 .task-row__badge--done {
-  background-color: var(--success-bg-light);
-  color: var(--color-success);
+  background: rgba(46, 204, 113, 0.15);
+  border-color: rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
 }
 
 .task-row__badge--backlog {
-  background-color: var(--purple-bg-subtle);
-  color: var(--color-primary);
+  background: rgba(155, 89, 182, 0.15);
+  border-color: rgba(155, 89, 182, 0.3);
+  color: #d2b4de;
 }
 
 .task-row__badge--on_hold {
-  background-color: var(--orange-bg-light);
-  color: var(--color-warning);
+  background: rgba(230, 126, 34, 0.15);
+  border-color: rgba(230, 126, 34, 0.3);
+  color: #f5b041;
 }
 
-/* Tags Cell - Progressive disclosure */
+/* Tags Cell - Glass Chips */
 .task-row__tags {
   grid-area: tags;
   display: flex;
-  gap: var(--space-1);
+  gap: 4px;
   overflow: hidden;
-  opacity: 0;
-  transition: opacity var(--duration-fast) ease;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 
 .task-row:hover .task-row__tags {
@@ -479,33 +417,34 @@ const formatStatus = (status: string): string => {
 }
 
 .task-row__tag {
-  padding: 2px var(--space-1_5);
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  color: var(--text-secondary);
+  padding: 1px 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
   white-space: nowrap;
 }
 
 .task-row__tag-more {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  font-weight: 500;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
-/* Actions Cell - Hover only */
+/* Actions Cell */
 .task-row__actions {
   grid-area: actions;
   display: flex;
-  gap: var(--space-1);
+  gap: 4px;
   justify-content: flex-end;
   opacity: 0;
-  transition: opacity var(--duration-fast) ease;
+  transform: translateX(10px);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .task-row:hover .task-row__actions {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .task-row__action-btn {
@@ -514,42 +453,44 @@ const formatStatus = (status: string): string => {
   justify-content: center;
   width: 28px;
   height: 28px;
-  padding: 0;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: all var(--duration-fast) ease;
+  transition: all 0.2s;
 }
 
 .task-row__action-btn:hover {
-  background-color: var(--glass-bg-medium);
-  border-color: var(--glass-border-hover);
-  color: var(--text-primary);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
 
-/* Empty state indicator */
+/* Priority Indicator */
+.priority-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 3px;
+  width: 3px;
+  border-radius: 4px;
+  opacity: 0.8;
+}
+
+/* Empty state */
 .task-row__empty {
-  color: var(--text-tertiary);
+  color: rgba(255, 255, 255, 0.1);
   font-size: 12px;
 }
 
-/* Focus state for accessibility */
+/* Focus */
 .task-row:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
-  z-index: 1;
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .task-row,
-  .task-row__tags,
-  .task-row__actions,
-  .task-row__action-btn {
-    transition: none;
-  }
+  outline: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
 }
 </style>

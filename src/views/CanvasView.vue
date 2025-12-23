@@ -184,7 +184,7 @@
         <!-- Duration Filter Controls -->
         <div class="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-none">
            <!-- Wrapper to restore pointer events for buttons -->
-           <div class="flex items-center gap-1 p-1 bg-[rgba(30,41,59,0.5)] backdrop-blur-md border border-gray-700/30 rounded-lg shadow-lg pointer-events-auto">
+           <div class="flex items-center gap-1 p-1 pointer-events-auto">
              <button
                class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
                :class="{ 'bg-green-500/20 text-green-400': taskStore.activeDurationFilter === 'quick', 'text-gray-400': taskStore.activeDurationFilter !== 'quick' }"
@@ -3194,7 +3194,8 @@ onBeforeUnmount(() => {
   height: 100%;
   min-height: 100vh;
   position: relative;
-  background: var(--canvas-bg, #1a1a1a);
+  position: relative;
+  background: var(--app-background-gradient);
 }
 
 .vue-flow-container {

@@ -2,7 +2,11 @@
   <div class="calendar-inbox-panel" :class="{ collapsed: isCollapsed }">
     <!-- Header -->
     <div class="inbox-header">
-      <button class="collapse-btn" :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'" @click="isCollapsed = !isCollapsed">
+      <button
+        class="collapse-btn"
+        :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'"
+        @click="isCollapsed = !isCollapsed"
+      >
         <ChevronLeft v-if="!isCollapsed" :size="16" />
         <ChevronRight v-else :size="16" />
       </button>
@@ -11,14 +15,14 @@
       </h3>
 
       <!-- Expanded state count -->
-      <span v-if="!isCollapsed" class="inbox-count">{{ inboxTasks.length }}</span>
+      <NBadge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
     </div>
 
     <!-- Collapsed state task count indicators positioned under arrow -->
     <div v-if="isCollapsed" class="collapsed-badges-container">
       <!-- Show dual count when filter is active, single count when no filter -->
       <BaseBadge
-        v-if="currentFilter === 'allTasks'"
+        v-if="!hasActiveFilters"
         variant="count"
         size="sm"
         rounded
@@ -45,19 +49,17 @@
       </div>
     </div>
 
-    <!-- Filter Toggle -->
-    <div v-if="!isCollapsed" class="filter-toggle">
-      <button
-        v-for="option in filterOptions"
-        :key="option.value"
-        class="filter-btn"
-        :class="[{ active: currentFilter === option.value }]"
-        :title="option.label"
-        @click="currentFilter = option.value"
-      >
-        <span class="filter-icon">{{ option.icon }}</span>
-      </button>
-    </div>
+    <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
+    <InboxFilters
+      v-if="!isCollapsed"
+      v-model:unscheduled-only="unscheduledOnly"
+      v-model:selected-priority="selectedPriority"
+      v-model:selected-project="selectedProject"
+      v-model:selected-duration="selectedDuration"
+      :tasks="baseInboxTasks"
+      :projects="taskStore.rootProjects"
+      @clear-all="clearAllFilters"
+    />
 
     <!-- Quick Add -->
     <div v-if="!isCollapsed" class="quick-add">
@@ -67,6 +69,37 @@
         class="quick-add-input"
         @keydown.enter="addTask"
       >
+    </div>
+
+    <!-- Brain Dump Mode (optional) -->
+    <div v-if="!isCollapsed" class="brain-dump-section">
+      <NButton
+        secondary
+        block
+        size="small"
+        class="brain-dump-toggle"
+        @click="brainDumpMode = !brainDumpMode"
+      >
+        {{ brainDumpMode ? 'Quick Add Mode' : 'Brain Dump Mode' }}
+      </NButton>
+
+      <!-- Brain Dump Textarea -->
+      <div v-if="brainDumpMode" class="brain-dump-container">
+        <textarea
+          v-model="brainDumpText"
+          class="brain-dump-textarea"
+          rows="5"
+          placeholder="Paste or type tasks (one per line)..."
+        />
+        <NButton
+          type="primary"
+          block
+          :disabled="!brainDumpText.trim()"
+          @click="processBrainDump"
+        >
+          Add {{ brainDumpText.split('\n').filter(l => l.trim()).length }} Tasks
+        </NButton>
+      </div>
     </div>
 
     <!-- Inbox Task List -->
@@ -79,107 +112,112 @@
         <p class="empty-text">
           No tasks in inbox
         </p>
-        <p class="empty-subtext">
-          All tasks are scheduled
-        </p>
       </div>
 
-      <!-- Task Cards with native HTML5 drag-drop (NOT vuedraggable - per PomoFlow spec) -->
-      <div class="inbox-task-list">
-        <div
-          v-for="task in inboxTasks"
-          :key="task.id"
-          class="inbox-task-card"
-          draggable="true"
-          :class="{ 'is-dragging': draggingTaskId === task.id }"
-          @dragstart="onDragStart($event, task)"
-          @dragend="onDragEnd"
-          @click="handleTaskClick($event, task)"
-          @dblclick="handleTaskDoubleClick(task)"
-          @contextmenu.prevent="handleTaskContextMenu($event, task)"
-        >
-          <div class="priority-stripe" :class="`priority-stripe-${task.priority}`" />
+      <!-- Task Cards -->
+      <div
+        v-for="task in inboxTasks"
+        :key="task.id"
+        class="task-card"
+        draggable="true"
+        tabindex="0"
+        @dragstart="onDragStart($event, task)"
+        @dragend="onDragEnd"
+        @click="handleTaskClick($event, task)"
+        @dblclick="handleTaskDoubleClick(task)"
+        @contextmenu.prevent="handleTaskContextMenu($event, task)"
+      >
+        <!-- Priority Stripe (top) -->
+        <div class="priority-stripe" :class="`priority-${task.priority}`" />
 
-          <!-- Timer Active Badge -->
-          <div v-if="isTimerActive(task.id)" class="timer-indicator" title="Timer Active">
-            <Timer :size="12" />
+        <!-- Timer Active Badge -->
+        <div v-if="isTimerActive(task.id)" class="timer-indicator" title="Timer Active">
+          <Timer :size="12" />
+        </div>
+
+        <!-- Task Content -->
+        <div class="task-content">
+          <div class="task-title">
+            {{ task.title }}
           </div>
 
-          <div class="task-content">
-            <div class="task-title">
-              {{ task.title }}
-            </div>
+          <!-- Metadata Badges -->
+          <div class="task-metadata">
+            <!-- Project Badge -->
+            <span v-if="task.projectId" class="metadata-badge project-badge">
+              <ProjectEmojiIcon
+                :emoji="projectVisual(task.projectId).content"
+                size="xs"
+              />
+            </span>
 
-            <!-- Enhanced metadata section -->
-            <div class="task-metadata">
-              <!-- Status badge -->
-              <span class="status-badge">{{ statusLabel(task.status) }}</span>
-
-              <!-- Due date badge -->
-              <span v-if="task.dueDate" class="due-date-badge" title="Due Date">
-                <Calendar :size="12" />
-                {{ task.dueDate }}
-              </span>
-
-              <!-- Project visual indicator -->
-              <span
-                class="project-emoji-badge"
-                :class="[`project-visual--${projectVisual(task.projectId).type}`, { 'project-visual--colored': projectVisual(task.projectId).type === 'css-circle' }]"
-                :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-              >
-                <ProjectEmojiIcon
-                  v-if="projectVisual(task.projectId).type === 'emoji'"
-                  :emoji="projectVisual(task.projectId).content"
-                  size="sm"
-                  :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-                />
-                <span
-                  v-else-if="projectVisual(task.projectId).type === 'css-circle'"
-                  class="project-emoji project-css-circle"
-                  :style="{ '--project-color': projectVisual(task.projectId).color }"
-                >
-                  {{ projectVisual(task.projectId).content }}
-                </span>
-                <span v-else class="project-emoji">{{ projectVisual(task.projectId).content }}</span>
-              </span>
-
-              <!-- Duration badge -->
-              <span v-if="task.estimatedDuration" class="duration-badge">
-                {{ task.estimatedDuration }}m
-              </span>
-            </div>
-          </div>
-          <!-- Quick Actions -->
-          <div class="task-actions">
-            <button
-              class="action-btn"
-              :title="`Start timer for ${task.title}`"
-              @click="handleStartTimer(task)"
+            <!-- Priority Tag -->
+            <NTag
+              :type="task.priority === 'high' ? 'error' : task.priority === 'medium' ? 'warning' : 'info'"
+              size="small"
+              round
+              class="priority-badge"
             >
-              <Play :size="12" />
-            </button>
-            <button
-              class="action-btn"
-              :title="`Edit ${task.title}`"
-              @click="handleEditTask(task)"
+              {{ task.priority }}
+            </NTag>
+
+            <!-- Due Date Badge -->
+            <span
+              v-if="task.dueDate"
+              class="metadata-badge due-date-badge"
+              :class="getDueBadgeClass(task.dueDate)"
             >
-              <Edit2 :size="12" />
-            </button>
+              <Calendar :size="12" />
+              {{ formatDueDateLabel(task.dueDate) }}
+            </span>
+
+            <!-- Duration Badge -->
+            <span v-if="task.estimatedDuration" class="metadata-badge duration-badge">
+              <Clock :size="12" />
+              {{ task.estimatedDuration }}m
+            </span>
+
+            <!-- Status Indicator -->
+            <span class="metadata-badge status-badge" :class="`status-${task.status}`">
+              {{ statusEmoji(task.status) }}
+            </span>
           </div>
+        </div>
+
+        <!-- Quick Actions (hover) -->
+        <div class="task-actions">
+          <button
+            class="action-btn"
+            :title="`Start timer for ${task.title}`"
+            @click.stop="handleStartTimer(task)"
+          >
+            <Play :size="12" />
+          </button>
+          <button
+            class="action-btn"
+            :title="`Edit ${task.title}`"
+            @click.stop="handleEditTask(task)"
+          >
+            <Edit2 :size="12" />
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Quick Add Task Button -->
     <div v-if="!isCollapsed" class="quick-add-task">
-      <button
-        class="add-task-btn"
+      <NButton
+        type="primary"
+        block
+        dashed
         title="Add new task to inbox"
         @click="handleQuickAddTask"
       >
-        <Plus :size="14" />
+        <template #icon>
+          <Plus :size="14" />
+        </template>
         Add Task
-      </button>
+      </NButton>
     </div>
   </div>
 </template>
@@ -188,105 +226,90 @@
 import { ref, computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import {
-  ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar
+  ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock
 } from 'lucide-vue-next'
+import { NButton, NBadge, NTag } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import InboxFilters from '@/components/canvas/InboxFilters.vue'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const { updateTaskWithUndo, createTaskWithUndo } = useUnifiedUndoRedo()
 
 // State
 const isCollapsed = ref(false)
 const newTaskTitle = ref('')
-const currentFilter = ref('unscheduled')
 const draggingTaskId = ref<string | null>(null)
+const brainDumpMode = ref(false)
+const brainDumpText = ref('')
 
-// Filter options - calendar-only filters (no canvas-related options)
-const filterOptions = [
-  { value: 'today', label: 'Today', icon: '☀️' },
-  { value: 'unscheduled', label: 'Unscheduled', icon: '📅' },
-  { value: 'incomplete', label: 'Incomplete', icon: '⚡' },
-  { value: 'allTasks', label: 'All Tasks', icon: '📋' }
-]
+// Filter state
+const unscheduledOnly = ref(false)
+const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
+const selectedProject = ref<string | null>(null)
+const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
 
 // Computed
+const hasActiveFilters = computed(() => {
+  return unscheduledOnly.value || selectedPriority.value !== null || selectedProject.value !== null || selectedDuration.value !== null
+})
+
+// Check if task is scheduled on calendar (has instances with dates)
+const isScheduledOnCalendar = (task: Task): boolean => {
+  if (!task.instances || task.instances.length === 0) return false
+  return task.instances.some(inst => inst.scheduledDate)
+}
+
 const baseInboxTasks = computed(() => {
-  // Calendar inbox: Show tasks NOT scheduled on the calendar grid
-  // "Scheduled" means having instances (time slots) - NOT just having a dueDate
-  // dueDate is just a deadline, it doesn't put task on the calendar grid
-  // IGNORE canvasPosition - that's for Canvas inbox only
-  const allTasks = taskStore.tasks
-  return allTasks.filter(task => {
+  // Calendar inbox base: Show tasks NOT yet scheduled on the calendar grid
+  return taskStore.tasks.filter(task => {
     if (task.status === 'done') return false
-
-    // Only check for actual calendar scheduling (instances or legacy scheduled date/time)
-    // dueDate does NOT count as "on the calendar"
-    const hasInstances = task.instances && task.instances.length > 0
-    const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
-                             (task.scheduledTime && task.scheduledTime.trim() !== '')
-
-    // Show in calendar inbox if task has NO calendar instances
-    return !hasInstances && !hasLegacySchedule
+    return !isScheduledOnCalendar(task)
   })
 })
 
 const inboxTasks = computed(() => {
-  // Use raw tasks instead of filteredTasks to avoid conflicts with smart views
-  // Calendar inbox should work independently of smart view filtering
-  const allTasks = taskStore.tasks
+  let tasks = baseInboxTasks.value
 
+  // Apply filters
+  if (unscheduledOnly.value) {
+    tasks = tasks.filter(task => !isScheduledOnCalendar(task))
+  }
 
-  const filtered = allTasks.filter(task => {
-    // Calculate task properties - calendar-only checks
-    // "On the calendar" = has instances (time slots), NOT just dueDate
-    const hasInstances = task.instances && task.instances.length > 0
-    const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
-                             (task.scheduledTime && task.scheduledTime.trim() !== '')
-    const isNotDone = task.status !== 'done'
+  if (selectedPriority.value !== null) {
+    tasks = tasks.filter(task => task.priority === selectedPriority.value)
+  }
 
-    // Calendar inbox: IGNORE canvas state (isInInbox, canvasPosition)
-    // A task is "not on calendar" if it has no instances
-    const isNotOnCalendar = !hasInstances && !hasLegacySchedule
-
-    // Filter logic based on current selection
-    let passesFilter = false
-    switch (currentFilter.value) {
-      case 'today': {
-        const todayStr = new Date().toISOString().split('T')[0]
-
-        // Check if task is due today (dueDate) but NOT on calendar (no instances)
-        const isDueToday = task.dueDate === todayStr
-
-        // Show tasks due today that are NOT on the calendar grid
-        passesFilter = isDueToday && isNotOnCalendar && isNotDone
-        break
-      }
-      case 'unscheduled':
-        // Show tasks NOT on the calendar (no instances)
-        passesFilter = isNotOnCalendar && isNotDone
-        break
-      case 'incomplete':
-        // Show all incomplete tasks NOT on the calendar
-        passesFilter = isNotOnCalendar && isNotDone
-        break
-      case 'allTasks':
-        // Show all tasks NOT on the calendar
-        passesFilter = isNotOnCalendar && isNotDone
-        break
-      default:
-        passesFilter = isNotOnCalendar && isNotDone
+  if (selectedProject.value !== null) {
+    if (selectedProject.value === 'none') {
+      tasks = tasks.filter(task => !task.projectId)
+    } else {
+      tasks = tasks.filter(task => task.projectId === selectedProject.value)
     }
+  }
 
-    return passesFilter
-  })
+  if (selectedDuration.value !== null) {
+    tasks = tasks.filter(task => {
+      const d = task.estimatedDuration
+      if (selectedDuration.value === 'unestimated') return !d
+      if (!d) return false
+      
+      switch (selectedDuration.value) {
+        case 'quick': return d <= 15
+        case 'short': return d > 15 && d <= 30
+        case 'medium': return d > 30 && d <= 60
+        case 'long': return d > 60
+        default: return false
+      }
+    })
+  }
 
-  console.log(`🔍 DEBUG [${currentFilter.value}]: ${filtered.length} tasks in inbox:`, filtered.map(t => t.title))
-  return filtered
+  return tasks
 })
 
-// Computed properties for task visual enhancements
 const projectVisual = computed(() => (projectId: string) =>
   taskStore.getProjectVisual(projectId)
 )
@@ -295,46 +318,70 @@ const isTimerActive = computed(() => (taskId: string) => {
   return timerStore.isTimerActive && timerStore.currentTaskId === taskId
 })
 
-const statusLabel = computed(() => (status: string) => {
-  const labels: Record<string, string> = {
-    planned: 'Plan',
-    in_progress: 'Active',
-    done: 'Done',
-    backlog: 'Back',
-    on_hold: 'Hold'
+const statusEmoji = (status: string) => {
+  const emojis: Record<string, string> = {
+    planned: '📝',
+    in_progress: '🎬',
+    done: '✅',
+    backlog: '📦',
+    on_hold: '⏸️'
   }
-  return labels[status] || 'Unknown'
-})
+  return emojis[status] || '❓'
+}
+
+const getDueBadgeClass = (dueDate: string) => {
+  const today = new Date().toISOString().split('T')[0]
+  if (dueDate < today) return 'due-badge-overdue'
+  if (dueDate === today) return 'due-badge-today'
+  return 'due-badge-future'
+}
+
+const formatDueDateLabel = (dueDate: string) => {
+  const today = new Date().toISOString().split('T')[0]
+  if (dueDate < today) return 'Overdue ' + dueDate
+  if (dueDate === today) return 'Today'
+  return dueDate
+}
 
 // Methods
-const _getProjectName = (projectId: string) => {
-  const project = taskStore.getProjectById(projectId)
-  return project?.name || 'Uncategorized'
+const clearAllFilters = () => {
+  unscheduledOnly.value = false
+  selectedPriority.value = null
+  selectedProject.value = null
+  selectedDuration.value = null
 }
 
 const addTask = () => {
   if (!newTaskTitle.value.trim()) return
 
-  taskStore.createTask({
+  createTaskWithUndo({
     title: newTaskTitle.value.trim(),
-    description: '',
     status: 'planned',
-    projectId: null, // Uncategorized
     isInInbox: true
   })
 
   newTaskTitle.value = ''
 }
 
-const handleTaskClick = (_event: MouseEvent, _task: Task) => {
-  // IMPORTANT: Don't handle clicks if a drag operation is in progress
-  // This prevents interference with drag-drop functionality
-  if (draggingTaskId.value) {
-    console.log('🚫 Task click ignored - drag operation in progress')
-    return
-  }
+const processBrainDump = () => {
+  if (!brainDumpText.value.trim()) return
 
-  // Allow friction-free dragging - no other click handling needed
+  const lines = brainDumpText.value.split('\n').filter(line => line.trim())
+  
+  lines.forEach(line => {
+    createTaskWithUndo({
+      title: line.trim(),
+      status: 'planned',
+      isInInbox: true
+    })
+  })
+
+  brainDumpText.value = ''
+  brainDumpMode.value = false
+}
+
+const handleTaskClick = (_event: MouseEvent, _task: Task) => {
+  if (draggingTaskId.value) return
 }
 
 const handleTaskDoubleClick = (task: Task) => {
@@ -348,86 +395,26 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
   event.stopPropagation()
 
   window.dispatchEvent(new CustomEvent('task-context-menu', {
-    detail: {
-      event,
-      task,
-      instanceId: undefined,
-      isCalendarEvent: false
-    }
+    detail: { event, task }
   }))
 }
-
-// Native HTML5 Drag-Drop handlers (per PomoFlow Development Prompt)
-// DO NOT use vuedraggable for calendar grid - Native HTML5 + data attributes is simpler
 
 const onDragStart = (e: DragEvent, task: Task) => {
   if (!e.dataTransfer) return
 
   draggingTaskId.value = task.id
   e.dataTransfer.effectAllowed = 'move'
-
-  // Set global drag state for fallback mechanism (when dataTransfer is not available)
-  ;(window as Window & { __draggingTaskId?: string }).__draggingTaskId = task.id
-  document.documentElement.setAttribute('data-dragging-task-id', task.id)
-
-  // Include taskId explicitly for handleDrop compatibility
+  
   const dragData = {
     ...task,
-    taskId: task.id, // Explicit taskId for calendar drop handler
+    taskId: task.id,
     source: 'calendar-inbox'
   }
   e.dataTransfer.setData('application/json', JSON.stringify(dragData))
-
-  // Create a custom drag image for better visual feedback
-  const dragElement = e.target as HTMLElement
-  if (dragElement) {
-    // Find the task card container (not just the text within)
-    const taskCard = dragElement.closest('.inbox-task-card') || dragElement
-
-    // Create a clone for the drag image
-    const dragImage = taskCard.cloneNode(true) as HTMLElement
-    dragImage.style.opacity = '0.9'
-    dragImage.style.transform = 'rotate(-3deg)'
-    dragImage.style.maxWidth = '250px'
-    dragImage.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)'
-    dragImage.style.borderRadius = '8px'
-    dragImage.style.backgroundColor = 'rgba(0, 0, 0, 0.95)'
-    dragImage.style.border = '2px solid var(--brand-primary)'
-
-    // Temporarily add to body to create image
-    document.body.appendChild(dragImage)
-
-    // Set the drag image
-    try {
-      e.dataTransfer.setDragImage(dragImage, 20, 20)
-      console.log('✅ [CalendarInboxDrag] Custom drag image set successfully')
-
-      // Remove the temporary element after a short delay
-      setTimeout(() => {
-        if (document.body.contains(dragImage)) {
-          document.body.removeChild(dragImage)
-        }
-      }, 100)
-    } catch (error) {
-      console.warn('⚠️ [CalendarInboxDrag] Could not set custom drag image, using default:', error)
-      // Fallback: use the original element
-      e.dataTransfer.setDragImage(taskCard, 20, 20)
-    }
-  }
-
-  console.log(`[Drag] Started dragging: "${task.title}" (ID: ${task.id})`)
-  console.log(`[Drag] Task inbox status:`, task.isInInbox)
-  console.log(`[Drag] Task instances:`, task.instances?.length || 0)
 }
 
 const onDragEnd = () => {
   draggingTaskId.value = null
-
-  // Clean up global drag state
-  delete (window as Window & { __draggingTaskId?: string }).__draggingTaskId
-  document.documentElement.removeAttribute('data-dragging-task-id')
-
-  console.log('[Drag] Drag ended')
 }
 
 const handleStartTimer = (task: Task) => {
@@ -441,37 +428,28 @@ const handleEditTask = (task: Task) => {
 }
 
 const handleQuickAddTask = () => {
-  // Open QuickTaskCreate modal instead of creating hardcoded task
-  window.dispatchEvent(new CustomEvent('open-quick-task-create', {
-    detail: {
-      defaultProjectId: '1',
-      defaultPriority: 'medium',
-      estimatedDuration: 30
-    }
-  }))
+  window.dispatchEvent(new CustomEvent('open-quick-task-create'))
 }
 </script>
 
 <style scoped>
-/* UNIFIED DESIGN SYSTEM - Outlined + Glass with Green Accent */
-
 .calendar-inbox-panel {
   width: 320px;
   margin: var(--space-4) 0 var(--space-4) var(--space-4);
   max-height: calc(100vh - 220px);
-  padding: var(--space-6);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   overflow: visible;
   transition: width var(--duration-normal) var(--spring-smooth), padding var(--duration-normal);
   position: relative;
   z-index: 100;
-  /* Clean solid background matching target design */
-  background: var(--glass-bg-solid);
+  background: var(--inbox-panel-bg);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  border-radius: 16px; /* Moderate rounded corners */
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--overlay-component-shadow);
 }
 
 .calendar-inbox-panel.collapsed {
@@ -484,7 +462,7 @@ const handleQuickAddTask = () => {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  padding-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -492,7 +470,7 @@ const handleQuickAddTask = () => {
   background: transparent;
   border: 1px solid var(--border-medium);
   color: var(--text-muted);
-  padding: var(--space-2);
+  padding: var(--space-1);
   cursor: pointer;
   border-radius: var(--radius-md);
   transition: all var(--duration-normal) var(--spring-smooth);
@@ -500,114 +478,44 @@ const handleQuickAddTask = () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: var(--shadow-sm);
 }
 
 .collapse-btn:hover {
   background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
   color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow);
 }
 
 .inbox-title {
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   margin: 0;
   flex: 1;
 }
 
-.inbox-count {
-  background: var(--glass-bg-heavy);
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  min-width: 20px;
-  text-align: center;
-  flex-shrink: 0;
+/* Naive UI components handle their own basic layout, 
+   but we can add spacing as needed */
+.brain-dump-section {
+  padding: 0 var(--space-1);
 }
 
 .collapsed-badges-container {
-  @apply flex flex-col items-center gap-1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   margin-top: var(--space-2);
-  width: 100%;
-  overflow: visible;
 }
 
 .dual-badges {
-  @apply flex flex-col items-center gap-1;
-}
-
-.dual-badges .total-count {
-  @apply opacity-70;
-}
-
-.dual-badges .filtered-count {
-  @apply scale-90;
-}
-
-.filter-toggle {
   display: flex;
-  gap: var(--space-1);
-  margin-bottom: var(--space-3);
-  padding: var(--space-1);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.filter-toggle::-webkit-scrollbar {
-  display: none;
-}
-
-.filter-btn {
-  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: var(--space-2);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--duration-fast) ease;
-  color: var(--text-muted);
-  flex-shrink: 0;
-  min-width: 32px;
-  height: 32px;
-}
-
-.filter-btn:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--glass-border-medium);
-  color: var(--text-secondary);
-  transform: translateY(-1px);
-}
-
-.filter-btn.active {
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  color: var(--text-primary);
-  box-shadow: var(--state-hover-shadow);
-}
-
-.filter-icon {
-  font-size: var(--text-base);
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 4px;
 }
 
 .quick-add {
-  margin-bottom: var(--space-2);
+  padding: 0;
 }
 
 .quick-add-input {
@@ -615,350 +523,160 @@ const handleQuickAddTask = () => {
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
-.quick-add-input:focus {
-  outline: none;
-  border-color: var(--state-active-border);
+.brain-dump-toggle {
+  margin-bottom: var(--space-2);
+}
+
+.brain-dump-toggle:hover {
+  background: var(--state-hover-bg);
+  color: var(--text-secondary);
+}
+
+.brain-dump-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.brain-dump-textarea {
+  width: 100%;
   background: var(--glass-bg-soft);
-  box-shadow: var(--state-hover-shadow);
-}
-
-.quick-add-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.7;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  resize: vertical;
+  margin-bottom: var(--space-2);
 }
 
 .inbox-tasks {
   flex: 1;
-  overflow-x: visible;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  margin: calc(var(--space-2) * -1) calc(var(--space-4) * -1);
+  margin-top: var(--space-2);
 }
 
-.empty-inbox {
-  text-align: center;
-  padding: var(--space-8) var(--space-4);
-  color: var(--text-muted);
-}
-
-.empty-icon {
-  font-size: var(--text-4xl);
-  margin-bottom: var(--space-3);
-  opacity: 0.5;
-}
-
-.empty-text {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  margin: 0 0 var(--space-1) 0;
-}
-
-.empty-subtext {
-  font-size: var(--text-xs);
-  margin: 0;
-  opacity: 0.7;
-}
-
-/* Unified card styling - subtle at rest, vibrant on hover */
-.inbox-task-card {
+.task-card {
   position: relative;
-  padding: var(--space-4);
-  margin-bottom: var(--space-1);
-  cursor: move;
-  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-3);
+  background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  z-index: 100;
+  cursor: grab;
+  transition: all var(--duration-fast) ease;
 }
 
-.inbox-task-card:last-child {
-  margin-bottom: 0;
-}
-
-.inbox-task-card:hover {
+.task-card:hover {
   background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-  z-index: 100;
-}
-
-.inbox-task-card.is-dragging {
-  z-index: 1000;
-}
-
-/* Hover state: Enhanced visibility */
-.inbox-task-card:hover .task-title {
-  color: var(--text-primary);
-}
-
-.inbox-task-card:hover .task-meta {
-  opacity: 0.95;
+  transform: translateY(-1px);
 }
 
 .priority-stripe {
   position: absolute;
   top: 0;
-  bottom: 0;
   left: 0;
   width: 3px;
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-  margin: 0;
-  padding: 0;
+  height: 100%;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
 }
 
-.priority-stripe.priority-high {
-  background: var(--color-priority-high);
-}
-
-.priority-stripe.priority-medium {
-  background: var(--color-priority-medium);
-}
-
-.priority-stripe.priority-low {
-  background: var(--color-priority-low);
-}
-
-.priority-stripe.priority-none {
-  background: transparent;
-}
-
-/* Timer Active Badge */
-.timer-indicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
-  background: var(--brand-primary);
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 2px 8px var(--brand-primary);
-  animation: timerPulse 2s ease-in-out infinite;
-  z-index: 5;
-}
-
-@keyframes timerPulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 2px 8px var(--brand-primary);
-  }
-  50% {
-    transform: scale(1.1);
-    box-shadow: 0 2px 16px var(--brand-primary);
-  }
-}
-
-.task-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  flex: 1;
-  min-width: 0;
-}
+.priority-high { background: var(--color-priority-high); }
+.priority-medium { background: var(--color-priority-medium); }
+.priority-low { background: var(--color-priority-low); }
 
 .task-title {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-primary);
-  line-height: var(--leading-tight);
-  transition: color var(--duration-normal);
-  margin-bottom: var(--space-2);
-  margin-top: var(--space-1);
-  word-wrap: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  margin-bottom: var(--space-1);
 }
 
 .task-metadata {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1_5);
+  gap: var(--space-1);
   align-items: center;
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  transition: opacity var(--duration-normal);
 }
 
-/* Enhanced metadata badges */
-.status-badge,
-.due-date-badge,
-.duration-badge,
-.project-emoji-badge {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  padding: var(--space-1) var(--space-2);
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
+.metadata-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
   border-radius: var(--radius-full);
-  font-weight: var(--font-medium);
-  box-shadow: 0 2px 4px var(--shadow-subtle);
-  white-space: nowrap;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  max-width: 120px;
-}
-
-.status-badge {
-  background: var(--glass-bg-heavy);
-  color: var(--text-muted);
-}
-
-.due-date-badge {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.duration-badge {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-/* Project visual badge styles */
-.project-emoji-badge {
-  background: var(--brand-bg-subtle);
-  border-color: var(--brand-border-subtle);
+  background: var(--glass-bg-medium);
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--duration-fast) ease;
-}
-
-.project-emoji-badge:hover {
-  background: var(--brand-bg-subtle-hover);
-  border-color: var(--brand-border);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px var(--shadow-subtle);
-}
-
-.project-emoji {
-  font-size: 12px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.project-emoji.project-css-circle {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--project-color, var(--color-primary));
-  box-shadow: var(--project-indicator-shadow);
-  position: relative;
-  font-size: 8px;
-  color: white;
-  font-weight: var(--font-bold);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--duration-fast) ease;
-}
-
-.project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: scale(1.2);
-  box-shadow: 0 0 8px var(--project-color);
-}
-
-.project-emoji-badge.project-visual--colored {
-  background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
 }
+
+.priority-badge {
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+}
+
+.due-badge-overdue { color: var(--status-error); }
+.due-badge-today { color: var(--status-warning); }
+
+.status-badge { opacity: 0.8; }
 
 .task-actions {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
   display: flex;
   gap: var(--space-1);
   opacity: 0;
-  transition: opacity var(--duration-fast) ease;
+  transition: opacity var(--duration-fast);
 }
 
-.inbox-task-card:hover .task-actions {
+.task-card:hover .task-actions {
   opacity: 1;
 }
 
 .action-btn {
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  color: var(--text-muted);
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
+  background: var(--glass-bg-heavy);
+  border: none;
+  color: var(--text-secondary);
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--duration-fast) ease;
-  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
 .action-btn:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--glass-border-medium);
-  color: var(--text-secondary);
-  transform: scale(1.05);
+  color: var(--brand-primary);
 }
 
 .quick-add-task {
-  border-top: 1px solid var(--glass-bg-heavy);
-  padding-top: var(--space-3);
-  margin-top: var(--space-3);
+  margin-top: var(--space-2);
 }
 
-.add-task-btn {
-  width: 100%;
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
+.empty-inbox {
+  text-align: center;
+  padding: var(--space-4);
   color: var(--text-muted);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
-.add-task-btn:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--glass-border-medium);
-  color: var(--text-secondary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+.empty-icon {
+  font-size: 24px;
+  margin-bottom: var(--space-2);
+  opacity: 0.5;
 }
 
-.add-task-btn:active {
-  transform: translateY(0);
-}
-
-/* Unified scrollbar styling */
+/* Custom scrollbar for inbox tasks */
 .inbox-tasks::-webkit-scrollbar {
   width: 6px;
 }
@@ -970,40 +688,9 @@ const handleQuickAddTask = () => {
 .inbox-tasks::-webkit-scrollbar-thumb {
   background: var(--glass-border);
   border-radius: var(--radius-md);
-  transition: background var(--duration-fast);
 }
 
 .inbox-tasks::-webkit-scrollbar-thumb:hover {
   background: var(--border-hover);
-}
-
-.inbox-tasks {
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-border) transparent;
-}
-
-/* Native HTML5 drag-drop container (per PomoFlow spec) */
-.inbox-task-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-height: 50px;
-}
-
-/* Drag state for inbox task cards - native HTML5 */
-.inbox-task-card.is-dragging {
-  opacity: 0.5;
-  cursor: grabbing;
-  transform: scale(0.98);
-  border: 2px dashed var(--brand-primary) !important;
-  background: var(--state-selected-bg) !important;
-}
-
-.inbox-task-card[draggable="true"] {
-  cursor: grab;
-}
-
-.inbox-task-card[draggable="true"]:active {
-  cursor: grabbing;
 }
 </style>

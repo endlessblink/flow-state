@@ -173,6 +173,7 @@ defineExpose({
   overflow: hidden;
   contain: layout style; /* Performance optimization */
   box-shadow: var(--shadow-xl);
+}
 
 .project-group {
   border-bottom: 1px solid var(--glass-border);

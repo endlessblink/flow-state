@@ -2,24 +2,38 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import CategorySelector from '@/components/CategorySelector.vue'
 
 const meta = {
-    component: CategorySelector,
-    title: '📝 Task Management/CategorySelector',
-    tags: ['autodocs'],
-    parameters: {
-        layout: 'centered',
-    }
+  component: CategorySelector,
+  title: '📝 Task Management/CategorySelector',
+  tags: ['autodocs'],
+  parameters: {
+    layout: 'padded',
+    backgrounds: {
+      default: 'dark',
+      values: [
+        { name: 'dark', value: '#0f172a' },
+      ],
+    },
+  },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 100px; background: var(--app-background-gradient); min-height: 300px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+          <story />
+        </div>
+      `
+    })
+  ],
 } satisfies Meta<typeof CategorySelector>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-    render: () => ({
-        components: { CategorySelector },
-        template: `
-      <div style="width: 600px; padding: 40px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border-subtle);">
+  render: () => ({
+    components: { CategorySelector },
+    template: `
         <CategorySelector />
-      </div>
-    `
-    })
+      `
+  })
 }

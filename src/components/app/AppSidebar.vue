@@ -176,13 +176,21 @@ const sidebar = useSidebarManagement()
 const newTaskTitle = ref('')
 
 // Use the exact same pattern as Board view (line 168-177) but for root projects only
+// TASK-054: Also filter out empty projects (no tasks assigned)
 const rootProjects = computed(() => {
   console.log('🎯 AppSidebar: Computing rootProjects, taskStore.projects length:', taskStore.projects?.length || 0)
 
   // Filter for root projects only (no parentId) - same logic as Board view
-  const projects = taskStore.projects.filter(project => !project.parentId)
+  // Also filter out projects with no tasks (TASK-054: prevent empty demo projects from cluttering sidebar)
+  const projects = taskStore.projects.filter(project => {
+    if (project.parentId) return false  // Only root projects
 
-  console.log('🎯 AppSidebar: Root projects found:', projects.length, projects.map(p => ({ id: p.id, name: p.name })))
+    // Check if project has any tasks
+    const hasActiveTasks = taskStore.tasks.some(task => task.projectId === project.id)
+    return hasActiveTasks
+  })
+
+  console.log('🎯 AppSidebar: Root projects with tasks found:', projects.length, projects.map(p => ({ id: p.id, name: p.name })))
 
   return projects
 })

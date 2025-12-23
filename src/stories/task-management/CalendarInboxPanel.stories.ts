@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import CalendarInboxPanel from '@/components/CalendarInboxPanel.vue'
-import type { Task } from '@/stores/tasks'
+import { useTaskStore, type Task } from '@/stores/tasks'
 
 const meta = {
   component: CalendarInboxPanel,
@@ -12,16 +12,41 @@ const meta = {
   },
 
   parameters: {
-    layout: 'centered',
+    layout: 'fullscreen',
+    backgrounds: {
+      default: 'dark',
+      values: [
+        { name: 'dark', value: '#0f172a' },
+      ],
+    },
   },
 
   // Mock the task store for Storybook
   decorators: [
     (story) => ({
       components: { story },
-      template: '<div style="min-height: 700px; width: 380px; padding: 20px; background: var(--app-background-gradient); border-radius: 12px; overflow: visible;"><story /></div>',
+      template: `
+        <div style="transform: scale(1); height: 100vh; width: 100vw; position: relative; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: 40px; box-sizing: border-box;">
+          <div style="width: 320px; height: 100%; max-height: 800px; position: relative;">
+            <story />
+          </div>
+        </div>
+      `,
       setup() {
-        // Mock task store data would be injected here in a real implementation
+        const taskStore = useTaskStore()
+
+        // Populate store with mock tasks for the stories to use
+        taskStore.tasks = [
+          createMockTask('1', 'Fix CSS issues', 'high'),
+          createMockTask('2', 'Plan next week', 'medium'),
+          createMockTask('3', 'Email client', 'low'),
+          createMockTask('4', 'Task with instances', 'medium', true),
+          createMockTask('5', 'Task on canvas', 'medium', false, true),
+          createMockTask('6', 'Long title task that should definitely wrap or truncate gracefully in the UI', 'low'),
+          createMockTask('7', 'Project task', 'medium', false, false, 'p1'),
+          createMockTask('8', 'Personal task', 'high', false, false, 'p2')
+        ]
+
         return {}
       }
     })
@@ -32,7 +57,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 // Helper function to create mock tasks
-const createMockTask = (id: string, title: string, priority: Task['priority'] = 'medium', hasInstances = false, onCanvas = false): Task => ({
+const createMockTask = (id: string, title: string, priority: Task['priority'] = 'medium', hasInstances = false, onCanvas = false, projectId: string | null = null): Task => ({
   id,
   title,
   description: `Description for ${title}`,
@@ -43,7 +68,7 @@ const createMockTask = (id: string, title: string, priority: Task['priority'] = 
   subtasks: [],
   dueDate: '2024-12-25',
   estimatedDuration: 60,
-  projectId: null,
+  projectId,
   parentTaskId: null,
   createdAt: new Date(),
   updatedAt: new Date(),

@@ -32,7 +32,7 @@
     <div class="task-row__project">
       <span
         class="project-emoji-badge"
-        :class="[`project-visual--${projectVisual.type}`, { 'project-visual--colored': projectVisual.type === 'css-circle' }]"
+        :class="`project-visual--${projectVisual.type}`"
         :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
       >
         <!-- Emoji visual indicator -->
@@ -211,7 +211,7 @@ const formatStatus = (status: string): string => {
   gap: var(--space-2);
   
   /* Glass Morphism Base - More visible */
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent; /* Remove gray background to let gradient show */
   border: 1px solid rgba(255, 255, 255, 0.08); /* All-around border like cards */
   border-bottom-color: rgba(255, 255, 255, 0.1); /* Slightly stronger bottom */
   border-radius: 6px; /* Rounded corners like cards */
@@ -311,8 +311,10 @@ const formatStatus = (status: string): string => {
 
 /* Project Indicator Glass */
 .project-emoji-badge {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: all 0.2s ease;

@@ -7,7 +7,23 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
-  }
+    backgrounds: {
+      default: 'dark',
+      values: [
+        { name: 'dark', value: '#0f172a' },
+      ],
+    },
+  },
+  decorators: [
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 100px; background: var(--app-background-gradient); min-height: 300px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+          <story />
+        </div>
+      `
+    })
+  ],
 }
 
 export default meta

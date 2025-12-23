@@ -353,17 +353,10 @@ export const useTaskStore = defineStore('tasks', () => {
           }
         }
 
-        // Preserve existing tasks if they exist, only create samples if truly empty
+        // Fresh start - no demo data, user creates their own tasks
         if (tasks.value.length === 0) {
-          const oldTasks = [...tasks.value]
-          tasks.value = createSampleTasks()
-          taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'createSampleTasks-initial')
-          addTestCalendarInstances() // Add test instances to sample tasks
-          console.log('📝 Created sample tasks for first-time users (no backup found)')
-          console.log('📊 Sample tasks created:', tasks.value.map(t => ({ id: t.id, title: t.title, projectId: t.projectId, status: t.status })))
-
-          // Save sample tasks to database immediately (respects INDIVIDUAL_ONLY)
-          await saveTasksToStorage(tasks.value, 'sample-tasks-creation')
+          console.log('📝 Fresh start - no tasks found, ready for user to create their own')
+          // No sample tasks created - user starts with empty app
         } else {
           console.log(`🔄 Keeping existing ${tasks.value.length} tasks`)
         }
@@ -398,13 +391,10 @@ export const useTaskStore = defineStore('tasks', () => {
         }
       }
 
-      // Preserve existing tasks on error, only create samples if truly empty
+      // Preserve existing tasks on error - no demo data creation
       if (tasks.value.length === 0) {
-        console.log('🔄 Creating fallback sample tasks due to PouchDB failure (no existing tasks or backup)')
-        const oldTasks = [...tasks.value]
-        tasks.value = createSampleTasks()
-        taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'error-recovery-createSampleTasks')
-        addTestCalendarInstances() // Add test instances to sample tasks
+        console.log('🔄 PouchDB failure with no tasks - user will start fresh once connection restored')
+        // No sample tasks created - user starts with empty app
       } else {
         console.log(`🔄 Preserving existing ${tasks.value.length} tasks despite PouchDB error`)
       }
@@ -429,80 +419,9 @@ export const useTaskStore = defineStore('tasks', () => {
     return writeQueue.value
   }
 
-  // Create sample tasks for testing when database is empty
-  const createSampleTasks = (): Task[] => {
-    const today = new Date().toISOString().split('T')[0]
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
-
-    return [
-      {
-        id: 'sample-task-1',
-        title: 'Work on tasks for lime',
-        description: 'Complete the task management features',
-        status: 'in_progress',
-        priority: 'high',
-        progress: 60,
-        completedPomodoros: 3,
-        subtasks: [],
-        dueDate: today,
-        instances: [],
-        projectId: 'uncategorized', // Uncategorized task
-        parentTaskId: null,
-        createdAt: new Date(Date.now() - 86400000),
-        updatedAt: new Date(),
-        canvasPosition: undefined,
-        isInInbox: false,
-        dependsOn: [],
-        isUncategorized: false
-      },
-      {
-        id: 'sample-task-2',
-        title: 'Blink test task',
-        description: 'Test the blinking notification system',
-        status: 'planned',
-        priority: 'medium',
-        progress: 0,
-        completedPomodoros: 0,
-        subtasks: [],
-        dueDate: tomorrow,
-        instances: [],
-        projectId: 'uncategorized', // Uncategorized task
-        parentTaskId: null,
-        createdAt: new Date(Date.now() - 43200000),
-        updatedAt: new Date(),
-        canvasPosition: undefined,
-        isInInbox: false, // Set to false so it appears in regular project swimlanes
-        dependsOn: [],
-        isUncategorized: false
-      },
-      {
-        id: 'sample-task-3',
-        title: 'Review calendar integration',
-        description: 'Check if calendar view displays tasks correctly',
-        status: 'planned',
-        priority: 'low',
-        progress: 20,
-        completedPomodoros: 1,
-        subtasks: [],
-        dueDate: today,
-        instances: [],
-        projectId: 'uncategorized', // Uncategorized task
-        parentTaskId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        canvasPosition: undefined,
-        isInInbox: false,
-        dependsOn: [],
-        isUncategorized: false
-      }
-    ]
-  }
-
-  // Initialize sample tasks (disabled - start with empty)
-  const _initializeSampleTasks = () => {
-    // Disabled - users add their own tasks
-    return
-  }
+  // REMOVED: createSampleTasks - Demo data removed per TASK-054
+  // Users start with an empty app and create their own tasks
+  // See AGENTS.md and CLAUDE.md for data safety rules
 
   // Migrate legacy tasks to use instances array
   const migrateLegacyTasks = () => {
@@ -608,49 +527,7 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  // DEBUG: Add test calendar instances for filter testing
-  const addTestCalendarInstances = () => {
-    console.log('🔧 DEBUG: Adding test calendar instances...')
-    const today = new Date().toISOString().split('T')[0]
-
-    // Find specific tasks to create instances for
-    const workTask = tasks.value.find(t => t.title.includes('Work on tasks for lime'))
-    const blinkTask = tasks.value.find(t => t.title.includes('blink'))
-
-    if (workTask) {
-      console.log(`🔧 DEBUG: Creating calendar instance for work task: "${workTask.title}"`)
-      if (!workTask.instances) workTask.instances = []
-      workTask.instances.push({
-        id: `test-instance-${workTask.id}-${Date.now()}`,
-        scheduledDate: today,
-        scheduledTime: '10:00',
-        duration: 60
-      })
-    }
-
-    if (blinkTask) {
-      console.log(`🔧 DEBUG: Creating calendar instance for blink task: "${blinkTask.title}"`)
-      if (!blinkTask.instances) blinkTask.instances = []
-      blinkTask.instances.push({
-        id: `test-instance-${blinkTask.id}-${Date.now()}`,
-        scheduledDate: today,
-        scheduledTime: '14:00',
-        duration: 45
-      })
-    }
-
-    // Also ensure these tasks have the right status for testing
-    if (workTask) {
-      workTask.status = 'in_progress'
-      console.log(`🔧 DEBUG: Set work task status to: ${workTask.status}`)
-    }
-    if (blinkTask) {
-      blinkTask.status = 'planned'
-      console.log(`🔧 DEBUG: Set blink task status to: ${blinkTask.status}`)
-    }
-
-    console.log('🔧 DEBUG: Test calendar instances added successfully')
-  }
+  // REMOVED: addTestCalendarInstances - Demo data removed per TASK-054
 
 
 
@@ -1271,9 +1148,6 @@ export const useTaskStore = defineStore('tasks', () => {
         console.warn('⚠️ TASK-034: Migration check failed:', error)
       }
     }
-
-    // DEBUG: DISABLED - was causing infinite sync loop by modifying tasks on every load
-    // addTestCalendarInstances()
 
     // If no tasks found, try to import from recovery tool first, then JSON file
     if (tasks.value.length === 0) {
@@ -3478,6 +3352,36 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  // TASK-054: One-time cleanup of any existing demo data
+  const cleanupDemoData = async () => {
+    // Known demo task patterns from createSampleTasks() - removed in TASK-054
+    const demoPatterns = [
+      'sample-task-1', 'sample-task-2', 'sample-task-3',
+      'Work on tasks for lime', 'Blink test task', 'Review calendar integration'
+    ]
+
+    const demoTasks = tasks.value.filter(task =>
+      demoPatterns.some(pattern =>
+        task.id.includes(pattern) || task.title.includes(pattern)
+      )
+    )
+
+    if (demoTasks.length > 0) {
+      console.log(`🧹 TASK-054: Found ${demoTasks.length} demo tasks to remove:`, demoTasks.map(t => t.title))
+
+      // Remove demo tasks
+      const cleanedTasks = tasks.value.filter(task =>
+        !demoPatterns.some(pattern =>
+          task.id.includes(pattern) || task.title.includes(pattern)
+        )
+      )
+
+      tasks.value = cleanedTasks
+      await saveTasksToStorage(tasks.value, 'demo-cleanup-TASK-054')
+      console.log(`✅ TASK-054: Removed ${demoTasks.length} demo tasks, ${tasks.value.length} tasks remaining`)
+    }
+  }
+
   // CRITICAL: INITIALIZATION FROM POUCHDB ON STORE CREATION
   const initializeFromPouchDB = async () => {
     console.log('🔄 Initializing store from PouchDB...')
@@ -3511,7 +3415,10 @@ export const useTaskStore = defineStore('tasks', () => {
       // This is part of the "My Tasks" redundancy removal plan
       await migrateMyTasksToUncategorized()
 
-      console.log('✅ Store initialized from PouchDB successfully (with "My Tasks" migration)')
+      // TASK-054: Clean up any existing demo data from previous versions
+      await cleanupDemoData()
+
+      console.log('✅ Store initialized from PouchDB successfully (with migrations and cleanup)')
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.ERROR,

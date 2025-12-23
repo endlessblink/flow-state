@@ -484,6 +484,38 @@ The application uses port 5546 by default. Vite will auto-allocate alternative p
 5. **Type Safety** - All new code must have proper TypeScript types
 6. **Component Structure** - Follow established patterns for script setup, props, and state management
 7. **Check Task Dependencies** - Before starting work, check the Task Dependency Index in `docs/MASTER_PLAN.md`
+8. **NEVER Create Demo Data** - See Data Safety section below
+
+### Data Safety - NEVER Create Demo Content
+
+**CRITICAL RULE - ALL AI ASSISTANTS MUST FOLLOW (TASK-054):**
+
+1. **NEVER** programmatically create tasks, projects, or sample data
+2. **NEVER** add functions like `createSampleTasks()`, `addDemoData()`, `seedDatabase()`
+3. **NEVER** generate "Test Task", "Sample Project", "Lorem ipsum" content
+4. **NEVER** create fallback data when database is empty
+5. First-time users MUST see an **empty app** - not sample data
+6. Only CREATE data when explicitly instructed by user to create a specific item
+
+**Why this rule exists:**
+- Demo data pollutes real user data and is hard to distinguish
+- Users accidentally delete real tasks thinking they're demo content
+- Causes confusion and data loss requiring manual database cleanup
+- Previous incidents required emergency data recovery
+
+**Correct behavior when database is empty:**
+```typescript
+// CORRECT - Start with empty array
+if (tasks.value.length === 0) {
+  console.log('📝 Fresh start - no tasks')
+  // User creates their own tasks via UI
+}
+
+// WRONG - Never do this
+if (tasks.value.length === 0) {
+  tasks.value = createSampleTasks()  // FORBIDDEN
+}
+```
 
 ### Task Dependency Workflow
 

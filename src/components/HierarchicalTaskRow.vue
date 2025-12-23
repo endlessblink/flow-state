@@ -80,7 +80,7 @@
       <div class="task-row__project">
         <span
           class="project-emoji-badge"
-          :class="[`project-visual--${projectVisual.type}`, { 'project-visual--colored': projectVisual.type === 'css-circle' }]"
+          :class="`project-visual--${projectVisual.type}`"
           :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
         >
           <!-- Emoji rendering using ProjectEmojiIcon for consistency -->
@@ -614,6 +614,16 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   position: relative;
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  transition: all var(--spring-smooth);
+}
+
+.hierarchical-task-row:hover {
+  background: var(--glass-bg-heavy);
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--shadow-md);
 }
 
 /* Table-style task row matching TaskTable exactly */
@@ -624,7 +634,7 @@ onUnmounted(() => {
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--glass-border);
-  background: transparent;
+  background: transparent; /* Remove default gray fill */
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;
   position: relative;
@@ -700,13 +710,18 @@ onUnmounted(() => {
 
 /* Enhanced project indicator styles matching canvas implementation */
 .project-emoji-badge {
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--spring-smooth) ease;
-  padding: var(--space-1) var(--space-2);
+  padding: 2px 8px;
   border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
 }
 
 .project-emoji-badge:hover {
@@ -774,9 +789,11 @@ onUnmounted(() => {
   z-index: -1;
 }
 
-.project-emoji-badge.project-visual--colored {
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
+.project-emoji-badge.project-visual--css-circle {
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--glass-border-hover);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* Subtask count */

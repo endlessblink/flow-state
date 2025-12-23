@@ -22,7 +22,7 @@
         <div class="metadata-item">
           <span
             class="project-emoji-badge"
-            :class="[`project-visual--${projectVisual.type}`, { 'project-visual--colored': projectVisual.type === 'css-circle' }]"
+            :class="`project-visual--${projectVisual.type}`"
             :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
           >
             <span
@@ -516,18 +516,18 @@ function handleSwipeEnd() {
 
 /* Enhanced project indicator styles matching canvas implementation */
 .project-emoji-badge {
-  background: var(--brand-bg-subtle);
-  border-color: var(--brand-border-subtle);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--spring-smooth) ease;
-  padding: var(--space-1) var(--space-2);
+  padding: 2px 8px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 2px 4px var(--shadow-subtle);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-1);
 }
 
 .project-emoji-badge:hover {
@@ -597,9 +597,11 @@ function handleSwipeEnd() {
   z-index: -1;
 }
 
-.project-emoji-badge.project-visual--colored {
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
+.project-emoji-badge.project-visual--css-circle {
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--glass-border-hover);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .swipe-indicator {

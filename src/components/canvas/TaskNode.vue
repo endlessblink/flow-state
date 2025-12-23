@@ -59,7 +59,7 @@
       </span>
       <span
         class="project-emoji-badge"
-        :class="[`project-visual--${projectVisual.type}`, { 'project-visual--colored': projectVisual.type === 'css-circle' }]"
+        :class="`project-visual--${projectVisual.type}`"
         :title="`Project: ${taskStore.getProjectDisplayName(task?.projectId)}`"
       >
         <!-- Emoji rendering using ProjectEmojiIcon for consistency -->
@@ -396,9 +396,9 @@ const formattedDuration = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--glass-bg-solid);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: transparent; /* Remove solid glass bg */
+  backdrop-filter: blur(12px); /* Maintain blur but remove gray tint */
+  -webkit-backdrop-filter: blur(12px);
   border-radius: var(--radius-xl);
   border: 1px solid var(--glass-border);
   z-index: -1;
@@ -919,10 +919,12 @@ body.dragging-active .task-node .vue-flow__handle {
   opacity: 0.4; /* Stronger glow for canvas interactions */
 }
 
-.project-emoji-badge.project-visual--colored {
+.project-emoji-badge.project-visual--css-circle {
   /* Enhanced background for colored dots */
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-subtle);
   border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .schedule-badge {

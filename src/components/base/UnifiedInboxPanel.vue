@@ -667,7 +667,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .unified-inbox-panel {
-  background: var(--glass-bg-light);
+  background: var(--inbox-panel-bg);
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;

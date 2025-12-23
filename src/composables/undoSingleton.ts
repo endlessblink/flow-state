@@ -36,14 +36,31 @@ function initializeRefHistory() {
 
   console.log('🔄 Creating SINGLE refHistory instance for entire application (tasks + groups)...')
 
-  const taskStore = useTaskStore()
-  const canvasStore = useCanvasStore()
+  try {
+    const taskStore = useTaskStore()
 
-  // Initialize with combined state (tasks + groups)
-  unifiedState = ref<UnifiedUndoState>({
-    tasks: [...taskStore.tasks],
-    groups: [...canvasStore.groups]
-  })
+    // Safely get canvas store - it might not be ready during early initialization
+    let canvasGroups: CanvasGroup[] = []
+    try {
+      const canvasStore = useCanvasStore()
+      canvasGroups = canvasStore.groups ? [...canvasStore.groups] : []
+    } catch (canvasError) {
+      console.warn('⚠️ [UNDO] Canvas store not available during initialization, groups will be added later')
+    }
+
+    // Initialize with combined state (tasks + groups)
+    unifiedState = ref<UnifiedUndoState>({
+      tasks: [...taskStore.tasks],
+      groups: canvasGroups
+    })
+  } catch (error) {
+    console.error('❌ [UNDO] Failed to initialize stores, using empty state:', error)
+    // Fallback to empty state if stores aren't available
+    unifiedState = ref<UnifiedUndoState>({
+      tasks: [],
+      groups: []
+    })
+  }
 
   // Create the SINGLE useManualRefHistory instance with proper VueUse configuration
   // NOTE: deep: true was intentionally removed for performance reasons (deep watchers issue)

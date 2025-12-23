@@ -8,14 +8,38 @@ const meta = {
     parameters: {
         layout: 'fullscreen',
         docs: {
+            story: {
+                inline: true,
+            },
             description: {
                 component: 'Overlay system for displaying critical sync errors, warnings, and informational status updates.'
             }
         }
-    }
+    },
+    decorators: [
+        (story: any) => ({
+            components: { story },
+            template: `
+                <div style="min-height: 1000px; width: 100%; padding: 40px; background: radial-gradient(circle at center, #3c2b5a 0%, #1a1a2e 100%); transform: scale(1); border-radius: var(--radius-xl);">
+                    <div style="position: relative; height: 100%;">
+                        <story />
+                    </div>
+                </div>
+            `
+        })
+    ]
 }
 
 export default meta
+
+const mockSyncManager = {
+    error: ref(null),
+    conflicts: ref([]),
+    isOnline: ref(true),
+    getSyncHealth: () => ({ lastSuccessfulSync: new Date() }),
+    triggerSync: async () => { console.log('Mock sync triggered') },
+    clearSyncErrors: () => { console.log('Mock errors cleared') }
+}
 
 export const Default = {
     render: () => ({
@@ -52,8 +76,8 @@ export const Default = {
                 }
             })
 
-            return { alertSystemRef }
+            return { alertSystemRef, mockSyncManager }
         },
-        template: '<SyncAlertSystem ref="alertSystemRef" />'
+        template: '<SyncAlertSystem ref="alertSystemRef" :syncManager="mockSyncManager" />'
     })
 }

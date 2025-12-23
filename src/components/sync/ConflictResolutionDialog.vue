@@ -19,7 +19,7 @@
       </div>
       <div class="conflict-title">
         <h3>Sync Conflict Detected</h3>
-        <p class="text-sm text-gray-600">
+        <p class="text-sm text-secondary opacity-70">
           {{ conflicts.length }} conflict{{ conflicts.length > 1 ? 's' : '' }} found in "{{ taskTitle }}"
         </p>
       </div>
@@ -516,15 +516,30 @@ onMounted(() => {
 
 <style scoped>
 .conflict-resolution-dialog {
-  @apply bg-white rounded-lg shadow-xl border border-gray-200 max-w-6xl mx-auto;
+  background: rgba(20, 20, 20, 0.36);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-xl);
+  max-width: 1000px;
+  margin: 0 auto;
+  overflow: hidden;
 }
 
 .conflict-header {
-  @apply flex items-center gap-4 p-6 border-b border-gray-200;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .conflict-title h3 {
-  @apply text-lg font-semibold text-gray-900;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
 }
 
 .conflict-priority span {
@@ -544,7 +559,12 @@ onMounted(() => {
 }
 
 .conflict-summary {
-  @apply flex items-center gap-6 p-4 bg-gray-50 border-b border-gray-200;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .summary-item {
@@ -552,23 +572,34 @@ onMounted(() => {
 }
 
 .summary-item .label {
-  @apply text-gray-600;
+  color: var(--text-muted);
 }
 
 .conflict-fields {
-  @apply max-h-96 overflow-y-auto;
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .conflict-field {
-  @apply border-b border-gray-200 last:border-b-0;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.conflict-field:last-child {
+  border-bottom: none;
 }
 
 .field-header {
-  @apply flex items-center justify-between p-4 bg-gray-50;
+  background: rgba(40, 40, 40, 0.4);
+  padding: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .field-name {
-  @apply font-medium text-gray-900;
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .field-meta {
@@ -596,11 +627,19 @@ onMounted(() => {
 }
 
 .value-column {
-  @apply border rounded-lg overflow-hidden;
+  background: rgba(30, 30, 30, 0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .column-header {
-  @apply flex items-center justify-between p-3 bg-gray-100 border-b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .device-badge {
@@ -616,7 +655,8 @@ onMounted(() => {
 }
 
 .timestamp {
-  @apply text-xs text-gray-500;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .value-display {
@@ -624,7 +664,9 @@ onMounted(() => {
 }
 
 .value-actions {
-  @apply p-3 border-t bg-gray-50;
+  padding: var(--space-3);
+  border-top: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .action-btn {
@@ -648,27 +690,79 @@ onMounted(() => {
 }
 
 .accept-suggestion {
-  @apply bg-green-500 text-white hover:bg-green-600;
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.accept-suggestion:hover {
+  background: rgba(34, 197, 94, 0.2);
 }
 
 .accept-suggestion.active {
-  @apply bg-green-700 ring-2 ring-green-300;
+  background: rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
 }
 
 .resolution-options {
-  @apply p-4 bg-gray-50 border-t space-y-3;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .suggested-resolution {
-  @apply flex items-center gap-3 p-3 bg-blue-50 rounded-lg;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .suggestion-header {
-  @apply flex items-center gap-2 text-sm font-medium text-blue-700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.suggestion-value {
+  flex: 1;
+  color: var(--text-primary);
+  opacity: 0.9;
+}
+
+.manual-merge {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .manual-merge-btn {
-  @apply bg-gray-500 text-white hover:bg-gray-600;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.manual-merge-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--glass-border-heavy);
+}
+
+.manual-merge-btn svg {
+  color: var(--text-muted);
 }
 
 .custom-input {
@@ -684,7 +778,11 @@ onMounted(() => {
 }
 
 .global-actions {
-  @apply p-6 border-t border-gray-200 space-y-4;
+  padding: var(--space-6);
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .bulk-actions {
@@ -696,15 +794,33 @@ onMounted(() => {
 }
 
 .bulk-btn.local {
-  @apply bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100;
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.bulk-btn.local:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.2);
 }
 
 .bulk-btn.remote {
-  @apply bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100;
+  background: rgba(168, 85, 247, 0.1);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.bulk-btn.remote:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.2);
 }
 
 .bulk-btn.suggested {
-  @apply bg-green-50 text-green-700 border-green-200 hover:bg-green-100;
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.bulk-btn.suggested:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.2);
 }
 
 .bulk-btn:disabled {
@@ -716,11 +832,17 @@ onMounted(() => {
 }
 
 .cancel {
-  @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .apply {
-  @apply bg-blue-500 text-white hover:bg-blue-600;
+  background: var(--brand-primary);
+  color: white;
 }
 
 .apply:disabled {

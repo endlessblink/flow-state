@@ -183,94 +183,130 @@ function escapeHtml(text: string): string {
 
 <style scoped>
 .line-diff {
-  @apply space-y-3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .diff-lines {
-  @apply border border-gray-200 rounded-lg overflow-hidden font-mono text-sm;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
 }
 
 .diff-line {
-  @apply flex border-b border-gray-100 last:border-b-0;
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.diff-line:last-child {
+  border-bottom: none;
 }
 
 .line-number {
-  @apply w-12 px-2 py-1 bg-gray-50 text-gray-500 text-xs border-r border-gray-200 text-right;
+  width: 48px;
+  padding: var(--space-1) var(--space-2);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  border-right: 1px solid var(--glass-border);
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .line-content {
-  @apply flex-1 px-3 py-1 whitespace-pre;
+  flex-grow: 1;
+  padding: var(--space-1) var(--space-3);
+  white-space: pre;
+  color: var(--text-primary);
 }
 
 .line-comparison {
-  @apply border-l-2 border-gray-300;
+  border-left: 2px solid var(--glass-border);
 }
 
 .original-line {
-  @apply px-3 py-1 bg-gray-50 text-gray-500 text-sm whitespace-pre;
+  padding: var(--space-1) var(--space-3);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  white-space: pre;
 }
 
 .line-added {
-  @apply bg-green-50;
+  background: rgba(34, 197, 94, 0.1);
 }
 
 .line-added .line-number {
-  @apply bg-green-100 text-green-700;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
 }
 
 .line-added .line-content {
-  @apply text-green-900;
+  color: #4ade80;
 }
 
 .line-removed {
-  @apply bg-red-50;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .line-removed .line-number {
-  @apply bg-red-100 text-red-700;
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
 }
 
 .line-removed .line-content {
-  @apply text-red-900 line-through;
+  color: #f87171;
+  text-decoration: line-through;
 }
 
 .line-unchanged {
-  @apply bg-white;
+  background: transparent;
 }
 
 .line-changed {
-  @apply bg-orange-50;
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .line-changed .line-number {
-  @apply bg-orange-100 text-orange-700;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
 }
 
 .line-changed .line-content {
-  @apply text-orange-900;
+  color: #fbbf24;
 }
 
 .line-stats {
-  @apply flex items-center justify-center gap-4 text-xs text-gray-600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .stat-item {
-  @apply flex items-center gap-1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .stat-count {
-  @apply font-medium;
+  font-weight: var(--font-medium);
 }
 
 .stat-item.added .stat-count {
-  @apply text-green-600;
+  color: #4ade80;
 }
 
 .stat-item.removed .stat-count {
-  @apply text-red-600;
+  color: #f87171;
 }
 
 .stat-item.unchanged .stat-count {
-  @apply text-gray-500;
+  color: var(--text-muted);
 }
 </style>

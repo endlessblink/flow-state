@@ -550,13 +550,13 @@ function handleSwipeEnd() {
 }
 
 .project-emoji.project-css-circle {
-  width: var(--project-indicator-size-md); /* 24px to match canvas */
-  height: var(--project-indicator-size-md); /* 24px to match canvas */
+  width: var(--project-indicator-size-sm); /* Shrink to 20px */
+  height: var(--project-indicator-size-sm); /* Shrink to 20px */
   border-radius: 50%;
   background: var(--project-color);
   box-shadow: var(--project-indicator-shadow-inset);
   position: relative;
-  font-size: var(--project-indicator-font-size-md); /* Proper font scaling */
+  font-size: var(--project-indicator-font-size-sm); 
   color: white;
   font-weight: var(--font-bold);
   display: flex;
@@ -564,18 +564,19 @@ function handleSwipeEnd() {
   justify-content: center;
   transition: all var(--spring-smooth) ease;
   backdrop-filter: var(--project-indicator-backdrop);
-  /* Enhanced glow to match canvas */
+  opacity: var(--project-indicator-opacity); /* Apply subtle opacity */
+  /* Softened glow */
   box-shadow:
     var(--project-indicator-shadow-inset),
-    var(--project-indicator-glow-strong);
+    var(--project-indicator-glow-subtle);
 }
 
 .project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: translateZ(0) scale(1.15); /* Match canvas scaling */
+  transform: translateZ(0) scale(1.1); 
+  opacity: 1; /* Full brightness on hover */
   box-shadow:
     var(--project-indicator-shadow-inset),
-    0 0 16px var(--project-color),
-    0 0 32px var(--project-color);
+    var(--project-indicator-glow-medium);
 }
 
 /* Add radial gradient glow effect like canvas */

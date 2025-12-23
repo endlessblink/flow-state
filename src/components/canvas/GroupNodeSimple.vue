@@ -190,8 +190,9 @@ const powerKeyword = computed((): PowerKeywordResult | null => {
   if (sectionData?.powerKeyword !== undefined) {
     return sectionData.powerKeyword
   }
-  // Auto-detect from name
-  return detectPowerKeyword(props.data.name)
+  // Auto-detect from name (guard against undefined name)
+  const name = props.data?.name || sectionData?.name
+  return name ? detectPowerKeyword(name) : null
 })
 
 const isPowerMode = computed(() => {

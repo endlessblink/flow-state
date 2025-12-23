@@ -638,8 +638,13 @@ onMounted(() => {
 
 <style scoped>
 .sync-health-dashboard {
-  @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg;
-  transition: all 0.3s ease;
+  background: rgba(20, 20, 20, 0.36);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-xl);
+  transition: all 0.3s var(--spring-smooth);
 }
 
 .sync-health-dashboard.minimized {
@@ -696,7 +701,17 @@ onMounted(() => {
 }
 
 .stat-card {
-  @apply bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 border border-slate-200 dark:border-slate-600;
+  background: rgba(30, 30, 30, 0.4);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s var(--spring-smooth);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(40, 40, 40, 0.5);
 }
 
 .stat-header {
@@ -756,7 +771,10 @@ onMounted(() => {
 }
 
 .section-card {
-  @apply bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700;
+  background: rgba(40, 40, 40, 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  border: 1px solid var(--glass-border);
 }
 
 .section-title {

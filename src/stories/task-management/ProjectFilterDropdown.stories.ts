@@ -17,7 +17,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="transform: scale(1); height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: 40px; box-sizing: border-box;">
+        <div style="transform: scale(1); min-height: 300px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: 40px; box-sizing: border-box; border-radius: var(--radius-xl); overflow: hidden;">
           <div style="width: auto; position: relative;">
             <story />
           </div>

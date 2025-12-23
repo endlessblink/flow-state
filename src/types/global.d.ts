@@ -121,6 +121,8 @@ declare global {
   }
 
   interface Window {
+    // TASK-054: Storybook environment flag to prevent database pollution
+    __STORYBOOK__?: boolean
     pomoFlowDb?: PomoFlowDB
     __pomoFlowUndoSystem?: UndoRedoActions
     pomoFlowBackup: {

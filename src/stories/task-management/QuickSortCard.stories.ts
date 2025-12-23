@@ -19,7 +19,11 @@ const meta = {
                 ]
                 return {}
             },
-            template: '<div style="width: 650px; padding: 20px;"><story /></div>'
+            template: `
+                <div style="width: 100%; min-height: 400px; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: 40px; box-sizing: border-box; transform: scale(1); border-radius: var(--radius-xl); overflow: hidden;">
+                    <div style="width: 650px;"><story /></div>
+                </div>
+            `
         })
     ]
 } satisfies Meta<typeof QuickSortCard>

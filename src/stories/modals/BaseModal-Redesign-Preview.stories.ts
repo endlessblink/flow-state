@@ -18,7 +18,7 @@ const meta = {
   },
   decorators: [
     () => ({
-      template: '<div style="width: 100%; height: 100vh;"><story /></div>'
+      template: '<div style="width: 100%; min-height: 500px; transform: scale(1); border-radius: var(--radius-xl); overflow: hidden; background: var(--app-background-gradient);"><story /></div>'
     })
   ]
 } satisfies Meta<typeof BaseModal>

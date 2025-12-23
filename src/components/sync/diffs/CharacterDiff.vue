@@ -99,26 +99,36 @@ function escapeHtml(text: string): string {
 
 <style scoped>
 .character-diff {
-  @apply p-3 font-mono text-sm leading-relaxed;
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
 }
 
 .diff-line {
-  @apply break-all;
+  word-break: break-all;
 }
 
 .token-added {
-  @apply bg-green-200 text-green-900 rounded px-0.5;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border-radius: var(--radius-sm);
+  padding: 0 2px;
 }
 
 .token-removed {
-  @apply bg-red-200 text-red-900 rounded px-0.5 line-through;
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-radius: var(--radius-sm);
+  padding: 0 2px;
+  text-decoration: line-through;
 }
 
 .token-unchanged {
-  @apply text-gray-800;
+  color: var(--text-primary);
 }
 
 .token-space {
-  @apply text-gray-400;
+  color: var(--text-muted);
 }
 </style>

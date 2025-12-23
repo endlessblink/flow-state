@@ -472,39 +472,39 @@ const menuPosition = computed(() => {
     return { left: props.x + 'px', top: props.y + 'px' }
   }
 
-  const menuHeight = menuRef.value.offsetHeight || 400 // Estimated height
+  const menuHeight = menuRef.value.offsetHeight || 600 // More accurate estimated height to prevent cutoff before measurement
   const menuWidth = menuRef.value.offsetWidth || 240
   const viewportHeight = window.innerHeight
   const viewportWidth = window.innerWidth
   const padding = 8 // Padding from viewport edge
 
+  // Get parent container height to detect boundaries within Storybook/Modals
+  const parentElement = menuRef.value.parentElement
+  const containerHeight = parentElement ? parentElement.offsetHeight : viewportHeight
+  const containerWidth = parentElement ? parentElement.offsetWidth : viewportWidth
+
   let left = props.x
   let top = props.y
 
-  // Check if menu overflows bottom of viewport
-  if (top + menuHeight > viewportHeight - padding) {
+  // Check if menu overflows bottom of container
+  if (top + menuHeight > containerHeight - padding) {
     // Flip to render above the click point
     top = props.y - menuHeight
   }
 
-  // Check if menu overflows right of viewport
-  if (left + menuWidth > viewportWidth - padding) {
-    left = viewportWidth - menuWidth - padding
+  // Check if menu overflows right of container
+  if (left + menuWidth > containerWidth - padding) {
+    left = containerWidth - menuWidth - padding
   }
 
-  // Ensure menu doesn't go off-screen on the left
-  if (left < padding) {
-    left = padding
-  }
-
-  // Ensure menu doesn't go off-screen on the top
-  if (top < padding) {
-    top = padding
-  }
+  // Ensure menu doesn't go off-screen on the left/top
+  if (left < padding) left = padding
+  if (top < padding) top = padding
 
   return {
     left: left + 'px',
-    top: top + 'px'
+    top: top + 'px',
+    position: 'absolute'
   }
 })
 
@@ -728,14 +728,16 @@ onUnmounted(() => {
 
 <style scoped>
 .context-menu {
-  position: fixed;
-  background: var(--glass-bg-solid);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  position: absolute;
+  background: rgba(20, 20, 20, 0.36);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--overlay-component-shadow);
   padding: var(--space-2) 0;
-  min-width: 200px;
-  z-index: 1000;
+  min-width: 220px;
+  z-index: var(--z-dropdown);
   animation: menuSlideIn var(--duration-fast) var(--spring-smooth);
 }
 
@@ -751,14 +753,16 @@ onUnmounted(() => {
 }
 
 .context-menu-header {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2_5) var(--space-4);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  color: var(--blue-text);
-  background: var(--blue-bg-subtle);
-  border-radius: var(--radius-md);
-  margin: var(--space-2) var(--space-3);
-  text-align: center;
+  color: var(--text-secondary);
+  background: var(--glass-bg-soft);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-1);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .menu-item {
@@ -778,7 +782,8 @@ onUnmounted(() => {
 }
 
 .menu-item:hover {
-  background: var(--bg-hover);
+  background: var(--glass-bg-soft);
+  color: var(--text-primary);
 }
 
 .menu-item.danger {

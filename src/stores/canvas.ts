@@ -701,13 +701,25 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Custom groups match by filters
     if (group.filters) {
-      if (group.filters.priorities && task.priority && !group.filters.priorities.includes(task.priority)) {
+      // BUG-034 FIX: Check if any actual filters are set
+      // Empty filters object should not match all tasks!
+      const hasPriorityFilters = group.filters.priorities && group.filters.priorities.length > 0
+      const hasStatusFilters = group.filters.statuses && group.filters.statuses.length > 0
+      const hasProjectFilters = group.filters.projects && group.filters.projects.length > 0
+
+      // If no actual filters are set, don't match any tasks logically
+      if (!hasPriorityFilters && !hasStatusFilters && !hasProjectFilters) {
         return false
       }
-      if (group.filters.statuses && !group.filters.statuses.includes(task.status)) {
+
+      // Check each filter - task must match ALL set filters
+      if (hasPriorityFilters && (!task.priority || !group.filters.priorities!.includes(task.priority))) {
         return false
       }
-      if (group.filters.projects && !group.filters.projects.includes(task.projectId)) {
+      if (hasStatusFilters && !group.filters.statuses!.includes(task.status)) {
+        return false
+      }
+      if (hasProjectFilters && !group.filters.projects!.includes(task.projectId)) {
         return false
       }
       return true
@@ -1274,12 +1286,10 @@ export const useCanvasStore = defineStore('canvas', () => {
       )
     }
 
-    // For custom groups, include both geometrically contained and logically matching tasks
-    return allTasks.filter(task => {
-      const isInside = isTaskInGroup(task, group)
-      const matchesCriteria = isTaskLogicallyInGroup(task, group)
-      return isInside || matchesCriteria
-    })
+    // BUG-034 FIX: For regular custom groups, ONLY check physical containment
+    // Logical matching is for auto-collect smart groups, not for bounds checking
+    // This ensures groups only count/move tasks that are physically inside them
+    return allTasks.filter(task => isTaskInGroup(task, group))
   }
 
   const findNearestGroup = (x: number, y: number, maxDistance: number = 50): CanvasGroup | null => {

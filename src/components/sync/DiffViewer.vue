@@ -91,14 +91,21 @@ function formatValue(value: unknown): string {
 }
 
 .value-content {
-  @apply text-gray-800 whitespace-pre-wrap break-words;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
 }
 
 .value-content.empty {
-  @apply text-gray-400 italic;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .default-display {
-  @apply p-2;
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
 }
 </style>

@@ -1,146 +1,142 @@
 <template>
   <div class="notification-preferences">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">
+    <div class="pref-header">
+      <h3 class="pref-title">
         Notifications
       </h3>
-      <label class="flex items-center cursor-pointer">
+      <label class="toggle-container">
         <input
           v-model="preferences.isEnabled"
           type="checkbox"
-          class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          class="checkbox-input"
           @change="handleToggle"
         >
-        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+        <span class="toggle-label">
           Enable notifications
         </span>
       </label>
     </div>
 
-    <div v-if="preferences.isEnabled" class="space-y-4">
+    <div v-if="preferences.isEnabled" class="pref-body">
       <!-- Reminder Times -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div class="pref-section">
+        <label class="section-label">
           Remind me
         </label>
-        <div class="space-y-2">
+        <div class="checkbox-group">
           <label
             v-for="option in reminderOptions"
             :key="option.value"
-            class="flex items-center"
+            class="checkbox-item"
           >
             <input
               v-model="selectedReminderTimes"
               type="checkbox"
               :value="option.value"
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="checkbox-input"
               @change="handleReminderTimesChange"
             >
-            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+            <span class="checkbox-label">
               {{ option.label }}
             </span>
           </label>
         </div>
       </div>
 
-      <!-- Notification Channels -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div class="pref-section">
+        <label class="section-label">
           Notification channels
         </label>
-        <div class="space-y-2">
-          <label class="flex items-center">
+        <div class="checkbox-group">
+          <label class="checkbox-item">
             <input
               v-model="preferences.notificationChannels.browser"
               type="checkbox"
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="checkbox-input"
               @change="handleChange"
             >
-            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+            <span class="checkbox-label">
               Browser notifications
             </span>
           </label>
-          <label class="flex items-center">
+          <label class="checkbox-item">
             <input
               v-model="preferences.notificationChannels.mobile"
               type="checkbox"
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="checkbox-input"
               @change="handleChange"
             >
-            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+            <span class="checkbox-label">
               Mobile notifications
             </span>
           </label>
         </div>
       </div>
 
-      <!-- Sound Settings -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div class="pref-section">
+        <label class="section-label">
           Sound
         </label>
-        <label class="flex items-center">
+        <label class="checkbox-item">
           <input
             v-model="preferences.soundEnabled"
             type="checkbox"
-            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            class="checkbox-input"
             @change="handleChange"
           >
-          <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+          <span class="checkbox-label">
             Play sound with notifications
           </span>
         </label>
       </div>
 
-      <!-- Do Not Disturb -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div class="pref-section">
+        <label class="section-label">
           Do Not Disturb
         </label>
-        <div class="space-y-2">
-          <label class="flex items-center">
+        <div class="checkbox-group">
+          <label class="checkbox-item">
             <input
               v-model="preferences.doNotDisturb!.enabled"
               type="checkbox"
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="checkbox-input"
               @change="handleChange"
             >
-            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+            <span class="checkbox-label">
               Enable Do Not Disturb
             </span>
           </label>
-          <div v-if="preferences.doNotDisturb?.enabled" class="ml-6 space-y-2">
-            <label class="flex items-center">
-              <span class="text-sm text-gray-700 dark:text-gray-300 mr-2">From</span>
+          <div v-if="preferences.doNotDisturb?.enabled" class="dnd-times">
+            <div class="time-range">
+              <span class="range-label">From</span>
               <input
                 type="time"
                 :value="formatTime(preferences.doNotDisturb?.startHour)"
-                class="px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                class="time-input"
                 @input="handleDNDStartChange"
               >
-              <span class="ml-2 text-sm text-gray-700 dark:text-gray-300 mr-2">to</span>
+              <span class="range-label">to</span>
               <input
                 type="time"
                 :value="formatTime(preferences.doNotDisturb?.endHour)"
-                class="px-2 py-1 border border-gray-300 rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                class="time-input"
                 @input="handleDNDEndChange"
               >
-            </label>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
+            </div>
+            <p class="helper-text">
               Notifications will be silenced during these hours
             </p>
           </div>
         </div>
       </div>
 
-      <!-- Snooze Duration -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div class="pref-section">
+        <label class="section-label">
           Snooze duration
         </label>
         <select
           v-model="preferences.snoozeDuration"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+          class="select-input"
           @change="handleChange"
         >
           <option v-for="option in snoozeOptions" :key="option.value" :value="option.value">
@@ -149,24 +145,21 @@
         </select>
       </div>
 
-      <!-- Permission Status -->
-      <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-        <div class="flex items-center justify-between">
-          <span class="text-sm text-gray-600 dark:text-gray-400">
+      <div class="permission-status">
+        <div class="status-row">
+          <span class="status-label">
             Browser permission:
           </span>
           <span
-            class="text-sm font-medium"
-            :class="[
-              isPermissionGranted ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-            ]"
+            class="status-badge"
+            :class="[isPermissionGranted ? 'granted' : 'denied']"
           >
             {{ isPermissionGranted ? 'Granted' : 'Not granted' }}
           </span>
         </div>
         <button
           v-if="!isPermissionGranted"
-          class="mt-2 w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="btn btn-primary btn-full"
           @click="requestPermission"
         >
           Request Permission
@@ -174,15 +167,16 @@
       </div>
 
       <!-- Test Notification -->
-      <div>
+      <div class="test-action">
         <button
           :disabled="!isPermissionGranted"
-          class="w-full px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="btn btn-secondary btn-full"
           @click="sendTestNotification"
         >
           Send Test Notification
         </button>
       </div>
+    </div>
     </div>
   </div>
 </template>
@@ -328,6 +322,194 @@ watch(() => props.initialPreferences, (newPreferences) => {
 
 <style scoped>
 .notification-preferences {
-  @apply space-y-4;
+  width: 100%;
+}
+
+.pref-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.pref-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.toggle-label {
+  margin-left: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.pref-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.pref-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.section-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.checkbox-input {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.checkbox-label {
+  margin-left: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.dnd-times {
+  margin-left: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.range-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.time-input {
+  padding: var(--space-1) var(--space-2);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.helper-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.select-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+}
+
+.permission-status {
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.status-badge {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+}
+
+.status-badge.granted {
+  color: #4ade80;
+}
+
+.status-badge.denied {
+  color: #f87171;
+}
+
+.btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn-primary {
+  background: var(--brand-primary);
+  color: white;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.test-action {
+  margin-top: var(--space-2);
 }
 </style>

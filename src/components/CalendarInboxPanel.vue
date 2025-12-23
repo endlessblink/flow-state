@@ -204,21 +204,6 @@
       </div>
     </div>
 
-    <!-- Quick Add Task Button -->
-    <div v-if="!isCollapsed" class="quick-add-task">
-      <NButton
-        type="primary"
-        block
-        dashed
-        title="Add new task to inbox"
-        @click="handleQuickAddTask"
-      >
-        <template #icon>
-          <Plus :size="14" />
-        </template>
-        Add Task
-      </NButton>
-    </div>
   </div>
 </template>
 

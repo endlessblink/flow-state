@@ -184,18 +184,18 @@ async function handleSubmit() {
 
 .form-header {
   text-align: center;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
 .form-title {
-  font-size: var(--text-2xl);
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  margin: 0 0 var(--space-2) 0;
+  margin-bottom: var(--space-1);
 }
 
 .form-subtitle {
-  font-size: var(--text-sm);
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin: 0;
 }
@@ -211,12 +211,12 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
-  border-radius: var(--radius-lg);
-  color: var(--color-danger);
-  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--priority-high-text);
+  font-size: var(--font-size-sm);
   animation: slideIn 0.2s var(--spring-smooth);
 }
 
@@ -275,17 +275,18 @@ async function handleSubmit() {
 .forgot-password-link {
   background: none;
   border: none;
-  color: var(--color-primary);
-  font-size: var(--text-sm);
+  color: var(--brand-primary);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
-  transition: all var(--duration-fast) var(--spring-smooth);
+  transition: all 0.2s;
 }
 
 .forgot-password-link:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--brand-hover);
 }
 
 .forgot-password-link:disabled {
@@ -303,7 +304,7 @@ async function handleSubmit() {
 .divider {
   position: relative;
   text-align: center;
-  margin: var(--space-2) 0;
+  margin: var(--space-4) 0;
 }
 
 .divider::before {
@@ -313,16 +314,16 @@ async function handleSubmit() {
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--border-default);
+  background: var(--glass-border);
 }
 
 .divider span {
   position: relative;
   display: inline-block;
   padding: 0 var(--space-3);
-  background: var(--surface-default);
+  background: rgba(20, 20, 20, 0.95);
   color: var(--text-muted);
-  font-size: var(--text-xs);
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -333,30 +334,31 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  margin-top: var(--space-4);
   padding-top: var(--space-4);
-  border-top: 1px solid var(--border-default);
+  border-top: 1px solid var(--glass-border);
 }
 
 .footer-text {
-  font-size: var(--text-sm);
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
 }
 
 .switch-mode-link {
   background: none;
   border: none;
-  color: var(--color-primary);
-  font-size: var(--text-sm);
+  color: var(--brand-primary);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-semibold);
   cursor: pointer;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
-  transition: all var(--duration-fast) var(--spring-smooth);
+  transition: all 0.2s;
 }
 
 .switch-mode-link:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--brand-hover);
 }
 
 .switch-mode-link:disabled {

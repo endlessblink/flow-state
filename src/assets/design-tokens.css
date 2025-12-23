@@ -660,19 +660,21 @@
   /* Emoji within 32px container */
 
   /* CSS circle dot sizes (for colored dots fallback) */
-  --project-circle-size-xs: 6px;
+  --project-circle-size-xs: 4px;
   /* Small dot for ultra-compact */
-  --project-circle-size-sm: 7px;
+  --project-circle-size-sm: 6px;
   /* Standard dot for regular components */
-  --project-circle-size-md: 8px;
+  --project-circle-size-md: 7px;
   /* Larger dot for canvas visibility */
-  --project-circle-size-lg: 12px;
+  --project-circle-size-lg: 10px;
   /* Prominent dot for featured displays */
 
-  /* Glow intensity variations */
-  --project-indicator-glow-subtle: 0 0 6px currentColor, 0 0 12px currentColor;
-  --project-indicator-glow-medium: 0 0 8px currentColor, 0 0 16px currentColor;
-  --project-indicator-glow-strong: 0 0 12px currentColor, 0 0 24px currentColor;
+  /* Glow intensity variations - Softened for less distraction */
+  --project-indicator-glow-subtle: 0 0 4px currentColor, 0 0 8px currentColor;
+  --project-indicator-glow-medium: 0 0 6px currentColor, 0 0 12px currentColor;
+  --project-indicator-glow-strong: 0 0 8px currentColor, 0 0 16px currentColor;
+  --project-indicator-opacity: 0.6;
+  /* More subtle default state */
 
   /* Enhanced glass morphism effects */
   --project-indicator-border: rgba(255, 255, 255, 0.3);

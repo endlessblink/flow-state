@@ -1,17 +1,33 @@
 import DiffViewer from '@/components/sync/DiffViewer.vue'
 
 const meta = {
-    title: 'PLACEHOLDER',
-  component: DiffViewer,
+    component: DiffViewer,
     title: '🔄 Sync & Reliability/DiffViewer',
     tags: ['autodocs'],
     parameters: {
-        layout: 'padded',
+        layout: 'fullscreen',
+        docs: {
+            story: {
+                inline: true,
+            }
+        }
     },
     argTypes: {
         mode: { control: 'select', options: ['local', 'remote'] },
         fieldType: { control: 'select', options: ['text', 'array', 'object', 'datetime', 'boolean'] }
-    }
+    },
+    decorators: [
+        (story: any) => ({
+            components: { story },
+            template: `
+        <div style="min-height: 1000px; width: 100%; padding: 40px; background: radial-gradient(circle at center, #3c2b5a 0%, #1a1a2e 100%); transform: scale(1); border-radius: var(--radius-xl);">
+          <div style="position: relative; height: 100%; max-width: 1000px; margin: 0 auto;">
+            <story />
+          </div>
+        </div>
+      `
+        })
+    ]
 }
 
 export default meta

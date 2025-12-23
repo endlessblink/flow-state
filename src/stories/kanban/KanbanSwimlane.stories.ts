@@ -47,11 +47,13 @@ const meta = {
       },
       template: `<div style="
         width: 100%;
-        height: 100vh;
+        min-height: 600px;
         overflow: hidden;
         background: var(--app-background-gradient);
         padding: 32px;
         font-family: sans-serif;
+        transform: scale(1);
+        border-radius: var(--radius-xl);
       "><story /></div>`
     })
   ]

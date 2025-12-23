@@ -881,13 +881,14 @@ body.dragging-active .task-node .vue-flow__handle {
 }
 
 .project-emoji.project-css-circle {
-  /* CSS circle with enhanced glow for canvas visibility */
-  width: var(--project-indicator-size-md); /* 8px for TaskNode canvas visibility */
-  height: var(--project-indicator-size-md);
+  /* CSS circle with softened glow */
+  width: var(--project-indicator-size-sm); /* Shrink to 20px */
+  height: var(--project-indicator-size-sm);
   border-radius: 50%;
   background: var(--project-color);
+  opacity: var(--project-indicator-opacity); /* Apply subtle opacity */
   box-shadow:
-    var(--project-indicator-glow-strong), /* Strong glow for canvas visibility */
+    var(--project-indicator-glow-subtle),
     var(--project-indicator-shadow-inset);
   border: 1px solid var(--project-indicator-border);
   backdrop-filter: var(--project-indicator-backdrop);
@@ -908,10 +909,10 @@ body.dragging-active .task-node .vue-flow__handle {
 }
 
 .project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: translateZ(0) scale(1.15); /* Slightly larger scale for canvas */
+  transform: translateZ(0) scale(1.1); 
+  opacity: 1; /* Full brightness on hover */
   box-shadow:
-    0 0 16px var(--project-color),
-    0 0 32px var(--project-color),
+    var(--project-indicator-glow-medium),
     var(--project-indicator-shadow-inset);
 }
 

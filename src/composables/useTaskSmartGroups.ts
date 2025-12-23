@@ -74,6 +74,10 @@ export interface PowerKeywordResult {
  * Returns the detected keyword info or null if no power keyword found
  */
 export function detectPowerKeyword(groupName: string): PowerKeywordResult | null {
+  // Guard against undefined/null groupName
+  if (!groupName) {
+    return null
+  }
   const normalizedName = groupName.toLowerCase().trim()
 
   // Check date keywords first (smart groups)

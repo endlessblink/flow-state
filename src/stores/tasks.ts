@@ -3352,36 +3352,6 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  // TASK-054: One-time cleanup of any existing demo data
-  const cleanupDemoData = async () => {
-    // Known demo task patterns from createSampleTasks() - removed in TASK-054
-    const demoPatterns = [
-      'sample-task-1', 'sample-task-2', 'sample-task-3',
-      'Work on tasks for lime', 'Blink test task', 'Review calendar integration'
-    ]
-
-    const demoTasks = tasks.value.filter(task =>
-      demoPatterns.some(pattern =>
-        task.id.includes(pattern) || task.title.includes(pattern)
-      )
-    )
-
-    if (demoTasks.length > 0) {
-      console.log(`🧹 TASK-054: Found ${demoTasks.length} demo tasks to remove:`, demoTasks.map(t => t.title))
-
-      // Remove demo tasks
-      const cleanedTasks = tasks.value.filter(task =>
-        !demoPatterns.some(pattern =>
-          task.id.includes(pattern) || task.title.includes(pattern)
-        )
-      )
-
-      tasks.value = cleanedTasks
-      await saveTasksToStorage(tasks.value, 'demo-cleanup-TASK-054')
-      console.log(`✅ TASK-054: Removed ${demoTasks.length} demo tasks, ${tasks.value.length} tasks remaining`)
-    }
-  }
-
   // CRITICAL: INITIALIZATION FROM POUCHDB ON STORE CREATION
   const initializeFromPouchDB = async () => {
     console.log('🔄 Initializing store from PouchDB...')
@@ -3415,10 +3385,7 @@ export const useTaskStore = defineStore('tasks', () => {
       // This is part of the "My Tasks" redundancy removal plan
       await migrateMyTasksToUncategorized()
 
-      // TASK-054: Clean up any existing demo data from previous versions
-      await cleanupDemoData()
-
-      console.log('✅ Store initialized from PouchDB successfully (with migrations and cleanup)')
+      console.log('✅ Store initialized from PouchDB successfully')
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.ERROR,

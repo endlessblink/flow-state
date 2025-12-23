@@ -1176,7 +1176,7 @@ const _handleToggleDoneTasks = (_event: MouseEvent) => {
 .calendar-layout {
   display: flex;
   flex: 1;
-  background: var(--surface-primary);
+  background: var(--app-background-gradient);
   overflow: visible;
   min-height: 0;
   position: relative;
@@ -1200,11 +1200,11 @@ const _handleToggleDoneTasks = (_event: MouseEvent) => {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-6) var(--space-8);
-  /* Solid background to ensure visibility when sticky */
-  background: var(--surface-primary);
+  /* Glassy background to ensure visibility when sticky but keep gradient */
+  background: var(--glass-panel-bg);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .date-navigation {

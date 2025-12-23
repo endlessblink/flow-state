@@ -32,7 +32,10 @@
 }
 
 /* TASK CARDS - ULTRA REFINED */
-.task-card {
+/* NOTE: Inbox panel task cards use scoped styles with glass-bg-light */
+/* This global style is for Kanban/Board view task cards */
+.kanban-column .task-card,
+.board-view .task-card {
     background: var(--surface-secondary);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
@@ -42,7 +45,8 @@
     transition: all var(--duration-normal) var(--spring-smooth);
 }
 
-.task-card:hover {
+.kanban-column .task-card:hover,
+.board-view .task-card:hover {
     border-color: var(--border-medium);
     box-shadow: var(--shadow-medium);
 }

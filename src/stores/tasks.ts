@@ -184,6 +184,12 @@ export const useTaskStore = defineStore('tasks', () => {
    * Centralized project save function that respects storage flags
    */
   const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {
+    // TASK-054: Prevent Storybook from polluting real database
+    if (typeof window !== 'undefined' && window.__STORYBOOK__) {
+      console.log('🔒 [STORYBOOK] Skipping project persistence:', context)
+      return
+    }
+
     const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
     if (!dbInstance) {
       console.error(`❌ [SAVE-PROJECTS] PouchDB not available (${context})`)
@@ -230,6 +236,12 @@ export const useTaskStore = defineStore('tasks', () => {
    * Centralized task save function that respects INDIVIDUAL_ONLY mode
    */
   const saveTasksToStorage = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
+    // TASK-054: Prevent Storybook from polluting real database
+    if (typeof window !== 'undefined' && window.__STORYBOOK__) {
+      console.log('🔒 [STORYBOOK] Skipping task persistence:', context)
+      return
+    }
+
     const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
     if (!dbInstance) {
       console.error(`❌ [SAVE-TASKS] PouchDB not available (${context})`)

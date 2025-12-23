@@ -23,8 +23,7 @@ const meta = {
     layout: 'fullscreen',
     docs: {
       story: {
-        inline: false,
-        iframeHeight: 900,
+        inline: true,
       }
     }
   },
@@ -33,7 +32,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="min-height: 100vh; width: 100%; padding: 40px; background: var(--app-background-gradient); transform: scale(1);">
+        <div style="min-height: 1000px; width: 100%; padding: 40px; background: radial-gradient(circle at center, #3c2b5a 0%, #1a1a2e 100%); transform: scale(1); border-radius: var(--radius-xl);">
           <div style="position: relative; height: 100%;">
             <story />
           </div>
@@ -210,4 +209,19 @@ export const InboxLargeBatch: Story = {
     x: 150,
     y: 150,
   },
+}
+// Redesigned Preview - shows the streamlined design in a themed container
+export const RedesignedPreview: Story = {
+  args: {
+    ...Default.args,
+    x: 100,
+    y: 100,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Showcases the streamlined context menu with enhanced glassmorphism, neutral headers, and improved hover states against a vibrant purple gradient.'
+      }
+    }
+  }
 }

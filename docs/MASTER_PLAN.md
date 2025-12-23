@@ -223,6 +223,69 @@ const loadProjectsFromPouchDB = async () => {
 **Testing Required**: Create projects, refresh browser, verify projects persist
 
 
+### ~~BUG-033~~: Canvas Groups Not Rendering (✅ FIXED)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Groups not rendering on canvas - TypeError | HIGH | ✅ **FIXED** Dec 23, 2025 |
+
+**Root Cause**: `detectPowerKeyword()` in `useTaskSmartGroups.ts:77` called `groupName.toLowerCase()` without null check. When groups had undefined `name` property, this crashed and prevented all group nodes from rendering.
+
+**Fix Applied**:
+```typescript
+// useTaskSmartGroups.ts - Added guard clause
+export function detectPowerKeyword(groupName: string): PowerKeywordResult | null {
+  if (!groupName) {
+    return null  // Guard against undefined/null
+  }
+  const normalizedName = groupName.toLowerCase().trim()
+  // ...
+}
+
+// GroupNodeSimple.vue - Added fallback name lookup
+const name = props.data?.name || sectionData?.name
+return name ? detectPowerKeyword(name) : null
+```
+
+**Files Modified**:
+- `src/composables/useTaskSmartGroups.ts` - Added null guard
+- `src/components/canvas/GroupNodeSimple.vue` - Added name fallback
+
+**Related**: ISSUE-008 (Group undo/redo fix from same session)
+
+### ~~BUG-034~~: Canvas Group/Task Drag Issues (✅ COMPLETE Dec 23, 2025)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Group drag doesn't move tasks inside | HIGH | ✅ **FIXED** Dec 23, 2025 |
+| Task count doesn't update on move | MEDIUM | ✅ **FIXED** Dec 23, 2025 |
+| Returned tasks don't move with group | MEDIUM | ✅ **FIXED** Dec 23, 2025 |
+
+**SOP**: `docs/🐛 debug/sop/canvas-group-drag-fix-2025-12-23.md`
+
+**Root Cause** (via Vue Flow documentation research):
+Vue Flow expects **RELATIVE** positions for child nodes when `parentNode` is set, but we were passing **ABSOLUTE** coordinates.
+
+**All Issues Resolved**:
+- ✅ Task drag no longer moves entire group
+- ✅ Group drag moves tasks inside correctly
+- ✅ Task count correct initially
+- ✅ Task count decrements when task moved OUT of group
+- ✅ Tasks returned to group move with subsequent group drags
+
+**Fixes Applied** (3 total):
+1. **Relative position conversion** - `syncNodes()` converts absolute→relative when `parentNode` is set
+2. **parentNode-based task finding** - Section drag uses `parentNode` relationship instead of bounds re-check
+3. **Always refresh relationships** - `syncNodes()` called after EVERY task drag
+
+**Files Modified**:
+- `src/views/CanvasView.vue:1535-1541` - Enabled relative position conversion
+- `src/composables/canvas/useCanvasDragDrop.ts:208-218` - Use parentNode relationship
+- `src/composables/canvas/useCanvasDragDrop.ts:304-306` - Always call syncNodes() after task drag
+
+**User Verified**: December 23, 2025
+
+
 ### ✅ E2E Recovery Initiative (Dec 22, 2025)
 
 | Issue | Severity | Status | Key Fixes |
@@ -549,6 +612,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-052**~~ | ✅ **DONE** | `src/stories/**/*` | - | - |
 | ~~TASK-053~~ | ✅ **DONE** | `dev-manager/kanban/index.html`, `dev-manager/server.js` | - | - |
 | ~~TASK-054~~ | ✅ **DONE** | `src/stores/tasks.ts`, `useDemoGuard.ts`, sidebar | - | - |
+| ~~**TASK-055**~~ | ✅ **DONE** | `SyncAlertSystem.vue`, `LoginForm.vue`, `AuthModal.vue`, etc. | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -578,7 +642,46 @@ Phase 3 (Mobile) ←────────────────────
 **Ready to Start:**
 - TASK-017: KDE Plasma Widget (depends on TASK-021 ✅ DONE)
 
+
+- 🔄 **TASK-043**: CanvasView Refactoring (Phase 4 pending - component decomposition)
+- 🔄 **TASK-048**: Individual Project/Section Storage (Phase 4-5 pending - enable READ_INDIVIDUAL flags)
+- 👀 **BUG-032**: Projects deletion fix (REVIEW - needs user verification)
+- 👀 **TASK-022**: Task disappearance monitoring (logger active)
+
+**Recently Completed (Dec 23):**
+- ✅ TASK-055: Global UI Polish & Component Streamlining (Sync/Auth)
+- ✅ TASK-054: Remove demo content safeguards (task documented)
+- ✅ TASK-045: Consolidate backup composables (deleted 5 redundant files)
+
 ---
+
+### ~~TASK-055~~: Global UI Polish & Component Streamlining (✅ COMPLETE)
+
+**Goal**: Apply premium dark glassmorphism and full tokenization to all remaining core components.
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| `SimpleBackupSettings.vue` | ✅ DONE | Streamlined + Tokenized |
+| `SyncAlertSystem.vue` | ✅ DONE | Streamlined + Tokenized |
+| `SyncIntegrationExample.vue` | ✅ DONE | Streamlined + Tokenized |
+| `AuthModal.vue` | ✅ DONE | Streamlined + Tokenized |
+| `AuthStatusNotice.vue` | ✅ DONE | Streamlined + Tokenized |
+| `LoginForm.vue` | ✅ DONE | Streamlined + Tokenized |
+| `NotificationPreferences.vue` | ✅ DONE | Streamlined + Tokenized |
+| `SignupForm.vue` | ✅ DONE | Streamlined + Tokenized |
+
+**Progress**:
+- [x] `SimpleBackupSettings.vue` streamlined ✅
+- [x] `SyncAlertSystem.vue` fixed & streamlined ✅
+- [x] `SyncIntegrationExample.vue` streamlined ✅
+- [x] `AuthModal.vue` fixed & streamlined ✅
+- [x] `AuthStatusNotice.vue` streamlined ✅
+- [x] `LoginForm.vue` fixed & streamlined ✅
+- [x] `NotificationPreferences.vue` streamlined ✅
+- [x] `SignupForm.vue` streamlined ✅
+
+---
+
 
 ### ~~TASK-027~~: Fix All Lint Warnings (COMPLETE)
 

@@ -24,7 +24,8 @@ const meta: Meta<typeof AuthModal> = {
       template: `
         <div class="auth-modal-story-container" style="
           background: var(--app-background-gradient);
-          height: 850px;
+          min-height: 600px;
+          height: 100%;
           width: 100%;
           position: relative;
           overflow: hidden;

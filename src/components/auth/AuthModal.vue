@@ -147,15 +147,14 @@ function handleClose() {
 }
 
 .auth-modal-body {
-  padding: var(--space-6) 0;
-  min-height: 800px;
+  padding: var(--space-4) 0;
+  /* Allow content to define height */
 }
 
 /* Responsive */
 @media (max-width: 640px) {
   .auth-modal-body {
-    padding: var(--space-4) 0;
-    min-height: 600px;
+    padding: var(--space-3) 0;
   }
 }
 </style>

@@ -307,130 +307,233 @@ function saveMerge(): void {
 
 <style scoped>
 .modal-overlay {
-  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4);
 }
 
 .modal-container {
-  @apply bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col;
+  background: rgba(20, 20, 20, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-2xl);
+  max-width: 1000px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
-  @apply flex items-center justify-between p-6 border-b border-gray-200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .modal-header h3 {
-  @apply text-lg font-semibold text-gray-900;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
 }
 
 .close-btn {
-  @apply p-1 text-gray-400 hover:text-gray-600 transition-colors;
+  padding: var(--space-1);
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: var(--text-primary);
 }
 
 .modal-body {
-  @apply flex-1 overflow-y-auto p-6 space-y-6;
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 .merge-preview {
-  @apply space-y-4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .preview-header {
-  @apply flex items-center justify-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .preview-header h4 {
-  @apply font-medium text-gray-900;
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
 }
 
 .merge-actions {
-  @apply flex items-center gap-2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .merge-btn {
-  @apply px-3 py-1 rounded text-sm font-medium transition-colors;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  transition: all 0.2s;
 }
 
 .merge-btn.combine {
-  @apply bg-blue-500 text-white hover:bg-blue-600;
+  background: var(--brand-primary);
+  color: white;
 }
 
 .merge-btn.local {
-  @apply bg-blue-50 text-blue-700 hover:bg-blue-100;
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .merge-btn.remote {
-  @apply bg-purple-50 text-purple-700 hover:bg-purple-100;
+  background: rgba(168, 85, 247, 0.1);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.2);
 }
 
 .merge-btn:disabled {
-  @apply opacity-50 cursor-not-allowed;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .merge-editor {
-  @apply border border-gray-300 rounded-lg overflow-hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .merge-input {
-  @apply w-full px-3 py-2 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500;
+  width: 100%;
+  padding: var(--space-3);
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.merge-input:focus {
+  outline: none;
 }
 
 .source-values {
-  @apply grid grid-cols-2 gap-4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
 }
 
 .source-column h5 {
-  @apply font-medium text-gray-900 mb-2;
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
 }
 
 .source-display {
-  @apply p-3 bg-gray-50 rounded border border-gray-200;
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
 }
 
 .merge-history {
-  @apply space-y-2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .merge-history h5 {
-  @apply font-medium text-gray-900;
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
 }
 
 .history-list {
-  @apply space-y-1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .history-entry {
-  @apply flex items-center gap-3 text-sm p-2 bg-gray-50 rounded;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
 }
 
 .history-action {
-  @apply font-medium text-gray-600 min-w-32;
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  min-width: 120px;
 }
 
 .history-value {
-  @apply flex-1 text-gray-800 truncate;
+  flex: 1;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .history-time {
-  @apply text-gray-500 text-xs;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .modal-footer {
-  @apply flex items-center justify-end gap-3 p-6 border-t border-gray-200;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border-top: 1px solid var(--glass-border);
 }
 
 .action-btn {
-  @apply px-4 py-2 rounded text-sm font-medium transition-colors;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  transition: all 0.2s;
 }
 
 .cancel {
-  @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
 }
 
 .save {
-  @apply bg-blue-500 text-white hover:bg-blue-600;
+  background: var(--brand-primary);
+  color: white;
 }
 
 .save:disabled {
-  @apply opacity-50 cursor-not-allowed;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

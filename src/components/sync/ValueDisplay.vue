@@ -119,74 +119,109 @@ function formatDefaultValue(value: unknown): string {
 
 <style scoped>
 .value-display {
-  @apply w-full;
+  width: 100%;
 }
 
 .text-value {
-  @apply text-gray-800 whitespace-pre-wrap break-words;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-words;
 }
 
 .text-value.empty {
-  @apply text-gray-400 italic;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .array-value {
-  @apply space-y-1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .array-items {
-  @apply space-y-1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .array-item {
-  @apply px-2 py-1 bg-gray-100 rounded text-sm text-gray-700;
+  padding: var(--space-1) var(--space-2);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
 }
 
 .array-more {
-  @apply px-2 py-1 bg-blue-50 rounded text-sm text-blue-600 italic;
+  padding: var(--space-1) var(--space-2);
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: #60a5fa;
+  font-style: italic;
 }
 
 .empty-array {
-  @apply text-gray-400 italic;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .object-value {
-  @apply bg-gray-50 rounded p-2;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
 }
 
 .object-content {
-  @apply text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 128px;
+  overflow-y: auto;
 }
 
 .datetime-value {
-  @apply text-gray-800;
+  color: var(--text-primary);
 }
 
 .datetime-formatted {
-  @apply font-medium;
+  font-weight: var(--font-medium);
 }
 
 .datetime-empty {
-  @apply text-gray-400 italic;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .boolean-value {
-  @apply flex items-center;
+  display: flex;
+  align-items: center;
 }
 
 .boolean-true {
-  @apply flex items-center gap-1 text-green-600 font-medium;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: #4ade80;
+  font-weight: var(--font-medium);
 }
 
 .boolean-false {
-  @apply flex items-center gap-1 text-red-600 font-medium;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: #f87171;
+  font-weight: var(--font-medium);
 }
 
 .boolean-undefined {
-  @apply text-gray-400 italic;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .default-value {
-  @apply text-gray-800;
+  color: var(--text-primary);
 }
 </style>

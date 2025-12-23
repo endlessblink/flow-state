@@ -123,15 +123,17 @@
               placeholder="Test value"
               class="input"
             >
-            <button class="btn btn-sm btn-primary" @click="saveTestData">
-              Save
-            </button>
-            <button class="btn btn-sm btn-secondary" @click="loadTestData">
-              Load
-            </button>
-            <button class="btn btn-sm btn-outline" @click="removeTestData">
-              Remove
-            </button>
+            <div class="operation-btns">
+              <button class="btn btn-sm btn-primary" @click="saveTestData">
+                Save
+              </button>
+              <button class="btn btn-sm btn-secondary" @click="loadTestData">
+                Load
+              </button>
+              <button class="btn btn-sm btn-outline" @click="removeTestData">
+                Remove
+              </button>
+            </div>
           </div>
           <div v-if="operationResult" class="operation-result">
             <strong>Result:</strong> {{ operationResult }}
@@ -420,23 +422,33 @@ onMounted(() => {
 
 <style scoped>
 .sync-integration-example {
-  @apply p-6 max-w-6xl mx-auto;
+  padding: var(--space-6);
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 .header-sync {
-  @apply mb-6;
+  margin-bottom: var(--space-6);
 }
 
 .main-content {
-  @apply space-y-6;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 h2 {
-  @apply text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
 }
 
 h3 {
-  @apply text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-3);
+  color: var(--text-secondary);
 }
 
 .sync-controls,
@@ -445,7 +457,13 @@ h3 {
 .health-monitoring,
 .recent-errors,
 .test-results {
-  @apply bg-white dark:bg-gray-800 rounded-lg p-4 shadow border border-gray-200 dark:border-gray-700;
+  background: rgba(20, 20, 20, 0.36);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
 }
 
 .control-buttons {
@@ -453,23 +471,51 @@ h3 {
 }
 
 .btn {
-  @apply px-4 py-2 rounded font-medium transition-colors duration-200;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-medium);
+  transition: all 0.2s var(--spring-smooth);
 }
 
 .btn-primary {
-  @apply bg-blue-600 hover:bg-blue-700 text-white;
+  background: var(--brand-primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--brand-hover);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
-  @apply bg-gray-600 hover:bg-gray-700 text-white;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .btn-outline {
-  @apply border border-gray-600 hover:bg-gray-600/50 text-gray-700 dark:text-gray-300;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border-color: var(--glass-border-heavy);
 }
 
 .btn-ghost {
-  @apply hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
 }
 
 .btn:disabled {
@@ -485,122 +531,182 @@ h3 {
 }
 
 .input {
-  @apply px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  transition: all 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
 }
 
 .operation-result {
-  @apply p-3 bg-gray-100 dark:bg-gray-700 rounded text-sm;
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 .health-grid {
-  @apply grid grid-cols-2 md:grid-cols-3 gap-3 mb-4;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .health-item {
-  @apply flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded;
+  background: rgba(30, 30, 30, 0.4);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  border: 1px solid var(--glass-border);
 }
 
 .health-label {
-  @apply text-sm font-medium text-gray-600 dark:text-gray-400;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: var(--space-1);
 }
 
 .health-value {
-  @apply text-sm font-mono;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
 }
 
 .health-value.healthy,
 .health-value.online,
 .health-value.connected {
-  @apply text-green-600 dark:text-green-400;
+  color: var(--status-done-text);
 }
 
 .health-value.unhealthy,
-.health.value.offline,
-.health.value.disconnected {
-  @apply text-red-600 dark:text-red-400;
+.health-value.offline,
+.health-value.disconnected {
+  color: var(--priority-high-text);
 }
 
 .health-value.warning,
 .health-value.error {
-  @apply text-yellow-600 dark:text-yellow-400;
+  color: var(--status-in-progress-text);
 }
 
 .last-sync {
-  @apply text-sm text-gray-600 dark:text-gray-400;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
 }
 
 .error-list {
-  @apply space-y-2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .error-item {
-  @apply p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded;
+  padding: var(--space-3);
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
 }
 
 .error-header {
-  @apply flex justify-between items-center mb-1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-1);
 }
 
 .error-direction {
-  @apply text-xs font-medium text-red-600 dark:text-red-400 uppercase;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
+  color: var(--priority-high-text);
+  text-transform: uppercase;
 }
 
 .error-time {
-  @apply text-xs text-gray-500 dark:text-gray-400;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .error-message {
-  @apply text-sm text-red-800 dark:text-red-200 mb-1;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
 }
 
 .error-meta {
-  @apply text-xs text-gray-600 dark:text-gray-400;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .test-summary {
-  @apply flex justify-between items-center mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
 }
 
 .test-summary.success {
-  @apply bg-green-50 dark:bg-green-900/20;
+  background: var(--success-bg-subtle);
+  color: var(--status-done-text);
 }
 
 .test-summary.failure {
-  @apply bg-red-50 dark:bg-red-900/20;
+  background: var(--danger-bg-subtle);
+  color: var(--priority-high-text);
 }
 
 .test-duration {
-  @apply text-sm text-gray-600 dark:text-gray-400;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
 }
 
 .test-details {
-  @apply space-y-1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .test-result-item {
-  @apply flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background 0.2s;
+}
+
+.test-result-item:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .test-status {
-  @apply w-6 text-center;
+  width: 24px;
+  text-align: center;
 }
 
 .test-name {
-  @apply flex-1 text-sm font-medium;
-}
-
-.test-duration {
-  @apply text-xs text-gray-500 dark:text-gray-400;
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
 }
 
 .test-error {
-  @apply w-full text-xs text-red-600 dark:text-red-400 mt-1;
-}
-
-/* Dark theme support */
-@media (prefers-color-scheme: dark) {
-  .sync-integration-example {
-    @apply bg-gray-900 text-gray-100;
-  }
+  width: 100%;
+  font-size: var(--font-size-xs);
+  color: var(--priority-high-text);
+  margin-top: var(--space-1);
 }
 </style>

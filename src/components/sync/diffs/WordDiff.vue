@@ -166,50 +166,65 @@ function escapeHtml(text: string): string {
 
 <style scoped>
 .word-diff {
-  @apply space-y-3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .diff-content {
-  @apply p-3 leading-relaxed text-sm;
+  padding: var(--space-3);
+  line-height: var(--line-height-relaxed);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
 }
 
 .token-added {
-  @apply bg-green-200 text-green-900 rounded px-1;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border-radius: var(--radius-sm);
+  padding: 0 2px;
 }
 
 .token-removed {
-  @apply bg-red-200 text-red-900 rounded px-1 line-through;
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-radius: var(--radius-sm);
+  padding: 0 2px;
+  text-decoration: line-through;
 }
 
-.token-unchanged {
-  @apply text-gray-800;
-}
-
-.token-whitespace {
-  @apply text-gray-800;
+.token-unchanged, .token-whitespace {
+  color: var(--text-primary);
 }
 
 .word-stats {
-  @apply flex items-center justify-center gap-4 text-xs text-gray-600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .stat-item {
-  @apply flex items-center gap-1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .stat-count {
-  @apply font-medium;
+  font-weight: var(--font-medium);
 }
 
 .stat-item.added .stat-count {
-  @apply text-green-600;
+  color: #4ade80;
 }
 
 .stat-item.removed .stat-count {
-  @apply text-red-600;
+  color: #f87171;
 }
 
 .stat-item.unchanged .stat-count {
-  @apply text-gray-500;
+  color: var(--text-muted);
 }
 </style>

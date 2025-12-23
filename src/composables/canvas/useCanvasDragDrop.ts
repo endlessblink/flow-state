@@ -184,47 +184,62 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             const section = canvasStore.sections.find(s => s.id === sectionId)
 
             if (section) {
-                // Calculate position delta and update all child tasks
-                const deltaX = node.position.x - section.position.x
-                const deltaY = node.position.y - section.position.y
+                // BUG-034 FIX: Save OLD section bounds BEFORE updating position
+                // This is critical for correctly identifying tasks inside the section
+                const oldBounds = {
+                    x: section.position.x,
+                    y: section.position.y,
+                    width: section.position.width,
+                    height: section.position.height
+                }
+
+                // Calculate position delta
+                const deltaX = node.position.x - oldBounds.x
+                const deltaY = node.position.y - oldBounds.y
+
+                // DEBUG: Log section bounds and all task positions
+                console.log('🔍 BUG-034 DEBUG: Section drag detected', {
+                    sectionId,
+                    oldBounds,
+                    newPosition: { x: node.position.x, y: node.position.y },
+                    delta: { deltaX, deltaY }
+                })
+
+                // BUG-034 FIX: Find tasks that are VISUALLY inside the section
+                // Use Vue Flow's parentNode relationship (set by syncNodes based on visual containment)
+                // This is more reliable than re-checking bounds against stored positions
+                const sectionNodeId = `section-${sectionId}`
+                const tasksInSection = nodes.value
+                    .filter(n => n.parentNode === sectionNodeId && !n.id.startsWith('section-'))
+                    .map(n => taskStore.tasks.find(t => t.id === n.id))
+                    .filter((t): t is Task => t !== undefined && t.canvasPosition !== undefined)
+
+                console.log(`🔍 BUG-034: Found ${tasksInSection.length} child tasks for section "${section.name}"`,
+                    tasksInSection.map(t => ({ id: t.id, title: t.title?.substring(0, 15) })))
 
                 // Update section position in store
                 canvasStore.updateSectionWithUndo(sectionId, {
                     position: {
                         x: node.position.x,
                         y: node.position.y,
-                        width: node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : 300,
-                        height: node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : 200
+                        width: node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : oldBounds.width,
+                        height: node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : oldBounds.height
                     }
                 })
 
                 // Update all child task positions to maintain relative positioning
-                if (Array.isArray(filteredTasks.value)) {
-                    filteredTasks.value
-                        .filter(task => {
-                            if (!task.canvasPosition) return false
-                            const taskSection = canvasStore.sections.find(s => {
-                                const { x, y, width, height } = s.position
-                                if (!task.canvasPosition) return false
-                                return task.canvasPosition.x >= x &&
-                                    task.canvasPosition.x <= x + width &&
-                                    task.canvasPosition.y >= y &&
-                                    task.canvasPosition.y <= y + height
-                            })
-                            return taskSection?.id === sectionId
-                        })
-                        .forEach(task => {
-                            if (task.canvasPosition) {
-                                taskStore.updateTaskWithUndo(task.id, {
-                                    canvasPosition: {
-                                        x: task.canvasPosition.x + deltaX,
-                                        y: task.canvasPosition.y + deltaY
-                                    }
-                                })
+                tasksInSection.forEach(task => {
+                    if (task.canvasPosition) {
+                        taskStore.updateTaskWithUndo(task.id, {
+                            canvasPosition: {
+                                x: task.canvasPosition.x + deltaX,
+                                y: task.canvasPosition.y + deltaY
                             }
                         })
-                }
-                console.log(`Section dragged to: (${node.position.x}, ${node.position.y})`)
+                    }
+                })
+
+                console.log(`Section dragged: ${tasksInSection.length} tasks moved with it`)
             }
         } else {
             // For task nodes, update position with improved section handling
@@ -283,9 +298,12 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 if (containingSection.type !== 'custom' || shouldUseSmartGroupLogic(containingSection.name)) {
                     console.log('[handleNodeDragStop] Applying properties for section:', containingSection.name)
                     applySectionPropertiesToTask(node.id, containingSection)
-                    syncNodes()
                 }
             }
+
+            // BUG-034 FIX: ALWAYS call syncNodes after task drag to update parentNode relationships
+            // This ensures task count and group membership are always up-to-date
+            syncNodes()
 
             // Restore selection state
             if (selectedIdsBeforeDrag.length > 0) {

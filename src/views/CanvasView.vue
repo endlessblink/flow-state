@@ -30,7 +30,7 @@
 -->
 
 <template>
-  <div class="canvas-layout">
+  <div class="canvas-layout canvas-contour">
     <!-- System Health Alert for Graceful Degradation -->
     <div
       v-if="!systemHealthy"
@@ -95,7 +95,7 @@
       class="global-loading-overlay"
     >
       <div class="loading-content">
-        <div class="loading-spinner" />
+        <div class="loading-spinner"></div>
         <span class="loading-text">
           {{ operationLoading.loading ? 'Loading Canvas...' : 'Synchronizing Data...' }}
         </span>
@@ -109,7 +109,6 @@
 
   
     <!-- MAIN CANVAS AREA -->
-    <div class="canvas-main">
       <!-- Vue Flow Canvas -->
       <div
         class="canvas-drop-zone"
@@ -120,7 +119,7 @@
         <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
         <div v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0" class="canvas-loading-overlay">
           <div class="loading-content">
-            <div class="loading-spinner" />
+            <div class="loading-spinner"></div>
             <span class="loading-text">Loading canvas...</span>
           </div>
         </div>
@@ -181,71 +180,11 @@
           </div>
         </div>
 
-        <!-- Duration Filter Controls -->
-        <div class="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-none">
-           <!-- Wrapper to restore pointer events for buttons -->
-           <div class="flex items-center gap-1 p-1 pointer-events-auto">
-             <button
-               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
-               :class="{ 'bg-green-500/20 text-green-400': taskStore.activeDurationFilter === 'quick', 'text-gray-400': taskStore.activeDurationFilter !== 'quick' }"
-               title="Filter: Quick (< 15m)"
-               @click="taskStore.toggleDurationFilter('quick')"
-             >
-               <Zap :size="16" />
-             </button>
-             <button
-               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
-               :class="{ 'bg-lime-500/20 text-lime-400': taskStore.activeDurationFilter === 'short', 'text-gray-400': taskStore.activeDurationFilter !== 'short' }"
-               title="Filter: Short (15-30m)"
-               @click="taskStore.toggleDurationFilter('short')"
-             >
-               <Timer :size="16" />
-             </button>
-             <button
-               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
-               :class="{ 'bg-orange-500/20 text-orange-400': taskStore.activeDurationFilter === 'medium', 'text-gray-400': taskStore.activeDurationFilter !== 'medium' }"
-               title="Filter: Medium (30-60m)"
-               @click="taskStore.toggleDurationFilter('medium')"
-             >
-               <Timer :size="16" />
-             </button>
-             <button
-               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
-               :class="{ 'bg-red-500/20 text-red-400': taskStore.activeDurationFilter === 'long', 'text-gray-400': taskStore.activeDurationFilter !== 'long' }"
-               title="Filter: Long (> 60m)"
-               @click="taskStore.toggleDurationFilter('long')"
-             >
-               <Clock :size="16" />
-             </button>
-             <button
-               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
-               :class="{ 'bg-gray-500/20 text-gray-300': taskStore.activeDurationFilter === 'unestimated', 'text-gray-400': taskStore.activeDurationFilter !== 'unestimated' }"
-               title="Filter: Unestimated"
-               @click="taskStore.toggleDurationFilter('unestimated')"
-             >
-               <HelpCircle :size="16" />
-             </button>
-             
-             <!-- Separator if filter is active -->
-             <div v-if="taskStore.activeDurationFilter" class="w-px h-4 bg-gray-600 mx-1"></div>
-             
-             <!-- Clear Filter -->
-             <button
-                v-if="taskStore.activeDurationFilter"
-                class="p-1.5 rounded-md hover:bg-red-500/20 text-red-400 transition-colors"
-                title="Clear Duration Filter"
-                @click="taskStore.setActiveDurationFilter(null)"
-             >
-               <X :size="14" />
-             </button>
-           </div>
-        </div>
 
         <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
         <UnifiedInboxPanel />
 
         <!-- Always show VueFlow canvas, even when empty -->
-        <div>
           <div class="canvas-container-wrapper">
             <!-- Canvas with tasks -->
             <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
@@ -383,7 +322,7 @@
               <div v-else class="canvas-loading-state">
                 <div class="flex items-center justify-center h-full">
                   <div class="text-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4" />
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
                     <p class="text-gray-600 dark:text-gray-400">
                       {{ systemHealthy ? 'Initializing Canvas...' : 'System Initializing...' }}
                     </p>
@@ -393,8 +332,6 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>  <!-- This closes the canvas-drop-zone div from line 55 -->
 
     <!-- ================================================================= -->
     <!-- MODALS & OVERLAYS SECTION (Safe to Extract)                      -->
@@ -449,6 +386,16 @@
       :is-visible="isGroupEditModalOpen"
       @close="closeGroupEditModal"
       @save="handleGroupEditSave"
+    />
+
+    <!-- Group Delete Confirmation Modal -->
+    <ConfirmationModal
+      :is-open="isDeleteGroupModalOpen"
+      title="Delete Group"
+      :message="deleteGroupMessage"
+      confirm-text="Delete"
+      @confirm="confirmDeleteGroup"
+      @cancel="cancelDeleteGroup"
     />
 
     <!-- Canvas Context Menu -->
@@ -568,6 +515,7 @@ import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
 import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
 import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
 
 // Import Vue Flow styles
 import '@vue-flow/core/dist/style.css'
@@ -1106,6 +1054,15 @@ const groupModalPosition = ref({ x: 100, y: 100 })
 const isGroupEditModalOpen = ref(false)
 const selectedSectionForEdit = ref<CanvasSection | null>(null)
 
+// Group Delete Confirmation Modal state
+const isDeleteGroupModalOpen = ref(false)
+const groupPendingDelete = ref<CanvasSection | null>(null)
+
+// Delete group confirmation message
+const deleteGroupMessage = computed(() => {
+  if (!groupPendingDelete.value) return 'Delete this group?'
+  return `Delete "${groupPendingDelete.value.name}" group? Tasks inside will remain on the canvas.`
+})
 
 // Computed properties
 
@@ -1509,17 +1466,27 @@ const syncNodes = () => {
   )
 
   sections.forEach(section => {
+    // Calculate task count for this section
+    const tasksInThisSection = canvasStore.getTasksInSectionBounds(
+      section,
+      Array.isArray(filteredTasks.value) ? filteredTasks.value : []
+    )
+
     allNodes.push({
       id: `section-${section.id}`,
       type: 'sectionNode',
       position: { x: section.position.x, y: section.position.y },
       data: {
+        id: section.id, // BUG-034: Add id for component lookup
+        name: section.name, // BUG-034: Add name for display
         label: section.name,
         section,
         width: section.position.width || 300,
         height: section.position.height || 200,
         isCollapsed: section.isCollapsed || false,
-        theme: (section as unknown as { theme?: string }).theme || 'default'
+        theme: (section as unknown as { theme?: string }).theme || 'default',
+        taskCount: tasksInThisSection.length, // BUG-034: Add task count
+        type: section.type // BUG-034: Add type for styling
       },
       style: {
         width: `${section.position.width || 300}px`,
@@ -1546,30 +1513,32 @@ const syncNodes = () => {
       let parentNode = undefined
       let position = { ...task.canvasPosition }
 
-      // Check if task belongs to a section visually or logically
-      // FIX: Only use visual containment if not manually set to avoid jumping
+      // Check if task belongs to a section visually
+      // BUG-034 FIX: Use task CENTER for bounds check (consistent with getTasksInSectionBounds)
+      const TASK_WIDTH = 220
+      const TASK_HEIGHT = 100
+      const taskCenterX = position.x + TASK_WIDTH / 2
+      const taskCenterY = position.y + TASK_HEIGHT / 2
+
       const section = sections.find(s => {
         const sx = s.position.x
         const sy = s.position.y
         const sw = s.position.width || 300
         const sh = s.position.height || 200
-        return position.x >= sx && position.x <= sx + sw &&
-               position.y >= sy && position.y <= sy + sh
+        return taskCenterX >= sx && taskCenterX <= sx + sw &&
+               taskCenterY >= sy && taskCenterY <= sy + sh
       })
 
       if (section) {
         // Task is visually inside a section - make it a child
         parentNode = `section-${section.id}`
-        // Convert to relative position for Vue Flow parent-child system
-        // position = {
-        //   x: position.x - section.position.x,
-        //   y: position.y - section.position.y
-        // }
-        // FIX: Vue Flow 1.33+ handles absolute positions for child nodes too if configured
-        // But standard parent-child requires relative positions.
-        // CHECK: If we use extent: 'parent', we need relative.
-        // For now, let's keep absolute to avoid complex coordinate transforms on every sync
-        // Vue Flow will handle the visual nesting if we handle the drag events right
+        // BUG-034 FIX: Convert ABSOLUTE to RELATIVE for Vue Flow parent-child system
+        // Vue Flow expects position to be RELATIVE when parentNode is set
+        // See: https://github.com/bcakmakoglu/vue-flow/discussions/1202
+        position = {
+          x: position.x - section.position.x,
+          y: position.y - section.position.y
+        }
       }
 
       allNodes.push({
@@ -1578,8 +1547,8 @@ const syncNodes = () => {
         position,
         data: { task },
         parentNode, // Set parent if found
-        extent: 'parent', // Constrain to parent if parent exists
-        expandParent: true, // Expand parent if dragged out? No.
+        extent: undefined, // Allow free movement - we use absolute coordinates (BUG-034 fix)
+        expandParent: false, // Don't expand parent on drag
         zIndex: 10, // Tasks always above sections
         draggable: true,
         connectable: true,
@@ -1741,6 +1710,8 @@ const {
   closeGroupEditModal,
   handleGroupEditSave,
   deleteGroup,
+  confirmDeleteGroup,
+  cancelDeleteGroup,
   moveSelectedTasksToInbox,
   deleteSelectedTasks,
   handleNodeContextMenu,
@@ -1766,6 +1737,8 @@ const {
     groupModalPosition,
     isGroupEditModalOpen,
     selectedSectionForEdit,
+    isDeleteGroupModalOpen,
+    groupPendingDelete,
     selectedNode,
     showNodeContextMenu,
     nodeContextMenuX,
@@ -2967,11 +2940,19 @@ onBeforeUnmount(() => {
 .canvas-layout {
   display: flex;
   flex: 1;
-  background: var(--surface-primary);
-  overflow: hidden; /* Prevent overflow from affecting viewport */
+  overflow: hidden;
   height: 100%;
-  position: relative; /* For positioning filter controls */
-  max-height: 100vh; /* Ensure layout doesn't exceed viewport height */
+  position: relative;
+  max-height: 100vh;
+}
+
+.canvas-contour {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xl);
+  margin: var(--space-4);
+  background: rgba(255, 255, 255, 0.01);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 }
 
 /* System Health Alert for Graceful Degradation */
@@ -3175,27 +3156,34 @@ onBeforeUnmount(() => {
 
 
 .canvas-main {
-  flex: 1;
-  position: relative;
-  overflow: hidden; /* Prevent scrollbars on main canvas */
   height: 100%;
+}
+
+.canvas-container-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
 }
 
 
 
 .canvas-drop-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
   width: 100%;
   height: 100%;
-  position: relative;
+  overflow: hidden;
 }
 
 .canvas-container {
   width: 100%;
   height: 100%;
-  min-height: 100vh;
   position: relative;
-  position: relative;
-  background: var(--app-background-gradient);
 }
 
 .vue-flow-container {
@@ -3215,7 +3203,7 @@ onBeforeUnmount(() => {
 <style>
 /* Global Vue Flow theme overrides */
 .vue-flow {
-  background: var(--surface-primary);
+  background: var(--app-background-gradient);
   outline: none; /* Remove default outline, use custom focus-visible */
   width: 100%;
   height: 100%;

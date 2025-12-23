@@ -6,6 +6,15 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import customTheme from './theme'
 import i18n from '../src/i18n'
 
+// TASK-054: Mark Storybook environment to prevent database writes
+// This prevents stories from polluting the real app's IndexedDB
+declare global {
+  interface Window {
+    __STORYBOOK__?: boolean
+  }
+}
+window.__STORYBOOK__ = true
+
 // Storybook dark mode override (must come first)
 import './storybook-dark-override.css'
 

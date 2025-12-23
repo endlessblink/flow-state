@@ -69,23 +69,26 @@ const showManualBackupHelp = () => {
 
 <style scoped>
 .simple-backup-settings {
-  padding: 20px;
+  padding: var(--space-5);
   max-width: 600px;
 }
 
 .section-title {
-  font-size: 1.1em;
-  font-weight: 600;
-  margin: 0 0 15px 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-4);
   color: var(--text-primary);
 }
 
 .backup-status {
-  background: var(--glass-bg-soft);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 25px;
+  background: rgba(20, 20, 20, 0.36);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
   border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
 }
 
 .status-indicator {
@@ -110,22 +113,22 @@ const showManualBackupHelp = () => {
 }
 
 .primary-status {
-  font-size: 1.1em;
-  font-weight: 600;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
-  margin-bottom: 2px;
+  margin-bottom: var(--space-1);
 }
 
 .backup-count {
-  font-size: 0.9em;
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
 }
 
 .backup-details {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  padding-top: 15px;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--glass-border);
 }
 
@@ -145,30 +148,33 @@ const showManualBackupHelp = () => {
 }
 
 .backup-actions {
-  background: var(--glass-bg-soft);
-  border-radius: 12px;
-  padding: 20px;
+  background: rgba(20, 20, 20, 0.36);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
   border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
 }
 
 .action-buttons {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 25px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
 }
 
 .action-button {
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-size: 0.95em;
-  font-weight: 600;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-semibold);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .action-button:disabled {
@@ -177,8 +183,8 @@ const showManualBackupHelp = () => {
 }
 
 .action-button.primary {
-  background: transparent;
-  border: 1px solid var(--brand-primary);
+  background: var(--state-active-bg);
+  border: 1px solid var(--state-active-border);
   color: var(--brand-primary);
 }
 
@@ -433,13 +439,13 @@ const showManualBackupHelp = () => {
 }
 
 .backup-notice {
-  padding: 15px;
-  margin-top: 15px;
-  border-radius: 8px;
-  background: var(--glass-bg-light);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
-  font-size: 0.9em;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
 }
 
@@ -452,12 +458,12 @@ const showManualBackupHelp = () => {
 }
 
 .manual-help {
-  margin-top: 20px;
-  padding: 15px;
-  background: var(--glass-bg-light);
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--glass-border);
-  border-radius: 8px;
-  font-size: 0.9em;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
   line-height: 1.4;
 }
@@ -474,5 +480,6 @@ const showManualBackupHelp = () => {
   color: var(--text-primary);
   display: block;
   margin-bottom: 8px;
+  font-weight: var(--font-semibold);
 }
 </style>

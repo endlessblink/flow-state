@@ -29,6 +29,10 @@ interface ActionsState {
     isGroupEditModalOpen: Ref<boolean>
     selectedSectionForEdit: Ref<CanvasSection | null>
 
+    // Group Delete Confirmation
+    isDeleteGroupModalOpen: Ref<boolean>
+    groupPendingDelete: Ref<CanvasSection | null>
+
     // Node Context Menu
     selectedNode: Ref<Node | null>
     showNodeContextMenu: Ref<boolean>
@@ -181,25 +185,29 @@ export function useCanvasActions(
     const deleteGroup = (section: CanvasSection) => {
         if (!section) return
 
-        // FIX: Using window.confirm for now to match original behavior
-        if (confirm(`Delete "${section.name}" group? This will remove the group and all its settings.`)) {
-            const sectionNodeId = `section-${section.id}`
-
-            // Preservation Logic
-            /* Note: The store logic handles removal, but we need to ensure tasks are visually orphaned first 
-               if we want to keep them on canvas. The original code manually filtered nodes. */
-
-            // Logic from original file to preserve tasks
-            // ... (This logic relies on manipulating local nodes ref, but we should rely on store + sync)
-            // Actually, standard CanvasStore.deleteSection doesn't delete tasks, it just removes the section.
-            // Tasks lose their parentNode via sync or we must ensure they are updated.
-
-            canvasStore.deleteSection(section.id)
-
-            // Force high priority sync
-            nextTick(() => deps.batchedSyncNodes('high'))
-        }
+        // Show designed confirmation modal instead of native confirm()
+        state.groupPendingDelete.value = section
+        state.isDeleteGroupModalOpen.value = true
         deps.closeCanvasContextMenu()
+    }
+
+    const confirmDeleteGroup = () => {
+        const section = state.groupPendingDelete.value
+        if (!section) return
+
+        // Perform the deletion with undo support
+        canvasStore.deleteSectionWithUndo(section.id)
+
+        // Force high priority sync
+        nextTick(() => deps.batchedSyncNodes('high'))
+
+        // Close the modal
+        cancelDeleteGroup()
+    }
+
+    const cancelDeleteGroup = () => {
+        state.isDeleteGroupModalOpen.value = false
+        state.groupPendingDelete.value = null
     }
 
     // --- Bulk Actions ---
@@ -363,6 +371,8 @@ export function useCanvasActions(
         closeGroupEditModal,
         handleGroupEditSave,
         deleteGroup,
+        confirmDeleteGroup,
+        cancelDeleteGroup,
         moveSelectedTasksToInbox,
         deleteSelectedTasks,
         handleNodeContextMenu,

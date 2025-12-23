@@ -1,0 +1,36 @@
+# Cursor AI Rules for Pomo-Flow
+
+## CRITICAL: Data Safety (TASK-054)
+
+NEVER create demo, sample, or test data programmatically.
+NEVER add createSampleTasks(), addDemoData(), seedDatabase(), or similar functions.
+NEVER generate "Test Task", "Sample Project", "Demo", or placeholder content.
+NEVER create fallback data when database is empty.
+
+Users must see an EMPTY app on first run - not sample data.
+
+## Why
+
+Demo data pollutes real user data and causes confusion.
+Previous incidents required manual database cleanup.
+
+## Stack
+
+- Vue 3 + Composition API + TypeScript
+- Pinia for state management
+- Tailwind CSS with design tokens
+- PouchDB for local storage
+- Vitest + Playwright for testing
+
+## Key Files
+
+- CLAUDE.md - Full development guidelines
+- docs/MASTER_PLAN.md - Project roadmap
+- src/stores/tasks.ts - Task management (PROTECTED)
+
+## Commands
+
+npm run dev - Start dev server (port 5546)
+npm run build - Production build
+npm run test - Run tests
+npm run lint - Lint code

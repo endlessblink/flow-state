@@ -98,8 +98,11 @@ const _computedTitle = computed(() => {
 /* Default variant with background and border */
 .project-emoji-icon--default {
   border-radius: var(--radius-full);
-  background-color: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-subtle);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Plain variant - just the emoji, no background or border */

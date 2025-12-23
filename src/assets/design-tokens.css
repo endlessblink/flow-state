@@ -67,9 +67,9 @@
   /* Glass Surfaces - SUBTLE glassmorphism (use sparingly!) */
   --glass-bg-solid: rgba(0, 0, 0, 0.95);
   /* Solid black for cards/panels */
-  --glass-bg-light: rgba(255, 255, 255, 0.03);
-  --glass-bg-medium: rgba(255, 255, 255, 0.05);
-  --glass-bg-heavy: rgba(255, 255, 255, 0.08);
+  --glass-bg-light: rgba(255, 255, 255, 0.02);
+  --glass-bg-medium: rgba(255, 255, 255, 0.04);
+  --glass-bg-heavy: rgba(255, 255, 255, 0.06);
   --glass-border: rgba(255, 255, 255, 0.10);
   --glass-border-hover: rgba(255, 255, 255, 0.15);
   --glass-glow: rgba(99, 102, 241, 0.08);
@@ -560,10 +560,10 @@
   --week-hover-bg: rgba(16, 185, 129, 0.02);
 
   /* Additional glass opacity variations */
-  --glass-bg-subtle: rgba(255, 255, 255, 0.01);
-  --glass-bg-weak: rgba(255, 255, 255, 0.02);
-  --glass-bg-tint: rgba(255, 255, 255, 0.04);
-  --glass-bg-soft: rgba(255, 255, 255, 0.06);
+  --glass-bg-subtle: rgba(255, 255, 255, 0.005);
+  --glass-bg-weak: rgba(255, 255, 255, 0.015);
+  --glass-bg-tint: rgba(255, 255, 255, 0.03);
+  --glass-bg-soft: rgba(255, 255, 255, 0.05);
   --glass-border-light: rgba(255, 255, 255, 0.06);
   --glass-border-medium: rgba(255, 255, 255, 0.16);
   --glass-border-strong: rgba(255, 255, 255, 0.28);
@@ -715,6 +715,10 @@
   --overlay-component-border: 1px solid rgba(255, 255, 255, 0.15);
   --overlay-component-border-color: rgba(255, 255, 255, 0.15);
   --overlay-component-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3);
+
+  /* Inbox Panel Customization - User Controlled */
+  --inbox-panel-opacity: 0.31;
+  --inbox-panel-bg: rgba(20, 20, 20, var(--inbox-panel-opacity));
 
   /* Dropdown-specific tokens */
   --dropdown-trigger-height: 44px;

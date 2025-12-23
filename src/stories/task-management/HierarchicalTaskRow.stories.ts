@@ -9,6 +9,12 @@ const meta = {
     tags: ['autodocs'],
     parameters: {
         layout: 'padded',
+        backgrounds: {
+            default: 'dark',
+            values: [
+                { name: 'dark', value: '#0f172a' },
+            ],
+        },
     },
     decorators: [
         (story: any) => ({

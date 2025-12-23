@@ -653,10 +653,11 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .inbox-panel {
-  background: var(--glass-bg-solid);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  background: transparent; /* Remove dark overlay */
+  backdrop-filter: none; /* Let main app blur handle it if needed, or re-add blur without color */
+  border: none; /* Remove border if it creates a boxy look, or keep explicit border only */
+  /* border-radius: var(--radius-lg); */
+  box-shadow: none; /* Remove shadow to blend in */
   height: 100%;
   width: 320px;
   max-height: 100%;
@@ -717,12 +718,12 @@ onBeforeUnmount(() => {
 }
 
 .quick-add-input:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--glass-border-hover);
 }
 
 .quick-add-input:focus {
-  border-color: rgba(78, 205, 196, 0.5);
-  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.15);
+  border-color: var(--brand-primary);
+  box-shadow: var(--state-hover-glow);
 }
 
 .quick-add-input::placeholder {
@@ -793,7 +794,7 @@ onBeforeUnmount(() => {
 }
 
 .inbox-task-card {
-  background: var(--glass-bg-light);
+  background: rgba(255, 255, 255, 0.03); /* Very subtle tint instead of opaque glass */
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-3);
@@ -809,13 +810,13 @@ onBeforeUnmount(() => {
 }
 
 .inbox-task-card.selected {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-bg-subtle);
   border-color: var(--brand-primary);
 }
 
 .inbox-task-card.timer-active {
-  background: rgba(251, 146, 60, 0.1);
-  border-color: rgba(251, 146, 60, 0.5);
+  background: var(--timer-active-bg-start);
+  border-color: var(--timer-active-border);
 }
 
 .selection-indicator {
@@ -824,7 +825,7 @@ onBeforeUnmount(() => {
   left: var(--space-2);
   width: 0.5rem;
   height: 0.5rem;
-  background: rgb(96, 165, 250);
+  background: var(--color-info);
   border-radius: 50%;
 }
 
@@ -849,14 +850,14 @@ onBeforeUnmount(() => {
 }
 
 .priority-stripe-null {
-  background: rgb(156, 163, 175);
+  background: var(--text-disabled);
 }
 
 .timer-indicator {
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-  color: rgb(251, 146, 60);
+  color: var(--color-warning);
 }
 
 .task-content {

@@ -152,10 +152,10 @@ const clearAllFilters = () => {
   align-items: center;
   gap: 16px;
   padding: 8px 16px;
-  background: var(--glass-bg-heavy);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  background: transparent; /* Remove heavy glass bg */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none; /* Remove border for cleaner look */
   border-radius: 16px;
   height: auto;
   min-height: 44px;

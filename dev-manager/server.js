@@ -23,6 +23,18 @@ const MASTER_PLAN_PATH = path.join(__dirname, '..', 'docs', 'MASTER_PLAN.md');
 app.use(cors());
 app.use(express.json());
 
+// Aggressive cache-control - prevent stale data issues
+app.use((req, res, next) => {
+  // Disable caching for HTML and markdown files
+  if (req.path.endsWith('.html') || req.path.endsWith('.md') || req.path === '/') {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  }
+  next();
+});
+
 // Request logging
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);

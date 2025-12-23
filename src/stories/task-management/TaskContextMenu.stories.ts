@@ -1,6 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import TaskContextMenu from '@/components/TaskContextMenu.vue'
 import type { Task } from '@/stores/tasks'
+import { createPinia, setActivePinia } from 'pinia'
+import { useTaskStore } from '@/stores/tasks'
+
+const pinia = createPinia()
+setActivePinia(pinia)
 
 const meta = {
   component: TaskContextMenu,
@@ -25,13 +30,20 @@ const meta = {
   },
 
   decorators: [
-    (story: () => object) => ({
+    (story: any) => ({
       components: { story },
       template: `
-        <div style="min-height: 100vh; width: 100%; padding: 40px; background: var(--app-background-gradient);">
-          <story />
+        <div style="min-height: 100vh; width: 100%; padding: 40px; background: var(--app-background-gradient); transform: scale(1);">
+          <div style="position: relative; height: 100%;">
+            <story />
+          </div>
         </div>
-      `
+      `,
+      setup() {
+        const taskStore = useTaskStore()
+        // Mock some data if needed for the context menu (though it mostly takes props)
+        return {}
+      }
     })
   ],
 } satisfies Meta<typeof TaskContextMenu>

@@ -13,7 +13,13 @@ const meta = {
       description: {
         component: 'Comprehensive view controls for managing table/list display, density, sorting, and filtering with intuitive UI controls.'
       }
-    }
+    },
+    backgrounds: {
+      default: 'dark',
+      values: [
+        { name: 'dark', value: '#0f172a' },
+      ],
+    },
   },
 
   argTypes: {

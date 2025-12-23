@@ -32,6 +32,12 @@ const meta = {
         component: 'Command palette for quick task creation with progressive disclosure and keyboard shortcuts.'
       }
     },
+    backgrounds: {
+      default: 'dark',
+      values: [
+        { name: 'dark', value: '#0f172a' },
+      ],
+    },
     // Provide mocked store to component
     vue3: {
       beforeMount(app: any) {
@@ -97,19 +103,39 @@ export const Default: Story = {
 
 export const WithPreOpened: Story = {
   render: (args: any) => ({
-    components: { CommandPalette },
+    components: { CommandPalette, BaseButton },
     setup() {
       const commandPaletteRef = ref()
+      const isOpen = ref(true)
+
+      const openCommandPalette = () => {
+        isOpen.value = true
+        commandPaletteRef.value?.open()
+      }
 
       // Auto-open after mount
-      setTimeout(() => {
-        commandPaletteRef.value?.open()
-      }, 100)
+      onMounted(() => {
+        setTimeout(() => {
+          commandPaletteRef.value?.open()
+        }, 100)
+      })
 
-      return { args, commandPaletteRef }
+      return { args, commandPaletteRef, isOpen, openCommandPalette }
     },
     template: `
-      <div style="position: relative; width: 100%; height: 100vh;">
+      <div style="position: relative; width: 100%; height: 100vh; padding: 40px;">
+        <div style="text-align: center; color: white;">
+          <h1>Pre-Opened Command Palette</h1>
+          <p style="margin-bottom: 20px;">The palette is open by default in this story</p>
+          <BaseButton
+            variant="secondary"
+            size="lg"
+            @click="openCommandPalette"
+          >
+            Open Command Palette
+          </BaseButton>
+        </div>
+
         <CommandPalette
           ref="commandPaletteRef"
           v-bind="args"

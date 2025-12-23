@@ -503,7 +503,8 @@ const formattedDuration = computed(() => {
 <style scoped>
 .task-card {
   /* Todoist-inspired compact card */
-  background: var(--kanban-card-glass-bg); /* Deep semi-transparent blue/black */
+  /* Todoist-inspired compact card */
+  background: var(--glass-bg-subtle); /* Remove deep blue/gray background */
   backdrop-filter: blur(var(--blur-xs));
   -webkit-backdrop-filter: blur(var(--blur-xs));
   border: 1px solid var(--glass-border);
@@ -846,9 +847,11 @@ const formattedDuration = computed(() => {
 
 /* For CSS circles (not emojis), add background and border styling */
 .project-visual-container:has(.project-css-circle) {
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-subtle);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* Hover effects - only for containers with CSS circles */
@@ -922,7 +925,6 @@ const formattedDuration = computed(() => {
 
 /* Legacy support - remove old unused styles */
 .project-visual-badge,
-.project-visual-badge.project-visual--colored,
 .project-visual,
 .project-visual.project-emoji,
 .project-visual.project-css-circle,

@@ -305,7 +305,7 @@ onUnmounted(() => {
 .dropdown-panel {
   position: absolute;
   top: calc(100% + var(--space-2));
-  inset-inline: 0; /* RTL: full width dropdown panel */
+  left: 0;
   background: var(--surface-primary);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);

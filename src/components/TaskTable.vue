@@ -97,7 +97,7 @@
       <div class="table-cell project-cell">
         <span
           class="project-emoji-badge"
-          :class="[`project-visual--${getProjectVisual(task).type}`, { 'project-visual--colored': getProjectVisual(task).type === 'css-circle' }]"
+          :class="`project-visual--${getProjectVisual(task).type}`"
           :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
         >
           <!-- Emoji visual indicator -->
@@ -486,7 +486,9 @@ onUnmounted(() => {
 
 /* Enhanced project indicator styles matching canvas implementation */
 .project-emoji-badge {
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-subtle);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   cursor: pointer;
@@ -563,9 +565,11 @@ onUnmounted(() => {
   z-index: -1;
 }
 
-.project-emoji-badge.project-visual--colored {
-  background: var(--glass-bg-light);
+.project-emoji-badge.project-visual--css-circle {
+  background: var(--glass-bg-subtle);
   border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .project-emoji:hover {

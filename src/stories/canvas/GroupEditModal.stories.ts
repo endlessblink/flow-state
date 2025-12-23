@@ -21,7 +21,7 @@ const createSection = (overrides: Partial<CanvasSection> = {}): CanvasSection =>
 
 const meta = {
   component: GroupEditModal,
-  title: '🧩 Components/🎨 Canvas/GroupEditModal',
+  title: '🎨 Canvas/GroupEditModal',
   tags: ['autodocs'],
 
   parameters: {

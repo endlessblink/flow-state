@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 
 const meta: Meta = {
-  title: 'Design System/Colors/Brand Primary Decision',
+  title: '🛸 Design System/Colors',
   parameters: {
     layout: 'padded',
     docs: {

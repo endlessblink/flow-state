@@ -15,7 +15,9 @@ AUDIT Storybook stories for common issues like cutoff modals, store dependency e
 4. **Props Verification**: Ensure story args match component prop definitions
 5. **Layout Validation**: Check modals/overlays use `layout: 'fullscreen'`
 6. **Design Token Enforcement**: Detect hardcoded colors/styles that should use CSS variables
-7. **Self-Learning**: Update this skill when new issues/solutions are discovered and approved
+7. **Import Verification**: Detect missing Vue imports (`ref`, `reactive`, `computed`, etc.)
+8. **Event Handler Verification**: Detect missing critical event handlers (`@close`, `@submit`, `@confirm`, `@cancel`)
+9. **Self-Learning**: Update this skill when new issues/solutions are discovered and approved
 
 ## Trigger Keywords
 
@@ -30,6 +32,10 @@ Activate this skill when user mentions:
 - "create story" / "create stories"
 - "storybook tokens" / "hardcoded colors"
 - "tokenize storybook"
+- "Cannot find name 'ref'" / "Cannot find name 'computed'"
+- "missing imports" / "Vue import error"
+- "missing event handlers" / "modal won't close"
+- "buttons don't work" / "handlers missing"
 
 ---
 
@@ -73,6 +79,14 @@ User reports Storybook issue
     ├── "doesn't match" / "wrong props"
     │   └── Ask: "Which props are incorrect?"
     │   └── Likely: Props mismatch → Check 4
+    │
+    ├── "Cannot find name 'ref'" / "Cannot find name 'computed'"
+    │   └── Ask: "Which Vue APIs are you using in setup()?"
+    │   └── Likely: Missing imports → Check 7
+    │
+    ├── "buttons don't work" / "can't close modal"
+    │   └── Ask: "What happens when you click [button]?"
+    │   └── Likely: Missing event handlers → Check 8
     │
     └── Unknown
         └── Run full audit, then ask about findings
@@ -530,6 +544,222 @@ const darkBgDecorator = () => ({
 
 ---
 
+### Check 7: Missing Vue Imports
+
+**Issue**: Stories use Vue APIs (`ref`, `reactive`, `computed`, `watch`, `onMounted`) without importing them from Vue
+
+**Detection**:
+```bash
+# Find stories using Vue APIs without importing them
+# Step 1: List all story files using Vue APIs
+grep -rn "\bref\b\|\breactive\b\|\bcomputed\b\|\bwatch\b\|\bonMounted\b\|\bonUnmounted\b\|\bnextTick\b" src/stories/ --include="*.ts" -l | \
+# Step 2: Remove files that already import from 'vue'
+while read file; do
+  if ! grep -q "from 'vue'" "$file"; then
+    echo "$file"
+  fi
+done
+```
+
+**Problematic Pattern**:
+```typescript
+// ❌ BAD - Using Vue APIs without imports
+import type { Meta, StoryObj } from '@storybook/vue3'
+import MyComponent from '@/components/MyComponent.vue'
+
+export const Interactive: Story = {
+  render: () => ({
+    components: { MyComponent },
+    setup() {
+      const counter = ref(0)  // TypeScript error: Cannot find name 'ref'
+      const doubleCounter = computed(() => counter.value * 2)  // Error: Cannot find name 'computed'
+      return { counter, doubleCounter }
+    },
+    template: `<MyComponent :count="counter" />`
+  })
+}
+```
+
+**Fix Pattern: Add Missing Imports**:
+```typescript
+// ✅ GOOD - Import all used Vue APIs
+import type { Meta, StoryObj } from '@storybook/vue3'
+import { ref, computed } from 'vue'  // ✅ Add imports
+import MyComponent from '@/components/MyComponent.vue'
+
+export const Interactive: Story = {
+  render: () => ({
+    components: { MyComponent },
+    setup() {
+      const counter = ref(0)
+      const doubleCounter = computed(() => counter.value * 2)
+      return { counter, doubleCounter }
+    },
+    template: `<MyComponent :count="counter" />`
+  })
+}
+```
+
+**Common Vue APIs That Need Import**:
+| API | Description | Import |
+|-----|-------------|--------|
+| `ref` | Reactive primitive | `import { ref } from 'vue'` |
+| `reactive` | Reactive object | `import { reactive } from 'vue'` |
+| `computed` | Computed property | `import { computed } from 'vue'` |
+| `watch` | Watcher | `import { watch } from 'vue'` |
+| `watchEffect` | Immediate watcher | `import { watchEffect } from 'vue'` |
+| `onMounted` | Lifecycle hook | `import { onMounted } from 'vue'` |
+| `onUnmounted` | Lifecycle hook | `import { onUnmounted } from 'vue'` |
+| `nextTick` | Next DOM update | `import { nextTick } from 'vue'` |
+| `toRefs` | Destructure reactive | `import { toRefs } from 'vue'` |
+
+**Pattern: Adding to Existing Vue Import**:
+```typescript
+// Before
+import { ref } from 'vue'
+
+// After
+import { ref, computed, watch, onMounted } from 'vue'
+```
+
+**Pattern: Creating New Vue Import**:
+```typescript
+// Before
+import MyComponent from '@/components/MyComponent.vue'
+
+// After
+import { ref, computed } from 'vue'
+import MyComponent from '@/components/MyComponent.vue'
+```
+
+---
+
+### Check 8: Event Handlers
+
+**Issue**: Stories use components with event emitters but don't provide handlers for critical events (`@close`, `@submit`, `@confirm`, `@cancel`)
+
+**Detection**:
+```bash
+# Step 1: Find components with event emitters
+grep -rn "defineEmits" src/components/ --include="*.vue" | cut -d: -f1 | sort -u
+
+# Step 2: For each component, check if stories provide handlers for critical events
+# Manual review recommended for critical events: @close, @submit, @confirm, @cancel
+```
+
+**Critical Events Checklist**:
+
+For **Modal/Overlay** components:
+- [ ] `@close` - User closes modal (X button, backdrop click, ESC)
+- [ ] `@confirm` - User confirms action
+- [ ] `@cancel` - User cancels action
+
+For **Form** components:
+- [ ] `@submit` - User submits form
+- [ ] `@cancel` - User cancels form
+
+For **Dropdown/Menu** components:
+- [ ] `@close` - User closes dropdown (selection made, click outside)
+- [ ] `@select` - User selects item
+
+**Problematic Pattern**:
+```typescript
+// Component defines emits
+const emit = defineEmits<{
+  close: []
+  confirm: []
+  cancel: []
+}>()
+
+// Story - MISSING HANDLERS ❌
+export const Default: Story = {
+  args: {
+    isOpen: true,
+    title: 'Confirm Action',
+  },
+  render: (args) => ({
+    components: { ConfirmationModal },
+    template: `
+      <ConfirmationModal
+        :is-open="args.isOpen"
+        :title="args.title"
+        // ❌ Missing: @close handler
+        // ❌ Missing: @confirm handler
+        // ❌ Missing: @cancel handler
+      />
+    `
+  })
+}
+```
+
+**Fix Pattern A: Noop Handlers (Simplest)**:
+```typescript
+export const Default: Story = {
+  args: {
+    isOpen: true,
+    title: 'Confirm Action',
+  },
+  render: (args) => ({
+    components: { ConfirmationModal },
+    template: `
+      <ConfirmationModal
+        :is-open="args.isOpen"
+        :title="args.title"
+        @close="() => console.log('Closed')"
+        @confirm="() => console.log('Confirmed')"
+        @cancel="() => console.log('Cancelled')"
+      />
+    `
+  })
+}
+```
+
+**Fix Pattern B: Interactive Demo with State**:
+```typescript
+export const InteractiveDemo: Story = {
+  render: () => ({
+    components: { ConfirmationModal },
+    setup() {
+      const isOpen = ref(true)
+
+      const handleClose = () => {
+        console.log('Modal closed')
+        isOpen.value = false
+      }
+
+      const handleConfirm = () => {
+        console.log('Confirmed action')
+        isOpen.value = false
+      }
+
+      const handleCancel = () => {
+        console.log('Cancelled')
+        isOpen.value = false
+      }
+
+      return { isOpen, handleClose, handleConfirm, handleCancel }
+    },
+    template: `
+      <ConfirmationModal
+        :is-open="isOpen"
+        title="Confirm Action"
+        @close="handleClose"
+        @confirm="handleConfirm"
+        @cancel="handleCancel"
+      />
+    `
+  })
+}
+```
+
+**Detection Workflow**:
+1. Check component's `defineEmits` declaration
+2. Identify critical events (close, submit, confirm, cancel)
+3. Verify story provides handlers for these events
+4. Add noop handlers where missing
+
+---
+
 ## Audit Workflow
 
 ### Step 1: Run Full Audit
@@ -557,6 +787,18 @@ echo "--- Hex colors ---"
 grep -rn "#[0-9a-fA-F]\{3,8\}" src/stories/ --include="*.ts" 2>/dev/null | head -15 || echo "None found"
 echo "--- Hardcoded rgba ---"
 grep -rn "rgba(" src/stories/ --include="*.ts" 2>/dev/null | head -10 || echo "None found"
+echo ""
+echo "=== 6. Missing Vue Imports ==="
+grep -rn "\bref\b\|\breactive\b\|\bcomputed\b\|\bwatch\b\|\bonMounted\b\|\bonUnmounted\b\|\bnextTick\b" src/stories/ --include="*.ts" -l 2>/dev/null | \
+  while read file; do
+    if ! grep -q "from 'vue'" "$file"; then
+      echo "$file"
+    fi
+  done | head -20 || echo "None found"
+echo ""
+echo "=== 7. Missing Event Handlers (Manual Check) ==="
+echo "Critical events to verify: @close, @submit, @confirm, @cancel"
+echo "Check if stories provide handlers for these events"
 echo ""
 echo "=== Audit Complete ==="
 ```
@@ -653,6 +895,26 @@ When stores are imported in Storybook:
 - [Storybook Pinia Recipe](https://storybook.js.org/recipes/pinia)
 - [GitHub: Storybook iframe height issue](https://github.com/storybookjs/storybook/issues/13765)
 - [GitHub: Pinia with Storybook Discussion](https://github.com/storybookjs/storybook/discussions/17685)
+
+---
+
+## Example Files
+
+Before/after examples are available in `examples/` directory:
+- `before-after-modal-iframe.md` - Iframe height fix for modals
+- `before-after-contextmenu-height.md` - Height fix for cascading menus
+- `before-after-store-dependency.md` - Real case from AuthModal (store dependency fix)
+- `before-after-template-style.md` - Template `<style>` tag fix
+- `before-after-props-mismatch.md` - Props matching component definitions
+- `before-after-missing-imports.md` - Missing Vue imports fix (NEW)
+- `before-after-event-handlers.md` - Missing event handlers fix (NEW)
+
+Each example includes:
+- Problem description
+- Detection method
+- Before/after code
+- Solution explanation
+- Verification steps
 
 ---
 

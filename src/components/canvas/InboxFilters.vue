@@ -56,6 +56,39 @@
       </div>
     </div>
 
+    <!-- Duration Filter -->
+    <div ref="durationDropdownRef" class="filter-dropdown">
+      <button
+        class="filter-chip"
+        :class="{ active: selectedDuration !== null }"
+        @click="showDurationDropdown = !showDurationDropdown"
+      >
+        <Clock :size="14" />
+        <span class="chip-label">{{ durationLabel }}</span>
+        <ChevronDown :size="12" class="chevron" :class="{ rotated: showDurationDropdown }" />
+      </button>
+      <div v-if="showDurationDropdown" class="dropdown-menu">
+        <button
+          class="dropdown-item"
+          :class="{ selected: selectedDuration === null }"
+          @click="selectDuration(null)"
+        >
+          All Durations
+        </button>
+        <button
+          v-for="duration in durations"
+          :key="duration.value"
+          class="dropdown-item"
+          :class="{ selected: selectedDuration === duration.value }"
+          @click="selectDuration(duration.value)"
+        >
+          <span class="duration-icon">{{ duration.icon }}</span>
+          {{ duration.label }}
+          <span class="item-count">{{ getDurationCount(duration.value) }}</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Project Filter -->
     <div ref="projectDropdownRef" class="filter-dropdown">
       <button
@@ -112,15 +145,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List } from 'lucide-vue-next'
+import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
+
 
 interface Props {
   tasks: Task[]
   projects: Project[]
   unscheduledOnly: boolean
   selectedPriority: 'high' | 'medium' | 'low' | null
+  unscheduledOnly: boolean
+  selectedPriority: 'high' | 'medium' | 'low' | null
   selectedProject: string | null
+  selectedDuration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
 }
 
 const props = defineProps<Props>()
@@ -128,21 +165,34 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:unscheduledOnly': [value: boolean]
   'update:selectedPriority': [value: 'high' | 'medium' | 'low' | null]
+  'update:selectedPriority': [value: 'high' | 'medium' | 'low' | null]
   'update:selectedProject': [value: string | null]
+  'update:selectedDuration': [value: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null]
   clearAll: []
 }>()
 
 // Dropdown visibility state
 const showPriorityDropdown = ref(false)
 const showProjectDropdown = ref(false)
+const showDurationDropdown = ref(false)
 const priorityDropdownRef = ref<HTMLElement>()
 const projectDropdownRef = ref<HTMLElement>()
+const durationDropdownRef = ref<HTMLElement>()
 
 // Priority options
 const priorities = [
   { value: 'high' as const, label: 'High' },
   { value: 'medium' as const, label: 'Medium' },
   { value: 'low' as const, label: 'Low' }
+]
+
+// Duration options
+const durations = [
+  { value: 'quick' as const, label: 'Quick (<15m)', icon: '⚡' },
+  { value: 'short' as const, label: 'Short (15-30m)', icon: '☕' },
+  { value: 'medium' as const, label: 'Medium (30-60m)', icon: '⏳' },
+  { value: 'long' as const, label: 'Long (>1h)', icon: '🏔️' },
+  { value: 'unestimated' as const, label: 'No Estimate', icon: '❓' }
 ]
 
 // Computed: Check if task is scheduled on calendar (has instances with dates)
@@ -162,6 +212,12 @@ const priorityLabel = computed(() => {
   return priorities.find(p => p.value === props.selectedPriority)?.label || 'Priority'
 })
 
+// Computed: Duration label
+const durationLabel = computed(() => {
+  if (props.selectedDuration === null) return 'Duration'
+  return durations.find(d => d.value === props.selectedDuration)?.label.split(' ')[0] || 'Duration'
+})
+
 // Computed: Project label
 const projectLabel = computed(() => {
   if (props.selectedProject === null) return 'Project'
@@ -172,7 +228,7 @@ const projectLabel = computed(() => {
 
 // Computed: Check if any filters are active
 const hasActiveFilters = computed(() => {
-  return props.unscheduledOnly || props.selectedPriority !== null || props.selectedProject !== null
+  return props.unscheduledOnly || props.selectedPriority !== null || props.selectedProject !== null || props.selectedDuration !== null
 })
 
 // Get count of tasks with specific priority
@@ -188,6 +244,23 @@ const getProjectCount = (projectId: string | null): number => {
   return props.tasks.filter(task => task.projectId === projectId).length
 }
 
+// Get count of tasks with specific duration
+const getDurationCount = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated'): number => {
+  return props.tasks.filter(task => {
+    const d = task.estimatedDuration
+    if (duration === 'unestimated') return !d
+    if (!d) return false
+    
+    switch (duration) {
+      case 'quick': return d <= 15
+      case 'short': return d > 15 && d <= 30
+      case 'medium': return d > 30 && d <= 60
+      case 'long': return d > 60
+      default: return false
+    }
+  }).length
+}
+
 // Select priority and close dropdown
 const selectPriority = (priority: 'high' | 'medium' | 'low' | null) => {
   emit('update:selectedPriority', priority)
@@ -200,11 +273,18 @@ const selectProject = (projectId: string | null) => {
   showProjectDropdown.value = false
 }
 
+// Select duration and close dropdown
+const selectDuration = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null) => {
+  emit('update:selectedDuration', duration)
+  showDurationDropdown.value = false
+}
+
 // Clear all filters
 const clearAllFilters = () => {
   emit('update:unscheduledOnly', false)
   emit('update:selectedPriority', null)
   emit('update:selectedProject', null)
+  emit('update:selectedDuration', null)
   emit('clearAll')
 }
 
@@ -216,6 +296,9 @@ const handleClickOutside = (event: MouseEvent) => {
   }
   if (projectDropdownRef.value && !projectDropdownRef.value.contains(target)) {
     showProjectDropdown.value = false
+  }
+  if (durationDropdownRef.value && !durationDropdownRef.value.contains(target)) {
+    showDurationDropdown.value = false
   }
 }
 
@@ -361,7 +444,7 @@ onBeforeUnmount(() => {
   background: var(--color-priority-low);
 }
 
-.project-icon {
+.project-icon, .duration-icon {
   font-size: 0.875rem;
 }
 

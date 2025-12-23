@@ -93,6 +93,19 @@ export function getSettingsDescription(settings: AssignOnDropSettings | undefine
   if (settings.projectId) {
     parts.push('Project assigned')
   }
+  if (settings.estimatedDuration !== undefined && settings.estimatedDuration !== null) {
+    const d = settings.estimatedDuration
+    let label = ''
+    if (d === 15) label = 'Quick (<15m)'
+    else if (d === 30) label = 'Short (15-30m)'
+    else if (d === 60) label = 'Medium (30-60m)'
+    else if (d === 120) label = 'Long (>60m)'
+    else label = `${d}m`
+    parts.push(`Duration: ${label}`)
+  } else if (settings.estimatedDuration === null) {
+    // This case might be used if we explicitly want to clear duration, but usually we just don't include it.
+    // However, if we want to show 'Unestimated' as a set property:
+  }
 
   return parts.join(', ')
 }
@@ -121,6 +134,15 @@ export function useGroupSettings() {
       case 'status':
         settings.status = keyword.value as AssignOnDropSettings['status']
         break
+      case 'duration': {
+        const d = keyword.value
+        if (d === 'quick') settings.estimatedDuration = 15
+        else if (d === 'short') settings.estimatedDuration = 30
+        else if (d === 'medium') settings.estimatedDuration = 60
+        else if (d === 'long') settings.estimatedDuration = 120
+        else if (d === 'unestimated') settings.estimatedDuration = null // Use null to indicate "clear duration"
+        break
+      }
     }
 
     return settings
@@ -145,6 +167,9 @@ export function useGroupSettings() {
         break
       case 'status':
         filter.matchStatus = keyword.value as CollectFilterSettings['matchStatus']
+        break
+      case 'duration':
+        filter.matchDuration = keyword.value // 'quick', 'short', etc.
         break
     }
 

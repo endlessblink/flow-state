@@ -4,7 +4,7 @@ import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
 
 const meta = {
   component: EdgeContextMenu,
-  title: '🎭 Overlays/💬 Context Menus/EdgeContextMenu',
+  title: '🎨 Canvas/EdgeContextMenu',
   tags: ['autodocs'],
 
   parameters: {

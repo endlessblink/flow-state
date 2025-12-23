@@ -12,6 +12,7 @@ import {
   type PowerKeywordResult
 } from '@/composables/useTaskSmartGroups'
 import { useSmartViews } from '@/composables/useSmartViews'
+import { resolveDueDate } from '@/composables/useGroupSettings'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // TASK-048: Individual section document storage
 import { STORAGE_FLAGS } from '@/config/database'
@@ -60,6 +61,7 @@ export interface AssignOnDropSettings {
   status?: Task['status'] | null
   dueDate?: 'today' | 'tomorrow' | 'this_week' | 'this_weekend' | 'later' | string | null
   projectId?: string | null
+  estimatedDuration?: number | null
 }
 
 /**
@@ -70,6 +72,7 @@ export interface CollectFilterSettings {
   matchStatus?: Task['status'] | null
   matchDueDate?: 'today' | 'tomorrow' | 'this_week' | 'overdue' | null
   matchProjectId?: string | null
+  matchDuration?: string | null
 }
 
 export interface CanvasGroup {
@@ -782,6 +785,12 @@ export const useCanvasStore = defineStore('canvas', () => {
    * Returns tasks that match the power keyword criteria
    */
   const getMatchingTasksForPowerGroup = (group: CanvasGroup, allTasks: Task[]): Task[] => {
+    // 1. If explicit collectFilter is set, use it
+    if (group.collectFilter && Object.keys(group.collectFilter).length > 0) {
+      return getMatchingTasksForCollectFilter(group.collectFilter, allTasks)
+    }
+
+    // 2. Fallback to power keyword matching
     const powerKeyword = getGroupPowerKeyword(group)
     if (!powerKeyword) return []
 
@@ -829,6 +838,36 @@ export const useCanvasStore = defineStore('canvas', () => {
         default:
           return false
       }
+    })
+  }
+
+  const getMatchingTasksForCollectFilter = (filter: CollectFilterSettings, allTasks: Task[]): Task[] => {
+    return allTasks.filter(task => {
+      if (task.isInInbox === false) return false
+
+      if (filter.matchPriority && task.priority !== filter.matchPriority) return false
+      if (filter.matchStatus && task.status !== filter.matchStatus) return false
+      if (filter.matchProjectId && task.projectId !== filter.matchProjectId) return false
+
+      if (filter.matchDueDate) {
+        const expectedDate = resolveDueDate(filter.matchDueDate)
+        if (expectedDate && task.dueDate !== expectedDate) return false
+        // If it was supposed to be a smart date but couldn't be resolved (and it's not a direct date string)
+        if (!expectedDate && !/^\d{4}-\d{2}-\d{2}$/.test(filter.matchDueDate)) return false
+      }
+
+      if (filter.matchDuration) {
+        const { isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
+        switch (filter.matchDuration) {
+          case 'quick': if (!isQuickTask(task)) return false; break
+          case 'short': if (!isShortTask(task)) return false; break
+          case 'medium': if (!isMediumTask(task)) return false; break
+          case 'long': if (!isLongTask(task)) return false; break
+          case 'unestimated': if (!isUnestimatedTask(task)) return false; break
+        }
+      }
+
+      return true
     })
   }
 
@@ -919,10 +958,44 @@ export const useCanvasStore = defineStore('canvas', () => {
   ): Partial<Task> | 'ask' | null => {
     if (!isGroupPowerEnabled(group)) return null
 
-    const powerKeyword = getGroupPowerKeyword(group)
-    if (!powerKeyword) return null
-
     const updates: Partial<Task> = {}
+    const powerKeyword = getGroupPowerKeyword(group)
+
+    // 1. Process explicit assignOnDrop settings if available
+    if (group.assignOnDrop) {
+      const settings = group.assignOnDrop
+
+      if (settings.priority !== undefined && settings.priority !== null) {
+        updates.priority = settings.priority
+      }
+
+      if (settings.status !== undefined && settings.status !== null) {
+        updates.status = settings.status
+      }
+
+      if (settings.dueDate !== undefined && settings.dueDate !== null) {
+        // Resolve smart date to YYYY-MM-DD
+        const resolvedDate = resolveDueDate(settings.dueDate)
+        if (resolvedDate !== null) updates.dueDate = resolvedDate
+      }
+
+      if (settings.projectId !== undefined && settings.projectId !== null) {
+        updates.projectId = settings.projectId
+      }
+
+      if (settings.estimatedDuration !== undefined) {
+        // null value in settings means "clear duration"
+        updates.estimatedDuration = settings.estimatedDuration === null ? undefined : settings.estimatedDuration
+      }
+
+      // If we have explicit settings, they usually define the behavior completely.
+      // However, we still check powerKeyword for anything NOT covered by explicit settings
+      // or if the user wants them combined. For now, let's treat explicit as override.
+      if (Object.keys(updates).length > 0) return updates
+    }
+
+    // 2. Fallback to auto-detected power keyword if no explicit settings apply
+    if (!powerKeyword) return null
 
     switch (powerKeyword.category) {
       case 'date': {
@@ -976,20 +1049,30 @@ export const useCanvasStore = defineStore('canvas', () => {
       case 'duration': {
         const durationValue = powerKeyword.value // 'quick', 'short', etc.
         let estimatedDuration: number | undefined
+        let isUnestimated = false
 
         // Map category to default duration
         if (durationValue === 'quick') estimatedDuration = 15
         else if (durationValue === 'short') estimatedDuration = 30
         else if (durationValue === 'medium') estimatedDuration = 60
         else if (durationValue === 'long') estimatedDuration = 120
+        else if (durationValue === 'unestimated') isUnestimated = true
 
-        if (estimatedDuration !== undefined) {
+        if (estimatedDuration !== undefined || isUnestimated) {
           if (overrideMode === 'always') {
             updates.estimatedDuration = estimatedDuration
           } else if (overrideMode === 'only_empty') {
             if (!task.estimatedDuration) updates.estimatedDuration = estimatedDuration
-          } else if (overrideMode === 'ask' && task.estimatedDuration && task.estimatedDuration !== estimatedDuration) {
-            return 'ask'
+          } else if (overrideMode === 'ask' && task.estimatedDuration !== estimatedDuration) {
+            // Special case for unestimated: logic is a bit tricky if we strictly compare undefined !== undefined (false)
+            // If task has duration and we want unestimated, valid mismatch.
+            // If task has NO duration and we want unestimated, no mismatch.
+            const taskHasDuration = task.estimatedDuration !== undefined && task.estimatedDuration !== null
+            if (isUnestimated && taskHasDuration) return 'ask'
+            if (!isUnestimated && task.estimatedDuration !== estimatedDuration) return 'ask'
+
+            // If we get here, no conflict or confirmed
+            updates.estimatedDuration = estimatedDuration
           } else {
             updates.estimatedDuration = estimatedDuration
           }

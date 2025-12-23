@@ -43,7 +43,7 @@ const createMockTimerStore = (overrides = {}) => ({
 
 const meta = {
   component: SettingsModal,
-  title: '🎭 Overlays/🪟 Modals/SettingsModal',
+  title: '🪟 Modals & Dialogs/SettingsModal',
   tags: ['autodocs'],
 
   parameters: {

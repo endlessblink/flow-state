@@ -4,7 +4,7 @@ import type { Task } from '@/stores/tasks'
 
 const meta = {
   component: InboxTimeFilters,
-  title: '🧩 Components/🎨 Canvas/InboxTimeFilters',
+  title: '🎨 Canvas/InboxTimeFilters',
   tags: ['autodocs'],
 
   args: {

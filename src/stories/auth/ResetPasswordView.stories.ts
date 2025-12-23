@@ -3,7 +3,7 @@ import ResetPasswordView from '@/components/auth/ResetPasswordView.vue'
 import { ref } from 'vue'
 
 const meta: Meta<typeof ResetPasswordView> = {
-  title: 'Auth/ResetPasswordView',
+  title: '🔐 Auth/ResetPasswordView',
   component: ResetPasswordView,
   tags: ['autodocs'],
   parameters: {

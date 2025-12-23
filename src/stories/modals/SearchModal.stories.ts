@@ -107,7 +107,7 @@ const mockProjects = [
 
 const meta = {
   component: SearchModal,
-  title: '🎭 Overlays/🪟 Modals/SearchModal',
+  title: '🪟 Modals & Dialogs/SearchModal',
   tags: ['autodocs'],
 
   parameters: {

@@ -3,7 +3,7 @@ import UserProfile from '@/components/auth/UserProfile.vue'
 import { ref } from 'vue'
 
 const meta: Meta<typeof UserProfile> = {
-  title: 'Auth/UserProfile',
+  title: '🔐 Auth/UserProfile',
   component: UserProfile,
   tags: ['autodocs'],
   parameters: {

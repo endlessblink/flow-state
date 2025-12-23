@@ -4,7 +4,7 @@ import BatchEditModal from '@/components/BatchEditModal.vue'
 
 const meta = {
   component: BatchEditModal,
-  title: '🎭 Overlays/🪟 Modals/BatchEditModal',
+  title: '🪟 Modals & Dialogs/BatchEditModal',
   tags: ['autodocs'],
 
   parameters: {

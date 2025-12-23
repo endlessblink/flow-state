@@ -204,6 +204,60 @@
 
     <div class="menu-divider" />
 
+    <!-- Duration Section -->
+    <div class="menu-section">
+      <div class="section-header">
+        <div class="section-label">
+          <Clock :size="14" class="section-icon" />
+          <span class="section-title">Duration</span>
+        </div>
+      </div>
+      <div class="icon-row">
+        <button
+          class="icon-btn duration-quick"
+          :class="{ active: currentTask?.estimatedDuration === 15 }"
+          title="Quick (15m)"
+          @click="setDuration(15)"
+        >
+          <Zap :size="16" :stroke-width="1.5" class="duration-icon quick" />
+        </button>
+        <button
+          class="icon-btn duration-short"
+          :class="{ active: currentTask?.estimatedDuration === 30 }"
+          title="Short (30m)"
+          @click="setDuration(30)"
+        >
+          <Timer :size="16" :stroke-width="1.5" class="duration-icon short" />
+        </button>
+        <button
+          class="icon-btn duration-medium"
+          :class="{ active: currentTask?.estimatedDuration === 60 }"
+          title="Medium (1h)"
+          @click="setDuration(60)"
+        >
+          <Timer :size="16" :stroke-width="1.5" class="duration-icon medium" />
+        </button>
+        <button
+          class="icon-btn duration-long"
+          :class="{ active: currentTask?.estimatedDuration === 120 }"
+          title="Long (2h)"
+          @click="setDuration(120)"
+        >
+          <Clock :size="16" :stroke-width="1.5" class="duration-icon long" />
+        </button>
+        <button
+          class="icon-btn duration-none"
+          :class="{ active: !currentTask?.estimatedDuration }"
+          title="Unestimated"
+          @click="setDuration(null)"
+        >
+          <HelpCircle :size="16" :stroke-width="1.5" class="duration-icon none" />
+        </button>
+      </div>
+    </div>
+
+    <div class="menu-divider" />
+
     <!-- Focus Mode -->
     <button class="menu-item focus-action" :class="{ 'menu-item--compact': compactMode }" @click="enterFocus">
       <svg
@@ -339,7 +393,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
-import { Calendar, Sun, Moon, ArrowRight, MoreHorizontal, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle } from 'lucide-vue-next'
+import { Calendar, Sun, Moon, ArrowRight, MoreHorizontal, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle, Zap, Timer, Clock, HelpCircle } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
 
@@ -365,6 +419,7 @@ const emit = defineEmits<{
   setDueDate: [dateType: 'today' | 'tomorrow' | 'weekend' | 'nextweek']
   enterFocusMode: []
   deleteSelected: []
+  setDuration: [duration: number | null]
 }>()
 
 const taskStore = useTaskStore()
@@ -554,6 +609,20 @@ const setStatus = async (status: 'planned' | 'in_progress' | 'done' | 'backlog' 
       canvasStore.requestSync()
     } catch (error) {
       console.error('❌ Error setting status:', error)
+    }
+  }
+  emit('close')
+}
+
+const setDuration = async (duration: number | null) => {
+  if (isBatchOperation.value) {
+    emit('setDuration', duration)
+  } else if (currentTask.value) {
+    try {
+      await taskStore.updateTaskWithUndo(currentTask.value.id, { estimatedDuration: duration })
+      canvasStore.requestSync()
+    } catch (error) {
+      console.error('❌ Error setting estimated duration:', error)
     }
   }
   emit('close')
@@ -800,6 +869,12 @@ onUnmounted(() => {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
 }
+
+.duration-icon.quick { color: var(--green-text); }
+.duration-icon.short { color: var(--color-work); }
+.duration-icon.medium { color: var(--orange-text); }
+.duration-icon.long { color: var(--danger-text); }
+.duration-icon.none { color: var(--text-muted); }
 
 .section-shortcut {
   color: var(--text-muted);

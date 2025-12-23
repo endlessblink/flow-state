@@ -4,7 +4,7 @@ import type { Task } from '@/stores/tasks'
 
 const meta = {
   component: TaskNode,
-  title: '✨ Features/🎨 Canvas View/TaskNode',
+  title: '🎨 Canvas/TaskNode',
   tags: ['autodocs'],
 
   args: {

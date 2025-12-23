@@ -52,6 +52,173 @@
 
       <!-- Project & Task Management -->
       <div class="task-management-section">
+        <!-- Smart Views - Using DateDropZone for drag and drop functionality -->
+        <div class="smart-views-grid">
+          <!-- Today -->
+          <SidebarSmartItem
+            :active="taskStore.activeSmartView === 'today'"
+            :count="todayTaskCount"
+            drop-type="date"
+            drop-value="today"
+            color="azure"
+            compact
+            @click="selectSmartView('today')"
+          >
+            <template #icon><Calendar :size="14" /></template>
+            Today
+          </SidebarSmartItem>
+
+          <!-- This Week -->
+          <SidebarSmartItem
+            :active="taskStore.activeSmartView === 'week'"
+            :count="weekTaskCount"
+            drop-type="date"
+            drop-value="weekend"
+            color="azure-dark"
+            compact
+            @click="selectSmartView('week')"
+          >
+            <template #icon><Calendar :size="14" /></template>
+            This Week
+          </SidebarSmartItem>
+        </div>
+
+        <div class="sidebar-sub-divider" />
+
+        <div class="smart-views-grid secondary">
+          <!-- All Active -->
+          <SidebarSmartItem
+            :active="taskStore.activeSmartView === 'all_active'"
+            :count="allActiveCount"
+            drop-type="date"
+            drop-value="nodate"
+            color="blue"
+            compact
+            @click="selectSmartView('all_active')"
+          >
+            <template #icon><List :size="14" /></template>
+            All Active
+          </SidebarSmartItem>
+
+          <!-- Uncategorized (Inbox) -->
+          <SidebarSmartItem
+            :active="taskStore.activeSmartView === 'uncategorized'"
+            :count="uncategorizedCount"
+            drop-type="date"
+            drop-value="nodate"
+            color="orange"
+            compact
+            @click="selectSmartView('uncategorized')"
+          >
+            <template #icon><Inbox :size="14" /></template>
+            Inbox
+          </SidebarSmartItem>
+        </div>
+
+        <!-- Quick Sort Button (shows when uncategorized filter is active) -->
+        <Transition name="fade">
+          <button
+            v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedCount > 0"
+            class="quick-sort-button-full"
+            title="Start Quick Sort to categorize these tasks"
+            @click="handleStartQuickSort"
+          >
+            <Zap :size="16" />
+            <span>Categorize Inbox ({{ uncategorizedCount }})</span>
+          </button>
+        </Transition>
+
+        <!-- Duration Groups - Collapsible Section -->
+        <div class="duration-section">
+          <button 
+            class="section-toggle" 
+            @click="sidebar.toggleDurationSection"
+            :aria-expanded="sidebar.isDurationSectionExpanded.value"
+          >
+            <Clock :size="14" />
+            <span>By Duration</span>
+            <ChevronRight 
+              :size="14" 
+              class="toggle-chevron" 
+              :class="{ rotated: sidebar.isDurationSectionExpanded.value }" 
+            />
+          </button>
+          
+          <div v-show="sidebar.isDurationSectionExpanded.value" class="duration-grid">
+            <!-- Quick (<15m) -->
+            <SidebarSmartItem
+              :active="taskStore.activeSmartView === 'quick'"
+              :count="sidebar.quickCount.value"
+              drop-type="duration"
+              :drop-value="15"
+              color="green"
+              compact
+              @click="sidebar.selectSmartView('quick')"
+            >
+              <template #icon><Zap :size="14" /></template>
+              Quick
+            </SidebarSmartItem>
+
+            <!-- Short (15-30m) -->
+            <SidebarSmartItem
+              :active="taskStore.activeSmartView === 'short'"
+              :count="sidebar.shortCount.value"
+              drop-type="duration"
+              :drop-value="30"
+              color="teal"
+              compact
+              @click="sidebar.selectSmartView('short')"
+            >
+              <template #icon><Coffee :size="14" /></template>
+              Short
+            </SidebarSmartItem>
+
+            <!-- Medium (30-60m) -->
+            <SidebarSmartItem
+              :active="taskStore.activeSmartView === 'medium'"
+              :count="sidebar.mediumCount.value"
+              drop-type="duration"
+              :drop-value="60"
+              color="teal"
+              compact
+              @click="sidebar.selectSmartView('medium')"
+            >
+              <template #icon><Hourglass :size="14" /></template>
+              Medium
+            </SidebarSmartItem>
+
+            <!-- Long (>60m) -->
+            <SidebarSmartItem
+              :active="taskStore.activeSmartView === 'long'"
+              :count="sidebar.longCount.value"
+              drop-type="duration"
+              :drop-value="120"
+              color="purple"
+              compact
+              @click="sidebar.selectSmartView('long')"
+            >
+              <template #icon><Mountain :size="14" /></template>
+              Long
+            </SidebarSmartItem>
+
+            <!-- Unestimated -->
+            <SidebarSmartItem
+              :active="taskStore.activeSmartView === 'unestimated'"
+              :count="sidebar.unestimatedCount.value"
+              drop-type="duration"
+              :drop-value="-1"
+              color="gray"
+              compact
+              @click="sidebar.selectSmartView('unestimated')"
+            >
+              <template #icon><HelpCircle :size="14" /></template>
+              No Estimate
+            </SidebarSmartItem>
+          </div>
+        </div>
+
+        <!-- Projects Section Header -->
+        <div class="projects-divider" />
         <div class="section-header">
           <h3 class="section-title">
             <FolderOpen :size="16" class="section-icon" />
@@ -61,161 +228,6 @@
             <Plus :size="14" />
           </button>
         </div>
-
-        <!-- Smart Views - Using DateDropZone for drag and drop functionality -->
-        <div class="smart-views">
-          <!-- Today - Azure highlight -->
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'today'"
-            :count="todayTaskCount"
-            target-type="today"
-            filter-color="azure"
-            @click="selectSmartView('today')"
-          >
-            <template #icon>
-              <Calendar :size="16" />
-            </template>
-            Today
-          </DateDropZone>
-
-          <!-- This Week - Azure-dark highlight -->
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'week'"
-            :count="weekTaskCount"
-            target-type="today"
-            filter-color="azure-dark"
-            @click="selectSmartView('week')"
-          >
-            <template #icon>
-              <Calendar :size="16" />
-            </template>
-            This Week
-          </DateDropZone>
-
-          <!-- Uncategorized Tasks -->
-          <div class="smart-view-uncategorized">
-            <!-- All Active Tasks - Blue highlight -->
-            <DateDropZone
-              :active="taskStore.activeSmartView === 'all_active'"
-              :count="allActiveCount"
-              target-type="nodate"
-              filter-color="blue"
-              @click="selectSmartView('all_active')"
-            >
-              <template #icon>
-                <List :size="16" />
-              </template>
-              All Active
-            </DateDropZone>
-
-            <button
-              class="uncategorized-filter"
-              :class="{ active: taskStore.activeSmartView === 'uncategorized' }"
-              title="Show Uncategorized Tasks"
-              @click="selectSmartView('uncategorized')"
-            >
-              <Inbox :size="16" />
-              <span>Uncategorized Tasks</span>
-              <span
-                v-if="uncategorizedCount > 0"
-                class="filter-badge"
-                :class="{ 'badge-active': taskStore.activeSmartView === 'uncategorized' }"
-              >
-                {{ uncategorizedCount }}
-              </span>
-            </button>
-
-            <!-- Quick Sort Button (shows when uncategorized filter is active) -->
-            <button
-              v-if="taskStore.activeSmartView === 'uncategorized' && uncategorizedCount > 0"
-              class="quick-sort-button"
-              title="Start Quick Sort to categorize these tasks"
-              @click="handleStartQuickSort"
-            >
-              <Zap :size="16" />
-              <span>Quick Sort</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- By Duration Section -->
-        <div class="projects-divider" />
-        <div class="section-header">
-          <h3 class="section-title">
-            <Clock :size="16" class="section-icon" />
-            By Duration
-          </h3>
-        </div>
-
-        <div class="smart-views duration-views">
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'quick'"
-            :count="quickCount"
-            target-type="nodate"
-            filter-color="green"
-            @click="selectSmartView('quick')"
-          >
-            <template #icon>
-              <Zap :size="16" />
-            </template>
-            Quick (< 15m)
-          </DateDropZone>
-
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'short'"
-            :count="shortCount"
-            target-type="nodate"
-            filter-color="lime"
-            @click="selectSmartView('short')"
-          >
-            <template #icon>
-              <Timer :size="16" />
-            </template>
-            Short (15-30m)
-          </DateDropZone>
-
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'medium'"
-            :count="mediumCount"
-            target-type="nodate"
-            filter-color="orange"
-            @click="selectSmartView('medium')"
-          >
-            <template #icon>
-              <Timer :size="16" />
-            </template>
-            Medium (30-60m)
-          </DateDropZone>
-
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'long'"
-            :count="longCount"
-            target-type="nodate"
-            filter-color="red"
-            @click="selectSmartView('long')"
-          >
-            <template #icon>
-              <Clock :size="16" />
-            </template>
-            Long (> 60m)
-          </DateDropZone>
-
-          <DateDropZone
-            :active="taskStore.activeSmartView === 'unestimated'"
-            :count="unestimatedCount"
-            target-type="nodate"
-            filter-color="gray"
-            @click="selectSmartView('unestimated')"
-          >
-            <template #icon>
-              <HelpCircle :size="16" />
-            </template>
-            Unestimated
-          </DateDropZone>
-        </div>
-
-        <!-- Projects Section Header -->
-        <div class="projects-divider" />
 
         <!-- Project List - Recursive tree rendering with accessibility -->
         <nav
@@ -250,11 +262,12 @@ import { useTaskStore, type Project } from '@/stores/tasks'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { 
   Plus, PanelLeftClose, Settings, FolderOpen, 
-  Calendar, List, Inbox, Zap, Clock, Timer, HelpCircle 
+  Calendar, List, Inbox, Zap, Clock, Timer, HelpCircle,
+  ChevronRight, Coffee, Hourglass, Mountain
 } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
-import DateDropZone from '@/components/DateDropZone.vue'
+import SidebarSmartItem from '@/components/SidebarSmartItem.vue'
 import ProjectTreeItem from '@/components/ProjectTreeItem.vue'
 
 const router = useRouter()
@@ -451,12 +464,12 @@ defineExpose({
   width: 100%; /* Fill the grid column */
   background: linear-gradient(
     135deg,
-    var(--glass-border) 0%,
-    var(--glass-bg-soft) 100%
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 100%
   );
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-right: 1px solid var(--glass-border-hover);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -491,12 +504,8 @@ defineExpose({
 
 .sidebar-header {
   padding: var(--space-10) var(--space-6) var(--space-6) var(--space-6);
-  border-bottom: 1px solid var(--glass-bg-heavy);
-  background: linear-gradient(
-    180deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-weak) 100%
-  );
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass-bg-medium);
 }
 
 .app-brand {
@@ -556,8 +565,9 @@ defineExpose({
 /* Quick Task Section */
 .quick-task-section {
   padding: 8px;
-  background: var(--glass-bg-soft);
-  border-radius: 8px;
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
   margin: var(--space-4) var(--space-6);
 }
 
@@ -654,73 +664,8 @@ defineExpose({
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
-.uncategorized-filter:hover {
-  background: var(--surface-hover);
-  color: var(--text-secondary);
-  border-color: var(--border-medium);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
-
-.uncategorized-filter.active {
-  background: var(--brand-primary-bg-subtle);
-  border-color: var(--brand-primary-border-medium);
-  color: var(--brand-primary);
-  font-weight: var(--font-semibold);
-  box-shadow: var(--brand-primary-glow-subtle);
-}
-
-.uncategorized-filter .filter-badge {
-  margin-left: auto;
-  background: var(--glass-bg-heavy);
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-full);
-  min-width: 20px;
-  text-align: center;
-  border: 1px solid var(--glass-border);
-  transition: all var(--duration-fast) var(--spring-smooth);
-}
-
-.uncategorized-filter .filter-badge.badge-active {
-  background: var(--brand-primary);
-  color: white;
-  border-color: var(--brand-primary);
-  box-shadow: var(--brand-primary-glow-subtle);
-}
 
 /* Quick Sort Button */
-.quick-sort-button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  margin-top: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: linear-gradient(135deg, var(--brand-primary-bg-subtle), var(--brand-primary-bg-medium));
-  border: 1px solid var(--brand-primary-border-medium);
-  border-radius: var(--radius-lg);
-  color: var(--brand-primary);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--brand-primary-glow-subtle);
-}
-
-.quick-sort-button:hover {
-  background: linear-gradient(135deg, var(--brand-primary-bg-medium), var(--brand-primary-bg-heavy));
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--brand-primary-glow-medium);
-}
-
-.quick-sort-button:active {
-  transform: translateY(0);
-}
 
 .projects-divider {
   height: 1px;
@@ -754,5 +699,101 @@ defineExpose({
 [dir="rtl"] .sidebar-slide-enter-from,
 [dir="rtl"] .sidebar-slide-leave-to {
   transform: translateX(100%);
+}
+/* Duration Section */
+.duration-section {
+  margin-bottom: var(--space-4);
+}
+
+.section-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-1);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+
+.section-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.toggle-chevron {
+  margin-left: auto;
+  transition: transform var(--duration-fast);
+  opacity: 0.5;
+}
+
+.toggle-chevron.rotated {
+  transform: rotate(90deg);
+}
+
+.smart-views-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-2) var(--space-4);
+}
+
+.smart-views-grid.secondary {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-4);
+}
+
+.sidebar-sub-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: var(--space-1) var(--space-4);
+  opacity: 0.3;
+}
+
+.quick-sort-button-full {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: calc(100% - 32px);
+  margin: 0 16px var(--space-4) 16px;
+  padding: var(--space-2);
+  background: var(--brand-primary);
+  color: #0a0a0a;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal);
+  box-shadow: var(--shadow-sm);
+}
+
+.quick-sort-button-full:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  filter: brightness(1.1);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.duration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4) var(--space-4);
 }
 </style>

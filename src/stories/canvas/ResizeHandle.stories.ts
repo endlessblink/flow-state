@@ -3,7 +3,7 @@ import ResizeHandle from '@/components/canvas/ResizeHandle.vue'
 
 const meta = {
   component: ResizeHandle,
-  title: '✨ Features/🎨 Canvas View/ResizeHandle',
+  title: '🎨 Canvas/ResizeHandle',
   tags: ['autodocs'],
 
   parameters: {

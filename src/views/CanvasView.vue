@@ -181,6 +181,66 @@
           </div>
         </div>
 
+        <!-- Duration Filter Controls -->
+        <div class="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-none">
+           <!-- Wrapper to restore pointer events for buttons -->
+           <div class="flex items-center gap-1 p-1 bg-[rgba(30,41,59,0.5)] backdrop-blur-md border border-gray-700/30 rounded-lg shadow-lg pointer-events-auto">
+             <button
+               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
+               :class="{ 'bg-green-500/20 text-green-400': taskStore.activeDurationFilter === 'quick', 'text-gray-400': taskStore.activeDurationFilter !== 'quick' }"
+               title="Filter: Quick (< 15m)"
+               @click="taskStore.toggleDurationFilter('quick')"
+             >
+               <Zap :size="16" />
+             </button>
+             <button
+               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
+               :class="{ 'bg-lime-500/20 text-lime-400': taskStore.activeDurationFilter === 'short', 'text-gray-400': taskStore.activeDurationFilter !== 'short' }"
+               title="Filter: Short (15-30m)"
+               @click="taskStore.toggleDurationFilter('short')"
+             >
+               <Timer :size="16" />
+             </button>
+             <button
+               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
+               :class="{ 'bg-orange-500/20 text-orange-400': taskStore.activeDurationFilter === 'medium', 'text-gray-400': taskStore.activeDurationFilter !== 'medium' }"
+               title="Filter: Medium (30-60m)"
+               @click="taskStore.toggleDurationFilter('medium')"
+             >
+               <Timer :size="16" />
+             </button>
+             <button
+               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
+               :class="{ 'bg-red-500/20 text-red-400': taskStore.activeDurationFilter === 'long', 'text-gray-400': taskStore.activeDurationFilter !== 'long' }"
+               title="Filter: Long (> 60m)"
+               @click="taskStore.toggleDurationFilter('long')"
+             >
+               <Clock :size="16" />
+             </button>
+             <button
+               class="p-1.5 rounded-md transition-all duration-200 hover:bg-white/10"
+               :class="{ 'bg-gray-500/20 text-gray-300': taskStore.activeDurationFilter === 'unestimated', 'text-gray-400': taskStore.activeDurationFilter !== 'unestimated' }"
+               title="Filter: Unestimated"
+               @click="taskStore.toggleDurationFilter('unestimated')"
+             >
+               <HelpCircle :size="16" />
+             </button>
+             
+             <!-- Separator if filter is active -->
+             <div v-if="taskStore.activeDurationFilter" class="w-px h-4 bg-gray-600 mx-1"></div>
+             
+             <!-- Clear Filter -->
+             <button
+                v-if="taskStore.activeDurationFilter"
+                class="p-1.5 rounded-md hover:bg-red-500/20 text-red-400 transition-colors"
+                title="Clear Duration Filter"
+                @click="taskStore.setActiveDurationFilter(null)"
+             >
+               <X :size="14" />
+             </button>
+           </div>
+        </div>
+
         <!-- Inbox Sidebar - Using UnifiedInboxPanel for consistency with CalendarView -->
         <UnifiedInboxPanel context="canvas" />
 
@@ -482,7 +542,7 @@ import {
   useMagicKeys,
   useDebounceFn
 } from '@vueuse/core'
-import { Filter, X, Plus, Inbox } from 'lucide-vue-next'
+import { Filter, X, Plus, Inbox, Zap, Timer, Clock, HelpCircle } from 'lucide-vue-next'
 import { useMessage } from 'naive-ui'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'

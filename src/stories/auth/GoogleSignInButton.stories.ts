@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton.vue'
 
 const meta: Meta<typeof GoogleSignInButton> = {
-  title: 'Auth/GoogleSignInButton',
+  title: '🔐 Auth/GoogleSignInButton',
   component: GoogleSignInButton,
   tags: ['autodocs'],
   parameters: {

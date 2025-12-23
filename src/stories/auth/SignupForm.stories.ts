@@ -3,7 +3,7 @@ import SignupForm from '@/components/auth/SignupForm.vue'
 import { ref, h } from 'vue'
 
 const meta: Meta<typeof SignupForm> = {
-  title: 'Auth/SignupForm',
+  title: '🔐 Auth/SignupForm',
   component: SignupForm,
   tags: ['autodocs'],
   parameters: {

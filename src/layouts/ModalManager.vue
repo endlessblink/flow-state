@@ -87,15 +87,15 @@ import { createLazyModal } from '@/composables/useLazyComponent'
 import { Edit, Palette, Copy, Trash2 } from 'lucide-vue-next'
 
 // Components
-import SettingsModal from '@/components/SettingsModal.vue'
-import ProjectModal from '@/components/ProjectModal.vue'
-import TaskEditModal from '@/components/TaskEditModal.vue'
-import TaskContextMenu from '@/components/TaskContextMenu.vue'
-import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import SettingsModal from '@/components/layout/SettingsModal.vue'
+import ProjectModal from '@/components/projects/ProjectModal.vue'
+import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
+import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
+import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
-import SearchModal from '@/components/SearchModal.vue'
-import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
-const CommandPalette = createLazyModal(() => import('@/components/CommandPalette.vue'))
+import SearchModal from '@/components/layout/SearchModal.vue'
+import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
+const CommandPalette = createLazyModal(() => import('@/components/layout/CommandPalette.vue'))
 
 // Stores
 const uiStore = useUIStore()

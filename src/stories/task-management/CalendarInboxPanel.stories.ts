@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import CalendarInboxPanel from '@/components/CalendarInboxPanel.vue'
+import CalendarInboxPanel from '@/components/inbox/CalendarInboxPanel.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 
 const meta = {

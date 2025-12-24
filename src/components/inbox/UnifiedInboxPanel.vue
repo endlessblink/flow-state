@@ -240,8 +240,8 @@ import {
   Target as _Target, Calendar as _CalendarIcon, Clipboard as _Clipboard, Folder as _Folder, Trash2, X
 } from 'lucide-vue-next'
 import { NButton, NBadge, NTag } from 'naive-ui'
-import BaseBadge from './BaseBadge.vue'
-import ProjectEmojiIcon from './ProjectEmojiIcon.vue'
+import BaseBadge from '@/components/base/BaseBadge.vue'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 
 // Props

@@ -66,7 +66,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTaskStore, type Project } from '@/stores/tasks'
-import BaseNavItem from './base/BaseNavItem.vue'
+import BaseNavItem from '@/components/base/BaseNavItem.vue'
 
 interface Props {
   project: Project

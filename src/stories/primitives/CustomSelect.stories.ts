@@ -1,4 +1,4 @@
-import CustomSelect from '@/components/CustomSelect.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 const meta = {
   title: '🧩 Primitives/CustomSelect',

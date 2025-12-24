@@ -69,7 +69,7 @@
 <script setup lang="ts">
 import { AlignJustify, List, LayoutList, ChevronsDown, ChevronsUp } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
-import CustomSelect from '@/components/CustomSelect.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 export type ViewType = 'table' | 'list'
 export type DensityType = 'compact' | 'comfortable' | 'spacious'

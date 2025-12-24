@@ -1,4 +1,4 @@
-import MultiSelectToggle from '@/components/MultiSelectToggle.vue'
+import MultiSelectToggle from '@/components/common/MultiSelectToggle.vue'
 
 const meta = {
   title: '🧩 Primitives/MultiSelectToggle',

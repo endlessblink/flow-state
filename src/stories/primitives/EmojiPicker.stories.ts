@@ -1,4 +1,4 @@
-import EmojiPicker from '@/components/EmojiPicker.vue'
+import EmojiPicker from '@/components/common/EmojiPicker.vue'
 
 const meta = {
   title: 'Primitives/EmojiPicker',

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
-import HierarchicalTaskRow from '@/components/HierarchicalTaskRow.vue'
+import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import { useTaskStore } from '@/stores/tasks'
 
 const meta = {

@@ -200,9 +200,10 @@ import { useUIStore } from '@/stores/ui'
 import { useDirection as _useDirection } from '@/i18n/useDirection'
 import { useI18n as _useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
-import CloudSyncSettings from './CloudSyncSettings.vue'
-import LanguageSettings from './settings/LanguageSettings.vue'
-import BackupSettings from './BackupSettings.vue'
+import CloudSyncSettings from '@/components/sync/CloudSyncSettings.vue'
+import BackupSettings from '@/components/sync/BackupSettings.vue'
+import NotificationPreferences from '@/components/notifications/NotificationPreferences.vue'
+import LanguageSettings from '@/components/settings/LanguageSettings.vue'
 
 interface Props {
   isOpen: boolean

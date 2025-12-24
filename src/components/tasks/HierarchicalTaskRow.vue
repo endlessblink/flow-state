@@ -225,7 +225,7 @@ import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { Calendar, Play, Edit, Copy } from 'lucide-vue-next'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
-import DoneToggle from '@/components/DoneToggle.vue'
+import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 

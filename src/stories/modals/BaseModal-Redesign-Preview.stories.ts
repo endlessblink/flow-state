@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
-import EmojiPicker from '@/components/EmojiPicker.vue'
+import EmojiPicker from '@/components/common/EmojiPicker.vue'
 
 const meta = {
   component: BaseModal,

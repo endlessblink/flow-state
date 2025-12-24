@@ -1,4 +1,4 @@
-import SettingsModal from '@/components/SettingsModal.vue'
+import SettingsModal from '@/components/layout/SettingsModal.vue'
 
 const meta = {
   title: 'Modals/SettingsModal',

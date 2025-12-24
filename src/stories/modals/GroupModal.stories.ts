@@ -1,4 +1,4 @@
-import GroupModal from '@/components/GroupModal.vue'
+import GroupModal from '@/components/common/GroupModal.vue'
 
 const meta = {
   title: 'Modals/GroupModal',

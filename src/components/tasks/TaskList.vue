@@ -51,7 +51,7 @@
 import { ref, computed } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
-import HierarchicalTaskRow from '@/components/HierarchicalTaskRow.vue'
+import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { Inbox, ChevronRight } from 'lucide-vue-next'
 

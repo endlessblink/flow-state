@@ -64,13 +64,13 @@ import type { Task } from '@/stores/tasks'
 import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 
 // Components
-import TaskEditModal from '@/components/TaskEditModal.vue'
-import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
-import BatchEditModal from '@/components/BatchEditModal.vue'
+import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
+import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
+import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import GroupSettingsMenu from '@/components/canvas/GroupSettingsMenu.vue'
 import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
-import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
 defineProps<{
   // Task Edit

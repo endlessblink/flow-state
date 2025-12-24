@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import ProjectFilterDropdown from '@/components/ProjectFilterDropdown.vue'
+import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 

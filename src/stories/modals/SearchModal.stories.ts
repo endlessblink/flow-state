@@ -1,4 +1,4 @@
-import SearchModal from '@/components/SearchModal.vue'
+import SearchModal from '@/components/layout/SearchModal.vue'
 
 const meta = {
   title: 'Modals/SearchModal',

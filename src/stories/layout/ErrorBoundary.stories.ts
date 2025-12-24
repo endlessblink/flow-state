@@ -1,4 +1,4 @@
-import ErrorBoundary from '@/components/ErrorBoundary.vue'
+import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 
 const meta = {
   title: 'Layout/ErrorBoundary',

@@ -462,7 +462,7 @@ export class SecurityScanner {
   private findCodePatterns(_patterns: string[]): string[] {
     // This would scan actual code files
     // For demo purposes, return simulated findings
-    return ['src/components/TaskEditModal.vue:45']
+    return ['src/components/tasks/TaskEditModal.vue:45']
   }
 
   private calculateSecurityScore(vulnerabilities: SecurityVulnerability[]): number {

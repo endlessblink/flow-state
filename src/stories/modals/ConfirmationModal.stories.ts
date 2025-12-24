@@ -1,4 +1,4 @@
-import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
 const meta = {
   title: 'Modals/ConfirmationModal',

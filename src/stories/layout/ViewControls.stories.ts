@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref, computed } from 'vue'
-import ViewControls from '@/components/ViewControls.vue'
+import ViewControls from '@/components/layout/ViewControls.vue'
 
 const meta = {
   component: ViewControls,

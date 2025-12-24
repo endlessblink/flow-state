@@ -289,7 +289,7 @@ import {
   X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
   Calendar, CalendarClock, Clock, TimerReset, ChevronDown
 } from 'lucide-vue-next'
-import CustomSelect from '@/components/CustomSelect.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 interface Props {
   isOpen: boolean

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import TaskRow from '@/components/TaskRow.vue'
+import TaskRow from '@/components/tasks/TaskRow.vue'
 import type { Task } from '@/stores/tasks'
 
 const meta = {

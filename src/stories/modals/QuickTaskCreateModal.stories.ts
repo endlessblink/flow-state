@@ -1,4 +1,4 @@
-import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
+import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 
 const meta = {
   title: 'Modals/QuickTaskCreateModal',

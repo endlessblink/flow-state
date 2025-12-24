@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import TaskContextMenu from '@/components/TaskContextMenu.vue'
+import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import type { Task } from '@/stores/tasks'
 import { createPinia, setActivePinia } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'

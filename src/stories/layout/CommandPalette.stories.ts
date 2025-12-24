@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref, onMounted } from 'vue'
-import CommandPalette from '@/components/CommandPalette.vue'
+import CommandPalette from '@/components/layout/CommandPalette.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 
 // Mock the task store for Storybook

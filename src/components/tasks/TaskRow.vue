@@ -116,8 +116,8 @@ import { computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { Calendar, Play, Edit } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
-import DoneToggle from '@/components/DoneToggle.vue'
-import type { DensityType } from '@/components/ViewControls.vue'
+import DoneToggle from '@/components/tasks/DoneToggle.vue'
+import type { DensityType } from '@/components/layout/ViewControls.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {

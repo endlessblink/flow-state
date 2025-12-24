@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
-import ProjectDropZone from '@/components/ProjectDropZone.vue'
+import ProjectDropZone from '@/components/projects/ProjectDropZone.vue'
 
 const meta = {
   component: ProjectDropZone,

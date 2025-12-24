@@ -112,14 +112,14 @@ async function handleGoogleSignIn() {
   font-weight: var(--font-medium);
   color: var(--text-primary);
 
-  /* Visual - Google branding guidelines */
+  /* Visual - Google branding guidelines integration with glass theme */
   background: var(--surface-default);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
 
   /* Interaction */
   cursor: pointer;
-  transition: all var(--duration-normal) var(--spring-smooth);
+  transition: all 0.2s;
 
   /* Remove default button styles */
   outline: none;
@@ -129,8 +129,8 @@ async function handleGoogleSignIn() {
 
 .google-signin-button:hover:not(:disabled) {
   background: var(--surface-hover);
-  border-color: var(--border-hover);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
 }
 
 .google-signin-button:active:not(:disabled) {
@@ -138,7 +138,7 @@ async function handleGoogleSignIn() {
 }
 
 .google-signin-button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -163,9 +163,9 @@ async function handleGoogleSignIn() {
 .spinner {
   width: 100%;
   height: 100%;
-  border: 2px solid var(--border-default);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--brand-primary);
+  border-radius: var(--radius-full);
   animation: spin 0.8s linear infinite;
 }
 
@@ -182,7 +182,7 @@ async function handleGoogleSignIn() {
 
 /* Focus Styles */
 .google-signin-button:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
 }
 

@@ -84,7 +84,7 @@ watch(() => authStore.isAuthenticated, (isAuth) => {
     uiStore.closeAuthModal()
 
     // Redirect if needed
-    if (redirectPath && redirectPath !== router.currentRoute.value.fullPath) {
+    if (redirectPath && router.currentRoute.value && redirectPath !== router.currentRoute.value.fullPath) {
       console.log('🔄 Redirecting to:', redirectPath)
       router.push(redirectPath)
     }

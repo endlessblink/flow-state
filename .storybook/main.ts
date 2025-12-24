@@ -1,33 +1,36 @@
 import type { StorybookConfig } from '@storybook/vue3-vite'
-import { fileURLToPath, URL } from 'node:url'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const config: StorybookConfig = {
-  stories: [
-    '../src/**/*.mdx',
-    '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'
-  ],
+  framework: '@storybook/vue3-vite',
+  stories: ['../src/stories/**/*.stories.ts'],
   addons: [
     '@storybook/addon-docs',
-    '@storybook/addon-onboarding',
     '@storybook/addon-a11y',
     '@storybook/addon-vitest'
   ],
-  framework: {
-    name: '@storybook/vue3-vite',
-    options: {}
-  },
+
   viteFinal: async (config) => {
     return {
       ...config,
       resolve: {
         ...config.resolve,
         alias: {
-          ...config.resolve?.alias,
-          '@': fileURLToPath(new URL('../src', import.meta.url))
-        },
-        dedupe: ['vue', 'pinia', 'vue-router'],
+          '@': resolve(__dirname, '../src'),
+          '~': resolve(__dirname, '../src')
+        }
       },
+      optimizeDeps: {
+        ...config.optimizeDeps,
+        exclude: ['vue-i18n', '@intlify/unplugin-vue-i18n']
+      }
     }
-  },
+  }
 }
+
 export default config

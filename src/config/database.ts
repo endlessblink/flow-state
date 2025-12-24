@@ -160,34 +160,34 @@ export const STORAGE_FLAGS = {
    * When true: Save projects to BOTH projects:data (legacy) AND project-{id} (new)
    * Phase 1: Safe dual-write for migration
    */
-  DUAL_WRITE_PROJECTS: import.meta.env.VITE_DUAL_WRITE_PROJECTS === 'true' || true, // TASK-048: Start with dual-write
+  DUAL_WRITE_PROJECTS: import.meta.env.VITE_DUAL_WRITE_PROJECTS === 'true' || false, // TASK-048: Final phase, stop writing to legacy
 
   /**
    * When true: Read from individual project-{id} documents instead of projects:data
    */
-  READ_INDIVIDUAL_PROJECTS: import.meta.env.VITE_READ_INDIVIDUAL_PROJECTS === 'true' || false, // TASK-048: Enable after dual-write verified
+  READ_INDIVIDUAL_PROJECTS: import.meta.env.VITE_READ_INDIVIDUAL_PROJECTS === 'true' || true, // TASK-048: ENABLED 2025-12-24
 
   /**
    * When true: Stop writing to projects:data entirely
    */
-  INDIVIDUAL_PROJECTS_ONLY: import.meta.env.VITE_INDIVIDUAL_PROJECTS_ONLY === 'true' || false, // TASK-048: Final phase
+  INDIVIDUAL_PROJECTS_ONLY: import.meta.env.VITE_INDIVIDUAL_PROJECTS_ONLY === 'true' || true, // TASK-048: Final phase
 
   // ============ CANVAS SECTIONS (TASK-048) ============
   /**
    * When true: Save sections to BOTH canvas:data (legacy) AND section-{id} (new)
    * Phase 1: Safe dual-write for migration
    */
-  DUAL_WRITE_SECTIONS: import.meta.env.VITE_DUAL_WRITE_SECTIONS === 'true' || true, // TASK-048: Start with dual-write
+  DUAL_WRITE_SECTIONS: import.meta.env.VITE_DUAL_WRITE_SECTIONS === 'true' || false, // TASK-048: Final phase, stop writing to legacy
 
   /**
    * When true: Read from individual section-{id} documents instead of canvas:data
    */
-  READ_INDIVIDUAL_SECTIONS: import.meta.env.VITE_READ_INDIVIDUAL_SECTIONS === 'true' || false, // TASK-048: Enable after dual-write verified
+  READ_INDIVIDUAL_SECTIONS: import.meta.env.VITE_READ_INDIVIDUAL_SECTIONS === 'true' || true, // TASK-048: ENABLED 2025-12-24
 
   /**
    * When true: Stop writing to canvas:data entirely
    */
-  INDIVIDUAL_SECTIONS_ONLY: import.meta.env.VITE_INDIVIDUAL_SECTIONS_ONLY === 'true' || false // TASK-048: Final phase
+  INDIVIDUAL_SECTIONS_ONLY: import.meta.env.VITE_INDIVIDUAL_SECTIONS_ONLY === 'true' || true // TASK-048: Final phase
 } as const
 
 // Sync event types

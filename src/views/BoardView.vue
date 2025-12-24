@@ -78,7 +78,7 @@
     <ConfirmationModal
       :is-open="showConfirmModal"
       title="Delete Task"
-      message="Are you sure you want to delete this task? This action cannot be undone."
+      message="Are you sure you want to delete this task? You can press Ctrl+Z to undo."
       confirm-text="Delete"
       @confirm="confirmDeleteTask"
       @cancel="cancelDeleteTask"

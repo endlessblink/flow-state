@@ -11,7 +11,7 @@ import { getLocaleDirection } from './index'
  * ```
  */
 export function useDirection() {
-  const { locale } = useI18n()
+  const { locale } = useI18n({ useScope: 'global' })
 
   // Get saved direction preference or auto-detect from locale
   const getSavedDirection = (): 'ltr' | 'rtl' | 'auto' => {

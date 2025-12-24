@@ -126,6 +126,7 @@
         @click="handleTaskClick($event, task)"
         @dblclick="handleTaskDoubleClick(task)"
         @contextmenu.prevent="handleTaskContextMenu($event, task)"
+        @keydown="handleTaskKeydown($event, task)"
       >
         <!-- Priority Stripe (top) -->
         <div class="priority-stripe" :class="`priority-${task.priority}`" />
@@ -222,7 +223,7 @@ import InboxFilters from '@/components/canvas/InboxFilters.vue'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
-const { updateTaskWithUndo, createTaskWithUndo } = useUnifiedUndoRedo()
+const { updateTaskWithUndo, createTaskWithUndo, deleteTaskWithUndo } = useUnifiedUndoRedo()
 
 // State
 const isCollapsed = ref(false)
@@ -382,6 +383,16 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
   window.dispatchEvent(new CustomEvent('task-context-menu', {
     detail: { event, task }
   }))
+}
+
+// ISSUE-010 FIX: Handle Delete/Backspace key to delete task from calendar inbox
+const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    event.preventDefault()
+    event.stopPropagation()
+    console.log('🗑️ Delete key pressed on calendar inbox task:', task.id)
+    deleteTaskWithUndo(task.id)
+  }
 }
 
 const onDragStart = (e: DragEvent, task: Task) => {

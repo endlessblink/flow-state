@@ -632,7 +632,7 @@ Phase 3 (Mobile) ←────────────────────
 - ✅ TASK-044: App.vue refactor into layouts
 
 **Planned (code quality & architecture):**
-- TASK-037: Component directory organization (P3-LOW)
+- ~~TASK-037~~: Component directory organization (✅ DONE)
 - TASK-039: Duplicate systems consolidation (P3-LOW)
 - TASK-041: Custom recurrence patterns (P3-LOW)
 - TASK-042: Section selection dialog (P3-LOW)

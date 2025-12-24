@@ -67,7 +67,12 @@ const calculatePosition = () => {
   let y = props.y
   let finalPosition = props.position
 
-  if (props.position === 'auto') {
+  // For dropdown variant, position directly below without centering
+  if (props.variant === 'dropdown') {
+    // x stays as-is (left-aligned with trigger)
+    // y stays as-is (already set to bottom of trigger by parent)
+    finalPosition = 'bottom'
+  } else if (props.position === 'auto') {
     // Auto-detect best position based on available space
     const spaceRight = viewportWidth - x
     const spaceBottom = viewportHeight - y
@@ -88,24 +93,26 @@ const calculatePosition = () => {
     }
   }
 
-  // Calculate position based on final position
-  switch (finalPosition) {
-    case 'top':
-      x = x - popoverRect.width / 2
-      y = y - popoverRect.height - props.offset
-      break
-    case 'bottom':
-      x = x - popoverRect.width / 2
-      y = y + props.offset
-      break
-    case 'left':
-      x = x - popoverRect.width - props.offset
-      y = y - popoverRect.height / 2
-      break
-    case 'right':
-      x = x + props.offset
-      y = y - popoverRect.height / 2
-      break
+  // Calculate position based on final position (skip for dropdown - already positioned)
+  if (props.variant !== 'dropdown') {
+    switch (finalPosition) {
+      case 'top':
+        x = x - popoverRect.width / 2
+        y = y - popoverRect.height - props.offset
+        break
+      case 'bottom':
+        x = x - popoverRect.width / 2
+        y = y + props.offset
+        break
+      case 'left':
+        x = x - popoverRect.width - props.offset
+        y = y - popoverRect.height / 2
+        break
+      case 'right':
+        x = x + props.offset
+        y = y - popoverRect.height / 2
+        break
+    }
   }
 
   // Adjust horizontal position if popover would overflow
@@ -187,19 +194,19 @@ onUnmounted(() => {
 .base-popover {
   position: fixed;
 
-  /* Glass morphism - darker solid base for overlays */
-  background: var(--glass-bg-solid);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
+  /* Glass morphism - transparent with blur */
+  background: rgba(20, 20, 40, 0.85);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
 
-  /* Stroke border */
-  border: 1px solid var(--glass-border);
+  /* Stroke border - more visible */
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
 
-  /* Layered shadow - much deeper for overlays */
+  /* Layered shadow */
   box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.8),
-    0 8px 24px rgba(0, 0, 0, 0.4);
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
 
   z-index: 3001;
   animation: popoverSlideIn var(--duration-fast) var(--spring-bounce);

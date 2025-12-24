@@ -20,7 +20,7 @@ import { useAppInitialization } from '@/composables/app/useAppInitialization'
 import { useAppShortcuts } from '@/composables/app/useAppShortcuts'
 import MainLayout from '@/layouts/MainLayout.vue'
 import ModalManager from '@/layouts/ModalManager.vue'
-import FaviconManager from '@/components/FaviconManager.vue'
+import FaviconManager from '@/components/common/FaviconManager.vue'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 
 // Refs for child components

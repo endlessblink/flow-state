@@ -591,7 +591,7 @@ Phase 3 (Mobile) ←────────────────────
 | BUG-032 | 👀 **REVIEW** | `tasks.ts` | - | - |
 | ~~TASK-035~~ | ✅ **DONE** | `useSmartViews.ts`, `tasks.ts`, `AppSidebar.vue`, `canvas.ts` | - | - |
 | ~~TASK-036~~ | ✅ COMPLETE | `*.stories.ts` | - | - |
-| TASK-037 | PLANNED | `src/components/*` | - | - |
+| ~~TASK-037~~ | ✅ **DONE** | `src/components/*` | - | - |
 | ~~TASK-038~~ | ✅ **DONE** | `vite.config.ts` | - | - |
 | TASK-039 | PLANNED | `src/utils/conflict*.ts`, `src/utils/*Backup*.ts`, `src/utils/sync*.ts` | - | - |
 | ~~TASK-040~~ | ✅ **DONE** | `src/i18n/*`, `src/components/settings/LanguageSettings.vue` | - | - |

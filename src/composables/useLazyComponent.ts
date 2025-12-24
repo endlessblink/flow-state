@@ -202,23 +202,23 @@ export function createHoverPreloadComponent(
 
 // Predefined lazy loaders for commonly used heavy components
 export const LazyComponents = {
-  TaskEditModal: () => createLazyModal(() => import('@/components/TaskEditModal.vue')),
-  CalendarInboxPanel: () => createLazyComponent(() => import('@/components/CalendarInboxPanel.vue')),
-  ForensicVerificationDashboard: () => createLazyDashboard(() => import('@/components/ForensicVerificationDashboard.vue')),
-  MultiSelectToggle: () => createLazyComponent(() => import('@/components/MultiSelectToggle.vue')),
-  HierarchicalTaskRow: () => createLazyComponent(() => import('@/components/HierarchicalTaskRow.vue')),
-  PerformanceTest: () => createLazyDashboard(() => import('@/components/PerformanceTest.vue')),
+  TaskEditModal: () => createLazyModal(() => import('@/components/tasks/TaskEditModal.vue')),
+  CalendarInboxPanel: () => createLazyComponent(() => import('@/components/inbox/CalendarInboxPanel.vue')),
+  ForensicVerificationDashboard: () => createLazyDashboard(() => import('@/components/sync/ForensicVerificationDashboard.vue')),
+  MultiSelectToggle: () => createLazyComponent(() => import('@/components/common/MultiSelectToggle.vue')),
+  HierarchicalTaskRow: () => createLazyComponent(() => import('@/components/tasks/HierarchicalTaskRow.vue')),
+  PerformanceTest: () => createLazyDashboard(() => import('@/components/debug/PerformanceTest.vue')),
   KanbanTaskCard: () => createLazyComponent(() => import('@/components/kanban/TaskCard.vue')),
   KanbanSwimlane: () => createLazyComponent(() => import('@/components/kanban/KanbanSwimlane.vue')),
-  SettingsModal: () => createLazyModal(() => import('@/components/SettingsModal.vue')),
-  ProjectModal: () => createLazyModal(() => import('@/components/ProjectModal.vue')),
-  GroupModal: () => createLazyModal(() => import('@/components/GroupModal.vue')),
-  BatchEditModal: () => createLazyModal(() => import('@/components/BatchEditModal.vue')),
-  SyncSettings: () => createLazyModal(() => import('@/components/CloudSyncSettings.vue')),
-  BackupSettings: () => createLazyModal(() => import('@/components/BackupSettings.vue')),
-  TaskContextMenu: () => createLazyComponent(() => import('@/components/TaskContextMenu.vue')),
-  SearchModal: () => createLazyModal(() => import('@/components/SearchModal.vue')),
-  CommandPalette: () => createLazyModal(() => import('@/components/CommandPalette.vue'))
+  SettingsModal: () => createLazyModal(() => import('@/components/layout/SettingsModal.vue')),
+  ProjectModal: () => createLazyModal(() => import('@/components/projects/ProjectModal.vue')),
+  GroupModal: () => createLazyModal(() => import('@/components/common/GroupModal.vue')),
+  BatchEditModal: () => createLazyModal(() => import('@/components/tasks/BatchEditModal.vue')),
+  SyncSettings: () => createLazyModal(() => import('@/components/sync/CloudSyncSettings.vue')),
+  BackupSettings: () => createLazyModal(() => import('@/components/sync/BackupSettings.vue')),
+  TaskContextMenu: () => createLazyComponent(() => import('@/components/tasks/TaskContextMenu.vue')),
+  SearchModal: () => createLazyModal(() => import('@/components/layout/SearchModal.vue')),
+  CommandPalette: () => createLazyModal(() => import('@/components/layout/CommandPalette.vue'))
 } as const
 
 // Type definitions for better TypeScript support

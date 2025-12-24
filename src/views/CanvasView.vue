@@ -462,7 +462,7 @@ import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import GroupNodeSimple from '@/components/canvas/GroupNodeSimple.vue'
-import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
+import UnifiedInboxPanel from '@/components/inbox/UnifiedInboxPanel.vue'
 
 // Phase 4 Decomposed Components
 import CanvasModals from '@/components/canvas/CanvasModals.vue'

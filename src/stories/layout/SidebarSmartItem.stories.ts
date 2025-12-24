@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
-import SidebarSmartItem from '@/components/SidebarSmartItem.vue'
+import SidebarSmartItem from '@/components/layout/SidebarSmartItem.vue'
 import { Calendar, Inbox, List, Clock, Zap } from 'lucide-vue-next'
 
 const meta = {

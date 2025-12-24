@@ -151,7 +151,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { Calendar, Flag, Clock, Inbox } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import CustomSelect from '@/components/CustomSelect.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 interface Props {
   isOpen: boolean

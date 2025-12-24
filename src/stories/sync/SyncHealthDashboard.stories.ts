@@ -1,4 +1,4 @@
-import SyncHealthDashboard from '@/components/SyncHealthDashboard.vue'
+import SyncHealthDashboard from '@/components/sync/SyncHealthDashboard.vue'
 
 const meta = {
     title: '🔄 Sync & Reliability/SyncHealthDashboard',

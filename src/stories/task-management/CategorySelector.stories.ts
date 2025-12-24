@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import CategorySelector from '@/components/CategorySelector.vue'
+import CategorySelector from '@/components/layout/CategorySelector.vue'
 
 const meta = {
   component: CategorySelector,

@@ -49,7 +49,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Calendar, Clock } from 'lucide-vue-next'
-import BaseBadge from './base/BaseBadge.vue'
+import BaseBadge from '@/components/base/BaseBadge.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useTaskStore } from '@/stores/tasks'
 

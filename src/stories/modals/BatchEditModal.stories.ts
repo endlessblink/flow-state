@@ -1,4 +1,4 @@
-import BatchEditModal from '@/components/BatchEditModal.vue'
+import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 
 const meta = {
   title: 'Modals/BatchEditModal',

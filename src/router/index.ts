@@ -65,7 +65,7 @@ const router = createRouter({
       {
       path: '/keyboard-test',
       name: 'keyboard-test',
-      component: () => import('@/components/KeyboardDeletionTest.vue')
+      component: () => import('@/components/debug/KeyboardDeletionTest.vue')
     },
       // TODO: Add other views when implemented
     // {

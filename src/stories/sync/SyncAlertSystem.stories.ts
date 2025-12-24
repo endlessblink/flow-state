@@ -1,5 +1,5 @@
 import { ref, onMounted } from 'vue'
-import SyncAlertSystem from '@/components/SyncAlertSystem.vue'
+import SyncAlertSystem from '@/components/sync/SyncAlertSystem.vue'
 
 const meta = {
     title: '🔄 Sync & Reliability/SyncAlertSystem',

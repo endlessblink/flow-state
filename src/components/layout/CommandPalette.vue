@@ -59,7 +59,7 @@ import { ref, nextTick, computed } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
 import { Plus } from 'lucide-vue-next'
-import CustomSelect from './CustomSelect.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 const taskStore = useTaskStore()
 

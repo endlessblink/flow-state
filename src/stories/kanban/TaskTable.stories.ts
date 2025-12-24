@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import TaskTable from '@/components/TaskTable.vue'
+import TaskTable from '@/components/tasks/TaskTable.vue'
 import type { Task } from '@/stores/tasks'
 
 const meta = {

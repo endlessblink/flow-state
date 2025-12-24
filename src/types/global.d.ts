@@ -239,13 +239,13 @@ declare module './App.vue' {
 }
 
 // Specific Vue component declarations for dynamic imports
-declare module '@/components/SyncStatusIndicator.vue' {
+declare module '@/components/sync/SyncStatusIndicator.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/SyncErrorBoundary.vue' {
+declare module '@/components/sync/SyncErrorBoundary.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
@@ -257,37 +257,37 @@ declare module '@/views/CanvasView.vue' {
   export default component
 }
 
-declare module '@/components/TaskEditModal.vue' {
+declare module '@/components/tasks/TaskEditModal.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/CalendarInboxPanel.vue' {
+declare module '@/components/inbox/CalendarInboxPanel.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/ForensicVerificationDashboard.vue' {
+declare module '@/components/sync/ForensicVerificationDashboard.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/MultiSelectToggle.vue' {
+declare module '@/components/common/MultiSelectToggle.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/HierarchicalTaskRow.vue' {
+declare module '@/components/tasks/HierarchicalTaskRow.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/PerformanceTest.vue' {
+declare module '@/components/debug/PerformanceTest.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
@@ -305,55 +305,55 @@ declare module '@/components/kanban/KanbanSwimlane.vue' {
   export default component
 }
 
-declare module '@/components/SettingsModal.vue' {
+declare module '@/components/layout/SettingsModal.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/ProjectModal.vue' {
+declare module '@/components/projects/ProjectModal.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/GroupModal.vue' {
+declare module '@/components/common/GroupModal.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/BatchEditModal.vue' {
+declare module '@/components/tasks/BatchEditModal.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/CloudSyncSettings.vue' {
+declare module '@/components/sync/CloudSyncSettings.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/BackupSettings.vue' {
+declare module '@/components/sync/BackupSettings.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/TaskContextMenu.vue' {
+declare module '@/components/tasks/TaskContextMenu.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/SearchModal.vue' {
+declare module '@/components/layout/SearchModal.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/CommandPalette.vue' {
+declare module '@/components/layout/CommandPalette.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
@@ -397,37 +397,37 @@ declare module '@/views/FocusView.vue' {
 }
 
 // Missing component declarations from global tsc errors
-declare module '@/components/ForensicVerificationDashboard.vue' {
+declare module '@/components/sync/ForensicVerificationDashboard.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/MultiSelectToggle.vue' {
+declare module '@/components/common/MultiSelectToggle.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/HierarchicalTaskRow.vue' {
+declare module '@/components/tasks/HierarchicalTaskRow.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/PerformanceTest.vue' {
+declare module '@/components/debug/PerformanceTest.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/CloudSyncSettings.vue' {
+declare module '@/components/sync/CloudSyncSettings.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
 }
 
-declare module '@/components/TaskContextMenu.vue' {
+declare module '@/components/tasks/TaskContextMenu.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component
@@ -446,7 +446,7 @@ declare module '@/components/kanban/KanbanSwimlane.vue' {
   export default component
 }
 
-declare module '@/components/KeyboardDeletionTest.vue' {
+declare module '@/components/debug/KeyboardDeletionTest.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>
   export default component

@@ -1,4 +1,4 @@
-import TaskEditModal from '@/components/TaskEditModal.vue'
+import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 
 const meta = {
   title: 'Modals/TaskEditModal',

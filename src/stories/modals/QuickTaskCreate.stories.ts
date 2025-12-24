@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref, reactive } from 'vue'
-import QuickTaskCreate from '@/components/QuickTaskCreate.vue'
+import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
 
 const meta = {
   component: QuickTaskCreate,

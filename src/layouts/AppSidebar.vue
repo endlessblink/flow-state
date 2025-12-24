@@ -267,8 +267,8 @@ import {
 } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
-import SidebarSmartItem from '@/components/SidebarSmartItem.vue'
-import ProjectTreeItem from '@/components/ProjectTreeItem.vue'
+import SidebarSmartItem from '@/components/layout/SidebarSmartItem.vue'
+import ProjectTreeItem from '@/components/projects/ProjectTreeItem.vue'
 
 const router = useRouter()
 const uiStore = useUIStore()

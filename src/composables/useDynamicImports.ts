@@ -54,13 +54,13 @@ export const IMPORT_CONFIG = {
 
   // UI component imports
   SyncStatusIndicator: {
-    path: () => import('@/components/SyncStatusIndicator.vue'),
+    path: () => import('@/components/sync/SyncStatusIndicator.vue'),
     preload: false, // Load on demand
     timeout: 3000
   },
 
   SyncErrorBoundary: {
-    path: () => import('@/components/SyncErrorBoundary.vue'),
+    path: () => import('@/components/sync/SyncErrorBoundary.vue'),
     preload: false, // Load on demand
     timeout: 3000
   },

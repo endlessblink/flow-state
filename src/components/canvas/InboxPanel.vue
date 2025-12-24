@@ -191,7 +191,7 @@ import { Plus as _Plus, Zap as _Zap, Clock as _Clock, ChevronLeft, ChevronRight,
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
-import TaskContextMenu from '@/components/TaskContextMenu.vue'
+import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import InboxTimeFilters from './InboxTimeFilters.vue'
 import InboxFilters from './InboxFilters.vue'
 import BaseBadge from '@/components/base/BaseBadge.vue'

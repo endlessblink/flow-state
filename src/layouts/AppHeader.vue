@@ -164,8 +164,8 @@ import { useRouter } from 'vue-router'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { Timer, Play, Pause, Coffee, Square, User } from 'lucide-vue-next'
-import TimeDisplay from '@/components/TimeDisplay.vue'
-import SyncStatus from '@/components/SyncStatus.vue'
+import TimeDisplay from '@/components/common/TimeDisplay.vue'
+import SyncStatus from '@/components/sync/SyncStatus.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 const router = useRouter()

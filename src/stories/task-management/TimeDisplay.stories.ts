@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import TimeDisplay from '@/components/TimeDisplay.vue'
+import TimeDisplay from '@/components/common/TimeDisplay.vue'
 
 const meta = {
   title: '📝 Task Management/TimeDisplay',

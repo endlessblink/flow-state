@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
+import UnifiedInboxPanel from '@/components/inbox/UnifiedInboxPanel.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 
 const meta = {

@@ -202,7 +202,7 @@ import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { Play, Edit, Calendar, Inbox, Trash2, X } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
-import type { DensityType } from '@/components/ViewControls.vue'
+import type { DensityType } from '@/components/layout/ViewControls.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 

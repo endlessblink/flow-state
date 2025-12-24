@@ -1,4 +1,4 @@
-import DragHandle from '@/components/DragHandle.vue'
+import DragHandle from '@/components/tasks/DragHandle.vue'
 
 const meta = {
   title: '🧩 Primitives/DragHandle',

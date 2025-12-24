@@ -102,7 +102,7 @@ import type { Project } from '@/stores/tasks'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
-import EmojiPicker from './EmojiPicker.vue'
+import EmojiPicker from '@/components/common/EmojiPicker.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 interface Props {

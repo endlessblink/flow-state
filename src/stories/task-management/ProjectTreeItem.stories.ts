@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
-import ProjectTreeItem from '@/components/ProjectTreeItem.vue'
+import ProjectTreeItem from '@/components/projects/ProjectTreeItem.vue'
 
 const meta = {
   component: ProjectTreeItem,

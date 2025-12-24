@@ -1,4 +1,4 @@
-import SyncIntegrationExample from '@/components/SyncIntegrationExample.vue'
+import SyncIntegrationExample from '@/components/sync/SyncIntegrationExample.vue'
 
 const meta = {
   component: SyncIntegrationExample,

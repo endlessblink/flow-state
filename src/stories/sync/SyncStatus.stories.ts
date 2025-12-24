@@ -1,4 +1,4 @@
-import SyncStatus from '@/components/SyncStatus.vue'
+import SyncStatus from '@/components/sync/SyncStatus.vue'
 
 const meta = {
     title: '🔄 Sync & Reliability/SyncStatus',

@@ -83,7 +83,7 @@ import { ChevronLeft, ChevronRight, Check } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 interface Language {
   code: 'en' | 'he'

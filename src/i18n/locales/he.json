@@ -65,6 +65,23 @@
     "autoDescription": "זיהוי אוטומטי לפי שפה"
   },
   "auth": {
+    "displayName": "שם תצוגה",
+    "displayNamePlaceholder": "הזן שם תצוגה",
+    "email": "אימייל",
+    "emailPlaceholder": "הזן אימייל",
+    "password": "סיסמה",
+    "passwordPlaceholder": "הזן סיסמה",
+    "confirmPassword": "אימות סיסמה",
+    "confirmPasswordPlaceholder": "הזן שוב את הסיסמה",
+    "passwordMismatch": "הסיסמאות אינן תואמות",
+    "createAccount": "צור חשבון",
+    "creatingAccount": "יוצר חשבון...",
+    "or": "או",
+    "haveAccount": "כבר יש לך חשבון?",
+    "signIn": "התחבר",
+    "sending": "שולח...",
+    "sendResetLink": "שלח קישור לאיפוס",
+    "backToLogin": "חזרה להתחברות",
     "login": {
       "title": "התחברות",
       "subtitle": "ברוך שובך! התחבר כדי לגשת למשימות שלך",
@@ -78,6 +95,18 @@
       "signUp": "צור חשבון",
       "signIn": "התחבר",
       "signingIn": "מתחבר..."
+    },
+    "signup": {
+      "title": "יצירת חשבון",
+      "subtitle": "הירשם כדי להתחיל"
+    },
+    "resetPassword": {
+      "title": "איפוס סיסמה",
+      "subtitle": "הזן את המייל שלך לקבלת קישור לאיפוס",
+      "emailSent": "המייל נשלח",
+      "checkEmail": "בדוק את תיבת המייל שלך",
+      "didntReceive": "לא קיבלת את המייל?",
+      "resend": "שלח שוב"
     }
   }
 }

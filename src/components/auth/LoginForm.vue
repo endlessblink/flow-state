@@ -3,10 +3,10 @@
   <div class="login-form">
     <div class="form-header">
       <h2 class="form-title">
-        {{ $t('auth.login.title', 'Sign In') }}
+        {{ t('auth.login.title') }}
       </h2>
       <p class="form-subtitle">
-        {{ $t('auth.login.subtitle', 'Welcome back! Sign in to access your tasks') }}
+        {{ t('auth.login.subtitle') }}
       </p>
     </div>
 
@@ -21,8 +21,8 @@
       <BaseInput
         v-model="email"
         type="email"
-        :label="$t('auth.login.email', 'Email')"
-        :placeholder="$t('auth.login.emailPlaceholder', 'Enter your email')"
+        :label="t('auth.login.email')"
+        :placeholder="t('auth.login.emailPlaceholder')"
         required
         :disabled="isLoading"
         data-testid="email-input"
@@ -35,8 +35,8 @@
         <BaseInput
           v-model="password"
           :type="showPassword ? 'text' : 'password'"
-          :label="$t('auth.login.password', 'Password')"
-          :placeholder="$t('auth.login.passwordPlaceholder', 'Enter your password')"
+          :label="t('auth.login.password')"
+          :placeholder="t('auth.login.passwordPlaceholder')"
           required
           :disabled="isLoading"
           data-testid="password-input"
@@ -66,7 +66,7 @@
           :disabled="isLoading"
           @click="$emit('forgotPassword', email)"
         >
-          {{ $t('auth.login.forgotPassword', 'Forgot password?') }}
+          {{ t('auth.login.forgotPassword') }}
         </button>
       </div>
 
@@ -80,12 +80,12 @@
         class="submit-button"
         data-testid="login-button"
       >
-        {{ isLoading ? $t('auth.login.signingIn', 'Signing In...') : $t('auth.login.signIn', 'Sign In') }}
+        {{ isLoading ? t('auth.login.signingIn') : t('auth.login.signIn') }}
       </BaseButton>
 
       <!-- Divider -->
       <div class="divider">
-        <span>{{ $t('auth.login.or', 'or') }}</span>
+        <span>{{ t('auth.login.or') }}</span>
       </div>
 
       <!-- Google Sign-In (will be separate component) -->
@@ -94,7 +94,7 @@
       <!-- Sign Up Link -->
       <div class="form-footer">
         <span class="footer-text">
-          {{ $t('auth.login.noAccount', "Don't have an account?") }}
+          {{ t('auth.login.noAccount') }}
         </span>
         <button
           type="button"
@@ -102,7 +102,7 @@
           :disabled="isLoading"
           @click="$emit('switchToSignup')"
         >
-          {{ $t('auth.login.signUp', 'Sign Up') }}
+          {{ t('auth.login.signUp') }}
         </button>
       </div>
     </form>
@@ -111,6 +111,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useSafeI18n } from '@/composables/useSafeI18n'
 import { useAuthStore, type User } from '@/stores/auth'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -129,6 +130,9 @@ interface Emits {
   switchToSignup: []
   forgotPassword: [email: string]
 }
+
+// ===== i18n =====
+const { t } = useSafeI18n()
 
 // ===== State =====
 const authStore = useAuthStore()
@@ -198,6 +202,7 @@ async function handleSubmit() {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin: 0;
+  line-height: var(--leading-normal);
 }
 
 .auth-form {

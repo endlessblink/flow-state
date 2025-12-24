@@ -3,8 +3,10 @@ import type { App } from 'vue'
 import { setup } from '@storybook/vue3'
 import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
+import { createI18n, type I18n } from 'vue-i18n'
 import customTheme from './theme'
-import i18n from '../src/i18n'
+import en from '../src/i18n/locales/en.json'
+import he from '../src/i18n/locales/he.json'
 
 // TASK-054: Mark Storybook environment to prevent database writes
 // This prevents stories from polluting the real app's IndexedDB
@@ -22,13 +24,53 @@ import './storybook-dark-override.css'
 import '../src/assets/design-tokens.css'
 import '../src/assets/styles.css'
 
-const pinia = createPinia()
+// Track which apps have been set up to avoid reinstalling plugins
+const setupApps = new WeakSet<App>()
+
+// Create a single i18n instance that can be reused
+// This prevents "Unexpected return type in composer" errors
+let sharedI18n: I18n | null = null
+
+function getOrCreateI18n(): I18n {
+  if (!sharedI18n) {
+    sharedI18n = createI18n({
+      legacy: false,
+      locale: 'en',
+      fallbackLocale: 'en',
+      messages: { en, he },
+      globalInjection: true,
+      allowComposition: true
+    })
+  }
+  return sharedI18n
+}
 
 setup((app: App) => {
+  // Skip if already set up (prevents reinstallation errors)
+  if (setupApps.has(app)) return
+  setupApps.add(app)
+
+  // Pinia - fresh instance for each app
+  const pinia = createPinia()
   app.use(pinia)
+
+  // i18n - use shared instance but install fresh for each app
+  // Create fresh i18n for each app to avoid "already installed" errors
+  const i18n = createI18n({
+    legacy: false,
+    locale: 'en',
+    fallbackLocale: 'en',
+    messages: { en, he },
+    globalInjection: true,
+    allowComposition: true,
+    // Explicitly set warnHtmlMessage to false to reduce noise
+    warnHtmlMessage: false,
+    missingWarn: false,
+    fallbackWarn: false
+  })
   app.use(i18n)
 
-  // Create a new router instance for each story to avoid re-definition conflicts
+  // Router - fresh instance for each app
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [

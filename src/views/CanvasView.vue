@@ -185,228 +185,198 @@
         <UnifiedInboxPanel />
 
         <!-- Always show VueFlow canvas, even when empty -->
-          <div class="canvas-container-wrapper">
-            <!-- Canvas with tasks -->
-            <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
-              <VueFlow
-                v-if="systemHealthy && isCanvasReady"
-                ref="vueFlowRef"
-                v-model:nodes="safeNodes"
-                v-model:edges="safeEdges"
-                :class="{ 'canvas-ready': isCanvasReady }"
-                class="vue-flow-container"
-                :node-types="nodeTypes"
-                edges-focusable
-                :elevate-nodes-on-select="false"
-                elevate-edges-on-select
-                zoom-on-scroll
-                :pan-on-scroll="false"
-                zoom-on-pinch
-                pan-on-drag
-                multi-selection-key-code="Shift"
-                snap-to-grid
-                :snap-grid="[16, 16]"
-                :node-extent="dynamicNodeExtent"
-                :min-zoom="0.05"
-                :max-zoom="4.0"
-                :fit-view-on-init="false"
-                :connect-on-drag-nodes="false"
-                :zoom-scroll-sensitivity="1.0"
-                :zoom-activation-key-code="null"
-                prevent-scrolling
-                :default-viewport="{ zoom: 1, x: 0, y: 0 }"
-                dir="ltr"
-                tabindex="0"
-                @node-drag-start="handleNodeDragStart"
-                @node-drag-stop="handleNodeDragStop"
-                @node-drag="handleNodeDrag"
-                @nodes-change="handleNodesChange"
-                @selection-change="handleSelectionChange"
-                @pane-click="handlePaneClick"
-                @pane-context-menu="handlePaneContextMenu"
-                @node-context-menu="handleNodeContextMenu"
-                @edge-click="handleEdgeClick"
-                @edge-context-menu="handleEdgeContextMenu"
-                @connect="typedHandleConnect"
-                @connect-start="handleConnectStart"
-                @connect-end="handleConnectEnd"
-                @keydown="handleKeyDown"
-              >
-                <!-- Background Grid -->
-                <Background
-                  pattern-color="#e5e7eb"
-                  pattern="dots"
-                  :gap="16"
-                  :size="1"
+        <div class="canvas-container-wrapper">
+          <!-- Canvas with tasks -->
+          <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
+            <VueFlow
+              v-if="systemHealthy && isCanvasReady"
+              ref="vueFlowRef"
+              v-model:nodes="safeNodes"
+              v-model:edges="safeEdges"
+              :class="{ 'canvas-ready': isCanvasReady }"
+              class="vue-flow-container"
+              :node-types="nodeTypes"
+              edges-focusable
+              :elevate-nodes-on-select="false"
+              elevate-edges-on-select
+              zoom-on-scroll
+              :pan-on-scroll="false"
+              zoom-on-pinch
+              pan-on-drag
+              multi-selection-key-code="Shift"
+              snap-to-grid
+              :snap-grid="[16, 16]"
+              :node-extent="dynamicNodeExtent"
+              :min-zoom="0.05"
+              :max-zoom="4.0"
+              :fit-view-on-init="false"
+              :connect-on-drag-nodes="false"
+              :zoom-scroll-sensitivity="1.0"
+              :zoom-activation-key-code="null"
+              prevent-scrolling
+              :default-viewport="{ zoom: 1, x: 0, y: 0 }"
+              dir="ltr"
+              tabindex="0"
+              @node-drag-start="handleNodeDragStart"
+              @node-drag-stop="handleNodeDragStop"
+              @node-drag="handleNodeDrag"
+              @nodes-change="handleNodesChange"
+              @selection-change="handleSelectionChange"
+              @pane-click="handlePaneClick"
+              @pane-context-menu="handlePaneContextMenu"
+              @node-context-menu="handleNodeContextMenu"
+              @edge-click="handleEdgeClick"
+              @edge-context-menu="handleEdgeContextMenu"
+              @connect="typedHandleConnect"
+              @connect-start="handleConnectStart"
+              @connect-end="handleConnectEnd"
+              @keydown="handleKeyDown"
+            >
+              <!-- Background Grid -->
+              <Background
+                pattern-color="#e5e7eb"
+                pattern="dots"
+                :gap="16"
+                :size="1"
+              />
+
+              <!-- MiniMap -->
+              <MiniMap
+                :node-color="getNodeColor"
+                mask-color="var(--text-secondary)"
+                pannable
+                zoomable
+                position="bottom-right"
+              />
+
+              <!-- Section Node Template -->
+              <template #node-sectionNode="nodeProps">
+                <GroupNodeSimple
+                  :data="nodeProps.data"
+                  :selected="nodeProps.selected"
+                  @update="handleSectionUpdate"
+                  @collect="collectTasksForSection"
+                  @context-menu="handleSectionContextMenu"
+                  @open-settings="handleOpenSectionSettings"
+                  @resize-start="handleSectionResizeStart"
+                  @resize="handleSectionResize"
+                  @resize-end="handleSectionResizeEnd"
                 />
+              </template>
 
-  
-  
-                <!-- MiniMap -->
-                <MiniMap
-                  :node-color="getNodeColor"
-                  mask-color="var(--text-secondary)"
-                  pannable
-                  zoomable
-                  position="bottom-right"
+              <!-- Custom Task Node Template -->
+              <template #node-taskNode="nodeProps">
+                <TaskNode
+                  :task="nodeProps.data.task"
+                  :is-selected="canvasStore.selectedNodeIds.includes(nodeProps.data.task.id)"
+                  :multi-select-mode="canvasStore.multiSelectMode"
+                  :show-priority="canvasStore.showPriorityIndicator"
+                  :show-status="canvasStore.showStatusBadge"
+                  :show-duration="canvasStore.showDurationBadge"
+                  :show-schedule="canvasStore.showScheduleBadge"
+                  :is-connecting="isConnecting"
+                  @edit="handleEditTask"
+                  @select="handleTaskSelect"
+                  @context-menu="handleTaskContextMenu"
                 />
+              </template>
 
-                <!-- Section Node Template -->
-                <template #node-sectionNode="nodeProps">
-                  <GroupNodeSimple
-                    :data="nodeProps.data"
-                    :selected="nodeProps.selected"
-                    @update="handleSectionUpdate"
-                    @collect="collectTasksForSection"
-                    @context-menu="handleSectionContextMenu"
-                    @open-settings="handleOpenSectionSettings"
-                    @resize-start="handleSectionResizeStart"
-                    @resize="handleSectionResize"
-                    @resize-end="handleSectionResizeEnd"
-                  />
-                </template>
+              <!-- SVG markers for connection arrows -->
+              <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
+                <defs>
+                  <marker
+                    id="arrowhead"
+                    markerWidth="10"
+                    markerHeight="10"
+                    refX="9"
+                    refY="3"
+                    orient="auto"
+                    markerUnits="strokeWidth"
+                  >
+                    <polygon
+                      points="0 0, 10 3, 0 6"
+                      fill="var(--border-secondary)"
+                    />
+                  </marker>
+                  <marker
+                    id="arrowhead-hover"
+                    markerWidth="10"
+                    markerHeight="10"
+                    refX="9"
+                    refY="3"
+                    orient="auto"
+                    markerUnits="strokeWidth"
+                  >
+                    <polygon
+                      points="0 0, 10 3, 0 6"
+                      fill="var(--color-navigation)"
+                    />
+                  </marker>
+                </defs>
+              </svg>
+            </VueFlow>
 
-                <!-- Custom Task Node Template -->
-                <template #node-taskNode="nodeProps">
-                  <TaskNode
-                    :task="nodeProps.data.task"
-                    :is-selected="canvasStore.selectedNodeIds.includes(nodeProps.data.task.id)"
-                    :multi-select-mode="canvasStore.multiSelectMode"
-                    :show-priority="canvasStore.showPriorityIndicator"
-                    :show-status="canvasStore.showStatusBadge"
-                    :show-duration="canvasStore.showDurationBadge"
-                    :show-schedule="canvasStore.showScheduleBadge"
-                    :is-connecting="isConnecting"
-                    @edit="handleEditTask"
-                    @select="handleTaskSelect"
-                    @context-menu="handleTaskContextMenu"
-                  />
-                </template>
-
-                <!-- SVG markers for connection arrows -->
-                <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
-                  <defs>
-                    <marker
-                      id="arrowhead"
-                      markerWidth="10"
-                      markerHeight="10"
-                      refX="9"
-                      refY="3"
-                      orient="auto"
-                      markerUnits="strokeWidth"
-                    >
-                      <polygon
-                        points="0 0, 10 3, 0 6"
-                        fill="var(--border-secondary)"
-                      />
-                    </marker>
-                    <marker
-                      id="arrowhead-hover"
-                      markerWidth="10"
-                      markerHeight="10"
-                      refX="9"
-                      refY="3"
-                      orient="auto"
-                      markerUnits="strokeWidth"
-                    >
-                      <polygon
-                        points="0 0, 10 3, 0 6"
-                        fill="var(--color-navigation)"
-                      />
-                    </marker>
-                  </defs>
-                </svg>
-              </VueFlow>
-
-              <!-- Loading state when canvas is not ready -->
-              <div v-else class="canvas-loading-state">
-                <div class="flex items-center justify-center h-full">
-                  <div class="text-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-                    <p class="text-gray-600 dark:text-gray-400">
-                      {{ systemHealthy ? 'Initializing Canvas...' : 'System Initializing...' }}
-                    </p>
-                  </div>
+            <!-- Loading state when canvas is not ready -->
+            <div v-else class="canvas-loading-state">
+              <div class="flex items-center justify-center h-full">
+                <div class="text-center">
+                  <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                  <p class="text-gray-600 dark:text-gray-400">
+                    {{ systemHealthy ? 'Initializing Canvas...' : 'System Initializing...' }}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-    <!-- ================================================================= -->
-    <!-- MODALS & OVERLAYS SECTION (Safe to Extract)                      -->
-    <!-- Components: Various modals and overlays                           -->
-    <!-- Dependencies: Modal state variables, task data                    -->
-
-  
-    <!-- Task Edit Modal -->
-    <TaskEditModal
-      :is-open="isEditModalOpen"
-      :task="selectedTask"
-      @close="closeEditModal"
+    <!-- Sub-components: Extracted for maintainability (Phase 4) -->
+    <CanvasModals
+      :is-edit-modal-open="isEditModalOpen"
+      :selected-task="selectedTask"
+      :is-quick-task-create-open="isQuickTaskCreateOpen"
+      :is-batch-edit-modal-open="isBatchEditModalOpen"
+      :batch-edit-task-ids="batchEditTaskIds"
+      :is-section-settings-open="isSectionSettingsOpen"
+      :editing-section="editingSection"
+      :is-group-modal-open="isGroupModalOpen"
+      :selected-group="selectedGroup"
+      :group-modal-position="groupModalPosition"
+      :is-group-edit-modal-open="isGroupEditModalOpen"
+      :selected-section-for-edit="selectedSectionForEdit"
+      :is-delete-group-modal-open="isDeleteGroupModalOpen"
+      :delete-group-message="deleteGroupMessage"
+      @close-edit-modal="closeEditModal"
+      @close-quick-task-create="closeQuickTaskCreate"
+      @handle-quick-task-create="handleQuickTaskCreate"
+      @close-batch-edit-modal="closeBatchEditModal"
+      @handle-batch-edit-applied="handleBatchEditApplied"
+      @close-section-settings-modal="closeSectionSettingsModal"
+      @handle-section-settings-save="handleSectionSettingsSave"
+      @close-group-modal="closeGroupModal"
+      @handle-group-created="handleGroupCreated"
+      @handle-group-updated="handleGroupUpdated"
+      @close-group-edit-modal="closeGroupEditModal"
+      @handle-group-edit-save="handleGroupEditSave"
+      @confirm-delete-group="confirmDeleteGroup"
+      @cancel-delete-group="cancelDeleteGroup"
     />
 
-    <!-- Quick Task Create Modal -->
-    <QuickTaskCreateModal
-      :is-open="isQuickTaskCreateOpen"
-      :loading="false"
-      @cancel="closeQuickTaskCreate"
-      @create="handleQuickTaskCreate"
-    />
-
-    <!-- Batch Edit Modal -->
-    <BatchEditModal
-      :is-open="isBatchEditModalOpen"
-      :task-ids="batchEditTaskIds"
-      @close="closeBatchEditModal"
-      @applied="handleBatchEditApplied"
-    />
-
-    <!-- Section Settings Modal -->
-    <GroupSettingsMenu
-      :section="editingSection"
-      :is-visible="isSectionSettingsOpen"
-      @close="closeSectionSettingsModal"
-      @save="handleSectionSettingsSave"
-    />
-
-    <!-- Unified Group Modal (create + edit with optional smart settings) -->
-    <UnifiedGroupModal
-      :is-open="isGroupModalOpen"
-      :group="selectedGroup"
-      :position="groupModalPosition"
-      @close="closeGroupModal"
-      @created="handleGroupCreated"
-      @updated="handleGroupUpdated"
-    />
-
-    <!-- Group Edit Modal -->
-    <GroupEditModal
-      :section="selectedSectionForEdit"
-      :is-visible="isGroupEditModalOpen"
-      @close="closeGroupEditModal"
-      @save="handleGroupEditSave"
-    />
-
-    <!-- Group Delete Confirmation Modal -->
-    <ConfirmationModal
-      :is-open="isDeleteGroupModalOpen"
-      title="Delete Group"
-      :message="deleteGroupMessage"
-      confirm-text="Delete"
-      @confirm="confirmDeleteGroup"
-      @cancel="cancelDeleteGroup"
-    />
-
-    <!-- Canvas Context Menu -->
-    <CanvasContextMenu
-      :is-visible="showCanvasContextMenu"
-      :x="canvasContextMenuX"
-      :y="canvasContextMenuY"
+    <CanvasContextMenus
+      :show-canvas-context-menu="showCanvasContextMenu"
+      :canvas-context-menu-x="canvasContextMenuX"
+      :canvas-context-menu-y="canvasContextMenuY"
       :has-selected-tasks="canvasStore.selectedNodeIds.length > 0"
       :selected-count="canvasStore.selectedNodeIds.length"
       :context-section="canvasContextSection"
-      @close="closeCanvasContextMenu"
+      :show-edge-context-menu="showEdgeContextMenu"
+      :edge-context-menu-x="edgeContextMenuX"
+      :edge-context-menu-y="edgeContextMenuY"
+      :show-node-context-menu="showNodeContextMenu"
+      :node-context-menu-x="nodeContextMenuX"
+      :node-context-menu-y="nodeContextMenuY"
+      @close-canvas-context-menu="closeCanvasContextMenu"
       @create-task-here="createTaskHere"
       @create-group="createGroup"
       @edit-group="editGroup"
@@ -424,26 +394,12 @@
       @arrange-in-row="arrangeInRow"
       @arrange-in-column="arrangeInColumn"
       @arrange-in-grid="arrangeInGrid"
+      @close-edge-context-menu="closeEdgeContextMenu"
+      @disconnect-edge="disconnectEdge"
+      @close-node-context-menu="closeNodeContextMenu"
+      @delete-node="deleteNode"
     />
 
-    <!-- Edge Context Menu -->
-    <EdgeContextMenu
-      :is-visible="showEdgeContextMenu"
-      :x="edgeContextMenuX"
-      :y="edgeContextMenuY"
-      @close="closeEdgeContextMenu"
-      @disconnect="disconnectEdge"
-    />
-
-    <!-- Node Context Menu (for sections) -->
-    <EdgeContextMenu
-      :is-visible="showNodeContextMenu"
-      :x="nodeContextMenuX"
-      :y="nodeContextMenuY"
-      menu-text="Delete Section"
-      @close="closeNodeContextMenu"
-      @disconnect="deleteNode"
-    />
 
     <!-- Resize Preview Overlay - FIXED positioning -->
     <div
@@ -506,16 +462,11 @@ import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
 import GroupNodeSimple from '@/components/canvas/GroupNodeSimple.vue'
-import GroupSettingsMenu from '@/components/canvas/GroupSettingsMenu.vue'
 import UnifiedInboxPanel from '@/components/base/UnifiedInboxPanel.vue'
-import TaskEditModal from '@/components/TaskEditModal.vue'
-import QuickTaskCreateModal from '@/components/QuickTaskCreateModal.vue'
-import BatchEditModal from '@/components/BatchEditModal.vue'
-import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
-import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
-import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
-import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
-import ConfirmationModal from '@/components/ConfirmationModal.vue'
+
+// Phase 4 Decomposed Components
+import CanvasModals from '@/components/canvas/CanvasModals.vue'
+import CanvasContextMenus from '@/components/canvas/CanvasContextMenus.vue'
 
 // Import Vue Flow styles
 import '@vue-flow/core/dist/style.css'

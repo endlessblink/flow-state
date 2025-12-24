@@ -78,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits } from 'vue'
+// defineEmits is a compiler macro - no import needed
 
 const emit = defineEmits<{
   close: []

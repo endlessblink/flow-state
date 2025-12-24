@@ -2,10 +2,10 @@
   <div class="signup-form">
     <div class="form-header">
       <h2 class="form-title">
-        {{ $t('auth.signup.title', 'Create Account') }}
+        {{ t('auth.signup.title') }}
       </h2>
       <p class="form-subtitle">
-        {{ $t('auth.signup.subtitle', 'Start boosting your productivity') }}
+        {{ t('auth.signup.subtitle') }}
       </p>
     </div>
 
@@ -20,8 +20,8 @@
       <BaseInput
         v-model="displayName"
         type="text"
-        :label="$t('auth.displayName', 'Display Name')"
-        :placeholder="$t('auth.displayNamePlaceholder', 'Your name (optional)')"
+        :label="t('auth.displayName')"
+        :placeholder="t('auth.displayNamePlaceholder')"
         :disabled="isLoading"
         data-testid="displayname-input"
         autocomplete="name"
@@ -31,8 +31,8 @@
       <BaseInput
         v-model="email"
         type="email"
-        :label="$t('auth.email', 'Email')"
-        :placeholder="$t('auth.emailPlaceholder', 'your@email.com')"
+        :label="t('auth.email')"
+        :placeholder="t('auth.emailPlaceholder')"
         required
         :disabled="isLoading"
         data-testid="email-input"
@@ -44,8 +44,8 @@
         <BaseInput
           v-model="password"
           :type="showPassword ? 'text' : 'password'"
-          :label="$t('auth.password', 'Password')"
-          :placeholder="$t('auth.passwordPlaceholder', 'At least 8 characters')"
+          :label="t('auth.password')"
+          :placeholder="t('auth.passwordPlaceholder')"
           required
           :disabled="isLoading"
           data-testid="password-input"
@@ -84,8 +84,8 @@
       <BaseInput
         v-model="confirmPassword"
         :type="showConfirmPassword ? 'text' : 'password'"
-        :label="$t('auth.confirmPassword', 'Confirm Password')"
-        :placeholder="$t('auth.confirmPasswordPlaceholder', 'Re-enter your password')"
+        :label="t('auth.confirmPassword')"
+        :placeholder="t('auth.confirmPasswordPlaceholder')"
         required
         :disabled="isLoading"
         data-testid="confirm-password-input"
@@ -108,7 +108,7 @@
       <!-- Password Match Indicator -->
       <div v-if="confirmPassword && password !== confirmPassword" class="validation-error">
         <AlertCircle class="error-icon-small" />
-        <span>{{ $t('auth.passwordMismatch', 'Passwords do not match') }}</span>
+        <span>{{ t('auth.passwordMismatch') }}</span>
       </div>
 
       <!-- Submit Button -->
@@ -121,12 +121,12 @@
         class="submit-button"
         data-testid="signup-button"
       >
-        {{ isLoading ? $t('auth.creatingAccount', 'Creating account...') : $t('auth.createAccount', 'Create Account') }}
+        {{ isLoading ? t('auth.creatingAccount') : t('auth.createAccount') }}
       </BaseButton>
 
       <!-- Divider -->
       <div class="divider">
-        <span>{{ $t('auth.or', 'or') }}</span>
+        <span>{{ t('auth.or') }}</span>
       </div>
 
       <!-- Google Sign-In (will be separate component) -->
@@ -135,7 +135,7 @@
       <!-- Sign In Link -->
       <div class="form-footer">
         <span class="footer-text">
-          {{ $t('auth.haveAccount', 'Already have an account?') }}
+          {{ t('auth.haveAccount') }}
         </span>
         <button
           type="button"
@@ -143,7 +143,7 @@
           :disabled="isLoading"
           @click="$emit('switchToLogin')"
         >
-          {{ $t('auth.signIn', 'Sign In') }}
+          {{ t('auth.signIn') }}
         </button>
       </div>
     </form>
@@ -163,6 +163,10 @@ interface Emits {
 }
 
 const emit = defineEmits<Emits>()
+
+// ===== i18n =====
+import { useSafeI18n } from '@/composables/useSafeI18n'
+const { t } = useSafeI18n()
 
 // ===== State =====
 const authStore = useAuthStore()
@@ -277,6 +281,7 @@ async function handleSubmit() {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin: 0;
+  line-height: var(--leading-normal);
 }
 
 .auth-form {

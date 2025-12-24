@@ -2,10 +2,10 @@
   <div class="reset-password-view">
     <div class="form-header">
       <h2 class="form-title">
-        {{ $t('auth.resetPassword.title', 'Reset Password') }}
+        {{ t('auth.resetPassword.title') }}
       </h2>
       <p class="form-subtitle">
-        {{ $t('auth.resetPassword.subtitle', "We'll send you an email with instructions to reset your password") }}
+        {{ t('auth.resetPassword.subtitle') }}
       </p>
     </div>
 
@@ -20,8 +20,8 @@
       <BaseInput
         v-model="email"
         type="email"
-        :label="$t('auth.email', 'Email')"
-        :placeholder="$t('auth.emailPlaceholder', 'your@email.com')"
+        :label="t('auth.email')"
+        :placeholder="t('auth.emailPlaceholder')"
         required
         :disabled="isLoading"
         data-testid="reset-email-input"
@@ -39,7 +39,7 @@
         class="submit-button"
         data-testid="send-reset-button"
       >
-        {{ isLoading ? $t('auth.sending', 'Sending...') : $t('auth.sendResetLink', 'Send Reset Link') }}
+        {{ isLoading ? t('auth.sending') : t('auth.sendResetLink') }}
       </BaseButton>
 
       <!-- Back to Login Link -->
@@ -50,7 +50,7 @@
           :disabled="isLoading"
           @click="$emit('switchToLogin')"
         >
-          ← {{ $t('auth.backToLogin', 'Back to login') }}
+          ← {{ t('auth.backToLogin') }}
         </button>
       </div>
     </form>
@@ -61,15 +61,15 @@
         <CheckCircleIcon class="success-icon" />
       </div>
       <h3 class="success-title">
-        {{ $t('auth.resetPassword.emailSent', 'Email Sent!') }}
+        {{ t('auth.resetPassword.emailSent') }}
       </h3>
       <p class="success-text">
-        {{ $t('auth.resetPassword.checkEmail', 'Check your email for a link to reset your password.') }}
+        {{ t('auth.resetPassword.checkEmail') }}
       </p>
       <p class="success-subtext">
-        {{ $t('auth.resetPassword.didntReceive', "Didn't receive the email?") }}
+        {{ t('auth.resetPassword.didntReceive') }}
         <button class="resend-link" :disabled="isLoading" @click="handleSubmit">
-          {{ $t('auth.resetPassword.resend', 'Resend') }}
+          {{ t('auth.resetPassword.resend') }}
         </button>
       </p>
       <BaseButton
@@ -78,7 +78,7 @@
         class="back-button"
         @click="$emit('switchToLogin')"
       >
-        {{ $t('auth.backToLogin', 'Back to login') }}
+        {{ t('auth.backToLogin') }}
       </BaseButton>
     </div>
   </div>
@@ -104,7 +104,12 @@ interface Emits {
   switchToLogin: []
 }
 
+// ===== i18n =====
+import { useSafeI18n } from '@/composables/useSafeI18n'
+const { t } = useSafeI18n()
+
 // ===== State =====
+
 const authStore = useAuthStore()
 const email = ref('')
 const isLoading = ref(false)
@@ -159,21 +164,21 @@ async function handleSubmit() {
 
 .form-header {
   text-align: center;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
 .form-title {
-  font-size: var(--text-2xl);
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  margin: 0 0 var(--space-2) 0;
+  margin-bottom: var(--space-1);
 }
 
 .form-subtitle {
-  font-size: var(--text-sm);
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--leading-normal);
 }
 
 .auth-form {
@@ -187,12 +192,12 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
-  border-radius: var(--radius-lg);
-  color: var(--color-danger);
-  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--priority-high-text);
+  font-size: var(--font-size-sm);
   animation: slideIn 0.2s var(--spring-smooth);
 }
 
@@ -224,24 +229,24 @@ async function handleSubmit() {
   display: flex;
   justify-content: center;
   padding-top: var(--space-4);
-  border-top: 1px solid var(--border-default);
+  border-top: 1px solid var(--glass-border);
 }
 
 .back-link {
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  transition: all var(--duration-fast) var(--spring-smooth);
+  transition: all 0.2s;
 }
 
 .back-link:hover:not(:disabled) {
   color: var(--text-primary);
-  background: var(--surface-hover);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .back-link:disabled {
@@ -265,8 +270,8 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--color-success) 15%, transparent);
-  border-radius: 50%;
+  background: var(--success-bg-subtle);
+  border-radius: var(--radius-full);
   margin-bottom: var(--space-2);
   animation: scaleIn 0.3s var(--spring-bounce);
 }
@@ -274,7 +279,7 @@ async function handleSubmit() {
 .success-icon {
   width: 32px;
   height: 32px;
-  color: var(--color-success);
+  color: var(--status-done-text);
 }
 
 @keyframes scaleIn {
@@ -296,15 +301,15 @@ async function handleSubmit() {
 }
 
 .success-text {
-  font-size: var(--text-sm);
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin: 0;
   max-width: 320px;
-  line-height: 1.6;
+  line-height: var(--leading-normal);
 }
 
 .success-subtext {
-  font-size: var(--text-xs);
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
   margin: var(--space-2) 0 0 0;
 }
@@ -312,7 +317,7 @@ async function handleSubmit() {
 .resend-link {
   background: none;
   border: none;
-  color: var(--color-primary);
+  color: var(--brand-primary);
   font-weight: var(--font-medium);
   cursor: pointer;
   text-decoration: underline;
@@ -320,7 +325,7 @@ async function handleSubmit() {
 }
 
 .resend-link:hover:not(:disabled) {
-  color: var(--color-primary-hover);
+  color: var(--brand-hover);
 }
 
 .resend-link:disabled {

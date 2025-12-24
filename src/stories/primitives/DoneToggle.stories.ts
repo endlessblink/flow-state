@@ -1,4 +1,4 @@
-import DoneToggle from '@/components/base/DoneToggle.vue'
+import DoneToggle from '@/components/DoneToggle.vue'
 
 const meta = {
   title: '🧩 Primitives/DoneToggle',

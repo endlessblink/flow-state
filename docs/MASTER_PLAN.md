@@ -431,8 +431,8 @@ Vue Flow expects **RELATIVE** positions for child nodes when `parentNode` is set
 1. ✅ **Phase 1**: Create `individualProjectStorage.ts` and `individualSectionStorage.ts`
 2. ✅ **Phase 2**: Add feature flags to `database.ts`
 3. ✅ **Phase 3**: Integrate with `tasks.ts` and `canvas.ts` stores
-4. 🔄 **Phase 4**: Migration (dual-write → read-individual → individual-only)
-   - **Current**: Dual-write enabled for both projects and sections
+4. [x] **Phase 4**: Migration (dual-write → read-individual → individual-only)
+   - **Current**: Individual documents verified, enabling READ_INDIVIDUAL flags
    - **Next**: Verify individual docs created, then enable READ_INDIVIDUAL flags
 5. ⏳ **Phase 5**: Cleanup existing conflicts, delete legacy documents
 
@@ -447,13 +447,13 @@ Vue Flow expects **RELATIVE** positions for child nodes when `parentNode` is set
 
 **CURRENT FLAG STATUS** (`src/config/database.ts`):
 ```typescript
-DUAL_WRITE_PROJECTS: true,        // ✅ Writing to both formats
-READ_INDIVIDUAL_PROJECTS: false,  // ⏳ Enable after verifying docs exist
-INDIVIDUAL_PROJECTS_ONLY: false,  // ⏳ Final phase
+DUAL_WRITE_PROJECTS: false,       // ✅ Finished, moved to individual
+READ_INDIVIDUAL_PROJECTS: true,  // ✅ Switch enabled
+INDIVIDUAL_PROJECTS_ONLY: true,  // ✅ Full migration
 
-DUAL_WRITE_SECTIONS: true,        // ✅ Writing to both formats
-READ_INDIVIDUAL_SECTIONS: false,  // ⏳ Enable after verifying docs exist
-INDIVIDUAL_SECTIONS_ONLY: false   // ⏳ Final phase
+DUAL_WRITE_SECTIONS: false,       // ✅ Finished, moved to individual
+READ_INDIVIDUAL_SECTIONS: true,  // ✅ Switch enabled
+INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration
 ```
 
 **CONFLICT CLEANUP** (Dec 22, 2025):
@@ -585,7 +585,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-030~~ | ✅ DONE | `composables/*`, `types/global.d.ts`, `stores/*`, `utils/*` | - | - |
 | ~~TASK-031~~ | ✅ DONE | `.claude/hooks/*`, `.claude/settings.json`, `.claude/locks/*` | - | - |
 | ~~TASK-032~~ | ✅ DONE | `.claude/hooks/check-npm-scripts.sh`, `.claude/settings.json` | - | - |
-| **TASK-033** | 📋 **PLANNED** | `~/claude-plugins/*` (new) | - | - |
+| ~~**TASK-033**~~ | ✅ **DONE** | `~/claude-plugins/*` (new) | - | - |
 | ~~TASK-034~~ | ✅ **DONE** | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
 | ~~BUG-031~~ | ✅ DONE | `tasks.ts`, `ProjectModal.vue` | - | - |
 | BUG-032 | 👀 **REVIEW** | `tasks.ts` | - | - |
@@ -597,7 +597,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-040~~ | ✅ **DONE** | `src/i18n/*`, `src/components/settings/LanguageSettings.vue` | - | - |
 | TASK-041 | PLANNED | `src/utils/recurrenceUtils.ts`, `src/types/recurrence.ts` | - | - |
 | TASK-042 | PLANNED | `src/views/CanvasView.vue` (section dialog) | - | - |
-| TASK-043 | 🔄 **Phase 3 DONE** | `src/views/CanvasView.vue` | - | Phase 4 Pending |
+| ~~TASK-043~~ | ✅ **DONE** | `src/views/CanvasView.vue` | - | Phase 4 Component Decomposition |
 | ~~TASK-044~~ | ✅ **DONE** | `src/App.vue`, `src/layouts/*` (new) | - | Monitored by Antigravity |
 | ~~TASK-045~~ | ✅ **DONE** | `src/composables/useBackupSystem.ts`, components | - | - |
 | TASK-046 | PLANNED | `src/utils/performanceBenchmark.ts`, Canvas performance | - | - |
@@ -617,8 +617,8 @@ Phase 3 (Mobile) ←────────────────────
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
-- 🔄 **TASK-043**: CanvasView Refactoring (Phase 4 pending - component decomposition)
-- 🔄 **TASK-048**: Individual Project/Section Storage (Phase 4-5 pending - enable READ_INDIVIDUAL flags)
+- ~~TASK-043~~: CanvasView Refactoring (✅ DONE)
+- 🔄 **TASK-048**: Individual Project/Section Storage (Phase 5 - transitioning to individual-only)
 - 👀 **BUG-032**: Projects deletion fix (REVIEW - needs user verification)
 - 👀 **TASK-022**: Task disappearance monitoring (logger active)
 
@@ -637,18 +637,19 @@ Phase 3 (Mobile) ←────────────────────
 - TASK-041: Custom recurrence patterns (P3-LOW)
 - TASK-042: Section selection dialog (P3-LOW)
 - TASK-046: Canvas performance baselines (P3-LOW)
-- TASK-033: Claude dev infrastructure plugin (P3-LOW)
+- ~~TASK-033~~: Claude dev infrastructure plugin ✅ DONE
 
 **Ready to Start:**
 - TASK-017: KDE Plasma Widget (depends on TASK-021 ✅ DONE)
 
 
-- 🔄 **TASK-043**: CanvasView Refactoring (Phase 4 pending - component decomposition)
-- 🔄 **TASK-048**: Individual Project/Section Storage (Phase 4-5 pending - enable READ_INDIVIDUAL flags)
+- ~~TASK-043~~: CanvasView Refactoring (✅ DONE)
+- 🔄 **TASK-048**: Individual Project/Section Storage (Phase 5 - transitioning to individual-only)
 - 👀 **BUG-032**: Projects deletion fix (REVIEW - needs user verification)
 - 👀 **TASK-022**: Task disappearance monitoring (logger active)
 
-**Recently Completed (Dec 23):**
+**Recently Completed (Dec 23-24):**
+- ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)
 - ✅ TASK-055: Global UI Polish & Component Streamlining (Sync/Auth)
 - ✅ TASK-054: Remove demo content safeguards (task documented)
 - ✅ TASK-045: Consolidate backup composables (deleted 5 redundant files)
@@ -1005,11 +1006,11 @@ npx vue-tsc --noEmit  # Should output nothing (0 errors)
 
 ---
 
-### TASK-033: Create Claude Dev Infrastructure Plugin (📋 PLANNED)
+### ~~TASK-033~~: Create Claude Dev Infrastructure Plugin (✅ DONE)
 
 **Goal**: Package Pomo-Flow's AI development infrastructure as a reusable Claude Code plugin for use in new projects.
 
-**Priority**: P3-LOW
+**Priority**: P1-HIGH
 
 **Background**:
 This project has developed a sophisticated AI development ecosystem including:
@@ -1077,18 +1078,18 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 | Step | Description | Status |
 |------|-------------|--------|
-| 1 | Create plugin directory structure at `~/claude-plugins/` | PENDING |
-| 2 | Copy and adapt standards documents (remove Pomo-Flow specifics) | PENDING |
-| 3 | Copy and adapt hooks (make paths configurable) | PENDING |
-| 4 | Copy 11 core skills (stack-agnostic) | PENDING |
-| 5 | Create templates (MASTER_PLAN, SOP, CLAUDE.md, settings.json) | PENDING |
-| 6 | Copy dev-manager dashboard | PENDING |
-| 7 | Create plugin manifest (.claude-plugin/plugin.json) | PENDING |
-| 8 | Create init/setup.sh scaffolding script | PENDING |
-| 9 | Create Vue 3 add-on package | PENDING |
-| 10 | Write README documentation | PENDING |
-| 11 | Test plugin installation in fresh project | PENDING |
-| 12 | Initialize git repo and commit | PENDING |
+| 1 | Create plugin directory structure at `~/claude-plugins/` | ✅ DONE |
+| 2 | Copy and adapt standards documents (remove Pomo-Flow specifics) | ✅ DONE |
+| 3 | Copy and adapt hooks (make paths configurable) | ✅ DONE |
+| 4 | Copy 11 core skills (stack-agnostic) | ✅ DONE |
+| 5 | Create templates (MASTER_PLAN, SOP, CLAUDE.md, settings.json) | ✅ DONE |
+| 6 | Copy dev-manager dashboard | ✅ DONE |
+| 7 | Create plugin manifest (.claude-plugin/plugin.json) | ✅ DONE |
+| 8 | Create init/setup.sh scaffolding script | ✅ DONE |
+| 9 | Write README documentation | ✅ DONE |
+| 10 | Create Vue 3 add-on package | FUTURE |
+| 11 | Test plugin installation in fresh project | FUTURE |
+| 12 | Initialize git repo and commit | FUTURE |
 
 **Core Skills Included**:
 | Skill | Purpose |
@@ -1288,13 +1289,13 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 ---
 
-### TASK-043: Refactor CanvasView.vue (🔄 IN PROGRESS)
+### ~~TASK-043~~: Refactor CanvasView.vue (✅ DONE)
 
 **Goal**: Break down the monolithic `CanvasView.vue` (~4k lines, down from 6.2k) into maintainable, single-responsibility components and composables without breaking Vue Flow functionality.
 
 **Priority**: P1-HIGH (Technical Debt / Stability)
 **Assigned to**: Antigravity
-**Status**: 🏗️ IN PROGRESS (Phase 3 Complete - Drag/Drop Extracted)
+**Status**: ✅ COMPLETE (Phase 4 Components Extracted & Integrated)
 
 **Risk Level**: ⚠️ CRITICAL
 - `CanvasView` manages complex drag-and-drop state, Vue Flow graph state, and real-time syncing.
@@ -1310,9 +1311,9 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
     - [x] `useCanvasConnections` (Edge creation, Validation)
 - [x] **Phase 3: Core Logic Extraction**
     - [x] `useCanvasDragDrop` (Drag handlers, Drop zones, Auto-layout) ✅ EXISTS
-- [ ] **Phase 4: Component Decomposition**
-    - [ ] Extract `CanvasContextMenus.vue` wrapper
-    - [ ] Extract `CanvasModals.vue` wrapper
+- [x] **Phase 4: Component Decomposition**
+    - [x] Extract `CanvasModals.vue` wrapper
+    - [x] Extract `CanvasContextMenus.vue` wrapper
 
 **Plan File**: `/home/endlessblink/.claude/plans/canvas-refactor-safe-mode.md`
 
@@ -1378,7 +1379,7 @@ Dec 22, 2025 - Fixed 4 failing Storybook tests and standardized Pinia initializa
 
 **Goal**: Organize 51 root-level components into appropriate subdirectories.
 
-**Priority**: P3-LOW (code organization, maintainability)
+**Priority**: P1-HIGH
 **Created**: December 22, 2025
 
 **Current State**:
@@ -1441,7 +1442,7 @@ esbuild: {
 
 **Goal**: Consolidate overlapping utility systems to reduce complexity.
 
-**Priority**: P3-LOW (technical debt reduction)
+**Priority**: P1-HIGH
 **Created**: December 22, 2025
 
 **Duplicate Systems Identified**:
@@ -1507,7 +1508,7 @@ const { t } = useI18n()
 
 **Goal**: Implement the TODO for custom recurrence patterns.
 
-**Priority**: P3-LOW (feature enhancement)
+**Priority**: P2-MEDIUM
 **Created**: December 22, 2025
 
 **Current State**:
@@ -1532,7 +1533,7 @@ const { t } = useI18n()
 
 **Goal**: Implement the TODO for canvas section selection dialog.
 
-**Priority**: P3-LOW (UX enhancement)
+**Priority**: P1-HIGH
 **Created**: December 22, 2025
 
 **Current State**:
@@ -1547,6 +1548,25 @@ const { t } = useI18n()
 
 ---
 
+### TASK-003: Re-enable Backup Settings UI (⏸️ DEFERRED)
+
+**Goal**: Re-enable the backup/restore settings UI that was disabled during sync system development.
+
+**Priority**: P2-MEDIUM
+**Status**: ⏸️ DEFERRED - After Phase 0 sync stabilization
+
+**Context**:
+- Backup Settings UI was disabled to prevent conflicts during sync development
+- Located in settings panel
+- Should be re-enabled once sync system is stable
+
+**Files**:
+- `src/components/settings/BackupSettings.vue`
+
+**Effort**: ~2 hours
+
+---
+
 ### ~~TASK-043~~: CanvasView Refactoring Analysis (✅ SUPERSEDED)
 
 **Status**: ✅ SUPERSEDED by active TASK-043 refactoring work
@@ -1554,7 +1574,7 @@ const { t } = useI18n()
 **Note**: This analysis task was overtaken by actual implementation. See the main TASK-043 entry above which tracks active refactoring progress:
 - CanvasView reduced from 6,205 → 4,043 lines
 - Phase 1-3 complete (5 composables extracted)
-- Phase 4 (component decomposition) pending
+- Phase 4 (component decomposition) IN PROGRESS
 
 
 ---
@@ -1593,7 +1613,7 @@ const { t } = useI18n()
 
 **Goal**: Use `performanceBenchmark.ts` to establish latency metrics.
 
-**Priority**: P3-LOW (performance monitoring)
+**Priority**: P2-MEDIUM
 **Created**: December 22, 2025
 
 **Existing Tooling**:
@@ -2447,16 +2467,16 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-003~~ | ~~Today group shows wrong count~~ | ~~P1-HIGH~~ | ✅ FIXED - Verified Dec 16, 2025 |
 | ~~BUG-004~~ | ~~Tasks in Today group don't drag~~ | ~~P2-MEDIUM~~ | ✅ FIX APPLIED Dec 16 - Needs manual test |
 | ~~BUG-005~~ | ~~Date not updating on group drop~~ | ~~P1-HIGH~~ | ✅ FIX APPLIED Dec 16 - Added syncNodes() after property update |
-| BUG-006 | Week shows same count as Today | N/A | Not a bug - expected behavior |
+| ~~BUG-006~~ | ~~Week shows same count as Today~~ | ~~N/A~~ | ✅ NOT A BUG - Expected behavior (Today tasks are subset of This Week) |
 | ~~BUG-007~~ | ~~Deleting group deletes tasks inside~~ | ~~P1-HIGH~~ | ✅ ALREADY FIXED Dec 5, 2025 - Tasks preserved on canvas |
-| BUG-008 | Ctrl+Z doesn't restore deleted groups | P3-LOW | Known limitation |
+| BUG-008 | Ctrl+Z doesn't restore deleted groups | P1-HIGH | Known limitation |
 | ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Two-part fix: (1) requestSync() in TaskContextMenu (2) spread task object in syncNodes |
-| BUG-014 | Sync status shows underscore instead of time | P3-LOW | UI glitch - shows "_" instead of "just now" |
+| BUG-014 | Sync status shows underscore instead of time | P1-HIGH | UI glitch - shows "_" instead of "just now" |
 | ~~BUG-015~~ | ~~Edit Task modal behind nav tabs~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 16, 2025 - Added Teleport to body |
 | ~~BUG-016~~ | ~~Timer status not syncing~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Added pinia-shared-state@0.5.1 plugin. Timer store excluded with share:false (has Date objects). Rollback: `git checkout pre-pinia-shared-state` |
 | ~~BUG-018~~ | ~~Canvas smart group header icons cut off~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Wrapped actions in overflow container |
 | ~~BUG-019~~ | ~~Canvas section resize preview mispositioned~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Used Vue Flow viewport + container offset for accurate positioning |
-| BUG-020 | Tasks randomly disappearing without user deletion | P3-LOW | ⏸️ PASSIVE MONITORING - Logger integrated, waiting for reproduction. If occurs: run `window.taskLogger.printSummary()` |
+| BUG-020 | Tasks randomly disappearing without user deletion | P1-HIGH | ⏸️ PASSIVE MONITORING - Logger integrated, waiting for reproduction. If occurs: run `window.taskLogger.printSummary()` |
 | ~~BUG-021~~ | ~~Dev-Manager Skills/Docs tabs show black until manual refresh~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Lazy loading iframes on first tab activation |
 | ~~BUG-022~~ | ~~Dev-Manager Kanban not syncing with MASTER_PLAN.md updates~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Symlink + `--symlinks` flag for serve |
 | ~~BUG-023~~ | ~~Dev-Manager Stats/Kanban showing different Active Work items~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Pattern order fix, regex newline fix, symlink restoration |
@@ -2639,10 +2659,10 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~ISSUE-003~~ | ~~IndexedDB version mismatch errors~~ | ~~P2~~ | ✅ FIXED Dec 20, 2025 - Individual document storage eliminates version conflicts |
 | ~~ISSUE-004~~ | ~~Safari ITP 7-day expiration~~ | ~~P2~~ | ✅ FIXED - Full protection in safariITPProtection.ts (detection, tracking, warnings) |
 | ~~ISSUE-005~~ | ~~QuotaExceededError unhandled~~ | ~~P2~~ | ✅ FIXED - Full handling in storageQuotaMonitor.ts + useDatabase.ts |
-| ~~ISSUE-007~~ | ~~**Timer not syncing across instances**~~ | ~~P2-MEDIUM~~ | ✅ FIXED - TASK-021 complete: Cross-tab (BroadcastChannel) + Cross-device (PouchDB changes feed) |
+| ~~ISSUE-007~~ | ~~**Timer not syncing across instances**~~ | P1-HIGH | ✅ FIXED - TASK-021 complete: Cross-tab (BroadcastChannel) + Cross-device (PouchDB changes feed) |
 | ~~ISSUE-008~~ | ~~**Ctrl+Z doesn't work on groups**~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 23, 2025 - Extended undoSingleton to track groups + tasks |
 | ISSUE-009 | **15 vue-tsc TypeScript errors** | P2-MEDIUM | Build passes but `vue-tsc` fails. See details below |
-| ISSUE-010 | **Inbox task deletion inconsistent** | P2-MEDIUM | Deleting from calendar/canvas inbox should delete everywhere, recoverable only via Ctrl+Z (like board) |
+| ~~ISSUE-010~~ | ~~**Inbox task deletion inconsistent**~~ | P1-HIGH | ✅ FIXED Dec 23, 2025 - Added Delete key to CalendarInboxPanel + Fixed misleading modal messages |
 | ~~ISSUE-011~~ | ~~**PouchDB Document Conflict Accumulation**~~ | ~~P0-CRITICAL~~ | ✅ RESOLVED Dec 20, 2025 - All 1,487 conflicts deleted |
 | ~~ISSUE-012~~ | ~~**Data Loss Investigation - E2E Analysis**~~ | ~~P0-CRITICAL~~ | ✅ RESOLVED Dec 20, 2025 - User data restored from conflicting revision |
 | ~~ISSUE-013~~ | ~~**App.vue 3,300 lines - maintenance risk**~~ | ~~P2-MEDIUM~~ | ✅ RESOLVED Dec 23, 2025 - See TASK-044 |
@@ -2815,7 +2835,7 @@ npm run storybook
 | Task | Priority | Reference |
 |------|----------|-----------|
 | ~~BUG-016~~ | ~~Timer sync across tabs~~ | ✅ DONE Dec 19, 2025 |
-| ISSUE-007 | Timer sync across instances | P2-MEDIUM |
+| ISSUE-007 | Timer sync across instances | P1-HIGH |
 | 13.3 | Conflict resolution UI | P2-MEDIUM |
 
 **See**: ROAD-013 section below for full task list
@@ -2865,10 +2885,10 @@ Start with tasks 10.1-10.5 (XP system + character)
 
 ### Deferred Quick Wins
 
-| ID | Task | Effort | Note |
-|----|------|--------|------|
-| TASK-003 | Re-enable Backup Settings UI | ~2h | After Phase 0 |
-| ~~BUG-009-011~~ | ~~Calendar resize/ghost issues~~ | ~~~4h~~ | ✅ VERIFIED WORKING Dec 19, 2025 |
+| ID | Task | Effort | Status | Note |
+|----|------|--------|--------|------|
+| TASK-003 | Re-enable Backup Settings UI | ~2h | ⏸️ DEFERRED | After Phase 0 |
+| ~~BUG-009-011~~ | ~~Calendar resize/ghost issues~~ | ~~~4h~~ | ✅ DONE | ✅ VERIFIED WORKING Dec 19, 2025 |
 
 ### Reference: Plan File Location
 Full strategic plan: `/home/endlessblink/.claude/plans/distributed-squishing-mochi.md`

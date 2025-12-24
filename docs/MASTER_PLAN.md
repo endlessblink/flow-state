@@ -1548,7 +1548,7 @@ const { t } = useI18n()
 
 ---
 
-### TASK-003: Re-enable Backup Settings UI (⏸️ DEFERRED)
+### TASK-003: Re-enable Backup Settings UI (✅ DONE)
 
 **Goal**: Re-enable the backup/restore settings UI that was disabled during sync system development.
 
@@ -2887,7 +2887,7 @@ Start with tasks 10.1-10.5 (XP system + character)
 
 | ID | Task | Effort | Status | Note |
 |----|------|--------|--------|------|
-| TASK-003 | Re-enable Backup Settings UI | ~2h | ⏸️ DEFERRED | After Phase 0 |
+| TASK-003 | Re-enable Backup Settings UI | ~2h | ✅ DONE | Re-enabled Dec 24, 2025 |
 | ~~BUG-009-011~~ | ~~Calendar resize/ghost issues~~ | ~~~4h~~ | ✅ DONE | ✅ VERIFIED WORKING Dec 19, 2025 |
 
 ### Reference: Plan File Location

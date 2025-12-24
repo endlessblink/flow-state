@@ -1,35 +1,53 @@
-/* Pure black background for all Storybook elements */
+/* Glass morphism background for all Storybook elements - more visible gradient */
 html, body, :root {
-  background-color: #000000 !important;
+  background: linear-gradient(135deg, hsl(220, 15%, 12%) 0%, hsl(250, 30%, 20%) 25%, hsl(260, 35%, 18%) 50%, hsl(270, 30%, 20%) 75%, hsl(220, 15%, 14%) 100%) !important;
   color-scheme: dark;
 }
 
-/* Docs page containers */
+/* Docs page containers - transparent to show gradient */
 .sb-show-main,
 .sb-main-padded,
 .sbdocs,
 .sbdocs-wrapper,
 .sbdocs-content,
 #storybook-docs {
-  background-color: #000000 !important;
+  background: transparent !important;
 }
 
-/* Story preview areas */
+/* Story preview areas - stronger glass effect */
 .docs-story,
-.docs-story > div,
 .sbdocs-preview,
-.sb-story,
+.sb-story {
+  background: rgba(30, 30, 50, 0.5) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  overflow: visible !important;
+  min-height: 200px !important;
+}
+
+/* Inner wrappers need overflow visible for dropdowns */
+.docs-story > div,
 .innerZoomElementWrapper,
 .innerZoomElementWrapper > div {
-  background-color: #000000 !important;
+  background: transparent !important;
+  overflow: visible !important;
 }
 
-/* Canvas/iframe wrappers */
+/* Canvas/iframe wrappers - transparent with overflow visible for dropdowns */
 [data-testid="docs-preview-iframe"],
 .sb-iframe-wrapper,
 .sb-wrapper,
 .canvas {
-  background-color: #000000 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+/* Ensure iframe allows dropdown overflow */
+iframe[data-is-storybook] {
+  overflow: visible !important;
 }
 
 /* Toolbar */

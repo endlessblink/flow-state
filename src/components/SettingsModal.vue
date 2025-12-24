@@ -184,9 +184,9 @@
           <CloudSyncSettings />
         </section>
 
-        <!-- Data Protection & Emergency Recovery -->
+        <!-- Data Protection & Backup -->
         <section class="settings-section">
-          <EmergencyRecovery />
+          <BackupSettings />
         </section>
       </div>
     </div>
@@ -202,7 +202,7 @@ import { useI18n as _useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
 import CloudSyncSettings from './CloudSyncSettings.vue'
 import LanguageSettings from './settings/LanguageSettings.vue'
-import EmergencyRecovery from './EmergencyRecovery.vue'
+import BackupSettings from './BackupSettings.vue'
 
 interface Props {
   isOpen: boolean

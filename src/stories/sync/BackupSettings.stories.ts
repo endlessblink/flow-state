@@ -1,4 +1,4 @@
-import BackupSettings from '@/components/SimpleBackupSettings.vue'
+import BackupSettings from '@/components/BackupSettings.vue'
 
 const meta = {
   title: '🔄 Sync & Reliability/BackupSettings',

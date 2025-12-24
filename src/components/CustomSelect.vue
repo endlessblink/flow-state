@@ -219,13 +219,13 @@ watch(isOpen, (newVal) => {
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
 
-  /* Glass morphism base - matches BaseDropdown */
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px) saturate(100%);
-  -webkit-backdrop-filter: blur(12px) saturate(100%);
+  /* Glass morphism base - more transparent for glass effect */
+  background: rgba(30, 30, 50, 0.35);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
 
-  /* Stroke border */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  /* Stroke border - more visible */
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-lg);
 
   color: var(--text-primary);

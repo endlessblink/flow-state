@@ -3,24 +3,28 @@ import { Edit, Copy, Trash2, Archive, CheckCircle, Flag, Clock } from 'lucide-vu
 import ContextMenu from '@/components/ContextMenu.vue'
 import type { ContextMenuItem } from '@/components/ContextMenu.vue'
 
+// Glass morphism container style
+const glassContainer = `
+  padding: 40px;
+  background: rgba(20, 20, 35, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+`
+
 const meta = {
   title: '🧩 Primitives/ContextMenu',
   component: ContextMenu,
   tags: ['autodocs'],
   parameters: {
-    layout: 'fullscreen',
-    docs: {
-      story: {
-        inline: false,
-        iframeHeight: 400,
-      }
-    },
+    layout: 'centered',
   },
   argTypes: {
-    isVisible: { control: 'boolean' },
-    x: { control: 'number' },
-    y: { control: 'number' },
-    items: { control: 'object' },
+    isVisible: { control: 'boolean', description: 'Controls menu visibility' },
+    x: { control: 'number', description: 'X position of menu' },
+    y: { control: 'number', description: 'Y position of menu' },
+    items: { control: 'object', description: 'Menu items array' },
   },
 }
 
@@ -59,13 +63,13 @@ export const Default = {
         setTimeout(() => { isVisible.value = true }, 50)
       })
 
-      return { isVisible, items, handleClose, menuX, menuY, Edit, Copy, Trash2 }
+      return { isVisible, items, handleClose, menuX, menuY, Edit, Copy, Trash2, glassContainer }
     },
     template: `
-      <div style="min-height: 400px; background: var(--app-background-gradient); padding: 40px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div :style="glassContainer + 'min-height: 400px; min-width: 500px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;'">
         <div style="margin-bottom: 20px; text-align: center;">
-          <h3 style="color: #e5e5e5; margin: 0 0 8px 0;">Basic Context Menu</h3>
-          <p style="color: #a3a3a3; margin: 0;">The ContextMenu component centered in the viewport</p>
+          <h3 style="color: var(--text-primary); margin: 0 0 8px 0;">Basic Context Menu</h3>
+          <p style="color: var(--text-secondary); margin: 0;">The ContextMenu component centered in the viewport</p>
         </div>
         <ContextMenu
           :is-visible="isVisible"
@@ -108,22 +112,20 @@ export const InteractiveDemo = {
         menu.isVisible = true
       }
 
-      return { menu, showTaskMenu }
+      return { menu, showTaskMenu, glassContainer }
     },
     template: `
-      <div style="min-height: 100vh; background: var(--glass-bg-solid); padding: 40px;">
+      <div :style="glassContainer + 'min-height: 400px; min-width: 500px;'">
         <h3 style="color: var(--text-primary); margin: 0 0 8px 0;">Interactive Demo</h3>
         <p style="color: var(--text-secondary); margin: 0 0 20px 0;">Right-click on the task card below</p>
 
-        <div v-if="menu.lastAction" style="padding: 10px 14px; background: var(--brand-bg-subtle); border: 1px solid var(--brand-border-light); border-radius: 8px; margin-bottom: 20px; color: var(--text-primary); font-size: 14px;">
+        <div v-if="menu.lastAction" style="padding: 10px 14px; background: rgba(78, 205, 196, 0.1); border: 1px solid rgba(78, 205, 196, 0.3); border-radius: 8px; margin-bottom: 20px; color: var(--text-primary); font-size: 14px;">
           Last action: {{ menu.lastAction }}
         </div>
 
         <div
           @contextmenu.prevent="showTaskMenu"
-          style="padding: 16px; background: var(--glass-bg-subtle); border: 1px solid var(--glass-border-light); border-radius: 10px; cursor: context-menu; max-width: 400px; transition: border-color 0.2s;"
-          @mouseenter="$event.target.style.borderColor = 'var(--brand-border-medium)'"
-          @mouseleave="$event.target.style.borderColor = 'var(--glass-border-light)'"
+          style="padding: 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; cursor: context-menu; max-width: 400px; transition: border-color 0.2s;"
         >
           <div style="display: flex; align-items: center; gap: 10px;">
             <div style="width: 18px; height: 18px; border-radius: 4px; background: var(--brand-primary);"></div>

@@ -274,6 +274,7 @@ const draggingTaskId = ref<string | null>(null)
 
 // Multi-select state
 const selectedTaskIds = ref<Set<string>>(new Set())
+const lastSelectedTaskId = ref<string | null>(null) // Anchor for shift+click range selection
 const multiSelectMode = computed(() => selectedTaskIds.value.size > 0)
 
 // Additional filter state (TASK-018: Unscheduled, Priority, Project)
@@ -493,30 +494,67 @@ const processBrainDump = () => {
 const handleTaskClick = (event: MouseEvent, task: Task) => {
   if (draggingTaskId.value) return
 
-  const isMultiSelect = event.ctrlKey || event.metaKey
+  // Handle Shift+Click (Range Selection)
+  if (event.shiftKey) {
+    if (!lastSelectedTaskId.value) {
+      // No anchor set - treat as first selection
+      selectedTaskIds.value = new Set([task.id])
+      lastSelectedTaskId.value = task.id
+      return
+    }
 
-  if (isMultiSelect) {
-    // Toggle selection for this task
-    if (selectedTaskIds.value.has(task.id)) {
-      selectedTaskIds.value.delete(task.id)
-    } else {
-      selectedTaskIds.value.add(task.id)
+    // Has anchor - perform range selection
+    const tasks = inboxTasks.value
+    const lastIndex = tasks.findIndex(t => t.id === lastSelectedTaskId.value)
+    const currentIndex = tasks.findIndex(t => t.id === task.id)
+
+    if (lastIndex === -1) {
+      // Anchor task no longer in list - reset to clicked task
+      selectedTaskIds.value = new Set([task.id])
+      lastSelectedTaskId.value = task.id
+      return
     }
-    // Force reactivity update
-    selectedTaskIds.value = new Set(selectedTaskIds.value)
-  } else {
-    // Single click without modifier - clear selection
-    if (selectedTaskIds.value.size > 0) {
-      selectedTaskIds.value.clear()
-      selectedTaskIds.value = new Set()
+
+    if (currentIndex !== -1) {
+      const start = Math.min(lastIndex, currentIndex)
+      const end = Math.max(lastIndex, currentIndex)
+      const rangeTasks = tasks.slice(start, end + 1)
+
+      // Merge with existing selection
+      const newSet = new Set(selectedTaskIds.value)
+      rangeTasks.forEach(t => newSet.add(t.id))
+      selectedTaskIds.value = newSet
     }
+    return
   }
+
+  // Handle Ctrl/Cmd+Click (Toggle Selection)
+  if (event.ctrlKey || event.metaKey) {
+    const newSet = new Set(selectedTaskIds.value)
+    if (newSet.has(task.id)) {
+      newSet.delete(task.id)
+      // If we deselect the anchor, clear it
+      if (task.id === lastSelectedTaskId.value) {
+        lastSelectedTaskId.value = null
+      }
+    } else {
+      newSet.add(task.id)
+      lastSelectedTaskId.value = task.id // Update anchor
+    }
+    selectedTaskIds.value = newSet
+    return
+  }
+
+  // Single click without modifier - select only this task
+  selectedTaskIds.value = new Set([task.id])
+  lastSelectedTaskId.value = task.id
 }
 
 // Clear selection when clicking outside or pressing Escape
 const clearSelection = () => {
   selectedTaskIds.value.clear()
   selectedTaskIds.value = new Set()
+  lastSelectedTaskId.value = null
 }
 
 // Delete selected tasks

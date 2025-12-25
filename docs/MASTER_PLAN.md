@@ -2597,7 +2597,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-005~~ | ~~Date not updating on group drop~~ | ~~P1-HIGH~~ | ✅ FIX APPLIED Dec 16 - Added syncNodes() after property update |
 | ~~BUG-006~~ | ~~Week shows same count as Today~~ | ~~N/A~~ | ✅ NOT A BUG - Expected behavior (Today tasks are subset of This Week) |
 | ~~BUG-007~~ | ~~Deleting group deletes tasks inside~~ | ~~P1-HIGH~~ | ✅ ALREADY FIXED Dec 5, 2025 - Tasks preserved on canvas |
-| BUG-008 | Ctrl+Z doesn't restore deleted groups | P1-HIGH | Known limitation |
+| ~~BUG-008~~ | ~~Ctrl+Z doesn't restore deleted groups~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 25, 2025 - Added createGroupWithUndo/updateGroupWithUndo to undoSingleton.ts, updated UnifiedGroupModal.vue |
 | ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Two-part fix: (1) requestSync() in TaskContextMenu (2) spread task object in syncNodes |
 | BUG-014 | Sync status shows underscore instead of time | P1-HIGH | UI glitch - shows "_" instead of "just now" |
 | ~~BUG-015~~ | ~~Edit Task modal behind nav tabs~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 16, 2025 - Added Teleport to body |

@@ -260,6 +260,7 @@ import { ref, reactive, watch, nextTick, computed } from 'vue'
 import { X, Group, Zap, ChevronDown, RefreshCw, Trash2 } from 'lucide-vue-next'
 import { useCanvasStore, type CanvasGroup, type AssignOnDropSettings } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { getUndoSystem } from '@/composables/undoSingleton'
 import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 import { getSettingsDescription } from '@/composables/useGroupSettings'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -412,7 +413,7 @@ const inferGroupType = (): CanvasGroup['type'] => {
   return 'custom'
 }
 
-const saveGroup = () => {
+const saveGroup = async () => {
   if (!groupData.value.name.trim()) return
 
   // Build assignOnDrop settings (only non-null values)
@@ -425,9 +426,12 @@ const saveGroup = () => {
     assignOnDrop.estimatedDuration = smartSettings.estimatedDuration === -1 ? null : smartSettings.estimatedDuration
   }
 
+  // BUG-008 FIX: Use undo-enabled methods for proper Ctrl+Z support
+  const undoSystem = getUndoSystem()
+
   if (isEditing.value && props.group) {
-    // Update existing group
-    canvasStore.updateGroup(props.group.id, {
+    // Update existing group with undo support
+    await undoSystem.updateGroupWithUndo(props.group.id, {
       name: groupData.value.name.trim(),
       color: groupData.value.color,
       type: inferGroupType(),
@@ -439,8 +443,8 @@ const saveGroup = () => {
       emit('updated', updatedGroup)
     }
   } else {
-    // Create new group
-    const newGroup = canvasStore.createGroup({
+    // Create new group with undo support
+    const newGroup = await undoSystem.createGroupWithUndo({
       name: groupData.value.name.trim(),
       type: inferGroupType(),
       position: {

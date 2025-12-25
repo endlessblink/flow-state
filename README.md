@@ -22,6 +22,32 @@ npm run dev
 # Open http://localhost:5546
 ```
 
+## Optional: Multi-Device Sync
+
+Pomo-Flow works fully offline with local browser storage (IndexedDB). No account required!
+
+For multi-device sync, you can self-host CouchDB:
+
+### Quick Start (Docker)
+
+```bash
+docker run -d --name pomoflow-couchdb \
+  -p 5984:5984 \
+  -e COUCHDB_USER=admin \
+  -e COUCHDB_PASSWORD=your-secure-password \
+  couchdb:3
+```
+
+Then create a `.env` file:
+
+```env
+VITE_COUCHDB_URL=http://localhost:5984/pomoflow
+VITE_COUCHDB_USERNAME=admin
+VITE_COUCHDB_PASSWORD=your-secure-password
+```
+
+See `.env.example` for all configuration options.
+
 ## Development Commands
 
 ```bash
@@ -41,7 +67,7 @@ npm run lint:fix     # Fix linting issues
 - **UI**: Tailwind CSS + Naive UI + Lucide Icons
 - **Canvas**: Vue Flow (@vue-flow/core)
 - **Calendar**: vue-cal
-- **Storage**: IndexedDB via LocalForage + PouchDB
+- **Storage**: PouchDB (IndexedDB) + optional CouchDB sync
 - **Build**: Vite 7.2.4
 - **Testing**: Vitest + Playwright
 

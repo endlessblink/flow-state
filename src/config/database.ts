@@ -72,20 +72,34 @@ export const prodDatabaseConfig: DatabaseConfig = {
   }
 }
 
+// Get CouchDB configuration from environment variables
+// Leave empty for local-only mode (no sync)
+// Self-host with Docker: see README.md
+const couchdbUrl = import.meta.env.VITE_COUCHDB_URL || ''
+const couchdbUsername = import.meta.env.VITE_COUCHDB_USERNAME || ''
+const couchdbPassword = import.meta.env.VITE_COUCHDB_PASSWORD || ''
+
+/**
+ * Check if CouchDB sync is enabled
+ * Sync is only enabled when all three environment variables are set
+ */
+export const isSyncEnabled = (): boolean => {
+  return !!(couchdbUrl && couchdbUsername && couchdbPassword)
+}
+
 // Get configuration based on environment
 export const getDatabaseConfig = (): DatabaseConfig => {
-  // CouchDB remote sync configuration
-  const couchdbUrl = import.meta.env.VITE_COUCHDB_URL || 'http://84.46.253.137:5984/pomoflow-tasks'
-  const couchdbUsername = import.meta.env.VITE_COUCHDB_USERNAME || 'admin'
-  const couchdbPassword = import.meta.env.VITE_COUCHDB_PASSWORD || 'pomoflow-2024'
-
-  console.log('🔧 [DATABASE CONFIG] URL:', couchdbUrl)
+  if (isSyncEnabled()) {
+    console.log('🔧 [DATABASE CONFIG] Sync enabled')
+  } else {
+    console.log('🔧 [DATABASE CONFIG] Local-only mode (no sync configured)')
+  }
 
   return {
     local: {
       name: 'pomoflow-app-dev'
     },
-    remote: {
+    remote: isSyncEnabled() ? {
       url: couchdbUrl,
       auth: {
         username: couchdbUsername,
@@ -93,13 +107,13 @@ export const getDatabaseConfig = (): DatabaseConfig => {
       },
       batchSize: 100,
       batchesLimit: 10
-    },
-    sync: {
+    } : undefined,
+    sync: isSyncEnabled() ? {
       live: true,
       retry: true,
       timeout: 30000,
       heartBeat: 10000
-    }
+    } : undefined
   }
 }
 

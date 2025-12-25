@@ -806,6 +806,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const updateTask = (taskId: string, updates: Partial<Task>) => {
     const taskIndex = tasks.value.findIndex(task => task.id === taskId)
     if (taskIndex !== -1) {
+      console.log(`📝 [updateTask] Applying updates for "${tasks.value[taskIndex].title}":`, updates)
       const task = tasks.value[taskIndex]
 
       // === COMPREHENSIVE STATE TRANSITION LOGIC ===
@@ -888,11 +889,13 @@ export const useTaskStore = defineStore('tasks', () => {
       }
 
       const updatedTask = tasks.value[taskIndex] as Task
-      console.log(`🔄 Task "${updatedTask.title}" state updated: `, {
+      console.log(`🔄 Task "${updatedTask.title}" (ID: ${updatedTask.id}) state updated: `, {
+        title: updatedTask.title,
         status: updatedTask.status,
         isInInbox: updatedTask.isInInbox,
         canvasPosition: updatedTask.canvasPosition,
-        instanceCount: (updatedTask.instances as any[])?.length || 0
+        instanceCount: (updatedTask.instances as any[])?.length || 0,
+        updatedAt: updatedTask.updatedAt
       })
     }
   }

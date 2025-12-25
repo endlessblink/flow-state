@@ -67,10 +67,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ChevronDown, Inbox } from 'lucide-vue-next'
 import { useCanvasStore } from '@/stores/canvas'
-import type { CanvasSection } from '@/stores/canvas'
 
 interface Props {
   modelValue: string | null

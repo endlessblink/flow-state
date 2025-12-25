@@ -5,13 +5,17 @@ const meta = {
   component: CanvasContextMenu,
   tags: ['autodocs'],
   parameters: {
-    layout: 'fullscreen',
+    layout: 'padded',
+    backgrounds: {
+      default: 'dark',
+      values: [{ name: 'dark', value: '#0f172a' }],
+    },
   },
   decorators: [
     (story: any) => ({
       components: { story },
       template: `
-        <div style="width: 100%; height: 400px; position: relative; background: var(--app-background-gradient); display: flex; align-items: center; justify-content: center; transform: scale(1); border-radius: var(--radius-xl); overflow: hidden;">
+        <div style="padding: 40px; background: var(--app-background-gradient); min-height: 500px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
           <story />
         </div>
       `
@@ -24,7 +28,7 @@ export default meta
 export const Default = {
   args: {
     isVisible: true,
-    x: 0,
-    y: 0
+    x: 200,
+    y: 120
   }
 }

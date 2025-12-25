@@ -9,7 +9,13 @@ const meta = {
   title: '🪟 Modals & Dialogs/BaseModal Redesign Preview',
   tags: ['autodocs'],
   parameters: {
-    layout: 'fullscreen',
+    layout: 'padded',
+    backgrounds: {
+      default: 'dark',
+      values: [
+        { name: 'dark', value: '#0f172a' },
+      ],
+    },
     docs: {
       description: {
         component: 'BaseModal with neutral, clean styling - no blue tint, sharper borders, reduced blur. Global styling now applied to all modals.'
@@ -17,8 +23,13 @@ const meta = {
     }
   },
   decorators: [
-    () => ({
-      template: '<div style="width: 100%; min-height: 500px; transform: scale(1); border-radius: var(--radius-xl); overflow: hidden; background: var(--app-background-gradient);"><story /></div>'
+    (story: any) => ({
+      components: { story },
+      template: `
+        <div style="padding: 40px; background: var(--app-background-gradient); min-height: 500px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+          <story />
+        </div>
+      `
     })
   ]
 } satisfies Meta<typeof BaseModal>
@@ -55,21 +66,21 @@ export const SimpleModal: Story = {
             </div>
 
             <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-              <button style="padding: 8px 16px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); cursor: pointer;">
+              <button style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); color: var(--text-primary); cursor: pointer;">
                 15m
               </button>
-              <button style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); cursor: pointer; box-shadow: 0 0 0 1px var(--brand-primary) inset;">
+              <button style="padding: 8px 16px; background: transparent; border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); cursor: pointer;">
                 20m
               </button>
-              <button style="padding: 8px 16px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); cursor: pointer;">
+              <button style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); color: var(--text-primary); cursor: pointer;">
                 25m
               </button>
-              <button style="padding: 8px 16px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); cursor: pointer;">
+              <button style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); color: var(--text-primary); cursor: pointer;">
                 30m
               </button>
             </div>
 
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--glass-bg-soft); border-radius: var(--radius-md); margin-top: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-md); margin-top: 16px;">
               <span style="color: var(--text-secondary); font-size: var(--text-sm);">Auto-start breaks</span>
               <div style="width: 40px; height: 20px; background: transparent; border: 2px solid var(--brand-primary); border-radius: 10px; position: relative;">
                 <div style="width: 14px; height: 14px; background: var(--brand-primary); border-radius: 50%; position: absolute; right: 1px; top: 1px;"></div>
@@ -126,7 +137,7 @@ export const ProjectModalStyle: Story = {
             <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); font-weight: 500; margin-bottom: 12px;">
               Parent Project (Optional)
             </label>
-            <select style="width: 100%; padding: 12px 16px; background: var(--glass-bg-light); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
+            <select style="width: 100%; padding: 12px 16px; background: rgba(30, 30, 50, 0.35); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
               <option>None (Top Level)</option>
               <option>Work</option>
               <option>Personal</option>
@@ -139,7 +150,7 @@ export const ProjectModalStyle: Story = {
             </label>
             <button
               @click="showPicker = true"
-              style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--glass-bg-light); border: 1px solid var(--glass-border); border-radius: var(--radius-md); cursor: pointer; width: 100%; transition: all 0.2s ease;"
+              style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); cursor: pointer; width: 100%; transition: all 0.2s ease;"
             >
               <!-- Icon Preview -->
               <div
@@ -243,7 +254,7 @@ export const FormExample: Story = {
             <div style="margin-bottom: 20px;">
               <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: 8px;">Description</label>
               <textarea
-                style="width: 100%; padding: 12px; background: var(--glass-bg-light); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-family: inherit; resize: vertical; min-height: 80px;"
+                style="width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); color: var(--text-primary); font-family: inherit; resize: vertical; min-height: 80px;"
                 placeholder="Add task description..."
               >Create a unified, clean modal design system that matches the SettingsModal aesthetic...</textarea>
             </div>
@@ -251,7 +262,7 @@ export const FormExample: Story = {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
               <div>
                 <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: 8px;">Priority</label>
-                <select style="width: 100%; padding: 10px 12px; background: var(--glass-bg-light); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
+                <select style="width: 100%; padding: 10px 12px; background: rgba(30, 30, 50, 0.35); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
                   <option>High</option>
                   <option>Medium</option>
                   <option>Low</option>
@@ -259,7 +270,7 @@ export const FormExample: Story = {
               </div>
               <div>
                 <label style="display: block; color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: 8px;">Status</label>
-                <select style="width: 100%; padding: 10px 12px; background: var(--glass-bg-light); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
+                <select style="width: 100%; padding: 10px 12px; background: rgba(30, 30, 50, 0.35); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
                   <option>In Progress</option>
                   <option>Planned</option>
                   <option>Done</option>

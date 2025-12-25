@@ -1,17 +1,72 @@
 /**
  * Conflict Resolution System
  * Resolves detected conflicts using multiple strategies: Last Write Wins, Smart Merge, etc.
+ * Consolidated with advanced rules from ConflictResolutionEngine.
  */
 
 import type { ConflictInfo, ResolutionResult, DocumentVersion } from '@/types/conflicts';
 import { ConflictType, ResolutionType } from '@/types/conflicts'
 
+export interface UserResolutionRule {
+  name: string
+  field: string
+  condition: 'always' | 'when-newer' | 'when-empty' | 'when-contains'
+  value?: unknown
+  action: 'prefer-local' | 'prefer-remote' | 'merge' | 'prefer-truthy' | 'prefer-either-true' | 'prefer-longer'
+  priority: number
+}
+
 export class ConflictResolver {
   private deviceId: string
   private resolutionHistory: ResolutionResult[] = []
+  private userRules: Map<string, UserResolutionRule[]> = new Map()
 
   constructor(deviceId: string) {
     this.deviceId = deviceId
+    this.initializeDefaultRules()
+  }
+
+  /**
+   * Initialize default field-level resolution rules
+   */
+  private initializeDefaultRules(): void {
+    // Ported from ConflictResolutionEngine
+    this.userRules.set('title', [
+      {
+        name: 'Prefer non-empty titles',
+        field: 'title',
+        condition: 'when-empty',
+        action: 'prefer-local',
+        priority: 1
+      },
+      {
+        name: 'Prefer longer titles',
+        field: 'title',
+        condition: 'always',
+        action: 'prefer-longer',
+        priority: 2
+      }
+    ])
+
+    this.userRules.set('description', [
+      {
+        name: 'Merge descriptions',
+        field: 'description',
+        condition: 'always',
+        action: 'merge',
+        priority: 1
+      }
+    ])
+
+    this.userRules.set('completed', [
+      {
+        name: 'Prefer completed status',
+        field: 'completed',
+        condition: 'always',
+        action: 'prefer-either-true',
+        priority: 1
+      }
+    ])
   }
 
   /**
@@ -131,7 +186,7 @@ export class ConflictResolver {
     console.log(`🏆 Last Write Wins: ${conflict.documentId} -> ${winnerDevice} (${winner.updatedAt})`)
 
     // Safe access to winner.data with null fallback
-    const winnerData = winner.data || {}
+    const winnerData = (winner.data || {}) as Record<string, unknown>
     const preservedLocalFields = winnerDevice === 'local' ? Object.keys(winnerData) : []
     const preservedRemoteFields = winnerDevice === 'remote' ? Object.keys(winnerData) : []
 
@@ -190,7 +245,7 @@ export class ConflictResolver {
     console.log(`🗑️ Edit-Delete Resolution: ${conflict.documentId} -> ${winnerDevice}`)
 
     // Safe access to winner.data with fallback to empty object
-    const winnerData = winner.data || {}
+    const winnerData = (winner.data || {}) as Record<string, unknown>
 
     return {
       documentId: conflict.documentId,
@@ -256,7 +311,6 @@ export class ConflictResolver {
         mergedFields,
         preservedLocalFields: this.getPreservedFields((conflict.localVersion.data || {}) as Record<string, unknown>, merged),
         preservedRemoteFields: this.getPreservedFields((conflict.remoteVersion.data || {}) as Record<string, unknown>, merged),
-        // mergeComplexity: this.assessMergeComplexity(conflict)
       }
     }
   }
@@ -274,7 +328,7 @@ export class ConflictResolver {
     }
 
     // Safe access to data with fallback to empty object
-    const localData = conflict.localVersion.data || {}
+    const localData = (conflict.localVersion.data || {}) as Record<string, unknown>
 
     return {
       documentId: conflict.documentId,
@@ -305,7 +359,7 @@ export class ConflictResolver {
     }
 
     // Safe access to data with fallback to empty object
-    const remoteData = conflict.remoteVersion.data || {}
+    const remoteData = (conflict.remoteVersion.data || {}) as Record<string, unknown>
 
     return {
       documentId: conflict.documentId,
@@ -374,10 +428,15 @@ export class ConflictResolver {
    * Check if a specific field can be merged
    */
   private canMergeField(key: string, localValue: unknown, remoteValue: unknown): boolean {
-    // Never merge critical identifier fields
-    const criticalFields = ['id', 'title', 'name', '_id']
+    // Never merge critical identifier fields unless they have specific rules
+    const criticalFields = ['id', '_id']
     if (criticalFields.includes(key)) {
       return false
+    }
+
+    // Allow fields with rules
+    if (this.userRules.has(key)) {
+      return true
     }
 
     // Merge arrays by concatenation
@@ -398,7 +457,20 @@ export class ConflictResolver {
   /**
    * Merge values for a specific field
    */
-  private mergeFieldValues(_key: string, localValue: unknown, remoteValue: unknown): unknown {
+  private mergeFieldValues(key: string, localValue: unknown, remoteValue: unknown): unknown {
+    // Check for advanced rules
+    const rules = this.userRules.get(key)
+    if (rules && rules.length > 0) {
+      // Sort by priority and find first applicable rule
+      const sortedRules = [...rules].sort((a, b) => a.priority - b.priority)
+      for (const rule of sortedRules) {
+        if (this.shouldApplyRule(rule, localValue, remoteValue)) {
+          console.log(`📜 Applying rule: ${rule.name} for field ${key}`)
+          return this.applyRule(rule, localValue, remoteValue)
+        }
+      }
+    }
+
     // Merge arrays (concatenate and dedupe)
     if (Array.isArray(localValue) && Array.isArray(remoteValue)) {
       const merged = [...localValue, ...remoteValue]
@@ -411,8 +483,55 @@ export class ConflictResolver {
       return { ...localValue, ...remoteValue }
     }
 
-    // Default: return remote value
-    return remoteValue
+    // Default: return local value
+    return localValue
+  }
+
+  /**
+   * Check if rule should be applied
+   */
+  private shouldApplyRule(rule: UserResolutionRule, localValue: unknown, remoteValue: unknown): boolean {
+    switch (rule.condition) {
+      case 'always':
+        return true
+      case 'when-empty':
+        return !localValue || !remoteValue
+      case 'when-contains':
+        if (rule.value && typeof localValue === 'string') {
+          return localValue.includes(String(rule.value))
+        }
+        return false
+      default:
+        return false
+    }
+  }
+
+  /**
+   * Apply resolution rule
+   */
+  private applyRule(rule: UserResolutionRule, localValue: unknown, remoteValue: unknown): unknown {
+    switch (rule.action) {
+      case 'prefer-local':
+        return localValue
+      case 'prefer-remote':
+        return remoteValue
+      case 'prefer-truthy':
+        return localValue || remoteValue
+      case 'prefer-either-true':
+        return localValue === true || remoteValue === true
+      case 'prefer-longer':
+        if (typeof localValue === 'string' && typeof remoteValue === 'string') {
+          return localValue.length >= remoteValue.length ? localValue : remoteValue
+        }
+        return localValue
+      case 'merge':
+        if (typeof localValue === 'string' && typeof remoteValue === 'string') {
+          return `${localValue}\n\n---\n\n${remoteValue}`
+        }
+        return localValue
+      default:
+        return localValue
+    }
   }
 
   /**
@@ -454,8 +573,8 @@ export class ConflictResolver {
       return 'simple'
     }
 
-    const localFieldCount = Object.keys(conflict.localVersion.data).length
-    const remoteFieldCount = Object.keys(conflict.remoteVersion.data).length
+    const localFieldCount = Object.keys(conflict.localVersion.data as Record<string, unknown>).length
+    const remoteFieldCount = Object.keys(conflict.remoteVersion.data as Record<string, unknown>).length
 
     if (localFieldCount + remoteFieldCount < 10) {
       return 'simple'

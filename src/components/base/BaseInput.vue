@@ -140,11 +140,9 @@ defineExpose({
   font-size: var(--text-sm);
   font-weight: var(--font-normal);
 
-  /* Visual - Glass morphism with stroke */
-  background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid var(--glass-border);
+  /* Visual - Transparent with stroke border (matches design system) */
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
   border-radius: var(--radius-lg);
 
@@ -167,13 +165,13 @@ defineExpose({
 }
 
 .base-input:hover:not(:disabled) {
-  border-color: var(--glass-border-hover);
-  background: var(--glass-bg-medium);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .base-input:focus {
   border-color: var(--brand-primary);
-  background: var(--glass-bg-medium);
+  background: rgba(255, 255, 255, 0.05);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1), 0 0 12px rgba(78, 205, 196, 0.05);
 }
 

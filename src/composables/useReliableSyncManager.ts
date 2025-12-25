@@ -12,7 +12,7 @@ import { OfflineQueue } from '@/utils/offlineQueue'
 import { SyncValidator } from '@/utils/syncValidator'
 import { isSyncableDocument } from '@/composables/documentFilters'
 import { getDatabaseConfig } from '@/config/database'
-import { getBackupManager } from '@/utils/localBackupManager'
+import { useBackupSystem } from '@/composables/useBackupSystem'
 import { getTimezoneManager } from '@/utils/timezoneCompatibility'
 import { getNetworkOptimizer } from '@/utils/networkOptimizer'
 import { getBatchManager } from '@/utils/syncBatchManager'
@@ -133,11 +133,7 @@ export const useReliableSyncManager = () => {
     validateTimestamps: true,
     validateIds: true
   })
-  const backupManager = getBackupManager({
-    maxBackups: 5,
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
-    autoCleanup: true
-  })
+  const backupSystem = useBackupSystem()
 
   // Phase 3 optimization systems
   const timezoneManager = getTimezoneManager()
@@ -589,7 +585,7 @@ export const useReliableSyncManager = () => {
 
       // Step 0: Backup before sync (safety first) - SILENT
       try {
-        await backupManager.createBackup('sync', 'Automatic backup before reliable sync')
+        await backupSystem.createBackup('auto')
       } catch (_backupErr) {
         // Silent fail - backup is optional
       }
@@ -699,7 +695,7 @@ export const useReliableSyncManager = () => {
 
         try {
           // List recent backups and check if restoration might be needed
-          const backups = await backupManager.listBackups()
+          const backups = backupSystem.backupHistory.value
           const recentBackup = backups[0] // Most recent backup
 
           if (recentBackup) {

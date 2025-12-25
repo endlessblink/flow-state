@@ -589,6 +589,7 @@ INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration
 | ROAD-014 | **KDE Plasma Widget** | Taskbar plasmoid for Tuxedo OS - timer controls, task selector, bidirectional CouchDB sync |
 | ROAD-015 | **P2P Sync (YJS/WebRTC)** | Direct tab-to-tab sync without server. Alternative to CouchDB for offline-first |
 | ROAD-016 | **Advanced ADHD Mode** | Progressive Disclosure UI - hide complexity, reveal on demand. Focus enhancement features |
+| **ROAD-017** | **GitHub Public Release** | **P0-CRITICAL** | Security cleanup, BFG history rewrite, documentation. Free local + self-host sync |
 
 ---
 
@@ -694,12 +695,15 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-059** | 🔄 **ACTIVE** | `vite.config.ts`, `src/router/index.ts` | - | - |
 | **TASK-060** | PLANNED | `AppSidebar.vue`, `ProjectTree.vue`, `tasks.ts` | - | - |
 | **TASK-061** | PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
-| **TASK-062** | PLANNED | `src/components/base/ConfirmationModal.vue` (new) | - | - |
+| **TASK-062** | 🔄 **PARTIAL** | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
+| **BUG-037** | 🔄 **IN PROGRESS** | `conflictResolver.ts`, `tasks.ts` | - | Blocked by TASK-022 |
 | **TASK-064** | 🔄 **IN PROGRESS** | `dev-manager/*`, `dev-manager/timeline/` (new) | - | - |
+| **TASK-065** | 🔄 **IN PROGRESS** | `database.ts`, `.env.example`, `README.md`, `LICENSE` | - | ROAD-017 |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
+- [x] **TASK-065**: GitHub Public Release (P0-CRITICAL) - Security cleanup, BFG history, documentation
 - [/] **TASK-056**: Refactor `tasks.ts` (ISSUE-014) - Researching & Planning
 - [ ] TASK-057: Refactor `canvas.ts` - Planned
 - [ ] TASK-058: Refactor `timer.ts` - Planned
@@ -723,6 +727,48 @@ Phase 3 (Mobile) ←────────────────────
 - ✅ TASK-034: Individual task documents (INDIVIDUAL_ONLY enabled)
 - ✅ TASK-053: Dev-Manager bidirectional editing
 - ✅ TASK-044: App.vue refactor into layouts
+
+---
+
+### TASK-065: Prepare for GitHub Public Release (🔄 IN PROGRESS)
+
+**Goal**: Publish Pomo-Flow as open-source on GitHub with proper security and documentation
+
+**Priority**: P0-CRITICAL
+
+**Business Model**:
+| Tier | Features | Price |
+|------|----------|-------|
+| **Free** | Full app, local storage (IndexedDB) | $0 |
+| **Self-Host** | Sync via own CouchDB (Docker guide) | $0 |
+| **Paid (Future)** | Managed sync + Gamification + AI | TBD |
+
+**Steps:**
+- [ ] Remove hardcoded CouchDB credentials from `database.ts:78-80`
+- [ ] Add `isSyncEnabled()` helper function
+- [ ] Update `.env.example` with CouchDB variables
+- [ ] Run BFG Repo Cleaner to remove credentials from git history
+- [ ] Rotate CouchDB password on server
+- [ ] Create `/LICENSE` file (MIT)
+- [ ] Fix SectionSelector.vue lint issues (unused imports)
+- [ ] Commit Section Selection Modal feature
+- [ ] Add Docker self-host guide to README
+- [ ] Verify build passes
+- [ ] Make repo public
+
+**Security Notes**:
+- Credentials currently in history: IP, username, password
+- BFG will replace with `***REMOVED***`
+- Must rotate actual credentials before making public
+
+**Files to Modify**:
+| Priority | File | Change |
+|----------|------|--------|
+| CRITICAL | `src/config/database.ts` | Remove hardcoded credentials, add isSyncEnabled() |
+| CRITICAL | `.env.example` | Add CouchDB variables |
+| HIGH | `/LICENSE` | Create with MIT text |
+| HIGH | `README.md` | Add Docker self-host guide |
+| MEDIUM | `src/components/canvas/SectionSelector.vue` | Remove unused imports |
 
 ---
 
@@ -3432,7 +3478,7 @@ npm run dev
 
 ---
 
-### TASK-062: Custom Confirmation Modals (PLANNED)
+### TASK-062: Custom Confirmation Modals (🔄 PARTIAL)
 
 **Priority**: P2-MEDIUM
 
@@ -3447,7 +3493,7 @@ npm run dev
 **Solution**: Create a reusable `ConfirmationModal.vue` component and a composable `useConfirmation()` for easy integration.
 
 **Features**:
-- [ ] Create `src/components/base/ConfirmationModal.vue`
+- [x] Create `src/components/common/ConfirmationModal.vue` ✅ (Already exists)
   - Glassmorphism styling matching BaseModal
   - Support for danger/warning/info variants
   - Customizable title, message, and button text

@@ -321,6 +321,59 @@ const createTaskWithUndo = async (taskData: Partial<Task>) => {
   return newTask
 }
 
+// NEW: Create group with undo support (BUG-008 fix)
+const createGroupWithUndo = async (groupData: Omit<CanvasGroup, 'id'>) => {
+  console.log('➕ createGroupWithUndo called with:', groupData.name)
+  const canvasStore = useCanvasStore()
+
+  // Save state before operation
+  saveState('Before group creation')
+
+  try {
+    // Perform the creation
+    const newGroup = canvasStore.createGroup(groupData)
+    console.log(`✅ Group created: ${newGroup.name}`)
+
+    // Save state after operation
+    await nextTick()
+    saveState('After group creation')
+    return newGroup
+  } catch (error) {
+    console.error('❌ createGroupWithUndo failed:', error)
+    throw error
+  }
+}
+
+// NEW: Update group with undo support (BUG-008 fix)
+const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup>) => {
+  console.log('✏️ updateGroupWithUndo called for:', groupId, updates)
+  const canvasStore = useCanvasStore()
+
+  const groupToUpdate = canvasStore.groups.find(g => g.id === groupId)
+  if (!groupToUpdate) {
+    console.warn('⚠️ Group not found for update:', groupId)
+    return
+  }
+
+  console.log(`✏️ Updating group: ${groupToUpdate.name}`)
+
+  // Save state before operation
+  saveState('Before group update')
+
+  try {
+    // Perform the update
+    canvasStore.updateGroup(groupId, updates)
+    console.log(`✅ Group updated: ${groupId}`)
+
+    // Save state after operation
+    await nextTick()
+    saveState('After group update')
+  } catch (error) {
+    console.error('❌ updateGroupWithUndo failed:', error)
+    throw error
+  }
+}
+
 // NEW: Delete group with undo support (ISSUE-008 fix)
 const deleteGroupWithUndo = async (groupId: string) => {
   console.log('🗑️ deleteGroupWithUndo called for:', groupId)
@@ -410,7 +463,9 @@ export function getUndoSystem() {
     updateTaskWithUndo,
     createTaskWithUndo,
 
-    // Group operations with undo (ISSUE-008 fix)
+    // Group operations with undo (ISSUE-008 fix / BUG-008 fix)
+    createGroupWithUndo,
+    updateGroupWithUndo,
     deleteGroupWithUndo
   }
 }

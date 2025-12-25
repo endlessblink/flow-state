@@ -59,63 +59,94 @@
         }
 
         .header {
-            background: rgba(31, 31, 31, 0.95);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 0 1rem;
+            background: linear-gradient(180deg, rgba(20, 20, 24, 0.98) 0%, rgba(13, 17, 23, 0.95) 100%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 0 1.5rem;
             display: flex;
             align-items: center;
-            gap: 1.5rem;
-            height: 52px;
+            gap: 2rem;
+            height: 56px;
             flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .logo {
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-weight: 700;
             color: var(--brand-primary);
             white-space: nowrap;
-            letter-spacing: -0.01em;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--brand-primary);
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--brand-primary);
         }
 
         .tabs {
             display: flex;
-            gap: 0.25rem;
+            gap: 0.375rem;
             height: 100%;
+            padding: 0.5rem 0;
         }
 
         .tab {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0 1.25rem;
+            gap: 0.625rem;
+            padding: 0.5rem 1rem;
             background: transparent;
             border: none;
+            border-radius: 8px;
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             font-weight: 500;
             cursor: pointer;
-            transition: all var(--transition-fast);
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
+            transition: all var(--transition-normal);
+            position: relative;
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: var(--brand-primary);
+            border-radius: 1px;
+            transition: width var(--transition-normal);
         }
 
         .tab:hover {
             color: var(--text-secondary);
-            background: var(--surface-hover);
+            background: rgba(255, 255, 255, 0.04);
         }
 
         .tab.active {
             color: var(--text-primary);
-            border-bottom-color: var(--brand-primary);
+            background: rgba(255, 255, 255, 0.06);
         }
 
-        .tab.active.kanban { border-bottom-color: var(--color-kanban); }
-        .tab.active.skills { border-bottom-color: var(--color-skills); }
-        .tab.active.docs { border-bottom-color: var(--color-docs); }
-        .tab.active.stats { border-bottom-color: var(--color-stats); }
-        .tab.active.timeline { border-bottom-color: var(--color-timeline); }
+        .tab.active::after {
+            width: 60%;
+        }
+
+        .tab.active.kanban::after { background: var(--color-kanban); box-shadow: 0 0 8px var(--color-kanban); }
+        .tab.active.skills::after { background: var(--color-skills); box-shadow: 0 0 8px var(--color-skills); }
+        .tab.active.docs::after { background: var(--color-docs); box-shadow: 0 0 8px var(--color-docs); }
+        .tab.active.stats::after { background: var(--color-stats); box-shadow: 0 0 8px var(--color-stats); }
+        .tab.active.timeline::after { background: var(--color-timeline); box-shadow: 0 0 8px var(--color-timeline); }
 
         .tab .icon {
             width: 18px;
@@ -165,19 +196,32 @@
         }
 
         .back-link {
-            color: var(--text-subtle);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
             text-decoration: none;
             font-size: 0.8rem;
-            padding: 0.4rem 0.75rem;
+            font-weight: 500;
+            padding: 0.5rem 0.875rem;
             border-radius: 8px;
-            transition: all var(--transition-fast);
-            border: 1px solid transparent;
+            transition: all var(--transition-normal);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
         }
 
         .back-link:hover {
             color: var(--brand-primary);
-            background: var(--surface-hover);
-            border-color: var(--border-subtle);
+            background: rgba(78, 205, 196, 0.08);
+            border-color: rgba(78, 205, 196, 0.2);
+        }
+
+        .back-link svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
         }
 
         .content {
@@ -270,7 +314,13 @@
 
         <div class="spacer"></div>
 
-        <a href="http://localhost:5546" class="back-link">← Pomo-Flow</a>
+        <a href="http://localhost:5546" class="back-link">
+            <svg viewBox="0 0 24 24">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Pomo-Flow
+        </a>
     </header>
 
     <main class="content">

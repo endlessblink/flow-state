@@ -42,6 +42,58 @@
       --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
+    /* SVG Icon System - Stroke-based icons */
+    .icon {
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    .icon-sm svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .icon-lg svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Inline SVG icons for JavaScript-generated content */
+    .inline-icon {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      vertical-align: -2px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      margin-right: 4px;
+    }
+
+    .inline-icon.empty-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 8px;
+      display: block;
+      opacity: 0.5;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -78,6 +130,13 @@
       font-weight: 700;
       margin-bottom: 20px;
       color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sidebar-title .icon svg {
+      stroke: var(--brand-primary);
     }
 
     .nav-tabs {
@@ -89,23 +148,41 @@
     .nav-tab {
       padding: 12px 16px;
       background: transparent;
-      border: none;
+      border: 1px solid transparent;
       color: var(--text-muted);
       cursor: pointer;
       border-radius: 8px;
       font-size: 14px;
       transition: all var(--transition-fast);
       text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-tab .icon svg {
+      stroke: var(--text-muted);
+      transition: stroke var(--transition-fast);
+    }
+
+    .nav-tab:hover .icon svg {
+      stroke: var(--text-secondary);
+    }
+
+    .nav-tab.active .icon svg {
+      stroke: var(--brand-primary);
     }
 
     .nav-tab:hover {
-      background: var(--surface-tertiary);
+      background: transparent;
       color: var(--text-secondary);
+      border-color: var(--border-medium);
     }
 
     .nav-tab.active {
-      background: var(--brand-primary);
-      color: var(--surface-primary);
+      background: transparent;
+      color: var(--brand-primary);
+      border: 1px solid var(--brand-primary);
     }
 
     /* MAIN CONTENT */
@@ -140,9 +217,9 @@
 
     .btn {
       padding: 8px 16px;
-      background: var(--brand-primary);
-      border: none;
-      color: var(--surface-primary);
+      background: transparent;
+      border: 1px solid var(--brand-primary);
+      color: var(--brand-primary);
       border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
@@ -151,8 +228,8 @@
     }
 
     .btn:hover {
-      background: var(--brand-hover);
-      transform: translateY(-1px);
+      border-color: var(--brand-hover);
+      color: var(--brand-hover);
     }
 
     /* SEARCH INPUT */
@@ -160,10 +237,30 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      position: relative;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .search-icon svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--text-subtle);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
     }
 
     .search-input {
-      padding: 8px 12px;
+      padding: 8px 12px 8px 36px;
       background: var(--surface-tertiary);
       border: 1px solid var(--border-medium);
       border-radius: 8px;
@@ -171,6 +268,29 @@
       font-size: 14px;
       width: 200px;
       transition: all var(--transition-fast);
+    }
+
+    /* Button with icon */
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-icon .icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon .icon svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
     }
 
     .search-input:focus {
@@ -696,6 +816,32 @@
       color: white;
     }
 
+    /* Priority dots for dropdown options */
+    .priority-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .priority-dot.high {
+      background: var(--status-todo);
+    }
+
+    .priority-dot.medium {
+      background: #f59e0b;
+    }
+
+    .priority-dot.low {
+      background: var(--status-done);
+    }
+
+    .priority-dot.info {
+      background: #3b82f6;
+    }
+
     /* Badge wrapper for positioning dropdown */
     .badge-wrapper {
       position: relative;
@@ -1100,7 +1246,7 @@
     }
 
     .task-modal-btn {
-      background: var(--surface-tertiary);
+      background: transparent;
       border: 1px solid var(--border-medium);
       color: var(--text-secondary);
       padding: 10px 20px;
@@ -1112,19 +1258,19 @@
     }
 
     .task-modal-btn:hover {
-      background: var(--surface-elevated);
-      border-color: var(--border-strong);
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
     }
 
     .task-modal-btn.primary {
-      background: var(--brand-primary);
+      background: transparent;
       border-color: var(--brand-primary);
-      color: var(--surface-primary);
+      color: var(--brand-primary);
     }
 
     .task-modal-btn.primary:hover {
-      background: var(--brand-hover);
       border-color: var(--brand-hover);
+      color: var(--brand-hover);
     }
 
     /* MODAL EDIT CONTROLS */
@@ -1281,22 +1427,32 @@
   <div class="container">
     <!-- SIDEBAR -->
     <div class="sidebar">
-      <div class="sidebar-title">📋 Task System</div>
+      <div class="sidebar-title">
+        <span class="icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+        </span>
+        Task System
+      </div>
       <div class="nav-tabs">
         <button class="nav-tab active" data-view="kanban">
-          📋 My Tasks
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg></span>
+          My Tasks
         </button>
         <button class="nav-tab" data-view="ideas">
-          💭 Ideas
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/></svg></span>
+          Ideas
         </button>
         <button class="nav-tab" data-view="roadmap">
-          🗺️ Roadmap
+          <span class="icon"><svg viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg></span>
+          Roadmap
         </button>
         <button class="nav-tab" data-view="archive">
-          📦 Archive
+          <span class="icon"><svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span>
+          Archive
         </button>
         <button class="nav-tab" data-view="status">
-          📊 Status
+          <span class="icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+          Status
         </button>
       </div>
     </div>
@@ -1307,17 +1463,18 @@
         <h1 id="view-title">Kanban Board</h1>
         <div class="header-actions">
           <div class="search-container">
-            <input type="text" id="search-input" class="search-input" placeholder="🔍 Search tasks..."
+            <span class="search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input type="text" id="search-input" class="search-input" placeholder="Search tasks..."
               oninput="handleSearch(this.value)">
             <button class="search-clear" onclick="clearSearch()" title="Clear search">✕</button>
             <span id="search-results-count" class="search-results-count"></span>
           </div>
           <select id="type-filter" class="filter-select" onchange="applyFilters()">
             <option value="all">All Types</option>
-            <option value="task">📋 Tasks</option>
-            <option value="bug">🐛 Bugs</option>
-            <option value="issue">⚠️ Issues</option>
-            <option value="road">🗺️ Roadmap</option>
+            <option value="task">Tasks</option>
+            <option value="bug">Bugs</option>
+            <option value="issue">Issues</option>
+            <option value="road">Roadmap</option>
           </select>
           <select id="priority-filter" class="filter-select" onchange="applyFilters()">
             <option value="all">All Priorities</option>
@@ -1326,16 +1483,16 @@
             <option value="p3">P3 / LOW</option>
           </select>
           <select id="sort-select" class="filter-select" onchange="applySorting()">
-            <option value="priority-desc">🔥 Priority (High→Low)</option>
+            <option value="priority-desc">Priority (High→Low)</option>
             <option value="priority-asc">Priority (Low→High)</option>
-            <option value="progress-desc">📈 Progress (High→Low)</option>
+            <option value="progress-desc">Progress (High→Low)</option>
             <option value="progress-asc">Progress (Low→High)</option>
-            <option value="date-desc">📅 Newest First</option>
+            <option value="date-desc">Newest First</option>
             <option value="date-asc">Oldest First</option>
-            <option value="alpha-asc">🔤 A→Z</option>
+            <option value="alpha-asc">A→Z</option>
             <option value="alpha-desc">Z→A</option>
           </select>
-          <button class="btn" onclick="refreshData()">🔄 Refresh</button>
+          <button class="btn btn-icon" onclick="refreshData()"><span class="icon"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span> Refresh</button>
         </div>
       </div>
 
@@ -1389,20 +1546,20 @@
       <div class="view-container active" id="kanban-view">
         <div class="kanban-board" id="kanban-board">
           <div class="kanban-column">
-            <div class="column-header todo">📋 To Do</div>
+            <div class="column-header todo"><span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></span> To Do</div>
             <div class="column-content" id="column-todo"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header in-progress">🚀 In Progress</div>
+            <div class="column-header in-progress"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> In Progress</div>
             <div class="column-content" id="column-in-progress"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header review">👀 Review</div>
+            <div class="column-header review"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z"/></svg></span> Review</div>
             <div class="column-content" id="column-review"></div>
           </div>
           <div class="kanban-column">
             <div class="column-header done" id="done-header">
-              <span class="column-header-text">✅ Done</span>
+              <span class="column-header-text"><span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Done</span>
               <span class="collapse-count" id="done-count">0</span>
               <button class="collapse-toggle" onclick="toggleDoneColumn()" title="Collapse/Expand">▼</button>
             </div>
@@ -1415,19 +1572,19 @@
       <div class="view-container" id="ideas-view">
         <div class="kanban-board" id="ideas-board">
           <div class="kanban-column">
-            <div class="column-header raw">💭 Raw Ideas</div>
+            <div class="column-header raw"><span class="icon"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/></svg></span> Raw Ideas</div>
             <div class="column-content" id="ideas-column-raw"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header developing">📝 In Development</div>
+            <div class="column-header developing"><span class="icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span> In Development</div>
             <div class="column-content" id="ideas-column-developing"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header ready">🎯 Ready for Review</div>
+            <div class="column-header ready"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span> Ready for Review</div>
             <div class="column-content" id="ideas-column-ready"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header promoted">✅ Promoted</div>
+            <div class="column-header promoted"><span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Promoted</div>
             <div class="column-content" id="ideas-column-promoted"></div>
           </div>
         </div>
@@ -1437,19 +1594,19 @@
       <div class="view-container" id="roadmap-view">
         <div class="kanban-board" id="roadmap-board">
           <div class="kanban-column">
-            <div class="column-header current">🔄 Current</div>
+            <div class="column-header current"><span class="icon"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span> Current</div>
             <div class="column-content" id="roadmap-column-current"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header next">⏭️ Next</div>
+            <div class="column-header next"><span class="icon"><svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></span> Next</div>
             <div class="column-content" id="roadmap-column-next"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header future">🔮 Future</div>
+            <div class="column-header future"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> Future</div>
             <div class="column-content" id="roadmap-column-future"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header completed">✅ Completed</div>
+            <div class="column-header completed"><span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Completed</div>
             <div class="column-content" id="roadmap-column-completed"></div>
           </div>
         </div>
@@ -1459,19 +1616,19 @@
       <div class="view-container" id="archive-view">
         <div class="kanban-board" id="archive-board">
           <div class="kanban-column">
-            <div class="column-header recent">📅 Recent</div>
+            <div class="column-header recent"><span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Recent</div>
             <div class="column-content" id="archive-column-recent"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header features">🚀 Features</div>
+            <div class="column-header features"><span class="icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Features</div>
             <div class="column-content" id="archive-column-features"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header bugs">🐛 Bug Fixes</div>
+            <div class="column-header bugs"><span class="icon"><svg viewBox="0 0 24 24"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6z"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 17c0-2.1 1.6-3.8 3.53-4"/><path d="M17.47 9c1.93-.2 3.53-1.9 3.53-4"/><path d="M18 13h4"/><path d="M21 17c0-2.1-1.6-3.8-3.53-4"/></svg></span> Bug Fixes</div>
             <div class="column-content" id="archive-column-bugs"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header old">📜 Old</div>
+            <div class="column-header old"><span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span> Old</div>
             <div class="column-content" id="archive-column-old"></div>
           </div>
         </div>
@@ -1481,19 +1638,19 @@
       <div class="view-container" id="status-view">
         <div class="kanban-board" id="status-board">
           <div class="kanban-column">
-            <div class="column-header critical">🔴 Critical</div>
+            <div class="column-header critical"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span> Critical</div>
             <div class="column-content" id="status-column-critical"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header warning">🟡 Warning</div>
+            <div class="column-header warning"><span class="icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Warning</div>
             <div class="column-content" id="status-column-warning"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header info">🔵 Info</div>
+            <div class="column-header info"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span> Info</div>
             <div class="column-content" id="status-column-info"></div>
           </div>
           <div class="kanban-column">
-            <div class="column-header success">🟢 Success</div>
+            <div class="column-header success"><span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Success</div>
             <div class="column-content" id="status-column-success"></div>
           </div>
         </div>
@@ -1517,18 +1674,18 @@
         <div class="task-modal-meta-item">
           <span class="task-modal-meta-label">Status</span>
           <select id="modalStatusSelect" class="modal-edit-select" onchange="updateTaskStatus()">
-            <option value="todo">📋 To Do</option>
-            <option value="in-progress">🔄 In Progress</option>
-            <option value="review">👀 Review</option>
-            <option value="done">✅ Done</option>
+            <option value="todo">To Do</option>
+            <option value="in-progress">In Progress</option>
+            <option value="review">Review</option>
+            <option value="done">Done</option>
           </select>
         </div>
         <div class="task-modal-meta-item">
           <span class="task-modal-meta-label">Priority</span>
           <select id="modalPrioritySelect" class="modal-edit-select" onchange="updateTaskPriority()">
-            <option value="P1">🔥 P1 / HIGH</option>
-            <option value="P2">⚡ P2 / MEDIUM</option>
-            <option value="P3">📝 P3 / LOW</option>
+            <option value="P1">P1 / HIGH</option>
+            <option value="P2">P2 / MEDIUM</option>
+            <option value="P3">P3 / LOW</option>
           </select>
         </div>
         <div class="task-modal-meta-item">
@@ -1548,7 +1705,7 @@
 
       <div class="task-modal-actions">
         <button class="task-modal-btn" onclick="closeTaskModal()">Close</button>
-        <button class="task-modal-btn primary" onclick="saveAndClose()">💾 Save & Close</button>
+        <button class="task-modal-btn primary btn-icon" onclick="saveAndClose()"><span class="icon"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> Save & Close</button>
       </div>
     </div>
   </div>
@@ -1556,15 +1713,35 @@
   <script>
     // Configuration - detect if running on server
     const isServer = window.location.hostname !== 'file://';
+    // Get parent origin for API calls (iframe is in /kanban/ subfolder)
+    const API_BASE = window.location.origin;
     const CONFIG = {
       basePath: isServer ? '/' : './',
       files: {
-        masterPlan: '/docs/MASTER_PLAN.md'
-      }
+        masterPlan: `${API_BASE}/api/master-plan`
+      },
+      useApi: true
     };
 
     // Global parsed data cache
     let MASTER_PLAN_DATA = null;
+
+    // SVG Icon definitions for JavaScript-generated content
+    const ICONS = {
+      task: '<svg class="inline-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>',
+      bug: '<svg class="inline-icon" viewBox="0 0 24 24"><rect x="8" y="6" width="8" height="14" rx="4"/><line x1="6" y1="9" x2="3" y2="6"/><line x1="18" y1="9" x2="21" y2="6"/><line x1="6" y1="15" x2="3" y2="18"/><line x1="18" y1="15" x2="21" y2="18"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="12" y1="2" x2="12" y2="6"/></svg>',
+      issue: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      roadmap: '<svg class="inline-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>',
+      inbox: '<svg class="inline-icon empty-icon" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
+      todo: '<svg class="inline-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>',
+      inProgress: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+      review: '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>',
+      done: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+      calendar: '<svg class="inline-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+      sync: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+      idea: '<svg class="inline-icon empty-icon" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/></svg>',
+      check: '<svg class="inline-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
+    };
 
     /**
      * Comprehensive task status parser
@@ -1638,7 +1815,15 @@
         // Add cache-busting timestamp to prevent stale data
         const cacheBuster = `?t=${Date.now()}`;
         const response = await fetch(CONFIG.files.masterPlan + cacheBuster);
-        const content = await response.text();
+
+        // Handle API response format (returns JSON with { content: ... })
+        let content;
+        if (CONFIG.useApi) {
+          const json = await response.json();
+          content = json.content;
+        } else {
+          content = await response.text();
+        }
 
         const data = {
           ideas: [],
@@ -2149,7 +2334,7 @@
         // Populate columns
         for (const [column, taskList] of Object.entries(tasks)) {
           if (taskList.length === 0) {
-            columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No tasks</div></div>';
+            columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>No tasks</div></div>`;
           } else {
             taskList.forEach(task => {
               const card = document.createElement('div');
@@ -2165,10 +2350,10 @@
                 priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' : 'low';
 
               // Get type badge based on ID prefix
-              const typeLabel = task.id.startsWith('BUG-') ? '🐛 Bug' :
-                task.id.startsWith('ISSUE-') ? '⚠️ Issue' :
-                  task.id.startsWith('ROAD-') ? '🗺️ Roadmap' :
-                    task.id.startsWith('TASK-') ? '📋 Task' : '';
+              const typeLabel = task.id.startsWith('BUG-') ? `${ICONS.bug}Bug` :
+                task.id.startsWith('ISSUE-') ? `${ICONS.issue}Issue` :
+                  task.id.startsWith('ROAD-') ? `${ICONS.roadmap}Roadmap` :
+                    task.id.startsWith('TASK-') ? `${ICONS.task}Task` : '';
 
               // Use task's calculated progress, or default based on status
               const progress = task.progress !== undefined ? task.progress :
@@ -2204,19 +2389,19 @@
                 <div class="badge-wrapper">
                   <div class="task-status ${statusClass} editable" onclick="toggleStatusDropdown('${task.id}', event)" title="Click to change status">${statusLabel}</div>
                   <div class="badge-dropdown status-dropdown" id="status-dropdown-${task.id}">
-                    <button class="badge-dropdown-option${task.status === 'todo' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'todo', event)">📋 TODO</button>
-                    <button class="badge-dropdown-option${task.status === 'in-progress' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'in-progress', event)">🔄 IN PROGRESS</button>
-                    <button class="badge-dropdown-option${task.status === 'review' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'review', event)">👀 REVIEW</button>
-                    <button class="badge-dropdown-option${task.status === 'done' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'done', event)">✅ DONE</button>
+                    <button class="badge-dropdown-option${task.status === 'todo' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'todo', event)">${ICONS.todo}TODO</button>
+                    <button class="badge-dropdown-option${task.status === 'in-progress' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'in-progress', event)">${ICONS.inProgress}IN PROGRESS</button>
+                    <button class="badge-dropdown-option${task.status === 'review' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'review', event)">${ICONS.review}REVIEW</button>
+                    <button class="badge-dropdown-option${task.status === 'done' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'done', event)">${ICONS.done}DONE</button>
                   </div>
                 </div>
                 ${priority ? `
                 <div class="badge-wrapper">
                   <div class="task-priority ${priorityClass} editable" onclick="togglePriorityDropdown('${task.id}', event)" title="Click to change priority">${priority}</div>
                   <div class="badge-dropdown priority-dropdown" id="priority-dropdown-${task.id}">
-                    <button class="badge-dropdown-option${priorityClass === 'high' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P1-HIGH', event)">🔴 P1-HIGH</button>
-                    <button class="badge-dropdown-option${priorityClass === 'medium' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P2-MEDIUM', event)">🟠 P2-MEDIUM</button>
-                    <button class="badge-dropdown-option${priorityClass === 'low' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P3-LOW', event)">🟢 P3-LOW</button>
+                    <button class="badge-dropdown-option${priorityClass === 'high' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P1-HIGH', event)"><span class="priority-dot high"></span>P1-HIGH</button>
+                    <button class="badge-dropdown-option${priorityClass === 'medium' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P2-MEDIUM', event)"><span class="priority-dot medium"></span>P2-MEDIUM</button>
+                    <button class="badge-dropdown-option${priorityClass === 'low' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P3-LOW', event)"><span class="priority-dot low"></span>P3-LOW</button>
                   </div>
                 </div>
                 ` : ''}
@@ -2266,7 +2451,7 @@
         if (board) {
           board.innerHTML = `
           <div style="text-align: center; padding: 40px; color: #ef4444;">
-            <h3>⚠️ Error Loading Kanban Board</h3>
+            <h3>${ICONS.issue}Error Loading Kanban Board</h3>
             <p>Failed to load tasks: ${error.message}</p>
             <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer;">Reload</button>
           </div>
@@ -2314,7 +2499,7 @@
 
         for (const [column, ideaList] of Object.entries(categorized)) {
           if (ideaList.length === 0) {
-            columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">💭</div><div>No ideas</div></div>';
+            columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.idea}</div><div>No ideas</div></div>`;
           } else {
             ideaList.forEach(idea => {
               const card = document.createElement('div');
@@ -2340,7 +2525,7 @@
       } catch (error) {
         console.error('Error loading ideas:', error);
         Object.values(columns).forEach(col => {
-          col.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>Error loading ideas</div></div>';
+          col.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>Error loading ideas</div></div>`;
         });
       }
     }
@@ -2432,7 +2617,7 @@
 
         for (const [column, items] of Object.entries(roadmap)) {
           if (items.length === 0) {
-            columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">🗺️</div><div>Nothing planned</div></div>';
+            columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.roadmap}</div><div>Nothing planned</div></div>`;
           } else {
             items.forEach(item => {
               const card = document.createElement('div');
@@ -2449,7 +2634,7 @@
                 ${item.notes ? `<div class="task-description">${item.notes}</div>` : ''}
                 <div class="task-footer">
                   <div class="task-meta">
-                    <span class="task-tags">🗺️ Roadmap</span>
+                    <span class="task-tags">${ICONS.roadmap}Roadmap</span>
                   </div>
                 </div>
               `;
@@ -2461,7 +2646,7 @@
       } catch (error) {
         console.error('Error loading roadmap:', error);
         Object.values(columns).forEach(col => {
-          col.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>Error loading roadmap</div></div>';
+          col.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>Error loading roadmap</div></div>`;
         });
       }
     }
@@ -2571,7 +2756,7 @@
       // Render each category
       for (const [column, taskList] of Object.entries(categorized)) {
         if (taskList.length === 0) {
-          columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No tasks</div></div>';
+          columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>No tasks</div></div>`;
         } else {
           taskList.forEach(task => {
             const card = document.createElement('div');
@@ -2582,9 +2767,9 @@
               priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' : 'low';
 
             // Get type badge based on ID prefix
-            const typeLabel = task.id.startsWith('BUG-') ? '🐛 Bug Fixed' :
-              task.id.startsWith('ROAD-') ? '🗺️ Roadmap' :
-                task.id.startsWith('TASK-') ? '✅ Task' : '✅ Done';
+            const typeLabel = task.id.startsWith('BUG-') ? `${ICONS.bug}Bug Fixed` :
+              task.id.startsWith('ROAD-') ? `${ICONS.roadmap}Roadmap` :
+                task.id.startsWith('TASK-') ? `${ICONS.done}Task` : `${ICONS.done}Done`;
 
             card.innerHTML = `
               <div class="task-header">
@@ -2653,17 +2838,17 @@
       // Render each priority level
       for (const [column, taskList] of Object.entries(byPriority)) {
         if (taskList.length === 0) {
-          columns[column].innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No tasks</div></div>';
+          columns[column].innerHTML = `<div class="empty-state"><div class="empty-state-icon">${ICONS.inbox}</div><div>No tasks</div></div>`;
         } else {
           taskList.forEach(task => {
             const card = document.createElement('div');
             card.className = 'task-card';
 
             // Get type badge based on ID prefix
-            const typeLabel = task.id.startsWith('BUG-') ? '🐛 Bug' :
-              task.id.startsWith('ISSUE-') ? '⚠️ Issue' :
-                task.id.startsWith('TASK-') ? '📋 Task' :
-                  task.id.startsWith('ROAD-') ? '🗺️ Roadmap' : '';
+            const typeLabel = task.id.startsWith('BUG-') ? `${ICONS.bug}Bug` :
+              task.id.startsWith('ISSUE-') ? `${ICONS.issue}Issue` :
+                task.id.startsWith('TASK-') ? `${ICONS.task}Task` :
+                  task.id.startsWith('ROAD-') ? `${ICONS.roadmap}Roadmap` : '';
 
             // Status badge
             const statusLabel = task.status === 'in-progress' ? 'In Progress' : task.status === 'todo' ? 'To Do' : task.status;
@@ -2837,7 +3022,7 @@
         <div class="task-id">${idea.id} ${priority}</div>
         <div class="task-title">${idea.title}</div>
         <div class="task-meta">
-          <span>📅 ${captured}</span>
+          <span>${ICONS.calendar}${captured}</span>
           <span>${tags}</span>
         </div>
         <div class="task-progress">
@@ -2861,7 +3046,7 @@
         <div class="task-id">VERSION</div>
         <div class="task-title">${version.title}</div>
         <div class="task-meta">
-          <span>📋 ${version.section}</span>
+          <span>${ICONS.task}${version.section}</span>
         </div>
         <div class="task-progress">
           <div class="task-progress-bar ${progressClass}" style="width: ${progress}%"></div>
@@ -2877,14 +3062,14 @@
       card.className = 'task-card';
       card.draggable = true;
 
-      const icon = item.type === 'critical' ? '🔴' : item.type === 'warning' ? '🟡' : item.type === 'info' ? '🔵' : '🟢';
+      const dotClass = item.type === 'critical' ? 'high' : item.type === 'warning' ? 'medium' : item.type === 'info' ? 'info' : 'low';
 
       const progress = getTaskProgress(item.section);
       const progressClass = getProgressClass(progress);
 
       card.innerHTML = `
         <div class="task-id">${item.id}</div>
-        <div class="task-title">${icon} ${item.title}</div>
+        <div class="task-title"><span class="priority-dot ${dotClass}"></span>${item.title}</div>
         <div class="task-meta">
           <span>Status: ${item.section}</span>
         </div>
@@ -3004,9 +3189,6 @@
       currentEditTask = null;
       pendingChanges = {};
     }
-
-    // API base URL - uses current origin when running on server
-    const API_BASE = window.location.origin;
 
     // Update task status via API
     async function updateTaskStatus() {
@@ -3321,11 +3503,11 @@
 
         // Update header
         const titles = {
-          kanban: '📋 My Tasks',
-          ideas: '💭 Ideas',
-          roadmap: '🗺️ Roadmap',
-          archive: '📦 Archive',
-          status: '📊 Status'
+          kanban: 'My Tasks',
+          ideas: 'Ideas',
+          roadmap: 'Roadmap',
+          archive: 'Archive',
+          status: 'Status'
         };
         document.getElementById('view-title').textContent = titles[view];
 
@@ -3771,13 +3953,13 @@
       if (hasSubtasks || isHighPriority || isMediumPriority) {
         html += '<div class="quick-stats">';
         if (isHighPriority) {
-          html += '<span class="stat-badge priority-high">🔴 High Priority</span>';
+          html += '<span class="stat-badge priority-high"><span class="priority-dot high"></span>High Priority</span>';
         } else if (isMediumPriority) {
-          html += '<span class="stat-badge priority-medium">🟡 Medium Priority</span>';
+          html += '<span class="stat-badge priority-medium"><span class="priority-dot medium"></span>Medium Priority</span>';
         }
         if (hasSubtasks) {
           const percent = Math.round((completed / total) * 100);
-          html += `<span class="stat-badge subtasks">📋 ${completed}/${total} subtasks (${percent}%)</span>`;
+          html += `<span class="stat-badge subtasks">${ICONS.task}${completed}/${total} subtasks (${percent}%)</span>`;
         }
         html += '</div>';
       }
@@ -3879,7 +4061,7 @@
         renderStatusKanban();
       }
 
-      showStatus('✅ Refreshed!');
+      showStatus('Refreshed!');
     }
 
     function showStatus(message) {
@@ -3966,7 +4148,7 @@
       eventSource.onopen = () => {
         console.log('[SSE] Connected to live sync');
         reconnectAttempts = 0;
-        showToast('🔄 Live sync connected', 'success');
+        showToast('Live sync connected', 'success');
       };
 
       eventSource.onmessage = (event) => {
@@ -3976,7 +4158,7 @@
 
           if (data.type === 'file-changed') {
             console.log('[SSE] MASTER_PLAN.md changed externally - refreshing...');
-            showToast('📄 MASTER_PLAN.md updated - refreshing...', 'info');
+            showToast('MASTER_PLAN.md updated - refreshing...', 'info');
             // Debounce to avoid multiple rapid refreshes
             setTimeout(() => renderKanban(), 300);
           }
@@ -3996,7 +4178,7 @@
           setTimeout(connectSSE, delay);
         } else {
           console.log('[SSE] Max reconnect attempts reached. Live sync disabled.');
-          showToast('⚠️ Live sync disconnected', 'warning');
+          showToast('Live sync disconnected', 'warning');
         }
       };
     }

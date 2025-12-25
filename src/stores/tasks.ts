@@ -3,9 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { DB_KEYS, useDatabase } from '@/composables/useDatabase'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
-import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getUndoSystem } from '@/composables/undoSingleton'
-import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import type {
   TaskRecurrence as _TaskRecurrence,
   NotificationPreferences as _NotificationPreferences,
@@ -22,35 +20,25 @@ import {
   saveTasks as saveIndividualTasks,
   loadAllTasks as loadIndividualTasks,
   deleteTask as _deleteIndividualTask,
+  deleteTasks as _deleteIndividualTasksBulk,
   syncDeletedTasks,
   migrateFromLegacyFormat
 } from '@/utils/individualTaskStorage'
 
 // TASK-048: Individual project document storage
-import {
-  saveProjects as saveIndividualProjects,
-  loadAllProjects as loadIndividualProjects,
-  migrateFromLegacyFormat as migrateProjectsFromLegacy
-} from '@/utils/individualProjectStorage'
+import { } from '@/utils/individualProjectStorage'
 
 // Re-export types for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance }
 
-const padNumber = (value: number) => value.toString().padStart(2, '0')
+import { formatDateKey, parseDateKey } from '@/utils/dateUtils'
 
-export const formatDateKey = (date: Date): string => {
-  return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`
-}
-
-export const parseDateKey = (dateKey?: string): Date | null => {
-  if (!dateKey) return null
-  const [year, month, day] = dateKey.split('-').map(part => Number(part))
-  if (!year || !month || !day) return null
-
-  const parsed = new Date(year, month - 1, day)
-  parsed.setHours(0, 0, 0, 0)
-  return parsed
-}
+// Re-export parseDateKey for backward compatibility with components importing from tasks store
+export { parseDateKey }
+import { useProjectStore } from './projects'
+import { useTaskMigrations } from '@/composables/tasks/useTaskMigrations'
+import { useTaskFiltering } from '@/composables/tasks/useTaskFiltering'
+import { toRef } from 'vue'
 
 // getTaskInstances function - for compatibility with TaskEditModal
 // Returns recurring instances for a task, simplified for current system
@@ -86,7 +74,7 @@ export const clearHardcodedTestTasks = async () => {
       return
     }
 
-    console.log(`📊 Found ${savedTasks.length} total tasks`)
+    console.log('📊 Found ' + savedTasks.length + ' total tasks')
 
     // Identify test tasks to remove (only clear obvious test tasks)
     const testTaskPatterns = [
@@ -103,14 +91,14 @@ export const clearHardcodedTestTasks = async () => {
     const realTasks = savedTasks.filter(task => {
       const isTestTask = testTaskPatterns.some(pattern => pattern.test(task.title))
       if (isTestTask) {
-        console.log(`🗑️ Removing test task: "${task.title}" (ID: ${task.id})`)
+        console.log('🗑️ Removing test task: "' + task.title + '" (ID: ' + task.id + ')')
         return false // Remove this task
       }
       return true // Keep this task
     })
 
-    console.log(`✅ Keeping ${realTasks.length} real tasks`)
-    console.log(`🗑️ Removed ${savedTasks.length - realTasks.length} test tasks`)
+    console.log('✅ Keeping ' + realTasks.length + ' real tasks')
+    console.log('🗑️ Removed ' + (savedTasks.length - realTasks.length) + ' test tasks')
 
     // Use atomic transaction to save tasks and update related data together
     await db.atomicTransaction([
@@ -151,22 +139,48 @@ export const clearHardcodedTestTasks = async () => {
 
 
 export const useTaskStore = defineStore('tasks', () => {
-  // Initialize database composable
+  // Initialize database and external stores
   const db = useDatabase()
   const persistentStorage = usePersistentStorage()
-  const reliableSyncManager = useReliableSyncManager()
+  const projectStore = useProjectStore()
 
   // State - Start with empty tasks array
   const tasks = ref<Task[]>([])
 
-  // Safe sync wrapper to prevent infinite loops (moved to store scope)
-  let lastSyncTime = 0
-  const SYNC_COOLDOWN = 2000 // 2 seconds minimum between syncs (was 5s)
-  let syncAttempts = 0
-  const MAX_SYNC_ATTEMPTS = 1000 // Effectively removing common session limit (was 10)
+  // State for filtering (managed locally but used by useTaskFiltering)
+  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null>(null)
+  const activeStatusFilter = ref<string | null>(null)
+  const activeDurationFilter = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
+  const hideDoneTasks = ref(false)
 
-  // Flag to prevent auto-save during database loads (prevents sync loops)
+  // Initialize extracted composables
+  const { runAllTaskMigrations } = useTaskMigrations(tasks)
+
+  const {
+    filteredTasks,
+    tasksByStatus,
+    filteredTasksWithCanvasPosition,
+    smartViewTaskCounts,
+    getProjectTaskCount,
+    totalTasks,
+    completedTasks,
+    totalPomodoros,
+    doneTasksForColumn,
+    tasksWithCanvasPosition
+  } = useTaskFiltering(
+    tasks,
+    toRef(projectStore, 'projects'),
+    toRef(projectStore, 'activeProjectId'),
+    activeSmartView,
+    activeStatusFilter,
+    activeDurationFilter,
+    hideDoneTasks
+  )
+
+
+  // Flags to manage store state
   let isLoadingFromDatabase = false
+  let manualOperationInProgress = false
 
   // BUG-025: Initial sync is now handled by useReliableSyncManager.initializeSync()
   // which calls loadFromDatabase() after completing bidirectional sync
@@ -180,57 +194,6 @@ export const useTaskStore = defineStore('tasks', () => {
     return
   }
 
-  /**
-   * Centralized project save function that respects storage flags
-   */
-  const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {
-    // TASK-054: Prevent Storybook from polluting real database
-    if (typeof window !== 'undefined' && window.__STORYBOOK__) {
-      console.log('🔒 [STORYBOOK] Skipping project persistence:', context)
-      return
-    }
-
-    const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
-    if (!dbInstance) {
-      console.error(`❌ [SAVE-PROJECTS] PouchDB not available (${context})`)
-      return
-    }
-
-    try {
-      // TASK-048: Individual project document storage
-      if (STORAGE_FLAGS.DUAL_WRITE_PROJECTS || STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-        await saveIndividualProjects(dbInstance, projectsToSave)
-        console.log(`📋 [SAVE-PROJECTS] Projects saved to individual docs (${context}): ${projectsToSave.length} projects`)
-      }
-
-      // Write to legacy format unless INDIVIDUAL_PROJECTS_ONLY is true
-      if (!STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-        await queuedWrite(async () => {
-          const existingDoc = await dbInstance.get('projects:data').catch(() => null)
-          return await dbInstance.put({
-            _id: 'projects:data',
-            _rev: existingDoc?._rev || undefined,
-            data: projectsToSave,
-            createdAt: existingDoc?.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          })
-        })
-        console.log(`📋 [SAVE-PROJECTS] Projects saved to legacy format (${context})`)
-      }
-
-      // PHASE 1: Trigger sync if needed
-      await safeSync(`projects-save-${context}`)
-    } catch (error) {
-      errorHandler.report({
-        severity: ErrorSeverity.ERROR,
-        category: ErrorCategory.DATABASE,
-        message: 'Projects save failed',
-        error: error as Error,
-        context: { projectCount: projectsToSave.length, context },
-        showNotification: false
-      })
-    }
-  }
 
   /**
    * Centralized task save function that respects INDIVIDUAL_ONLY mode
@@ -244,7 +207,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
     if (!dbInstance) {
-      console.error(`❌ [SAVE-TASKS] PouchDB not available (${context})`)
+      console.error(`[SAVE - TASKS] PouchDB not available(${context})`)
       return
     }
 
@@ -288,393 +251,23 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  // CRITICAL: IMMEDIATE LOAD FROM POUCHDB ON STORE INITIALIZATION
-  const loadTasksFromPouchDB = async () => {
-    try {
-      console.log('📂 Loading tasks from PouchDB on store init...')
-
-      // Wait for database to be ready using modern composable
-      while (!db.isReady?.value) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-
-      // BUG-025 FIX: Delete stale local tasks:data document in INDIVIDUAL_ONLY mode
-      await deleteLegacyTasksDocument()
-
-      // BUG-025 FIX: Use Phase 4 individual task documents instead of legacy tasks:data
-      // The legacy tasks:data often has stale/empty data that overwrites good tasks
-      let loadedTasks: Task[] | null = null
-
-      if (STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
-        try {
-          const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
-          if (dbInstance) {
-            loadedTasks = await loadIndividualTasks(dbInstance)
-            console.log(`📂 [PHASE 4] Loaded ${loadedTasks?.length || 0} tasks from individual documents on init`)
-          }
-        } catch (phase4Error) {
-          console.warn('⚠️ Phase 4 load failed in loadTasksFromPouchDB, falling back to legacy:', phase4Error)
-          loadedTasks = null
-        }
-      }
-
-      // Only fall back to legacy if Phase 4 returned nothing
-      if (!loadedTasks || loadedTasks.length === 0) {
-        console.log('📂 [LEGACY FALLBACK] Trying tasks:data...')
-        loadedTasks = await db.load<Task[]>(DB_KEYS.TASKS)
-      }
-
-      if (loadedTasks && Array.isArray(loadedTasks) && loadedTasks.length > 0) {
-        const oldTasks = [...tasks.value]
-        tasks.value = loadedTasks
-        taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromPouchDB')
-        console.log(`✅ Loaded ${tasks.value.length} tasks from PouchDB`)
-      } else {
-        console.log('ℹ️ No tasks in PouchDB, checking localStorage for backup before creating samples')
-        // Check localStorage for user backup first
-        const userBackup = localStorage.getItem('pomo-flow-user-backup')
-        const importedTasks = localStorage.getItem('pomo-flow-imported-tasks')
-
-        if (userBackup) {
-          try {
-            const backupTasks = JSON.parse(userBackup)
-            if (Array.isArray(backupTasks) && backupTasks.length > 0) {
-              const oldTasks = [...tasks.value]
-              tasks.value = backupTasks
-              taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'localStorage-userBackup-restore')
-              console.log(`🔄 Restored ${backupTasks.length} tasks from localStorage backup`)
-              return
-            }
-          } catch (error) {
-            console.warn('⚠️ Failed to parse localStorage backup:', error)
-          }
-        }
-
-        if (importedTasks) {
-          try {
-            const parsedImported = JSON.parse(importedTasks)
-            if (Array.isArray(parsedImported) && parsedImported.length > 0) {
-              const oldTasks = [...tasks.value]
-              tasks.value = parsedImported
-              taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'localStorage-importedTasks-restore')
-              console.log(`🔄 Restored ${parsedImported.length} tasks from localStorage import`)
-              return
-            }
-          } catch (error) {
-            console.warn('⚠️ Failed to parse localStorage import:', error)
-          }
-        }
-
-        // Fresh start - no demo data, user creates their own tasks
-        if (tasks.value.length === 0) {
-          console.log('📝 Fresh start - no tasks found, ready for user to create their own')
-          // No sample tasks created - user starts with empty app
-        } else {
-          console.log(`🔄 Keeping existing ${tasks.value.length} tasks`)
-        }
-      }
-    } catch (error) {
-      errorHandler.report({
-        severity: ErrorSeverity.ERROR,
-        category: ErrorCategory.DATABASE,
-        message: 'Failed to load tasks from PouchDB',
-        error: error as Error,
-        context: { operation: 'loadTasksFromPouchDB' },
-        showNotification: true,
-        userMessage: 'Failed to load tasks. Attempting recovery from backup.'
-      })
-
-      // Check localStorage for backup before creating sample tasks
-      const userBackup = localStorage.getItem('pomo-flow-user-backup')
-      const _importedTasks = localStorage.getItem('pomo-flow-imported-tasks')
-
-      if (userBackup) {
-        try {
-          const backupTasks = JSON.parse(userBackup)
-          if (Array.isArray(backupTasks) && backupTasks.length > 0) {
-            const oldTasks = [...tasks.value]
-            tasks.value = backupTasks
-            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'error-recovery-localStorage-backup')
-            console.log(`🔄 Restored ${backupTasks.length} tasks from localStorage backup during error recovery`)
-            return
-          }
-        } catch (parseError) {
-          console.warn('⚠️ Failed to parse localStorage backup during error recovery:', parseError)
-        }
-      }
-
-      // Preserve existing tasks on error - no demo data creation
-      if (tasks.value.length === 0) {
-        console.log('🔄 PouchDB failure with no tasks - user will start fresh once connection restored')
-        // No sample tasks created - user starts with empty app
-      } else {
-        console.log(`🔄 Preserving existing ${tasks.value.length} tasks despite PouchDB error`)
-      }
-    }
-  }
 
   // REMOVED: createDefaultProjects - My Tasks concept removed
   // Previously created default "My Tasks" project with ID '1'
 
-  // CRITICAL: Write queue to prevent concurrent PouchDB writes causing 409 conflicts
-  const writeQueue = ref<Promise<unknown>>(Promise.resolve())
-
-  const queuedWrite = async (updateFn: (latestDoc: PouchDBDocument | null) => Promise<PouchDBResponse>) => {
-    writeQueue.value = writeQueue.value.then(async () => {
-      try {
-        return await updateFn(null) // latestDoc will be fetched inside updateFn
-      } catch (error) {
-        console.error('❌ Write queue failed:', error)
-        throw error
-      }
-    })
-    return writeQueue.value
-  }
 
   // REMOVED: createSampleTasks - Demo data removed per TASK-054
   // Users start with an empty app and create their own tasks
   // See AGENTS.md and CLAUDE.md for data safety rules
 
-  // Migrate legacy tasks to use instances array
-  const migrateLegacyTasks = () => {
-    tasks.value.forEach(task => {
-      // If task has scheduledDate but no instances, create instance from legacy fields
-      if (task.scheduledDate && task.scheduledTime && (!task.instances || task.instances.length === 0)) {
-        task.instances = [{
-          id: `migrated-${task.id}-${Date.now()}`,
-          scheduledDate: task.scheduledDate,
-          scheduledTime: task.scheduledTime,
-          duration: task.estimatedDuration
-        }]
-        // Keep legacy fields for backward compatibility but they won't be used anymore
-      }
-    })
-  }
-
-  // Run migration on store initialization
-  migrateLegacyTasks()
-
-  // Migrate task status values to fix "todo" -> "planned" mapping
-  const migrateTaskStatuses = () => {
-    tasks.value.forEach(task => {
-      // Convert old "todo" status to "planned"
-      if ((task.status as string) === 'todo') {
-        task.status = 'planned'
-        console.log(`🔄 Migrated task "${task.title}" status from "todo" to "planned"`)
-      }
-    })
-  }
-
-  // Migrate tasks to set isInInbox based on canvas position
-  const migrateInboxFlag = () => {
-    let migratedCount = 0
-    let orphanedCount = 0
-    tasks.value.forEach(task => {
-      // FIX: If task has canvasPosition, it should NOT be in inbox (regardless of current isInInbox value)
-      // This fixes the issue where JSON import sets isInInbox: true even for positioned tasks
-      if (task.canvasPosition && task.isInInbox !== false) {
-        task.isInInbox = false
-        migratedCount++
-        console.log(`🔄 [INBOX_MIGRATION] Fixed task "${task.title}" - has canvasPosition, setting isInInbox: false`)
-      }
-      // If isInInbox is undefined and no position, default to inbox
-      else if (task.isInInbox === undefined) {
-        // Task has no canvas position = in inbox
-        task.isInInbox = true
-      }
-
-      // FIX: Detect and repair ORPHANED tasks (invisible everywhere)
-      // An orphaned task has isInInbox: false but no canvas position and no calendar instances
-      const hasCanvasPosition = task.canvasPosition &&
-        typeof task.canvasPosition.x === 'number' &&
-        typeof task.canvasPosition.y === 'number'
-      const hasCalendarInstances = task.instances && task.instances.length > 0
-
-      if (task.isInInbox === false && !hasCanvasPosition && !hasCalendarInstances) {
-        console.log(`🔧 [INBOX_MIGRATION] Repairing ORPHANED task: "${task.title}" → restoring to inbox`)
-        task.isInInbox = true
-        orphanedCount++
-      }
-    })
-    if (migratedCount > 0) {
-      console.log(`✅ [INBOX_MIGRATION] Fixed ${migratedCount} tasks with incorrect isInInbox values`)
-    }
-    if (orphanedCount > 0) {
-      console.log(`✅ [INBOX_MIGRATION] Repaired ${orphanedCount} ORPHANED tasks (were invisible everywhere)`)
-    }
-  }
-
-  // Migrate projects to add viewType field
-  const migrateProjects = () => {
-    projects.value.forEach(project => {
-      if (!project.viewType) {
-        project.viewType = 'status' // Default to status view
-      }
-    })
-  }
-
-  // Migrate tasks to add isUncategorized flag
-  const migrateTaskUncategorizedFlag = () => {
-    let migratedCount = 0
-    tasks.value.forEach(task => {
-      // Only migrate tasks that don't have the isUncategorized field set
-      if (task.isUncategorized === undefined) {
-        // Determine if task should be uncategorized based on existing logic
-        // REMOVED: projectId === '1' check - My Tasks concept removed
-        const shouldBeUncategorized = !task.projectId ||
-          task.projectId === '' ||
-          task.projectId === null
-
-        task.isUncategorized = shouldBeUncategorized
-        migratedCount++
-
-        if (shouldBeUncategorized) {
-          console.log(`🔄 Marked task "${task.title}" as uncategorized (projectId: ${task.projectId})`)
-        }
-      }
-    })
-
-    if (migratedCount > 0) {
-      console.log(`🔄 Migration complete: Set isUncategorized flag for ${migratedCount} tasks`)
-    }
-  }
 
   // REMOVED: addTestCalendarInstances - Demo data removed per TASK-054
 
 
 
-  // REMOVED: Default "My Tasks" project - My Tasks concept removed
-  // Projects array starts empty and loads from PouchDB
-  const projects = ref<Project[]>([])
-
-  // CRITICAL: IMMEDIATE LOAD PROJECTS FROM POUCHDB ON STORE INITIALIZATION
-  const loadProjectsFromPouchDB = async () => {
-    // BUG-032 FIX: Set flag to prevent auto-save during load (prevents project deletion)
-    isLoadingFromDatabase = true
-
-    try {
-      console.log('📂 Loading projects from PouchDB on store init...')
-
-      // Wait for database to be ready using modern composable
-      // BUG-027: Added timeout to prevent infinite wait
-      let waitAttempts = 0
-      while (!db.isReady?.value && waitAttempts < 150) { // 15s max
-        await new Promise(resolve => setTimeout(resolve, 100))
-        waitAttempts++
-      }
-
-      const dbInstance = window.pomoFlowDb
-      if (!dbInstance) {
-        console.warn('⚠️ PouchDB not available for project loading - proceeding with empty projects')
-        return
-      }
-
-      let loadedProjects: Project[] | null = null
-
-      // TASK-048: Check if we should read from individual documents
-      if (STORAGE_FLAGS.READ_INDIVIDUAL_PROJECTS) {
-        console.log('📂 [TASK-048] Loading projects from individual documents...')
-        loadedProjects = await loadIndividualProjects(dbInstance as unknown as PouchDB.Database)
-
-        // If no individual docs, try migrating from legacy format
-        if (!loadedProjects || loadedProjects.length === 0) {
-          console.log('🔄 [TASK-048] No individual project docs, checking for legacy format...')
-          const { migrated } = await migrateProjectsFromLegacy(dbInstance as unknown as PouchDB.Database)
-          if (migrated > 0) {
-            loadedProjects = await loadIndividualProjects(dbInstance as unknown as PouchDB.Database)
-          }
-        }
-      } else {
-        // Legacy: Load from projects:data
-        loadedProjects = await db.load<Project[]>(DB_KEYS.PROJECTS)
-      }
-
-      if (!loadedProjects) {
-        // BUG-032 FIX: Don't save empty projects.value - this would overwrite any existing data
-        // If no projects loaded, just leave projects.value as empty array without persisting
-        console.log('ℹ️ No projects in PouchDB - starting with empty projects array')
-        return
-      }
-
-      if (loadedProjects && Array.isArray(loadedProjects) && loadedProjects.length > 0) {
-        // MIGRATION: Remove "My Tasks" project (id: '1') from loaded projects
-        // This is part of the "My Tasks" redundancy removal plan
-        const filteredProjects = loadedProjects.filter(project =>
-          project.id !== '1' && project.name !== 'My Tasks'
-        )
-
-        if (filteredProjects.length !== loadedProjects.length) {
-          console.log(`🔄 MIGRATION: Removed ${loadedProjects.length - filteredProjects.length} "My Tasks" projects from database`)
-          // Save the filtered projects back to database to complete migration
-          await db.save(DB_KEYS.PROJECTS, filteredProjects)
-          console.log('💾 Migration completed - "My Tasks" removed from database')
-        }
-
-        projects.value = filteredProjects
-        console.log(`✅ Loaded ${projects.value.length} projects from PouchDB (after "My Tasks" migration)`)
-      } else {
-        // BUG-032 FIX: Don't save empty projects.value - this would overwrite any existing data
-        console.log('ℹ️ No projects loaded (empty array from database) - keeping empty state')
-      }
-    } catch (error) {
-      console.error('❌ Failed to load projects from PouchDB:', error)
-      // Keep default projects on error
-    } finally {
-      // BUG-032 FIX: Always reset flag after load attempt
-      isLoadingFromDatabase = false
-    }
-  }
-
-  // Run project migration after initialization
-  migrateProjects()
-
-  // Migrate nested tasks to inherit parent's projectId
-  const migrateNestedTaskProjectIds = () => {
-    tasks.value.forEach(task => {
-      // If this is a nested task (has parentTaskId), ensure it inherits parent's projectId
-      if (task.parentTaskId) {
-        const parentTask = tasks.value.find(t => t.id === task.parentTaskId)
-        if (parentTask && task.projectId !== parentTask.projectId) {
-          console.log(`🔄 Migrated nested task "${task.title}" projectId from ${task.projectId} to ${parentTask.projectId}`)
-          task.projectId = parentTask.projectId
-        }
-      }
-    })
-  }
-
-  // Migrate projects to add colorType field
-  const migrateProjectColors = () => {
-    projects.value.forEach(project => {
-      if (!project.colorType) {
-        // Priority: Check if project has emoji (emoji-first preference)
-        if (project.emoji && (!project.color || project.color === undefined)) {
-          project.colorType = 'emoji'
-        }
-        // Legacy: If color looks like an emoji, migrate to emoji type
-        else if (project.color && typeof project.color === 'string' && /^[\u{1F600}-\u{1F64F}]|^[\u{1F300}-\u{1F5FF}]|^[\u{1F680}-\u{1F6FF}]|^[\u{1F1E0}-\u{1F1FF}]|^[\u{2600}-\u{26FF}]|^[\u{2700}-\u{27BF}]/u.test(project.color)) {
-          project.colorType = 'emoji'
-          project.emoji = project.color
-        }
-        // Default: Set to hex type only if there's actually a color value
-        else if (project.color && typeof project.color === 'string') {
-          project.colorType = 'hex'
-        } else {
-          project.colorType = 'emoji' // Default to emoji type for emoji-first approach
-        }
-      }
-    })
-  }
-
-  // Run color migration
-  migrateProjectColors()
 
   const currentView = ref('board')
   const selectedTaskIds = ref<string[]>([])
-  const activeProjectId = ref<string | null>(null) // null = show all projects
-  const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null>(null)
-  const activeStatusFilter = ref<string | null>(null) // null = show all statuses, 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
-  const activeDurationFilter = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
-  const hideDoneTasks = ref(false) // Global setting to hide done tasks across all views (disabled by default to show completed tasks for logging)
 
   // Filter persistence
   const FILTER_STORAGE_KEY = 'pomo-flow-filters' // Legacy localStorage key
@@ -699,10 +292,10 @@ export const useTaskStore = defineStore('tasks', () => {
       const saved = await db.load<PersistedFilterState>(DB_KEYS.FILTER_STATE)
       if (saved) {
         // Validate project still exists before restoring
-        if (saved.activeProjectId && !projects.value.find(p => p.id === saved.activeProjectId)) {
+        if (saved.activeProjectId && !projectStore.projects.find(p => p.id === saved.activeProjectId)) {
           saved.activeProjectId = null
         }
-        activeProjectId.value = saved.activeProjectId
+        projectStore.setActiveProject(saved.activeProjectId)
         activeSmartView.value = saved.activeSmartView
         activeStatusFilter.value = saved.activeStatusFilter
         hideDoneTasks.value = saved.hideDoneTasks ?? false
@@ -726,10 +319,10 @@ export const useTaskStore = defineStore('tasks', () => {
       const localSaved = localStorage.getItem(FILTER_STORAGE_KEY)
       if (localSaved) {
         const state: PersistedFilterState = JSON.parse(localSaved)
-        if (state.activeProjectId && !projects.value.find(p => p.id === state.activeProjectId)) {
+        if (state.activeProjectId && !projectStore.projects.find(p => p.id === state.activeProjectId)) {
           state.activeProjectId = null
         }
-        activeProjectId.value = state.activeProjectId
+        projectStore.setActiveProject(state.activeProjectId)
         activeSmartView.value = state.activeSmartView
         activeStatusFilter.value = state.activeStatusFilter
         hideDoneTasks.value = state.hideDoneTasks ?? false
@@ -747,7 +340,7 @@ export const useTaskStore = defineStore('tasks', () => {
     if (persistTimeout) clearTimeout(persistTimeout)
     persistTimeout = setTimeout(async () => {
       const state: PersistedFilterState = {
-        activeProjectId: activeProjectId.value,
+        activeProjectId: projectStore.activeProjectId,
         activeSmartView: activeSmartView.value,
         activeStatusFilter: activeStatusFilter.value,
         hideDoneTasks: hideDoneTasks.value
@@ -773,59 +366,22 @@ export const useTaskStore = defineStore('tasks', () => {
   // Import tasks from JSON file (for migration from external storage)
   const importTasksFromJSON = async (jsonFilePath?: string) => {
     try {
-      // If no path provided, use the default tasks.json path
       const defaultPath = '/tasks.json'
-
-      let tasksData: unknown
+      let tasksData: any
       if (jsonFilePath) {
-        // For future: if a custom path is provided, we'd need to handle file reading
         throw new Error('Custom file paths not yet supported')
       } else {
-        // Try to fetch the default tasks.json file
         const response = await fetch(defaultPath)
-        if (!response.ok) {
-          console.log('No tasks.json file found, starting fresh')
-          return
-        }
+        if (!response.ok) return
         tasksData = await response.json()
       }
 
-      // Handle JSON data structure (might be direct array or wrapped in data property)
-      const tasksDataObj = tasksData as { data?: unknown[] } | unknown[]
-      const tasksArray = Array.isArray(tasksDataObj) ? tasksDataObj : (tasksDataObj.data || [])
-
-      if (!tasksArray || tasksArray.length === 0) {
-        console.log('No tasks found in JSON file')
-        return
-      }
+      const tasksArray = Array.isArray(tasksData) ? tasksData : (tasksData.data || [])
+      if (!tasksArray || tasksArray.length === 0) return
 
       console.log(`📥 Found ${tasksArray.length} tasks in JSON file, importing...`)
 
-      // Map JSON tasks to Task interface format
-      interface JsonTask {
-        id?: string
-        title?: string
-        description?: string
-        status?: string
-        priority?: string
-        progress?: number
-        completedPomodoros?: number
-        subtasks?: Array<{ id?: string; title?: string; completed?: boolean }>
-        dueDate?: string
-        instances?: TaskInstance[]
-        project?: string
-        projectId?: string
-        parentTaskId?: string | null
-        createdAt?: string | Date
-        updatedAt?: string | Date
-        canvasPosition?: { x: number; y: number }
-        isInInbox?: boolean
-        dependsOn?: string[]
-        isUncategorized?: boolean
-      }
-      const importedTasks: Task[] = tasksArray.map((jsonTask: unknown) => {
-        const jt = jsonTask as JsonTask
-        // Map status values
+      const importedTasks: Task[] = tasksArray.map((jt: any) => {
         let status: Task['status'] = 'planned'
         if (jt.status === 'done') status = 'done'
         else if (jt.status === 'todo') status = 'planned'
@@ -833,19 +389,13 @@ export const useTaskStore = defineStore('tasks', () => {
         else if (jt.status === 'backlog') status = 'backlog'
         else if (jt.status === 'on_hold') status = 'on_hold'
 
-        // Map priority values
         let priority: Task['priority'] = null
         if (jt.priority === 'high') priority = 'high'
         else if (jt.priority === 'medium') priority = 'medium'
         else if (jt.priority === 'low') priority = 'low'
 
-        // Map project to projectId
         const projectId = jt.project === 'pomo-flow' ? '1' : jt.project || '1'
-
-        // FIX: Preserve canvasPosition if it exists in JSON, and set isInInbox based on position
-        const hasCanvasPosition = jt.canvasPosition &&
-          typeof jt.canvasPosition.x === 'number' &&
-          typeof jt.canvasPosition.y === 'number'
+        const hasCanvasPosition = jt.canvasPosition && typeof jt.canvasPosition.x === 'number' && typeof jt.canvasPosition.y === 'number'
 
         return {
           id: jt.id || '',
@@ -860,24 +410,19 @@ export const useTaskStore = defineStore('tasks', () => {
           projectId,
           createdAt: new Date(jt.createdAt || Date.now()),
           updatedAt: new Date(jt.updatedAt || jt.createdAt || Date.now()),
-          // FIX: Use JSON value if available, otherwise default based on canvasPosition
           canvasPosition: hasCanvasPosition ? jt.canvasPosition : undefined,
           isInInbox: hasCanvasPosition ? false : (jt.isInInbox ?? true),
-          instances: jt.instances || [], // Preserve instances if available
+          instances: jt.instances || [],
         }
       })
 
-      // Add imported tasks to existing tasks (avoid duplicates by ID)
       const existingIds = new Set(tasks.value.map(t => t.id))
       const newTasks = importedTasks.filter(task => !existingIds.has(task.id))
 
       if (newTasks.length > 0) {
         tasks.value.push(...newTasks)
         console.log(`✅ Imported ${newTasks.length} new tasks from JSON file`)
-      } else {
-        console.log('📋 All tasks from JSON file already exist in database')
       }
-
     } catch (error) {
       console.log('ℹ️ Could not import tasks from JSON:', error instanceof Error ? error.message : 'Unknown error')
     }
@@ -886,12 +431,8 @@ export const useTaskStore = defineStore('tasks', () => {
   // Import tasks from recovery tool (localStorage)
   const importFromRecoveryTool = async () => {
     try {
-      if (typeof window === 'undefined') {
-        console.log('⚠️ Window not available, skipping recovery tool import')
-        return
-      }
+      if (typeof window === 'undefined') return
 
-      // First check for user backup
       const userBackup = localStorage.getItem('pomo-flow-user-backup')
       if (userBackup) {
         console.log('📥 Found user backup, restoring...')
@@ -902,46 +443,22 @@ export const useTaskStore = defineStore('tasks', () => {
             createdAt: new Date(userTask.createdAt),
             updatedAt: new Date(userTask.updatedAt)
           }))
-
           tasks.value.push(...restoredTasks)
-          migrateTaskStatuses() // Fix "todo" -> "planned" status mapping for restored tasks
           console.log(`✅ Restored ${restoredTasks.length} tasks from user backup`)
-
-          // Clear the backup after successful restore
           localStorage.removeItem('pomo-flow-user-backup')
           return
         }
       }
 
-      const importedTasks = localStorage.getItem('pomo-flow-imported-tasks')
-      if (!importedTasks) {
-        console.log('ℹ️ No tasks found in recovery tool storage')
-        return
-      }
+      const importedTasksStr = localStorage.getItem('pomo-flow-imported-tasks')
+      if (!importedTasksStr) return
 
-      const tasksData = JSON.parse(importedTasks)
-      if (!Array.isArray(tasksData) || tasksData.length === 0) {
-        console.log('ℹ️ No valid tasks found in recovery tool storage')
-        return
-      }
+      const tasksData = JSON.parse(importedTasksStr)
+      if (!Array.isArray(tasksData) || tasksData.length === 0) return
 
       console.log(`📥 Found ${tasksData.length} tasks in recovery tool, importing...`)
 
-      // Map recovery tool tasks to Task interface format
-      interface RecoveryTask {
-        id?: string
-        title?: string
-        description?: string
-        status?: string
-        priority?: string
-        progress?: number
-        projectId?: string | null
-        createdAt?: string | Date
-        updatedAt?: string | Date
-      }
-      const recoveredTasks: Task[] = tasksData.map((recoveryTask: unknown, index: number) => {
-        const rt = recoveryTask as RecoveryTask
-        // Map status values
+      const recoveredTasks: Task[] = tasksData.map((rt: any, index: number) => {
         let status: Task['status'] = 'planned'
         if (rt.status === 'done') status = 'done'
         else if (rt.status === 'todo') status = 'planned'
@@ -949,14 +466,13 @@ export const useTaskStore = defineStore('tasks', () => {
         else if (rt.status === 'backlog') status = 'backlog'
         else if (rt.status === 'on_hold') status = 'on_hold'
 
-        // Map priority values
         let priority: Task['priority'] = null
         if (rt.priority === 'high') priority = 'high'
         else if (rt.priority === 'medium') priority = 'medium'
         else if (rt.priority === 'low') priority = 'low'
 
         return {
-          id: rt.id || `recovery-${Date.now()}-${index}`,
+          id: rt.id || `recovery - ${Date.now()} -${index} `,
           title: rt.title || 'Recovered Task',
           description: rt.description || '',
           status,
@@ -968,240 +484,125 @@ export const useTaskStore = defineStore('tasks', () => {
           projectId: rt.projectId || null,
           createdAt: new Date(rt.createdAt || Date.now()),
           updatedAt: new Date(rt.updatedAt || Date.now()),
-          isInInbox: true, // Start in inbox until positioned on canvas
-          instances: [], // No instances initially
+          isInInbox: true,
+          instances: [],
         }
       })
 
-      // Add recovered tasks to existing tasks (avoid duplicates by ID if available)
       const existingIds = new Set(tasks.value.map(t => t.id))
       const newTasks = recoveredTasks.filter(task => !existingIds.has(task.id))
 
       if (newTasks.length > 0) {
         tasks.value.push(...newTasks)
-        migrateTaskStatuses() // Fix "todo" -> "planned" status mapping for recovered tasks
+        runAllTaskMigrations()
         console.log(`✅ Imported ${newTasks.length} tasks from recovery tool`)
-
-        // Clear the recovery tool storage after successful import
         localStorage.removeItem('pomo-flow-imported-tasks')
-        console.log('🗑️ Cleared recovery tool storage after successful import')
-      } else {
-        console.log('📋 All tasks from recovery tool already exist in database')
       }
-
     } catch (error) {
-      console.log('ℹ️ Could not import tasks from recovery tool:', error instanceof Error ? error.message : 'Unknown error')
     }
   }
 
   // Load tasks from PouchDB on initialization
   const loadFromDatabase = async () => {
-    console.log('🚀 NEW POUCHDB LOADING: Starting task load from PouchDB...')
-
-    // Set flag to prevent auto-save during load (prevents sync loop)
-    isLoadingFromDatabase = true
-
-    // Wait for window.pomoFlowDb to be available (set by useReliableSyncManager)
-    // The sync manager handles the initial bidirectional sync before calling this
-    console.log('🔍 [BUG-025] Waiting for PouchDB to be available...')
-    let attempts = 0
-    while (!window.pomoFlowDb && attempts < 300) { // 30s max (300 * 100ms)
-      await new Promise(resolve => setTimeout(resolve, 100))
-      attempts++
-      if (attempts % 50 === 0) {
-        console.log(`🔍 [BUG-025] Still waiting for PouchDB... attempt ${attempts}`)
-      }
-    }
-
-    const dbInstance = window.pomoFlowDb
-    if (!dbInstance) {
-      console.warn('⚠️ [STABILIZATION] PouchDB not available for task loading after 30s timeout - proceeding with local memory')
-      isLoadingFromDatabase = false
-      return
-    }
-    console.log('✅ [BUG-025] PouchDB ready, loading tasks...')
-
-    // NOTE: Bidirectional sync is now handled by useReliableSyncManager.initializeSync()
-    // before it calls loadFromDatabase(). No need for redundant sync here.
-
     try {
-      // TASK-034: Phase 4 - Read from individual task documents if enabled
+      isLoadingFromDatabase = true
+
+      console.log('🔍 [BUG-025] Waiting for PouchDB...')
+      let attempts = 0
+      while (!window.pomoFlowDb && attempts < 300) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
+      }
+
+      const dbInstance = window.pomoFlowDb
+      if (!dbInstance) {
+        console.warn('⚠️ PouchDB not available')
+        return
+      }
+
+      // 1. Load from individual docs (Phase 4)
       if (STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
-        console.log('📂 TASK-034 Phase 4: Loading tasks from individual task-{id} documents...')
         try {
-          const loadedTasks = await loadIndividualTasks(dbInstance as unknown as PouchDB.Database)
+          const loadedTasks = await loadIndividualTasks(dbInstance as any)
           if (loadedTasks && loadedTasks.length > 0) {
             const oldTasks = [...tasks.value]
-
-            // BUG-025 FIX: MERGE instead of REPLACE to prevent losing in-memory tasks
-            // that haven't been saved to individual docs yet
             const loadedTaskIds = new Set(loadedTasks.map(t => t.id))
             const tasksOnlyInMemory = oldTasks.filter(t => !loadedTaskIds.has(t.id))
+            let mergedTasks = tasksOnlyInMemory.length > 0 ? [...loadedTasks, ...tasksOnlyInMemory] : loadedTasks
 
-            if (tasksOnlyInMemory.length > 0) {
-              console.warn(`⚠️ [BUG-025] Found ${tasksOnlyInMemory.length} tasks in memory not in individual docs - preserving and saving:`,
-                tasksOnlyInMemory.map(t => ({ id: t.id, title: t.title })))
+            // BUG-037: Filter before assignment
+            const deletionDoc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ taskIds: [] })) as any
+            const deletedIds = new Set(deletionDoc.taskIds || [])
+            tasks.value = mergedTasks.filter(t => !deletedIds.has(t.id))
 
-              // Save these tasks to individual docs so they don't get lost
-              await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, tasksOnlyInMemory)
-              console.log(`✅ [BUG-025] Saved ${tasksOnlyInMemory.length} in-memory tasks to individual docs`)
-
-              // Merge: loaded tasks + in-memory only tasks
-              tasks.value = [...loadedTasks, ...tasksOnlyInMemory]
-            } else {
-              tasks.value = loadedTasks
+            console.log(`✅ Loaded ${tasks.value.length} tasks (Phase 4)`)
+            if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+              deleteLegacyTasksDocument().catch(() => { })
             }
-
-            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-Phase4-individualDocs')
-            console.log(`✅ TASK-034 Phase 4: Loaded ${loadedTasks.length} tasks from individual documents (final: ${tasks.value.length})`)
-
-            // Skip legacy read - individual docs loaded successfully
-            // Continue to migrations below
-          } else {
-            console.warn('⚠️ TASK-034 Phase 4: No individual task docs found, falling back to legacy format')
-            // Fall through to legacy read below
           }
-        } catch (phase4Error) {
-          console.error('❌ TASK-034 Phase 4: Individual task load failed, falling back to legacy:', phase4Error)
-          // Fall through to legacy read below
+        } catch (e) {
+          console.warn('Phase 4 load failed, falling back:', e)
         }
       }
 
-      // Phase 1 (Legacy): Read from tasks:data if Phase 4 not enabled or failed
-      // Skip if tasks were already loaded from individual docs
-      if (tasks.value.length === 0 || !STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
-        console.log('📂 Loading tasks from tasks:data (legacy format)...')
-
-        const result = await dbInstance.allDocs({ include_docs: true })
-        console.log('🔍 POUCHDB DEBUG: Total documents found:', result.total_rows)
-        console.log('🔍 POUCHDB DEBUG: All document IDs:', result.rows.map((row) => row.id))
-
-        const tasksDoc = result.rows.find((row) => row.id === 'tasks:data')
-        console.log('🔍 POUCHDB DEBUG: tasks:data document found:', !!tasksDoc)
-
-        if (tasksDoc?.doc) {
-          let taskArray = null
-
-          // Check if doc itself is the array
-          if (Array.isArray(tasksDoc.doc)) {
-            taskArray = tasksDoc.doc
+      // 2. Fallback to legacy (Phase 1)
+      if ((tasks.value.length === 0 || !STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) && !STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+        try {
+          const tasksDoc = await dbInstance.get('tasks:data').catch(() => null) as any
+          if (tasksDoc?.tasks) {
+            tasks.value = tasksDoc.tasks.map((t: any) => ({
+              ...t,
+              createdAt: new Date(t.createdAt || Date.now()),
+              updatedAt: new Date(t.updatedAt || Date.now())
+            }))
+            console.log(`✅ Loaded ${tasks.value.length} tasks (Legacy)`)
           }
-          // Check if doc has tasks property
-          else if (Array.isArray(tasksDoc.doc.tasks)) {
-            taskArray = tasksDoc.doc.tasks
-          }
-          // Check if doc has data property (useDatabase composable structure)
-          else if (Array.isArray(tasksDoc.doc.data)) {
-            taskArray = tasksDoc.doc.data
-          }
-
-          if (taskArray && taskArray.length > 0) {
-            const oldTasks = [...tasks.value]
-            interface TaskDoc {
-              createdAt?: string | Date
-              updatedAt?: string | Date
-              [key: string]: unknown
-            }
-            tasks.value = taskArray.map((task: unknown) => {
-              const t = task as TaskDoc
-              return {
-                ...t,
-                createdAt: new Date(t.createdAt || Date.now()),
-                updatedAt: new Date(t.updatedAt || Date.now())
-              }
-            }) as Task[]
-            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'loadFromDatabase-legacyFormat')
-            console.log(`✅ Loaded ${taskArray.length} tasks from tasks:data (legacy)`)
-          } else {
-            // BUG-025 FIX: DON'T wipe tasks if legacy doc is empty - preserve existing tasks
-            console.log('ℹ️ tasks:data exists but is empty - PRESERVING existing tasks to prevent data loss')
-            // tasks.value = [] // DANGEROUS - removed to prevent data loss
-          }
-        } else {
-          // BUG-025 FIX: DON'T wipe tasks if legacy doc missing - preserve existing tasks
-          console.log('ℹ️ No tasks:data document found - PRESERVING existing tasks to prevent data loss')
-          // tasks.value = [] // DANGEROUS - removed to prevent data loss
+        } catch (e) {
+          console.warn('Legacy load failed:', e)
         }
-      } // End of legacy format loading block
+      }
+
+      // 3. Post-load initialization
+      runAllTaskMigrations()
+
+      if (STORAGE_FLAGS.DUAL_WRITE_TASKS && tasks.value.length > 0) {
+        const existing = await dbInstance.allDocs({ startkey: 'task-', endkey: 'task-\ufff0', limit: 1 })
+        if (existing.total_rows === 0) {
+          await migrateFromLegacyFormat(dbInstance as any)
+        }
+      }
+
+      let isInitialized = false
+      try {
+        await dbInstance.get('_local/app-init')
+        isInitialized = true
+      } catch { }
+
+      if (tasks.value.length === 0 && !isInitialized) {
+        await importFromRecoveryTool()
+        if (tasks.value.length === 0) await importTasksFromJSON()
+      }
+
+      if (!isInitialized) {
+        await dbInstance.put({ _id: '_local/app-init', createdAt: new Date().toISOString() }).catch(() => { })
+      }
+
+      try {
+        const savedHideDone = await db.load<boolean>(DB_KEYS.HIDE_DONE_TASKS)
+        if (savedHideDone !== null) hideDoneTasks.value = savedHideDone
+      } catch { }
+
+      safeSync('startup-check')
     } catch (error) {
-      console.error('❌ Failed to load tasks from PouchDB:', error)
-      // BUG-025 FIX: DON'T wipe tasks on error - preserve existing tasks
-      console.warn('⚠️ PRESERVING existing tasks despite error to prevent data loss')
-      // tasks.value = [] // DANGEROUS - removed to prevent data loss
-      return
+      console.error('❌ loadFromDatabase failed:', error)
+    } finally {
+      isLoadingFromDatabase = false
+      console.log('✅ loadFromDatabase complete, auto-save re-enabled')
     }
-
-    // Run task migrations after loading
-    migrateLegacyTasks()
-    migrateTaskStatuses() // Fix "todo" -> "planned" status mapping
-    migrateInboxFlag()
-    migrateNestedTaskProjectIds() // Fix nested tasks to inherit parent's projectId
-    migrateTaskUncategorizedFlag() // Set isUncategorized flag for existing tasks
-
-    // TASK-034: Phase 2 - Check if migration is needed
-    if (STORAGE_FLAGS.DUAL_WRITE_TASKS && tasks.value.length > 0) {
-      console.log('🔄 TASK-034: Checking if individual task documents exist...')
-
-      // Check if individual docs already exist
-      try {
-        const existingIndividualDocs = await dbInstance.allDocs({
-          startkey: 'task-',
-          endkey: 'task-\ufff0'
-        })
-
-        if (existingIndividualDocs.total_rows === 0) {
-          console.log('📂 TASK-034: No individual task documents found. Running migration...')
-          const migrationResult = await migrateFromLegacyFormat(dbInstance as unknown as PouchDB.Database)
-          console.log(`✅ TASK-034: Migration complete - ${migrationResult.migrated} tasks migrated, legacy deleted: ${migrationResult.deleted}`)
-        } else {
-          console.log(`ℹ️ TASK-034: Found ${existingIndividualDocs.total_rows} individual task documents, skipping migration`)
-        }
-      } catch (error) {
-        console.warn('⚠️ TASK-034: Migration check failed:', error)
-      }
-    }
-
-    // If no tasks found, try to import from recovery tool first, then JSON file
-    if (tasks.value.length === 0) {
-      console.log('📂 No tasks found, attempting import from recovery tool...')
-      await importFromRecoveryTool()
-
-      // If still no tasks, try JSON file
-      if (tasks.value.length === 0) {
-        console.log('📂 No tasks from recovery tool, attempting import from JSON file...')
-        await importTasksFromJSON()
-      }
-    }
-
-    // REMOVED: Duplicate PouchDB initialization code that was causing race condition
-    // Projects are now loaded exclusively by the main database composable (see loadProjectsFromPouchDB function)
-
-    // Load hide done tasks setting (defaults to false to show completed tasks for logging)
-    // BUG-025: Check if database is ready first, fall back to localStorage
-    if (db.isReady?.value) {
-      try {
-        const savedHideDoneTasks = await db.load<boolean>(DB_KEYS.HIDE_DONE_TASKS)
-        if (savedHideDoneTasks !== null) {
-          hideDoneTasks.value = savedHideDoneTasks
-        }
-      } catch (_e) {
-        console.log('🔧 [BUG-025] hide_done_tasks: DB load failed, using default')
-      }
-    }
-    // If no saved setting exists, keep the default value of false (show done tasks)
-
-
-    // Test safe sync once
-    safeSync('startup-check')
-
-    // Reset flag after loading complete
-    isLoadingFromDatabase = false
-    console.log('✅ Database load complete, auto-save re-enabled')
   }
 
   // Auto-save to IndexedDB when tasks, projects, or settings change (debounced)
   let tasksSaveTimer: ReturnType<typeof setTimeout> | null = null
-  let projectsSaveTimer: ReturnType<typeof setTimeout> | null = null
   let settingsSaveTimer: ReturnType<typeof setTimeout> | null = null
 
   watch(tasks, (_newTasks) => {
@@ -1245,7 +646,7 @@ export const useTaskStore = defineStore('tasks', () => {
           // 2. Also save as individual task-{id} documents
           try {
             await saveIndividualTasks(dbInstance as unknown as PouchDB.Database, currentTasks)
-            console.log(`📋 Tasks saved as ${currentTasks.length} individual documents (new format)`)
+            console.log(`📋 Tasks saved as ${currentTasks.length} individual documents(new format)`)
 
             // 3. Clean up orphaned task documents (deleted tasks)
             const currentTaskIds = new Set(currentTasks.map(t => t.id))
@@ -1288,26 +689,9 @@ export const useTaskStore = defineStore('tasks', () => {
   }, { deep: true, flush: 'post' })
 
   // PHASE 3: DEBUG watcher removed - was causing unnecessary deep comparisons
-  // Original: watch(() => projects.value.map(...), ..., { deep: true, immediate: true })
+  // Original: watch(() => projects.value.map(...), ..., { deep: true, immediate: true})
   // Removed to improve performance - debugging should use Vue DevTools instead
 
-  // TASK-048: Updated to support individual document storage
-  watch(projects, (newProjects) => {
-    if (manualOperationInProgress) {
-      console.log('⏸️ Skipping projects auto-save during manual operation')
-      return
-    }
-
-    if (isLoadingFromDatabase) {
-      console.log('⏸️ Skipping projects auto-save during database load')
-      return
-    }
-
-    if (projectsSaveTimer) clearTimeout(projectsSaveTimer)
-    projectsSaveTimer = setTimeout(async () => {
-      await saveProjectsToStorage([...projects.value], 'auto-save')
-    }, 1000) // Debounce 1 second
-  }, { deep: true, flush: 'post' })
 
   // Auto-save hide done tasks setting
   watch(hideDoneTasks, (newValue) => {
@@ -1317,562 +701,6 @@ export const useTaskStore = defineStore('tasks', () => {
     }, 500) // Debounce 0.5 second for settings
   }, { flush: 'post' })
 
-  // Helper function to recursively collect nested tasks with infinite loop protection
-  const collectNestedTasks = (taskIds: string[]): string[] => {
-    const allNestedIds: string[] = []
-    const visited = new Set<string>() // Prevent infinite loops
-
-    const collectChildren = (parentId: string) => {
-      const children = tasks.value.filter(task => task.parentTaskId === parentId)
-      children.forEach(child => {
-        if (!visited.has(child.id)) {
-          visited.add(child.id)
-          allNestedIds.push(child.id)
-          collectChildren(child.id) // Recursively collect children of children
-        }
-      })
-    }
-
-    taskIds.forEach(parentId => {
-      if (!visited.has(parentId)) {
-        visited.add(parentId)
-        collectChildren(parentId)
-      }
-    })
-    return allNestedIds
-  }
-
-  // Computed - Filtered tasks based on active project, smart view, AND status filter
-  const filteredTasks = computed(() => {
-    // Safety check: ensure tasks array exists and is iterable
-    if (!tasks.value || !Array.isArray(tasks.value)) {
-      console.warn('TaskStore.filteredTasks: tasks array not initialized, returning empty array')
-      return []
-    }
-
-    if (shouldLogTaskDiagnostics()) {
-      console.log('🚨 TaskStore.filteredTasks: === STARTING FILTERED TASKS COMPUTATION ===')
-      console.log('🚨 TaskStore.filteredTasks: Total tasks available:', tasks.value.length)
-      console.log('🚨 TaskStore.filteredTasks: activeProjectId:', activeProjectId.value)
-      console.log('🚨 TaskStore.filteredTasks: activeSmartView:', activeSmartView.value)
-      console.log('🚨 TaskStore.filteredTasks: activeStatusFilter:', activeStatusFilter.value)
-      console.log('🚨 TaskStore.filteredTasks: activeDurationFilter:', activeDurationFilter.value)
-      console.log('🚨 TaskStore.filteredTasks: hideDoneTasks:', hideDoneTasks.value)
-
-      // Log all tasks with their basic info
-      console.log('🚨 TaskStore.filteredTasks: All tasks in store:')
-      tasks.value.forEach(task => {
-        console.log(`🚨 TaskStore.filteredTasks:   - "${task.title}" (ID: ${task.id}, Status: ${task.status}, Project: ${task.projectId})`)
-      })
-    }
-
-    // Helper function to get all child projects (recursively) of a given project
-    const getChildProjectIds = (projectId: string): string[] => {
-      const ids = [projectId]
-      const childProjects = projects.value.filter(p => p.parentId === projectId)
-      childProjects.forEach(child => {
-        ids.push(...getChildProjectIds(child.id))
-      })
-      return ids
-    }
-
-    let filtered = tasks.value
-    if (shouldLogTaskDiagnostics()) {
-      console.log('🚨 TaskStore.filteredTasks: After initial assignment:', filtered.length, 'tasks')
-    }
-
-    // NEW ARCHITECTURE: Filters are applied SEQUENTIALLY and can be COMBINED
-    // Order: Smart View → Project → Status → Duration → Hide Done
-
-    // Step 1: Apply smart view filter FIRST (if active)
-    const { applySmartViewFilter, isUncategorizedTask, isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
-
-    // Step 1: Apply smart view filter FIRST (if active)
-    if (activeSmartView.value) {
-      filtered = applySmartViewFilter(filtered, activeSmartView.value)
-    }
-
-    // Step 2: Apply project filter ON TOP of smart view result (if active)
-    // Note: Filters can now be combined - "Today" + "Project X" shows today's tasks in Project X
-    if (activeProjectId.value) {
-      const beforeProjectFilter = filtered.length
-      const projectIds = getChildProjectIds(activeProjectId.value)
-
-      if (shouldLogTaskDiagnostics()) {
-        console.log('\n🚨 PROJECT FILTER (Combined with smart view):', activeProjectId.value)
-        console.log(`   Target Project IDs (including children): ${projectIds.join(', ')}`)
-        console.log(`   Tasks before filter: ${filtered.length}`)
-      }
-
-      filtered = filtered.filter(task => projectIds.includes(task.projectId))
-
-      if (shouldLogTaskDiagnostics()) {
-        console.log(`   Tasks after filter: ${filtered.length}`)
-        console.log(`   Removed: ${beforeProjectFilter - filtered.length}`)
-      }
-    }
-
-    // Step 3: Apply status filter (NEW GLOBAL STATUS FILTER)
-    if (activeStatusFilter.value) {
-      filtered = filtered.filter(task => task.status === activeStatusFilter.value)
-    }
-
-    // Step 4: Apply duration filter (NEW GLOBAL DURATION FILTER)
-    if (activeDurationFilter.value) {
-      const beforeDurationFilter = filtered.length
-      filtered = filtered.filter(t => {
-        switch (activeDurationFilter.value) {
-          case 'quick': return isQuickTask(t)
-          case 'short': return isShortTask(t)
-          case 'medium': return isMediumTask(t)
-          case 'long': return isLongTask(t)
-          case 'unestimated': return isUnestimatedTask(t)
-          default: return true
-        }
-      })
-      if (shouldLogTaskDiagnostics()) {
-        console.log(`🔧 TaskStore.filteredTasks: Duration filter enabled - removed ${beforeDurationFilter - filtered.length} tasks, ${filtered.length} remaining`)
-      }
-    }
-
-    // Step 5: Apply done task visibility based on user preference
-    if (hideDoneTasks.value) {
-      const beforeHideDone = filtered.length
-      filtered = filtered.filter(task => task.status !== 'done')
-      if (shouldLogTaskDiagnostics()) {
-        console.log(`🔧 TaskStore.filteredTasks: Hide done tasks enabled - removed ${beforeHideDone - filtered.length} done tasks, ${filtered.length} remaining`)
-      }
-    } else {
-      if (shouldLogTaskDiagnostics()) {
-        const doneTaskCount = filtered.filter(task => task.status === 'done').length
-        console.log(`🔧 TaskStore.filteredTasks: Hide done tasks disabled - keeping ${doneTaskCount} done tasks in filter results`)
-      }
-    }
-
-    // NEW: Include nested tasks when their parent matches the filter
-    // Get the IDs of tasks that passed the initial filtering
-    const filteredTaskIds = filtered.map(task => task.id)
-    if (shouldLogTaskDiagnostics()) {
-      console.log('🔧 TaskStore.filteredTasks: Parent task IDs that passed filters:', filteredTaskIds)
-    }
-
-    // Collect all nested task IDs from the filtered tasks
-    const nestedTaskIds = collectNestedTasks(filteredTaskIds)
-    if (shouldLogTaskDiagnostics()) {
-      console.log('🔧 TaskStore.filteredTasks: Collected nested task IDs:', nestedTaskIds)
-    }
-
-    // Find the actual nested task objects and APPLY THE SAME FILTERS
-    let nestedTasks: Task[] = []
-    try {
-      nestedTasks = tasks.value
-        .filter(task => nestedTaskIds.includes(task.id))
-        .filter(task => {
-          try {
-            // Validate task object
-            if (!task || typeof task !== 'object') return false
-
-            // Apply project filter to nested tasks (including child projects)
-            if (activeProjectId.value) {
-              const projectIds = getChildProjectIds(activeProjectId.value)
-              if (!projectIds.includes(task.projectId)) return false
-            }
-
-            // Apply smart view filter to nested tasks
-            if (activeSmartView.value === 'today') {
-              if (task.status === 'done') return false
-
-              const todayStr = new Date().toISOString().split('T')[0]
-              const today = new Date()
-              today.setHours(0, 0, 0, 0)
-
-              // Tasks created today
-              if (task.createdAt) {
-                const taskCreatedDate = new Date(task.createdAt)
-                taskCreatedDate.setHours(0, 0, 0, 0)
-                if (taskCreatedDate.getTime() === today.getTime()) return true
-              }
-
-              // Tasks due today
-              if (task.dueDate) {
-                const taskDueDate = new Date(task.dueDate)
-                if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) return true
-              }
-
-              // Tasks currently in progress
-              if (task.status === 'in_progress') return true
-
-              return false
-            } else if (activeSmartView.value === 'week') {
-              const today = new Date()
-              today.setHours(0, 0, 0, 0)
-              const todayStr = today.toISOString().split('T')[0]
-              const weekEnd = new Date(today)
-              weekEnd.setDate(weekEnd.getDate() + 7)
-              const weekEndStr = weekEnd.toISOString().split('T')[0]
-
-              if (!task.dueDate) return false
-              return task.dueDate >= todayStr && task.dueDate <= weekEndStr
-            } else if (activeSmartView.value === 'uncategorized') {
-              return isUncategorizedTask(task)
-            }
-
-            // Apply status filter to nested tasks
-            if (activeStatusFilter.value && task.status !== activeStatusFilter.value) return false
-
-            // Apply duration filter to nested tasks
-            if (activeDurationFilter.value) {
-              switch (activeDurationFilter.value) {
-                case 'quick': if (!isQuickTask(task)) return false; break;
-                case 'short': if (!isShortTask(task)) return false; break;
-                case 'medium': if (!isMediumTask(task)) return false; break;
-                case 'long': if (!isLongTask(task)) return false; break;
-                case 'unestimated': if (!isUnestimatedTask(task)) return false; break;
-              }
-            }
-
-            // Apply global done task exclusion to nested tasks
-            if (task.status === 'done') return false
-
-            return true
-          } catch {
-            return false
-          }
-        })
-    } catch {
-      nestedTasks = []
-    }
-
-    // Combine filtered tasks with their properly filtered nested tasks
-    const allTasks = [...filtered, ...nestedTasks]
-
-    // Remove duplicates (in case a nested task was also directly filtered)
-    const uniqueTasks = allTasks.filter((task, index, self) =>
-      index === self.findIndex(t => t.id === task.id)
-    )
-
-    return uniqueTasks
-  })
-
-  // Computed - Status groups using filtered tasks
-  const tasksByStatus = computed(() => {
-    const tasksToGroup = filteredTasks.value
-    return {
-      planned: tasksToGroup.filter(task => task.status === 'planned'),
-      in_progress: tasksToGroup.filter(task => task.status === 'in_progress'),
-      done: tasksToGroup.filter(task => task.status === 'done'),
-      backlog: tasksToGroup.filter(task => task.status === 'backlog'),
-      on_hold: tasksToGroup.filter(task => task.status === 'on_hold')
-    }
-  })
-
-  // Tasks that have canvas positions (for canvas extent calculation)
-  const tasksWithCanvasPosition = computed(() => {
-    return tasks.value.filter(task => task.canvasPosition &&
-      typeof task.canvasPosition.x === 'number' &&
-      typeof task.canvasPosition.y === 'number')
-  })
-
-  // Filtered tasks that have canvas positions (for Canvas view with sidebar filters)
-  let lastFilteredTasksWithCanvasPosition: Task[] = []
-  let lastFilteredTasksWithCanvasPositionHash: string = ''
-
-  const filteredTasksWithCanvasPosition = computed(() => {
-    const currentTasks = filteredTasks.value.filter(task => task.canvasPosition &&
-      typeof task.canvasPosition.x === 'number' &&
-      typeof task.canvasPosition.y === 'number')
-
-    const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}`).join('|')
-
-    // Check if we need to re-filter based on active canvas filters
-    if (activeStatusFilter.value || activeDurationFilter.value) {
-      // We always re-filter if there's an active canvas filter
-      // Force update regardless of hash if filters changed (handled by computed dependencies activeStatusFilter/activeDurationFilter)
-    } else if (currentHash === lastFilteredTasksWithCanvasPositionHash && lastFilteredTasksWithCanvasPosition.length > 0) {
-      return lastFilteredTasksWithCanvasPosition
-    }
-
-    lastFilteredTasksWithCanvasPositionHash = currentHash
-
-    // Apply canvas-specific filters (Status & Duration)
-    let filtered = [...currentTasks]
-
-    if (activeStatusFilter.value) {
-      filtered = filtered.filter(t => t.status === activeStatusFilter.value)
-    }
-
-    if (activeDurationFilter.value) {
-      const { isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
-      filtered = filtered.filter(t => {
-        switch (activeDurationFilter.value) {
-          case 'quick': return isQuickTask(t)
-          case 'short': return isShortTask(t)
-          case 'medium': return isMediumTask(t)
-          case 'long': return isLongTask(t)
-          case 'unestimated': return isUnestimatedTask(t)
-          default: return true
-        }
-      })
-    }
-
-    lastFilteredTasksWithCanvasPosition = filtered
-    return filtered
-  })
-
-  const totalTasks = computed(() => tasks.value.filter(task => task.status !== 'done').length)
-  const completedTasks = computed(() => tasks.value.filter(task => task.status === 'done').length)
-
-  // Done tasks for Done column (respects all other filters but includes done tasks)
-  const doneTasksForColumn = computed(() => {
-    let doneTasks = tasks.value.filter(task => task.status === 'done')
-
-    // Apply project filter if active
-    if (activeProjectId.value) {
-      const getChildProjectIds = (projectId: string): string[] => {
-        const ids = [projectId]
-        const childProjects = projects.value.filter(p => p.parentId === projectId)
-        childProjects.forEach(child => {
-          ids.push(...getChildProjectIds(child.id))
-        })
-        return ids
-      }
-      const projectIds = getChildProjectIds(activeProjectId.value)
-      doneTasks = doneTasks.filter(task => projectIds.includes(task.projectId))
-    }
-
-    // Apply smart view filter if active
-    if (activeSmartView.value === 'today') {
-      const todayStr = new Date().toISOString().split('T')[0]
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-
-      doneTasks = doneTasks.filter(task => {
-
-        // Tasks created today
-        const taskCreatedDate = new Date(task.createdAt)
-        taskCreatedDate.setHours(0, 0, 0, 0)
-        if (taskCreatedDate.getTime() === today.getTime()) return true
-
-        // Tasks due today
-        if (task.dueDate) {
-          const taskDueDate = new Date(task.dueDate)
-          if (!isNaN(taskDueDate.getTime()) && formatDateKey(taskDueDate) === todayStr) return true
-        }
-
-
-        return false
-      })
-    }
-
-    return doneTasks
-  })
-
-  const totalPomodoros = computed(() =>
-    tasks.value.reduce((sum, task) => sum + task.completedPomodoros, 0)
-  )
-
-  // Calendar-aware task filtering - UNIFIED with filteredTasks
-  // Uses filteredTasks as base, adds calendar-specific enhancements
-  const calendarFilteredTasks = computed(() => {
-    if (shouldLogTaskDiagnostics()) {
-      console.log('🚨 TaskStore.calendarFilteredTasks: === COMPUTING CALENDAR FILTERED TASKS ===')
-      console.log('🚨 TaskStore.calendarFilteredTasks: Using unified filteredTasks as base')
-    }
-
-    // Start with the unified filteredTasks (already has smart view + project + status + hideDone filters applied)
-    let filtered = [...filteredTasks.value]
-
-    // CALENDAR-SPECIFIC ENHANCEMENT: For "today" smart view, also include unscheduled inbox tasks
-    // This is the only calendar-specific behavior that differs from filteredTasks
-    if (activeSmartView.value === 'today') {
-      // Find unscheduled inbox tasks that should appear in calendar's today view
-      const additionalInboxTasks = tasks.value.filter(task => {
-        // Skip if task is already in filtered results
-        if (filtered.some(t => t.id === task.id)) return false
-
-        // Skip done tasks
-        if (task.status === 'done') return false
-
-        // Calendar filtering: IGNORE canvas position entirely
-        // A task can be on canvas AND still appear in calendar inbox if not on calendar grid
-        // "On calendar" = has instances (time slots), NOT just dueDate
-        // dueDate is a deadline, not a calendar time slot
-
-        // Check if task is on the calendar (has instances or legacy schedule)
-        const hasInstances = task.instances && task.instances.length > 0
-        const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
-          (task.scheduledTime && task.scheduledTime.trim() !== '')
-        const isNotOnCalendar = !hasInstances && !hasLegacySchedule
-
-        // Apply project filter if active
-        if (activeProjectId.value) {
-          const getChildProjectIds = (projectId: string): string[] => {
-            const ids = [projectId]
-            const childProjects = projects.value.filter(p => p.parentId === projectId)
-            childProjects.forEach(child => {
-              ids.push(...getChildProjectIds(child.id))
-            })
-            return ids
-          }
-          const projectIds = getChildProjectIds(activeProjectId.value)
-          if (!projectIds.includes(task.projectId)) return false
-        }
-
-        // Apply status filter if active
-        if (activeStatusFilter.value && task.status !== activeStatusFilter.value) return false
-
-        // Apply duration filter if active
-        if (activeDurationFilter.value) {
-          const { isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
-          switch (activeDurationFilter.value) {
-            case 'quick': if (!isQuickTask(task)) return false; break;
-            case 'short': if (!isShortTask(task)) return false; break;
-            case 'medium': if (!isMediumTask(task)) return false; break;
-            case 'long': if (!isLongTask(task)) return false; break;
-            case 'unestimated': if (!isUnestimatedTask(task)) return false; break;
-          }
-        }
-
-        // Calendar inbox: show if not on calendar grid (ignore canvas state)
-        return isNotOnCalendar
-      })
-
-      // Add the additional inbox tasks
-      filtered = [...filtered, ...additionalInboxTasks]
-    }
-
-    if (shouldLogTaskDiagnostics()) {
-      console.log(`🚨 TaskStore.calendarFilteredTasks: Final calendar filtered tasks: ${filtered.length}`)
-      console.log('🚨 TaskStore.calendarFilteredTasks: === END CALENDAR FILTERED TASKS ===')
-    }
-
-    return filtered
-  })
-
-  // Centralized non-done task counter - single source of truth for all task counting
-  const nonDoneTaskCount = computed(() => {
-    // Use the already-filtered tasks from filteredTasks computed property
-    // This ensures we use the exact same logic that excludes done tasks globally
-    return filteredTasks.value.length
-  })
-
-  // CENTRALIZED TASK COUNTS - Single source of truth for sidebar counts
-  // These counts respect the active project filter (if set) to show relevant counts
-  // Updated: Fixed timezone bug using local date strings
-  const smartViewTaskCounts = computed(() => {
-    const {
-      isTodayTask, isWeekTask, isUncategorizedTask, isUnscheduledTask, isInProgressTask,
-      isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask
-    } = useSmartViews()
-
-    // Get the base tasks - either all tasks or project-filtered tasks
-    let baseTasks = tasks.value
-
-    // If project filter is active, show counts within that project only
-    if (activeProjectId.value) {
-      const getChildProjectIds = (projectId: string): string[] => {
-        const ids = [projectId]
-        const childProjects = projects.value.filter(p => p.parentId === projectId)
-        childProjects.forEach(child => {
-          ids.push(...getChildProjectIds(child.id))
-        })
-        return ids
-      }
-      const projectIds = getChildProjectIds(activeProjectId.value)
-      baseTasks = baseTasks.filter(task => projectIds.includes(task.projectId))
-    }
-
-    // Apply hideDoneTasks if enabled (except for specific views that handle it internally)
-    if (hideDoneTasks.value) {
-      baseTasks = baseTasks.filter(task => task.status !== 'done')
-    }
-
-    // Calculate counts for each smart view
-    const today = baseTasks.filter(task => isTodayTask(task)).length
-    const week = baseTasks.filter(task => isWeekTask(task)).length
-    const uncategorized = baseTasks.filter(task => isUncategorizedTask(task)).length
-    const unscheduled = baseTasks.filter(task => isUnscheduledTask(task)).length
-    const inProgress = baseTasks.filter(task => isInProgressTask(task)).length
-    const quick = baseTasks.filter(task => isQuickTask(task)).length
-    const short = baseTasks.filter(task => isShortTask(task)).length
-    const medium = baseTasks.filter(task => isMediumTask(task)).length
-    const long = baseTasks.filter(task => isLongTask(task)).length
-    const unestimated = baseTasks.filter(task => isUnestimatedTask(task)).length
-
-    // 'all_active' counts all non-done tasks (previously 'above_my_tasks')
-    const allActive = baseTasks.filter(task => task.status !== 'done').length
-
-    // 'all' is just the total of base tasks (respecting project filter)
-    const all = baseTasks.length
-
-    return {
-      today,
-      week,
-      uncategorized,
-      unscheduled,
-      inProgress,
-      allActive,
-      all,
-      quick,
-      short,
-      medium,
-      long,
-      unestimated
-    }
-  })
-
-  // Helper to get count for a specific project (respecting active filters)
-  const getProjectTaskCount = (projectId: string): number => {
-    const getChildProjectIds = (id: string): string[] => {
-      const ids = [id]
-      const childProjects = projects.value.filter(p => p.parentId === id)
-      childProjects.forEach(child => {
-        ids.push(...getChildProjectIds(child.id))
-      })
-      return ids
-    }
-
-    const projectIds = getChildProjectIds(projectId)
-    let projectTasks = tasks.value.filter(task => projectIds.includes(task.projectId))
-
-    // Apply smart view filter if active
-    if (activeSmartView.value) {
-      const { applySmartViewFilter } = useSmartViews()
-      projectTasks = applySmartViewFilter(projectTasks, activeSmartView.value)
-    }
-
-    // Apply status filter if active
-    if (activeStatusFilter.value) {
-      projectTasks = projectTasks.filter(task => task.status === activeStatusFilter.value)
-    }
-
-    // Apply duration filter if active
-    if (activeDurationFilter.value) {
-      const { isQuickTask, isShortTask, isMediumTask, isLongTask, isUnestimatedTask } = useSmartViews()
-      projectTasks = projectTasks.filter(t => {
-        switch (activeDurationFilter.value) {
-          case 'quick': return isQuickTask(t)
-          case 'short': return isShortTask(t)
-          case 'medium': return isMediumTask(t)
-          case 'long': return isLongTask(t)
-          case 'unestimated': return isUnestimatedTask(t)
-          default: return true
-        }
-      })
-    }
-
-    // Apply hideDoneTasks if enabled
-    if (hideDoneTasks.value) {
-      projectTasks = projectTasks.filter(task => task.status !== 'done')
-    }
-
-    return projectTasks.length
-  }
-
-  // Root projects - projects without parentId (for AppSidebar)
-  const rootProjects = computed(() => {
-    return projects.value.filter(p => !p.parentId || p.parentId === 'undefined' || p.parentId === undefined)
-  })
 
   // Actions
   const createTask = async (taskData: Partial<Task>) => {
@@ -1892,7 +720,7 @@ export const useTaskStore = defineStore('tasks', () => {
       if (taskData.scheduledDate && taskData.scheduledTime) {
         const now = new Date()
         instances.push({
-          id: `instance-${taskId}-${Date.now()}`,
+          id: `instance - ${taskId} -${Date.now()} `,
           taskId: taskId,
           scheduledDate: taskData.scheduledDate,
           scheduledTime: taskData.scheduledTime,
@@ -1946,7 +774,7 @@ export const useTaskStore = defineStore('tasks', () => {
       });
 
       // Save to PouchDB for persistence (respects INDIVIDUAL_ONLY)
-      await saveTasksToStorage(tasks.value, `createTask-${newTask.id}`)
+      await saveTasksToStorage(tasks.value, `createTask - ${newTask.id} `)
       console.log('✅ Task created and saved:', newTask.id)
       return newTask
 
@@ -2011,7 +839,7 @@ export const useTaskStore = defineStore('tasks', () => {
       if (updates.instances && updates.instances.length > 0) {
         // DO NOT modify isInInbox or canvasPosition here
         // Calendar scheduling should not affect canvas state
-        console.log(`Task "${task.title}" given calendar instances - canvas state unchanged (independent systems)`)
+        console.log(`Task "${task.title}" given calendar instances - canvas state unchanged(independent systems)`)
       }
 
       // 5. Instance Removal: If all instances removed and no canvas position, return to inbox
@@ -2047,24 +875,24 @@ export const useTaskStore = defineStore('tasks', () => {
 
       // If task would be orphaned (not visible anywhere), restore to inbox
       if (finalIsInInbox === false && !willHaveCanvasPosition && !willHaveCalendarInstances) {
-        console.warn(`⚠️ [ORPHAN_PREVENTION] Task "${task.title}" would become orphaned - restoring to inbox`)
+        console.warn(`⚠️[ORPHAN_PREVENTION] Task "${task.title}" would become orphaned - restoring to inbox`)
         updates.isInInbox = true
       }
 
-      // Apply the updates
+      // Apply the updates atomically against the CURRENT state in the array
+      // This prevents race conditions when multiple updates happen in the same tick
       tasks.value[taskIndex] = {
-        ...task,
+        ...tasks.value[taskIndex],
         ...updates,
         updatedAt: new Date()
       }
 
-      // Debug log for state verification
-      const updatedTask = tasks.value[taskIndex]
-      console.log(`🔄 Task "${updatedTask.title}" state updated:`, {
+      const updatedTask = tasks.value[taskIndex] as Task
+      console.log(`🔄 Task "${updatedTask.title}" state updated: `, {
         status: updatedTask.status,
         isInInbox: updatedTask.isInInbox,
         canvasPosition: updatedTask.canvasPosition,
-        instanceCount: updatedTask.instances?.length || 0
+        instanceCount: (updatedTask.instances as any[])?.length || 0
       })
     }
   }
@@ -2080,7 +908,7 @@ export const useTaskStore = defineStore('tasks', () => {
       const memoryCount = tasks.value.length
       const dbCount = dbTasks?.length || 0
 
-      console.log(`📊 Simple validation - Memory: ${memoryCount}, DB: ${dbCount}`)
+      console.log(`📊 Simple validation - Memory: ${memoryCount}, DB: ${dbCount} `)
 
       // Basic consistency check (ignoring localStorage for now)
       return memoryCount === dbCount
@@ -2092,7 +920,6 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Manual operation flag to prevent watch system conflicts
-  let manualOperationInProgress = false
 
   const deleteTask = async (taskId: string): Promise<void> => {
     console.log('🗑️ [EMERGENCY-FIX] deleteTask called for:', taskId)
@@ -2117,7 +944,7 @@ export const useTaskStore = defineStore('tasks', () => {
       tasks.value.splice(taskIndex, 1)
 
       // Take snapshot after deletion (markUserDeletion already called above)
-      taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${deletedTask.title.substring(0, 30)}`)
+      taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask - ${deletedTask.title.substring(0, 30)} `)
 
       // BUG-025 FIX: Use centralized save that respects INDIVIDUAL_ONLY mode
       console.log('💾 [DELETE-TASK] Persisting remaining tasks...')
@@ -2128,15 +955,49 @@ export const useTaskStore = defineStore('tasks', () => {
         if (dbInstance) {
           try {
             await _deleteIndividualTask(dbInstance, taskId)
-            console.log(`🗑️ [BUG-025] Individual task-${taskId} deleted from PouchDB`)
+            console.log(`🗑️[BUG-025] Individual task - ${taskId} deleted from PouchDB`)
+
+            // BUG-037 FIX: Track deletion intent to prevent sync resurrection
+            // This _local document survives sync and ensures deleted tasks stay deleted
+            try {
+              interface DeletionTrackingDoc {
+                _id: string
+                _rev?: string
+                taskIds: string[]
+                deletedAt: Record<string, string>
+              }
+
+              let deletionDoc: DeletionTrackingDoc
+              try {
+                deletionDoc = await dbInstance.get('_local/deleted-tasks') as DeletionTrackingDoc
+              } catch {
+                // Document doesn't exist yet, create it
+                deletionDoc = {
+                  _id: '_local/deleted-tasks',
+                  taskIds: [],
+                  deletedAt: {}
+                }
+              }
+
+              // Add this task to the deletion tracking list
+              if (!deletionDoc.taskIds.includes(taskId)) {
+                deletionDoc.taskIds.push(taskId)
+                deletionDoc.deletedAt[taskId] = new Date().toISOString()
+                await dbInstance.put(deletionDoc)
+                console.log(`🗑️ BUG-037: Tracked deletion intent for task ${taskId}`)
+              }
+            } catch (trackingError) {
+              console.warn('⚠️ BUG-037: Failed to track deletion intent:', trackingError)
+              // Non-critical - deletion still proceeds
+            }
           } catch (e) {
-            console.warn(`⚠️ [BUG-025] Delete individual doc failed:`, e)
+            console.warn(`⚠️[BUG-025] Delete individual doc failed: `, e)
           }
         }
       }
 
       // Save remaining tasks (respects INDIVIDUAL_ONLY - won't write to tasks:data)
-      await saveTasksToStorage(tasks.value, `deleteTask-${taskId}`)
+      await saveTasksToStorage(tasks.value, `deleteTask - ${taskId} `)
 
       // Trigger sync to push deletion to CouchDB
       await safeSync('task-delete')
@@ -2172,7 +1033,7 @@ export const useTaskStore = defineStore('tasks', () => {
         }
 
         // Save remaining tasks (respects INDIVIDUAL_ONLY)
-        await saveTasksToStorage(tasks.value, `deleteTask-retry-${taskId}`)
+        await saveTasksToStorage(tasks.value, `deleteTask - retry - ${taskId} `)
         await safeSync('task-delete-retry')
 
         console.log('✅ Retry successful')
@@ -2319,6 +1180,102 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  // BUG-036 FIX: Atomic Bulk Delete to prevent race conditions
+  const bulkDeleteTasks = async (taskIds: string[]) => {
+    if (!taskIds.length) return
+
+    console.log(`🗑️ [BULK-DELETE] Deleting ${taskIds.length} tasks atomically...`)
+    manualOperationInProgress = true
+
+    try {
+      // 1. Remove from memory (Atomic splice)
+      // Filter out tasks that preserve their order, effectively removing the target IDs
+      const tasksToKeep = tasks.value.filter(t => !taskIds.includes(t.id))
+      const countRemoved = tasks.value.length - tasksToKeep.length
+
+      if (countRemoved === 0) {
+        console.warn('⚠️ Bulk delete: No tasks found to delete in memory')
+        manualOperationInProgress = false
+        return
+      }
+
+      // Snapshot for logger
+      taskDisappearanceLogger.takeSnapshot(tasksToKeep, `bulkDelete - ${countRemoved} tasks`)
+
+      // Update state
+      tasks.value = tasksToKeep
+
+      const dbInstance = (window as unknown as { pomoFlowDb?: PouchDB.Database }).pomoFlowDb
+
+      // 2. Perform DB Operations (Atomic Bulk)
+      // We check flags but since we are fixing BUG-036 which only happens in INDIVIDUAL_ONLY or DUAL_WRITE,
+      // we assume we need to delete individual docs.
+      if ((STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY) && dbInstance) {
+        await _deleteIndividualTasksBulk(dbInstance, taskIds)
+
+        // BUG-037: Track Deletion Intent for Batch Deletes so Sync doesn't restore them
+        try {
+          interface DeletionTrackingDoc {
+            _id: string
+            _rev?: string
+            taskIds: string[]
+            deletedAt: Record<string, string>
+            [key: string]: any
+          }
+
+          let deletionDoc: DeletionTrackingDoc
+          try {
+            deletionDoc = (await dbInstance.get('_local/deleted-tasks')) as unknown as DeletionTrackingDoc
+          } catch (e) {
+            if ((e as { status?: number }).status === 404) {
+              deletionDoc = { _id: '_local/deleted-tasks', taskIds: [], deletedAt: {} }
+            } else {
+              throw e
+            }
+          }
+
+          let dirty = false
+          const now = new Date().toISOString()
+          for (const id of taskIds) {
+            if (!deletionDoc.taskIds.includes(id)) {
+              deletionDoc.taskIds.push(id)
+              deletionDoc.deletedAt[id] = now
+              dirty = true
+            }
+          }
+
+          if (dirty) {
+            await dbInstance.put(deletionDoc)
+            console.log(`🗑️ [BULK-DELETE] Tracked ${taskIds.length} tasks for sync safety`)
+          }
+
+        } catch (trackingError) {
+          console.warn('⚠️ Failed to track bulk deletion intent:', trackingError)
+        }
+      }
+
+      // 3. Save Remaining State (Once)
+      // This handles the legacy doc update if needed (if not individual only)
+      await saveTasksToStorage(tasks.value, `bulkDelete - ${taskIds.length} tasks`)
+
+      // 4. Trigger Sync (Once)
+      await safeSync('task-bulk-delete')
+
+      console.log('✅ Bulk deletion successful')
+    } catch (error) {
+      errorHandler.report({
+        severity: ErrorSeverity.ERROR,
+        category: ErrorCategory.DATABASE,
+        message: 'Bulk task deletion failed',
+        error: error as Error,
+        context: { count: taskIds.length },
+        showNotification: true
+      })
+    } finally {
+      manualOperationInProgress = false
+    }
+  }
+
   // Start task now - move to current time and mark as in progress
   // BUG-025 FIX: Use updateTask() to properly trigger watcher and sync
   const startTaskNow = (taskId: string) => {
@@ -2335,11 +1292,11 @@ export const useTaskStore = defineStore('tasks', () => {
     roundedTime.setMinutes(roundedMinutes, 0, 0)
 
     const todayStr = formatDateKey(now)
-    const timeStr = `${roundedTime.getHours().toString().padStart(2, '0')}:${roundedTime.getMinutes().toString().padStart(2, '0')}`
+    const timeStr = `${roundedTime.getHours().toString().padStart(2, '0')}:${roundedTime.getMinutes().toString().padStart(2, '0')} `
 
     // Create new instance for current time
     const newInstance = {
-      id: `instance-${taskId}-${Date.now()}`,
+      id: `instance - ${taskId} -${Date.now()} `,
       scheduledDate: todayStr,
       scheduledTime: timeStr,
       duration: task.estimatedDuration || 60
@@ -2360,7 +1317,7 @@ export const useTaskStore = defineStore('tasks', () => {
     const task = tasks.value.find(t => t.id === taskId)
     if (!task) return
 
-    console.log(`[Smart Groups] Moving task "${task.title}" to smart group: ${smartGroupType}`)
+    console.log(`[Smart Groups] Moving task "${task.title}" to smart group: ${smartGroupType} `)
 
     // Smart group logic - set dueDate but preserve inbox status
     const today = new Date()
@@ -2368,26 +1325,26 @@ export const useTaskStore = defineStore('tasks', () => {
 
     switch (smartGroupType.toLowerCase()) {
       case 'today':
-        dueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        dueDate = `${today.getFullYear()} -${String(today.getMonth() + 1).padStart(2, '0')} -${String(today.getDate()).padStart(2, '0')} `
         break
       case 'tomorrow': {
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
-        dueDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+        dueDate = `${tomorrow.getFullYear()} -${String(tomorrow.getMonth() + 1).padStart(2, '0')} -${String(tomorrow.getDate()).padStart(2, '0')} `
         break
       }
       case 'this weekend': {
         const saturday = new Date(today)
         const daysUntilSaturday = (6 - today.getDay() + 7) % 7 || 7
         saturday.setDate(today.getDate() + daysUntilSaturday)
-        dueDate = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`
+        dueDate = `${saturday.getFullYear()} -${String(saturday.getMonth() + 1).padStart(2, '0')} -${String(saturday.getDate()).padStart(2, '0')} `
         break
       }
       case 'this week': {
         const sunday = new Date(today)
         const daysUntilSunday = (7 - today.getDay()) % 7 || 7
         sunday.setDate(today.getDate() + daysUntilSunday)
-        dueDate = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`
+        dueDate = `${sunday.getFullYear()} -${String(sunday.getMonth() + 1).padStart(2, '0')} -${String(sunday.getDate()).padStart(2, '0')} `
         break
       }
       case 'later':
@@ -2395,7 +1352,7 @@ export const useTaskStore = defineStore('tasks', () => {
         dueDate = ''
         break
       default:
-        console.warn(`[Smart Groups] Unknown smart group type: ${smartGroupType}`)
+        console.warn(`[Smart Groups] Unknown smart group type: ${smartGroupType} `)
         return
     }
 
@@ -2404,7 +1361,7 @@ export const useTaskStore = defineStore('tasks', () => {
       dueDate: dueDate,
     }
 
-    console.log(`[Smart Groups] Applied ${smartGroupType} properties to task "${task.title}":`, {
+    console.log(`[Smart Groups] Applied ${smartGroupType} properties to task "${task.title}": `, {
       dueDate: updates.dueDate,
       staysInInbox: true,
       noInstancesCreated: true
@@ -2418,7 +1375,7 @@ export const useTaskStore = defineStore('tasks', () => {
     const task = tasks.value.find(t => t.id === taskId)
     if (!task) return
 
-    console.log(`Moving task "${task.title}" to date column: ${dateColumn}`)
+    console.log(`Moving task "${task.title}" to date column: ${dateColumn} `)
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -2476,7 +1433,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
       // Create single new instance for the target date
       const newInstance = {
-        id: `instance-${taskId}-${Date.now()}`,
+        id: `instance - ${taskId} -${Date.now()} `,
         scheduledDate: dateStr,
         scheduledTime: timeStr,
         duration: task.estimatedDuration || 60,
@@ -2484,22 +1441,22 @@ export const useTaskStore = defineStore('tasks', () => {
       }
 
       task.instances.push(newInstance)
-      console.log(`Created new ${isLater ? 'later' : 'scheduled'} instance for task "${task.title}" on ${dateStr}`)
+      console.log(`Created new ${isLater ? 'later' : 'scheduled'} instance for task "${task.title}" on ${dateStr} `)
     } else {
       // For no date, instances array is already cleared
       if (previousCount > 0) {
-        console.log(`Removed ${previousCount} instances for task "${task.title}" (moved to no date)`)
+        console.log(`Removed ${previousCount} instances for task "${task.title}"(moved to no date)`)
       }
     }
 
     // CRITICAL FIX: When a task is scheduled, it should no longer be in the inbox
     if (task.isInInbox !== false) {
       task.isInInbox = false
-      console.log(`Task "${task.title}" removed from inbox (scheduled for ${dateColumn})`)
+      console.log(`Task "${task.title}" removed from inbox(scheduled for ${dateColumn})`)
     }
 
     task.updatedAt = new Date()
-    console.log(`Task movement completed. Task now has ${task.instances.length} instances`)
+    console.log(`Task movement completed.Task now has ${task.instances.length} instances`)
   }
 
   // Unschedule task - remove from calendar timeline and move to inbox
@@ -2525,7 +1482,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // Keep the due date intact for smart group matching (Today, Tomorrow, etc.)
     // This ensures the task stays in its smart group in canvas
-    console.log(`Task "${task.title}" unscheduled:`, {
+    console.log(`Task "${task.title}" unscheduled: `, {
       previousInstances: previousInstanceCount,
       wasInInbox,
       nowInInbox: true,
@@ -2554,7 +1511,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // Project and view filtering
   // Note: Smart views and project filters can now be combined (no longer mutually exclusive)
   const setActiveProject = (projectId: string | null) => {
-    activeProjectId.value = projectId
+    projectStore.setActiveProject(projectId)
     persistFilters()
   }
 
@@ -2633,190 +1590,11 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   const setProjectViewType = (projectId: string, viewType: Project['viewType']) => {
-    const project = projects.value.find(p => p.id === projectId)
-    if (project) {
-      project.viewType = viewType
-    }
-  }
-
-  // Project management actions
-  const createProject = async (projectData: Partial<Project>) => {
-    console.log('🔥 [DEBUG] tasks.ts createProject called with:', projectData)
-    // Removed trace to reduce log noise
-
-    manualOperationInProgress = true
-
-    try {
-      const newProject: Project = {
-        id: Date.now().toString(),
-        name: projectData.name || 'New Project',
-        color: projectData.color || '#4ECDC4',
-        colorType: projectData.colorType || 'hex',
-        emoji: projectData.emoji,
-        viewType: projectData.viewType || 'status',
-        parentId: projectData.parentId || null,
-        createdAt: new Date(),
-        ...projectData
-      }
-
-      projects.value.push(newProject)
-
-      console.log('📋 [DEBUG] Projects array after creation:', projects.value.length, 'projects')
-
-      // Persist immediately
-      await saveProjectsToStorage(projects.value, `createProject-${newProject.id}`)
-
-      return newProject
-    } finally {
-      manualOperationInProgress = false
-    }
-  }
-
-  const updateProject = async (projectId: string, updates: Partial<Project>) => {
-    const projectIndex = projects.value.findIndex(p => p.id === projectId)
-    if (projectIndex !== -1) {
-      manualOperationInProgress = true
-      try {
-        projects.value[projectIndex] = {
-          ...projects.value[projectIndex],
-          ...updates
-        }
-        await saveProjectsToStorage(projects.value, `updateProject-${projectId}`)
-      } finally {
-        manualOperationInProgress = false
-      }
-    }
-  }
-
-  const deleteProject = async (projectId: string) => {
-    const projectIndex = projects.value.findIndex(p => p.id === projectId)
-    if (projectIndex !== -1) {
-      manualOperationInProgress = true
-      try {
-        const projectToDelete = projects.value[projectIndex]
-        const parentId = projectToDelete.parentId
-
-        // Move all tasks from this project to uncategorized (null)
-        let tasksModified = false
-        tasks.value.forEach(task => {
-          if (task.projectId === projectId) {
-            task.projectId = null
-            task.isUncategorized = true
-            task.updatedAt = new Date()
-            tasksModified = true
-          }
-        })
-
-        // Move child projects to parent of deleted project
-        projects.value.forEach(project => {
-          if (project.parentId === projectId) {
-            project.parentId = parentId
-          }
-        })
-
-        if (tasksModified) {
-          await saveTasksToStorage(tasks.value, `deleteProject-taskCleanup-${projectId}`)
-        }
-
-        projects.value.splice(projectIndex, 1)
-        await saveProjectsToStorage(projects.value, `deleteProject-${projectId}`)
-      } finally {
-        manualOperationInProgress = false
-      }
-    }
-  }
-
-  const setProjectColor = async (projectId: string, color: string, colorType: 'hex' | 'emoji', emoji?: string) => {
-    const project = projects.value.find(p => p.id === projectId)
-    if (project) {
-      manualOperationInProgress = true
-      try {
-        project.color = color
-        project.colorType = colorType
-        if (colorType === 'emoji' && emoji) {
-          project.emoji = emoji
-        } else {
-          project.emoji = undefined
-        }
-        await saveProjectsToStorage(projects.value, `setProjectColor-${projectId}`)
-      } finally {
-        manualOperationInProgress = false
-      }
-    }
-  }
-
-  const moveTaskToProject = async (taskId: string, targetProjectId: string) => {
-    const task = tasks.value.find(t => t.id === taskId)
-    if (task) {
-      manualOperationInProgress = true
-      try {
-        task.projectId = targetProjectId
-        task.updatedAt = new Date()
-        console.log(`Task "${task.title}" moved to project "${getProjectById(targetProjectId)?.name}"`)
-        await saveTasksToStorage(tasks.value, `moveTaskToProject-${taskId}`)
-      } finally {
-        manualOperationInProgress = false
-      }
-    }
-  }
-
-  const getProjectById = (projectId: string): Project | undefined => {
-    return projects.value.find(p => p.id === projectId)
-  }
-
-  const getProjectDisplayName = (projectId: string | null | undefined): string => {
-    // REMOVED: My Tasks fallback logic - My Tasks concept removed
-    if (!projectId) return 'Uncategorized'
-    if (projectId === '1') return 'Uncategorized' // Legacy uncategorized project ID
-    const project = getProjectById(projectId)
-    return project?.name || 'Uncategorized' // Show "Uncategorized" instead of "Unknown Project"
-  }
-
-  const getProjectEmoji = (projectId: string | null | undefined): string => {
-    if (!projectId) return '📁' // Default folder emoji for uncategorized tasks
-    const project = getProjectById(projectId)
-    return project?.emoji || '📁' // Return project emoji or default folder emoji
-  }
-
-  // Enhanced project visual function that returns either emoji or CSS circle information
-  const getProjectVisual = (projectId: string | null | undefined): {
-    type: 'emoji' | 'css-circle' | 'default'
-    content: string
-    color?: string
-  } => {
-    if (!projectId) {
-      return { type: 'default', content: '📁' }
-    }
-
-    const project = getProjectById(projectId)
-    if (!project) {
-      return { type: 'default', content: '📁' }
-    }
-
-    // Priority 1: Show emoji if project has one set
-    if (project.emoji) {
-      return { type: 'emoji', content: project.emoji }
-    }
-
-    // Priority 2: Show CSS circle if project has hex color (supports both 'hex' and 'color' types)
-    if (project.colorType === 'hex' && typeof project.color === 'string') {
-      return {
-        type: 'css-circle',
-        content: '', // Empty content - CSS will create the circle
-        color: project.color
-      }
-    }
-
-    // Priority 3: Default fallback
-    return { type: 'default', content: '📁' }
+    projectStore.setProjectViewType(projectId, viewType)
   }
 
   const getTask = (taskId: string): Task | undefined => {
     return tasks.value.find(task => task.id === taskId)
-  }
-
-  const getTaskInstances = (task: Task): RecurringTaskInstance[] => {
-    return task.recurringInstances || []
   }
 
   const getUncategorizedTaskCount = (): number => {
@@ -2843,44 +1621,6 @@ export const useTaskStore = defineStore('tasks', () => {
     return filteredTasks.length
   }
 
-  const isDescendantOf = (projectId: string, potentialAncestorId: string): boolean => {
-    // Check if projectId is a descendant of potentialAncestorId
-    // Used to prevent circular dependencies when nesting projects
-    let current = getProjectById(projectId)
-
-    while (current?.parentId) {
-      if (current.parentId === potentialAncestorId) {
-        return true // projectId is a descendant of potentialAncestorId
-      }
-      current = getProjectById(current.parentId)
-    }
-
-    return false
-  }
-
-  const getChildProjects = (parentId: string): Project[] => {
-    return projects.value.filter(p => p.parentId === parentId)
-  }
-
-  const getProjectHierarchy = (projectId: string): Project[] => {
-    const project = getProjectById(projectId)
-    if (!project) return []
-
-    const hierarchy = [project]
-    let currentId = project.parentId
-
-    while (currentId) {
-      const parent = getProjectById(currentId)
-      if (parent) {
-        hierarchy.unshift(parent)
-        currentId = parent.parentId
-      } else {
-        break
-      }
-    }
-
-    return hierarchy
-  }
 
   // Nested task management
   const getNestedTasks = (parentTaskId: string | null = null): Task[] => {
@@ -3000,7 +1740,7 @@ export const useTaskStore = defineStore('tasks', () => {
               console.log('⚠️ FALLBACK moveTaskWithUndo called - no undo support')
               return moveTask(taskId, newStatus)
             },
-            moveTaskToProject: (taskId: string, targetProjectId: string) => moveTaskToProject(taskId, targetProjectId),
+            moveTaskToProject: (taskId: string, targetProjectId: string) => projectStore.moveTaskToProject(taskId, targetProjectId),
             moveTaskToDate: (taskId: string, dateColumn: string) => moveTaskToDate(taskId, dateColumn),
             moveTaskToSmartGroup: (taskId: string, smartGroupType: string) => moveTaskToSmartGroup(taskId, smartGroupType),
             createSubtask: (taskId: string, subtaskData: Partial<Subtask>) => createSubtask(taskId, subtaskData),
@@ -3009,9 +1749,9 @@ export const useTaskStore = defineStore('tasks', () => {
             createTaskInstance: (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => createTaskInstance(taskId, instanceData),
             updateTaskInstance: (taskId: string, instanceId: string, updates: Partial<TaskInstance>) => updateTaskInstance(taskId, instanceId, updates),
             deleteTaskInstance: (taskId: string, instanceId: string) => deleteTaskInstance(taskId, instanceId),
-            createProject: (projectData: Partial<Project>) => createProject(projectData),
-            updateProject: (projectId: string, updates: Partial<Project>) => updateProject(projectId, updates),
-            deleteProject: (projectId: string) => deleteProject(projectId),
+            createProject: (projectData: Partial<Project>) => projectStore.createProject(projectData),
+            updateProject: (projectId: string, updates: Partial<Project>) => projectStore.updateProject(projectId, updates),
+            deleteProject: (projectId: string) => projectStore.deleteProject(projectId),
             bulkUpdateTasks: (taskIds: string[], updates: Partial<Task>) => {
               taskIds.forEach(id => updateTask(id, updates))
             },
@@ -3034,12 +1774,12 @@ export const useTaskStore = defineStore('tasks', () => {
           const undoHistory = getUndoSystem()
           console.log('⚡ Using singleton undo system instance for create...')
 
-          console.log(`📋 Before execution - undo count: ${undoHistory.undoCount.value}`)
+          console.log(`📋 Before execution - undo count: ${undoHistory.undoCount.value} `)
 
           const result = undoHistory.createTaskWithUndo(taskData)
           console.log('✅ Task created with undo successfully')
 
-          console.log(`📋 After execution - undo count: ${undoHistory.undoCount.value}`)
+          console.log(`📋 After execution - undo count: ${undoHistory.undoCount.value} `)
           return result
         } catch (error) {
           console.error('❌ Failed to create task with undo:', error)
@@ -3055,11 +1795,11 @@ export const useTaskStore = defineStore('tasks', () => {
           const undoHistory = getUndoSystem()
           console.log('⚡ Using singleton undo system instance for update...')
 
-          console.log(`📋 Before execution - undo count: ${undoHistory.undoCount.value}`)
+          console.log(`📋 Before execution - undo count: ${undoHistory.undoCount.value} `)
 
           const result = undoHistory.updateTaskWithUndo(taskId, updates)
           console.log('✅ Task updated with undo successfully')
-          console.log(`✅ Undo count after update: ${undoHistory.undoCount.value}`)
+          console.log(`✅ Undo count after update: ${undoHistory.undoCount.value} `)
 
           return result
         } catch (error) {
@@ -3078,12 +1818,12 @@ export const useTaskStore = defineStore('tasks', () => {
           const undoHistory = getUndoSystem()
           console.log('⚡ Using singleton undo system instance for deletion...')
 
-          console.log(`📋 Before execution - undo count: ${undoHistory.undoCount.value}`)
+          console.log(`📋 Before execution - undo count: ${undoHistory.undoCount.value} `)
 
           const result = undoHistory.deleteTaskWithUndo(taskId)
           console.log('✅ Task deleted with undo successfully')
-          console.log(`✅ Undo count after deletion: ${undoHistory.undoCount.value}`)
-          console.log(`✅ Can undo: ${undoHistory.canUndo.value}`)
+          console.log(`✅ Undo count after deletion: ${undoHistory.undoCount.value} `)
+          console.log(`✅ Can undo: ${undoHistory.canUndo.value} `)
 
           return result
         } catch (error) {
@@ -3108,7 +1848,7 @@ export const useTaskStore = defineStore('tasks', () => {
       moveTaskToProjectWithUndo: async (taskId: string, targetProjectId: string) => {
         // Unified undo/redo doesn't support moveTaskToProject yet
         // Using direct operation for now
-        return moveTaskToProject(taskId, targetProjectId)
+        return projectStore.moveTaskToProject(taskId, targetProjectId)
       },
       moveTaskToDateWithUndo: async (taskId: string, dateColumn: string) => {
         // Unified undo/redo doesn't support moveTaskToDate yet
@@ -3160,17 +1900,17 @@ export const useTaskStore = defineStore('tasks', () => {
       createProjectWithUndo: async (projectData: Partial<Project>) => {
         // Unified undo/redo doesn't support project operations yet
         // Using direct operations for now
-        return createProject(projectData)
+        return projectStore.createProject(projectData)
       },
       updateProjectWithUndo: async (projectId: string, updates: Partial<Project>) => {
         // Unified undo/redo doesn't support project operations yet
         // Using direct operations for now
-        return updateProject(projectId, updates)
+        return projectStore.updateProject(projectId, updates)
       },
       deleteProjectWithUndo: async (projectId: string) => {
         // Unified undo/redo doesn't support project operations yet
         // Using direct operations for now
-        return deleteProject(projectId)
+        return projectStore.deleteProject(projectId)
       },
 
       // Bulk actions with undo/redo
@@ -3180,9 +1920,9 @@ export const useTaskStore = defineStore('tasks', () => {
         taskIds.forEach(taskId => updateTask(taskId, updates))
       },
       bulkDeleteTasksWithUndo: async (taskIds: string[]) => {
-        // Unified undo/redo doesn't support bulk operations yet
-        // Perform individual deletions for now
-        taskIds.forEach(taskId => deleteTask(taskId))
+        // BUG-036 FIX: Use atomic bulk delete
+        // Unified undo/redo doesn't support bulk undo yet, but at least partial data loss is prevented
+        await bulkDeleteTasks(taskIds)
       },
 
       // Task timing actions with undo/redo
@@ -3227,7 +1967,7 @@ export const useTaskStore = defineStore('tasks', () => {
     // This was blocking legitimate undo operations when user wants to restore to empty state
     // The undo system (VueUse useManualRefHistory) already has proper state tracking
     // If user explicitly triggered undo, they want to go back to the previous state
-    // Previous check: if (newTasks.length === 0 && tasks.value.length > 0) { ... block ... }
+    // Previous check: if (newTasks.length === 0 && tasks.value.length > 0) { ... block ...}
 
     // Validate task objects have required fields (only if there are tasks to validate)
     const invalidTasks = newTasks.filter(task =>
@@ -3283,9 +2023,9 @@ export const useTaskStore = defineStore('tasks', () => {
 
       // DEBUG: Log canvas tasks after restore
       const canvasTasks = tasks.value.filter(t => t.isInInbox === false && t.canvasPosition)
-      console.log(`🔍 [RESTORE-DEBUG] After restore: ${canvasTasks.length} tasks have canvas properties`)
+      console.log(`🔍[RESTORE - DEBUG] After restore: ${canvasTasks.length} tasks have canvas properties`)
       canvasTasks.forEach(t => {
-        console.log(`   - ${t.title}: isInInbox=${t.isInInbox}, canvasPosition=${JSON.stringify(t.canvasPosition)}`)
+        console.log(`   - ${t.title}: isInInbox = ${t.isInInbox}, canvasPosition = ${JSON.stringify(t.canvasPosition)} `)
       })
 
       // Additional validation after restore
@@ -3330,72 +2070,22 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  // MIGRATION: Convert "My Tasks" projectId='1' tasks to uncategorized
-  // This is part of the "My Tasks" redundancy removal plan
-  const migrateMyTasksToUncategorized = async () => {
-    try {
-      const tasksWithMyTasksProject = tasks.value.filter(task => task.projectId === '1')
-
-      if (tasksWithMyTasksProject.length === 0) {
-        console.log('ℹ️ No tasks with projectId="1" found - migration not needed')
-        return
-      }
-
-      console.log(`🔄 MIGRATION: Found ${tasksWithMyTasksProject.length} tasks with projectId="1", converting to uncategorized`)
-
-      // Update tasks to be uncategorized
-      let migratedCount = 0
-      tasks.value.forEach(task => {
-        if (task.projectId === '1') {
-          task.projectId = '' // empty string for uncategorized (matches Task interface)
-          task.isUncategorized = true // Explicitly mark as uncategorized
-          migratedCount++
-          console.log(`  → Migrated task: "${task.title}" (id: ${task.id})`)
-        }
-      })
-
-      // Save migrated tasks to database (respects INDIVIDUAL_ONLY)
-      await saveTasksToStorage(tasks.value, 'my-tasks-migration')
-      console.log(`💾 Migration completed: ${migratedCount} tasks converted to uncategorized and saved`)
-
-    } catch (error) {
-      console.error('❌ Failed to migrate "My Tasks" tasks to uncategorized:', error)
-      // Continue with migration failure - tasks will remain as-is
-    }
-  }
-
   // CRITICAL: INITIALIZATION FROM POUCHDB ON STORE CREATION
   const initializeFromPouchDB = async () => {
     console.log('🔄 Initializing store from PouchDB...')
 
-    // FIX #5: Wait for PouchDB to be available before trying to load
-    // This fixes the race condition where store tries to load before PouchDB is ready
-    let attempts = 0
-    while (!window.pomoFlowDb && attempts < 50) {
-      console.log(`⏳ Waiting for PouchDB to be available... attempt ${attempts + 1}/50`)
-      await new Promise(resolve => setTimeout(resolve, 100))
-      attempts++
-    }
-
-    const dbInstance = window.pomoFlowDb
-    if (!dbInstance) {
-      console.error('❌ PouchDB not available for store initialization - skipping database load')
-      console.log('⚠️ Store will continue with empty state (no tasks/projects from database)')
-      // Continue with empty state if PouchDB is not available
-      return
-    }
-
-    console.log('✅ PouchDB is available, proceeding with store initialization...')
-
     try {
-      await Promise.all([
-        loadTasksFromPouchDB(),
-        loadProjectsFromPouchDB()
-      ])
+      // 1. First ensure projects are initialized (dependencies)
+      const dbReady = await projectStore.initializeFromPouchDB()
+      if (!dbReady) {
+        console.warn('⚠️ Project store failed to initialize - continuing with local state')
+      }
 
-      // MIGRATION: Migrate tasks with projectId = '1' to uncategorized
-      // This is part of the "My Tasks" redundancy removal plan
-      await migrateMyTasksToUncategorized()
+      // 2. Load tasks using consolidated loading logic
+      await loadFromDatabase()
+
+      // Run migrations
+      runAllTaskMigrations()
 
       console.log('✅ Store initialized from PouchDB successfully')
     } catch (error) {
@@ -3407,7 +2097,6 @@ export const useTaskStore = defineStore('tasks', () => {
         showNotification: true,
         userMessage: 'Failed to load your tasks. Please refresh the page.'
       })
-      // Continue with empty state if initialization fails
     }
   }
 
@@ -3426,101 +2115,94 @@ export const useTaskStore = defineStore('tasks', () => {
   return {
     // State
     tasks,
-    projects,
-    currentView,
     selectedTaskIds,
-    activeProjectId,
     activeSmartView,
     activeStatusFilter,
+    activeDurationFilter,
     hideDoneTasks,
+    currentView,
 
-    // Computed
+    // Project Store passthrough (Re-exporting for backward compatibility)
+    projects: computed(() => projectStore.projects),
+    activeProjectId: computed(() => projectStore.activeProjectId),
+
+    // Filtering (from useTaskFiltering)
     filteredTasks,
-    calendarFilteredTasks,
-    doneTasksForColumn,
-    tasksWithCanvasPosition,
-    filteredTasksWithCanvasPosition,
     tasksByStatus,
+    filteredTasksWithCanvasPosition,
+    smartViewTaskCounts,
+    getProjectTaskCount,
     totalTasks,
     completedTasks,
     totalPomodoros,
-    nonDoneTaskCount,
-    smartViewTaskCounts,
-    rootProjects,
+    doneTasksForColumn,
+    tasksWithCanvasPosition,
 
-    // Centralized count helpers
-    getProjectTaskCount,
-
-    // Original actions (without undo/redo - for internal use)
+    // Actions
     createTask,
     updateTask,
     deleteTask,
+    bulkDeleteTasks,
     moveTask,
     selectTask,
     deselectTask,
     clearSelection,
-    setActiveProject,
-    setSmartView,
-    setActiveStatusFilter,
-    toggleStatusFilter,
-    setProjectViewType,
-    toggleHideDoneTasks,
-
-    // Project management actions
-    createProject,
-    updateProject,
-    deleteProject,
-    setProjectColor,
-    moveTaskToProject,
-    getProjectById,
-    getProjectDisplayName,
-    getProjectEmoji,
-    getProjectVisual,
-    isDescendantOf,
-    getChildProjects,
-    getProjectHierarchy,
-
-    // Date and priority movement actions
-    moveTaskToDate,
-    moveTaskToPriority,
-    startTaskNow,
-    unscheduleTask,
-
-    // Subtask actions
     createSubtask,
     updateSubtask,
     deleteSubtask,
-
-    // Task Instance actions
     createTaskInstance,
     updateTaskInstance,
     deleteTaskInstance,
-
-    // Nested task management
+    startTaskNow,
+    moveTaskToSmartGroup,
+    moveTaskToDate,
+    unscheduleTask,
+    moveTaskToPriority,
+    setActiveProject,
+    setSmartView,
+    toggleHideDoneTasks,
+    setActiveStatusFilter,
+    toggleStatusFilter,
+    setActiveDurationFilter,
+    toggleDurationFilter,
+    setProjectViewType,
+    getTask,
+    getTaskInstances,
+    getUncategorizedTaskCount,
     getNestedTasks,
     getTaskChildren,
     getTaskHierarchy,
     isNestedTask,
     hasNestedTasks,
 
-    // Database actions
+    // Project Actions (Pass-through)
+    createProject: projectStore.createProject,
+    updateProject: projectStore.updateProject,
+    deleteProject: projectStore.deleteProject,
+    setProjectColor: projectStore.setProjectColor,
+    moveTaskToProject: projectStore.moveTaskToProject,
+    getProjectById: projectStore.getProjectById,
+    getProjectDisplayName: projectStore.getProjectDisplayName,
+    getProjectEmoji: projectStore.getProjectEmoji,
+    getProjectVisual: projectStore.getProjectVisual,
+    isDescendantOf: projectStore.isDescendantOf,
+    getChildProjects: projectStore.getChildProjects,
+    getProjectHierarchy: projectStore.getProjectHierarchy,
+
+    // Persistence
     loadFromDatabase,
+    saveTasksToStorage,
     importTasksFromJSON,
     importFromRecoveryTool,
-
-    // Helper functions
-    getTask,
-    getTaskInstances,
-    getUncategorizedTaskCount,
 
     // Data integrity validation
     validateDataConsistency,
 
     // Undo/Redo support
+    initializeFromPouchDB,
     restoreState,
 
     // Undo/Redo enabled actions
     ...undoRedoEnabledActions()
   }
 })
-

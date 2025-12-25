@@ -57,6 +57,17 @@
     @confirm="$emit('confirm-delete-group')"
     @cancel="$emit('cancel-delete-group')"
   />
+
+  <!-- Bulk Delete Confirmation Modal (Shift+Delete on multiple items) -->
+  <ConfirmationModal
+    :is-open="isBulkDeleteModalOpen"
+    :title="bulkDeleteTitle"
+    :message="bulkDeleteMessage"
+    :details="bulkDeleteItems.map(item => `${item.type === 'section' ? '📁' : '📌'} ${item.name}`)"
+    :confirm-text="bulkDeleteIsPermanent ? 'Delete Permanently' : 'Remove'"
+    @confirm="$emit('confirm-bulk-delete')"
+    @cancel="$emit('cancel-bulk-delete')"
+  />
 </template>
 
 <script setup lang="ts">
@@ -100,6 +111,13 @@ defineProps<{
   // Group Delete
   isDeleteGroupModalOpen: boolean
   deleteGroupMessage: string
+
+  // Bulk Delete (Shift+Delete on multiple items)
+  isBulkDeleteModalOpen: boolean
+  bulkDeleteTitle: string
+  bulkDeleteMessage: string
+  bulkDeleteItems: { id: string; name: string; type: 'task' | 'section' }[]
+  bulkDeleteIsPermanent: boolean
 }>()
 
 defineEmits<{
@@ -117,5 +135,7 @@ defineEmits<{
   (e: 'handle-group-edit-save', updatedSection: any): void
   (e: 'confirm-delete-group'): void
   (e: 'cancel-delete-group'): void
+  (e: 'confirm-bulk-delete'): void
+  (e: 'cancel-bulk-delete'): void
 }>()
 </script>

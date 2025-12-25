@@ -1,6 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref, reactive } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
+
+// Initialize Pinia for Storybook
+const pinia = createPinia()
+setActivePinia(pinia)
 
 const meta = {
   component: QuickTaskCreate,

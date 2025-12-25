@@ -32,7 +32,13 @@ let clear: (() => void) | null = null
  * Initialize the single refHistory instance
  */
 function initializeRefHistory() {
-  if (refHistoryInstance) return
+  // BUG-008 DEBUG: Log immediately on function entry
+  console.log('🔄 [UNDO-INIT] initializeRefHistory() ENTERED, refHistoryInstance exists?', !!refHistoryInstance)
+
+  if (refHistoryInstance) {
+    console.log('🔄 [UNDO-INIT] Early return - refHistoryInstance already exists')
+    return
+  }
 
   console.log('🔄 Creating SINGLE refHistory instance for entire application (tasks + groups)...')
 
@@ -128,21 +134,26 @@ const performUndo = async () => {
     const canvasTasks = previousState.tasks.filter(t => t.isInInbox === false && t.canvasPosition)
     console.log(`🔄 [UNDO-DEBUG] Restoring ${canvasTasks.length} canvas tasks`)
 
-    // Restore tasks
-    await taskStore.restoreState(previousState.tasks)
-    console.log('🔄 [UNDO] Task store now has:', taskStore.tasks.length, 'tasks')
-
-    // Restore groups (ISSUE-008 fix)
+    // BUG-008 FIX: Restore groups FIRST (synchronous, no DB dependency)
+    // This ensures groups are restored immediately even if task DB save hangs
     canvasStore.restoreGroups(previousState.groups)
     console.log('🔄 [UNDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
-    // Request canvas sync to refresh Vue Flow nodes after undo
+    // Request canvas sync IMMEDIATELY after group restore
     try {
       canvasStore.requestSync()
-      console.log('🔄 [UNDO] Requested canvas sync after restore')
+      console.log('🔄 [UNDO] Requested canvas sync after group restore')
     } catch (error) {
       console.warn('⚠️ [UNDO] Could not request canvas sync:', error)
     }
+
+    // Restore tasks (async - may take time for DB operations)
+    // Don't await - let it run in background to avoid blocking UI
+    taskStore.restoreState(previousState.tasks).then(() => {
+      console.log('🔄 [UNDO] Task store restore completed. Tasks:', taskStore.tasks.length)
+    }).catch((err) => {
+      console.error('❌ [UNDO] Task store restore failed:', err)
+    })
 
     return true
   }
@@ -165,21 +176,25 @@ const performRedo = async () => {
 
     console.log('🔄 [REDO] Restoring:', nextState.tasks.length, 'tasks,', nextState.groups.length, 'groups')
 
-    // Restore tasks
-    await taskStore.restoreState(nextState.tasks)
-    console.log('🔄 [REDO] Task store now has:', taskStore.tasks.length, 'tasks')
-
-    // Restore groups (ISSUE-008 fix)
+    // BUG-008 FIX: Restore groups FIRST (synchronous, no DB dependency)
     canvasStore.restoreGroups(nextState.groups)
     console.log('🔄 [REDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
-    // Request canvas sync to refresh Vue Flow nodes after redo
+    // Request canvas sync IMMEDIATELY after group restore
     try {
       canvasStore.requestSync()
-      console.log('🔄 [REDO] Requested canvas sync after restore')
+      console.log('🔄 [REDO] Requested canvas sync after group restore')
     } catch (error) {
       console.warn('⚠️ [REDO] Could not request canvas sync:', error)
     }
+
+    // Restore tasks (async - may take time for DB operations)
+    // Don't await - let it run in background to avoid blocking UI
+    taskStore.restoreState(nextState.tasks).then(() => {
+      console.log('🔄 [REDO] Task store restore completed. Tasks:', taskStore.tasks.length)
+    }).catch((err) => {
+      console.error('❌ [REDO] Task store restore failed:', err)
+    })
 
     return true
   }
@@ -188,7 +203,16 @@ const performRedo = async () => {
 
 // UPDATED: Now saves both tasks AND groups (ISSUE-008 fix)
 const saveState = (description?: string) => {
-  if (!refHistoryInstance) return false
+  // BUG-008 DEBUG: Log when refHistoryInstance is null
+  if (!refHistoryInstance) {
+    console.error('❌ [UNDO-CRITICAL] saveState() called but refHistoryInstance is NULL! Calling initializeRefHistory()...')
+    initializeRefHistory()
+    if (!refHistoryInstance) {
+      console.error('❌ [UNDO-CRITICAL] Still null after init retry!')
+      return false
+    }
+    console.log('✅ [UNDO-CRITICAL] refHistoryInstance recovered after init')
+  }
   // FIX: Add null check for commit function to prevent silent failures
   if (!commit) {
     console.error('❌ [UNDO] commit function not initialized - calling initializeRefHistory()')
@@ -213,7 +237,13 @@ const saveState = (description?: string) => {
     console.log(`💾 [UNDO-DEBUG] Saving state: ${canvasTasks.length} canvas tasks, ${canvasStore.groups.length} groups`)
 
     commit()
-    console.log(`💾 State saved: ${description || 'Operation'}. History length: ${refHistoryInstance.history.value.length}`)
+    // BUG-008 DEBUG: Log all history state after commit
+    console.log(`💾 State saved: ${description || 'Operation'}`, {
+      historyLength: refHistoryInstance.history.value.length,
+      undoStackLength: refHistoryInstance.undoStack.value.length,
+      canUndo: refHistoryInstance.canUndo.value,
+      canRedo: refHistoryInstance.canRedo.value
+    })
     return true
   } catch (error) {
     console.error('❌ Failed to save state:', error)
@@ -321,6 +351,33 @@ const deleteGroupWithUndo = async (groupId: string) => {
   }
 }
 
+// BUG-036 FIX: Batch delete support in singleton
+const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
+  console.log(`🗑️ bulkDeleteTasksWithUndo called for ${taskIds.length} tasks`)
+  const taskStore = useTaskStore()
+
+  saveState(`Before bulk delete of ${taskIds.length} tasks`)
+
+  try {
+    if (taskStore.bulkDeleteTasks) {
+      await taskStore.bulkDeleteTasks(taskIds)
+    } else {
+      console.warn('⚠️ taskStore.bulkDeleteTasks not found, falling back to individual')
+      // Fallback for safety (though store should have it now)
+      for (const id of taskIds) {
+        await taskStore.deleteTask(id)
+      }
+    }
+    console.log(`✅ Bulk delete completed. Current tasks: ${taskStore.tasks.length}`)
+
+    await nextTick()
+    saveState('After bulk delete')
+  } catch (error) {
+    console.error('❌ bulkDeleteTasksWithUndo failed:', error)
+    throw error
+  }
+}
+
 /**
  * Get the global undo system functions that use the shared refHistory instance
  */
@@ -349,6 +406,7 @@ export function getUndoSystem() {
 
     // Task operations that use the shared refHistory
     deleteTaskWithUndo,
+    bulkDeleteTasksWithUndo,
     updateTaskWithUndo,
     createTaskWithUndo,
 

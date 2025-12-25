@@ -341,6 +341,19 @@
       <span v-if="!compactMode" class="menu-text">Duplicate</span>
     </button>
 
+    <div class="menu-divider" />
+
+    <!-- Move to Canvas Section -->
+    <button 
+      v-if="!isBatchOperation" 
+      class="menu-item" 
+      :class="{ 'menu-item--compact': compactMode }" 
+      @click="$emit('moveToSection', currentTask?.id)"
+    >
+      <Layout :size="16" stroke-width="1.5" class="menu-icon text-indigo-400" />
+      <span v-if="!compactMode" class="menu-text">Move to Section</span>
+    </button>
+
     <!-- Clear Selection (only for batch operations) -->
     <button v-if="isBatchOperation" class="menu-item" @click="clearSelection">
       <svg
@@ -393,7 +406,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
-import { Calendar, Sun, Moon, ArrowRight, MoreHorizontal, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle, Zap, Timer, Clock, HelpCircle } from 'lucide-vue-next'
+import { Calendar, Sun, Moon, ArrowRight, MoreHorizontal, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle, Zap, Timer, Clock, HelpCircle, Layout } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
 
@@ -420,6 +433,7 @@ const emit = defineEmits<{
   enterFocusMode: []
   deleteSelected: []
   setDuration: [duration: number | null]
+  moveToSection: [taskId: string]
 }>()
 
 const taskStore = useTaskStore()

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline - Dev Manager</title>
+    <style>
+        :root {
+            --surface-primary: #000000;
+            --surface-secondary: #0d1117;
+            --surface-tertiary: #161b22;
+            --text-primary: #e6edf3;
+            --text-secondary: #c9d1d9;
+            --text-muted: #8b949e;
+            --border-subtle: #1a1a1a;
+            --border-medium: #30363d;
+            --color-timeline: #ec4899;
+            --brand-primary: #4ECDC4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--surface-primary);
+            color: var(--text-secondary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .header-icon {
+            width: 32px;
+            height: 32px;
+            stroke: var(--color-timeline);
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .coming-soon {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 1.5rem;
+        }
+
+        .coming-soon-icon {
+            width: 64px;
+            height: 64px;
+            stroke: var(--text-muted);
+            stroke-width: 1;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            opacity: 0.5;
+        }
+
+        .coming-soon h2 {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .coming-soon p {
+            color: var(--text-muted);
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        .feature-list {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            text-align: left;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .feature-item svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--color-timeline);
+            stroke-width: 2;
+            fill: none;
+            flex-shrink: 0;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid rgba(236, 72, 153, 0.2);
+            border-radius: 9999px;
+            color: var(--color-timeline);
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <svg class="header-icon" viewBox="0 0 24 24">
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <circle cx="6" cy="12" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="18" cy="12" r="2"/>
+                <line x1="6" y1="8" x2="6" y2="10"/>
+                <line x1="12" y1="14" x2="12" y2="16"/>
+                <line x1="18" y1="8" x2="18" y2="10"/>
+            </svg>
+            <h1>Timeline View</h1>
+        </div>
+
+        <div class="coming-soon">
+            <span class="badge">
+                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none;">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                Coming Soon
+            </span>
+
+            <svg class="coming-soon-icon" viewBox="0 0 24 24">
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <circle cx="6" cy="12" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="18" cy="12" r="2"/>
+                <line x1="6" y1="8" x2="6" y2="10"/>
+                <line x1="12" y1="14" x2="12" y2="16"/>
+                <line x1="18" y1="8" x2="18" y2="10"/>
+            </svg>
+
+            <h2>Timeline / Gantt View</h2>
+            <p>Visualize your development tasks in a timeline format to better understand project progress and dependencies.</p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span>Gantt-style task visualization</span>
+                </div>
+                <div class="feature-item">
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span>Task dependencies and relationships</span>
+                </div>
+                <div class="feature-item">
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span>Progress tracking at a glance</span>
+                </div>
+                <div class="feature-item">
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span>Priority-based task ordering</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Listen for tab activation messages
+        window.addEventListener('message', (event) => {
+            if (event.data?.type === 'tab-activated') {
+                console.log('Timeline tab activated');
+            }
+        });
+    </script>
+</body>
+</html>

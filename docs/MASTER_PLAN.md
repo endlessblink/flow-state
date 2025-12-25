@@ -141,6 +141,59 @@ Parser calculates progress from checkbox subtasks:
 
 **Files to investigate**: `useReliableSyncManager.ts`, `canvas.ts`, `tasks.ts`
 
+### ✅ BUG-036: Deleted Tasks Recreated (Dec 25, 2025)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Tasks reappear after deletion | CRITICAL | ✅ **FIXED** |
+
+**User Report**: "I deleted all tasks from the app to start fresh and on refresh f5 they all appeard"
+
+**Symptom**: Tasks persist after deletion and reload.
+
+**Root Cause**:
+1. Legacy Fallback: App loaded from stale `tasks:data`.
+2. Auto-Seeding: App treated "0 tasks" as "Fresh Install" and restored backups.
+
+**Fix Applied**:
+1. Disabled legacy fallback in `INDIVIDUAL_ONLY` mode.
+2. Implemented "Intelligent Initialization" using PouchDB `_local/app-init` document. This correctly distinguishes between "User Deleted All Data" (flag exists) and "Fresh Install" (flag missing), unlike localStorage which can drift out of sync with the DB.
+
+**SOP**: `docs/🐛 debug/sop/deleted-tasks-recreation-fix-2025-12-25.md`
+
+
+### BUG-037: CouchDB Sync Resurrects Deleted Tasks (🔄 IN PROGRESS)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Sync restores deleted tasks from remote | HIGH | 🔄 **IN PROGRESS** |
+
+**User Report**: "tasks are being recreated after deletion on refresh" (with CouchDB sync enabled)
+
+**Root Cause** (Deep Analysis Dec 25, 2025):
+BUG-036 only fixed legacy fallback and auto-seeding, but did NOT address CouchDB sync:
+1. User deletes task → marked `_deleted: true` in PouchDB (tombstone)
+2. CouchDB remote still has non-deleted version
+3. Sync detects conflict: local deleted vs remote not deleted
+4. Old `PRESERVE_NON_DELETED` strategy chose **remote version** (non-deleted wins)
+5. Task document restored → task reappears on next load
+
+**Fix Applied** (Partial):
+1. ✅ Changed conflict resolution to "Deletion Wins" strategy (`conflictResolver.ts:230-255`)
+   - Local deletion now wins over remote non-deleted version
+   - Remote deletion propagates to local (deletion syncs both ways)
+
+**Remaining Work** (Blocked by TASK-022 lock on `tasks.ts`):
+2. [ ] Add deletion intent tracking via `_local/deleted-tasks` document
+3. [ ] Filter deleted tasks in `loadFromDatabase()`
+4. [ ] Cleanup old deletion entries (>30 days)
+
+**Files Modified**:
+- `src/utils/conflictResolver.ts` - Deletion wins strategy
+
+**Analysis**: `/home/endlessblink/.claude/plans/toasty-puzzling-catmull.md`
+
+
 ### ✅ ~~BUG-030~~: Uncategorized Tasks Filter Not Working (✅ DONE)
 
 | Issue | Severity | Status |
@@ -334,7 +387,10 @@ Vue Flow expects **RELATIVE** positions for child nodes when `parentNode` is set
 | Storybook regressions | Visual consistency | Standardized Pinia initialization |
 | Firebase dependency (stubbed) | Limited auth features | Consider CouchDB auth or backend |
 | ~~`App.vue` 3.3k lines~~ | ~~Maintenance risk~~ | ~~TASK-044~~ ✅ DONE |
-| `tasks.ts` 3k lines | Maintenance risk | ISSUE-014 tracking |
+| `tasks.ts` 3.5k lines | Maintenance risk | ISSUE-014 tracking |
+| `canvas.ts` 1.8k lines | Maintenance risk | [PLANNED] |
+| `timer.ts` 1.2k lines | Maintenance risk | [PLANNED] |
+| **Bundle Size** | 894 KB (gzip: 284 KB) | TASK-059 tracking |
 
 ---
 
@@ -419,6 +475,18 @@ Vue Flow expects **RELATIVE** positions for child nodes when `parentNode` is set
 - Console: **CLEAN** (No more "active component instance" warnings)
 
 ---
+
+### TASK-050: Batch Delete UX Improvement
+**Priority**: Medium
+**Status**: ✅ **DONE**
+**Description**: Implemented atomic bulk delete to fix race conditions (BUG-036) and reduce confirmation fatigue.
+**Blockers**: None
+
+### TASK-051: Inbox Shift+Click Multi-Select
+**Priority**: Medium
+**Status**: ✅ **DONE**
+**Description**: Implemented `Shift + Click` functionality in the Inbox for range selection.
+**Blockers**: None
 
 ## 🔄 TASK-048: Individual Document Storage for Projects & Canvas (IN PROGRESS)
 
@@ -594,6 +662,8 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-034~~ | ✅ **DONE** | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
 | ~~BUG-031~~ | ✅ DONE | `tasks.ts`, `ProjectModal.vue` | - | - |
 | BUG-032 | 👀 **REVIEW** | `tasks.ts` | - | - |
+| **BUG-035** | 🔄 **IN PROGRESS** | `useReliableSyncManager.ts`, `useDatabase.ts`, `useCouchDBSync.ts` | - | - |
+| ~~**BUG-036**~~ | ✅ **DONE** | `src/stores/tasks.ts`, `useDatabase.ts` | - | - |
 | ~~TASK-035~~ | ✅ **DONE** | `useSmartViews.ts`, `tasks.ts`, `AppSidebar.vue`, `canvas.ts` | - | - |
 | ~~TASK-036~~ | ✅ COMPLETE | `*.stories.ts` | - | - |
 | ~~TASK-037~~ | ✅ **DONE** | `src/components/*` | - | - |
@@ -618,16 +688,34 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-053~~ | ✅ **DONE** | `dev-manager/kanban/index.html`, `dev-manager/server.js` | - | - |
 | ~~TASK-054~~ | ✅ **DONE** | `src/stores/tasks.ts`, `useDemoGuard.ts`, sidebar | - | - |
 | ~~**TASK-055**~~ | ✅ **DONE** | `SyncAlertSystem.vue`, `LoginForm.vue`, `AuthModal.vue`, etc. | - | - |
+| **TASK-056** | 🔄 **IN PROGRESS** | `src/stores/tasks.ts` | - | - |
+| TASK-057 | PLANNED | `src/stores/canvas.ts` | - | - |
+| TASK-058 | PLANNED | `src/stores/timer.ts` | - | - |
+| **TASK-059** | 🔄 **ACTIVE** | `vite.config.ts`, `src/router/index.ts` | - | - |
+| **TASK-060** | PLANNED | `AppSidebar.vue`, `ProjectTree.vue`, `tasks.ts` | - | - |
+| **TASK-061** | PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
+| **TASK-062** | PLANNED | `src/components/base/ConfirmationModal.vue` (new) | - | - |
+| **TASK-064** | 🔄 **IN PROGRESS** | `dev-manager/*`, `dev-manager/timeline/` (new) | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
+- [/] **TASK-056**: Refactor `tasks.ts` (ISSUE-014) - Researching & Planning
+- [ ] TASK-057: Refactor `canvas.ts` - Planned
+- [ ] TASK-058: Refactor `timer.ts` - Planned
+- [ ] **TASK-059**: Bundle Size Optimization (894 KB → Target < 500 KB)
+- [ ] **TASK-060**: Multi-Select Projects with Bulk Delete (P1-HIGH)
+- [ ] **TASK-061**: Demo Content Guard Logger (P2-MEDIUM)
+- [ ] **TASK-062**: Custom Confirmation Modals - Replace browser `confirm()` dialogs (P2-MEDIUM)
+- [/] **TASK-064**: Dev-Manager Comprehensive Redesign (P1-HIGH) - Stroke icons, UI overhaul, Timeline view
 - ~~TASK-043~~: CanvasView Refactoring (✅ DONE)
 - 🔄 **TASK-048**: Individual Project/Section Storage (Phase 5 - transitioning to individual-only)
 - 👀 **BUG-032**: Projects deletion fix (REVIEW - needs user verification)
 - 👀 **TASK-022**: Task disappearance monitoring (logger active)
 
-**Recently Completed (Dec 23):**
+**Recently Completed (Dec 23-25):**
+- ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)
+- ✅ TASK-055: Global UI Polish & Component Streamlining (Sync/Auth)
 - ✅ TASK-054: Remove demo content safeguards (task documented)
 - ✅ TASK-045: Consolidate backup composables (deleted 5 redundant files)
 - ✅ TASK-040: Fix i18n system (restored $t() calls)
@@ -635,29 +723,6 @@ Phase 3 (Mobile) ←────────────────────
 - ✅ TASK-034: Individual task documents (INDIVIDUAL_ONLY enabled)
 - ✅ TASK-053: Dev-Manager bidirectional editing
 - ✅ TASK-044: App.vue refactor into layouts
-
-**Planned (code quality & architecture):**
-- ~~TASK-037~~: Component directory organization (✅ DONE)
-- TASK-039: Duplicate systems consolidation (P3-LOW)
-- TASK-041: Custom recurrence patterns (P3-LOW)
-- TASK-042: Section selection dialog (P3-LOW)
-- TASK-046: Canvas performance baselines (P3-LOW)
-- ~~TASK-033~~: Claude dev infrastructure plugin ✅ DONE
-
-**Ready to Start:**
-- TASK-017: KDE Plasma Widget (depends on TASK-021 ✅ DONE)
-
-
-- ~~TASK-043~~: CanvasView Refactoring (✅ DONE)
-- 🔄 **TASK-048**: Individual Project/Section Storage (Phase 5 - transitioning to individual-only)
-- 👀 **BUG-032**: Projects deletion fix (REVIEW - needs user verification)
-- 👀 **TASK-022**: Task disappearance monitoring (logger active)
-
-**Recently Completed (Dec 23-24):**
-- ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)
-- ✅ TASK-055: Global UI Polish & Component Streamlining (Sync/Auth)
-- ✅ TASK-054: Remove demo content safeguards (task documented)
-- ✅ TASK-045: Consolidate backup composables (deleted 5 redundant files)
 
 ---
 
@@ -3306,6 +3371,194 @@ npm run dev
 2. **Global Shortcuts** - Ctrl+Y, Ctrl+N
 3. **Task Actions** - Space, E, T
 4. **Navigation & Help** - Arrow keys, ? for help modal
+
+### TASK-059: Bundle Size Optimization (🔄 ACTIVE)
+
+**Goal**: Reduce the main bundle size from 894 KB to < 500 KB (unzipped).
+
+**Current Stats**:
+- Bundle Size: 894 KB (gzip: 284 KB)
+- Largest chunks: `CanvasView` (357KB), `BoardView` (207KB)
+
+**Proposed Actions**:
+- [ ] Implement code splitting for all routes in `router/index.ts`
+- [ ] Use `defineAsyncComponent` for large dialogs and modals
+- [ ] Audit `package.json` for heavy dependencies (Moment.js, Lodash, etc.)
+- [ ] Refactor monolithic stores (already in progress via TASK-056/57/58)
+- [ ] Optimize SVG usage (use symbols or specific imports)
+
+---
+
+### TASK-060: Multi-Select Projects with Bulk Delete (P1-HIGH)
+
+**Priority**: P1-HIGH
+
+**Goal**: Allow users to select multiple projects using Ctrl+Click and delete them in bulk.
+
+**Features**:
+- [ ] Add Ctrl+Click multi-selection to projects in sidebar
+- [ ] Add visual selection indicator (checkbox or highlight)
+- [ ] Add "Delete Selected" button that appears when projects are selected
+- [ ] Confirmation modal for bulk deletion
+- [ ] Handle cascade deletion of tasks within deleted projects (move to inbox or delete)
+- [ ] Add Undo support for project deletion
+
+**Files to Modify**:
+- `src/components/app/AppSidebar.vue`
+- `src/components/ui/ProjectTree.vue` (or equivalent)
+- `src/stores/tasks.ts` (project deletion logic)
+
+---
+
+### TASK-061: Demo Content Guard Logger (PLANNED)
+
+**Priority**: P2-MEDIUM
+
+**Goal**: Create a logger/guard that detects and alerts when programmatic task creation or demo content is being added to the system.
+
+**Rationale**: Prevent accidental pollution of user data with test/demo content (relates to TASK-054 data safety).
+
+**Features**:
+- [ ] Create `src/utils/demoContentGuard.ts`
+- [ ] Detect patterns like "Test Task", "Sample Project", "Lorem ipsum", "Demo"
+- [ ] Hook into task/project creation functions
+- [ ] Console warnings in development mode
+- [ ] Optional user notification for suspicious content
+- [ ] Whitelist for legitimate task titles containing these words
+
+**Integration Points**:
+- `src/stores/tasks.ts` - createTask, createProject
+- `src/composables/useUnifiedUndoRedo.ts` - createTaskWithUndo
+
+---
+
+### TASK-062: Custom Confirmation Modals (PLANNED)
+
+**Priority**: P2-MEDIUM
+
+**Goal**: Replace native browser `window.confirm()` dialogs with custom-designed modals that match the app's glassmorphism aesthetic.
+
+**Problem**: Currently, destructive actions (delete project, delete task, clear data) use native browser confirm dialogs which:
+- Look inconsistent with the app's dark/purple glassmorphism theme
+- Cannot be styled or customized
+- Have poor UX on mobile
+- Show browser-specific styling (Chrome vs Firefox)
+
+**Solution**: Create a reusable `ConfirmationModal.vue` component and a composable `useConfirmation()` for easy integration.
+
+**Features**:
+- [ ] Create `src/components/base/ConfirmationModal.vue`
+  - Glassmorphism styling matching BaseModal
+  - Support for danger/warning/info variants
+  - Customizable title, message, and button text
+  - Icon support (warning triangle, trash, etc.)
+  - Keyboard support (Enter to confirm, Escape to cancel)
+- [ ] Create `src/composables/useConfirmation.ts`
+  - Promise-based API: `const confirmed = await confirm({ title, message, variant })`
+  - Global singleton pattern for app-wide access
+  - TypeScript support with proper types
+- [ ] Replace all `window.confirm()` calls:
+  - Project deletion (`ProjectTree.vue`, `AppSidebar.vue`)
+  - Task deletion (`TaskContextMenu.vue`)
+  - Clear all data (Settings)
+  - [x] Canvas bulk delete (Shift+Delete) - `useCanvasActions.ts` ✅ (Dec 25, 2025)
+  - Any other destructive actions
+
+**Design Requirements**:
+- Match existing modal styling (rgba(20, 20, 40, 0.85) background, blur, etc.)
+- Danger variant: red accent for delete actions
+- Warning variant: amber accent for cautionary actions
+- Clear visual hierarchy (title, message, actions)
+- Responsive design for mobile
+
+**Files to Create**:
+- `src/components/base/ConfirmationModal.vue`
+- `src/composables/useConfirmation.ts`
+
+**Files to Update**:
+- `src/components/projects/ProjectTree.vue`
+- `src/components/app/AppSidebar.vue`
+- `src/components/tasks/TaskContextMenu.vue`
+- `src/components/settings/*.vue` (where confirm is used)
+
+---
+
+### ~~TASK-063~~: Storybook Modal Stories Fixes (✅ DONE)
+
+**Priority**: P2-MEDIUM
+
+**Goal**: Fix and streamline all Storybook modal stories to render correctly with proper glassmorphism styling.
+
+**Problem**: Multiple modal stories in Storybook are broken or not rendering:
+- BatchEditModal - nothing appears
+- ConfirmationModal - nothing appears
+- GroupModal - nothing appears
+- QuickTaskCreateModal - broken
+- SearchModal - needs streamlining
+- SettingsModal - broken
+- TaskEditModal - needs streamlining
+
+**Solution**: Applied consistent story patterns with:
+- Emoji-prefixed titles (🪟 Modals & Dialogs/ComponentName)
+- Dark gradient background decorators
+- Proper TypeScript types
+- Pinia initialization to prevent store errors
+- Mock data instead of real store dependencies
+- Event handlers for all emitted events
+- Multiple story variants
+
+**Files Fixed**:
+- [x] `src/stories/modals/BatchEditModal.stories.ts` - Fixed prop names (isOpen, taskIds), added variants
+- [x] `src/stories/modals/ConfirmationModal.stories.ts` - Fixed prop name (isOpen not show), added 4 variants
+- [x] `src/stories/modals/GroupModal.stories.ts` - Fixed prop name (isOpen not modelValue), added variants
+- [x] `src/stories/modals/QuickTaskCreateModal.stories.ts` - Added event handlers, proper styling
+- [x] `src/stories/modals/SearchModal.stories.ts` - Added Pinia init, event handlers
+- [x] `src/stories/modals/SettingsModal.stories.ts` - Added Pinia init, proper render function
+- [x] `src/stories/modals/TaskEditModal.stories.ts` - Added mock Task data, 5 story variants
+
+**Started**: 2025-12-25
+**Completed**: 2025-12-25
+
+**Note**: Verification blocked by unrelated syntax error in `tasks.ts:637` (await outside async). That file is locked by TASK-022.
+
+---
+
+### TASK-064: Dev-Manager Comprehensive Redesign (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH
+
+**Goal**: Complete UI overhaul of the dev-manager dashboard with modern design, stroke-based icons, and new Timeline/Gantt view.
+
+**Design Principles**:
+- **Strokes over fills**: All icons use outline/stroke style, no filled icons
+- **Glass morphism**: Consistent with PomoFlow's design system
+- **Modern aesthetics**: Clean, minimal, professional developer tooling feel
+
+**Scope**:
+1. **Icon System**: Replace emoji icons (📋, 🎯, 📚, 📊) with custom SVG stroke icons
+2. **Header Redesign**: Modern navigation with refined tab styling
+3. **Kanban Board Overhaul**: Improved task cards, better visual hierarchy
+4. **Timeline/Gantt View**: New tab implementing IDEA-002 for task visualization
+5. **Panel Consistency**: Update Skills, Docs, and Stats panels to match new design
+
+**Files to Modify**:
+- [ ] `dev-manager/index.html` - Main dashboard, icons, header
+- [ ] `dev-manager/kanban/index.html` - Kanban board UI
+- [ ] `dev-manager/skills/index.html` - Skills panel styling
+- [ ] `dev-manager/docs/index.html` - Docs panel styling
+- [ ] `dev-manager/stats/index.html` - Stats panel styling
+- [ ] Create: `dev-manager/timeline/index.html` - New Timeline/Gantt view
+
+**Implementation Phases**:
+- [ ] Phase 1: SVG stroke icon set design and integration
+- [ ] Phase 2: Header and navigation redesign
+- [ ] Phase 3: Kanban board UI overhaul
+- [ ] Phase 4: Timeline/Gantt view implementation
+- [ ] Phase 5: Skills, Docs, Stats panel updates
+
+**Related**: Incorporates IDEA-002 (Timeline View for Dev-Manager)
+
+**Started**: 2025-12-25
 
 ---
 

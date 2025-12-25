@@ -438,6 +438,44 @@ export const migrateFromLegacyFormat = async (
 }
 
 /**
+ * Delete multiple tasks
+ * Atomic operation using bulkDocs
+ */
+export const deleteTasks = async (
+  db: PouchDB.Database,
+  taskIds: string[]
+): Promise<void> => {
+  if (!taskIds.length) return
+
+  // 1. Fetch current revisions
+  const keys = taskIds.map(id => id.startsWith(TASK_DOC_PREFIX) ? id : `task-${id}`)
+
+  try {
+    const result = await db.allDocs({
+      keys,
+      include_docs: false
+    })
+
+    // 2. Prepare deletion docs
+    const docsToDelete = result.rows
+      .filter((row): row is PouchDB.Core.AllDocsResponse<unknown>['rows'][0] & { value: { rev: string } } => !('error' in row) && !!row.value)
+      .map(row => ({
+        _id: row.id,
+        _rev: row.value.rev,
+        _deleted: true
+      }))
+
+    if (docsToDelete.length > 0) {
+      await db.bulkDocs(docsToDelete)
+      console.log(`🗑️ Bulk deleted ${docsToDelete.length} tasks`)
+    }
+  } catch (error) {
+    console.error('❌ Bulk delete failed:', error)
+    throw error
+  }
+}
+
+/**
  * Sync deleted tasks - remove documents that no longer exist in the task list
  */
 export const syncDeletedTasks = async (

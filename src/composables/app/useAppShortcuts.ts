@@ -18,6 +18,8 @@ export function useAppShortcuts() {
 
     const shouldIgnoreElement = (target: HTMLElement | null): boolean => {
         if (!target) return false
+        // Guard against non-Element targets (like document)
+        if (!target.classList) return false
         if (target.classList.contains('quick-task-input') ||
             target.closest('.quick-task-section')) {
             return false

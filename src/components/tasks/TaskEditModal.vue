@@ -121,6 +121,15 @@
                   class="inline-custom-select"
                 />
               </div>
+
+              <div class="metadata-field metadata-field--dropdown">
+                <Layout :size="14" class="text-indigo-400" />
+                <span class="field-label">Section</span>
+                <SectionSelector
+                  v-model="currentSectionId"
+                  class="inline-custom-select"
+                />
+              </div>
             </div>
           </section>
 
@@ -287,9 +296,11 @@ import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import type { Task, Subtask } from '@/stores/tasks'
 import {
   X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
-  Calendar, CalendarClock, Clock, TimerReset, ChevronDown
+  Calendar, CalendarClock, Clock, TimerReset, ChevronDown, Layout
 } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import SectionSelector from '@/components/canvas/SectionSelector.vue'
+import { useCanvasStore } from '@/stores/canvas'
 
 interface Props {
   isOpen: boolean
@@ -316,6 +327,7 @@ const statusOptions = [
 ]
 
 const taskStore = useTaskStore()
+const canvasStore = useCanvasStore()
 
 // Template refs
 const titleInput = ref<HTMLInputElement>()
@@ -421,6 +433,75 @@ const totalSubtaskPomodoros = computed(() =>
 const totalTaskPomodoros = computed(() =>
   editedTask.value.completedPomodoros + totalSubtaskPomodoros.value
 )
+
+// Canvas Section Support
+const currentSectionId = computed({
+  get: () => {
+    if (!editedTask.value.canvasPosition) return null
+    
+    // Find section that contains this task's position
+    const pos = editedTask.value.canvasPosition
+    const sections = canvasStore.sections
+    
+    const containingSection = sections.find(s => 
+      pos.x >= s.position.x && 
+      pos.x <= s.position.x + s.position.width &&
+      pos.y >= s.position.y && 
+      pos.y <= s.position.y + s.position.height
+    )
+    
+    return containingSection?.id || null
+  },
+  set: (sectionId) => {
+    handleSectionChange(sectionId)
+  }
+})
+
+const handleSectionChange = (sectionId: string | null) => {
+  if (!sectionId) {
+    // Move to Inbox
+    editedTask.value.isInInbox = true
+    editedTask.value.canvasPosition = undefined
+    return
+  }
+
+  const section = canvasStore.sections.find(s => s.id === sectionId)
+  if (!section) return
+
+  // Update position if not already in this section
+  const currentPos = editedTask.value.canvasPosition
+  const isCurrentlyInSection = currentPos && 
+    currentPos.x >= section.position.x && 
+    currentPos.x <= section.position.x + section.position.width &&
+    currentPos.y >= section.position.y && 
+    currentPos.y <= section.position.y + section.position.height
+
+  if (!isCurrentlyInSection) {
+    // Place in center of section with small offset
+    editedTask.value.canvasPosition = {
+      x: section.position.x + (section.position.width / 2) - 100, // Approx half task width
+      y: section.position.y + (section.position.height / 2) - 40   // Approx half task height
+    }
+  }
+
+  editedTask.value.isInInbox = false
+
+  // Apply "Assign on Drop" settings if they exist
+  if (section.assignOnDrop) {
+    const settings = section.assignOnDrop
+    if (settings.priority) editedTask.value.priority = settings.priority
+    if (settings.status) editedTask.value.status = settings.status
+    if (settings.projectId) editedTask.value.projectId = settings.projectId
+    
+    // Handle due date relative keywords
+    if (settings.dueDate) {
+      const { resolveDueDate } = import('@/composables/useGroupSettings')
+      resolveDueDate(settings.dueDate).then(dateStr => {
+        if (dateStr) editedTask.value.dueDate = dateStr
+      })
+    }
+  }
+}
 
 // Dynamic icon and class for priority
 const priorityIcon = computed(() => {

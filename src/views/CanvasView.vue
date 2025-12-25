@@ -599,7 +599,7 @@ const filteredTasksWithProjectFiltering = computed(() => {
       // FIX (Dec 5, 2025): Include dueDate and canvasPosition in hash for proper cache invalidation
       // - dueDate: ensures filter updates when task dates change
       // - canvasPosition: ensures syncNodes() filter at line 1758 works correctly
-      const currentHash = currentTasks.map(t => `${t.id}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}`).join('|')
+      const currentHash = currentTasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}:${t.updatedAt?.getTime() ?? ''}`).join('|')
       if (currentHash === lastFilteredTasksHash && lastFilteredTasks.length > 0) {
         return lastFilteredTasks
       }
@@ -646,7 +646,7 @@ const filteredTasksWithCanvasPosition = computed(() => {
   }
 
   // Performance optimization: Cache filtered results
-  const currentHash = tasks.map(t => `${t.id}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}`).join('|')
+  const currentHash = tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.updatedAt?.getTime() ?? ''}`).join('|')
   if (currentHash === lastCanvasTasksHash && lastCanvasTasks.length > 0) {
     return lastCanvasTasks
   }
@@ -1986,7 +1986,7 @@ const getTaskCountForSection = (sectionId: string) => {
 // deep:true on task arrays causes cascading updates because it triggers on ANY nested property change
 resourceManager.addWatcher(
   watch(
-    () => filteredTasks.value.map(t => `${t.id}:${t.isInInbox}:${t.canvasPosition?.x}:${t.canvasPosition?.y}`).join('|'),
+    () => filteredTasks.value.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.isInInbox}:${t.canvasPosition?.x}:${t.canvasPosition?.y}:${t.updatedAt?.getTime() ?? ''}`).join('|'),
     () => {
       batchedSyncNodes('high')
       batchedSyncEdges('high')

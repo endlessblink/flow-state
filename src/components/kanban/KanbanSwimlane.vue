@@ -257,16 +257,24 @@ const getNextMonday = (base: Date) => {
 const taskCache = ref(new Map<string, Task[]>())
 
 // Helper functions to group tasks (with caching for performance)
+// Generate a deterministic fingerprint for a set of tasks to detect content changes (not just count)
+const getTasksFingerprint = (tasks: Task[]) => {
+  if (!tasks || tasks.length === 0) return 'empty'
+  // Use a smaller sample or hash if performance becomes an issue with 1000+ tasks
+  return tasks.map(t => `${t.id}:${t.updatedAt?.getTime() ?? ''}`).join('|')
+}
+
 const getTasksByStatus = (status: string) => {
   return props.tasks.filter(task => task.status === status)
 }
 
 const getTasksByDate = (dateColumn: string) => {
-  // Create cache key that includes relevant factors
+  // Create cache key that includes relevant factors including content fingerprint
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const todayStr = today.toISOString().split('T')[0]
-  const cacheKey = `date_${dateColumn}_${props.tasks.length}_${todayStr}_${props.currentFilter}`
+  const fingerprint = getTasksFingerprint(props.tasks)
+  const cacheKey = `date_${dateColumn}_${fingerprint}_${todayStr}_${props.currentFilter}`
 
   if (taskCache.value.has(cacheKey)) {
     return taskCache.value.get(cacheKey)!
@@ -483,8 +491,13 @@ const updateLocalTasks = () => {
 updateLocalTasks()
 
 // Watch for external task changes
-watch(() => props.tasks, () => {
-  // Update localTasks to maintain vuedraggable reactivity (no more cache clearing)
+watch(() => props.tasks, (newTasks) => {
+  if (shouldLogTaskDiagnostics()) {
+    console.log(`🔄 [KanbanSwimlane] Tasks changed for project "${props.project.name}":`, newTasks.length)
+  }
+  // Clear the cache to ensure getTasksByDate recomputes with new task data
+  taskCache.value.clear()
+  // Update localTasks to maintain vuedraggable reactivity
   updateLocalTasks()
 }, { deep: true })
 

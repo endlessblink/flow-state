@@ -40,8 +40,8 @@ import { useSecurityMonitor as _useSecurityMonitor } from './utils/securityMonit
 // Initialize local-first authentication system
 import { useLocalAuthStore as _useLocalAuthStore } from './stores/local-auth'
 
-// Task disappearance logger - auto-enable for debugging BUG-020
-import { taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
+// Task disappearance logger - kept for window.taskLogger side-effect (manual debugging)
+import { taskDisappearanceLogger as _taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
 
 const app = createApp(App)
 
@@ -83,9 +83,7 @@ window.addEventListener('unhandledrejection', (event) => {
 
 app.mount('#app')
 
-// Auto-enable task disappearance logger for debugging (BUG-020)
-// This will help identify mysterious task disappearances
-setTimeout(() => {
-  taskDisappearanceLogger.enable()
-  console.log('%c[TASK-LOGGER] Auto-enabled for BUG-020 investigation', 'color: #4CAF50; font-weight: bold')
-}, 2000) // Wait 2 seconds for store initialization
+// Task disappearance logger available for manual debugging if needed:
+// Import: import { taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
+// Enable: taskDisappearanceLogger.enable() or window.taskLogger.enable()
+// TASK-022 monitoring completed Dec 25, 2025 - no issues detected

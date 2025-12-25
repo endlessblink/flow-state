@@ -183,7 +183,7 @@ BUG-036 only fixed legacy fallback and auto-seeding, but did NOT address CouchDB
    - Local deletion now wins over remote non-deleted version
    - Remote deletion propagates to local (deletion syncs both ways)
 
-**Remaining Work** (Blocked by TASK-022 lock on `tasks.ts`):
+**Remaining Work** (TASK-022 complete - can now proceed):
 2. [ ] Add deletion intent tracking via `_local/deleted-tasks` document
 3. [ ] Filter deleted tasks in `loadFromDatabase()`
 4. [ ] Cleanup old deletion entries (>30 days)
@@ -645,7 +645,7 @@ Phase 3 (Mobile) ←────────────────────
 
 | ID | Status | Primary Files | Depends | Blocks |
 |----|--------|---------------|---------|--------|
-| TASK-022 | 👀 MONITORING | `tasks.ts`, `taskDisappearanceLogger.ts` | - | TASK-034 |
+| ~~TASK-022~~ | ✅ **DONE** | `tasks.ts`, `taskDisappearanceLogger.ts` | - | ~~TASK-034~~ |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | ~~TASK-014~~ | ✅ COMPLETE | `*.stories.ts`, `*.vue` (UI) | - | - |
 | ~~TASK-019~~ | ✅ DONE | ~~`tasks.ts`, stores, views~~ | - | Superseded by TASK-027 |
@@ -696,14 +696,14 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-060** | PLANNED | `AppSidebar.vue`, `ProjectTree.vue`, `tasks.ts` | - | - |
 | **TASK-061** | PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
 | **TASK-062** | 🔄 **PARTIAL** | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
-| **BUG-037** | 🔄 **IN PROGRESS** | `conflictResolver.ts`, `tasks.ts` | - | Blocked by TASK-022 |
+| **BUG-037** | 🔄 **IN PROGRESS** | `conflictResolver.ts`, `tasks.ts` | - | - |
 | **TASK-064** | 🔄 **IN PROGRESS** | `dev-manager/*`, `dev-manager/timeline/` (new) | - | - |
-| **TASK-065** | 🔄 **IN PROGRESS** | `database.ts`, `.env.example`, `README.md`, `LICENSE` | - | ROAD-017 |
+| **TASK-065** | 📋 **TODO** | `database.ts`, `.env.example`, `README.md`, `LICENSE` | - | ROAD-017 |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
-- [x] **TASK-065**: GitHub Public Release (P0-CRITICAL) - Security cleanup, BFG history, documentation
+- [ ] **TASK-065**: GitHub Public Release (P0-CRITICAL) - Security cleanup, BFG history, documentation
 - [/] **TASK-056**: Refactor `tasks.ts` (ISSUE-014) - Researching & Planning
 - [ ] TASK-057: Refactor `canvas.ts` - Planned
 - [ ] TASK-058: Refactor `timer.ts` - Planned
@@ -715,7 +715,7 @@ Phase 3 (Mobile) ←────────────────────
 - ~~TASK-043~~: CanvasView Refactoring (✅ DONE)
 - 🔄 **TASK-048**: Individual Project/Section Storage (Phase 5 - transitioning to individual-only)
 - 👀 **BUG-032**: Projects deletion fix (REVIEW - needs user verification)
-- 👀 **TASK-022**: Task disappearance monitoring (logger active)
+- ~~TASK-022~~: Task disappearance monitoring (✅ DONE - no issues detected after 6 days)
 
 **Recently Completed (Dec 23-25):**
 - ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)
@@ -730,7 +730,7 @@ Phase 3 (Mobile) ←────────────────────
 
 ---
 
-### TASK-065: Prepare for GitHub Public Release (🔄 IN PROGRESS)
+### TASK-065: Prepare for GitHub Public Release (📋 TODO)
 
 **Goal**: Publish Pomo-Flow as open-source on GitHub with proper security and documentation
 
@@ -1872,32 +1872,34 @@ Dec 18, 2025 - Added Unscheduled, Priority, and Project filters to canvas inbox.
 
 ---
 
-### TASK-022: Task Disappearance Monitoring & Review (👀 MONITORING)
+### ~~TASK-022~~: Task Disappearance Monitoring & Review (✅ DONE)
 Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance events. This task combines the previous logger setup (TASK-022) and review SOP (TASK-024).
+
+**Completed**: Dec 25, 2025 - No task disappearances detected after 6 days of monitoring.
 
 **Features**:
 - Identified 6 critical task removal locations in `tasks.ts`
 - Created `taskDisappearanceLogger.ts` with snapshot, diff, and search capabilities
 - Integrated logging into task store, cross-tab sync, and main.ts
-- Auto-enabled on app startup for monitoring
+- Auto-enabled on app startup for monitoring (removed after completion)
 
-#### If Issue Recurs - Run These Steps
+#### Resolution
 
 | Step | Description | Status |
 |------|-------------|--------|
-| 1 | Run `window.taskLogger.printSummary()` in browser console | WAITING |
-| 2 | Check `window.taskLogger.getDisappearedTasks()` for disappeared tasks | WAITING |
-| 3 | If tasks disappeared, analyze logs to identify source | WAITING |
-| 4 | Export logs with `window.taskLogger.exportLogs()` for documentation | WAITING |
-| 5 | Create fix based on findings | WAITING |
-| 6 | Remove auto-enable from `src/main.ts` once issue resolved | WAITING |
+| 1 | Run `window.taskLogger.printSummary()` in browser console | ✅ Checked |
+| 2 | Check `window.taskLogger.getDisappearedTasks()` for disappeared tasks | ✅ 0 found |
+| 3 | If tasks disappeared, analyze logs to identify source | N/A |
+| 4 | Export logs with `window.taskLogger.exportLogs()` for documentation | N/A |
+| 5 | Create fix based on findings | N/A |
+| 6 | Remove auto-enable from `src/main.ts` once issue resolved | ✅ Done |
 
 #### Notes
 
-- Logger is integrated and running in background
-- If tasks disappear again, immediately run the steps above
-- May be an intermittent issue or already resolved
-- Low priority until reproduction occurs
+- Logger remains available for manual debugging: `window.taskLogger.enable()`
+- No task disappearances detected during 6-day monitoring period
+- Issue may have been resolved in earlier fixes or was intermittent
+- BUG-037 (CouchDB sync resurrects deleted tasks) can now proceed
 
 ---
 

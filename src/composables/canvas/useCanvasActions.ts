@@ -33,6 +33,11 @@ interface ActionsState {
     isDeleteGroupModalOpen: Ref<boolean>
     groupPendingDelete: Ref<CanvasSection | null>
 
+    // Bulk Delete Confirmation (for Shift+Delete on multiple items)
+    isBulkDeleteModalOpen: Ref<boolean>
+    bulkDeleteItems: Ref<{ id: string; name: string; type: 'task' | 'section' }[]>
+    bulkDeleteIsPermanent: Ref<boolean>
+
     // Node Context Menu
     selectedNode: Ref<Node | null>
     showNodeContextMenu: Ref<boolean>
@@ -308,10 +313,6 @@ export function useCanvasActions(
 
         if (event.key === 'f' || event.key === 'F') {
             // Handled by Zoom composable usually, but we might intercept here if needed.
-            // Assuming fitView is globally handled or passed if necessary, but typically 
-            // the zoom composables sets up its own listener or component does.
-            // The original code had it here.
-            // We will leave fitView to the component or zoom composable.
         }
 
         if (!isDeleteKey) return
@@ -330,21 +331,49 @@ export function useCanvasActions(
         event.preventDefault()
         const permanentDelete = event.shiftKey
 
+        // Collect all items to delete - show ONE confirmation for all
+        const itemsToDelete: { id: string; name: string; type: 'task' | 'section' }[] = []
+
         for (const node of selectedNodes) {
             if (node.id.startsWith('section-')) {
                 const sectionId = node.id.replace('section-', '')
                 const section = canvasStore.sections.find(s => s.id === sectionId)
-                // Re-use logic for confirmation
-                const tasksInSection = section ? canvasStore.getTasksInSection(section, state.filteredTasks.value) : []
-
-                if (confirm(section && tasksInSection.length ? `Delete "${section.name}"?` : 'Delete section?')) {
-                    await canvasStore.deleteSectionWithUndo(sectionId)
-                }
-            } else if (permanentDelete) {
-                await undoHistory.deleteTaskWithUndo(node.id)
+                itemsToDelete.push({
+                    id: sectionId,
+                    name: section?.name || 'Unknown Section',
+                    type: 'section'
+                })
             } else {
-                // Move to inbox
-                await undoHistory.updateTaskWithUndo(node.id, {
+                const task = taskStore.getTask(node.id)
+                itemsToDelete.push({
+                    id: node.id,
+                    name: task?.title || 'Unknown Task',
+                    type: 'task'
+                })
+            }
+        }
+
+        if (itemsToDelete.length === 0) return
+
+        // Show bulk delete confirmation modal
+        state.bulkDeleteItems.value = itemsToDelete
+        state.bulkDeleteIsPermanent.value = permanentDelete
+        state.isBulkDeleteModalOpen.value = true
+    }
+
+    // Confirm bulk delete - called when user confirms the modal
+    const confirmBulkDelete = async () => {
+        const items = state.bulkDeleteItems.value
+        const isPermanent = state.bulkDeleteIsPermanent.value
+
+        for (const item of items) {
+            if (item.type === 'section') {
+                await canvasStore.deleteSectionWithUndo(item.id)
+            } else if (isPermanent) {
+                await undoHistory.deleteTaskWithUndo(item.id)
+            } else {
+                // Move to inbox (soft delete)
+                await undoHistory.updateTaskWithUndo(item.id, {
                     canvasPosition: undefined,
                     isInInbox: true,
                     instances: [],
@@ -354,9 +383,18 @@ export function useCanvasActions(
             }
         }
 
+        // Clear selection and state
         canvasStore.setSelectedNodes([])
+        state.bulkDeleteItems.value = []
+        state.isBulkDeleteModalOpen.value = false
         await nextTick()
         deps.syncNodes()
+    }
+
+    // Cancel bulk delete
+    const cancelBulkDelete = () => {
+        state.bulkDeleteItems.value = []
+        state.isBulkDeleteModalOpen.value = false
     }
 
     return {
@@ -378,6 +416,9 @@ export function useCanvasActions(
         handleNodeContextMenu,
         closeNodeContextMenu,
         deleteNode,
-        handleKeyDown
+        handleKeyDown,
+        // Bulk delete handlers
+        confirmBulkDelete,
+        cancelBulkDelete
     }
 }

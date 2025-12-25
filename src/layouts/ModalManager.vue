@@ -34,6 +34,7 @@
         if (task) openEditTask(task)
       }"
       @confirm-delete="handleContextMenuDelete"
+      @move-to-section="handleMoveToSection"
     />
 
     <!-- PROJECT CONTEXT MENU -->
@@ -74,6 +75,14 @@
 
     <!-- COMMAND PALETTE -->
     <CommandPalette ref="commandPaletteRef" />
+
+    <!-- SECTION SELECTION MODAL -->
+    <SectionSelectionModal
+      :is-open="showSectionSelectionModal"
+      :task="selectedTaskForSection"
+      @cancel="showSectionSelectionModal = false"
+      @confirm="confirmMoveToSection"
+    />
   </div>
 </template>
 
@@ -82,6 +91,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Task, type Project } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useCanvasStore } from '@/stores/canvas'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { createLazyModal } from '@/composables/useLazyComponent'
 import { Edit, Palette, Copy, Trash2 } from 'lucide-vue-next'
@@ -95,12 +105,14 @@ import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
 import SearchModal from '@/components/layout/SearchModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
+import SectionSelectionModal from '@/components/canvas/SectionSelectionModal.vue'
 const CommandPalette = createLazyModal(() => import('@/components/layout/CommandPalette.vue'))
 
 // Stores
 const uiStore = useUIStore()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const canvasStore = useCanvasStore()
 const sidebar = useSidebarManagement()
 
 // State
@@ -124,6 +136,8 @@ const confirmDetails = ref<string[]>([])
 
 const showSearchModal = ref(false)
 const showQuickTaskCreate = ref(false)
+const showSectionSelectionModal = ref(false)
+const selectedTaskForSection = ref<Task | null>(null)
 const commandPaletteRef = ref<{ open: () => void; close: () => void } | null>(null)
 
 // Methods
@@ -201,9 +215,56 @@ const handleQuickTaskCreate = async (title: string, description: string) => {
     })
     closeQuickTaskCreate()
   } catch (error) {
-    console.error('Error creating quick task:', error)
-    closeQuickTaskCreate()
+    console.error('Failed to create task:', error)
   }
+}
+
+const handleMoveToSection = (taskId: string) => {
+  const task = taskStore.tasks.find(t => t.id === taskId)
+  if (task) {
+    selectedTaskForSection.value = task
+    showSectionSelectionModal.value = true
+    showTaskContextMenu.value = false
+  }
+}
+
+const confirmMoveToSection = async (sectionId: string) => {
+  if (!selectedTaskForSection.value) return
+
+  const task = selectedTaskForSection.value
+  const section = canvasStore.sections.find(s => s.id === sectionId)
+  
+  if (section) {
+    // Calculate new position (center of section)
+    const newPosition = {
+      x: section.position.x + (section.position.width / 2) - 100,
+      y: section.position.y + (section.position.height / 2) - 40
+    }
+
+    const updates: any = {
+      canvasPosition: newPosition,
+      isInInbox: false
+    }
+
+    // Apply "Assign on Drop" settings
+    if (section.assignOnDrop) {
+      if (section.assignOnDrop.priority) updates.priority = section.assignOnDrop.priority
+      if (section.assignOnDrop.status) updates.status = section.assignOnDrop.status
+      if (section.assignOnDrop.projectId) updates.projectId = section.assignOnDrop.projectId
+      
+      if (section.assignOnDrop.dueDate) {
+        const { resolveDueDate } = await import('@/composables/useGroupSettings')
+        const dateStr = await resolveDueDate(section.assignOnDrop.dueDate)
+        if (dateStr) updates.dueDate = dateStr
+      }
+    }
+
+    await taskStore.updateTaskWithUndo(task.id, updates)
+    canvasStore.requestSync()
+  }
+
+  showSectionSelectionModal.value = false
+  selectedTaskForSection.value = null
 }
 
 const projectContextMenuItems = computed<ContextMenuItem[]>(() => {

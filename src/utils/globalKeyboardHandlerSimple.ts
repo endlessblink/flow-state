@@ -221,9 +221,27 @@ export class SimpleGlobalKeyboardHandler {
     try {
       console.log('🔄 Executing undo operation with unified system...')
 
-      // Check if undo is possible
-      if (!this.undoRedo.canUndo.value) {
-        console.log('ℹ️ Nothing to undo - canUndo is false')
+      // BUG-008 DEBUG: Log all undo system values
+      console.log('🔍 [UNDO-DEBUG] Cached undoRedo values:', {
+        canUndo: this.undoRedo.canUndo?.value,
+        canRedo: this.undoRedo.canRedo?.value,
+        undoCount: this.undoRedo.undoCount?.value,
+        redoCount: this.undoRedo.redoCount?.value
+      })
+
+      // BUG-008 DEBUG: Get fresh reference to check if cached values are stale
+      const { getUndoSystem } = await import('@/composables/undoSingleton')
+      const freshUndoSystem = getUndoSystem()
+      console.log('🔍 [UNDO-DEBUG] Fresh undoSystem values:', {
+        canUndo: freshUndoSystem.canUndo?.value,
+        canRedo: freshUndoSystem.canRedo?.value,
+        undoCount: freshUndoSystem.undoCount?.value,
+        redoCount: freshUndoSystem.redoCount?.value
+      })
+
+      // Check if undo is possible - use fresh reference
+      if (!freshUndoSystem.canUndo?.value) {
+        console.log('ℹ️ Nothing to undo - canUndo is false (both cached and fresh)')
         return
       }
 

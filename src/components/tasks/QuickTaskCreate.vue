@@ -335,8 +335,9 @@ watch(() => props.isOpen, (isOpen) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(12px) saturate(100%);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -350,11 +351,14 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .quick-create-modal {
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 20, 40, 0.85);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 32px 64px rgba(0, 0, 0, 0.5),
+    0 16px 32px rgba(0, 0, 0, 0.3);
   padding: var(--space-6);
   width: 520px;
   max-width: 90vw;

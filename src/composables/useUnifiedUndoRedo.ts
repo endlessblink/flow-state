@@ -39,6 +39,11 @@ export const useUnifiedUndoRedo = () => {
     return await singletonUndo.deleteTaskWithUndo(taskId)
   }
 
+  const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
+    console.log('🗑️ bulkDeleteTasksWithUndo called for:', taskIds.length, 'tasks')
+    return await singletonUndo.bulkDeleteTasksWithUndo(taskIds)
+  }
+
   const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
     console.log('✏️ updateTaskWithUndo called for:', taskId, updates)
     return await singletonUndo.updateTaskWithUndo(taskId, updates)
@@ -100,6 +105,7 @@ export const useUnifiedUndoRedo = () => {
 
     // Task operations with undo support
     deleteTaskWithUndo,
+    bulkDeleteTasksWithUndo,
     updateTaskWithUndo,
     createTaskWithUndo,
     moveTaskWithUndo,

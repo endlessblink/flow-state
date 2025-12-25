@@ -51,7 +51,7 @@ const pinia = createPinia()
 pinia.use(
   PiniaSharedState({
     enable: true,       // Enable cross-tab sync globally
-    initialize: true,   // Recover state from other tabs on load
+    initialize: false,  // FIXED: Disable auto-hydration to prevent "ghost data" flash (BUG-037)
     type: 'native',     // Use BroadcastChannel API (fastest, best support)
   })
 )

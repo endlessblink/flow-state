@@ -207,7 +207,13 @@ export class ConflictResolver {
   }
 
   /**
-   * Preserve Non-Deleted resolution strategy
+   * Deletion-Wins resolution strategy (BUG-037 FIX)
+   *
+   * Changed from "preserve non-deleted" to "deletion wins" to prevent
+   * deleted tasks from being resurrected by CouchDB sync.
+   *
+   * When a user deletes a task, that deletion should propagate everywhere.
+   * The deletion intent takes priority over older non-deleted versions.
    */
   private async resolvePreserveNonDeleted(conflict: ConflictInfo): Promise<ResolutionResult> {
     // CRITICAL NULL SAFETY CHECKS - Prevent TypeError
@@ -227,12 +233,18 @@ export class ConflictResolver {
     let winner: DocumentVersion
     let winnerDevice: string
 
+    // BUG-037 FIX: Deletion ALWAYS wins to prevent task resurrection
     if (localDeleted && !remoteDeleted) {
-      winner = conflict.remoteVersion
-      winnerDevice = 'remote'
+      // LOCAL DELETION WINS - user deleted locally, respect that intent
+      // Remote will receive this deletion on next sync push
+      winner = { ...conflict.localVersion, data: {}, _deleted: true }
+      winnerDevice = 'local_deletion'
+      console.log(`🗑️ BUG-037: Local deletion wins for ${conflict.documentId} - task stays deleted`)
     } else if (!localDeleted && remoteDeleted) {
-      winner = conflict.localVersion
-      winnerDevice = 'local'
+      // REMOTE DELETION WINS - task was deleted on another device, propagate
+      winner = { ...conflict.remoteVersion, data: {}, _deleted: true }
+      winnerDevice = 'remote_deletion'
+      console.log(`🗑️ BUG-037: Remote deletion wins for ${conflict.documentId} - propagating deletion`)
     } else if (!localDeleted && !remoteDeleted) {
       // Neither deleted, use last write wins
       return this.resolveLastWriteWins(conflict)

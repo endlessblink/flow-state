@@ -347,6 +347,11 @@
       :selected-section-for-edit="selectedSectionForEdit"
       :is-delete-group-modal-open="isDeleteGroupModalOpen"
       :delete-group-message="deleteGroupMessage"
+      :is-bulk-delete-modal-open="isBulkDeleteModalOpen"
+      :bulk-delete-title="bulkDeleteTitle"
+      :bulk-delete-message="bulkDeleteMessage"
+      :bulk-delete-items="bulkDeleteItems"
+      :bulk-delete-is-permanent="bulkDeleteIsPermanent"
       @close-edit-modal="closeEditModal"
       @close-quick-task-create="closeQuickTaskCreate"
       @handle-quick-task-create="handleQuickTaskCreate"
@@ -361,6 +366,8 @@
       @handle-group-edit-save="handleGroupEditSave"
       @confirm-delete-group="confirmDeleteGroup"
       @cancel-delete-group="cancelDeleteGroup"
+      @confirm-bulk-delete="confirmBulkDelete"
+      @cancel-bulk-delete="cancelBulkDelete"
     />
 
     <CanvasContextMenus
@@ -1013,6 +1020,40 @@ const groupPendingDelete = ref<CanvasSection | null>(null)
 const deleteGroupMessage = computed(() => {
   if (!groupPendingDelete.value) return 'Delete this group?'
   return `Delete "${groupPendingDelete.value.name}" group? Tasks inside will remain on the canvas.`
+})
+
+// Bulk Delete Confirmation Modal state (for Shift+Delete on multiple items)
+const isBulkDeleteModalOpen = ref(false)
+const bulkDeleteItems = ref<{ id: string; name: string; type: 'task' | 'section' }[]>([])
+const bulkDeleteIsPermanent = ref(false)
+
+// Bulk delete confirmation message
+const bulkDeleteMessage = computed(() => {
+  const count = bulkDeleteItems.value.length
+  if (count === 0) return ''
+
+  const taskCount = bulkDeleteItems.value.filter(i => i.type === 'task').length
+  const sectionCount = bulkDeleteItems.value.filter(i => i.type === 'section').length
+
+  const parts: string[] = []
+  if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`)
+  if (sectionCount > 0) parts.push(`${sectionCount} group${sectionCount > 1 ? 's' : ''}`)
+
+  const itemsText = parts.join(' and ')
+
+  if (bulkDeleteIsPermanent.value) {
+    return `Permanently delete ${itemsText}? This cannot be undone.`
+  } else {
+    return `Remove ${itemsText} from canvas? Tasks will be moved to inbox.`
+  }
+})
+
+// Bulk delete title
+const bulkDeleteTitle = computed(() => {
+  if (bulkDeleteIsPermanent.value) {
+    return 'Delete Items Permanently'
+  }
+  return 'Remove from Canvas'
 })
 
 // Computed properties
@@ -1668,7 +1709,9 @@ const {
   handleNodeContextMenu,
   closeNodeContextMenu,
   deleteNode,
-  handleKeyDown
+  handleKeyDown,
+  confirmBulkDelete,
+  cancelBulkDelete
 } = useCanvasActions(
   {
     viewport,
@@ -1694,7 +1737,11 @@ const {
     showNodeContextMenu,
     nodeContextMenuX,
     nodeContextMenuY,
-    filteredTasks: filteredTasks as any
+    filteredTasks: filteredTasks as any,
+    // Fix: Add missing bulk delete state refs
+    isBulkDeleteModalOpen,
+    bulkDeleteItems,
+    bulkDeleteIsPermanent
   },
   undoHistory
 )

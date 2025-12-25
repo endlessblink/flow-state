@@ -8,7 +8,11 @@ const meta = {
   tags: ['autodocs'],
 
   parameters: {
-    layout: 'fullscreen',
+    layout: 'padded',
+    backgrounds: {
+      default: 'dark',
+      values: [{ name: 'dark', value: '#0f172a' }],
+    },
     docs: {
       story: {
         height: '600px',
@@ -19,7 +23,11 @@ const meta = {
   decorators: [
     (story: any) => ({
       components: { story },
-      template: '<div style="min-height: 100vh; background: var(--app-background-gradient);"><story /></div>',
+      template: `
+        <div style="padding: 40px; background: var(--app-background-gradient); min-height: 600px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+          <story />
+        </div>
+      `,
     }),
   ],
 } satisfies Meta<typeof ProjectModal>

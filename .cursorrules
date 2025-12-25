@@ -1,36 +1,16 @@
-# Cursor AI Rules for Pomo-Flow
+# AI Behavior Rules
 
-## CRITICAL: Data Safety (TASK-054)
+## Project Management & Dev Manager
+This project uses a custom Dev Manager (Kanban) that parses `docs/MASTER_PLAN.md`.
+When you complete a task:
+1.  **Mark as DONE**: You MUST mark the task as done in `docs/MASTER_PLAN.md`.
+2.  **Update ALL References**: A task might appear in multiple places:
+    *   The "Active Work" table
+    *   The "Planned" or "Roadmap" sections
+    *   **CRITICAL**: The main task header definition (e.g., `### TASK-XXX: Title (PLANNED)` -> `### ~~TASK-XXX~~: Title (✅ DONE)`)
+3.  **Strict Formatting**: Use `~~TASK-XXX~~` strikethrough and `(✅ DONE)` status to ensure the parser detects it correctly.
 
-NEVER create demo, sample, or test data programmatically.
-NEVER add createSampleTasks(), addDemoData(), seedDatabase(), or similar functions.
-NEVER generate "Test Task", "Sample Project", "Demo", or placeholder content.
-NEVER create fallback data when database is empty.
-
-Users must see an EMPTY app on first run - not sample data.
-
-## Why
-
-Demo data pollutes real user data and causes confusion.
-Previous incidents required manual database cleanup.
-
-## Stack
-
-- Vue 3 + Composition API + TypeScript
-- Pinia for state management
-- Tailwind CSS with design tokens
-- PouchDB for local storage
-- Vitest + Playwright for testing
-
-## Key Files
-
-- CLAUDE.md - Full development guidelines
-- docs/MASTER_PLAN.md - Project roadmap
-- src/stores/tasks.ts - Task management (PROTECTED)
-
-## Commands
-
-npm run dev - Start dev server (port 5546)
-npm run build - Production build
-npm run test - Run tests
-npm run lint - Lint code
+## Component Organization
+*   Components are organized by domain in `src/components/` (sync, tasks, projects, layout, common, inbox, debug).
+*   New components should be placed in the appropriate subdirectory.
+*   Always use absolute imports (`@/components/...`) instead of relative imports.

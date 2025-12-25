@@ -8,7 +8,11 @@ const meta = {
   tags: ['autodocs'],
 
   parameters: {
-    layout: 'fullscreen',
+    layout: 'padded',
+    backgrounds: {
+      default: 'dark',
+      values: [{ name: 'dark', value: '#0f172a' }],
+    },
     docs: {
       story: {
         height: '800px', // Explicit height for complex modal stories
@@ -65,7 +69,7 @@ export const Default: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Quick Task Create Modal</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Fast task creation with time scheduling</p>
 
@@ -114,7 +118,7 @@ export const MorningTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Morning Task Creation</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Quick task for 9:00 AM - 9:30 AM slot</p>
 
@@ -156,7 +160,7 @@ export const AfternoonMeeting: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Afternoon Meeting</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Schedule a meeting from 2:30 PM to 4:00 PM</p>
 
@@ -198,7 +202,7 @@ export const ShortTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Quick 15-Minute Task</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Perfect for quick actions and micro-tasks</p>
 
@@ -240,7 +244,7 @@ export const LongTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
         <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Extended Work Session</h3>
         <p style="margin: 0 0 24px 0; color: var(--text-secondary);">2-hour deep work session from 10:00 AM to 12:00 PM</p>
 
@@ -339,7 +343,7 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
         <h2 style="margin: 0 0 16px 0; font-size: 20px; color: var(--text-primary);">Interactive QuickTaskCreate Demo</h2>
         <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Click any time slot below to open the quick create modal</p>
 
@@ -471,7 +475,7 @@ export const AllVariants: Story = {
       return { modals, openModal, closeModal, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 100vh; background: rgba(0, 0, 0, 0.95);">
+      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
         <h2 style="margin: 0 0 24px 0; font-size: 20px; text-align: center; color: var(--text-primary);">QuickTaskCreate Duration Variants</h2>
 
         <!-- Task Type Grid -->

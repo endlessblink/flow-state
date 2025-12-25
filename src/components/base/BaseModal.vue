@@ -356,10 +356,10 @@ defineExpose({
 
 /* Modal Container */
 .modal-container {
-  background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid var(--glass-border);
+  background: rgba(20, 20, 40, 0.85);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-2xl);
   box-shadow:
     0 32px 64px rgba(0, 0, 0, 0.5),

@@ -342,21 +342,17 @@ defineExpose({
   border-inline-end-color: transparent; /* RTL: spinner arc rotation */
 }
 
-/* Variant: Secondary - Default transparent with glass effect */
+/* Variant: Secondary - Stroke only, transparent background */
 .base-button.variant-secondary {
-  background: var(--glass-bg-light);
-  border-color: var(--glass-border);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.15);
   color: var(--text-secondary);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 .base-button.variant-secondary:hover:not(:disabled):not(.loading) {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.25);
   color: var(--text-primary);
-  backdrop-filter: var(--state-active-glass);
-  -webkit-backdrop-filter: var(--state-active-glass);
 }
 
 /* Variant: Ghost - Minimal styling with subtle effects */

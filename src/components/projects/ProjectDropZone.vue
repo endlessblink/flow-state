@@ -86,7 +86,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useDragAndDrop, type DragData } from '../composables/useDragAndDrop'
+import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 
 interface Props {
   projectId: string

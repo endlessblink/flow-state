@@ -184,6 +184,60 @@ export const useProjectStore = defineStore('projects', () => {
         }
     }
 
+    /**
+     * Bulk delete multiple projects at once
+     * - Moves all tasks from deleted projects to 'uncategorized'
+     * - Re-parents child projects to their grandparent (or root if no grandparent)
+     * - Single database write for efficiency
+     */
+    const deleteProjects = async (projectIds: string[]) => {
+        if (projectIds.length === 0) return
+
+        manualOperationInProgress = true
+        try {
+            const taskStore = useTaskStore() as any
+            const projectIdSet = new Set(projectIds)
+
+            // Build parent mapping for re-parenting children
+            const parentMap = new Map<string, string | null>()
+            projectIds.forEach(id => {
+                const project = projects.value.find(p => p.id === id)
+                if (project) {
+                    parentMap.set(id, project.parentId || null)
+                }
+            })
+
+            // Move tasks from all deleted projects to uncategorized
+            taskStore.tasks.forEach((task: any) => {
+                if (projectIdSet.has(task.projectId)) {
+                    taskStore.updateTask(task.id, {
+                        projectId: 'uncategorized',
+                        isUncategorized: true
+                    })
+                }
+            })
+
+            // Re-parent children of deleted projects
+            projects.value.forEach(project => {
+                if (projectIdSet.has(project.parentId || '')) {
+                    // Find the nearest ancestor that's not being deleted
+                    let newParentId = parentMap.get(project.parentId!) || null
+                    while (newParentId && projectIdSet.has(newParentId)) {
+                        newParentId = parentMap.get(newParentId) || null
+                    }
+                    project.parentId = newParentId
+                }
+            })
+
+            // Remove all deleted projects
+            projects.value = projects.value.filter(p => !projectIdSet.has(p.id))
+
+            await saveProjectsToStorage(projects.value, `deleteProjects-${projectIds.length}`)
+        } finally {
+            manualOperationInProgress = false
+        }
+    }
+
     const setProjectColor = async (projectId: string, color: string, colorType: 'hex' | 'emoji', emoji?: string) => {
         const project = projects.value.find(p => p.id === projectId)
         if (project) {
@@ -312,6 +366,7 @@ export const useProjectStore = defineStore('projects', () => {
         createProject,
         updateProject,
         deleteProject,
+        deleteProjects,
         setProjectColor,
         getProjectById,
         getProjectDisplayName,

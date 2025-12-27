@@ -13,7 +13,7 @@
     <div class="sync-text">
       <span class="status-label">{{ statusText }}</span>
       <span class="last-sync">
-        {{ isManualSyncing ? progressText : (lastSyncTime ? formatTime(lastSyncTime) : '—') }}
+        {{ isManualSyncing ? progressText : (lastSyncTime ? formatTime(lastSyncTime) : 'Never') }}
       </span>
 
       <!-- Error Message Display -->

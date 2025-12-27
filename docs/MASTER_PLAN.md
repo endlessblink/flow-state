@@ -3492,6 +3492,7 @@ npm run dev
 - Tasks in deleted projects are moved to "Uncategorized" (not deleted)
 - Child projects are re-parented to their grandparent (or root)
 - Escape key clears selection
+- Delete key works for BOTH single active project AND multi-selected projects
 
 ---
 

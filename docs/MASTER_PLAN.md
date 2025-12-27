@@ -1,4 +1,4 @@
-**Last Updated**: December 23, 2025 (TASK-045 Backup Consolidation Complete)
+**Last Updated**: December 27, 2025 (TASK-067 TaskNode Visual Fix)
 **Version**: 5.8 (Backup System Unified)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -720,16 +720,17 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-064** | 🔄 **IN PROGRESS** | `dev-manager/*`, `dev-manager/timeline/` (new) | - | - |
 | **TASK-065** | 📋 **TODO** | `database.ts`, `.env.example`, `README.md`, `LICENSE` | - | ROAD-017 |
 | ~~**TASK-066**~~ | ✅ **DONE** | `BaseInput.vue`, `ProjectModal.vue` | - | - |
+| ~~**TASK-067**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
-- **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) - **ACTIVE**
-    - [ ] Create E2E reproduction of sync conflicts
-    - [ ] Analyze `151 conflicts` root cause
-    - [ ] Implement robust conflict resolution
+- ✅ **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) | ✅ FIXED (Dec 27)
+    - [x] Create E2E reproduction of sync conflicts
+    - [x] Analyze `151 conflicts` root cause (Hidden PouchDB internal conflicts)
+    - [x] Implement robust conflict resolution (Bulk delete of conflicting revisions)
 - [ ] TASK-058: Refactor `timer.ts` - Planned
 - [ ] **TASK-059**: Bundle Size Optimization (894 KB → Target < 500 KB)
 - ✅ **TASK-060**: Multi-Select Projects with Bulk Delete (P1-HIGH) - ✅ DONE (Dec 27)
@@ -742,6 +743,7 @@ Phase 3 (Mobile) ←────────────────────
 - ~~TASK-022~~: Task disappearance monitoring (✅ DONE - no issues detected after 6 days)
 
 **Recently Completed (Dec 23-27):**
+- ✅ TASK-067: TaskNode priority indicator visual fix - fills top edge, connection handles visible (Dec 27)
 - ✅ TASK-066: Enter key triggers project creation in ProjectModal (Dec 27)
 - ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)
 - ✅ TASK-055: Global UI Polish & Component Streamlining (Sync/Auth)

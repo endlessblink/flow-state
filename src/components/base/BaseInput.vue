@@ -20,6 +20,7 @@
         :style="inputStyles"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
+        @keydown.enter="$emit('enter', $event)"
       >
 
       <slot name="suffix" />
@@ -61,6 +62,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number]
   blur: [event: FocusEvent]
   focus: [event: FocusEvent]
+  enter: [event: KeyboardEvent]
 }>()
 
 const inputRef = ref<HTMLInputElement>()

@@ -162,11 +162,13 @@ Parser calculates progress from checkbox subtasks:
 **SOP**: `docs/🐛 debug/sop/deleted-tasks-recreation-fix-2025-12-25.md`
 
 
-### BUG-037: CouchDB Sync Resurrects Deleted Tasks (🔄 IN PROGRESS)
+### ~~BUG-037~~: CouchDB Sync Resurrects Deleted Tasks (✅ DONE)
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| Sync restores deleted tasks from remote | HIGH | 🔄 **IN PROGRESS** |
+| Sync restores deleted tasks from remote | HIGH | ✅ **DONE** |
+
+**Completed**: Dec 25, 2025
 
 **User Report**: "tasks are being recreated after deletion on refresh" (with CouchDB sync enabled)
 
@@ -178,20 +180,36 @@ BUG-036 only fixed legacy fallback and auto-seeding, but did NOT address CouchDB
 4. Old `PRESERVE_NON_DELETED` strategy chose **remote version** (non-deleted wins)
 5. Task document restored → task reappears on next load
 
-**Fix Applied** (Partial):
+**Fix Applied**:
 1. ✅ Changed conflict resolution to "Deletion Wins" strategy (`conflictResolver.ts:230-255`)
    - Local deletion now wins over remote non-deleted version
    - Remote deletion propagates to local (deletion syncs both ways)
-
-**Remaining Work** (TASK-022 complete - can now proceed):
-2. [ ] Add deletion intent tracking via `_local/deleted-tasks` document
-3. [ ] Filter deleted tasks in `loadFromDatabase()`
-4. [ ] Cleanup old deletion entries (>30 days)
 
 **Files Modified**:
 - `src/utils/conflictResolver.ts` - Deletion wins strategy
 
 **Analysis**: `/home/endlessblink/.claude/plans/toasty-puzzling-catmull.md`
+
+
+### ✅ ~~BUG-038~~: Inbox Shift+Click Multi-Select Not Working (✅ DONE)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Shift+click deselects instead of range select | MEDIUM | ✅ **FIXED** |
+
+**User Report**: "shift select just deselects the first selected task" in Inbox
+
+**Root Cause**: `UnifiedInboxPanel.vue` was missing shift+click range selection logic entirely. TASK-051 claimed completion but only `InboxPanel.vue` (canvas inbox) had the implementation - the main `UnifiedInboxPanel.vue` only had Ctrl+Click toggle, causing shift+click to fall through to single-click behavior (clearing selection).
+
+**Fix Applied** (Dec 25, 2025):
+- [x] Added `lastSelectedTaskId` ref for range selection anchor
+- [x] Implemented `event.shiftKey` handling in `handleTaskClick()` with proper range calculation
+- [x] Updated `clearSelection()` to also clear anchor
+
+**Files Modified**:
+- `src/components/inbox/UnifiedInboxPanel.vue` - Lines 277, 497-528, 557
+
+**SOP**: `docs/🐛 debug/sop/inbox-shift-click-fix-2025-12-25.md`
 
 
 ### ✅ ~~BUG-030~~: Uncategorized Tasks Filter Not Working (✅ DONE)
@@ -246,11 +264,13 @@ BUG-036 only fixed legacy fallback and auto-seeding, but did NOT address CouchDB
 **Files to investigate**: `tasks.ts` (project CRUD), `ProjectModal.vue`, dual-write logic
 
 
-### BUG-032: Projects Occasionally Deleted (👀 REVIEW)
+### ~~BUG-032~~: Projects Occasionally Deleted (✅ DONE)
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| Projects disappear/get deleted randomly | HIGH | 👀 **REVIEW** |
+| Projects disappear/get deleted randomly | HIGH | ✅ **DONE** |
+
+**Completed**: Dec 25, 2025
 
 **User Report**: "projects are created but get deleted occasionally"
 
@@ -589,7 +609,7 @@ INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration
 | ROAD-014 | **KDE Plasma Widget** | Taskbar plasmoid for Tuxedo OS - timer controls, task selector, bidirectional CouchDB sync |
 | ROAD-015 | **P2P Sync (YJS/WebRTC)** | Direct tab-to-tab sync without server. Alternative to CouchDB for offline-first |
 | ROAD-016 | **Advanced ADHD Mode** | Progressive Disclosure UI - hide complexity, reveal on demand. Focus enhancement features |
-| **ROAD-017** | **GitHub Public Release** | **P0-CRITICAL** | Security cleanup, BFG history rewrite, documentation. Free local + self-host sync |
+| ROAD-017 | **GitHub Public Release** | **P2-LOW** | Security cleanup, BFG history rewrite, documentation. Free local + self-host sync |
 
 ---
 
@@ -662,8 +682,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-033**~~ | ✅ **DONE** | `~/claude-plugins/*` (new) | - | - |
 | ~~TASK-034~~ | ✅ **DONE** | `tasks.ts`, `individualTaskStorage.ts`, `database.ts`, `documentFilters.ts` | - | - |
 | ~~BUG-031~~ | ✅ DONE | `tasks.ts`, `ProjectModal.vue` | - | - |
-| BUG-032 | 👀 **REVIEW** | `tasks.ts` | - | - |
-| **BUG-035** | 🔄 **IN PROGRESS** | `useReliableSyncManager.ts`, `useDatabase.ts`, `useCouchDBSync.ts` | - | - |
+| ~~BUG-032~~ | ✅ **DONE** | `tasks.ts` | - | - |
 | ~~**BUG-036**~~ | ✅ **DONE** | `src/stores/tasks.ts`, `useDatabase.ts` | - | - |
 | ~~TASK-035~~ | ✅ **DONE** | `useSmartViews.ts`, `tasks.ts`, `AppSidebar.vue`, `canvas.ts` | - | - |
 | ~~TASK-036~~ | ✅ COMPLETE | `*.stories.ts` | - | - |
@@ -672,7 +691,7 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-039 | PLANNED | `src/utils/conflict*.ts`, `src/utils/*Backup*.ts`, `src/utils/sync*.ts` | - | - |
 | ~~TASK-040~~ | ✅ **DONE** | `src/i18n/*`, `src/components/settings/LanguageSettings.vue` | - | - |
 | TASK-041 | PLANNED | `src/utils/recurrenceUtils.ts`, `src/types/recurrence.ts` | - | - |
-| TASK-042 | PLANNED | `src/views/CanvasView.vue` (section dialog) | - | - |
+| ~~TASK-042~~ | ✅ **DONE** | `SectionSelectionModal.vue`, `SectionSelector.vue`, `ModalManager.vue` | - | - |
 | ~~TASK-043~~ | ✅ **DONE** | `src/views/CanvasView.vue` | - | Phase 4 Component Decomposition |
 | ~~TASK-044~~ | ✅ **DONE** | `src/App.vue`, `src/layouts/*` (new) | - | Monitored by Antigravity |
 | ~~TASK-045~~ | ✅ **DONE** | `src/composables/useBackupSystem.ts`, components | - | - |
@@ -689,35 +708,38 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-053~~ | ✅ **DONE** | `dev-manager/kanban/index.html`, `dev-manager/server.js` | - | - |
 | ~~TASK-054~~ | ✅ **DONE** | `src/stores/tasks.ts`, `useDemoGuard.ts`, sidebar | - | - |
 | ~~**TASK-055**~~ | ✅ **DONE** | `SyncAlertSystem.vue`, `LoginForm.vue`, `AuthModal.vue`, etc. | - | - |
-| **TASK-056** | 🔄 **IN PROGRESS** | `src/stores/tasks.ts` | - | - |
+| **TASK-056** | 🔄 **IN PROGRESS** | `src/stores/tasks.ts`, `src/composables/tasks/*` | - | - |
 | TASK-057 | PLANNED | `src/stores/canvas.ts` | - | - |
 | TASK-058 | PLANNED | `src/stores/timer.ts` | - | - |
 | **TASK-059** | 🔄 **ACTIVE** | `vite.config.ts`, `src/router/index.ts` | - | - |
-| **TASK-060** | PLANNED | `AppSidebar.vue`, `ProjectTree.vue`, `tasks.ts` | - | - |
+| ~~**TASK-060**~~ | ✅ **DONE** | `AppSidebar.vue`, `ProjectTreeItem.vue`, `projects.ts` | - | - |
 | **TASK-061** | PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
 | **TASK-062** | 🔄 **PARTIAL** | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
-| **BUG-037** | 🔄 **IN PROGRESS** | `conflictResolver.ts`, `tasks.ts` | - | - |
+| ~~**BUG-037**~~ | ✅ **DONE** | `conflictResolver.ts`, `tasks.ts` | - | - |
+| ~~**BUG-038**~~ | ✅ **DONE** | `UnifiedInboxPanel.vue` | - | - |
 | **TASK-064** | 🔄 **IN PROGRESS** | `dev-manager/*`, `dev-manager/timeline/` (new) | - | - |
 | **TASK-065** | 📋 **TODO** | `database.ts`, `.env.example`, `README.md`, `LICENSE` | - | ROAD-017 |
+| ~~**TASK-066**~~ | ✅ **DONE** | `BaseInput.vue`, `ProjectModal.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
-- [ ] **TASK-065**: GitHub Public Release (P0-CRITICAL) - Security cleanup, BFG history, documentation
-- [/] **TASK-056**: Refactor `tasks.ts` (ISSUE-014) - Researching & Planning
+- [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
+- ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
 - [ ] TASK-057: Refactor `canvas.ts` - Planned
 - [ ] TASK-058: Refactor `timer.ts` - Planned
 - [ ] **TASK-059**: Bundle Size Optimization (894 KB → Target < 500 KB)
-- [ ] **TASK-060**: Multi-Select Projects with Bulk Delete (P1-HIGH)
+- ✅ **TASK-060**: Multi-Select Projects with Bulk Delete (P1-HIGH) - ✅ DONE (Dec 27)
 - [ ] **TASK-061**: Demo Content Guard Logger (P2-MEDIUM)
 - [ ] **TASK-062**: Custom Confirmation Modals - Replace browser `confirm()` dialogs (P2-MEDIUM)
 - [/] **TASK-064**: Dev-Manager Comprehensive Redesign (P1-HIGH) - Stroke icons, UI overhaul, Timeline view
 - ~~TASK-043~~: CanvasView Refactoring (✅ DONE)
 - 🔄 **TASK-048**: Individual Project/Section Storage (Phase 5 - transitioning to individual-only)
-- 👀 **BUG-032**: Projects deletion fix (REVIEW - needs user verification)
+- ~~BUG-032~~: Projects deletion fix (✅ DONE)
 - ~~TASK-022~~: Task disappearance monitoring (✅ DONE - no issues detected after 6 days)
 
-**Recently Completed (Dec 23-25):**
+**Recently Completed (Dec 23-27):**
+- ✅ TASK-066: Enter key triggers project creation in ProjectModal (Dec 27)
 - ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)
 - ✅ TASK-055: Global UI Polish & Component Streamlining (Sync/Auth)
 - ✅ TASK-054: Remove demo content safeguards (task documented)
@@ -734,7 +756,7 @@ Phase 3 (Mobile) ←────────────────────
 
 **Goal**: Publish Pomo-Flow as open-source on GitHub with proper security and documentation
 
-**Priority**: P0-CRITICAL
+**Priority**: P2-LOW
 
 **Business Model**:
 | Tier | Features | Price |
@@ -1657,22 +1679,25 @@ const { t } = useI18n()
 
 ---
 
-### TASK-042: Implement Section Selection Dialog (PLANNED)
+### ~~TASK-042~~: Implement Section Selection Dialog (✅ DONE)
 
 **Goal**: Implement the TODO for canvas section selection dialog.
 
 **Priority**: P1-HIGH
 **Created**: December 22, 2025
+**Completed**: December 25, 2025
 
-**Current State**:
-- `src/views/CanvasView.vue` has: `// TODO: Implement section selection dialog`
-- Users cannot easily select which section to add tasks to
+**Implementation**:
+- `SectionSelectionModal.vue` - Modal to move tasks to canvas sections
+- `SectionSelector.vue` - Categorized dropdown for section selection
+- Integrated in `ModalManager.vue` with full event handling
 
-**Scope**:
-- Create modal/dropdown for section selection
-- Show available sections with counts
-- Allow quick section switching
-- Integrate with task creation flow
+**Features Delivered**:
+- ✅ Modal/dropdown for section selection
+- ✅ Categorized sections (Custom, Status, Priority, Timeline, Project)
+- ✅ "None (Move to Inbox)" option
+- ✅ Color-coded section indicators
+- ✅ Glass morphism styling consistent with app design
 
 ---
 
@@ -1899,7 +1924,7 @@ Dec 19, 2025 - Logger installed and active. Monitoring for task disappearance ev
 - Logger remains available for manual debugging: `window.taskLogger.enable()`
 - No task disappearances detected during 6-day monitoring period
 - Issue may have been resolved in earlier fixes or was intermittent
-- BUG-037 (CouchDB sync resurrects deleted tasks) can now proceed
+- ~~BUG-037~~ (CouchDB sync resurrects deleted tasks) completed
 
 ---
 
@@ -2601,12 +2626,12 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-007~~ | ~~Deleting group deletes tasks inside~~ | ~~P1-HIGH~~ | ✅ ALREADY FIXED Dec 5, 2025 - Tasks preserved on canvas |
 | ~~BUG-008~~ | ~~Ctrl+Z doesn't restore deleted groups~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 25, 2025 - Added createGroupWithUndo/updateGroupWithUndo to undoSingleton.ts, updated UnifiedGroupModal.vue |
 | ~~BUG-013~~ | ~~Tasks disappear after changing properties on canvas~~ | ~~P1-HIGH~~ | ✅ FIXED Dec 16, 2025 - Two-part fix: (1) requestSync() in TaskContextMenu (2) spread task object in syncNodes |
-| BUG-014 | Sync status shows underscore instead of time | P1-HIGH | UI glitch - shows "_" instead of "just now" |
+| ~~BUG-014~~ | Sync status shows underscore instead of time | P1-HIGH | ✅ **FIXED** (Dec 25) - Shows "Never" instead of "—" |
 | ~~BUG-015~~ | ~~Edit Task modal behind nav tabs~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 16, 2025 - Added Teleport to body |
 | ~~BUG-016~~ | ~~Timer status not syncing~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Added pinia-shared-state@0.5.1 plugin. Timer store excluded with share:false (has Date objects). Rollback: `git checkout pre-pinia-shared-state` |
 | ~~BUG-018~~ | ~~Canvas smart group header icons cut off~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Wrapped actions in overflow container |
 | ~~BUG-019~~ | ~~Canvas section resize preview mispositioned~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Used Vue Flow viewport + container offset for accurate positioning |
-| BUG-020 | Tasks randomly disappearing without user deletion | P1-HIGH | ⏸️ PASSIVE MONITORING - Logger integrated, waiting for reproduction. If occurs: run `window.taskLogger.printSummary()` |
+| ~~BUG-020~~ | ~~Tasks randomly disappearing without user deletion~~ | ~~P1-HIGH~~ | ✅ RESOLVED Dec 25, 2025 - No issues detected after 6+ days of monitoring. Logger remains available: `window.taskLogger.printSummary()` |
 | ~~BUG-021~~ | ~~Dev-Manager Skills/Docs tabs show black until manual refresh~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Lazy loading iframes on first tab activation |
 | ~~BUG-022~~ | ~~Dev-Manager Kanban not syncing with MASTER_PLAN.md updates~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Symlink + `--symlinks` flag for serve |
 | ~~BUG-023~~ | ~~Dev-Manager Stats/Kanban showing different Active Work items~~ | ~~P2-MEDIUM~~ | ✅ FIXED Dec 19, 2025 - Pattern order fix, regex newline fix, symlink restoration |
@@ -2892,7 +2917,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 
 **Related Issues**:
 - ~~ISSUE-011~~ (PouchDB conflicts - RESOLVED)
-- BUG-020 (Task disappearance investigation)
+- ~~BUG-020~~ (Task disappearance - RESOLVED, no issues after 6+ days monitoring)
 
 **Related Files**:
 - `src/utils/taskDisappearanceLogger.ts` - Needs enhancement for ROAD-013
@@ -3437,24 +3462,33 @@ npm run dev
 
 ---
 
-### TASK-060: Multi-Select Projects with Bulk Delete (P1-HIGH)
+### ~~TASK-060~~: Multi-Select Projects with Bulk Delete (✅ DONE - Dec 27)
 
 **Priority**: P1-HIGH
+
+**Status**: ✅ COMPLETE
 
 **Goal**: Allow users to select multiple projects using Ctrl+Click and delete them in bulk.
 
 **Features**:
-- [ ] Add Ctrl+Click multi-selection to projects in sidebar
-- [ ] Add visual selection indicator (checkbox or highlight)
-- [ ] Add "Delete Selected" button that appears when projects are selected
-- [ ] Confirmation modal for bulk deletion
-- [ ] Handle cascade deletion of tasks within deleted projects (move to inbox or delete)
-- [ ] Add Undo support for project deletion
+- [x] Add Ctrl+Click multi-selection to projects in sidebar ✅
+- [x] Add Shift+Click range selection for projects ✅
+- [x] Add visual selection indicator (highlight with brand primary color) ✅
+- [x] Add "Delete Selected" button that appears when projects are selected ✅
+- [x] Delete key shortcut to delete selected projects ✅
+- [x] Confirmation modal for bulk deletion with improved glass morphism styling ✅
+- [x] Bulk `deleteProjects()` method in projects store ✅
 
-**Files to Modify**:
-- `src/components/app/AppSidebar.vue`
-- `src/components/ui/ProjectTree.vue` (or equivalent)
-- `src/stores/tasks.ts` (project deletion logic)
+**Implementation Details**:
+- `projects.ts`: Added `deleteProjects(projectIds: string[])` for efficient bulk deletion
+- `AppSidebar.vue`: Selection state, selection bar UI, confirmation modal
+- `ProjectTreeItem.vue`: Selection handling and visual indicator propagation
+- `BaseNavItem.vue`: Added `selected` prop with styling
+
+**Notes**:
+- Tasks in deleted projects are moved to "Uncategorized" (not deleted)
+- Child projects are re-parented to their grandparent (or root)
+- Escape key clears selection
 
 ---
 

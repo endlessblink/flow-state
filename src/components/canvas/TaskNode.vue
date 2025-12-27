@@ -18,84 +18,87 @@
     @click="handleClick"
     @contextmenu.prevent="handleContextMenu"
   >
-    <!-- Priority Badge -->
-    <div v-if="showPriority" class="priority-indicator" />
+    <!-- Content wrapper - clips priority bar to rounded corners -->
+    <div class="task-node-content">
+      <!-- Priority Badge -->
+      <div v-if="showPriority" class="priority-indicator" />
 
-    <!-- Timer Active Badge -->
-    <div v-if="isTimerActive" class="timer-indicator" title="Timer Active">
-      <Timer :size="14" />
-    </div>
-
-    <!-- Title -->
-    <div class="task-title" :class="titleAlignmentClasses">
-      {{ task?.title || 'Untitled Task' }}
-    </div>
-
-    <!-- Description (if available) -->
-    <div v-if="task?.description" class="task-description" :class="titleAlignmentClasses">
-      <div
-        class="description-content"
-        :class="{ 'expanded': isDescriptionExpanded || !isDescriptionLong }"
-      >
-        {{ task.description }}
+      <!-- Timer Active Badge -->
+      <div v-if="isTimerActive" class="timer-indicator" title="Timer Active">
+        <Timer :size="14" />
       </div>
-      <button
-        v-if="isDescriptionLong"
-        class="description-toggle"
-        :aria-expanded="isDescriptionExpanded"
-        aria-label="Show more description"
-        @click.stop="toggleDescriptionExpanded"
-      >
-        {{ isDescriptionExpanded ? 'Show less' : 'Show more' }}
-      </button>
-    </div>
 
-    <!-- Metadata -->
-    <div class="task-metadata">
-      <span v-if="showStatus" class="status-badge">{{ statusLabel }}</span>
-      <span v-if="task?.dueDate" class="due-date-badge" title="Due Date">
-        <Calendar :size="12" />
-        {{ task.dueDate }}
-      </span>
-      <span
-        class="project-emoji-badge"
-        :class="`project-visual--${projectVisual.type}`"
-        :title="`Project: ${taskStore.getProjectDisplayName(task?.projectId)}`"
-      >
-        <!-- Emoji rendering using ProjectEmojiIcon for consistency -->
-        <ProjectEmojiIcon
-          v-if="projectVisual.type === 'emoji'"
-          :emoji="projectVisual.content"
-          size="md"
-        />
-        <!-- CSS Circle for colored projects -->
+      <!-- Title -->
+      <div class="task-title" :class="titleAlignmentClasses">
+        {{ task?.title || 'Untitled Task' }}
+      </div>
+
+      <!-- Description (if available) -->
+      <div v-if="task?.description" class="task-description" :class="titleAlignmentClasses">
         <div
-          v-else-if="projectVisual.type === 'css-circle'"
-          class="project-css-circle"
-          :style="{ '--project-color': projectVisual.color }"
-        />
-        <!-- Default fallback (folder icon) -->
-        <ProjectEmojiIcon
-          v-else
-          emoji="📁"
-          size="md"
-        />
-      </span>
-      <span v-if="showSchedule && hasSchedule" class="schedule-badge" title="Scheduled">
-        📅
-      </span>
-      <span
-        v-if="showDuration && task?.estimatedDuration"
-        class="duration-badge"
-        :class="durationBadgeClass"
-        :title="`Duration: ${formattedDuration}`"
-      >
-        <component :is="durationIcon" :size="12" />
-        {{ formattedDuration }}
-      </span>
+          class="description-content"
+          :class="{ 'expanded': isDescriptionExpanded || !isDescriptionLong }"
+        >
+          {{ task.description }}
+        </div>
+        <button
+          v-if="isDescriptionLong"
+          class="description-toggle"
+          :aria-expanded="isDescriptionExpanded"
+          aria-label="Show more description"
+          @click.stop="toggleDescriptionExpanded"
+        >
+          {{ isDescriptionExpanded ? 'Show less' : 'Show more' }}
+        </button>
+      </div>
+
+      <!-- Metadata -->
+      <div class="task-metadata">
+        <span v-if="showStatus" class="status-badge">{{ statusLabel }}</span>
+        <span v-if="task?.dueDate" class="due-date-badge" title="Due Date">
+          <Calendar :size="12" />
+          {{ task.dueDate }}
+        </span>
+        <span
+          class="project-emoji-badge"
+          :class="`project-visual--${projectVisual.type}`"
+          :title="`Project: ${taskStore.getProjectDisplayName(task?.projectId)}`"
+        >
+          <!-- Emoji rendering using ProjectEmojiIcon for consistency -->
+          <ProjectEmojiIcon
+            v-if="projectVisual.type === 'emoji'"
+            :emoji="projectVisual.content"
+            size="md"
+          />
+          <!-- CSS Circle for colored projects -->
+          <div
+            v-else-if="projectVisual.type === 'css-circle'"
+            class="project-css-circle"
+            :style="{ '--project-color': projectVisual.color }"
+          />
+          <!-- Default fallback (folder icon) -->
+          <ProjectEmojiIcon
+            v-else
+            emoji="📁"
+            size="md"
+          />
+        </span>
+        <span v-if="showSchedule && hasSchedule" class="schedule-badge" title="Scheduled">
+          📅
+        </span>
+        <span
+          v-if="showDuration && task?.estimatedDuration"
+          class="duration-badge"
+          :class="durationBadgeClass"
+          :title="`Duration: ${formattedDuration}`"
+        >
+          <component :is="durationIcon" :size="12" />
+          {{ formattedDuration }}
+        </span>
+      </div>
     </div>
 
-    <!-- Selection Indicator -->
+    <!-- Selection Indicator - outside content wrapper so it's not clipped -->
     <div v-if="isSelected" class="selection-indicator">
       <div class="selection-corner top-left" />
       <div class="selection-corner top-right" />
@@ -103,7 +106,7 @@
       <div class="selection-corner bottom-right" />
     </div>
 
-    <!-- Connection Handles - only render when in Vue Flow context -->
+    <!-- Connection Handles - outside content wrapper so they're not clipped -->
     <Handle
       v-if="isInVueFlowContext"
       type="target"
@@ -356,7 +359,6 @@ const formattedDuration = computed(() => {
   border: none !important;
   outline: none !important;
   border-radius: var(--radius-xl);
-  padding: var(--space-6);
   min-width: 280px;
   max-width: 420px;
   width: auto;
@@ -382,6 +384,14 @@ const formattedDuration = computed(() => {
   display: block;
 }
 
+/* Content wrapper - clips priority bar to card's rounded corners */
+.task-node-content {
+  position: relative;
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
 .task-title,
 .task-metadata {
   transform: translateZ(0);
@@ -396,9 +406,9 @@ const formattedDuration = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: transparent; /* Remove solid glass bg */
-  backdrop-filter: blur(12px); /* Maintain blur but remove gray tint */
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 20, 30, 0.4);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border-radius: var(--radius-xl);
   border: 1px solid var(--glass-border);
   z-index: -1;
@@ -565,13 +575,10 @@ body.dragging-active .task-node .vue-flow__handle {
   top: 0;
   left: 0;
   right: 0;
-  height: 5px;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  box-shadow: 0 4px 8px var(--shadow-md);
-  /* Fix priority label clipping - account for task node padding */
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  height: 6px;
+  /* No border-radius needed - parent's overflow:hidden clips to rounded corners */
+  border-radius: 0;
+  z-index: 1;
 }
 
 .priority-high .priority-indicator {

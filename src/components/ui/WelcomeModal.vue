@@ -1,214 +1,108 @@
 <template>
-  <div class="modal-overlay" @click.self="closeModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 class="modal-title">
-          <span class="emoji">🍅</span>
-          Welcome to Pomo-Flow
-        </h2>
-        <button
-          class="close-btn"
-          aria-label="Close welcome modal"
-          @click="closeModal"
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <line
-              x1="18"
-              y1="6"
-              x2="6"
-              y2="18"
-            />
-            <line
-              x1="6"
-              y1="6"
-              x2="18"
-              y2="18"
-            />
-          </svg>
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <!-- Local User Status -->
-        <div class="user-status">
-          <div class="status-icon">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M20 6L9 17L4 12" />
-            </svg>
-          </div>
-          <div class="status-text">
-            <h3>Local Profile Created</h3>
-            <p v-if="authStore.isNewSession">
-              Your anonymous profile has been created. All data is stored privately on this device.
-            </p>
-            <p v-else>
-              Welcome back! You've used Pomo-Flow for {{ userStats?.daysSinceCreation || 0 }} days.
-            </p>
-          </div>
-        </div>
-
-        <!-- User Name Setup -->
-        <div class="name-setup">
-          <label for="displayName" class="input-label">
-            Your Display Name (Optional)
-          </label>
-          <div class="input-group">
-            <input
-              id="displayName"
-              v-model="displayName"
-              type="text"
-              placeholder="Enter your name"
-              class="name-input"
-              maxlength="50"
-            >
-            <button
-              :disabled="!displayName || displayName === currentDisplayName"
-              class="save-btn"
-              @click="saveDisplayName"
-            >
-              Save
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
+        <div class="modal-container">
+          <!-- Header -->
+          <div class="modal-header">
+            <div class="header-content">
+              <span class="logo">🍅</span>
+              <div>
+                <h2 class="modal-title">Welcome to Pomo-Flow</h2>
+                <p class="modal-subtitle">Your productivity companion</p>
+              </div>
+            </div>
+            <button class="close-btn" aria-label="Close" @click="closeModal">
+              <X :size="20" />
             </button>
           </div>
-          <p class="input-help">
-            This is only stored locally and helps personalize your experience.
-          </p>
-        </div>
 
-        <!-- Key Features -->
-        <div class="features">
-          <h4>What Makes Pomo-Flow Special:</h4>
-          <div class="feature-list">
-            <div class="feature-item">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <rect
-                  x="3"
-                  y="3"
-                  width="18"
-                  height="18"
-                  rx="2"
-                  ry="2"
-                />
-                <line
-                  x1="9"
-                  y1="9"
-                  x2="15"
-                  y2="9"
-                />
-                <line
-                  x1="9"
-                  y1="15"
-                  x2="15"
-                  y2="15"
-                />
-              </svg>
-              <div>
-                <strong>Task Management</strong>
-                <p>Organize tasks across Board, Calendar, and Canvas views</p>
+          <!-- Body -->
+          <div class="modal-body">
+            <!-- Status Banner -->
+            <div class="status-banner">
+              <CheckCircle :size="20" class="status-icon" />
+              <span>{{ authStore.isNewSession ? 'Profile created' : `Day ${userStats?.daysSinceCreation || 1}` }}</span>
+            </div>
+
+            <!-- Optional Name Input -->
+            <div class="name-section">
+              <label class="input-label">Display Name (optional)</label>
+              <div class="input-row">
+                <input
+                  v-model="displayName"
+                  type="text"
+                  placeholder="Enter your name"
+                  class="name-input"
+                  maxlength="30"
+                >
+                <button
+                  :disabled="!displayName || displayName === currentDisplayName"
+                  class="save-btn"
+                  @click="saveDisplayName"
+                >
+                  Save
+                </button>
               </div>
             </div>
-            <div class="feature-item">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <div>
-                <strong>Pomodoro Timer</strong>
-                <p>Stay focused with built-in time management techniques</p>
+
+            <!-- Features (Simplified) -->
+            <div class="features">
+              <div class="feature">
+                <LayoutGrid :size="18" class="feature-icon" />
+                <span>Multiple views: Board, Calendar, Canvas</span>
+              </div>
+              <div class="feature">
+                <Timer :size="18" class="feature-icon" />
+                <span>Built-in Pomodoro timer</span>
+              </div>
+              <div class="feature">
+                <Shield :size="18" class="feature-icon" />
+                <span>100% private, works offline</span>
               </div>
             </div>
-            <div class="feature-item">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" />
-                <path d="M2 17L12 22L22 17" />
-                <path d="M2 12L12 17L22 12" />
-              </svg>
-              <div>
-                <strong>100% Private</strong>
-                <p>Your data stays on your device - no sign-up required</p>
-              </div>
-            </div>
-            <div class="feature-item">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-              <div>
-                <strong>Works Offline</strong>
-                <p>Full functionality without internet connection</p>
-              </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="modal-footer">
+            <button class="primary-btn" @click="closeModal">
+              Get Started
+            </button>
+            <div class="secondary-actions">
+              <button class="secondary-btn" @click="exportData">
+                <Download :size="16" />
+                Export
+              </button>
+              <button class="secondary-btn" @click="emit('showSettings')">
+                <Settings :size="16" />
+                Settings
+              </button>
             </div>
           </div>
         </div>
       </div>
-
-      <div class="modal-footer">
-        <button class="primary-btn" @click="closeModal">
-          Start Being Productive
-        </button>
-        <div class="secondary-actions">
-          <button class="secondary-btn" @click="exportData">
-            📤 Export Data
-          </button>
-          <button class="secondary-btn" @click="showSettings = true">
-            ⚙️ Settings
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useLocalAuthStore } from '@/stores/local-auth'
+import {
+  X,
+  CheckCircle,
+  LayoutGrid,
+  Timer,
+  Shield,
+  Download,
+  Settings
+} from 'lucide-vue-next'
 
 interface Props {
   isOpen: boolean
 }
 
-const _props = defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<{
   close: []
   showSettings: []
@@ -216,13 +110,11 @@ const emit = defineEmits<{
 
 const authStore = useLocalAuthStore()
 const displayName = ref('')
-const showSettings = ref(false)
 
 const userStats = computed(() => authStore.getUserStats())
 const currentDisplayName = computed(() => authStore.localUser?.displayName || '')
 
 onMounted(() => {
-  // Set initial display name
   displayName.value = currentDisplayName.value
 })
 
@@ -256,110 +148,253 @@ const exportData = () => {
 
 <style scoped>
 .modal-overlay {
-  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
 }
 
-.modal-content {
-  @apply bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto;
+.modal-container {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-xl, 16px);
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
 }
 
+/* Header */
 .modal-header {
-  @apply flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logo {
+  font-size: 2rem;
 }
 
 .modal-title {
-  @apply text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
 }
 
-.emoji {
-  @apply text-2xl;
+.modal-subtitle {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
 }
 
 .close-btn {
-  @apply text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-md transition-colors;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
+.close-btn:hover {
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #fff);
+}
+
+/* Body */
 .modal-body {
-  @apply p-6 space-y-6;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-.user-status {
-  @apply bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-start gap-3;
+/* Status Banner */
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  background: transparent;
+  border: 1px solid var(--color-work, #3b82f6);
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.875rem;
+  color: var(--color-work, #3b82f6);
 }
 
 .status-icon {
-  @apply text-green-600 dark:text-green-400 flex-shrink-0 mt-1;
+  flex-shrink: 0;
 }
 
-.status-text h3 {
-  @apply font-medium text-green-900 dark:text-green-100 mb-1;
-}
-
-.status-text p {
-  @apply text-green-800 dark:text-green-200 text-sm;
-}
-
-.name-setup {
-  @apply space-y-2;
+/* Name Section */
+.name-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .input-label {
-  @apply block text-sm font-medium text-gray-700 dark:text-gray-300;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
 }
 
-.input-group {
-  @apply flex gap-2;
+.input-row {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .name-input {
-  @apply flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  background: transparent;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 8px);
+  color: var(--text-primary, #fff);
+  font-size: 0.875rem;
+}
+
+.name-input::placeholder {
+  color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: var(--color-work, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .save-btn {
-  @apply px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors;
+  padding: 0.625rem 1rem;
+  background: transparent;
+  border: 1px solid var(--color-work, #3b82f6);
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-work, #3b82f6);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.input-help {
-  @apply text-sm text-gray-500 dark:text-gray-400;
+.save-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.1);
 }
 
-.features h4 {
-  @apply font-medium text-gray-900 dark:text-gray-100 mb-3;
+.save-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-.feature-list {
-  @apply grid grid-cols-1 sm:grid-cols-2 gap-4;
+/* Features */
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.feature-item {
-  @apply flex items-start gap-3;
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
 }
 
-.feature-item svg {
-  @apply text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5;
+.feature-icon {
+  color: var(--color-work, #3b82f6);
+  flex-shrink: 0;
 }
 
-.feature-item strong {
-  @apply block text-gray-900 dark:text-gray-100 font-medium;
-}
-
-.feature-item p {
-  @apply text-sm text-gray-600 dark:text-gray-400 mt-1;
-}
-
+/* Footer */
 .modal-footer {
-  @apply p-6 border-t border-gray-200 dark:border-gray-700 space-y-4;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .primary-btn {
-  @apply w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition-colors text-base;
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--color-work, #3b82f6);
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-work, #3b82f6);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.primary-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--color-work-hover, #2563eb);
 }
 
 .secondary-actions {
-  @apply flex flex-wrap gap-2 justify-center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
 }
 
 .secondary-btn {
-  @apply px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-md transition-colors;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background: transparent;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 8px);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.secondary-btn:hover {
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.05));
+  border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.15));
+  color: var(--text-primary, #fff);
+}
+
+/* Transitions */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.modal-fade-enter-active .modal-container,
+.modal-fade-leave-active .modal-container {
+  transition: transform 0.2s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-from .modal-container,
+.modal-fade-leave-to .modal-container {
+  transform: scale(0.95);
 }
 </style>

@@ -2,17 +2,19 @@
   <div
     :id="`project-${project.id}`"
     class="project-tree-item"
+    :class="{ 'is-selected': isSelected }"
     :style="{ '--nesting-depth': nestingDepth }"
     role="treeitem"
     :aria-expanded="hasChildren ? isExpanded : undefined"
     :aria-level="level"
-    :aria-selected="taskStore.activeProjectId === project.id"
+    :aria-selected="taskStore.activeProjectId === project.id || isSelected"
     :aria-label="project.name"
     tabindex="-1"
   >
     <!-- The project itself -->
     <BaseNavItem
       :active="taskStore.activeProjectId === project.id"
+      :selected="isSelected"
       :project-id="project.id"
       :has-children="hasChildren"
       :expanded="isExpanded"
@@ -25,7 +27,7 @@
       :aria-expanded="hasChildren ? isExpanded : undefined"
       :aria-level="level"
       :tabindex="taskStore.activeProjectId === project.id ? 0 : -1"
-      @click="handleProjectClick(project)"
+      @click="handleProjectClick"
       @toggle-expand="toggleExpand"
       @contextmenu.prevent="$emit('contextmenu', $event, project)"
       @project-drop="$emit('projectDrop', $event)"
@@ -50,10 +52,11 @@
           :key="child.id"
           :project="child"
           :expanded-projects="expandedProjects"
+          :selected-project-ids="selectedProjectIds"
           nested
           :nesting-depth="nestingDepth + 1"
           :level="level + 1"
-          @click="(project) => $emit('click', project)"
+          @click="(event, project) => $emit('click', event, project)"
           @toggle-expand="(projectId) => $emit('toggleExpand', projectId)"
           @contextmenu="(event, project) => $emit('contextmenu', event, project)"
           @project-drop="(data) => $emit('projectDrop', data)"
@@ -71,6 +74,7 @@ import BaseNavItem from '@/components/base/BaseNavItem.vue'
 interface Props {
   project: Project
   expandedProjects: string[]
+  selectedProjectIds?: Set<string>
   nested?: boolean
   nestingDepth?: number
   level?: number
@@ -79,17 +83,23 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   nested: false,
   nestingDepth: 0,
-  level: 1
+  level: 1,
+  selectedProjectIds: () => new Set()
 })
 
 const emit = defineEmits<{
-  click: [project: Project]
+  click: [event: MouseEvent, project: Project]
   toggleExpand: [projectId: string]
   contextmenu: [event: MouseEvent, project: Project]
   projectDrop: [data: unknown]
 }>()
 
 const taskStore = useTaskStore()
+
+// Check if this project is selected
+const isSelected = computed(() => {
+  return props.selectedProjectIds?.has(props.project.id) ?? false
+})
 
 // Check if this project has children
 const hasChildren = computed(() => {
@@ -111,10 +121,9 @@ const toggleExpand = () => {
   emit('toggleExpand', props.project.id)
 }
 
-// Handle project click - emit event and set as active project
-const handleProjectClick = (project: Project) => {
-  emit('click', project)
-  taskStore.setActiveProject(project.id)
+// Handle project click - pass event and project to parent for selection handling
+const handleProjectClick = (event: MouseEvent) => {
+  emit('click', event, props.project)
 }
 
 // Recursively count tasks in this project and all descendants (matches BoardView filtering logic)
@@ -151,6 +160,11 @@ const getProjectTaskCount = (projectId: string): number => {
 .project-tree-item {
   display: flex;
   flex-direction: column;
+}
+
+.project-tree-item.is-selected :deep(.nav-item) {
+  background: var(--brand-primary-alpha-15, rgba(78, 205, 196, 0.15));
+  border-color: var(--brand-primary-alpha-30, rgba(78, 205, 196, 0.3));
 }
 
 .nested-children {

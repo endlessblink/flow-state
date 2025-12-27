@@ -229,6 +229,42 @@
           </button>
         </div>
 
+        <!-- Project Selection Bar (shown when projects are selected) -->
+        <Transition name="fade">
+          <div v-if="multiSelectMode" class="project-selection-bar">
+            <span class="selection-count">{{ selectedProjectIds.size }} selected</span>
+            <button
+              class="selection-action delete-action"
+              title="Delete selected projects"
+              @click="confirmDeleteSelectedProjects"
+            >
+              <Trash2 :size="14" />
+              Delete
+            </button>
+            <button
+              class="selection-action clear-action"
+              title="Clear selection (Esc)"
+              @click="clearProjectSelection"
+            >
+              <X :size="14" />
+            </button>
+          </div>
+        </Transition>
+
+        <!-- Delete Confirmation Modal -->
+        <Transition name="fade">
+          <div v-if="showDeleteConfirm" class="delete-confirm-overlay" @click.self="cancelDeleteProjects">
+            <div class="delete-confirm-modal">
+              <h4>Delete {{ projectsToDeleteCount }} project{{ projectsToDeleteCount > 1 ? 's' : '' }}?</h4>
+              <p>Tasks in {{ projectsToDeleteCount > 1 ? 'these projects' : 'this project' }} will be moved to Inbox. This cannot be undone.</p>
+              <div class="confirm-actions">
+                <button class="cancel-btn" @click="cancelDeleteProjects">Cancel</button>
+                <button class="delete-btn" @click="executeDeleteProjects">Delete</button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+
         <!-- Project List - Recursive tree rendering with accessibility -->
         <nav
           class="projects-list"
@@ -242,8 +278,9 @@
             :key="project.id"
             :project="project"
             :expanded-projects="sidebar.expandedProjects.value || []"
+            :selected-project-ids="selectedProjectIds"
             :level="1"
-            @click="sidebar.selectProject"
+            @click="handleProjectClick"
             @toggle-expand="sidebar.toggleProjectExpansion"
             @contextmenu="handleProjectContextMenu"
             @project-drop="() => {}"
@@ -255,15 +292,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
-import { 
-  Plus, PanelLeftClose, Settings, FolderOpen, 
+import {
+  Plus, PanelLeftClose, Settings, FolderOpen,
   Calendar, List, Inbox, Zap, Clock, Timer, HelpCircle,
-  ChevronRight, Coffee, Hourglass, Mountain
+  ChevronRight, Coffee, Hourglass, Mountain, Trash2, X
 } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -274,6 +311,152 @@ const router = useRouter()
 const uiStore = useUIStore()
 const taskStore = useTaskStore()
 const sidebar = useSidebarManagement()
+
+// Project Multi-Select State
+const selectedProjectIds = ref<Set<string>>(new Set())
+const lastSelectedProjectId = ref<string | null>(null)
+const multiSelectMode = computed(() => selectedProjectIds.value.size > 0)
+const showDeleteConfirm = ref(false)
+
+// Project Selection Handlers
+const handleProjectClick = (event: MouseEvent, project: Project) => {
+  // Handle Shift+Click (Range Selection)
+  if (event.shiftKey) {
+    if (!lastSelectedProjectId.value) {
+      selectedProjectIds.value = new Set([project.id])
+      lastSelectedProjectId.value = project.id
+      return
+    }
+
+    // Has anchor - perform range selection
+    const allProjects = getFlattenedProjectList()
+    const lastIndex = allProjects.findIndex(p => p.id === lastSelectedProjectId.value)
+    const currentIndex = allProjects.findIndex(p => p.id === project.id)
+
+    if (lastIndex === -1) {
+      selectedProjectIds.value = new Set([project.id])
+      lastSelectedProjectId.value = project.id
+      return
+    }
+
+    if (currentIndex !== -1) {
+      const start = Math.min(lastIndex, currentIndex)
+      const end = Math.max(lastIndex, currentIndex)
+      const rangeProjects = allProjects.slice(start, end + 1)
+
+      const newSet = new Set(selectedProjectIds.value)
+      rangeProjects.forEach(p => newSet.add(p.id))
+      selectedProjectIds.value = newSet
+    }
+    return
+  }
+
+  // Handle Ctrl/Cmd+Click (Toggle Selection)
+  if (event.ctrlKey || event.metaKey) {
+    const newSet = new Set(selectedProjectIds.value)
+    if (newSet.has(project.id)) {
+      newSet.delete(project.id)
+      if (project.id === lastSelectedProjectId.value) {
+        lastSelectedProjectId.value = null
+      }
+    } else {
+      newSet.add(project.id)
+      lastSelectedProjectId.value = project.id
+    }
+    selectedProjectIds.value = newSet
+    return
+  }
+
+  // Single click - clear selection and select project normally
+  clearProjectSelection()
+  sidebar.selectProject(project)
+}
+
+const clearProjectSelection = () => {
+  selectedProjectIds.value = new Set()
+  lastSelectedProjectId.value = null
+  showDeleteConfirm.value = false
+}
+
+const deleteSelectedProjects = async () => {
+  // Get IDs to delete - either from multi-selection or from active project
+  let idsToDelete: string[] = []
+
+  if (selectedProjectIds.value.size > 0) {
+    idsToDelete = Array.from(selectedProjectIds.value)
+  } else if (taskStore.activeProjectId && taskStore.activeProjectId !== 'uncategorized') {
+    // Single active project (not in multi-select mode)
+    idsToDelete = [taskStore.activeProjectId]
+  }
+
+  if (idsToDelete.length === 0) return
+
+  try {
+    await taskStore.deleteProjects(idsToDelete)
+  } catch (error) {
+    console.error('❌ Error deleting projects:', error)
+  }
+  clearProjectSelection()
+}
+
+const confirmDeleteSelectedProjects = () => {
+  showDeleteConfirm.value = true
+}
+
+const cancelDeleteProjects = () => {
+  showDeleteConfirm.value = false
+}
+
+const executeDeleteProjects = async () => {
+  await deleteSelectedProjects()
+  showDeleteConfirm.value = false
+}
+
+// Check if there are projects that can be deleted (selected or active)
+const hasDeletableProjects = computed(() => {
+  if (selectedProjectIds.value.size > 0) return true
+  if (taskStore.activeProjectId && taskStore.activeProjectId !== 'uncategorized') return true
+  return false
+})
+
+// Get count of projects to delete (for modal)
+const projectsToDeleteCount = computed(() => {
+  if (selectedProjectIds.value.size > 0) return selectedProjectIds.value.size
+  if (taskStore.activeProjectId && taskStore.activeProjectId !== 'uncategorized') return 1
+  return 0
+})
+
+// Keyboard handler for project selection actions
+const handleProjectKeydown = (event: KeyboardEvent) => {
+  // Don't handle if typing in an input field
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return
+  }
+
+  // Escape: Clear selection
+  if (event.key === 'Escape' && selectedProjectIds.value.size > 0) {
+    clearProjectSelection()
+    return
+  }
+
+  // Delete or Backspace: Show confirmation to delete projects (selected or active)
+  if ((event.key === 'Delete' || event.key === 'Backspace') && hasDeletableProjects.value) {
+    event.preventDefault()
+    event.stopPropagation()
+    confirmDeleteSelectedProjects()
+    return
+  }
+}
+
+// Lifecycle - add/remove keyboard listener
+onMounted(() => {
+  window.addEventListener('keydown', handleProjectKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleProjectKeydown)
+})
 
 // Quick Task Logic
 const quickTaskRef = ref<HTMLInputElement | null>(null)
@@ -795,5 +978,126 @@ defineExpose({
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
   padding: 0 var(--space-4) var(--space-4) var(--space-4);
+}
+
+/* Project Selection Bar */
+.project-selection-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--brand-primary-alpha-30);
+  border-radius: var(--radius-md);
+  margin: 0 var(--space-4) var(--space-2) var(--space-4);
+}
+
+.selection-count {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--brand-primary);
+  flex: 1;
+}
+
+.selection-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.selection-action:hover {
+  background: var(--state-hover-bg);
+  border-color: var(--state-hover-border);
+}
+
+.selection-action.delete-action:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.selection-action.clear-action {
+  padding: var(--space-1);
+}
+
+/* Delete Confirmation Modal */
+.delete-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.delete-confirm-modal {
+  background: rgba(20, 20, 25, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.delete-confirm-modal h4 {
+  margin: 0 0 var(--space-3) 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.delete-confirm-modal p {
+  margin: 0 0 var(--space-4) 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.confirm-actions button {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.cancel-btn {
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+}
+
+.cancel-btn:hover {
+  background: var(--state-hover-bg);
+  border-color: var(--state-hover-border);
+}
+
+.delete-btn {
+  background: #ef4444;
+  border: none;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #dc2626;
 }
 </style>

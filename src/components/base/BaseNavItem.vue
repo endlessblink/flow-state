@@ -1,9 +1,10 @@
 <template>
   <div
-    class="base-nav-item"
+    class="base-nav-item nav-item"
     :class="[
       {
         'is-active': active,
+        'is-selected': selected,
         'is-nested': nested,
         'is-drag-target': isDragTarget,
         'is-drag-valid': isDragValid && projectId,
@@ -87,6 +88,7 @@ import { useTaskStore } from '@/stores/tasks'
 
 interface Props {
   active?: boolean
+  selected?: boolean
   nested?: boolean
   hasChildren?: boolean
   expanded?: boolean
@@ -99,6 +101,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   active: false,
+  selected: false,
   nested: false,
   hasChildren: false,
   expanded: false,
@@ -321,6 +324,17 @@ const handleDrop = (event: DragEvent) => {
   border: 1px solid var(--state-active-border);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* Selected State - Multi-select highlight */
+.base-nav-item.is-selected {
+  background: var(--brand-primary-alpha-15, rgba(78, 205, 196, 0.15));
+  border: 1px solid var(--brand-primary-alpha-30, rgba(78, 205, 196, 0.3));
+}
+
+.base-nav-item.is-selected.is-active {
+  background: var(--brand-primary-alpha-20, rgba(78, 205, 196, 0.2));
+  border: 1px solid var(--brand-primary-alpha-40, rgba(78, 205, 196, 0.4));
 }
 
 /* Nested items - dynamic indentation based on CSS custom property */

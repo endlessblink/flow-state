@@ -726,7 +726,10 @@ Phase 3 (Mobile) ←────────────────────
 **Active Work:**
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
-- [ ] TASK-057: Refactor `canvas.ts` - Planned
+- **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) - **ACTIVE**
+    - [ ] Create E2E reproduction of sync conflicts
+    - [ ] Analyze `151 conflicts` root cause
+    - [ ] Implement robust conflict resolution
 - [ ] TASK-058: Refactor `timer.ts` - Planned
 - [ ] **TASK-059**: Bundle Size Optimization (894 KB → Target < 500 KB)
 - ✅ **TASK-060**: Multi-Select Projects with Bulk Delete (P1-HIGH) - ✅ DONE (Dec 27)

@@ -1,5 +1,5 @@
-**Last Updated**: December 27, 2025 (TASK-067 TaskNode Visual Fix)
-**Version**: 5.8 (Backup System Unified)
+**Last Updated**: December 27, 2025 (TASK-059 Bundle Size & TASK-048 Storage)
+**Version**: 5.9 (Performance & Persistence Hardened)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -527,42 +527,28 @@ Vue Flow expects **RELATIVE** positions for child nodes when `parentNode` is set
 4. [x] **Phase 4**: Migration (dual-write → read-individual → individual-only)
    - **Current**: Individual documents verified, enabling READ_INDIVIDUAL flags
    - **Next**: Verify individual docs created, then enable READ_INDIVIDUAL flags
-5. ⏳ **Phase 5**: Cleanup existing conflicts, delete legacy documents
+5. ✅ **Phase 5**: Cleanup existing conflicts, delete legacy documents (Dec 27, 2025)
+   - Created `legacyStorageCleanup.ts` to physically remove obsolete monolithic docs.
+   - Integrated into `useAppInitialization.ts` for automatic pruning.
 
-**FILES CREATED**:
-- ✅ `src/utils/individualProjectStorage.ts` - Full CRUD for project-{id} docs
-- ✅ `src/utils/individualSectionStorage.ts` - Full CRUD for section-{id} docs
-
-**FILES MODIFIED**:
-- ✅ `src/config/database.ts` - Added 6 new STORAGE_FLAGS (DUAL_WRITE/READ/INDIVIDUAL for projects & sections)
-- ✅ `src/stores/tasks.ts` - Added dual-write for projects in watcher
-- ✅ `src/stores/canvas.ts` - Added dual-write for sections in watcher
+**SOP**: `docs/🐛 debug/sop/bundle-size-and-storage-cleanup-2025-12-27.md`
 
 **CURRENT FLAG STATUS** (`src/config/database.ts`):
 ```typescript
-DUAL_WRITE_PROJECTS: false,       // ✅ Finished, moved to individual
-READ_INDIVIDUAL_PROJECTS: true,  // ✅ Switch enabled
-INDIVIDUAL_PROJECTS_ONLY: true,  // ✅ Full migration
-
-DUAL_WRITE_SECTIONS: false,       // ✅ Finished, moved to individual
-READ_INDIVIDUAL_SECTIONS: true,  // ✅ Switch enabled
-INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration
+INDIVIDUAL_ONLY: true,           // ✅ Full migration (Tasks)
+INDIVIDUAL_PROJECTS_ONLY: true,  // ✅ Full migration (Projects)
+INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration (Sections)
 ```
 
-**CONFLICT CLEANUP** (Dec 22, 2025):
-| Document | Before | After | Total Pruned |
-|----------|--------|-------|--------------|
-| `canvas:data` | 216 conflicts | ✅ Clean | 216 |
-| `projects:data` | 179 conflicts | ✅ Clean | 179 |
-| `notifications:data` | 124 conflicts | ✅ Clean | 124 |
-| `settings:data` | 16 conflicts | ✅ Clean | 16 |
-| **TOTAL** | | | **535** |
+**CONFLICT CLEANUP** (Dec 27, 2025):
+| Document | Action | Result |
+|----------|--------|--------|
+| `canvas:data` | Deleted | ✅ REMOVED |
+| `projects:data` | Deleted | ✅ REMOVED |
+| `tasks:data` | Deleted | ✅ REMOVED |
 
 **NEXT STEPS**:
-1. ⏳ Refresh app and make project/section changes to trigger dual-write
-2. ⏳ Verify `project-*` and `section-*` documents appear in CouchDB
-3. ⏳ Enable READ_INDIVIDUAL flags after verification
-4. ⏳ Enable INDIVIDUAL_ONLY flags after confirming read works
+1. ✅ Migration complete. All core entities now use individual document storage.
 
 ---
 
@@ -623,10 +609,10 @@ INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration
 
 | Phase | Feature | Timeline | Dependencies |
 |-------|---------|----------|--------------|
-| **Phase 0** | Sync Hardening (ROAD-013) | 1 week | None |
+| **Phase 0** | Sync Hardening (ROAD-013) | ✅ DONE | Finalized Dec 27 |
 | **Phase 1** | Gamification (ROAD-010) | 2-3 weeks | Sync stable |
 | **Phase 2** | AI Assistant (ROAD-011) | 3-4 weeks | Phase 1 complete |
-| **Phase 3** | Mobile PWA (ROAD-004) | 4-6 weeks | Phase 2 complete |
+| **Phase 3** | Mobile PWA (ROAD-004) | 4-6 weeks | Phase 2 complete (Performance ready) |
 
 **Note**: Each phase is independently valuable. Can stop after any phase.
 
@@ -700,7 +686,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-047**~~ | ✅ **DONE** | `CanvasView.vue`, `App.vue` | ~~BUG-026~~ | - |
 | ~~**BUG-027**~~ | ✅ **DONE** | `canvas.ts`, `tasks.ts` | - | - |
 | ~~**BUG-028**~~ | ✅ **DONE** | `useDatabase.ts` | - | - |
-| **TASK-048** | 🔄 **IN PROGRESS** | `individualProjectStorage.ts`, `individualSectionStorage.ts`, `database.ts` | - | - |
+| ~~**TASK-048**~~ | ✅ **DONE** | `individualProjectStorage.ts`, `individualSectionStorage.ts`, `database.ts` | - | - |
 | ~~**TASK-049**~~ | ✅ **DONE** | `useDatabase.ts` (Init Optimization) | - | - |
 | ~~TASK-050~~ | ✅ DONE | `TaskNode.vue` | - | - |
 | ~~TASK-051~~ | ✅ DONE | `UnifiedInboxPanel.vue`, `InboxFilters.vue` | - | - |
@@ -711,7 +697,7 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-056** | 🔄 **IN PROGRESS** | `src/stores/tasks.ts`, `src/composables/tasks/*` | - | - |
 | TASK-057 | PLANNED | `src/stores/canvas.ts` | - | - |
 | TASK-058 | PLANNED | `src/stores/timer.ts` | - | - |
-| **TASK-059** | 🔄 **ACTIVE** | `vite.config.ts`, `src/router/index.ts` | - | - |
+| ~~**TASK-059**~~ | ✅ **DONE** | `vite.config.ts`, `src/utils/legacyStorageCleanup.ts` | - | - |
 | ~~**TASK-060**~~ | ✅ **DONE** | `AppSidebar.vue`, `ProjectTreeItem.vue`, `projects.ts` | - | - |
 | **TASK-061** | PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
 | **TASK-062** | 🔄 **PARTIAL** | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
@@ -733,19 +719,17 @@ Phase 3 (Mobile) ←────────────────────
     - [x] Analyze `151 conflicts` root cause (Hidden PouchDB internal conflicts)
     - [x] Implement robust conflict resolution (Bulk delete of conflicting revisions)
 - [ ] TASK-058: Refactor `timer.ts` - Planned
-- [ ] **TASK-059**: Bundle Size Optimization (894 KB → Target < 500 KB)
-- ✅ **TASK-060**: Multi-Select Projects with Bulk Delete (P1-HIGH) - ✅ DONE (Dec 27)
-- [ ] **TASK-061**: Demo Content Guard Logger (P2-MEDIUM)
-- [ ] **TASK-062**: Custom Confirmation Modals - Replace browser `confirm()` dialogs (P2-MEDIUM)
-- [/] **TASK-064**: Dev-Manager Comprehensive Redesign (P1-HIGH) - Stroke icons, UI overhaul, Timeline view
-- ~~TASK-043~~: CanvasView Refactoring (✅ DONE)
-- 🔄 **TASK-048**: Individual Project/Section Storage (Phase 5 - transitioning to individual-only)
+- [x] **TASK-059**: Bundle Size Optimization (Reduced to 398 KB) ✅ DONE
+...
+- ✅ ~~**TASK-048**~~: Individual Project/Section Storage (Full migration & Legacy cleanup) ✅ DONE
 - ~~BUG-032~~: Projects deletion fix (✅ DONE)
 - ~~TASK-022~~: Task disappearance monitoring (✅ DONE - no issues detected after 6 days)
 
 **Recently Completed (Dec 23-27):**
-- ✅ BUG-039: Canvas InboxPanel missing computed properties restored - inbox not reactive after project delete (Dec 27)
-- ✅ TASK-067: TaskNode priority indicator visual fix - fills top edge, connection handles visible (Dec 27)
+- ✅ TASK-059: Bundle Size Optimization (894 KB → 398 KB) (Dec 27)
+- ✅ TASK-048: Individual Storage Migration Phase 5 (Legacy cleanup) (Dec 27)
+- ✅ BUG-039: Canvas InboxPanel missing computed properties restored (Dec 27)
+- ✅ TASK-067: TaskNode priority indicator visual fix (Dec 27)
 - ✅ TASK-066: Enter key triggers project creation in ProjectModal (Dec 27)
 - ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)
 - ✅ TASK-055: Global UI Polish & Component Streamlining (Sync/Auth)
@@ -3452,20 +3436,20 @@ npm run dev
 3. **Task Actions** - Space, E, T
 4. **Navigation & Help** - Arrow keys, ? for help modal
 
-### TASK-059: Bundle Size Optimization (🔄 ACTIVE)
+### ~~TASK-059~~: Bundle Size Optimization (✅ COMPLETE)
 
 **Goal**: Reduce the main bundle size from 894 KB to < 500 KB (unzipped).
 
-**Current Stats**:
-- Bundle Size: 894 KB (gzip: 284 KB)
-- Largest chunks: `CanvasView` (357KB), `BoardView` (207KB)
+**Final Stats**:
+- Bundle Size: **398 KB** (gzip: 117 KB)
+- Strategy: [manualChunks Splitting](docs/🐛 debug/sop/bundle-size-and-storage-cleanup-2025-12-27.md)
 
-**Proposed Actions**:
-- [ ] Implement code splitting for all routes in `router/index.ts`
-- [ ] Use `defineAsyncComponent` for large dialogs and modals
-- [ ] Audit `package.json` for heavy dependencies (Moment.js, Lodash, etc.)
-- [ ] Refactor monolithic stores (already in progress via TASK-056/57/58)
-- [ ] Optimize SVG usage (use symbols or specific imports)
+**Actions Taken**:
+- [x] Implement code splitting for vendor libraries (`vendor-core`, `vendor-ui`, `vendor-flow`, `vendor-pouchdb`) ✅
+- [x] Audit `stats.html` for size contributors ✅
+- [x] Verified app stability with split chunks ✅
+
+**SOP**: `docs/🐛 debug/sop/bundle-size-and-storage-cleanup-2025-12-27.md`
 
 ---
 

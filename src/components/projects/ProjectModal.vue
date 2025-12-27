@@ -14,6 +14,7 @@
           ref="nameInput"
           v-model="projectData.name"
           placeholder="Enter project name..."
+          @enter="saveProject"
         />
       </div>
 

@@ -434,32 +434,39 @@ export const useReliableSyncManager = () => {
         // Apply resolution to local database with proper revision handling
         if (localDB) {
           try {
-            // Try to put the resolved document first
-            await localDB.put({
-              ...(resolution.resolvedDocument as Record<string, unknown>),
-              _id: conflict.documentId,
-              conflictResolvedAt: new Date().toISOString()
-            })
+            // BUG-013 FIX: Deleting conflicts requires fetching the conflict revisions first
+            // and include them as _deleted: true in a bulkDocs operation
+
+            // 1. Fetch current document with conflicts to get latest state
+            const currentDoc = await localDB.get(conflict.documentId, { conflicts: true })
+            const conflictRevs = (currentDoc as any)._conflicts || []
+
+            // 2. Prepare bulk update
+            const bulkDocs = [
+              // The Winner (Updated State)
+              {
+                ...(resolution.resolvedDocument as Record<string, unknown>),
+                _id: conflict.documentId,
+                _rev: currentDoc._rev, // Use latest revision from DB, not from conflict info which might be stale
+                conflictResolvedAt: new Date().toISOString()
+              },
+              // The Losers (Mark as Deleted)
+              ...conflictRevs.map((rev: string) => ({
+                _id: conflict.documentId,
+                _rev: rev,
+                _deleted: true
+              }))
+            ]
+
+            console.log(`🧹 Resolving conflict for ${conflict.documentId} with ${conflictRevs.length} deletions`)
+
+            await localDB.bulkDocs(bulkDocs)
+
+            console.log(`✅ Conflict resolved and cleaned for ${conflict.documentId}`)
+
           } catch (putError: unknown) {
-            if ((putError as { status?: number }).status === 409) {
-              // Document conflict - fetch latest revision and retry
-              console.log(`🔄 Fetching latest revision for ${conflict.documentId}`)
-              try {
-                const latestDoc = await localDB.get(conflict.documentId)
-                await localDB.put({
-                  ...(resolution.resolvedDocument as Record<string, unknown>),
-                  _id: conflict.documentId,
-                  _rev: latestDoc._rev, // Use latest revision
-                  conflictResolvedAt: new Date().toISOString()
-                })
-                console.log(`✅ Conflict resolved for ${conflict.documentId} with latest revision`)
-              } catch (fetchError) {
-                console.error(`❌ Failed to fetch latest document for ${conflict.documentId}:`, fetchError)
-                throw fetchError
-              }
-            } else {
-              throw putError
-            }
+            console.error(`❌ Failed to apply resolution for ${conflict.documentId}:`, putError)
+            throw putError
           }
         }
 

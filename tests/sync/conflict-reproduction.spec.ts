@@ -67,11 +67,69 @@ describe('Sync Conflict Reproduction', () => {
             console.log('Replication error (unexpected vs expected):', e)
         }
 
+
         // 8. Verify Conflict Exists on Remote
         const remoteDoc = await remoteDB.get(docId, { conflicts: true })
-        console.log('Remote Document Conflicts:', remoteDoc._conflicts)
+        console.log('Remote Document Conflicts (Before Resolution):', remoteDoc._conflicts)
 
         expect(remoteDoc._conflicts).toBeDefined()
         expect(remoteDoc._conflicts?.length).toBeGreaterThan(0)
+
+        // 9. PHASE 2: Attempt Resolution using App Logic
+        const { ConflictDetector } = await import('@/utils/conflictDetector')
+        const { ConflictResolver } = await import('@/utils/conflictResolver')
+
+        const detector = new ConflictDetector({ deviceId: 'test-device' })
+        const resolver = new ConflictResolver('test-device')
+
+        // Initialize detector with Client B (which failed to push) and Remote
+        // We simulate that Client B detects the conflict because it has the "losing" state vs remote
+        await detector.initialize(clientBDB, remoteDB)
+
+        // Detect execution
+        // Note: detectDocumentConflict fetches heads. 
+        // It might NOT detect it if PouchDB already synced the winning revision to Client B locally.
+        // So we force Client B to pull the conflict first?
+        await clientBDB.replicate.from(remoteDB)
+
+        // Now Client B has the "winning" remote revision AND the "losing" local revision in _conflicts or history
+
+        const conflicts = await detector.detectAllConflicts()
+
+        if (conflicts.length > 0) {
+            const resolution = await resolver.resolveConflict(conflicts[0])
+
+            // Apply resolution (simulating PROPER fix)
+            // We need to get the conflicting revisions first
+            const docWithConflicts = await clientBDB.get(conflicts[0].documentId, { conflicts: true })
+            const conflictRevs = docWithConflicts._conflicts || []
+
+            const bulkDocs = [
+                // 1. The Winner
+                {
+                    ...resolution.resolvedDocument,
+                    _id: conflicts[0].documentId,
+                    _rev: conflicts[0].localVersion._rev // Updating local head
+                },
+                // 2. The Losers (Process as Deletions)
+                ...conflictRevs.map(rev => ({
+                    _id: conflicts[0].documentId,
+                    _rev: rev,
+                    _deleted: true
+                }))
+            ]
+
+            await clientBDB.bulkDocs(bulkDocs)
+
+            // Push resolved state back to remote
+            await clientBDB.replicate.to(remoteDB)
+        }
+
+        // 10. Verify _conflicts is cleared on Remote
+        const remoteDocAfter = await remoteDB.get(docId, { conflicts: true })
+
+        // CRITICAL: If this fails, we found the root cause (conflicts persist even after "resolution")
+        expect(remoteDocAfter._conflicts || []).toHaveLength(0)
     })
 })
+

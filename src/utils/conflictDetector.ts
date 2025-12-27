@@ -40,8 +40,8 @@ export class ConflictDetector {
     console.log('🔍 Starting comprehensive conflict detection...')
 
     try {
-      // Get all local documents
-      const allDocs = await this.localDB.allDocs({ include_docs: true })
+      // Get all local documents with conflict information
+      const allDocs = await this.localDB.allDocs({ include_docs: true, conflicts: true })
       const syncableDocs = allDocs.rows
         .filter(row => isSyncableDocument(row.doc))
         .map(row => row.doc)
@@ -116,6 +116,30 @@ export class ConflictDetector {
 
     try {
       const remoteDoc = this.remoteDB ? await this.getRemoteVersion(doc._id) : null
+
+      // Check for PouchDB internal conflicts (the "151 conflicts" issue)
+      // This happens when multiple revisions exist in the tree but weren't caught by the temporal check
+      if ((doc as any)._conflicts && ((doc as any)._conflicts.length > 0)) {
+        console.log(`⚔️ Internal PouchDB conflicts detected for ${doc._id}:`, (doc as any)._conflicts)
+
+        // Construct a conflict info object for this internal conflict
+        // We'll need to fetch the remote version or just use the first conflicting revision as "remote" for comparison?
+        // Ideally, we treat this as a "Version Mismatch" or a new "Internal Conflict" type.
+
+        // If we have a remote doc, continue to standard comparison, but prioritize reporting the internal conflict
+        // if the standard check fails?
+
+        // Actually, let's return a conflict immediately if we see _conflicts
+        return {
+          documentId: doc._id,
+          localVersion: doc,
+          remoteVersion: remoteDoc || { ...doc, _rev: (doc as any)._conflicts[0], _id: doc._id } as any, // Placeholder 
+          conflictType: ConflictType.VERSION_MISMATCH, // Treat as version mismatch
+          timestamp: new Date(),
+          severity: 'high', // Internal conflicts are always high/critical to resolve
+          autoResolvable: true // We want to force auto-resolution (deletion of losers)
+        }
+      }
 
       if (remoteDoc && this.hasConflict(doc, remoteDoc)) {
         return this.analyzeConflict(doc, remoteDoc)

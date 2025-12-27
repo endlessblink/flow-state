@@ -717,6 +717,7 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-062** | 🔄 **PARTIAL** | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
 | ~~**BUG-037**~~ | ✅ **DONE** | `conflictResolver.ts`, `tasks.ts` | - | - |
 | ~~**BUG-038**~~ | ✅ **DONE** | `UnifiedInboxPanel.vue` | - | - |
+| ~~**BUG-039**~~ | ✅ **DONE** | `InboxPanel.vue`, `tasks.ts` | - | - |
 | **TASK-064** | 🔄 **IN PROGRESS** | `dev-manager/*`, `dev-manager/timeline/` (new) | - | - |
 | **TASK-065** | 📋 **TODO** | `database.ts`, `.env.example`, `README.md`, `LICENSE` | - | ROAD-017 |
 | ~~**TASK-066**~~ | ✅ **DONE** | `BaseInput.vue`, `ProjectModal.vue` | - | - |
@@ -743,6 +744,7 @@ Phase 3 (Mobile) ←────────────────────
 - ~~TASK-022~~: Task disappearance monitoring (✅ DONE - no issues detected after 6 days)
 
 **Recently Completed (Dec 23-27):**
+- ✅ BUG-039: Canvas InboxPanel missing computed properties restored - inbox not reactive after project delete (Dec 27)
 - ✅ TASK-067: TaskNode priority indicator visual fix - fills top edge, connection handles visible (Dec 27)
 - ✅ TASK-066: Enter key triggers project creation in ProjectModal (Dec 27)
 - ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)

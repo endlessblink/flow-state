@@ -113,6 +113,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // Project Store passthrough (compatibility)
     projects: computed(() => projectStore.projects),
+    rootProjects: computed(() => projectStore.rootProjects),
     activeProjectId: computed(() => projectStore.activeProjectId),
     createProject: projectStore.createProject,
     updateProject: projectStore.updateProject,

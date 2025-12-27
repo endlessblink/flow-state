@@ -1,0 +1,5 @@
+# Environment
+.env
+
+# Dependencies (optional - uncomment if dev-manager is standalone)
+# node_modules/

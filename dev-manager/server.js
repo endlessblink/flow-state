@@ -3,6 +3,9 @@
  * Serves static files and provides API for editing MASTER_PLAN.md
  */
 
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const fs = require('fs').promises;
 const fsSync = require('fs');
@@ -10,14 +13,16 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = 6010;
+const PORT = process.env.PORT || 6010;
 
 // SSE clients for live file sync
 let sseClients = [];
 
 // Paths
 const DEV_MANAGER_DIR = __dirname;
-const MASTER_PLAN_PATH = path.join(__dirname, '..', 'docs', 'MASTER_PLAN.md');
+const MASTER_PLAN_PATH = process.env.MASTER_PLAN_PATH
+  ? path.resolve(process.env.MASTER_PLAN_PATH)
+  : path.join(__dirname, '..', 'docs', 'MASTER_PLAN.md');
 
 // Middleware
 app.use(cors());

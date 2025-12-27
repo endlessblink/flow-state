@@ -1,38 +1,104 @@
 # Dev Manager
 
-Unified development management dashboard for Pomo-Flow with tabbed interface.
+Unified development management dashboard with Kanban board for tracking tasks via MASTER_PLAN.md.
 
-## Quick Start
+## Installation (Standalone)
+
+Install dev-manager on any system with one command:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash
+```
+
+This installs to `~/.dev-manager/`. To customize the location:
+
+```bash
+export DEV_MANAGER_DIR=/path/to/install
+curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash
+```
+
+## Updating
+
+Run the same install command to update to the latest version:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash
+```
+
+Or manually:
+
+```bash
+cd ~/.dev-manager
+git pull origin master
+cd dev-manager && npm install
+```
+
+## Starting the Server
+
+```bash
+cd ~/.dev-manager/dev-manager
+npm start
+# Open http://localhost:6010
+```
+
+Or with install + start:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash -s -- --start
+```
+
+## Configuration
+
+Create a `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `6010` | Server port |
+| `MASTER_PLAN_PATH` | `../docs/MASTER_PLAN.md` | Path to your MASTER_PLAN.md file |
+
+**Using with your own project:**
+
+```bash
+# In your .env file:
+MASTER_PLAN_PATH=/path/to/your/project/docs/MASTER_PLAN.md
+```
+
+## Usage within Pomo-Flow
+
+If you cloned the full pomo-flow repo:
 
 ```bash
 npm run dev:manager
 # Open http://localhost:6010
 ```
 
-All three services run in a single tabbed interface - no need to open multiple ports.
-
 ## Tabs
 
 | Tab | Description |
 |-----|-------------|
-| **Kanban** | Development task tracking (Frontend, Backend, Database, DevOps, Design) |
-| **Skills** | 80+ Claude Code skills with analytics and relationship mapping |
-| **Docs** | Interactive 347-node documentation canvas with search |
+| **Kanban** | Development task tracking parsed from MASTER_PLAN.md |
+| **Skills** | Claude Code skills with analytics and relationship mapping |
+| **Docs** | Interactive documentation canvas with search |
+| **Timeline** | Development timeline view |
+| **Stats** | Project statistics |
 
 ## Features
 
-- Single command starts everything
+- Live sync: Changes to MASTER_PLAN.md auto-refresh the UI
+- Drag-and-drop task status updates
+- Dark theme
 - Tab selection persists across sessions
-- Each service runs in isolated iframe (no CSS/JS conflicts)
-- Dark theme matching Pomo-Flow
 
-## Related
+## Shell Alias (Optional)
+
+Add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
-npm run dev          # Main Pomo-Flow app (port 5546)
-npm run storybook    # Component library (port 6006)
+alias dev-manager='cd ~/.dev-manager/dev-manager && node server.js'
 ```
 
-## History
-
-Restored from commit `5d3b9c3` (Nov 23, 2025) on Dec 5, 2025.
+Then just run `dev-manager` from anywhere.

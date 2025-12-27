@@ -4,6 +4,8 @@ import { fileURLToPath, URL } from 'node:url'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
+import { visualizer } from 'rollup-plugin-visualizer'
+
 export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
@@ -18,6 +20,12 @@ export default defineConfig(({ mode }) => ({
       include: [fileURLToPath(new URL('./src/i18n/locales/**', import.meta.url))],
       strictMessage: false,
       escapeHtml: false
+    }),
+    visualizer({
+      open: false,
+      filename: 'stats.html',
+      gzipSize: true,
+      brotliSize: true,
     })
   ],
   esbuild: {
@@ -49,7 +57,19 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     sourcemap: false,
     rollupOptions: {
-      external: ['fsevents']
+      external: ['fsevents'],
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('pouchdb')) return 'vendor-pouchdb'
+            if (id.includes('naive-ui')) return 'vendor-ui'
+            if (id.includes('lucide-vue-next')) return 'vendor-ui'
+            if (id.includes('@vue-flow')) return 'vendor-flow'
+            if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router') || id.includes('@vueuse')) return 'vendor-core'
+            return 'vendor'
+          }
+        }
+      }
     },
     // Reduce complexity for testing
     chunkSizeWarningLimit: 1000,

@@ -182,6 +182,7 @@
     "happy-dom": "^20.0.11",
     "nodemon": "^3.1.11",
     "postcss": "^8.4.32",
+    "rollup-plugin-visualizer": "^6.0.5",
     "storybook": "^10.1.4",
     "tailwindcss": "^3.4.0",
     "tsc-watch": "^7.2.0",

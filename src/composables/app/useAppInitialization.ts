@@ -31,6 +31,16 @@ export function useAppInitialization() {
         await taskStore.loadFromDatabase()
         await canvasStore.loadFromDatabase()
 
+        // Clean up legacy monolithic documents if in individual-only mode
+        // This ensures database pruning after successful migration
+        const dbInstance = window.pomoFlowDb
+        if (dbInstance) {
+            const { cleanupLegacyMonolithicDocuments } = await import('@/utils/legacyStorageCleanup')
+            cleanupLegacyMonolithicDocuments(dbInstance).catch(err => {
+                console.warn('⚠️ Legacy storage cleanup failed:', err)
+            })
+        }
+
         // Initialize notification system
         if (taskStore.tasks.length >= 0) {
             try {

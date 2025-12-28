@@ -713,6 +713,8 @@ Phase 3 (Mobile) ←────────────────────
 
 **Active Work:**
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
+- ✅ **BUG-040**: Sidebar content disappearance fix | ✅ FIXED (Dec 28)
+- 🔄 **BUG-041**: Fix blurry text on canvas zoom | ⏳ VERIFYING (Dec 28)
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
 - ✅ **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) | ✅ FIXED (Dec 27)
     - [x] Create E2E reproduction of sync conflicts
@@ -1445,6 +1447,37 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
     - [x] Extract `CanvasContextMenus.vue` wrapper
 
 **Plan File**: `/home/endlessblink/.claude/plans/canvas-refactor-safe-mode.md`
+
+---
+
+### ✅ ~~BUG-040~~: Sidebar Collapse Hides Main Content (✅ FIXED)
+
+**Reported**: Dec 28, 2025
+**Status**: ✅ **FIXED**
+
+**Issue**: Main content area (`.main-content`) disappeared when sidebar was toggled hidden.
+**Root Cause**: CSS Grid alignment issue in `MainLayout.vue`. The hidden state set column width to `0fr`, and main content lacked explicit `grid-column: 2` assignment, causing it to collapse into the hidden column.
+**Fix Applied**:
+1. Updated `MainLayout.vue` to explicitly assign `grid-column: 2` to `.main-content`.
+2. Changed collapsed sidebar width from `0fr` to `0px` for better cross-browser stability.
+3. Cleaned up invalid `span 0` syntax.
+
+---
+
+### 🔄 BUG-041: Blurry Text on Canvas Zoom (IN VERIFICATION)
+
+**Reported**: Dec 28, 2025
+**Status**: 🔄 **WAITING VERIFICATION**
+
+**Issue**: Text on Task Nodes and Group Nodes becomes blurry/rasterized when zooming out (< 100%).
+**Root Cause**: Browser "layerizing" optimization. Vue Flow (or defaults) likely applies `will-change: transform` to the viewport container, causing Chrome/WebKit to cache the canvas as a bitmap and scale the image instead of re-rendering vector text.
+**Attempted Fixes**:
+1. Removing `backdrop-filter` (Glass effect) - **Failed** (User reported no change).
+2. Removing `overflow: hidden` from cards - **Failed** (User reported no change).
+3. **Current Fix**:
+    - Restored original Visuals (Glass effect + Clipping).
+    - Applied **Global Viewport Override** (`will-change: auto !important`) to `.vue-flow__viewport` and `.vue-flow__transformation-pane`.
+    - **Goal**: Force browser to re-rasterize text at every zoom level (disable bitmap caching).
 
 ---
 
@@ -2630,6 +2663,16 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~BUG-025~~ | ~~Stale data loading instead of current data~~ | ~~P0-CRITICAL~~ | ✅ FIXED Dec 22, 2025 - Increased sync limits and optimized storage operations. |
 
 **Details**: See "Open Bug Analysis" section below.
+
+#### ~~BUG-007~~: Deleting Group Deletes Tasks Inside (✅ FIXED Dec 5, 2025)
+
+**Problem**: When a canvas group/section was deleted, all tasks inside were also deleted.
+
+**Solution**: Modified group deletion logic to preserve tasks on the canvas when their containing group is removed. Tasks are now orphaned (moved to canvas root level) instead of being deleted with the group.
+
+**Status**: ✅ FIXED - Tasks are preserved on canvas when group is deleted.
+
+---
 
 #### ~~BUG-018~~ & ~~BUG-019~~: Canvas Smart Group UI Issues (Dec 18, 2025) ✅ ALL FIXED
 

@@ -2,7 +2,7 @@
   <div
     class="section-node"
     :class="[`section-type-${section.type}`, { 'collapsed': isCollapsed }]"
-    :style="{ borderColor: section.color + '60' }"
+    :style="{ borderColor: section.color + 'A0' }"
     @contextmenu.prevent="handleContextMenu"
   >
     <!-- Section Header -->
@@ -20,73 +20,7 @@
         @blur="updateName"
       >
 
-      <!-- Actions Container - wraps all action buttons with overflow handling -->
-      <div v-if="!isCollapsed" class="header-actions">
-        <!-- Power Mode Indicator -->
-        <div
-          v-if="isPowerMode"
-          class="power-indicator"
-          :title="powerModeTooltip"
-        >
-          <Zap :size="12" class="power-icon" />
-        </div>
-
-        <!-- Collect Button (for power groups) -->
-        <div v-if="isPowerMode" class="collect-wrapper">
-          <button
-            class="collect-btn"
-            :class="{ 'has-matches': matchingInboxCount > 0 }"
-            :title="`Collect matching tasks (${matchingInboxCount} available)`"
-            @click.stop="toggleCollectMenu"
-          >
-            <Magnet :size="12" />
-            <span v-if="matchingInboxCount > 0" class="collect-badge">{{ matchingInboxCount }}</span>
-          </button>
-
-          <!-- Collect Dropdown Menu -->
-          <div v-if="showCollectMenu" class="collect-menu" @click.stop>
-            <button class="collect-option" @click="handleCollect('move')">
-              Move {{ matchingInboxCount }} tasks here
-            </button>
-            <button class="collect-option" @click="handleCollect('highlight')">
-              Highlight matching tasks
-            </button>
-          </div>
-        </div>
-
-        <!-- Power Mode Toggle -->
-        <button
-          v-if="powerKeyword"
-          class="power-toggle-btn"
-          :class="{ 'power-active': isPowerMode }"
-          :title="isPowerMode ? 'Disable power mode' : 'Enable power mode'"
-          @click.stop="togglePowerMode"
-        >
-          <Zap :size="12" />
-        </button>
-
-        <!-- Settings Button -->
-        <button
-          class="settings-btn"
-          title="Group settings - configure auto-assign properties"
-          @click.stop="openSettings"
-        >
-          <Settings :size="12" />
-        </button>
-
-        <button
-          v-if="section.type !== 'custom'"
-          class="auto-collect-btn"
-          :class="{ active: autoCollectEnabled }"
-          :title="autoCollectEnabled ? 'Auto-collect: ON - Matching tasks auto-placed' : 'Auto-collect: OFF - Manual placement only'"
-          @click="toggleAutoCollect"
-        >
-          🧲
-        </button>
-        <div v-if="section.type !== 'custom'" class="section-type-badge" :title="sectionTypeLabel">
-          {{ sectionTypeIcon }}
-        </div>
-      </div>
+      <!-- TASK-068: All actions moved to context menu for cleaner header -->
 
       <div class="section-count" :class="{ 'has-tasks': taskCount > 0 }">
         {{ taskCount }}
@@ -155,31 +89,8 @@ const isCollapsed = computed(() => {
   return sectionData?.isCollapsed || false
 })
 
-const autoCollectEnabled = computed(() => {
-  const sectionData = canvasStore.sections.find(s => s.id === props.data.id)
-  return sectionData?.autoCollect || false
-})
-
-const sectionTypeIcon = computed(() => {
-  switch (props.data.type) {
-    case 'priority': return '🏳️'
-    case 'status': return '▶️'
-    case 'project': return '📁'
-    case 'timeline': return '📅'
-    default: return ''
-  }
-})
-
-const sectionTypeLabel = computed(() => {
-  const labels = {
-    priority: 'Priority Group - Auto-assigns priority',
-    status: 'Status Group - Auto-assigns status',
-    project: 'Project Group - Auto-assigns project',
-    timeline: 'Timeline Group - Auto-assigns schedule',
-    custom: 'Custom Group'
-  }
-  return labels[props.data.type || 'custom']
-})
+// TASK-068: Removed unused computed properties (autoCollectEnabled, sectionTypeIcon, sectionTypeLabel)
+// These were for UI elements that cluttered the header
 
 // Power group state and computed properties
 const showCollectMenu = ref(false)
@@ -237,11 +148,7 @@ const toggleCollapse = () => {
   canvasStore.toggleSectionCollapse(props.data.id, taskStore.filteredTasks)
 }
 
-const toggleAutoCollect = () => {
-  canvasStore.toggleAutoCollect(props.data.id)
-  // Trigger immediate collection when enabled
-  emit('collect', props.data.id)
-}
+// TASK-068: Removed toggleAutoCollect - feature consolidated
 
 const handleContextMenu = (event: MouseEvent) => {
   emit('contextMenu', event, props.data)
@@ -309,14 +216,26 @@ const handleResizeEnd = (event: unknown) => {
 </script>
 
 <style scoped>
+/* TASK-069: Improved group visibility with stronger border and subtle glow */
 .section-node {
   width: 100%;
   height: 100%;
-  border: 2px dashed;
+  border: 2px solid;
   border-radius: var(--radius-lg);
   background: var(--glass-bg-light);
   position: relative;
   z-index: 1;
+  /* Subtle shadow for depth and visibility */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05),
+              0 2px 8px rgba(0, 0, 0, 0.15),
+              inset 0 0 20px rgba(255, 255, 255, 0.02);
+  transition: box-shadow var(--duration-fast), border-color var(--duration-fast);
+}
+
+.section-node:hover {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
+              0 4px 12px rgba(0, 0, 0, 0.2),
+              inset 0 0 20px rgba(255, 255, 255, 0.03);
 }
 
 .section-header {
@@ -393,35 +312,7 @@ const handleResizeEnd = (event: unknown) => {
   opacity: 0.8;
 }
 
-.auto-collect-btn {
-  background: transparent;
-  border: 1px solid var(--border-medium);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  transition: all var(--duration-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.auto-collect-btn:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  color: var(--text-primary);
-  transform: scale(1.1);
-}
-
-.auto-collect-btn.active {
-  background: var(--blue-bg-medium);
-  border-color: var(--blue-border-active);
-  color: var(--blue-text);
-  box-shadow: 0 0 0 2px var(--blue-bg-subtle);
-}
+/* TASK-068: Removed .auto-collect-btn CSS - feature removed to reduce clutter */
 
 .section-name-input {
   flex: 1 1 60px; /* Grow, shrink, min basis of 60px */
@@ -445,13 +336,7 @@ const handleResizeEnd = (event: unknown) => {
   background: var(--glass-bg-medium);
 }
 
-.section-type-badge {
-  background: var(--glass-bg-heavy);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  margin-right: var(--space-2);
-}
+/* TASK-068: Removed .section-type-badge CSS - non-actionable element removed */
 
 .section-count {
   /* Position badge absolutely to prevent overflow */
@@ -536,32 +421,7 @@ const handleResizeEnd = (event: unknown) => {
   opacity: 0.3;
 }
 
-/* Power Mode Styles */
-.power-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  border-radius: var(--radius-sm);
-  background: var(--amber-bg-medium, rgba(245, 158, 11, 0.2));
-  color: var(--amber-text, #f59e0b);
-  flex-shrink: 0;
-}
-
-.power-icon {
-  animation: power-pulse 2s ease-in-out infinite;
-}
-
-@keyframes power-pulse {
-  0%, 100% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-}
+/* Power Mode Styles - TASK-068: Removed redundant .power-indicator (toggle button shows state) */
 
 .collect-wrapper {
   position: relative;

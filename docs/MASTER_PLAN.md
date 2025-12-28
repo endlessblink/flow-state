@@ -708,18 +708,18 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-065** | 📋 **TODO** | `database.ts`, `.env.example`, `README.md`, `LICENSE` | - | ROAD-017 |
 | ~~**TASK-066**~~ | ✅ **DONE** | `BaseInput.vue`, `ProjectModal.vue` | - | - |
 | ~~**TASK-067**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
-| **TASK-068** | 📋 **TODO** | `SectionNode.vue`, `GroupNode.vue`, Canvas group components | - | - |
-| **TASK-069** | 📋 **TODO** (Later) | `SectionNode.vue`, Canvas group styling | - | - |
+| ~~**TASK-068**~~ | ✅ **DONE** | `GroupNodeSimple.vue`, `CanvasContextMenu.vue`, `CanvasView.vue` | - | - |
+| ~~**TASK-069**~~ | ✅ **DONE** | `GroupNodeSimple.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
-- [ ] **TASK-068**: Streamline Canvas Group Header Design | **P1-HIGH** | TODO - Remove unused icons, add missing functionality
+- [x] **TASK-068**: Streamline Canvas Group Header Design | **P1-HIGH** | ✅ DONE (Dec 28) - Moved all actions to context menu
 - [ ] **TASK-061**: Demo Content Guard Logger | **P0-CRITICAL** | PLANNED
 - [ ] **TASK-062**: Custom Confirmation Modals | **P0-CRITICAL** | 🔄 PARTIAL
 - ✅ **BUG-041**: Fix blurry text on canvas zoom | **P0-CRITICAL** | ✅ FIXED (Dec 28)
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
-- [ ] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** (Later) - Group outlines not visible enough
+- [x] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** | ✅ DONE (Dec 28) - Solid border, increased opacity, shadow
 - ✅ **BUG-040**: Sidebar content disappearance fix | ✅ FIXED (Dec 28)
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
 - ✅ **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) | ✅ FIXED (Dec 27)
@@ -793,53 +793,58 @@ Phase 3 (Mobile) ←────────────────────
 
 ---
 
-### TASK-068: Streamline Canvas Group Header Design (📋 TODO)
+### ~~TASK-068~~: Streamline Canvas Group Header Design (✅ DONE - Dec 28)
 
 **Priority**: P1-HIGH
 
-**Problem**: Canvas group headers have too many icons that are:
-- Cluttering the UI with unnecessary visual noise
-- Some icons have no functionality attached
-- Missing functionality that would be useful
+**Solution Implemented**:
+All header action buttons were removed and moved to the context menu for a cleaner, minimal design.
 
-**Current State** (from screenshot):
-- Yellow lightning bolt icon (⚡)
-- Purple badge with count
-- Another lightning bolt
-- Settings/gear icon
-- Magnet icon (red)
-- Calendar icon with date
-- Task count
+**Header Now Contains Only**:
+- Collapse/expand chevron
+- Color indicator dot
+- Editable group name
+- Task count badge
 
-**Goals**:
-- [ ] Audit all group header icons and identify what each does
-- [ ] Remove icons that have no functionality
-- [ ] Add missing functionality where icons exist but don't work
-- [ ] Consolidate related functions into fewer icons
-- [ ] Follow Todoist/Linear style - minimal, purposeful icons only
+**Context Menu Now Includes**:
+- ✅ Add Task to Group (new functionality)
+- ✅ Edit Group
+- ✅ Group Settings (moved from header)
+- ✅ Toggle Power Mode (moved from header, shown only if group has power keyword)
+- ✅ Collect Matching Tasks (moved from header, shown only in power mode)
+- ✅ Delete Group
 
-**Files to Modify**:
-- `src/components/canvas/SectionNode.vue`
-- `src/components/canvas/GroupNode.vue`
-- Related canvas group components
+**Files Modified**:
+- `src/components/canvas/GroupNodeSimple.vue` - Removed all header buttons
+- `src/components/canvas/CanvasContextMenu.vue` - Added new menu options
+- `src/components/canvas/CanvasContextMenus.vue` - Event pass-through
+- `src/views/CanvasView.vue` - Handler implementations
 
 ---
 
-### TASK-069: Improve Canvas Group Visibility (📋 TODO - Later)
+### ~~TASK-069~~: Improve Canvas Group Visibility (✅ DONE - Dec 28)
 
-**Priority**: P3-LOW (Backlog)
+**Priority**: P3-LOW
 
-**Problem**: Canvas group outlines/borders are not visible enough, making it hard to distinguish groups from the background.
+**Solution Implemented**:
+- [x] Changed border from dashed to solid 2px
+- [x] Increased border opacity (A0 instead of 60)
+- [x] Added subtle box-shadow for depth and visibility
+- [x] Enhanced hover state with stronger shadow
+- [x] Maintained glassmorphism aesthetic
 
-**Goals**:
-- [ ] Increase border opacity/contrast
-- [ ] Add subtle background differentiation
-- [ ] Consider glow effect on hover/selection
-- [ ] Maintain glassmorphism aesthetic
+**CSS Changes** (GroupNodeSimple.vue):
+```css
+.section-node {
+  border: 2px solid;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05),
+              0 2px 8px rgba(0, 0, 0, 0.15),
+              inset 0 0 20px rgba(255, 255, 255, 0.02);
+}
+```
 
-**Files to Modify**:
-- `src/components/canvas/SectionNode.vue`
-- Canvas group styling
+**Files Modified**:
+- `src/components/canvas/GroupNodeSimple.vue`
 
 ---
 

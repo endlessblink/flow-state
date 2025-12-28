@@ -348,23 +348,56 @@ function broadcastFileChange() {
   console.log(`[SSE] Broadcasted file change to ${sseClients.length} clients`);
 }
 
-// File watcher with debounce
-let fileChangeTimeout = null;
+// File watcher using polling (more reliable than fs.watch for detecting all changes)
+let lastMtime = null;
+let pollInterval = null;
+
 function setupFileWatcher() {
+  // Get initial mtime
   try {
-    fsSync.watch(MASTER_PLAN_PATH, (eventType, filename) => {
+    const stats = fsSync.statSync(MASTER_PLAN_PATH);
+    lastMtime = stats.mtimeMs;
+  } catch (error) {
+    console.error('[FileWatcher] Failed to get initial file stats:', error.message);
+  }
+
+  // Poll every 2 seconds for changes
+  pollInterval = setInterval(() => {
+    try {
+      const stats = fsSync.statSync(MASTER_PLAN_PATH);
+      if (lastMtime && stats.mtimeMs !== lastMtime) {
+        console.log(`[FileWatcher] MASTER_PLAN.md changed (mtime: ${new Date(stats.mtimeMs).toISOString()})`);
+        lastMtime = stats.mtimeMs;
+        broadcastFileChange();
+      } else if (!lastMtime) {
+        lastMtime = stats.mtimeMs;
+      }
+    } catch (error) {
+      // File might be temporarily unavailable during write
+      console.log('[FileWatcher] File temporarily unavailable, will retry...');
+    }
+  }, 2000); // Check every 2 seconds
+
+  console.log('[FileWatcher] Polling MASTER_PLAN.md for changes (every 2s)');
+
+  // Also try fs.watch as a faster backup (works for some editors)
+  try {
+    fsSync.watch(MASTER_PLAN_PATH, (eventType) => {
       if (eventType === 'change') {
-        // Debounce rapid changes (e.g., editor saves multiple times)
-        if (fileChangeTimeout) clearTimeout(fileChangeTimeout);
-        fileChangeTimeout = setTimeout(() => {
-          console.log(`[FileWatcher] MASTER_PLAN.md changed`);
-          broadcastFileChange();
-        }, 500); // 500ms debounce
+        // Update mtime check immediately
+        try {
+          const stats = fsSync.statSync(MASTER_PLAN_PATH);
+          if (stats.mtimeMs !== lastMtime) {
+            console.log(`[FileWatcher] MASTER_PLAN.md changed (fs.watch)`);
+            lastMtime = stats.mtimeMs;
+            broadcastFileChange();
+          }
+        } catch (e) { /* ignore */ }
       }
     });
-    console.log('[FileWatcher] Watching MASTER_PLAN.md for changes');
+    console.log('[FileWatcher] Also using fs.watch for faster detection');
   } catch (error) {
-    console.error('[FileWatcher] Failed to watch file:', error.message);
+    console.log('[FileWatcher] fs.watch not available, using polling only');
   }
 }
 

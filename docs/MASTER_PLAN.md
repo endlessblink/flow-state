@@ -3024,7 +3024,7 @@ npm run storybook
 | Task | Priority | Reference |
 |------|----------|-----------|
 | ~~BUG-016~~ | ~~Timer sync across tabs~~ | ✅ DONE Dec 19, 2025 |
-| ISSUE-007 | Timer sync across instances | P1-HIGH |
+| ~~ISSUE-007~~ | ~~Timer sync across instances~~ | ✅ DONE - TASK-021 complete |
 | 13.3 | Conflict resolution UI | P2-MEDIUM |
 
 **See**: ROAD-013 section below for full task list

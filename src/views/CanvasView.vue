@@ -401,6 +401,10 @@
       @arrange-in-row="arrangeInRow"
       @arrange-in-column="arrangeInColumn"
       @arrange-in-grid="arrangeInGrid"
+      @create-task-in-group="createTaskInGroup"
+      @open-group-settings="handleOpenSectionSettingsFromContext"
+      @toggle-power-mode="handleTogglePowerMode"
+      @collect-tasks="handleCollectTasksFromMenu"
       @close-edge-context-menu="closeEdgeContextMenu"
       @disconnect-edge="disconnectEdge"
       @close-node-context-menu="closeNodeContextMenu"
@@ -2831,6 +2835,53 @@ const handleSectionSettingsSave = (settings: { assignOnDrop: AssignOnDropSetting
   })
 
   closeSectionSettingsModal()
+}
+
+// TASK-068: Context menu handlers for group actions (moved from header)
+const handleOpenSectionSettingsFromContext = (section: CanvasSection) => {
+  handleOpenSectionSettings(section.id)
+}
+
+const handleTogglePowerMode = (section: CanvasSection) => {
+  console.log('⚡ [CanvasView] Toggle power mode for:', section.name)
+  canvasStore.togglePowerMode(section.id)
+}
+
+const handleCollectTasksFromMenu = (section: CanvasSection) => {
+  console.log('🧲 [CanvasView] Collect tasks for:', section.name)
+  collectTasksForSection(section.id)
+}
+
+const createTaskInGroup = async (section: CanvasSection) => {
+  console.log('➕ [CanvasView] Create task in group:', section.name)
+
+  // Create a new task
+  const newTask = await taskStore.createTaskWithUndo({
+    title: '',
+    status: 'planned',
+    isInInbox: false // Not in inbox - goes to canvas
+  })
+
+  if (newTask) {
+    // Position the task in the section
+    const sectionNode = canvasStore.sections.find(s => s.id === section.id)
+    if (sectionNode) {
+      // Place task at top-left of section with some padding
+      const taskPosition = {
+        x: (sectionNode.position?.x || 0) + 20,
+        y: (sectionNode.position?.y || 0) + 60 // Below header
+      }
+
+      // Add the task node to the canvas
+      canvasStore.addTaskNode(newTask.id, taskPosition, section.id)
+
+      console.log('✅ [CanvasView] Task created and added to group:', {
+        taskId: newTask.id,
+        sectionId: section.id,
+        position: taskPosition
+      })
+    }
+  }
 }
 
 // Section management methods

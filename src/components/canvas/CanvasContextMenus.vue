@@ -25,6 +25,10 @@
     @arrange-in-row="$emit('arrange-in-row')"
     @arrange-in-column="$emit('arrange-in-column')"
     @arrange-in-grid="$emit('arrange-in-grid')"
+    @create-task-in-group="(section) => $emit('create-task-in-group', section)"
+    @open-group-settings="(section) => $emit('open-group-settings', section)"
+    @toggle-power-mode="(section) => $emit('toggle-power-mode', section)"
+    @collect-tasks="(section) => $emit('collect-tasks', section)"
   />
 
   <!-- Edge Context Menu -->
@@ -95,5 +99,10 @@ defineEmits<{
   (e: 'disconnect-edge'): void
   (e: 'close-node-context-menu'): void
   (e: 'delete-node'): void
+  // TASK-068: New group actions moved from header
+  (e: 'create-task-in-group', section: CanvasSection): void
+  (e: 'open-group-settings', section: CanvasSection): void
+  (e: 'toggle-power-mode', section: CanvasSection): void
+  (e: 'collect-tasks', section: CanvasSection): void
 }>()
 </script>

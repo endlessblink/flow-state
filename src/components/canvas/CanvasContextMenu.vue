@@ -12,6 +12,15 @@
         <span>{{ contextSection.name || 'Group' }}</span>
       </div>
 
+      <!-- TASK-068: Add Task to Group -->
+      <button
+        class="menu-item"
+        @click="handleCreateTaskInGroup"
+      >
+        <PlusCircle :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Add Task to Group</span>
+      </button>
+
       <button
         class="menu-item"
         @click="$emit('editGroup', contextSection)"
@@ -19,6 +28,40 @@
         <Edit2 :size="16" :stroke-width="1.5" class="menu-icon" />
         <span class="menu-text">Edit Group</span>
       </button>
+
+      <!-- TASK-068: Group Settings (moved from header) -->
+      <button
+        class="menu-item"
+        @click="handleOpenSettings"
+      >
+        <Settings :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Group Settings</span>
+      </button>
+
+      <div class="menu-divider" />
+
+      <!-- TASK-068: Power Mode Toggle (moved from header) -->
+      <button
+        v-if="contextSection.powerKeyword"
+        class="menu-item"
+        :class="{ 'active': contextSection.isPowerMode }"
+        @click="handleTogglePowerMode"
+      >
+        <Zap :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">{{ contextSection.isPowerMode ? 'Disable Power Mode' : 'Enable Power Mode' }}</span>
+      </button>
+
+      <!-- TASK-068: Collect Tasks (moved from header, only in power mode) -->
+      <button
+        v-if="contextSection.isPowerMode"
+        class="menu-item"
+        @click="handleCollectTasks"
+      >
+        <Magnet :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Collect Matching Tasks</span>
+      </button>
+
+      <div class="menu-divider" />
 
       <button
         class="menu-item danger"
@@ -163,7 +206,8 @@ import {
   AlignHorizontalJustifyCenter, AlignVerticalJustifyStart,
   AlignVerticalJustifyEnd, AlignVerticalJustifyCenter,
   Columns as _Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2, Inbox,
-  LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3
+  LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3,
+  Settings, Zap, Magnet // TASK-068: Icons for group actions moved from header
 } from 'lucide-vue-next'
 import { useContextMenuEvents } from '@/composables/useContextMenuEvents'
 import { useContextMenuPositioning } from '@/composables/useContextMenuPositioning'
@@ -203,6 +247,11 @@ const emit = defineEmits<{
   arrangeInRow: []
   arrangeInColumn: []
   arrangeInGrid: []
+  // TASK-068: New group actions moved from header
+  createTaskInGroup: [section: CanvasSection]
+  openGroupSettings: [section: CanvasSection]
+  togglePowerMode: [section: CanvasSection]
+  collectTasks: [section: CanvasSection]
 }>()
 
 const menuRef = ref<HTMLElement | null>(null)
@@ -266,6 +315,42 @@ const handleCreateGroup = () => {
   console.log('🔧 CanvasContextMenu: Emitting createGroup event (opens unified modal)')
   emit('createGroup')
   emit('close')
+}
+
+// TASK-068: Handler for creating task in group
+const handleCreateTaskInGroup = () => {
+  if (props.contextSection) {
+    console.log('➕ CanvasContextMenu: Create Task in Group:', props.contextSection.name)
+    emit('createTaskInGroup', props.contextSection)
+    emit('close')
+  }
+}
+
+// TASK-068: Handler for opening group settings
+const handleOpenSettings = () => {
+  if (props.contextSection) {
+    console.log('⚙️ CanvasContextMenu: Open Settings for:', props.contextSection.name)
+    emit('openGroupSettings', props.contextSection)
+    emit('close')
+  }
+}
+
+// TASK-068: Handler for toggling power mode
+const handleTogglePowerMode = () => {
+  if (props.contextSection) {
+    console.log('⚡ CanvasContextMenu: Toggle Power Mode for:', props.contextSection.name)
+    emit('togglePowerMode', props.contextSection)
+    emit('close')
+  }
+}
+
+// TASK-068: Handler for collecting tasks
+const handleCollectTasks = () => {
+  if (props.contextSection) {
+    console.log('🧲 CanvasContextMenu: Collect Tasks for:', props.contextSection.name)
+    emit('collectTasks', props.contextSection)
+    emit('close')
+  }
 }
 
 // Handle move to inbox
@@ -415,6 +500,16 @@ const handleArrangeInGrid = () => {
 
 .menu-item.danger:hover {
   background: rgba(239, 68, 68, 0.1);
+}
+
+/* TASK-068: Active state for toggleable menu items like power mode */
+.menu-item.active {
+  color: var(--amber-text, #f59e0b);
+  background: var(--amber-bg-medium, rgba(245, 158, 11, 0.15));
+}
+
+.menu-item.active:hover {
+  background: var(--amber-bg-medium, rgba(245, 158, 11, 0.25));
 }
 
 .menu-item:disabled {

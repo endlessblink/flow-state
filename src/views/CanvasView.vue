@@ -481,6 +481,9 @@ import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/minimap/dist/style.css'
 
+// CRITICAL: Import AFTER Vue Flow CSS to override rasterization-causing styles (BUG-041)
+import '@/assets/vue-flow-overrides.css'
+
 // Phase 1 Composables
 import { useCanvasResourceManager } from '@/composables/canvas/useCanvasResourceManager'
 import { useCanvasZoom } from '@/composables/canvas/useCanvasZoom'

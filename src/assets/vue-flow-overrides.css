@@ -12,12 +12,12 @@
 
 /* 2. The Nodes */
 .vue-flow__node {
-    /* CRITICAL: Disable "will-change: transform" which Vue Flow adds inline. 
+    /* CRITICAL: Disable "will-change: transform" which Vue Flow adds inline.
      This prevents the browser from pre-rasterizing the node as a texture. */
     will-change: auto !important;
 
-    /* Force hardware acceleration (individual layers) */
-    transform: translateZ(0) !important;
+    /* NOTE: Do NOT set transform here - Vue Flow uses transform for positioning!
+     * The translateZ(0) trick breaks node dragging. */
     backface-visibility: hidden !important;
 
     /* Rendering quality hints */

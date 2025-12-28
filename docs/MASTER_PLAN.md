@@ -699,8 +699,8 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-058 | PLANNED | `src/stores/timer.ts` | - | - |
 | ~~**TASK-059**~~ | ✅ **DONE** | `vite.config.ts`, `src/utils/legacyStorageCleanup.ts` | - | - |
 | ~~**TASK-060**~~ | ✅ **DONE** | `AppSidebar.vue`, `ProjectTreeItem.vue`, `projects.ts` | - | - |
-| **TASK-061** | PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
-| **TASK-062** | 🔄 **PARTIAL** | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
+| **TASK-061** | **P0** PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
+| **TASK-062** | **P0** 🔄 PARTIAL | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
 | ~~**BUG-037**~~ | ✅ **DONE** | `conflictResolver.ts`, `tasks.ts` | - | - |
 | ~~**BUG-038**~~ | ✅ **DONE** | `UnifiedInboxPanel.vue` | - | - |
 | ~~**BUG-039**~~ | ✅ **DONE** | `InboxPanel.vue`, `tasks.ts` | - | - |
@@ -712,9 +712,11 @@ Phase 3 (Mobile) ←────────────────────
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
+- [ ] **TASK-061**: Demo Content Guard Logger | **P0-CRITICAL** | PLANNED
+- [ ] **TASK-062**: Custom Confirmation Modals | **P0-CRITICAL** | 🔄 PARTIAL
+- ✅ **BUG-041**: Fix blurry text on canvas zoom | **P0-CRITICAL** | ✅ FIXED (Dec 28)
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - ✅ **BUG-040**: Sidebar content disappearance fix | ✅ FIXED (Dec 28)
-- 🔄 **BUG-041**: Fix blurry text on canvas zoom | ⏳ VERIFYING (Dec 28)
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
 - ✅ **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) | ✅ FIXED (Dec 27)
     - [x] Create E2E reproduction of sync conflicts
@@ -1464,20 +1466,31 @@ vue3-typescript-skills/                      # Add-on package (Vue-specific)
 
 ---
 
-### 🔄 BUG-041: Blurry Text on Canvas Zoom (IN VERIFICATION)
+### ~~BUG-041~~: Blurry Text on Canvas Zoom (✅ FIXED Dec 28, 2025)
 
+**Priority**: P0-CRITICAL
 **Reported**: Dec 28, 2025
-**Status**: 🔄 **WAITING VERIFICATION**
+**Status**: ✅ **FIXED**
 
 **Issue**: Text on Task Nodes and Group Nodes becomes blurry/rasterized when zooming out (< 100%).
-**Root Cause**: Browser "layerizing" optimization. Vue Flow (or defaults) likely applies `will-change: transform` to the viewport container, causing Chrome/WebKit to cache the canvas as a bitmap and scale the image instead of re-rendering vector text.
-**Attempted Fixes**:
-1. Removing `backdrop-filter` (Glass effect) - **Failed** (User reported no change).
-2. Removing `overflow: hidden` from cards - **Failed** (User reported no change).
-3. **Current Fix**:
-    - Restored original Visuals (Glass effect + Clipping).
-    - Applied **Global Viewport Override** (`will-change: auto !important`) to `.vue-flow__viewport` and `.vue-flow__transformation-pane`.
-    - **Goal**: Force browser to re-rasterize text at every zoom level (disable bitmap caching).
+
+**Root Cause**:
+1. `vue-flow-overrides.css` existed with the fix but was **never imported** in CanvasView.vue
+2. The CSS had a conflicting `transform: translateZ(0) !important` rule that broke node dragging
+3. `TaskNode.vue` had `will-change: transform` during drag which caused text rasterization
+
+**Solution Applied**:
+1. Imported `vue-flow-overrides.css` in CanvasView.vue AFTER Vue Flow's CSS imports
+2. Removed `transform: translateZ(0) !important` from `.vue-flow__node` (was breaking Vue Flow positioning)
+3. Changed `will-change: transform` to `will-change: auto` in TaskNode.vue during drag state
+4. Kept `will-change: auto !important` on `.vue-flow__viewport` and `.vue-flow__transformation-pane`
+
+**Files Modified**:
+- `src/views/CanvasView.vue` - Added CSS import
+- `src/assets/vue-flow-overrides.css` - Removed problematic transform rule
+- `src/components/canvas/TaskNode.vue` - Fixed will-change during drag
+
+**SOP**: `docs/🐛 debug/sop/canvas-blurry-text-fix-2025-12-28.md`
 
 ---
 
@@ -3527,9 +3540,9 @@ npm run dev
 
 ---
 
-### TASK-061: Demo Content Guard Logger (PLANNED)
+### TASK-061: Demo Content Guard Logger (P0-CRITICAL - PLANNED)
 
-**Priority**: P2-MEDIUM
+**Priority**: P0-CRITICAL
 
 **Goal**: Create a logger/guard that detects and alerts when programmatic task creation or demo content is being added to the system.
 
@@ -3549,9 +3562,9 @@ npm run dev
 
 ---
 
-### TASK-062: Custom Confirmation Modals (🔄 PARTIAL)
+### TASK-062: Custom Confirmation Modals (P0-CRITICAL - 🔄 PARTIAL)
 
-**Priority**: P2-MEDIUM
+**Priority**: P0-CRITICAL
 
 **Goal**: Replace native browser `window.confirm()` dialogs with custom-designed modals that match the app's glassmorphism aesthetic.
 

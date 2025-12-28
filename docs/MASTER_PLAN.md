@@ -2664,7 +2664,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 
 **Details**: See "Open Bug Analysis" section below.
 
-#### ~~BUG-007~~: Deleting Group Deletes Tasks Inside (✅ FIXED Dec 5, 2025)
+### ~~BUG-007~~: Deleting Group Deletes Tasks Inside (✅ FIXED Dec 5, 2025)
 
 **Problem**: When a canvas group/section was deleted, all tasks inside were also deleted.
 

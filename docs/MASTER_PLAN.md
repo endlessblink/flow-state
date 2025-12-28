@@ -708,14 +708,18 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-065** | 📋 **TODO** | `database.ts`, `.env.example`, `README.md`, `LICENSE` | - | ROAD-017 |
 | ~~**TASK-066**~~ | ✅ **DONE** | `BaseInput.vue`, `ProjectModal.vue` | - | - |
 | ~~**TASK-067**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
+| **TASK-068** | 📋 **TODO** | `SectionNode.vue`, `GroupNode.vue`, Canvas group components | - | - |
+| **TASK-069** | 📋 **TODO** (Later) | `SectionNode.vue`, Canvas group styling | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
+- [ ] **TASK-068**: Streamline Canvas Group Header Design | **P1-HIGH** | TODO - Remove unused icons, add missing functionality
 - [ ] **TASK-061**: Demo Content Guard Logger | **P0-CRITICAL** | PLANNED
 - [ ] **TASK-062**: Custom Confirmation Modals | **P0-CRITICAL** | 🔄 PARTIAL
 - ✅ **BUG-041**: Fix blurry text on canvas zoom | **P0-CRITICAL** | ✅ FIXED (Dec 28)
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
+- [ ] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** (Later) - Group outlines not visible enough
 - ✅ **BUG-040**: Sidebar content disappearance fix | ✅ FIXED (Dec 28)
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
 - ✅ **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) | ✅ FIXED (Dec 27)
@@ -786,6 +790,56 @@ Phase 3 (Mobile) ←────────────────────
 | HIGH | `/LICENSE` | Create with MIT text |
 | HIGH | `README.md` | Add Docker self-host guide |
 | MEDIUM | `src/components/canvas/SectionSelector.vue` | Remove unused imports |
+
+---
+
+### TASK-068: Streamline Canvas Group Header Design (📋 TODO)
+
+**Priority**: P1-HIGH
+
+**Problem**: Canvas group headers have too many icons that are:
+- Cluttering the UI with unnecessary visual noise
+- Some icons have no functionality attached
+- Missing functionality that would be useful
+
+**Current State** (from screenshot):
+- Yellow lightning bolt icon (⚡)
+- Purple badge with count
+- Another lightning bolt
+- Settings/gear icon
+- Magnet icon (red)
+- Calendar icon with date
+- Task count
+
+**Goals**:
+- [ ] Audit all group header icons and identify what each does
+- [ ] Remove icons that have no functionality
+- [ ] Add missing functionality where icons exist but don't work
+- [ ] Consolidate related functions into fewer icons
+- [ ] Follow Todoist/Linear style - minimal, purposeful icons only
+
+**Files to Modify**:
+- `src/components/canvas/SectionNode.vue`
+- `src/components/canvas/GroupNode.vue`
+- Related canvas group components
+
+---
+
+### TASK-069: Improve Canvas Group Visibility (📋 TODO - Later)
+
+**Priority**: P3-LOW (Backlog)
+
+**Problem**: Canvas group outlines/borders are not visible enough, making it hard to distinguish groups from the background.
+
+**Goals**:
+- [ ] Increase border opacity/contrast
+- [ ] Add subtle background differentiation
+- [ ] Consider glow effect on hover/selection
+- [ ] Maintain glassmorphism aesthetic
+
+**Files to Modify**:
+- `src/components/canvas/SectionNode.vue`
+- Canvas group styling
 
 ---
 

@@ -456,8 +456,8 @@ const formattedDuration = computed(() => {
   /* Prevent any blur or filter effects during drag */
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  /* Ensure no visual artifacts */
-  will-change: transform !important;
+  /* BUG-041: Changed from will-change: transform to auto to prevent text rasterization */
+  will-change: auto !important;
   outline: none !important;
   border: none !important;
 }

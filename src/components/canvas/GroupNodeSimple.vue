@@ -317,8 +317,6 @@ const handleResizeEnd = (event: unknown) => {
   background: var(--glass-bg-light);
   position: relative;
   z-index: 1;
-  will-change: transform;
-  transform: translateZ(0);
 }
 
 .section-header {

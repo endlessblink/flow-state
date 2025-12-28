@@ -1,0 +1,27 @@
+/* Global Vue Flow Overrides to prevent rasterization */
+
+/* 1. The Container/Viewport */
+.vue-flow__transformation-pane,
+.vue-flow__viewport {
+    /* Force 3D rendering context to prevent flattening into a single bitmap */
+    transform-style: preserve-3d !important;
+    /* Disable bitmap caching optimization */
+    will-change: auto !important;
+    backface-visibility: visible !important;
+}
+
+/* 2. The Nodes */
+.vue-flow__node {
+    /* CRITICAL: Disable "will-change: transform" which Vue Flow adds inline. 
+     This prevents the browser from pre-rasterizing the node as a texture. */
+    will-change: auto !important;
+
+    /* Force hardware acceleration (individual layers) */
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+
+    /* Rendering quality hints */
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: subpixel-antialiased !important;
+    -moz-osx-font-smoothing: auto !important;
+}

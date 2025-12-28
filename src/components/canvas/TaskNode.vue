@@ -370,16 +370,6 @@ const formattedDuration = computed(() => {
     0 12px 24px var(--shadow-md),
     0 6px 12px var(--shadow-md);
 
-  /* GPU acceleration and sharp text rendering */
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  backface-visibility: hidden;
-  image-rendering: -webkit-optimize-contrast;
-
-  /* Ensure precise hit area */
   box-sizing: border-box;
   display: block;
 }
@@ -394,8 +384,7 @@ const formattedDuration = computed(() => {
 
 .task-title,
 .task-metadata {
-  transform: translateZ(0);
-  will-change: contents;
+  /* Removed 3D transforms to fix blurriness */
 }
 
 /* Blurred background layer - keeps text sharp */
@@ -613,6 +602,9 @@ body.dragging-active .task-node .vue-flow__handle {
   box-shadow: 0 2px 8px var(--brand-primary);
   animation: timerPulse 2s ease-in-out infinite;
   border: 2px solid white;
+  /* Optimize for legibility to encourage re-rasterization at scale */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: subpixel-antialiased;
   /* Fix timer icon centering */
   padding: 0;
   margin: 0;

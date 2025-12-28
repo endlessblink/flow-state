@@ -9,13 +9,25 @@
             --surface-primary: #000000;
             --surface-secondary: #0d1117;
             --surface-tertiary: #161b22;
+            --surface-elevated: #21262d;
             --text-primary: #e6edf3;
             --text-secondary: #c9d1d9;
             --text-muted: #8b949e;
             --border-subtle: #1a1a1a;
             --border-medium: #30363d;
-            --color-timeline: #ec4899;
             --brand-primary: #4ECDC4;
+            --color-timeline: #ec4899;
+
+            /* Priority colors */
+            --priority-high: #ef4444;
+            --priority-medium: #f59e0b;
+            --priority-low: #10b981;
+
+            /* Status colors */
+            --status-todo: #6366f1;
+            --status-in-progress: #f59e0b;
+            --status-review: #8b5cf6;
+            --status-done: #10b981;
         }
 
         * {
@@ -29,27 +41,34 @@
             background: var(--surface-primary);
             color: var(--text-secondary);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            overflow-x: hidden;
         }
 
         .container {
-            flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 2rem;
+            height: 100vh;
+            padding: 1.5rem;
         }
 
         .header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
             gap: 1rem;
-            margin-bottom: 2rem;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         .header-icon {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             stroke: var(--color-timeline);
             stroke-width: 1.5;
             stroke-linecap: round;
@@ -58,155 +77,905 @@
         }
 
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 600;
             color: var(--text-primary);
         }
 
-        .coming-soon {
+        .filters {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: var(--surface-tertiary);
+            border: 1px solid var(--border-medium);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 150ms;
+        }
+
+        .filter-btn:hover {
+            background: var(--surface-elevated);
+            color: var(--text-secondary);
+        }
+
+        .filter-btn.active {
+            background: var(--brand-primary);
+            border-color: var(--brand-primary);
+            color: #000;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+        }
+
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .timeline-container {
             flex: 1;
+            overflow: auto;
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .timeline-header {
+            display: flex;
+            position: sticky;
+            top: 0;
+            background: var(--surface-tertiary);
+            border-bottom: 1px solid var(--border-medium);
+            z-index: 10;
+        }
+
+        .timeline-label-col {
+            width: 280px;
+            min-width: 280px;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            border-right: 1px solid var(--border-medium);
+        }
+
+        .timeline-chart-col {
+            flex: 1;
+            display: flex;
+            min-width: 600px;
+        }
+
+        .timeline-week {
+            flex: 1;
+            min-width: 100px;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            border-right: 1px solid var(--border-subtle);
+        }
+
+        .timeline-week.current {
+            background: rgba(78, 205, 196, 0.1);
+            color: var(--brand-primary);
+        }
+
+        .timeline-body {
+            min-height: 300px;
+        }
+
+        .timeline-row {
+            display: flex;
+            border-bottom: 1px solid var(--border-subtle);
+            transition: background 150ms;
+        }
+
+        .timeline-row:hover {
+            background: var(--surface-tertiary);
+        }
+
+        .task-info {
+            width: 280px;
+            min-width: 280px;
+            padding: 0.75rem 1rem;
+            border-right: 1px solid var(--border-medium);
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .task-id {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .task-id .priority-badge {
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            font-weight: 700;
+        }
+
+        .priority-high { background: rgba(239, 68, 68, 0.2); color: var(--priority-high); }
+        .priority-medium { background: rgba(245, 158, 11, 0.2); color: var(--priority-medium); }
+        .priority-low { background: rgba(16, 185, 129, 0.2); color: var(--priority-low); }
+
+        .task-title {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-status {
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .status-todo .status-dot { background: var(--status-todo); }
+        .status-in-progress .status-dot { background: var(--status-in-progress); }
+        .status-review .status-dot { background: var(--status-review); }
+        .status-done .status-dot { background: var(--status-done); }
+
+        .task-chart {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            min-width: 600px;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        .task-bar-container {
+            position: absolute;
+            height: 28px;
+            display: flex;
+            align-items: center;
+        }
+
+        .task-bar {
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #fff;
+            min-width: 60px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 150ms, box-shadow 150ms;
+        }
+
+        .task-bar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .task-bar.status-todo {
+            background: linear-gradient(135deg, var(--status-todo), #4f46e5);
+        }
+
+        .task-bar.status-in-progress {
+            background: linear-gradient(135deg, var(--status-in-progress), #d97706);
+        }
+
+        .task-bar.status-review {
+            background: linear-gradient(135deg, var(--status-review), #7c3aed);
+        }
+
+        .task-bar.status-done {
+            background: linear-gradient(135deg, var(--status-done), #059669);
+        }
+
+        .task-bar-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px 0 0 4px;
+        }
+
+        .task-bar-text {
+            position: relative;
+            z-index: 1;
+            white-space: nowrap;
+        }
+
+        .week-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            pointer-events: none;
+        }
+
+        .week-grid-line {
+            flex: 1;
+            border-right: 1px solid var(--border-subtle);
+        }
+
+        .week-grid-line.current {
+            background: rgba(78, 205, 196, 0.05);
+        }
+
+        .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            padding: 4rem 2rem;
             text-align: center;
-            gap: 1.5rem;
+            color: var(--text-muted);
         }
 
-        .coming-soon-icon {
-            width: 64px;
-            height: 64px;
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
             stroke: var(--text-muted);
-            stroke-width: 1;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
             opacity: 0.5;
+            margin-bottom: 1rem;
         }
 
-        .coming-soon h2 {
-            font-size: 1.25rem;
-            font-weight: 500;
-            color: var(--text-muted);
-        }
-
-        .coming-soon p {
-            color: var(--text-muted);
-            max-width: 400px;
-            line-height: 1.6;
-        }
-
-        .feature-list {
-            margin-top: 2rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            text-align: left;
-        }
-
-        .feature-item {
+        .loading {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            justify-content: center;
+            padding: 4rem;
             color: var(--text-muted);
-            font-size: 0.9rem;
         }
 
-        .feature-item svg {
-            width: 16px;
-            height: 16px;
-            stroke: var(--color-timeline);
-            stroke-width: 2;
-            fill: none;
-            flex-shrink: 0;
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-medium);
+            border-top-color: var(--brand-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.75rem;
         }
 
-        .badge {
-            display: inline-flex;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid var(--border-subtle);
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(236, 72, 153, 0.1);
-            border: 1px solid rgba(236, 72, 153, 0.2);
-            border-radius: 9999px;
-            color: var(--color-timeline);
             font-size: 0.75rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .legend-bar {
+            width: 24px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+            max-width: 300px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 150ms;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 0.25rem;
+        }
+
+        .tooltip-label {
+            color: var(--text-muted);
+        }
+
+        .tooltip-value {
+            color: var(--text-secondary);
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <svg class="header-icon" viewBox="0 0 24 24">
-                <line x1="3" y1="12" x2="21" y2="12"/>
-                <circle cx="6" cy="12" r="2"/>
-                <circle cx="12" cy="12" r="2"/>
-                <circle cx="18" cy="12" r="2"/>
-                <line x1="6" y1="8" x2="6" y2="10"/>
-                <line x1="12" y1="14" x2="12" y2="16"/>
-                <line x1="18" y1="8" x2="18" y2="10"/>
-            </svg>
-            <h1>Timeline View</h1>
+            <div class="header-left">
+                <svg class="header-icon" viewBox="0 0 24 24">
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <circle cx="6" cy="12" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="18" cy="12" r="2"/>
+                    <line x1="6" y1="8" x2="6" y2="10"/>
+                    <line x1="12" y1="14" x2="12" y2="16"/>
+                    <line x1="18" y1="8" x2="18" y2="10"/>
+                </svg>
+                <h1>Gantt Timeline</h1>
+            </div>
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">All Active</button>
+                <button class="filter-btn" data-filter="todo">To Do</button>
+                <button class="filter-btn" data-filter="in-progress">In Progress</button>
+                <button class="filter-btn" data-filter="review">Review</button>
+            </div>
         </div>
 
-        <div class="coming-soon">
-            <span class="badge">
-                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none;">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-                Coming Soon
-            </span>
+        <div class="stats-bar" id="stats-bar">
+            <div class="stat">
+                <span class="stat-dot" style="background: var(--status-todo)"></span>
+                <span class="stat-value" id="stat-todo">0</span>
+                <span class="stat-label">To Do</span>
+            </div>
+            <div class="stat">
+                <span class="stat-dot" style="background: var(--status-in-progress)"></span>
+                <span class="stat-value" id="stat-progress">0</span>
+                <span class="stat-label">In Progress</span>
+            </div>
+            <div class="stat">
+                <span class="stat-dot" style="background: var(--status-review)"></span>
+                <span class="stat-value" id="stat-review">0</span>
+                <span class="stat-label">Review</span>
+            </div>
+            <div class="stat">
+                <span class="stat-dot" style="background: var(--brand-primary)"></span>
+                <span class="stat-value" id="stat-total">0</span>
+                <span class="stat-label">Total Active</span>
+            </div>
+        </div>
 
-            <svg class="coming-soon-icon" viewBox="0 0 24 24">
-                <line x1="3" y1="12" x2="21" y2="12"/>
-                <circle cx="6" cy="12" r="2"/>
-                <circle cx="12" cy="12" r="2"/>
-                <circle cx="18" cy="12" r="2"/>
-                <line x1="6" y1="8" x2="6" y2="10"/>
-                <line x1="12" y1="14" x2="12" y2="16"/>
-                <line x1="18" y1="8" x2="18" y2="10"/>
-            </svg>
+        <div class="timeline-container">
+            <div class="timeline-header">
+                <div class="timeline-label-col">Task</div>
+                <div class="timeline-chart-col" id="timeline-weeks"></div>
+            </div>
+            <div class="timeline-body" id="timeline-body">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    Loading tasks...
+                </div>
+            </div>
+        </div>
 
-            <h2>Timeline / Gantt View</h2>
-            <p>Visualize your development tasks in a timeline format to better understand project progress and dependencies.</p>
-
-            <div class="feature-list">
-                <div class="feature-item">
-                    <svg viewBox="0 0 24 24">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span>Gantt-style task visualization</span>
-                </div>
-                <div class="feature-item">
-                    <svg viewBox="0 0 24 24">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span>Task dependencies and relationships</span>
-                </div>
-                <div class="feature-item">
-                    <svg viewBox="0 0 24 24">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span>Progress tracking at a glance</span>
-                </div>
-                <div class="feature-item">
-                    <svg viewBox="0 0 24 24">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span>Priority-based task ordering</span>
-                </div>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-bar" style="background: linear-gradient(135deg, var(--status-todo), #4f46e5)"></div>
+                <span>To Do</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-bar" style="background: linear-gradient(135deg, var(--status-in-progress), #d97706)"></div>
+                <span>In Progress</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-bar" style="background: linear-gradient(135deg, var(--status-review), #7c3aed)"></div>
+                <span>Review</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-bar" style="background: rgba(255,255,255,0.2)"></div>
+                <span>Progress</span>
             </div>
         </div>
     </div>
 
+    <div class="tooltip" id="tooltip"></div>
+
     <script>
-        // Listen for tab activation messages
+        // Configuration
+        const API_URL = '/api/master-plan';
+        const WEEKS_TO_SHOW = 8;
+
+        // State
+        let allTasks = [];
+        let currentFilter = 'all';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+
+        async function init() {
+            setupWeekHeaders();
+            setupFilters();
+            setupTooltip();
+            await loadTasks();
+            setupSSE();
+        }
+
+        function setupWeekHeaders() {
+            const container = document.getElementById('timeline-weeks');
+            const today = new Date();
+            const currentWeek = getWeekNumber(today);
+
+            let html = '';
+            for (let i = 0; i < WEEKS_TO_SHOW; i++) {
+                const weekDate = new Date(today);
+                weekDate.setDate(weekDate.getDate() + (i * 7));
+                const weekNum = getWeekNumber(weekDate);
+                const isCurrent = i === 0;
+                const monthDay = weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                html += `<div class="timeline-week ${isCurrent ? 'current' : ''}">
+                    Week ${weekNum}<br><small>${monthDay}</small>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function setupFilters() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderTasks();
+                });
+            });
+        }
+
+        function setupTooltip() {
+            const tooltip = document.getElementById('tooltip');
+
+            document.addEventListener('mousemove', (e) => {
+                if (tooltip.classList.contains('visible')) {
+                    tooltip.style.left = (e.clientX + 10) + 'px';
+                    tooltip.style.top = (e.clientY + 10) + 'px';
+                }
+            });
+        }
+
+        function showTooltip(task, e) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${task.title}</div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">ID:</span>
+                    <span class="tooltip-value">${task.id}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Status:</span>
+                    <span class="tooltip-value">${formatStatus(task.status)}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Priority:</span>
+                    <span class="tooltip-value">${task.priority || 'None'}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Progress:</span>
+                    <span class="tooltip-value">${task.progress}%</span>
+                </div>
+                ${task.type ? `<div class="tooltip-row">
+                    <span class="tooltip-label">Type:</span>
+                    <span class="tooltip-value">${task.type}</span>
+                </div>` : ''}
+            `;
+            tooltip.style.left = (e.clientX + 10) + 'px';
+            tooltip.style.top = (e.clientY + 10) + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        function formatStatus(status) {
+            const statusMap = {
+                'todo': 'To Do',
+                'in-progress': 'In Progress',
+                'review': 'In Review',
+                'done': 'Done'
+            };
+            return statusMap[status] || status;
+        }
+
+        async function loadTasks() {
+            try {
+                const response = await fetch(API_URL + '?t=' + Date.now());
+                const data = await response.json();
+                allTasks = parseMasterPlan(data.content);
+                renderTasks();
+                updateStats();
+            } catch (error) {
+                console.error('Failed to load tasks:', error);
+                document.getElementById('timeline-body').innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <p>Failed to load tasks. Make sure the API is running.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function parseMasterPlan(content) {
+            const tasks = [];
+            const lines = content.split('\n');
+            let currentSection = '';
+            let currentTask = null;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const trimmed = line.trim();
+
+                // Track sections
+                if (trimmed.startsWith('## Active Work') || trimmed.startsWith('## Current Status')) {
+                    currentSection = 'activeWork';
+                    continue;
+                }
+                if (trimmed.startsWith('## Archive') || trimmed.startsWith('## Technical Debt')) {
+                    currentSection = 'archive';
+                    continue;
+                }
+                if (trimmed.startsWith('## ')) {
+                    currentSection = '';
+                    continue;
+                }
+
+                // Only parse active work
+                if (currentSection !== 'activeWork') continue;
+
+                // Parse task headers
+                const taskMatch = trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE)-\d+)(?:~~)?(?::| - | )?\s*(.+?)(?:\s*\(([^)]+)\))?$/);
+                if (taskMatch) {
+                    // Save previous task
+                    if (currentTask) {
+                        tasks.push(currentTask);
+                    }
+
+                    const id = taskMatch[1];
+                    const title = taskMatch[2].replace(/[^\w\s-]/g, '').trim();
+                    const statusText = taskMatch[3] || '';
+                    const hasStrikethrough = trimmed.includes('~~' + id + '~~');
+
+                    let status = parseStatus(statusText);
+                    if (hasStrikethrough && status === 'todo') {
+                        status = 'done';
+                    }
+
+                    // Skip done tasks
+                    if (status === 'done') {
+                        currentTask = null;
+                        continue;
+                    }
+
+                    currentTask = {
+                        id,
+                        title,
+                        status,
+                        priority: null,
+                        progress: status === 'in-progress' ? 50 : 0,
+                        type: id.startsWith('BUG') ? 'Bug' : id.startsWith('ISSUE') ? 'Issue' : 'Task',
+                        subtasks: [],
+                        completedSubtasks: 0,
+                        inScope: false,
+                        foundPercent: false
+                    };
+                    continue;
+                }
+
+                // Parse priority
+                if (currentTask && trimmed.startsWith('**Priority**:')) {
+                    const priority = trimmed.replace('**Priority**:', '').trim();
+                    currentTask.priority = priority;
+                    continue;
+                }
+
+                // Parse subtasks for progress (checkbox format)
+                if (currentTask && trimmed.match(/^- \[(x| )\]/i)) {
+                    currentTask.subtasks.push(trimmed);
+                    if (trimmed.match(/^- \[x\]/i)) {
+                        currentTask.completedSubtasks++;
+                    }
+                    continue;
+                }
+
+                // Also count scope items as subtasks (regular bullets under Scope section)
+                if (currentTask && currentTask.inScope && trimmed.match(/^- /)) {
+                    currentTask.subtasks.push(trimmed);
+                    // Check if item is marked done with emoji
+                    if (trimmed.includes('✅') || trimmed.includes('✓')) {
+                        currentTask.completedSubtasks++;
+                    }
+                }
+
+                // Track if we're in Scope section
+                if (currentTask && trimmed.startsWith('**Scope**:')) {
+                    currentTask.inScope = true;
+                    continue;
+                }
+                // Exit scope section on next section
+                if (currentTask && trimmed.startsWith('**') && trimmed.endsWith('**:') && !trimmed.includes('Scope')) {
+                    currentTask.inScope = false;
+                }
+
+                // Look for percentage in content
+                if (currentTask && !currentTask.foundPercent) {
+                    const percentMatch = trimmed.match(/(\d+(?:\.\d+)?)\s*%\s*(?:complete|done|progress|reduction)/i);
+                    if (percentMatch) {
+                        currentTask.explicitProgress = Math.round(parseFloat(percentMatch[1]));
+                        currentTask.foundPercent = true;
+                    }
+                }
+            }
+
+            // Don't forget last task
+            if (currentTask) {
+                tasks.push(currentTask);
+            }
+
+            // Calculate progress from subtasks or explicit percentage
+            tasks.forEach(task => {
+                // First priority: explicit percentage mentioned
+                if (task.explicitProgress !== undefined) {
+                    task.progress = task.explicitProgress;
+                }
+                // Second: calculate from subtasks (if any completed)
+                else if (task.subtasks.length > 0 && task.completedSubtasks > 0) {
+                    task.progress = Math.round((task.completedSubtasks / task.subtasks.length) * 100);
+                    if (task.status === 'in-progress' && task.progress >= 100) {
+                        task.progress = 95; // Cap to show it's not complete
+                    }
+                }
+                // Third: use status-based defaults with scope bonus
+                else {
+                    // Base progress by status
+                    let baseProgress = task.status === 'in-progress' ? 50 :
+                                       task.status === 'review' ? 80 : 5;
+
+                    // Bonus for having defined scope (planning is progress!)
+                    if (task.subtasks.length > 0) {
+                        baseProgress = Math.max(baseProgress, 10); // At least 10% if scope defined
+                    }
+
+                    task.progress = baseProgress;
+                }
+
+                // Cleanup temp properties
+                delete task.inScope;
+                delete task.foundPercent;
+                delete task.explicitProgress;
+            });
+
+            return tasks;
+        }
+
+        function parseStatus(text) {
+            const upper = text.toUpperCase();
+            if (upper.includes('DONE') || upper.includes('COMPLETE') || upper.includes('✅')) {
+                return 'done';
+            }
+            if (upper.includes('IN PROGRESS') || upper.includes('IN_PROGRESS') || upper.includes('🔄')) {
+                return 'in-progress';
+            }
+            if (upper.includes('REVIEW') || upper.includes('MONITORING') || upper.includes('👀')) {
+                return 'review';
+            }
+            return 'todo';
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('timeline-body');
+
+            // Filter tasks
+            let filtered = allTasks.filter(t => t.status !== 'done');
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(t => t.status === currentFilter);
+            }
+
+            // Sort by priority then status
+            const priorityOrder = { 'P1-HIGH': 0, 'P1': 0, 'HIGH': 0, 'P2-MEDIUM': 1, 'P2': 1, 'MEDIUM': 1, 'P3-LOW': 2, 'P3': 2, 'LOW': 2 };
+            const statusOrder = { 'in-progress': 0, 'review': 1, 'todo': 2 };
+
+            filtered.sort((a, b) => {
+                const statusDiff = (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
+                if (statusDiff !== 0) return statusDiff;
+
+                const aPriority = priorityOrder[a.priority?.toUpperCase()] ?? 3;
+                const bPriority = priorityOrder[b.priority?.toUpperCase()] ?? 3;
+                return aPriority - bPriority;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <p>No active tasks found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach((task, index) => {
+                const priorityClass = getPriorityClass(task.priority);
+                const barWidth = getBarWidth(task);
+                const barOffset = getBarOffset(task, index);
+
+                html += `
+                    <div class="timeline-row">
+                        <div class="task-info">
+                            <div class="task-id">
+                                ${task.id}
+                                ${priorityClass ? `<span class="priority-badge ${priorityClass}">${task.priority}</span>` : ''}
+                            </div>
+                            <div class="task-title" title="${task.title}">${task.title}</div>
+                            <div class="task-status status-${task.status}">
+                                <span class="status-dot"></span>
+                                ${formatStatus(task.status)}
+                            </div>
+                        </div>
+                        <div class="task-chart">
+                            <div class="week-grid">
+                                ${Array(WEEKS_TO_SHOW).fill(0).map((_, i) =>
+                                    `<div class="week-grid-line ${i === 0 ? 'current' : ''}"></div>`
+                                ).join('')}
+                            </div>
+                            <div class="task-bar-container" style="left: ${barOffset}%; width: ${barWidth}%;">
+                                <div class="task-bar status-${task.status}"
+                                     data-task-id="${task.id}"
+                                     onmouseenter="showTooltip(${JSON.stringify(task).replace(/"/g, '&quot;')}, event)"
+                                     onmouseleave="hideTooltip()">
+                                    <div class="task-bar-progress" style="width: ${task.progress}%"></div>
+                                    <span class="task-bar-text">${task.progress}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function getPriorityClass(priority) {
+            if (!priority) return '';
+            const upper = priority.toUpperCase();
+            if (upper.includes('HIGH') || upper === 'P1') return 'priority-high';
+            if (upper.includes('MEDIUM') || upper === 'P2') return 'priority-medium';
+            if (upper.includes('LOW') || upper === 'P3') return 'priority-low';
+            return '';
+        }
+
+        function getBarWidth(task) {
+            // Base width on status and priority
+            const statusWidths = { 'in-progress': 40, 'review': 30, 'todo': 25 };
+            let width = statusWidths[task.status] || 25;
+
+            // Adjust based on priority
+            if (task.priority) {
+                const upper = task.priority.toUpperCase();
+                if (upper.includes('HIGH') || upper === 'P1') width += 10;
+            }
+
+            return Math.min(width, 80);
+        }
+
+        function getBarOffset(task, index) {
+            // Stagger tasks visually - in-progress start at current week
+            // Todo tasks start a bit later
+            const statusOffsets = { 'in-progress': 2, 'review': 5, 'todo': 10 };
+            return statusOffsets[task.status] || 5;
+        }
+
+        function updateStats() {
+            const activeTasks = allTasks.filter(t => t.status !== 'done');
+            document.getElementById('stat-todo').textContent = activeTasks.filter(t => t.status === 'todo').length;
+            document.getElementById('stat-progress').textContent = activeTasks.filter(t => t.status === 'in-progress').length;
+            document.getElementById('stat-review').textContent = activeTasks.filter(t => t.status === 'review').length;
+            document.getElementById('stat-total').textContent = activeTasks.length;
+        }
+
+        function setupSSE() {
+            const eventSource = new EventSource('/api/events');
+
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'file-changed') {
+                    console.log('File changed, reloading tasks...');
+                    loadTasks();
+                }
+            };
+
+            eventSource.onerror = () => {
+                console.log('SSE connection lost, will retry...');
+            };
+        }
+
+        // Listen for tab activation
         window.addEventListener('message', (event) => {
             if (event.data?.type === 'tab-activated') {
-                console.log('Timeline tab activated');
+                loadTasks();
             }
         });
     </script>

@@ -70,7 +70,7 @@ defineExpose({
 }
 
 .app-layout.sidebar-hidden {
-  grid-template-columns: 0fr 1fr;
+  grid-template-columns: 0px 1fr;
 }
 
 .sidebar {
@@ -78,7 +78,7 @@ defineExpose({
 }
 
 .app-layout.sidebar-hidden .sidebar {
-  grid-column: 1 / span 0;
+  visibility: hidden;
 }
 
 .floating-sidebar-toggle {
@@ -113,6 +113,7 @@ defineExpose({
 }
 
 .main-content {
+  grid-column: 2;
   background: transparent;
   padding: var(--space-10) var(--space-12) 0;
   position: relative;

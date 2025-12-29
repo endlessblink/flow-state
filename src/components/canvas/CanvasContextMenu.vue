@@ -444,11 +444,12 @@ const handleArrangeInGrid = () => {
 <style scoped>
 .context-menu {
   position: fixed;
-  /* Dark glass morphism */
-  background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  /* Glass morphism - transparent with purple tint and blur */
+  background: rgba(20, 20, 40, 0.85);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  /* Stroke border - more visible */
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.5),
@@ -460,6 +461,9 @@ const handleArrangeInGrid = () => {
   overflow-y: auto;
   z-index: var(--z-popover);
   animation: menuSlideIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* Ensure backdrop-filter works */
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
 @keyframes menuSlideIn {
@@ -607,11 +611,12 @@ const handleArrangeInGrid = () => {
   position: absolute;
   left: calc(100% + var(--space-1));
   top: 0;
-  /* Dark glass morphism */
-  background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  /* Glass morphism - transparent with purple tint and blur */
+  background: rgba(20, 20, 40, 0.85);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  /* Stroke border - more visible */
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.5),
@@ -624,6 +629,9 @@ const handleArrangeInGrid = () => {
   z-index: var(--z-popover);
   pointer-events: auto;
   animation: submenuSlideIn var(--duration-fast) ease-out;
+  /* Ensure backdrop-filter works */
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
 .submenu.submenu-flipped {

@@ -1543,7 +1543,9 @@ const syncNodes = () => {
       const taskCenterX = position.x + TASK_WIDTH / 2
       const taskCenterY = position.y + TASK_HEIGHT / 2
 
-      const section = sections.find(s => {
+      // TASK-072 FIX: Find the MOST SPECIFIC (smallest/nested) section that contains the task
+      // If task is inside both parent and nested group, prefer the nested group
+      const containingSections = sections.filter(s => {
         const sx = s.position.x
         const sy = s.position.y
         const sw = s.position.width || 300
@@ -1551,6 +1553,15 @@ const syncNodes = () => {
         return taskCenterX >= sx && taskCenterX <= sx + sw &&
                taskCenterY >= sy && taskCenterY <= sy + sh
       })
+      // Sort by area (smallest first) and pick the smallest containing section
+      // Smaller sections are more specific (nested groups are smaller than their parents)
+      const section = containingSections.length > 0
+        ? containingSections.sort((a, b) => {
+            const areaA = (a.position.width || 300) * (a.position.height || 200)
+            const areaB = (b.position.width || 300) * (b.position.height || 200)
+            return areaA - areaB
+          })[0]
+        : undefined
 
       if (section) {
         // Task is visually inside a section - make it a child

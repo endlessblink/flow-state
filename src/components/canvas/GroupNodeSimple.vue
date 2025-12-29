@@ -216,26 +216,41 @@ const handleResizeEnd = (event: unknown) => {
 </script>
 
 <style scoped>
-/* TASK-069: Improved group visibility with stronger border and subtle glow */
+/* TASK-069 + TASK-073: Enhanced group visibility with dashed border and color glow */
 .section-node {
   width: 100%;
   height: 100%;
-  border: 2px solid;
+  /* TASK-073: Dashed border for visual distinction from solid task cards */
+  border: 2px dashed;
   border-radius: var(--radius-lg);
-  background: var(--glass-bg-light);
+  /* Slightly more opaque background for better content contrast */
+  background: rgba(20, 25, 35, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   position: relative;
   z-index: 1;
-  /* Subtle shadow for depth and visibility */
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05),
-              0 2px 8px rgba(0, 0, 0, 0.15),
-              inset 0 0 20px rgba(255, 255, 255, 0.02);
-  transition: box-shadow var(--duration-fast), border-color var(--duration-fast);
+  /* Enhanced shadow with color-tinted outer glow */
+  box-shadow:
+    /* Outer colored glow - uses inherited border color */
+    0 0 20px -5px currentColor,
+    /* White outline for definition */
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    /* Depth shadow */
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    /* Inner highlight */
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all var(--duration-fast) ease;
 }
 
 .section-node:hover {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
-              0 4px 12px rgba(0, 0, 0, 0.2),
-              inset 0 0 20px rgba(255, 255, 255, 0.03);
+  /* Intensify effects on hover */
+  border-style: solid;
+  box-shadow:
+    /* Stronger outer glow on hover */
+    0 0 30px -3px currentColor,
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .section-header {

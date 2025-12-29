@@ -1465,16 +1465,40 @@ const syncNodes = () => {
   )
 
   sections.forEach(section => {
-    // Calculate task count for this section
-    const tasksInThisSection = canvasStore.getTasksInSectionBounds(
-      section,
-      Array.isArray(filteredTasks.value) ? filteredTasks.value : []
-    )
+    // Calculate task count for this section (use recursive counting for nested groups)
+    const taskCount = section.parentGroupId
+      ? canvasStore.getTaskCountInGroupRecursive(section.id, Array.isArray(filteredTasks.value) ? filteredTasks.value : [])
+      : canvasStore.getTasksInSectionBounds(section, Array.isArray(filteredTasks.value) ? filteredTasks.value : []).length
+
+    // TASK-072: Handle nested groups - set parent node and convert to relative position
+    let parentNode: string | undefined = undefined
+    let position = { x: section.position.x, y: section.position.y }
+
+    if (section.parentGroupId) {
+      const parentGroup = sections.find(s => s.id === section.parentGroupId)
+      if (parentGroup) {
+        parentNode = `section-${parentGroup.id}`
+        // Convert absolute position to relative (like we do for tasks)
+        position = {
+          x: section.position.x - parentGroup.position.x,
+          y: section.position.y - parentGroup.position.y
+        }
+      }
+    }
+
+    // Calculate z-index based on nesting depth (deeper = higher z-index)
+    const getDepth = (groupId: string, depth = 0): number => {
+      const group = sections.find(s => s.id === groupId)
+      if (!group || !group.parentGroupId || depth > 10) return depth
+      return getDepth(group.parentGroupId, depth + 1)
+    }
+    const zIndex = getDepth(section.id)
 
     allNodes.push({
       id: `section-${section.id}`,
       type: 'sectionNode',
-      position: { x: section.position.x, y: section.position.y },
+      position,
+      parentNode, // TASK-072: Set parent for nested groups
       data: {
         id: section.id, // BUG-034: Add id for component lookup
         name: section.name, // BUG-034: Add name for display
@@ -1484,13 +1508,13 @@ const syncNodes = () => {
         height: section.position.height || 200,
         isCollapsed: section.isCollapsed || false,
         theme: (section as unknown as { theme?: string }).theme || 'default',
-        taskCount: tasksInThisSection.length, // BUG-034: Add task count
+        taskCount, // BUG-034: Add task count (now uses recursive for nested)
         type: section.type // BUG-034: Add type for styling
       },
       style: {
         width: `${section.position.width || 300}px`,
         height: `${section.position.height || 200}px`,
-        zIndex: 0 // Ensure sections are strictly background
+        zIndex // TASK-072: Deeper nested groups render above parents
       },
       draggable: true, // Allow dragging sections
       selectable: true,
@@ -1733,6 +1757,7 @@ const {
     showCanvasContextMenu,
     canvasContextMenuX,
     canvasContextMenuY,
+    canvasContextSection,
     isGroupModalOpen,
     selectedGroup,
     groupModalPosition,

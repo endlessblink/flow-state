@@ -1,5 +1,5 @@
-**Last Updated**: December 27, 2025 (TASK-059 Bundle Size & TASK-048 Storage)
-**Version**: 5.9 (Performance & Persistence Hardened)
+**Last Updated**: December 29, 2025 (TASK-072 Nested Groups & TASK-074 Blur Effect)
+**Version**: 5.10 (Canvas Groups Enhanced)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -710,16 +710,31 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-067**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | ~~**TASK-068**~~ | ✅ **DONE** | `GroupNodeSimple.vue`, `CanvasContextMenu.vue`, `CanvasView.vue` | - | - |
 | ~~**TASK-069**~~ | ✅ **DONE** | `GroupNodeSimple.vue` | - | - |
+| **TASK-070** | 📋 **TODO** | `CanvasView.vue`, `GroupNodeSimple.vue` | - | - |
+| **TASK-071** | 📋 **TODO** | `TaskNode.vue` | - | - |
+| ~~**TASK-072**~~ | ✅ **DONE** | `canvas.ts`, `GroupModal.vue`, `CanvasView.vue` | - | - |
+| **TASK-073** | 📋 **TODO** | `GroupNodeSimple.vue` | - | - |
+| ~~**TASK-074**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
+| **TASK-075** | 📋 **TODO** | `TaskNode.vue`, `TaskEditModal.vue` | - | - |
+| **TASK-076** | 📋 **TODO** | `InboxPanel.vue`, `CalendarInboxPanel.vue`, `ui.ts` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
 - [x] **TASK-068**: Streamline Canvas Group Header Design | **P1-HIGH** | ✅ DONE (Dec 28) - Moved all actions to context menu
+- [x] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** | ✅ DONE (Dec 28) - Solid border, increased opacity, shadow
+- [ ] **TASK-070**: Fix context menu in groups (wrong menu) | **P1-HIGH** | TODO
+- [ ] **TASK-071**: Fix task card text wrapping | **P1-HIGH** | TODO
+- [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 29)
+- [ ] **TASK-073**: Improve group outline styling | **P2-MEDIUM** | TODO
+- [x] **TASK-074**: Task node background blur | **P2-MEDIUM** | ✅ DONE (Dec 29)
+- [ ] **TASK-075**: Markdown support for task descriptions | **P2-MEDIUM** | TODO
+- [ ] **TASK-076**: Separate done filter (Canvas vs Calendar inbox) | **P1-HIGH** | TODO
 - [ ] **TASK-061**: Demo Content Guard Logger | **P0-CRITICAL** | PLANNED
 - [ ] **TASK-062**: Custom Confirmation Modals | **P0-CRITICAL** | 🔄 PARTIAL
 - ✅ **BUG-041**: Fix blurry text on canvas zoom | **P0-CRITICAL** | ✅ FIXED (Dec 28)
+- [ ] **BUG-042**: Task created from group context menu goes to inbox | **P1-HIGH** | TODO
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
-- [x] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** | ✅ DONE (Dec 28) - Solid border, increased opacity, shadow
 - ✅ **BUG-040**: Sidebar content disappearance fix | ✅ FIXED (Dec 28)
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
 - ✅ **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) | ✅ FIXED (Dec 27)
@@ -845,6 +860,132 @@ All header action buttons were removed and moved to the context menu for a clean
 
 **Files Modified**:
 - `src/components/canvas/GroupNodeSimple.vue`
+
+---
+
+### TASK-070: Fix Context Menu in Groups (📋 TODO)
+
+**Priority**: P1-HIGH
+
+**Problem**: When right-clicking inside a group, the wrong context menu appears ("Disconnect" / Edge menu) instead of the canvas context menu with group actions.
+
+**Goals**:
+- [ ] Right-click on group background shows canvas context menu with group actions
+- [ ] Context menu includes: Add Task, Edit Group, Settings, Power Mode, Collect Tasks, Delete
+- [ ] Ensure section/group is passed correctly to context menu
+
+**Files to Modify**:
+- `src/views/CanvasView.vue` - Context menu event handling
+- `src/components/canvas/GroupNodeSimple.vue` - Right-click event propagation
+
+---
+
+### TASK-071: Fix Task Card Text Wrapping (📋 TODO)
+
+**Priority**: P1-HIGH
+
+**Problem**: Text in task cards breaks horizontally (overflows) instead of wrapping vertically to multiple lines.
+
+**Goals**:
+- [ ] Long task titles wrap to multiple lines
+- [ ] Text stays within card boundaries
+- [ ] Card height adjusts to content
+
+**Files to Modify**:
+- `src/components/canvas/TaskNode.vue` - CSS word-wrap/overflow
+
+---
+
+### ~~TASK-072~~: Add Nested Groups Support (✅ DONE)
+
+**Priority**: P2-MEDIUM
+
+**Completed**: Dec 29, 2025
+
+**Problem**: Need to support groups within groups. Tasks inside nested groups should be visible to parent groups.
+
+**Implementation** (5 phases):
+- [x] Phase 1: Added `parentGroupId` optional field to `CanvasGroup` interface
+- [x] Phase 2: Updated `syncNodes()` in CanvasView.vue to render nested groups with Vue Flow's `parentNode`
+- [x] Phase 3: Added recursive task counting with `getTaskCountInGroupRecursive()` and `getChildGroups()`
+- [x] Phase 4: Added "Parent Group" dropdown to GroupModal.vue for creating/editing nested groups
+- [x] Phase 5: Added automatic child group reparenting on delete (prevents orphaned groups)
+
+**Files Modified**:
+- `src/stores/canvas.ts` - parentGroupId field, helper functions, delete cascade
+- `src/components/common/GroupModal.vue` - Parent group selector UI
+- `src/views/CanvasView.vue` - Nested group rendering with relative positioning
+
+---
+
+### TASK-073: Improve Group Outline Styling (📋 TODO)
+
+**Priority**: P2-MEDIUM
+
+**Problem**: Group outlines still need visual improvements for better visibility and aesthetics.
+
+**Goals**:
+- [ ] Better visual distinction between groups
+- [ ] Consistent styling across all group states
+- [ ] Consider dashed/dotted borders, gradients, or other effects
+
+**Files to Modify**:
+- `src/components/canvas/GroupNodeSimple.vue` - CSS styling
+
+---
+
+### ~~TASK-074~~: Task Node Background Blur (✅ DONE)
+
+**Priority**: P2-MEDIUM
+
+**Completed**: Dec 29, 2025
+
+**Problem**: Task nodes should blur the canvas dots/grid behind them for better readability.
+
+**Implementation**:
+- [x] Applied frosted glass effect with backdrop-filter blur(32px)
+- [x] Used 0.3 opacity so dots are visible but blurred (user preference)
+- [x] Added saturate(1.3) for subtle color enhancement
+
+**Files Modified**:
+- `src/components/canvas/TaskNode.vue` - CSS ::before pseudo-element with backdrop-filter
+
+---
+
+### TASK-075: Markdown Support for Task Descriptions (📋 TODO)
+
+**Priority**: P2-MEDIUM
+
+**Problem**: Task descriptions don't render markdown, specifically checkboxes like `- [ ]` for subtask checklists.
+
+**Goals**:
+- [ ] Render markdown in task descriptions on TaskNode
+- [ ] Support checkboxes `- [ ]` and `- [x]`
+- [ ] Support basic formatting (bold, italic, lists)
+- [ ] Interactive checkbox toggling
+
+**Files to Modify**:
+- `src/components/canvas/TaskNode.vue` - Markdown rendering
+- `src/components/modals/TaskEditModal.vue` - Markdown preview
+
+---
+
+### TASK-076: Separate Done Filter for Canvas vs Calendar Inbox (📋 TODO)
+
+**Priority**: P1-HIGH
+
+**Problem**: Need separate "show done tasks" filters for Canvas Inbox and Calendar Inbox so they can have independent visibility settings.
+
+**Goals**:
+- [ ] Add `showDoneInCanvasInbox` setting
+- [ ] Add `showDoneInCalendarInbox` setting
+- [ ] Each inbox panel respects its own setting
+- [ ] Settings persisted in UI store
+
+**Files to Modify**:
+- `src/components/panels/InboxPanel.vue` - Canvas inbox filter
+- `src/components/calendar/CalendarInboxPanel.vue` - Calendar inbox filter
+- `src/stores/ui.ts` - New filter state
 
 ---
 

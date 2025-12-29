@@ -18,6 +18,11 @@ interface DragDropState {
     isNodeDragging: Ref<boolean>
 }
 
+// TASK-072 FIX: Store starting positions for correct delta calculation
+// For nested sections, node.position is relative to parent, so we need to track
+// the starting position in the SAME coordinate system to calculate delta
+const dragStartPositions = new Map<string, { x: number; y: number }>()
+
 export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     const { taskStore, canvasStore, nodes, filteredTasks, withVueFlowErrorBoundary, syncNodes } = deps
     const { isNodeDragging } = state
@@ -57,16 +62,23 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         })
     }
 
+    // Helper: Check if a section is physically inside another section (for nested group detection)
+    const isSectionInsideSection = (inner: CanvasSection, outer: CanvasSection): boolean => {
+        // A section is "inside" another if its center is within the outer section's bounds
+        const innerCenterX = inner.position.x + (inner.position.width / 2)
+        const innerCenterY = inner.position.y + (inner.position.height / 2)
+
+        return (
+            innerCenterX >= outer.position.x &&
+            innerCenterX <= outer.position.x + outer.position.width &&
+            innerCenterY >= outer.position.y &&
+            innerCenterY <= outer.position.y + outer.position.height &&
+            inner.id !== outer.id  // Don't match self
+        )
+    }
+
     // Helper: Apply section properties to task
     const applySectionPropertiesToTask = (taskId: string, section: CanvasSection) => {
-        console.log('[applySectionPropertiesToTask] Called with:', {
-            taskId,
-            sectionName: section.name,
-            sectionType: section.type,
-            assignOnDrop: section.assignOnDrop,
-            propertyValue: section.propertyValue
-        })
-
         const updates: Partial<Task> = {}
 
         // 1. UNIFIED APPROACH: Check for explicit assignOnDrop settings first
@@ -91,7 +103,6 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             }
 
             if (Object.keys(updates).length > 0) {
-                console.log('[applySectionPropertiesToTask] Applying assignOnDrop updates:', updates)
                 taskStore.updateTaskWithUndo(taskId, updates)
                 return
             }
@@ -100,7 +111,6 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         // 2. AUTO-DETECT: If no assignOnDrop settings, try keyword detection on section name
         const keyword = detectPowerKeyword(section.name)
         if (keyword) {
-            console.log('[applySectionPropertiesToTask] Auto-detected keyword:', keyword)
 
             switch (keyword.category) {
                 case 'date':
@@ -117,7 +127,6 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             }
 
             if (Object.keys(updates).length > 0) {
-                console.log('[applySectionPropertiesToTask] Applying keyword-based updates:', updates)
                 taskStore.updateTaskWithUndo(taskId, updates)
                 return
             }
@@ -162,13 +171,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         const { node } = event
         isNodeDragging.value = true
 
-        if (node.id.startsWith('section-')) {
-            const sectionId = node.id.replace('section-', '')
-            const section = canvasStore.sections.find(s => s.id === sectionId)
-            if (section) {
-                console.log(`Started dragging section: ${section.name}`)
-            }
-        }
+        // TASK-072 FIX: Store starting position for accurate delta calculation
+        // This is critical for nested sections where node.position is relative to parent
+        dragStartPositions.set(node.id, { x: node.position.x, y: node.position.y })
     })
 
     // Handle node drag stop
@@ -193,55 +198,178 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     height: section.position.height
                 }
 
-                // Calculate position delta
-                const deltaX = node.position.x - oldBounds.x
-                const deltaY = node.position.y - oldBounds.y
+                // TASK-072 FIX: Calculate position delta using SAME coordinate system
+                // For nested sections, node.position is relative to parent, so we MUST use
+                // the stored start position (also relative) to get correct delta
+                const startPos = dragStartPositions.get(node.id) || { x: oldBounds.x, y: oldBounds.y }
+                const deltaX = node.position.x - startPos.x
+                const deltaY = node.position.y - startPos.y
 
-                // DEBUG: Log section bounds and all task positions
-                console.log('🔍 BUG-034 DEBUG: Section drag detected', {
-                    sectionId,
-                    oldBounds,
-                    newPosition: { x: node.position.x, y: node.position.y },
-                    delta: { deltaX, deltaY }
-                })
+                // Clean up the stored position
+                dragStartPositions.delete(node.id)
 
                 // BUG-034 FIX: Find tasks that are VISUALLY inside the section
-                // Use Vue Flow's parentNode relationship (set by syncNodes based on visual containment)
-                // This is more reliable than re-checking bounds against stored positions
+                // First try Vue Flow's parentNode relationship
                 const sectionNodeId = `section-${sectionId}`
-                const tasksInSection = nodes.value
+                let tasksInSection = nodes.value
                     .filter(n => n.parentNode === sectionNodeId && !n.id.startsWith('section-'))
                     .map(n => taskStore.tasks.find(t => t.id === n.id))
                     .filter((t): t is Task => t !== undefined && t.canvasPosition !== undefined)
 
-                console.log(`🔍 BUG-034: Found ${tasksInSection.length} child tasks for section "${section.name}"`,
-                    tasksInSection.map(t => ({ id: t.id, title: t.title?.substring(0, 15) })))
+                // TASK-072 FIX: For nested groups, Vue Flow assigns tasks to outermost container
+                // So parentNode check fails. Use physical containment as fallback.
+                // CRITICAL: Use node.position (Vue Flow's position) which is accurate
+                if (tasksInSection.length === 0) {
+                    // For nested sections, node.position is RELATIVE to parent
+                    // We need to calculate absolute position for bounds check
+                    let absoluteX = node.position.x
+                    let absoluteY = node.position.y
 
-                // Update section position in store
+                    if (node.parentNode) {
+                        // Find parent node in Vue Flow nodes array
+                        const parentNode = nodes.value.find(n => n.id === node.parentNode)
+                        if (parentNode) {
+                            absoluteX = parentNode.position.x + node.position.x
+                            absoluteY = parentNode.position.y + node.position.y
+                        }
+                    }
+
+                    const visualBounds = {
+                        x: absoluteX,
+                        y: absoluteY,
+                        width: oldBounds.width,
+                        height: oldBounds.height
+                    }
+
+                    // Create a temporary section-like object with correct visual bounds
+                    const visualSection = {
+                        ...section,
+                        position: visualBounds
+                    }
+
+                    tasksInSection = filteredTasks.value.filter(task => {
+                        if (!task.canvasPosition) return false
+                        return isTaskInSectionBounds(
+                            task.canvasPosition.x,
+                            task.canvasPosition.y,
+                            visualSection as typeof section
+                        )
+                    })
+                }
+
+                // TASK-072 FIX: Find nested sections (child groups) that should move with parent
+                // First try Vue Flow's parentNode relationship
+                let nestedSectionsInParent = nodes.value
+                    .filter(n => n.parentNode === sectionNodeId && n.id.startsWith('section-'))
+                    .map(n => n.id.replace('section-', ''))
+
+                // TASK-072 FIX: If no nested sections found via parentNode, use physical containment
+                // This handles cases where groups are visually nested but don't have parentGroupId set
+                if (nestedSectionsInParent.length === 0 && section) {
+                    nestedSectionsInParent = canvasStore.sections
+                        .filter(s => s.id !== sectionId && isSectionInsideSection(s, section))
+                        .map(s => s.id)
+                }
+
+                // TASK-072 FIX: For nested sections, node.position is RELATIVE to parent
+                // But the store expects ABSOLUTE positions. Convert before storing.
+                let storeX = node.position.x
+                let storeY = node.position.y
+                if (node.parentNode) {
+                    const parentNode = nodes.value.find(n => n.id === node.parentNode)
+                    if (parentNode) {
+                        storeX = parentNode.position.x + node.position.x
+                        storeY = parentNode.position.y + node.position.y
+                    }
+                }
+
+                // Update section position in store with ABSOLUTE coordinates
                 canvasStore.updateSectionWithUndo(sectionId, {
                     position: {
-                        x: node.position.x,
-                        y: node.position.y,
+                        x: storeX,
+                        y: storeY,
                         width: node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : oldBounds.width,
                         height: node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : oldBounds.height
                     }
                 })
 
+                // TASK-072 FIX: Update nested section positions to maintain relative positioning
+                // CRITICAL: Find tasks FIRST using OLD position, THEN update section, THEN move tasks
+                nestedSectionsInParent.forEach(nestedSectionId => {
+                    const nestedSection = canvasStore.sections.find(s => s.id === nestedSectionId)
+                    if (nestedSection) {
+                        // STEP 1: Find tasks PHYSICALLY inside nested section BEFORE updating position
+                        // This is critical - we need OLD section bounds to match OLD task positions
+                        const tasksInNestedSection = filteredTasks.value.filter(task => {
+                            if (!task.canvasPosition) return false
+                            return isTaskInSectionBounds(
+                                task.canvasPosition.x,
+                                task.canvasPosition.y,
+                                nestedSection  // Still at OLD position here
+                            )
+                        })
+
+                        // STEP 2: NOW update nested section position
+                        canvasStore.updateSection(nestedSectionId, {
+                            position: {
+                                ...nestedSection.position,
+                                x: nestedSection.position.x + deltaX,
+                                y: nestedSection.position.y + deltaY
+                            }
+                        })
+
+                        // STEP 3: Move the tasks we found earlier
+                        tasksInNestedSection.forEach(task => {
+                            if (task.canvasPosition) {
+                                taskStore.updateTask(task.id, {
+                                    canvasPosition: {
+                                        x: task.canvasPosition.x + deltaX,
+                                        y: task.canvasPosition.y + deltaY
+                                    }
+                                })
+                            }
+                        })
+                    }
+                })
+
+                // TASK-072 FIX: Collect IDs of tasks already moved via nested sections to avoid double-moving
+                const tasksAlreadyMoved = new Set<string>()
+                nestedSectionsInParent.forEach(nestedSectionId => {
+                    const nestedSection = canvasStore.sections.find(s => s.id === nestedSectionId)
+                    if (nestedSection) {
+                        filteredTasks.value.forEach(task => {
+                            if (task.canvasPosition && isTaskInSectionBounds(task.canvasPosition.x, task.canvasPosition.y, nestedSection)) {
+                                tasksAlreadyMoved.add(task.id)
+                            }
+                        })
+                    }
+                })
+
                 // Update all child task positions to maintain relative positioning
+                // BUT skip tasks that were already moved as part of nested sections
                 tasksInSection.forEach(task => {
-                    if (task.canvasPosition) {
+                    if (task.canvasPosition && !tasksAlreadyMoved.has(task.id)) {
+                        const newX = task.canvasPosition.x + deltaX
+                        const newY = task.canvasPosition.y + deltaY
                         taskStore.updateTaskWithUndo(task.id, {
                             canvasPosition: {
-                                x: task.canvasPosition.x + deltaX,
-                                y: task.canvasPosition.y + deltaY
+                                x: newX,
+                                y: newY
                             }
                         })
                     }
                 })
 
                 console.log(`Section dragged: ${tasksInSection.length} tasks moved with it`)
+
+                // TASK-072 FIX: Sync Vue Flow nodes after updating task positions in store
+                // This ensures the visual position matches the store position
+                syncNodes()
             }
         } else {
+            // TASK-072: Clean up stored start position for task nodes too
+            dragStartPositions.delete(node.id)
+
             // For task nodes, update position with improved section handling
             if (node.parentNode) {
                 const sectionId = node.parentNode.replace('section-', '')
@@ -292,11 +420,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             }
 
             const containingSection = getContainingSection(checkX, checkY)
-            console.log('[handleNodeDragStop] Found section:', containingSection ? { name: containingSection.name, type: containingSection.type } : 'null')
 
             if (containingSection) {
                 if (containingSection.type !== 'custom' || shouldUseSmartGroupLogic(containingSection.name)) {
-                    console.log('[handleNodeDragStop] Applying properties for section:', containingSection.name)
                     applySectionPropertiesToTask(node.id, containingSection)
                 }
             }
@@ -320,16 +446,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         }, 50)
     })
 
-    // Handle node drag
-    const handleNodeDrag = (event: { node: Node }) => {
-        const { node } = event
-        if (node.id.startsWith('section-')) {
-            const sectionId = node.id.replace('section-', '')
-            const section = canvasStore.sections.find(s => s.id === sectionId)
-            if (section) {
-                console.log(`Dragging section: ${section.name}`)
-            }
-        }
+    // Handle node drag (continuous during drag - kept lightweight)
+    const handleNodeDrag = (_event: { node: Node }) => {
+        // No-op for now - heavy operations should be in handleNodeDragStop
     }
 
     return {

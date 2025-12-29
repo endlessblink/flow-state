@@ -1319,7 +1319,17 @@ export const useCanvasStore = defineStore('canvas', () => {
     const taskCenterX = task.canvasPosition.x + taskWidth / 2
     const taskCenterY = task.canvasPosition.y + taskHeight / 2
 
-    return isPointInGroup(taskCenterX, taskCenterY, group)
+    // TASK-072 FIX: More forgiving containment - check if top-left corner OR center is inside
+    // This prevents edge cases where task is visually inside but center is outside bounds
+    const isInsideByCorner = (
+      task.canvasPosition.x >= group.position.x &&
+      task.canvasPosition.x <= group.position.x + group.position.width &&
+      task.canvasPosition.y >= group.position.y &&
+      task.canvasPosition.y <= group.position.y + group.position.height
+    )
+    const isInsideByCenter = isPointInGroup(taskCenterX, taskCenterY, group)
+
+    return isInsideByCorner || isInsideByCenter
   }
 
   // Check if task is logically associated with a group (matches criteria)
@@ -1332,7 +1342,19 @@ export const useCanvasStore = defineStore('canvas', () => {
     // When a group is nested inside another, tasks should be counted by position,
     // not by logical properties. This allows manual organization within nested groups.
     if (group.parentGroupId) {
-      return allTasks.filter(task => isTaskInGroup(task, group))
+      const result = allTasks.filter(task => isTaskInGroup(task, group))
+      console.log(`🔍 [NESTED-GROUP] "${group.name}" (parent: ${group.parentGroupId})`, {
+        groupBounds: group.position,
+        totalTasks: allTasks.length,
+        tasksWithPosition: allTasks.filter(t => t.canvasPosition).length,
+        matchingTasks: result.length,
+        taskPositions: allTasks.filter(t => t.canvasPosition).map(t => ({
+          id: t.id.slice(0, 8),
+          title: t.title?.slice(0, 20),
+          pos: t.canvasPosition
+        }))
+      })
+      return result
     }
 
     // For smart groups (priority, status, project), include matching tasks that are ON CANVAS

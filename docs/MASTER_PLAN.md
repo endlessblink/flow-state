@@ -1,4 +1,4 @@
-**Last Updated**: December 29, 2025 (TASK-072 Nested Groups & TASK-074 Blur Effect)
+**Last Updated**: December 29, 2025 (TASK-077 Context Menu Glassmorphism)
 **Version**: 5.10 (Canvas Groups Enhanced)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -717,6 +717,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-074**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | **TASK-075** | 📋 **TODO** | `TaskNode.vue`, `TaskEditModal.vue` | - | - |
 | **TASK-076** | 📋 **TODO** | `InboxPanel.vue`, `CalendarInboxPanel.vue`, `ui.ts` | - | - |
+| ~~**TASK-077**~~ | ✅ **DONE** | `CanvasContextMenu.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -728,6 +729,7 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [ ] **TASK-073**: Improve group outline styling | **P2-MEDIUM** | TODO
 - [x] **TASK-074**: Task node background blur | **P2-MEDIUM** | ✅ DONE (Dec 29)
+- [x] **TASK-077**: Context menu glassmorphism styling | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [ ] **TASK-075**: Markdown support for task descriptions | **P2-MEDIUM** | TODO
 - [ ] **TASK-076**: Separate done filter (Canvas vs Calendar inbox) | **P1-HIGH** | TODO
 - [ ] **TASK-061**: Demo Content Guard Logger | **P0-CRITICAL** | PLANNED

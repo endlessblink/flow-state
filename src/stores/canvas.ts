@@ -1328,6 +1328,13 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const getTasksInGroupBounds = (group: CanvasGroup, allTasks: Task[]): Task[] => {
+    // TASK-072 FIX: Nested groups should use physical containment
+    // When a group is nested inside another, tasks should be counted by position,
+    // not by logical properties. This allows manual organization within nested groups.
+    if (group.parentGroupId) {
+      return allTasks.filter(task => isTaskInGroup(task, group))
+    }
+
     // For smart groups (priority, status, project), include matching tasks that are ON CANVAS
     // FIXED: Only include tasks with isInInbox === false (explicitly on canvas)
     // FIXED Dec 5, 2025: Also check canvasPosition to match syncNodes() filter

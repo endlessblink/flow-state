@@ -21,6 +21,7 @@ interface ActionsState {
     showCanvasContextMenu: Ref<boolean>
     canvasContextMenuX: Ref<number>
     canvasContextMenuY: Ref<number>
+    canvasContextSection: Ref<CanvasSection | null>
 
     // Group Modals
     isGroupModalOpen: Ref<boolean>
@@ -259,6 +260,7 @@ export function useCanvasActions(
     }
 
     // --- Node Context Menu (Sections) ---
+    // TASK-070: Show canvas context menu with group actions instead of minimal "Delete Section" menu
 
     const handleNodeContextMenu = (event: { node: Node; event: MouseEvent | TouchEvent }) => {
         event.event.preventDefault()
@@ -267,12 +269,17 @@ export function useCanvasActions(
         if (!event.node.id.startsWith('section-')) return
 
         const mouseEvent = event.event as MouseEvent
-        state.nodeContextMenuX.value = mouseEvent.clientX || 0
-        state.nodeContextMenuY.value = mouseEvent.clientY || 0
-        state.selectedNode.value = event.node
-        state.showNodeContextMenu.value = true
+        const sectionId = event.node.id.replace('section-', '')
+        const section = canvasStore.sections.find(s => s.id === sectionId)
 
-        deps.closeCanvasContextMenu()
+        if (section) {
+            // Show the canvas context menu with group actions (TASK-070)
+            state.canvasContextMenuX.value = mouseEvent.clientX || 0
+            state.canvasContextMenuY.value = mouseEvent.clientY || 0
+            state.canvasContextSection.value = section
+            state.showCanvasContextMenu.value = true
+        }
+
         deps.closeEdgeContextMenu()
     }
 

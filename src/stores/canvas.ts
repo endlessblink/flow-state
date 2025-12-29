@@ -97,6 +97,8 @@ export interface CanvasGroup {
   assignOnDrop?: AssignOnDropSettings
   // NEW: Collect filter settings for magnet button
   collectFilter?: CollectFilterSettings
+  // TASK-072: Nested groups support - optional parent group ID
+  parentGroupId?: string | null
 }
 
 // Backward compatibility alias - keeping CanvasSection as alias for CanvasGroup
@@ -427,6 +429,17 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
     const index = groups.value.findIndex(g => g.id === id)
     if (index > -1) {
+      // TASK-072: Reparent child groups before deleting
+      const groupToDelete = groups.value[index]
+      const childGroups = groups.value.filter(g => g.parentGroupId === id)
+      if (childGroups.length > 0) {
+        console.log(`[canvas.ts] Reparenting ${childGroups.length} child groups from deleted group ${id}`)
+        // Reparent to the deleted group's parent (or null for top-level)
+        childGroups.forEach(child => {
+          child.parentGroupId = groupToDelete.parentGroupId || null
+        })
+      }
+
       // 1. Remove from memory (Instant UI update)
       groups.value.splice(index, 1)
 
@@ -1419,6 +1432,35 @@ export const useCanvasStore = defineStore('canvas', () => {
     return associatedTasks.length
   }
 
+  // TASK-072: Helper to get direct child groups
+  const getChildGroups = (parentGroupId: string): CanvasGroup[] => {
+    return groups.value.filter(g => g.parentGroupId === parentGroupId)
+  }
+
+  // TASK-072: Recursive task counting for nested groups
+  const getTaskCountInGroupRecursive = (groupId: string, allTasks: Task[], visited = new Set<string>()): number => {
+    // Prevent infinite loops from circular references
+    if (visited.has(groupId)) {
+      console.warn(`[canvas.ts] Circular reference detected in group hierarchy: ${groupId}`)
+      return 0
+    }
+    visited.add(groupId)
+
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) return 0
+
+    // Count direct tasks in this group
+    let count = getTaskCountInGroup(group, allTasks)
+
+    // Add tasks from child groups recursively
+    const children = getChildGroups(groupId)
+    for (const child of children) {
+      count += getTaskCountInGroupRecursive(child.id, allTasks, visited)
+    }
+
+    return count
+  }
+
   // Backward compatibility aliases for magnetic zone utilities
   const isPointInSection = isPointInGroup
   const isTaskInSection = isTaskInGroup
@@ -1931,6 +1973,8 @@ export const useCanvasStore = defineStore('canvas', () => {
     findNearestGroup,            // Primary method name
     getMagneticSnapPosition,
     getTaskCountInGroup,         // Primary method name
+    getChildGroups,              // TASK-072: Get direct child groups
+    getTaskCountInGroupRecursive, // TASK-072: Recursive counting for nested groups
     getCollapsedTaskCount,
 
     // Magnetic zone backward compatibility aliases

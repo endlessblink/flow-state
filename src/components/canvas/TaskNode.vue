@@ -359,9 +359,10 @@ const formattedDuration = computed(() => {
   border: none !important;
   outline: none !important;
   border-radius: var(--radius-xl);
-  min-width: 280px;
-  max-width: 420px;
-  width: auto;
+  /* TASK-071: Fixed width to force vertical text wrapping instead of horizontal expansion */
+  width: 280px;
+  min-width: 200px;
+  max-width: 320px;
   position: relative;
   transition: all var(--duration-normal) var(--spring-smooth);
   cursor: grab;
@@ -387,7 +388,7 @@ const formattedDuration = computed(() => {
   /* Removed 3D transforms to fix blurriness */
 }
 
-/* Blurred background layer - keeps text sharp */
+/* TASK-074: Blurred background layer - blurs canvas dots behind task cards */
 .task-node::before {
   content: '';
   position: absolute;
@@ -395,9 +396,11 @@ const formattedDuration = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 20, 30, 0.4);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  /* TASK-074: Frosted glass effect - dots visible but blurred */
+  background: rgba(15, 20, 30, 0.3);
+  /* Increased blur to properly blur canvas dots */
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
   border-radius: var(--radius-xl);
   border: 1px solid var(--glass-border);
   z-index: -1;
@@ -740,16 +743,19 @@ body.dragging-active .task-node .vue-flow__handle {
   margin-bottom: var(--space-3);
   margin-top: var(--space-1);
   line-height: 1.4;
+  /* TASK-071: Force text to break and wrap vertically */
   word-wrap: break-word;
   overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
   hyphens: auto;
   text-shadow: 0 1px 2px var(--shadow-subtle);
   /* Allow multi-line titles with graceful truncation */
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  max-height: 3.6em; /* 3 lines at 1.4 line-height */
+  max-height: 5.6em; /* 4 lines at 1.4 line-height */
 }
 
 .task-metadata {

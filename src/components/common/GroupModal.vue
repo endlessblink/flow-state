@@ -68,6 +68,27 @@
             </div>
           </div>
         </div>
+
+        <!-- TASK-072: Parent Group Selector for Nested Groups -->
+        <div class="form-group">
+          <label class="form-label">Parent Group (Optional)</label>
+          <select
+            v-model="groupData.parentGroupId"
+            class="parent-select"
+          >
+            <option :value="null">None (Top Level)</option>
+            <option
+              v-for="parentOption in availableParentGroups"
+              :key="parentOption.id"
+              :value="parentOption.id"
+            >
+              {{ parentOption.name }}
+            </option>
+          </select>
+          <p class="form-hint">
+            Nest this group inside another group for better organization.
+          </p>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -143,7 +164,8 @@ const isEditing = computed(() => !!props.group)
 
 const groupData = ref({
   name: '',
-  color: '#3b82f6'
+  color: '#3b82f6',
+  parentGroupId: null as string | null  // TASK-072: Parent group for nesting
 })
 
 const customColor = ref('#3b82f6')
@@ -172,6 +194,29 @@ const colorPresets = [
   '#71717a', // neutral
 ]
 
+// TASK-072: Get available parent groups (exclude self and descendants to prevent cycles)
+const availableParentGroups = computed(() => {
+  const allSections = canvasStore.sections || []
+
+  // If editing, exclude self and all descendants
+  if (props.group) {
+    const getDescendantIds = (parentId: string, visited = new Set<string>()): Set<string> => {
+      if (visited.has(parentId)) return visited
+      visited.add(parentId)
+
+      const children = allSections.filter((s: CanvasSection) => s.parentGroupId === parentId)
+      children.forEach((child: CanvasSection) => getDescendantIds(child.id, visited))
+      return visited
+    }
+
+    const excludeIds = getDescendantIds(props.group.id)
+    return allSections.filter((s: CanvasSection) => !excludeIds.has(s.id))
+  }
+
+  // For new groups, all existing groups are valid parents
+  return allSections
+})
+
 const selectColor = (color: string) => {
   groupData.value.color = color
   customColor.value = color
@@ -196,7 +241,8 @@ const saveGroup = () => {
     // Update existing group
     canvasStore.updateSection(props.group.id, {
       name: groupData.value.name.trim(),
-      color: groupData.value.color
+      color: groupData.value.color,
+      parentGroupId: groupData.value.parentGroupId  // TASK-072: Update parent group
     })
 
     const updatedGroup = canvasStore.sections.find((s: { id: string }) => s.id === props.group!.id)
@@ -217,7 +263,8 @@ const saveGroup = () => {
       color: groupData.value.color,
       layout: 'grid',
       isVisible: true,
-      isCollapsed: false
+      isCollapsed: false,
+      parentGroupId: groupData.value.parentGroupId  // TASK-072: Set parent group
     })
 
     emit('created', newGroup)
@@ -231,14 +278,16 @@ watch(() => props.group, (newGroup) => {
   if (newGroup) {
     groupData.value = {
       name: newGroup.name,
-      color: newGroup.color
+      color: newGroup.color,
+      parentGroupId: newGroup.parentGroupId || null  // TASK-072: Load parent group
     }
     customColor.value = newGroup.color
   } else {
     // Reset for new group creation
     groupData.value = {
       name: '',
-      color: '#3b82f6'
+      color: '#3b82f6',
+      parentGroupId: null  // TASK-072: Default no parent
     }
     customColor.value = '#3b82f6'
   }
@@ -519,5 +568,47 @@ watch(() => props.isOpen, async (isOpen) => {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
+}
+
+/* TASK-072: Parent group selector styling */
+.parent-select {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  padding-right: var(--space-8);
+}
+
+.parent-select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.parent-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+}
+
+.parent-select option {
+  background: #1a1a1a;
+  color: var(--text-primary);
+  padding: var(--space-2);
+}
+
+.form-hint {
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
 }
 </style>

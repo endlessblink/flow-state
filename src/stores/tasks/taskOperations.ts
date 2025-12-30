@@ -1,6 +1,7 @@
 import { type Ref } from 'vue'
 import type { Task, Subtask, TaskInstance, Project } from '@/types/tasks'
 import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
+import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { STORAGE_FLAGS } from '@/config/database'
 import {
     deleteTask as _deleteIndividualTask,
@@ -26,6 +27,11 @@ export function useTaskOperations(
     const projectStore = useProjectStore()
 
     const createTask = async (taskData: Partial<Task>) => {
+        // TASK-061: Demo content guard - warn in dev mode
+        if (taskData.title) {
+            guardTaskCreation(taskData.title)
+        }
+
         const taskId = Date.now().toString()
         manualOperationInProgress.value = true
 

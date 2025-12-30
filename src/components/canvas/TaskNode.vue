@@ -28,11 +28,6 @@
         <Timer :size="14" />
       </div>
 
-      <!-- Done Indicator Badge (BUG-045) -->
-      <div v-if="task?.status === 'done' && !isTimerActive" class="done-indicator" title="Completed">
-        <Check :size="14" />
-      </div>
-
       <!-- Title -->
       <div class="task-title" :class="titleAlignmentClasses">
         {{ task?.title || 'Untitled Task' }}
@@ -99,6 +94,11 @@
         >
           <component :is="durationIcon" :size="12" />
           {{ formattedDuration }}
+        </span>
+        <!-- Done Indicator Badge (BUG-045) - small badge next to duration -->
+        <span v-if="task?.status === 'done'" class="done-badge" title="Completed">
+          <Check :size="12" />
+          Done
         </span>
       </div>
     </div>
@@ -638,35 +638,25 @@ body.dragging-active .task-node .vue-flow__handle {
   flex-shrink: 0;
 }
 
-/* Done Indicator Styles (BUG-045) */
-.done-indicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
-  background: #10b981; /* Green for completion */
-  color: white;
+/* Done Badge Styles (BUG-045) - small badge in metadata row */
+.done-badge {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 5;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
-  border: 2px solid white;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: subpixel-antialiased;
-  padding: 0;
-  margin: 0;
-  line-height: 1;
+  gap: var(--space-1);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.done-indicator svg {
-  width: 14px !important;
-  height: 14px !important;
-  display: block;
-  margin: 0;
-  padding: 0;
+.done-badge svg {
+  width: 12px !important;
+  height: 12px !important;
   flex-shrink: 0;
 }
 

@@ -348,28 +348,28 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 if (updatedSection && !updatedSection.parentGroupId) {
                     let containingParent: CanvasSection | null = null
 
-                    canvasStore.sections.forEach(potentialParent => {
-                        if (potentialParent.id === sectionId) return  // Skip self
-                        if (potentialParent.parentGroupId === sectionId) return  // Skip our children
+                        (canvasStore.sections as CanvasSection[]).forEach(potentialParent => {
+                            if (potentialParent.id === sectionId) return  // Skip self
+                            if (potentialParent.parentGroupId === sectionId) return  // Skip our children
 
-                        const parentArea = potentialParent.position.width * potentialParent.position.height
-                        if (parentArea <= sectionArea) return  // Parent must be bigger
+                            const parentArea = potentialParent.position.width * potentialParent.position.height
+                            if (parentArea <= sectionArea) return  // Parent must be bigger
 
-                        // Check if we're fully inside this potential parent
-                        const isInside = (
-                            absoluteX >= potentialParent.position.x &&
-                            absoluteY >= potentialParent.position.y &&
-                            absoluteX + oldBounds.width <= potentialParent.position.x + potentialParent.position.width &&
-                            absoluteY + oldBounds.height <= potentialParent.position.y + potentialParent.position.height
-                        )
+                            // Check if we're fully inside this potential parent
+                            const isInside = (
+                                absoluteX >= potentialParent.position.x &&
+                                absoluteY >= potentialParent.position.y &&
+                                absoluteX + oldBounds.width <= potentialParent.position.x + potentialParent.position.width &&
+                                absoluteY + oldBounds.height <= potentialParent.position.y + potentialParent.position.height
+                            )
 
-                        if (isInside) {
-                            // Prefer smallest containing parent (most immediate)
-                            if (!containingParent || parentArea < (containingParent.position.width * containingParent.position.height)) {
-                                containingParent = potentialParent
+                            if (isInside) {
+                                // Prefer smallest containing parent (most immediate)
+                                if (!containingParent || parentArea < (containingParent.position.width * containingParent.position.height)) {
+                                    containingParent = potentialParent
+                                }
                             }
-                        }
-                    })
+                        })
 
                     if (containingParent) {
                         console.log(`%c[TASK-072] Setting parentGroupId: "${section.name}" is now child of "${containingParent.name}"`, 'color: #FF9800; font-weight: bold')

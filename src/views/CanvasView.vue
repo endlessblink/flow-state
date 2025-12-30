@@ -3008,8 +3008,13 @@ onMounted(async () => {
   canvasStore.initializeDefaultSections()
 
   // TASK-072: Restore saved viewport position
+  // BUG-048 FIX: Set hasInitialFit BEFORE applying viewport to prevent auto-centering
+  // from overriding the restored viewport position when nodesInitialized fires
   const viewportRestored = await canvasStore.loadSavedViewport()
   if (viewportRestored) {
+    // Prevent the auto-centering watcher from running
+    hasInitialFit.value = true
+
     // Apply restored viewport to Vue Flow after a short delay to ensure it's ready
     setTimeout(() => {
       const savedViewport = canvasStore.viewport
@@ -3018,7 +3023,10 @@ onMounted(async () => {
         y: savedViewport.y,
         zoom: savedViewport.zoom
       })
-      console.log('🔭 [TASK-072] Viewport applied to Vue Flow:', savedViewport)
+      console.log('🔭 [BUG-048] Viewport restored and applied:', savedViewport)
+      // Mark canvas as ready since we have a saved viewport
+      isCanvasReady.value = true
+      isVueFlowReady.value = true
     }, 100)
   }
 

@@ -96,8 +96,35 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         }
     }
 
+    // BUG-047 FIX: Helper to get all ancestor group IDs for a given group
+    // This is needed to update parent groups when a child's count changes
+    const getAncestorGroupIds = (groupId: string, visited = new Set<string>()): string[] => {
+        if (visited.has(groupId)) return [] // Prevent infinite loops
+        visited.add(groupId)
+
+        const group = canvasStore.groups.find(g => g.id === groupId)
+        if (!group || !group.parentGroupId) return []
+
+        const ancestors: string[] = [group.parentGroupId]
+        ancestors.push(...getAncestorGroupIds(group.parentGroupId, visited))
+        return ancestors
+    }
+
+    // BUG-047 FIX: Update a single section's task count by mutating node.data
+    const updateSingleSectionCount = (sectionId: string, tasks: Task[]) => {
+        const sectionNodeId = `section-${sectionId}`
+        const newCount = canvasStore.getTaskCountInGroupRecursive(sectionId, tasks)
+
+        // MUTATE the existing node.data to maintain Vue Flow reactivity
+        const node = nodes.value.find(n => n.id === sectionNodeId)
+        if (node && node.data) {
+            node.data.taskCount = newCount
+            console.log(`[BUG-047] Updated "${node.data?.name || sectionId}" taskCount: ${newCount}`)
+        }
+    }
+
     // TASK-072 FIX: Update section task counts without calling syncNodes()
-    // This is called after a task moves between sections to update the visual count
+    // BUG-047 FIX: Also update all ancestor groups to reflect recursive counting
     //
     // CRITICAL INSIGHT from Vue Flow docs (https://github.com/bcakmakoglu/vue-flow/discussions/920):
     // "useNode returns us the node object straight from the state - since the node obj is reactive,
@@ -108,32 +135,25 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     const updateSectionTaskCounts = (oldSectionId?: string, newSectionId?: string) => {
         const tasks = filteredTasks.value || []
 
-        // Update old section's count (if task was moved out)
+        // Collect all sections that need updating (including ancestors)
+        const sectionsToUpdate = new Set<string>()
+
+        // Update old section and its ancestors (if task was moved out)
         if (oldSectionId) {
-            const oldSectionNodeId = `section-${oldSectionId}`
-            const newCount = canvasStore.getTaskCountInGroupRecursive(oldSectionId, tasks)
-
-            // TASK-072 FIX: MUTATE the existing node.data, don't replace the node
-            // This maintains the reactive reference that useNode() tracks
-            const node = nodes.value.find(n => n.id === oldSectionNodeId)
-            if (node && node.data) {
-                node.data.taskCount = newCount
-                console.log(`[TASK-072] MUTATED "${node.data?.name || oldSectionId}" taskCount: ${newCount}`)
-            }
+            sectionsToUpdate.add(oldSectionId)
+            getAncestorGroupIds(oldSectionId).forEach(id => sectionsToUpdate.add(id))
         }
 
-        // Update new section's count (if task was moved in)
+        // Update new section and its ancestors (if task was moved in)
         if (newSectionId) {
-            const newSectionNodeId = `section-${newSectionId}`
-            const newCount = canvasStore.getTaskCountInGroupRecursive(newSectionId, tasks)
-
-            // TASK-072 FIX: MUTATE the existing node.data, don't replace the node
-            const node = nodes.value.find(n => n.id === newSectionNodeId)
-            if (node && node.data) {
-                node.data.taskCount = newCount
-                console.log(`[TASK-072] MUTATED "${node.data?.name || newSectionId}" taskCount: ${newCount}`)
-            }
+            sectionsToUpdate.add(newSectionId)
+            getAncestorGroupIds(newSectionId).forEach(id => sectionsToUpdate.add(id))
         }
+
+        // BUG-047 FIX: Update all affected sections in one pass
+        sectionsToUpdate.forEach(sectionId => {
+            updateSingleSectionCount(sectionId, tasks)
+        })
     }
 
     // Helper: Apply section properties to task

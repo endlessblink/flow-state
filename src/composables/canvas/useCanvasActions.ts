@@ -56,7 +56,8 @@ export function useCanvasActions(
 ) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { getSelectedNodes } = useVueFlow()
+    // BUG-044 FIX: Get viewport directly from Vue Flow (not stale store value)
+    const { getSelectedNodes, viewport: vfViewport } = useVueFlow()
 
     // --- Task Creation ---
 
@@ -71,12 +72,13 @@ export function useCanvasActions(
                 throw new Error('Vue Flow DOM element (.vue-flow) not found')
             }
 
-            // ✅ CALCULATE CANVAS COORDINATES
+            // ✅ BUG-044 FIX: Use Vue Flow's actual viewport (not stale store viewport)
+            const vp = vfViewport.value
             const rect = vueFlowElement.getBoundingClientRect()
-            const canvasX = (state.canvasContextMenuX.value - rect.left - deps.viewport.value.x) / deps.viewport.value.zoom
-            const canvasY = (state.canvasContextMenuY.value - rect.top - deps.viewport.value.y) / deps.viewport.value.zoom
+            const canvasX = (state.canvasContextMenuX.value - rect.left - (vp?.x || 0)) / (vp?.zoom || 1)
+            const canvasY = (state.canvasContextMenuY.value - rect.top - (vp?.y || 0)) / (vp?.zoom || 1)
 
-            console.log(`📐 ${functionName}: Calculated canvas position: x=${canvasX}, y=${canvasY}`)
+            console.log(`📐 ${functionName}: Calculated canvas position: x=${canvasX}, y=${canvasY} (viewport: x=${vp?.x}, y=${vp?.y}, zoom=${vp?.zoom})`)
 
             if (!Number.isFinite(canvasX) || !Number.isFinite(canvasY)) {
                 throw new Error(`Invalid calculated coordinates: x=${canvasX}, y=${canvasY}`)

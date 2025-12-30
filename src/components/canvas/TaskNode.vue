@@ -28,6 +28,11 @@
         <Timer :size="14" />
       </div>
 
+      <!-- Done Indicator Badge (BUG-045) -->
+      <div v-if="task?.status === 'done' && !isTimerActive" class="done-indicator" title="Completed">
+        <Check :size="14" />
+      </div>
+
       <!-- Title -->
       <div class="task-title" :class="titleAlignmentClasses">
         {{ task?.title || 'Untitled Task' }}
@@ -125,7 +130,7 @@
 <script setup lang="ts">
 import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
-import { Calendar, Timer, Zap, Clock, HelpCircle } from 'lucide-vue-next'
+import { Calendar, Timer, Zap, Clock, HelpCircle, Check } from 'lucide-vue-next'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
@@ -367,11 +372,14 @@ const formattedDuration = computed(() => {
   transition: all var(--duration-normal) var(--spring-smooth);
   cursor: grab;
   user-select: none;
-  /* TASK-079: Enhanced shadow with subtle outer glow for better visibility on dark bg */
+  /* TASK-079: High-visibility shadow with strong white halo */
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.15),
-    0 12px 24px var(--shadow-md),
-    0 6px 12px var(--shadow-md);
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    /* ZOOM FIX: Very strong white halo for zoom-out visibility */
+    0 0 80px 20px rgba(255, 255, 255, 0.25),
+    /* White outline for separation */
+    0 0 0 1px rgba(255, 255, 255, 0.20);
 
   box-sizing: border-box;
   display: block;
@@ -390,7 +398,7 @@ const formattedDuration = computed(() => {
   /* Removed 3D transforms to fix blurriness */
 }
 
-/* TASK-074 + TASK-079: Blurred background layer with enhanced border visibility */
+/* TASK-074 + TASK-079: High-visibility background layer */
 .task-node::before {
   content: '';
   position: absolute;
@@ -398,26 +406,27 @@ const formattedDuration = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  /* TASK-074: Frosted glass effect - dots visible but blurred */
-  /* TASK-079: Slightly darker background for better contrast */
-  background: rgba(20, 25, 35, 0.45);
+  /* TASK-079: Brighter background for zoom-out visibility */
+  background: rgba(42, 45, 55, 0.95);
   /* Increased blur to properly blur canvas dots */
   backdrop-filter: blur(32px) saturate(1.3);
   -webkit-backdrop-filter: blur(32px) saturate(1.3);
   border-radius: var(--radius-xl);
-  /* TASK-079: Enhanced border for better visibility on dark backgrounds */
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  /* TASK-079: Thick visible border for zoom-out */
+  border: 2px solid rgba(255, 255, 255, 0.25);
   z-index: -1;
 }
 
 .task-node:hover {
   border: none;
   transform: translate3d(0, -2px, 0);
-  /* TASK-079: Enhanced hover shadow with brighter outline */
+  /* TASK-079: High-visibility enhanced hover shadow */
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.22),
-    0 16px 32px var(--shadow-strong),
-    0 8px 16px var(--shadow-md);
+    0 20px 56px rgba(0, 0, 0, 0.55),
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    /* ZOOM FIX: Very strong halo on hover */
+    0 0 100px 25px rgba(255, 255, 255, 0.35),
+    0 0 0 2px rgba(255, 255, 255, 0.30);
   cursor: grab;
 }
 
@@ -621,6 +630,38 @@ body.dragging-active .task-node .vue-flow__handle {
 }
 
 .timer-indicator svg {
+  width: 14px !important;
+  height: 14px !important;
+  display: block;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* Done Indicator Styles (BUG-045) */
+.done-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #10b981; /* Green for completion */
+  color: white;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
+  border: 2px solid white;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: subpixel-antialiased;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+}
+
+.done-indicator svg {
   width: 14px !important;
   height: 14px !important;
   display: block;

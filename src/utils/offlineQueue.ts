@@ -488,6 +488,12 @@ export class OfflineQueue {
     if (!operation.documentData) {
       throw new Error('Create operation requires document data')
     }
+    if (!operation.documentId) {
+      throw new Error('Create operation requires documentId')
+    }
+    if (!this.db) {
+      throw new Error('Database not initialized')
+    }
 
     try {
       await this.db.save(operation.documentId, operation.documentData)
@@ -505,6 +511,12 @@ export class OfflineQueue {
     if (!operation.documentData) {
       throw new Error('Update operation requires document data')
     }
+    if (!operation.documentId) {
+      throw new Error('Update operation requires documentId')
+    }
+    if (!this.db) {
+      throw new Error('Database not initialized')
+    }
 
     try {
       await this.db.save(operation.documentId, operation.documentData)
@@ -519,6 +531,13 @@ export class OfflineQueue {
    * Execute delete operation
    */
   private async executeDelete(operation: QueuedOperation): Promise<boolean> {
+    if (!operation.documentId) {
+      throw new Error('Delete operation requires documentId')
+    }
+    if (!this.db) {
+      throw new Error('Database not initialized')
+    }
+
     try {
       await this.db.remove(operation.documentId)
       return true

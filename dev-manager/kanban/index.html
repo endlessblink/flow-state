@@ -357,6 +357,73 @@
       display: none !important;
     }
 
+    /* HIDE DONE TOGGLE */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .toggle-container:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-hover);
+    }
+
+    .toggle-container.active {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: var(--accent-primary);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: var(--surface-tertiary);
+      border-radius: 10px;
+      transition: all var(--transition-fast);
+    }
+
+    .toggle-container.active .toggle-switch {
+      background: var(--accent-primary);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: all var(--transition-fast);
+    }
+
+    .toggle-container.active .toggle-switch::after {
+      left: 18px;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      user-select: none;
+    }
+
+    .toggle-container.active .toggle-label {
+      color: var(--accent-primary);
+    }
+
+    .done-column-hidden {
+      display: none !important;
+    }
+
     /* COLLAPSE TOGGLE */
     .collapse-toggle {
       background: transparent;
@@ -1492,6 +1559,10 @@
             <option value="alpha-asc">A→Z</option>
             <option value="alpha-desc">Z→A</option>
           </select>
+          <div id="hide-done-toggle" class="toggle-container" onclick="toggleHideDone()" title="Hide completed tasks">
+            <div class="toggle-switch"></div>
+            <span class="toggle-label">Hide Done</span>
+          </div>
           <button class="btn btn-icon" onclick="refreshData()"><span class="icon"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span> Refresh</button>
         </div>
       </div>
@@ -3632,6 +3703,7 @@
       const savedType = localStorage.getItem('kanban-type-filter');
       const savedPriority = localStorage.getItem('kanban-priority-filter');
       const savedSort = localStorage.getItem('kanban-sort');
+      const savedHideDone = localStorage.getItem('kanban-hide-done');
 
       if (savedType) {
         document.getElementById('type-filter').value = savedType;
@@ -3641,6 +3713,37 @@
       }
       if (savedSort) {
         document.getElementById('sort-select').value = savedSort;
+      }
+      if (savedHideDone === 'true') {
+        const toggle = document.getElementById('hide-done-toggle');
+        if (toggle) {
+          toggle.classList.add('active');
+          applyHideDone(true);
+        }
+      }
+    }
+
+    // Toggle hide done tasks
+    function toggleHideDone() {
+      const toggle = document.getElementById('hide-done-toggle');
+      const isActive = toggle.classList.toggle('active');
+
+      localStorage.setItem('kanban-hide-done', isActive);
+      applyHideDone(isActive);
+      updateStats();
+    }
+
+    // Apply hide done state
+    function applyHideDone(hide) {
+      // Find the Done column (the kanban-column containing column-done)
+      const doneContent = document.getElementById('column-done');
+      const doneColumn = doneContent?.closest('.kanban-column');
+      if (doneColumn) {
+        if (hide) {
+          doneColumn.classList.add('done-column-hidden');
+        } else {
+          doneColumn.classList.remove('done-column-hidden');
+        }
       }
     }
 

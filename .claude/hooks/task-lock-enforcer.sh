@@ -88,8 +88,8 @@ find_matching_task() {
     local task_id
     task_id=$(echo "$line" | grep -oE '(~~)?TASK-[0-9]+(~~)?' | head -1 | tr -d '~')
 
-    # Skip done tasks (strikethrough)
-    if [[ "$line" =~ ~~TASK-[0-9]+~~ ]]; then
+    # Skip done tasks (strikethrough) - handle both ~~TASK-XXX~~ and ~~**TASK-XXX**~~
+    if [[ "$line" =~ ~~\*?\*?TASK-[0-9]+\*?\*?~~ ]]; then
       continue
     fi
 

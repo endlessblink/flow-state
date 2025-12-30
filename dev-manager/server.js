@@ -23,6 +23,7 @@ const DEV_MANAGER_DIR = __dirname;
 const MASTER_PLAN_PATH = process.env.MASTER_PLAN_PATH
   ? path.resolve(process.env.MASTER_PLAN_PATH)
   : path.join(__dirname, '..', 'docs', 'MASTER_PLAN.md');
+const LOCKS_DIR = path.join(__dirname, '..', '.claude', 'locks');
 
 // Middleware
 app.use(cors());
@@ -119,6 +120,55 @@ app.post('/api/task/:id/move', async (req, res) => {
     res.json({ success: true, id, status: toColumn });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Get active task locks
+app.get('/api/locks', async (req, res) => {
+  try {
+    const locks = [];
+
+    // Check if locks directory exists
+    try {
+      await fs.access(LOCKS_DIR);
+    } catch {
+      // Locks directory doesn't exist yet
+      return res.json({ locks: [], count: 0 });
+    }
+
+    // Read all .lock files
+    const files = await fs.readdir(LOCKS_DIR);
+    const lockFiles = files.filter(f => f.endsWith('.lock'));
+
+    for (const file of lockFiles) {
+      try {
+        const content = await fs.readFile(path.join(LOCKS_DIR, file), 'utf-8');
+        const lockData = JSON.parse(content);
+
+        // Extract just the filename from full paths
+        const filesShort = (lockData.files_touched || []).map(f => path.basename(f));
+
+        locks.push({
+          task_id: lockData.task_id,
+          session_id: lockData.session_id,
+          session_short: lockData.session_id ? lockData.session_id.substring(0, 8) + '...' : 'unknown',
+          locked_at: lockData.locked_at,
+          timestamp: lockData.timestamp,
+          files: filesShort,
+          files_full: lockData.files_touched || []
+        });
+      } catch (parseError) {
+        console.error(`[Locks] Failed to parse ${file}:`, parseError.message);
+      }
+    }
+
+    // Sort by timestamp (most recent first)
+    locks.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    res.json({ locks, count: locks.length });
+  } catch (error) {
+    console.error('[Locks] Error reading locks:', error.message);
+    res.status(500).json({ error: error.message, locks: [], count: 0 });
   }
 });
 
@@ -348,6 +398,15 @@ function broadcastFileChange() {
   console.log(`[SSE] Broadcasted file change to ${sseClients.length} clients`);
 }
 
+// Broadcast lock change to all connected clients
+function broadcastLockChange() {
+  const event = JSON.stringify({ type: 'locks-changed', timestamp: Date.now() });
+  sseClients.forEach(client => {
+    client.write(`data: ${event}\n\n`);
+  });
+  console.log(`[SSE] Broadcasted lock change to ${sseClients.length} clients`);
+}
+
 // File watcher using polling (more reliable than fs.watch for detecting all changes)
 let lastMtime = null;
 let pollInterval = null;
@@ -401,6 +460,65 @@ function setupFileWatcher() {
   }
 }
 
+// Setup locks directory watcher
+let lastLocksMtime = new Map(); // Track individual lock file mtimes
+
+function setupLocksWatcher() {
+  // Check if locks directory exists
+  try {
+    fsSync.accessSync(LOCKS_DIR);
+  } catch {
+    console.log('[LocksWatcher] Locks directory not found, will retry...');
+    // Retry after 5 seconds
+    setTimeout(setupLocksWatcher, 5000);
+    return;
+  }
+
+  // Watch the locks directory for changes
+  try {
+    fsSync.watch(LOCKS_DIR, (eventType, filename) => {
+      if (filename && filename.endsWith('.lock')) {
+        console.log(`[LocksWatcher] Lock ${eventType}: ${filename}`);
+        broadcastLockChange();
+      }
+    });
+    console.log('[LocksWatcher] Watching locks directory for changes');
+  } catch (error) {
+    console.error('[LocksWatcher] Failed to watch locks directory:', error.message);
+  }
+
+  // Also poll for changes (more reliable for some filesystems)
+  setInterval(() => {
+    try {
+      const files = fsSync.readdirSync(LOCKS_DIR);
+      const currentLocks = new Set(files.filter(f => f.endsWith('.lock')));
+      const previousLocks = new Set(lastLocksMtime.keys());
+
+      // Check for new or removed locks
+      let changed = false;
+      for (const lock of currentLocks) {
+        if (!previousLocks.has(lock)) {
+          changed = true;
+          lastLocksMtime.set(lock, Date.now());
+        }
+      }
+      for (const lock of previousLocks) {
+        if (!currentLocks.has(lock)) {
+          changed = true;
+          lastLocksMtime.delete(lock);
+        }
+      }
+
+      if (changed) {
+        console.log('[LocksWatcher] Lock files changed (polling)');
+        broadcastLockChange();
+      }
+    } catch {
+      // Directory might not exist yet
+    }
+  }, 3000); // Poll every 3 seconds
+}
+
 // ===== END LIVE FILE SYNC =====
 
 // Start server
@@ -415,9 +533,13 @@ app.listen(PORT, () => {
 ║                                                        ║
 ║  Editing tasks will update MASTER_PLAN.md directly    ║
 ║  Live sync: Changes to MASTER_PLAN.md auto-refresh UI ║
+║  Locks: http://localhost:${PORT}/api/locks              ║
 ╚════════════════════════════════════════════════════════╝
   `);
 
   // Start file watcher for live sync
   setupFileWatcher();
+
+  // Start locks directory watcher
+  setupLocksWatcher();
 });

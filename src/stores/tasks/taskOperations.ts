@@ -91,11 +91,8 @@ export function useTaskOperations(
 
         const task = tasks.value[index]
 
-        // Auto-archive
-        if (updates.status === 'done' && task.status !== 'done') {
-            updates.isInInbox = true
-            updates.canvasPosition = undefined
-        }
+        // BUG-045 FIX: Removed auto-archive behavior
+        // Tasks now stay on canvas when marked as done (no position/inbox changes)
 
         // Canvas logic
         if (updates.canvasPosition && !task.canvasPosition) {

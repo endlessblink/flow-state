@@ -70,10 +70,16 @@
           <ProjectFilterDropdown />
 
           <!-- Hide Done Tasks Toggle -->
-          
-
-          <!-- Status Filters -->
-          
+          <button
+            class="hide-done-toggle"
+            :class="{ active: hideDoneTasks }"
+            :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+            @click="taskStore.toggleHideDoneTasks()"
+          >
+            <EyeOff v-if="hideDoneTasks" :size="16" :stroke-width="1.5" />
+            <Eye v-else :size="16" :stroke-width="1.5" />
+            <span>{{ hideDoneTasks ? 'Hidden' : 'Done' }}</span>
+          </button>
 
           <div class="view-selector">
             <button
@@ -524,6 +530,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick as _nextTick, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
@@ -540,7 +547,7 @@ import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
 import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
-import { ChevronLeft, ChevronRight, Calendar, Eye as _Eye, EyeOff as _EyeOff, ListTodo as _ListTodo, Play as _Play, Check as _Check, Video as _Video, VideoOff as _VideoOff, Download as _Download } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, ListTodo as _ListTodo, Play as _Play, Check as _Check, Video as _Video, VideoOff as _VideoOff, Download as _Download } from 'lucide-vue-next'
 import { dragRecorder as _dragRecorder, type InteractionAnalysis } from '@/utils/DragInteractionRecorder'
 import type { CalendarEvent } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
@@ -554,6 +561,9 @@ interface SortableEvent {
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
+
+// Extract reactive refs from store
+const { hideDoneTasks } = storeToRefs(taskStore)
 
 // View state
 const currentDate = ref(new Date())
@@ -1279,6 +1289,36 @@ const _handleToggleDoneTasks = (_event: MouseEvent) => {
   color: var(--text-primary);
   transform: translateY(-2px);
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* Hide Done Tasks Toggle */
+.hide-done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  height: 36px;
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hide-done-toggle:hover {
+  background: rgba(30, 30, 30, 0.95);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.hide-done-toggle.active {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #a78bfa;
 }
 
 .view-selector {

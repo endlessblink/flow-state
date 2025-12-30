@@ -224,10 +224,10 @@ export class DragInteractionRecorder {
       const elements = document.querySelectorAll(selector);
       elements.forEach(element => {
         // Monitor dragstart, dragover, drop events
-        element.addEventListener('dragstart', (e: DragEvent) => this.captureDragEvent(e, 'dragstart'));
-        element.addEventListener('dragover', (e: DragEvent) => this.captureDragEvent(e, 'dragover'));
-        element.addEventListener('drop', (e: DragEvent) => this.captureDragEvent(e, 'drop'));
-        element.addEventListener('dragend', (e: DragEvent) => this.captureDragEvent(e, 'dragend'));
+        element.addEventListener('dragstart', (e: Event) => this.captureDragEvent(e as DragEvent, 'dragstart'));
+        element.addEventListener('dragover', (e: Event) => this.captureDragEvent(e as DragEvent, 'dragover'));
+        element.addEventListener('drop', (e: Event) => this.captureDragEvent(e as DragEvent, 'drop'));
+        element.addEventListener('dragend', (e: Event) => this.captureDragEvent(e as DragEvent, 'dragend'));
       });
     });
 

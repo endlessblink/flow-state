@@ -335,15 +335,196 @@ git checkout HEAD~1 -- .claude/skills/dev-debug-canvas/SKILL.md
 
 ---
 
+## Fix 6: Immediate Task Count Update After Drag
+
+**File**: `src/composables/canvas/useCanvasDragDrop.ts`
+
+**Problem:** After removing syncNodes() calls, group task counts didn't update immediately when tasks were dragged in/out.
+
+**Solution:** Add `updateSectionTaskCounts()` helper that directly updates the affected section nodes' `data.taskCount`:
+
+```typescript
+// TASK-072 FIX: Update section task counts without calling syncNodes()
+const updateSectionTaskCounts = (oldSectionId?: string, newSectionId?: string) => {
+    const tasks = filteredTasks.value || []
+
+    // Update old section's count (if task was moved out)
+    if (oldSectionId) {
+        const nodeIndex = nodes.value.findIndex(n => n.id === `section-${oldSectionId}`)
+        if (nodeIndex !== -1) {
+            const oldNode = nodes.value[nodeIndex]
+            const newCount = canvasStore.getTaskCountInGroupRecursive(oldSectionId, tasks)
+            // Replace entire node to trigger Vue reactivity
+            nodes.value[nodeIndex] = {
+                ...oldNode,
+                data: { ...oldNode.data, taskCount: newCount }
+            }
+        }
+    }
+
+    // Update new section's count (if task was moved in)
+    if (newSectionId) {
+        const nodeIndex = nodes.value.findIndex(n => n.id === `section-${newSectionId}`)
+        if (nodeIndex !== -1) {
+            const newNode = nodes.value[nodeIndex]
+            const newCount = canvasStore.getTaskCountInGroupRecursive(newSectionId, tasks)
+            nodes.value[nodeIndex] = {
+                ...newNode,
+                data: { ...newNode.data, taskCount: newCount }
+            }
+        }
+    }
+}
+```
+
+**Called after parentNode changes:**
+```typescript
+if (currentParentNode !== newParentNode) {
+    const oldSectionId = currentParentNode?.replace('section-', '')
+    const newSectionId = newParentNode?.replace('section-', '')
+    // ... update node position ...
+    updateSectionTaskCounts(oldSectionId, newSectionId)
+}
+```
+
+---
+
+## Fix 7: Real-Time Counter Updates with useNode() Composable
+
+**File**: `src/components/canvas/GroupNodeSimple.vue`
+
+**Problem:** Task counts didn't update in real-time when tasks were dragged. The count only updated after a page refresh or when `syncNodes()` was called.
+
+**Root Cause:** The component was using `props.data.taskCount` which depends on Vue's prop passing. When `updateNodeData()` updates Vue Flow's internal state, the props don't automatically re-render.
+
+**Solution:** Use Vue Flow's `useNode()` composable to get reactive node data directly from Vue Flow's internal state.
+
+**Per [Vue Flow Documentation](https://vueflow.dev/guide/node.html):**
+> "Inside custom nodes, you can use the useNode composable. useNode returns us the node object straight from the state - since the node obj is reactive, we can mutate it to update our nodes' data."
+
+**Before (BROKEN - uses props):**
+```typescript
+const taskCount = computed(() => props.data.taskCount || 0)
+```
+
+**After (FIXED - uses Vue Flow state):**
+```typescript
+import { useNode } from '@vue-flow/core'
+
+// Get reactive node from Vue Flow state
+const { node } = useNode()
+
+// Use node.data for real-time reactivity, fallback to props
+const taskCount = computed(() => node.data?.taskCount ?? props.data.taskCount ?? 0)
+```
+
+**Why it works:** `useNode()` returns the node object directly from Vue Flow's reactive state. When `updateNodeData()` is called, it updates this internal state, and the computed property immediately reflects the change.
+
+---
+
 ## Files Modified Summary
 
 | File | Change | Purpose |
 |------|--------|---------|
 | `useCanvasDragDrop.ts` | Remove syncNodes(), add direct node updates | Prevent position resets |
 | `useCanvasDragDrop.ts` | Add z-index calculation | Nested groups render above parents |
+| `useCanvasDragDrop.ts` | Add getAbsolutePosition() recursive helper | 3+ level nesting support |
+| `useCanvasDragDrop.ts` | Add updateSectionTaskCounts() helper | Immediate task count updates |
+| `useCanvasDragDrop.ts` | Add updateNodeData dependency | Use Vue Flow's official API |
+| `CanvasView.vue` | Pass updateNodeData to composable | Enable official API usage |
 | `CanvasView.vue` (CSS) | Remove `z-index: 1 !important` | Allow dynamic z-index |
 | `CanvasView.vue` (syncNodes) | Use recursive counting for all groups | Parent counts include child tasks |
+| `GroupNodeSimple.vue` | Use useNode() for taskCount | Real-time counter updates |
 | `dev-debug-canvas/SKILL.md` | Add nested nodes section | Document the golden rule |
+
+---
+
+## Fix 8: MUTATE Node.data Instead of Replacing Nodes (Critical for Reactivity)
+
+**File**: `src/composables/canvas/useCanvasDragDrop.ts`
+
+**Problem:** Even with `useNode()` in the custom component, task counts didn't update in real-time. This is because we were **replacing** the node object instead of **mutating** it.
+
+**Root Cause per [Vue Flow GitHub Discussion #920](https://github.com/bcakmakoglu/vue-flow/discussions/920):**
+> "useNode returns us the node object straight from the state - since the node obj is reactive, we can **MUTATE** it to update our nodes' data"
+
+**Before (BROKEN - replaces node, breaks reactivity chain):**
+```typescript
+const nodeIndex = nodes.value.findIndex(n => n.id === nodeId)
+if (nodeIndex !== -1) {
+    // This creates a NEW object, breaking the reference useNode() tracks
+    nodes.value[nodeIndex] = {
+        ...nodes.value[nodeIndex],
+        data: { ...nodes.value[nodeIndex].data, taskCount: newCount }
+    }
+}
+```
+
+**After (FIXED - mutates existing node.data):**
+```typescript
+// TASK-072 FIX: MUTATE the existing node.data, don't replace the node
+// This maintains the reactive reference that useNode() tracks
+const node = nodes.value.find(n => n.id === nodeId)
+if (node && node.data) {
+    node.data.taskCount = newCount  // Direct mutation!
+}
+```
+
+**Why it works:** `useNode()` returns a reference to the actual node object in Vue Flow's store. When you mutate `node.data.taskCount`, Vue's reactivity system detects the change. When you replace the entire node object, you break the reference chain.
+
+---
+
+## Fix 9: Settling Period to Prevent Watcher-Triggered Resets
+
+**File**: `src/composables/canvas/useCanvasDragDrop.ts` + `src/views/CanvasView.vue`
+
+**Problem:** After drag ends, positions reset because:
+1. Drag ends → `isNodeDragging` becomes `false` (50ms delay)
+2. Store updates trigger watchers (filteredTasks, sections, etc.)
+3. Watchers call `batchedSyncNodes()`
+4. `batchedSyncNodes()` only checks `isNodeDragging`, which is now false
+5. `syncNodes()` runs and rebuilds all nodes from store, overwriting Vue Flow positions
+
+**Solution:** Add a longer "settling period" that blocks `syncNodes()` even after `isNodeDragging` becomes false.
+
+**In useCanvasDragDrop.ts:**
+```typescript
+// Module-level export for CanvasView to import
+export const isDragSettlingRef = ref(false)
+
+// In handleNodeDragStart:
+isDragSettling.value = true
+
+// In handleNodeDragStop:
+setTimeout(() => {
+    isNodeDragging.value = false
+}, 50)
+
+// TASK-072 FIX: Longer settling period (500ms)
+setTimeout(() => {
+    isDragSettling.value = false
+    console.log('[TASK-072] Drag settling complete - syncNodes unblocked')
+}, 500)
+```
+
+**In CanvasView.vue batchedSyncNodes guard:**
+```typescript
+import { isDragSettlingRef } from '@/composables/canvas/useCanvasDragDrop'
+
+const batchedSyncNodes = (priority: 'high' | 'normal' | 'low' = 'normal') => {
+    if (_nodeUpdateBatcher) {
+        _nodeUpdateBatcher.schedule(() => {
+            // TASK-072 FIX: Also check isDragSettlingRef to prevent sync during settling
+            if (!isHandlingNodeChange.value && !isSyncing.value &&
+                !isNodeDragging.value && !isDragSettlingRef.value) {
+                syncNodes()
+            }
+        }, priority)
+    }
+}
+```
+
+**Why it works:** The 500ms settling period gives time for all store updates to propagate. Watchers fire but are blocked. By the time settling ends, positions are consistent.
 
 ---
 
@@ -354,6 +535,10 @@ git checkout HEAD~1 -- .claude/skills/dev-debug-canvas/SKILL.md
 3. **Direct node mutations** - For immediate changes, update nodes.value directly
 4. **CSS specificity matters** - `!important` can break dynamic styling
 5. **Recursive counting** - Parents need to know about ALL descendants
+6. **MUTATE, don't replace** - When updating node.data, MUTATE the existing object to maintain reactivity with useNode()
+7. **Use useNode() in custom nodes** - For real-time updates, use Vue Flow's useNode() composable instead of props
+8. **Settling period prevents resets** - Block syncNodes for 500ms after drag to let store updates propagate
+9. **Multiple guards needed** - Both `isNodeDragging` AND `isDragSettling` must be checked
 
 ---
 

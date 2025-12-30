@@ -1,4 +1,4 @@
-import { type Ref, type ComputedRef } from 'vue'
+import { type Ref, type ComputedRef, ref } from 'vue'
 import { type Node } from '@vue-flow/core'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
@@ -12,10 +12,16 @@ interface DragDropDeps {
     filteredTasks: ComputedRef<Task[]>
     withVueFlowErrorBoundary: (handlerName: string, handler: (...args: any[]) => any, options?: any) => any
     syncNodes: () => void
+    // Vue Flow's official API for updating node data reactively (kept for backward compatibility)
+    updateNodeData?: (nodeId: string, data: Record<string, unknown>) => void
 }
 
 interface DragDropState {
     isNodeDragging: Ref<boolean>
+    // TASK-072 FIX: Settling period to prevent syncNodes from resetting positions after drag
+    // This should be checked in batchedSyncNodes() guard
+    // Optional: composable creates its own ref if not provided
+    isDragSettling?: Ref<boolean>
 }
 
 // TASK-072 FIX: Store starting positions for correct delta calculation
@@ -23,9 +29,16 @@ interface DragDropState {
 // the starting position in the SAME coordinate system to calculate delta
 const dragStartPositions = new Map<string, { x: number; y: number }>()
 
+// TASK-072 FIX: Module-level refs for settling state
+// These need to be exported so CanvasView.vue can check them in batchedSyncNodes guard
+const _internalDragSettling = ref(false)
+export const isDragSettlingRef = _internalDragSettling
+
 export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
-    const { taskStore, canvasStore, nodes, filteredTasks, withVueFlowErrorBoundary, syncNodes } = deps
-    const { isNodeDragging } = state
+    const { taskStore, canvasStore, nodes, filteredTasks, withVueFlowErrorBoundary, syncNodes, updateNodeData: _updateNodeData } = deps
+    // TASK-072: isDragSettling prevents syncNodes from running during the settling period after drag ends
+    // Use provided ref or fall back to internal one (exported as isDragSettlingRef)
+    const { isNodeDragging, isDragSettling = _internalDragSettling } = state
 
     // Helper: Check if coordinates are within section bounds
     const isTaskInSectionBounds = (x: number, y: number, section: CanvasSection, taskWidth: number = 220, taskHeight: number = 100) => {
@@ -80,6 +93,46 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         return {
             x: parentAbsolute.x + node.position.x,
             y: parentAbsolute.y + node.position.y
+        }
+    }
+
+    // TASK-072 FIX: Update section task counts without calling syncNodes()
+    // This is called after a task moves between sections to update the visual count
+    //
+    // CRITICAL INSIGHT from Vue Flow docs (https://github.com/bcakmakoglu/vue-flow/discussions/920):
+    // "useNode returns us the node object straight from the state - since the node obj is reactive,
+    //  we can MUTATE it to update our nodes' data"
+    //
+    // The key is to MUTATE the existing node.data, NOT replace the node object.
+    // Replacing the node breaks the reference that useNode() is watching in custom components.
+    const updateSectionTaskCounts = (oldSectionId?: string, newSectionId?: string) => {
+        const tasks = filteredTasks.value || []
+
+        // Update old section's count (if task was moved out)
+        if (oldSectionId) {
+            const oldSectionNodeId = `section-${oldSectionId}`
+            const newCount = canvasStore.getTaskCountInGroupRecursive(oldSectionId, tasks)
+
+            // TASK-072 FIX: MUTATE the existing node.data, don't replace the node
+            // This maintains the reactive reference that useNode() tracks
+            const node = nodes.value.find(n => n.id === oldSectionNodeId)
+            if (node && node.data) {
+                node.data.taskCount = newCount
+                console.log(`[TASK-072] MUTATED "${node.data?.name || oldSectionId}" taskCount: ${newCount}`)
+            }
+        }
+
+        // Update new section's count (if task was moved in)
+        if (newSectionId) {
+            const newSectionNodeId = `section-${newSectionId}`
+            const newCount = canvasStore.getTaskCountInGroupRecursive(newSectionId, tasks)
+
+            // TASK-072 FIX: MUTATE the existing node.data, don't replace the node
+            const node = nodes.value.find(n => n.id === newSectionNodeId)
+            if (node && node.data) {
+                node.data.taskCount = newCount
+                console.log(`[TASK-072] MUTATED "${node.data?.name || newSectionId}" taskCount: ${newCount}`)
+            }
         }
     }
 
@@ -176,6 +229,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: { node: Node }) => {
         const { node } = event
         isNodeDragging.value = true
+        // TASK-072 FIX: Also set isDragSettling to true immediately
+        // This blocks syncNodes from the moment drag starts until settling period ends
+        isDragSettling.value = true
 
         // TASK-072 FIX: Store starting position for accurate delta calculation
         // This is critical for nested sections where node.position is relative to parent
@@ -275,7 +331,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                                     parentNode: undefined,
                                     position: { x: absoluteX, y: absoluteY },  // Convert to absolute
                                     style: {
-                                        ...nodes.value[nodeIndex].style,
+                                        ...(nodes.value[nodeIndex].style as Record<string, any>),
                                         zIndex: 0  // Reset to base z-index when becoming top-level
                                     }
                                 }
@@ -290,7 +346,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 // Re-read section to get updated parentGroupId state
                 const updatedSection = canvasStore.sections.find(s => s.id === sectionId)
                 if (updatedSection && !updatedSection.parentGroupId) {
-                    let containingParent: typeof section | null = null
+                    let containingParent: CanvasSection | null = null
 
                     canvasStore.sections.forEach(potentialParent => {
                         if (potentialParent.id === sectionId) return  // Skip self
@@ -331,7 +387,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                             // Calculate z-index: nested groups should render ABOVE their parents
                             // Get parent's z-index and add 1
                             const parentNode = nodes.value.find(n => n.id === parentNodeId)
-                            const parentZIndex = parentNode?.style?.zIndex ?? 0
+                            const parentZIndex = (parentNode?.style as Record<string, any>)?.zIndex ?? 0
                             const childZIndex = (typeof parentZIndex === 'number' ? parentZIndex : parseInt(String(parentZIndex)) || 0) + 1
 
                             nodes.value[nodeIndex] = {
@@ -339,7 +395,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                                 parentNode: parentNodeId,
                                 position: { x: relativeX, y: relativeY },
                                 style: {
-                                    ...nodes.value[nodeIndex].style,
+                                    ...(nodes.value[nodeIndex].style as Record<string, any>),
                                     zIndex: childZIndex
                                 }
                             }
@@ -427,6 +483,10 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 if (currentParentNode !== newParentNode) {
                     console.log(`%c[TASK-072] Task parentNode change: ${currentParentNode} → ${newParentNode}`, 'color: #2196F3; font-weight: bold')
 
+                    // Extract section IDs for task count updates
+                    const oldSectionId = currentParentNode?.replace('section-', '')
+                    const newSectionId = newParentNode?.replace('section-', '')
+
                     if (containingSection) {
                         // Convert to relative position
                         const relativeX = checkX - containingSection.position.x
@@ -444,6 +504,10 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                             position: { x: checkX, y: checkY }
                         }
                     }
+
+                    // TASK-072 FIX: Update task counts on affected sections immediately
+                    // Without this, group headers show stale counts until next syncNodes()
+                    updateSectionTaskCounts(oldSectionId, newSectionId)
                 }
             }
             // syncNodes() // REMOVED - was causing section position resets (TASK-072)
@@ -458,9 +522,24 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             }
         }
 
+        // TASK-072 FIX: Use longer settling period to prevent watchers from resetting positions
+        // The settling period blocks syncNodes from running after drag ends.
+        // This gives time for:
+        // 1. Store updates to propagate
+        // 2. Watchers to fire and be blocked
+        // 3. Vue Flow to stabilize positions
         setTimeout(() => {
             isNodeDragging.value = false
         }, 50)
+
+        // TASK-072 FIX: Clear isDragSettling after a longer delay (500ms)
+        // This is the key fix for position resets - watchers trigger syncNodes after
+        // isNodeDragging becomes false, but isDragSettling blocks them until
+        // all store updates have fully propagated.
+        setTimeout(() => {
+            isDragSettling.value = false
+            console.log(`%c[TASK-072] Drag settling complete - syncNodes unblocked`, 'color: #4CAF50')
+        }, 500)
     })
 
     // Handle node drag (continuous during drag - kept lightweight)

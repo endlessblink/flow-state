@@ -84,8 +84,9 @@ export function useTaskHistory(
             },
             bulkDeleteTasksWithUndo: async (taskIds: string[]) => {
                 // Bulk delete is special, we use the atomic version
-                const { bulkDeleteTasks } = await import('../tasks') // We'll need to export this
-                // Original code didn't have bulk undo yet
+                const { useTaskStore } = await import('../tasks')
+                const store = useTaskStore()
+                await store.bulkDeleteTasks(taskIds)
             },
             startTaskNowWithUndo: async (taskId: string) => {
                 try {

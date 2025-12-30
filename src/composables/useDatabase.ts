@@ -41,6 +41,7 @@ export const DB_KEYS = {
   TASKS: 'tasks',
   PROJECTS: 'projects',
   CANVAS: 'canvas',
+  CANVAS_VIEWPORT: 'canvas_viewport', // TASK-072: Persist viewport position across refreshes
   TIMER: 'timer',
   SETTINGS: 'settings',
   NOTIFICATIONS: 'notifications',

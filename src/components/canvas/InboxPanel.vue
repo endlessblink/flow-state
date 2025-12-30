@@ -12,6 +12,19 @@
 
       <!-- Expanded state count -->
       <NBadge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
+
+      <!-- Quick Today Filter (TASK-080) -->
+      <button
+        v-if="!isCollapsed"
+        class="today-quick-filter"
+        :class="{ active: activeTimeFilter === 'today' }"
+        :title="`Show tasks for today (${todayCount})`"
+        @click="activeTimeFilter = activeTimeFilter === 'today' ? 'all' : 'today'"
+      >
+        <CalendarDays :size="14" />
+        <span>Today</span>
+        <span v-if="todayCount > 0" class="count-badge">{{ todayCount }}</span>
+      </button>
     </div>
 
     <!-- Collapsed state task count indicators positioned under arrow -->
@@ -187,7 +200,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { NButton, NBadge, NTag, NIcon as _NIcon } from 'naive-ui'
-import { Plus as _Plus, Zap as _Zap, Clock as _Clock, ChevronLeft, ChevronRight, Timer } from 'lucide-vue-next'
+import { Plus as _Plus, Zap as _Zap, Clock as _Clock, ChevronLeft, ChevronRight, Timer, CalendarDays } from 'lucide-vue-next'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
@@ -196,25 +209,37 @@ import InboxTimeFilters from './InboxTimeFilters.vue'
 import InboxFilters from './InboxFilters.vue'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 
+import { useInboxFiltering } from '@/composables/useInboxFiltering'
+import { useInboxDrag } from '@/composables/useInboxDrag'
+import { useBrainDump } from '@/composables/useBrainDump'
+
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 
+const {
+  activeTimeFilter,
+  unscheduledOnly,
+  selectedPriority,
+  selectedProject,
+  selectedDuration,
+  baseInboxTasks,
+  todayCount,
+  inboxTasks,
+  clearAllFilters
+} = useInboxFiltering()
+
+const {
+  brainDumpMode,
+  brainDumpText,
+  parsedTaskCount,
+  processBrainDump
+} = useBrainDump()
+
 const newTaskTitle = ref('')
-const brainDumpMode = ref(false)
-const brainDumpText = ref('')
 const isCollapsed = ref(true) // Start collapsed to avoid overwhelming the user
 const _quickInputRef = ref<HTMLInputElement>()
 const selectedTaskIds = ref<Set<string>>(new Set())
 const lastSelectedTaskId = ref<string | null>(null)
-
-// Time filter state
-const activeTimeFilter = ref<'all' | 'now' | 'today' | 'tomorrow' | 'thisWeek' | 'noDate'>('all')
-
-// Additional filter state (TASK-018)
-const unscheduledOnly = ref(false)
-const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
-const selectedProject = ref<string | null>(null)
-const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
 
 // Context menu state
 const showContextMenu = ref(false)
@@ -222,194 +247,14 @@ const contextMenuX = ref(0)
 const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null) // Task that was right-clicked
 
-// Get ONLY inbox tasks (tasks without canvas position, excluding done tasks)
-// Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
-const baseInboxTasks = computed(() =>
-  taskStore.filteredTasks.filter(task =>
-    !task.canvasPosition && task.status !== 'done'
-  )
-)
-
 // Check if a task has an active timer
 const isTimerActive = (taskId: string) => {
   return timerStore.isTimerActive && timerStore.currentTaskId === taskId
 }
 
-// Helper functions for date calculations
-const getToday = () => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return today
-}
 
-const getTomorrow = () => {
-  const tomorrow = new Date(getToday())
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  return tomorrow
-}
-
-const getWeekEnd = () => {
-  const weekEnd = new Date(getToday())
-  weekEnd.setDate(weekEnd.getDate() + 7)
-  return weekEnd
-}
-
-const _isToday = (dateStr?: string) => {
-  if (!dateStr) return false
-  const today = getToday()
-  const date = new Date(dateStr)
-  date.setHours(0, 0, 0, 0)
-  return date.getTime() === today.getTime()
-}
-
-const _isTomorrow = (dateStr?: string) => {
-  if (!dateStr) return false
-  const tomorrow = getTomorrow()
-  const date = new Date(dateStr)
-  date.setHours(0, 0, 0, 0)
-  return date.getTime() === tomorrow.getTime()
-}
-
-const isThisWeek = (dateStr?: string) => {
-  if (!dateStr) return false
-  const today = getToday()
-  const weekEnd = getWeekEnd()
-  const date = new Date(dateStr)
-  date.setHours(0, 0, 0, 0)
-  return date >= today && date < weekEnd
-}
-
-const hasDate = (task: Task) => {
-  // Check instances first (new format)
-  if (task.instances && task.instances.length > 0) {
-    return task.instances.some((inst) => inst.scheduledDate)
-  }
-  // Fallback to legacy scheduledDate
-  return !!task.scheduledDate
-}
-
-// Check if task is scheduled on calendar (has instances with dates) - TASK-018
-const isScheduledOnCalendar = (task: Task): boolean => {
-  if (!task.instances || task.instances.length === 0) return false
-  return task.instances.some((inst) => inst.scheduledDate)
-}
-
-// Clear all additional filters - TASK-018
-const clearAllFilters = () => {
-  unscheduledOnly.value = false
-  selectedPriority.value = null
-  selectedProject.value = null
-  selectedDuration.value = null
-}
-
-// Apply time-based filtering to inbox tasks
-const timeFilteredTasks = computed(() => {
-  const tasks = baseInboxTasks.value
-
-  switch (activeTimeFilter.value) {
-    case 'all':
-      return tasks
-
-    case 'now': {
-      // Tasks due today, created today, currently in progress, or currently running (timer active)
-      const today = getToday().toISOString().split('T')[0]
-
-      return tasks.filter(task => {
-        // Check instances for today scheduling
-        if (task.instances && task.instances.length > 0) {
-          if (task.instances.some((inst) => inst.scheduledDate === today)) return true
-        }
-        // Fallback to legacy scheduledDate
-        if (task.scheduledDate === today) return true
-
-        return false
-      })
-    }
-
-    case 'tomorrow':
-      return tasks.filter(task => {
-        const tomorrow = getTomorrow().toISOString().split('T')[0]
-        // Check instances for tomorrow scheduling
-        if (task.instances && task.instances.length > 0) {
-          if (task.instances.some((inst) => inst.scheduledDate === tomorrow)) return true
-        }
-        // Fallback to legacy scheduledDate
-        if (task.scheduledDate === tomorrow) return true
-        return false
-      })
-
-    case 'thisWeek':
-      return tasks.filter(task => {
-        // Check instances for this week scheduling
-        if (task.instances && task.instances.length > 0) {
-          if (task.instances.some((inst) => isThisWeek(inst.scheduledDate))) return true
-        }
-        // Fallback to legacy scheduledDate
-        if (isThisWeek(task.scheduledDate)) return true
-        return false
-      })
-
-    case 'noDate':
-      return tasks.filter(task => !hasDate(task))
-
-    default:
-      return tasks
-  }
-})
-
-// Apply additional filters (TASK-018: Unscheduled, Priority, Project)
-const inboxTasks = computed(() => {
-  let tasks = timeFilteredTasks.value
-
-  // Apply Unscheduled filter - show only tasks NOT on calendar
-  if (unscheduledOnly.value) {
-    tasks = tasks.filter(task => !isScheduledOnCalendar(task))
-  }
-
-  // Apply Priority filter
-  if (selectedPriority.value !== null) {
-    tasks = tasks.filter(task => task.priority === selectedPriority.value)
-  }
-
-  // Apply Project filter
-  if (selectedProject.value !== null) {
-    if (selectedProject.value === 'none') {
-      // Show tasks with no project
-      tasks = tasks.filter(task => !task.projectId)
-    } else {
-      // Show tasks with specific project
-      tasks = tasks.filter(task => task.projectId === selectedProject.value)
-    }
-  }
-
-  // Apply Duration filter
-  if (selectedDuration.value !== null) {
-    tasks = tasks.filter(task => {
-      const d = task.estimatedDuration
-      if (selectedDuration.value === 'unestimated') return !d
-      if (!d) return false
-
-      switch (selectedDuration.value) {
-        case 'quick': return d <= 15
-        case 'short': return d > 15 && d <= 30
-        case 'medium': return d > 30 && d <= 60
-        case 'long': return d > 60
-        default: return false
-      }
-    })
-  }
-
-  return tasks
-})
 
 // Parse brain dump text to count tasks
-const parsedTaskCount = computed(() => {
-  if (!brainDumpText.value.trim()) return 0
-
-  const lines = brainDumpText.value.split('\n').filter(line => line.trim())
-  return lines.length
-})
-
 // Task management methods
 const addTask = () => {
   if (!newTaskTitle.value.trim()) return
@@ -424,52 +269,7 @@ const addTask = () => {
   newTaskTitle.value = ''
 }
 
-const processBrainDump = () => {
-  if (!brainDumpText.value.trim()) return
 
-  const lines = brainDumpText.value.split('\n').filter(line => line.trim())
-  const { createTaskWithUndo } = useUnifiedUndoRedo()
-
-  lines.forEach(line => {
-    // Parse task line for priority, duration, etc.
-    const cleanedLine = line.trim()
-    let title = cleanedLine
-    let priority: 'high' | 'medium' | 'low' | null = null
-    let estimatedDuration: number | undefined
-
-    // Extract priority (e.g., "!!!", "!!", "!")
-    const priorityMatch = cleanedLine.match(/(!+)$/)
-    if (priorityMatch) {
-      const exclamationCount = priorityMatch[1].length
-      if (exclamationCount >= 3) priority = 'high'
-      else if (exclamationCount === 2) priority = 'medium'
-      else if (exclamationCount === 1) priority = 'low'
-      title = cleanedLine.replace(/\s*!+$/, '').trim()
-    }
-
-    // Extract duration (e.g., "2h", "30m")
-    const durationMatch = cleanedLine.match(/(\d+)([hm])$/i)
-    if (durationMatch) {
-      const value = parseInt(durationMatch[1])
-      const unit = durationMatch[2].toLowerCase()
-      if (unit === 'h') estimatedDuration = value * 60
-      else estimatedDuration = value
-      title = cleanedLine.replace(/\s*\d+[hm]$/i, '').trim()
-    }
-
-    createTaskWithUndo({
-      title,
-      priority,
-      estimatedDuration,
-      status: 'planned',
-      isInInbox: true
-    })
-  })
-
-  // Clear brain dump
-  brainDumpText.value = ''
-  brainDumpMode.value = false
-}
 
 // Task interaction handlers
 const handleTaskClick = (event: MouseEvent, task: Task) => {
@@ -566,25 +366,7 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
   showContextMenu.value = true
 }
 
-const handleDragStart = (event: DragEvent, task: Task) => {
-  // Fix for Shift+Click: Prevent drag if Shift is held so click event can fire
-  if (event.shiftKey) {
-    event.preventDefault()
-    return
-  }
-
-  if (event.dataTransfer) {
-    event.dataTransfer.setData('application/json', JSON.stringify({
-      type: 'task',
-      taskId: task.id,
-      taskIds: [task.id], // For batch operation compatibility
-      title: task.title,
-      fromInbox: true,
-      source: 'inbox'
-    }))
-    event.dataTransfer.effectAllowed = 'move'
-  }
-}
+const { handleDragStart } = useInboxDrag()
 
 // Context menu handlers
 const handleSetPriority = (priority: string) => {
@@ -753,6 +535,46 @@ onBeforeUnmount(() => {
   font-weight: 500;
   font-size: 0.875rem;
   flex: 1;
+}
+
+/* Today Quick Filter Button (TASK-080) */
+.today-quick-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  height: 28px;
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.today-quick-filter:hover {
+  background: rgba(30, 30, 30, 0.95);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.today-quick-filter.active {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #a78bfa;
+}
+
+.today-quick-filter .count-badge {
+  background: rgba(139, 92, 246, 0.3);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  min-width: 14px;
+  text-align: center;
 }
 
 .quick-add {

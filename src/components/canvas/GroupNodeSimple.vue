@@ -2,7 +2,7 @@
   <div
     class="section-node"
     :class="[`section-type-${section.type}`, { 'collapsed': isCollapsed }]"
-    :style="{ borderColor: section.color + 'A0', backgroundColor: section.color + '18' }"
+    :style="{ borderColor: section.color, backgroundColor: section.color + '25' }"
     @contextmenu.prevent="handleContextMenu"
   >
     <!-- Section Header -->
@@ -216,44 +216,44 @@ const handleResizeEnd = (event: unknown) => {
 </script>
 
 <style scoped>
-/* TASK-069 + TASK-073 + TASK-078: Enhanced group visibility with dashed border and color glow */
+/* TASK-069 + TASK-073 + TASK-078 + TASK-079: Enhanced group visibility with stronger border and glow */
 .section-node {
   width: 100%;
   height: 100%;
   /* TASK-073: Dashed border for visual distinction from solid task cards */
-  border: 2px dashed;
+  border: 2.5px dashed;
   border-radius: var(--radius-lg);
-  /* TASK-078: Increased opacity for better group boundary visibility */
-  background: rgba(20, 25, 35, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* TASK-079: Slightly lighter background for better contrast */
+  background: rgba(30, 35, 45, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   position: relative;
   z-index: 1;
-  /* TASK-078: Enhanced shadow with stronger color-tinted outer glow */
+  /* TASK-079: Much stronger glow for visibility against dark backgrounds */
   box-shadow:
-    /* Enhanced outer colored glow - more visible boundary */
-    0 0 30px 0px currentColor,
-    /* Brighter white outline for definition */
-    0 0 0 1px rgba(255, 255, 255, 0.12),
+    /* Strong outer colored glow - highly visible boundary */
+    0 0 40px 4px currentColor,
+    /* Bright white outline for definition against dark bg */
+    0 0 0 1px rgba(255, 255, 255, 0.25),
     /* Deeper depth shadow */
-    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 4px 24px rgba(0, 0, 0, 0.4),
     /* Inner ambient glow for depth */
-    inset 0 0 50px rgba(255, 255, 255, 0.03),
+    inset 0 0 60px rgba(255, 255, 255, 0.05),
     /* Top highlight */
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition: all var(--duration-fast) ease;
 }
 
 .section-node:hover {
-  /* TASK-078: Intensified effects on hover for better feedback */
+  /* TASK-079: Enhanced hover effects for better feedback */
   border-style: solid;
   box-shadow:
-    /* Stronger outer glow on hover */
-    0 0 40px 2px currentColor,
-    0 0 0 1px rgba(255, 255, 255, 0.15),
-    0 8px 28px rgba(0, 0, 0, 0.35),
-    inset 0 0 60px rgba(255, 255, 255, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    /* Even stronger outer glow on hover */
+    0 0 50px 6px currentColor,
+    0 0 0 1px rgba(255, 255, 255, 0.30),
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    inset 0 0 70px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .section-header {

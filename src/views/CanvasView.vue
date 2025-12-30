@@ -1465,10 +1465,8 @@ const syncNodes = () => {
   )
 
   sections.forEach(section => {
-    // Calculate task count for this section (use recursive counting for nested groups)
-    const taskCount = section.parentGroupId
-      ? canvasStore.getTaskCountInGroupRecursive(section.id, Array.isArray(filteredTasks.value) ? filteredTasks.value : [])
-      : canvasStore.getTasksInSectionBounds(section, Array.isArray(filteredTasks.value) ? filteredTasks.value : []).length
+    // TASK-072 FIX: Always use recursive counting so parent groups include tasks from child groups
+    const taskCount = canvasStore.getTaskCountInGroupRecursive(section.id, Array.isArray(filteredTasks.value) ? filteredTasks.value : [])
 
     // TASK-072: Handle nested groups - set parent node and convert to relative position
     let parentNode: string | undefined = undefined
@@ -3329,9 +3327,10 @@ onBeforeUnmount(() => {
    ==================================================================== */
 
 /* Z-index layering: sections < edges < tasks, with hover states */
+/* TASK-072 FIX: Don't force z-index - let Vue Flow node.style.zIndex control it for nested groups */
 .vue-flow__node[id^="section-"],
 .vue-flow__node-sectionNode {
-  z-index: 1 !important;
+  /* z-index is now controlled by node.style.zIndex for proper nested group layering */
   /* Allow section wrapper to be interactive */
   pointer-events: auto !important;
 }

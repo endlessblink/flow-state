@@ -367,7 +367,9 @@ const formattedDuration = computed(() => {
   transition: all var(--duration-normal) var(--spring-smooth);
   cursor: grab;
   user-select: none;
+  /* TASK-079: Enhanced shadow with subtle outer glow for better visibility on dark bg */
   box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.15),
     0 12px 24px var(--shadow-md),
     0 6px 12px var(--shadow-md);
 
@@ -388,7 +390,7 @@ const formattedDuration = computed(() => {
   /* Removed 3D transforms to fix blurriness */
 }
 
-/* TASK-074: Blurred background layer - blurs canvas dots behind task cards */
+/* TASK-074 + TASK-079: Blurred background layer with enhanced border visibility */
 .task-node::before {
   content: '';
   position: absolute;
@@ -397,19 +399,23 @@ const formattedDuration = computed(() => {
   right: 0;
   bottom: 0;
   /* TASK-074: Frosted glass effect - dots visible but blurred */
-  background: rgba(15, 20, 30, 0.3);
+  /* TASK-079: Slightly darker background for better contrast */
+  background: rgba(20, 25, 35, 0.45);
   /* Increased blur to properly blur canvas dots */
   backdrop-filter: blur(32px) saturate(1.3);
   -webkit-backdrop-filter: blur(32px) saturate(1.3);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--glass-border);
+  /* TASK-079: Enhanced border for better visibility on dark backgrounds */
+  border: 1px solid rgba(255, 255, 255, 0.18);
   z-index: -1;
 }
 
 .task-node:hover {
   border: none;
   transform: translate3d(0, -2px, 0);
+  /* TASK-079: Enhanced hover shadow with brighter outline */
   box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.22),
     0 16px 32px var(--shadow-strong),
     0 8px 16px var(--shadow-md);
   cursor: grab;

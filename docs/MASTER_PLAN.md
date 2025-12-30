@@ -712,7 +712,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-069**~~ | ✅ **DONE** | `GroupNodeSimple.vue` | - | - |
 | **TASK-070** | 📋 **TODO** | `CanvasView.vue`, `GroupNodeSimple.vue` | - | - |
 | **TASK-071** | 📋 **TODO** | `TaskNode.vue` | - | - |
-| ~~**TASK-072**~~ | ✅ **DONE** | `canvas.ts`, `GroupModal.vue`, `CanvasView.vue` | - | - |
+| ~~**TASK-072**~~ | ✅ **DONE** | `canvas.ts`, `GroupModal.vue`, `CanvasView.vue`, `useCanvasDragDrop.ts` | - | - |
 | **TASK-073** | 📋 **TODO** | `GroupNodeSimple.vue` | - | - |
 | ~~**TASK-074**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | **TASK-075** | 📋 **TODO** | `TaskNode.vue`, `TaskEditModal.vue` | - | - |
@@ -726,7 +726,7 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** | ✅ DONE (Dec 28) - Solid border, increased opacity, shadow
 - [ ] **TASK-070**: Fix context menu in groups (wrong menu) | **P1-HIGH** | TODO
 - [ ] **TASK-071**: Fix task card text wrapping | **P1-HIGH** | TODO
-- [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 29)
+- [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 30 drag fix, Dec 29 initial)
 - [ ] **TASK-073**: Improve group outline styling | **P2-MEDIUM** | TODO
 - [x] **TASK-074**: Task node background blur | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [x] **TASK-077**: Context menu glassmorphism styling | **P2-MEDIUM** | ✅ DONE (Dec 29)
@@ -902,21 +902,30 @@ All header action buttons were removed and moved to the context menu for a clean
 
 **Priority**: P2-MEDIUM
 
-**Completed**: Dec 29, 2025
+**Completed**: Dec 30, 2025 (drag fix), Dec 29, 2025 (initial)
 
 **Problem**: Need to support groups within groups. Tasks inside nested groups should be visible to parent groups.
 
-**Implementation** (5 phases):
+**Implementation** (5 phases + bug fixes):
 - [x] Phase 1: Added `parentGroupId` optional field to `CanvasGroup` interface
 - [x] Phase 2: Updated `syncNodes()` in CanvasView.vue to render nested groups with Vue Flow's `parentNode`
 - [x] Phase 3: Added recursive task counting with `getTaskCountInGroupRecursive()` and `getChildGroups()`
 - [x] Phase 4: Added "Parent Group" dropdown to GroupModal.vue for creating/editing nested groups
 - [x] Phase 5: Added automatic child group reparenting on delete (prevents orphaned groups)
+- [x] Phase 6: **CRITICAL FIX** - Fixed nested group drag (positions reset, wrong group moved)
+- [x] Phase 7: Fixed z-index so nested groups render above parents
+- [x] Phase 8: Fixed parent group task count to include child group tasks
+
+**Key Fix (Dec 30)**: Removed `syncNodes()` calls after drag - Vue Flow manages child positions automatically. Calling syncNodes() rebuilds all nodes and breaks the parent-child positioning.
+
+**SOP**: `docs/🐛 debug/sop/nested-groups-drag-fix-2025-12-30.md`
 
 **Files Modified**:
 - `src/stores/canvas.ts` - parentGroupId field, helper functions, delete cascade
 - `src/components/common/GroupModal.vue` - Parent group selector UI
-- `src/views/CanvasView.vue` - Nested group rendering with relative positioning
+- `src/views/CanvasView.vue` - Nested group rendering, recursive task counting for all groups
+- `src/composables/canvas/useCanvasDragDrop.ts` - Direct Vue Flow node updates, z-index handling
+- `.claude/skills/dev-debug-canvas/SKILL.md` - Added "Golden Rule" for nested nodes
 
 ---
 

@@ -62,19 +62,25 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         })
     }
 
-    // Helper: Check if a section is physically inside another section (for nested group detection)
-    const isSectionInsideSection = (inner: CanvasSection, outer: CanvasSection): boolean => {
-        // A section is "inside" another if its center is within the outer section's bounds
-        const innerCenterX = inner.position.x + (inner.position.width / 2)
-        const innerCenterY = inner.position.y + (inner.position.height / 2)
+    // TASK-072 FIX: Recursively calculate absolute position for any nesting depth
+    // When a node has parentNode set, its position is RELATIVE to parent.
+    // If the parent is also nested, ITS position is relative to ITS parent.
+    // We need to walk up the entire ancestor chain to get true absolute position.
+    const getAbsolutePosition = (nodeId: string): { x: number, y: number } => {
+        const node = nodes.value.find(n => n.id === nodeId)
+        if (!node) return { x: 0, y: 0 }
 
-        return (
-            innerCenterX >= outer.position.x &&
-            innerCenterX <= outer.position.x + outer.position.width &&
-            innerCenterY >= outer.position.y &&
-            innerCenterY <= outer.position.y + outer.position.height &&
-            inner.id !== outer.id  // Don't match self
-        )
+        if (!node.parentNode) {
+            // No parent = position is already absolute
+            return { x: node.position.x, y: node.position.y }
+        }
+
+        // Has parent: recursively get parent's absolute position and add this node's relative position
+        const parentAbsolute = getAbsolutePosition(node.parentNode)
+        return {
+            x: parentAbsolute.x + node.position.x,
+            y: parentAbsolute.y + node.position.y
+        }
     }
 
     // Helper: Apply section properties to task
@@ -189,8 +195,28 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             const section = canvasStore.sections.find(s => s.id === sectionId)
 
             if (section) {
-                // BUG-034 FIX: Save OLD section bounds BEFORE updating position
-                // This is critical for correctly identifying tasks inside the section
+                // Clean up the stored position
+                dragStartPositions.delete(node.id)
+
+                // TASK-072 FIX: Use Vue Flow's native parent-child handling
+                // When parentNode is set, Vue Flow automatically moves children with parent
+                // We just need to:
+                // 1. Calculate the section's new ABSOLUTE position
+                // 2. Update store with absolute position
+                // 3. Detect if section should be nested in another (set parentGroupId)
+                // 4. Let syncNodes() handle the Vue Flow parentNode relationship
+
+                // TASK-072 FIX: Use recursive helper for correct absolute position at ANY nesting depth
+                // The old code only checked immediate parent, breaking for 3+ level nesting
+                // (grandchild → child → parent) where child's position is also relative
+                const absolutePos = getAbsolutePosition(node.id)
+                let absoluteX = absolutePos.x
+                let absoluteY = absolutePos.y
+
+                console.log(`%c[TASK-072] DRAG STOP: "${section.name}"`, 'color: #4CAF50; font-weight: bold')
+                console.log(`  Vue Flow pos: (${node.position.x.toFixed(0)}, ${node.position.y.toFixed(0)})${node.parentNode ? ' [relative]' : ' [absolute]'}`)
+                console.log(`  Calculated absolute: (${absoluteX.toFixed(0)}, ${absoluteY.toFixed(0)})`)
+
                 const oldBounds = {
                     x: section.position.x,
                     y: section.position.y,
@@ -198,173 +224,136 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     height: section.position.height
                 }
 
-                // TASK-072 FIX: Calculate position delta using SAME coordinate system
-                // For nested sections, node.position is relative to parent, so we MUST use
-                // the stored start position (also relative) to get correct delta
-                const startPos = dragStartPositions.get(node.id) || { x: oldBounds.x, y: oldBounds.y }
-                const deltaX = node.position.x - startPos.x
-                const deltaY = node.position.y - startPos.y
-
-                // Clean up the stored position
-                dragStartPositions.delete(node.id)
-
-                // BUG-034 FIX: Find tasks that are VISUALLY inside the section
-                // First try Vue Flow's parentNode relationship
+                // TASK-072: Log child sections for debugging (Vue Flow manages them automatically)
                 const sectionNodeId = `section-${sectionId}`
-                let tasksInSection = nodes.value
-                    .filter(n => n.parentNode === sectionNodeId && !n.id.startsWith('section-'))
-                    .map(n => taskStore.tasks.find(t => t.id === n.id))
-                    .filter((t): t is Task => t !== undefined && t.canvasPosition !== undefined)
-
-                // TASK-072 FIX: For nested groups, Vue Flow assigns tasks to outermost container
-                // So parentNode check fails. Use physical containment as fallback.
-                // CRITICAL: Use node.position (Vue Flow's position) which is accurate
-                if (tasksInSection.length === 0) {
-                    // For nested sections, node.position is RELATIVE to parent
-                    // We need to calculate absolute position for bounds check
-                    let absoluteX = node.position.x
-                    let absoluteY = node.position.y
-
-                    if (node.parentNode) {
-                        // Find parent node in Vue Flow nodes array
-                        const parentNode = nodes.value.find(n => n.id === node.parentNode)
-                        if (parentNode) {
-                            absoluteX = parentNode.position.x + node.position.x
-                            absoluteY = parentNode.position.y + node.position.y
-                        }
-                    }
-
-                    const visualBounds = {
-                        x: absoluteX,
-                        y: absoluteY,
-                        width: oldBounds.width,
-                        height: oldBounds.height
-                    }
-
-                    // Create a temporary section-like object with correct visual bounds
-                    const visualSection = {
-                        ...section,
-                        position: visualBounds
-                    }
-
-                    tasksInSection = filteredTasks.value.filter(task => {
-                        if (!task.canvasPosition) return false
-                        return isTaskInSectionBounds(
-                            task.canvasPosition.x,
-                            task.canvasPosition.y,
-                            visualSection as typeof section
-                        )
-                    })
+                const childSectionCount = nodes.value.filter(n =>
+                    n.parentNode === sectionNodeId && n.id.startsWith('section-')
+                ).length
+                if (childSectionCount > 0) {
+                    console.log(`  Child sections: ${childSectionCount} (Vue Flow auto-manages)`)
                 }
 
-                // TASK-072 FIX: Find nested sections (child groups) that should move with parent
-                // First try Vue Flow's parentNode relationship
-                let nestedSectionsInParent = nodes.value
-                    .filter(n => n.parentNode === sectionNodeId && n.id.startsWith('section-'))
-                    .map(n => n.id.replace('section-', ''))
-
-                // TASK-072 FIX: If no nested sections found via parentNode, use physical containment
-                // This handles cases where groups are visually nested but don't have parentGroupId set
-                if (nestedSectionsInParent.length === 0 && section) {
-                    nestedSectionsInParent = canvasStore.sections
-                        .filter(s => s.id !== sectionId && isSectionInsideSection(s, section))
-                        .map(s => s.id)
-                }
-
-                // TASK-072 FIX: For nested sections, node.position is RELATIVE to parent
-                // But the store expects ABSOLUTE positions. Convert before storing.
-                let storeX = node.position.x
-                let storeY = node.position.y
-                if (node.parentNode) {
-                    const parentNode = nodes.value.find(n => n.id === node.parentNode)
-                    if (parentNode) {
-                        storeX = parentNode.position.x + node.position.x
-                        storeY = parentNode.position.y + node.position.y
-                    }
-                }
-
-                // Update section position in store with ABSOLUTE coordinates
+                // Update dragged section's position in store (always absolute)
                 canvasStore.updateSectionWithUndo(sectionId, {
                     position: {
-                        x: storeX,
-                        y: storeY,
+                        x: absoluteX,
+                        y: absoluteY,
                         width: node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : oldBounds.width,
                         height: node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : oldBounds.height
                     }
                 })
 
-                // TASK-072 FIX: Update nested section positions to maintain relative positioning
-                // CRITICAL: Find tasks FIRST using OLD position, THEN update section, THEN move tasks
-                nestedSectionsInParent.forEach(nestedSectionId => {
-                    const nestedSection = canvasStore.sections.find(s => s.id === nestedSectionId)
-                    if (nestedSection) {
-                        // STEP 1: Find tasks PHYSICALLY inside nested section BEFORE updating position
-                        // This is critical - we need OLD section bounds to match OLD task positions
-                        const tasksInNestedSection = filteredTasks.value.filter(task => {
-                            if (!task.canvasPosition) return false
-                            return isTaskInSectionBounds(
-                                task.canvasPosition.x,
-                                task.canvasPosition.y,
-                                nestedSection  // Still at OLD position here
-                            )
-                        })
+                // TASK-072 FIX: Do NOT update child section or task positions here!
+                // Vue Flow manages children automatically when parentNode is set.
+                // When parent drags, Vue Flow moves children visually (relative positions stay same).
+                // See: https://vueflow.dev/examples/nodes/nesting.html
 
-                        // STEP 2: NOW update nested section position
-                        canvasStore.updateSection(nestedSectionId, {
-                            position: {
-                                ...nestedSection.position,
-                                x: nestedSection.position.x + deltaX,
-                                y: nestedSection.position.y + deltaY
-                            }
-                        })
+                // TASK-072: Manage parent-child relationship based on position
+                const sectionArea = oldBounds.width * oldBounds.height
 
-                        // STEP 3: Move the tasks we found earlier
-                        tasksInNestedSection.forEach(task => {
-                            if (task.canvasPosition) {
-                                taskStore.updateTask(task.id, {
-                                    canvasPosition: {
-                                        x: task.canvasPosition.x + deltaX,
-                                        y: task.canvasPosition.y + deltaY
+                // First, check if section with existing parent was dragged OUTSIDE that parent
+                if (section.parentGroupId) {
+                    const currentParent = canvasStore.sections.find(s => s.id === section.parentGroupId)
+                    if (currentParent) {
+                        // Check if we're still inside the current parent
+                        const stillInside = (
+                            absoluteX >= currentParent.position.x &&
+                            absoluteY >= currentParent.position.y &&
+                            absoluteX + oldBounds.width <= currentParent.position.x + currentParent.position.width &&
+                            absoluteY + oldBounds.height <= currentParent.position.y + currentParent.position.height
+                        )
+
+                        if (!stillInside) {
+                            console.log(`%c[TASK-072] Clearing parentGroupId: "${section.name}" dragged outside "${currentParent.name}"`, 'color: #E91E63; font-weight: bold')
+                            canvasStore.updateSection(sectionId, { parentGroupId: null })
+
+                            // TASK-072 FIX: Directly update Vue Flow node to remove parent relationship
+                            const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+                            if (nodeIndex !== -1) {
+                                nodes.value[nodeIndex] = {
+                                    ...nodes.value[nodeIndex],
+                                    parentNode: undefined,
+                                    position: { x: absoluteX, y: absoluteY },  // Convert to absolute
+                                    style: {
+                                        ...nodes.value[nodeIndex].style,
+                                        zIndex: 0  // Reset to base z-index when becoming top-level
                                     }
-                                })
+                                }
+                                console.log(`  Updated Vue Flow node: parentNode=undefined, absPos=(${absoluteX.toFixed(0)}, ${absoluteY.toFixed(0)}), zIndex=0`)
                             }
-                        })
+                            // After clearing, continue to check if it landed in a NEW parent below
+                        }
                     }
-                })
+                }
 
-                // TASK-072 FIX: Collect IDs of tasks already moved via nested sections to avoid double-moving
-                const tasksAlreadyMoved = new Set<string>()
-                nestedSectionsInParent.forEach(nestedSectionId => {
-                    const nestedSection = canvasStore.sections.find(s => s.id === nestedSectionId)
-                    if (nestedSection) {
-                        filteredTasks.value.forEach(task => {
-                            if (task.canvasPosition && isTaskInSectionBounds(task.canvasPosition.x, task.canvasPosition.y, nestedSection)) {
-                                tasksAlreadyMoved.add(task.id)
+                // Then, check if section was dropped inside another section (new parent)
+                // Re-read section to get updated parentGroupId state
+                const updatedSection = canvasStore.sections.find(s => s.id === sectionId)
+                if (updatedSection && !updatedSection.parentGroupId) {
+                    let containingParent: typeof section | null = null
+
+                    canvasStore.sections.forEach(potentialParent => {
+                        if (potentialParent.id === sectionId) return  // Skip self
+                        if (potentialParent.parentGroupId === sectionId) return  // Skip our children
+
+                        const parentArea = potentialParent.position.width * potentialParent.position.height
+                        if (parentArea <= sectionArea) return  // Parent must be bigger
+
+                        // Check if we're fully inside this potential parent
+                        const isInside = (
+                            absoluteX >= potentialParent.position.x &&
+                            absoluteY >= potentialParent.position.y &&
+                            absoluteX + oldBounds.width <= potentialParent.position.x + potentialParent.position.width &&
+                            absoluteY + oldBounds.height <= potentialParent.position.y + potentialParent.position.height
+                        )
+
+                        if (isInside) {
+                            // Prefer smallest containing parent (most immediate)
+                            if (!containingParent || parentArea < (containingParent.position.width * containingParent.position.height)) {
+                                containingParent = potentialParent
                             }
-                        })
-                    }
-                })
+                        }
+                    })
 
-                // Update all child task positions to maintain relative positioning
-                // BUT skip tasks that were already moved as part of nested sections
-                tasksInSection.forEach(task => {
-                    if (task.canvasPosition && !tasksAlreadyMoved.has(task.id)) {
-                        const newX = task.canvasPosition.x + deltaX
-                        const newY = task.canvasPosition.y + deltaY
-                        taskStore.updateTaskWithUndo(task.id, {
-                            canvasPosition: {
-                                x: newX,
-                                y: newY
+                    if (containingParent) {
+                        console.log(`%c[TASK-072] Setting parentGroupId: "${section.name}" is now child of "${containingParent.name}"`, 'color: #FF9800; font-weight: bold')
+                        canvasStore.updateSection(sectionId, { parentGroupId: containingParent.id })
+
+                        // TASK-072 FIX: Directly update Vue Flow node's parentNode instead of calling syncNodes()
+                        // syncNodes() rebuilds all nodes which breaks Vue Flow's automatic child positioning
+                        const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+                        if (nodeIndex !== -1) {
+                            const parentNodeId = `section-${containingParent.id}`
+                            // Convert to relative position for Vue Flow
+                            const relativeX = absoluteX - containingParent.position.x
+                            const relativeY = absoluteY - containingParent.position.y
+
+                            // Calculate z-index: nested groups should render ABOVE their parents
+                            // Get parent's z-index and add 1
+                            const parentNode = nodes.value.find(n => n.id === parentNodeId)
+                            const parentZIndex = parentNode?.style?.zIndex ?? 0
+                            const childZIndex = (typeof parentZIndex === 'number' ? parentZIndex : parseInt(String(parentZIndex)) || 0) + 1
+
+                            nodes.value[nodeIndex] = {
+                                ...nodes.value[nodeIndex],
+                                parentNode: parentNodeId,
+                                position: { x: relativeX, y: relativeY },
+                                style: {
+                                    ...nodes.value[nodeIndex].style,
+                                    zIndex: childZIndex
+                                }
                             }
-                        })
+                            console.log(`  Updated Vue Flow node: parentNode=${parentNodeId}, relPos=(${relativeX.toFixed(0)}, ${relativeY.toFixed(0)}), zIndex=${childZIndex}`)
+                        }
                     }
-                })
+                }
 
-                console.log(`Section dragged: ${tasksInSection.length} tasks moved with it`)
+                console.log(`%c[TASK-072] DRAG COMPLETE - Vue Flow manages child positions`, 'color: #4CAF50; font-weight: bold')
 
-                // TASK-072 FIX: Sync Vue Flow nodes after updating task positions in store
-                // This ensures the visual position matches the store position
-                syncNodes()
+                // TASK-072 FIX: Do NOT call syncNodes() after drag!
+                // Vue Flow already moved children visually during drag.
+                // Calling syncNodes() rebuilds all nodes and breaks the position consistency.
+                // syncNodes() // REMOVED - was causing position resets
             }
         } else {
             // TASK-072: Clean up stored start position for task nodes too
@@ -427,9 +416,37 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 }
             }
 
-            // BUG-034 FIX: ALWAYS call syncNodes after task drag to update parentNode relationships
-            // This ensures task count and group membership are always up-to-date
-            syncNodes()
+            // TASK-072 FIX: Directly update Vue Flow node's parentNode instead of calling syncNodes()
+            // syncNodes() rebuilds ALL nodes including sections, which breaks nested group positions
+            const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+            if (nodeIndex !== -1) {
+                const currentParentNode = nodes.value[nodeIndex].parentNode
+                const newParentNode = containingSection ? `section-${containingSection.id}` : undefined
+
+                // Only update if parentNode actually changed
+                if (currentParentNode !== newParentNode) {
+                    console.log(`%c[TASK-072] Task parentNode change: ${currentParentNode} → ${newParentNode}`, 'color: #2196F3; font-weight: bold')
+
+                    if (containingSection) {
+                        // Convert to relative position
+                        const relativeX = checkX - containingSection.position.x
+                        const relativeY = checkY - containingSection.position.y
+                        nodes.value[nodeIndex] = {
+                            ...nodes.value[nodeIndex],
+                            parentNode: newParentNode,
+                            position: { x: relativeX, y: relativeY }
+                        }
+                    } else {
+                        // No containing section - use absolute position
+                        nodes.value[nodeIndex] = {
+                            ...nodes.value[nodeIndex],
+                            parentNode: undefined,
+                            position: { x: checkX, y: checkY }
+                        }
+                    }
+                }
+            }
+            // syncNodes() // REMOVED - was causing section position resets (TASK-072)
 
             // Restore selection state
             if (selectedIdsBeforeDrag.length > 0) {

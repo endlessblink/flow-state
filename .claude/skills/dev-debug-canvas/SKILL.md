@@ -110,3 +110,56 @@ const debugHitDetection = (node, mousePosition) => {
 ```
 
 This skill activates when you mention canvas interactions, drag/drop problems, node selection issues, Vue Flow debugging, or custom canvas implementation bugs.
+
+---
+
+## Vue Flow Nested Nodes - The Golden Rule
+
+### Core Principle
+**Only sync PARENT positions to store. Vue Flow manages children automatically.**
+
+When `parentNode` is set on a Vue Flow node:
+- Position is RELATIVE to parent
+- When parent drags, Vue Flow auto-moves children visually
+- Child position property stays the same (relative)
+
+### The Pattern
+```typescript
+onNodeDragStop((event) => {
+  const { node } = event
+
+  // Only update if this is a parent (no parentNode set)
+  if (!node.parentNode) {
+    store.updatePosition(node.id, node.position)
+  }
+
+  // NEVER update children here!
+  // Vue Flow manages them automatically
+})
+```
+
+### Common Mistakes
+- Updating child positions in onNodeDragStop
+- Manually calculating child absolute positions after parent drag
+- Using syncNodes() to update children after drag
+- Fighting Vue Flow's automatic child management
+
+### Debug Checklist for Nested Node Issues
+1. Is `parentNode` set correctly on child nodes?
+2. Are you updating ONLY parent positions in drag handlers?
+3. Is the store position matching Vue Flow position for parents?
+4. Are children using relative positions in Vue Flow?
+
+### Position Systems
+| Node Type | Store Position | Vue Flow Position | parentNode |
+|-----------|---------------|-------------------|------------|
+| Parent (Section) | ABSOLUTE | ABSOLUTE | undefined |
+| Child (Nested Section) | ABSOLUTE | RELATIVE | parent ID |
+| Task | ABSOLUTE | RELATIVE | section ID |
+
+`syncNodes()` handles the absolute→relative conversion automatically.
+
+### References
+- Vue Flow Nested Nodes: https://vueflow.dev/examples/nodes/nesting.html
+- Position Discussion: https://github.com/bcakmakoglu/vue-flow/discussions/1202
+- Node Guide: https://vueflow.dev/guide/node.html

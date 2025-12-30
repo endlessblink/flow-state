@@ -12,6 +12,19 @@
 
       <!-- Expanded state count -->
       <NBadge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
+
+      <!-- Quick Today Filter (TASK-080) -->
+      <button
+        v-if="!isCollapsed"
+        class="today-quick-filter"
+        :class="{ active: activeTimeFilter === 'today' }"
+        :title="`Show tasks for today (${todayCount})`"
+        @click="activeTimeFilter = activeTimeFilter === 'today' ? 'all' : 'today'"
+      >
+        <CalendarDays :size="14" />
+        <span>Today</span>
+        <span v-if="todayCount > 0" class="count-badge">{{ todayCount }}</span>
+      </button>
     </div>
 
     <!-- Collapsed state task count indicators -->
@@ -236,7 +249,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import {
-  ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock,
+  ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock, CalendarDays,
   Target as _Target, Calendar as _CalendarIcon, Clipboard as _Clipboard, Folder as _Folder, Trash2, X
 } from 'lucide-vue-next'
 import { NButton, NBadge, NTag } from 'naive-ui'
@@ -314,12 +327,49 @@ const clearAllFilters = () => {
   selectedPriority.value = null
   selectedProject.value = null
   selectedDuration.value = null
+  activeTimeFilter.value = 'all'
 }
+
+// Time filter state (TASK-080: Today Quick Filter)
+const activeTimeFilter = ref<'all' | 'today'>('all')
+
+// Helper: Get today's date string
+const getToday = () => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today
+}
+
+// Count tasks scheduled for today (TASK-080: Today Quick Filter)
+const todayCount = computed(() => {
+  const todayStr = getToday().toISOString().split('T')[0]
+  return baseInboxTasks.value.filter(task => {
+    // Check instances for today scheduling
+    if (task.instances && task.instances.length > 0) {
+      return task.instances.some((inst) => inst.scheduledDate === todayStr)
+    }
+    // Fallback to legacy scheduledDate
+    return task.scheduledDate === todayStr
+  }).length
+})
 
 // Apply additional filters (TASK-018: Unscheduled, Priority, Project)
 // NOTE: "Show Everything" is now the default since we removed restrictive tabs
 const inboxTasks = computed(() => {
   let tasks = baseInboxTasks.value
+
+  // Apply Today filter (TASK-080)
+  if (activeTimeFilter.value === 'today') {
+    const todayStr = getToday().toISOString().split('T')[0]
+    tasks = tasks.filter(task => {
+      // Check instances for today scheduling
+      if (task.instances && task.instances.length > 0) {
+        return task.instances.some((inst) => inst.scheduledDate === todayStr)
+      }
+      // Fallback to legacy scheduledDate
+      return task.scheduledDate === todayStr
+    })
+  }
 
   // Apply Unscheduled filter - show only tasks NOT on calendar
   if (unscheduledOnly.value) {
@@ -767,6 +817,47 @@ onBeforeUnmount(() => {
   color: var(--text-primary);
   margin: 0;
   flex: 1;
+}
+
+/* Today Quick Filter Button (TASK-080) */
+.today-quick-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  height: 28px;
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.today-quick-filter:hover {
+  background: rgba(30, 30, 30, 0.95);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.today-quick-filter.active {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #a78bfa;
+}
+
+.today-quick-filter .count-badge {
+  background: rgba(139, 92, 246, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  min-width: 16px;
+  text-align: center;
 }
 
 .collapsed-badges-container {

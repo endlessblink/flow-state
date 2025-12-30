@@ -28,13 +28,14 @@
       </div>
     </div>
 
-    <!-- RESIZE HANDLES - Automatic handles for all corners and edges -->
+    <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
     <NodeResizer
       :is-visible="selected"
       :min-width="200"
       :min-height="80"
       :max-width="2000"
       :max-height="2000"
+      :line-positions="[Position.Top, Position.Right, Position.Bottom, Position.Left]"
       @resize-start="handleResizeStart"
       @resize="handleResize"
       @resize-end="handleResizeEnd"
@@ -47,6 +48,9 @@ import { ref, computed, watch } from 'vue'
 import { ChevronDown, ChevronRight, Zap, Magnet, Settings } from 'lucide-vue-next'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
+// TASK-072: Import useNode for reactive node data from Vue Flow state
+// BUG-043: Import Position for edge resize handles
+import { useNode, Position } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
@@ -78,9 +82,16 @@ const emit = defineEmits<{
   resizeEnd: [data: { sectionId: string; event: unknown }]
 }>()
 
+// TASK-072: Use useNode() to get reactive node data directly from Vue Flow state
+// This ensures taskCount updates in real-time when updateNodeData is called
+// See: https://vueflow.dev/guide/node.html
+const { node } = useNode()
+
 const section = computed(() => props.data)
 const sectionName = ref(props.data.name)
-const taskCount = computed(() => props.data.taskCount || 0)
+// TASK-072 FIX: Use node.data.taskCount from Vue Flow state for real-time reactivity
+// props.data doesn't update reactively when updateNodeData is called
+const taskCount = computed(() => node.data?.taskCount ?? props.data.taskCount ?? 0)
 const canvasStore = useCanvasStore()
 const taskStore = useTaskStore()
 
@@ -216,44 +227,40 @@ const handleResizeEnd = (event: unknown) => {
 </script>
 
 <style scoped>
-/* TASK-069 + TASK-073 + TASK-078 + TASK-079: Enhanced group visibility with stronger border and glow */
+/* TASK-079: High-visibility group design for zoom-out */
 .section-node {
   width: 100%;
   height: 100%;
-  /* TASK-073: Dashed border for visual distinction from solid task cards */
-  border: 2.5px dashed;
+  /* TASK-079: Thick visible border - 2px solid white for clear boundaries */
+  border: 2px solid rgba(255, 255, 255, 0.30) !important;
   border-radius: var(--radius-lg);
-  /* TASK-079: Slightly lighter background for better contrast */
-  background: rgba(30, 35, 45, 0.65);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* TASK-079: Brighter background for contrast against dark canvas */
+  background: rgba(45, 48, 58, 0.92) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   position: relative;
   z-index: 1;
-  /* TASK-079: Much stronger glow for visibility against dark backgrounds */
+  /* TASK-079: Very strong glow for zoom-out visibility */
   box-shadow:
-    /* Strong outer colored glow - highly visible boundary */
-    0 0 40px 4px currentColor,
-    /* Bright white outline for definition against dark bg */
-    0 0 0 1px rgba(255, 255, 255, 0.25),
-    /* Deeper depth shadow */
-    0 4px 24px rgba(0, 0, 0, 0.4),
-    /* Inner ambient glow for depth */
-    inset 0 0 60px rgba(255, 255, 255, 0.05),
-    /* Top highlight */
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    /* Drop shadows */
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    /* ZOOM FIX: Large colored glow */
+    0 0 80px 20px currentColor,
+    /* White outline glow for separation */
+    0 0 0 1px rgba(255, 255, 255, 0.15);
   transition: all var(--duration-fast) ease;
 }
 
 .section-node:hover {
-  /* TASK-079: Enhanced hover effects for better feedback */
-  border-style: solid;
+  /* TASK-079: Enhanced hover - brighter border and stronger glow */
+  border-color: rgba(255, 255, 255, 0.45) !important;
   box-shadow:
-    /* Even stronger outer glow on hover */
-    0 0 50px 6px currentColor,
-    0 0 0 1px rgba(255, 255, 255, 0.30),
-    0 8px 32px rgba(0, 0, 0, 0.45),
-    inset 0 0 70px rgba(255, 255, 255, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 20px 56px rgba(0, 0, 0, 0.55),
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    /* ZOOM FIX: Even stronger glow on hover */
+    0 0 100px 25px currentColor,
+    0 0 0 2px rgba(255, 255, 255, 0.25);
 }
 
 .section-header {

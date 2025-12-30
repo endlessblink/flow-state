@@ -31,3 +31,10 @@ html, body {
   outline: none;
   box-shadow: none;
 }
+
+/* TASK-079: Canvas visibility improvements */
+.canvas-contour {
+  /* Brighter canvas background for better element visibility */
+  background: rgba(45, 50, 60, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}

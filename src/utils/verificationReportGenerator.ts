@@ -174,7 +174,15 @@ export class VerificationReportGenerator {
     const timestamp = new Date().toISOString()
 
     // Get audit report
-    const auditReport = ForensicLogger.generateAuditReport()
+    const rawAuditReport = ForensicLogger.generateAuditReport()
+    // Normalize types for strict compatibility
+    const auditReport = {
+      ...rawAuditReport,
+      summary: {
+        ...rawAuditReport.summary,
+        lastTimestamp: rawAuditReport.summary.lastTimestamp || undefined
+      }
+    }
 
     // Get current system state
     const systemState = await this.captureSystemState()

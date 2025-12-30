@@ -100,7 +100,8 @@ export const useTimerStore = defineStore('timer', () => {
 
       // Set up callbacks for cross-tab timer events
       crossTabSync.setTimerCallbacks({
-        onSessionUpdate: (session: PomodoroSession | null) => {
+        onSessionUpdate: (rawSession: unknown) => {
+          const session = rawSession as PomodoroSession | null
           // Another tab updated the timer - sync local state
           if (!isLeader.value && session) {
             console.log('🔄 [TIMER SYNC] Received session update from leader:', session)
@@ -298,7 +299,8 @@ export const useTimerStore = defineStore('timer', () => {
 
     // Use direct PouchDB changes feed for real-time updates (TASK-021 fix)
     // This replaces the unreliable 'reliable-sync-change' event listener
-    timerChangesSync.startListening(async (rawDoc: Record<string, unknown>) => {
+    timerChangesSync.startListening(async (doc: unknown) => {
+      const rawDoc = doc as Record<string, unknown>
       try {
         // Handle document deletion
         if (rawDoc.deleted) {
@@ -313,7 +315,15 @@ export const useTimerStore = defineStore('timer', () => {
 
         // FIXED (TASK-021): Changes feed passes raw PouchDB doc { _id, _rev, data: {...} }
         // We need to extract the nested data structure
-        const timerData = rawDoc.data as RemoteTimerDoc | undefined
+        interface PouchChangeDoc {
+          data?: RemoteTimerDoc
+          deviceLeaderId?: string // Legacy format support
+          session?: PomodoroSession // Legacy format support
+        }
+
+        const docData = rawDoc as unknown as PouchChangeDoc
+        const timerData = docData.data || (docData.deviceLeaderId ? docData : undefined) as RemoteTimerDoc | undefined
+
         if (!timerData) {
           console.warn('⚠️ [TIMER CROSS-DEVICE] Received doc without data property:', rawDoc._id)
           return

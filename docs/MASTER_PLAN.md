@@ -1,5 +1,5 @@
-**Last Updated**: December 29, 2025 (TASK-077 Context Menu Glassmorphism)
-**Version**: 5.10 (Canvas Groups Enhanced)
+**Last Updated**: December 30, 2025 (Refactoring for AI Customization)
+**Version**: 5.11 (Type Safety & Modularity)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -651,6 +651,7 @@ Phase 3 (Mobile) ←────────────────────
 
 | ID | Status | Primary Files | Depends | Blocks |
 |----|--------|---------------|---------|--------|
+| **TASK-079** | 🔄 **IN PROGRESS** | `tsconfig.json`, `src/**/*` | - | - |
 | ~~TASK-022~~ | ✅ **DONE** | `tasks.ts`, `taskDisappearanceLogger.ts` | - | ~~TASK-034~~ |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | ~~TASK-014~~ | ✅ COMPLETE | `*.stories.ts`, `*.vue` (UI) | - | - |
@@ -700,7 +701,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-059**~~ | ✅ **DONE** | `vite.config.ts`, `src/utils/legacyStorageCleanup.ts` | - | - |
 | ~~**TASK-060**~~ | ✅ **DONE** | `AppSidebar.vue`, `ProjectTreeItem.vue`, `projects.ts` | - | - |
 | **TASK-061** | **P0** PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
-| **TASK-062** | **P0** 🔄 PARTIAL | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
+| ~~**TASK-062**~~ | ✅ **DONE** | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
 | ~~**BUG-037**~~ | ✅ **DONE** | `conflictResolver.ts`, `tasks.ts` | - | - |
 | ~~**BUG-038**~~ | ✅ **DONE** | `UnifiedInboxPanel.vue` | - | - |
 | ~~**BUG-039**~~ | ✅ **DONE** | `InboxPanel.vue`, `tasks.ts` | - | - |
@@ -718,6 +719,10 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-075** | 📋 **TODO** | `TaskNode.vue`, `TaskEditModal.vue` | - | - |
 | **TASK-076** | 📋 **TODO** | `InboxPanel.vue`, `CalendarInboxPanel.vue`, `ui.ts` | - | - |
 | ~~**TASK-077**~~ | ✅ **DONE** | `CanvasContextMenu.vue` | - | - |
+| ~~**TASK-078**~~ | ✅ **DONE** | `dev-manager/kanban/index.html` | - | - |
+| **TASK-079** | 🔄 **IN PROGRESS** | `tsconfig.json`, `src/**/*` | - | - |
+| **TASK-079** | 📋 **PLANNED** | `src-tauri/*` (new), `timer.ts`, `vite.config.ts`, `package.json` | TASK-017 | - |
+| ~~**TASK-080**~~ | ✅ **DONE** | `CalendarView.vue`, `CanvasView.vue`, `UnifiedInboxPanel.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -726,17 +731,22 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** | ✅ DONE (Dec 28) - Solid border, increased opacity, shadow
 - [ ] **TASK-070**: Fix context menu in groups (wrong menu) | **P1-HIGH** | TODO
 - [ ] **TASK-071**: Fix task card text wrapping | **P1-HIGH** | TODO
-- [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 30 drag fix, Dec 29 initial)
+- [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 30 - 3-level nesting working, drag fix, task counts)
 - [ ] **TASK-073**: Improve group outline styling | **P2-MEDIUM** | TODO
 - [x] **TASK-074**: Task node background blur | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [x] **TASK-077**: Context menu glassmorphism styling | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [ ] **TASK-075**: Markdown support for task descriptions | **P2-MEDIUM** | TODO
 - [ ] **TASK-076**: Separate done filter (Canvas vs Calendar inbox) | **P1-HIGH** | TODO
 - [ ] **TASK-061**: Demo Content Guard Logger | **P0-CRITICAL** | PLANNED
-- [ ] **TASK-062**: Custom Confirmation Modals | **P0-CRITICAL** | 🔄 PARTIAL
+- [x] **~~TASK-062~~**: Custom Confirmation Modals | **P0-CRITICAL** | ✅ DONE (Dec 30) - ConfirmationModal in use, no window.confirm() calls remain
 - ✅ **BUG-041**: Fix blurry text on canvas zoom | **P0-CRITICAL** | ✅ FIXED (Dec 28)
-- [ ] **BUG-042**: Task created from group context menu goes to inbox | **P1-HIGH** | TODO
+- [x] **~~BUG-042~~**: Task created from group context menu goes to inbox | **P1-HIGH** | ✅ FIXED (Dec 30)
+- [x] **~~BUG-043~~**: Group resize only works from corners, not edges | **P2-MEDIUM** | ✅ FIXED (Dec 30)
+- [x] **~~BUG-044~~**: Task created at wrong position (not at right-click location) | **P2-MEDIUM** | ✅ FIXED (Dec 30)
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
+- [x] **TASK-078**: Dev-Manager Hide Done Tasks Filter | **P2-MEDIUM** | ✅ DONE (Dec 30)
+- [ ] **TASK-080**: Hide Done Toggle + Today Filter (Calendar/Canvas views) | **P2-MEDIUM** | 🔄 IN PROGRESS
+- [ ] **TASK-079**: Tauri Desktop Integration (Fokus-style) | **P3-LOW** | PLANNED - System tray, taskbar progress, break splash screen
 - ✅ **BUG-040**: Sidebar content disappearance fix | ✅ FIXED (Dec 28)
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
 - ✅ **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) | ✅ FIXED (Dec 27)
@@ -902,7 +912,7 @@ All header action buttons were removed and moved to the context menu for a clean
 
 **Priority**: P2-MEDIUM
 
-**Completed**: Dec 30, 2025 (drag fix), Dec 29, 2025 (initial)
+**Completed**: Dec 30, 2025 (real-time counters, drag fix), Dec 29, 2025 (initial)
 
 **Problem**: Need to support groups within groups. Tasks inside nested groups should be visible to parent groups.
 
@@ -915,16 +925,22 @@ All header action buttons were removed and moved to the context menu for a clean
 - [x] Phase 6: **CRITICAL FIX** - Fixed nested group drag (positions reset, wrong group moved)
 - [x] Phase 7: Fixed z-index so nested groups render above parents
 - [x] Phase 8: Fixed parent group task count to include child group tasks
+- [x] Phase 9: **Real-time counter updates** - Used Vue Flow's `useNode()` composable and `updateNodeData()` API
 
-**Key Fix (Dec 30)**: Removed `syncNodes()` calls after drag - Vue Flow manages child positions automatically. Calling syncNodes() rebuilds all nodes and breaks the parent-child positioning.
+**Key Fixes (Dec 30)**:
+1. Removed `syncNodes()` calls after drag - Vue Flow manages child positions automatically
+2. Added recursive `getAbsolutePosition()` helper for 3+ level nesting
+3. Used Vue Flow's official `updateNodeData()` API for reactive data updates
+4. Used `useNode()` composable in GroupNodeSimple.vue for real-time task count display
 
 **SOP**: `docs/🐛 debug/sop/nested-groups-drag-fix-2025-12-30.md`
 
 **Files Modified**:
 - `src/stores/canvas.ts` - parentGroupId field, helper functions, delete cascade
 - `src/components/common/GroupModal.vue` - Parent group selector UI
-- `src/views/CanvasView.vue` - Nested group rendering, recursive task counting for all groups
-- `src/composables/canvas/useCanvasDragDrop.ts` - Direct Vue Flow node updates, z-index handling
+- `src/views/CanvasView.vue` - Nested group rendering, recursive task counting, updateNodeData pass-through
+- `src/composables/canvas/useCanvasDragDrop.ts` - Direct Vue Flow node updates, z-index handling, updateNodeData integration
+- `src/components/canvas/GroupNodeSimple.vue` - useNode() for real-time counter updates
 - `.claude/skills/dev-debug-canvas/SKILL.md` - Added "Golden Rule" for nested nodes
 
 ---
@@ -997,6 +1013,78 @@ All header action buttons were removed and moved to the context menu for a clean
 - `src/components/panels/InboxPanel.vue` - Canvas inbox filter
 - `src/components/calendar/CalendarInboxPanel.vue` - Calendar inbox filter
 - `src/stores/ui.ts` - New filter state
+
+---
+
+### ~~TASK-078~~: Dev-Manager Hide Done Tasks Filter (✅ DONE)
+
+**Priority**: P2-MEDIUM
+
+**Goal**: Add a toggle to hide completed tasks in the dev-manager kanban board, making it easier to focus on active work.
+
+**Problem**: When viewing the kanban board, done tasks clutter the view. Users want to focus only on pending/in-progress items.
+
+**Implementation**:
+- [x] Add "Hide Done" checkbox/toggle to the filter bar
+- [x] Update `applyFilters()` function to respect the toggle
+- [x] Hide entire Done column when toggle is active
+- [x] Persist preference in localStorage
+- [x] Update stats to reflect filtered view
+
+**Files Modified**:
+- `dev-manager/kanban/index.html` - Added toggle UI, CSS, and JavaScript functions
+
+**Completed**: Dec 30, 2025
+
+---
+
+### TASK-079: Tauri Desktop Integration - Fokus-Style (📋 PLANNED)
+
+**Goal**: Transform PomoFlow from browser-only to native Linux desktop app with system tray, KDE taskbar progress, and Fokus-style break splash screens.
+
+**Priority**: P3-LOW
+
+**Effort Estimate**: 9-12 days (Tauri) + 14-19 days (Plasmoid via TASK-017)
+
+**Platform**: Linux (KDE Plasma 6.1 / Tuxedo OS)
+
+**Inspiration**: Fokus app break screen (see `docs/🐛 debug/debugging-screenshot/image copy 6.png`)
+
+#### Key Features
+1. **System Tray** - Timer state icon + context menu (Start/Pause/Stop, current task, open app)
+2. **KDE Taskbar Progress** - Progress bar showing timer countdown (Unity Launcher D-Bus API)
+3. **Break Splash Screen** - Full-screen Fokus-style overlay when Pomodoro completes
+4. **Strict Mode Setting** - Optional "can't skip" break enforcement (ADHD-friendly)
+
+#### Implementation Phases
+
+| Phase | Description | Effort | Status |
+|-------|-------------|--------|--------|
+| 1 | Initialize Tauri in project | 1 day | PENDING |
+| 2 | System tray (icon + menu) | 1-2 days | PENDING |
+| 3 | Taskbar progress bar (D-Bus) | 2-3 days | PENDING |
+| 4 | Break splash window + component | 2-3 days | PENDING |
+| 5 | Timer store integration | 1 day | PENDING |
+| 6 | Polish + testing | 2 days | PENDING |
+| 7 | KDE Plasmoid (TASK-017) | 14-19 days | PENDING |
+
+#### Files to Create/Modify
+- **New:** `src-tauri/*` - Tauri backend (Rust)
+- **New:** `src/components/desktop/BreakSplashScreen.vue` - Fokus-style UI
+- `package.json` - Add Tauri scripts
+- `vite.config.ts` - Add Tauri plugin
+- `src/stores/timer.ts` - Add invoke calls for splash/progress
+- `src/router/index.ts` - Add `/break-splash` route
+
+#### Reference Research
+- **Focust** (Tauri app): https://github.com/pilgrimlyieu/Focust - Nearly identical tech stack
+- **Tauri System Tray**: https://v2.tauri.app/learn/system-tray/
+- **Unity Launcher API**: https://wiki.ubuntu.com/Unity/LauncherAPI
+- **Full plan**: `/home/endlessblink/.claude/plans/humble-sniffing-bachman.md`
+
+#### Related Tasks
+- **TASK-017**: KDE Plasmoid - Phase 3 of this epic
+- **ROAD-014**: KDE Plasma Widget - Same as TASK-017
 
 ---
 
@@ -2767,6 +2855,8 @@ git checkout HEAD -- src/composables/useTimerChangesSync.ts src/stores/timer.ts
 ---
 
 ### TASK-017: KDE Plasma Widget (Plasmoid) for Timer Sync
+
+> **Part of TASK-079: Desktop Integration Epic** - This task is Phase 3 of the larger Tauri Desktop Integration initiative. See TASK-079 for full context including system tray, taskbar progress, and break splash screens.
 
 **Goal**: Create a KDE Plasma 6 taskbar widget that provides bidirectional timer sync with Pomo-Flow via CouchDB.
 

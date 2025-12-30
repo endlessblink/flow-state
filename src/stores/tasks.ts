@@ -9,7 +9,7 @@ import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler
 
 // Export types and utilities for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
-export { parseDateKey } from '@/utils/dateUtils'
+export { parseDateKey, formatDateKey } from '@/utils/dateUtils'
 
 /**
  * getTaskInstances function - for compatibility with TaskEditModal

@@ -244,6 +244,7 @@ export const useTaskFiltering = (
         smartViewTaskCounts,
         getProjectTaskCount,
         totalTasks,
+        nonDoneTaskCount: totalTasks,
         completedTasks,
         totalPomodoros,
         doneTasksForColumn,

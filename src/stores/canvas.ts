@@ -262,7 +262,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
         // Set up reactive watcher with safety guards for task deletions
         // CRITICAL FIX: Pinia auto-unwraps refs, so taskStore.tasks IS the array, NOT a ref!
-        watch(() => taskStore.tasks, (newTasks, oldTasks) => {
+        watch(() => taskStore?.tasks, (newTasks, oldTasks) => {
           if (newTasks && Array.isArray(newTasks)) {
             // If tasks were deleted, immediately remove them from canvas nodes
             if (oldTasks && Array.isArray(oldTasks) && newTasks.length < oldTasks.length) {
@@ -443,7 +443,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       // 1. Remove from memory (Instant UI update)
       groups.value.splice(index, 1)
 
-      if (import.meta.env.DEV) {
+      if (import.meta.env.DEV && window.__lastDeletedGroup) {
         window.__lastDeletedGroup.after = groups.value.map(g => g.id)
       }
       if (activeGroupId.value === id) {
@@ -1209,6 +1209,36 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
     }, 1000)
   }, { deep: true, flush: 'post' })
+
+  // TASK-072: Auto-save viewport to IndexedDB for persistence across refreshes
+  let viewportSaveTimer: ReturnType<typeof setTimeout> | null = null
+  watch(viewport, (newViewport) => {
+    if (viewportSaveTimer) clearTimeout(viewportSaveTimer)
+    viewportSaveTimer = setTimeout(async () => {
+      if (!db.isReady?.value) return
+      try {
+        await db.save(DB_KEYS.CANVAS_VIEWPORT, newViewport)
+        console.log('🔭 [TASK-072] Viewport saved:', newViewport)
+      } catch (error) {
+        console.error('❌ Viewport save failed:', error)
+      }
+    }, 500)
+  }, { deep: true })
+
+  // TASK-072: Load saved viewport on initialization
+  const loadSavedViewport = async (): Promise<boolean> => {
+    try {
+      const savedViewport = await db.load<{ x: number; y: number; zoom: number }>(DB_KEYS.CANVAS_VIEWPORT)
+      if (savedViewport && typeof savedViewport.x === 'number') {
+        viewport.value = savedViewport
+        console.log('🔭 [TASK-072] Viewport restored:', savedViewport)
+        return true
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load saved viewport:', error)
+    }
+    return false
+  }
 
   // Initialize groups (empty by default - user creates them)
   const initializeDefaultGroups = () => {
@@ -1987,6 +2017,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     bulkUpdateDueDate,
     bulkUpdateDuration,
     loadFromDatabase,
+    loadSavedViewport,       // TASK-072: Restore viewport position on mount
 
     // Zoom management functions
     updateZoomConfig,

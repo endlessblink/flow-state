@@ -180,6 +180,17 @@
           </div>
         </div>
 
+        <!-- Hide Done Tasks Toggle (TASK-080) -->
+        <button
+          class="hide-done-toggle absolute top-4 right-4 z-20 px-3 py-2 bg-[rgba(30,30,40,0.95)] backdrop-blur-sm border border-white/10 rounded-lg text-gray-300 text-sm font-medium flex items-center gap-2 shadow-lg hover:bg-[rgba(40,40,50,0.95)] hover:border-white/20 transition-all"
+          :class="{ 'active bg-[rgba(139,92,246,0.2)] border-purple-500/30 text-purple-300': hideDoneTasks }"
+          :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+          @click="taskStore.toggleHideDoneTasks()"
+        >
+          <EyeOff v-if="hideDoneTasks" :size="16" />
+          <Eye v-else :size="16" />
+          <span>{{ hideDoneTasks ? 'Hidden' : 'Done' }}</span>
+        </button>
 
         <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
         <UnifiedInboxPanel />
@@ -456,7 +467,7 @@ import {
   useMagicKeys,
   useDebounceFn
 } from '@vueuse/core'
-import { Filter, X, Plus, Inbox, Zap, Timer, Clock, HelpCircle } from 'lucide-vue-next'
+import { Filter, X, Plus, Inbox, Zap, Timer, Clock, HelpCircle, Eye, EyeOff } from 'lucide-vue-next'
 import { useMessage } from 'naive-ui'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
@@ -468,7 +479,7 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { storeToRefs } from 'pinia'
-import { useCanvasDragDrop } from '@/composables/canvas/useCanvasDragDrop'
+import { useCanvasDragDrop, isDragSettlingRef } from '@/composables/canvas/useCanvasDragDrop'
 import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import TaskNode from '@/components/canvas/TaskNode.vue'
@@ -674,7 +685,7 @@ const filteredTasksWithCanvasPosition = computed(() => {
 })
 
 // 🚀 Phase 1: Vue 3 + Pinia Reactivity Core - Use storeToRefs for proper reactivity
-const { hideDoneTasks: _hideDoneTasks } = storeToRefs(taskStore)
+const { hideDoneTasks } = storeToRefs(taskStore)
 const { sections: _sections, viewport } = storeToRefs(canvasStore)
 const { secondarySidebarVisible: _secondarySidebarVisible } = storeToRefs(uiStore)
 const message = useMessage()
@@ -1307,8 +1318,17 @@ const {
   onEdgeClick,
   onEdgeContextMenu,
   removeEdges,
-  viewport: vfViewport // BUG-019: Get the actual Vue Flow viewport for accurate coordinate transforms
+  viewport: vfViewport, // BUG-019: Get the actual Vue Flow viewport for accurate coordinate transforms
+  updateNodeData, // TASK-072: Official Vue Flow API for updating node data reactively
+  setViewport: vueFlowSetViewport // TASK-072: Restore saved viewport position
 } = useVueFlow()
+
+// TASK-072: Sync Vue Flow viewport changes to canvas store for persistence
+watch(vfViewport, (newViewport) => {
+  // Update canvas store with Vue Flow's actual viewport
+  // This triggers the auto-save watcher in canvas.ts
+  canvasStore.setViewport(newViewport.x, newViewport.y, newViewport.zoom)
+}, { deep: true })
 
 // Template Helper Properties
 const handleEditTask = (task: Task) => {
@@ -1699,7 +1719,8 @@ const batchedSyncNodes = (priority: 'high' | 'normal' | 'low' = 'normal') => {
   if (_nodeUpdateBatcher) {
     _nodeUpdateBatcher.schedule(() => {
     // FIXED: Also check isNodeDragging to prevent sync during drag operations
-    if (!isHandlingNodeChange.value && !isSyncing.value && !isNodeDragging.value) {
+    // TASK-072 FIX: Also check isDragSettlingRef to prevent sync during settling period after drag
+    if (!isHandlingNodeChange.value && !isSyncing.value && !isNodeDragging.value && !isDragSettlingRef.value) {
       syncNodes()
     }
   }, priority)
@@ -1800,7 +1821,8 @@ const {
   nodes,
   filteredTasks,
   withVueFlowErrorBoundary,
-  syncNodes
+  syncNodes,
+  updateNodeData // TASK-072: Vue Flow's official API for reactive node data updates
 }, {
   isNodeDragging
 })
@@ -2889,32 +2911,33 @@ const handleCollectTasksFromMenu = (section: CanvasSection) => {
 const createTaskInGroup = async (section: CanvasSection) => {
   console.log('➕ [CanvasView] Create task in group:', section.name)
 
-  // Create a new task
+  // Position the task in the section
+  const sectionNode = canvasStore.sections.find(s => s.id === section.id)
+  if (!sectionNode) {
+    console.warn('❌ [CanvasView] Section not found:', section.id)
+    return
+  }
+
+  // Place task at top-left of section with some padding
+  const taskPosition = {
+    x: (sectionNode.position?.x || 0) + 20,
+    y: (sectionNode.position?.y || 0) + 60 // Below header
+  }
+
+  // BUG-042 FIX: Create task with canvasPosition directly (not in inbox)
   const newTask = await taskStore.createTaskWithUndo({
     title: '',
     status: 'planned',
-    isInInbox: false // Not in inbox - goes to canvas
+    isInInbox: false,
+    canvasPosition: taskPosition
   })
 
   if (newTask) {
-    // Position the task in the section
-    const sectionNode = canvasStore.sections.find(s => s.id === section.id)
-    if (sectionNode) {
-      // Place task at top-left of section with some padding
-      const taskPosition = {
-        x: (sectionNode.position?.x || 0) + 20,
-        y: (sectionNode.position?.y || 0) + 60 // Below header
-      }
-
-      // Add the task node to the canvas
-      canvasStore.addTaskNode(newTask.id, taskPosition, section.id)
-
-      console.log('✅ [CanvasView] Task created and added to group:', {
-        taskId: newTask.id,
-        sectionId: section.id,
-        position: taskPosition
-      })
-    }
+    console.log('✅ [CanvasView] Task created in group:', {
+      taskId: newTask.id,
+      sectionId: section.id,
+      position: taskPosition
+    })
   }
 }
 
@@ -2983,6 +3006,21 @@ onMounted(async () => {
   await canvasStore.loadFromDatabase()
   syncNodes()
   canvasStore.initializeDefaultSections()
+
+  // TASK-072: Restore saved viewport position
+  const viewportRestored = await canvasStore.loadSavedViewport()
+  if (viewportRestored) {
+    // Apply restored viewport to Vue Flow after a short delay to ensure it's ready
+    setTimeout(() => {
+      const savedViewport = canvasStore.viewport
+      vueFlowSetViewport({
+        x: savedViewport.x,
+        y: savedViewport.y,
+        zoom: savedViewport.zoom
+      })
+      console.log('🔭 [TASK-072] Viewport applied to Vue Flow:', savedViewport)
+    }, 100)
+  }
 
   // Safety fallback: if canvas doesn't initialize in 3s, force ready state
   // This prevents infinite "Initializing Canvas..." state
@@ -3617,12 +3655,16 @@ onBeforeUnmount(() => {
   transform: scale(1.05) !important; /* Subtle scale for feedback */
 }
 
+/* BUG-043: Edge lines are now clickable resize handles */
 .vue-flow__resize-control.line {
-  background-color: var(--brand-primary) !important;
-  opacity: 1 !important; /* Always visible */
+  background-color: transparent !important; /* Invisible by default */
+  opacity: 1 !important;
   transition: background-color 0.2s ease !important;
-  /* Lines should not block drag events */
-  pointer-events: none !important;
+  pointer-events: auto !important; /* Make lines clickable for resize */
+}
+
+.vue-flow__resize-control.line:hover {
+  background-color: var(--brand-primary) !important;
 }
 
 /* Ensure resize handles are always visible on sections */
@@ -3676,17 +3718,33 @@ onBeforeUnmount(() => {
   cursor: ew-resize !important;
 }
 
-/* Resize line styles with better visibility */
+/* BUG-043: Resize line styles with LARGER hit area for easier grabbing */
 .vue-flow__resize-control.line.top,
 .vue-flow__resize-control.line.bottom {
-  height: 2px !important;
+  height: 12px !important; /* Larger hit area (was 2px) */
   width: 100% !important;
+  cursor: ns-resize !important;
 }
 
 .vue-flow__resize-control.line.left,
 .vue-flow__resize-control.line.right {
-  width: 2px !important;
+  width: 12px !important; /* Larger hit area (was 2px) */
   height: 100% !important;
+  cursor: ew-resize !important;
+}
+
+/* Position lines at edges but keep hit area extending inward */
+.vue-flow__resize-control.line.top {
+  top: -6px !important;
+}
+.vue-flow__resize-control.line.bottom {
+  bottom: -6px !important;
+}
+.vue-flow__resize-control.line.left {
+  left: -6px !important;
+}
+.vue-flow__resize-control.line.right {
+  right: -6px !important;
 }
 
 /* Active resize state with enhanced feedback */

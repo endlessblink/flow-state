@@ -497,7 +497,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         }
       }
 
-    } else if (import.meta.env.DEV) {
+    } else if (import.meta.env.DEV && window.__lastDeletedGroup) {
       window.__lastDeletedGroup.missed = true
     }
   }

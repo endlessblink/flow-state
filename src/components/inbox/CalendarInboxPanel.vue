@@ -16,6 +16,19 @@
 
       <!-- Expanded state count -->
       <NBadge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
+
+      <!-- Quick Today Filter (BUG-046) -->
+      <button
+        v-if="!isCollapsed"
+        class="today-quick-filter"
+        :class="{ active: showTodayOnly }"
+        :title="`Show tasks due today (${todayCount})`"
+        @click="showTodayOnly = !showTodayOnly"
+      >
+        <CalendarDays :size="14" />
+        <span>Today</span>
+        <span v-if="todayCount > 0" class="count-badge">{{ todayCount }}</span>
+      </button>
     </div>
 
     <!-- Collapsed state task count indicators positioned under arrow -->
@@ -214,7 +227,7 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import {
-  ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock
+  ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock, CalendarDays
 } from 'lucide-vue-next'
 import { NButton, NBadge, NTag } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
@@ -237,10 +250,20 @@ const unscheduledOnly = ref(false)
 const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
 const selectedProject = ref<string | null>(null)
 const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
+const showTodayOnly = ref(false)
+
+// Get today's date string for filtering
+const getTodayStr = () => new Date().toISOString().split('T')[0]
 
 // Computed
 const hasActiveFilters = computed(() => {
-  return unscheduledOnly.value || selectedPriority.value !== null || selectedProject.value !== null || selectedDuration.value !== null
+  return showTodayOnly.value || unscheduledOnly.value || selectedPriority.value !== null || selectedProject.value !== null || selectedDuration.value !== null
+})
+
+// Count tasks due today (BUG-046)
+const todayCount = computed(() => {
+  const todayStr = getTodayStr()
+  return baseInboxTasks.value.filter(task => task.dueDate === todayStr).length
 })
 
 // Check if task is scheduled on calendar (has instances with dates)
@@ -259,6 +282,12 @@ const baseInboxTasks = computed(() => {
 
 const inboxTasks = computed(() => {
   let tasks = baseInboxTasks.value
+
+  // Apply Today filter (BUG-046)
+  if (showTodayOnly.value) {
+    const todayStr = getTodayStr()
+    tasks = tasks.filter(task => task.dueDate === todayStr)
+  }
 
   // Apply filters
   if (unscheduledOnly.value) {
@@ -460,6 +489,46 @@ const handleQuickAddTask = () => {
   gap: var(--space-2);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Today Quick Filter (BUG-046) */
+.today-quick-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--spring-smooth);
+  white-space: nowrap;
+}
+
+.today-quick-filter:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+
+.today-quick-filter.active {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-border-subtle);
+  color: var(--brand-primary);
+}
+
+.today-quick-filter .count-badge {
+  background: var(--brand-primary);
+  color: white;
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  min-width: 16px;
+  text-align: center;
 }
 
 .collapse-btn {

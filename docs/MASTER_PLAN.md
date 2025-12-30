@@ -651,7 +651,7 @@ Phase 3 (Mobile) ←────────────────────
 
 | ID | Status | Primary Files | Depends | Blocks |
 |----|--------|---------------|---------|--------|
-| **TASK-079** | 🔄 **IN PROGRESS** | `tsconfig.json`, `src/**/*` | - | - |
+
 | ~~TASK-022~~ | ✅ **DONE** | `tasks.ts`, `taskDisappearanceLogger.ts` | - | ~~TASK-034~~ |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | ~~TASK-014~~ | ✅ COMPLETE | `*.stories.ts`, `*.vue` (UI) | - | - |
@@ -700,7 +700,7 @@ Phase 3 (Mobile) ←────────────────────
 | TASK-058 | PLANNED | `src/stores/timer.ts` | - | - |
 | ~~**TASK-059**~~ | ✅ **DONE** | `vite.config.ts`, `src/utils/legacyStorageCleanup.ts` | - | - |
 | ~~**TASK-060**~~ | ✅ **DONE** | `AppSidebar.vue`, `ProjectTreeItem.vue`, `projects.ts` | - | - |
-| **TASK-061** | **P0** PLANNED | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
+| ~~**TASK-061**~~ | ✅ **DONE** | `src/utils/demoContentGuard.ts` (new), `tasks.ts` | - | - |
 | ~~**TASK-062**~~ | ✅ **DONE** | `ConfirmationModal.vue`, `useCanvasActions.ts`, `CanvasView.vue` | - | - |
 | ~~**BUG-037**~~ | ✅ **DONE** | `conflictResolver.ts`, `tasks.ts` | - | - |
 | ~~**BUG-038**~~ | ✅ **DONE** | `UnifiedInboxPanel.vue` | - | - |
@@ -720,9 +720,11 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-076** | 📋 **TODO** | `InboxPanel.vue`, `CalendarInboxPanel.vue`, `ui.ts` | - | - |
 | ~~**TASK-077**~~ | ✅ **DONE** | `CanvasContextMenu.vue` | - | - |
 | ~~**TASK-078**~~ | ✅ **DONE** | `dev-manager/kanban/index.html` | - | - |
-| **TASK-079** | 🔄 **IN PROGRESS** | `tsconfig.json`, `src/**/*` | - | - |
+| ~~**TASK-081**~~ | ✅ **DONE** | `tsconfig.json`, `src/**/*` | - | - |
 | **TASK-079** | 📋 **PLANNED** | `src-tauri/*` (new), `timer.ts`, `vite.config.ts`, `package.json` | TASK-017 | - |
 | ~~**TASK-080**~~ | ✅ **DONE** | `CalendarView.vue`, `CanvasView.vue`, `UnifiedInboxPanel.vue` | - | - |
+| ~~**BUG-047**~~ | ✅ **DONE** | `useCanvasDragDrop.ts` | - | - |
+| ~~**BUG-048**~~ | ✅ **DONE** | `CanvasView.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -737,15 +739,19 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **TASK-077**: Context menu glassmorphism styling | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [ ] **TASK-075**: Markdown support for task descriptions | **P2-MEDIUM** | TODO
 - [ ] **TASK-076**: Separate done filter (Canvas vs Calendar inbox) | **P1-HIGH** | TODO
-- [ ] **TASK-061**: Demo Content Guard Logger | **P0-CRITICAL** | PLANNED
+- [x] **~~TASK-061~~**: Demo Content Guard Logger | **P0-CRITICAL** | ✅ DONE (Dec 30) - Guards in createTask, createProject, createTaskWithUndo
 - [x] **~~TASK-062~~**: Custom Confirmation Modals | **P0-CRITICAL** | ✅ DONE (Dec 30) - ConfirmationModal in use, no window.confirm() calls remain
 - ✅ **BUG-041**: Fix blurry text on canvas zoom | **P0-CRITICAL** | ✅ FIXED (Dec 28)
 - [x] **~~BUG-042~~**: Task created from group context menu goes to inbox | **P1-HIGH** | ✅ FIXED (Dec 30)
 - [x] **~~BUG-043~~**: Group resize only works from corners, not edges | **P2-MEDIUM** | ✅ FIXED (Dec 30)
 - [x] **~~BUG-044~~**: Task created at wrong position (not at right-click location) | **P2-MEDIUM** | ✅ FIXED (Dec 30)
+- [x] **~~BUG-045~~**: Canvas done tasks - no visual indication + auto-moves to inbox | **P1-HIGH** | ✅ FIXED (Dec 30)
+- [x] **~~BUG-046~~**: Canvas inbox Today filter ignores dueDate (only checked scheduledDate) | **P1-HIGH** | ✅ FIXED (Dec 30) - Now checks dueDate + instances + scheduledDate
+- [x] **~~BUG-047~~**: Group task counter not updating in real-time when moving tasks | **P1-HIGH** | ✅ FIXED (Dec 30)
+- [x] **~~BUG-048~~**: Viewport doesn't persist user pan/zoom interactions | **P1-HIGH** | ✅ FIXED (Dec 30)
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - [x] **TASK-078**: Dev-Manager Hide Done Tasks Filter | **P2-MEDIUM** | ✅ DONE (Dec 30)
-- [ ] **TASK-080**: Hide Done Toggle + Today Filter (Calendar/Canvas views) | **P2-MEDIUM** | 🔄 IN PROGRESS
+- [x] **~~TASK-080~~**: Hide Done Toggle + Today Filter (Calendar/Canvas views) | **P2-MEDIUM** | ✅ DONE (Dec 30)
 - [ ] **TASK-079**: Tauri Desktop Integration (Fokus-style) | **P3-LOW** | PLANNED - System tray, taskbar progress, break splash screen
 - ✅ **BUG-040**: Sidebar content disappearance fix | ✅ FIXED (Dec 28)
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
@@ -760,7 +766,8 @@ Phase 3 (Mobile) ←────────────────────
 - ~~BUG-032~~: Projects deletion fix (✅ DONE)
 - ~~TASK-022~~: Task disappearance monitoring (✅ DONE - no issues detected after 6 days)
 
-**Recently Completed (Dec 23-27):**
+**Recently Completed (Dec 23-30):**
+- ✅ TASK-081: Enable Strict Mode & Type Safety (Dec 30)
 - ✅ TASK-059: Bundle Size Optimization (894 KB → 398 KB) (Dec 27)
 - ✅ TASK-048: Individual Storage Migration Phase 5 (Legacy cleanup) (Dec 27)
 - ✅ BUG-039: Canvas InboxPanel missing computed properties restored (Dec 27)
@@ -3841,7 +3848,7 @@ npm run dev
 
 ---
 
-### TASK-061: Demo Content Guard Logger (P0-CRITICAL - PLANNED)
+### ~~TASK-061~~: Demo Content Guard Logger (P0-CRITICAL - ✅ DONE Dec 30, 2025)
 
 **Priority**: P0-CRITICAL
 
@@ -3850,16 +3857,24 @@ npm run dev
 **Rationale**: Prevent accidental pollution of user data with test/demo content (relates to TASK-054 data safety).
 
 **Features**:
-- [ ] Create `src/utils/demoContentGuard.ts`
-- [ ] Detect patterns like "Test Task", "Sample Project", "Lorem ipsum", "Demo"
-- [ ] Hook into task/project creation functions
-- [ ] Console warnings in development mode
-- [ ] Optional user notification for suspicious content
-- [ ] Whitelist for legitimate task titles containing these words
+- [x] Create `src/utils/demoContentGuard.ts` ✅
+- [x] Detect patterns like "Test Task", "Sample Project", "Lorem ipsum", "Demo" ✅
+- [x] Hook into task/project creation functions ✅
+- [x] Console warnings in development mode ✅
+- [x] Optional user notification for suspicious content ✅
+- [x] Whitelist for legitimate task titles containing these words ✅
 
-**Integration Points**:
-- `src/stores/tasks.ts` - createTask, createProject
-- `src/composables/useUnifiedUndoRedo.ts` - createTaskWithUndo
+**Integration Points** (all hooked):
+- [x] `src/stores/tasks/taskOperations.ts` - createTask ✅
+- [x] `src/stores/projects.ts` - createProject ✅
+- [x] `src/composables/undoSingleton.ts` - createTaskWithUndo ✅
+
+**Implementation Notes**:
+- Uses regex patterns with confidence levels (high/medium/low)
+- Whitelist for legitimate titles (e.g., "Test Results", "Demo Meeting")
+- Console warnings only in DEV mode
+- Batch checking available for bulk imports
+- Non-blocking by default (warns but doesn't prevent)
 
 ---
 

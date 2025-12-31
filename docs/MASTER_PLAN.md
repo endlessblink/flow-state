@@ -711,7 +711,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-067**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | ~~**TASK-068**~~ | ✅ **DONE** | `GroupNodeSimple.vue`, `CanvasContextMenu.vue`, `CanvasView.vue` | - | - |
 | ~~**TASK-069**~~ | ✅ **DONE** | `GroupNodeSimple.vue` | - | - |
-| **TASK-070** | 📋 **TODO** | `CanvasView.vue`, `GroupNodeSimple.vue` | - | - |
+| ~~**TASK-070**~~ | ✅ **DONE** | `useCanvasActions.ts`, `CanvasView.vue`, `GroupNodeSimple.vue` | - | - |
 | **TASK-071** | 📋 **TODO** | `TaskNode.vue` | - | - |
 | ~~**TASK-072**~~ | ✅ **DONE** | `canvas.ts`, `GroupModal.vue`, `CanvasView.vue`, `useCanvasDragDrop.ts` | - | - |
 | **TASK-073** | 📋 **TODO** | `GroupNodeSimple.vue` | - | - |
@@ -725,13 +725,18 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-080**~~ | ✅ **DONE** | `CalendarView.vue`, `CanvasView.vue`, `UnifiedInboxPanel.vue` | - | - |
 | ~~**BUG-047**~~ | ✅ **DONE** | `useCanvasDragDrop.ts` | - | - |
 | ~~**BUG-048**~~ | ✅ **DONE** | `CanvasView.vue` | - | - |
+| **BUG-050** | 🔄 **IN PROGRESS** | `CanvasView.vue`, `KanbanColumn.vue` | - | - |
+| **TASK-082** | 🔄 **IN PROGRESS** | `useDateTransition.ts` (new), `canvas.ts` | - | - |
+| **TASK-083** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | - |
+| **TASK-084** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | TASK-083 |
+| ~~**BUG-051**~~ | ✅ **DONE** | `QuickSortView.vue`, `CategorySelector.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
 **Active Work:**
 - [x] **TASK-068**: Streamline Canvas Group Header Design | **P1-HIGH** | ✅ DONE (Dec 28) - Moved all actions to context menu
 - [x] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** | ✅ DONE (Dec 28) - Solid border, increased opacity, shadow
-- [ ] **TASK-070**: Fix context menu in groups (wrong menu) | **P1-HIGH** | TODO
+- [x] **~~TASK-070~~**: Fix context menu in groups (wrong menu) | **P1-HIGH** | ✅ DONE (Dec 31)
 - [ ] **TASK-071**: Fix task card text wrapping | **P1-HIGH** | TODO
 - [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 30 - 3-level nesting working, drag fix, task counts)
 - [ ] **TASK-073**: Improve group outline styling | **P2-MEDIUM** | TODO
@@ -749,10 +754,16 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~BUG-046~~**: Canvas inbox Today filter ignores dueDate (only checked scheduledDate) | **P1-HIGH** | ✅ FIXED (Dec 30) - Now checks dueDate + instances + scheduledDate
 - [x] **~~BUG-047~~**: Group task counter not updating in real-time when moving tasks | **P1-HIGH** | ✅ FIXED (Dec 30)
 - [x] **~~BUG-048~~**: Viewport doesn't persist user pan/zoom interactions | **P1-HIGH** | ✅ FIXED (Dec 30)
+- [x] **~~BUG-049~~**: Inbox panel can't scroll to see all tasks | **P2-MEDIUM** | ✅ FIXED (Dec 31) - Parent `overflow:visible` blocked child scrolling
+- [ ] **BUG-050**: Ghost preview positioning during resize/kanban status change | **P1-HIGH** | 🔄 IN PROGRESS
+- [ ] **TASK-082**: Auto-move Today tasks to Overdue at midnight (canvas only) | **P2-MEDIUM** | 🔄 IN PROGRESS
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - [x] **TASK-078**: Dev-Manager Hide Done Tasks Filter | **P2-MEDIUM** | ✅ DONE (Dec 30)
 - [x] **~~TASK-080~~**: Hide Done Toggle + Today Filter (Calendar/Canvas views) | **P2-MEDIUM** | ✅ DONE (Dec 30)
 - [ ] **TASK-079**: Tauri Desktop Integration (Fokus-style) | **P3-LOW** | PLANNED - System tray, taskbar progress, break splash screen
+- [ ] **TASK-083**: "All Projects" filter to see all tasks regardless of project | **P2-MEDIUM** | TODO
+- [ ] **TASK-084**: Multi-select projects with Ctrl+click to see combined tasks | **P2-MEDIUM** | TODO (depends on TASK-083)
+- [x] **~~BUG-051~~**: Can't type 'e' or space in project modal on QuickSort view | **P1-HIGH** | ✅ FIXED (Dec 31) - Global keyboard handlers now check for input/modal
 - ✅ **BUG-040**: Sidebar content disappearance fix | ✅ FIXED (Dec 28)
 - ✅ **TASK-056**: Refactor `tasks.ts` store logic | P1 | ✅ DONE (Dec 27) - Decomposed into sub-modules
 - ✅ **ROAD-013**: Sync Hardening & E2E Validation (P0-CRITICAL) | ✅ FIXED (Dec 27)
@@ -882,20 +893,25 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### TASK-070: Fix Context Menu in Groups (📋 TODO)
+### ~~TASK-070~~: Fix Context Menu in Groups (✅ DONE)
 
 **Priority**: P1-HIGH
 
-**Problem**: When right-clicking inside a group, the wrong context menu appears ("Disconnect" / Edge menu) instead of the canvas context menu with group actions.
+**Completed**: Dec 31, 2025
+
+**Problem**: When right-clicking inside a group, the wrong context menu appeared ("Disconnect" / Edge menu) instead of the canvas context menu with group actions.
+
+**Solution**: The `handleNodeContextMenu` function in `useCanvasActions.ts` was updated to show `showCanvasContextMenu` (with full group actions) instead of `showNodeContextMenu` (minimal "Delete Section" menu).
 
 **Goals**:
-- [ ] Right-click on group background shows canvas context menu with group actions
-- [ ] Context menu includes: Add Task, Edit Group, Settings, Power Mode, Collect Tasks, Delete
-- [ ] Ensure section/group is passed correctly to context menu
+- [x] Right-click on group background shows canvas context menu with group actions
+- [x] Context menu includes: Add Task, Edit Group, Settings, Power Mode, Collect Tasks, Delete
+- [x] Ensure section/group is passed correctly to context menu
 
-**Files to Modify**:
-- `src/views/CanvasView.vue` - Context menu event handling
-- `src/components/canvas/GroupNodeSimple.vue` - Right-click event propagation
+**Files Modified**:
+- `src/composables/canvas/useCanvasActions.ts` - Changed `handleNodeContextMenu` to show CanvasContextMenu
+- `src/views/CanvasView.vue` - Context menu event handling (already correct)
+- `src/components/canvas/GroupNodeSimple.vue` - Right-click event propagation (already correct)
 
 ---
 
@@ -1092,6 +1108,125 @@ All header action buttons were removed and moved to the context menu for a clean
 #### Related Tasks
 - **TASK-017**: KDE Plasmoid - Phase 3 of this epic
 - **ROAD-014**: KDE Plasma Widget - Same as TASK-017
+
+---
+
+### BUG-050: Ghost Preview Positioning During Resize/Status Change (🔄 IMPLEMENTED - Awaiting Test)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Ghost preview at wrong position | HIGH | 🔄 IMPLEMENTED |
+
+**User Report**: Ghost preview appears at incorrect canvas coordinates during:
+1. Group/Section resize on canvas
+2. Task status change in kanban board
+
+**Screenshot**: `docs/🐛 debug/debugging-screenshot/image copy 7.png`
+
+**Symptoms**:
+- Resize preview (showing dimensions like "412 × 952") appears at wrong canvas location
+- Preview not aligned with actual resize operation
+- Similar issue in kanban when changing status via drag
+
+**Root Causes (Identified)**:
+1. **Canvas Resize**: `handleSectionResize` relies on `event.params.x/y` which may not be present for right/bottom edge resizing. Need to always read position from Vue Flow node.
+2. **Kanban**: vuedraggable with `:force-fallback="false"` uses native HTML5 drag which desyncs with horizontal scroll.
+
+**Fix Applied** (Dec 31, 2025):
+- [x] Canvas: Updated `handleSectionResize` to always read position from Vue Flow node via `findNode()` (line 2580)
+- [x] Kanban: Enabled fallback mode (`:force-fallback="true"`) with fixed positioning CSS (line 25, 370-380)
+
+**Files Modified**:
+- `src/views/CanvasView.vue:2567-2593` - Always read position from Vue Flow node
+- `src/components/kanban/KanbanColumn.vue:25-27` - Enable force-fallback mode
+- `src/components/kanban/KanbanColumn.vue:370-381` - Add `.sortable-fallback` CSS class
+
+---
+
+### TASK-082: Auto-Move Today Tasks to Overdue at Midnight (🔄 IMPLEMENTED - Awaiting Test)
+
+| Feature | Priority | Status |
+|---------|----------|--------|
+| Date transition auto-move | P2-MEDIUM | 🔄 IMPLEMENTED |
+
+**Goal**: When the date changes from today to tomorrow at 00:00, tasks in "Today" canvas group should auto-move to "Overdue" group.
+
+**Scope**:
+- **Canvas only** (not Board/Calendar views)
+- Background process watches for date change
+- Only if "Overdue" group exists on canvas
+- If no Overdue group, tasks stay in Today (with overdue visual indicators)
+
+**Implementation Applied** (Dec 31, 2025):
+- [x] Created `useDateTransition.ts` composable - watches for midnight with precise setTimeout
+- [x] Added canvas handler `handleMidnightTransition()` in CanvasView.vue
+- [x] Finds "Today" and "Overdue" groups by name (case-insensitive match)
+- [x] Moves tasks between groups, preserving grid layout
+
+**Files Created/Modified**:
+- **New:** `src/composables/useDateTransition.ts` - Date change watcher with visibility API support
+- `src/views/CanvasView.vue:538-613` - Midnight transition handler
+
+---
+
+### TASK-083: "All Projects" Filter (📋 TODO)
+
+| Feature | Priority | Status |
+|---------|----------|--------|
+| All Projects filter | P2-MEDIUM | 📋 TODO |
+
+**Goal**: Add a filter option in the sidebar to see all tasks from all projects at once, regardless of which project they belong to.
+
+**User Story**: As a user, I want to see a unified view of all my tasks across all projects, so I can get a complete overview without switching between projects.
+
+**Scope**:
+- Add "All Projects" option to sidebar project filter
+- When selected, shows tasks from every project combined
+- Works with existing filters (Today, This Week, Active, etc.)
+- Respects "Hide Done" toggle
+
+**Implementation Notes**:
+- Add new filter state in `ui.ts` store
+- Modify task filtering logic in `tasks.ts`
+- Update `AppSidebar.vue` to include "All Projects" option
+
+**Files to Modify**:
+- `src/stores/ui.ts` - Add filter state
+- `src/stores/tasks.ts` - Modify filter getters
+- `src/components/layout/AppSidebar.vue` - Add UI option
+
+---
+
+### TASK-084: Multi-Select Projects Filter (📋 TODO)
+
+| Feature | Priority | Status |
+|---------|----------|--------|
+| Multi-select projects | P2-MEDIUM | 📋 TODO |
+
+**Goal**: Enable Ctrl+Click to select multiple projects in the sidebar, showing combined tasks from all selected projects.
+
+**User Story**: As a user, I want to Ctrl+Click on multiple projects to see tasks from just those selected projects combined.
+
+**Scope**:
+- Ctrl+Click to toggle project selection (multi-select mode)
+- Click without Ctrl selects single project (existing behavior)
+- Visual indicator for selected projects (highlight/checkbox)
+- Combined task view from all selected projects
+- Clear selection option
+
+**Depends On**: TASK-083 (shares filtering infrastructure)
+
+**Implementation Notes**:
+- Track selected project IDs as array in `ui.ts`
+- Modify click handler in sidebar project list
+- Update task filtering to support multiple project IDs
+- Add visual feedback for multi-selected state
+
+**Files to Modify**:
+- `src/stores/ui.ts` - Add `selectedProjectIds: string[]`
+- `src/stores/tasks.ts` - Support array of project IDs in filters
+- `src/components/layout/AppSidebar.vue` - Add Ctrl+Click handler
+- `src/components/projects/ProjectTreeItem.vue` - Multi-select visual state
 
 ---
 

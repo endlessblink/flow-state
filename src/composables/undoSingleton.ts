@@ -8,6 +8,7 @@ import { useManualRefHistory } from '@vueuse/core'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import { useCanvasStore, type CanvasGroup } from '@/stores/canvas'
+import { guardTaskCreation } from '@/utils/demoContentGuard'
 
 // Combined state interface for tracking both tasks and groups
 interface UnifiedUndoState {
@@ -306,6 +307,11 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
 
 const createTaskWithUndo = async (taskData: Partial<Task>) => {
   console.log('➕ createTaskWithUndo called with:', taskData)
+
+  // TASK-061: Demo content guard - defense in depth (also checked in taskStore.createTask)
+  if (taskData.title) {
+    guardTaskCreation(taskData.title)
+  }
 
   // FIXED: Use proper VueUse pattern - save state before operation
   saveState('Before task creation')

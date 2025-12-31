@@ -250,7 +250,7 @@ export const useReliableSyncManager = () => {
     try {
       // Initialize conflict detector with databases
       if (localDB) {
-        await conflictDetector.initialize(localDB, remoteDB || undefined)
+        await conflictDetector.initialize(localDB, remoteDB)
       }
 
       // Update references in offline queue
@@ -601,7 +601,7 @@ export const useReliableSyncManager = () => {
       const validationResult = await syncValidator.validateDatabase(localDB)
       lastValidation.value = validationResult
       if (validationResult.critical) {
-        throw new Error(`Critical database validation failure: ${validationResult.errors[0]}`)
+        throw new Error(`Critical database validation failure: ${validationResult.errors?.[0] || 'Unknown error'}`)
       }
 
       // Step 2: Conflict detection - only log if conflicts found
@@ -1089,7 +1089,7 @@ export const useReliableSyncManager = () => {
         retry: true,
         batch_size: 50,
         batches_limit: 10
-      })
+      }) as unknown as PouchDBSyncHandler
 
       // Setup event handlers
       syncHandler.on('change', async (info) => {
@@ -1114,36 +1114,38 @@ export const useReliableSyncManager = () => {
         localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())
       })
 
-      syncHandler.on('paused', (err: unknown) => {
-        if (err) {
-          console.warn('⏸️ [LIVE SYNC] Paused with error:', err)
-          syncStatus.value = 'paused'
-        } else {
-          console.log('⏸️ [LIVE SYNC] Paused (waiting for changes)')
-          syncStatus.value = 'idle'
-        }
-      })
+      if (syncHandler) {
+        syncHandler.on('paused', (err: unknown) => {
+          if (err) {
+            console.warn('⏸️ [LIVE SYNC] Paused with error:', err)
+            syncStatus.value = 'paused'
+          } else {
+            console.log('⏸️ [LIVE SYNC] Paused (waiting for changes)')
+            syncStatus.value = 'idle'
+          }
+        })
 
-      syncHandler.on('active', () => {
-        console.log('▶️ [LIVE SYNC] Active')
-        syncStatus.value = 'syncing'
-      })
+        syncHandler.on('active', () => {
+          console.log('▶️ [LIVE SYNC] Active')
+          syncStatus.value = 'syncing'
+        })
 
-      syncHandler.on('denied', (err: unknown) => {
-        console.error('🚫 [LIVE SYNC] Denied:', err)
-        error.value = 'Sync denied: ' + ((err as { message?: string })?.message || 'Unknown error')
-      })
+        syncHandler.on('denied', (err: unknown) => {
+          console.error('🚫 [LIVE SYNC] Denied:', err)
+          error.value = 'Sync denied: ' + ((err as { message?: string })?.message || 'Unknown error')
+        })
 
-      syncHandler.on('error', (err: unknown) => {
-        console.error('❌ [LIVE SYNC] Error:', err)
-        syncStatus.value = 'error'
-        error.value = (err as { message?: string })?.message || 'Sync error'
-      })
+        syncHandler.on('error', (err: unknown) => {
+          console.error('❌ [LIVE SYNC] Error:', err)
+          syncStatus.value = 'error'
+          error.value = (err as { message?: string })?.message || 'Sync error'
+        })
 
-      syncHandler.on('complete', (info: unknown) => {
-        console.log('✅ [LIVE SYNC] Complete:', info)
-        // Live sync shouldn't complete unless cancelled
-      })
+        syncHandler.on('complete', (info: unknown) => {
+          console.log('✅ [LIVE SYNC] Complete:', info)
+          // Live sync shouldn't complete unless cancelled
+        })
+      }
 
       console.log('✅ [LIVE SYNC] Live sync started successfully')
       syncStatus.value = 'idle'

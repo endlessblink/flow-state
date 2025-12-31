@@ -157,7 +157,21 @@ function handleCreateNew() {
   emit('createNew')
 }
 
+function shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement
+  if (!target) return false
+  const tagName = target.tagName?.toLowerCase()
+  return tagName === 'input' ||
+         tagName === 'textarea' ||
+         tagName === 'select' ||
+         target.isContentEditable ||
+         !!target.closest('[role="dialog"], .modal, .n-modal')
+}
+
 function handleKeydown(event: KeyboardEvent) {
+  // Skip if user is in an input field or modal
+  if (shouldIgnoreKeyEvent(event)) return
+
   // Number keys 1-9 for quick selection
   const key = parseInt(event.key)
   if (key >= 1 && key <= 9 && key <= availableProjects.value.length) {

@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import { STORAGE_FLAGS } from '@/config/database'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { guardProjectCreation } from '@/utils/demoContentGuard'
 import type { Project } from '@/types/tasks'
 import {
     saveProjects as saveIndividualProjects,
@@ -115,6 +116,11 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const createProject = async (projectData: Partial<Project>) => {
+        // TASK-061: Demo content guard - warn in dev mode
+        if (projectData.name) {
+            guardProjectCreation(projectData.name)
+        }
+
         manualOperationInProgress = true
         try {
             const newProject: Project = {

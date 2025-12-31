@@ -502,6 +502,7 @@ import '@/assets/vue-flow-overrides.css'
 // Phase 1 Composables
 import { useCanvasResourceManager } from '@/composables/canvas/useCanvasResourceManager'
 import { useCanvasZoom } from '@/composables/canvas/useCanvasZoom'
+import { useDateTransition } from '@/composables/useDateTransition'
 import { useCanvasAlignment } from '@/composables/canvas/useCanvasAlignment'
 // REMOVED: Library styles were forcing circular handles
 // import '@vue-flow/node-resizer/dist/style.css'
@@ -533,6 +534,83 @@ const validateStores = () => {
 
 // Store validation status for use throughout component
 const storeHealth = validateStores()
+
+// TASK-082: Date transition handler - move Today tasks to Overdue at midnight
+const handleMidnightTransition = async (_previousDate: Date, _newDate: Date) => {
+  console.log('[TASK-082] Midnight transition detected - checking for Today → Overdue task moves')
+
+  // Find "Today" and "Overdue" groups by name (case-insensitive, partial match)
+  const todayGroup = canvasStore.groups.find(g =>
+    g.name?.toLowerCase().includes('today')
+  )
+  const overdueGroup = canvasStore.groups.find(g =>
+    g.name?.toLowerCase().includes('overdue')
+  )
+
+  if (!todayGroup) {
+    console.log('[TASK-082] No "Today" group found on canvas - skipping transition')
+    return
+  }
+
+  if (!overdueGroup) {
+    console.log('[TASK-082] No "Overdue" group found on canvas - tasks will stay in Today')
+    return
+  }
+
+  // Find tasks that are visually inside the "Today" group (canvasPosition within group bounds)
+  const todayBounds = todayGroup.position
+  const tasksInToday = taskStore.tasks.filter(task => {
+    if (!task.canvasPosition || task.isInInbox) return false
+    const pos = task.canvasPosition
+    return (
+      pos.x >= todayBounds.x &&
+      pos.x <= todayBounds.x + todayBounds.width &&
+      pos.y >= todayBounds.y &&
+      pos.y <= todayBounds.y + todayBounds.height
+    )
+  })
+
+  if (tasksInToday.length === 0) {
+    console.log('[TASK-082] No tasks in "Today" group to move')
+    return
+  }
+
+  console.log(`[TASK-082] Moving ${tasksInToday.length} tasks from "Today" to "Overdue"`)
+
+  // Calculate positions in the Overdue group
+  const overdueBounds = overdueGroup.position
+  const taskWidth = 220
+  const taskHeight = 100
+  const padding = 20
+  const headerHeight = 60
+  const cols = Math.max(1, Math.floor((overdueBounds.width - padding * 2) / (taskWidth + 10)))
+
+  // Move each task to the Overdue group
+  for (let i = 0; i < tasksInToday.length; i++) {
+    const task = tasksInToday[i]
+    const col = i % cols
+    const row = Math.floor(i / cols)
+    const newX = overdueBounds.x + padding + col * (taskWidth + 10)
+    const newY = overdueBounds.y + headerHeight + padding + row * (taskHeight + 10)
+
+    try {
+      await taskStore.updateTask(task.id, {
+        canvasPosition: { x: newX, y: newY }
+      })
+    } catch (error) {
+      console.error(`[TASK-082] Failed to move task ${task.id}:`, error)
+    }
+  }
+
+  console.log(`[TASK-082] Successfully moved ${tasksInToday.length} tasks to "Overdue" group`)
+}
+
+// Initialize date transition watcher
+const { isWatching: isDateWatcherActive, simulateTransition: _simulateDateTransition } = useDateTransition({
+  onDayChange: handleMidnightTransition,
+  autoStart: true,
+  debug: true
+})
 
 import { useCanvasActions } from '@/composables/canvas/useCanvasActions'
 import { useCanvasConnections } from '@/composables/canvas/useCanvasConnections'
@@ -2564,7 +2642,7 @@ const handleSectionResizeStart = ({ sectionId, event: _event }: { sectionId: str
   }
 }
 
-const handleSectionResize = ({ sectionId: _sectionId, event }: { sectionId: string; event: { params?: { width?: number; height?: number; x?: number; y?: number }; width?: number; height?: number } }) => {
+const handleSectionResize = ({ sectionId, event }: { sectionId: string; event: { params?: { width?: number; height?: number; x?: number; y?: number }; width?: number; height?: number } }) => {
   // NodeResizer provides dimensions in event.params as { width, height, x, y }
   const width = event?.params?.width || event?.width
   const height = event?.params?.height || event?.height
@@ -2574,13 +2652,21 @@ const handleSectionResize = ({ sectionId: _sectionId, event }: { sectionId: stri
     resizeState.value.currentWidth = width
     resizeState.value.currentHeight = height
 
-    // BUG-019 FIX: Track live position when resizing from left/top edges
-    // NodeResizer provides x, y in params when position changes
-    if (typeof event?.params?.x === 'number') {
-      resizeState.value.currentX = event.params.x
-    }
-    if (typeof event?.params?.y === 'number') {
-      resizeState.value.currentY = event.params.y
+    // BUG-050 FIX: Always read position from Vue Flow node (source of truth)
+    // This fixes ghost preview positioning when event.params.x/y are not provided
+    // (e.g., when resizing from right/bottom edges where position doesn't change)
+    const vueFlowNode = findNode(`section-${sectionId}`)
+    if (vueFlowNode) {
+      resizeState.value.currentX = vueFlowNode.position.x
+      resizeState.value.currentY = vueFlowNode.position.y
+    } else {
+      // Fallback to event params if node not found
+      if (typeof event?.params?.x === 'number') {
+        resizeState.value.currentX = event.params.x
+      }
+      if (typeof event?.params?.y === 'number') {
+        resizeState.value.currentY = event.params.y
+      }
     }
   }
 }
@@ -3266,7 +3352,9 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 1rem;
   top: 1rem;
+  bottom: 2rem; /* BUG-049: Added to constrain height and enable scrolling */
   z-index: 50;
+  max-height: calc(100vh - 3rem); /* Fallback constraint with extra padding */
   /* InboxPanel has its own sizing: 320px expanded, 3rem collapsed */
 }
 

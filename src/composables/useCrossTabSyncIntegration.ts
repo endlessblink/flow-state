@@ -284,8 +284,8 @@ export function useCrossTabSyncIntegration() {
     const originalDeleteTask = taskStore.deleteTask.bind(taskStore)
 
     // Override createTask
-    taskStore.createTask = function(taskData: unknown) {
-      const result = originalCreateTask(taskData)
+    taskStore.createTask = function (taskData: unknown) {
+      const result = originalCreateTask(taskData as any)
 
       // Broadcast after creation
       setTimeout(() => {
@@ -304,9 +304,9 @@ export function useCrossTabSyncIntegration() {
     }
 
     // Override updateTask
-    taskStore.updateTask = function(taskId: string, updates: unknown) {
+    taskStore.updateTask = function (taskId: string, updates: unknown) {
       const _oldTask = taskStore.tasks.find(t => t.id === taskId)
-      const result = originalUpdateTask(taskId, updates)
+      const result = originalUpdateTask(taskId, updates as any)
 
       // Broadcast after update
       setTimeout(() => {
@@ -326,7 +326,7 @@ export function useCrossTabSyncIntegration() {
     }
 
     // Override deleteTask
-    taskStore.deleteTask = async function(taskId: string) {
+    taskStore.deleteTask = async function (taskId: string) {
       const _oldTask = taskStore.tasks.find(t => t.id === taskId)
       const result = await originalDeleteTask(taskId)
 

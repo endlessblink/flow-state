@@ -82,7 +82,7 @@ export const useUnifiedUndoRedo = () => {
 
   // Computed properties for UI state
   const lastAction = computed(() => {
-    if (history.value && history.value.length > 0) {
+    if (history?.value && history.value.length > 0) {
       const time = new Date().toLocaleTimeString()
       return `Last action at ${time} (${history.value.length} states in history)`
     }

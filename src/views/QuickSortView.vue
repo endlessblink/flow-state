@@ -270,7 +270,21 @@ function handleExit() {
   router.push({ name: 'board' })
 }
 
+function shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement
+  if (!target) return false
+  const tagName = target.tagName?.toLowerCase()
+  return tagName === 'input' ||
+         tagName === 'textarea' ||
+         tagName === 'select' ||
+         target.isContentEditable ||
+         !!target.closest('[role="dialog"], .modal, .n-modal')
+}
+
 function handleGlobalKeydown(event: KeyboardEvent) {
+  // Skip if user is in an input field or modal
+  if (shouldIgnoreKeyEvent(event)) return
+
   // Escape to exit
   if (event.key === 'Escape') {
     event.preventDefault()

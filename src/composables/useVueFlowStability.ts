@@ -565,7 +565,7 @@ export function useVueFlowStability(
 /**
  * Debounce utility function
  */
-function debounce<T extends (...args: never[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null
 
   return (...args: Parameters<T>) => {

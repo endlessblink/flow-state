@@ -154,7 +154,7 @@ export class SyncValidator {
         severity: 'error',
         message: 'Document is not a valid object or is null'
       })
-      return this.createValidationResult((document?._id as string) || 'unknown', issues, Date.now() - startTime)
+      return this.createValidationResult(((document as any)?._id as string) || 'unknown', issues, Date.now() - startTime)
     }
 
     // Skip validation for non-syncable documents

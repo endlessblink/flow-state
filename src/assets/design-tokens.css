@@ -74,6 +74,13 @@
   --glass-border-hover: rgba(255, 255, 255, 0.15);
   --glass-glow: rgba(99, 102, 241, 0.08);
 
+  /* Canvas Node Backgrounds - TASK-079 zoom visibility */
+  /* Adjust these to control canvas element brightness */
+  --canvas-task-bg: rgba(34, 36, 44, 0.95);      /* Task cards on canvas */
+  --canvas-group-bg: rgba(36, 38, 46, 0.92);     /* Groups/sections on canvas */
+  --canvas-task-border: rgba(255, 255, 255, 0.25);   /* Task border */
+  --canvas-group-border: rgba(255, 255, 255, 0.30);  /* Group border */
+
   /* Text Hierarchy - Foreground colors */
   --text-primary: hsl(var(--gray-100));
   --text-secondary: hsl(var(--gray-200));

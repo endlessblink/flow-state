@@ -18,7 +18,7 @@
         v-if="!isCollapsed"
         class="today-quick-filter"
         :class="{ active: activeTimeFilter === 'today' }"
-        :title="`Show tasks for today (${todayCount})`"
+        :title="`Filter inbox: Show only today's tasks (${todayCount})`"
         @click="activeTimeFilter = activeTimeFilter === 'today' ? 'all' : 'today'"
       >
         <CalendarDays :size="14" />
@@ -762,12 +762,13 @@ onBeforeUnmount(() => {
 <style scoped>
 .unified-inbox-panel {
   width: 320px;
-  max-height: calc(100vh - 220px);
+  height: 100%; /* Fill parent height (constrained by CanvasView) */
+  max-height: 100%; /* Don't exceed parent bounds */
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  overflow: visible;
+  overflow: hidden; /* Fixed: was 'visible' which broke child scrolling */
   transition: width var(--duration-normal) var(--spring-smooth), padding var(--duration-normal);
   position: relative;
   z-index: 100;
@@ -1031,11 +1032,13 @@ onBeforeUnmount(() => {
 
 .inbox-tasks {
   flex: 1;
+  min-height: 0; /* Critical for flexbox scroll containers */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-2);
+  padding-bottom: var(--space-4); /* BUG-049: Extra padding so last task isn't cut off */
 }
 
 .empty-inbox {

@@ -40,7 +40,9 @@ export function useInboxFiltering() {
     }
 
     const hasDate = (task: Task) => {
-        // Check instances first (new format)
+        // Check dueDate first (set via context menu)
+        if (task.dueDate) return true
+        // Check instances (new format)
         if (task.instances && task.instances.length > 0) {
             return task.instances.some((inst) => inst.scheduledDate)
         }
@@ -60,15 +62,23 @@ export function useInboxFiltering() {
         )
     )
 
-    // Count tasks scheduled for today
+    // Check if task is scheduled/due for a specific date
+    const isTaskForDate = (task: Task, dateStr: string): boolean => {
+        // Check dueDate first (set via context menu "Set Due Date")
+        if (task.dueDate === dateStr) return true
+        // Check instances (calendar scheduling)
+        if (task.instances && task.instances.length > 0) {
+            if (task.instances.some((inst) => inst.scheduledDate === dateStr)) return true
+        }
+        // Check legacy scheduledDate
+        if (task.scheduledDate === dateStr) return true
+        return false
+    }
+
+    // Count tasks scheduled/due for today
     const todayCount = computed(() => {
         const todayStr = getToday().toISOString().split('T')[0]
-        return baseInboxTasks.value.filter(task => {
-            if (task.instances && task.instances.length > 0) {
-                return task.instances.some((inst) => inst.scheduledDate === todayStr)
-            }
-            return task.scheduledDate === todayStr
-        }).length
+        return baseInboxTasks.value.filter(task => isTaskForDate(task, todayStr)).length
     })
 
     // Apply time-based filtering
@@ -79,33 +89,27 @@ export function useInboxFiltering() {
             case 'all':
                 return tasks
 
+            case 'today':
             case 'now': {
+                // BUG-046 FIX: Check dueDate, instances, AND scheduledDate
                 const today = getToday().toISOString().split('T')[0]
-                return tasks.filter(task => {
-                    if (task.instances && task.instances.length > 0) {
-                        if (task.instances.some((inst) => inst.scheduledDate === today)) return true
-                    }
-                    if (task.scheduledDate === today) return true
-                    return false
-                })
+                return tasks.filter(task => isTaskForDate(task, today))
             }
 
             case 'tomorrow': {
                 const tomorrow = getTomorrow().toISOString().split('T')[0]
-                return tasks.filter(task => {
-                    if (task.instances && task.instances.length > 0) {
-                        if (task.instances.some((inst) => inst.scheduledDate === tomorrow)) return true
-                    }
-                    if (task.scheduledDate === tomorrow) return true
-                    return false
-                })
+                return tasks.filter(task => isTaskForDate(task, tomorrow))
             }
 
             case 'thisWeek':
                 return tasks.filter(task => {
+                    // Check dueDate
+                    if (isThisWeek(task.dueDate)) return true
+                    // Check instances
                     if (task.instances && task.instances.length > 0) {
                         if (task.instances.some((inst) => isThisWeek(inst.scheduledDate))) return true
                     }
+                    // Check legacy scheduledDate
                     if (isThisWeek(task.scheduledDate)) return true
                     return false
                 })

@@ -459,8 +459,8 @@ export const useAuthStore = defineStore('auth', () => {
       // Update Firebase Auth profile if display name or photo changed
       if (data.displayName !== undefined || data.photoURL !== undefined) {
         await _firebaseUpdateProfile(user.value, {
-          displayName: data.displayName ?? user.value.displayName,
-          photoURL: data.photoURL ?? user.value.photoURL
+          displayName: (data.displayName ?? user.value.displayName) || undefined,
+          photoURL: (data.photoURL ?? user.value.photoURL) || undefined
         })
       }
 

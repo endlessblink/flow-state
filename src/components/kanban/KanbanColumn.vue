@@ -22,8 +22,9 @@
         ghost-class="ghost-card"
         chosen-class="chosen-card"
         drag-class="drag-card"
-        :force-fallback="false"
-        :fallback-tolerance="0"
+        :force-fallback="true"
+        fallback-class="sortable-fallback"
+        :fallback-tolerance="3"
         :scroll-sensitivity="100"
         :scroll-speed="20"
         bubble-scroll
@@ -364,5 +365,18 @@ const handleDragChange = (event: DraggableChangeEvent) => {
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   cursor: grabbing;
+}
+
+/* BUG-050 FIX: Sortable fallback ghost - fixed positioning for consistent appearance across scroll */
+.sortable-fallback {
+  position: fixed !important;
+  z-index: 9999 !important;
+  pointer-events: none !important;
+  opacity: 0.9 !important;
+  background: rgba(40, 40, 50, 0.95) !important;
+  border: 1px solid rgba(99, 102, 241, 0.4) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  border-radius: var(--radius-lg) !important;
+  transform: rotate(2deg) scale(1.02) !important;
 }
 </style>

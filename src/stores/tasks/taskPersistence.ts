@@ -16,6 +16,8 @@ import { useProjectStore } from '../projects'
 export function useTaskPersistence(
     tasks: Ref<Task[]>,
     hideDoneTasks: Ref<boolean>,
+    hideCanvasDoneTasks: Ref<boolean>,
+    hideCalendarDoneTasks: Ref<boolean>,
     activeSmartView: Ref<any>,
     activeStatusFilter: Ref<string | null>,
     isLoadingFromDatabase: Ref<boolean>,
@@ -33,7 +35,11 @@ export function useTaskPersistence(
         activeProjectId: string | null
         activeSmartView: any
         activeStatusFilter: string | null
-        hideDoneTasks: boolean
+        // TASK-076: Separate done filters
+        hideCanvasDoneTasks?: boolean
+        hideCalendarDoneTasks?: boolean
+        // Deprecated - kept for migration from old format
+        hideDoneTasks?: boolean
     }
 
     const saveTasksToStorage = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
@@ -83,7 +89,17 @@ export function useTaskPersistence(
                 projectStore.setActiveProject(state.activeProjectId)
                 activeSmartView.value = state.activeSmartView
                 activeStatusFilter.value = state.activeStatusFilter
-                hideDoneTasks.value = state.hideDoneTasks ?? false
+
+                // TASK-076: Migration from old single hideDoneTasks to separate filters
+                if (state.hideCanvasDoneTasks !== undefined || state.hideCalendarDoneTasks !== undefined) {
+                    // New format - use separate values
+                    hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? false
+                    hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false
+                } else if (state.hideDoneTasks !== undefined) {
+                    // Old format - migrate to both filters
+                    hideCanvasDoneTasks.value = state.hideDoneTasks
+                    hideCalendarDoneTasks.value = state.hideDoneTasks
+                }
             }
         } catch (e) {
             console.warn('Failed to load filters from localStorage:', e)
@@ -102,7 +118,17 @@ export function useTaskPersistence(
                 projectStore.setActiveProject(saved.activeProjectId)
                 activeSmartView.value = saved.activeSmartView
                 activeStatusFilter.value = saved.activeStatusFilter
-                hideDoneTasks.value = saved.hideDoneTasks ?? false
+
+                // TASK-076: Migration from old single hideDoneTasks to separate filters
+                if (saved.hideCanvasDoneTasks !== undefined || saved.hideCalendarDoneTasks !== undefined) {
+                    // New format - use separate values
+                    hideCanvasDoneTasks.value = saved.hideCanvasDoneTasks ?? false
+                    hideCalendarDoneTasks.value = saved.hideCalendarDoneTasks ?? false
+                } else if (saved.hideDoneTasks !== undefined) {
+                    // Old format - migrate to both filters
+                    hideCanvasDoneTasks.value = saved.hideDoneTasks
+                    hideCalendarDoneTasks.value = saved.hideDoneTasks
+                }
             } else {
                 loadFiltersFromLocalStorage()
             }
@@ -118,11 +144,13 @@ export function useTaskPersistence(
         if (isLoadingFilters.value) return
         if (persistTimeout) clearTimeout(persistTimeout)
         persistTimeout = setTimeout(async () => {
+            // TASK-076: Save separate done filters (no longer save deprecated hideDoneTasks)
             const state: PersistedFilterState = {
                 activeProjectId: projectStore.activeProjectId,
                 activeSmartView: activeSmartView.value,
                 activeStatusFilter: activeStatusFilter.value,
-                hideDoneTasks: hideDoneTasks.value
+                hideCanvasDoneTasks: hideCanvasDoneTasks.value,
+                hideCalendarDoneTasks: hideCalendarDoneTasks.value
             }
             localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
             if (db.isReady?.value) {
@@ -307,8 +335,11 @@ export function useTaskPersistence(
         }, 1000)
     }, { deep: true })
 
-    watch(hideDoneTasks, (val) => {
-        db.save(DB_KEYS.HIDE_DONE_TASKS, val)
+    // TASK-076: Watch both new done filter refs for legacy DB_KEYS.HIDE_DONE_TASKS compat
+    // This keeps the legacy key updated for any code still reading it
+    watch([hideCanvasDoneTasks, hideCalendarDoneTasks], () => {
+        // Save combined value to legacy key for backward compatibility
+        db.save(DB_KEYS.HIDE_DONE_TASKS, hideCanvasDoneTasks.value || hideCalendarDoneTasks.value)
     }, { flush: 'post' })
 
     return {

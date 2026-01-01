@@ -60,14 +60,16 @@ export const useTaskStore = defineStore('tasks', () => {
   // 1. Initialize State
   const states = useTaskStates()
   const {
-    tasks, hideDoneTasks, activeSmartView, activeStatusFilter,
+    tasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
+    activeSmartView, activeStatusFilter,
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
     isLoadingFilters, runAllTaskMigrations
   } = states
 
   // 2. Initialize Persistence
   const persistence = useTaskPersistence(
-    tasks, hideDoneTasks, activeSmartView, activeStatusFilter,
+    tasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
+    activeSmartView, activeStatusFilter,
     isLoadingFromDatabase, manualOperationInProgress, isLoadingFilters,
     runAllTaskMigrations
   )
@@ -76,8 +78,8 @@ export const useTaskStore = defineStore('tasks', () => {
   // 3. Initialize Operations
   const operations = useTaskOperations(
     tasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
-    activeDurationFilter, hideDoneTasks, manualOperationInProgress,
-    saveTasksToStorage, persistFilters, runAllTaskMigrations
+    activeDurationFilter, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
+    manualOperationInProgress, saveTasksToStorage, persistFilters, runAllTaskMigrations
   )
 
   // 4. Initialize History

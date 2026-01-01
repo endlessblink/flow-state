@@ -180,16 +180,24 @@
           </div>
         </div>
 
-        <!-- Hide Done Tasks Toggle (TASK-080) -->
+        <!-- Hide Done Tasks Toggle (TASK-080, TASK-076) -->
+        <!-- Using inline styles since Tailwind arbitrary values weren't compiling -->
         <button
-          class="hide-done-toggle absolute top-4 right-4 z-20 px-3 py-2 bg-[rgba(30,30,40,0.95)] backdrop-blur-sm border border-white/10 rounded-lg text-gray-300 text-sm font-medium flex items-center gap-2 shadow-lg hover:bg-[rgba(40,40,50,0.95)] hover:border-white/20 transition-all"
-          :class="{ 'active bg-[rgba(139,92,246,0.2)] border-purple-500/30 text-purple-300': hideDoneTasks }"
-          :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-          @click="taskStore.toggleHideDoneTasks()"
+          class="hide-done-toggle absolute px-3 py-2 backdrop-blur-sm border rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
+          :class="hideCanvasDoneTasks ? 'text-purple-300' : 'text-gray-300'"
+          :style="{
+            top: '16px',
+            left: taskStore.activeStatusFilter ? '280px' : '16px',
+            zIndex: 1010,
+            background: hideCanvasDoneTasks ? 'rgba(139,92,246,0.2)' : 'rgba(30,30,40,0.95)',
+            borderColor: hideCanvasDoneTasks ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.1)'
+          }"
+          :title="hideCanvasDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+          @click="taskStore.toggleCanvasDoneTasks()"
         >
-          <EyeOff v-if="hideDoneTasks" :size="16" />
+          <EyeOff v-if="hideCanvasDoneTasks" :size="16" />
           <Eye v-else :size="16" />
-          <span>{{ hideDoneTasks ? 'Hidden' : 'Done' }}</span>
+          <span>{{ hideCanvasDoneTasks ? 'Hidden' : 'Done' }}</span>
         </button>
 
         <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
@@ -225,7 +233,7 @@
               :zoom-scroll-sensitivity="1.0"
               :zoom-activation-key-code="null"
               prevent-scrolling
-              :default-viewport="{ zoom: 1, x: 0, y: 0 }"
+              :default-viewport="initialViewport"
               dir="ltr"
               tabindex="0"
               @node-drag-start="handleNodeDragStart"
@@ -422,24 +430,6 @@
       @delete-node="deleteNode"
     />
 
-
-    <!-- Resize Preview Overlay - FIXED positioning -->
-    <div
-      v-if="resizeState.isResizing"
-      class="resize-preview-overlay-fixed"
-    >
-      <div
-        v-for="section in canvasStore.sections"
-        v-show="section.id === resizeState.sectionId"
-        :key="section.id"
-        class="resize-preview-section-overlay"
-        :style="getSectionResizeStyle(section)"
-      >
-        <div class="resize-size-indicator">
-          {{ resizeState.currentWidth }} × {{ resizeState.currentHeight }}
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -534,6 +524,15 @@ const validateStores = () => {
 
 // Store validation status for use throughout component
 const storeHealth = validateStores()
+
+// BUG-052: Initial viewport from saved state - prevents jump when Vue Flow initializes
+// By using canvasStore.viewport (which is loaded BEFORE Vue Flow renders),
+// we avoid the default (0,0,1) → saved viewport jump
+const initialViewport = computed(() => ({
+  x: canvasStore.viewport.x,
+  y: canvasStore.viewport.y,
+  zoom: canvasStore.viewport.zoom
+}))
 
 // TASK-082: Date transition handler - move Today tasks to Overdue at midnight
 const handleMidnightTransition = async (_previousDate: Date, _newDate: Date) => {
@@ -763,7 +762,8 @@ const filteredTasksWithCanvasPosition = computed(() => {
 })
 
 // 🚀 Phase 1: Vue 3 + Pinia Reactivity Core - Use storeToRefs for proper reactivity
-const { hideDoneTasks } = storeToRefs(taskStore)
+// TASK-076: Use canvas-specific done filter
+const { hideCanvasDoneTasks } = storeToRefs(taskStore)
 const { sections: _sections, viewport } = storeToRefs(canvasStore)
 const { secondarySidebarVisible: _secondarySidebarVisible } = storeToRefs(uiStore)
 const message = useMessage()
@@ -1328,52 +1328,6 @@ const resizeState = ref({
   resizeStartTime: 0 // Track when resize started for debugging
 })
 
-// Get section resize style for individual sections
-// BUG-019 FIX: Use currentX/currentY from resizeState for live position tracking
-// Also account for Vue Flow container's screen position when using position: fixed
-const getSectionResizeStyle = (section: CanvasSection): Record<string, string | number> => {
-  if (!resizeState.value.isResizing || resizeState.value.sectionId !== section.id) {
-    return {}
-  }
-
-  // Use live position from resizeState (updated during resize), not stale section.position from store
-  const currentX = resizeState.value.currentX
-  const currentY = resizeState.value.currentY
-
-  // BUG-019 FIX: Use the ACTUAL Vue Flow viewport (vfViewport) instead of the store's viewport
-  // The store viewport may be stale or not properly synchronized during resize operations
-  const zoom = vfViewport.value?.zoom || 1
-  const vpX = vfViewport.value?.x || 0
-  const vpY = vfViewport.value?.y || 0
-
-  // Get the Vue Flow container's position on screen
-  // position: fixed is relative to the browser viewport, so we need the container offset
-  let containerOffsetX = 0
-  let containerOffsetY = 0
-
-  if (vueFlowRef.value?.$el) {
-    const rect = vueFlowRef.value.$el.getBoundingClientRect()
-    containerOffsetX = rect.left
-    containerOffsetY = rect.top
-  }
-
-  // Calculate screen position:
-  // 1. Canvas position (currentX/Y) transformed by Vue Flow viewport (zoom + pan)
-  // 2. Add container offset for position: fixed to work correctly
-  const screenX = currentX * zoom + vpX + containerOffsetX
-  const screenY = currentY * zoom + vpY + containerOffsetY
-
-  return {
-    position: 'fixed',
-    left: `${screenX}px`,
-    top: `${screenY}px`,
-    width: `${resizeState.value.currentWidth * zoom}px`,
-    height: `${resizeState.value.currentHeight * zoom}px`,
-    pointerEvents: 'none',
-    zIndex: 999
-  }
-}
-
 // Register custom node types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const nodeTypes = markRaw({
@@ -1402,9 +1356,8 @@ const {
 } = useVueFlow()
 
 // TASK-072: Sync Vue Flow viewport changes to canvas store for persistence
+// This triggers the auto-save watcher in canvas.ts (debounced 1s save to IndexedDB)
 watch(vfViewport, (newViewport) => {
-  // Update canvas store with Vue Flow's actual viewport
-  // This triggers the auto-save watcher in canvas.ts
   canvasStore.setViewport(newViewport.x, newViewport.y, newViewport.zoom)
 }, { deep: true })
 
@@ -2494,10 +2447,6 @@ const _handleResizeStart = (event: Node | { node?: Node; direction?: string }) =
         nodeElement.classList.add('resizing')
         // Let CSS handle visibility - don't force inline styles
       }
-
-      // Clear any existing resize preview overlays to prevent conflicts
-      const existingOverlays = document.querySelectorAll('.resize-preview-overlay-fixed')
-      existingOverlays.forEach(overlay => overlay.remove())
     }
   }
 }
@@ -2776,6 +2725,35 @@ const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event
         })
 
         console.log('✅ [CanvasView] Task absolute positions adjusted')
+
+        // BUG-055 FIX: Also adjust child groups (nested groups) - RECURSIVE
+        // When resizing from left/top edges, child groups need their positions adjusted too
+        // This must be recursive to handle deeply nested groups (grandchildren, etc.)
+        const adjustChildGroupsRecursively = (parentId: string, dX: number, dY: number) => {
+          const children = canvasStore.getChildGroups(parentId)
+          children.forEach(childGroup => {
+            const currentPos = childGroup.position
+            const newGroupX = currentPos.x + dX
+            const newGroupY = currentPos.y + dY
+
+            console.log(`  📍 Adjusting child group "${childGroup.name}": (${currentPos.x}, ${currentPos.y}) → (${newGroupX}, ${newGroupY})`)
+
+            canvasStore.updateGroup(childGroup.id, {
+              position: {
+                ...currentPos,
+                x: newGroupX,
+                y: newGroupY
+              }
+            })
+
+            // Recursively adjust grandchildren
+            adjustChildGroupsRecursively(childGroup.id, dX, dY)
+          })
+          return children.length
+        }
+
+        const totalAdjusted = adjustChildGroupsRecursively(sectionId, deltaX, deltaY)
+        console.log(`📦 [CanvasView] Adjusted ${totalAdjusted} direct child groups (plus any grandchildren)`)
       } else {
         console.log('⏭️  [CanvasView] Position delta too small, skipping task adjustment')
       }
@@ -3079,8 +3057,7 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
 
 
 onMounted(async () => {
-  console.log('CanvasView mounted, tasks:', taskStore.tasks.length)
-  console.log('✅ showSectionTypeDropdown fix applied - handleClickOutside function removed')
+  console.log('🎨 CanvasView mounted, tasks:', taskStore.tasks.length)
 
   // Set Vue Flow as mounted immediately (component is ready for operations)
   isVueFlowMounted.value = true
@@ -3096,24 +3073,17 @@ onMounted(async () => {
   // TASK-072: Restore saved viewport position
   // BUG-048 FIX: Set hasInitialFit BEFORE applying viewport to prevent auto-centering
   // from overriding the restored viewport position when nodesInitialized fires
+  // BUG-052 FIX: loadSavedViewport sets canvasStore.viewport, which is used by the
+  // initialViewport computed prop - Vue Flow will initialize with the correct viewport
+  // immediately, eliminating the previous (0,0,1) → saved viewport jump
   const viewportRestored = await canvasStore.loadSavedViewport()
   if (viewportRestored) {
     // Prevent the auto-centering watcher from running
     hasInitialFit.value = true
-
-    // Apply restored viewport to Vue Flow after a short delay to ensure it's ready
-    setTimeout(() => {
-      const savedViewport = canvasStore.viewport
-      vueFlowSetViewport({
-        x: savedViewport.x,
-        y: savedViewport.y,
-        zoom: savedViewport.zoom
-      })
-      console.log('🔭 [BUG-048] Viewport restored and applied:', savedViewport)
-      // Mark canvas as ready since we have a saved viewport
-      isCanvasReady.value = true
-      isVueFlowReady.value = true
-    }, 100)
+    // Mark canvas as ready - Vue Flow will render with initialViewport computed prop
+    isCanvasReady.value = true
+    isVueFlowReady.value = true
+    console.log('🔭 Viewport restored from DB:', canvasStore.viewport)
   }
 
   // Safety fallback: if canvas doesn't initialize in 3s, force ready state
@@ -4057,60 +4027,6 @@ body.dragging-active .vue-flow__background {
   transition: none !important;
 }
 
-/* Resize Preview Overlay - FIXED positioning */
-.resize-preview-overlay-fixed {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 998;
-}
-
-.resize-preview-section-overlay {
-  border: 2px dashed var(--accent-primary);
-  border-radius: var(--radius-lg);
-  background: rgba(99, 102, 241, 0.08);
-  pointer-events: none;
-  z-index: 999;
-  animation: resize-preview-pulse 1.5s ease-in-out infinite;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  /* Prevent interference with drag operations */
-  transform-origin: top left;
-}
-
-.resize-size-indicator {
-  position: absolute;
-  top: -32px;
-  right: 0;
-  background: var(--surface-primary);
-  border: 1px solid var(--accent-primary);
-  border-radius: var(--radius-md);
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--accent-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  white-space: nowrap;
-  z-index: 1000;
-  /* Ensure indicator stays visible during resize */
-  transform: translateZ(0);
-}
-
-@keyframes resize-preview-pulse {
-  0%, 100% {
-    opacity: 0.6;
-    background: rgba(99, 102, 241, 0.08);
-  }
-  50% {
-    opacity: 0.8;
-    background: rgba(99, 102, 241, 0.12);
-  }
-}
-
-
 /* ====================================================================
    MINIMAL RESIZE HANDLE FIXES (work with library CSS, don't fight it)
    ==================================================================== */
@@ -4206,6 +4122,13 @@ body.dragging-active .vue-flow__background {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 1000;
+  pointer-events: none; /* Allow clicks to pass through to Done toggle */
+}
+
+/* Re-enable pointer events for interactive children */
+.canvas-empty-state button,
+.canvas-empty-state a {
+  pointer-events: auto;
 }
 
 .empty-icon {

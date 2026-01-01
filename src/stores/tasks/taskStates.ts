@@ -1,4 +1,4 @@
-import { ref, toRef } from 'vue'
+import { ref, toRef, computed } from 'vue'
 import { useProjectStore } from '../projects'
 import { useTaskMigrations } from '@/composables/tasks/useTaskMigrations'
 import { useTaskFiltering } from '@/composables/tasks/useTaskFiltering'
@@ -14,7 +14,19 @@ export function useTaskStates() {
     const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null>(null)
     const activeStatusFilter = ref<string | null>(null)
     const activeDurationFilter = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
-    const hideDoneTasks = ref(false)
+
+    // TASK-076: Separate done filters for Canvas vs Calendar views
+    const hideCanvasDoneTasks = ref(false)
+    const hideCalendarDoneTasks = ref(false)
+
+    // Backward compatibility computed - used by useTaskFiltering and legacy code
+    const hideDoneTasks = computed({
+        get: () => hideCanvasDoneTasks.value || hideCalendarDoneTasks.value,
+        set: (val: boolean) => {
+            hideCanvasDoneTasks.value = val
+            hideCalendarDoneTasks.value = val
+        }
+    })
 
     // Initialize extracted composables
     const { runAllTaskMigrations } = useTaskMigrations(tasks)
@@ -55,6 +67,8 @@ export function useTaskStates() {
         activeStatusFilter,
         activeDurationFilter,
         hideDoneTasks,
+        hideCanvasDoneTasks,
+        hideCalendarDoneTasks,
         runAllTaskMigrations,
         filteredTasks,
         tasksByStatus,

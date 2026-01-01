@@ -11,6 +11,18 @@
       <span class="chip-label">All</span>
     </button>
 
+    <!-- TASK-076: Hide Done Toggle -->
+    <button
+      v-if="hideDoneTasks !== undefined"
+      class="filter-chip"
+      :class="{ active: hideDoneTasks }"
+      title="Hide completed tasks"
+      @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
+    >
+      <CheckCircle2 :size="14" />
+      <span class="chip-label">{{ hideDoneTasks ? 'Hiding Done' : 'Show Done' }}</span>
+    </button>
+
     <!-- Unscheduled Toggle -->
     <button
       class="filter-chip"
@@ -145,7 +157,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock } from 'lucide-vue-next'
+import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2 } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
 
 
@@ -156,6 +168,7 @@ interface Props {
   selectedPriority: 'high' | 'medium' | 'low' | null
   selectedProject: string | null
   selectedDuration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
+  hideDoneTasks?: boolean // TASK-076: Separate done filter for each view
 }
 
 const props = defineProps<Props>()
@@ -165,6 +178,7 @@ const emit = defineEmits<{
   'update:selectedPriority': [value: 'high' | 'medium' | 'low' | null]
   'update:selectedProject': [value: string | null]
   'update:selectedDuration': [value: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null]
+  'update:hideDoneTasks': [value: boolean] // TASK-076
   clearAll: []
 }>()
 
@@ -225,7 +239,7 @@ const projectLabel = computed(() => {
 
 // Computed: Check if any filters are active
 const hasActiveFilters = computed(() => {
-  return props.unscheduledOnly || props.selectedPriority !== null || props.selectedProject !== null || props.selectedDuration !== null
+  return props.unscheduledOnly || props.selectedPriority !== null || props.selectedProject !== null || props.selectedDuration !== null || props.hideDoneTasks
 })
 
 // Get count of tasks with specific priority
@@ -282,6 +296,7 @@ const clearAllFilters = () => {
   emit('update:selectedPriority', null)
   emit('update:selectedProject', null)
   emit('update:selectedDuration', null)
+  emit('update:hideDoneTasks', false) // TASK-076
   emit('clearAll')
 }
 

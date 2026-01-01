@@ -721,25 +721,10 @@ const { hideCanvasDoneTasks } = storeToRefs(taskStore)
 
 const filteredTasks = computed(() => {
   const tasks = filteredTasksWithProjectFiltering.value
-  const hideDone = hideCanvasDoneTasks.value
-
-  // TASK-076 DEBUG: Log filter state
-  const doneTasks = tasks.filter(t => t.status === 'done')
-  const doneWithCanvas = doneTasks.filter(t => t.canvasPosition)
-  console.log('🔍 [TASK-076] filteredTasks computed:', {
-    hideDone,
-    totalTasks: tasks.length,
-    doneTasks: doneTasks.length,
-    doneWithCanvasPos: doneWithCanvas.length,
-    doneTaskTitles: doneWithCanvas.map(t => t.title)
-  })
-
-  // Filter out done tasks if hideCanvasDoneTasks is enabled
-  // Use .value from storeToRefs for proper Firefox reactivity
-  if (hideDone) {
-    const filtered = tasks.filter(t => t.status !== 'done')
-    console.log('🔍 [TASK-076] After filter:', filtered.length, 'tasks')
-    return filtered
+  // TASK-076: Filter out done tasks if hideCanvasDoneTasks is enabled
+  // Use .value from storeToRefs for proper cross-browser reactivity
+  if (hideCanvasDoneTasks.value) {
+    return tasks.filter(t => t.status !== 'done')
   }
   return tasks
 })

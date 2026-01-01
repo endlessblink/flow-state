@@ -1,0 +1,146 @@
+src/components/canvas/CanvasContextMenus.vue(9,6): error TS2322: Type 'CanvasGroup | null' is not assignable to type 'CanvasGroup | undefined'.
+  Type 'null' is not assignable to type 'CanvasGroup | undefined'.
+src/components/debug/KeyboardDeletionTest.vue(250,9): error TS2869: Right operand of ?? is unreachable because the left operand is never nullish.
+src/components/debug/KeyboardDeletionTest.vue(314,10): error TS18047: 'undoHistory.canRedo' is possibly 'null'.
+src/components/layout/CommandPalette.vue(122,5): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/components/layout/CommandPalette.vue(148,5): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/components/layout/SidebarSmartItem.vue(89,40): error TS2345: Argument of type '"date-target" | "duration-target"' is not assignable to parameter of type '"task" | "project" | "date-target"'.
+  Type '"duration-target"' is not assignable to type '"task" | "project" | "date-target"'. Did you mean '"date-target"'?
+src/components/layout/TaskManagerSidebar.vue(300,22): error TS2339: Property 'calendarFilteredTasks' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'.
+src/components/sync/BackupSettings.vue(185,68): error TS2339: Property 'success' does not exist on type '{ id: string; tasks: { [x: string]: unknown; title?: string | undefined; description?: string | undefined; }[]; projects: unknown[]; canvas: unknown; timestamp: number; version: string; checksum: string; type: "manual" | "auto" | "emergency"; metadata?: { ...; } | undefined; }'.
+src/components/sync/BackupSettings.vue(185,93): error TS2339: Property 'success' does not exist on type '{ id: string; tasks: { [x: string]: unknown; title?: string | undefined; description?: string | undefined; }[]; projects: unknown[]; canvas: unknown; timestamp: number; version: string; checksum: string; type: "manual" | "auto" | "emergency"; metadata?: { ...; } | undefined; }'.
+src/components/sync/BackupSettings.vue(186,25): error TS2339: Property 'success' does not exist on type '{ id: string; tasks: { [x: string]: unknown; title?: string | undefined; description?: string | undefined; }[]; projects: unknown[]; canvas: unknown; timestamp: number; version: string; checksum: string; type: "manual" | "auto" | "emergency"; metadata?: { ...; } | undefined; }'.
+src/components/sync/BackupSettings.vue(188,32): error TS2339: Property 'success' does not exist on type '{ id: string; tasks: { [x: string]: unknown; title?: string | undefined; description?: string | undefined; }[]; projects: unknown[]; canvas: unknown; timestamp: number; version: string; checksum: string; type: "manual" | "auto" | "emergency"; metadata?: { ...; } | undefined; }'.
+src/components/sync/BackupSettings.vue(188,83): error TS2339: Property 'size' does not exist on type '{ id: string; tasks: { [x: string]: unknown; title?: string | undefined; description?: string | undefined; }[]; projects: unknown[]; canvas: unknown; timestamp: number; version: string; checksum: string; type: "manual" | "auto" | "emergency"; metadata?: { ...; } | undefined; }'.
+src/components/sync/BackupVerificationButton.vue(92,24): error TS18048: '__VLS_ctx.verificationResult.recommendations' is possibly 'undefined'.
+src/components/sync/ConflictResolutionDialog.vue(278,29): error TS2305: Module '"@/utils/conflictResolution"' has no exported member 'TaskConflict'.
+src/components/sync/ConflictResolutionDialog.vue(306,26): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/sync/ConflictResolutionDialog.vue(310,26): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/sync/ConflictResolutionDialog.vue(317,47): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/sync/ConflictResolutionDialog.vue(318,49): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/sync/ConflictResolutionDialog.vue(344,60): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/sync/ConflictResolutionDialog.vue(454,37): error TS7006: Parameter 'conflict' implicitly has an 'any' type.
+src/components/sync/ConflictResolutionDialog.vue(460,37): error TS7006: Parameter 'conflict' implicitly has an 'any' type.
+src/components/sync/ConflictResolutionDialog.vue(466,27): error TS7006: Parameter 'conflict' implicitly has an 'any' type.
+src/components/sync/ConflictResolutionDialog.vue(503,51): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(callbackfn: (previousValue: string, currentValue: string, currentIndex: number, array: string[]) => string, initialValue: string): string', gave the following error.
+    Type 'unknown' is not assignable to type 'string'.
+  Overload 2 of 3, '(callbackfn: (previousValue: Record<string, unknown>, currentValue: string, currentIndex: number, array: string[]) => Record<string, unknown>, initialValue: Record<string, unknown>): Record<...>', gave the following error.
+    Type 'unknown' is not assignable to type 'Record<string, unknown>'.
+src/components/sync/ConflictResolutionDialog.vue(508,27): error TS7006: Parameter 'conflict' implicitly has an 'any' type.
+src/components/sync/SyncAlertSystem.vue(344,43): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/sync/SyncAlertSystem.vue(345,26): error TS7006: Parameter 'oc' implicitly has an 'any' type.
+src/components/sync/SyncAlertSystem.vue(370,36): error TS7006: Parameter 'conflict' implicitly has an 'any' type.
+src/components/tasks/TaskContextMenu.vue(2,4): error TS2345: Argument of type '{ style: { left: string; top: string; position?: undefined; } | { left: string; top: string; position: string; }; class: string; ref: string; }' is not assignable to parameter of type 'HTMLAttributes & ReservedProps & Record<string, unknown>'.
+  Type '{ style: { left: string; top: string; position?: undefined; } | { left: string; top: string; position: string; }; class: string; ref: string; }' is not assignable to type 'HTMLAttributes'.
+    Types of property 'style' are incompatible.
+      Type '{ left: string; top: string; position?: undefined; } | { left: string; top: string; position: string; }' is not assignable to type 'StyleValue'.
+        Type '{ left: string; top: string; position: string; }' is not assignable to type 'StyleValue'.
+          Type '{ left: string; top: string; position: string; }' is not assignable to type 'CSSProperties'.
+            Types of property 'position' are incompatible.
+              Type 'string' is not assignable to type 'Position | undefined'.
+src/components/tasks/TaskContextMenu.vue(351,38): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/tasks/TaskContextMenu.vue(636,66): error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/components/tasks/TaskEditModal.vue(105,19): error TS2322: Type 'string | null' is not assignable to type 'string | number'.
+  Type 'null' is not assignable to type 'string | number'.
+src/components/tasks/TaskEditModal.vue(369,3): error TS2322: Type 'null' is not assignable to type 'string'.
+src/components/tasks/TaskEditModal.vue(498,15): error TS2339: Property 'resolveDueDate' does not exist on type 'Promise<typeof import("/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useGroupSettings")>'.
+src/components/tasks/TaskEditModal.vue(499,45): error TS7006: Parameter 'dateStr' implicitly has an 'any' type.
+src/components/tasks/TaskEditModal.vue(576,13): error TS2551: Property 'updateSubtaskWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'. Did you mean 'updateTaskWithUndo'?
+src/components/tasks/TaskEditModal.vue(662,7): error TS7006: Parameter 'inst' implicitly has an 'any' type.
+src/components/tasks/TaskEditModal.vue(667,17): error TS2551: Property 'updateTaskInstanceWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'. Did you mean 'updateTaskWithUndo'?
+src/components/tasks/TaskEditModal.vue(674,17): error TS2551: Property 'createTaskInstanceWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'. Did you mean 'createTaskWithUndo'?
+src/components/tasks/TaskEditModal.vue(690,33): error TS7006: Parameter 'instance' implicitly has an 'any' type.
+src/components/tasks/TaskEditModal.vue(691,19): error TS2551: Property 'deleteTaskInstanceWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'. Did you mean 'deleteTaskWithUndo'?
+src/components/tasks/TaskEditModal.vue(722,17): error TS2551: Property 'deleteSubtaskWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'. Did you mean 'deleteTaskWithUndo'?
+src/components/tasks/TaskEditModal.vue(730,17): error TS2551: Property 'updateSubtaskWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'. Did you mean 'updateTaskWithUndo'?
+src/components/tasks/TaskEditModal.vue(733,17): error TS2551: Property 'createSubtaskWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'. Did you mean 'createTaskWithUndo'?
+src/composables/app/useSidebarManagement.ts(272,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+src/composables/calendar/useCalendarDayView.ts(484,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/composables/calendar/useCalendarMonthView.ts(53,21): error TS7006: Parameter 'instance' implicitly has an 'any' type.
+src/composables/calendar/useCalendarMonthView.ts(54,22): error TS7006: Parameter 'instance' implicitly has an 'any' type.
+src/composables/calendar/useCalendarWeekView.ts(69,19): error TS7006: Parameter 'instance' implicitly has an 'any' type.
+src/composables/calendar/useCalendarWeekView.ts(70,20): error TS7006: Parameter 'instance' implicitly has an 'any' type.
+src/composables/canvas/useCanvasDragDrop.ts(371,66): error TS2721: Cannot invoke an object which is possibly 'null'.
+src/composables/canvas/useCanvasDragDrop.ts(373,75): error TS7006: Parameter 'potentialParent' implicitly has an 'any' type.
+src/composables/useBackupSystem.ts(643,22): error TS2339: Property 'createBackup' does not exist on type 'never'.
+src/composables/useCanvasPerformanceTesting.ts(519,5): error TS2322: Type '{ severity: string; type: string; description: string; suggestion: string; }[]' is not assignable to type '{ severity: "low" | "medium" | "high" | "critical"; type: string; description: string; suggestion: string; }[]'.
+  Type '{ severity: string; type: string; description: string; suggestion: string; }' is not assignable to type '{ severity: "low" | "medium" | "high" | "critical"; type: string; description: string; suggestion: string; }'.
+    Types of property 'severity' are incompatible.
+      Type 'string' is not assignable to type '"low" | "medium" | "high" | "critical"'.
+src/composables/useCanvasRenderingOptimization.ts(514,9): error TS7053: Element implicitly has an 'any' type because expression of type '`level${number}`' can't be used to index type '{ level1: number; level2: number; level3: number; level4: number; }'.
+src/composables/useCrossTabSync.ts(859,43): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/composables/usePersistentStorage.ts(397,71): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'BackupData'.
+src/composables/useRenderOptimization.ts(228,18): error TS2571: Object is of type 'unknown'.
+src/composables/useRenderOptimization.ts(228,46): error TS2571: Object is of type 'unknown'.
+src/composables/useTaskRecurrence.ts(250,7): error TS2698: Spread types may only be created from object types.
+src/composables/useTimerChangesSync.ts(105,21): error TS2345: Argument of type '(change: PouchDBChange) => void' is not assignable to parameter of type '(data: unknown) => void'.
+  Types of parameters 'change' and 'data' are incompatible.
+    Type 'unknown' is not assignable to type 'PouchDBChange'.
+src/composables/useVirtualList.ts(285,23): error TS2352: Conversion of type 'null' to type 'HTMLElement' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/composables/useVirtualList.ts(307,23): error TS2352: Conversion of type 'null' to type 'HTMLElement' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/layouts/AppSidebar.vue(158,24): error TS2367: This comparison appears to be unintentional because the types '"in_progress" | "today" | "week" | "uncategorized" | "unscheduled" | "all_active" | null' and '"quick"' have no overlap.
+src/layouts/AppSidebar.vue(174,24): error TS2367: This comparison appears to be unintentional because the types '"in_progress" | "today" | "week" | "uncategorized" | "unscheduled" | "all_active" | null' and '"short"' have no overlap.
+src/layouts/AppSidebar.vue(190,24): error TS2367: This comparison appears to be unintentional because the types '"in_progress" | "today" | "week" | "uncategorized" | "unscheduled" | "all_active" | null' and '"medium"' have no overlap.
+src/layouts/AppSidebar.vue(206,24): error TS2367: This comparison appears to be unintentional because the types '"in_progress" | "today" | "week" | "uncategorized" | "unscheduled" | "all_active" | null' and '"long"' have no overlap.
+src/layouts/AppSidebar.vue(222,24): error TS2367: This comparison appears to be unintentional because the types '"in_progress" | "today" | "week" | "uncategorized" | "unscheduled" | "all_active" | null' and '"unestimated"' have no overlap.
+src/layouts/AppSidebar.vue(516,13): error TS2540: Cannot assign to 'activeProjectId' because it is a read-only property.
+src/stores/__tests__/tasks.test.ts(141,43): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/stores/__tests__/tasks.test.ts(164,43): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/stores/notifications.ts(355,9): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/utils/conflictDetector.ts(350,5): error TS2322: Type 'unknown' is not assignable to type 'boolean'.
+src/utils/emojiDetection.ts(37,29): error TS2304: Cannot find name 'twemoji'.
+src/utils/iconImports.ts(135,5): error TS2322: Type '{ default: unknown; } | undefined' is not assignable to type '{ default: unknown; }'.
+  Type 'undefined' is not assignable to type '{ default: unknown; }'.
+src/utils/iconImports.ts(151,5): error TS2322: Type 'null' is not assignable to type '{ default: unknown; }'.
+src/utils/individualTaskStorage.ts(461,58): error TS2344: Type 'unknown' does not satisfy the constraint '{}'.
+src/views/BoardView.vue(361,21): error TS2551: Property 'createSubtaskWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'. Did you mean 'createTaskWithUndo'?
+src/views/CalendarView.vue(1165,15): error TS2339: Property 'unscheduleTaskWithUndo' does not exist on type 'Store<"tasks", Pick<{ validateDataConsistency: () => Promise<boolean>; createTaskWithUndo: (taskData: Partial<Task>) => Promise<Task>; updateTaskWithUndo: (taskId: string, updates: Partial<...>) => Promise<...>; ... 89 more ...; selectedTaskIds: Ref<...>; }, "tasks" | ... 9 more ... | "selectedTaskIds">, Pick<...>, ...'.
+src/views/CalendarViewVueCal.vue(99,13): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/views/CanvasView.vue(249,14): error TS2322: Type '(event: { nodeId?: string; handleId?: string; handleType?: string; }) => void' is not assignable to type '(connectionEvent: { event?: MouseEvent | undefined; } & OnConnectStartParams) => any'.
+  Types of parameters 'event' and 'connectionEvent' are incompatible.
+    Type '{ event?: MouseEvent | undefined; } & OnConnectStartParams' is not assignable to type '{ nodeId?: string | undefined; handleId?: string | undefined; handleType?: string | undefined; }'.
+      Types of property 'handleId' are incompatible.
+        Type 'string | null' is not assignable to type 'string | undefined'.
+          Type 'null' is not assignable to type 'string | undefined'.
+src/views/CanvasView.vue(279,18): error TS2322: Type '({ sectionId, event: _event }: { sectionId: string; event: MouseEvent; }) => void' is not assignable to type '(data: { sectionId: string; event: unknown; }) => any'.
+  Types of parameters '__0' and 'data' are incompatible.
+    Type '{ sectionId: string; event: unknown; }' is not assignable to type '{ sectionId: string; event: MouseEvent; }'.
+      Types of property 'event' are incompatible.
+        Type 'unknown' is not assignable to type 'MouseEvent'.
+src/views/CanvasView.vue(280,18): error TS2322: Type '({ sectionId, event }: { sectionId: string; event: { params?: { width?: number; height?: number; x?: number; y?: number; }; width?: number; height?: number; }; }) => void' is not assignable to type '(data: { sectionId: string; event: unknown; }) => any'.
+  Types of parameters '__0' and 'data' are incompatible.
+    Type '{ sectionId: string; event: unknown; }' is not assignable to type '{ sectionId: string; event: { params?: { width?: number | undefined; height?: number | undefined; x?: number | undefined; y?: number | undefined; } | undefined; width?: number | undefined; height?: number | undefined; }; }'.
+      Types of property 'event' are incompatible.
+        Type 'unknown' is not assignable to type '{ params?: { width?: number | undefined; height?: number | undefined; x?: number | undefined; y?: number | undefined; } | undefined; width?: number | undefined; height?: number | undefined; }'.
+src/views/CanvasView.vue(281,18): error TS2322: Type '({ sectionId, event }: { sectionId: string; event: { params?: { width?: number; height?: number; }; width?: number; height?: number; }; }) => void' is not assignable to type '(data: { sectionId: string; event: unknown; }) => any'.
+  Types of parameters '__0' and 'data' are incompatible.
+    Type '{ sectionId: string; event: unknown; }' is not assignable to type '{ sectionId: string; event: { params?: { width?: number | undefined; height?: number | undefined; } | undefined; width?: number | undefined; height?: number | undefined; }; }'.
+      Types of property 'event' are incompatible.
+        Type 'unknown' is not assignable to type '{ params?: { width?: number | undefined; height?: number | undefined; } | undefined; width?: number | undefined; height?: number | undefined; }'.
+src/views/CanvasView.vue(1886,5): error TS2322: Type '(handlerName: string, handler: (...args: unknown[]) => unknown, options?: { errorType?: "validation" | "rendering" | "interaction" | "state" | "performance" | "network"; severity?: "low" | "medium" | "high" | "critical"; recoverable?: boolean; }) => (...args: unknown[]) => Promise<...>' is not assignable to type '(name: string, fn: Function) => Function'.
+  Types of parameters 'handler' and 'fn' are incompatible.
+    Type 'Function' is not assignable to type '(...args: unknown[]) => unknown'.
+      Type 'Function' provides no match for the signature '(...args: unknown[]): unknown'.
+src/views/CanvasView.vue(2375,73): error TS2345: Argument of type '(changes: Array<{ type: string; id?: string; dimensions?: { width: number; height: number; }; }>) => void' is not assignable to parameter of type '(...args: unknown[]) => unknown'.
+  Types of parameters 'changes' and 'args' are incompatible.
+    Type 'unknown' is not assignable to type '{ type: string; id?: string | undefined; dimensions?: { width: number; height: number; } | undefined; }[]'.
+src/views/CanvasView.vue(2389,41): error TS18048: 'change.id' is possibly 'undefined'.
+src/views/CanvasView.vue(2390,25): error TS18048: 'change.id' is possibly 'undefined'.
+src/views/CanvasView.vue(2415,39): error TS18048: 'change.id' is possibly 'undefined'.
+src/views/CanvasView.vue(2416,25): error TS18048: 'change.id' is possibly 'undefined'.
+src/views/CanvasView.vue(3091,57): error TS2345: Argument of type '(event: KeyboardEvent) => Promise<void>' is not assignable to parameter of type 'EventListener'.
+  Types of parameters 'event' and 'evt' are incompatible.
+    Type 'Event' is missing the following properties from type 'KeyboardEvent': altKey, charCode, code, ctrlKey, and 17 more.

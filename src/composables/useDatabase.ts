@@ -15,12 +15,47 @@ import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManag
 import { getDatabaseConfig, type DatabaseHealth as _DatabaseHealth } from '@/config/database'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { isQuotaExceededError, checkStorageQuota } from '@/utils/storageQuotaMonitor'
+import { detectGlobalDatabaseFailure, resetGlobalFailureCount } from '@/composables/useDatabaseHealthCheck'
 
 // Singleton database instance state
 let singletonDatabase: PouchDB.Database | null = null
 let isInitializing = false
 let initializationPromise: Promise<void> | null = null
 let databaseRefCount = 0
+let hasRunAutoPrune = false // Singleton guard for auto-prune
+
+/**
+ * BUG-057 FIX: Reset database singleton when connection is closed
+ * Firefox/Zen browser can close IndexedDB when memory runs out
+ * This allows automatic recovery by creating a fresh database instance
+ */
+export function resetDatabaseSingleton(): void {
+  console.log('🔄 [DATABASE] Resetting database singleton due to closed connection')
+  if (singletonDatabase) {
+    try {
+      // Don't await - just try to close if possible
+      singletonDatabase.close()
+    } catch {
+      // Ignore errors during close
+    }
+  }
+  singletonDatabase = null
+  isInitializing = false
+  initializationPromise = null
+}
+
+/**
+ * BUG-057 FIX: Check if error is a closed database error
+ */
+function isDatabaseClosedError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const message = err.message.toLowerCase()
+    return message.includes('closed database') ||
+           message.includes('transaction on a closed') ||
+           message.includes('not, or is no longer, usable')
+  }
+  return false
+}
 
 // Database health monitoring
 let lastHealthCheck: Date | null = null
@@ -138,6 +173,20 @@ async function performWithRetry<T>(
       return result
     } catch (err) {
       lastError = err as Error
+
+      // BUG-057 FIX: Detect global database failures (Firefox OOM, closed database, etc.)
+      // After MAX_GLOBAL_FAILURES, this will auto-nuke and reload
+      if (detectGlobalDatabaseFailure(err)) {
+        // Will trigger page reload - don't continue retrying
+        throw err
+      }
+
+      // BUG-057 FIX: If database is closed (Firefox OOM), reset singleton and retry
+      if (isDatabaseClosedError(err)) {
+        console.warn(`⚠️ [RETRY] Database closed detected in ${operationName}, resetting singleton...`)
+        resetDatabaseSingleton()
+        // Don't throw - let it retry with fresh database
+      }
 
       // Don't retry on certain error types
       if (err instanceof Error && (
@@ -301,24 +350,69 @@ export function useDatabase(): UseDatabaseReturn {
         const forceLocalMode = false
 
         const dbName = config.local.name
+
+        // BUG-056: Auto-recovery for corrupted IndexedDB
+        const createDatabase = async (retryAfterDelete = false): Promise<PouchDB.Database> => {
+          try {
+            const db = new PouchDB(dbName, {
+              adapter: 'idb',
+              auto_compaction: true,
+              revs_limit: 5
+            })
+            await db.info() // Test the connection
+            return db
+          } catch (dbError) {
+            const errorMessage = (dbError as Error).message || String(dbError)
+            const errorName = (dbError as Error).name || ''
+
+            // Detect corrupted IndexedDB errors
+            const isCorruptedDB =
+              errorName === 'NotFoundError' ||
+              errorMessage.includes('NotFoundError') ||
+              errorMessage.includes('object store did not exist') ||
+              errorMessage.includes('database object could not be found')
+
+            if (isCorruptedDB && !retryAfterDelete) {
+              console.warn('⚠️ [DATABASE] Corrupted IndexedDB detected - attempting auto-recovery...')
+
+              // Try to delete the corrupted database
+              try {
+                await new Promise<void>((resolve, reject) => {
+                  const deleteRequest = indexedDB.deleteDatabase(`_pouch_${dbName}`)
+                  deleteRequest.onsuccess = () => {
+                    console.log('✅ [DATABASE] Corrupted database deleted successfully')
+                    resolve()
+                  }
+                  deleteRequest.onerror = () => reject(deleteRequest.error)
+                  deleteRequest.onblocked = () => {
+                    console.warn('⚠️ [DATABASE] Database deletion blocked - close other tabs')
+                    // Still resolve - user may need to close tabs
+                    setTimeout(resolve, 1000)
+                  }
+                })
+
+                // Small delay to ensure IndexedDB is fully cleared
+                await new Promise(resolve => setTimeout(resolve, 500))
+
+                // Retry creating the database
+                return createDatabase(true)
+              } catch (deleteError) {
+                console.error('❌ [DATABASE] Failed to delete corrupted database:', deleteError)
+                throw dbError // Re-throw original error
+              }
+            }
+
+            throw dbError
+          }
+        }
+
         try {
-          const existingDB = new PouchDB(dbName, {
-            adapter: 'idb',
-            auto_compaction: true,
-            revs_limit: 5
-          })
-          await existingDB.info()
-          singletonDatabase = existingDB
-        } catch {
-          const dbConfig: PouchDB.Configuration.LocalDatabaseConfiguration = {
-            adapter: 'idb',
-            auto_compaction: true,
-            revs_limit: 5
-          }
-          if (config.local.adapter) {
-            dbConfig.adapter = config.local.adapter as string
-          }
-          singletonDatabase = new PouchDB(config.local.name, dbConfig)
+          singletonDatabase = await createDatabase()
+        } catch (finalError) {
+          console.error('❌ [DATABASE] Failed to initialize database:', finalError)
+          // Set error state so UI can show recovery options
+          error.value = finalError as Error
+          throw finalError
         }
 
         const w = window as Window & typeof globalThis
@@ -395,9 +489,13 @@ export function useDatabase(): UseDatabaseReturn {
   initializeDatabase().then(() => {
     // BUG-RECOVERY: Automatically prune conflicts on initialization if backlog is expected
     // This addresses the "Document X has 200+ conflicts" issue
-    setTimeout(() => {
-      autoPruneBacklog().catch(err => console.warn('⚠️ Auto-pruning failed:', err))
-    }, 2000) // Delay to ensure stability first
+    // SINGLETON GUARD: Only run once across all useDatabase() consumers
+    if (!hasRunAutoPrune) {
+      hasRunAutoPrune = true
+      setTimeout(() => {
+        autoPruneBacklog().catch(err => console.warn('⚠️ Auto-pruning failed:', err))
+      }, 2000) // Delay to ensure stability first
+    }
   })
 
 

@@ -33,14 +33,14 @@
         {{ task?.title || 'Untitled Task' }}
       </div>
 
-      <!-- Description (if available) -->
+      <!-- Description (if available) - TASK-075: Markdown rendering -->
       <div v-if="task?.description" class="task-description" :class="titleAlignmentClasses">
         <div
-          class="description-content"
+          class="description-content markdown-content"
           :class="{ 'expanded': isDescriptionExpanded || !isDescriptionLong }"
-        >
-          {{ task.description }}
-        </div>
+          v-html="parsedDescription"
+          @click="handleDescriptionClick"
+        />
         <button
           v-if="isDescriptionLong"
           class="description-toggle"
@@ -131,12 +131,19 @@
 import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
 import { Calendar, Timer, Zap, Clock, Check } from 'lucide-vue-next'
+import { marked } from 'marked'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTimerStore } from '@/stores/timer'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+
+// Configure marked for safe rendering
+marked.setOptions({
+  gfm: true, // GitHub Flavored Markdown
+  breaks: true // Convert \n to <br>
+})
 
 interface Props {
   task: Task
@@ -218,6 +225,62 @@ const isDescriptionLong = computed(() => {
 // Toggle description expansion
 const toggleDescriptionExpanded = () => {
   isDescriptionExpanded.value = !isDescriptionExpanded.value
+}
+
+// TASK-075: Parse markdown description with checkbox support
+const parsedDescription = computed(() => {
+  if (!props.task?.description) return ''
+
+  // Parse markdown to HTML
+  const html = marked.parse(props.task.description) as string
+
+  // Add data attributes to checkboxes for interactivity
+  // Replace checkbox inputs with clickable versions
+  return html.replace(
+    /<input type="checkbox"([^>]*)>/g,
+    (_match, attrs) => {
+      const isChecked = attrs.includes('checked')
+      return `<input type="checkbox" class="md-checkbox" ${isChecked ? 'checked' : ''}>`
+    }
+  )
+})
+
+// Handle checkbox clicks in markdown description
+const handleDescriptionClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+
+  // Check if clicked element is a markdown checkbox
+  if (target.tagName === 'INPUT' && target.classList.contains('md-checkbox')) {
+    event.stopPropagation()
+    event.preventDefault()
+
+    const description = props.task?.description || ''
+
+    // Find all checkboxes in the description
+    const checkboxPattern = /- \[([ x])\]/g
+    const matches = [...description.matchAll(checkboxPattern)]
+
+    // Find which checkbox was clicked by counting preceding checkboxes in DOM
+    const allCheckboxes = (target.closest('.description-content') as HTMLElement)?.querySelectorAll('.md-checkbox')
+    const clickedIndex = Array.from(allCheckboxes || []).indexOf(target)
+
+    if (clickedIndex >= 0 && clickedIndex < matches.length) {
+      // Toggle the checkbox state in the raw markdown
+      let currentIndex = 0
+      const newDescription = description.replace(checkboxPattern, (match) => {
+        if (currentIndex === clickedIndex) {
+          currentIndex++
+          // Toggle: [ ] -> [x] or [x] -> [ ]
+          return match === '- [ ]' ? '- [x]' : '- [ ]'
+        }
+        currentIndex++
+        return match
+      })
+
+      // Update the task description
+      taskStore.updateTask(props.task.id, { description: newDescription })
+    }
+  }
 }
 
 // Check if we're in a Vue Flow context (works in CanvasView, but not in Storybook)
@@ -993,5 +1056,119 @@ body.dragging-active .task-node .vue-flow__handle {
   width: 18px !important;
   height: 18px !important;
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow) !important;
+}
+
+/* TASK-075: Markdown content styles */
+.markdown-content {
+  pointer-events: auto; /* Enable clicks for checkboxes */
+}
+
+.markdown-content :deep(p) {
+  margin: 0 0 var(--space-2) 0;
+}
+
+.markdown-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-content :deep(strong),
+.markdown-content :deep(b) {
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.markdown-content :deep(em),
+.markdown-content :deep(i) {
+  font-style: italic;
+}
+
+.markdown-content :deep(code) {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.1em 0.4em;
+  border-radius: var(--radius-xs);
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.markdown-content :deep(pre) {
+  background: rgba(0, 0, 0, 0.3);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: var(--space-2) 0;
+}
+
+.markdown-content :deep(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+}
+
+.markdown-content :deep(li) {
+  margin-bottom: var(--space-1);
+}
+
+/* Checkbox list items (task lists) */
+.markdown-content :deep(ul.contains-task-list) {
+  list-style: none;
+  padding-left: var(--space-1);
+}
+
+.markdown-content :deep(li.task-list-item) {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* Interactive checkbox styling */
+.markdown-content :deep(.md-checkbox) {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--brand-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.markdown-content :deep(.md-checkbox:checked) {
+  background: var(--brand-primary);
+}
+
+.markdown-content :deep(.md-checkbox:hover) {
+  transform: scale(1.1);
+}
+
+/* Links */
+.markdown-content :deep(a) {
+  color: var(--brand-primary);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.markdown-content :deep(a:hover) {
+  color: var(--brand-hover);
+  text-decoration-style: solid;
+}
+
+/* Blockquotes */
+.markdown-content :deep(blockquote) {
+  border-left: 3px solid var(--brand-primary);
+  margin: var(--space-2) 0;
+  padding-left: var(--space-3);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Horizontal rules */
+.markdown-content :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: var(--space-3) 0;
 }
 </style>

@@ -331,15 +331,20 @@ export const useReliableSyncManager = () => {
       // Initialize Phase 2 systems
       await initializePhase2Systems()
 
+      // BUG-057 FIX: Do NOT set initialSyncComplete early
+      // The stores will load local data first (from useAppInitialization)
+      // Then this sync will complete and notify callbacks to reload with synced data
+
       // BUG-025 FIX: One-time bidirectional sync on startup only
       // DO NOT reload task store here - let App.vue handle that
       if (remoteDB && isOnline.value) {
         syncStatus.value = 'syncing'
         try {
-          // BUG-054 FIX: Add 30-second timeout to initial sync to prevent hanging
+          // BUG-057 FIX: Use very small batch size for initial sync
+          // Firefox/Zen browser runs out of memory with large batches
           const syncPromise = localDB.sync(remoteDB, {
-            batch_size: 100,
-            batches_limit: 10
+            batch_size: 10,  // Small batches to prevent OOM
+            batches_limit: 5
           })
           const syncTimeout = new Promise<null>((_, reject) => {
             setTimeout(() => reject(new Error('Initial sync timeout after 30 seconds')), 30000)
@@ -348,22 +353,30 @@ export const useReliableSyncManager = () => {
           const result = await Promise.race([syncPromise, syncTimeout])
           if (result) {
             const pulledDocs = result.pull?.docs_written || 0
-            console.log(`✅ [SYNC] Initial: pushed ${result.push?.docs_written || 0}, pulled ${pulledDocs}`)
+            const pushedDocs = result.push?.docs_written || 0
+            console.log(`✅ [SYNC] Initial: pushed ${pushedDocs}, pulled ${pulledDocs}`)
+
+            // BUG-057 FIX: Set initialSyncComplete AFTER sync actually completes
+            initialSyncComplete.value = true
+            console.log('✅ [SYNC] Initial sync complete - data ready')
 
             // BUG-054 FIX: Notify callbacks when data is pulled so stores can reload
-            if (pulledDocs > 0) {
-              await notifyDataPulled()
-            }
+            await notifyDataPulled()
           }
         } catch (syncError) {
           console.warn('⚠️ [SYNC] Initial sync failed, using local data:', (syncError as Error).message)
+          // BUG-057 FIX: Set complete even on failure so app doesn't hang
+          initialSyncComplete.value = true
+          // BUG-055 FIX: Still notify callbacks to trigger store reload from local
+          await notifyDataPulled()
         }
+      } else {
+        // BUG-057 FIX: No remote - set complete immediately
+        initialSyncComplete.value = true
+        console.log('✅ [SYNC] No remote - using local data')
+        // BUG-055 FIX: No remote - still notify so stores reload
+        await notifyDataPulled()
       }
-
-      // BUG-025 FIX: Mark initial sync as complete so App.vue can proceed with loading data
-      // This is set even if sync failed, since we want the UI to proceed with local data
-      initialSyncComplete.value = true
-      console.log('✅ [SYNC] Initial sync complete signal sent')
 
       syncStatus.value = 'idle'
       error.value = null
@@ -675,11 +688,12 @@ export const useReliableSyncManager = () => {
 
       try {
         // Pull remote → local FIRST (get authoritative data)
+        // BUG-057 FIX: Small batches to prevent Firefox OOM
         const pullPromise = local.replicate.from(remote, {
           live: false,
           retry: false,
-          batch_size: 50,
-          batches_limit: 10
+          batch_size: 10,
+          batches_limit: 5
         })
         const pullTimeout = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Pull timeout after 60 seconds')), 60000)
@@ -687,10 +701,11 @@ export const useReliableSyncManager = () => {
         const pullResult = await Promise.race([pullPromise, pullTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
 
         // Push local → remote
+        // BUG-057 FIX: Small batches to prevent Firefox OOM
         const pushPromise = local.replicate.to(remote, {
           live: false,
           retry: false,
-          batch_size: 50,
+          batch_size: 10,
           batches_limit: 5
         })
         const pushTimeout = new Promise((_, reject) => {
@@ -1142,13 +1157,19 @@ export const useReliableSyncManager = () => {
       syncHandler = null
     }
 
+    // BUG-057 FIX: Debounce live sync store reloads to prevent rapid resets
+    let liveSyncReloadPending = false
+    let liveSyncReloadTimer: ReturnType<typeof setTimeout> | null = null
+    const LIVE_SYNC_RELOAD_DEBOUNCE = 2000 // 2 seconds debounce
+
     try {
       // Setup bidirectional live sync
+      // BUG-057 FIX: Small batch size to prevent overwhelming the browser
       syncHandler = localDB.sync(remoteDB, {
         live: true,
         retry: true,
-        batch_size: 50,
-        batches_limit: 10
+        batch_size: 10,  // Small batches for stability
+        batches_limit: 5
       }) as unknown as PouchDBSyncHandler
 
       // Setup event handlers
@@ -1160,12 +1181,24 @@ export const useReliableSyncManager = () => {
           console.log('📤 [LIVE SYNC] Change:', syncChange.direction, docCount, 'docs')
         }
 
-        // BUG-054 FIX: Notify callbacks when data is PULLED from remote
-        // This allows stores to reload and show the new data
-        // Only trigger on 'pull' direction to avoid infinite loop with 'push'
-        // The stores use manualOperationInProgress flag to prevent re-save during load
+        // BUG-057 FIX: Debounce store reloads to prevent UI resets
+        // Only reload once after sync activity settles down
         if (syncChange.direction === 'pull' && docCount > 0) {
-          await notifyDataPulled()
+          if (!liveSyncReloadPending) {
+            liveSyncReloadPending = true
+          }
+          // Clear existing timer and set new one
+          if (liveSyncReloadTimer) {
+            clearTimeout(liveSyncReloadTimer)
+          }
+          liveSyncReloadTimer = setTimeout(async () => {
+            if (liveSyncReloadPending) {
+              console.log('🔄 [LIVE SYNC] Debounced reload after pull activity settled')
+              liveSyncReloadPending = false
+              liveSyncReloadTimer = null
+              await notifyDataPulled()
+            }
+          }, LIVE_SYNC_RELOAD_DEBOUNCE)
         }
 
         lastSyncTime.value = new Date()

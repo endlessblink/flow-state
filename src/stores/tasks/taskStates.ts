@@ -19,6 +19,9 @@ export function useTaskStates() {
     const hideCanvasDoneTasks = ref(false)
     const hideCalendarDoneTasks = ref(false)
 
+    // TASK-082: Hide overdue tasks on canvas (tasks with due date before today)
+    const hideCanvasOverdueTasks = ref(false)
+
     // Backward compatibility computed - used by useTaskFiltering and legacy code
     const hideDoneTasks = computed({
         get: () => hideCanvasDoneTasks.value || hideCalendarDoneTasks.value,
@@ -71,6 +74,7 @@ export function useTaskStates() {
         hideDoneTasks,
         hideCanvasDoneTasks,
         hideCalendarDoneTasks,
+        hideCanvasOverdueTasks,
         runAllTaskMigrations,
         filteredTasks,
         tasksByStatus,

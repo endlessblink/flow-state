@@ -141,6 +141,7 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^3.6.0",
     "lucide-vue-next": "^0.294.0",
+    "marked": "^17.0.1",
     "naive-ui": "^2.43.1",
     "pinia": "^2.1.7",
     "pinia-shared-state": "^0.5.1",

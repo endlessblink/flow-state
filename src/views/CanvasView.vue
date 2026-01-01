@@ -109,32 +109,46 @@
 
   
     <!-- MAIN CANVAS AREA -->
-    <!-- Hide Done Tasks Toggle (TASK-080, TASK-076) - Icon only, fixed position at top border of canvas box -->
-    <button
-      class="hide-done-toggle fixed backdrop-blur-sm border rounded-md shadow-md transition-all"
-      :class="hideCanvasDoneTasks ? 'text-purple-300' : 'text-gray-300'"
-      :style="{
-        top: '232px',
-        right: '12px',
-        zIndex: 1010,
-        padding: '4px',
-        background: hideCanvasDoneTasks ? 'rgba(139,92,246,0.2)' : 'rgba(30,30,40,0.95)',
-        borderColor: hideCanvasDoneTasks ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.1)'
-      }"
-      :title="hideCanvasDoneTasks ? 'Show completed tasks on canvas' : 'Hide completed tasks on canvas'"
-      @click="taskStore.toggleCanvasDoneTasks()"
-    >
-      <EyeOff v-if="hideCanvasDoneTasks" :size="14" />
-      <Eye v-else :size="14" />
-    </button>
-
     <!-- Vue Flow Canvas -->
     <div
-      class="canvas-drop-zone"
+      class="canvas-drop-zone relative"
       @drop="handleDrop"
       @dragover.prevent
       @contextmenu.prevent="handleCanvasRightClick"
     >
+      <!-- Canvas Filter Toggles - Absolute position at top-right of canvas area -->
+      <div class="canvas-filter-toggles absolute flex gap-2" style="top: 12px; right: 12px; z-index: 100;">
+        <!-- Hide Overdue Tasks Toggle (TASK-082) -->
+        <button
+          class="hide-overdue-toggle backdrop-blur-md border rounded-lg shadow-lg transition-all hover:scale-105"
+          :class="hideCanvasOverdueTasks ? 'text-orange-300' : 'text-gray-300'"
+          :style="{
+            padding: '8px',
+            background: hideCanvasOverdueTasks ? 'rgba(249,115,22,0.4)' : 'rgba(30,30,40,0.9)',
+            borderColor: hideCanvasOverdueTasks ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.2)'
+          }"
+          :title="hideCanvasOverdueTasks ? 'Show overdue tasks on canvas' : 'Hide overdue tasks on canvas'"
+          @click="taskStore.hideCanvasOverdueTasks = !taskStore.hideCanvasOverdueTasks"
+        >
+          <CalendarX v-if="hideCanvasOverdueTasks" :size="18" />
+          <Calendar v-else :size="18" />
+        </button>
+        <!-- Hide Done Tasks Toggle (TASK-080, TASK-076) -->
+        <button
+          class="hide-done-toggle backdrop-blur-md border rounded-lg shadow-lg transition-all hover:scale-105"
+          :class="hideCanvasDoneTasks ? 'text-purple-300' : 'text-gray-300'"
+          :style="{
+            padding: '8px',
+            background: hideCanvasDoneTasks ? 'rgba(139,92,246,0.4)' : 'rgba(30,30,40,0.9)',
+            borderColor: hideCanvasDoneTasks ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.2)'
+          }"
+          :title="hideCanvasDoneTasks ? 'Show completed tasks on canvas' : 'Hide completed tasks on canvas'"
+          @click="taskStore.toggleCanvasDoneTasks()"
+        >
+          <EyeOff v-if="hideCanvasDoneTasks" :size="18" />
+          <Eye v-else :size="18" />
+        </button>
+      </div>
       <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
       <div v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0" class="canvas-loading-overlay">
         <div class="loading-content">
@@ -455,7 +469,7 @@ import {
   useMagicKeys,
   useDebounceFn
 } from '@vueuse/core'
-import { Filter, X, Plus, Inbox, Zap, Timer, Clock, HelpCircle, Eye, EyeOff } from 'lucide-vue-next'
+import { Filter, X, Plus, Inbox, Zap, Timer, Clock, HelpCircle, Eye, EyeOff, CalendarX, Calendar } from 'lucide-vue-next'
 import { useMessage } from 'naive-ui'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
@@ -715,17 +729,30 @@ const filteredTasksWithProjectFiltering = computed(() => {
 })
 
 // Store reactive reference for use throughout the component
-// TASK-076: Apply canvas-specific done filter
-// Extract hideCanvasDoneTasks BEFORE computed to ensure proper reactivity in all browsers
-const { hideCanvasDoneTasks } = storeToRefs(taskStore)
+// TASK-076 & TASK-082: Apply canvas-specific filters
+// Extract refs BEFORE computed to ensure proper reactivity in all browsers
+const { hideCanvasDoneTasks, hideCanvasOverdueTasks } = storeToRefs(taskStore)
 
 const filteredTasks = computed(() => {
-  const tasks = filteredTasksWithProjectFiltering.value
+  let tasks = filteredTasksWithProjectFiltering.value
+
   // TASK-076: Filter out done tasks if hideCanvasDoneTasks is enabled
   // Use .value from storeToRefs for proper cross-browser reactivity
   if (hideCanvasDoneTasks.value) {
-    return tasks.filter(t => t.status !== 'done')
+    tasks = tasks.filter(t => t.status !== 'done')
   }
+
+  // TASK-082: Filter out overdue tasks (due date before today)
+  if (hideCanvasOverdueTasks.value) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    tasks = tasks.filter(t => {
+      if (!t.dueDate) return true // Keep tasks without due date
+      const due = new Date(t.dueDate)
+      return due >= today // Keep tasks due today or later
+    })
+  }
+
   return tasks
 })
 
@@ -1760,12 +1787,21 @@ const syncEdges = () => {
 let _nodeUpdateBatcher: NodeUpdateBatcher | null = new NodeUpdateBatcher(vueFlowRef)
 resourceManager.setNodeBatcher(_nodeUpdateBatcher)
 
+// BUG-055 FIX: Track resize settling period (similar to drag settling)
+const isResizeSettling = ref(false)
+
 const batchedSyncNodes = (priority: 'high' | 'normal' | 'low' = 'normal') => {
   if (_nodeUpdateBatcher) {
     _nodeUpdateBatcher.schedule(() => {
     // FIXED: Also check isNodeDragging to prevent sync during drag operations
     // TASK-072 FIX: Also check isDragSettlingRef to prevent sync during settling period after drag
-    if (!isHandlingNodeChange.value && !isSyncing.value && !isNodeDragging.value && !isDragSettlingRef.value) {
+    // BUG-055 FIX: Also check resizeState.isResizing and isResizeSettling to prevent sync during resize
+    if (!isHandlingNodeChange.value &&
+        !isSyncing.value &&
+        !isNodeDragging.value &&
+        !isDragSettlingRef.value &&
+        !resizeState.value.isResizing &&
+        !isResizeSettling.value) {
       syncNodes()
     }
   }, priority)
@@ -2250,6 +2286,18 @@ resourceManager.addWatcher(
   watch(hideCanvasDoneTasks, (newVal, oldVal) => {
     if (newVal !== oldVal) {
       console.log('🔄 [TASK-076] hideCanvasDoneTasks changed:', { from: oldVal, to: newVal })
+      // Force immediate sync to update canvas nodes with new filter
+      syncNodes()
+    }
+  })
+)
+
+// TASK-082: Watch hideCanvasOverdueTasks toggle to refresh canvas nodes
+// This ensures clicking the Overdue toggle immediately shows/hides overdue tasks on canvas
+resourceManager.addWatcher(
+  watch(hideCanvasOverdueTasks, (newVal, oldVal) => {
+    if (newVal !== oldVal) {
+      console.log('🔄 [TASK-082] hideCanvasOverdueTasks changed:', { from: oldVal, to: newVal })
       // Force immediate sync to update canvas nodes with new filter
       syncNodes()
     }
@@ -2747,14 +2795,13 @@ const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event
     console.error('❌ [CanvasView] Missing width or height:', { width, height })
   }
 
-  // BUG-055 FIX: Sync nodes to recalculate relative positions after store updates
-  // NodeResizer updates Vue Flow directly, but our store has the correct absolute positions.
-  // syncNodes() recalculates relative positions from store, fixing child position jumps.
-  // CRITICAL: Must use nextTick() to ensure Vue's computed properties have updated
-  // after the store mutations (section position, task positions) before rebuilding nodes.
-  nextTick(() => {
-    syncNodes()
-  })
+  // BUG-055 FIX: Use settling period to prevent race conditions with watchers
+  // 1. Set settling flag to block batchedSyncNodes during transition
+  // 2. Reset resize state first (isResizing = false)
+  // 3. After nextTick, call syncNodes directly (not batched)
+  // 4. Clear settling flag after short delay
+  isResizeSettling.value = true
+  console.log('🔄 [BUG-055] Resize settling started')
 
   // Reset resize state
   resizeState.value = {
@@ -2772,6 +2819,19 @@ const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event
     isDragging: false,
     resizeStartTime: 0
   }
+
+  // BUG-055 FIX: Sync nodes after resize state is cleared
+  // Use nextTick to ensure Vue's reactivity has propagated
+  nextTick(() => {
+    syncNodes()
+    console.log('🔄 [BUG-055] syncNodes called after resize')
+
+    // Clear settling flag after a short delay to prevent race conditions
+    setTimeout(() => {
+      isResizeSettling.value = false
+      console.log('✅ [BUG-055] Resize settling complete')
+    }, 100)
+  })
 }
 
 // Handle pane click - clear selection

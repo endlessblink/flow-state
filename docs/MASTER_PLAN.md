@@ -1,5 +1,5 @@
-**Last Updated**: December 30, 2025 (Refactoring for AI Customization)
-**Version**: 5.11 (Type Safety & Modularity)
+**Last Updated**: January 1, 2026 (BUG-054 Cross-Browser Sync Fix)
+**Version**: 5.12 (Sync Reliability)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -716,7 +716,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-072**~~ | ✅ **DONE** | `canvas.ts`, `GroupModal.vue`, `CanvasView.vue`, `useCanvasDragDrop.ts` | - | - |
 | ~~**TASK-073**~~ | ✅ **DONE** | `GroupNodeSimple.vue` | - | - |
 | ~~**TASK-074**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
-| **TASK-075** | 📋 **TODO** | `TaskNode.vue`, `TaskEditModal.vue` | - | - |
+| ~~**TASK-075**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | ~~**TASK-076**~~ | ✅ **DONE** | `taskStates.ts`, `taskOperations.ts`, `taskPersistence.ts`, `CanvasView.vue`, `CalendarView.vue` | - | - |
 | ~~**TASK-077**~~ | ✅ **DONE** | `CanvasContextMenu.vue` | - | - |
 | ~~**TASK-078**~~ | ✅ **DONE** | `dev-manager/kanban/index.html` | - | - |
@@ -729,8 +729,9 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-082** | 👀 **REVIEW** | `useDateTransition.ts`, `CanvasView.vue` | - | - |
 | **TASK-083** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | - |
 | **TASK-084** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | TASK-083 |
+| ~~**TASK-085**~~ | ✅ **DONE** | `useDatabaseHealthCheck.ts`, `useCrossTabCoordination.ts`, `useConflictPruning.ts` | - | - |
 | ~~**BUG-051**~~ | ✅ **DONE** | `QuickSortView.vue`, `CategorySelector.vue` | - | - |
-| ~~**BUG-055**~~ | ✅ **DONE** | `CanvasView.vue` | - | - |
+| **BUG-055** | 🔴 **IN PROGRESS** | `CanvasView.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -743,7 +744,7 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~TASK-073~~**: Improve group outline styling | **P2-MEDIUM** | ✅ DONE (Jan 1)
 - [x] **TASK-074**: Task node background blur | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [x] **TASK-077**: Context menu glassmorphism styling | **P2-MEDIUM** | ✅ DONE (Dec 29)
-- [ ] **TASK-075**: Markdown support for task descriptions | **P2-MEDIUM** | TODO
+- [x] **~~TASK-075~~**: Markdown support for task descriptions | **P2-MEDIUM** | ✅ DONE (Jan 1) - Renders markdown in TaskNode, interactive checkboxes
 - [x] **~~TASK-076~~**: Separate done filter (Canvas vs Calendar inbox) | **P1-HIGH** | ✅ DONE (Dec 31)
 - [x] **~~TASK-061~~**: Demo Content Guard Logger | **P0-CRITICAL** | ✅ DONE (Dec 30) - Guards in createTask, createProject, createTaskWithUndo
 - [x] **~~TASK-062~~**: Custom Confirmation Modals | **P0-CRITICAL** | ✅ DONE (Dec 30) - ConfirmationModal in use, no window.confirm() calls remain
@@ -760,7 +761,12 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~BUG-052~~**: Canvas view changing abruptly/glitching | **P1-HIGH** | ✅ FIXED (Dec 31) - Vue Flow now initializes with saved viewport via `initialViewport` computed prop, eliminating the (0,0,1) → saved viewport jump
 - [x] **~~BUG-053~~**: Projects/tasks disappeared from IndexedDB | **P0-CRITICAL** | ✅ RECOVERED (Dec 31) - Data restored from CouchDB; sync manager URL bug identified
 - [x] **~~BUG-054~~**: ReliableSyncManager not reading CouchDB URL from settings | **P1-HIGH** | ✅ FIXED (Jan 1) - getDatabaseConfig() now reads localStorage first, useReliableSyncManager calls it fresh each time
-- [x] **~~BUG-055~~**: Tasks move when resizing groups | **P1-HIGH** | ✅ FIXED (Jan 1) - Removed task position adjustment code; tasks now stay at absolute position during resize
+- [x] **~~BUG-055~~**: Canvas group resize breaks task/group positions | **P0-CRITICAL** | ✅ FIXED (Jan 1) - All fixes implemented:
+  - `isResizing` guard added to `batchedSyncNodes()` (line 1803)
+  - `isResizeSettling` ref + settling period (lines 1791, 2803-2834)
+  - Nested group position conversion: relative→absolute (lines 2717-2739)
+  - Verified with Playwright: resize settling works correctly
+- [x] **~~TASK-085~~**: IndexedDB Corruption Prevention Safeguards | **P1-HIGH** | ✅ DONE (Jan 1) - Health check, cross-tab coordination, conflict pruning
 - [ ] **TASK-082**: Auto-move Today tasks to Overdue at midnight (canvas only) | **P2-MEDIUM** | 👀 READY FOR TESTING - Test: `window.__simulateMidnightTransition()` in browser console
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - [x] **TASK-078**: Dev-Manager Hide Done Tasks Filter | **P2-MEDIUM** | ✅ DONE (Dec 30)
@@ -1020,21 +1026,28 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### TASK-075: Markdown Support for Task Descriptions (📋 TODO)
+### ~~TASK-075~~: Markdown Support for Task Descriptions (✅ DONE)
 
 **Priority**: P2-MEDIUM
+
+**Completed**: Jan 1, 2026
 
 **Problem**: Task descriptions don't render markdown, specifically checkboxes like `- [ ]` for subtask checklists.
 
 **Goals**:
-- [ ] Render markdown in task descriptions on TaskNode
-- [ ] Support checkboxes `- [ ]` and `- [x]`
-- [ ] Support basic formatting (bold, italic, lists)
-- [ ] Interactive checkbox toggling
+- [x] Render markdown in task descriptions on TaskNode
+- [x] Support checkboxes `- [ ]` and `- [x]`
+- [x] Support basic formatting (bold, italic, lists)
+- [x] Interactive checkbox toggling
 
-**Files to Modify**:
-- `src/components/canvas/TaskNode.vue` - Markdown rendering
-- `src/components/modals/TaskEditModal.vue` - Markdown preview
+**Implementation**:
+- Installed `marked` library for GFM (GitHub Flavored Markdown) parsing
+- Added `parsedDescription` computed with v-html rendering in TaskNode.vue
+- Added `handleDescriptionClick` for interactive checkbox toggling
+- Comprehensive CSS styles for markdown elements (code, lists, blockquotes, links)
+
+**Files Modified**:
+- `src/components/canvas/TaskNode.vue` - Markdown rendering with interactive checkboxes
 
 ---
 
@@ -1206,6 +1219,70 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
+### ~~BUG-054~~: Cross-Browser CouchDB Sync Failures (✅ FIXED - Jan 1, 2026)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Sync not working across different browsers | P1-HIGH | ✅ **FIXED** |
+| UI blocked 10+ seconds waiting for sync | P1-HIGH | ✅ **FIXED** |
+| Deleted projects reappearing after sync | P1-HIGH | ✅ **FIXED** |
+| Each browser required manual credential entry | P1-HIGH | ✅ **FIXED** |
+
+**User Reports**:
+- "Projects/tasks don't sync between Zen and Brave browsers"
+- "Sync should be automatic without configuring each browser"
+- "UI is blocked for 10+ seconds on page load"
+- "Deleted projects keep coming back"
+
+**Root Causes Identified**:
+
+1. **Configuration Disconnect**: Settings UI saved to `localStorage` keys, but sync manager only read from environment variables (`import.meta.env.VITE_COUCHDB_*`). Two independent systems that never communicated.
+
+2. **Blocking Initialization**: App waited for `waitForInitialSync(10000)` before loading any local data, causing 10+ second UI freeze.
+
+3. **Race Condition**: Data-pulled callback registered inside `onMounted`, but sync started when stores were created (before mount) - callback missed initial sync.
+
+4. **Missing Tombstones**: Project deletion only removed from array, no PouchDB tombstone created, so CouchDB sync restored "non-deleted" remote version.
+
+5. **IndexedDB Corruption**: Brave browser had corrupted IndexedDB with errors:
+   - `Database has a global failure UnknownError: Failed to read large IndexedDB value`
+   - `InvalidStateError: The database connection is closing`
+
+**Fixes Applied**:
+
+1. **Unified Configuration** (`src/config/database.ts`):
+   - Added `getStoredCouchDBConfig()` that reads localStorage first → env vars → hardcoded defaults
+   - Fixed empty string handling with `.trim()` checks
+   - Added automatic fallback credentials for seamless multi-browser sync
+
+2. **Local-First Loading** (`src/composables/app/useAppInitialization.ts`):
+   - Load local data immediately (< 1 second to UI)
+   - Sync runs in background with 30-second timeout
+   - Callback registered OUTSIDE `onMounted` to catch early sync
+
+3. **Tombstone Creation** (`src/stores/projects.ts`):
+   - Added `deleteProjectDoc()` calls to create proper PouchDB deletion markers
+   - Tombstones sync to CouchDB, preventing resurrection
+
+4. **Callback Mechanism** (`src/composables/useReliableSyncManager.ts`):
+   - Added `registerDataPulledCallback()` for post-sync store reloading
+   - Stores refresh automatically when sync pulls new data
+
+**Files Modified**:
+- `src/config/database.ts` - Configuration unification
+- `src/composables/app/useAppInitialization.ts` - Local-first loading
+- `src/stores/projects.ts` - Tombstone creation on delete
+- `src/composables/useReliableSyncManager.ts` - Callback mechanism
+
+**SOP**: `docs/🐛 debug/sop/cross-browser-sync-fix-2026-01-01.md`
+
+**Troubleshooting for Corrupted IndexedDB**:
+1. DevTools → Application → Storage → IndexedDB
+2. Delete `_pouch_pomoflow-app-dev`
+3. Refresh page - app syncs fresh data from CouchDB
+
+---
+
 ### TASK-082: Auto-Move Today Tasks to Overdue at Midnight (🔄 IMPLEMENTED - Awaiting Test)
 
 | Feature | Priority | Status |
@@ -1290,6 +1367,98 @@ All header action buttons were removed and moved to the context menu for a clean
 - `src/stores/tasks.ts` - Support array of project IDs in filters
 - `src/components/layout/AppSidebar.vue` - Add Ctrl+Click handler
 - `src/components/projects/ProjectTreeItem.vue` - Multi-select visual state
+
+---
+
+### ~~TASK-085~~: IndexedDB Corruption Prevention Safeguards (✅ DONE - Jan 1, 2026)
+
+| Feature | Priority | Status |
+|---------|----------|--------|
+| Database health check on startup | P1-HIGH | ✅ DONE |
+| Cross-tab write coordination | P1-HIGH | ✅ DONE |
+| Periodic conflict pruning | P2-MEDIUM | ✅ DONE |
+
+**Goal**: Prevent IndexedDB corruption that caused BUG-054 data loss by implementing three safeguards.
+
+**Background**: Users experienced corrupted IndexedDB with errors like "Failed to read large IndexedDB value" and "database connection is closing". Manual cleanup was required.
+
+**Safeguard 1: Database Health Check on Startup**
+
+Validates IndexedDB integrity on app load. If corrupted AND CouchDB has data, clears local and syncs fresh.
+
+```typescript
+// useDatabaseHealthCheck.ts
+const checkDatabaseHealth = async () => {
+  try {
+    // Try basic operation - if fails, DB is corrupted
+    await db.info()
+    await db.allDocs({ limit: 1 })
+    return { healthy: true }
+  } catch (error) {
+    if (isSyncEnabled() && await remoteHasData()) {
+      await clearLocalDatabase()
+      return { healthy: false, action: 'cleared-and-will-sync' }
+    }
+    return { healthy: false, action: 'none-remote-empty' }
+  }
+}
+```
+
+**Safeguard 2: Cross-Tab Write Coordination**
+
+Uses BroadcastChannel API to coordinate writes across tabs, preventing concurrent write conflicts.
+
+```typescript
+// useCrossTabCoordination.ts
+const channel = new BroadcastChannel('pomoflow-db-writes')
+
+const acquireWriteLock = async (docId: string) => {
+  // Announce intent to write
+  channel.postMessage({ type: 'write-start', docId, tabId })
+  // Wait for conflicts
+  await new Promise(r => setTimeout(r, 50))
+  // Check if another tab is writing
+  if (activeWriters.has(docId)) {
+    throw new Error('Write conflict - another tab is writing')
+  }
+}
+```
+
+**Safeguard 3: Periodic Conflict Pruning**
+
+Background job that cleans up conflicting revisions every hour. Only deletes duplicate revisions, never the winning document.
+
+```typescript
+// useConflictPruning.ts
+const pruneConflicts = async () => {
+  const docs = await db.allDocs({ conflicts: true, include_docs: true })
+  for (const row of docs.rows) {
+    if (row.doc?._conflicts?.length > 0) {
+      // Delete only the losing revisions
+      for (const conflictRev of row.doc._conflicts) {
+        await db.remove(row.id, conflictRev)
+      }
+    }
+  }
+}
+```
+
+**Implementation Steps**:
+- [x] Create `useDatabaseHealthCheck.ts` composable ✅
+- [x] Integrate health check into app initialization ✅
+- [x] Create `useCrossTabCoordination.ts` composable ✅
+- [x] Integrate cross-tab coordination into app initialization ✅
+- [x] Create `useConflictPruning.ts` composable ✅
+- [x] Add periodic pruning (hourly) with visibility API awareness ✅
+
+**Files to Create**:
+- `src/composables/useDatabaseHealthCheck.ts`
+- `src/composables/useCrossTabCoordination.ts`
+- `src/composables/useConflictPruning.ts`
+
+**Files to Modify**:
+- `src/composables/app/useAppInitialization.ts` - Add health check
+- `src/composables/useDatabase.ts` - Add cross-tab coordination
 
 ---
 

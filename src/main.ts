@@ -1,4 +1,4 @@
-// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2025-11-08T16:49:00Z - V10 - SIMPLE BACKUP SYSTEM
+// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2026-01-01T23:45:00Z - V13 - AUTO LIVE SYNC
 
 // Console filter - reduces log noise in development (toggle via localStorage)
 import './utils/consoleFilter'
@@ -43,47 +43,79 @@ import { useLocalAuthStore as _useLocalAuthStore } from './stores/local-auth'
 // Task disappearance logger - kept for window.taskLogger side-effect (manual debugging)
 import { taskDisappearanceLogger as _taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
 
-const app = createApp(App)
+// BUG-057: Pre-initialization IndexedDB health check for Firefox/Zen browser
+// This MUST run BEFORE Vue/Pinia is initialized to catch corrupted databases early
+import { runPreInitializationCheck } from './composables/useDatabaseHealthCheck'
 
-// Create Pinia with cross-tab state synchronization
-// ROLLBACK: Remove PiniaSharedState plugin and revert to: app.use(createPinia())
-const pinia = createPinia()
-pinia.use(
-  PiniaSharedState({
-    enable: true,       // Enable cross-tab sync globally
-    initialize: false,  // FIXED: Disable auto-hydration to prevent "ghost data" flash (BUG-037)
-    type: 'native',     // Use BroadcastChannel API (fastest, best support)
-  })
-)
+// Run pre-check and initialize app
+async function initializeApp() {
+  // BUG-057: Check IndexedDB health BEFORE creating Vue app
+  // This prevents PouchDB from failing on corrupted Firefox databases
+  console.log('🚀 [MAIN] Starting app initialization...')
 
-app.use(pinia)
-app.use(router)
-app.use(i18n)
+  try {
+    const preCheckResult = await runPreInitializationCheck()
 
-// Global error handler for extension compatibility
-app.config.errorHandler = (err, _vm, info) => {
-  const errorStr = String(err);
+    if (preCheckResult.cleared) {
+      console.log('🔄 [MAIN] Corrupted IndexedDB was cleared - reloading page...')
+      // Page will reload - don't continue initialization
+      window.location.reload()
+      return
+    }
 
-  // Extension errors: log silently, don't crash
-  if (errorStr.match(/chrome is not defined|browser is not defined/i)) {
-    console.warn('🔌 Extension compatibility detected:', errorStr);
-    return; // Don't propagate - app continues
+    if (!preCheckResult.healthy && preCheckResult.error) {
+      console.warn('⚠️ [MAIN] IndexedDB pre-check warning:', preCheckResult.error)
+      // Continue anyway - PouchDB may still work or will handle it
+    }
+  } catch (error) {
+    console.warn('⚠️ [MAIN] Pre-check failed, continuing anyway:', error)
   }
 
-  // Real application errors: log normally
-  console.error('App error:', err, info);
-};
+  const app = createApp(App)
 
-// Handle unhandled promise rejections
-window.addEventListener('unhandledrejection', (event) => {
-  if (String(event.reason).includes('chrome is not defined')) {
-    event.preventDefault(); // Don't crash the app
-  }
-});
+  // Create Pinia with cross-tab state synchronization
+  // ROLLBACK: Remove PiniaSharedState plugin and revert to: app.use(createPinia())
+  const pinia = createPinia()
+  pinia.use(
+    PiniaSharedState({
+      enable: true,       // Enable cross-tab sync globally
+      initialize: false,  // FIXED: Disable auto-hydration to prevent "ghost data" flash (BUG-037)
+      type: 'native',     // Use BroadcastChannel API (fastest, best support)
+    })
+  )
 
-app.mount('#app')
+  app.use(pinia)
+  app.use(router)
+  app.use(i18n)
 
-// Task disappearance logger available for manual debugging if needed:
-// Import: import { taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
-// Enable: taskDisappearanceLogger.enable() or window.taskLogger.enable()
-// TASK-022 monitoring completed Dec 25, 2025 - no issues detected
+  // Global error handler for extension compatibility
+  app.config.errorHandler = (err, _vm, info) => {
+    const errorStr = String(err);
+
+    // Extension errors: log silently, don't crash
+    if (errorStr.match(/chrome is not defined|browser is not defined/i)) {
+      console.warn('🔌 Extension compatibility detected:', errorStr);
+      return; // Don't propagate - app continues
+    }
+
+    // Real application errors: log normally
+    console.error('App error:', err, info);
+  };
+
+  // Handle unhandled promise rejections
+  window.addEventListener('unhandledrejection', (event) => {
+    if (String(event.reason).includes('chrome is not defined')) {
+      event.preventDefault(); // Don't crash the app
+    }
+  });
+
+  app.mount('#app')
+
+  // Task disappearance logger available for manual debugging if needed:
+  // Import: import { taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
+  // Enable: taskDisappearanceLogger.enable() or window.taskLogger.enable()
+  // TASK-022 monitoring completed Dec 25, 2025 - no issues detected
+}
+
+// Start the app
+initializeApp()

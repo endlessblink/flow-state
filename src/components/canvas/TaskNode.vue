@@ -130,7 +130,7 @@
 <script setup lang="ts">
 import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
-import { Calendar, Timer, Zap, Clock, HelpCircle, Check } from 'lucide-vue-next'
+import { Calendar, Timer, Zap, Clock, Check } from 'lucide-vue-next'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'

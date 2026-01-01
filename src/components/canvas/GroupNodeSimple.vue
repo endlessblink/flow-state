@@ -45,7 +45,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { ChevronDown, ChevronRight, Zap, Magnet, Settings } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
 // TASK-072: Import useNode for reactive node data from Vue Flow state
@@ -127,23 +127,6 @@ const isPowerMode = computed(() => {
   return powerKeyword.value !== null
 })
 
-const powerModeTooltip = computed(() => {
-  if (!powerKeyword.value) return ''
-  const categoryLabels = {
-    date: 'Sets due date',
-    priority: 'Sets priority',
-    status: 'Sets status'
-  }
-  return `Power Group: ${categoryLabels[powerKeyword.value.category]} to "${powerKeyword.value.displayName}"`
-})
-
-// Get count of matching tasks in inbox for collect button
-const matchingInboxCount = computed(() => {
-  if (!isPowerMode.value) return 0
-  const allTasks = taskStore.filteredTasks
-  return canvasStore.getMatchingTaskCount(props.data.id, allTasks)
-})
-
 // Watch for external name changes
 watch(() => props.data.name, (newName) => {
   sectionName.value = newName
@@ -163,31 +146,6 @@ const toggleCollapse = () => {
 
 const handleContextMenu = (event: MouseEvent) => {
   emit('contextMenu', event, props.data)
-}
-
-// Power mode functions
-const togglePowerMode = () => {
-  canvasStore.togglePowerMode(props.data.id)
-}
-
-// Settings function
-const openSettings = () => {
-  emit('openSettings', props.data.id)
-}
-
-const toggleCollectMenu = () => {
-  showCollectMenu.value = !showCollectMenu.value
-}
-
-const handleCollect = async (mode: 'move' | 'highlight') => {
-  showCollectMenu.value = false
-  const allTasks = taskStore.filteredTasks
-  await canvasStore.collectMatchingTasks(
-    props.data.id,
-    mode,
-    allTasks,
-    taskStore.updateTask.bind(taskStore)
-  )
 }
 
 // Resize event handlers
@@ -227,12 +185,12 @@ const handleResizeEnd = (event: unknown) => {
 </script>
 
 <style scoped>
-/* TASK-079: High-visibility group design for zoom-out */
+/* TASK-073 + TASK-079: Enhanced group outline styling for visibility and distinction */
 .section-node {
   width: 100%;
   height: 100%;
-  /* TASK-079: Thick visible border - 2px solid white for clear boundaries */
-  border: 2px solid rgba(255, 255, 255, 0.30) !important;
+  /* TASK-073: Double-line border effect - inner solid + outer subtle */
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
   border-radius: var(--radius-lg);
   /* TASK-079: Brighter background for contrast against dark canvas */
   background: rgba(45, 48, 58, 0.92) !important;
@@ -240,27 +198,48 @@ const handleResizeEnd = (event: unknown) => {
   -webkit-backdrop-filter: blur(12px);
   position: relative;
   z-index: 1;
-  /* TASK-079: Very strong glow for zoom-out visibility */
+  /* TASK-073: Outer line via outline for double-border effect */
+  outline: 1px solid rgba(255, 255, 255, 0.12);
+  outline-offset: 2px;
+  /* TASK-079: Strong glow for zoom-out visibility */
   box-shadow:
     /* Drop shadows */
     0 16px 48px rgba(0, 0, 0, 0.5),
     0 8px 24px rgba(0, 0, 0, 0.3),
     /* ZOOM FIX: Large colored glow */
     0 0 80px 20px currentColor,
-    /* White outline glow for separation */
-    0 0 0 1px rgba(255, 255, 255, 0.15);
+    /* TASK-073: Inner subtle highlight */
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: all var(--duration-fast) ease;
 }
 
 .section-node:hover {
-  /* TASK-079: Enhanced hover - brighter border and stronger glow */
-  border-color: rgba(255, 255, 255, 0.45) !important;
+  /* TASK-073: Enhanced hover - brighter border and stronger outline */
+  border-color: rgba(255, 255, 255, 0.50) !important;
+  outline: 1px solid rgba(255, 255, 255, 0.20);
+  outline-offset: 3px;
   box-shadow:
     0 20px 56px rgba(0, 0, 0, 0.55),
     0 10px 28px rgba(0, 0, 0, 0.35),
     /* ZOOM FIX: Even stronger glow on hover */
     0 0 100px 25px currentColor,
-    0 0 0 2px rgba(255, 255, 255, 0.25);
+    /* TASK-073: Brighter inner highlight on hover */
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* TASK-073: Selected group state - highly visible */
+.section-node.selected,
+.section-node:focus-within {
+  border-color: var(--accent-primary) !important;
+  outline: 2px solid rgba(99, 102, 241, 0.4);
+  outline-offset: 3px;
+  box-shadow:
+    0 20px 56px rgba(0, 0, 0, 0.55),
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    0 0 100px 25px currentColor,
+    /* Accent glow for selection */
+    0 0 20px 4px rgba(99, 102, 241, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .section-header {
@@ -415,6 +394,16 @@ const handleResizeEnd = (event: unknown) => {
   min-height: auto;
   height: auto !important;
   cursor: pointer;
+  /* TASK-073: Subtle dashed outline for collapsed state distinction */
+  border-style: dashed !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  outline: 1px dashed rgba(255, 255, 255, 0.08);
+  outline-offset: 2px;
+}
+
+.section-node.collapsed:hover {
+  border-color: rgba(255, 255, 255, 0.40) !important;
+  outline: 1px dashed rgba(255, 255, 255, 0.15);
 }
 
 .section-node.collapsed .section-header {
@@ -427,9 +416,15 @@ const handleResizeEnd = (event: unknown) => {
   display: none;
 }
 
-/* Ensure collapsed sections still accept drops */
+/* TASK-073: Collapsed + selected state with accent outline */
 .section-node.collapsed.vue-flow__node--selected {
-  box-shadow: 0 0 0 2px var(--accent-primary);
+  border-color: var(--accent-primary) !important;
+  outline: 2px solid rgba(99, 102, 241, 0.3);
+  outline-offset: 3px;
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 0 20px 4px rgba(99, 102, 241, 0.25);
 }
 
 /* Visual hint for collapsed sections */

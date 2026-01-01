@@ -1,6 +1,7 @@
 
 import { type Ref } from 'vue'
-import { type VueFlow, useVueFlow, type Node, type Edge } from '@vue-flow/core'
+import type { useVueFlow} from '@vue-flow/core';
+import { type VueFlow, type Node, type Edge } from '@vue-flow/core'
 
 export interface NodeBatcher {
     flush: () => void

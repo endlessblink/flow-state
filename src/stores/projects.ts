@@ -8,7 +8,8 @@ import type { Project } from '@/types/tasks'
 import {
     saveProjects as saveIndividualProjects,
     loadAllProjects as loadIndividualProjects,
-    migrateFromLegacyFormat as migrateProjectsFromLegacy
+    migrateFromLegacyFormat as migrateProjectsFromLegacy,
+    deleteProject as deleteProjectDoc
 } from '@/utils/individualProjectStorage'
 import { useTaskStore } from './tasks'
 
@@ -184,6 +185,18 @@ export const useProjectStore = defineStore('projects', () => {
 
                 projects.value.splice(projectIndex, 1)
                 await saveProjectsToStorage(projects.value, `deleteProject-${projectId}`)
+
+                // BUG-054 FIX: Actually delete the project document from PouchDB
+                // This creates a tombstone that syncs to CouchDB, preventing the project from reappearing
+                const dbInstance = (window as any).pomoFlowDb
+                if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
+                    try {
+                        await deleteProjectDoc(dbInstance, projectId)
+                        console.log(`🗑️ [PROJECT] Deleted document for project ${projectId}`)
+                    } catch (deleteErr) {
+                        console.warn(`⚠️ [PROJECT] Failed to delete document for ${projectId}:`, deleteErr)
+                    }
+                }
             } finally {
                 manualOperationInProgress = false
             }
@@ -239,6 +252,20 @@ export const useProjectStore = defineStore('projects', () => {
             projects.value = projects.value.filter(p => !projectIdSet.has(p.id))
 
             await saveProjectsToStorage(projects.value, `deleteProjects-${projectIds.length}`)
+
+            // BUG-054 FIX: Actually delete project documents from PouchDB
+            // This creates tombstones that sync to CouchDB, preventing projects from reappearing
+            const dbInstance = (window as any).pomoFlowDb
+            if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
+                for (const projectId of projectIds) {
+                    try {
+                        await deleteProjectDoc(dbInstance, projectId)
+                        console.log(`🗑️ [PROJECT] Deleted document for project ${projectId}`)
+                    } catch (deleteErr) {
+                        console.warn(`⚠️ [PROJECT] Failed to delete document for ${projectId}:`, deleteErr)
+                    }
+                }
+            }
         } finally {
             manualOperationInProgress = false
         }

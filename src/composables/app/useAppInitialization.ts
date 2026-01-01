@@ -1,6 +1,7 @@
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 import { useTaskStore } from '@/stores/tasks'
+import { useProjectStore } from '@/stores/projects'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notifications'
@@ -11,25 +12,50 @@ import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple
 export function useAppInitialization() {
     const timerStore = useTimerStore()
     const taskStore = useTaskStore()
+    const projectStore = useProjectStore()
     const canvasStore = useCanvasStore()
     const uiStore = useUIStore()
     const notificationStore = useNotificationStore()
     const itpProtection = useSafariITPProtection()
 
+    // BUG-054 FIX: Get sync manager and register callback IMMEDIATELY
+    // Stores are created above which triggers useDatabase → sync starts in background
+    // We MUST register the callback NOW, before sync can complete and notify
+    const syncManager = getGlobalReliableSyncManager()
+
+    // BUG-054 FIX: Register callback as early as possible (outside onMounted)
+    // This ensures we catch data pulled events even from initial sync
+    const unregisterDataPulledCallback = syncManager.registerDataPulledCallback(async () => {
+        console.log('🔄 [APP] Reloading stores after sync pulled data...')
+        await taskStore.loadFromDatabase()
+        await projectStore.loadProjectsFromPouchDB()
+        await canvasStore.loadFromDatabase()
+        console.log('✅ [APP] Stores reloaded after sync')
+    })
+
     onMounted(async () => {
         // Load UI state from localStorage
         uiStore.loadState()
 
-        // Sync and Data loading
-        const syncManager = getGlobalReliableSyncManager()
-        const syncCompleted = await syncManager.waitForInitialSync(10000)
-
-        if (!syncCompleted) {
-            console.warn('⚠️ Sync did not complete in time, loading local data')
-        }
-
+        // BUG-054 FIX: Load local data IMMEDIATELY - don't block UI waiting for sync
+        // This ensures instant app responsiveness while sync runs in background
+        console.log('⚡ [APP] Loading local data immediately...')
         await taskStore.loadFromDatabase()
+        await projectStore.loadProjectsFromPouchDB()
         await canvasStore.loadFromDatabase()
+        console.log('✅ [APP] Local data loaded - UI ready')
+
+        // Start sync in background - don't await, let it run while app is usable
+        // The callback above will reload stores when sync completes
+        syncManager.waitForInitialSync(30000).then(syncCompleted => {
+            if (syncCompleted) {
+                console.log('✅ [APP] Background sync completed')
+            } else {
+                console.warn('⚠️ [APP] Background sync timed out - using local data')
+            }
+        }).catch(err => {
+            console.warn('⚠️ [APP] Background sync failed:', err)
+        })
 
         // Clean up legacy monolithic documents if in individual-only mode
         // This ensures database pruning after successful migration
@@ -74,5 +100,12 @@ export function useAppInitialization() {
 
         // Initialize global keyboard shortcuts (system-level: undo/redo/new-task)
         await initGlobalKeyboardShortcuts()
+    })
+
+    // BUG-054 FIX: Cleanup callback registration on unmount
+    onUnmounted(() => {
+        if (unregisterDataPulledCallback) {
+            unregisterDataPulledCallback()
+        }
     })
 }

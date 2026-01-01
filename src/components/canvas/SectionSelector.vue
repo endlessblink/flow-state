@@ -11,7 +11,7 @@
         <div 
           class="section-color-dot" 
           :style="{ backgroundColor: selectedSection.color || 'var(--brand-primary)' }"
-        ></div>
+        />
         <span class="select-value">{{ selectedSection.name }}</span>
       </div>
       <span v-else class="select-value placeholder">{{ placeholder }}</span>
@@ -40,7 +40,9 @@
 
           <!-- Section Groups -->
           <div v-for="group in categorizedSections" :key="group.type" class="dropdown-group">
-            <div class="group-header">{{ group.label }}</div>
+            <div class="group-header">
+              {{ group.label }}
+            </div>
             <div
               v-for="section in group.sections"
               :key="section.id"
@@ -52,7 +54,7 @@
               <div 
                 class="section-color-dot" 
                 :style="{ backgroundColor: section.color || 'var(--brand-primary)' }"
-              ></div>
+              />
               <span>{{ section.name }}</span>
             </div>
           </div>

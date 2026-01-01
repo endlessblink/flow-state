@@ -89,7 +89,7 @@
             </div>
 
             <!-- Recommendations -->
-            <div v-if="verificationResult.recommendations.length > 0" class="recommendations">
+            <div v-if="(verificationResult.recommendations?.length ?? 0) > 0" class="recommendations">
               <h4>Recommendations</h4>
               <ul>
                 <li v-for="(rec, index) in verificationResult.recommendations" :key="index">

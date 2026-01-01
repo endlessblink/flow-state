@@ -3,31 +3,31 @@
   <TaskEditModal
     :is-open="isEditModalOpen"
     :task="selectedTask"
-    @close="$emit('close-edit-modal')"
+    @close="$emit('closeEditModal')"
   />
 
   <!-- Quick Task Create Modal -->
   <QuickTaskCreateModal
     :is-open="isQuickTaskCreateOpen"
     :loading="false"
-    @cancel="$emit('close-quick-task-create')"
-    @create="(title, description) => $emit('handle-quick-task-create', title, description)"
+    @cancel="$emit('closeQuickTaskCreate')"
+    @create="(title, description) => $emit('handleQuickTaskCreate', title, description)"
   />
 
   <!-- Batch Edit Modal -->
   <BatchEditModal
     :is-open="isBatchEditModalOpen"
     :task-ids="batchEditTaskIds"
-    @close="$emit('close-batch-edit-modal')"
-    @applied="$emit('handle-batch-edit-applied')"
+    @close="$emit('closeBatchEditModal')"
+    @applied="$emit('handleBatchEditApplied')"
   />
 
   <!-- Section Settings Modal -->
   <GroupSettingsMenu
     :section="editingSection"
     :is-visible="isSectionSettingsOpen"
-    @close="$emit('close-section-settings-modal')"
-    @save="(settings) => $emit('handle-section-settings-save', settings)"
+    @close="$emit('closeSectionSettingsModal')"
+    @save="(settings) => $emit('handleSectionSettingsSave', settings)"
   />
 
   <!-- Unified Group Modal (create + edit with optional smart settings) -->
@@ -35,17 +35,17 @@
     :is-open="isGroupModalOpen"
     :group="selectedGroup"
     :position="groupModalPosition"
-    @close="$emit('close-group-modal')"
-    @created="(group) => $emit('handle-group-created', group)"
-    @updated="(group) => $emit('handle-group-updated', group)"
+    @close="$emit('closeGroupModal')"
+    @created="(group) => $emit('handleGroupCreated', group)"
+    @updated="(group) => $emit('handleGroupUpdated', group)"
   />
 
   <!-- Group Edit Modal -->
   <GroupEditModal
     :section="selectedSectionForEdit"
     :is-visible="isGroupEditModalOpen"
-    @close="$emit('close-group-edit-modal')"
-    @save="(updatedSection) => $emit('handle-group-edit-save', updatedSection)"
+    @close="$emit('closeGroupEditModal')"
+    @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection)"
   />
 
   <!-- Group Delete Confirmation Modal -->
@@ -54,8 +54,8 @@
     title="Delete Group"
     :message="deleteGroupMessage"
     confirm-text="Delete"
-    @confirm="$emit('confirm-delete-group')"
-    @cancel="$emit('cancel-delete-group')"
+    @confirm="$emit('confirmDeleteGroup')"
+    @cancel="$emit('cancelDeleteGroup')"
   />
 
   <!-- Bulk Delete Confirmation Modal (Shift+Delete on multiple items) -->
@@ -65,8 +65,8 @@
     :message="bulkDeleteMessage"
     :details="bulkDeleteItems.map(item => `${item.type === 'section' ? '📁' : '📌'} ${item.name}`)"
     :confirm-text="bulkDeleteIsPermanent ? 'Delete Permanently' : 'Remove'"
-    @confirm="$emit('confirm-bulk-delete')"
-    @cancel="$emit('cancel-bulk-delete')"
+    @confirm="$emit('confirmBulkDelete')"
+    @cancel="$emit('cancelBulkDelete')"
   />
 </template>
 
@@ -121,21 +121,21 @@ defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'close-edit-modal'): void
-  (e: 'close-quick-task-create'): void
-  (e: 'handle-quick-task-create', title: string, description: string): void
-  (e: 'close-batch-edit-modal'): void
-  (e: 'handle-batch-edit-applied'): void
-  (e: 'close-section-settings-modal'): void
-  (e: 'handle-section-settings-save', settings: { assignOnDrop: AssignOnDropSettings }): void
-  (e: 'close-group-modal'): void
-  (e: 'handle-group-created', group: CanvasSection): void
-  (e: 'handle-group-updated', group: CanvasSection): void
-  (e: 'close-group-edit-modal'): void
-  (e: 'handle-group-edit-save', updatedSection: any): void
-  (e: 'confirm-delete-group'): void
-  (e: 'cancel-delete-group'): void
-  (e: 'confirm-bulk-delete'): void
-  (e: 'cancel-bulk-delete'): void
+  (e: 'closeEditModal'): void
+  (e: 'closeQuickTaskCreate'): void
+  (e: 'handleQuickTaskCreate', title: string, description: string): void
+  (e: 'closeBatchEditModal'): void
+  (e: 'handleBatchEditApplied'): void
+  (e: 'closeSectionSettingsModal'): void
+  (e: 'handleSectionSettingsSave', settings: { assignOnDrop: AssignOnDropSettings }): void
+  (e: 'closeGroupModal'): void
+  (e: 'handleGroupCreated', group: CanvasSection): void
+  (e: 'handleGroupUpdated', group: CanvasSection): void
+  (e: 'closeGroupEditModal'): void
+  (e: 'handleGroupEditSave', updatedSection: any): void
+  (e: 'confirmDeleteGroup'): void
+  (e: 'cancelDeleteGroup'): void
+  (e: 'confirmBulkDelete'): void
+  (e: 'cancelBulkDelete'): void
 }>()
 </script>

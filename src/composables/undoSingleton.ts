@@ -43,31 +43,33 @@ function initializeRefHistory() {
 
   console.log('🔄 Creating SINGLE refHistory instance for entire application (tasks + groups)...')
 
-  try {
-    const taskStore = useTaskStore()
+  // CRITICAL FIX: Start with empty state to avoid circular dependency during store setup
+  // The state will be populated after stores are fully initialized
+  // This is called during useTaskStore() setup, so we can't access taskStore.tasks yet
+  unifiedState = ref<UnifiedUndoState>({
+    tasks: [],
+    groups: []
+  })
 
-    // Safely get canvas store - it might not be ready during early initialization
-    let canvasGroups: CanvasGroup[] = []
+  // Schedule state population after stores are ready (next tick ensures store setup is complete)
+  nextTick(() => {
     try {
+      const taskStore = useTaskStore()
       const canvasStore = useCanvasStore()
-      canvasGroups = canvasStore.groups ? [...canvasStore.groups] : []
-    } catch (canvasError) {
-      console.warn('⚠️ [UNDO] Canvas store not available during initialization, groups will be added later')
-    }
 
-    // Initialize with combined state (tasks + groups)
-    unifiedState = ref<UnifiedUndoState>({
-      tasks: [...taskStore.tasks],
-      groups: canvasGroups
-    })
-  } catch (error) {
-    console.error('❌ [UNDO] Failed to initialize stores, using empty state:', error)
-    // Fallback to empty state if stores aren't available
-    unifiedState = ref<UnifiedUndoState>({
-      tasks: [],
-      groups: []
-    })
-  }
+      // Now safely populate the state - stores should be fully initialized
+      if (taskStore.tasks && Array.isArray(taskStore.tasks)) {
+        unifiedState!.value.tasks = [...taskStore.tasks]
+        console.log('✅ [UNDO] Populated tasks state:', taskStore.tasks.length, 'tasks')
+      }
+      if (canvasStore.groups && Array.isArray(canvasStore.groups)) {
+        unifiedState!.value.groups = [...canvasStore.groups]
+        console.log('✅ [UNDO] Populated groups state:', canvasStore.groups.length, 'groups')
+      }
+    } catch (error) {
+      console.warn('⚠️ [UNDO] Could not populate initial state (stores may not be ready):', error)
+    }
+  })
 
   // Create the SINGLE useManualRefHistory instance with proper VueUse configuration
   // NOTE: deep: true was intentionally removed for performance reasons (deep watchers issue)

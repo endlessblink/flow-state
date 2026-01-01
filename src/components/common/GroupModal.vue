@@ -76,7 +76,9 @@
             v-model="groupData.parentGroupId"
             class="parent-select"
           >
-            <option :value="null">None (Top Level)</option>
+            <option :value="null">
+              None (Top Level)
+            </option>
             <option
               v-for="parentOption in availableParentGroups"
               :key="parentOption.id"

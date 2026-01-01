@@ -204,9 +204,9 @@ Call client"
             </NTag>
 
             <!-- Due Date Badge -->
-            <span v-if="getDueStatus(task)" class="metadata-badge due-date-badge" :class="`due-badge-${getDueStatus(task).type}`">
+            <span v-if="getDueStatus(task)" class="metadata-badge due-date-badge" :class="`due-badge-${getDueStatus(task)?.type}`">
               <Calendar :size="12" />
-              {{ getDueStatus(task).text }}
+              {{ getDueStatus(task)?.text }}
             </span>
 
             <!-- Duration Badge -->
@@ -241,7 +241,6 @@ Call client"
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -281,22 +280,16 @@ const props = withDefaults(defineProps<Props>(), {
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 
-// TASK-076: Get view-specific hide done filter from store
-const hideCanvasDoneTasks = computed(() => taskStore.hideCanvasDoneTasks)
-const hideCalendarDoneTasks = computed(() => taskStore.hideCalendarDoneTasks)
+// TASK-076: Inbox has its OWN local state for done filter (independent of canvas/calendar toggles)
+// The canvas Done toggle only affects canvas view, not this inbox panel
+const hideInboxDoneTasks = ref(false)
 
-// TASK-076: Current view's hide done setting
-const currentHideDoneTasks = computed(() => {
-  return props.context === 'calendar' ? hideCalendarDoneTasks.value : hideCanvasDoneTasks.value
-})
+// TASK-076: Current view's hide done setting - uses LOCAL inbox state
+const currentHideDoneTasks = computed(() => hideInboxDoneTasks.value)
 
-// TASK-076: Toggle function for the current view
-const toggleHideDoneTasks = (value: boolean) => {
-  if (props.context === 'calendar') {
-    taskStore.toggleCalendarDoneTasks()
-  } else {
-    taskStore.toggleCanvasDoneTasks()
-  }
+// TASK-076: Toggle function for the inbox's own done filter
+const toggleHideDoneTasks = () => {
+  hideInboxDoneTasks.value = !hideInboxDoneTasks.value
 }
 
 // State

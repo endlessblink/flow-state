@@ -38,6 +38,7 @@ export interface BackupData {
   metadata?: {
     taskCount: number
     projectCount: number
+    size?: number
     exportedAt?: string
   }
 }
@@ -211,6 +212,12 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
         projects: backupData.projects,
         canvas: backupData.canvas
       })
+
+      // Calculate approximate size
+      const size = new TextEncoder().encode(JSON.stringify(backupData)).length
+      if (backupData.metadata) {
+        backupData.metadata.size = size
+      }
 
       // Save to localStorage
       saveToHistory(backupData)
@@ -626,7 +633,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
  * Singleton instance for components using the old object pattern
  * @deprecated Use useBackupSystem() composable instead
  */
-const singletonInstance: ReturnType<typeof useBackupSystem> | null = null
+const singletonInstance: ReturnType<typeof useBackupSystem> | null = null as any
 
 export const backupSystem = {
   getInstance() {

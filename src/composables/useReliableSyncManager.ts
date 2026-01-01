@@ -51,7 +51,10 @@ export interface SyncMetrics {
 }
 
 export const useReliableSyncManager = () => {
-  const config = getDatabaseConfig()
+  // BUG-054 FIX: DON'T cache config at module load time!
+  // getDatabaseConfig() now reads from localStorage dynamically,
+  // so we must call it fresh each time we need the config.
+  // Removed: const config = getDatabaseConfig()
 
   // Phase 1 reactive state (keep existing)
   const syncStatus = ref<SyncStatus>('idle')
@@ -154,6 +157,39 @@ export const useReliableSyncManager = () => {
   const MAX_CONSECUTIVE_FAILURES = 3
   const HEALTH_CHECK_INTERVAL = 30000 // 30 seconds
 
+  // BUG-054 FIX: Callbacks for when data is pulled from remote
+  // This allows stores to reload after sync completes
+  const dataPulledCallbacks: Array<() => Promise<void> | void> = []
+
+  /**
+   * Register a callback to be called when data is pulled from remote
+   * This is used to reload stores after sync completes
+   */
+  const registerDataPulledCallback = (callback: () => Promise<void> | void): (() => void) => {
+    dataPulledCallbacks.push(callback)
+    // Return unregister function
+    return () => {
+      const index = dataPulledCallbacks.indexOf(callback)
+      if (index > -1) {
+        dataPulledCallbacks.splice(index, 1)
+      }
+    }
+  }
+
+  /**
+   * Call all registered callbacks when data is pulled
+   */
+  const notifyDataPulled = async () => {
+    console.log(`🔄 [SYNC] Notifying ${dataPulledCallbacks.length} callbacks that data was pulled`)
+    for (const callback of dataPulledCallbacks) {
+      try {
+        await callback()
+      } catch (err) {
+        console.warn('⚠️ Data pulled callback failed:', err)
+      }
+    }
+  }
+
   /**
    * Initialize local PouchDB instance
    */
@@ -162,6 +198,9 @@ export const useReliableSyncManager = () => {
       if (localDB) {
         return localDB
       }
+
+      // BUG-054 FIX: Get fresh config each time (reads from localStorage → env vars)
+      const config = getDatabaseConfig()
 
       localDB = new PouchDB(config.local.name, {
         adapter: config.local.adapter
@@ -181,6 +220,9 @@ export const useReliableSyncManager = () => {
   const setupRemoteConnection = async (): Promise<PouchDB.Database | null> => {
     try {
       console.log('🔌 [REMOTE] Starting remote connection setup...')
+
+      // BUG-054 FIX: Get fresh config each time (reads from localStorage → env vars)
+      const config = getDatabaseConfig()
 
       if (!config.remote?.url) {
         console.log('📱 ReliableSyncManager: No remote URL configured, using local-only mode')
@@ -294,14 +336,27 @@ export const useReliableSyncManager = () => {
       if (remoteDB && isOnline.value) {
         syncStatus.value = 'syncing'
         try {
-          const result = await localDB.sync(remoteDB, {
+          // BUG-054 FIX: Add 30-second timeout to initial sync to prevent hanging
+          const syncPromise = localDB.sync(remoteDB, {
             batch_size: 100,
             batches_limit: 10
           })
-          console.log(`✅ [SYNC] Initial: pushed ${result.push?.docs_written || 0}, pulled ${result.pull?.docs_written || 0}`)
-          // DO NOT reload task store here - causes loop
+          const syncTimeout = new Promise<null>((_, reject) => {
+            setTimeout(() => reject(new Error('Initial sync timeout after 30 seconds')), 30000)
+          })
+
+          const result = await Promise.race([syncPromise, syncTimeout])
+          if (result) {
+            const pulledDocs = result.pull?.docs_written || 0
+            console.log(`✅ [SYNC] Initial: pushed ${result.push?.docs_written || 0}, pulled ${pulledDocs}`)
+
+            // BUG-054 FIX: Notify callbacks when data is pulled so stores can reload
+            if (pulledDocs > 0) {
+              await notifyDataPulled()
+            }
+          }
         } catch (syncError) {
-          console.warn('⚠️ [SYNC] Initial sync failed, using local data')
+          console.warn('⚠️ [SYNC] Initial sync failed, using local data:', (syncError as Error).message)
         }
       }
 
@@ -648,6 +703,11 @@ export const useReliableSyncManager = () => {
         const pushed = pushResult.docs_written || 0
         if (pulled > 0 || pushed > 0) {
           console.log(`✅ [SYNC] Pulled ${pulled}, pushed ${pushed} docs`)
+        }
+
+        // BUG-054 FIX: Notify callbacks when data is pulled so stores can reload
+        if (pulled > 0) {
+          await notifyDataPulled()
         }
       } catch (syncError) {
         throw new Error(`Sync failed: ${(syncError as Error).message}`)
@@ -1100,15 +1160,13 @@ export const useReliableSyncManager = () => {
           console.log('📤 [LIVE SYNC] Change:', syncChange.direction, docCount, 'docs')
         }
 
-        // BUG-025 FIX: DO NOT auto-reload task store on every sync change!
-        // This was causing an infinite loop:
-        // 1. Sync pulls changes → loadFromDatabase()
-        // 2. loadFromDatabase() triggers debouncedSave()
-        // 3. Save triggers another sync change
-        // 4. Repeat forever
-        //
-        // Instead, user must manually refresh or we use a different approach
-        // The task store's own change listeners will handle reactivity
+        // BUG-054 FIX: Notify callbacks when data is PULLED from remote
+        // This allows stores to reload and show the new data
+        // Only trigger on 'pull' direction to avoid infinite loop with 'push'
+        // The stores use manualOperationInProgress flag to prevent re-save during load
+        if (syncChange.direction === 'pull' && docCount > 0) {
+          await notifyDataPulled()
+        }
 
         lastSyncTime.value = new Date()
         localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())
@@ -1257,6 +1315,9 @@ export const useReliableSyncManager = () => {
     initialSyncComplete,
     waitForInitialSync,
 
+    // BUG-054 FIX: Callback for when data is pulled from remote
+    registerDataPulledCallback,
+
     // Computed properties for component usage
     isSyncing,
     hasErrors,
@@ -1324,6 +1385,9 @@ export interface ReliableSyncManagerInstance {
   // BUG-025 FIX: Sync completion signal
   initialSyncComplete: Ref<boolean>
   waitForInitialSync: (timeoutMs?: number) => Promise<boolean>
+
+  // BUG-054 FIX: Callback for when data is pulled
+  registerDataPulledCallback: (callback: () => Promise<void> | void) => () => void
 
   // Computed properties
   isSyncing: ComputedRef<boolean>

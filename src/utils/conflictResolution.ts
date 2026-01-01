@@ -19,3 +19,14 @@ export interface UserResolutionRule {
     action: 'prefer-local' | 'prefer-remote' | 'prefer-non-empty' | 'prefer-true' | 'prefer-false' | 'prefer-longer' | 'prefer-newer' | 'prefer-earlier' | 'prefer-higher' | 'merge' | 'union' | 'merge-deep' | 'ask' | string
     priority: number
 }
+
+// Minimal Task interface to avoid circular deps if needed, or use any
+export interface TaskConflict {
+    taskId: string
+    baseTask?: unknown
+    localTask: any
+    remoteTask: any
+    conflicts: ConflictDiff[]
+    priority: 'low' | 'medium' | 'high'
+    timestamp: number
+}

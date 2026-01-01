@@ -119,7 +119,7 @@ const createTask = async () => {
     description: '',
     status: 'planned',
     priority: priority.value as Task['priority'], // Cast to Task priority type
-    projectId: selectedProject.value || taskStore.activeProjectId || null
+    projectId: selectedProject.value || taskStore.activeProjectId || undefined
   }
 
   if (dueDate.value) {

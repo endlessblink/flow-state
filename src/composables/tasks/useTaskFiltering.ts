@@ -13,7 +13,8 @@ export const useTaskFiltering = (
     activeSmartView: Ref<SmartView>,
     activeStatusFilter: Ref<string | null>,
     activeDurationFilter: Ref<string | null>,
-    hideDoneTasks: Ref<boolean>
+    hideDoneTasks: Ref<boolean>,
+    hideCalendarDoneTasks?: Ref<boolean>
 ) => {
     const {
         applySmartViewFilter,
@@ -100,10 +101,12 @@ export const useTaskFiltering = (
             })
         }
 
-        // 5. Hide Done
-        if (hideDoneTasks.value) {
-            filtered = filtered.filter(task => task.status !== 'done')
-        }
+        // 5. Hide Done - REMOVED (TASK-076)
+        // Each view (Canvas, Calendar, Inbox) handles done filtering locally
+        // Canvas: CanvasView.vue filteredTasks computed
+        // Calendar: CalendarView.vue local filter
+        // Inbox: UnifiedInboxPanel.vue hideInboxDoneTasks ref
+        // This ensures canvas toggle doesn't affect inbox and vice versa
 
         // Include nested tasks
         const filteredTaskIds = filtered.map(task => task.id)
@@ -118,7 +121,9 @@ export const useTaskFiltering = (
                         const projectIds = getChildProjectIds(activeProjectId.value)
                         if (!projectIds.includes(task.projectId)) return false
                     }
-                    if (task.status === 'done' && (hideDoneTasks.value || activeSmartView.value === 'today')) return false
+                    // TASK-076: Only filter done tasks for Today smart view here
+                    // View-specific done filtering handled locally by each view
+                    if (task.status === 'done' && activeSmartView.value === 'today') return false
                     return true
                 })
         } catch {
@@ -152,6 +157,23 @@ export const useTaskFiltering = (
         return tasks.value.filter(task => task.canvasPosition &&
             typeof task.canvasPosition.x === 'number' &&
             typeof task.canvasPosition.y === 'number')
+    })
+
+    const calendarFilteredTasks = computed(() => {
+        let filtered = tasks.value
+
+        // 1. Project
+        if (activeProjectId.value) {
+            const projectIds = getChildProjectIds(activeProjectId.value)
+            filtered = filtered.filter(task => projectIds.includes(task.projectId))
+        }
+
+        // 2. Hide Done (Calendar specific)
+        if (hideCalendarDoneTasks?.value) {
+            filtered = filtered.filter(task => task.status !== 'done')
+        }
+
+        return filtered
     })
 
     const totalTasks = computed(() => tasks.value.filter(task => task.status !== 'done').length)
@@ -248,6 +270,7 @@ export const useTaskFiltering = (
         completedTasks,
         totalPomodoros,
         doneTasksForColumn,
-        tasksWithCanvasPosition
+        tasksWithCanvasPosition,
+        calendarFilteredTasks
     }
 }

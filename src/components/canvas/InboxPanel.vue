@@ -198,7 +198,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { NButton, NBadge, NTag, NIcon as _NIcon } from 'naive-ui'
 import { Plus as _Plus, Zap as _Zap, Clock as _Clock, ChevronLeft, ChevronRight, Timer, CalendarDays } from 'lucide-vue-next'
 import { useTaskStore, type Task } from '@/stores/tasks'

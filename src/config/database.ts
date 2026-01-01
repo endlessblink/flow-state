@@ -72,25 +72,64 @@ export const prodDatabaseConfig: DatabaseConfig = {
   }
 }
 
-// Get CouchDB configuration from environment variables
-// Leave empty for local-only mode (no sync)
-// Self-host with Docker: see README.md
-const couchdbUrl = import.meta.env.VITE_COUCHDB_URL || ''
-const couchdbUsername = import.meta.env.VITE_COUCHDB_USERNAME || ''
-const couchdbPassword = import.meta.env.VITE_COUCHDB_PASSWORD || ''
+/**
+ * BUG-054 FIX: Get CouchDB configuration with automatic defaults
+ *
+ * Priority order:
+ * 1. localStorage (runtime user settings from Settings UI)
+ * 2. Environment variables (build-time configuration)
+ * 3. Hardcoded defaults (automatic sync for personal use)
+ *
+ * This ensures sync works automatically on any browser without manual configuration.
+ */
+const DEFAULT_COUCHDB_URL = 'http://84.46.253.137:5984/pomoflow-tasks'
+const DEFAULT_COUCHDB_USERNAME = 'admin'
+const DEFAULT_COUCHDB_PASSWORD = 'pomoflow-2024'
+
+const getStoredCouchDBConfig = () => {
+  // Check if we're in a browser environment with localStorage
+  if (typeof localStorage === 'undefined') {
+    // SSR or non-browser environment - use env vars or defaults
+    return {
+      url: import.meta.env.VITE_COUCHDB_URL || DEFAULT_COUCHDB_URL,
+      username: import.meta.env.VITE_COUCHDB_USERNAME || DEFAULT_COUCHDB_USERNAME,
+      password: import.meta.env.VITE_COUCHDB_PASSWORD || DEFAULT_COUCHDB_PASSWORD
+    }
+  }
+
+  // Browser environment - check localStorage first, then env vars, then defaults
+  // IMPORTANT: Use .trim() and check for empty strings, not just null
+  const storedUrl = localStorage.getItem('pomo-couchdb-url')?.trim()
+  const storedUsername = localStorage.getItem('pomo-couchdb-username')?.trim()
+  const storedPassword = localStorage.getItem('pomo-couchdb-password')?.trim()
+
+  const config = {
+    url: storedUrl || import.meta.env.VITE_COUCHDB_URL || DEFAULT_COUCHDB_URL,
+    username: storedUsername || import.meta.env.VITE_COUCHDB_USERNAME || DEFAULT_COUCHDB_USERNAME,
+    password: storedPassword || import.meta.env.VITE_COUCHDB_PASSWORD || DEFAULT_COUCHDB_PASSWORD
+  }
+
+  return config
+}
 
 /**
  * Check if CouchDB sync is enabled
- * Sync is only enabled when all three environment variables are set
+ * Sync is only enabled when URL, username, and password are all configured
+ * (either via localStorage settings from UI or environment variables)
  */
 export const isSyncEnabled = (): boolean => {
-  return !!(couchdbUrl && couchdbUsername && couchdbPassword)
+  const config = getStoredCouchDBConfig()
+  return !!(config.url && config.username && config.password)
 }
 
 // Get configuration based on environment
 export const getDatabaseConfig = (): DatabaseConfig => {
-  if (isSyncEnabled()) {
-    console.log('🔧 [DATABASE CONFIG] Sync enabled')
+  // Get dynamic config each time (reads from localStorage → env vars)
+  const couchConfig = getStoredCouchDBConfig()
+  const syncEnabled = isSyncEnabled()
+
+  if (syncEnabled) {
+    console.log('🔧 [DATABASE CONFIG] Sync enabled - URL:', couchConfig.url)
   } else {
     console.log('🔧 [DATABASE CONFIG] Local-only mode (no sync configured)')
   }
@@ -99,16 +138,16 @@ export const getDatabaseConfig = (): DatabaseConfig => {
     local: {
       name: 'pomoflow-app-dev'
     },
-    remote: isSyncEnabled() ? {
-      url: couchdbUrl,
+    remote: syncEnabled ? {
+      url: couchConfig.url,
       auth: {
-        username: couchdbUsername,
-        password: couchdbPassword
+        username: couchConfig.username,
+        password: couchConfig.password
       },
       batchSize: 100,
       batchesLimit: 10
     } : undefined,
-    sync: isSyncEnabled() ? {
+    sync: syncEnabled ? {
       live: true,
       retry: true,
       timeout: 30000,

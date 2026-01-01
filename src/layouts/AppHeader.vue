@@ -129,7 +129,7 @@
 
         <!-- SYNC STATUS INDICATOR -->
         <div class="sync-status-container">
-          <SyncStatus />
+          <SyncStatus :show-controls="true" />
         </div>
       </div>
     </div>

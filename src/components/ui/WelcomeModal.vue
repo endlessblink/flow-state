@@ -8,8 +8,12 @@
             <div class="header-content">
               <span class="logo">🍅</span>
               <div>
-                <h2 class="modal-title">Welcome to Pomo-Flow</h2>
-                <p class="modal-subtitle">Your productivity companion</p>
+                <h2 class="modal-title">
+                  Welcome to Pomo-Flow
+                </h2>
+                <p class="modal-subtitle">
+                  Your productivity companion
+                </p>
               </div>
             </div>
             <button class="close-btn" aria-label="Close" @click="closeModal">

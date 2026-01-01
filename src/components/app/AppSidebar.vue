@@ -142,8 +142,8 @@
           :nested="false"
           :nesting-depth="0"
           :level="1"
-          @click="(project) => handleProjectClick(project)"
-          @contextmenu="(event, project) => $emit('projectContextMenu', event, project)"
+          @click="(project: Project) => handleProjectClick(project)"
+          @contextmenu="(event: MouseEvent, project: Project) => $emit('projectContextMenu', event, project)"
         />
       </nav>
     </div>

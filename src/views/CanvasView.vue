@@ -95,7 +95,7 @@
       class="global-loading-overlay"
     >
       <div class="loading-content">
-        <div class="loading-spinner"></div>
+        <div class="loading-spinner" />
         <span class="loading-text">
           {{ operationLoading.loading ? 'Loading Canvas...' : 'Synchronizing Data...' }}
         </span>
@@ -109,43 +109,62 @@
 
   
     <!-- MAIN CANVAS AREA -->
-      <!-- Vue Flow Canvas -->
-      <div
-        class="canvas-drop-zone"
-        @drop="handleDrop"
-        @dragover.prevent
-        @contextmenu.prevent="handleCanvasRightClick"
-      >
-        <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
-        <div v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0" class="canvas-loading-overlay">
-          <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <span class="loading-text">Loading canvas...</span>
-          </div>
+    <!-- Hide Done Tasks Toggle (TASK-080, TASK-076) - Icon only, fixed position at top border of canvas box -->
+    <button
+      class="hide-done-toggle fixed backdrop-blur-sm border rounded-md shadow-md transition-all"
+      :class="hideCanvasDoneTasks ? 'text-purple-300' : 'text-gray-300'"
+      :style="{
+        top: '232px',
+        right: '12px',
+        zIndex: 1010,
+        padding: '4px',
+        background: hideCanvasDoneTasks ? 'rgba(139,92,246,0.2)' : 'rgba(30,30,40,0.95)',
+        borderColor: hideCanvasDoneTasks ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.1)'
+      }"
+      :title="hideCanvasDoneTasks ? 'Show completed tasks on canvas' : 'Hide completed tasks on canvas'"
+      @click="taskStore.toggleCanvasDoneTasks()"
+    >
+      <EyeOff v-if="hideCanvasDoneTasks" :size="14" />
+      <Eye v-else :size="14" />
+    </button>
+
+    <!-- Vue Flow Canvas -->
+    <div
+      class="canvas-drop-zone"
+      @drop="handleDrop"
+      @dragover.prevent
+      @contextmenu.prevent="handleCanvasRightClick"
+    >
+      <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
+      <div v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0" class="canvas-loading-overlay">
+        <div class="loading-content">
+          <div class="loading-spinner" />
+          <span class="loading-text">Loading canvas...</span>
         </div>
+      </div>
 
-        <!-- Empty state when no tasks exist -->
-        <div v-if="hasNoTasks" class="canvas-empty-state">
-          <Inbox :size="64" class="empty-icon" />
-          <h2 class="empty-title">
-            Your canvas is empty
-          </h2>
-          <p class="empty-description">
-            Add your first task to get started with visual organization
-          </p>
-          <button class="add-task-button" @click="handleAddTask">
-            <Plus :size="16" />
-            Add Task
-          </button>
-        </div>
+      <!-- Empty state when no tasks exist -->
+      <div v-if="hasNoTasks" class="canvas-empty-state">
+        <Inbox :size="64" class="empty-icon" />
+        <h2 class="empty-title">
+          Your canvas is empty
+        </h2>
+        <p class="empty-description">
+          Add your first task to get started with visual organization
+        </p>
+        <button class="add-task-button" @click="handleAddTask">
+          <Plus :size="16" />
+          Add Task
+        </button>
+      </div>
 
-        <!-- ================================================================= -->
-        <!-- VUE FLOW CORE SECTION (NEVER EXTRACT - CRITICAL DEPENDENCIES) -->
-        <!-- Component: CanvasViewCore (would be the name if extracted)        -->
-        <!-- Dependencies: All Vue Flow bindings, event handlers, node/edge state -->
-        <!-- Extraction Risk: 100% - Will break all canvas functionality         -->
+      <!-- ================================================================= -->
+      <!-- VUE FLOW CORE SECTION (NEVER EXTRACT - CRITICAL DEPENDENCIES) -->
+      <!-- Component: CanvasViewCore (would be the name if extracted)        -->
+      <!-- Dependencies: All Vue Flow bindings, event handlers, node/edge state -->
+      <!-- Extraction Risk: 100% - Will break all canvas functionality         -->
 
-        <!--
+      <!--
           ⚠️ CRITICAL VUE FLOW COMPONENT - DO NOT EXTRACT OR MODIFY BINDINGS
 
           The following Vue Flow bindings and event handlers are the core of canvas functionality:
@@ -161,194 +180,174 @@
 
           ALL Vue Flow related code must stay in this component during refactoring.
         -->
-        <!-- Filter Status Indicator -->
-        <div
-          v-if="taskStore.activeStatusFilter"
-          class="absolute top-4 left-4 z-20 px-4 py-2 bg-[rgba(99,102,241,0.2)] backdrop-blur-sm border border-indigo-500/30 rounded-lg text-indigo-300 text-sm font-medium flex items-center gap-2 shadow-lg"
-        >
-          <Filter :size="16" />
-          <span>{{ getStatusFilterLabel(taskStore.activeStatusFilter) }} filter active</span>
-          <button
-            class="ml-2 text-indigo-400 hover:text-white transition-colors"
-            title="Clear filter"
-            @click="clearStatusFilter"
-          >
-            <X :size="14" />
-          </button>
-          <div class="text-xs text-indigo-400 ml-2">
-            (Check Canvas Inbox for more tasks)
-          </div>
-        </div>
-
-        <!-- Hide Done Tasks Toggle (TASK-080, TASK-076) -->
-        <!-- Using inline styles since Tailwind arbitrary values weren't compiling -->
+      <!-- Filter Status Indicator -->
+      <div
+        v-if="taskStore.activeStatusFilter"
+        class="absolute top-4 left-4 z-20 px-4 py-2 bg-[rgba(99,102,241,0.2)] backdrop-blur-sm border border-indigo-500/30 rounded-lg text-indigo-300 text-sm font-medium flex items-center gap-2 shadow-lg"
+      >
+        <Filter :size="16" />
+        <span>{{ getStatusFilterLabel(taskStore.activeStatusFilter) }} filter active</span>
         <button
-          class="hide-done-toggle absolute px-3 py-2 backdrop-blur-sm border rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
-          :class="hideCanvasDoneTasks ? 'text-purple-300' : 'text-gray-300'"
-          :style="{
-            top: '16px',
-            left: taskStore.activeStatusFilter ? '280px' : '16px',
-            zIndex: 1010,
-            background: hideCanvasDoneTasks ? 'rgba(139,92,246,0.2)' : 'rgba(30,30,40,0.95)',
-            borderColor: hideCanvasDoneTasks ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.1)'
-          }"
-          :title="hideCanvasDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-          @click="taskStore.toggleCanvasDoneTasks()"
+          class="ml-2 text-indigo-400 hover:text-white transition-colors"
+          title="Clear filter"
+          @click="clearStatusFilter"
         >
-          <EyeOff v-if="hideCanvasDoneTasks" :size="16" />
-          <Eye v-else :size="16" />
-          <span>{{ hideCanvasDoneTasks ? 'Hidden' : 'Done' }}</span>
+          <X :size="14" />
         </button>
+        <div class="text-xs text-indigo-400 ml-2">
+          (Check Canvas Inbox for more tasks)
+        </div>
+      </div>
 
-        <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
-        <UnifiedInboxPanel />
+      <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
+      <UnifiedInboxPanel />
 
-        <!-- Always show VueFlow canvas, even when empty -->
-        <div class="canvas-container-wrapper">
-          <!-- Canvas with tasks -->
-          <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
-            <VueFlow
-              v-if="systemHealthy && isCanvasReady"
-              ref="vueFlowRef"
-              v-model:nodes="safeNodes"
-              v-model:edges="safeEdges"
-              :class="{ 'canvas-ready': isCanvasReady }"
-              class="vue-flow-container"
-              :node-types="nodeTypes"
-              edges-focusable
-              :elevate-nodes-on-select="false"
-              elevate-edges-on-select
-              zoom-on-scroll
-              :pan-on-scroll="false"
-              zoom-on-pinch
-              pan-on-drag
-              multi-selection-key-code="Shift"
-              snap-to-grid
-              :snap-grid="[16, 16]"
-              :node-extent="dynamicNodeExtent"
-              :min-zoom="0.05"
-              :max-zoom="4.0"
-              :fit-view-on-init="false"
-              :connect-on-drag-nodes="false"
-              :zoom-scroll-sensitivity="1.0"
-              :zoom-activation-key-code="null"
-              prevent-scrolling
-              :default-viewport="initialViewport"
-              dir="ltr"
-              tabindex="0"
-              @node-drag-start="handleNodeDragStart"
-              @node-drag-stop="handleNodeDragStop"
-              @node-drag="handleNodeDrag"
-              @nodes-change="handleNodesChange"
-              @selection-change="handleSelectionChange"
-              @pane-click="handlePaneClick"
-              @pane-context-menu="handlePaneContextMenu"
-              @node-context-menu="handleNodeContextMenu"
-              @edge-click="handleEdgeClick"
-              @edge-context-menu="handleEdgeContextMenu"
-              @connect="typedHandleConnect"
-              @connect-start="handleConnectStart"
-              @connect-end="handleConnectEnd"
-              @keydown="handleKeyDown"
-            >
-              <!-- Background Grid -->
-              <Background
-                pattern-color="#e5e7eb"
-                pattern="dots"
-                :gap="16"
-                :size="1"
+      <!-- Always show VueFlow canvas, even when empty -->
+      <div class="canvas-container-wrapper">
+        <!-- Canvas with tasks -->
+        <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
+          <VueFlow
+            v-if="systemHealthy && isCanvasReady"
+            ref="vueFlowRef"
+            v-model:nodes="safeNodes"
+            v-model:edges="safeEdges"
+            :class="{ 'canvas-ready': isCanvasReady }"
+            class="vue-flow-container"
+            :node-types="nodeTypes"
+            edges-focusable
+            :elevate-nodes-on-select="false"
+            elevate-edges-on-select
+            zoom-on-scroll
+            :pan-on-scroll="false"
+            zoom-on-pinch
+            pan-on-drag
+            multi-selection-key-code="Shift"
+            snap-to-grid
+            :snap-grid="[16, 16]"
+            :node-extent="dynamicNodeExtent"
+            :min-zoom="0.05"
+            :max-zoom="4.0"
+            :fit-view-on-init="false"
+            :connect-on-drag-nodes="false"
+            :zoom-scroll-sensitivity="1.0"
+            :zoom-activation-key-code="null"
+            prevent-scrolling
+            :default-viewport="initialViewport"
+            dir="ltr"
+            tabindex="0"
+            @node-drag-start="handleNodeDragStart"
+            @node-drag-stop="handleNodeDragStop"
+            @node-drag="handleNodeDrag"
+            @nodes-change="handleNodesChange"
+            @selection-change="handleSelectionChange"
+            @pane-click="handlePaneClick"
+            @pane-context-menu="handlePaneContextMenu"
+            @node-context-menu="handleNodeContextMenu"
+            @edge-click="handleEdgeClick"
+            @edge-context-menu="handleEdgeContextMenu"
+            @connect="typedHandleConnect"
+            @connect-start="handleConnectStart"
+            @connect-end="handleConnectEnd"
+            @keydown="handleKeyDown"
+          >
+            <!-- Background Grid -->
+            <Background
+              pattern-color="#e5e7eb"
+              pattern="dots"
+              :gap="16"
+              :size="1"
+            />
+
+            <!-- MiniMap -->
+            <MiniMap
+              :node-color="getNodeColor"
+              mask-color="var(--text-secondary)"
+              pannable
+              zoomable
+              position="bottom-right"
+            />
+
+            <!-- Section Node Template -->
+            <template #node-sectionNode="nodeProps">
+              <GroupNodeSimple
+                :data="nodeProps.data"
+                :selected="nodeProps.selected"
+                @update="handleSectionUpdate"
+                @collect="collectTasksForSection"
+                @context-menu="handleSectionContextMenu"
+                @open-settings="handleOpenSectionSettings"
+                @resize-start="handleSectionResizeStart"
+                @resize="handleSectionResize"
+                @resize-end="handleSectionResizeEnd"
               />
+            </template>
 
-              <!-- MiniMap -->
-              <MiniMap
-                :node-color="getNodeColor"
-                mask-color="var(--text-secondary)"
-                pannable
-                zoomable
-                position="bottom-right"
+            <!-- Custom Task Node Template -->
+            <template #node-taskNode="nodeProps">
+              <TaskNode
+                :task="nodeProps.data.task"
+                :is-selected="canvasStore.selectedNodeIds.includes(nodeProps.data.task.id)"
+                :multi-select-mode="canvasStore.multiSelectMode"
+                :show-priority="canvasStore.showPriorityIndicator"
+                :show-status="canvasStore.showStatusBadge"
+                :show-duration="canvasStore.showDurationBadge"
+                :show-schedule="canvasStore.showScheduleBadge"
+                :is-connecting="isConnecting"
+                @edit="handleEditTask"
+                @select="handleTaskSelect"
+                @context-menu="handleTaskContextMenu"
               />
+            </template>
 
-              <!-- Section Node Template -->
-              <template #node-sectionNode="nodeProps">
-                <GroupNodeSimple
-                  :data="nodeProps.data"
-                  :selected="nodeProps.selected"
-                  @update="handleSectionUpdate"
-                  @collect="collectTasksForSection"
-                  @context-menu="handleSectionContextMenu"
-                  @open-settings="handleOpenSectionSettings"
-                  @resize-start="handleSectionResizeStart"
-                  @resize="handleSectionResize"
-                  @resize-end="handleSectionResizeEnd"
-                />
-              </template>
+            <!-- SVG markers for connection arrows -->
+            <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
+              <defs>
+                <marker
+                  id="arrowhead"
+                  markerWidth="10"
+                  markerHeight="10"
+                  refX="9"
+                  refY="3"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <polygon
+                    points="0 0, 10 3, 0 6"
+                    fill="var(--border-secondary)"
+                  />
+                </marker>
+                <marker
+                  id="arrowhead-hover"
+                  markerWidth="10"
+                  markerHeight="10"
+                  refX="9"
+                  refY="3"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <polygon
+                    points="0 0, 10 3, 0 6"
+                    fill="var(--color-navigation)"
+                  />
+                </marker>
+              </defs>
+            </svg>
+          </VueFlow>
 
-              <!-- Custom Task Node Template -->
-              <template #node-taskNode="nodeProps">
-                <TaskNode
-                  :task="nodeProps.data.task"
-                  :is-selected="canvasStore.selectedNodeIds.includes(nodeProps.data.task.id)"
-                  :multi-select-mode="canvasStore.multiSelectMode"
-                  :show-priority="canvasStore.showPriorityIndicator"
-                  :show-status="canvasStore.showStatusBadge"
-                  :show-duration="canvasStore.showDurationBadge"
-                  :show-schedule="canvasStore.showScheduleBadge"
-                  :is-connecting="isConnecting"
-                  @edit="handleEditTask"
-                  @select="handleTaskSelect"
-                  @context-menu="handleTaskContextMenu"
-                />
-              </template>
-
-              <!-- SVG markers for connection arrows -->
-              <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
-                <defs>
-                  <marker
-                    id="arrowhead"
-                    markerWidth="10"
-                    markerHeight="10"
-                    refX="9"
-                    refY="3"
-                    orient="auto"
-                    markerUnits="strokeWidth"
-                  >
-                    <polygon
-                      points="0 0, 10 3, 0 6"
-                      fill="var(--border-secondary)"
-                    />
-                  </marker>
-                  <marker
-                    id="arrowhead-hover"
-                    markerWidth="10"
-                    markerHeight="10"
-                    refX="9"
-                    refY="3"
-                    orient="auto"
-                    markerUnits="strokeWidth"
-                  >
-                    <polygon
-                      points="0 0, 10 3, 0 6"
-                      fill="var(--color-navigation)"
-                    />
-                  </marker>
-                </defs>
-              </svg>
-            </VueFlow>
-
-            <!-- Loading state when canvas is not ready -->
-            <div v-else class="canvas-loading-state">
-              <div class="flex items-center justify-center h-full">
-                <div class="text-center">
-                  <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-                  <p class="text-gray-600 dark:text-gray-400">
-                    {{ systemHealthy ? 'Initializing Canvas...' : 'System Initializing...' }}
-                  </p>
-                </div>
+          <!-- Loading state when canvas is not ready -->
+          <div v-else class="canvas-loading-state">
+            <div class="flex items-center justify-center h-full">
+              <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4" />
+                <p class="text-gray-600 dark:text-gray-400">
+                  {{ systemHealthy ? 'Initializing Canvas...' : 'System Initializing...' }}
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
     <!-- Sub-components: Extracted for maintainability (Phase 4) -->
     <CanvasModals
@@ -429,7 +428,6 @@
       @close-node-context-menu="closeNodeContextMenu"
       @delete-node="deleteNode"
     />
-
   </div>
 </template>
 
@@ -605,11 +603,16 @@ const handleMidnightTransition = async (_previousDate: Date, _newDate: Date) => 
 }
 
 // Initialize date transition watcher
-const { isWatching: isDateWatcherActive, simulateTransition: _simulateDateTransition } = useDateTransition({
+const { isWatching: isDateWatcherActive, simulateTransition } = useDateTransition({
   onDayChange: handleMidnightTransition,
   autoStart: true,
   debug: true
 })
+
+// TASK-082: Expose simulate function for testing (call window.__simulateMidnightTransition() in console)
+if (typeof window !== 'undefined') {
+  (window as unknown as { __simulateMidnightTransition: typeof simulateTransition }).__simulateMidnightTransition = simulateTransition
+}
 
 import { useCanvasActions } from '@/composables/canvas/useCanvasActions'
 import { useCanvasConnections } from '@/composables/canvas/useCanvasConnections'
@@ -712,7 +715,34 @@ const filteredTasksWithProjectFiltering = computed(() => {
 })
 
 // Store reactive reference for use throughout the component
-const filteredTasks = computed(() => filteredTasksWithProjectFiltering.value)
+// TASK-076: Apply canvas-specific done filter
+// Extract hideCanvasDoneTasks BEFORE computed to ensure proper reactivity in all browsers
+const { hideCanvasDoneTasks } = storeToRefs(taskStore)
+
+const filteredTasks = computed(() => {
+  const tasks = filteredTasksWithProjectFiltering.value
+  const hideDone = hideCanvasDoneTasks.value
+
+  // TASK-076 DEBUG: Log filter state
+  const doneTasks = tasks.filter(t => t.status === 'done')
+  const doneWithCanvas = doneTasks.filter(t => t.canvasPosition)
+  console.log('🔍 [TASK-076] filteredTasks computed:', {
+    hideDone,
+    totalTasks: tasks.length,
+    doneTasks: doneTasks.length,
+    doneWithCanvasPos: doneWithCanvas.length,
+    doneTaskTitles: doneWithCanvas.map(t => t.title)
+  })
+
+  // Filter out done tasks if hideCanvasDoneTasks is enabled
+  // Use .value from storeToRefs for proper Firefox reactivity
+  if (hideDone) {
+    const filtered = tasks.filter(t => t.status !== 'done')
+    console.log('🔍 [TASK-076] After filter:', filtered.length, 'tasks')
+    return filtered
+  }
+  return tasks
+})
 
 // System health check for graceful degradation UI
 const systemHealthy = computed(() => {
@@ -762,8 +792,7 @@ const filteredTasksWithCanvasPosition = computed(() => {
 })
 
 // 🚀 Phase 1: Vue 3 + Pinia Reactivity Core - Use storeToRefs for proper reactivity
-// TASK-076: Use canvas-specific done filter
-const { hideCanvasDoneTasks } = storeToRefs(taskStore)
+// TASK-076: hideCanvasDoneTasks moved earlier (line 720) for computed reactivity
 const { sections: _sections, viewport } = storeToRefs(canvasStore)
 const { secondarySidebarVisible: _secondarySidebarVisible } = storeToRefs(uiStore)
 const message = useMessage()
@@ -2230,6 +2259,18 @@ resourceManager.addWatcher(
 // REASON: This was causing all tasks to get canvasPosition assigned, preventing inbox tasks
 // NEW: Canvas sync only happens when explicitly needed (drag-drop, right-click, etc.)
 
+// TASK-076: Watch hideCanvasDoneTasks toggle to refresh canvas nodes
+// This ensures clicking the Done toggle immediately shows/hides completed tasks on canvas
+resourceManager.addWatcher(
+  watch(hideCanvasDoneTasks, (newVal, oldVal) => {
+    if (newVal !== oldVal) {
+      console.log('🔄 [TASK-076] hideCanvasDoneTasks changed:', { from: oldVal, to: newVal })
+      // Force immediate sync to update canvas nodes with new filter
+      syncNodes()
+    }
+  })
+)
+
 // CPU Optimization: Watch sections with batching
 // NOTE: Console log removed to fix 0-2 FPS issue
 // FIX: Removed duplicate section watcher that used deep:true causing infinite loops
@@ -2640,8 +2681,29 @@ const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event
   const height = event?.params?.height || event?.height
 
   // Use the node's actual position from Vue Flow (this is what NodeResizer updates)
-  const newX = vueFlowNode.position.x
-  const newY = vueFlowNode.position.y
+  // BUG-055 FIX: For nested groups, Vue Flow position is RELATIVE to parent.
+  // We need to convert back to ABSOLUTE for store.
+  let newX = vueFlowNode.position.x
+  let newY = vueFlowNode.position.y
+
+  // Check if this is a nested group by looking up the section in store
+  const sectionForParentCheck = canvasStore.sections.find(s => s.id === sectionId)
+  if (sectionForParentCheck?.parentGroupId) {
+    // This is a nested group - convert relative to absolute
+    const parentGroup = canvasStore.sections.find(s => s.id === sectionForParentCheck.parentGroupId)
+    if (parentGroup) {
+      newX = vueFlowNode.position.x + parentGroup.position.x
+      newY = vueFlowNode.position.y + parentGroup.position.y
+      console.log('🔄 [BUG-055] Converted nested group position from relative to absolute:', {
+        relativeX: vueFlowNode.position.x,
+        relativeY: vueFlowNode.position.y,
+        parentX: parentGroup.position.x,
+        parentY: parentGroup.position.y,
+        absoluteX: newX,
+        absoluteY: newY
+      })
+    }
+  }
 
   console.log('📏 [CanvasView] Extracted from Vue Flow node:', {
     newX,
@@ -2649,7 +2711,8 @@ const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event
     width,
     height,
     nodeWidth: vueFlowNode.width,
-    nodeHeight: vueFlowNode.height
+    nodeHeight: vueFlowNode.height,
+    isNested: !!sectionForParentCheck?.parentGroupId
   })
 
   if (width && height) {
@@ -2688,81 +2751,25 @@ const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event
         height: validatedHeight
       })
 
-      // If position changed significantly (more than 1px to avoid jitter), update child task positions
-      if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-        console.log('🔄 [CanvasView] Adjusting task positions by delta:', { deltaX, deltaY })
-
-        // Find all tasks inside this section (geometric bounds check using ORIGINAL section bounds)
-        // Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
-        const tasksInSection = Array.isArray(filteredTasks.value) ? filteredTasks.value.filter(task => {
-          if (!task.canvasPosition || section.isCollapsed) return false
-
-          const taskX = task.canvasPosition.x
-          const taskY = task.canvasPosition.y
-
-          // Check if task was inside the section's ORIGINAL bounds
-          return taskX >= resizeState.value.startX &&
-                 taskX <= resizeState.value.startX + resizeState.value.startWidth &&
-                 taskY >= resizeState.value.startY &&
-                 taskY <= resizeState.value.startY + resizeState.value.startHeight
-        }) : []
-
-        console.log(`📦 [CanvasView] Found ${tasksInSection.length} tasks to adjust`)
-
-        // Update each task's absolute position by the delta
-        // Update each task's absolute position by the delta
-        tasksInSection.forEach(task => {
-          if (task.canvasPosition) {
-            const newTaskX = task.canvasPosition.x + deltaX
-            const newTaskY = task.canvasPosition.y + deltaY
-
-            console.log(`  📍 Adjusting task "${task.title}": (${task.canvasPosition.x}, ${task.canvasPosition.y}) → (${newTaskX}, ${newTaskY})`)
-
-            taskStore.updateTask(task.id, {
-              canvasPosition: { x: newTaskX, y: newTaskY }
-            })
-          }
-        })
-
-        console.log('✅ [CanvasView] Task absolute positions adjusted')
-
-        // BUG-055 FIX: Also adjust child groups (nested groups) - RECURSIVE
-        // When resizing from left/top edges, child groups need their positions adjusted too
-        // This must be recursive to handle deeply nested groups (grandchildren, etc.)
-        const adjustChildGroupsRecursively = (parentId: string, dX: number, dY: number) => {
-          const children = canvasStore.getChildGroups(parentId)
-          children.forEach(childGroup => {
-            const currentPos = childGroup.position
-            const newGroupX = currentPos.x + dX
-            const newGroupY = currentPos.y + dY
-
-            console.log(`  📍 Adjusting child group "${childGroup.name}": (${currentPos.x}, ${currentPos.y}) → (${newGroupX}, ${newGroupY})`)
-
-            canvasStore.updateGroup(childGroup.id, {
-              position: {
-                ...currentPos,
-                x: newGroupX,
-                y: newGroupY
-              }
-            })
-
-            // Recursively adjust grandchildren
-            adjustChildGroupsRecursively(childGroup.id, dX, dY)
-          })
-          return children.length
-        }
-
-        const totalAdjusted = adjustChildGroupsRecursively(sectionId, deltaX, deltaY)
-        console.log(`📦 [CanvasView] Adjusted ${totalAdjusted} direct child groups (plus any grandchildren)`)
-      } else {
-        console.log('⏭️  [CanvasView] Position delta too small, skipping task adjustment')
-      }
+      // BUG-055 FIX: Tasks should NOT move when group is resized
+      // Tasks stay at their absolute canvas position - only the group boundary changes
+      // This means tasks may end up outside the group after resize, which is expected behavior
+      console.log('ℹ️ [CanvasView] Group resized - tasks maintain absolute positions (no movement)')
     } else {
       console.error('❌ [CanvasView] Section not found in store:', sectionId)
     }
   } else {
     console.error('❌ [CanvasView] Missing width or height:', { width, height })
   }
+
+  // BUG-055 FIX: Sync nodes to recalculate relative positions after store updates
+  // NodeResizer updates Vue Flow directly, but our store has the correct absolute positions.
+  // syncNodes() recalculates relative positions from store, fixing child position jumps.
+  // CRITICAL: Must use nextTick() to ensure Vue's computed properties have updated
+  // after the store mutations (section position, task positions) before rebuilding nodes.
+  nextTick(() => {
+    syncNodes()
+  })
 
   // Reset resize state
   resizeState.value = {

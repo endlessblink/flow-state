@@ -714,7 +714,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-070**~~ | ✅ **DONE** | `useCanvasActions.ts`, `CanvasView.vue`, `GroupNodeSimple.vue` | - | - |
 | ~~**TASK-071**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | ~~**TASK-072**~~ | ✅ **DONE** | `canvas.ts`, `GroupModal.vue`, `CanvasView.vue`, `useCanvasDragDrop.ts` | - | - |
-| **TASK-073** | 📋 **TODO** | `GroupNodeSimple.vue` | - | - |
+| ~~**TASK-073**~~ | ✅ **DONE** | `GroupNodeSimple.vue` | - | - |
 | ~~**TASK-074**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | **TASK-075** | 📋 **TODO** | `TaskNode.vue`, `TaskEditModal.vue` | - | - |
 | ~~**TASK-076**~~ | ✅ **DONE** | `taskStates.ts`, `taskOperations.ts`, `taskPersistence.ts`, `CanvasView.vue`, `CalendarView.vue` | - | - |
@@ -726,11 +726,11 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**BUG-047**~~ | ✅ **DONE** | `useCanvasDragDrop.ts` | - | - |
 | ~~**BUG-048**~~ | ✅ **DONE** | `CanvasView.vue` | - | - |
 | ~~**BUG-050**~~ | ✅ **DONE** | `CanvasView.vue`, `KanbanColumn.vue` | - | - |
-| **TASK-082** | 🔄 **IN PROGRESS** | `useDateTransition.ts` (new), `canvas.ts` | - | - |
+| **TASK-082** | 👀 **REVIEW** | `useDateTransition.ts`, `CanvasView.vue` | - | - |
 | **TASK-083** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | - |
 | **TASK-084** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | TASK-083 |
 | ~~**BUG-051**~~ | ✅ **DONE** | `QuickSortView.vue`, `CategorySelector.vue` | - | - |
-| **BUG-055** | 🔄 **IN PROGRESS** | `CanvasView.vue` | - | - |
+| ~~**BUG-055**~~ | ✅ **DONE** | `CanvasView.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -740,7 +740,7 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~TASK-070~~**: Fix context menu in groups (wrong menu) | **P1-HIGH** | ✅ DONE (Dec 31)
 - [x] **~~TASK-071~~**: Fix task card text wrapping | **P1-HIGH** | ✅ DONE (Dec 31)
 - [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 30 - 3-level nesting working, drag fix, task counts)
-- [ ] **TASK-073**: Improve group outline styling | **P2-MEDIUM** | TODO
+- [x] **~~TASK-073~~**: Improve group outline styling | **P2-MEDIUM** | ✅ DONE (Jan 1)
 - [x] **TASK-074**: Task node background blur | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [x] **TASK-077**: Context menu glassmorphism styling | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [ ] **TASK-075**: Markdown support for task descriptions | **P2-MEDIUM** | TODO
@@ -759,9 +759,9 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~BUG-050~~**: Ghost preview positioning - RESOLVED BY REMOVAL | **P1-HIGH** | ✅ REMOVED (Dec 31) - Simpler: rely on Vue Flow native feedback
 - [x] **~~BUG-052~~**: Canvas view changing abruptly/glitching | **P1-HIGH** | ✅ FIXED (Dec 31) - Vue Flow now initializes with saved viewport via `initialViewport` computed prop, eliminating the (0,0,1) → saved viewport jump
 - [x] **~~BUG-053~~**: Projects/tasks disappeared from IndexedDB | **P0-CRITICAL** | ✅ RECOVERED (Dec 31) - Data restored from CouchDB; sync manager URL bug identified
-- [ ] **BUG-054**: ReliableSyncManager not reading CouchDB URL from settings | **P1-HIGH** | TODO - Sync fails with "No remote URL configured" despite settings saved
-- [ ] **BUG-055**: Nested groups/tasks jump outside parent during resize | **P1-HIGH** | 🔄 IN PROGRESS (Dec 31) - Child groups not position-adjusted during parent resize
-- [ ] **TASK-082**: Auto-move Today tasks to Overdue at midnight (canvas only) | **P2-MEDIUM** | 🔄 IN PROGRESS
+- [x] **~~BUG-054~~**: ReliableSyncManager not reading CouchDB URL from settings | **P1-HIGH** | ✅ FIXED (Jan 1) - getDatabaseConfig() now reads localStorage first, useReliableSyncManager calls it fresh each time
+- [x] **~~BUG-055~~**: Tasks move when resizing groups | **P1-HIGH** | ✅ FIXED (Jan 1) - Removed task position adjustment code; tasks now stay at absolute position during resize
+- [ ] **TASK-082**: Auto-move Today tasks to Overdue at midnight (canvas only) | **P2-MEDIUM** | 👀 READY FOR TESTING - Test: `window.__simulateMidnightTransition()` in browser console
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - [x] **TASK-078**: Dev-Manager Hide Done Tasks Filter | **P2-MEDIUM** | ✅ DONE (Dec 30)
 - [x] **~~TASK-080~~**: Hide Done Toggle + Today Filter (Calendar/Canvas views) | **P2-MEDIUM** | ✅ DONE (Dec 30)
@@ -981,19 +981,24 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### TASK-073: Improve Group Outline Styling (📋 TODO)
+### ~~TASK-073~~: Improve Group Outline Styling (✅ DONE)
 
 **Priority**: P2-MEDIUM
 
-**Problem**: Group outlines still need visual improvements for better visibility and aesthetics.
+**Completed**: Jan 1, 2026
 
-**Goals**:
-- [ ] Better visual distinction between groups
-- [ ] Consistent styling across all group states
-- [ ] Consider dashed/dotted borders, gradients, or other effects
+**Problem**: Group outlines needed visual improvements for better visibility and aesthetics.
 
-**Files to Modify**:
-- `src/components/canvas/GroupNodeSimple.vue` - CSS styling
+**Implementation**:
+- [x] Double-line border effect using border + outline properties
+- [x] Improved border visibility (35% opacity base, 50% on hover)
+- [x] Outer subtle outline (1px at 12% opacity, expanding to 3px offset on hover)
+- [x] Dashed border for collapsed groups to distinguish state
+- [x] Selected/focus state with accent color outline and glow
+- [x] Inner subtle highlight using inset box-shadow
+
+**Files Modified**:
+- `src/components/canvas/GroupNodeSimple.vue` - CSS styling with TASK-073 comments
 
 ---
 

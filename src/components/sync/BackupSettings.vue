@@ -182,10 +182,10 @@
         <div v-for="(backup, index) in backupHistory.slice(0, 5)" :key="index" class="history-item">
           <div class="history-info">
             <span class="history-time">{{ formatTime(backup.timestamp) }}</span>
-            <span class="history-status" :class="{ success: backup.success, failed: !backup.success }">
-              {{ backup.success ? '✅ Success' : '❌ Failed' }}
+            <span class="history-status" :class="{ success: true }">
+              ✅ Success
             </span>
-            <span v-if="backup.success" class="history-size">{{ formatSize(backup.size) }}</span>
+            <span class="history-size">{{ formatSize(backup.metadata?.size || 0) }}</span>
           </div>
         </div>
       </div>
@@ -220,24 +220,24 @@
               </div>
             </div>
             <div class="item-actions">
-              <button class="download-btn" @click.stop="downloadBackup(backup)" title="Download JSON">
+              <button class="download-btn" title="Download JSON" @click.stop="downloadBackup(backup)">
                 <Download :size="16" />
               </button>
             </div>
           </div>
           <div v-if="backupHistory.length === 0" class="no-backups">
-             No backups available.
+            No backups available.
           </div>
         </div>
 
         <div class="dialog-actions">
-           <button
+          <button
             class="action-btn secondary"
             @click="triggerFileUpload"
           >
             📁 Upload File
           </button>
-          <div class="spacer" style="flex: 1"></div>
+          <div class="spacer" style="flex: 1" />
           <button
             class="action-btn secondary"
             @click="closeRestoreDialog"

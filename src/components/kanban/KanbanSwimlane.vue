@@ -50,7 +50,7 @@
             v-for="column in statusColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as Task['status']"
             :tasks="localTasks.status[column.key]"
             class="swimlane-column"
             @add-task="handleAddTask"
@@ -69,7 +69,7 @@
             v-for="column in dateColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="localTasks.date[column.key]"
             class="swimlane-column"
             @add-task="handleAddTask"
@@ -88,7 +88,7 @@
             v-for="column in priorityColumns"
             :key="column.key"
             :title="column.label"
-            :status="column.key"
+            :status="column.key as any"
             :tasks="localTasks.priority[column.key]"
             class="swimlane-column"
             @add-task="handleAddTask"
@@ -120,7 +120,7 @@ import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
 import KanbanColumn from './KanbanColumn.vue' 
 import TaskCard from './TaskCard.vue'
-import type { Task, Project, RecurringTaskInstance as _RecurringTaskInstance } from '@/stores/tasks'
+import type { Task, Project, RecurringTaskInstance } from '@/stores/tasks'
 import { useTaskStore, parseDateKey, getTaskInstances } from '@/stores/tasks'
 import { ChevronDown, ChevronRight, Calendar, Plus } from 'lucide-vue-next'
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
@@ -300,7 +300,7 @@ const getTasksByDate = (dateColumn: string) => {
     const isDueToday = task.dueDate === todayStr
     const isInProgress = task.status === 'in_progress'
     const isOverdueByDate = task.dueDate && task.dueDate < todayStr
-    const hasPastInstance = instances.length > 0 && instances.some(instance => {
+    const hasPastInstance = instances.length > 0 && instances.some((instance: RecurringTaskInstance) => {
       const instanceDate = parseDateKey(instance.scheduledDate)
       return instanceDate && instanceDate < today
     })
@@ -337,7 +337,7 @@ const getTasksByDate = (dateColumn: string) => {
     }
 
     // For tasks with instances, use the original logic with later flag support
-    return instances.some(instance => {
+    return instances.some((instance: RecurringTaskInstance) => {
       // Check for later flag first
       if (instance.isLater) {
         return dateColumn === 'later'

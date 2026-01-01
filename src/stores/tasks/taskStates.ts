@@ -42,7 +42,8 @@ export function useTaskStates() {
         completedTasks,
         totalPomodoros,
         doneTasksForColumn,
-        tasksWithCanvasPosition
+        tasksWithCanvasPosition,
+        calendarFilteredTasks
     } = useTaskFiltering(
         tasks,
         toRef(projectStore, 'projects'),
@@ -50,7 +51,8 @@ export function useTaskStates() {
         activeSmartView,
         activeStatusFilter,
         activeDurationFilter,
-        hideDoneTasks
+        hideDoneTasks,
+        hideCalendarDoneTasks
     )
 
     // Flags to manage store state
@@ -81,6 +83,7 @@ export function useTaskStates() {
         totalPomodoros,
         doneTasksForColumn,
         tasksWithCanvasPosition,
+        calendarFilteredTasks,
         isLoadingFromDatabase,
         manualOperationInProgress,
         isLoadingFilters,

@@ -76,8 +76,8 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
     testName,
     status: 'running',
     details: 'Testing permanent deletion with undo support',
-    undoCountBefore: undoHistory.undoCount.value,
-    canUndoBefore: undoHistory.canUndo.value,
+    undoCountBefore: undoHistory.undoCount?.value ?? 0,
+    canUndoBefore: undoHistory.canUndo?.value ?? false,
     undoCountAfter: 0,
     canUndoAfter: false
   })
@@ -96,8 +96,8 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
     console.log('🗑️ Testing Shift+Delete on task:', originalTask.title)
 
     // Record state before deletion
-    const undoCountBefore = undoHistory.undoCount.value
-    const canUndoBefore = undoHistory.canUndo.value
+    const undoCountBefore = undoHistory.undoCount?.value ?? 0
+    const canUndoBefore = undoHistory.canUndo?.value ?? false
     const _tasksCountBefore = taskStore.tasks.length
 
     // Simulate Shift+Delete operation
@@ -112,8 +112,8 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
     }
 
     // Verify undo state was updated
-    const undoCountAfter = undoHistory.undoCount.value
-    const canUndoAfter = undoHistory.canUndo.value
+    const undoCountAfter = undoHistory.undoCount?.value ?? 0
+    const canUndoAfter = undoHistory.canUndo?.value ?? false
 
     console.log(`✅ Shift+Delete completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Can undo ${canUndoBefore} → ${canUndoAfter}`)
 
@@ -135,10 +135,10 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
       testName,
       status: 'failed',
       details: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      undoCountBefore: undoHistory.undoCount.value,
-      canUndoBefore: undoHistory.canUndo.value,
-      undoCountAfter: undoHistory.undoCount.value,
-      canUndoAfter: undoHistory.canUndo.value,
+      undoCountBefore: undoHistory.undoCount?.value ?? 0,
+      canUndoBefore: undoHistory.canUndo?.value ?? false,
+      undoCountAfter: undoHistory.undoCount?.value ?? 0,
+      canUndoAfter: undoHistory.canUndo?.value ?? false,
       error: error instanceof Error ? error.message : 'Unknown error'
     })
     return false
@@ -151,8 +151,8 @@ const testDeleteOperation = async (): Promise<boolean> => {
     testName,
     status: 'running',
     details: 'Testing delete operation (move to inbox) with undo support',
-    undoCountBefore: undoHistory.undoCount.value,
-    canUndoBefore: undoHistory.canUndo.value,
+    undoCountBefore: undoHistory.undoCount?.value ?? 0,
+    canUndoBefore: undoHistory.canUndo?.value ?? false,
     undoCountAfter: 0,
     canUndoAfter: false
   })
@@ -175,8 +175,8 @@ const testDeleteOperation = async (): Promise<boolean> => {
     console.log('📤 Testing Delete (move to inbox) on task:', originalTask.title)
 
     // Record state before modification
-    const undoCountBefore = undoHistory.undoCount.value
-    const canUndoBefore = undoHistory.canUndo.value
+    const undoCountBefore = undoHistory.undoCount?.value ?? 0
+    const canUndoBefore = undoHistory.canUndo?.value ?? false
     const _hadCanvasPosition = !!originalTask.canvasPosition
 
     // Simulate Delete operation (move to inbox)
@@ -201,8 +201,8 @@ const testDeleteOperation = async (): Promise<boolean> => {
     }
 
     // Verify undo state was updated
-    const undoCountAfter = undoHistory.undoCount.value
-    const canUndoAfter = undoHistory.canUndo.value
+    const undoCountAfter = undoHistory.undoCount?.value ?? 0
+    const canUndoAfter = undoHistory.canUndo?.value ?? false
 
     console.log(`✅ Delete completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Can undo ${canUndoBefore} → ${canUndoAfter}`)
 
@@ -224,10 +224,10 @@ const testDeleteOperation = async (): Promise<boolean> => {
       testName,
       status: 'failed',
       details: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      undoCountBefore: undoHistory.undoCount.value,
-      canUndoBefore: undoHistory.canUndo.value,
-      undoCountAfter: undoHistory.undoCount.value,
-      canUndoAfter: undoHistory.canUndo.value,
+      undoCountBefore: undoHistory.undoCount?.value ?? 0,
+      canUndoBefore: undoHistory.canUndo?.value ?? false,
+      undoCountAfter: undoHistory.undoCount?.value ?? 0,
+      canUndoAfter: undoHistory.canUndo?.value ?? false,
       error: error instanceof Error ? error.message : 'Unknown error'
     })
     return false
@@ -240,18 +240,18 @@ const testUndoOperation = async (): Promise<boolean> => {
     testName,
     status: 'running',
     details: 'Testing undo functionality after deletion',
-    undoCountBefore: undoHistory.undoCount.value,
-    canUndoBefore: undoHistory.canUndo.value,
+    undoCountBefore: undoHistory.undoCount?.value ?? 0,
+    canUndoBefore: undoHistory.canUndo?.value ?? false,
     undoCountAfter: 0,
     canUndoAfter: false
   })
 
   try {
-    if (!undoHistory.canUndo.value) {
+    if (!undoHistory.canUndo?.value ?? false) {
       throw new Error('Nothing to undo - cannot test undo functionality')
     }
 
-    const undoCountBefore = undoHistory.undoCount.value
+    const undoCountBefore = undoHistory.undoCount?.value ?? 0
     const tasksCountBefore = taskStore.tasks.length
 
     console.log('↩️ Testing Ctrl+Z undo operation')
@@ -265,7 +265,7 @@ const testUndoOperation = async (): Promise<boolean> => {
       throw new Error('Undo operation returned false')
     }
 
-    const undoCountAfter = undoHistory.undoCount.value
+    const undoCountAfter = undoHistory.undoCount?.value ?? 0
     const tasksCountAfter = taskStore.tasks.length
 
     console.log(`✅ Undo completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Tasks: ${tasksCountBefore} → ${tasksCountAfter}`)
@@ -277,7 +277,7 @@ const testUndoOperation = async (): Promise<boolean> => {
       undoCountBefore,
       canUndoBefore: true,
       undoCountAfter,
-      canUndoAfter: undoHistory.canUndo.value
+      canUndoAfter: undoHistory.canUndo?.value ?? false
     })
 
     return true
@@ -288,10 +288,10 @@ const testUndoOperation = async (): Promise<boolean> => {
       testName,
       status: 'failed',
       details: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      undoCountBefore: undoHistory.undoCount.value,
-      canUndoBefore: undoHistory.canUndo.value,
-      undoCountAfter: undoHistory.undoCount.value,
-      canUndoAfter: undoHistory.canUndo.value,
+      undoCountBefore: undoHistory.undoCount?.value ?? 0,
+      canUndoBefore: undoHistory.canUndo?.value ?? false,
+      undoCountAfter: undoHistory.undoCount?.value ?? 0,
+      canUndoAfter: undoHistory.canUndo?.value ?? false,
       error: error instanceof Error ? error.message : 'Unknown error'
     })
     return false
@@ -304,8 +304,8 @@ const testRedoOperation = async (): Promise<boolean> => {
     testName,
     status: 'running',
     details: 'Testing redo functionality after undo',
-    undoCountBefore: undoHistory.undoCount.value,
-    canUndoBefore: undoHistory.canUndo.value,
+    undoCountBefore: undoHistory.undoCount?.value ?? 0,
+    canUndoBefore: undoHistory.canUndo?.value ?? false,
     undoCountAfter: 0,
     canUndoAfter: false
   })
@@ -315,7 +315,7 @@ const testRedoOperation = async (): Promise<boolean> => {
       throw new Error('Nothing to redo - cannot test redo functionality')
     }
 
-    const undoCountBefore = undoHistory.undoCount.value
+    const undoCountBefore = undoHistory.undoCount?.value ?? 0
     const tasksCountBefore = taskStore.tasks.length
 
     console.log('↪️ Testing Ctrl+Y redo operation')
@@ -329,7 +329,7 @@ const testRedoOperation = async (): Promise<boolean> => {
       throw new Error('Redo operation returned false')
     }
 
-    const undoCountAfter = undoHistory.undoCount.value
+    const undoCountAfter = undoHistory.undoCount?.value ?? 0
     const tasksCountAfter = taskStore.tasks.length
 
     console.log(`✅ Redo completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Tasks: ${tasksCountBefore} → ${tasksCountAfter}`)
@@ -339,9 +339,9 @@ const testRedoOperation = async (): Promise<boolean> => {
       status: 'passed',
       details: `Redo successful. Undo count: ${undoCountBefore}→${undoCountAfter}, Tasks: ${tasksCountBefore}→${tasksCountAfter}`,
       undoCountBefore,
-      canUndoBefore: undoHistory.canUndo.value,
+      canUndoBefore: undoHistory.canUndo?.value ?? false,
       undoCountAfter,
-      canUndoAfter: undoHistory.canUndo.value
+      canUndoAfter: undoHistory.canUndo?.value ?? false
     })
 
     return true
@@ -352,10 +352,10 @@ const testRedoOperation = async (): Promise<boolean> => {
       testName,
       status: 'failed',
       details: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      undoCountBefore: undoHistory.undoCount.value,
-      canUndoBefore: undoHistory.canUndo.value,
-      undoCountAfter: undoHistory.undoCount.value,
-      canUndoAfter: undoHistory.canUndo.value,
+      undoCountBefore: undoHistory.undoCount?.value ?? 0,
+      canUndoBefore: undoHistory.canUndo?.value ?? false,
+      undoCountAfter: undoHistory.undoCount?.value ?? 0,
+      canUndoAfter: undoHistory.canUndo?.value ?? false,
       error: error instanceof Error ? error.message : 'Unknown error'
     })
     return false

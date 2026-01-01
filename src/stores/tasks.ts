@@ -130,6 +130,7 @@ export const useTaskStore = defineStore('tasks', () => {
     isDescendantOf: projectStore.isDescendantOf,
     getChildProjects: projectStore.getChildProjects,
     getProjectHierarchy: projectStore.getProjectHierarchy,
+    setProjectViewType: projectStore.setProjectViewType,
     // Undo/Redo support
     initializeFromPouchDB,
     restoreState,

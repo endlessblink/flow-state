@@ -64,7 +64,9 @@
             compact
             @click="selectSmartView('today')"
           >
-            <template #icon><Calendar :size="14" /></template>
+            <template #icon>
+              <Calendar :size="14" />
+            </template>
             Today
           </SidebarSmartItem>
 
@@ -78,7 +80,9 @@
             compact
             @click="selectSmartView('week')"
           >
-            <template #icon><Calendar :size="14" /></template>
+            <template #icon>
+              <Calendar :size="14" />
+            </template>
             This Week
           </SidebarSmartItem>
         </div>
@@ -96,7 +100,9 @@
             compact
             @click="selectSmartView('all_active')"
           >
-            <template #icon><List :size="14" /></template>
+            <template #icon>
+              <List :size="14" />
+            </template>
             All Active
           </SidebarSmartItem>
 
@@ -110,7 +116,9 @@
             compact
             @click="selectSmartView('uncategorized')"
           >
-            <template #icon><Inbox :size="14" /></template>
+            <template #icon>
+              <Inbox :size="14" />
+            </template>
             Inbox
           </SidebarSmartItem>
         </div>
@@ -132,8 +140,8 @@
         <div class="duration-section">
           <button 
             class="section-toggle" 
-            @click="sidebar.toggleDurationSection"
             :aria-expanded="sidebar.isDurationSectionExpanded.value"
+            @click="sidebar.toggleDurationSection"
           >
             <Clock :size="14" />
             <span>By Duration</span>
@@ -155,7 +163,9 @@
               compact
               @click="sidebar.selectSmartView('quick')"
             >
-              <template #icon><Zap :size="14" /></template>
+              <template #icon>
+                <Zap :size="14" />
+              </template>
               Quick
             </SidebarSmartItem>
 
@@ -169,7 +179,9 @@
               compact
               @click="sidebar.selectSmartView('short')"
             >
-              <template #icon><Coffee :size="14" /></template>
+              <template #icon>
+                <Coffee :size="14" />
+              </template>
               Short
             </SidebarSmartItem>
 
@@ -183,7 +195,9 @@
               compact
               @click="sidebar.selectSmartView('medium')"
             >
-              <template #icon><Hourglass :size="14" /></template>
+              <template #icon>
+                <Hourglass :size="14" />
+              </template>
               Medium
             </SidebarSmartItem>
 
@@ -197,7 +211,9 @@
               compact
               @click="sidebar.selectSmartView('long')"
             >
-              <template #icon><Mountain :size="14" /></template>
+              <template #icon>
+                <Mountain :size="14" />
+              </template>
               Long
             </SidebarSmartItem>
 
@@ -211,7 +227,9 @@
               compact
               @click="sidebar.selectSmartView('unestimated')"
             >
-              <template #icon><HelpCircle :size="14" /></template>
+              <template #icon>
+                <HelpCircle :size="14" />
+              </template>
               No Estimate
             </SidebarSmartItem>
           </div>
@@ -258,8 +276,12 @@
               <h4>Delete {{ projectsToDeleteCount }} project{{ projectsToDeleteCount > 1 ? 's' : '' }}?</h4>
               <p>Tasks in {{ projectsToDeleteCount > 1 ? 'these projects' : 'this project' }} will be moved to Inbox. This cannot be undone.</p>
               <div class="confirm-actions">
-                <button class="cancel-btn" @click="cancelDeleteProjects">Cancel</button>
-                <button class="delete-btn" @click="executeDeleteProjects">Delete</button>
+                <button class="cancel-btn" @click="cancelDeleteProjects">
+                  Cancel
+                </button>
+                <button class="delete-btn" @click="executeDeleteProjects">
+                  Delete
+                </button>
               </div>
             </div>
           </div>

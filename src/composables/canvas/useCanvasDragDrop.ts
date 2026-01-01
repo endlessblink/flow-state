@@ -1,7 +1,9 @@
 import { type Ref, type ComputedRef, ref } from 'vue'
 import { type Node } from '@vue-flow/core'
-import { useTaskStore, type Task } from '@/stores/tasks'
-import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
+import type { useTaskStore} from '@/stores/tasks';
+import { type Task } from '@/stores/tasks'
+import type { useCanvasStore} from '@/stores/canvas';
+import { type CanvasSection } from '@/stores/canvas'
 import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
 import { resolveDueDate } from '@/composables/useGroupSettings'
 
@@ -286,8 +288,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 // The old code only checked immediate parent, breaking for 3+ level nesting
                 // (grandchild → child → parent) where child's position is also relative
                 const absolutePos = getAbsolutePosition(node.id)
-                let absoluteX = absolutePos.x
-                let absoluteY = absolutePos.y
+                const absoluteX = absolutePos.x
+                const absoluteY = absolutePos.y
 
                 console.log(`%c[TASK-072] DRAG STOP: "${section.name}"`, 'color: #4CAF50; font-weight: bold')
                 console.log(`  Vue Flow pos: (${node.position.x.toFixed(0)}, ${node.position.y.toFixed(0)})${node.parentNode ? ' [relative]' : ' [absolute]'}`)

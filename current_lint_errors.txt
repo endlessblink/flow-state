@@ -1,0 +1,614 @@
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasContextMenus.vue
+  10:19  error  Custom event name 'close-canvas-context-menu' must be camelCase  vue/custom-event-name-casing
+  11:30  error  Custom event name 'create-task-here' must be camelCase           vue/custom-event-name-casing
+  12:26  error  Custom event name 'create-group' must be camelCase               vue/custom-event-name-casing
+  13:37  error  Custom event name 'edit-group' must be camelCase                 vue/custom-event-name-casing
+  14:39  error  Custom event name 'delete-group' must be camelCase               vue/custom-event-name-casing
+  15:27  error  Custom event name 'move-to-inbox' must be camelCase              vue/custom-event-name-casing
+  16:26  error  Custom event name 'delete-tasks' must be camelCase               vue/custom-event-name-casing
+  17:24  error  Custom event name 'align-left' must be camelCase                 vue/custom-event-name-casing
+  18:25  error  Custom event name 'align-right' must be camelCase                vue/custom-event-name-casing
+  19:23  error  Custom event name 'align-top' must be camelCase                  vue/custom-event-name-casing
+  20:26  error  Custom event name 'align-bottom' must be camelCase               vue/custom-event-name-casing
+  21:37  error  Custom event name 'align-center-horizontal' must be camelCase    vue/custom-event-name-casing
+  22:35  error  Custom event name 'align-center-vertical' must be camelCase      vue/custom-event-name-casing
+  23:35  error  Custom event name 'distribute-horizontal' must be camelCase      vue/custom-event-name-casing
+  24:33  error  Custom event name 'distribute-vertical' must be camelCase        vue/custom-event-name-casing
+  25:28  error  Custom event name 'arrange-in-row' must be camelCase             vue/custom-event-name-casing
+  26:31  error  Custom event name 'arrange-in-column' must be camelCase          vue/custom-event-name-casing
+  27:29  error  Custom event name 'arrange-in-grid' must be camelCase            vue/custom-event-name-casing
+  28:47  error  Custom event name 'create-task-in-group' must be camelCase       vue/custom-event-name-casing
+  29:46  error  Custom event name 'open-group-settings' must be camelCase        vue/custom-event-name-casing
+  30:44  error  Custom event name 'toggle-power-mode' must be camelCase          vue/custom-event-name-casing
+  31:40  error  Custom event name 'collect-tasks' must be camelCase              vue/custom-event-name-casing
+  39:19  error  Custom event name 'close-edge-context-menu' must be camelCase    vue/custom-event-name-casing
+  40:24  error  Custom event name 'disconnect-edge' must be camelCase            vue/custom-event-name-casing
+  44:3   error  The template root requires exactly one element                   vue/no-multiple-template-root
+  49:19  error  Custom event name 'close-node-context-menu' must be camelCase    vue/custom-event-name-casing
+  50:24  error  Custom event name 'delete-node' must be camelCase                vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasModals.vue
+    6:19  error    Custom event name 'close-edit-modal' must be camelCase              vue/custom-event-name-casing
+   13:20  error    Custom event name 'close-quick-task-create' must be camelCase       vue/custom-event-name-casing
+   14:44  error    Custom event name 'handle-quick-task-create' must be camelCase      vue/custom-event-name-casing
+   21:19  error    Custom event name 'close-batch-edit-modal' must be camelCase        vue/custom-event-name-casing
+   22:21  error    Custom event name 'handle-batch-edit-applied' must be camelCase     vue/custom-event-name-casing
+   29:19  error    Custom event name 'close-section-settings-modal' must be camelCase  vue/custom-event-name-casing
+   30:32  error    Custom event name 'handle-section-settings-save' must be camelCase  vue/custom-event-name-casing
+   38:19  error    Custom event name 'close-group-modal' must be camelCase             vue/custom-event-name-casing
+   39:32  error    Custom event name 'handle-group-created' must be camelCase          vue/custom-event-name-casing
+   40:32  error    Custom event name 'handle-group-updated' must be camelCase          vue/custom-event-name-casing
+   47:19  error    Custom event name 'close-group-edit-modal' must be camelCase        vue/custom-event-name-casing
+   48:38  error    Custom event name 'handle-group-edit-save' must be camelCase        vue/custom-event-name-casing
+   57:21  error    Custom event name 'confirm-delete-group' must be camelCase          vue/custom-event-name-casing
+   58:20  error    Custom event name 'cancel-delete-group' must be camelCase           vue/custom-event-name-casing
+   62:3   error    The template root requires exactly one element                      vue/no-multiple-template-root
+   68:21  error    Custom event name 'confirm-bulk-delete' must be camelCase           vue/custom-event-name-casing
+   69:20  error    Custom event name 'cancel-bulk-delete' must be camelCase            vue/custom-event-name-casing
+  135:49  warning  Unexpected any. Specify a different type                            @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/GroupNodeSimple.vue
+   48:37  error  'Zap' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+   48:42  error  'Magnet' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   48:50  error  'Settings' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  130:7   error  'powerModeTooltip' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  141:7   error  'matchingInboxCount' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  169:7   error  'togglePowerMode' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  174:7   error  'openSettings' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  178:7   error  'toggleCollectMenu' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  182:7   error  'handleCollect' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/InboxPanel.vue
+  201:15  error  'computed' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/SectionSelector.vue
+  11:9   warning  Require self-closing on HTML elements (<div>)                                  vue/html-self-closing
+  43:39  warning  Expected 1 line break after opening tag (`<div>`), but no line breaks found    vue/singleline-html-element-content-newline
+  43:56  warning  Expected 1 line break before closing tag (`</div>`), but no line breaks found  vue/singleline-html-element-content-newline
+  52:15  warning  Require self-closing on HTML elements (<div>)                                  vue/html-self-closing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/TaskNode.vue
+  133:39  error  'HelpCircle' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/UnifiedGroupModal.vue
+  194:29  error  Parsing error: invalid-first-character-of-tag-name  vue/no-parsing-error
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/common/GroupModal.vue
+   79:35  warning  Expected 1 line break after opening tag (`<option>`), but no line breaks found    vue/singleline-html-element-content-newline
+   79:51  warning  Expected 1 line break before closing tag (`</option>`), but no line breaks found  vue/singleline-html-element-content-newline
+  159:8   warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/CalendarInboxPanel.vue
+  222:11  error  Expected 1 line break before closing tag (`</div>`), but 2 line breaks found                   vue/multiline-html-element-content-newline
+  233:43  error  'Plus' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+  242:9   error  'updateTaskWithUndo' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  467:7   error  'handleQuickAddTask' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/UnifiedInboxPanel.vue
+  243:11  error  Expected 1 line break before closing tag (`</div>`), but 2 line breaks found                   vue/multiline-html-element-content-newline
+  255:43  error  'Plus' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+  736:7   error  'handleQuickAddTask' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/KanbanColumn.vue
+  25:9  error  Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/KanbanSwimlane.vue
+  120:8   error  'draggable' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  122:8   error  'TaskCard' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  125:47  error  'Plus' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/TaskCard.vue
+  243:118  error  'HelpCircle' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/layout/SettingsModal.vue
+  205:8  error  'NotificationPreferences' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/layout/SidebarSmartItem.vue
+  155:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/BackupSettings.vue
+  223:81  warning  Attribute "title" should go before "@click.stop"                                          vue/attributes-order
+  229:1   error    Expected indentation of 12 spaces but found 13 spaces                                     vue/html-indent
+  234:1   error    Expected indentation of 10 spaces but found 11 spaces                                     vue/html-indent
+  240:11  warning  Require self-closing on HTML elements (<div>)                                             vue/html-self-closing
+  271:36  error    'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  272:49  error    'BackupConfig' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  275:34  error    'CheckCircle' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  275:47  error    'AlertTriangle' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  276:3   error    'X' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+  276:6   error    'Info' is defined but never used. Allowed unused vars must match /^_/u                    @typescript-eslint/no-unused-vars
+  318:5   error    'updateInterval' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  351:7   error    'setMaxBackups' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  416:14  error    'e' is defined but never used. Allowed unused caught errors must match /^_/u              @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/SyncAlertSystem.vue
+  198:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/diffs/CharacterDiff.vue
+  9:9  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/diffs/WordDiff.vue
+  9:9  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/ui/WelcomeModal.vue
+   11:41  warning  Expected 1 line break after opening tag (`<h2>`), but no line breaks found        vue/singleline-html-element-content-newline
+   11:61  warning  Expected 1 line break before closing tag (`</h2>`), but no line breaks found      vue/singleline-html-element-content-newline
+   12:43  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found         vue/singleline-html-element-content-newline
+   12:70  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found       vue/singleline-html-element-content-newline
+  105:7   error    'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/app/useAppShortcuts.ts
+  8:11  error  'undoHistory' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/app/useSidebarManagement.ts
+  430:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasActions.ts
+   55:18  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  108:19  error    'newTask' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasConnections.ts
+  12:50  error    The `Function` type accepts any function-like value.
+Prefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type
+  12:63  error    The `Function` type accepts any function-like value.
+Prefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type
+  21:23  warning  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasDragDrop.ts
+    3:1    error    All imports in the declaration are only used as types. Use `import type`              @typescript-eslint/consistent-type-imports
+    4:1    error    All imports in the declaration are only used as types. Use `import type`              @typescript-eslint/consistent-type-imports
+   13:72   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   13:82   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   13:97   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   13:105  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   38:85   error    'syncNodes' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  289:21   error    'absoluteX' is never reassigned. Use 'const' instead                                  prefer-const
+  290:21   error    'absoluteY' is never reassigned. Use 'const' instead                                  prefer-const
+  354:92   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  371:25   error    Unexpected newline between function and ( of function call                            no-unexpected-multiline
+  410:87   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  418:88   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasResourceManager.ts
+    3:1   error    All imports in the declaration are only used as types. Use `import type`                                             @typescript-eslint/consistent-type-imports
+  162:21  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  164:25  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  167:21  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  169:25  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  172:21  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  174:25  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/tasks/useTaskFiltering.ts
+  226:88  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/undoSingleton.ts
+   54:14  error    'canvasError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  231:5   warning  Forbidden non-null assertion                                                            @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useCrossTabSyncIntegration.ts
+  288:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  309:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useDatabase.ts
+   17:32  error    'checkStorageQuota' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  698:63  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  718:19  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useDateTransition.ts
+  14:39  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/usePerformanceManager.ts
+  71:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  71:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  97:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  97:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useReliableSyncManager.ts
+  320:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  497:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useSafeI18n.ts
+  11:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useVueFlowStability.ts
+  559:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/AppSidebar.vue
+   67:29  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+   67:52  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+   81:29  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+   81:52  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+   99:29  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+   99:48  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+  113:29  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+  113:49  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+  136:13  warning  Attribute ":aria-expanded" should go before "@click"                                         vue/attributes-order
+  158:31  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+  158:49  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+  172:31  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+  172:52  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+  186:31  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+  186:55  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+  200:31  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+  200:54  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+  214:31  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found             vue/singleline-html-element-content-newline
+  214:56  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found           vue/singleline-html-element-content-newline
+  261:74  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found               vue/singleline-html-element-content-newline
+  261:80  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found             vue/singleline-html-element-content-newline
+  262:75  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found               vue/singleline-html-element-content-newline
+  262:81  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found             vue/singleline-html-element-content-newline
+  302:38  error    'Timer' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  486:7   error    'quickCount' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  487:7   error    'shortCount' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  488:7   error    'mediumCount' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  489:7   error    'longCount' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  490:7   error    'unestimatedCount' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  495:39  warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/MainLayout.vue
+  35:15  error  'computed' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/ModalManager.vue
+  114:7   error    'timerStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  244:20  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/unified-task-service.ts
+  184:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/canvas.ts
+   466:28  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+   780:53  warning  Forbidden non-null assertion                                                        @typescript-eslint/no-non-null-assertion
+   783:32  warning  Forbidden non-null assertion                                                        @typescript-eslint/no-non-null-assertion
+   786:33  warning  Forbidden non-null assertion                                                        @typescript-eslint/no-non-null-assertion
+  1535:9   error    'isReady' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1652:30  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  1676:20  error    'e' is defined but never used. Allowed unused caught errors must match /^_/u        @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/projects.ts
+    3:23  error    'DB_KEYS' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   33:57  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   38:39  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   78:39  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   92:61  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  169:53  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  170:48  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  204:49  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  217:44  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  230:53  warning  Forbidden non-null assertion                                               @typescript-eslint/no-non-null-assertion
+  271:45  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  272:42  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  272:56  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  279:37  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks.ts
+   18:40   warning  Unexpected any. Specify a different type                                                           @typescript-eslint/no-explicit-any
+   37:38   warning  Unexpected any. Specify a different type                                                           @typescript-eslint/no-explicit-any
+   76:49   error    'loadPersistedFilters' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+   76:87   error    'importTasksFromJSON' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   76:108  error    'importFromRecoveryTool' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  148:37   warning  Unexpected any. Specify a different type                                                           @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks/taskHistory.ts
+   2:21  error    'Subtask' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+   2:30  error    'TaskInstance' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+   2:44  error    'Project' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  17:11  error    'projectStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  97:44  warning  Unexpected any. Specify a different type                                                 @typescript-eslint/no-explicit-any
+  99:25  error    Empty block statement                                                                    no-empty
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks/taskOperations.ts
+    2:44  error    'Project' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   11:10  error    'errorHandler' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   11:24  error    'ErrorSeverity' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   11:39  error    'ErrorCategory' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   18:26  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   20:31  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   27:5   error    'runAllTaskMigrations' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  143:43  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  155:25  error    Empty block statement                                                                   no-empty
+  176:43  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  192:25  error    Empty block statement                                                                   no-empty
+  313:17  error    Unexpected lexical declaration in case block                                            no-case-declarations
+  315:17  error    Unexpected lexical declaration in case block                                            no-case-declarations
+  317:17  error    Unexpected lexical declaration in case block                                            no-case-declarations
+  362:33  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  393:48  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  399:45  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks/taskPersistence.ts
+   13:21  error    'TaskInstance' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+   21:26  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+   29:11  error    'persistentStorage' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   36:26  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+   46:57  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+   50:39  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+   68:11  error    'deleteLegacyTasksDocument' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   70:39  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+   78:17  error    Empty block statement                                                                                 no-empty
+  142:25  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  159:25  error    Empty block statement                                                                                 no-empty
+  172:63  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  192:17  error    Empty block statement                                                                                 no-empty
+  217:63  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  241:17  error    Empty block statement                                                                                 no-empty
+  248:32  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  253:43  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  264:25  error    Empty block statement                                                                                 no-empty
+  271:62  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  277:25  error    Empty block statement                                                                                 no-empty
+  293:21  error    Empty block statement                                                                                 no-empty
+  307:21  error    Empty block statement                                                                                 no-empty
+  317:25  warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/canvas/NodeUpdateBatcher.ts
+  11:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/conflictDetector.ts
+  122:19   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:47   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  123:87   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:63   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:101  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/legacyStorageCleanup.ts
+  21:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/syncValidator.ts
+  106:34  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  111:13  error    'critical' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  157:56  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/CanvasView.vue
+    98:9   warning  Require self-closing on HTML elements (<div>)                                                            vue/html-self-closing
+   112:1   error    Expected indentation of 4 spaces but found 6 spaces                                                      vue/html-indent
+   113:1   error    Expected indentation of 4 spaces but found 6 spaces                                                      vue/html-indent
+   114:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   115:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   116:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   117:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   118:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   119:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   120:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   121:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   122:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   123:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   124:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   125:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   126:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   127:1   error    Expected indentation of 4 spaces but found 6 spaces                                                      vue/html-indent
+   128:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   129:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   130:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   131:1   error    Expected indentation of 4 spaces but found 6 spaces                                                      vue/html-indent
+   133:1   error    Expected indentation of 4 spaces but found 6 spaces                                                      vue/html-indent
+   134:1   error    Expected indentation of 4 spaces but found 6 spaces                                                      vue/html-indent
+   135:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   136:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   137:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   138:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   139:1   error    Expected indentation of 4 spaces but found 6 spaces                                                      vue/html-indent
+   140:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   141:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   142:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   143:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   143:13  warning  Require self-closing on HTML elements (<div>)                                                            vue/html-self-closing
+   144:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   145:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   146:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   148:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   149:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   150:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   151:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   152:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   153:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   154:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   155:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   156:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   157:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   158:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   159:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   160:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   161:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   163:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   164:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   165:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   166:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   167:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   169:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   185:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   186:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   187:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   188:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   189:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   190:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   191:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   192:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   193:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   194:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   195:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   196:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   197:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   198:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   199:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   200:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   201:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   202:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   204:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   205:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   207:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   208:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   209:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   210:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   211:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   212:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   213:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   214:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   215:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   216:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   217:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   218:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   219:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   220:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   221:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   222:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   223:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   224:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   225:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   226:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   227:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   228:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   229:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   230:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   231:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   232:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   233:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   234:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   235:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   236:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   237:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   238:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   239:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   240:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   241:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   242:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   243:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   244:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   245:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   246:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   247:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   248:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   249:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   250:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   251:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   252:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   253:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   254:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   255:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   256:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   257:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   258:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   259:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   260:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   261:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   263:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   264:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   265:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   266:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   267:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   268:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   269:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   270:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   272:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   273:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   274:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   275:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   276:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   277:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   278:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   279:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   280:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   281:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   282:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   283:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   284:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   285:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   287:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   288:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   289:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   290:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   291:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   292:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   293:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   294:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   295:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   296:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   297:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   298:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   299:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   300:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   301:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   302:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   304:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   305:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   306:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   307:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   308:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   309:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   310:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   311:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   312:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   313:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   314:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   315:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   316:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   317:1   error    Expected indentation of 20 spaces but found 22 spaces                                                    vue/html-indent
+   318:1   error    Expected indentation of 20 spaces but found 22 spaces                                                    vue/html-indent
+   319:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   320:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   321:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   322:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   323:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   324:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   325:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   326:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   327:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   328:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   329:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   330:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   331:1   error    Expected indentation of 20 spaces but found 22 spaces                                                    vue/html-indent
+   332:1   error    Expected indentation of 20 spaces but found 22 spaces                                                    vue/html-indent
+   333:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   334:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   335:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   336:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   337:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   339:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   340:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   341:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   342:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   343:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   343:19  warning  Require self-closing on HTML elements (<div>)                                                            vue/html-self-closing
+   344:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   345:1   error    Expected indentation of 18 spaces but found 20 spaces                                                    vue/html-indent
+   346:1   error    Expected indentation of 16 spaces but found 18 spaces                                                    vue/html-indent
+   347:1   error    Expected indentation of 14 spaces but found 16 spaces                                                    vue/html-indent
+   348:1   error    Expected indentation of 12 spaces but found 14 spaces                                                    vue/html-indent
+   349:1   error    Expected indentation of 10 spaces but found 12 spaces                                                    vue/html-indent
+   350:1   error    Expected indentation of 8 spaces but found 10 spaces                                                     vue/html-indent
+   351:1   error    Expected indentation of 6 spaces but found 8 spaces                                                      vue/html-indent
+   352:1   error    Expected indentation of 4 spaces but found 6 spaces                                                      vue/html-indent
+   432:7   error    Expected 1 line break before closing tag (`</div>`), but 2 line breaks found                             vue/multiline-html-element-content-newline
+   461:34  error    'Zap' is defined but never used. Allowed unused vars must match /^_/u                                    @typescript-eslint/no-unused-vars
+   461:39  error    'Timer' is defined but never used. Allowed unused vars must match /^_/u                                  @typescript-eslint/no-unused-vars
+   461:46  error    'Clock' is defined but never used. Allowed unused vars must match /^_/u                                  @typescript-eslint/no-unused-vars
+   461:53  error    'HelpCircle' is defined but never used. Allowed unused vars must match /^_/u                             @typescript-eslint/no-unused-vars
+   609:21  error    'isDateWatcherActive' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+   783:7   error    'message' is assigned a value but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+  1350:7   warning  Unexpected any. Specify a different type                                                                 @typescript-eslint/no-explicit-any
+  1358:11  error    'vueFlowZoomIn' is assigned a value but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  1360:11  error    'vueFlowZoomTo' is assigned a value but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  1361:3   error    'getSelectedNodes' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1369:16  error    'vueFlowSetViewport' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  1391:30  warning  Unexpected any. Specify a different type                                                                 @typescript-eslint/no-explicit-any
+  1398:64  warning  Unexpected any. Specify a different type                                                                 @typescript-eslint/no-explicit-any
+  1419:9   error    'fitView' is assigned a value but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+  1419:18  error    'zoomIn' is assigned a value but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+  1419:26  error    'zoomOut' is assigned a value but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+  1419:35  error    'shouldCullNode' is assigned a value but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  1423:7   error    'vueFlowStability' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  1438:7   error    'vueFlowStateManager' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  1847:37  warning  Unexpected any. Specify a different type                                                                 @typescript-eslint/no-explicit-any
+  1860:3   error    'getContainingSection' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  1861:3   error    'isTaskInSectionBounds' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  1862:3   error    'applySectionPropertiesToTask' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  2083:7   error    'getTaskCountForSection' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+
+✖ 508 problems (372 errors, 136 warnings)
+  225 errors and 38 warnings potentially fixable with the `--fix` option.
+

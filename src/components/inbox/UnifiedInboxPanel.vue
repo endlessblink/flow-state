@@ -58,14 +58,17 @@
     </div>
 
     <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
+    <!-- TASK-076: Added hide-done-tasks for view-specific done filter -->
     <InboxFilters
       v-if="!isCollapsed"
       v-model:unscheduled-only="unscheduledOnly"
       v-model:selected-priority="selectedPriority"
       v-model:selected-project="selectedProject"
       v-model:selected-duration="selectedDuration"
+      :hide-done-tasks="currentHideDoneTasks"
       :tasks="baseInboxTasks"
       :projects="taskStore.rootProjects"
+      @update:hide-done-tasks="toggleHideDoneTasks"
       @clear-all="clearAllFilters"
     />
 
@@ -278,6 +281,24 @@ const props = withDefaults(defineProps<Props>(), {
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 
+// TASK-076: Get view-specific hide done filter from store
+const hideCanvasDoneTasks = computed(() => taskStore.hideCanvasDoneTasks)
+const hideCalendarDoneTasks = computed(() => taskStore.hideCalendarDoneTasks)
+
+// TASK-076: Current view's hide done setting
+const currentHideDoneTasks = computed(() => {
+  return props.context === 'calendar' ? hideCalendarDoneTasks.value : hideCanvasDoneTasks.value
+})
+
+// TASK-076: Toggle function for the current view
+const toggleHideDoneTasks = (value: boolean) => {
+  if (props.context === 'calendar') {
+    taskStore.toggleCalendarDoneTasks()
+  } else {
+    taskStore.toggleCanvasDoneTasks()
+  }
+}
+
 // State
 const isCollapsed = ref(props.startCollapsed)
 const newTaskTitle = ref('')
@@ -300,6 +321,11 @@ const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimate
 const baseInboxTasks = computed(() => {
   // Use taskStore.filteredTasks to respect global sidebar filters (Uncategorized, Project, Smart Views)
   return taskStore.filteredTasks.filter(task => {
+    // TASK-076: Respect view-specific hide done filter
+    if (currentHideDoneTasks.value && task.status === 'done') {
+      return false
+    }
+
     // Keep context-specific filtering (Canvas/Calendar)
     if (props.context === 'calendar') {
       // CALENDAR INBOX: Show tasks NOT on the calendar grid

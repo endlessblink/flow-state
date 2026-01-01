@@ -433,38 +433,29 @@ export function useVueFlowStability(
 
   /**
    * Restore from snapshot
+   * BUG-052 FIX: Removed viewport restoration - preserves user's current viewport
    */
   const restoreFromSnapshot = async (snapshot: VueFlowStateSnapshot) => {
     nodes.value = [...snapshot.nodes]
     edges.value = [...snapshot.edges]
 
-    // Restore viewport
-    if (vueFlowStore.value) {
-      nextTick(() => {
-        const store = vueFlowStore.value as unknown as { setTransform: (x: number, y: number, zoom: number) => void } | null
-        if (store) {
-          store.setTransform?.(snapshot.viewport.x, snapshot.viewport.y, snapshot.viewport.zoom)
-        }
-      })
-    }
+    // BUG-052: DO NOT restore viewport from snapshot
+    // The user's current viewport position should be preserved
+    // Restoring old viewport positions causes jarring jumps
   }
 
   /**
    * Perform basic recovery
+   * BUG-052 FIX: Removed fitView() call which was causing viewport to jump randomly
    */
   const performBasicRecovery = async () => {
     // Clear invalid nodes and edges
     nodes.value = validateNodes(nodes.value)
     edges.value = validateEdges(edges.value)
 
-    // Reset viewport
-    if (vueFlowStore.value) {
-      nextTick(() => {
-        if (vueFlowStore.value) {
-          vueFlowStore.value.fitView({ padding: 0.1 })
-        }
-      })
-    }
+    // BUG-052: DO NOT reset viewport during recovery - this causes jarring UX
+    // The user's viewport position should be preserved
+    // If viewport reset is truly needed, it should be explicit user action
   }
 
   /**

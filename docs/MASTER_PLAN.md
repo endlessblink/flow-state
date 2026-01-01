@@ -712,12 +712,12 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-068**~~ | ✅ **DONE** | `GroupNodeSimple.vue`, `CanvasContextMenu.vue`, `CanvasView.vue` | - | - |
 | ~~**TASK-069**~~ | ✅ **DONE** | `GroupNodeSimple.vue` | - | - |
 | ~~**TASK-070**~~ | ✅ **DONE** | `useCanvasActions.ts`, `CanvasView.vue`, `GroupNodeSimple.vue` | - | - |
-| **TASK-071** | 📋 **TODO** | `TaskNode.vue` | - | - |
+| ~~**TASK-071**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | ~~**TASK-072**~~ | ✅ **DONE** | `canvas.ts`, `GroupModal.vue`, `CanvasView.vue`, `useCanvasDragDrop.ts` | - | - |
 | **TASK-073** | 📋 **TODO** | `GroupNodeSimple.vue` | - | - |
 | ~~**TASK-074**~~ | ✅ **DONE** | `TaskNode.vue` | - | - |
 | **TASK-075** | 📋 **TODO** | `TaskNode.vue`, `TaskEditModal.vue` | - | - |
-| **TASK-076** | 📋 **TODO** | `InboxPanel.vue`, `CalendarInboxPanel.vue`, `ui.ts` | - | - |
+| ~~**TASK-076**~~ | ✅ **DONE** | `taskStates.ts`, `taskOperations.ts`, `taskPersistence.ts`, `CanvasView.vue`, `CalendarView.vue` | - | - |
 | ~~**TASK-077**~~ | ✅ **DONE** | `CanvasContextMenu.vue` | - | - |
 | ~~**TASK-078**~~ | ✅ **DONE** | `dev-manager/kanban/index.html` | - | - |
 | ~~**TASK-081**~~ | ✅ **DONE** | `tsconfig.json`, `src/**/*` | - | - |
@@ -725,11 +725,12 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-080**~~ | ✅ **DONE** | `CalendarView.vue`, `CanvasView.vue`, `UnifiedInboxPanel.vue` | - | - |
 | ~~**BUG-047**~~ | ✅ **DONE** | `useCanvasDragDrop.ts` | - | - |
 | ~~**BUG-048**~~ | ✅ **DONE** | `CanvasView.vue` | - | - |
-| **BUG-050** | 🔄 **IN PROGRESS** | `CanvasView.vue`, `KanbanColumn.vue` | - | - |
+| ~~**BUG-050**~~ | ✅ **DONE** | `CanvasView.vue`, `KanbanColumn.vue` | - | - |
 | **TASK-082** | 🔄 **IN PROGRESS** | `useDateTransition.ts` (new), `canvas.ts` | - | - |
 | **TASK-083** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | - |
 | **TASK-084** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | TASK-083 |
 | ~~**BUG-051**~~ | ✅ **DONE** | `QuickSortView.vue`, `CategorySelector.vue` | - | - |
+| **BUG-055** | 🔄 **IN PROGRESS** | `CanvasView.vue` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -737,13 +738,13 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **TASK-068**: Streamline Canvas Group Header Design | **P1-HIGH** | ✅ DONE (Dec 28) - Moved all actions to context menu
 - [x] **TASK-069**: Improve Canvas Group Visibility | **P3-LOW** | ✅ DONE (Dec 28) - Solid border, increased opacity, shadow
 - [x] **~~TASK-070~~**: Fix context menu in groups (wrong menu) | **P1-HIGH** | ✅ DONE (Dec 31)
-- [ ] **TASK-071**: Fix task card text wrapping | **P1-HIGH** | TODO
+- [x] **~~TASK-071~~**: Fix task card text wrapping | **P1-HIGH** | ✅ DONE (Dec 31)
 - [x] **TASK-072**: Add nested groups support | **P2-MEDIUM** | ✅ DONE (Dec 30 - 3-level nesting working, drag fix, task counts)
 - [ ] **TASK-073**: Improve group outline styling | **P2-MEDIUM** | TODO
 - [x] **TASK-074**: Task node background blur | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [x] **TASK-077**: Context menu glassmorphism styling | **P2-MEDIUM** | ✅ DONE (Dec 29)
 - [ ] **TASK-075**: Markdown support for task descriptions | **P2-MEDIUM** | TODO
-- [ ] **TASK-076**: Separate done filter (Canvas vs Calendar inbox) | **P1-HIGH** | TODO
+- [x] **~~TASK-076~~**: Separate done filter (Canvas vs Calendar inbox) | **P1-HIGH** | ✅ DONE (Dec 31)
 - [x] **~~TASK-061~~**: Demo Content Guard Logger | **P0-CRITICAL** | ✅ DONE (Dec 30) - Guards in createTask, createProject, createTaskWithUndo
 - [x] **~~TASK-062~~**: Custom Confirmation Modals | **P0-CRITICAL** | ✅ DONE (Dec 30) - ConfirmationModal in use, no window.confirm() calls remain
 - ✅ **BUG-041**: Fix blurry text on canvas zoom | **P0-CRITICAL** | ✅ FIXED (Dec 28)
@@ -754,8 +755,12 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~BUG-046~~**: Canvas inbox Today filter ignores dueDate (only checked scheduledDate) | **P1-HIGH** | ✅ FIXED (Dec 30) - Now checks dueDate + instances + scheduledDate
 - [x] **~~BUG-047~~**: Group task counter not updating in real-time when moving tasks | **P1-HIGH** | ✅ FIXED (Dec 30)
 - [x] **~~BUG-048~~**: Viewport doesn't persist user pan/zoom interactions | **P1-HIGH** | ✅ FIXED (Dec 30)
-- [x] **~~BUG-049~~**: Inbox panel can't scroll to see all tasks | **P2-MEDIUM** | ✅ FIXED (Dec 31) - Parent `overflow:visible` blocked child scrolling
-- [ ] **BUG-050**: Ghost preview positioning during resize/kanban status change | **P1-HIGH** | 🔄 IN PROGRESS
+- [ ] **BUG-049**: Inbox panel can't scroll to see all tasks | **P2-MEDIUM** | 👀 REVIEW (Dec 31) - Parent `overflow:visible` blocked child scrolling
+- [x] **~~BUG-050~~**: Ghost preview positioning - RESOLVED BY REMOVAL | **P1-HIGH** | ✅ REMOVED (Dec 31) - Simpler: rely on Vue Flow native feedback
+- [x] **~~BUG-052~~**: Canvas view changing abruptly/glitching | **P1-HIGH** | ✅ FIXED (Dec 31) - Vue Flow now initializes with saved viewport via `initialViewport` computed prop, eliminating the (0,0,1) → saved viewport jump
+- [x] **~~BUG-053~~**: Projects/tasks disappeared from IndexedDB | **P0-CRITICAL** | ✅ RECOVERED (Dec 31) - Data restored from CouchDB; sync manager URL bug identified
+- [ ] **BUG-054**: ReliableSyncManager not reading CouchDB URL from settings | **P1-HIGH** | TODO - Sync fails with "No remote URL configured" despite settings saved
+- [ ] **BUG-055**: Nested groups/tasks jump outside parent during resize | **P1-HIGH** | 🔄 IN PROGRESS (Dec 31) - Child groups not position-adjusted during parent resize
 - [ ] **TASK-082**: Auto-move Today tasks to Overdue at midnight (canvas only) | **P2-MEDIUM** | 🔄 IN PROGRESS
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - [x] **TASK-078**: Dev-Manager Hide Done Tasks Filter | **P2-MEDIUM** | ✅ DONE (Dec 30)
@@ -915,16 +920,24 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### TASK-071: Fix Task Card Text Wrapping (📋 TODO)
+### ~~TASK-071~~: Fix Task Card Text Wrapping (✅ DONE)
 
 **Priority**: P1-HIGH
 
+**Completed**: Dec 31, 2025
+
 **Problem**: Text in task cards breaks horizontally (overflows) instead of wrapping vertically to multiple lines.
 
+**Solution**: CSS word-wrapping properties added to `.task-title` class in TaskNode.vue:
+- Fixed width constraints (280px default, 200-320px range)
+- `word-wrap: break-word`, `overflow-wrap: break-word`
+- `-webkit-line-clamp: 4` for multi-line truncation
+- `white-space: normal` and `hyphens: auto`
+
 **Goals**:
-- [ ] Long task titles wrap to multiple lines
-- [ ] Text stays within card boundaries
-- [ ] Card height adjusts to content
+- [x] Long task titles wrap to multiple lines ✅
+- [x] Text stays within card boundaries ✅
+- [x] Card height adjusts to content ✅
 
 **Files to Modify**:
 - `src/components/canvas/TaskNode.vue` - CSS word-wrap/overflow
@@ -1020,22 +1033,32 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### TASK-076: Separate Done Filter for Canvas vs Calendar Inbox (📋 TODO)
+### ~~TASK-076~~: Separate Done Filter for Canvas vs Calendar Inbox (✅ DONE)
 
 **Priority**: P1-HIGH
 
+**Completed**: Dec 31, 2025
+
 **Problem**: Need separate "show done tasks" filters for Canvas Inbox and Calendar Inbox so they can have independent visibility settings.
 
-**Goals**:
-- [ ] Add `showDoneInCanvasInbox` setting
-- [ ] Add `showDoneInCalendarInbox` setting
-- [ ] Each inbox panel respects its own setting
-- [ ] Settings persisted in UI store
+**Solution**: Added "Show Done / Hiding Done" toggle to InboxFilters component. Each view (Canvas/Calendar) uses store's view-specific filter values (`hideCanvasDoneTasks`, `hideCalendarDoneTasks`) that were already implemented but not exposed in UI.
 
-**Files to Modify**:
-- `src/components/panels/InboxPanel.vue` - Canvas inbox filter
-- `src/components/calendar/CalendarInboxPanel.vue` - Calendar inbox filter
-- `src/stores/ui.ts` - New filter state
+**Implementation**:
+- Added `hideDoneTasks` prop and emit to `InboxFilters.vue`
+- Connected `UnifiedInboxPanel.vue` to store's `hideCanvasDoneTasks` via `toggleCanvasDoneTasks()`
+- Updated `CalendarInboxPanel.vue` to use `hideCalendarDoneTasks` instead of hardcoded filter
+- Both filters persist independently and work across navigation
+
+**Goals**:
+- [x] Add `hideCanvasDoneTasks` setting ✅ (was in store, now exposed in UI)
+- [x] Add `hideCalendarDoneTasks` setting ✅ (was in store, now exposed in UI)
+- [x] Each inbox panel respects its own setting ✅
+- [x] Settings persisted in task store ✅
+
+**Files Modified**:
+- `src/components/canvas/InboxFilters.vue` - Added Hide Done toggle button
+- `src/components/inbox/UnifiedInboxPanel.vue` - Connected to canvas-specific filter
+- `src/components/inbox/CalendarInboxPanel.vue` - Connected to calendar-specific filter
 
 ---
 
@@ -1111,11 +1134,11 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### BUG-050: Ghost Preview Positioning During Resize/Status Change (🔄 IMPLEMENTED - Awaiting Test)
+### ~~BUG-050~~: Ghost Preview Positioning During Resize/Status Change (✅ RESOLVED - Removed Dec 31)
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| Ghost preview at wrong position | HIGH | 🔄 IMPLEMENTED |
+| Ghost preview at wrong position | HIGH | ✅ RESOLVED BY REMOVAL |
 
 **User Report**: Ghost preview appears at incorrect canvas coordinates during:
 1. Group/Section resize on canvas
@@ -1123,23 +1146,58 @@ All header action buttons were removed and moved to the context menu for a clean
 
 **Screenshot**: `docs/🐛 debug/debugging-screenshot/image copy 7.png`
 
-**Symptoms**:
-- Resize preview (showing dimensions like "412 × 952") appears at wrong canvas location
-- Preview not aligned with actual resize operation
-- Similar issue in kanban when changing status via drag
+**Resolution** (Dec 31, 2025):
+**Removed ghost preview overlay entirely for canvas operations** - Vue Flow already provides smooth real-time visual feedback during resize/drag, making the ghost overlay redundant and a source of bugs.
 
-**Root Causes (Identified)**:
-1. **Canvas Resize**: `handleSectionResize` relies on `event.params.x/y` which may not be present for right/bottom edge resizing. Need to always read position from Vue Flow node.
-2. **Kanban**: vuedraggable with `:force-fallback="false"` uses native HTML5 drag which desyncs with horizontal scroll.
+**What was removed:**
+- [x] Template: `<div v-if="resizeState.isResizing" class="resize-preview-overlay-fixed">` block
+- [x] Function: `getSectionResizeStyle()` (~40 lines)
+- [x] CSS: `.resize-preview-overlay-fixed`, `.resize-preview-section-overlay`, `.resize-size-indicator`, `@keyframes resize-preview-pulse` (~50 lines)
 
-**Fix Applied** (Dec 31, 2025):
-- [x] Canvas: Updated `handleSectionResize` to always read position from Vue Flow node via `findNode()` (line 2580)
-- [x] Kanban: Enabled fallback mode (`:force-fallback="true"`) with fixed positioning CSS (line 25, 370-380)
+**Ghost preview KEPT for:**
+- Inbox → Canvas drag (needed for drop zone feedback)
+- Calendar inbox → Calendar grid drag
+- Kanban drag (kept fallback mode for horizontal scroll compat)
 
-**Files Modified**:
-- `src/views/CanvasView.vue:2567-2593` - Always read position from Vue Flow node
-- `src/components/kanban/KanbanColumn.vue:25-27` - Enable force-fallback mode
-- `src/components/kanban/KanbanColumn.vue:370-381` - Add `.sortable-fallback` CSS class
+**Benefits:**
+- ~100 lines of code removed
+- No more positioning bugs for canvas resize
+- Better performance (no extra DOM during resize)
+- Simpler, more maintainable codebase
+
+---
+
+### ~~BUG-053~~: Projects/Tasks Disappeared from IndexedDB (✅ RECOVERED - Dec 31)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| All projects and tasks vanished from app | CRITICAL | ✅ DATA RECOVERED |
+
+**User Report**: "Projects that I created were removed from the projects area" - happened "programmatically" without user action.
+
+**Symptom**:
+- Sidebar showed 0 projects, 0 tasks
+- IndexedDB only contained `settings:data` document
+- Local backups were empty (created after data loss)
+
+**Investigation**:
+1. Confirmed IndexedDB was cleared (only 1 document remained)
+2. **Remote CouchDB still had all 54 documents** including 20 tasks and 26 projects
+3. CouchDB sync manager wasn't reading saved URL configuration (bug in `useReliableSyncManager.ts`)
+
+**Recovery Process**:
+1. ✅ Fetched data directly from CouchDB server via curl
+2. ✅ Created recovery JSON file with tasks and projects
+3. ✅ Imported tasks via Recovery Center "Upload File" feature
+4. ✅ Injected projects via Pinia store direct manipulation
+
+**Data Recovered**:
+- 20 tasks restored
+- 6 main projects restored (Work, Personal, Side Project, proji, projiz, Proji)
+
+**Root Cause**: Under investigation - suspected issue with sync manager not reading URL configuration from settings. See BUG-054 for sync manager URL bug.
+
+**Related Bug**: Created BUG-054 for ReliableSyncManager URL configuration issue.
 
 ---
 

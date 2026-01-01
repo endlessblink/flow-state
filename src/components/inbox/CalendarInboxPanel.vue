@@ -63,14 +63,17 @@
     </div>
 
     <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
+    <!-- TASK-076: Added hide-done-tasks for calendar-specific done filter -->
     <InboxFilters
       v-if="!isCollapsed"
       v-model:unscheduled-only="unscheduledOnly"
       v-model:selected-priority="selectedPriority"
       v-model:selected-project="selectedProject"
       v-model:selected-duration="selectedDuration"
+      :hide-done-tasks="hideCalendarDoneTasks"
       :tasks="baseInboxTasks"
       :projects="taskStore.rootProjects"
+      @update:hide-done-tasks="toggleHideDoneTasks"
       @clear-all="clearAllFilters"
     />
 
@@ -238,6 +241,14 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const { updateTaskWithUndo, createTaskWithUndo, deleteTaskWithUndo } = useUnifiedUndoRedo()
 
+// TASK-076: Get calendar-specific hide done filter from store
+const hideCalendarDoneTasks = computed(() => taskStore.hideCalendarDoneTasks)
+
+// TASK-076: Toggle function for calendar view
+const toggleHideDoneTasks = () => {
+  taskStore.toggleCalendarDoneTasks()
+}
+
 // State
 const isCollapsed = ref(false)
 const newTaskTitle = ref('')
@@ -275,7 +286,8 @@ const isScheduledOnCalendar = (task: Task): boolean => {
 const baseInboxTasks = computed(() => {
   // Calendar inbox base: Show tasks NOT yet scheduled on the calendar grid
   return taskStore.tasks.filter(task => {
-    if (task.status === 'done') return false
+    // TASK-076: Use store filter instead of hardcoding done task removal
+    if (hideCalendarDoneTasks.value && task.status === 'done') return false
     return !isScheduledOnCalendar(task)
   })
 })

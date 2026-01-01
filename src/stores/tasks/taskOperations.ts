@@ -19,6 +19,8 @@ export function useTaskOperations(
     activeStatusFilter: Ref<string | null>,
     activeDurationFilter: Ref<any>,
     hideDoneTasks: Ref<boolean>,
+    hideCanvasDoneTasks: Ref<boolean>,
+    hideCalendarDoneTasks: Ref<boolean>,
     manualOperationInProgress: Ref<boolean>,
     saveTasksToStorage: (tasks: Task[], context: string) => Promise<void>,
     persistFilters: () => void,
@@ -367,6 +369,17 @@ export function useTaskOperations(
         persistFilters()
     }
 
+    // TASK-076: View-specific done task toggles
+    const toggleCanvasDoneTasks = () => {
+        hideCanvasDoneTasks.value = !hideCanvasDoneTasks.value
+        persistFilters()
+    }
+
+    const toggleCalendarDoneTasks = () => {
+        hideCalendarDoneTasks.value = !hideCalendarDoneTasks.value
+        persistFilters()
+    }
+
     const setActiveStatusFilter = (status: string | null) => {
         activeStatusFilter.value = status
         if (status) activeDurationFilter.value = null
@@ -433,6 +446,8 @@ export function useTaskOperations(
         setActiveProject,
         setSmartView,
         toggleHideDoneTasks,
+        toggleCanvasDoneTasks,
+        toggleCalendarDoneTasks,
         setActiveStatusFilter,
         toggleStatusFilter,
         setActiveDurationFilter,

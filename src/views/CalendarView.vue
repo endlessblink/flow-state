@@ -69,16 +69,16 @@
           <!-- Project Filter -->
           <ProjectFilterDropdown />
 
-          <!-- Hide Done Tasks Toggle -->
+          <!-- Hide Done Tasks Toggle (TASK-076) -->
           <button
             class="hide-done-toggle"
-            :class="{ active: hideDoneTasks }"
-            :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-            @click="taskStore.toggleHideDoneTasks()"
+            :class="{ active: hideCalendarDoneTasks }"
+            :title="hideCalendarDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+            @click="taskStore.toggleCalendarDoneTasks()"
           >
-            <EyeOff v-if="hideDoneTasks" :size="16" :stroke-width="1.5" />
+            <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
             <Eye v-else :size="16" :stroke-width="1.5" />
-            <span>{{ hideDoneTasks ? 'Hidden' : 'Done' }}</span>
+            <span>{{ hideCalendarDoneTasks ? 'Hidden' : 'Done' }}</span>
           </button>
 
           <div class="view-selector">
@@ -563,7 +563,8 @@ const timerStore = useTimerStore()
 const uiStore = useUIStore()
 
 // Extract reactive refs from store
-const { hideDoneTasks } = storeToRefs(taskStore)
+// TASK-076: Use calendar-specific done filter
+const { hideCalendarDoneTasks } = storeToRefs(taskStore)
 
 // View state
 const currentDate = ref(new Date())
@@ -1176,9 +1177,9 @@ const handleMonthDayClick = (dateString: string) => {
   monthDayClickHandler(dateString, viewMode)
 }
 
-// Toggle hide done tasks
+// Toggle hide done tasks (TASK-076: calendar-specific)
 const _handleToggleDoneTasks = (_event: MouseEvent) => {
-  taskStore.toggleHideDoneTasks()
+  taskStore.toggleCalendarDoneTasks()
 }
 </script>
 

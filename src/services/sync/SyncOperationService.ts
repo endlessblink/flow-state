@@ -114,32 +114,74 @@ export class SyncOperationService {
     }
 
     private async pullFromRemote(local: PouchDB.Database, remote: PouchDB.Database): Promise<number> {
-        const pullPromise = local.replicate.from(remote, {
-            live: false,
-            retry: false,
-            batch_size: 10,
-            batches_limit: 5
-        })
-        const pullTimeout = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Pull timeout after 60 seconds')), 60000)
-        })
+        console.log('⬇️ [SYNC] Starting Pull (Remote -> Local)...')
+        return new Promise((resolve, reject) => {
+            const pull = local.replicate.from(remote, {
+                live: false,
+                retry: true, // Enable retry for pull
+                batch_size: 100, // Increased from 10
+                batches_limit: 10
+            })
 
-        const pullResult = await Promise.race([pullPromise, pullTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
-        return pullResult.docs_read || 0
+            const timer = setTimeout(() => {
+                pull.cancel()
+                reject(new Error('Pull timeout after 120 seconds'))
+            }, 120000)
+
+            pull.on('change', (info) => {
+                console.log(`⬇️ [SYNC] Pull progress: ${info.docs_read} docs`)
+            })
+            pull.on('complete', (info) => {
+                clearTimeout(timer)
+                console.log(`✅ [SYNC] Pull complete: ${info.docs_read} docs read, ${info.docs_written} written`)
+                resolve(info.docs_written || 0)
+            })
+            pull.on('error', (err) => {
+                clearTimeout(timer)
+                console.error('❌ [SYNC] Pull error:', err)
+                reject(err)
+            })
+            pull.on('paused', (err) => console.log('⬇️ [SYNC] Pull paused', err))
+            pull.on('active', () => console.log('⬇️ [SYNC] Pull active'))
+        })
     }
 
     private async pushToLocal(local: PouchDB.Database, remote: PouchDB.Database): Promise<number> {
-        const pushPromise = local.replicate.to(remote, {
-            live: false,
-            retry: false,
-            batch_size: 10,
-            batches_limit: 5
-        })
-        const pushTimeout = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Push timeout after 60 seconds')), 60000)
-        })
+        // Note: Using replicate.to() -> this is usually "Push to Remote"
+        // But the function name is 'pushToLocal'. 
+        // Wait, 'pushToLocal' implies putting data INTO local? 
+        // Sync logic is: pullFromRemote (Remote->Local), then pushToLocal (Local->Remote?).
+        // Examining original code: `local.replicate.to(remote)` -> Local -> Remote.
+        // So this method name 'pushToLocal' is confusing, it should be 'pushToRemote'.
+        // I will keep the name for now to avoid breaking calls, but add logging.
 
-        const pushResult = await Promise.race([pushPromise, pushTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
-        return pushResult.docs_written || 0
+        console.log('⬆️ [SYNC] Starting Push (Local -> Remote)...')
+        return new Promise((resolve, reject) => {
+            const push = local.replicate.to(remote, {
+                live: false,
+                retry: true,
+                batch_size: 100,
+                batches_limit: 10
+            })
+
+            const timer = setTimeout(() => {
+                push.cancel()
+                reject(new Error('Push timeout after 120 seconds'))
+            }, 120000)
+
+            push.on('change', (info) => {
+                console.log(`⬆️ [SYNC] Push progress: ${info.docs_read} docs`)
+            })
+            push.on('complete', (info) => {
+                clearTimeout(timer)
+                console.log(`✅ [SYNC] Push complete: ${info.docs_written} docs written`)
+                resolve(info.docs_written || 0)
+            })
+            push.on('error', (err) => {
+                clearTimeout(timer)
+                console.error('❌ [SYNC] Push error:', err)
+                reject(err)
+            })
+        })
     }
 }

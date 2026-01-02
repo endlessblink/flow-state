@@ -163,9 +163,15 @@ class PersistentStorage {
   /**
    * IndexedDB operations
    */
+  /**
+   * IndexedDB operations
+   */
+  private readonly DB_NAME = 'pomo-flow-backup'
+  private readonly DB_VERSION = 3 // Bumped to 3 to force 'storage' store creation
+
   private async saveToIndexedDB(key: string, data: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const request = indexedDB.open('pomo-flow-backup', 2)
+      const request = indexedDB.open(this.DB_NAME, this.DB_VERSION)
 
       request.onerror = () => {
         console.error('IndexedDB error:', request.error)
@@ -183,7 +189,9 @@ class PersistentStorage {
         const db = request.result
         // Ensure the storage object store exists before creating transaction
         if (!db.objectStoreNames.contains('storage')) {
-          console.error('Storage object store not found in IndexedDB')
+          console.error('Storage object store not found in IndexedDB - Nuke required?')
+          // Try to recover by closing and deleting? No, too risky during save.
+          // Just fail gracefully.
           resolve(false)
           return
         }
@@ -205,7 +213,7 @@ class PersistentStorage {
 
   private async loadFromIndexedDB(key: string): Promise<string | null> {
     return new Promise((resolve) => {
-      const request = indexedDB.open('pomo-flow-backup', 2)
+      const request = indexedDB.open(this.DB_NAME, this.DB_VERSION)
 
       request.onerror = () => resolve(null)
 

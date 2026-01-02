@@ -30,6 +30,7 @@
           @context-menu="handleContextMenu"
           @toggle-expand="toggleTaskExpand"
           @move-task="handleMoveTask"
+          @update-task="(taskId, updates) => $emit('updateTask', taskId, updates)"
         />
       </template>
     </div>
@@ -69,6 +70,7 @@ const emit = defineEmits<{
   edit: [taskId: string]
   contextMenu: [event: MouseEvent, task: Task]
   moveTask: [taskId: string, targetProjectId: string | null, targetParentId: string | null]
+  updateTask: [taskId: string, updates: Partial<Task>]
 }>()
 
 const taskStore = useTaskStore()

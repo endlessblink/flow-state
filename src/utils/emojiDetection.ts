@@ -5,6 +5,9 @@
 
 import { hasSvgRepresentation, hasColorfulSvgRepresentation } from './emojiSvgMap'
 
+declare const twemoji: any
+
+
 /**
  * Detect if the browser supports modern emoji rendering features
  */

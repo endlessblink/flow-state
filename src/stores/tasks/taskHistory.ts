@@ -1,11 +1,11 @@
-import { type Ref } from 'vue'
-import type { Task, Subtask, TaskInstance, Project } from '@/types/tasks'
+import { type Ref, nextTick } from 'vue'
+import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
 import { useDatabase } from '@/composables/useDatabase'
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
-import { useProjectStore } from '../projects'
+
 
 export function useTaskHistory(
     tasks: Ref<Task[]>,
@@ -14,7 +14,7 @@ export function useTaskHistory(
 ) {
     const db = useDatabase()
     const persistentStorage = usePersistentStorage()
-    const projectStore = useProjectStore()
+
 
     const restoreState = async (newTasks: Task[]) => {
         if (!Array.isArray(newTasks)) {
@@ -97,6 +97,73 @@ export function useTaskHistory(
                         return (actions as any).startTaskNow(taskId)
                     }
                 } catch { }
+            },
+
+            // Instance methods wrapped with undo
+            createTaskInstanceWithUndo: async (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => {
+                const { useTaskStore } = await import('../tasks')
+                const store = useTaskStore()
+                const undoSystem = getUndoSystem()
+                undoSystem.saveState('Before create instance')
+                store.createTaskInstance(taskId, instanceData)
+                await nextTick()
+                undoSystem.saveState('After create instance')
+            },
+
+            updateTaskInstanceWithUndo: async (taskId: string, instanceId: string, updates: Partial<TaskInstance>) => {
+                const { useTaskStore } = await import('../tasks')
+                const store = useTaskStore()
+                const undoSystem = getUndoSystem()
+                undoSystem.saveState('Before update instance')
+                store.updateTaskInstance(taskId, instanceId, updates)
+                await nextTick()
+                undoSystem.saveState('After update instance')
+            },
+
+            deleteTaskInstanceWithUndo: async (taskId: string, instanceId: string) => {
+                const { useTaskStore } = await import('../tasks')
+                const store = useTaskStore()
+                const undoSystem = getUndoSystem()
+                undoSystem.saveState('Before delete instance')
+                store.deleteTaskInstance(taskId, instanceId)
+                await nextTick()
+                undoSystem.saveState('After delete instance')
+            },
+
+            createSubtaskWithUndo: async (taskId: string, subtask: Partial<Subtask>) => {
+                const { useTaskStore } = await import('../tasks')
+                const store = useTaskStore()
+                const undoSystem = getUndoSystem()
+                undoSystem.saveState('Before create subtask')
+                store.createSubtask(taskId, subtask)
+                await nextTick()
+                undoSystem.saveState('After create subtask')
+            },
+            updateSubtaskWithUndo: async (taskId: string, subtaskId: string, updates: Partial<Subtask>) => {
+                const { useTaskStore } = await import('../tasks')
+                const store = useTaskStore()
+                const undoSystem = getUndoSystem()
+                undoSystem.saveState('Before update subtask')
+                store.updateSubtask(taskId, subtaskId, updates)
+                await nextTick()
+                undoSystem.saveState('After update subtask')
+            },
+            deleteSubtaskWithUndo: async (taskId: string, subtaskId: string) => {
+                const { useTaskStore } = await import('../tasks')
+                const store = useTaskStore()
+                const undoSystem = getUndoSystem()
+                undoSystem.saveState('Before delete subtask')
+                store.deleteSubtask(taskId, subtaskId)
+                await nextTick()
+                undoSystem.saveState('After delete subtask')
+            },
+            unscheduleTaskWithUndo: async (taskId: string) => {
+                // Remove all scheduling properties
+                return undoHistory.updateTaskWithUndo(taskId, {
+                    dueDate: undefined,
+                    scheduledDate: undefined,
+                    scheduledTime: undefined
+                })
             }
         }
     }

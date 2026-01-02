@@ -851,12 +851,13 @@ const handleStorageChange = (event: StorageEvent) => {
 
 // Track local operations for conflict detection
 const trackLocalOperation = (operation: TaskOperation) => {
-  if (operation.taskId) {
-    pendingLocalOperations.value.set(operation.taskId, operation)
+  const taskId = operation.taskId
+  if (taskId) {
+    pendingLocalOperations.value.set(taskId, operation)
 
     // Auto-cleanup after 5 seconds to prevent memory leaks
     setTimeout(() => {
-      pendingLocalOperations.value.delete(operation.taskId)
+      pendingLocalOperations.value.delete(taskId)
     }, 5000)
   }
 }

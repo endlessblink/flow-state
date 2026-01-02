@@ -11,7 +11,7 @@ export function useTaskStates() {
     const tasks = ref<Task[]>([])
 
     // State for filtering
-    const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null>(null)
+    const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
     const activeStatusFilter = ref<string | null>(null)
     const activeDurationFilter = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
 
@@ -51,7 +51,7 @@ export function useTaskStates() {
         tasks,
         toRef(projectStore, 'projects'),
         toRef(projectStore, 'activeProjectId'),
-        activeSmartView,
+        activeSmartView as any,
         activeStatusFilter,
         activeDurationFilter,
         hideDoneTasks,
@@ -62,6 +62,10 @@ export function useTaskStates() {
     const isLoadingFromDatabase = ref(false)
     const manualOperationInProgress = ref(false)
     const isLoadingFilters = ref(false)
+
+    // BUG-057 FIX: Flag to prevent save watchers during sync updates
+    // When true, store mutations should NOT trigger saves back to PouchDB
+    const syncInProgress = ref(false)
 
     const currentView = ref('board')
     const selectedTaskIds = ref<string[]>([])
@@ -91,6 +95,7 @@ export function useTaskStates() {
         isLoadingFromDatabase,
         manualOperationInProgress,
         isLoadingFilters,
+        syncInProgress,
         currentView,
         selectedTaskIds
     }

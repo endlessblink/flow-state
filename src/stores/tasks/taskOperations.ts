@@ -1,5 +1,5 @@
 import { type Ref } from 'vue'
-import type { Task, Subtask, TaskInstance, Project } from '@/types/tasks'
+import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
 import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { STORAGE_FLAGS } from '@/config/database'
@@ -8,7 +8,7 @@ import {
     deleteTasks as _deleteIndividualTasksBulk
 } from '@/utils/individualTaskStorage'
 import { formatDateKey } from '@/utils/dateUtils'
-import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
 
@@ -24,7 +24,7 @@ export function useTaskOperations(
     manualOperationInProgress: Ref<boolean>,
     saveTasksToStorage: (tasks: Task[], context: string) => Promise<void>,
     persistFilters: () => void,
-    runAllTaskMigrations: () => void
+    _runAllTaskMigrations: () => void
 ) {
     const projectStore = useProjectStore()
 
@@ -93,7 +93,7 @@ export function useTaskOperations(
         }
     }
 
-    const updateTask = (taskId: string, updates: Partial<Task>) => {
+    const updateTask = async (taskId: string, updates: Partial<Task>) => {
         const index = tasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
@@ -126,6 +126,14 @@ export function useTaskOperations(
         }
 
         tasks.value[index] = { ...task, ...updates, updatedAt: new Date() }
+
+        // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
+        // Previously relied on 1-second debounced watcher which could miss quick refreshes
+        try {
+            await saveTasksToStorage(tasks.value, `updateTask-${taskId}`)
+        } catch (error) {
+            console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
+        }
     }
 
     const deleteTask = async (taskId: string) => {
@@ -138,7 +146,8 @@ export function useTaskOperations(
 
         try {
             tasks.value.splice(index, 1)
-            taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${deletedTask.title.substring(0, 30)}`)
+            const taskTitle = deletedTask?.title || 'unknown'
+            taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${taskTitle.substring(0, 30)}`)
 
             const dbInstance = (window as any).pomoFlowDb
             if (dbInstance && (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY)) {

@@ -341,8 +341,8 @@ const setupAutoAlerts = () => {
 
   // Watch for conflicts
   watch(() => reliableSync.conflicts.value, (conflicts, oldConflicts) => {
-    const newConflicts = conflicts.filter(c =>
-      !oldConflicts.some(oc => oc.documentId === c.documentId)
+    const newConflicts = conflicts.filter((c: any) =>
+      !oldConflicts.some((oc: any) => oc.documentId === c.documentId)
     )
 
     if (newConflicts.length > 0) {
@@ -367,7 +367,7 @@ const setupAutoAlerts = () => {
             type: 'secondary',
             action: () => {
               // Trigger auto-resolution
-              newConflicts.forEach(conflict => {
+              newConflicts.forEach((conflict: any) => {
                 if (conflict.autoResolvable) {
                   console.log('Auto-resolving conflict:', conflict.documentId)
                 }

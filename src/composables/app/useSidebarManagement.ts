@@ -269,7 +269,7 @@ export function useSidebarManagement() {
         title: newTaskTitle.value.trim(),
         description: '',
         status: 'planned',
-        projectId: null // ✅ FIXED: Use null instead of forbidden '1'
+        projectId: undefined // ✅ FIXED: Use undefined instead of forbidden '1'
       })
       newTaskTitle.value = ''
     }

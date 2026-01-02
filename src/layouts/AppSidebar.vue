@@ -513,7 +513,7 @@ const unestimatedCount = computed(() => taskStore.smartViewTaskCounts.unestimate
 
 // Methods
 const selectSmartView = (view: string) => {
-  taskStore.activeProjectId = null
+  taskStore.setActiveProject(null)
   taskStore.activeSmartView = view as any
 }
 

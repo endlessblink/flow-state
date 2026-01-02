@@ -51,6 +51,7 @@
         @edit="handleEditTask"
         @context-menu="handleContextMenu"
         @move-task="handleMoveTask"
+        @update-task="handleUpdateTask"
       />
     </div>
 

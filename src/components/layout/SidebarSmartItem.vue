@@ -86,7 +86,7 @@ const isDragValid = computed(() => {
   // Only accept task drops
   if (dragData.value.type === 'task' && dragData.value.taskId) {
     const targetType = props.dropType === 'date' ? 'date-target' : 'duration-target'
-    return isValidDrop(dragData.value, targetType as 'date-target' | 'duration-target')
+    return isValidDrop(dragData.value, targetType as any)
   }
 
   return false

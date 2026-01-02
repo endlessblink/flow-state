@@ -511,7 +511,7 @@ export function useCanvasRenderingOptimization(
 
       if (isVisible) {
         visibleCount++
-        lodDistribution[`level${lodLevel}`]++
+        lodDistribution[`level${lodLevel}` as keyof typeof lodDistribution]++
 
         // Schedule lazy loading if needed
         if (finalConfig.enableLazyLoading && !existingState.isLoaded) {

@@ -103,8 +103,7 @@ const isCollapsed = computed(() => {
 // TASK-068: Removed unused computed properties (autoCollectEnabled, sectionTypeIcon, sectionTypeLabel)
 // These were for UI elements that cluttered the header
 
-// Power group state and computed properties
-const showCollectMenu = ref(false)
+
 
 const powerKeyword = computed((): PowerKeywordResult | null => {
   // Get section from store to check for stored power keyword

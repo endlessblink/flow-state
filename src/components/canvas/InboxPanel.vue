@@ -199,8 +199,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { NButton, NBadge, NTag, NIcon as _NIcon } from 'naive-ui'
-import { Plus as _Plus, Zap as _Zap, Clock as _Clock, ChevronLeft, ChevronRight, Timer, CalendarDays } from 'lucide-vue-next'
+import { NButton, NBadge, NTag } from 'naive-ui'
+import { ChevronLeft, ChevronRight, Timer, CalendarDays } from 'lucide-vue-next'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
@@ -237,7 +237,6 @@ const {
 
 const newTaskTitle = ref('')
 const isCollapsed = ref(true) // Start collapsed to avoid overwhelming the user
-const _quickInputRef = ref<HTMLInputElement>()
 const selectedTaskIds = ref<Set<string>>(new Set())
 const lastSelectedTaskId = ref<string | null>(null)
 

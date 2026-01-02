@@ -71,8 +71,17 @@ export interface BackupSystemState {
 const STORAGE_KEYS = {
   HISTORY: 'pomo-flow-backup-history',
   LATEST: 'pomo-flow-latest-backup',
-  STATS: 'pomo-flow-backup-stats'
+  STATS: 'pomo-flow-backup-stats',
+  // BUG-059 FIX: Golden backup that can NEVER be overwritten by auto-backups
+  // Only updated when manually triggered OR when task count reaches new maximum
+  GOLDEN: 'pomo-flow-golden-backup',
+  // Tracks the maximum task count ever seen - used to detect data loss
+  MAX_TASK_COUNT: 'pomo-flow-max-task-count'
 } as const
+
+// BUG-059 FIX: Threshold for detecting suspicious data loss
+// If new backup has less than this % of previous max tasks, block auto-backup
+const DATA_LOSS_THRESHOLD = 0.5 // 50%
 
 const DEFAULT_CONFIG: BackupConfig = {
   enabled: true,
@@ -152,6 +161,96 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
   // ============================================================================
 
   /**
+   * BUG-059 FIX: Get the maximum task count ever recorded
+   */
+  function getMaxTaskCount(): number {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.MAX_TASK_COUNT)
+      return stored ? parseInt(stored, 10) : 0
+    } catch {
+      return 0
+    }
+  }
+
+  /**
+   * BUG-059 FIX: Update the maximum task count if current is higher
+   */
+  function updateMaxTaskCount(currentCount: number): void {
+    const maxCount = getMaxTaskCount()
+    if (currentCount > maxCount) {
+      localStorage.setItem(STORAGE_KEYS.MAX_TASK_COUNT, currentCount.toString())
+      console.log(`[Backup] 🏆 New maximum task count: ${currentCount} (was ${maxCount})`)
+    }
+  }
+
+  /**
+   * BUG-059 FIX: Get golden backup (immutable high-water mark backup)
+   */
+  function getGoldenBackup(): BackupData | null {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.GOLDEN)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * BUG-059 FIX: Save golden backup (only if task count is higher than previous)
+   */
+  function saveGoldenBackup(backup: BackupData, force: boolean = false): boolean {
+    const golden = getGoldenBackup()
+    const goldenTaskCount = golden?.metadata?.taskCount || 0
+    const newTaskCount = backup.metadata?.taskCount || 0
+
+    if (force || newTaskCount > goldenTaskCount) {
+      localStorage.setItem(STORAGE_KEYS.GOLDEN, JSON.stringify(backup))
+      console.log(`[Backup] 💛 Golden backup updated: ${newTaskCount} tasks (was ${goldenTaskCount})`)
+      return true
+    }
+    return false
+  }
+
+  /**
+   * BUG-059 FIX: Check if backup looks suspicious (potential data loss)
+   */
+  function isBackupSuspicious(taskCount: number, type: 'auto' | 'manual' | 'emergency'): { suspicious: boolean; reason: string } {
+    const maxCount = getMaxTaskCount()
+    const golden = getGoldenBackup()
+    const goldenCount = golden?.metadata?.taskCount || 0
+
+    // For manual/emergency backups, allow any state (user explicitly requested)
+    if (type !== 'auto') {
+      return { suspicious: false, reason: '' }
+    }
+
+    // If we've never seen tasks before, can't detect data loss
+    if (maxCount === 0 && goldenCount === 0) {
+      return { suspicious: false, reason: '' }
+    }
+
+    const referenceCount = Math.max(maxCount, goldenCount)
+
+    // CRITICAL: Block auto-backup if task count dropped by more than threshold
+    if (referenceCount > 5 && taskCount < referenceCount * DATA_LOSS_THRESHOLD) {
+      return {
+        suspicious: true,
+        reason: `Task count dropped from ${referenceCount} to ${taskCount} (>${(1-DATA_LOSS_THRESHOLD)*100}% loss)`
+      }
+    }
+
+    // CRITICAL: Block auto-backup if tasks went to 0 when we had tasks before
+    if (taskCount === 0 && referenceCount > 0) {
+      return {
+        suspicious: true,
+        reason: `All ${referenceCount} tasks disappeared - blocking auto-backup`
+      }
+    }
+
+    return { suspicious: false, reason: '' }
+  }
+
+  /**
    * Create a new backup
    */
   async function createBackup(type: 'auto' | 'manual' | 'emergency' = 'manual'): Promise<BackupData | null> {
@@ -182,6 +281,15 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
           console.log(`[Backup] Filtered ${filterResult.mockTasks.length} mock tasks`)
         }
         tasks = filterResult.cleanTasks as BackupTaskLike[]
+      }
+
+      // BUG-059 FIX: Check if this backup looks suspicious before saving
+      const suspiciousCheck = isBackupSuspicious(tasks.length, type)
+      if (suspiciousCheck.suspicious) {
+        console.warn(`🛡️ [Backup] BLOCKED: ${suspiciousCheck.reason}`)
+        console.warn(`🛡️ [Backup] Golden backup preserved with ${getGoldenBackup()?.metadata?.taskCount || 0} tasks`)
+        state.value.error = suspiciousCheck.reason
+        return null
       }
 
       // Get other data
@@ -221,6 +329,11 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
       // Save to localStorage
       saveToHistory(backupData)
+
+      // BUG-059 FIX: Update max task count and golden backup
+      const taskCount = backupData.metadata?.taskCount || 0
+      updateMaxTaskCount(taskCount)
+      saveGoldenBackup(backupData)
 
       // Update stats
       stats.value.lastBackupTime = backupData.timestamp
@@ -621,7 +734,22 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     getStatus,
 
     // Initialize (can be called manually if needed)
-    initialize
+    initialize,
+
+    // BUG-059 FIX: Golden backup and safety methods
+    getGoldenBackup,
+    getMaxTaskCount,
+
+    // Restore from golden backup (last known good state)
+    restoreFromGoldenBackup: async () => {
+      const golden = getGoldenBackup()
+      if (!golden) {
+        console.error('[Backup] No golden backup available')
+        return false
+      }
+      console.log(`[Backup] Restoring from golden backup: ${golden.metadata?.taskCount} tasks`)
+      return await restoreBackup(golden)
+    }
   }
 }
 

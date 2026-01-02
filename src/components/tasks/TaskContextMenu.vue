@@ -348,7 +348,7 @@
       v-if="!isBatchOperation" 
       class="menu-item" 
       :class="{ 'menu-item--compact': compactMode }" 
-      @click="$emit('moveToSection', currentTask?.id)"
+      @click="currentTask && $emit('moveToSection', currentTask.id)"
     >
       <Layout :size="16" stroke-width="1.5" class="menu-icon text-indigo-400" />
       <span v-if="!compactMode" class="menu-text">Move to Section</span>
@@ -518,7 +518,7 @@ const menuPosition = computed(() => {
   return {
     left: left + 'px',
     top: top + 'px',
-    position: 'absolute'
+    position: 'absolute' as const
   }
 })
 
@@ -633,7 +633,7 @@ const setDuration = async (duration: number | null) => {
     emit('setDuration', duration)
   } else if (currentTask.value) {
     try {
-      await taskStore.updateTaskWithUndo(currentTask.value.id, { estimatedDuration: duration })
+      await taskStore.updateTaskWithUndo(currentTask.value.id, { estimatedDuration: duration ?? undefined })
       canvasStore.requestSync()
     } catch (error) {
       console.error('❌ Error setting estimated duration:', error)

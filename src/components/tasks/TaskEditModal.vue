@@ -102,7 +102,7 @@
                 />
                 <span class="field-label">Priority</span>
                 <CustomSelect
-                  v-model="editedTask.priority"
+                  v-model="editedTask.priority as string | number"
                   :options="priorityOptions"
                   class="inline-custom-select"
                 />
@@ -366,7 +366,7 @@ const editedTask = ref<Task>({
   scheduledDate: '',
   scheduledTime: '09:00',
   estimatedDuration: 60,
-  projectId: null,
+  projectId: '' as string,
   createdAt: new Date(),
   updatedAt: new Date()
 })
@@ -495,8 +495,8 @@ const handleSectionChange = (sectionId: string | null) => {
     
     // Handle due date relative keywords
     if (settings.dueDate) {
-      const { resolveDueDate } = import('@/composables/useGroupSettings')
-      resolveDueDate(settings.dueDate).then(dateStr => {
+      import('@/composables/useGroupSettings').then(({ resolveDueDate }) => {
+        const dateStr = resolveDueDate(settings.dueDate!)
         if (dateStr) editedTask.value.dueDate = dateStr
       })
     }
@@ -659,7 +659,7 @@ const saveTask = () => {
     // Check if task already has instances
     const existingInstances = props.task ? getTaskInstances(props.task) : []
     const sameDayInstance = existingInstances.find(
-      inst => inst.scheduledDate === editedTask.value.scheduledDate
+      (inst: any) => inst.scheduledDate === editedTask.value.scheduledDate
     )
 
     if (sameDayInstance) {
@@ -687,7 +687,7 @@ const saveTask = () => {
     if (existingInstances.length > 0) {
       console.log(`🗑️ User removed schedule - removing ${existingInstances.length} instances from task "${editedTask.value.title}"`)
 
-      existingInstances.forEach(instance => {
+      existingInstances.forEach((instance: any) => {
         taskStore.deleteTaskInstanceWithUndo(editedTask.value.id, instance.id)
       })
 

@@ -1,8 +1,8 @@
 import { type Ref, type ComputedRef, ref } from 'vue'
 import { type Node } from '@vue-flow/core'
-import type { useTaskStore} from '@/stores/tasks';
+import type { useTaskStore } from '@/stores/tasks';
 import { type Task } from '@/stores/tasks'
-import type { useCanvasStore} from '@/stores/canvas';
+import type { useCanvasStore } from '@/stores/canvas';
 import { type CanvasSection } from '@/stores/canvas'
 import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
 import { resolveDueDate } from '@/composables/useGroupSettings'
@@ -270,7 +270,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         // Check if it's a section node or task node
         if (node.id.startsWith('section-')) {
             const sectionId = node.id.replace('section-', '')
-            const section = canvasStore.sections.find(s => s.id === sectionId)
+            const section: CanvasSection | undefined = canvasStore.sections.find((s: CanvasSection) => s.id === sectionId)
 
             if (section) {
                 // Clean up the stored position
@@ -370,41 +370,43 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 if (updatedSection && !updatedSection.parentGroupId) {
                     let containingParent: CanvasSection | null = null
 
-                        (canvasStore.sections as CanvasSection[]).forEach(potentialParent => {
-                            if (potentialParent.id === sectionId) return  // Skip self
-                            if (potentialParent.parentGroupId === sectionId) return  // Skip our children
+                    const sections: CanvasSection[] = canvasStore.sections || []
+                    sections.forEach((potentialParent: CanvasSection) => {
+                        if (potentialParent.id === sectionId) return  // Skip self
+                        if (potentialParent.parentGroupId === sectionId) return  // Skip our children
 
-                            const parentArea = potentialParent.position.width * potentialParent.position.height
-                            if (parentArea <= sectionArea) return  // Parent must be bigger
+                        const parentArea = potentialParent.position.width * potentialParent.position.height
+                        if (parentArea <= sectionArea) return  // Parent must be bigger
 
-                            // Check if we're fully inside this potential parent
-                            const isInside = (
-                                absoluteX >= potentialParent.position.x &&
-                                absoluteY >= potentialParent.position.y &&
-                                absoluteX + oldBounds.width <= potentialParent.position.x + potentialParent.position.width &&
-                                absoluteY + oldBounds.height <= potentialParent.position.y + potentialParent.position.height
-                            )
+                        // Check if we're fully inside this potential parent
+                        const isInside = (
+                            absoluteX >= potentialParent.position.x &&
+                            absoluteY >= potentialParent.position.y &&
+                            absoluteX + oldBounds.width <= potentialParent.position.x + potentialParent.position.width &&
+                            absoluteY + oldBounds.height <= potentialParent.position.y + potentialParent.position.height
+                        )
 
-                            if (isInside) {
-                                // Prefer smallest containing parent (most immediate)
-                                if (!containingParent || parentArea < (containingParent.position.width * containingParent.position.height)) {
-                                    containingParent = potentialParent
-                                }
+                        if (isInside) {
+                            // Prefer smallest containing parent (most immediate)
+                            if (!containingParent || parentArea < (containingParent.position.width * containingParent.position.height)) {
+                                containingParent = potentialParent
                             }
-                        })
+                        }
+                    })
 
                     if (containingParent) {
-                        console.log(`%c[TASK-072] Setting parentGroupId: "${section.name}" is now child of "${containingParent.name}"`, 'color: #FF9800; font-weight: bold')
-                        canvasStore.updateSection(sectionId, { parentGroupId: containingParent.id })
+                        const parent = containingParent as CanvasSection
+                        console.log(`%c[TASK-072] Setting parentGroupId: "${updatedSection.name}" is now child of "${parent.name}"`, 'color: #FF9800; font-weight: bold')
+                        canvasStore.updateSection(sectionId, { parentGroupId: parent.id })
 
                         // TASK-072 FIX: Directly update Vue Flow node's parentNode instead of calling syncNodes()
                         // syncNodes() rebuilds all nodes which breaks Vue Flow's automatic child positioning
                         const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
                         if (nodeIndex !== -1) {
-                            const parentNodeId = `section-${containingParent.id}`
+                            const parentNodeId = `section-${parent.id}`
                             // Convert to relative position for Vue Flow
-                            const relativeX = absoluteX - containingParent.position.x
-                            const relativeY = absoluteY - containingParent.position.y
+                            const relativeX = absoluteX - parent.position.x
+                            const relativeY = absoluteY - parent.position.y
 
                             // Calculate z-index: nested groups should render ABOVE their parents
                             // Get parent's z-index and add 1

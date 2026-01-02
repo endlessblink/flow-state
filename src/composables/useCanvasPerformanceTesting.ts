@@ -459,12 +459,17 @@ export function useCanvasPerformanceTesting(
     description: string
     suggestion: string
   }> => {
-    const issues = []
+    const issues: Array<{
+      severity: 'low' | 'medium' | 'high' | 'critical'
+      type: string
+      description: string
+      suggestion: string
+    }> = []
     const thresholds = finalConfig.thresholds
 
     if (metrics.renderTime > thresholds.maxRenderTime) {
       issues.push({
-        severity: metrics.renderTime > thresholds.maxRenderTime * 2 ? 'high' : 'medium',
+        severity: (metrics.renderTime > thresholds.maxRenderTime * 2 ? 'high' : 'medium') as 'high' | 'medium',
         type: 'render_performance',
         description: `Render time (${metrics.renderTime.toFixed(2)}ms) exceeds threshold (${thresholds.maxRenderTime}ms)`,
         suggestion: 'Consider enabling virtualization, reducing node complexity, or implementing LOD rendering'
@@ -473,7 +478,7 @@ export function useCanvasPerformanceTesting(
 
     if (metrics.fps < thresholds.minFPS) {
       issues.push({
-        severity: metrics.fps < thresholds.minFPS / 2 ? 'critical' : 'high',
+        severity: (metrics.fps < thresholds.minFPS / 2 ? 'critical' : 'high') as 'critical' | 'high',
         type: 'frame_rate',
         description: `Frame rate (${metrics.fps}) below minimum (${thresholds.minFPS})`,
         suggestion: 'Enable performance monitoring, reduce update frequency, or optimize rendering pipeline'
@@ -482,7 +487,7 @@ export function useCanvasPerformanceTesting(
 
     if (metrics.memoryUsage > thresholds.maxMemoryUsage) {
       issues.push({
-        severity: metrics.memoryUsage > thresholds.maxMemoryUsage * 1.5 ? 'critical' : 'high',
+        severity: (metrics.memoryUsage > thresholds.maxMemoryUsage * 1.5 ? 'critical' : 'high') as 'critical' | 'high',
         type: 'memory_usage',
         description: `Memory usage (${metrics.memoryUsage.toFixed(2)}MB) exceeds threshold (${thresholds.maxMemoryUsage}MB)`,
         suggestion: 'Implement memory cleanup, enable node pooling, or reduce data retention'
@@ -500,7 +505,7 @@ export function useCanvasPerformanceTesting(
 
     if (metrics.interactionDelay > thresholds.maxInteractionDelay) {
       issues.push({
-        severity: metrics.interactionDelay > thresholds.maxInteractionDelay * 2 ? 'high' : 'medium',
+        severity: (metrics.interactionDelay > thresholds.maxInteractionDelay * 2 ? 'high' : 'medium') as 'high' | 'medium',
         type: 'interaction_performance',
         description: `Interaction delay (${metrics.interactionDelay.toFixed(2)}ms) exceeds threshold (${thresholds.maxInteractionDelay}ms)`,
         suggestion: 'Optimize event handlers, implement throttling, or use requestAnimationFrame'
@@ -509,7 +514,7 @@ export function useCanvasPerformanceTesting(
 
     if (metrics.cpuUsage > thresholds.maxCPUUsage) {
       issues.push({
-        severity: metrics.cpuUsage > thresholds.maxCPUUsage * 1.2 ? 'high' : 'medium',
+        severity: (metrics.cpuUsage > thresholds.maxCPUUsage * 1.2 ? 'high' : 'medium') as 'high' | 'medium',
         type: 'cpu_usage',
         description: `CPU usage (${metrics.cpuUsage.toFixed(2)}%) exceeds threshold (${thresholds.maxCPUUsage}%)`,
         suggestion: 'Implement Web Workers, reduce synchronous operations, or optimize algorithms'
@@ -594,8 +599,8 @@ export function useCanvasPerformanceTesting(
         maxMemoryUsage,
         averageInteractionDelay,
         passed: averageRenderTime <= finalConfig.thresholds.maxRenderTime &&
-                minFPS >= finalConfig.thresholds.minFPS &&
-                maxMemoryUsage <= finalConfig.thresholds.maxMemoryUsage,
+          minFPS >= finalConfig.thresholds.minFPS &&
+          maxMemoryUsage <= finalConfig.thresholds.maxMemoryUsage,
         grade: calculatePerformanceGrade()
       },
       issues

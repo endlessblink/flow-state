@@ -247,7 +247,7 @@ const testUndoOperation = async (): Promise<boolean> => {
   })
 
   try {
-    if (!undoHistory.canUndo?.value ?? false) {
+    if (!undoHistory.canUndo?.value) {
       throw new Error('Nothing to undo - cannot test undo functionality')
     }
 
@@ -311,7 +311,7 @@ const testRedoOperation = async (): Promise<boolean> => {
   })
 
   try {
-    if (!undoHistory.canRedo.value) {
+    if (!undoHistory.canRedo?.value) {
       throw new Error('Nothing to redo - cannot test redo functionality')
     }
 

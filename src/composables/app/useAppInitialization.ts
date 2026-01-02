@@ -39,6 +39,68 @@ export function useAppInitialization() {
         console.log('✅ [APP] Stores reloaded after sync')
     })
 
+    // BUG-057 FIX: Define handler at composable level for proper cleanup
+    // BUG-061 FIX: Properly extract task data from PouchDB document format
+    const handlePouchDBChange = (event: Event) => {
+        const detail = (event as CustomEvent).detail
+        if (!detail) return
+
+        const { id, doc, deleted } = detail
+
+        // Handle task documents (task-{id})
+        if (id.startsWith('task-')) {
+            const taskId = id.replace('task-', '')
+            if (taskStore.syncInProgress) return // Skip if already processing
+
+            // BUG-061 FIX: PouchDB docs have nested format: { _id, _rev, type, data: { id, title, ... } }
+            // We need to extract the actual task data from doc.data and convert dates
+            if (deleted) {
+                taskStore.updateTaskFromSync(taskId, null, true)
+                return
+            }
+
+            // Extract task data from nested format
+            let taskData = null
+            if (doc?.data && typeof doc.data === 'object') {
+                // Standard format: { data: { id, title, updatedAt, ... } }
+                taskData = doc.data
+            } else if (doc?.id && doc?.title !== undefined) {
+                // Flat format (legacy): { id, title, updatedAt, ... }
+                taskData = doc
+            }
+
+            // Validate task has required fields
+            if (!taskData || !taskData.id) {
+                console.warn('⚠️ [SYNC] Skipping invalid task doc (no id):', id)
+                return
+            }
+
+            // Convert dates from ISO strings to Date objects
+            const normalizedTask = {
+                ...taskData,
+                createdAt: taskData.createdAt
+                    ? new Date(taskData.createdAt)
+                    : new Date(),
+                updatedAt: taskData.updatedAt
+                    ? new Date(taskData.updatedAt)
+                    : new Date()
+            }
+
+            taskStore.updateTaskFromSync(taskId, normalizedTask, false)
+        }
+
+        // Handle project documents (project-{id})
+        if (id.startsWith('project-')) {
+            // Projects don't have incremental update yet, but we can add it
+            console.log('📥 [APP] Project change:', id, deleted ? 'deleted' : 'updated')
+        }
+
+        // Handle canvas section documents (section-{id} or group-{id})
+        if (id.startsWith('section-') || id.startsWith('group-')) {
+            console.log('📥 [APP] Canvas section change:', id, deleted ? 'deleted' : 'updated')
+        }
+    }
+
     onMounted(async () => {
         // BUG-057: Run PRE-INITIALIZATION check for Firefox/Zen browser compatibility
         // This must run FIRST - before any PouchDB operations
@@ -99,15 +161,13 @@ export function useAppInitialization() {
                 console.warn('⚠️ [APP] Background sync timed out - using local data')
             }
 
-            // BUG-057 FIX: Auto-start live sync for continuous bidirectional sync
-            // This ensures changes are automatically pushed to CouchDB without manual action
+            // BUG-057 FIX: Start live sync with changes feed pattern
+            // Now uses incremental updates instead of full store reloads
             if (syncManager.remoteConnected?.value || syncManager.hasConnectedEver?.value) {
-                console.log('🔄 [APP] Starting live sync for automatic push/pull...')
+                console.log('🔄 [APP] Starting live sync with incremental updates...')
                 syncManager.startLiveSync().then(success => {
                     if (success) {
-                        console.log('✅ [APP] Live sync started - changes will sync automatically')
-                    } else {
-                        console.warn('⚠️ [APP] Live sync failed to start - manual sync may be required')
+                        console.log('✅ [APP] Live sync started')
                     }
                 }).catch(err => {
                     console.warn('⚠️ [APP] Live sync error:', err)
@@ -131,15 +191,16 @@ export function useAppInitialization() {
             await canvasStore.loadFromDatabase()
             console.log('✅ [APP] Stores force-reloaded by fallback timer')
 
-            // BUG-057 FIX: Also start live sync from fallback timer
-            // Ensures sync runs even if initial sync timed out
+            // BUG-057 FIX: Start live sync from fallback if not already running
             if (!syncManager.isLiveSyncActive() && (syncManager.remoteConnected?.value || syncManager.hasConnectedEver?.value)) {
                 console.log('🔄 [APP] Fallback: Starting live sync...')
-                syncManager.startLiveSync().catch(err => {
-                    console.warn('⚠️ [APP] Fallback live sync error:', err)
-                })
+                syncManager.startLiveSync().catch(() => {})
             }
         }, 10000)
+
+        // BUG-057 FIX: Listen for incremental PouchDB changes
+        // Handler is defined at composable level for proper cleanup
+        window.addEventListener('pouchdb-change', handlePouchDBChange)
 
         // Clean up legacy monolithic documents if in individual-only mode
         // This ensures database pruning after successful migration
@@ -189,10 +250,12 @@ export function useAppInitialization() {
         startPeriodicPruning()
     })
 
-    // BUG-054 FIX: Cleanup callback registration on unmount
+    // BUG-054/057 FIX: Cleanup on unmount
     onUnmounted(() => {
         if (unregisterDataPulledCallback) {
             unregisterDataPulledCallback()
         }
+        // BUG-057: Remove changes feed listener
+        window.removeEventListener('pouchdb-change', handlePouchDBChange)
     })
 }

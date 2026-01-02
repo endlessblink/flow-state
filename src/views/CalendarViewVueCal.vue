@@ -88,7 +88,7 @@ const vueCalEvents = computed<VueCalEvent[]>(() => {
     .filter(task => task.recurrence?.isEnabled && task.recurrence?.generatedInstances)
     .forEach(task => {
       task.recurrence?.generatedInstances
-        ?.filter(instance => !instance.isSkipped && instance.scheduledDate && instance.scheduledTime)
+        ?.filter(instance => !instance.isSkipped && instance.scheduledDate && instance.scheduledTime && instance.id)
         ?.forEach(instance => {
           const [_hour2, _minute2] = instance.scheduledTime!.split(':').map(Number)
           const start = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
@@ -96,7 +96,7 @@ const vueCalEvents = computed<VueCalEvent[]>(() => {
           const end = new Date(start.getTime() + duration * 60000)
 
           events.push({
-            id: instance.id,
+            id: instance.id!,
             start,
             end,
             title: `${task.title} 🔁`, // Add recurrence indicator

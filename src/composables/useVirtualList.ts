@@ -282,7 +282,7 @@ export const useVirtualList = <T = unknown>(
 
     // Add scroll listener
     if (typeof scrollElement === 'string') {
-      const element = document.querySelector(scrollElement) as HTMLElement
+      const element = document.querySelector(scrollElement) as unknown as HTMLElement
       if (element) {
         element.addEventListener('scroll', handleScroll, { passive: true })
       }
@@ -304,7 +304,7 @@ export const useVirtualList = <T = unknown>(
 
     // Remove scroll listener
     if (typeof scrollElement === 'string') {
-      const element = document.querySelector(scrollElement) as HTMLElement
+      const element = document.querySelector(scrollElement) as unknown as HTMLElement
       if (element) {
         element.removeEventListener('scroll', handleScroll)
       }

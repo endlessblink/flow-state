@@ -10,6 +10,7 @@ interface ActionsDeps {
     syncNodes: () => void
     closeCanvasContextMenu: () => void
     closeEdgeContextMenu: () => void
+    closeNodeContextMenu: () => void
 }
 
 interface ActionsState {
@@ -105,12 +106,18 @@ export function useCanvasActions(
         try {
             if (!title?.trim()) throw new Error('Task title is required')
 
+            // BUG FIX: When position is at default (0,0), create task in inbox instead
+            // This happens when task is created from empty state "Add Task" button
+            // Real positions from createTaskHere() are calculated from screen coords and never exactly (0,0)
+            const isDefaultPosition = state.quickTaskPosition.value.x === 0 && state.quickTaskPosition.value.y === 0
+            const shouldCreateInInbox = isDefaultPosition
+
             const newTask = await taskStore.createTaskWithUndo({
                 title,
                 description,
-                canvasPosition: { ...state.quickTaskPosition.value },
+                canvasPosition: shouldCreateInInbox ? undefined : { ...state.quickTaskPosition.value },
                 status: 'planned',
-                isInInbox: false
+                isInInbox: shouldCreateInInbox
             })
 
             deps.batchedSyncNodes('high')
@@ -122,7 +129,9 @@ export function useCanvasActions(
                 window.__notificationApi({
                     type: 'success',
                     title: 'Task Created',
-                    content: `Task "${title}" created successfully`
+                    content: shouldCreateInInbox
+                        ? `Task "${title}" added to inbox`
+                        : `Task "${title}" created on canvas`
                 })
             }
 

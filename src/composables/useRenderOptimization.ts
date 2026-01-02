@@ -225,7 +225,7 @@ export function useRenderOptimization(options: RenderOptimizationOptions = {}) {
     return () => {
       const currentDependencyValues = dependencyKeys.map(key => {
         try {
-          return (window as unknown)[key] || (globalThis as unknown)[key]
+          return (window as any)[key] || (globalThis as any)[key]
         } catch {
           return undefined
         }

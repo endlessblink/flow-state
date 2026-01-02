@@ -500,7 +500,7 @@ function cancelResolution(): void {
 
 // Get nested value from object
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((current, key) => (current as Record<string, unknown>)?.[key], obj)
+  return path.split('.').reduce((current: any, key: string) => current?.[key], obj)
 }
 
 onMounted(() => {

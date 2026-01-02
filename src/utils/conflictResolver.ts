@@ -227,30 +227,33 @@ export class ConflictResolver {
       return await this.resolveLocalWins(conflict)
     }
 
-    const localDeleted = conflict.localVersion._deleted || false
-    const remoteDeleted = conflict.remoteVersion._deleted || false
+    const localDeleted = conflict.localVersion._deleted || (conflict.localVersion.data as any)?._soft_deleted || false
+    const remoteDeleted = conflict.remoteVersion._deleted || (conflict.remoteVersion.data as any)?._soft_deleted || false
+
+    const localData = (conflict.localVersion.data || {}) as Record<string, unknown>
+    const remoteData = (conflict.remoteVersion.data || {}) as Record<string, unknown>
 
     let winner: DocumentVersion
     let winnerDevice: string
 
     // BUG-037 FIX: Deletion ALWAYS wins to prevent task resurrection
+    // Phase 14 Update: Support Soft Deletes
     if (localDeleted && !remoteDeleted) {
-      // LOCAL DELETION WINS - user deleted locally, respect that intent
-      // Remote will receive this deletion on next sync push
-      winner = { ...conflict.localVersion, data: {}, _deleted: true }
+      // LOCAL DELETION WINS
+      winner = { ...conflict.localVersion, data: { ...localData, _soft_deleted: true, deletedAt: new Date().toISOString() } }
       winnerDevice = 'local_deletion'
-      console.log(`🗑️ BUG-037: Local deletion wins for ${conflict.documentId} - task stays deleted`)
+      console.log(`🗑️ BUG-037/Phase 14: Local deletion wins for ${conflict.documentId} - task marked deleted`)
     } else if (!localDeleted && remoteDeleted) {
-      // REMOTE DELETION WINS - task was deleted on another device, propagate
-      winner = { ...conflict.remoteVersion, data: {}, _deleted: true }
+      // REMOTE DELETION WINS
+      winner = { ...conflict.remoteVersion, data: { ...remoteData, _soft_deleted: true, deletedAt: new Date().toISOString() } }
       winnerDevice = 'remote_deletion'
-      console.log(`🗑️ BUG-037: Remote deletion wins for ${conflict.documentId} - propagating deletion`)
+      console.log(`🗑️ BUG-037/Phase 14: Remote deletion wins for ${conflict.documentId} - propagating deletion`)
     } else if (!localDeleted && !remoteDeleted) {
       // Neither deleted, use last write wins
       return this.resolveLastWriteWins(conflict)
     } else {
       // Both deleted - keep deleted
-      winner = { ...conflict.localVersion, data: {}, _deleted: true }
+      winner = { ...conflict.localVersion, data: { ...localData, _soft_deleted: true, deletedAt: new Date().toISOString() } }
       winnerDevice = 'both_deleted'
     }
 

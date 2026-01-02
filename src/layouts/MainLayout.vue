@@ -125,7 +125,7 @@ defineExpose({
   min-height: 100vh;
   max-height: 100vh;
   overflow-x: hidden;
-  overflow-y: visible;
+  overflow-y: hidden;
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 

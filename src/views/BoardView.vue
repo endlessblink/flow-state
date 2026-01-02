@@ -108,6 +108,9 @@ const timerStore = useTimerStore()
 const uiStore = useUIStore()
 const db = useDatabase()
 
+// Provide progressive disclosure state for TaskCard components
+provideProgressiveDisclosure()
+
 // Density state from global UI store
 const currentDensity = computed(() => uiStore.boardDensity)
 

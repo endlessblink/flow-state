@@ -1,4 +1,4 @@
-**Last Updated**: January 2, 2026 (BUG-061 Phantom Tasks & Date Serialization Fix)
+**Last Updated**: January 2, 2026 (BUG-086 Multi-node Drag Position Persistence Fix)
 **Version**: 5.13 (Data Safety)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -408,7 +408,7 @@ Vue Flow expects **RELATIVE** positions for child nodes when `parentNode` is set
 | Firebase dependency (stubbed) | Limited auth features | Consider CouchDB auth or backend |
 | ~~`App.vue` 3.3k lines~~ | ~~Maintenance risk~~ | ~~TASK-044~~ ✅ DONE |
 | `tasks.ts` 3.5k lines | Maintenance risk | ISSUE-014 tracking |
-| `canvas.ts` 1.8k lines | Maintenance risk | [PLANNED] |
+| `canvas.ts` | 350 lines | State | ✅ **DECOMPOSED** - Phase 4 Store Serialization complete |
 | `timer.ts` 1.2k lines | Maintenance risk | [PLANNED] |
 | **Bundle Size** | 894 KB (gzip: 284 KB) | TASK-059 tracking |
 
@@ -617,6 +617,8 @@ INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration (Sections)
 | **Phase 1** | Gamification (ROAD-010) | 2-3 weeks | Sync stable |
 | **Phase 2** | AI Assistant (ROAD-011) | 3-4 weeks | Phase 1 complete |
 | **Phase 3** | Mobile PWA (ROAD-004) | 4-6 weeks | Phase 2 complete (Performance ready) |
+| **Phase 9** | CalendarView Modularization | **Jan 2** | ✅ **COMPLETE** |
+| **Phase 10**| Sync Reliability Hardening | **Jan 2** | ✅ **COMPLETE** |
 
 **Note**: Each phase is independently valuable. Can stop after any phase.
 
@@ -700,7 +702,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-054~~ | ✅ **DONE** | `src/stores/tasks.ts`, `useDemoGuard.ts`, sidebar | - | - |
 | ~~**TASK-055**~~ | ✅ **DONE** | `SyncAlertSystem.vue`, `LoginForm.vue`, `AuthModal.vue`, etc. | - | - |
 | **TASK-056** | 🔄 **IN PROGRESS** | `src/stores/tasks.ts`, `src/composables/tasks/*` | - | - |
-| TASK-057 | PLANNED | `src/stores/canvas.ts` | - | - |
+| ~~TASK-057~~ | ✅ **DONE** | `src/stores/canvas.ts` | - | - |
 | TASK-058 | PLANNED | `src/stores/timer.ts` | - | - |
 | ~~**TASK-059**~~ | ✅ **DONE** | `vite.config.ts`, `src/utils/legacyStorageCleanup.ts` | - | - |
 | ~~**TASK-060**~~ | ✅ **DONE** | `AppSidebar.vue`, `ProjectTreeItem.vue`, `projects.ts` | - | - |
@@ -763,7 +765,7 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~BUG-046~~**: Canvas inbox Today filter ignores dueDate (only checked scheduledDate) | **P1-HIGH** | ✅ FIXED (Dec 30) - Now checks dueDate + instances + scheduledDate
 - [x] **~~BUG-047~~**: Group task counter not updating in real-time when moving tasks | **P1-HIGH** | ✅ FIXED (Dec 30)
 - [x] **~~BUG-048~~**: Viewport doesn't persist user pan/zoom interactions | **P1-HIGH** | ✅ FIXED (Dec 30)
-- [ ] **BUG-049**: Inbox panel can't scroll to see all tasks | **P2-MEDIUM** | 👀 REVIEW (Dec 31) - Parent `overflow:visible` blocked child scrolling
+- [x] **~~BUG-049~~**: Inbox panel can't scroll to see all tasks | **P1-HIGH** | ✅ FIXED (Jan 2) - Fixed overflow issues in `UnifiedInboxPanel`
 - [x] **~~BUG-050~~**: Ghost preview positioning - RESOLVED BY REMOVAL | **P1-HIGH** | ✅ REMOVED (Dec 31) - Simpler: rely on Vue Flow native feedback
 - [x] **~~BUG-052~~**: Canvas view changing abruptly/glitching | **P1-HIGH** | ✅ FIXED (Dec 31) - Vue Flow now initializes with saved viewport via `initialViewport` computed prop, eliminating the (0,0,1) → saved viewport jump
 - [x] **~~BUG-053~~**: Projects/tasks disappeared from IndexedDB | **P0-CRITICAL** | ✅ RECOVERED (Dec 31) - Data restored from CouchDB; sync manager URL bug identified
@@ -772,13 +774,11 @@ Phase 3 (Mobile) ←────────────────────
   - **Issue**: Tasks jump after group resize + reload.
   - **Fix**: Applied "Inverse Delta Persistence" - correctly updates `taskStore` with new absolute positions during resize operations.
   - **Resolution**: `CanvasView.vue` now calls `taskStore.updateTask` for all child nodes.
-- [ ] **TASK-090: Decompose CanvasView Monolith** <!-- id: 24 -->
-  - [x] Phase 1: Logic Extraction (Selection, Navigation, Events)
-  - [x] Phase 2: UI Component Extraction
-  - [ ] Phase 3: Helper Function Extraction
-  - **Goal**: Finish what TASK-043 started. 4,200 lines is still too large.
-  - **Scope**: Extract `handleSectionResize`, `handleDrop`, and Vue Flow event handlers into `composables/canvas/`.
+  - [x] Phase 4: Store Serialization (canvasData, canvasUi, canvasInteraction)
+  **Goal**: Logic extraction and store decomposition complete.
+  **Scope**: Decomposed monolithic `canvas.ts` into specialized sub-stores with full parity.
 - [x] **~~TASK-085~~**: IndexedDB Corruption Prevention Safeguards | **P1-HIGH** | ✅ DONE (Jan 1) - Health check, cross-tab coordination, conflict pruning
+- [x] **~~TASK-086~~**: Refactor useReliableSyncManager into Services | **P1-HIGH** | ✅ DONE (Jan 2) - Extracted `DatabaseService` and `SyncOperationService`
 
 - [x] **~~TASK-085~~**: IndexedDB Corruption Prevention Safeguards | **P1-HIGH** | ✅ DONE (Jan 1) - Health check, cross-tab coordination, conflict pruning
 - [x] **~~BUG-057~~**: PouchDB sync infinite loop causing data loss | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added safety guards to syncDeletedTasks(), pre-initialization health check
@@ -827,6 +827,13 @@ Phase 3 (Mobile) ←────────────────────
     - Validates task has ID before adding to store
     - Defensive date conversion (ensures Date objects even if strings passed)
   - ✅ Verified: Tasks display correctly with proper titles, no phantom duplication, dates work in CanvasView hash calculations
+- [x] **~~BUG-086~~**: Multi-node drag only saves position of directly-dragged node | **P1-HIGH** | ✅ FIXED (Jan 2)
+  - **Symptoms**: When selecting multiple tasks and dragging them together, positions reset after sync/reload
+  - **Root Cause**: `handleNodeDragStop` in `useCanvasDragDrop.ts` only saved the position of the node directly under the mouse, not all selected nodes that Vue Flow moved together
+  - **Fix**: Added code to save positions for ALL selected task nodes, not just the primary dragged node
+  - **Location**: `useCanvasDragDrop.ts:578-613`
+- [/] **Phase 9**: Operation Defrag - CalendarView Modularization | **P1-HIGH** | Refactor CalendarView.vue (~3k lines)
+- [ ] **Phase 10**: Sync Reliability Hardening | **P1-HIGH** | Refactor useReliableSyncManager.ts (1.6k lines)
 - [ ] **TASK-082**: Auto-move Today tasks to Overdue at midnight (canvas only) | **P2-MEDIUM** | 👀 READY FOR TESTING - Test: `window.__simulateMidnightTransition()` in browser console
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - [x] **TASK-078**: Dev-Manager Hide Done Tasks Filter | **P2-MEDIUM** | ✅ DONE (Dec 30)

@@ -1,3 +1,4 @@
+import { transactionManager } from '@/services/sync/TransactionManager'
 import { type Ref } from 'vue'
 import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
@@ -37,7 +38,11 @@ export function useTaskOperations(
         const taskId = Date.now().toString()
         manualOperationInProgress.value = true
 
+        let txId: string | null = null
         try {
+            // WAL Logic
+            txId = await transactionManager.beginTransaction('create', 'tasks', { ...taskData, id: taskId })
+
             const instances: TaskInstance[] = []
             if (taskData.scheduledDate && taskData.scheduledTime) {
                 const now = new Date()
@@ -83,8 +88,13 @@ export function useTaskOperations(
 
             tasks.value.push(newTask)
             await saveTasksToStorage(tasks.value, `createTask-${newTask.id}`)
+
+            // Commit WAL
+            if (txId) await transactionManager.commit(txId)
+
             return newTask
         } catch (error) {
+            if (txId) await transactionManager.rollback(txId, error)
             const index = tasks.value.findIndex(t => t.id === taskId)
             if (index !== -1) tasks.value.splice(index, 1)
             throw error
@@ -98,6 +108,14 @@ export function useTaskOperations(
         if (index === -1) return
 
         const task = tasks.value[index]
+
+        // WAL Logic
+        let txId: string | null = null
+        try {
+            txId = await transactionManager.beginTransaction('update', 'tasks', { taskId, updates })
+        } catch (e) {
+            console.warn('WAL Write failed during update, proceeding anyway', e)
+        }
 
         // BUG-045 FIX: Removed auto-archive behavior
         // Tasks now stay on canvas when marked as done (no position/inbox changes)
@@ -131,7 +149,9 @@ export function useTaskOperations(
         // Previously relied on 1-second debounced watcher which could miss quick refreshes
         try {
             await saveTasksToStorage(tasks.value, `updateTask-${taskId}`)
+            if (txId) await transactionManager.commit(txId)
         } catch (error) {
+            if (txId) await transactionManager.rollback(txId, error)
             console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
         }
     }
@@ -144,7 +164,10 @@ export function useTaskOperations(
         taskDisappearanceLogger.markUserDeletion(taskId)
         manualOperationInProgress.value = true
 
+        let txId: string | null = null
         try {
+            txId = await transactionManager.beginTransaction('delete', 'tasks', { taskId })
+
             tasks.value.splice(index, 1)
             const taskTitle = deletedTask?.title || 'unknown'
             taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${taskTitle.substring(0, 30)}`)
@@ -165,7 +188,9 @@ export function useTaskOperations(
             }
 
             await saveTasksToStorage(tasks.value, `deleteTask-${taskId}`)
+            if (txId) await transactionManager.commit(txId)
         } catch (error) {
+            if (txId) await transactionManager.rollback(txId, error)
             tasks.value.splice(index, 0, deletedTask)
             throw error
         } finally {
@@ -177,7 +202,10 @@ export function useTaskOperations(
         if (!taskIds.length) return
         manualOperationInProgress.value = true
 
+        let txId: string | null = null
         try {
+            txId = await transactionManager.beginTransaction('bulk_update', 'tasks', { type: 'bulk_delete', taskIds })
+
             const tasksToKeep = tasks.value.filter(t => !taskIds.includes(t.id))
             taskDisappearanceLogger.takeSnapshot(tasksToKeep, `bulkDelete-${taskIds.length} tasks`)
             tasks.value = tasksToKeep
@@ -202,6 +230,13 @@ export function useTaskOperations(
             }
 
             await saveTasksToStorage(tasks.value, `bulkDelete-${taskIds.length} tasks`)
+            if (txId) await transactionManager.commit(txId)
+        } catch (error) {
+            if (txId) await transactionManager.rollback(txId, error)
+            // Note: In bulk delete, we don't easily restore state here if internal array mutation happened but save failed.
+            // Ideally we should mutate state AFTER external saves, but that breaks optimistic UI.
+            // For now, we accept UI might be out of sync if save fails, but we don't crash.
+            throw error
         } finally {
             manualOperationInProgress.value = false
         }

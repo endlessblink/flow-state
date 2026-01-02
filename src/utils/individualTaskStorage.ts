@@ -25,7 +25,9 @@ interface LegacyTasksDocument extends PouchDB.Core.IdMeta, PouchDB.Core.GetMeta 
 interface DeletedDocument {
   _id: string
   _rev: string
-  _deleted: true
+  _deleted?: boolean
+  type?: string
+  data?: Record<string, unknown>
 }
 
 // Helper type for window with database
@@ -270,7 +272,8 @@ export const saveTasks = async (
 export const deleteTask = async (
   db: PouchDB.Database,
   taskId: string,
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  hardDelete: boolean = false
 ): Promise<PouchDB.Core.Response | null> => {
   const docId = getTaskDocId(taskId)
   let retryCount = 0
@@ -279,7 +282,21 @@ export const deleteTask = async (
     try {
       const validDb = await getDbWithRetry(db)
       const doc = await validDb.get(docId)
-      return await validDb.remove(doc)
+
+      if (hardDelete) {
+        return await validDb.remove(doc)
+      } else {
+        // Soft Delete: Mark as deleted but keep data
+        const taskData = (doc as any).data || {}
+        return await validDb.put({
+          ...doc,
+          data: {
+            ...taskData,
+            _soft_deleted: true,
+            deletedAt: new Date().toISOString()
+          }
+        })
+      }
     } catch (error) {
       const pouchError = error as { status?: number }
       if (pouchError.status === 404) {
@@ -340,6 +357,11 @@ export const loadAllTasks = async (
           }
 
           if (taskData && taskData.id) {
+            // Soft Delete Filter
+            if (taskData._soft_deleted) {
+              continue
+            }
+
             tasks.push({
               ...taskData,
               createdAt: new Date(taskData.createdAt as string || Date.now()),
@@ -468,7 +490,8 @@ export const migrateFromLegacyFormat = async (
  */
 export const deleteTasks = async (
   db: PouchDB.Database,
-  taskIds: string[]
+  taskIds: string[],
+  hardDelete: boolean = false
 ): Promise<void> => {
   if (!taskIds.length) return
 
@@ -478,17 +501,31 @@ export const deleteTasks = async (
   try {
     const result = await db.allDocs({
       keys,
-      include_docs: false
+      include_docs: true // Need docs for soft delete (to preserve other fields)
     })
 
     // 2. Prepare deletion docs
     const docsToDelete = result.rows
-      .filter((row): row is PouchDB.Core.AllDocsResponse<Record<string, any>>['rows'][0] & { value: { rev: string } } => !('error' in row) && !!row.value)
-      .map(row => ({
-        _id: row.id,
-        _rev: row.value.rev,
-        _deleted: true
-      }))
+      .filter((row): row is PouchDB.Core.AllDocsResponse<Record<string, any>>['rows'][0] & { doc: NonNullable<PouchDB.Core.ExistingDocument<any>> } => !('error' in row) && !!row.doc)
+      .map(row => {
+        if (hardDelete) {
+          return {
+            _id: row.id,
+            _rev: row.value.rev,
+            _deleted: true
+          }
+        } else {
+          const taskData = (row.doc as any).data || {}
+          return {
+            ...row.doc,
+            data: {
+              ...taskData,
+              _soft_deleted: true,
+              deletedAt: new Date().toISOString()
+            }
+          }
+        }
+      })
 
     if (docsToDelete.length > 0) {
       await db.bulkDocs(docsToDelete)
@@ -534,11 +571,22 @@ export const syncDeletedTasks = async (
       continue
     }
     if (!currentTaskIds.has(taskId) && row.doc) {
+      const taskData = (row.doc as any).data || {}
+
+      // If already soft deleted, ignore (it's safe in trash)
+      if (taskData._soft_deleted) {
+        continue
+      }
+
+      // Otherwise, soft delete it
       docsToDelete.push({
-        _id: row.id,
-        _rev: row.doc._rev,
-        _deleted: true
-      })
+        ...row.doc,
+        data: {
+          ...taskData,
+          _soft_deleted: true,
+          deletedAt: new Date().toISOString()
+        }
+      } as any)
       deletedCount++
     }
   }

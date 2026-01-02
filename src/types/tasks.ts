@@ -100,6 +100,9 @@ export interface Task {
   notificationPreferences?: NotificationPreferences // Notification settings for this task
   recurringInstances?: RecurringTaskInstance[] // Generated recurring task instances (for backwards compatibility)
   instances?: TaskInstance[] // Calendar instances for scheduled tasks
+  // Soft Delete Support (Phase 14)
+  _soft_deleted?: boolean
+  deletedAt?: Date | string
 }
 
 export interface Project {

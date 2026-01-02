@@ -1,5 +1,17 @@
 <template>
   <div class="calendar-layout">
+    <!-- Status Overlays -->
+    <CalendarStatusOverlays
+      :system-healthy="systemHealthy"
+      :system-health-message="systemHealthMessage"
+      :operation-error="operationError"
+      :operation-loading="operationLoading"
+      @validate-stores="handleValidateStores"
+      @retry-failed-operation="handleRetryFailedOperation"
+      @clear-operation-error="handleClearOperationError"
+      @reload-page="handleReloadPage"
+    />
+
     <!-- Unified Inbox Panel -->
     <Transition name="sidebar-slide">
       <UnifiedInboxPanel v-show="uiStore.secondarySidebarVisible" context="calendar" />
@@ -48,482 +60,114 @@
     <!-- Calendar Main Area -->
     <div class="calendar-main">
       <!-- Calendar Header -->
-      <div class="calendar-header">
-        <div class="date-navigation">
-          <button class="nav-btn" title="Previous Day" @click="previousDay">
-            <ChevronLeft :size="16" :stroke-width="1.5" />
-          </button>
-          <h2 class="current-date">
-            {{ formatCurrentDate }}
-          </h2>
-          <button class="nav-btn" title="Next Day" @click="nextDay">
-            <ChevronRight :size="16" :stroke-width="1.5" />
-          </button>
-        </div>
-        <div class="header-actions">
-          <button class="today-btn" @click="goToToday">
-            <Calendar :size="16" :stroke-width="1.5" />
-            Today
-          </button>
+      <CalendarHeader
+        :format-current-date="formatCurrentDate"
+        :hide-calendar-done-tasks="hideCalendarDoneTasks"
+        :view-mode="viewMode"
+        @previous-day="previousDay"
+        @next-day="nextDay"
+        @go-to-today="goToToday"
+        @toggle-done-tasks="taskStore.toggleCalendarDoneTasks()"
+        @update:view-mode="viewMode = $event"
+      />
 
-          <!-- Project Filter -->
-          <ProjectFilterDropdown />
-
-          <!-- Hide Done Tasks Toggle (TASK-076) -->
-          <button
-            class="hide-done-toggle"
-            :class="{ active: hideCalendarDoneTasks }"
-            :title="hideCalendarDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-            @click="taskStore.toggleCalendarDoneTasks()"
-          >
-            <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
-            <Eye v-else :size="16" :stroke-width="1.5" />
-            <span>{{ hideCalendarDoneTasks ? 'Hidden' : 'Done' }}</span>
-          </button>
-
-          <div class="view-selector">
-            <button
-              class="view-btn"
-              :class="{ active: viewMode === 'day' }"
-              @click="viewMode = 'day'"
-            >
-              Day
-            </button>
-            <button
-              class="view-btn"
-              :class="{ active: viewMode === 'week' }"
-              @click="viewMode = 'week'"
-            >
-              Week
-            </button>
-            <button
-              class="view-btn"
-              :class="{ active: viewMode === 'month' }"
-              @click="viewMode = 'month'"
-            >
-              Month
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Calendar Grid - Day View (SLOT-BASED: tasks rendered INSIDE slots) -->
-      <div v-if="viewMode === 'day'" class="calendar-grid">
-        <div class="time-labels">
-          <div
-            v-for="hour in hours"
-            :key="hour"
-            class="time-label"
-          >
-            {{ formatHour(hour) }}
-          </div>
-        </div>
-
-        <!-- Slots Container - Tasks render INSIDE slots (no absolute positioning) -->
-        <div ref="timeGridRef" class="slots-container">
-          <!-- Current Time Indicator (only shown when viewing today in day view) -->
-          <div
-            v-if="isViewingToday && viewMode === 'day'"
-            class="current-time-indicator"
-            :style="{ top: `${timeIndicatorPosition}px` }"
-          >
-            <div class="time-indicator-dot" />
-            <div class="time-indicator-line" />
-          </div>
-
-          <!-- Ghost Preview (only shown during inbox drag) - absolute positioning for smooth tracking -->
-          <div
-            v-if="dragGhost.visible"
-            class="ghost-preview-inline"
-            :style="{
-              position: 'absolute',
-              top: `${dragGhost.slotIndex * 30}px`,
-              height: `${Math.ceil(dragGhost.duration / 30) * 30}px`,
-              left: '4px',
-              right: '4px',
-              zIndex: 50
-            }"
-          >
-            <div class="ghost-content">
-              <div class="ghost-title">
-                {{ dragGhost.title }}
-              </div>
-              <div class="ghost-duration">
-                {{ dragGhost.duration }}min
-              </div>
-            </div>
-          </div>
-
-          <!-- Time Slots with tasks rendered inside -->
-          <div
-            v-for="slot in timeSlots"
-            :key="slot.id"
-            class="time-slot"
-            :class="{
-              'creating': dragCreate.isSlotInCreateRange(slot),
-              'drag-over': activeDropSlot === slot.slotIndex,
-              'current-time': isCurrentTimeSlot(slot)
-            }"
-            :data-slot-index="slot.slotIndex"
-            :data-slot-date="slot.date"
-            :data-hour="slot.hour"
-            :data-minute="slot.minute"
-            :data-time="formatSlotTime(slot)"
-            @dragover.prevent="onDragOver($event, slot)"
-            @dragenter.prevent="onDragEnter($event, slot)"
-            @dragleave="onDragLeave"
-            @drop.prevent="onDropSlot($event, slot)"
-            @mousedown="dragCreate.handleSlotMouseDown($event, slot)"
-          >
-            <!-- Tasks rendered INSIDE the slot - ONLY PRIMARY SLOTS (no continuation artifacts) -->
-            <template v-for="calEvent in getTasksForSlot(slot)" :key="`${calEvent.id}-${slot.slotIndex}`">
-              <div
-                v-if="isTaskPrimarySlot(slot, calEvent)"
-                class="slot-task is-primary"
-                :class="{
-                  'timer-active-event': timerStore.currentTaskId === calEvent.taskId,
-                  'dragging': isDragging && draggedEventId === calEvent.id,
-                  'is-hovered': hoveredEventId === calEvent.id,
-                  'has-overlap': calEvent.totalColumns > 1
-                }"
-                :style="getSlotTaskStyle(calEvent)"
-                :data-duration="calEvent.duration"
-                :data-task-id="calEvent.taskId"
-                draggable="true"
-                @mouseenter="handleSlotTaskMouseEnter(calEvent.id)"
-                @mouseleave="handleSlotTaskMouseLeave()"
-                @dragstart="handleEventDragStart($event, calEvent)"
-                @dragend="handleEventDragEnd($event, calEvent)"
-                @click="handleEventClick($event, calEvent)"
-                @dblclick="handleEventDblClick(calEvent)"
-                @contextmenu.prevent="handleEventContextMenu($event, calEvent)"
-              >
-                <!-- Project Stripe -->
-                <div
-                  v-if="getProjectVisual(calEvent).type === 'emoji'"
-                  class="project-stripe project-emoji-stripe"
-                  :title="`Project: ${getProjectName(calEvent)}`"
-                >
-                  <ProjectEmojiIcon
-                    :emoji="getProjectVisual(calEvent).content"
-                    size="xs"
-                    :title="`Project: ${getProjectName(calEvent)}`"
-                    class="project-emoji"
-                  />
-                </div>
-                <div
-                  v-else
-                  class="project-stripe project-color-stripe"
-                  :style="{ backgroundColor: getProjectColor(calEvent) }"
-                  :title="`Project: ${getProjectName(calEvent)}`"
-                />
-
-                <!-- Priority Stripe -->
-                <div
-                  class="priority-stripe"
-                  :class="`priority-${getPriorityClass(calEvent)}`"
-                  :title="`Priority: ${getPriorityLabel(calEvent)}`"
-                />
-
-                <!-- Task Content -->
-                <div class="task-content">
-                  <div class="task-header">
-                    <div class="task-title">
-                      {{ calEvent.title }}
-                    </div>
-                    <div class="task-actions">
-                      <div
-                        class="status-indicator"
-                        :class="`status-${getTaskStatus(calEvent)}`"
-                        :title="`Status: ${getStatusLabel(calEvent)} (click to change)`"
-                        @click.stop="cycleTaskStatus($event, calEvent)"
-                      >
-                        {{ getStatusIcon(getTaskStatus(calEvent)) }}
-                      </div>
-                      <button
-                        class="remove-from-calendar-btn"
-                        title="Remove from calendar (move to inbox)"
-                        @click.stop="handleRemoveFromCalendar(calEvent)"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                  <div class="task-duration">
-                    {{ calEvent.duration }}min
-                  </div>
-                </div>
-
-                <!-- Resize Handle (top for changing start time) -->
-                <div
-                  class="resize-handle resize-top"
-                  title="Drag to change start time"
-                  @mousedown.stop="startResize($event, calEvent, 'top')"
-                />
-
-                <!-- Resize Handle (bottom for changing duration) -->
-                <div
-                  class="resize-handle resize-bottom"
-                  title="Drag to change duration"
-                  @mousedown.stop="startResize($event, calEvent, 'bottom')"
-                />
-
-                <!-- Resize Preview Overlay - shows projected size during drag -->
-                <div
-                  v-if="resizePreview?.isResizing && resizePreview.taskId === calEvent.taskId"
-                  class="resize-preview-overlay"
-                  :style="{
-                    height: `${Math.ceil(resizePreview.previewDuration / 30) * 30}px`,
-                    top: resizePreview.direction === 'top' ? 'auto' : '0',
-                    bottom: resizePreview.direction === 'top' ? '0' : 'auto'
-                  }"
-                >
-                  <span class="preview-duration">{{ resizePreview.previewDuration }}min</span>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
+      <!-- Calendar Grid - Day View -->
+      <CalendarDayView
+        v-if="viewMode === 'day'"
+        :time-slots="timeSlots"
+        :hours="hours"
+        :is-viewing-today="isViewingToday"
+        :time-indicator-position="timeIndicatorPosition"
+        :drag-ghost="dragGhost"
+        :active-drop-slot="activeDropSlot"
+        :current-task-id="timerStore.currentTaskId"
+        :is-dragging="isDragging"
+        :dragged-event-id="draggedEventId"
+        :hovered-event-id="hoveredEventId"
+        :resize-preview="resizePreview"
+        :format-hour="formatHour"
+        :is-current-time-slot="isCurrentTimeSlot"
+        :format-slot-time="formatSlotTime"
+        :get-tasks-for-slot="getTasksForSlot"
+        :is-task-primary-slot="isTaskPrimarySlot"
+        :get-slot-task-style="getSlotTaskStyle"
+        :get-project-visual="getProjectVisual"
+        :get-project-name="getProjectName"
+        :get-project-color="getProjectColor"
+        :get-priority-class="getPriorityClass"
+        :get-priority-label="getPriorityLabel"
+        :get-task-status="getTaskStatus"
+        :get-status-label="getStatusLabel"
+        :get-status-icon="getStatusIcon"
+        @dragover="onDragOver"
+        @dragenter="onDragEnter"
+        @dragleave="onDragLeave"
+        @drop="onDropSlot"
+        @slot-mouse-down="dragCreate.handleSlotMouseDown"
+        @event-mouse-enter="handleSlotTaskMouseEnter"
+        @event-mouse-leave="handleSlotTaskMouseLeave"
+        @event-drag-start="handleEventDragStart"
+        @event-drag-end="handleEventDragEnd"
+        @event-click="handleEventClick"
+        @event-dbl-click="handleEventDblClick"
+        @event-context-menu="handleEventContextMenu"
+        @cycle-status="cycleTaskStatus"
+        @remove-from-calendar="handleRemoveFromCalendar"
+        @start-resize="startResize"
+      />
 
       <!-- Week View -->
-      <div v-else-if="viewMode === 'week'" class="week-view">
-        <!-- Week Header -->
-        <div class="week-header">
-          <div class="week-time-label" />
-          <div
-            v-for="(day, index) in weekDays"
-            :key="index"
-            class="week-day-header"
-          >
-            <div class="week-day-name">
-              {{ day.dayName }}
-            </div>
-            <div class="week-day-date">
-              {{ day.date }}
-            </div>
-          </div>
-        </div>
-
-        <!-- Week Grid Container -->
-        <div class="week-grid-container">
-          <!-- Time Labels -->
-          <div class="week-time-labels">
-            <div
-              v-for="hour in workingHours"
-              :key="hour"
-              class="week-time-label"
-            >
-              {{ formatHour(hour) }}
-            </div>
-          </div>
-
-          <!-- Week Days Grid -->
-          <div class="week-days-grid">
-            <!-- Time Grid Background with drop zones -->
-            <div class="week-time-grid">
-              <div
-                v-for="(day, dayIndex) in weekDays"
-                :key="`col-${dayIndex}`"
-                class="week-day-column"
-              >
-                <div
-                  v-for="(hour, hourIndex) in workingHours"
-                  :key="`${dayIndex}-${hour}`"
-                  class="week-time-cell"
-                  @drop="handleWeekDrop($event, day.dateString, hour)"
-                  @dragover.prevent="handleWeekDragOver"
-                  @dragenter.prevent
-                />
-              </div>
-            </div>
-
-            <!-- Events Layer -->
-            <div class="week-events-layer">
-              <div
-                v-for="event in weekEvents"
-                :key="event.id"
-                class="week-event"
-                :data-duration="event.duration"
-                :style="getWeekEventStyle(event)"
-                :class="{
-                  'multi-slot': event.slotSpan > 1,
-                  'timer-active-event': timerStore.currentTaskId === event.taskId
-                }"
-                draggable="true"
-                @dragstart="handleEventDragStart($event, event)"
-                @dragend="handleEventDragEnd($event, event)"
-                @click="handleEventClick($event, event)"
-              >
-                <!-- Top Resize Handle -->
-                <div
-                  class="resize-handle resize-top"
-                  title="Resize start time"
-                  @mousedown.stop="startWeekResize($event, event, 'top')"
-                />
-
-                <!-- Project Stripe -->
-                <div
-                  v-if="getProjectVisual(event).type === 'emoji'"
-                  class="project-stripe project-emoji-stripe"
-                  :title="`Project: ${getProjectName(event)}`"
-                >
-                  <ProjectEmojiIcon
-                    :emoji="getProjectVisual(event).content"
-                    size="xs"
-                    :title="`Project: ${getProjectName(event)}`"
-                    class="project-emoji"
-                  />
-                </div>
-                <div
-                  v-else
-                  class="project-stripe project-color-stripe"
-                  :style="{ backgroundColor: getProjectColor(event) }"
-                  :title="`Project: ${getProjectName(event)}`"
-                />
-
-                <!-- Priority Stripe -->
-                <div
-                  class="priority-stripe"
-                  :class="`priority-${getPriorityClass(event)}`"
-                  :title="`Priority: ${getPriorityLabel(event)}`"
-                />
-
-                <!-- Event Content -->
-                <div
-                  class="event-content"
-                  @dblclick="handleEventDblClick(event)"
-                  @contextmenu.prevent="handleEventContextMenu($event, event)"
-                >
-                  <div class="event-header">
-                    <div class="event-title">
-                      {{ event.title }}
-                    </div>
-                    <div class="event-actions">
-                      <div
-                        class="status-indicator"
-                        :class="`status-${getTaskStatus(event)}`"
-                        :title="`Status: ${getStatusLabel(event)} (click to change)`"
-                        @click.stop="cycleTaskStatus($event, event)"
-                      >
-                        {{ getStatusIcon(getTaskStatus(event)) }}
-                      </div>
-                      <button
-                        class="remove-from-calendar-btn"
-                        title="Remove from calendar (move to inbox)"
-                        @click.stop="handleRemoveFromCalendar(event)"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                  <div class="event-duration">
-                    {{ event.duration }}min
-                  </div>
-                </div>
-
-                <!-- Bottom Resize Handle -->
-                <div
-                  class="resize-handle resize-bottom"
-                  title="Resize end time"
-                  @mousedown.stop="startWeekResize($event, event, 'bottom')"
-                />
-              </div>
-            </div>
-
-            <!-- Current Time Indicator Layer (Above Events) -->
-            <div class="week-current-time-layer">
-              <div
-                v-for="(day, dayIndex) in weekDays"
-                :key="`time-${dayIndex}`"
-                class="week-day-time-column"
-              >
-                <div
-                  v-for="hour in workingHours"
-                  :key="`time-${dayIndex}-${hour}`"
-                  class="week-time-indicator"
-                  :class="{ 'current-time': isCurrentWeekTimeCell(day.dateString, hour) }"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CalendarWeekView
+        v-else-if="viewMode === 'week'"
+        :week-days="weekDays"
+        :working-hours="workingHours"
+        :week-events="weekEvents"
+        :current-task-id="timerStore.currentTaskId"
+        :format-hour="formatHour"
+        :get-week-event-style="getWeekEventStyle"
+        :is-current-week-time-cell="isCurrentWeekTimeCell"
+        :get-project-visual="getProjectVisual"
+        :get-project-name="getProjectName"
+        :get-project-color="getProjectColor"
+        :get-priority-class="getPriorityClass"
+        :get-priority-label="getPriorityLabel"
+        :get-task-status="getTaskStatus"
+        :get-status-label="getStatusLabel"
+        :get-status-icon="getStatusIcon"
+        @week-drag-over="handleWeekDragOver"
+        @week-drop="handleWeekDrop"
+        @event-drag-start="handleEventDragStart"
+        @event-drag-end="handleEventDragEnd"
+        @event-click="handleEventClick"
+        @event-dbl-click="handleEventDblClick"
+        @event-context-menu="handleEventContextMenu"
+        @cycle-status="cycleTaskStatus"
+        @remove-from-calendar="handleRemoveFromCalendar"
+        @start-resize="startWeekResize"
+      />
 
       <!-- Month View -->
-      <div v-else-if="viewMode === 'month'" class="month-view">
-        <!-- Month Grid -->
-        <div class="month-grid">
-          <div
-            v-for="day in monthDays"
-            :key="day.dateString"
-            class="month-day-cell"
-            :class="{
-              'other-month': !day.isCurrentMonth,
-              'today': day.isToday
-            }"
-            @drop="handleMonthDrop($event, day.dateString)"
-            @dragover.prevent
-            @dragenter.prevent
-            @click="handleMonthDayClick(day.dateString)"
-          >
-            <div class="day-number">
-              {{ day.dayNumber }}
-            </div>
-
-            <div class="day-events">
-              <div
-                v-for="event in day.events"
-                :key="event.id"
-                class="month-event"
-                :class="{ 'timer-active-event': timerStore.currentTaskId === event.taskId }"
-                :style="{ backgroundColor: event.color }"
-                draggable="true"
-                @dragstart="handleMonthDragStart($event, event)"
-                @dragend="handleMonthDragEnd($event)"
-                @dblclick.stop="handleEventDblClick(event)"
-                @contextmenu.prevent.stop="handleEventContextMenu($event, event)"
-                @click.stop
-              >
-                <!-- Project Stripe -->
-                <div
-                  v-if="getProjectVisual(event).type === 'emoji'"
-                  class="project-indicator project-emoji-indicator"
-                  :title="`Project: ${getProjectName(event)}`"
-                >
-                  <ProjectEmojiIcon
-                    :emoji="getProjectVisual(event).content"
-                    size="xs"
-                    :title="`Project: ${getProjectName(event)}`"
-                    class="project-emoji"
-                  />
-                </div>
-                <div
-                  v-else
-                  class="project-indicator project-color-indicator"
-                  :style="{ backgroundColor: getProjectColor(event) }"
-                  :title="`Project: ${getProjectName(event)}`"
-                />
-
-                <!-- Priority Stripe -->
-                <div
-                  class="priority-stripe"
-                  :class="`priority-${getPriorityClass(event)}`"
-                  :title="`Priority: ${getPriorityLabel(event)}`"
-                />
-                <span class="event-time">{{ formatEventTime(event) }}</span>
-                <span 
-                  class="event-title-short"
-                  :title="`Status: ${getStatusLabel(event)} (click to change)`"
-                  @click.stop="cycleTaskStatus($event, event)"
-                >
-                  {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CalendarMonthView
+        v-else-if="viewMode === 'month'"
+        :month-days="monthDays"
+        :current-task-id="timerStore.currentTaskId"
+        :get-project-visual="getProjectVisual"
+        :get-project-name="getProjectName"
+        :get-project-color="getProjectColor"
+        :get-priority-class="getPriorityClass"
+        :get-priority-label="getPriorityLabel"
+        :get-task-status="getTaskStatus"
+        :get-status-label="getStatusLabel"
+        :get-status-icon="getStatusIcon"
+        :format-event-time="formatEventTime"
+        @month-drop="handleMonthDrop"
+        @month-day-click="handleMonthDayClick"
+        @event-drag-start="handleMonthDragStart"
+        @event-drag-end="handleMonthDragEnd"
+        @event-dbl-click="handleEventDblClick"
+        @event-context-menu="handleEventContextMenu"
+        @cycle-status="cycleTaskStatus"
+      />
     </div>
   </div>
 </template>
@@ -539,8 +183,16 @@ import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
+import { useCalendarInteractionHandlers } from '@/composables/calendar/useCalendarInteractionHandlers'
+import { useCalendarModals } from '@/composables/calendar/useCalendarModals'
+import { useCalendarNavigation } from '@/composables/calendar/useCalendarNavigation'
 import { useCalendarScroll } from '@/composables/calendar/useCalendarScroll'
 import UnifiedInboxPanel from '@/components/inbox/UnifiedInboxPanel.vue'
+import CalendarStatusOverlays, { type OperationError, type OperationLoading } from '@/components/calendar/CalendarStatusOverlays.vue'
+import CalendarHeader from '@/components/calendar/CalendarHeader.vue'
+import CalendarDayView from '@/components/calendar/CalendarDayView.vue'
+import CalendarWeekView from '@/components/calendar/CalendarWeekView.vue'
+import CalendarMonthView from '@/components/calendar/CalendarMonthView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
@@ -562,13 +214,66 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
 
+// System Health & Status Overlays
+const operationLoading = ref<OperationLoading>({ loading: false, syncing: false })
+const operationError = ref<OperationError | null>(null)
+// Basic system health check - ensure stores are initialized
+const systemHealthy = computed(() => !!taskStore && !!timerStore && !!uiStore)
+const systemHealthMessage = computed(() => !systemHealthy.value ? 'Critical stores failed to initialize' : '')
+
+const handleValidateStores = () => {
+  console.log('Validating stores...', {
+    taskStore: !!taskStore,
+    timerStore: !!timerStore,
+    uiStore: !!uiStore
+  })
+}
+
+const handleRetryFailedOperation = () => {
+  if (operationError.value?.retryable) {
+    operationError.value = null
+    // Simple retry strategy: reload page for system-level errors
+    window.location.reload()
+  }
+}
+
+const handleClearOperationError = () => {
+  operationError.value = null
+}
+
+const handleReloadPage = () => {
+  window.location.reload()
+}
+
 // Extract reactive refs from store
 // TASK-076: Use calendar-specific done filter
 const { hideCalendarDoneTasks } = storeToRefs(taskStore)
 
+// Navigation (Extracted)
+const {
+  currentDate,
+  viewMode,
+  isViewingToday,
+  formatCurrentDate,
+  previousDay,
+  nextDay,
+  goToToday
+} = useCalendarNavigation()
+
+// Modals (Extracted)
+const {
+  isEditModalOpen,
+  selectedTask,
+  showConfirmModal,
+  taskToDelete,
+  handleEditTask,
+  closeEditModal,
+  handleConfirmDelete,
+  confirmDeleteTask,
+  cancelDeleteTask
+} = useCalendarModals()
+
 // View state
-const currentDate = ref(new Date())
-const viewMode = ref<'day' | 'week' | 'month'>('day')
 // Use global status filter directly from store (maintains reactivity)
 const statusFilter = computed(() => taskStore.activeStatusFilter)
 const timeGridRef = ref<HTMLElement | null>(null)
@@ -596,33 +301,7 @@ const monthView = useCalendarMonthView(currentDate, statusFilter)
 const currentTime = ref(new Date())
 let timeUpdateInterval: NodeJS.Timeout | null = null
 
-// Task Edit Modal state
-const isEditModalOpen = ref(false)
-const selectedTask = ref<Task | null>(null)
-
-// Context menu state
-const showContextMenu = ref(false)
-const contextMenuX = ref(0)
-const contextMenuY = ref(0)
-const contextMenuTask = ref<Task | null>(null)
-
-// Delete confirmation modal state
-const showConfirmModal = ref(false)
-const taskToDelete = ref<string | null>(null)
-
-// Calendar event selection state for keyboard operations - now supports multi-select
-const selectedCalendarEvents = ref<CalendarEvent[]>([])
-
-// Hover state for slot tasks - used to show resize handles (draggable elements have inconsistent :hover)
-const hoveredEventId = ref<string | null>(null)
-
-// Methods for hover tracking (inline handlers don't work reliably with draggable elements)
-const handleSlotTaskMouseEnter = (eventId: string) => {
-  hoveredEventId.value = eventId
-}
-const handleSlotTaskMouseLeave = () => {
-  hoveredEventId.value = null
-}
+// Hover state tracking (Moved to useCalendarInteractionHandlers)
 
 // Destructure commonly used items from composables
 const { hours, timeSlots, calendarEvents: _calendarEvents, dragGhost, dragMode: _dragMode, getEventStyle: _getEventStyle, getGhostStyle: _getGhostStyle,
@@ -645,11 +324,33 @@ const { setupScrollSync, cleanupScrollSync, scrollToCurrentTime } = calendarScro
 // Wrapper for isCurrentTimeSlot that passes current time
 const isCurrentTimeSlot = (slot: TimeSlot) => checkCurrentTimeSlot(slot, currentTime.value)
 
-// Time indicator computeds
-const isViewingToday = computed(() => {
-  const today = new Date()
-  return currentDate.value.toDateString() === today.toDateString()
-})
+// Interaction Handlers (Extracted)
+const {
+  showContextMenu,
+  contextMenuX,
+  contextMenuY,
+  contextMenuTask,
+  selectedCalendarEvents,
+  hoveredEventId,
+  handleSlotTaskMouseEnter,
+  handleSlotTaskMouseLeave,
+  closeContextMenu,
+  handleEventDblClick,
+  handleEventContextMenu,
+  handleInboxContextMenu,
+  handleRemoveFromCalendar,
+  handleEventClick,
+  handleKeyDown,
+  handleMonthDayClick
+} = useCalendarInteractionHandlers(
+  isDragging,
+  viewMode,
+  handleEditTask,
+  handleConfirmDelete,
+  monthDayClickHandler
+)
+
+// Time indicator position
 
 const timeIndicatorPosition = computed(() => {
   // Calculate position in pixels from top of slots container
@@ -659,36 +360,7 @@ const timeIndicatorPosition = computed(() => {
   return (hours * 60) + minutes
 })
 
-// Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
-const getSlotTaskStyle = (calEvent: CalendarEvent) => {
-  const baseHeight = (calEvent.slotSpan * 30) - 4
-
-  // If no overlap (totalColumns is 1 or undefined), use normal flow with full width
-  if (!calEvent.totalColumns || calEvent.totalColumns <= 1) {
-    return {
-      height: `${baseHeight}px`,
-      minHeight: `${baseHeight}px`,
-      zIndex: 10
-    }
-  }
-
-  // Calculate width and position for overlapping events (like Google Calendar)
-  const gapPercent = 1 // 1% gap between columns
-  const totalGaps = calEvent.totalColumns - 1
-  const availableWidth = 100 - (totalGaps * gapPercent)
-  const widthPercentage = availableWidth / calEvent.totalColumns
-  const leftPercentage = (widthPercentage + gapPercent) * (calEvent.column || 0)
-
-  return {
-    position: 'absolute' as const,
-    top: '2px',
-    height: `${baseHeight}px`,
-    minHeight: `${baseHeight}px`,
-    width: `calc(${widthPercentage}% - 4px)`,
-    left: `calc(${leftPercentage}% + 2px)`,
-    zIndex: 10 + (calEvent.column || 0) // Later columns render on top
-  }
-}
+// Positioning and sizing for slot tasks are handled by getSlotTaskStyle from useCalendarDayView
 
 // vuedraggable integration for calendar time grid drop zone
 // This provides an alternative to native HTML5 drag-drop for better mobile support
@@ -913,56 +585,9 @@ watch(currentDate, (newDate, _oldDate) => {
   }
 }, { immediate: false })
 
-// Formatted current date for header
-const formatCurrentDate = computed(() => {
-  if (viewMode.value === 'week') {
-    const weekStart = getWeekStart(currentDate.value)
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 6)
+// DATE FORMATTED (Moved to useCalendarNavigation)
 
-    const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' })
-    const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' })
-    const year = weekStart.getFullYear()
-
-    if (startMonth === endMonth) {
-      return `${startMonth} ${weekStart.getDate()} - ${weekEnd.getDate()}, ${year}`
-    } else {
-      return `${startMonth} ${weekStart.getDate()} - ${endMonth} ${weekEnd.getDate()}, ${year}`
-    }
-  }
-
-  if (viewMode.value === 'month') {
-    return currentDate.value.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long'
-    })
-  }
-
-  return currentDate.value.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-})
-
-const previousDay = () => {
-  const date = new Date(currentDate.value)
-  date.setDate(date.getDate() - 1)
-  currentDate.value = date
-}
-
-const nextDay = () => {
-  const date = new Date(currentDate.value)
-  date.setDate(date.getDate() + 1)
-  currentDate.value = date
-}
-
-const goToToday = () => {
-  currentDate.value = new Date()
-  // Scroll to current time after navigating to today
-  setTimeout(() => scrollToCurrentTime(), 100)
-}
+// NAVIGATION HANDLERS (Moved to useCalendarNavigation)
 
 const _handleAddTask = () => {
   // Open QuickTaskCreate modal instead of creating a hardcoded task
@@ -980,65 +605,13 @@ const _handleStartTimer = (taskId: string) => {
   timerStore.startTimer(taskId)
 }
 
-const handleEditTask = (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
-  if (task) {
-    selectedTask.value = task
-    isEditModalOpen.value = true
-  }
-}
+// MODAL HANDLERS (Moved to useCalendarModals)
 
-const closeEditModal = () => {
-  isEditModalOpen.value = false
-  selectedTask.value = null
-}
+// CONTEXT MENU HANDLERS (Moved to useCalendarInteractionHandlers)
 
-const closeContextMenu = () => {
-  showContextMenu.value = false
-  contextMenuTask.value = null
-}
+// DELETE HANDLERS (Moved to useCalendarModals)
 
-// Handle custom context menu event from CalendarInboxPanel
-const handleInboxContextMenu = (event: Event) => {
-  const customEvent = event as CustomEvent<{
-    event: MouseEvent
-    task: Task
-    instanceId?: string
-    isCalendarEvent: boolean
-  }>
-
-  const { event: mouseEvent, task } = customEvent.detail
-
-  contextMenuX.value = mouseEvent.clientX
-  contextMenuY.value = mouseEvent.clientY
-  contextMenuTask.value = task
-  showContextMenu.value = true
-}
-
-// Delete confirmation handlers
-const handleConfirmDelete = (taskId: string) => {
-  taskToDelete.value = taskId
-  showConfirmModal.value = true
-}
-
-const confirmDeleteTask = async () => {
-  if (taskToDelete.value) {
-    try {
-      await taskStore.deleteTaskWithUndo(taskToDelete.value)
-      taskToDelete.value = null
-    } catch (error) {
-      console.error('❌ Error deleting task:', error)
-    }
-  }
-  showConfirmModal.value = false
-}
-
-const cancelDeleteTask = () => {
-  taskToDelete.value = null
-  showConfirmModal.value = false
-}
-
-// Task modal handlers
+// TASK CREATED HANDLER
 const handleTaskCreated = (task: Task) => {
   console.log('Task created:', task)
   dragCreate.showQuickCreateModal.value = false
@@ -1046,136 +619,7 @@ const handleTaskCreated = (task: Task) => {
 }
 
 // Event interaction handlers
-const handleEventDblClick = (calendarEvent: CalendarEvent) => {
-  handleEditTask(calendarEvent.taskId)
-}
-
-const handleEventContextMenu = (mouseEvent: MouseEvent, calendarEvent: CalendarEvent) => {
-  mouseEvent.preventDefault()
-  mouseEvent.stopPropagation()
-
-  const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
-  if (!task) return
-
-  // Set context menu state
-  contextMenuX.value = mouseEvent.clientX
-  contextMenuY.value = mouseEvent.clientY
-  contextMenuTask.value = task
-  showContextMenu.value = true
-}
-
-// Remove task from calendar timeline and move to inbox
-const handleRemoveFromCalendar = (calendarEvent: CalendarEvent) => {
-  console.log(`🗑️ Removing task "${calendarEvent.title}" from calendar`)
-
-  // Find the task
-  const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
-  if (!task) {
-    console.warn(`Task not found for calendar event: ${calendarEvent.taskId}`)
-    return
-  }
-
-  // Use the unscheduleTask method to remove from calendar and move to inbox
-  taskStore.unscheduleTask(task.id)
-
-  console.log(`✅ Task "${task.title}" removed from calendar and moved to inbox`)
-}
-
-// Calendar event selection for keyboard operations - now supports multi-select
-const handleEventClick = (mouseEvent: MouseEvent, calendarEvent: CalendarEvent) => {
-  const eventElement = mouseEvent.currentTarget as HTMLElement
-  const isCtrlOrCmd = mouseEvent.ctrlKey || mouseEvent.metaKey
-
-  console.log('🖱️ Calendar event click:', {
-    eventId: calendarEvent.id,
-    eventTitle: calendarEvent.title,
-    isCtrlMultiSelect: isCtrlOrCmd,
-    currentSelection: selectedCalendarEvents.value.map(e => e.id),
-    selectedCount: selectedCalendarEvents.value.length
-  })
-
-  // IMPORTANT: Don't handle clicks if a drag operation is in progress
-  // This prevents interference with drag-drop functionality
-  if (isDragging.value) {
-    console.log('🚫 Click ignored - drag operation in progress')
-    return
-  }
-
-  if (isCtrlOrCmd) {
-    // Multi-select: toggle event in selection array
-    const index = selectedCalendarEvents.value.findIndex(e => e.id === calendarEvent.id)
-
-    if (index > -1) {
-      // Remove from selection
-      console.log('🖱️ Removing from multi-select:', calendarEvent.title)
-      selectedCalendarEvents.value.splice(index, 1)
-      eventElement.classList.remove('selected')
-    } else {
-      // Add to selection
-      console.log('🖱️ Adding to multi-select:', calendarEvent.title)
-      selectedCalendarEvents.value.push(calendarEvent)
-      eventElement.classList.add('selected')
-    }
-  } else {
-    // Single select: clear previous and select only this
-    console.log('🖱️ Single select (clearing previous):', calendarEvent.title)
-
-    // Check if clicking same event (toggle deselect)
-    if (selectedCalendarEvents.value.length === 1 && selectedCalendarEvents.value[0].id === calendarEvent.id) {
-      // Deselect
-      console.log('🖱️ Deselecting event:', calendarEvent.title)
-      selectedCalendarEvents.value = []
-      eventElement.classList.remove('selected')
-    } else {
-      // Clear previous selections
-      document.querySelectorAll('.calendar-event.selected, .week-event.selected').forEach(el => {
-        el.classList.remove('selected')
-      })
-
-      // Select new event
-      selectedCalendarEvents.value = [calendarEvent]
-      eventElement.classList.add('selected')
-    }
-  }
-}
-
-// Delete key handler for calendar events - supports multiple selected
-const handleKeyDown = (event: KeyboardEvent) => {
-  const isDeleteKey = event.key === 'Delete' || event.key === 'Backspace'
-  if (!isDeleteKey) return
-
-  // Only proceed if we have selected calendar events
-  if (selectedCalendarEvents.value.length === 0) return
-
-  // Prevent default behavior
-  event.preventDefault()
-  event.stopPropagation()
-
-  console.log('🗑️ Calendar Delete: Removing', selectedCalendarEvents.value.length, 'selected tasks')
-
-  // Remove each selected calendar event
-  selectedCalendarEvents.value.forEach(calendarEvent => {
-    const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
-    if (!task) return
-
-    console.log('🗑️ Calendar Delete: Removing calendar instance and moving task to inbox:', task.title)
-
-    // Use the same unschedule logic as the "Remove from Calendar" button
-    // This preserves canvas position and ensures consistent behavior
-    taskStore.unscheduleTaskWithUndo(task.id)
-  })
-
-  // Clear selection and DOM
-  selectedCalendarEvents.value = []
-  document.querySelectorAll('.calendar-event.selected, .week-event.selected').forEach(el => {
-    el.classList.remove('selected')
-  })
-}
-
-// Month day click wraps composable handler with viewMode ref
-const handleMonthDayClick = (dateString: string) => {
-  monthDayClickHandler(dateString, viewMode)
-}
+// EVENT HANDLERS (Moved to useCalendarInteractionHandlers)
 
 // Toggle hide done tasks (TASK-076: calendar-specific)
 const _handleToggleDoneTasks = (_event: MouseEvent) => {
@@ -1203,629 +647,19 @@ const _handleToggleDoneTasks = (_event: MouseEvent) => {
   z-index: 1;
 }
 
-.calendar-header {
-  position: sticky;
-  top: 0;
-  z-index: 200; /* Above all calendar content and events */
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-6) var(--space-8);
-  /* Glassy background to ensure visibility when sticky but keep gradient */
-  background: var(--glass-panel-bg);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-}
-
-.date-navigation {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.nav-btn {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-md);
-}
-
-.nav-btn:hover {
-  background: linear-gradient(
-    135deg,
-    var(--border-medium) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--glass-border-medium);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-xl);
-}
-
-.current-date {
-  color: var(--text-primary);
-  font-size: var(--text-xl);
-  font-weight: var(--font-semibold);
-  margin: 0;
-  text-shadow: var(--shadow-sm);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.today-btn {
-  background: var(--state-active-bg);
-  border: 1px solid var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  color: var(--text-primary);
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  transition: all var(--duration-normal) var(--spring-bounce);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.today-btn:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  color: var(--text-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-/* Hide Done Tasks Toggle */
-.hide-done-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  height: 36px;
-  background: rgba(20, 20, 20, 0.95);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hide-done-toggle:hover {
-  background: rgba(30, 30, 30, 0.95);
-  border-color: rgba(255, 255, 255, 0.25);
-  color: white;
-}
-
-.hide-done-toggle.active {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.4);
-  color: #a78bfa;
-}
-
-.view-selector {
-  display: flex;
-  gap: var(--space-1);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-1);
-  box-shadow: inset var(--shadow-sm);
-}
-
-.view-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+/* Transitions */
+.sidebar-slide-enter-active,
+.sidebar-slide-leave-active {
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
-.view-btn:hover {
-  color: var(--text-primary);
-  background: var(--glass-bg-heavy);
-}
-
-.view-btn.active {
-  background: var(--state-active-bg);
-  border: 1px solid var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  color: var(--text-primary);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-/* Status Filters - Cohesive Design System */
-.status-filters {
-  display: flex;
-  gap: var(--space-1);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-1);
-  box-shadow: inset var(--shadow-sm);
-}
-
-.status-btn {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  position: relative;
-  z-index: 1;
-  pointer-events: auto;
-}
-
-.status-btn.icon-only {
-  padding: var(--space-2);
-  min-width: 36px;
-  min-height: 36px;
-  justify-content: center;
-  display: flex;
-  align-items: center;
-}
-
-.status-btn:hover {
-  color: var(--text-primary);
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  box-shadow: var(--state-hover-shadow);
-}
-
-.status-btn.active {
-  color: var(--state-active-text);
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-/* Hide Done Tasks Toggle - Calendar */
-.hide-done-toggle {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-md);
-  position: relative;
-  z-index: 1000;
-  pointer-events: auto;
-  user-select: none;
-}
-
-.hide-done-toggle.icon-only {
-  padding: var(--space-2);
-  min-width: 40px;
-  min-height: 40px;
-  justify-content: center;
-}
-
-.hide-done-toggle:hover {
-  background: linear-gradient(
-    135deg,
-    var(--state-hover-bg) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--state-hover-border);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.hide-done-toggle.active {
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  color: var(--state-active-text);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.calendar-grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  overflow: visible;
-  min-height: 0; /* Allow flex child to shrink below content size */
-  position: relative;
-  z-index: 1;
-}
-
-.time-labels {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-tint) 0%,
-    var(--glass-bg-weak) 100%
-  );
-  backdrop-filter: blur(16px);
-  border-inline-end: 1px solid var(--glass-border-light); /* RTL: time labels border */
-  overflow-y: auto;
-  box-shadow: var(--shadow-xs);
-  scrollbar-width: none; /* Firefox */
-}
-
-.time-labels::-webkit-scrollbar {
-  display: none; /* Chrome/Safari - hide scrollbar but keep functionality */
-}
-
-.time-label {
-  height: 60px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: end; /* RTL: align time labels to end */
-  padding-top: var(--space-1);
-  padding-inline-end: var(--space-3); /* RTL: time label padding */
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  border-bottom: 1px solid var(--glass-bg-tint);
-}
-
-.calendar-events-container {
-  position: relative;
-  background: linear-gradient(
-    180deg,
-    var(--glass-bg-subtle) 0%,
-    transparent 100%
-  );
-  overflow-y: auto;
-}
-
-/* Slot-based Calendar Styles (NEW ARCHITECTURE) */
-
-/* Slot container replaces events-layer - normal flex layout, not positioned */
-.slots-container {
-  position: relative;
-  background: linear-gradient(
-    180deg,
-    var(--glass-bg-subtle) 0%,
-    transparent 100%
-  );
-  overflow-y: auto;
-  z-index: 2;
-  /* Same scrollbar styles as old calendar-events-container */
-}
-
-/* Custom minimalist scrollbar styling */
-.slots-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.slots-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.slots-container::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
-  border-radius: var(--radius-md);
-  transition: background var(--transition-fast);
-}
-
-.slots-container::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hover);
-}
-
-/* Firefox scrollbar styling */
-.slots-container {
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-border) transparent;
-}
-
-/* Current Time Indicator - shows "now" line like Google Calendar */
-.current-time-indicator {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-}
-
-.time-indicator-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-danger);
-  box-shadow: 0 0 8px var(--color-danger),
-              0 0 16px rgba(239, 68, 68, 0.4);
-  flex-shrink: 0;
-  margin-left: -6px;
-}
-
-.time-indicator-line {
-  flex: 1;
-  height: 2px;
-  background: var(--color-danger);
-  box-shadow: 0 0 4px var(--color-danger),
-              0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-/* Slot tasks - position relative within time-slots, overflow visible */
-.slot-task {
-  position: relative;
-  margin: 2px 4px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  background: var(--surface-tertiary);
-  color: var(--text-primary);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  pointer-events: auto;
-  box-shadow: var(--shadow-sm);
-  cursor: grab;
-  min-height: 24px;
-  font-size: var(--text-xs);
-  z-index: 5;
-}
-
-.slot-task:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-/* Overlapping tasks - remove margins when positioned absolutely */
-.slot-task.has-overlap {
-  margin: 0;
-}
-
-.slot-task.selected {
-  background: var(--state-selected-bg);
-  border: 2px solid var(--state-selected-border);
-  box-shadow: var(--state-selected-shadow), var(--state-selected-glow);
-  z-index: 15;
-}
-
-/* Drag states for slot tasks */
-.slot-task.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
-  cursor: grabbing;
-  border: 2px dashed var(--state-selected-border);
-  background: var(--state-selected-bg);
-  box-shadow: var(--state-selected-shadow), var(--state-selected-glow);
-  z-index: 100;
-  pointer-events: none; /* Allow drops to pass through to time slots */
-}
-
-.slot-task[draggable="true"]:hover {
-  cursor: grab;
-}
-
-.slot-task[draggable="true"]:active {
-  cursor: grabbing;
-}
-
-/* Primary slot shows full task content */
-.slot-task.is-primary {
-  border-left: 4px solid var(--accent-primary);
-  padding-left: calc(var(--space-3) - 2px); /* Adjust for thicker left border */
-}
-
-/* Continuation slot shows minimal indicator */
-.slot-task:not(.is-primary) {
-  opacity: 0.7;
-  font-size: var(--text-xs);
-  padding: 1px var(--space-2);
-  min-height: 16px;
-  cursor: default; /* Can't drag continuation slots */
-  pointer-events: none; /* Only primary slot is draggable */
-}
-
-.continuation-indicator {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-style: italic;
-}
-
-.continuation-indicator::before {
-  content: '↳';
-  color: var(--text-muted);
-}
-
-/* Task content layout for primary slots */
-.task-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  width: 100%;
-}
-
-.task-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.task-title {
-  flex: 1;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.task-actions {
-  display: flex;
-  gap: var(--space-1);
+.sidebar-slide-enter-from,
+.sidebar-slide-leave-to {
+  transform: translateX(-100%);
   opacity: 0;
-  transition: opacity var(--duration-fast);
 }
 
-.slot-task:hover .task-actions {
-  opacity: 1;
-}
-
-.task-duration {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  background: var(--glass-bg-subtle);
-  padding: 2px var(--space-1);
-  border-radius: var(--radius-sm);
-}
-
-/* Resize handles for day view tasks */
-.resize-handle {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 8px;
-  background: transparent;
-  cursor: ns-resize;
-  z-index: 20;
-  opacity: 0;
-  transition: all var(--duration-fast);
-  pointer-events: none;
-}
-
-.resize-handle.resize-top {
-  top: 0;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-}
-
-.resize-handle.resize-bottom {
-  bottom: 0;
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-}
-
-/* Use both :hover and .is-hovered class for resize handle visibility
-   The .is-hovered class is set via JS because draggable elements have inconsistent :hover behavior
-   transition: none is required to prevent the transition from blocking immediate opacity change */
-.slot-task.is-primary:hover .resize-handle,
-.slot-task.is-primary.is-hovered .resize-handle {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  background: rgba(99, 102, 241, 0.4) !important;
-  transition: none !important;
-}
-
-.resize-handle:hover {
-  background: rgba(99, 102, 241, 0.7) !important;
-}
-
-/* Resize Preview Overlay - shows projected size during resize drag */
-.resize-preview-overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  background: rgba(99, 102, 241, 0.15);
-  border: 2px dashed rgba(99, 102, 241, 0.6);
-  border-radius: var(--radius-md);
-  pointer-events: none;
-  z-index: 50;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 4px;
-}
-
-.resize-preview-overlay .preview-duration {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(99, 102, 241, 0.9);
-  background: rgba(255, 255, 255, 0.9);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
-
-/* Ghost preview for drag operations - inline version */
-.ghost-preview-inline {
-  background: linear-gradient(
-    135deg,
-    var(--calendar-ghost-bg-start) 0%,
-    var(--calendar-ghost-bg-end) 100%
-  );
-  backdrop-filter: blur(8px);
-  border: 3px solid var(--calendar-ghost-border);
-  border-radius: var(--radius-lg);
-  pointer-events: none;
-  animation: ghostPulse 1.5s ease-in-out infinite;
-  box-shadow: 0 0 25px rgba(99, 102, 241, 0.8), var(--calendar-ghost-shadow);
-  margin: 2px 4px;
-  padding: var(--space-2) var(--space-3);
-  min-height: 24px;
-  opacity: 0.95 !important;
-  transform: scale(1.02);
-}
-
-/* Remove old absolute positioned calendar-event styles - these are obsolete */
-/* .calendar-event { ... } styles are no longer used */
-
-/* Keep these utility styles for timer active state */
-.slot-task.timer-active-event {
-  border: 2px solid var(--timer-active-border);
-  background: linear-gradient(
-    135deg,
-    var(--timer-active-bg-start) 0%,
-    var(--timer-active-bg-end) 100%
-  );
-  box-shadow:
-    var(--timer-active-glow),
-    var(--timer-active-shadow),
-    inset 0 1px 0 var(--glass-border-hover);
-  animation: timerPulse 2s ease-in-out infinite;
-}
-
-/* Dark minimalist scrollbar for calendar-main */
+/* Custom scrollbar for calendar-main */
 .calendar-main::-webkit-scrollbar {
   width: 6px;
 }
@@ -1837,1162 +671,10 @@ const _handleToggleDoneTasks = (_event: MouseEvent) => {
 .calendar-main::-webkit-scrollbar-thumb {
   background: var(--glass-border);
   border-radius: var(--radius-md);
-  transition: background var(--transition-fast);
-}
-
-.calendar-main::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hover);
 }
 
 .calendar-main {
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
-}
-
-.time-grid {
-  position: relative;
-  z-index: 5; /* Below events layer to allow drag interactions */
-  /* Remove pointer-events: none to allow drag operations to reach time slots */
-}
-
-.time-slot {
-  height: 30px;
-  border-bottom: 1px solid var(--glass-bg-light);
-  position: relative;
-  z-index: 1; /* Below calendar events to allow drag and resize interactions */
-  transition: all var(--duration-fast) var(--spring-smooth);
-  pointer-events: auto !important; /* Allow drag and drop interactions */
-  cursor: crosshair !important; /* Indicate drop targets */
-  overflow: visible; /* Allow absolutely positioned children to extend beyond slot */
-}
-
-/* Allow pointer events on time slot when it doesn't contain calendar events */
-.time-slot:empty,
-.time-slot:not(:has(.slot-task)) {
-  pointer-events: auto;
-}
-
-/* CRITICAL: Slots with tasks let events pass through to children
-   Also elevate stacking context so multi-slot tasks render ABOVE subsequent time-slots */
-.time-slot:has(.slot-task) {
-  pointer-events: none;
-  position: relative;
-  z-index: 10; /* Elevate above subsequent time-slots for full-surface drag */
-}
-
-/* Allow pointer events for drag-drop operations */
-.events-layer.drag-active .time-slot {
-  pointer-events: auto;
-}
-
-.time-slot:hover {
-  background: linear-gradient(
-    135deg,
-    var(--calendar-hover-bg-medium) 0%,
-    var(--calendar-hover-bg) 100%
-  );
-}
-
-.time-slot.creating {
-  background: linear-gradient(
-    135deg,
-    var(--calendar-creating-bg) 0%,
-    var(--calendar-creating-bg-alt) 100%
-  );
-  border-color: var(--calendar-creating-border);
-}
-
-/* Drag-over visual feedback for drop zones */
-.time-slot.drag-over {
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.3) 0%,
-    rgba(79, 70, 229, 0.2) 100%
-  );
-  border: 3px solid var(--state-selected-border);
-  border-style: solid;
-  transform: scale(1.05);
-  box-shadow: 0 0 30px rgba(99, 102, 241, 0.6), var(--state-selected-shadow), var(--state-selected-glow);
-  z-index: 10;
-}
-
-/* Drag target indicator for better UX */
-.events-layer.drag-active {
-  pointer-events: auto;
-}
-
-.events-layer.drag-active .time-slot {
-  position: relative;
-}
-
-.events-layer.drag-active .time-slot::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 2px dashed var(--state-selected-border);
-  border-radius: var(--radius-lg);
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--spring-smooth);
-  pointer-events: none;
-}
-
-.events-layer.drag-active .time-slot.drag-over::before {
-  opacity: 1;
-}
-
-.current-time-layer {
-  position: absolute;
-  inset: 0; /* RTL: full coverage layer */
-  z-index: 50;
-  pointer-events: none;
-}
-
-.time-indicator {
-  height: 30px;
-  pointer-events: none;
-  position: relative;
-  z-index: 50;
-}
-
-.time-indicator.current-time {
-  height: 0;
-  border-top: 2px solid var(--calendar-current-time-border);
-  box-shadow: var(--calendar-current-time-glow);
-}
-
-.ghost-preview {
-  position: absolute;
-  z-index: 5;
-  background: linear-gradient(
-    135deg,
-    var(--calendar-ghost-bg-start) 0%,
-    var(--calendar-ghost-bg-end) 100%
-  );
-  backdrop-filter: blur(8px);
-  border: 2px dashed var(--calendar-ghost-border);
-  border-radius: var(--radius-lg);
-  pointer-events: none;
-  animation: ghostPulse 1.5s ease-in-out infinite;
-  box-shadow: var(--calendar-ghost-shadow);
-}
-
-.ghost-content {
-  padding: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
-}
-
-.ghost-title {
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  opacity: 0.9;
-  margin-bottom: var(--space-1);
-}
-
-.ghost-duration {
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  opacity: 0.8;
-}
-
-@keyframes ghostPulse {
-  0%, 100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-
-.events-layer {
-  position: absolute;
-  top: 0;
-  inset-inline: 0; /* RTL: full width events layer */
-  z-index: 10;
-  /* Remove pointer-events: none to allow drag operations on calendar events */
-}
-
-.calendar-event {
-  position: absolute;
-  z-index: 1;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  /* Dark solid background like kanban */
-  background: var(--surface-tertiary);
-  color: var(--text-primary);
-  font-weight: var(--font-medium);
-  overflow: visible;
-  display: flex;
-  flex-direction: column;
-  transition: all var(--duration-normal) var(--spring-smooth);
-  pointer-events: auto;
-  box-shadow: var(--shadow-sm);
-}
-
-.calendar-event:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.calendar-event.selected {
-  background: var(--state-selected-bg);
-  border: 2px solid var(--state-selected-border);
-  box-shadow: var(--state-selected-shadow), var(--state-selected-glow);
-  z-index: 15;
-}
-
-/* Drag states for calendar events */
-.calendar-event.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
-  cursor: grabbing;
-  border: 2px dashed var(--state-selected-border);
-  background: var(--state-selected-bg);
-  box-shadow: var(--state-selected-shadow), var(--state-selected-glow);
-  z-index: 100;
-  pointer-events: none; /* CRITICAL: Allow drops to pass through to time slots */
-}
-
-.calendar-event[draggable="true"]:hover {
-  cursor: grab;
-}
-
-.calendar-event[draggable="true"]:active {
-  cursor: grabbing;
-}
-
-/* Active pomodoro timer highlight */
-.calendar-event.timer-active-event {
-  border: 2px solid var(--timer-active-border);
-  background: linear-gradient(
-    135deg,
-    var(--timer-active-bg-start) 0%,
-    var(--timer-active-bg-end) 100%
-  );
-  box-shadow:
-    var(--timer-active-glow),
-    var(--timer-active-shadow),
-    inset 0 1px 0 var(--glass-border-hover);
-  animation: timerPulse 2s ease-in-out infinite;
-}
-
-@keyframes timerPulse {
-  0%, 100% {
-    box-shadow:
-      var(--timer-active-glow),
-      var(--timer-active-shadow),
-      inset 0 1px 0 var(--glass-border-hover);
-  }
-  50% {
-    box-shadow:
-      var(--timer-active-glow-strong),
-      var(--timer-active-shadow-hover),
-      inset 0 1px 0 var(--border-hover);
-  }
-}
-
-.calendar-event.multi-slot {
-  min-height: 60px;
-}
-
-/* Project stripe - matching kanban/inbox pattern */
-.calendar-event .project-stripe {
-  position: absolute;
-  top: 0;
-  inset-inline-start: 0; /* RTL: project stripe position */
-  width: 4px;
-  height: 100%;
-  border-start-start-radius: var(--radius-sm); /* RTL: top-left in LTR, top-right in RTL */
-  border-end-start-radius: var(--radius-sm); /* RTL: bottom-left in LTR, bottom-right in RTL */
-  z-index: 2; /* Above priority stripe */
-}
-
-.calendar-event .project-emoji-stripe {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  background: var(--glass-bg-heavy);
-  color: var(--text-primary);
-  width: 16px; /* Wider for emoji */
-  opacity: 0.9;
-}
-
-.calendar-event .project-color-stripe {
-  opacity: 0.9;
-}
-
-/* Priority stripe - matching kanban/inbox pattern */
-.calendar-event .priority-stripe {
-  position: absolute;
-  top: 0;
-  inset-inline-start: 4px; /* RTL: offset to the right of project stripe */
-  width: 4px;
-  height: 100%;
-  border-start-end-radius: var(--radius-sm); /* RTL: top-right in LTR, top-left in RTL */
-  border-end-end-radius: var(--radius-sm); /* RTL: bottom-right in LTR, bottom-left in RTL */
-  z-index: 1;
-}
-
-.calendar-event .priority-stripe.priority-high {
-  background: linear-gradient(180deg, var(--color-priority-high) 0%, #ff6b6b 100%);
-  box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
-}
-
-.calendar-event .priority-stripe.priority-medium {
-  background: var(--color-priority-medium);
-  box-shadow: var(--priority-medium-glow);
-}
-
-.calendar-event .priority-stripe.priority-low {
-  background: linear-gradient(180deg, var(--color-priority-low) 0%, #48dbfb 100%);
-  box-shadow: 0 0 8px rgba(72, 219, 251, 0.3);
-}
-
-/* 30-minute tasks: horizontal layout */
-.calendar-event[data-duration="30"] .event-content {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px var(--space-2);
-}
-
-.calendar-event[data-duration="30"] .event-title {
-  margin-bottom: 0;
-  margin-inline-end: var(--space-1); /* RTL: title spacing */
-  font-size: 10px;
-}
-
-/* 30-minute tasks in day view: horizontal compact layout */
-.slot-task[data-duration="30"] {
-  padding: 0;
-}
-
-.slot-task[data-duration="30"] .task-content {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
-  padding: 2px var(--space-1);
-}
-
-.slot-task[data-duration="30"] .task-header {
-  flex: 1;
-  min-width: 0; /* Allow text truncation */
-  gap: var(--space-1);
-}
-
-.slot-task[data-duration="30"] .task-title {
-  font-size: 10px;
-  line-height: 1.2;
-}
-
-.slot-task[data-duration="30"] .task-duration {
-  font-size: 9px;
-  padding: 1px 4px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.slot-task[data-duration="30"] .task-actions {
-  gap: 2px;
-}
-
-.slot-task[data-duration="30"] .status-indicator {
-  width: 14px;
-  height: 14px;
-  font-size: 8px;
-}
-
-.slot-task[data-duration="30"] .remove-from-calendar-btn {
-  width: 14px;
-  height: 14px;
-  font-size: 8px;
-}
-
-/* Hide project/priority stripes for 30-min tasks to save space */
-.slot-task[data-duration="30"] .project-stripe,
-.slot-task[data-duration="30"] .priority-stripe {
-  width: 3px;
-}
-
-.event-content {
-  flex: 1;
-  padding: var(--space-2) var(--space-3);
-  cursor: move;
-  transition: all var(--transition-fast);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.event-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2px;
-}
-
-.event-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.remove-from-calendar-btn {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: bold;
-  opacity: 0;
-  transition: all var(--duration-fast) ease;
-  line-height: 1;
-}
-
-.calendar-event:hover .remove-from-calendar-btn {
-  opacity: 1;
-}
-
-.remove-from-calendar-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.3);
-  transform: scale(1.1);
-}
-
-.status-indicator {
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-full);
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  margin-inline-start: var(--space-1); /* RTL: status indicator spacing */
-}
-
-.status-indicator:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--brand-primary);
-  transform: scale(1.1);
-}
-
-.status-indicator.status-planned {
-  background: var(--brand-primary-bg-subtle);
-  border-color: var(--brand-primary-border-medium);
-  color: var(--brand-primary);
-}
-
-.status-indicator.status-in_progress {
-  background: var(--color-priority-medium-bg-subtle);
-  border-color: var(--color-priority-medium-border-medium);
-  color: var(--color-priority-medium);
-}
-
-.status-indicator.status-done {
-  background: var(--color-work-bg-subtle);
-  border-color: var(--color-work-border-medium);
-  color: var(--color-work);
-}
-
-.status-indicator.status-backlog,
-.status-indicator.status-on_hold {
-  background: var(--glass-bg-tint);
-  border-color: var(--glass-bg-heavy);
-  color: var(--text-muted);
-}
-
-.event-title {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  line-height: 1.3;
-  margin-bottom: 2px;
-  word-wrap: break-word;
-  overflow: visible;
-}
-
-.event-duration {
-  font-size: var(--text-xs);
-  opacity: 0.8;
-}
-
-/* Week View Styles */
-.week-view {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.week-header {
-  display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
-  backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--glass-bg-heavy);
-  min-height: 80px;
-  flex-shrink: 0;
-  box-shadow: var(--shadow-md);
-}
-
-.week-time-label {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-tint) 0%,
-    var(--glass-bg-weak) 100%
-  );
-}
-
-.week-day-header {
-  padding: var(--space-4);
-  text-align: center;
-  border-inline-start: 1px solid var(--glass-border-light); /* RTL: day header border */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  transition: all var(--duration-fast) var(--spring-smooth);
-}
-
-.week-day-header:hover {
-  background: var(--glass-bg-tint);
-}
-
-.week-day-name {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  margin-bottom: var(--space-1);
-}
-
-.week-day-date {
-  font-size: var(--text-xl);
-  font-weight: var(--font-bold);
-  color: var(--text-primary);
-}
-
-.week-grid-container {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  overflow: hidden;
-}
-
-.week-time-labels {
-  background: var(--bg-secondary);
-  border-inline-end: 1px solid var(--border-primary); /* RTL: week time labels border */
-  overflow: hidden;
-}
-
-.week-time-label {
-  height: 60px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: end; /* RTL: align time labels to end */
-  padding-top: 0.25rem;
-  padding-inline-end: 0.5rem; /* RTL: week time label padding */
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  border-bottom: 1px solid var(--border-primary);
-}
-
-.week-days-grid {
-  position: relative;
-  overflow-y: auto;
-  background: var(--surface-primary);
-}
-
-/* Custom minimalist scrollbar for week view */
-.week-days-grid::-webkit-scrollbar {
-  width: 6px;
-}
-
-.week-days-grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.week-days-grid::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
-  border-radius: var(--radius-md);
-  transition: background var(--transition-fast);
-}
-
-.week-days-grid::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hover);
-}
-
-.week-days-grid {
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-border) transparent;
-}
-
-.week-time-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  position: relative;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.week-time-grid > * {
-  pointer-events: auto;
-}
-
-.week-day-column {
-  border-inline-start: 1px solid var(--border-primary); /* RTL: week day column border */
-}
-
-.week-day-column:first-child {
-  border-inline-start: none; /* RTL: remove first column border */
-}
-
-.week-time-cell {
-  height: 60px;
-  border-bottom: 1px solid var(--border-primary);
-  transition: all var(--transition-fast);
-}
-
-.week-time-cell:hover {
-  background: var(--week-hover-bg);
-}
-
-.week-events-layer {
-  position: absolute;
-  top: 0;
-  inset-inline: 0; /* RTL: full width week events layer */
-  z-index: 10;
-  pointer-events: none;
-}
-
-.week-current-time-layer {
-  position: absolute;
-  inset: 0; /* RTL: full coverage week current time layer */
-  z-index: 50;
-  pointer-events: none;
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-}
-
-.week-day-time-column {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-.week-time-indicator {
-  height: 60px;
-  pointer-events: none;
-  position: relative;
-  z-index: 50;
-}
-
-.week-time-indicator.current-time {
-  height: 0;
-  border-top: 2px solid var(--calendar-current-time-border);
-  box-shadow: var(--calendar-current-time-glow);
-}
-
-.week-event {
-  position: relative;
-  z-index: 1;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  /* Dark solid background like kanban */
-  background: var(--surface-tertiary);
-  color: var(--text-primary);
-  font-weight: var(--font-medium);
-  padding: 2px var(--space-2);
-  overflow: hidden;
-  transition: all var(--duration-normal) var(--spring-smooth);
-  pointer-events: auto;
-  cursor: move;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-}
-
-.week-event:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  backdrop-filter: var(--state-active-glass);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-}
-
-.week-event.selected {
-  background: var(--state-selected-bg);
-  border: 2px solid var(--state-selected-border);
-  box-shadow: var(--state-selected-shadow), var(--state-selected-glow);
-  z-index: 15;
-}
-
-/* Project stripe for week events */
-.week-event .project-stripe {
-  position: absolute;
-  top: 0;
-  inset-inline-start: 0; /* RTL: week event project stripe position */
-  width: 4px;
-  height: 100%;
-  border-start-start-radius: var(--radius-sm); /* RTL: top-left in LTR, top-right in RTL */
-  border-end-start-radius: var(--radius-sm); /* RTL: bottom-left in LTR, bottom-right in RTL */
-  z-index: 2; /* Above priority stripe */
-}
-
-.week-event .project-emoji-stripe {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  background: var(--glass-bg-heavy);
-  color: var(--text-primary);
-  width: 16px; /* Wider for emoji */
-  opacity: 0.9;
-}
-
-.week-event .project-color-stripe {
-  opacity: 0.9;
-}
-
-/* Priority stripe for week events */
-.week-event .priority-stripe {
-  position: absolute;
-  top: 0;
-  inset-inline-start: 4px; /* RTL: offset to the right of project stripe */
-  width: 4px;
-  height: 100%;
-  border-start-end-radius: var(--radius-sm); /* RTL: top-right in LTR, top-left in RTL */
-  border-end-end-radius: var(--radius-sm); /* RTL: bottom-right in LTR, bottom-left in RTL */
-  z-index: 1;
-}
-
-.week-event .priority-stripe.priority-high {
-  background: linear-gradient(180deg, var(--color-priority-high) 0%, #ff6b6b 100%);
-  box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
-}
-
-.week-event .priority-stripe.priority-medium {
-  background: var(--color-priority-medium);
-  box-shadow: var(--priority-medium-glow);
-}
-
-.week-event .priority-stripe.priority-low {
-  background: linear-gradient(180deg, var(--color-priority-low) 0%, #48dbfb 100%);
-  box-shadow: 0 0 8px rgba(72, 219, 251, 0.3);
-}
-
-/* Week view active pomodoro highlight */
-.week-event.timer-active-event {
-  border: 2px solid var(--timer-active-border);
-  background: linear-gradient(
-    135deg,
-    var(--timer-active-bg-start) 0%,
-    var(--timer-active-bg-end) 100%
-  );
-  box-shadow:
-    var(--timer-active-glow),
-    var(--shadow-md),
-    inset 0 1px 0 var(--border-medium);
-  animation: timerPulse 2s ease-in-out infinite;
-}
-
-.week-event .event-title {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  line-height: 1.3;
-  margin-bottom: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.week-event .event-duration {
-  font-size: var(--text-xs);
-  opacity: 0.8;
-}
-
-.week-event .event-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0;
-}
-
-.week-event .event-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2px;
-}
-
-.week-event .event-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.week-event .remove-from-calendar-btn {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: bold;
-  opacity: 0;
-  transition: all var(--duration-fast) ease;
-  line-height: 1;
-}
-
-.week-event:hover .remove-from-calendar-btn {
-  opacity: 1;
-}
-
-.week-event .status-indicator {
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-full);
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  margin-inline-start: var(--space-2); /* RTL: week event status indicator spacing */
-}
-
-.week-event .status-indicator:hover {
-  background: var(--glass-bg-heavy);
-  border-color: var(--brand-primary);
-  transform: scale(1.1);
-}
-
-.week-event .status-indicator.status-planned {
-  background: var(--brand-primary-bg-subtle);
-  border-color: var(--brand-primary-border-medium);
-  color: var(--brand-primary);
-}
-
-.week-event .status-indicator.status-in_progress {
-  background: var(--color-priority-medium-bg-subtle);
-  border-color: var(--color-priority-medium-border-medium);
-  color: var(--color-priority-medium);
-}
-
-.week-event .status-indicator.status-done {
-  background: var(--color-work-bg-subtle);
-  border-color: var(--color-work-border-medium);
-  color: var(--color-work);
-}
-
-.week-event .status-indicator.status-backlog,
-.week-event .status-indicator.status-on_hold {
-  background: var(--glass-bg-tint);
-  border-color: var(--glass-bg-heavy);
-  color: var(--text-muted);
-}
-
-/* Week view resize handles */
-.week-event .resize-handle {
-  position: absolute;
-  inset-inline: 0; /* RTL: full width resize handle */
-  height: 24px;
-  background: transparent;
-  cursor: ns-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  z-index: 20;
-  opacity: 0;
-  pointer-events: auto;
-}
-
-.week-event:hover .resize-handle {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.week-event .resize-handle.resize-top {
-  top: -12px;
-}
-
-.week-event .resize-handle.resize-bottom {
-  bottom: -12px;
-}
-
-.week-event .resize-handle:hover {
-  background: var(--glass-border);
-}
-
-.week-event .resize-handle::after {
-  content: '';
-  width: 24px;
-  height: 3px;
-  background: var(--glass-handle);
-  border-radius: var(--radius-xs);
-  transition: all var(--transition-fast);
-}
-
-.week-event .resize-handle:hover::after {
-  background: var(--brand-primary);
-  height: 4px;
-  width: 32px;
-}
-
-/* 30-minute tasks in week view */
-.week-event[data-duration="30"] .resize-handle {
-  height: 8px;
-}
-
-.week-event[data-duration="30"] .resize-handle.resize-top {
-  top: 0;
-}
-
-.week-event[data-duration="30"] .resize-handle.resize-bottom {
-  bottom: 0;
-}
-
-.week-event[data-duration="30"] .event-content {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0;
-}
-
-.week-event[data-duration="30"] .event-title {
-  margin-bottom: 0;
-  margin-inline-end: var(--space-2); /* RTL: week event title spacing */
-  flex: 1;
-}
-
-/* Month View Styles */
-.month-view {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.month-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, 1fr);
-  flex: 1;
-  gap: 1px;
-  background: var(--border-primary);
-}
-
-.month-day-cell {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-light) 0%,
-    var(--glass-bg-subtle) 100%
-  );
-  padding: var(--space-2);
-  display: flex;
-  flex-direction: column;
-  min-height: 100px;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--spring-smooth);
-  overflow: hidden;
-}
-
-.month-day-cell:hover {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
-  backdrop-filter: blur(8px);
-}
-
-.month-day-cell.other-month {
-  background: var(--glass-bg-subtle);
-  opacity: 0.4;
-}
-
-.month-day-cell.today {
-  background: linear-gradient(
-    135deg,
-    var(--calendar-today-bg-start) 0%,
-    var(--calendar-today-bg-end) 100%
-  );
-  border: 1px solid var(--calendar-today-border);
-  box-shadow: var(--calendar-today-glow);
-}
-
-.month-day-cell.today .day-number {
-  background: linear-gradient(
-    135deg,
-    var(--calendar-today-badge-start) 0%,
-    var(--calendar-today-badge-end) 100%
-  );
-  color: white;
-  border-radius: var(--radius-full);
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--calendar-today-badge-shadow);
-}
-
-.day-number {
-  font-weight: var(--font-semibold);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  margin-bottom: var(--space-2);
-}
-
-.day-events {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-}
-
-.month-event {
-  font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  cursor: move;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: flex;
-  gap: var(--space-1);
-  align-items: center;
-  transition: all var(--duration-fast) var(--spring-smooth);
-  border: 1px solid var(--glass-border-medium);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
-  backdrop-filter: blur(8px);
-  box-shadow: var(--shadow-sm);
-}
-
-.month-event:hover {
-  border-color: var(--glass-border-strong);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  background: linear-gradient(
-    135deg,
-    var(--border-medium) 0%,
-    var(--glass-bg-soft) 100%
-  );
-}
-
-/* Project indicator for month events */
-.month-event .project-indicator {
-  position: absolute;
-  top: 0;
-  inset-inline-start: 0; /* RTL: month event project indicator position */
-  width: 3px;
-  height: 100%;
-  border-start-start-radius: var(--radius-sm); /* RTL: top-left in LTR, top-right in RTL */
-  border-end-start-radius: var(--radius-sm); /* RTL: bottom-left in LTR, bottom-right in RTL */
-  z-index: 2; /* Above priority stripe */
-}
-
-.month-event .project-emoji-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  background: var(--glass-bg-heavy);
-  color: var(--text-primary);
-  width: 12px; /* Wider for emoji */
-  opacity: 0.9;
-}
-
-.month-event .project-color-indicator {
-  opacity: 0.9;
-}
-
-/* Priority stripe for month events */
-.month-event .priority-stripe {
-  position: absolute;
-  top: 0;
-  inset-inline-start: 3px; /* RTL: offset to the right of project indicator */
-  width: 3px;
-  height: 100%;
-  border-start-end-radius: var(--radius-sm); /* RTL: top-right in LTR, top-left in RTL */
-  border-end-end-radius: var(--radius-sm); /* RTL: bottom-right in LTR, bottom-left in RTL */
-  z-index: 1;
-}
-
-.month-event .priority-stripe.priority-high {
-  background: linear-gradient(180deg, var(--color-priority-high) 0%, #ff6b6b 100%);
-}
-
-.month-event .priority-stripe.priority-medium {
-  background: var(--color-priority-medium);
-}
-
-.month-event .priority-stripe.priority-low {
-  background: linear-gradient(180deg, var(--color-priority-low) 0%, #48dbfb 100%);
-}
-
-/* Month view active pomodoro highlight */
-.month-event.timer-active-event {
-  border: 2px solid var(--timer-active-border);
-  background: linear-gradient(
-    135deg,
-    var(--timer-active-month-bg-start) 0%,
-    var(--timer-active-month-bg-end) 100%
-  );
-  box-shadow:
-    var(--timer-active-month-glow),
-    var(--shadow-md);
-  animation: timerPulse 2s ease-in-out infinite;
-  font-weight: var(--font-semibold);
-}
-
-.event-time {
-  font-weight: var(--font-medium);
-  opacity: 0.9;
-}
-
-.event-title-short {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 </style>

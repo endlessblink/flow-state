@@ -331,10 +331,60 @@ export class SyncOrchestrator {
         }
     }
 
+
     public getNetworkOptimizer() {
         return getNetworkOptimizer()
+    }
+
+    /**
+     * EMERGENCY TOOLS (Phase 17)
+     * Exposed for manual console usage to resolve split-brain scenarios
+     */
+    public async manualBackfill() {
+        console.log('🚨 [MANUAL] Starting forced backfill (Local -> Remote)...')
+        if (!this.localDB || !this.remoteDB) {
+            console.error('❌ DBs not initialized')
+            return
+        }
+
+        try {
+            const info = await this.localDB.info()
+            console.log(`📊 Local Docs: ${info.doc_count}`)
+
+            await this.localDB.replicate.to(this.remoteDB, {
+                batch_size: 100,
+                batches_limit: 10
+            })
+            console.log('✅ [MANUAL] Backfill complete!')
+        } catch (err) {
+            console.error('❌ Backfill failed:', err)
+        }
+    }
+
+    public async forcePull() {
+        console.log('🚨 [MANUAL] Starting forced pull (Remote -> Local)...')
+        if (!this.localDB || !this.remoteDB) {
+            console.error('❌ DBs not initialized')
+            return
+        }
+
+        try {
+            await this.remoteDB.replicate.to(this.localDB, {
+                batch_size: 100,
+                batches_limit: 10
+            })
+            console.log('✅ [MANUAL] Force pull complete!')
+            window.location.reload()
+        } catch (err) {
+            console.error('❌ Force pull failed:', err)
+        }
     }
 }
 
 // Singleton
 export const syncOrchestrator = new SyncOrchestrator()
+
+// Expose to window for console access
+if (typeof window !== 'undefined') {
+    (window as any).pomoSync = syncOrchestrator
+}

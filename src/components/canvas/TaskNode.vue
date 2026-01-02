@@ -434,8 +434,8 @@ const formattedDuration = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  /* TASK-079: Brighter background for zoom-out visibility */
-  background: rgba(42, 45, 55, 0.95);
+  /* Glass morphism - translucent background with visible blur */
+  background: rgba(42, 45, 55, 0.65);
   /* Increased blur to properly blur canvas dots */
   backdrop-filter: blur(32px) saturate(1.3);
   -webkit-backdrop-filter: blur(32px) saturate(1.3);
@@ -731,16 +731,17 @@ body.dragging-active .task-node .vue-flow__handle {
 }
 
 .status-done {
-  opacity: 0.8; /* Reduced transparency - still visible but muted */
+  /* Use grayscale filter instead of opacity to keep backdrop solid/opaque */
+  filter: grayscale(0.6) brightness(0.85);
+}
+
+.status-done::before {
+  /* Slightly darker/muted backdrop for completed tasks */
+  background: rgba(35, 38, 48, 0.70);
 }
 
 .status-done .task-title {
   text-decoration: line-through;
-}
-
-/* Override opacity for tasks inside sections to maintain visibility */
-.vue-flow__node[data-id^="section-"] .task-node.status-done {
-  opacity: 0.9; /* Even less transparent inside sections */
 }
 
 .status-in-progress {

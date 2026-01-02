@@ -16,7 +16,8 @@ export function useTaskStates() {
     const activeDurationFilter = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
 
     // TASK-076: Separate done filters for Canvas vs Calendar views
-    const hideCanvasDoneTasks = ref(false)
+    // Default to true - canvas loads with completed tasks hidden
+    const hideCanvasDoneTasks = ref(true)
     const hideCalendarDoneTasks = ref(false)
 
     // TASK-082: Hide overdue tasks on canvas (tasks with due date before today)

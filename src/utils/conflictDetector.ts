@@ -26,7 +26,7 @@ export class ConflictDetector {
     this.localDB = localDB
     this.remoteDB = remoteDB
 
-    console.log(`🔍 ConflictDetector initialized with deviceId: ${this.deviceId}`)
+    console.debug(`🔍 ConflictDetector initialized with deviceId: ${this.deviceId}`)
   }
 
   /**
@@ -37,7 +37,7 @@ export class ConflictDetector {
       throw new Error('ConflictDetector not initialized')
     }
 
-    console.log('🔍 Starting comprehensive conflict detection...')
+    console.debug('🔍 Starting comprehensive conflict detection...')
 
     try {
       // Get all local documents with conflict information
@@ -46,7 +46,7 @@ export class ConflictDetector {
         .filter(row => isSyncableDocument(row.doc))
         .map(row => row.doc)
 
-      console.log(`📊 Analyzing ${syncableDocs.length} syncable documents for conflicts`)
+      console.debug(`📊 Analyzing ${syncableDocs.length} syncable documents for conflicts`)
 
       const conflicts: ConflictInfo[] = []
 
@@ -57,11 +57,11 @@ export class ConflictDetector {
             conflicts.push(conflict)
           }
         } catch (detectError) {
-          console.warn(`⚠️ Error detecting conflict for ${doc?._id}:`, detectError)
+          console.debug(`⚠️ Error detecting conflict for ${doc?._id}:`, detectError)
         }
       }
 
-      console.log(`✅ Conflict detection complete: ${conflicts.length} conflicts found`)
+      console.debug(`✅ Conflict detection complete: ${conflicts.length} conflicts found`)
       return conflicts
 
     } catch (error) {
@@ -78,7 +78,7 @@ export class ConflictDetector {
       throw new Error('ConflictDetector not initialized')
     }
 
-    console.log(`🔍 Detecting conflicts for ${documentIds.length} specific documents`)
+    console.debug(`🔍 Detecting conflicts for ${documentIds.length} specific documents`)
 
     const conflicts: ConflictInfo[] = []
 
@@ -92,7 +92,7 @@ export class ConflictDetector {
           conflicts.push(conflict)
         }
       } catch (error) {
-        console.warn(`⚠️ Error detecting conflict for ${docId}:`, error)
+        console.debug(`⚠️ Error detecting conflict for ${docId}:`, error)
       }
     }
 
@@ -121,7 +121,7 @@ export class ConflictDetector {
       // Check for PouchDB internal conflicts (the "151 conflicts" issue)
       // This happens when multiple revisions exist in the tree but weren't caught by the temporal check
       if ((doc as any)._conflicts && ((doc as any)._conflicts.length > 0)) {
-        console.log(`⚔️ Internal PouchDB conflicts detected for ${doc._id}:`, (doc as any)._conflicts)
+        console.debug(`⚔️ Internal PouchDB conflicts detected for ${doc._id}:`, (doc as any)._conflicts)
 
         // Construct a conflict info object for this internal conflict
         // We'll need to fetch the remote version or just use the first conflicting revision as "remote" for comparison?
@@ -148,7 +148,7 @@ export class ConflictDetector {
 
       return null
     } catch (error) {
-      console.warn(`⚠️ Error detecting conflict for ${doc._id}:`, error)
+      console.debug(`⚠️ Error detecting conflict for ${doc._id}:`, error)
       return null
     }
   }
@@ -262,7 +262,7 @@ export class ConflictDetector {
     const severity = this.assessSeverity(localDoc, remoteDoc, conflictType)
     const autoResolvable = this.canAutoResolve(localDoc, remoteDoc, conflictType)
 
-    console.log(`⚔️ Conflict detected: ${localDoc._id} - ${conflictType} (${severity})`)
+    console.debug(`⚔️ Conflict detected: ${localDoc._id} - ${conflictType} (${severity})`)
 
     return {
       documentId: localDoc._id,
@@ -441,7 +441,7 @@ export class ConflictDetector {
       const binString = Array.from(bytes, b => String.fromCodePoint(b)).join('')
       return btoa(binString).slice(0, 16)
     } catch (error) {
-      console.warn('⚠️ Error calculating checksum:', error)
+      console.debug('⚠️ Error calculating checksum:', error)
       return Date.now().toString(36)
     }
   }

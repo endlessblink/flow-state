@@ -3,7 +3,7 @@
  * Handles request batching, caching, compression, and deduplication
  */
 
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import { usePerformanceManager } from './usePerformanceManager'
 
 export interface NetworkRequest {
@@ -531,15 +531,17 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   }
 
   // Setup
-  onMounted(() => {
-    const cleanupListeners = setupEventListeners()
-    getNetworkInfo()
-    measureConnectionSpeed()
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      const cleanupListeners = setupEventListeners()
+      getNetworkInfo()
+      measureConnectionSpeed()
 
-    onUnmounted(cleanupListeners)
-  })
+      onUnmounted(cleanupListeners)
+    })
 
-  onUnmounted(cleanup)
+    onUnmounted(cleanup)
+  }
 
   return {
     // Core operations

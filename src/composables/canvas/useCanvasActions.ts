@@ -58,7 +58,7 @@ export function useCanvasActions(
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     // BUG-044 FIX: Get viewport directly from Vue Flow (not stale store value)
-    const { getSelectedNodes, viewport: vfViewport } = useVueFlow()
+    const { getSelectedNodes, screenToFlowCoordinate, viewport: vfViewport } = useVueFlow()
 
     // --- Task Creation ---
 
@@ -68,25 +68,27 @@ export function useCanvasActions(
 
         try {
             // ✅ VALIDATION 3: Check DOM element exists
+            // (Still good to verify flow exists, even if we delegate calc)
             const vueFlowElement = document.querySelector('.vue-flow')
             if (!vueFlowElement) {
                 throw new Error('Vue Flow DOM element (.vue-flow) not found')
             }
 
-            // ✅ BUG-044 FIX: Use Vue Flow's actual viewport (not stale store viewport)
-            const vp = vfViewport.value
-            const rect = vueFlowElement.getBoundingClientRect()
-            const canvasX = (state.canvasContextMenuX.value - rect.left - (vp?.x || 0)) / (vp?.zoom || 1)
-            const canvasY = (state.canvasContextMenuY.value - rect.top - (vp?.y || 0)) / (vp?.zoom || 1)
+            // ✅ DRIFT FIX: Use Vue Flow native projection
+            // screenToFlowCoordinate handles getBoundingClientRect AND viewport transform automatically
+            const flowCoords = screenToFlowCoordinate({
+                x: state.canvasContextMenuX.value,
+                y: state.canvasContextMenuY.value
+            })
 
-            console.log(`📐 ${functionName}: Calculated canvas position: x=${canvasX}, y=${canvasY} (viewport: x=${vp?.x}, y=${vp?.y}, zoom=${vp?.zoom})`)
+            console.log(`📐 ${functionName}: Projected position:`, flowCoords)
 
-            if (!Number.isFinite(canvasX) || !Number.isFinite(canvasY)) {
-                throw new Error(`Invalid calculated coordinates: x=${canvasX}, y=${canvasY}`)
+            if (!Number.isFinite(flowCoords.x) || !Number.isFinite(flowCoords.y)) {
+                throw new Error(`Invalid calculated coordinates: x=${flowCoords.x}, y=${flowCoords.y}`)
             }
 
             // ✅ STORE POSITION
-            state.quickTaskPosition.value = { x: canvasX, y: canvasY }
+            state.quickTaskPosition.value = flowCoords
 
             // ✅ CLOSE MENU & OPEN MODAL
             deps.closeCanvasContextMenu()
@@ -154,11 +156,13 @@ export function useCanvasActions(
         const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
         if (!vueFlowElement) return
 
-        const rect = vueFlowElement.getBoundingClientRect()
-        const canvasX = (state.canvasContextMenuX.value - rect.left - deps.viewport.value.x) / deps.viewport.value.zoom
-        const canvasY = (state.canvasContextMenuY.value - rect.top - deps.viewport.value.y) / deps.viewport.value.zoom
+        // ✅ DRIFT FIX: Use Vue Flow native projection
+        const flowCoords = screenToFlowCoordinate({
+            x: state.canvasContextMenuX.value,
+            y: state.canvasContextMenuY.value
+        })
 
-        state.groupModalPosition.value = { x: canvasX, y: canvasY }
+        state.groupModalPosition.value = flowCoords
         state.selectedGroup.value = null // Ensure create mode
 
         deps.closeCanvasContextMenu()
@@ -388,7 +392,8 @@ export function useCanvasActions(
             if (item.type === 'section') {
                 await canvasStore.deleteSectionWithUndo(item.id)
             } else if (isPermanent) {
-                await undoHistory.deleteTaskWithUndo(item.id)
+                // [DEEP-DIVE FIX] Call explicit permanent delete
+                await taskStore.permanentlyDeleteTask(item.id)
             } else {
                 // Move to inbox (soft delete)
                 await undoHistory.updateTaskWithUndo(item.id, {

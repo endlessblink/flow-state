@@ -22,7 +22,7 @@
       <!-- ROUTER VIEW FOR DIFFERENT VIEWS -->
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
-          <div v-if="Component" :key="$route.fullPath" class="view-wrapper">
+          <div v-if="Component" :key="$route.path" class="view-wrapper">
             <component :is="Component" />
           </div>
         </transition>

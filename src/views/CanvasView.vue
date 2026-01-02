@@ -112,7 +112,6 @@
         <!-- Canvas with tasks -->
         <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
           <VueFlow
-            v-if="systemHealthy && isCanvasReady"
             ref="vueFlowRef"
             v-model:nodes="safeNodes"
             v-model:edges="safeEdges"
@@ -240,7 +239,7 @@
           </VueFlow>
 
           <!-- Loading state when canvas is not ready -->
-          <div v-else class="canvas-loading-state">
+          <div v-if="!systemHealthy || !isCanvasReady" class="canvas-loading-state">
             <div class="flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4" />
@@ -674,6 +673,7 @@ const {
   onEdgeContextMenu,
   removeEdges,
   viewport: vfViewport, // BUG-019: Get the actual Vue Flow viewport for accurate coordinate transforms
+  screenToFlowCoordinate, // BUG-044 FIX: Use official coordinate projection
   updateNodeData, // TASK-072: Official Vue Flow API for updating node data reactively
   updateNode, // BUG-055: Update node position for inverse delta compensation
   // setViewport: vueFlowSetViewport // TASK-072: Restore saved viewport position // Unused
@@ -1624,7 +1624,15 @@ const safeEdges = computed({
     if (!systemHealthy.value || !Array.isArray(edges.value)) {
       return []
     }
-    return edges.value.filter(edge => edge && edge.id && edge.source && edge.target)
+    // BUG-FIX: Ensure source and target nodes actually exist in the nodes array
+    // This prevents [Vue Flow]: Edge source or target is missing warnings
+    const nodeIds = new Set(nodes.value.map(n => n.id))
+    return edges.value.filter(edge => 
+      edge && 
+      edge.id && 
+      edge.source && nodeIds.has(edge.source) && 
+      edge.target && nodeIds.has(edge.target)
+    )
   },
   set(newEdges: Edge[]) {
     edges.value = newEdges
@@ -2474,19 +2482,20 @@ const _createGroup = () => {
   }
 
   // Calculate canvas coordinates accounting for viewport transformation
-  const rect = vueFlowElement.getBoundingClientRect()
-  const canvasX = (canvasContextMenuX.value - rect.left - viewport.value?.x) / viewport.value?.zoom
-  const canvasY = (canvasContextMenuY.value - rect.top - viewport.value?.y) / viewport.value?.zoom
+  // ✅ DRIFT FIX: Use Vue Flow native projection for 100% accuracy
+  const flowCoords = screenToFlowCoordinate({
+    x: canvasContextMenuX.value,
+    y: canvasContextMenuY.value
+  })
 
   // Debug logging
   console.log('🎯 Creating group at:', {
     screenCoords: { x: canvasContextMenuX.value, y: canvasContextMenuY.value },
-    viewport: { x: viewport.value?.x, y: viewport.value?.y, zoom: viewport.value?.zoom },
-    canvasCoords: { x: canvasX, y: canvasY }
+    canvasCoords: flowCoords
   })
 
   // Set modal position for group creation using calculated coordinates
-  groupModalPosition.value = { x: canvasX, y: canvasY }
+  groupModalPosition.value = { x: flowCoords.x, y: flowCoords.y }
 
   // Open the group modal
   isGroupModalOpen.value = true
@@ -2555,21 +2564,23 @@ const createTaskInGroup = async (section: CanvasSection) => {
   }
 
   if (vueFlowElement && canvasContextMenuX.value && canvasContextMenuY.value) {
-    const rect = vueFlowElement.getBoundingClientRect()
-    const vp = viewport.value
-    const canvasX = (canvasContextMenuX.value - rect.left - (vp?.x || 0)) / (vp?.zoom || 1)
-    const canvasY = (canvasContextMenuY.value - rect.top - (vp?.y || 0)) / (vp?.zoom || 1)
+  if (vueFlowElement && canvasContextMenuX.value && canvasContextMenuY.value) {
+    // ✅ DRIFT FIX: Use Vue Flow native projection for 100% accuracy
+    const flowCoords = screenToFlowCoordinate({
+      x: canvasContextMenuX.value,
+      y: canvasContextMenuY.value
+    })
 
     console.log('📍 [CanvasView] createTaskInGroup position calc:', {
       screenCoords: { x: canvasContextMenuX.value, y: canvasContextMenuY.value },
-      viewport: { x: vp?.x, y: vp?.y, zoom: vp?.zoom },
-      canvasCoords: { x: canvasX, y: canvasY }
+      canvasCoords: flowCoords
     })
 
-    // Use click position if it's valid
-    if (Number.isFinite(canvasX) && Number.isFinite(canvasY)) {
-      taskPosition = { x: canvasX, y: canvasY }
+    // Use calculated position if valid
+    if (Number.isFinite(flowCoords.x) && Number.isFinite(flowCoords.y)) {
+      taskPosition = { x: flowCoords.x, y: flowCoords.y }
     }
+  }
   }
 
   // BUG-042 FIX: Create task with canvasPosition directly (not in inbox)

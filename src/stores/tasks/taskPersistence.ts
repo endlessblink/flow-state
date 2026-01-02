@@ -1,4 +1,5 @@
-import { watch, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
+import { syncState } from '@/services/sync/SyncStateService'
 import { DB_KEYS, useDatabase } from '@/composables/useDatabase'
 import { STORAGE_FLAGS } from '@/config/database'
 import {
@@ -58,14 +59,14 @@ export function useTaskPersistence(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const dbInstance = (window as any).pomoFlowDb
         if (!dbInstance) {
-            console.error(`[SAVE - TASKS] PouchDB not available(${context})`)
+            console.error(`[SAVE-TASKS] PouchDB not available (${context})`)
             return
         }
 
         // BUG-060: Pre-save validation - block tasks with invalid IDs
         const validation = validateBeforeSave(tasksToSave)
         if (validation.blockedTasks.length > 0) {
-            console.error(`🛡️ [PRE-SAVE] Blocked ${validation.blockedTasks.length} tasks with invalid IDs (${context}):`,
+            console.error(`🛡️ [PRE-SAVE] Blocked ${validation.blockedTasks.length} tasks with invalid IDs (${context}): `,
                 validation.blockedTasks.map(t => ({ id: t.id, title: t.title }))
             )
         }
@@ -114,7 +115,7 @@ export function useTaskPersistence(
 
         const validation = validateBeforeSave(tasksToSave)
         if (validation.blockedTasks.length > 0) {
-            console.error(`🛡️ [PRE-SAVE-SPECIFIC] Blocked ${validation.blockedTasks.length} tasks with invalid IDs (${context})`)
+            console.error(`🛡️[PRE - SAVE - SPECIFIC] Blocked ${validation.blockedTasks.length} tasks with invalid IDs(${context})`)
         }
 
         const validTasksToSave = validation.validTasks
@@ -149,8 +150,8 @@ export function useTaskPersistence(
 
                 // TASK-076: Migration from old single hideDoneTasks to separate filters
                 if (state.hideCanvasDoneTasks !== undefined || state.hideCalendarDoneTasks !== undefined) {
-                    // New format - use separate values
-                    hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? false
+                    // New format - use separate values (default true for canvas)
+                    hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? true
                     hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false
                 } else if (state.hideDoneTasks !== undefined) {
                     // Old format - migrate to both filters
@@ -208,7 +209,7 @@ export function useTaskPersistence(
             // BUG-060: Generate valid IDs for tasks that don't have them
             const importedTasks: Task[] = tasksArray.map((jt: any, index: number) => ({
                 // BUG-060 FIX: Generate fallback ID if missing or invalid
-                id: isValidTaskId(jt.id) ? jt.id : generateFallbackId(`json-import-${index}`),
+                id: isValidTaskId(jt.id) ? jt.id : generateFallbackId(`json -import -${index} `),
                 title: jt.title || 'Imported Task',
                 description: jt.description || '',
                 status: jt.status || 'planned',
@@ -227,7 +228,7 @@ export function useTaskPersistence(
             // BUG-060: Log any ID generation that occurred
             const generatedCount = importedTasks.filter((t, i) => !isValidTaskId(tasksArray[i]?.id)).length
             if (generatedCount > 0) {
-                console.log(`🛡️ [JSON-IMPORT] Generated ${generatedCount} fallback IDs for tasks without valid IDs`)
+                console.log(`🛡️[JSON - IMPORT] Generated ${generatedCount} fallback IDs for tasks without valid IDs`)
             }
 
             const existingIds = new Set(tasks.value.map(t => t.id))
@@ -251,7 +252,7 @@ export function useTaskPersistence(
                     })))
                     if (sanitized.length > 0) {
                         tasks.value.push(...sanitized)
-                        console.log(`🛡️ [RECOVERY] Restored ${sanitized.length} tasks from user backup`)
+                        console.log(`🛡️[RECOVERY] Restored ${sanitized.length} tasks from user backup`)
                     }
                     localStorage.removeItem('pomo-flow-user-backup')
                     return
@@ -265,7 +266,7 @@ export function useTaskPersistence(
 
             // BUG-060: Use isValidTaskId for robust ID validation
             const recoveredTasks: Task[] = tasksData.map((rt: any, index: number) => ({
-                id: isValidTaskId(rt.id) ? rt.id : generateFallbackId(`recovery-${index}`),
+                id: isValidTaskId(rt.id) ? rt.id : generateFallbackId(`recovery - ${index} `),
                 title: rt.title || 'Recovered Task',
                 description: rt.description || '',
                 status: rt.status || 'planned',
@@ -287,7 +288,7 @@ export function useTaskPersistence(
                 tasks.value.push(...newTasks)
                 runAllTaskMigrations()
                 localStorage.removeItem('pomo-flow-imported-tasks')
-                console.log(`🛡️ [RECOVERY] Imported ${newTasks.length} tasks from recovery tool`)
+                console.log(`🛡️[RECOVERY] Imported ${newTasks.length} tasks from recovery tool`)
             }
         } catch { }
     }
@@ -377,7 +378,7 @@ export function useTaskPersistence(
     let tasksSaveTimer: any = null
     watch(tasks, () => {
         // BUG-057: Skip auto-save during sync to prevent infinite loops
-        if (manualOperationInProgress.value || isLoadingFromDatabase.value || syncInProgress.value) return
+        if (manualOperationInProgress.value || isLoadingFromDatabase.value || syncInProgress.value || syncState.isSyncing.value) return
         if (tasksSaveTimer) clearTimeout(tasksSaveTimer)
         tasksSaveTimer = setTimeout(async () => {
             try {

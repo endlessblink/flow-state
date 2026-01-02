@@ -210,6 +210,28 @@ export function useTaskOperations(
         }
     }
 
+    // [DEEP-DIVE FIX] Added permanent delete operation
+    const permanentlyDeleteTask = async (taskId: string) => {
+        const index = tasks.value.findIndex(t => t.id === taskId)
+        if (index === -1) return
+
+        manualOperationInProgress.value = true
+        try {
+            // 1. Remove from local state immediately (Optimistic UI)
+            tasks.value.splice(index, 1)
+
+            // 2. Call TrashService for DB removal (Hard Delete)
+            const { trashService } = await import('@/services/trash/TrashService')
+            await trashService.permanentlyDeleteTask(taskId)
+
+            // 3. Ensure no artifacts remain in individual storage if needed
+        } catch (error) {
+            console.error(`❌ Failed to permanently delete ${taskId}:`, error)
+        } finally {
+            manualOperationInProgress.value = false
+        }
+    }
+
     const bulkDeleteTasks = async (taskIds: string[]) => {
         if (!taskIds.length) return
         manualOperationInProgress.value = true
@@ -485,6 +507,7 @@ export function useTaskOperations(
         createTask,
         updateTask,
         deleteTask,
+        permanentlyDeleteTask,
         bulkDeleteTasks,
         moveTask,
         selectTask,

@@ -30,7 +30,7 @@
           @context-menu="handleContextMenu"
           @toggle-expand="toggleTaskExpand"
           @move-task="handleMoveTask"
-          @update-task="(taskId, updates) => $emit('updateTask', taskId, updates)"
+          @update-task="(taskId: string, updates: Partial<Task>) => $emit('updateTask', taskId, updates)"
         />
       </template>
     </div>

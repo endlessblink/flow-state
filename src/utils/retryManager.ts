@@ -43,7 +43,7 @@ export class RetryManager {
       ...config
     }
 
-    console.log('🔄 RetryManager initialized:', this.config)
+    // console.log('🔄 RetryManager initialized:', this.config)
   }
 
   /**
@@ -59,7 +59,7 @@ export class RetryManager {
     let lastError: Error | null = null
     const startTime = Date.now()
 
-    console.log(`🔄 Executing ${operationName} (attempt 1/${this.config.maxAttempts})`)
+    // console.log(`🔄 Executing ${operationName} (attempt 1/${this.config.maxAttempts})`)
 
     for (let attempt = 1; attempt <= this.config.maxAttempts; attempt++) {
       try {
@@ -103,7 +103,7 @@ export class RetryManager {
           success: false
         })
 
-        console.warn(`❌ ${operationName} failed on attempt ${attempt}:`, this.formatError(error))
+        // console.warn(`❌ ${operationName} failed on attempt ${attempt}:`, this.formatError(error))
 
         // Don't retry on certain errors
         if (this.isNonRetryableError(error)) {

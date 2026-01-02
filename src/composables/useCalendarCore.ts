@@ -246,15 +246,27 @@ export function useCalendarCore() {
     const slotEnd = new Date(slotDate.getTime() + 30 * 60000)
 
     return currentTime >= slotDate && currentTime < slotEnd &&
-           slot.date === currentTime.toISOString().split('T')[0]
+      slot.date === currentTime.toISOString().split('T')[0]
   }
 
   /**
    * Get project visual (emoji or color) for a calendar event
    */
-  const getProjectVisual = (event: { projectId?: string }): { type: string; content: string } => {
-    if (!event.projectId) return { type: 'default', content: '📁' }
-    return taskStore.getProjectVisual(event.projectId)
+  const getProjectVisual = (event: { projectId?: string }): { type: 'color' | 'emoji'; content: string } => {
+    if (!event.projectId) return { type: 'emoji', content: '📁' }
+
+    const visual = taskStore.getProjectVisual(event.projectId)
+
+    // Normalize to strict types expected by Calendar components
+    if (visual.type === 'emoji') {
+      return { type: 'emoji', content: visual.content }
+    } else if (visual.type === 'css-circle' || visual.color) {
+      // Map css-circle/color to 'color' type with hex content
+      return { type: 'color', content: visual.color || '#808080' }
+    }
+
+    // Default fallback
+    return { type: 'emoji', content: '📁' }
   }
 
   return {

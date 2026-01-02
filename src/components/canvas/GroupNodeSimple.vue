@@ -192,9 +192,9 @@ const handleResizeEnd = (event: unknown) => {
   border: 2px solid rgba(255, 255, 255, 0.35) !important;
   border-radius: var(--radius-lg);
   /* TASK-079: Brighter background for contrast against dark canvas */
-  background: rgba(45, 48, 58, 0.92) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(45, 48, 58, 0.65) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   position: relative;
   z-index: 1;
   /* TASK-073: Outer line via outline for double-border effect */

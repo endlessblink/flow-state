@@ -12,6 +12,7 @@ import {
     deleteProject as deleteProjectDoc
 } from '@/utils/individualProjectStorage'
 import { useTaskStore } from './tasks'
+import { syncState } from '@/services/sync/SyncStateService'
 
 export const useProjectStore = defineStore('projects', () => {
     const db = useDatabase()
@@ -386,7 +387,7 @@ export const useProjectStore = defineStore('projects', () => {
 
     // Watchers
     watch(projects, (newProjects) => {
-        if (manualOperationInProgress || isLoading.value) return
+        if (manualOperationInProgress || isLoading.value || syncState.isSyncing.value) return
         saveProjectsToStorage([...newProjects], 'auto-save')
     }, { deep: true })
 

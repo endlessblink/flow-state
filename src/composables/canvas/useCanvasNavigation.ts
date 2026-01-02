@@ -3,17 +3,18 @@ import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { storeToRefs } from 'pinia'
 
-export function useCanvasNavigation() {
+export function useCanvasNavigation(canvasStore: any) {
     const { fitView: vueFlowFitView, getNodes } = useVueFlow()
-    const canvasStore = useCanvasStore()
-    const { viewport } = storeToRefs(canvasStore)
 
-    // BUG-052: Initial viewport from saved state
-    const initialViewport = computed(() => ({
-        x: viewport.value.x,
-        y: viewport.value.y,
-        zoom: viewport.value.zoom
-    }))
+    // Safety check - use computed to access viewport properties to avoid crash if store is not ready
+    const initialViewport = computed(() => {
+        const vp = canvasStore?.viewport || { x: 0, y: 0, zoom: 1 }
+        return {
+            x: vp.x ?? 0,
+            y: vp.y ?? 0,
+            zoom: vp.zoom ?? 1
+        }
+    })
 
     const zoomToSelection = () => {
         // Get selected nodes from store/VueFlow

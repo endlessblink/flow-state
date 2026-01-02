@@ -444,7 +444,7 @@ const storeHealth = validateStores()
 // By using canvasStore.viewport (which is loaded BEFORE Vue Flow renders),
 // we avoid the default (0,0,1) → saved viewport jump
 // Navigation (Extracted)
-const { initialViewport, fitCanvas, zoomToSelection } = useCanvasNavigation()
+const { initialViewport, fitCanvas, zoomToSelection } = useCanvasNavigation(canvasStore)
 
 // TASK-082: Date transition handler - move Today tasks to Overdue at midnight
 const handleMidnightTransition = async (_previousDate: Date, _newDate: Date) => {
@@ -2545,10 +2545,29 @@ const createTaskInGroup = async (section: CanvasSection) => {
     return
   }
 
-  // Place task at top-left of section with some padding
-  const taskPosition = {
+  // Calculate task position from the right-click location (not fixed offset)
+  const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
+  let taskPosition = {
     x: (sectionNode.position?.x || 0) + 20,
-    y: (sectionNode.position?.y || 0) + 60 // Below header
+    y: (sectionNode.position?.y || 0) + 60 // Fallback: top-left of section
+  }
+
+  if (vueFlowElement && canvasContextMenuX.value && canvasContextMenuY.value) {
+    const rect = vueFlowElement.getBoundingClientRect()
+    const vp = viewport.value
+    const canvasX = (canvasContextMenuX.value - rect.left - (vp?.x || 0)) / (vp?.zoom || 1)
+    const canvasY = (canvasContextMenuY.value - rect.top - (vp?.y || 0)) / (vp?.zoom || 1)
+
+    console.log('📍 [CanvasView] createTaskInGroup position calc:', {
+      screenCoords: { x: canvasContextMenuX.value, y: canvasContextMenuY.value },
+      viewport: { x: vp?.x, y: vp?.y, zoom: vp?.zoom },
+      canvasCoords: { x: canvasX, y: canvasY }
+    })
+
+    // Use click position if it's valid
+    if (Number.isFinite(canvasX) && Number.isFinite(canvasY)) {
+      taskPosition = { x: canvasX, y: canvasY }
+    }
   }
 
   // BUG-042 FIX: Create task with canvasPosition directly (not in inbox)

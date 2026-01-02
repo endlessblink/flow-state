@@ -58,6 +58,15 @@ export function useCanvasEvents(syncNodes?: () => void) {
     }
 
     const handleCanvasRightClick = (event: MouseEvent) => {
+        console.log('🖱️ [DEBUG] handleCanvasRightClick fired:', {
+            clientX: event.clientX,
+            clientY: event.clientY,
+            pageX: event.pageX,
+            pageY: event.pageY,
+            target: (event.target as HTMLElement)?.className,
+            eventType: event.type
+        })
+
         if (isConnecting.value) {
             event.preventDefault()
             event.stopPropagation()
@@ -72,10 +81,20 @@ export function useCanvasEvents(syncNodes?: () => void) {
 
         canvasContextMenuX.value = event.clientX
         canvasContextMenuY.value = event.clientY
+        console.log('🖱️ [DEBUG] handleCanvasRightClick SET coords:', { x: canvasContextMenuX.value, y: canvasContextMenuY.value })
         showCanvasContextMenu.value = true
     }
 
     const handlePaneContextMenu = (event: MouseEvent) => {
+        console.log('🎯 [DEBUG] handlePaneContextMenu fired:', {
+            clientX: event.clientX,
+            clientY: event.clientY,
+            pageX: event.pageX,
+            pageY: event.pageY,
+            target: (event.target as HTMLElement)?.className,
+            eventType: event.type
+        })
+
         if (isConnecting.value) {
             event.preventDefault()
             event.stopPropagation()
@@ -84,6 +103,7 @@ export function useCanvasEvents(syncNodes?: () => void) {
         event.preventDefault()
         canvasContextMenuX.value = event.clientX
         canvasContextMenuY.value = event.clientY
+        console.log('🎯 [DEBUG] handlePaneContextMenu SET coords:', { x: canvasContextMenuX.value, y: canvasContextMenuY.value })
         showCanvasContextMenu.value = true
     }
 

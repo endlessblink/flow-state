@@ -19,6 +19,9 @@ import { getBatchManager } from '@/utils/syncBatchManager'
 import { getLogger } from '@/utils/productionLogger'
 import type { ConflictInfo, ResolutionResult } from '@/types/conflicts'
 import type { SyncValidationResult } from '@/utils/syncValidator'
+import { DatabaseService } from '@/services/sync/DatabaseService'
+import { SyncOperationService } from '@/services/sync/SyncOperationService'
+
 
 export type { ConflictInfo, ResolutionResult }
 export type { SyncValidationResult }
@@ -144,6 +147,15 @@ export const useReliableSyncManager = () => {
   const batchManager = getBatchManager()
   const logger = getLogger()
 
+  // Phase 4 Services
+  const databaseService = new DatabaseService()
+  const syncOperationService = new SyncOperationService(
+    conflictDetector,
+    syncValidator,
+    backupSystem,
+    logger
+  )
+
   // Set logger context
   logger.setDevice(timezoneManager.getDeviceInfo().deviceId)
 
@@ -190,98 +202,7 @@ export const useReliableSyncManager = () => {
     }
   }
 
-  /**
-   * Initialize local PouchDB instance
-   */
-  const initializeLocalDatabase = (): PouchDB.Database => {
-    try {
-      if (localDB) {
-        return localDB
-      }
-
-      // BUG-054 FIX: Get fresh config each time (reads from localStorage → env vars)
-      const config = getDatabaseConfig()
-
-      localDB = new PouchDB(config.local.name, {
-        adapter: config.local.adapter
-      })
-
-      console.log(`🗄️ ReliableSyncManager: Local PouchDB initialized: ${config.local.name}`)
-      return localDB
-    } catch (error) {
-      console.error('❌ Failed to initialize local database:', error)
-      throw new Error(`Local database initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-  }
-
-  /**
-   * Setup remote PouchDB connection with error handling
-   */
-  const setupRemoteConnection = async (): Promise<PouchDB.Database | null> => {
-    try {
-      console.log('🔌 [REMOTE] Starting remote connection setup...')
-
-      // BUG-054 FIX: Get fresh config each time (reads from localStorage → env vars)
-      const config = getDatabaseConfig()
-
-      if (!config.remote?.url) {
-        console.log('📱 ReliableSyncManager: No remote URL configured, using local-only mode')
-        remoteConnected.value = false
-        return null
-      }
-
-      console.log(`🔌 [REMOTE] URL: ${config.remote.url}`)
-
-      const remoteOptions: PouchDB.Configuration.RemoteDatabaseConfiguration = {}
-
-      if (config.remote.auth) {
-        remoteOptions.auth = {
-          username: config.remote.auth.username,
-          password: config.remote.auth.password
-        }
-        console.log(`🔌 [REMOTE] Auth configured for user: ${config.remote.auth.username}`)
-      }
-
-      // Add timeout property - reduced to 10 seconds for faster feedback
-      (remoteOptions as PouchDB.Configuration.RemoteDatabaseConfiguration & { timeout?: number }).timeout = 10000
-      remoteOptions.skip_setup = false
-
-      console.log('🔌 [REMOTE] Creating PouchDB instance...')
-      remoteDB = new PouchDB(config.remote.url, remoteOptions)
-      console.log('🔌 [REMOTE] PouchDB instance created, testing connection...')
-
-      // Use a timeout wrapper for the info() call
-      try {
-        const infoPromise = remoteDB.info()
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Connection timeout after 10s')), 10000)
-        )
-
-        const info = await Promise.race([infoPromise, timeoutPromise]) as PouchDB.Core.DatabaseInfo
-        console.log(`🌐 ReliableSyncManager: Remote CouchDB connected: ${config.remote.url}`)
-        console.log(`📊 Remote DB info:`, {
-          name: info.db_name,
-          doc_count: info.doc_count,
-          update_seq: info.update_seq
-        })
-        remoteConnected.value = true
-        hasConnectedEver.value = true
-        localStorage.setItem('pomoflow_hasConnectedEver', 'true')  // Persist to localStorage
-        triggerRef(remoteConnected)
-        console.log('🔌 [REMOTE] Set remoteConnected=true, hasConnectedEver=true (saved to localStorage)')
-        return remoteDB
-      } catch (connectionError) {
-        console.warn('⚠️ Remote connection test failed:', connectionError)
-        // Still return the remoteDB - sync might work even if info() fails
-        remoteConnected.value = false
-        return remoteDB
-      }
-    } catch (err) {
-      console.error('❌ Failed to setup remote connection:', err instanceof Error ? err.message : 'Unknown error')
-      remoteConnected.value = false
-      return null
-    }
-  }
+  // initialization logic extracted to DatabaseService
 
   /**
    * Initialize Phase 2 systems
@@ -315,12 +236,12 @@ export const useReliableSyncManager = () => {
 
     try {
       // Initialize the database connection using internal function
-      localDB = initializeLocalDatabase()
+      localDB = databaseService.initializeLocal()
 
       const w = window as any
       w.pomoFlowDb = localDB
 
-      remoteDB = await setupRemoteConnection()
+      remoteDB = await databaseService.initializeRemote()
 
       if (!remoteDB) {
         console.log('📱 No remote database available, running in offline mode')
@@ -643,71 +564,26 @@ export const useReliableSyncManager = () => {
    * SYNC RE-ENABLED: Safe after Phase 1 watcher fixes (Dec 2025)
    */
   const performReliableSync = async (): Promise<void> => {
-    const syncOperation = logger.startSyncOperation('full_sync')
-    const operationId = syncOperation.operationId
+    // Note: Logging handled inside SyncOperationService but we need operationId for error handling here if wrapper fails
+    // Actually SyncOperationService handles its own logging mostly.
 
     try {
       if (!localDB) {
         throw new Error('Local database not initialized')
       }
 
-      const remoteDB = await setupRemoteConnection()
+      // Ensure remote connection
+      const remoteDBInstance = await databaseService.initializeRemote()
+      remoteDB = remoteDBInstance // Update local reference
+
       if (!remoteDB) {
         throw new Error('Remote database not available')
       }
 
       syncStatus.value = 'syncing'
 
-      // Step 0: Backup before sync (safety first) - SILENT
-      try {
-        await backupSystem.createBackup('auto')
-      } catch (_backupErr) {
-        // Silent fail - backup is optional
-      }
-
-      // BUG-059 FIX: PRE-FLIGHT SAFETY CHECK - Detect dangerous sync scenarios
-      // Compare local task count with remote task count before pulling
-      try {
-        const localDocs = await localDB.allDocs({
-          startkey: 'task-',
-          endkey: 'task-\ufff0'
-        })
-        const localTaskCount = localDocs.rows.length
-
-        const remoteDocs = await remoteDB.allDocs({
-          startkey: 'task-',
-          endkey: 'task-\ufff0'
-        })
-        const remoteTaskCount = remoteDocs.rows.length
-
-        // CRITICAL: If remote has 0 tasks but local has many, something is wrong
-        if (localTaskCount > 5 && remoteTaskCount === 0) {
-          console.warn(`🛡️ [SYNC PRE-FLIGHT] ABORT: Remote has 0 tasks but local has ${localTaskCount}`)
-          console.warn(`🛡️ [SYNC PRE-FLIGHT] This looks like remote data was deleted - refusing to sync`)
-          console.warn(`🛡️ [SYNC PRE-FLIGHT] Manual intervention required: delete remote DB or restore backup`)
-          syncStatus.value = 'error'
-          error.value = `Sync aborted: Remote DB appears empty (0 tasks) but local has ${localTaskCount} tasks. This may indicate data loss on remote.`
-          return
-        }
-
-        // CRITICAL: If remote would delete more than 50% of local tasks, warn (but continue for now)
-        if (localTaskCount > 5 && remoteTaskCount < localTaskCount * 0.5) {
-          console.warn(`⚠️ [SYNC PRE-FLIGHT] Remote has significantly fewer tasks (${remoteTaskCount}) than local (${localTaskCount})`)
-        }
-
-        console.log(`📊 [SYNC PRE-FLIGHT] Task counts - Local: ${localTaskCount}, Remote: ${remoteTaskCount}`)
-      } catch (preflightError) {
-        console.warn('⚠️ [SYNC PRE-FLIGHT] Check failed, continuing with sync:', preflightError)
-      }
-
-      // Step 1: Pre-sync validation - SILENT unless critical
-      const validationResult = await syncValidator.validateDatabase(localDB)
-      lastValidation.value = validationResult
-      if (validationResult.critical) {
-        throw new Error(`Critical database validation failure: ${validationResult.errors?.[0] || 'Unknown error'}`)
-      }
-
       // Step 2: Conflict detection - only log if conflicts found
+      // We keep this here because of UI state dependencies (conflicts ref)
       const existingConflicts = await conflictDetector.detectAllConflicts()
       if (existingConflicts.length > 0) {
         console.log(`⚔️ ${existingConflicts.length} conflicts found`)
@@ -715,134 +591,41 @@ export const useReliableSyncManager = () => {
         await resolveAutoResolvableConflicts()
       }
 
-      // Step 3: Perform sync (CORE OPERATION) with timeout
-      // IMPORTANT: PULL FIRST to get authoritative remote data before pushing local changes
-      // This prevents stale local data from overwriting good remote data
-      const local = localDB
-      const remote = remoteDB
+      // Delegate to SyncService
+      const result = await syncOperationService.performSync(localDB, remoteDB)
 
-      try {
-        // Pull remote → local FIRST (get authoritative data)
-        // BUG-057 FIX: Small batches to prevent Firefox OOM
-        const pullPromise = local.replicate.from(remote, {
-          live: false,
-          retry: false,
-          batch_size: 10,
-          batches_limit: 5
-        })
-        const pullTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Pull timeout after 60 seconds')), 60000)
-        })
-        const pullResult = await Promise.race([pullPromise, pullTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
+      if (result.success) {
+        syncStatus.value = 'complete'
+        remoteConnected.value = true
+        hasConnectedEver.value = true
+        localStorage.setItem('pomoflow_hasConnectedEver', 'true')
+        triggerRef(syncStatus)
+        triggerRef(remoteConnected)
+        lastSyncTime.value = new Date()
+        localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())
+        metrics.value.lastSyncTime = new Date()
+        metrics.value.successfulSyncs++
 
-        // Push local → remote
-        // BUG-057 FIX: Small batches to prevent Firefox OOM
-        const pushPromise = local.replicate.to(remote, {
-          live: false,
-          retry: false,
-          batch_size: 10,
-          batches_limit: 5
-        })
-        const pushTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Push timeout after 60 seconds')), 60000)
-        })
-        const pushResult = await Promise.race([pushPromise, pushTimeout]) as PouchDB.Replication.ReplicationResultComplete<Record<string, unknown>>
-
-        // Only log if docs were actually transferred
-        const pulled = pullResult.docs_read || 0
-        const pushed = pushResult.docs_written || 0
-        if (pulled > 0 || pushed > 0) {
-          console.log(`✅ [SYNC] Pulled ${pulled}, pushed ${pushed} docs`)
-        }
-
-        // BUG-054 FIX: Notify callbacks when data is pulled so stores can reload
-        if (pulled > 0) {
+        // Notify callbacks if data was pulled
+        if (result.pulled > 0) {
+          console.log(`✅ [SYNC] Pulled ${result.pulled} docs, notifying callbacks`)
           await notifyDataPulled()
         }
-      } catch (syncError) {
-        throw new Error(`Sync failed: ${(syncError as Error).message}`)
-      }
-
-      // Success - update metrics and status (SILENT)
-      syncStatus.value = 'complete'
-      remoteConnected.value = true
-      hasConnectedEver.value = true
-      localStorage.setItem('pomoflow_hasConnectedEver', 'true')
-      triggerRef(syncStatus)
-      triggerRef(remoteConnected)
-      lastSyncTime.value = new Date()
-      localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())
-      metrics.value.lastSyncTime = new Date()
-      metrics.value.successfulSyncs++
-
-      // Complete sync operation logging (internal only)
-      if ('completeSyncOperation' in logger) {
-        (logger as { completeSyncOperation: (id: string, success: boolean) => void }).completeSyncOperation(operationId, true)
+      } else {
+        throw new Error(result.error || 'Sync failed')
       }
 
     } catch (syncError) {
       const syncErrMessage = syncError instanceof Error ? syncError.message : 'Unknown error'
-      const syncErrStack = syncError instanceof Error ? syncError.stack : undefined
       console.error('❌ Reliable sync failed:', syncErrMessage)
-
-      // Log error
-      logger.error('sync', 'Reliable sync failed', {
-        operationId,
-        error: syncErrMessage,
-        stack: syncErrStack
-      })
-
-      // Complete sync operation with failure
-      if ('completeSyncOperation' in logger) {
-        (logger as { completeSyncOperation: (id: string, success: boolean, msg?: string) => void }).completeSyncOperation(operationId, false, syncErrMessage)
-      }
-
-      // Check if this is a critical error that requires data restoration
-      const errorMessage = syncErrMessage.toLowerCase()
-      const isCriticalError = errorMessage.includes('corruption') ||
-        errorMessage.includes('data loss') ||
-        errorMessage.includes('integrity') ||
-        errorMessage.includes('validation failed')
-
-      if (isCriticalError) {
-        logger.critical('sync', 'Critical sync error detected - data restoration may be needed', {
-          operationId,
-          error: errorMessage
-        })
-
-        try {
-          // List recent backups and check if restoration might be needed
-          const backups = backupSystem.backupHistory.value
-          const recentBackup = backups[0] // Most recent backup
-
-          if (recentBackup) {
-            // BUG-025: PouchDB serializes Date as string, convert before getTime()
-            const backupAge = Date.now() - new Date(recentBackup.timestamp).getTime()
-            const backupAgeMinutes = backupAge / (1000 * 60)
-
-            if (backupAgeMinutes < 30) { // Only consider backups less than 30 minutes old
-              logger.warn('sync', `Recent backup found for potential restoration`, {
-                backupId: recentBackup.id,
-                backupAgeMinutes: backupAgeMinutes.toFixed(1),
-                operationId
-              })
-
-              // Store backup info for potential manual restoration
-              const backupId = 'id' in recentBackup ? (recentBackup.id as string) : 'unknown'
-              error.value = `${errorMessage || 'Unknown error'}. Recent backup available: ${backupId} (${backupAgeMinutes.toFixed(1)} minutes old)`
-            }
-          }
-        } catch (backupCheckError) {
-          logger.error('sync', 'Failed to check backups during error recovery', {
-            operationId,
-            backupCheckError: (backupCheckError as Error).message
-          })
-        }
-      }
 
       // Update sync status to indicate error
       syncStatus.value = 'error'
-      throw error
+      error.value = syncErrMessage
+
+      logger.error('sync', 'Sync wrapper failed', { error: syncErrMessage })
+
+      throw new Error(syncErrMessage)
     }
   }
 

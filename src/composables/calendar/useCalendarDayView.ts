@@ -300,6 +300,39 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     }
   }
 
+  /**
+   * Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
+   */
+  const getSlotTaskStyle = (calEvent: CalendarEvent) => {
+    const baseHeight = (calEvent.slotSpan * 30) - 4
+
+    // If no overlap (totalColumns is 1 or undefined), use normal flow with full width
+    if (!calEvent.totalColumns || calEvent.totalColumns <= 1) {
+      return {
+        height: `${baseHeight}px`,
+        minHeight: `${baseHeight}px`,
+        zIndex: 10
+      }
+    }
+
+    // Calculate width and position for overlapping events (like Google Calendar)
+    const gapPercent = 1 // 1% gap between columns
+    const totalGaps = calEvent.totalColumns - 1
+    const availableWidth = 100 - (totalGaps * gapPercent)
+    const widthPercentage = availableWidth / calEvent.totalColumns
+    const leftPercentage = (widthPercentage + gapPercent) * (calEvent.column || 0)
+
+    return {
+      position: 'absolute' as const,
+      top: '2px',
+      height: `${baseHeight}px`,
+      minHeight: `${baseHeight}px`,
+      width: `calc(${widthPercentage}% - 4px)`,
+      left: `calc(${leftPercentage}% + 2px)`,
+      zIndex: 10 + (calEvent.column || 0) // Later columns render on top
+    }
+  }
+
   const getGhostStyle = () => {
     const slotHeight = 30
     const slotSpan = Math.ceil(dragGhost.value.duration / 30)
@@ -891,6 +924,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     // Styling
     getEventStyle,
+    getSlotTaskStyle,
     getGhostStyle,
 
     // Drag handlers

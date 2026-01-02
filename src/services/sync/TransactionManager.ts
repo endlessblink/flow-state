@@ -116,19 +116,10 @@ export class TransactionManager {
 
             console.warn(`🔄 [WAL] Found ${pending.length} pending transactions from previous session (CRASH RECOVERY)`)
 
-            for (const tx of pending) {
-                console.log(`🔄 [WAL] Replaying ${tx.operation} on ${tx.collection}`, tx._id)
-
-                // Emitting event so stores can listen and re-execute
-                // Why event? Because TransactionManager doesn't know about TaskStore/CanvasStore.
-                // Stores should subscribe to 'wal-replay' or we inject handler.
-                window.dispatchEvent(new CustomEvent('pomoflow-wal-replay', { detail: tx }))
-
-                // We assume the store handles it and calls commit(tx._id) if successful.
-                // But if we're just emitting, we can't await correctness easily unless we use a callback registry.
-                // For simplicity in Phase 14 part 1, we'll just log availability.
-                // TODO: Wire up actual replay logic in Store.
-            }
+            // Emit single batch event matching store expectation
+            window.dispatchEvent(new CustomEvent('pomoflow-wal-replay', {
+                detail: { transactions: pending }
+            }))
         } catch (err) {
             console.error('❌ [WAL] Failed to replay transactions:', err)
         }

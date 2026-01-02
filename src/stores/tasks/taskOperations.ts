@@ -24,6 +24,7 @@ export function useTaskOperations(
     hideCalendarDoneTasks: Ref<boolean>,
     manualOperationInProgress: Ref<boolean>,
     saveTasksToStorage: (tasks: Task[], context: string) => Promise<void>,
+    saveSpecificTasks: (tasks: Task[], context: string) => Promise<void>,
     persistFilters: () => void,
     _runAllTaskMigrations: () => void
 ) {
@@ -87,7 +88,7 @@ export function useTaskOperations(
             }
 
             tasks.value.push(newTask)
-            await saveTasksToStorage(tasks.value, `createTask-${newTask.id}`)
+            await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
 
             // Commit WAL
             if (txId) await transactionManager.commit(txId)
@@ -107,52 +108,61 @@ export function useTaskOperations(
         const index = tasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
-        const task = tasks.value[index]
+        // BUG-060 FIX: Suppress watcher during manual update to prevent concurrent bulk saves
+        // This prevents the "8 conflicts in bulk save" issue
+        const wasManualInProgress = manualOperationInProgress.value
+        if (!wasManualInProgress) manualOperationInProgress.value = true
 
-        // WAL Logic
-        let txId: string | null = null
         try {
-            txId = await transactionManager.beginTransaction('update', 'tasks', { taskId, updates })
-        } catch (e) {
-            console.warn('WAL Write failed during update, proceeding anyway', e)
-        }
+            const task = tasks.value[index]
 
-        // BUG-045 FIX: Removed auto-archive behavior
-        // Tasks now stay on canvas when marked as done (no position/inbox changes)
+            // WAL Logic
+            let txId: string | null = null
+            try {
+                txId = await transactionManager.beginTransaction('update', 'tasks', { taskId, updates })
+            } catch (e) {
+                console.warn('WAL Write failed during update, proceeding anyway', e)
+            }
 
-        // Canvas logic
-        if (updates.canvasPosition && !task.canvasPosition) {
-            updates.isInInbox = false
-        }
+            // BUG-045 FIX: Removed auto-archive behavior
+            // Tasks now stay on canvas when marked as done (no position/inbox changes)
 
-        if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || !task.instances.length)) {
-            updates.isInInbox = true
-        }
+            // Canvas logic
+            if (updates.canvasPosition && !task.canvasPosition) {
+                updates.isInInbox = false
+            }
 
-        // Project logic
-        if ('projectId' in updates) {
-            const isUncategorized = !updates.projectId || updates.projectId === '1' || updates.projectId === 'uncategorized'
-            updates.isUncategorized = isUncategorized
-        }
+            if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || !task.instances.length)) {
+                updates.isInInbox = true
+            }
 
-        // Orphan prevention
-        const finalInInbox = updates.isInInbox ?? task.isInInbox
-        const finalPos = updates.canvasPosition ?? task.canvasPosition
-        const finalInst = updates.instances ?? task.instances
-        if (!finalInInbox && !finalPos && (!finalInst || !finalInst.length)) {
-            updates.isInInbox = true
-        }
+            // Project logic
+            if ('projectId' in updates) {
+                const isUncategorized = !updates.projectId || updates.projectId === '1' || updates.projectId === 'uncategorized'
+                updates.isUncategorized = isUncategorized
+            }
 
-        tasks.value[index] = { ...task, ...updates, updatedAt: new Date() }
+            // Orphan prevention
+            const finalInInbox = updates.isInInbox ?? task.isInInbox
+            const finalPos = updates.canvasPosition ?? task.canvasPosition
+            const finalInst = updates.instances ?? task.instances
+            if (!finalInInbox && !finalPos && (!finalInst || !finalInst.length)) {
+                updates.isInInbox = true
+            }
 
-        // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
-        // Previously relied on 1-second debounced watcher which could miss quick refreshes
-        try {
-            await saveTasksToStorage(tasks.value, `updateTask-${taskId}`)
-            if (txId) await transactionManager.commit(txId)
-        } catch (error) {
-            if (txId) await transactionManager.rollback(txId, error)
-            console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
+            tasks.value[index] = { ...task, ...updates, updatedAt: new Date() }
+
+            // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
+            try {
+                await saveSpecificTasks([tasks.value[index]], `updateTask-${taskId}`)
+                if (txId) await transactionManager.commit(txId)
+            } catch (error) {
+                if (txId) await transactionManager.rollback(txId, error)
+                console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
+                // Note: We don't rollback memory state here to preserve UX, relying on "last write wins" locally
+            }
+        } finally {
+            if (!wasManualInProgress) manualOperationInProgress.value = false
         }
     }
 
@@ -187,7 +197,9 @@ export function useTaskOperations(
                 } catch { }
             }
 
-            await saveTasksToStorage(tasks.value, `deleteTask-${taskId}`)
+            if (!STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+                await saveTasksToStorage(tasks.value, `deleteTask-${taskId}`)
+            }
             if (txId) await transactionManager.commit(txId)
         } catch (error) {
             if (txId) await transactionManager.rollback(txId, error)
@@ -229,7 +241,9 @@ export function useTaskOperations(
                 } catch { }
             }
 
-            await saveTasksToStorage(tasks.value, `bulkDelete-${taskIds.length} tasks`)
+            if (!STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+                await saveTasksToStorage(tasks.value, `bulkDelete-${taskIds.length} tasks`)
+            }
             if (txId) await transactionManager.commit(txId)
         } catch (error) {
             if (txId) await transactionManager.rollback(txId, error)

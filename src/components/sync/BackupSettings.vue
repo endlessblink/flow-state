@@ -182,7 +182,7 @@
         <div v-for="(backup, index) in backupHistory.slice(0, 5)" :key="index" class="history-item">
           <div class="history-info">
             <span class="history-time">{{ formatTime(backup.timestamp) }}</span>
-            <span class="history-status" :class="{ success: true }">
+            <span class="history-status success">
               ✅ Success
             </span>
             <span class="history-size">{{ formatSize(backup.metadata?.size || 0) }}</span>

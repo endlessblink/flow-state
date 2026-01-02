@@ -1,5 +1,5 @@
-**Last Updated**: January 1, 2026 (BUG-054 Cross-Browser Sync Fix)
-**Version**: 5.12 (Sync Reliability)
+**Last Updated**: January 2, 2026 (BUG-061 Phantom Tasks & Date Serialization Fix)
+**Version**: 5.13 (Data Safety)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -583,6 +583,10 @@ INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration (Sections)
 | **ROAD-013** | **Sync Hardening** | **P0-CRITICAL** | **PREREQUISITE - Fix "mostly works" issues before major features** |
 | ROAD-004 | Mobile support (PWA) | P2 | PWA first → Android → iOS (paid only). Quick capture, today view, timer |
 | ROAD-005 | Auto-sync enablement | P1 | After multi-device testing |
+| ROAD-018 | **Markdown Export for Dropbox** | P1-HIGH | Hourly auto-export to .md file → Dropbox syncs versions. Independent of PouchDB/CouchDB. Human-readable recovery. |
+| ROAD-019 | **Write-Ahead Logging (WAL)** | P1-HIGH | **BUG-057 LESSON**: Log operation FIRST → Execute SECOND → Mark committed. Rollback uncommitted on crash. |
+| ROAD-020 | **Soft Delete Pattern** | P1-HIGH | **BUG-057 LESSON**: `_soft_deleted: true` instead of PouchDB remove(). "Trash" view for 30-day recovery. |
+| ROAD-021 | **SHA-256 Hash Verification** | P2-MEDIUM | Verify backup integrity before restore. Detect corruption/tampering. |
 
 ### Later
 | ID | Feature | Notes |
@@ -732,6 +736,9 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**TASK-085**~~ | ✅ **DONE** | `useDatabaseHealthCheck.ts`, `useCrossTabCoordination.ts`, `useConflictPruning.ts` | - | - |
 | ~~**BUG-051**~~ | ✅ **DONE** | `QuickSortView.vue`, `CategorySelector.vue` | - | - |
 | **BUG-055** | 🔴 **IN PROGRESS** | `CanvasView.vue` | - | - |
+| ~~**BUG-057**~~ | ✅ **DONE** | `individualTaskStorage.ts`, `useDatabaseHealthCheck.ts` | - | - |
+| ~~**BUG-058**~~ | ✅ **DONE** | `useReliableSyncManager.ts` | - | - |
+| ~~**BUG-059**~~ | ✅ **DONE** | `useBackupSystem.ts`, `useReliableSyncManager.ts` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -761,12 +768,65 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~BUG-052~~**: Canvas view changing abruptly/glitching | **P1-HIGH** | ✅ FIXED (Dec 31) - Vue Flow now initializes with saved viewport via `initialViewport` computed prop, eliminating the (0,0,1) → saved viewport jump
 - [x] **~~BUG-053~~**: Projects/tasks disappeared from IndexedDB | **P0-CRITICAL** | ✅ RECOVERED (Dec 31) - Data restored from CouchDB; sync manager URL bug identified
 - [x] **~~BUG-054~~**: ReliableSyncManager not reading CouchDB URL from settings | **P1-HIGH** | ✅ FIXED (Jan 1) - getDatabaseConfig() now reads localStorage first, useReliableSyncManager calls it fresh each time
-- [x] **~~BUG-055~~**: Canvas group resize breaks task/group positions | **P0-CRITICAL** | ✅ FIXED (Jan 1) - All fixes implemented:
-  - `isResizing` guard added to `batchedSyncNodes()` (line 1803)
-  - `isResizeSettling` ref + settling period (lines 1791, 2803-2834)
-  - Nested group position conversion: relative→absolute (lines 2717-2739)
-  - Verified with Playwright: resize settling works correctly
+- [x] **~~BUG-055~~**: Canvas group resize breaks task/group positions | **P0-CRITICAL** | ✅ FIXED (Jan 2)
+  - **Issue**: Tasks jump after group resize + reload.
+  - **Fix**: Applied "Inverse Delta Persistence" - correctly updates `taskStore` with new absolute positions during resize operations.
+  - **Resolution**: `CanvasView.vue` now calls `taskStore.updateTask` for all child nodes.
+- [ ] **TASK-090: Decompose CanvasView Monolith** <!-- id: 24 -->
+  - [x] Phase 1: Logic Extraction (Selection, Navigation, Events)
+  - [x] Phase 2: UI Component Extraction
+  - [ ] Phase 3: Helper Function Extraction
+  - **Goal**: Finish what TASK-043 started. 4,200 lines is still too large.
+  - **Scope**: Extract `handleSectionResize`, `handleDrop`, and Vue Flow event handlers into `composables/canvas/`.
 - [x] **~~TASK-085~~**: IndexedDB Corruption Prevention Safeguards | **P1-HIGH** | ✅ DONE (Jan 1) - Health check, cross-tab coordination, conflict pruning
+
+- [x] **~~TASK-085~~**: IndexedDB Corruption Prevention Safeguards | **P1-HIGH** | ✅ DONE (Jan 1) - Health check, cross-tab coordination, conflict pruning
+- [x] **~~BUG-057~~**: PouchDB sync infinite loop causing data loss | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added safety guards to syncDeletedTasks(), pre-initialization health check
+- [x] **~~BUG-058~~**: Non-syncable docs (notifications) causing constant sync loop | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added filter to live sync to exclude local-only documents
+- [x] **~~BUG-059~~**: Backup system overwrites with empty data during store corruption | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Golden backup, max task count tracking, suspicious backup detection, sync pre-flight validation
+- [x] **~~BUG-060~~**: Sync stability & persistence fixes | **P0-CRITICAL** | ✅ FIXED (Jan 2)
+  - ✅ btoa() UTF-8 encoding fix (conflictDetector.ts)
+  - ✅ Undefined task ID guards in saveTask/saveTasks
+  - ✅ updateTask() immediate save
+  - ✅ **Additional fixes (Jan 2 PM)** - Infinite loop fix:
+    - Root cause: `syncDeletedTasks()` received Set with `undefined` value (not string `'undefined'`)
+    - But document ID was `task-undefined` (string), so `Set.has('undefined')` returned false
+    - This created infinite loop: save conflict → delete orphan → repeat
+    - **Fix 1**: `taskPersistence.ts:59-67` - Filter undefined IDs before creating Set for syncDeletedTasks
+    - **Fix 2**: `individualTaskStorage.ts:530-535` - Skip 'undefined'/'null' string IDs in syncDeletedTasks loop
+  - ✅ **Multi-Layer Reliability Hardening** (Jan 2 Evening):
+    - **Layer 1 - Validation Utility**: `src/utils/taskValidation.ts` - Centralized ID validation
+      - `isValidTaskId()` - Robust check for string, non-empty, not 'undefined'/'null'
+      - `validateTask()` - Full task validation with error/warning collection
+      - `sanitizeTask()` - Recovers tasks with missing data, generates fallback IDs
+      - `sanitizeLoadedTasks()` - Batch sanitization for database loads
+      - `validateBeforeSave()` - Pre-save guard that blocks invalid tasks
+      - `logTaskIdStats()` - Debug utility for ID analysis
+    - **Layer 2 - Pre-Save Validation**: `taskPersistence.ts:saveTasksToStorage()`
+      - Validates all tasks before saving, blocks those with invalid IDs
+      - Only valid tasks are persisted, preventing database corruption
+    - **Layer 3 - Post-Load Sanitization**: `taskPersistence.ts:loadFromDatabase()`
+      - Sanitizes tasks immediately after loading from IndexedDB
+      - Recovers tasks with missing IDs by generating fallback IDs
+      - Logs statistics for debugging
+    - **Layer 4 - Import Hardening**: `taskPersistence.ts:importTasksFromJSON()` & `importFromRecoveryTool()`
+      - Uses `generateFallbackId()` for tasks without valid IDs
+      - No longer creates empty string IDs (`id: jt.id || ''` → `isValidTaskId(jt.id) ? jt.id : generateFallbackId(...)`)
+  - ✅ Verified: Task creation works, no console errors, sync operational
+- [x] **~~BUG-061~~**: Phantom tasks with undefined IDs + Date serialization errors | **P0-CRITICAL** | ✅ FIXED (Jan 2)
+  - **Symptoms**: Tasks appearing empty in inbox, phantom tasks multiplying (5→10), `TypeError: t.updatedAt?.getTime is not a function`
+  - **Root Cause**: `handlePouchDBChange` in `useAppInitialization.ts` passed raw PouchDB docs to `updateTaskFromSync` without:
+    - Extracting task data from nested `doc.data` format
+    - Converting date strings to Date objects
+    - Validating task has required ID field
+  - **Fix 1**: `useAppInitialization.ts:43-90` - Enhanced `handlePouchDBChange`:
+    - Properly extracts task data from `doc.data` (nested format) or falls back to flat format
+    - Validates task has ID before processing
+    - Converts `createdAt`/`updatedAt` from ISO strings to Date objects
+  - **Fix 2**: `tasks.ts:115-156` - Enhanced `updateTaskFromSync`:
+    - Validates task has ID before adding to store
+    - Defensive date conversion (ensures Date objects even if strings passed)
+  - ✅ Verified: Tasks display correctly with proper titles, no phantom duplication, dates work in CanvasView hash calculations
 - [ ] **TASK-082**: Auto-move Today tasks to Overdue at midnight (canvas only) | **P2-MEDIUM** | 👀 READY FOR TESTING - Test: `window.__simulateMidnightTransition()` in browser console
 - [ ] **TASK-065**: GitHub Public Release (P2-LOW) - Security cleanup, BFG history, documentation
 - [x] **TASK-078**: Dev-Manager Hide Done Tasks Filter | **P2-MEDIUM** | ✅ DONE (Dec 30)

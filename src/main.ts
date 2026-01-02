@@ -1,4 +1,4 @@
-// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2026-01-01T23:45:00Z - V13 - AUTO LIVE SYNC
+// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2026-01-02T07:30:00Z - V20 - BUG-058: FILTER NON-SYNCABLE DOCS FROM LIVE SYNC
 
 // Console filter - reduces log noise in development (toggle via localStorage)
 import './utils/consoleFilter'

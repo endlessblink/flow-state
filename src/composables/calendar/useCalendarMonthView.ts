@@ -50,8 +50,8 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
         .forEach(task => {
           const instances = getTaskInstances(task)
           instances
-            .filter(instance => instance.scheduledDate === dateString)
-            .forEach(instance => {
+            .filter((instance: any) => instance.scheduledDate === dateString)
+            .forEach((instance: any) => {
               const [_hour, _minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
               const duration = instance.duration || task.estimatedDuration || 30
 

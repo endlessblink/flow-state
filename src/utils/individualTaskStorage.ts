@@ -102,7 +102,14 @@ export const saveTask = async (
   db: PouchDB.Database,
   task: Task,
   maxRetries: number = 3
-): Promise<PouchDB.Core.Response> => {
+): Promise<PouchDB.Core.Response | null> => {
+  // BUG-060 FIX: Guard against undefined task IDs (causes phantom tasks)
+  if (!task?.id) {
+    console.error('🛡️ [SAFETY] BLOCKED: Attempted to save task with undefined ID')
+    console.error('🛡️ [SAFETY] Stack trace:', new Error().stack)
+    return null  // Return null instead of throwing - prevents cascading errors
+  }
+
   const docId = getTaskDocId(task.id)
   let retryCount = 0
 
@@ -172,6 +179,24 @@ export const saveTasks = async (
   tasks: Task[],
   maxRetries: number = 3
 ): Promise<(PouchDB.Core.Response | PouchDB.Core.Error)[]> => {
+  // BUG-060 FIX: Filter out tasks with undefined IDs before bulk save
+  const validTasks = tasks.filter(task => {
+    if (!task?.id) {
+      console.error('🛡️ [SAFETY] Filtered task with undefined ID from bulk save:', task)
+      return false
+    }
+    return true
+  })
+
+  if (validTasks.length === 0) {
+    console.warn('🛡️ [SAFETY] No valid tasks to save (all had undefined IDs)')
+    return []
+  }
+
+  if (validTasks.length !== tasks.length) {
+    console.warn(`🛡️ [SAFETY] Filtered ${tasks.length - validTasks.length} tasks with undefined IDs`)
+  }
+
   let retryCount = 0
 
   while (retryCount < maxRetries) {
@@ -194,7 +219,7 @@ export const saveTasks = async (
       })
 
       // Prepare documents for bulk insert
-      const docs = tasks.map(task => {
+      const docs = validTasks.map(task => {
         const docId = getTaskDocId(task.id)
         return {
           _id: docId,
@@ -216,7 +241,7 @@ export const saveTasks = async (
       results.forEach((result, index) => {
         const errorResult = result as PouchDB.Core.Error
         if (errorResult.error) {
-          console.error(`❌ Failed to save task ${tasks[index].id}:`, errorResult.message)
+          console.error(`❌ Failed to save task ${validTasks[index].id}:`, errorResult.message)
         }
       })
 
@@ -458,7 +483,7 @@ export const deleteTasks = async (
 
     // 2. Prepare deletion docs
     const docsToDelete = result.rows
-      .filter((row): row is PouchDB.Core.AllDocsResponse<unknown>['rows'][0] & { value: { rev: string } } => !('error' in row) && !!row.value)
+      .filter((row): row is PouchDB.Core.AllDocsResponse<Record<string, any>>['rows'][0] & { value: { rev: string } } => !('error' in row) && !!row.value)
       .map(row => ({
         _id: row.id,
         _rev: row.value.rev,
@@ -488,12 +513,27 @@ export const syncDeletedTasks = async (
     endkey: `${TASK_DOC_PREFIX}\ufff0`
   })
 
+  const existingTaskCount = result.rows.length
+
+  // BUG-057 CRITICAL SAFETY: Never delete ALL tasks if current set is empty
+  // This prevents catastrophic data loss during sync glitches
+  if (currentTaskIds.size === 0 && existingTaskCount > 0) {
+    console.warn(`🛡️ [SAFETY] Blocked deletion of ${existingTaskCount} tasks - currentTaskIds is empty`)
+    return 0
+  }
+
   let deletedCount = 0
   const docsToDelete: DeletedDocument[] = []
 
   for (const row of result.rows) {
     const taskId = extractTaskId(row.id)
-    if (taskId && !currentTaskIds.has(taskId) && row.doc) {
+    // BUG-060 FIX: Skip invalid task IDs like 'undefined' or 'null'
+    // These can occur when tasks with undefined IDs are saved
+    if (taskId === 'undefined' || taskId === 'null' || !taskId) {
+      console.warn(`⚠️ [SAFETY] Skipping invalid task document: ${row.id}`)
+      continue
+    }
+    if (!currentTaskIds.has(taskId) && row.doc) {
       docsToDelete.push({
         _id: row.id,
         _rev: row.doc._rev,
@@ -501,6 +541,13 @@ export const syncDeletedTasks = async (
       })
       deletedCount++
     }
+  }
+
+  // BUG-057 CRITICAL SAFETY: Prevent mass deletion (more than 50% of tasks)
+  // This catches edge cases where store is partially loaded
+  if (existingTaskCount > 5 && deletedCount > existingTaskCount * 0.5) {
+    console.warn(`🛡️ [SAFETY] Blocked mass deletion: ${deletedCount}/${existingTaskCount} tasks (>50%)`)
+    return 0
   }
 
   if (docsToDelete.length > 0) {

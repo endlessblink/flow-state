@@ -347,7 +347,7 @@ export class ConflictDetector {
     const localStatus = localData?.status
     const remoteStatus = remoteData?.status
 
-    return localStatus && remoteStatus && localStatus !== remoteStatus
+    return !!(localStatus && remoteStatus && localStatus !== remoteStatus)
   }
 
   /**
@@ -427,12 +427,16 @@ export class ConflictDetector {
 
   /**
    * Calculate checksum for data integrity
+   * BUG-060 FIX: Use UTF-8 safe encoding instead of btoa() which fails on non-ASCII
    */
   private calculateChecksum(data: unknown): string {
     try {
       const dataObj = (data || {}) as Record<string, unknown>
       const sortedData = JSON.stringify(data, Object.keys(dataObj).sort())
-      return btoa(sortedData).slice(0, 16)
+      // UTF-8 safe base64 encoding (btoa fails on emojis, Hebrew, etc.)
+      const bytes = new TextEncoder().encode(sortedData)
+      const binString = Array.from(bytes, b => String.fromCodePoint(b)).join('')
+      return btoa(binString).slice(0, 16)
     } catch (error) {
       console.warn('⚠️ Error calculating checksum:', error)
       return Date.now().toString(36)

@@ -138,7 +138,7 @@ describe('TaskStore', () => {
       })
 
       if (instance) {
-        store.updateTaskInstance(task.id, instance.id, {
+        store.updateTaskInstance(task.id, instance.id!, {
           scheduledTime: '11:00',
           duration: 90
         })
@@ -161,7 +161,7 @@ describe('TaskStore', () => {
       expect(task.instances?.length).toBe(1)
 
       if (instance) {
-        store.deleteTaskInstance(task.id, instance.id)
+        store.deleteTaskInstance(task.id, instance.id!)
       }
 
       const updatedTask = store.tasks.find(t => t.id === task.id)

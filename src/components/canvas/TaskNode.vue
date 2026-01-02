@@ -38,8 +38,8 @@
         <div
           class="description-content markdown-content"
           :class="{ 'expanded': isDescriptionExpanded || !isDescriptionLong }"
-          v-html="parsedDescription"
           @click="handleDescriptionClick"
+          v-html="parsedDescription"
         />
         <button
           v-if="isDescriptionLong"
@@ -139,6 +139,22 @@ import { useTimerStore } from '@/stores/timer'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
+const props = withDefaults(defineProps<Props>(), {
+  isSelected: false,
+  multiSelectMode: false,
+  showPriority: true,
+  showStatus: true,
+  showDuration: true,
+  showSchedule: true,
+  isConnecting: false
+})
+
+const emit = defineEmits<{
+  edit: [task: Task]
+  select: [task: Task, multiSelect: boolean]
+  contextMenu: [event: MouseEvent, task: Task]
+}>()
+
 // Configure marked for safe rendering
 marked.setOptions({
   gfm: true, // GitHub Flavored Markdown
@@ -155,22 +171,6 @@ interface Props {
   showSchedule?: boolean
   isConnecting?: boolean
 }
-
-const props = withDefaults(defineProps<Props>(), {
-  isSelected: false,
-  multiSelectMode: false,
-  showPriority: true,
-  showStatus: true,
-  showDuration: true,
-  showSchedule: true,
-  isConnecting: false
-})
-
-const emit = defineEmits<{
-  edit: [task: Task]
-  select: [task: Task, multiSelect: boolean]
-  contextMenu: [event: MouseEvent, task: Task]
-}>()
 
 // Lazy load Handle component to prevent Vue Flow context errors in Storybook
 const Handle = defineAsyncComponent(() =>
@@ -325,33 +325,7 @@ const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
 })
 
-// Drag handler with proper state management
-const _handleDragStart = (event: DragEvent) => {
-  // Prevent HTML5 drag during connection operations to avoid opaque preview
-  if (props.isConnecting) {
-    event.preventDefault()
-    return
-  }
 
-  if (event.dataTransfer && props.task) {
-    const dragData: DragData = {
-      type: 'task',
-      taskId: props.task.id || '',
-      title: props.task.title || 'Untitled Task',
-      source: 'canvas'
-    }
-
-    // Set local dragging state immediately to prevent visual artifacts
-    isNodeDragging.value = true
-
-    // Use new composable for global drag state
-    startDrag(dragData)
-
-    // Still set dataTransfer for HTML5 drag-and-drop compatibility
-    event.dataTransfer.setData('application/json', JSON.stringify(dragData))
-    event.dataTransfer.effectAllowed = 'move'
-  }
-}
 
 // Event handlers
 const handleClick = (event: MouseEvent) => {
@@ -386,16 +360,7 @@ const handleContextMenu = (event: MouseEvent) => {
   emit('contextMenu', event, props.task)
 }
 
-// Handle drag end to clean up visual state
-const _handleDragEnd = () => {
-  // Clean up local dragging state with a small delay to ensure smooth transition
-  setTimeout(() => {
-    isNodeDragging.value = false
-  }, 50)
 
-  // Call the global endDrag from composable
-  endDrag()
-}
 
 // Duration Badge Logic
 const durationBadgeClass = computed(() => {

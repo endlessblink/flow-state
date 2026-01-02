@@ -6,7 +6,7 @@
     :y="canvasContextMenuY"
     :has-selected-tasks="hasSelectedTasks"
     :selected-count="selectedCount"
-    :context-section="contextSection"
+    :context-section="contextSection || undefined"
     @close="$emit('closeCanvasContextMenu')"
     @create-task-here="$emit('createTaskHere')"
     @create-group="$emit('createGroup')"

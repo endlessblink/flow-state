@@ -9,6 +9,7 @@ import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler
 
 // Export types and utilities for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
+import type { Task } from '@/types/tasks'
 export { parseDateKey, formatDateKey } from '@/utils/dateUtils'
 
 /**
@@ -63,14 +64,16 @@ export const useTaskStore = defineStore('tasks', () => {
     tasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
-    isLoadingFilters, runAllTaskMigrations
+    isLoadingFilters, syncInProgress, runAllTaskMigrations, calendarFilteredTasks
   } = states
 
   // 2. Initialize Persistence
+  // BUG-057: Pass syncInProgress to prevent saves during sync operations
   const persistence = useTaskPersistence(
     tasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
     activeSmartView, activeStatusFilter,
     isLoadingFromDatabase, manualOperationInProgress, isLoadingFilters,
+    syncInProgress,
     runAllTaskMigrations
   )
   const { saveTasksToStorage, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool } = persistence
@@ -107,6 +110,51 @@ export const useTaskStore = defineStore('tasks', () => {
   // Auto-init on store creation
   initializeFromPouchDB().catch(() => { })
 
+  // BUG-057 FIX: Incremental update from sync - updates individual task without full reload
+  // This prevents infinite loops by not triggering save watchers
+  // BUG-061 FIX: Added validation and date conversion safety
+  const updateTaskFromSync = (taskId: string, taskDoc: Task | null, isDeleted = false) => {
+    syncInProgress.value = true
+    try {
+      if (isDeleted || !taskDoc) {
+        // Remove deleted task
+        const idx = tasks.value.findIndex(t => t.id === taskId)
+        if (idx !== -1) {
+          tasks.value.splice(idx, 1)
+        }
+      } else {
+        // BUG-061 FIX: Validate task before adding/updating
+        if (!taskDoc.id || !taskDoc.title === undefined) {
+          console.warn('⚠️ [TASK STORE] Ignoring invalid task from sync (missing id or title):', taskId)
+          return
+        }
+
+        // BUG-061 FIX: Ensure dates are Date objects (defensive)
+        const normalizedTask: Task = {
+          ...taskDoc,
+          createdAt: taskDoc.createdAt instanceof Date
+            ? taskDoc.createdAt
+            : new Date(taskDoc.createdAt || Date.now()),
+          updatedAt: taskDoc.updatedAt instanceof Date
+            ? taskDoc.updatedAt
+            : new Date(taskDoc.updatedAt || Date.now())
+        }
+
+        // Update or add task
+        const idx = tasks.value.findIndex(t => t.id === taskId)
+        if (idx !== -1) {
+          // Update existing task
+          tasks.value[idx] = normalizedTask
+        } else {
+          // Add new task
+          tasks.value.push(normalizedTask)
+        }
+      }
+    } finally {
+      syncInProgress.value = false
+    }
+  }
+
   return {
     ...states,
     ...persistence,
@@ -134,6 +182,11 @@ export const useTaskStore = defineStore('tasks', () => {
     // Undo/Redo support
     initializeFromPouchDB,
     restoreState,
+
+    // BUG-057 FIX: Incremental sync update
+    updateTaskFromSync,
+    syncInProgress,
+    calendarFilteredTasks,
 
     // Helper functions
     getTaskInstances,

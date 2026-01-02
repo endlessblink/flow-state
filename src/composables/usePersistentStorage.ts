@@ -394,7 +394,7 @@ export function usePersistentStorage() {
     load: <T>(key: string) => storage.load<T>(key),
     createBackup: () => storage.createBackup(),
     getAllBackups: () => storage.getAllBackups(),
-    restoreFromBackup: (backup: unknown) => storage.restoreFromBackup(backup),
+    restoreFromBackup: (backup: unknown) => storage.restoreFromBackup(backup as BackupData),
     healthStatus,
     STORAGE_KEYS
   }

@@ -122,7 +122,8 @@ export class SyncValidator {
         timestamp: new Date(),
         duration,
         stats: {} as ValidationStats,
-        checksums: new Map()
+        checksums: new Map(),
+        critical // Include critical flag
       } as unknown as SyncValidationResult
     } catch (error) {
       console.error('❌ Failed to validate database:', error)

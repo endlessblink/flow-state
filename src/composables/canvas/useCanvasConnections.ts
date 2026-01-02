@@ -9,7 +9,7 @@ interface ConnectionDeps {
     closeEdgeContextMenu: () => void
     closeNodeContextMenu: () => void
     addTimer: (id: number) => number
-    withVueFlowErrorBoundary: (name: string, fn: Function) => Function
+    withVueFlowErrorBoundary: (name: string, fn: (...args: any[]) => any, options?: any) => ((...args: any[]) => any)
 }
 
 interface ConnectionState {
@@ -27,7 +27,7 @@ export function useCanvasConnections(
 ) {
     const taskStore = useTaskStore()
 
-    const handleConnectStart = (event: { nodeId?: string; handleId?: string; handleType?: string }) => {
+    const handleConnectStart = (event: { nodeId?: string; handleId?: string | null; handleType?: string }) => {
         console.log('🔗 Connection started:', event)
         state.isConnecting.value = true
 

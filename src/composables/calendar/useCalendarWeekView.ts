@@ -66,8 +66,8 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
         const instances = getTaskInstances(task)
 
         instances
-          .filter(instance => instance.scheduledDate === day.dateString)
-          .forEach(instance => {
+          .filter((instance: any) => instance.scheduledDate === day.dateString)
+          .forEach((instance: any) => {
             const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
             const duration = instance.duration || task.estimatedDuration || 30
 

@@ -130,9 +130,9 @@ const iconCache = new Map<CoreIconName, { default: unknown }>()
 /**
  * Cached icon loader with memory management
  */
-export async function getCachedIcon(name: CoreIconName): Promise<{ default: unknown }> {
+export async function getCachedIcon(name: CoreIconName): Promise<{ default: unknown } | null> {
   if (iconCache.has(name)) {
-    return iconCache.get(name)
+    return iconCache.get(name)!
   }
 
   try {

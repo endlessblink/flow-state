@@ -102,15 +102,16 @@ const startChangesListener = (onTimerChange: TimerChangesHandler): boolean => {
       include_docs: true,
       doc_ids: [TIMER_DOC_ID]
     })
-      .on('change', (change: PouchDBChange) => {
-        if (change.doc && !change.deleted) {
+      .on('change', (change: unknown) => {
+        const changeData = change as PouchDBChange
+        if (changeData.doc && !changeData.deleted) {
           console.log('[TIMER CHANGES] Received timer update from changes feed')
           try {
-            onTimerChange(change.doc)
+            onTimerChange(changeData.doc)
           } catch (err) {
             console.error('[TIMER CHANGES] Error in change handler:', err)
           }
-        } else if (change.deleted) {
+        } else if (changeData.deleted) {
           console.log('[TIMER CHANGES] Timer document deleted')
           // Optionally handle deletion - pass null or special marker
           try {

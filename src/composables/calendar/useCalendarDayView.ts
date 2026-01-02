@@ -332,7 +332,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
       // Try to get dragged task from global state (CalendarInboxPanel sets this)
       const draggingTaskId = (window as Window & typeof globalThis).__draggingTaskId ||
-                            document.querySelector('[data-dragging-task-id]')?.getAttribute('data-dragging-task-id')
+        document.querySelector('[data-dragging-task-id]')?.getAttribute('data-dragging-task-id')
 
       if (draggingTaskId) {
         const task = taskStore.tasks.find(t => t.id === draggingTaskId)
@@ -474,7 +474,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           const instanceToUpdate = task.instances.find(instance =>
             instance && instance.id
           )
-          if (instanceToUpdate) {
+          if (instanceToUpdate && instanceToUpdate.id) {
             // Direct mutation triggers Vue reactivity
             instanceToUpdate.scheduledDate = slot.date
             instanceToUpdate.scheduledTime = timeStr

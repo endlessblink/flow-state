@@ -247,7 +247,7 @@ export function useTaskRecurrence(taskId: string) {
       id: `exception-${Date.now()}`,
       date,
       action,
-      ...(action === 'modify' && modifications && { modifiedInstance: modifications })
+      ...(action === 'modify' && modifications ? { modifiedInstance: modifications as Record<string, unknown> } : {})
     }
 
     recurrence.value.exceptions.push(exception)

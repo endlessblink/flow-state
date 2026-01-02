@@ -665,6 +665,41 @@ export const useReliableSyncManager = () => {
         // Silent fail - backup is optional
       }
 
+      // BUG-059 FIX: PRE-FLIGHT SAFETY CHECK - Detect dangerous sync scenarios
+      // Compare local task count with remote task count before pulling
+      try {
+        const localDocs = await localDB.allDocs({
+          startkey: 'task-',
+          endkey: 'task-\ufff0'
+        })
+        const localTaskCount = localDocs.rows.length
+
+        const remoteDocs = await remoteDB.allDocs({
+          startkey: 'task-',
+          endkey: 'task-\ufff0'
+        })
+        const remoteTaskCount = remoteDocs.rows.length
+
+        // CRITICAL: If remote has 0 tasks but local has many, something is wrong
+        if (localTaskCount > 5 && remoteTaskCount === 0) {
+          console.warn(`🛡️ [SYNC PRE-FLIGHT] ABORT: Remote has 0 tasks but local has ${localTaskCount}`)
+          console.warn(`🛡️ [SYNC PRE-FLIGHT] This looks like remote data was deleted - refusing to sync`)
+          console.warn(`🛡️ [SYNC PRE-FLIGHT] Manual intervention required: delete remote DB or restore backup`)
+          syncStatus.value = 'error'
+          error.value = `Sync aborted: Remote DB appears empty (0 tasks) but local has ${localTaskCount} tasks. This may indicate data loss on remote.`
+          return
+        }
+
+        // CRITICAL: If remote would delete more than 50% of local tasks, warn (but continue for now)
+        if (localTaskCount > 5 && remoteTaskCount < localTaskCount * 0.5) {
+          console.warn(`⚠️ [SYNC PRE-FLIGHT] Remote has significantly fewer tasks (${remoteTaskCount}) than local (${localTaskCount})`)
+        }
+
+        console.log(`📊 [SYNC PRE-FLIGHT] Task counts - Local: ${localTaskCount}, Remote: ${remoteTaskCount}`)
+      } catch (preflightError) {
+        console.warn('⚠️ [SYNC PRE-FLIGHT] Check failed, continuing with sync:', preflightError)
+      }
+
       // Step 1: Pre-sync validation - SILENT unless critical
       const validationResult = await syncValidator.validateDatabase(localDB)
       lastValidation.value = validationResult
@@ -1128,12 +1163,20 @@ export const useReliableSyncManager = () => {
     }
   }
 
+  // BUG-057 FIX: Store handlers for cleanup
+  let pushHandler: PouchDB.Replication.Replication<Record<string, unknown>> | null = null
+  let pullHandler: PouchDB.Replication.Replication<Record<string, unknown>> | null = null
+  let changesListener: PouchDB.Core.Changes<Record<string, unknown>> | null = null
+
   /**
    * Start live (continuous) sync between local and remote
-   * This enables real-time sync across tabs/browsers
+   * BUG-057 FIX: Uses changes feed pattern to avoid infinite loops
+   * - Separate push/pull handlers (not db.sync)
+   * - Changes feed listener for incremental updates
+   * - No full store reloads
    */
   const startLiveSync = async (): Promise<boolean> => {
-    console.log('🔄 [LIVE SYNC] Starting live sync...')
+    console.log('🔄 [LIVE SYNC] Starting live sync with changes feed pattern...')
 
     // Ensure databases are initialized
     if (!localDB || !remoteDB) {
@@ -1146,103 +1189,132 @@ export const useReliableSyncManager = () => {
       }
     }
 
-    // Cancel any existing sync handler
-    if (syncHandler) {
-      console.log('🔄 [LIVE SYNC] Cancelling existing sync handler...')
-      try {
-        await syncHandler.cancel()
-      } catch (e) {
-        console.warn('⚠️ [LIVE SYNC] Error cancelling existing sync:', e)
-      }
-      syncHandler = null
-    }
-
-    // BUG-057 FIX: Debounce live sync store reloads to prevent rapid resets
-    let liveSyncReloadPending = false
-    let liveSyncReloadTimer: ReturnType<typeof setTimeout> | null = null
-    const LIVE_SYNC_RELOAD_DEBOUNCE = 2000 // 2 seconds debounce
+    // Cancel any existing handlers
+    await stopLiveSync()
 
     try {
-      // Setup bidirectional live sync
-      // BUG-057 FIX: Small batch size to prevent overwhelming the browser
-      syncHandler = localDB.sync(remoteDB, {
+      // BUG-057 FIX: Use separate push/pull handlers instead of sync()
+      // This gives us more control and avoids some sync loop issues
+
+      // BUG-058 FIX: Only sync user data documents, NOT local preferences
+      // This prevents sync loops from notifications, filter_state, etc.
+      const syncableDocIds = [
+        'task-',       // Individual task documents
+        'tasks:',      // Legacy tasks document
+        'project-',    // Individual project documents
+        'projects:',   // Legacy projects document
+        'canvas:',     // Canvas data
+        'section-',    // Canvas sections
+        'group-',      // Canvas groups
+        'timer:',      // Timer sessions
+        'settings:',   // User settings
+      ]
+
+      // Non-syncable prefixes (local-only data)
+      const localOnlyDocIds = [
+        'notifications:',   // Notification state (local per-device)
+        'filter_state:',    // Filter preferences (local per-device)
+        'hide_done_tasks:', // Hide done tasks toggle (local per-device)
+        'kanban_settings:', // Kanban settings (local per-device)
+        'canvas_viewport:', // Canvas viewport (local per-device)
+        'quick_sort_sessions:', // Quick sort sessions (local per-device)
+      ]
+
+      // Push local changes to remote
+      pushHandler = localDB.replicate.to(remoteDB, {
         live: true,
         retry: true,
-        batch_size: 10,  // Small batches for stability
-        batches_limit: 5
-      }) as unknown as PouchDBSyncHandler
-
-      // Setup event handlers
-      syncHandler.on('change', async (info) => {
-        const syncChange = info as { direction: 'pull' | 'push'; change: { docs: unknown[] } }
-        // REDUCED LOGGING: Only log significant changes
-        const docCount = syncChange.change?.docs?.length || 0
-        if (docCount > 0) {
-          console.log('📤 [LIVE SYNC] Change:', syncChange.direction, docCount, 'docs')
+        batch_size: 25,
+        filter: (doc: any) => {
+          const id = doc._id || ''
+          // Never sync local-only documents
+          if (localOnlyDocIds.some(prefix => id.startsWith(prefix))) return false
+          // Never sync internal docs
+          if (id.startsWith('_')) return false
+          // Only sync documents with known syncable prefixes
+          return syncableDocIds.some(prefix => id.startsWith(prefix))
         }
+      })
 
-        // BUG-057 FIX: Debounce store reloads to prevent UI resets
-        // Only reload once after sync activity settles down
-        if (syncChange.direction === 'pull' && docCount > 0) {
-          if (!liveSyncReloadPending) {
-            liveSyncReloadPending = true
-          }
-          // Clear existing timer and set new one
-          if (liveSyncReloadTimer) {
-            clearTimeout(liveSyncReloadTimer)
-          }
-          liveSyncReloadTimer = setTimeout(async () => {
-            if (liveSyncReloadPending) {
-              console.log('🔄 [LIVE SYNC] Debounced reload after pull activity settled')
-              liveSyncReloadPending = false
-              liveSyncReloadTimer = null
-              await notifyDataPulled()
-            }
-          }, LIVE_SYNC_RELOAD_DEBOUNCE)
+      pushHandler.on('change', (info) => {
+        const docs = (info as { docs?: unknown[] }).docs?.length || 0
+        if (docs > 0) {
+          console.log('📤 [LIVE SYNC] Pushed', docs, 'docs')
         }
-
         lastSyncTime.value = new Date()
         localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())
       })
 
-      if (syncHandler) {
-        syncHandler.on('paused', (err: unknown) => {
-          if (err) {
-            console.warn('⏸️ [LIVE SYNC] Paused with error:', err)
-            syncStatus.value = 'paused'
-          } else {
-            console.log('⏸️ [LIVE SYNC] Paused (waiting for changes)')
-            syncStatus.value = 'idle'
+      pushHandler.on('error', (err) => {
+        console.error('❌ [LIVE SYNC] Push error:', err)
+      })
+
+      // Pull remote changes to local
+      pullHandler = localDB.replicate.from(remoteDB, {
+        live: true,
+        retry: true,
+        batch_size: 25,
+        filter: (doc: any) => {
+          const id = doc._id || ''
+          // Never sync local-only documents
+          if (localOnlyDocIds.some(prefix => id.startsWith(prefix))) return false
+          // Never sync internal docs
+          if (id.startsWith('_')) return false
+          // Only sync documents with known syncable prefixes
+          return syncableDocIds.some(prefix => id.startsWith(prefix))
+        }
+      })
+
+      pullHandler.on('change', (info) => {
+        const docs = (info as { docs?: unknown[] }).docs?.length || 0
+        if (docs > 0) {
+          console.log('📥 [LIVE SYNC] Pulled', docs, 'docs')
+        }
+        lastSyncTime.value = new Date()
+        localStorage.setItem('pomoflow_lastSyncTime', lastSyncTime.value.toISOString())
+      })
+
+      pullHandler.on('error', (err) => {
+        console.error('❌ [LIVE SYNC] Pull error:', err)
+      })
+
+      // BUG-057 FIX: Listen to LOCAL database changes feed
+      // This fires for BOTH local edits AND remote pulls
+      // Using since: 'now' means we only get NEW changes after this point
+      changesListener = localDB.changes({
+        since: 'now',
+        live: true,
+        include_docs: true,
+      })
+
+      changesListener.on('change', async (change) => {
+        // BUG-057 FIX: Incremental update - notify callbacks only for significant changes
+        // The callback will use updateTaskFromSync for individual docs
+        const docId = change.id
+        const doc = change.doc
+
+        // Skip design docs and internal docs
+        if (docId.startsWith('_')) return
+
+        // Emit custom event for stores to handle incrementally
+        window.dispatchEvent(new CustomEvent('pouchdb-change', {
+          detail: {
+            id: docId,
+            doc: doc,
+            deleted: change.deleted,
           }
-        })
+        }))
+      })
 
-        syncHandler.on('active', () => {
-          console.log('▶️ [LIVE SYNC] Active')
-          syncStatus.value = 'syncing'
-        })
+      changesListener.on('error', (err) => {
+        console.error('❌ [LIVE SYNC] Changes feed error:', err)
+      })
 
-        syncHandler.on('denied', (err: unknown) => {
-          console.error('🚫 [LIVE SYNC] Denied:', err)
-          error.value = 'Sync denied: ' + ((err as { message?: string })?.message || 'Unknown error')
-        })
-
-        syncHandler.on('error', (err: unknown) => {
-          console.error('❌ [LIVE SYNC] Error:', err)
-          syncStatus.value = 'error'
-          error.value = (err as { message?: string })?.message || 'Sync error'
-        })
-
-        syncHandler.on('complete', (info: unknown) => {
-          console.log('✅ [LIVE SYNC] Complete:', info)
-          // Live sync shouldn't complete unless cancelled
-        })
-      }
-
-      console.log('✅ [LIVE SYNC] Live sync started successfully')
+      console.log('✅ [LIVE SYNC] Live sync started with changes feed pattern')
       syncStatus.value = 'idle'
-      remoteConnected.value = true  // Set remoteConnected so UI shows Online/Synced
+      remoteConnected.value = true
       hasConnectedEver.value = true
-      localStorage.setItem('pomoflow_hasConnectedEver', 'true')  // Persist to localStorage
+      localStorage.setItem('pomoflow_hasConnectedEver', 'true')
       return true
 
     } catch (syncError) {
@@ -1255,22 +1327,52 @@ export const useReliableSyncManager = () => {
 
   /**
    * Stop live sync
+   * BUG-057 FIX: Cancel all handlers (push, pull, changes)
    */
   const stopLiveSync = async (): Promise<void> => {
     console.log('🛑 [LIVE SYNC] Stopping live sync...')
 
+    // Cancel push handler
+    if (pushHandler) {
+      try {
+        (pushHandler as { cancel?: () => void }).cancel?.()
+        pushHandler = null
+      } catch (e) {
+        console.warn('⚠️ [LIVE SYNC] Error stopping push:', e)
+      }
+    }
+
+    // Cancel pull handler
+    if (pullHandler) {
+      try {
+        (pullHandler as { cancel?: () => void }).cancel?.()
+        pullHandler = null
+      } catch (e) {
+        console.warn('⚠️ [LIVE SYNC] Error stopping pull:', e)
+      }
+    }
+
+    // Cancel changes listener
+    if (changesListener) {
+      try {
+        changesListener.cancel()
+        changesListener = null
+      } catch (e) {
+        console.warn('⚠️ [LIVE SYNC] Error stopping changes:', e)
+      }
+    }
+
+    // Legacy sync handler (if used)
     if (syncHandler) {
       try {
         await syncHandler.cancel()
         syncHandler = null
-        console.log('✅ [LIVE SYNC] Live sync stopped')
       } catch (e) {
-        console.error('❌ [LIVE SYNC] Error stopping sync:', e)
+        console.warn('⚠️ [LIVE SYNC] Error stopping sync:', e)
       }
-    } else {
-      console.log('ℹ️ [LIVE SYNC] No active sync to stop')
     }
 
+    console.log('✅ [LIVE SYNC] Live sync stopped')
     syncStatus.value = 'idle'
   }
 
@@ -1278,7 +1380,7 @@ export const useReliableSyncManager = () => {
    * Check if live sync is active
    */
   const isLiveSyncActive = (): boolean => {
-    return syncHandler !== null
+    return pushHandler !== null || pullHandler !== null || changesListener !== null || syncHandler !== null
   }
 
   /**

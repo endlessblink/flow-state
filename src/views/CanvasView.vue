@@ -723,10 +723,12 @@ const operationError = ref<{
   retryable: boolean
 } | null>(null)
 
-const setOperationLoading = (operation: keyof typeof operationLoading.value, loading: boolean) => {
-  operationLoading.value[operation] = loading
-  if (loading) {
-    operationError.value = null // Clear previous errors when starting new operation
+const setOperationLoading = (operation: string, loading: boolean) => {
+  if (operation in operationLoading.value) {
+    operationLoading.value[operation as keyof typeof operationLoading.value] = loading
+    if (loading) {
+      operationError.value = null // Clear previous errors when starting new operation
+    }
   }
 }
 
@@ -749,7 +751,7 @@ const vueFlowRef = ref(null)
 const isHandlingNodeChange = ref(false)
 const isSyncing = ref(false)
 const isNodeDragging = ref(false) // Guard against syncNodes during drag operations
-const isDragSettlingRef = ref(false) // Guard against syncNodes during drag settling
+
 
 // Track resize state for preview
 const resizeState = ref({

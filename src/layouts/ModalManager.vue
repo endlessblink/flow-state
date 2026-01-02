@@ -389,7 +389,7 @@ const handleProjectContextMenu = (event: Event) => {
 
 onMounted(() => {
   window.addEventListener('open-task-edit', handleOpenTaskEdit)
-  window.addEventListener('task-context-menu', handleTaskContextMenu)
+  window.addEventListener('task-context-menu' as any, handleTaskContextMenu as unknown as EventListener)
   window.addEventListener('project-context-menu', handleProjectContextMenu)
   window.addEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
   window.addEventListener('open-search', () => { showSearchModal.value = true })
@@ -398,7 +398,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('open-task-edit', handleOpenTaskEdit)
-  window.removeEventListener('task-context-menu', handleTaskContextMenu)
+  window.removeEventListener('task-context-menu' as any, handleTaskContextMenu as unknown as EventListener)
   window.removeEventListener('project-context-menu', handleProjectContextMenu)
   window.removeEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
   window.removeEventListener('open-search', () => { showSearchModal.value = true })

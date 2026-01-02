@@ -97,6 +97,43 @@ export function useTaskPersistence(
     }
 
 
+    // OPTIMIZATION: Save specific tasks only (no deletion sync)
+    // Used for highly frequent updates like drag-and-drop to prevent "bulk save" conflicts
+    const saveSpecificTasks = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) {
+            return
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const dbInstance = (window as any).pomoFlowDb
+        if (!dbInstance) {
+            console.error(`[SAVE - SPECIFIC] PouchDB not available(${context})`)
+            return
+        }
+
+        const validation = validateBeforeSave(tasksToSave)
+        if (validation.blockedTasks.length > 0) {
+            console.error(`🛡️ [PRE-SAVE-SPECIFIC] Blocked ${validation.blockedTasks.length} tasks with invalid IDs (${context})`)
+        }
+
+        const validTasksToSave = validation.validTasks
+        if (validTasksToSave.length === 0) return
+
+        if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+            await saveIndividualTasks(dbInstance, validTasksToSave)
+        } else if (STORAGE_FLAGS.DUAL_WRITE_TASKS) {
+            // In dual write, we can't easily patch the monolithic doc for just one task without reading it first.
+            // But since we are moving to INDIVIDUAL_ONLY, we prioritize that.
+            // For now, if Dual Write is on, we fall back to full save to keep monolithic sync
+            console.warn('[SAVE-SPECIFIC] Dual write enabled - falling back to full save for safety')
+            await saveTasksToStorage(tasks.value, context)
+        } else {
+            // Legacy monolithic only - must save all
+            await db.save(DB_KEYS.TASKS, tasks.value)
+        }
+    }
+
 
     const loadFiltersFromLocalStorage = () => {
         try {
@@ -369,6 +406,7 @@ export function useTaskPersistence(
 
     return {
         saveTasksToStorage,
+        saveSpecificTasks,
         loadFromDatabase,
         loadPersistedFilters,
         persistFilters,

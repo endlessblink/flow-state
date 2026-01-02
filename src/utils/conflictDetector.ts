@@ -111,8 +111,9 @@ export class ConflictDetector {
       return null
     }
 
-    // After type guard, cast to DocumentVersion for type safety
-    const doc = localDoc as DocumentVersion
+    // BUG-FIX: Normalize document instead of unchecked cast
+    // This ensures extracted fields like updatedAt are present even if nested
+    const doc = this.normalizeDocumentVersion(localDoc as Record<string, unknown>, 'local')
 
     try {
       const remoteDoc = this.remoteDB ? await this.getRemoteVersion(doc._id) : null
@@ -192,12 +193,14 @@ export class ConflictDetector {
    */
   private normalizeDocumentVersion(doc: Record<string, unknown>, source: 'local' | 'remote'): DocumentVersion {
     const data = this.extractData(doc)
+    const dataObj = (data || {}) as Record<string, unknown>
 
     return {
       _id: doc._id as string,
       _rev: doc._rev as string,
       data,
-      updatedAt: (doc.updatedAt || doc.timestamp || new Date().toISOString()) as string,
+      // BUG-FIX: Check data.updatedAt for wrapped documents (like tasks)
+      updatedAt: (doc.updatedAt || dataObj.updatedAt || doc.timestamp || new Date().toISOString()) as string,
       deviceId: (doc.deviceId || (source === 'local' ? this.deviceId : 'unknown')) as string,
       version: (doc.version || 1) as number,
       checksum: this.calculateChecksum(data),

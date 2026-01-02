@@ -525,7 +525,7 @@ onMounted(() => {
   // Add event listeners
   window.addEventListener('start-task-now', handleStartTaskNow)
   window.addEventListener('keydown', handleKeyDown)
-  window.addEventListener('task-context-menu', handleInboxContextMenu)
+  window.addEventListener('task-context-menu' as any, handleInboxContextMenu as unknown as EventListener)
 
   // ✅ ADD CAPTURE PHASE DRAG EVENT LISTENERS
   const calendarEl = document.querySelector('.calendar-main')
@@ -553,7 +553,7 @@ onUnmounted(() => {
   // Remove event listeners
   window.removeEventListener('start-task-now', handleStartTaskNow)
   window.removeEventListener('keydown', handleKeyDown)
-  window.removeEventListener('task-context-menu', handleInboxContextMenu)
+  window.removeEventListener('task-context-menu' as any, handleInboxContextMenu as unknown as EventListener)
 
   // ✅ CLEANUP CAPTURE PHASE DRAG EVENT LISTENERS
   const calendarEl = document.querySelector('.calendar-main')

@@ -1,7 +1,7 @@
 
 // WAL Verification Script
 
-import { transactionManager } from './src/services/sync/TransactionManager'
+import { transactionManager } from './services/sync/TransactionManager'
 
 async function testWAL() {
     console.log('🧪 Starting WAL Verification...')

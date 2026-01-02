@@ -191,37 +191,42 @@ export const saveTasks = async (
   })
 
   if (validTasks.length === 0) {
-    console.warn('🛡️ [SAFETY] No valid tasks to save (all had undefined IDs)')
+    if (tasks.length > 0) console.warn('🛡️ [SAFETY] No valid tasks to save (all had undefined IDs)')
     return []
   }
 
-  if (validTasks.length !== tasks.length) {
-    console.warn(`🛡️ [SAFETY] Filtered ${tasks.length - validTasks.length} tasks with undefined IDs`)
-  }
+  // Final results array, initialized with errors (placeholder)
+  const finalResults: (PouchDB.Core.Response | PouchDB.Core.Error)[] = new Array(validTasks.length).fill({ error: true, message: 'Unprocessed' } as any)
 
+  // Map taskId to its index in validTasks for result placement
+  const idToIndex = new Map<string, number>()
+  validTasks.forEach((t, i) => idToIndex.set(t.id, i))
+
+  // Queue of tasks to process (initially all)
+  let tasksToProcess = [...validTasks]
   let retryCount = 0
 
-  while (retryCount < maxRetries) {
+  while (retryCount < maxRetries && tasksToProcess.length > 0) {
     try {
       // Get valid database connection
       const validDb = await getDbWithRetry(db)
 
-      // Get all existing task documents for revisions (metadata only is faster)
+      // Fetch revs for currently processing tasks
+      const keys = tasksToProcess.map(t => getTaskDocId(t.id))
       const existingDocs = await validDb.allDocs({
         include_docs: false,
-        startkey: TASK_DOC_PREFIX,
-        endkey: `${TASK_DOC_PREFIX}\ufff0`
+        keys
       })
 
       const revMap = new Map<string, string>()
       existingDocs.rows.forEach(row => {
-        if (row.value?.rev) {
+        if (!('error' in row) && row.value?.rev) {
           revMap.set(row.id, row.value.rev)
         }
       })
 
-      // Prepare documents for bulk insert
-      const docs = validTasks.map(task => {
+      // Prepare docs
+      const docs = tasksToProcess.map(task => {
         const docId = getTaskDocId(task.id)
         return {
           _id: docId,
@@ -236,34 +241,60 @@ export const saveTasks = async (
         }
       })
 
-      // Use bulkDocs for efficiency
+      // Bulk write
       const results = await validDb.bulkDocs(docs)
 
-      // Log any errors
-      results.forEach((result, index) => {
+      // Analyze results
+      const nextRetryTasks: Task[] = []
+
+      results.forEach((result, i) => {
+        const task = tasksToProcess[i]
+        const originalIndex = idToIndex.get(task.id)!
+
+        finalResults[originalIndex] = result
+
         const errorResult = result as PouchDB.Core.Error
         if (errorResult.error) {
-          console.error(`❌ Failed to save task ${validTasks[index].id}:`, errorResult.message)
+          if (errorResult.status === 409) {
+            // Conflict - Add to retry queue
+            nextRetryTasks.push(task)
+          } else {
+            console.error(`❌ Failed to save task ${task.id}:`, errorResult.message)
+          }
         }
       })
 
-      return results
-    } catch (error) {
-      retryCount++
+      tasksToProcess = nextRetryTasks
 
-      // Handle connection closing error - retry
+      if (tasksToProcess.length > 0) {
+        // If we have conflicts, wait a bit before retry (exponential backoff)
+        const delay = 300 * Math.pow(2, retryCount)
+        console.warn(`⚠️ [TASK-STORAGE] ${tasksToProcess.length} conflicts in bulk save, retrying in ${delay}ms... (Attempt ${retryCount + 1}/${maxRetries})`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        retryCount++
+
+        // Refresh DB ref just in case
+        db = (window as unknown as WindowWithDb).pomoFlowDb || db
+      }
+
+    } catch (error) {
+      // If the WHOLE operation fails (e.g. connection error), retry everything currently in queue
+      retryCount++
       if (isConnectionClosingError(error) && retryCount < maxRetries) {
         console.warn(`⚠️ [TASK-STORAGE] Connection closing on bulk save (attempt ${retryCount}/${maxRetries}), retrying...`)
         await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        // Update db reference from window
         db = (window as unknown as WindowWithDb).pomoFlowDb || db
         continue
       }
-
       throw error
     }
   }
-  throw new Error(`Failed to save ${tasks.length} tasks after ${maxRetries} attempts`)
+
+  if (tasksToProcess.length > 0) {
+    console.error(`❌ [TASK-STORAGE] Failed to save ${tasksToProcess.length} tasks after ${maxRetries} attempts due to conflicts.`)
+  }
+
+  return finalResults
 }
 
 /**

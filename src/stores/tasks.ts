@@ -6,6 +6,7 @@ import { useTaskOperations } from './tasks/taskOperations'
 import { useTaskHistory } from './tasks/taskHistory'
 import { useProjectStore } from './projects'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { transactionManager } from '@/services/sync/TransactionManager'
 
 // Export types and utilities for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
@@ -76,13 +77,13 @@ export const useTaskStore = defineStore('tasks', () => {
     syncInProgress,
     runAllTaskMigrations
   )
-  const { saveTasksToStorage, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool } = persistence
+  const { saveTasksToStorage, saveSpecificTasks, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool } = persistence
 
   // 3. Initialize Operations
   const operations = useTaskOperations(
     tasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
     activeDurationFilter, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
-    manualOperationInProgress, saveTasksToStorage, persistFilters, runAllTaskMigrations
+    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, persistFilters, runAllTaskMigrations
   )
 
   // 4. Initialize History
@@ -96,6 +97,49 @@ export const useTaskStore = defineStore('tasks', () => {
       if (!dbReady) console.warn('⚠️ Project store failed to initialize')
       await loadFromDatabase()
       runAllTaskMigrations()
+
+      // Phase 14: Crash Recovery
+      await transactionManager.initialize()
+      window.addEventListener('pomoflow-wal-replay', async (event: any) => {
+        const { transactions } = event.detail
+        if (!transactions || !transactions.length) return
+
+        console.log(`🚑 Recovering ${transactions.length} pending transactions...`)
+        for (const tx of transactions) {
+          try {
+            // Replay logic based on tx.operation and tx.collection
+            if (tx.collection === 'tasks') {
+              // Note: 'create' data has { ...taskData, id }
+              // 'update' data has { taskId, updates }
+              // 'delete' data has { taskId }
+              // 'bulk_update' has { type: 'bulk_delete', taskIds }
+
+              if (tx.operation === 'create') {
+                await operations.createTask(tx.data)
+              } else if (tx.operation === 'update') {
+                if (tx.data.action === 'restore') {
+                  console.warn('Skipping restore replay for now')
+                } else {
+                  await operations.updateTask(tx.data.taskId, tx.data.updates)
+                }
+              } else if (tx.operation === 'delete') {
+                await operations.deleteTask(tx.data.taskId)
+              } else if (tx.operation === 'bulk_update' && tx.data.type === 'bulk_delete') {
+                await operations.bulkDeleteTasks(tx.data.taskIds)
+              }
+            }
+            // Mark as replayed/committed
+            await transactionManager.commit(tx.id)
+          } catch (err) {
+            console.error(`❌ Failed to replay transaction ${tx.id}`, err)
+            // Determine if we should rollback or retry later
+          }
+        }
+      })
+
+      // Trigger replay check
+      await transactionManager.replayPendingTransactions()
+
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.ERROR,
@@ -143,6 +187,21 @@ export const useTaskStore = defineStore('tasks', () => {
         // Update or add task
         const idx = tasks.value.findIndex(t => t.id === taskId)
         if (idx !== -1) {
+          const currentTask = tasks.value[idx]
+
+          // Phase 14: Conflict Prevention
+          // 1. If we are actively dragging/editing (manualOperationInProgress), ignore sync for now
+          // 2. If local task is newer than incoming task (based on updatedAt), ignore sync (Last Write Wins)
+          if (manualOperationInProgress.value) {
+            console.log(`🛡️ [SYNC-PROTECT] Ignoring sync for ${taskId} during manual operation`)
+            return
+          }
+
+          if (currentTask.updatedAt > normalizedTask.updatedAt) {
+            console.log(`🛡️ [SYNC-PROTECT] Ignoring sync for ${taskId} - local version is newer (${currentTask.updatedAt.toISOString()} vs ${normalizedTask.updatedAt.toISOString()})`)
+            return
+          }
+
           // Update existing task
           tasks.value[idx] = normalizedTask
         } else {

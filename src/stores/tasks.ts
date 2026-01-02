@@ -94,7 +94,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const initializeFromPouchDB = async () => {
     try {
       const dbReady = await projectStore.initializeFromPouchDB()
-      if (!dbReady) console.warn('⚠️ Project store failed to initialize')
+      if (!dbReady) console.debug('⚠️ Project store failed to initialize')
       await loadFromDatabase()
       runAllTaskMigrations()
 
@@ -104,7 +104,7 @@ export const useTaskStore = defineStore('tasks', () => {
         const { transactions } = event.detail
         if (!transactions || !transactions.length) return
 
-        console.log(`🚑 Recovering ${transactions.length} pending transactions...`)
+        console.debug(`🚑 Recovering ${transactions.length} pending transactions...`)
         for (const tx of transactions) {
           try {
             // Replay logic based on tx.operation and tx.collection

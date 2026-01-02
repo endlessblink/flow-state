@@ -93,7 +93,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       }
     } catch (error) {
       errorHandler.report({
-        severity: ErrorSeverity.WARNING,
+        severity: ErrorSeverity.INFO,
         category: ErrorCategory.DATABASE,
         message: 'Error loading notifications',
         error: error as Error,
@@ -205,7 +205,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     // CRITICAL FIX: Ensure scheduledNotifications.value is an array
     if (!Array.isArray(scheduledNotifications.value)) {
       errorHandler.report({
-        severity: ErrorSeverity.WARNING,
+        severity: ErrorSeverity.INFO,
         category: ErrorCategory.STATE,
         message: 'scheduledNotifications.value is not an array, resetting to empty array',
         context: { operation: 'checkAndShowNotifications', type: typeof scheduledNotifications.value },
@@ -457,7 +457,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       await db.save(DB_KEYS.NOTIFICATIONS, scheduledNotifications.value)
     } catch (error) {
       errorHandler.report({
-        severity: ErrorSeverity.ERROR,
+        severity: ErrorSeverity.WARNING,
         category: ErrorCategory.DATABASE,
         message: 'Error saving notifications to database',
         error: error as Error,

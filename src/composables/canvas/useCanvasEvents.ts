@@ -6,7 +6,8 @@ import { useTaskStore } from '@/stores/tasks'
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { viewport, project } = useVueFlow() // project() is better than manual calc if available, but staying safe with viewport for now logic
+    // ✅ DRIFT FIX: Use generic screenToFlowCoordinate
+    const { viewport, screenToFlowCoordinate } = useVueFlow()
 
     // --- Interaction State ---
     const isConnecting = ref(false)
@@ -121,9 +122,12 @@ export function useCanvasEvents(syncNodes?: () => void) {
             if (!vueFlowElement) return
 
             const rect = vueFlowElement.getBoundingClientRect()
-            // Manual projection since we need absolute page coords
-            const x = (event.clientX - rect.left - (viewport.value?.x || 0)) / (viewport.value?.zoom || 1)
-            const y = (event.clientY - rect.top - (viewport.value?.y || 0)) / (viewport.value?.zoom || 1)
+            // ✅ DRIFT FIX: Use Vue Flow native projection
+            const flowCoords = screenToFlowCoordinate({
+                x: event.clientX,
+                y: event.clientY
+            })
+            const { x, y } = flowCoords
 
             taskStore.updateTask(taskId, {
                 canvasPosition: { x, y },

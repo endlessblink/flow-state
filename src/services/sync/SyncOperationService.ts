@@ -103,7 +103,7 @@ export class SyncOperationService {
                 throw new Error(`Sync aborted: Remote DB appears empty (0 tasks) but local has ${localTaskCount} tasks.`)
             }
 
-            console.log(`📊 [SYNC PRE-FLIGHT] Task counts - Local: ${localTaskCount}, Remote: ${remoteTaskCount}`)
+            console.debug(`📊 [SYNC PRE-FLIGHT] Task counts - Local: ${localTaskCount}, Remote: ${remoteTaskCount}`)
         } catch (preflightError) {
             // Re-throw if it's our specific error, otherwise just warn
             if (preflightError instanceof Error && preflightError.message.includes('Sync aborted')) {

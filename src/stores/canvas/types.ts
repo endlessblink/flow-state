@@ -60,6 +60,7 @@ export interface CanvasGroup {
     collectFilter?: CollectFilterSettings
     // TASK-072: Nested groups support - optional parent group ID
     parentGroupId?: string | null
+    isPinned?: boolean
 }
 
 // Backward compatibility alias - keeping CanvasSection as alias for CanvasGroup

@@ -32,11 +32,15 @@ export function useAppInitialization() {
     // BUG-054 FIX: Register callback as early as possible (outside onMounted)
     // This ensures we catch data pulled events even from initial sync
     const unregisterDataPulledCallback = syncManager.registerDataPulledCallback(async () => {
-        console.log('🔄 [APP] Reloading stores after sync pulled data...')
-        await taskStore.loadFromDatabase()
-        await projectStore.loadProjectsFromPouchDB()
-        await canvasStore.loadFromDatabase()
-        console.log('✅ [APP] Stores reloaded after sync')
+        // [DEEP-DIVE FIX] Disable aggressive store reloading to prevent Canvas View resets
+        // Rely on incremental handlePouchDBChange updates instead
+        console.log('🔄 [APP] Sync pulled data - trusting incremental updates (no full reload)...')
+
+        // Only reload if valid reasons exist (e.g. major drift? TBD)
+        // For now, we strictly AVOID reloading canvasStore to stop the viewport reset
+        // await taskStore.loadFromDatabase() 
+        // await projectStore.loadProjectsFromPouchDB()
+        // await canvasStore.loadFromDatabase() // <-- THIS is the likely culprit for resets
     })
 
     // BUG-057 FIX: Define handler at composable level for proper cleanup
@@ -194,7 +198,7 @@ export function useAppInitialization() {
             // BUG-057 FIX: Start live sync from fallback if not already running
             if (!syncManager.isLiveSyncActive() && (syncManager.remoteConnected?.value || syncManager.hasConnectedEver?.value)) {
                 console.log('🔄 [APP] Fallback: Starting live sync...')
-                syncManager.startLiveSync().catch(() => {})
+                syncManager.startLiveSync().catch(() => { })
             }
         }, 10000)
 

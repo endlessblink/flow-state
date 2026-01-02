@@ -8,7 +8,7 @@
  * @since 2025-12-03
  */
 
-import { ref, computed, watch as _watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch as _watch, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
@@ -235,7 +235,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     if (referenceCount > 5 && taskCount < referenceCount * DATA_LOSS_THRESHOLD) {
       return {
         suspicious: true,
-        reason: `Task count dropped from ${referenceCount} to ${taskCount} (>${(1-DATA_LOSS_THRESHOLD)*100}% loss)`
+        reason: `Task count dropped from ${referenceCount} to ${taskCount} (>${(1 - DATA_LOSS_THRESHOLD) * 100}% loss)`
       }
     }
 
@@ -691,14 +691,16 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
   }
 
   // Lifecycle hooks
-  onMounted(() => {
-    // Delay initialization to ensure stores are ready
-    setTimeout(initialize, 1500)
-  })
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      // Delay initialization to ensure stores are ready
+      setTimeout(initialize, 1500)
+    })
 
-  onUnmounted(() => {
-    stopAutoBackup()
-  })
+    onUnmounted(() => {
+      stopAutoBackup()
+    })
+  }
 
   // ============================================================================
   // Return Public API

@@ -271,9 +271,17 @@ export const useCanvasStore = defineStore('canvas', () => {
                 .map(deletedTask => deletedTask.id)
 
               if (deletedTaskIds.length > 0) {
+                // Remove nodes
                 nodes.value = nodes.value.filter(node =>
                   !deletedTaskIds.includes(node.id) || node.type !== 'task'
                 )
+
+                // Remove connected edges
+                edges.value = edges.value.filter(edge =>
+                  !deletedTaskIds.includes(edge.source) && !deletedTaskIds.includes(edge.target)
+                )
+
+                console.log(`🧹 Cleaned up canvas items for ${deletedTaskIds.length} deleted tasks`)
               }
             }
 

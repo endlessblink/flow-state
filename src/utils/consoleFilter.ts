@@ -174,6 +174,22 @@ function shouldFilter(message: string): boolean {
   if (!logToggles.cloudSync && (msg.includes('📴 Offline') || msg.includes('⚠️ Cloud sync') || msg.includes('💡 To enable cloud sync'))) return true
   if (!logToggles.storage && (msg.includes('📦 Available storage') || msg.includes('📁 File system'))) return true
 
+  // Phase 16.1: Aggressive Diagnostic Suppression
+  // These are high-volume logs that should almost always be hidden even in dev unless debugging sync/conflicts specifically
+  if (!logToggles.database || !logToggles.cloudSync) {
+    if (msg.includes('⚔️ [DATABASE]') ||
+      msg.includes('⚔️ Conflict detected') ||
+      msg.includes('📊 Analyzing') ||
+      msg.includes('🔍 Starting comprehensive conflict detection') ||
+      msg.includes('🔍 ConflictDetector initialized') ||
+      msg.includes('⚠️ [USE-DATABASE] Sync not available') ||
+      msg.includes('⚠️ Project store failed to initialize') ||
+      msg.includes('🚑 Recovering') ||
+      msg.includes('🔍 Detecting conflicts for')) {
+      return true
+    }
+  }
+
   return false
 }
 
@@ -197,6 +213,13 @@ export function applyConsoleFiltering(): void {
     const firstArg = String(args[0])
     if (!shouldFilter(firstArg)) {
       originalConsole.info(...args)
+    }
+  }
+
+  console.debug = (...args: unknown[]) => {
+    const firstArg = String(args[0])
+    if (!shouldFilter(firstArg)) {
+      originalConsole.debug(...args)
     }
   }
 }

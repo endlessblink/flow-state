@@ -306,7 +306,7 @@ let timeUpdateInterval: NodeJS.Timeout | null = null
 // Destructure commonly used items from composables
 const { hours, timeSlots, calendarEvents: _calendarEvents, dragGhost, dragMode: _dragMode, getEventStyle: _getEventStyle, getGhostStyle: _getGhostStyle,
         isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd,
-        handleEventMouseDown: _handleEventMouseDown, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot } = dayView
+        handleEventMouseDown: _handleEventMouseDown, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
 
 const { workingHours, weekDays, weekEvents, getWeekEventStyle, handleWeekEventMouseDown: _handleWeekEventMouseDown,
         handleWeekDragOver, handleWeekDrop, startWeekResize, isCurrentWeekTimeCell } = weekView

@@ -51,8 +51,8 @@ function isDatabaseClosedError(err: unknown): boolean {
   if (err instanceof Error) {
     const message = err.message.toLowerCase()
     return message.includes('closed database') ||
-           message.includes('transaction on a closed') ||
-           message.includes('not, or is no longer, usable')
+      message.includes('transaction on a closed') ||
+      message.includes('not, or is no longer, usable')
   }
   return false
 }
@@ -602,7 +602,7 @@ export function useDatabase(): UseDatabaseReturn {
       }
       const docWithConflicts = doc as DocWithConflicts
       if (docWithConflicts._conflicts && docWithConflicts._conflicts.length > 0) {
-        console.warn(`⚠️ [DATABASE] Document ${docId} has ${docWithConflicts._conflicts.length} conflicts`)
+        console.debug(`⚔️ [DATABASE] Document ${docId} has ${docWithConflicts._conflicts.length} conflicts`)
         // Add to detected conflicts (don't auto-resolve - user must decide)
         const existingConflict = detectedConflicts.value.find(c => c.docId === docId)
         if (!existingConflict) {
@@ -879,7 +879,8 @@ export function useDatabase(): UseDatabaseReturn {
     if (syncManager) {
       await syncManager.triggerSync()
     } else {
-      console.warn('⚠️ [USE-DATABASE] Sync not available - no remote configuration')
+      // Log only on explicit trigger if needed, or silence completely
+      // console.debug('💡 [USE-DATABASE] Sync not available - no remote configuration')
     }
   }
 

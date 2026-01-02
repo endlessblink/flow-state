@@ -128,11 +128,13 @@ export const getDatabaseConfig = (): DatabaseConfig => {
   const couchConfig = getStoredCouchDBConfig()
   const syncEnabled = isSyncEnabled()
 
+  /*
   if (syncEnabled) {
     console.log('🔧 [DATABASE CONFIG] Sync enabled - URL:', couchConfig.url)
   } else {
     console.log('🔧 [DATABASE CONFIG] Local-only mode (no sync configured)')
   }
+  */
 
   return {
     local: {

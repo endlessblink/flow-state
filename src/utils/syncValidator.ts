@@ -81,14 +81,14 @@ export class SyncValidator {
       ...options
     }
 
-    console.log('🔍 SyncValidator initialized:', this.options)
+    // console.log('🔍 SyncValidator initialized:', this.options)
   }
 
   /**
    * Validate all syncable documents in a database
    */
   async validateDatabase(db: PouchDB.Database): Promise<SyncValidationResult & { valid?: boolean; critical?: boolean; errors?: string[] }> {
-    console.log(`🔍 Validating entire database: ${db.name}`)
+    // console.log(`🔍 Validating entire database: ${db.name}`)
     const errors: string[] = []
     const startTime = Date.now()
     let critical = false
@@ -215,7 +215,7 @@ export class SyncValidator {
    * Validate sync integrity between local and remote documents
    */
   async validateSync(localDocs: Record<string, unknown>[], remoteDocs: Record<string, unknown>[]): Promise<SyncValidationResult> {
-    console.log(`🔍 Validating sync integrity (${localDocs.length} local, ${remoteDocs.length} remote)`)
+    // console.log(`🔍 Validating sync integrity (${localDocs.length} local, ${remoteDocs.length} remote)`)
     const startTime = Date.now()
 
     const results: ValidationResult[] = []
@@ -268,7 +268,7 @@ export class SyncValidator {
     }
 
     const totalErrors = validationResult.issues.filter(i => i.severity === 'error').length
-    console.log(`✅ Sync validation complete: ${validationResult.validDocuments}/${validationResult.totalValidated} valid, ${totalErrors} errors (${duration}ms)`)
+    // console.log(`✅ Sync validation complete: ${validationResult.validDocuments}/${validationResult.totalValidated} valid, ${totalErrors} errors (${duration}ms)`)
 
     return validationResult
   }
@@ -490,7 +490,7 @@ export class SyncValidator {
    */
   private validateSettingsDocument(document: Record<string, unknown>, _issues: ValidationIssue[]): void {
     // Settings documents can have flexible structure, but basic validation applies
-    console.log(`🔍 Validating settings document: ${document._id}`)
+    // console.log(`🔍 Validating settings document: ${document._id}`)
   }
 
   /**

@@ -18,7 +18,7 @@ export interface SyncableDocument {
 export const isSyncableDocument = (doc: unknown): boolean => {
   // Basic validation
   if (!doc || typeof doc !== 'object') {
-    console.log(`🚫 Skipping invalid document:`, doc)
+    // console.log(`🚫 Skipping invalid document:`, doc)
     return false
   }
 
@@ -27,19 +27,19 @@ export const isSyncableDocument = (doc: unknown): boolean => {
 
   // Must have an _id field
   if (!docRecord._id || typeof docRecord._id !== 'string') {
-    console.log(`🚫 Skipping document without _id:`, doc)
+    // console.log(`🚫 Skipping document without _id:`, doc)
     return false
   }
 
   // NEVER sync local documents (these are PouchDB internal documents)
   if (docRecord._id.startsWith('_local/')) {
-    console.log(`🚫 Skipping local document: ${docRecord._id}`)
+    // console.log(`🚫 Skipping local document: ${docRecord._id}`)
     return false
   }
 
   // NEVER sync design documents
   if (docRecord._id.startsWith('_design/')) {
-    console.log(`🚫 Skipping design document: ${docRecord._id}`)
+    // console.log(`🚫 Skipping design document: ${docRecord._id}`)
     return false
   }
 
@@ -73,15 +73,15 @@ export const isSyncableDocument = (doc: unknown): boolean => {
   const isSyncable = hasSyncablePattern || hasSyncableType
 
   if (!isSyncable) {
-    console.log(`🚫 Skipping non-syncable document: ${docRecord._id} (type: ${docRecord.type})`)
+    // console.log(`🚫 Skipping non-syncable document: ${docRecord._id} (type: ${docRecord.type})`)
     return false
   }
 
   // Additional validation for syncable documents
   if (hasExplicitType && !hasSyncablePattern) {
-    console.log(`✅ Syncing document by type: ${docRecord._id} (type: ${docRecord.type})`)
+    // console.debug(`✅ Syncing document by type: ${docRecord._id} (type: ${docRecord.type})`)
   } else {
-    console.log(`✅ Syncing document by pattern: ${docRecord._id}`)
+    // console.debug(`✅ Syncing document by pattern: ${docRecord._id}`)
   }
 
   return true
@@ -102,7 +102,7 @@ export const filterSyncableDocuments = (docs: unknown[]): unknown[] => {
   const filtered = docs.length - syncable.length
 
   if (filtered > 0) {
-    console.log(`📊 Filtered ${filtered} non-syncable documents, kept ${syncable.length} syncable documents`)
+    // console.debug(`📊 Filtered ${filtered} non-syncable documents, kept ${syncable.length} syncable documents`)
   }
 
   return syncable

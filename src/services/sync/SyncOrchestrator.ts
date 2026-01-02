@@ -94,7 +94,7 @@ export class SyncOrchestrator {
             this.isInitialized = true
 
             this.state.updateStatus('idle')
-            console.log('✅ Sync Orchestrator Initialized')
+            console.debug('✅ Sync Orchestrator Initialized')
         } catch (error) {
             console.error('❌ Sync Orchestrator Initialization Failed:', error)
             throw error
@@ -104,7 +104,7 @@ export class SyncOrchestrator {
     }
 
     public async cleanup() {
-        console.log('🧹 Cleaning up Sync Orchestrator listeners')
+        console.debug('🧹 Cleaning up Sync Orchestrator listeners')
         this.network.cleanup()
         this.localDB = null
         this.remoteDB = null
@@ -112,13 +112,13 @@ export class SyncOrchestrator {
     }
 
     private async handleOnline() {
-        console.log('🌐 [SyncOrchestrator] Online detected')
+        console.debug('🌐 [SyncOrchestrator] Online detected')
         this.state.updateStatus('idle') // Clear offline status
         await this.performReliableSync()
     }
 
     private handleOffline() {
-        console.log('🔌 [SyncOrchestrator] Offline detected')
+        console.debug('🔌 [SyncOrchestrator] Offline detected')
         this.state.updateStatus('offline')
     }
 

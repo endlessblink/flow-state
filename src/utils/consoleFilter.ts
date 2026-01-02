@@ -185,7 +185,14 @@ function shouldFilter(message: string): boolean {
       msg.includes('⚠️ [USE-DATABASE] Sync not available') ||
       msg.includes('⚠️ Project store failed to initialize') ||
       msg.includes('🚑 Recovering') ||
-      msg.includes('🔍 Detecting conflicts for')) {
+      msg.includes('🔍 Detecting conflicts for') ||
+      msg.includes('🔍 Validating entire database') ||
+      msg.includes('✅ Sync validation complete') ||
+      msg.includes('🔄 Syncing document') ||
+      msg.includes('✅ Syncing document') ||
+      msg.includes('🚫 Skipping') ||
+      msg.includes('📊 Filtered') ||
+      msg.includes('🔧 [DATABASE CONFIG]')) {
       return true
     }
   }

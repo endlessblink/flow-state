@@ -303,7 +303,12 @@ export const useProjectStore = defineStore('projects', () => {
 
     const isDescendantOf = (projectId: string, potentialAncestorId: string): boolean => {
         let current = getProjectById(projectId)
+        const visited = new Set<string>()
+
         while (current?.parentId) {
+            if (visited.has(current.id)) return false // Cycle detected
+            visited.add(current.id)
+
             if (current.parentId === potentialAncestorId) return true
             current = getProjectById(current.parentId)
         }
@@ -312,10 +317,22 @@ export const useProjectStore = defineStore('projects', () => {
 
     const getChildProjectIds = (projectId: string): string[] => {
         const ids = [projectId]
-        const childProjects = projects.value.filter(p => p.parentId === projectId)
-        childProjects.forEach(child => {
-            ids.push(...getChildProjectIds(child.id))
-        })
+        const visited = new Set<string>([projectId])
+        const queue = [projectId]
+
+        // Use iterative BFS instead of recursion to prevent stack overflow
+        while (queue.length > 0) {
+            const currentId = queue.shift()!
+            const childProjects = projects.value.filter(p => p.parentId === currentId)
+
+            for (const child of childProjects) {
+                if (!visited.has(child.id)) {
+                    visited.add(child.id)
+                    ids.push(child.id)
+                    queue.push(child.id)
+                }
+            }
+        }
         return ids
     }
 

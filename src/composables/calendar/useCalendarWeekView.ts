@@ -63,37 +63,52 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
 
       // Use filtered tasks to respect active status filter
       taskStore.filteredTasks.forEach(task => {
-        const instances = getTaskInstances(task)
+        if (!task) return
 
-        instances
-          .filter((instance: any) => instance.scheduledDate === day.dateString)
-          .forEach((instance: any) => {
-            const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
-            const duration = instance.duration || task.estimatedDuration || 30
+        try {
+          const instances = getTaskInstances(task)
 
-            // Only show if within working hours
-            if (hour >= 6 && hour < 23) {
-              const startTime = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
-              const endTime = new Date(startTime.getTime() + duration * 60000)
+          // GUARD: Limit processed instances per task to prevent OOM
+          const MAX_INSTANCES_PER_TASK = 50
+          let processedCount = 0
 
-              dayEvents.push({
-                id: instance.id,
-                taskId: task.id,
-                instanceId: instance.id,
-                title: task.title,
-                startTime,
-                endTime,
-                duration,
-                startSlot: (hour - 6) * 2 + (minute === 30 ? 1 : 0),
-                slotSpan: Math.ceil(duration / 30),
-                color: getPriorityColor(task.priority),
-                column: 0,
-                totalColumns: 1,
-                dayIndex,
-                isDueDate: false
-              })
-            }
-          })
+          instances
+            .filter((instance: any) => {
+              if (processedCount >= MAX_INSTANCES_PER_TASK) return false
+              const matches = instance.scheduledDate === day.dateString
+              if (matches) processedCount++
+              return matches
+            })
+            .forEach((instance: any) => {
+              const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
+              const duration = instance.duration || task.estimatedDuration || 30
+
+              // Only show if within working hours
+              if (hour >= 6 && hour < 23) {
+                const startTime = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
+                const endTime = new Date(startTime.getTime() + duration * 60000)
+
+                dayEvents.push({
+                  id: instance.id,
+                  taskId: task.id,
+                  instanceId: instance.id,
+                  title: task.title,
+                  startTime,
+                  endTime,
+                  duration,
+                  startSlot: (hour - 6) * 2 + (minute === 30 ? 1 : 0),
+                  slotSpan: Math.ceil(duration / 30),
+                  color: getPriorityColor(task.priority),
+                  column: 0,
+                  totalColumns: 1,
+                  dayIndex,
+                  isDueDate: false
+                })
+              }
+            })
+        } catch (err) {
+          console.warn(`Error processing week event for task ${task.id}:`, err)
+        }
       })
 
       // Calculate overlapping positions for this day

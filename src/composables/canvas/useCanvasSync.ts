@@ -5,7 +5,7 @@ import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { NodeUpdateBatcher } from '@/utils/canvas/NodeUpdateBatcher'
 // TASK-089: Canvas state lock to prevent sync from overwriting user changes
-import { isAnyCanvasStateLocked } from '@/utils/canvasStateLock'
+import { isAnyCanvasStateLocked, getLockedTaskPosition } from '@/utils/canvasStateLock'
 
 interface SyncDependencies {
     nodes: Ref<Node[]>
@@ -138,7 +138,12 @@ export function useCanvasSync(deps: SyncDependencies) {
                 if (task.canvasPosition) {
                     // Find parent section
                     let parentNode = undefined
-                    let position = { ...task.canvasPosition }
+                    // TASK-089 FIX: Respect locked positions to prevent position resets during deletion
+                    // If a task's position is locked (recently dragged), use the locked position
+                    const lockedPosition = getLockedTaskPosition(task.id)
+                    let position = lockedPosition
+                        ? { x: lockedPosition.x, y: lockedPosition.y }
+                        : { ...task.canvasPosition }
 
                     // Check if task belongs to a section visually
                     // BUG-034 FIX: Use task CENTER for bounds check (consistent with getTasksInSectionBounds)

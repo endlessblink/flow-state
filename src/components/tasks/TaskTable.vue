@@ -128,7 +128,7 @@
 
       <div class="table-cell status-cell" @click.stop>
         <CustomSelect
-          :model-value="task.status"
+          :model-value="task.status || 'planned'"
           :options="statusOptions"
           placeholder="Select status..."
           @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"

@@ -63,6 +63,7 @@ const percentage = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  background: transparent !important; /* Override global tauri styles */
 }
 
 .progress-header {

@@ -24,10 +24,12 @@ import {
 } from '@/utils/individualSectionStorage'
 // TASK-089: Canvas state lock to prevent sync from overwriting user changes
 import {
+  isAnyCanvasStateLocked,
   isGroupPositionLocked,
   getLockedGroupPosition,
   isViewportLocked,
-  getLockedViewport
+  getLockedViewport,
+  getLockedTaskPosition
 } from '@/utils/canvasStateLock'
 
 // Task store import for safe sync functionality
@@ -231,22 +233,32 @@ export const useCanvasStore = defineStore('canvas', () => {
       // FIXED: Use explicit check (isInInbox === false) to avoid undefined bypass
       const taskNodes = tasks
         .filter(task => task.isInInbox === false && task.canvasPosition)
-        .map(task => ({
-          id: task.id,
-          type: 'task',
-          position: task.canvasPosition || { x: 100, y: 100 },
-          data: {
-            title: task.title,
-            description: task.description,
-            status: task.status,
-            priority: task.priority,
-            progress: task.progress,
-            dueDate: task.dueDate,
-            projectId: task.projectId,
-            task: task // Full task object reference
-          },
-          draggable: true
-        }))
+        .map(task => {
+          // TASK-089 FIX: Respect locked positions to prevent position resets during deletion
+          // If a task's position is locked (recently dragged), use the locked position
+          // This prevents syncTasksToCanvas from overwriting in-memory position changes
+          const lockedPosition = getLockedTaskPosition(task.id)
+          const position = lockedPosition
+            ? { x: lockedPosition.x, y: lockedPosition.y }
+            : (task.canvasPosition || { x: 100, y: 100 })
+
+          return {
+            id: task.id,
+            type: 'task',
+            position,
+            data: {
+              title: task.title,
+              description: task.description,
+              status: task.status,
+              priority: task.priority,
+              progress: task.progress,
+              dueDate: task.dueDate,
+              projectId: task.projectId,
+              task: task // Full task object reference
+            },
+            draggable: true
+          }
+        })
 
       // Filter out existing non-task nodes, keep them
       const nonTaskNodes = nodes.value.filter(node => node.type !== 'task')
@@ -297,7 +309,13 @@ export const useCanvasStore = defineStore('canvas', () => {
               }
             }
 
-            syncTasksToCanvas(newTasks)
+            // TASK-089 FIX: Guard against sync during position locks to prevent cascade resets
+            // Status changes were triggering syncs that read stale positions from database
+            if (!isAnyCanvasStateLocked()) {
+              syncTasksToCanvas(newTasks)
+            } else {
+              console.log('🛡️ [TASK-089] syncTasksToCanvas blocked in task watcher - canvas state locked')
+            }
           }
         }, { deep: true, immediate: false, flush: 'sync' })
 

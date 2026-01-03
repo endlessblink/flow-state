@@ -37,7 +37,8 @@ export interface StateSnapshot {
 export function useVueFlowStateManager(
   nodes: Ref<Node[]>,
   edges: Ref<Edge[]>,
-  config: VueFlowStateConfig = {}
+  config: VueFlowStateConfig = {},
+  isInteracting?: Ref<boolean>
 ) {
   const {
     enableOptimisticUpdates: _enableOptimisticUpdates = true,
@@ -120,32 +121,50 @@ export function useVueFlowStateManager(
    * Set up reactive watchers
    */
   const setupWatchers = () => {
-    // Watch for node changes
+    // Watch for node changes - guarded by isInteracting to prevent traversal during movement
     watch(
-      nodes,
-      (newNodes, oldNodes) => {
-        if (isInitialized.value) {
-          handleNodeChanges(newNodes, oldNodes)
+      () => (isInteracting?.value ? null : nodes.value),
+      (val, oldVal) => {
+        if (isInitialized.value && val) {
+          handleNodeChanges(val, oldNodes || [])
         }
       },
       { deep: true }
     )
 
-    // Watch for edge changes
+    // Store oldNodes for diffing
+    let oldNodes: Node[] = [...nodes.value]
+    watch(nodes, (newNodes) => {
+      if (!isInteracting?.value) {
+        oldNodes = [...newNodes]
+      }
+    }, { deep: false })
+
+    // Watch for edge changes - guarded by isInteracting
     watch(
-      edges,
-      (newEdges, oldEdges) => {
-        if (isInitialized.value) {
-          handleEdgeChanges(newEdges, oldEdges)
+      () => (isInteracting?.value ? null : edges.value),
+      (val, oldVal) => {
+        if (isInitialized.value && val) {
+          handleEdgeChanges(val, oldEdges || [])
         }
       },
       { deep: true }
     )
+
+    // Store oldEdges for diffing 
+    let oldEdges: Edge[] = [...edges.value]
+    watch(edges, (newEdges) => {
+      if (!isInteracting?.value) {
+        oldEdges = [...newEdges]
+      }
+    }, { deep: false })
 
     // Watch for conflicts
     watch(
       stateIntegrity,
       (integrity) => {
+        if (isInteracting && isInteracting.value) return
+
         if (integrity.orphanedEdges.length > 0) {
           console.warn(`⚠️ [VUE_FLOW_STATE] Found ${integrity.orphanedEdges.length} orphaned edges`)
           resolveOrphanedEdges(integrity.orphanedEdges)
@@ -212,15 +231,15 @@ export function useVueFlowStateManager(
   }
 
   /**
-   * Handle node changes
+   * Handle node changes with O(N) complexity
    */
   const handleNodeChanges = (newNodes: Node[], oldNodes: Node[]) => {
-    const oldNodeIds = new Set(oldNodes.map(n => n.id))
-    const newNodeIds = new Set(newNodes.map(n => n.id))
+    const oldNodeMap = new Map(oldNodes.map(n => [n.id, n]))
+    const newNodeMap = new Map(newNodes.map(n => [n.id, n]))
 
     // Find added nodes
     newNodes.forEach(node => {
-      if (!oldNodeIds.has(node.id)) {
+      if (!oldNodeMap.has(node.id)) {
         addOperation({
           type: 'add',
           target: 'node',
@@ -233,7 +252,7 @@ export function useVueFlowStateManager(
 
     // Find removed nodes
     oldNodes.forEach(node => {
-      if (!newNodeIds.has(node.id)) {
+      if (!newNodeMap.has(node.id)) {
         addOperation({
           type: 'remove',
           target: 'node',
@@ -246,29 +265,41 @@ export function useVueFlowStateManager(
 
     // Find updated nodes
     newNodes.forEach(newNode => {
-      const oldNode = oldNodes.find(n => n.id === newNode.id)
-      if (oldNode && JSON.stringify(oldNode) !== JSON.stringify(newNode)) {
-        addOperation({
-          type: 'update',
-          target: 'node',
-          id: newNode.id,
-          data: { old: oldNode, new: newNode },
-          timestamp: Date.now()
-        })
+      const oldNode = oldNodeMap.get(newNode.id)
+      if (oldNode) {
+        // PERF: Only stringify if internal references changed or skip if just position changed (handled elsewhere usually)
+        // But for state manager we want to track everything.
+        // Use a more targeted check if performance is still issue.
+        if (oldNode !== newNode) {
+          // Check if it's actually different content
+          // Using a faster check first: label/data length/keys
+          const dataChanged = JSON.stringify(oldNode.data) !== JSON.stringify(newNode.data)
+          const posChanged = oldNode.position.x !== newNode.position.x || oldNode.position.y !== newNode.position.y
+
+          if (dataChanged || posChanged) {
+            addOperation({
+              type: 'update',
+              target: 'node',
+              id: newNode.id,
+              data: { old: oldNode, new: newNode },
+              timestamp: Date.now()
+            })
+          }
+        }
       }
     })
   }
 
   /**
-   * Handle edge changes
+   * Handle edge changes with O(N) complexity
    */
   const handleEdgeChanges = (newEdges: Edge[], oldEdges: Edge[]) => {
-    const oldEdgeIds = new Set(oldEdges.map(e => e.id))
-    const newEdgeIds = new Set(newEdges.map(e => e.id))
+    const oldEdgeMap = new Map(oldEdges.map(e => [e.id, e]))
+    const newEdgeMap = new Map(newEdges.map(e => [e.id, e]))
 
     // Find added edges
     newEdges.forEach(edge => {
-      if (!oldEdgeIds.has(edge.id)) {
+      if (!oldEdgeMap.has(edge.id)) {
         addOperation({
           type: 'add',
           target: 'edge',
@@ -281,7 +312,7 @@ export function useVueFlowStateManager(
 
     // Find removed edges
     oldEdges.forEach(edge => {
-      if (!newEdgeIds.has(edge.id)) {
+      if (!newEdgeMap.has(edge.id)) {
         addOperation({
           type: 'remove',
           target: 'edge',
@@ -294,15 +325,17 @@ export function useVueFlowStateManager(
 
     // Find updated edges
     newEdges.forEach(newEdge => {
-      const oldEdge = oldEdges.find(e => e.id === newEdge.id)
-      if (oldEdge && JSON.stringify(oldEdge) !== JSON.stringify(newEdge)) {
-        addOperation({
-          type: 'update',
-          target: 'edge',
-          id: newEdge.id,
-          data: { old: oldEdge, new: newEdge },
-          timestamp: Date.now()
-        })
+      const oldEdge = oldEdgeMap.get(newEdge.id)
+      if (oldEdge && oldEdge !== newEdge) {
+        if (JSON.stringify(oldEdge) !== JSON.stringify(newEdge)) {
+          addOperation({
+            type: 'update',
+            target: 'edge',
+            id: newEdge.id,
+            data: { old: oldEdge, new: newEdge },
+            timestamp: Date.now()
+          })
+        }
       }
     })
   }

@@ -200,12 +200,15 @@ const tasksByProject = computed(() => {
   return grouped
 })
 
-// Helper to get a project and all its descendants recursively
-const getProjectAndChildren = (projectId: string): string[] => {
+// Helper to get a project and all its descendants recursively with cycle detection
+const getProjectAndChildren = (projectId: string, visited = new Set<string>()): string[] => {
+  if (visited.has(projectId)) return []
+  visited.add(projectId)
+  
   const ids = [projectId]
   const childProjects = taskStore.projects.filter(p => p.parentId === projectId)
   childProjects.forEach(child => {
-    ids.push(...getProjectAndChildren(child.id))
+    ids.push(...getProjectAndChildren(child.id, visited))
   })
   return ids
 }
@@ -499,7 +502,7 @@ const _handleToggleTodayFilter = (event: MouseEvent) => {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-6) var(--space-8);
-  background: var(--surface-primary);
+  background: transparent !important; /* Force transparent background */
   border-bottom: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-md);
   position: sticky;

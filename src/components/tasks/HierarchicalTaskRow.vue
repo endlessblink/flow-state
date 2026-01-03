@@ -105,9 +105,9 @@
       </div>
 
       <!-- Status (matches TaskTable status-cell) -->
-      <div class="task-row__status" @click.stop>
+      <div class="task-row__status table-cell status-cell" @click.stop>
         <CustomSelect
-          :model-value="task.status"
+          :model-value="task.status || 'planned'"
           :options="statusOptions"
           placeholder="Select status..."
           @update:model-value="(val) => updateTaskStatus(task.id, String(val))"
@@ -189,6 +189,7 @@
           v-memo="[childTask.id, childTask.status, isExpanded]"
           :task="childTask"
           :indent-level="indentLevel + 1"
+          :visited-ids="new Set([...visitedIds, task.id])"
           :expanded-tasks="expandedTasks"
           @select="$emit('select', $event)"
           @toggle-complete="$emit('toggleComplete', $event)"
@@ -228,12 +229,14 @@ interface Props {
   indentLevel?: number
   selected?: boolean
   expandedTasks?: Set<string>
+  visitedIds?: Set<string>
 }
 
 const props = withDefaults(defineProps<Props>(), {
   indentLevel: 0,
   selected: false,
-  expandedTasks: () => new Set()
+  expandedTasks: () => new Set(),
+  visitedIds: () => new Set()
 })
 
 const emit = defineEmits<{
@@ -285,9 +288,11 @@ const isExpanded = computed(() =>
   props.expandedTasks.has(props.task.id)
 )
 
-const childTasks = computed(() =>
-  taskStore.getTaskChildren(props.task.id)
-)
+const childTasks = computed(() => {
+  // Cycle detection: filter out children that are already in the visited chain
+  return taskStore.getTaskChildren(props.task.id)
+    .filter(child => !props.visitedIds.has(child.id))
+})
 
 const completedSubtaskCount = computed(() =>
   childTasks.value.filter(task => task.status === 'done').length

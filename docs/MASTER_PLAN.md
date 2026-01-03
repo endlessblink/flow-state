@@ -1,5 +1,5 @@
-**Last Updated**: January 3, 2026 (BUG-062 Backup False Positive Fix)
-**Version**: 5.14 (Data Safety & Log Hygiene)
+**Last Updated**: January 3, 2026 (BUG-065 Kanban & Scroll Overhaul)
+**Version**: 5.15 (Kanban & Scroll Stability)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -743,9 +743,12 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**BUG-058**~~ | ✅ **DONE** | `useReliableSyncManager.ts` | - | - |
 | ~~**BUG-059**~~ | ✅ **DONE** | `useBackupSystem.ts`, `useReliableSyncManager.ts` | - | - |
 | ~~**BUG-062**~~ | ✅ **DONE** | `mockTaskDetector.ts`, `CanvasView.vue`, `BackupSettings.vue` | - | - |
+| ~~**BUG-064**~~ | ✅ **DONE** | `styles.css` | - | - |
+| ~~**BUG-065**~~ | ✅ **DONE** | `useHorizontalDragScroll.ts`, `KanbanSwimlane.vue`, `BoardView.vue`, `MainLayout.vue` | - | - |
+| ~~**TASK-091**~~ | ✅ **DONE** | `useHorizontalDragScroll.ts`, `TaskCard.vue`, `KanbanColumn.vue` | - | - |
 | **TASK-087** | ✅ **DONE** | `MarkdownExportService.ts`, `FileSystemService.ts`, `BackupSettings.vue` | - | ROAD-018 |
 | **TASK-088** | ✅ **DONE** | `DatabaseMaintenanceService.ts`, `useDatabase.ts` | - | - |
-| **TASK-089** | 🔄 **IN PROGRESS** | `canvasStateLock.ts`, `useAppInitialization.ts`, `CanvasView.vue`, `canvas.ts`, `useCanvasSync.ts`, `useCanvasDragDrop.ts` | - | - |
+| ~~**TASK-089**~~ | ✅ **DONE** | `canvasStateLock.ts`, `useAppInitialization.ts`, `canvas.ts`, `useCanvasDragDrop.ts`, `useCanvasResize.ts`, `useCanvasEvents.ts` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -787,6 +790,7 @@ Phase 3 (Mobile) ←────────────────────
 
 - [x] **~~TASK-085~~**: IndexedDB Corruption Prevention Safeguards | **P1-HIGH** | ✅ DONE (Jan 1) - Health check, cross-tab coordination, conflict pruning
 - [x] **~~BUG-057~~**: PouchDB sync infinite loop causing data loss | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added safety guards to syncDeletedTasks(), pre-initialization health check
+- [x] **~~TASK-089~~**: Canvas position reset comprehensive fix | **P0-CRITICAL** | ✅ FIXED (Jan 3) - Fixed race condition: lock BEFORE store update, fixed position structure in updateSectionFromSync, removed canvasStore.loadFromDatabase() from sync handler
 - [x] **~~BUG-058~~**: Non-syncable docs (notifications) causing constant sync loop | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added filter to live sync to exclude local-only documents
 - [x] **~~BUG-059~~**: Backup system overwrites with empty data during store corruption | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Golden backup, max task count tracking, suspicious backup detection, sync pre-flight validation
 - [x] **~~BUG-060~~**: Sync stability & persistence fixes | **P0-CRITICAL** | ✅ FIXED (Jan 2)
@@ -844,6 +848,8 @@ Phase 3 (Mobile) ←────────────────────
     - Extracting task data from nested `doc.data` format
     - Converting date strings to Date objects
     - Validating task has required ID field
+- [x] **~~BUG-065~~**: Kanban Vertical Scroll Restoration | **P0-CRITICAL** | ✅ FIXED (Jan 3)
+- [x] **~~TASK-091~~**: Kanban Drag-and-Drop Overhaul | **P1-HIGH** | ✅ DONE (Jan 3)
   - **Fix 1**: `useAppInitialization.ts:43-90` - Enhanced `handlePouchDBChange`:
     - Properly extracts task data from `doc.data` (nested format) or falls back to flat format
     - Validates task has ID before processing
@@ -867,6 +873,35 @@ Phase 3 (Mobile) ←────────────────────
    - Wipes local database + reloads app.
    - Forces fresh clone from server.
 2. **Result**: Application re-syncs clean state from remote, resolving the discrepancy.
+
+### ✅ BUG-064: CustomSelect Tauri CSS Visual Discrepancy (Jan 3, 2026)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| CustomSelect dropdowns have prominent white borders in Tauri | MEDIUM | ✅ **FIXED** |
+
+**Symptom**: Filter dropdowns ("All Projects", "All Tasks", "All Status") displayed with visible white borders and glow effects in Tauri, appearing different from Storybook/browser version.
+
+**Root Cause**:
+1. Tauri uses WebKitGTK on Linux which has limited `backdrop-filter` support
+2. Initial CSS fallbacks used `border: 1px solid rgba(255, 255, 255, 0.12)` which was too bright
+3. The glass morphism effect relies on backdrop-blur which fails in WebKitGTK, making borders stand out more
+
+**Visual Comparison**:
+- **Reference (Storybook)**: Subtle, nearly invisible borders that blend with dark background
+- **Broken (Tauri)**: Prominent white borders, visible glow effects
+
+**Fix Implemented** (`src/assets/styles.css`):
+1. **Reduced border opacity**: Changed from `rgba(255, 255, 255, 0.12)` → `rgba(255, 255, 255, 0.06)`
+2. **Removed box-shadow from trigger**: Eliminated all glow effects
+3. **Adjusted background colors**: Made slightly lighter (`rgba(40, 42, 52, 0.9)`) to blend better
+4. **Added comprehensive state overrides**: Hover, focus, open, selected states all updated
+
+**Files Modified**:
+- `src/assets/styles.css` - Added Tauri-specific CustomSelect fallbacks (lines 363-417)
+
+**Related**: This is part of the broader WebKitGTK compatibility work documented in `.claude/skills/tauri-e2e-testing/SKILL.md`
+
 - [x] **~~BUG-086~~**: Multi-node drag only saves position of directly-dragged node | **P1-HIGH** | ✅ FIXED (Jan 2)
   - **Symptoms**: When selecting multiple tasks and dragging them together, positions reset after sync/reload
   - **Root Cause**: `handleNodeDragStop` in `useCanvasDragDrop.ts` only saved the position of the node directly under the mouse, not all selected nodes that Vue Flow moved together
@@ -4479,6 +4514,99 @@ npm run dev
 **Related**: Incorporates IDEA-002 (Timeline View for Dev-Manager)
 
 **Started**: 2025-12-25
+
+---
+
+### ~~BUG-065~~: Kanban Vertical Scroll & Layout Conflicts (✅ DONE - Jan 3, 2026)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| App-wide vertical scroll blocked | CRITICAL | ✅ **FIXED** |
+| Scroller listener leaks | HIGH | ✅ **FIXED** |
+| Browser-specific scroll lock (Zen/WebKitGTK) | CRITICAL | ✅ **FIXED** |
+
+**Symptom**: After drag-and-drop improvements, vertical scrolling was completely blocked across Zen, Brave, and Tauri apps. The UI felt "stuck" or unscrollable.
+
+**Root Causes**:
+1. **Scroller Conflict**: `useHorizontalDragScroll.ts` had a logic error where it was eagerly consuming all touch/mouse moves without a direction check, blocking native vertical results.
+2. **Layout Collapse**: Recent structural changes to `BoardView.vue` and `MainLayout.vue` omitted essential `flex: 1` and `height: 100%` rules on wrappers, causing the scrollable area to effectively have zero height.
+3. **Restrictive CSS**: Implementation of `contain: layout style` and `isolation: isolate` on global containers disrupted the scroll chain in certain browser engines.
+4. **Listener Leak**: Global `mousemove` and `mouseup` listeners were not correctly removed if a drag was yielded, bogging down the main thread.
+
+**Fixes Applied**:
+- [x] **Directional Awareness**: Refactored `handleMove` to yield immediately if movement is primarily vertical (|dy| > |dx|).
+- [x] **Structural Flex**: Added `display: flex; flex: 1; min-height: 0` to `.view-wrapper` and `.board-view-wrapper` to ensure a concrete scrollable height.
+- [x] **CSS Cleanup**: Removed restrictive containment and added `touch-action: pan-y` to allow native vertical gestures in all environments.
+- [x] **Safe Scoping**: Fixed scoping errors in `useHorizontalDragScroll.ts` that were crashing the listener attachment logic.
+
+**Files Modified**:
+- `src/composables/useHorizontalDragScroll.ts` - Refactored yield logic & global listener safety.
+- `src/layouts/MainLayout.vue` - Fixed `.view-wrapper` flex expansion.
+- `src/views/BoardView.vue` - Fixed `.board-view-wrapper` and scroller constraints.
+- `src/components/kanban/KanbanSwimlane.vue` - Adjusted overflow and touch-action.
+
+---
+
+### ~~BUG-066~~: Canvas Node Dragging Performance Lag (✅ DONE - Jan 3, 2026)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Canvas node dragging lag | CRITICAL | ✅ **FIXED** |
+| Reactive traversal overhead | HIGH | ✅ **FIXED** |
+| Deep watcher CPU spikes | HIGH | ✅ **FIXED** |
+
+**Symptom**: Dragging nodes on the canvas (Vue Flow) resulted in significant interaction lag (up to 1s frame drops) in the Tauri app, especially with custom nodes.
+
+**Root Causes**:
+1. **Deep Watchers**: `useVueFlowStateManager` and `useVueFlowStability` used `deep: true` watchers on the `nodes` array. Moving a node triggered full array traversal on every frame.
+2. **Selection Logic**: O(N^2) store-based selection checks in `CanvasView.vue` slots performed `.includes()` on every node every frame.
+3. **Expensive Filters**: Done tasks used `filter: grayscale()` and `backdrop-filter`, which added significant composition overhead during movement.
+4. **IPC Logs**: Excessive logging in the drag path caused IPC congestion in Tauri.
+
+**Fixes Applied**:
+- [x] **Guarded Watchers**: Modified watch sources to return `null` during `isInteracting`, pausing deep traversal during movement.
+- [x] **Efficient Diffing**: Replaced O(N^2) search logic with O(N) Map-based diffing in `useVueFlowStateManager`.
+- [x] **CSS Silencing**: Added `.is-dragging` state to custom nodes to disable `backdrop-filter`, `filter`, and `transition` during drag.
+- [x] **Internal State Optimization**: Switched to `nodeProps.selected` and `nodeProps.dragging` in `CanvasView.vue` slots to eliminate store lookups.
+
+**Files Modified**:
+- `src/composables/useVueFlowStateManager.ts` - Guarded watchers & O(N) diffing.
+- `src/composables/useVueFlowStability.ts` - Guarded watchers.
+- `src/components/canvas/TaskNode.vue` - CSS silencing & optimized props.
+- `src/views/CanvasView.vue` - Slot optimization & interaction state passing.
+- `src/composables/canvas/useCanvasDragDrop.ts` - Silenced IPC logs.
+
+---
+
+### ~~TASK-092~~: Canvas Custom Node Performance Guard (✅ DONE - Jan 3, 2026)
+
+**Goal**: Ensure custom canvas nodes remain performant under heavy interaction.
+
+**Actions**:
+- [x] Added `isDragging` prop support to `TaskNode.vue` and `GroupNodeSimple.vue`.
+- [x] Implemented interaction-aware CSS that automatically silences expensive filters during movement.
+- [x] Optimized selection detection logic to leverage Vue Flow internal state.
+- [x] Documented for future custom node types.
+
+---
+
+### ~~TASK-091~~: Kanban Board Drag-and-Drop Refactor (✅ DONE - Jan 3, 2026)
+
+| Feature | Priority | Status |
+|---------|----------|--------|
+| `vuedraggable` Integration | P1-HIGH | ✅ **DONE** |
+| Direction-aware Horizontal Scroll | P1-HIGH | ✅ **DONE** |
+| Native Drag Conflict Resolution | P2-MEDIUM | ✅ **DONE** |
+
+**Goal**: Implement a smooth, multi-swipe Kanban board where vertical task sorting and horizontal row scrolling coexist without conflict.
+
+**Implementation**:
+- [x] **Decoupled Interactions**: Removed native HTML5 `draggable="true"` from `TaskCard.vue` to prevent browser drag-preview interference with `vuedraggable`.
+- [x] **Improved Sensitivity**: Increased `vuedraggable` delay (100ms) and touch-threshold (5px) to better distinguish between clicking, sorting, and board scrolling.
+- [x] **Intent Detection**: Added `data-draggable="true"` attributes to help the horizontal scroller identify when to yield to children immediately.
+- [x] **Horizontal Momentum**: Maintained momentum-based scrolling for the board while ensuring it doesn't "catch" during vertical task movement.
+
+**Result**: Butter-smooth dragging in both directions across all platforms.
 
 ---
 

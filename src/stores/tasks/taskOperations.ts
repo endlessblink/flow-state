@@ -497,8 +497,11 @@ export function useTaskOperations(
     const getTaskChildren = (taskId: string) => tasks.value.filter(t => t.parentTaskId === taskId)
     const getTaskHierarchy = (taskId: string) => {
         const list: Task[] = []
+        const visited = new Set<string>()
         let curr: string | null = taskId
-        while (curr) {
+
+        while (curr && !visited.has(curr)) {
+            visited.add(curr)
             const t = getTask(curr)
             if (!t) break
             list.unshift(t)

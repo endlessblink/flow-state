@@ -28,10 +28,9 @@
         :scroll-sensitivity="100"
         :scroll-speed="20"
         bubble-scroll
-        :delay="0"
-        :delay-on-touch-start="false"
-        :delay-on-touch-only="false"
-        :touch-start-threshold="0"
+        :delay="100"
+        :delay-on-touch-only="true"
+        :touch-start-threshold="5"
         :disabled="false"
         easing="cubic-bezier(0.25, 0.46, 0.45, 0.94)"
         tag="div"
@@ -137,6 +136,12 @@ const handleDragChange = (event: DraggableChangeEvent) => {
     // Task was dropped into this column
     const task = event.added.element
     emit('moveTask', task.id, props.status)
+  } else if (event.moved) {
+    // Task was moved within this column
+    console.log('🔄 Task moved within column:', event.moved.element.title, 'to index:', event.moved.newIndex)
+    // NOTE: Internal sorting within a column is currently not persisted in the DB 
+    // because the Task interface doesn't have an order field.
+    // However, updating localTasks gives visual feedback.
   }
 }
 </script>

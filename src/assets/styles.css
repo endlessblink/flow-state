@@ -356,7 +356,64 @@ select option {
 .tauri-app .project-filter-dropdown {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background-color: rgba(20, 22, 28, 0.98) !important;
+  background: rgba(20, 22, 28, 0.98) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* CustomSelect specific fallbacks - must override Vue scoped styles */
+/* Match the reference: subtle borders that blend with dark background */
+.tauri-app .select-dropdown {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(30, 32, 40, 0.98) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  overflow: hidden !important;
+}
+
+.tauri-app .select-trigger {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(40, 42, 52, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
+}
+
+.tauri-app .select-trigger:hover {
+  background: rgba(45, 47, 58, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+.tauri-app .select-trigger:focus {
+  border-color: rgba(78, 205, 196, 0.3) !important;
+  box-shadow: none !important;
+}
+
+.tauri-app .select-trigger.is-open {
+  background: rgba(45, 47, 58, 0.9) !important;
+  border-color: rgba(78, 205, 196, 0.3) !important;
+  box-shadow: none !important;
+}
+
+.tauri-app .select-option {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.tauri-app .select-option:hover,
+.tauri-app .select-option.is-focused {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: transparent !important;
+}
+
+.tauri-app .select-option.is-selected {
+  background: rgba(78, 205, 196, 0.1) !important;
+  border-color: rgba(78, 205, 196, 0.3) !important;
+}
+
+.tauri-app .select-option.is-selected:hover {
+  background: rgba(78, 205, 196, 0.15) !important;
 }
 
 /* Button and Interactive Element fallbacks */
@@ -369,6 +426,7 @@ select option {
 .tauri-app .drag-handle {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  background: rgba(30, 32, 40, 0.95) !important;
 }
 
 /* Calendar Component fallbacks */

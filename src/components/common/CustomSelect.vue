@@ -320,21 +320,21 @@ watch(isOpen, (newVal) => {
 
 .select-option:hover,
 .select-option.is-focused {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-light);
+  border-color: var(--glass-border);
 }
 
 .select-option.is-selected {
-  /* Stroke-based selection - no fill */
-  background: transparent;
-  border-color: rgba(78, 205, 196, 0.5);
-  color: rgba(78, 205, 196, 1);
+  /* Matches BaseDropdown styling */
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
   font-weight: var(--font-semibold);
 }
 
 .select-option.is-selected:hover,
 .select-option.is-selected.is-focused {
-  background: rgba(78, 205, 196, 0.05);
+  background: rgba(78, 205, 196, 0.1);
 }
 
 /* Dropdown transition */

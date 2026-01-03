@@ -317,6 +317,15 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 const newWidth = node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : oldBounds.width
                 const newHeight = node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : oldBounds.height
 
+                // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
+                // Store update triggers watchers → syncNodes, lock must exist first
+                lockGroupPosition(sectionId, {
+                    x: absoluteX,
+                    y: absoluteY,
+                    width: newWidth,
+                    height: newHeight
+                }, 'drag')
+
                 canvasStore.updateSectionWithUndo(sectionId, {
                     position: {
                         x: absoluteX,
@@ -325,14 +334,6 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                         height: newHeight
                     }
                 })
-
-                // TASK-089: Lock group position to prevent sync from overwriting during push
-                lockGroupPosition(sectionId, {
-                    x: absoluteX,
-                    y: absoluteY,
-                    width: newWidth,
-                    height: newHeight
-                }, 'drag')
 
                 // TASK-072 FIX: Do NOT update child section or task positions here!
                 // Vue Flow manages children automatically when parentNode is set.

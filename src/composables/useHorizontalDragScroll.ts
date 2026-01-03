@@ -51,7 +51,7 @@ export function useHorizontalDragScroll(
     onDragEnd
   } = options
 
-  // State
+  const isPreparingToDrag = ref(false)
   const isDragging = ref(false)
   const isScrolling = ref(false)
   const startX = ref(0)
@@ -67,6 +67,7 @@ export function useHorizontalDragScroll(
     const draggableElement = target.closest<HTMLElement>(
       '.draggable, [data-draggable="true"], [draggable="true"], .task-card, .inbox-task-card, ' +
       '[data-inbox-task="true"], .vuedraggable, .vue-flow__node, .vue-flow__handle, ' +
+      '.drag-area, .task-item, .task-item-mini, .tasks-container, ' + // More comprehensive list
       '.calendar-event, .time-slot, .week-event, .month-event'
     )
 
@@ -113,7 +114,8 @@ export function useHorizontalDragScroll(
       return // Only handle events within our container
     }
 
-    isDragging.value = true
+    isPreparingToDrag.value = true
+    isDragging.value = false
     startX.value = clientX
     startY.value = clientY
     scrollLeft.value = scrollContainer.value.scrollLeft
@@ -125,17 +127,14 @@ export function useHorizontalDragScroll(
       cancelAnimationFrame(animationFrameId.value)
     }
 
-    // Set cursor and prevent text selection
-    scrollContainer.value.style.cursor = dragCursor
-    scrollContainer.value.style.userSelect = 'none'
-    scrollContainer.value.style.touchAction = 'pan-x'
-
-    onDragStart?.()
+    // Don't set styles here, wait for actual drag in handleMove
   }
+
+  // We don't onDragStart here anymore, we do it in handleMove once threshold is met
 
   // Drag move
   const handleMove = (clientX: number, clientY: number, e: MouseEvent | TouchEvent) => {
-    if (!isDragging.value || !scrollContainer.value) return
+    if ((!isDragging.value && !isPreparingToDrag.value) || !scrollContainer.value) return
 
     const deltaX = clientX - startX.value
     const deltaY = clientY - startY.value
@@ -144,6 +143,36 @@ export function useHorizontalDragScroll(
     if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
       return
     }
+
+    // Now that we've crossed the threshold, check if move is primarily horizontal
+    if (!isDragging.value) {
+      // If move is primarily vertical, this is likely a sort/drag within a column, NOT a board scroll
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        isPreparingToDrag.value = false // Yield to vertical dragging
+        return
+      }
+
+      isDragging.value = true
+      isPreparingToDrag.value = false
+
+      // Stop event propagation and prevent default once we're SURE it's a board scroll
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Set cursor and styles
+      if (scrollContainer.value) {
+        scrollContainer.value.style.cursor = dragCursor
+        scrollContainer.value.style.userSelect = 'none'
+        scrollContainer.value.style.touchAction = 'none' // Prevent all touch after we take over
+      }
+
+      onDragStart?.()
+      return
+    }
+
+    // If we're already dragging, always prevent default browser behavior
+    e.preventDefault()
+    e.stopPropagation()
 
     // Calculate velocity for momentum
     const currentVelocity = (clientX - lastX.value) * sensitivity
@@ -165,8 +194,8 @@ export function useHorizontalDragScroll(
 
   // End drag
   const handleEnd = (e?: MouseEvent | TouchEvent) => {
-    if (!isDragging.value) return
-
+    const wasDragging = isDragging.value
+    isPreparingToDrag.value = false
     isDragging.value = false
 
     // Reset cursor and styles
@@ -182,30 +211,34 @@ export function useHorizontalDragScroll(
     }
 
     // Start momentum scrolling if we have velocity
-    if (Math.abs(velocity.value) > 0.5) {
+    if (wasDragging && Math.abs(velocity.value) > 0.5) {
       isScrolling.value = true
       applyMomentum()
     }
 
-    onDragEnd?.()
+    if (wasDragging) {
+      onDragEnd?.()
+    }
   }
 
   // Mouse events
   const handleMouseDown = (e: MouseEvent) => {
-    // FIXED: Check for draggable elements BEFORE calling preventDefault()
-    const shouldAllowDrag = detectDragIntent(e.target as HTMLElement, e.clientX, e.clientY)
-    if (shouldAllowDrag) {
-      // Don't interfere with drag operations - let them proceed naturally
+    // If the event was already handled (e.g. by vuedraggable), respect it
+    if (e.defaultPrevented) return
+
+    // Check for interactive/draggable elements that should manage their own clicks/drags
+    const isInteractingWithDraggable = detectDragIntent(e.target as HTMLElement, e.clientX, e.clientY)
+    if (isInteractingWithDraggable) {
+      console.log('🎯 [HorizontalDragScroll] Allowing event to pass to draggable child')
       return
     }
 
-    // Only prevent default for non-draggable interactions (horizontal scrolling)
-    e.preventDefault()
-    e.stopPropagation()
+    // DON'T preventDefault or stopPropagation here!
+    // We only want to start scrolling if the user moves beyond the threshold.
     handleStart(e.clientX, e.clientY, e.target as HTMLElement)
 
-    // Add global listeners when drag starts
-    if (isDragging.value && scrollContainer.value) {
+    // Add global listeners when potential drag starts
+    if (scrollContainer.value) {
       const container = scrollContainer.value as HTMLElement & { _globalMouseMoveHandler?: (e: MouseEvent) => void, _globalMouseUpHandler?: (e: MouseEvent) => void }
       if (container._globalMouseMoveHandler) document.addEventListener('mousemove', container._globalMouseMoveHandler)
       if (container._globalMouseUpHandler) document.addEventListener('mouseup', container._globalMouseUpHandler)
@@ -213,17 +246,24 @@ export function useHorizontalDragScroll(
   }
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging.value) return
-    e.preventDefault()
-    e.stopPropagation()
+    if (!isPreparingToDrag.value && !isDragging.value) return
     handleMove(e.clientX, e.clientY, e)
   }
 
-  const _handleMouseUp = (e: MouseEvent) => {
-    if (!isDragging.value) return
-    e.preventDefault()
-    e.stopPropagation()
+  const handleGlobalMouseMove = (e: MouseEvent) => {
+    if (isPreparingToDrag.value || isDragging.value) {
+      handleMouseMove(e)
+    }
+  }
+
+  const handleGlobalMouseUp = (e: MouseEvent) => {
     handleEnd(e)
+    // ALWAYS remove these if we have them
+    if (scrollContainer.value) {
+      const container = scrollContainer.value as HTMLElement & { _globalMouseMoveHandler?: (e: MouseEvent) => void, _globalMouseUpHandler?: (e: MouseEvent) => void }
+      if (container._globalMouseMoveHandler) document.removeEventListener('mousemove', container._globalMouseMoveHandler)
+      if (container._globalMouseUpHandler) document.removeEventListener('mouseup', container._globalMouseUpHandler)
+    }
   }
 
   // Touch events
@@ -238,17 +278,16 @@ export function useHorizontalDragScroll(
       return
     }
 
-    // Only prevent default for non-draggable interactions (horizontal scrolling)
-    e.preventDefault()
-    e.stopPropagation()
+    // DON'T prevent default here. If we do, we block ALL native gestures including vertical scroll.
+    // handleStart will set up the initial coordinates.
+    // handleMove will decide whether to take over (preventDefault) or yield.
     handleStart(touch.clientX, touch.clientY, e.target as HTMLElement)
   }
 
   const handleTouchMove = (e: TouchEvent) => {
-    if (!touchEnabled || !isDragging.value) return
+    if (!touchEnabled || (!isPreparingToDrag.value && !isDragging.value)) return
     const touch = e.touches[0]
-    e.preventDefault()
-    e.stopPropagation()
+    // handleMove will call preventDefault() ONLY if it's a horizontal scroll
     handleMove(touch.clientX, touch.clientY, e)
   }
 
@@ -282,24 +321,10 @@ export function useHorizontalDragScroll(
     // Mouse events - only on container, not document
     container.addEventListener('mousedown', handleMouseDown)
 
-    // Add global mouseup/mousemove only when dragging starts
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (isDragging.value) {
-        handleMouseMove(e)
-      }
-    }
-
-    const handleGlobalMouseUp = (e: MouseEvent) => {
-      if (isDragging.value) {
-        handleEnd(e)
-        // Remove global listeners when drag ends
-        document.removeEventListener('mousemove', handleGlobalMouseMove)
-        document.removeEventListener('mouseup', handleGlobalMouseUp)
-      }
-    }
-
-      // Store global handlers for cleanup
+      // Store global handlers for cleanup and dynamic attachment
+      // @ts-ignore - internal handlers
       ; (container as unknown as Record<string, unknown>)._globalMouseMoveHandler = handleGlobalMouseMove as unknown
+      // @ts-ignore - internal handlers
       ; (container as unknown as Record<string, unknown>)._globalMouseUpHandler = handleGlobalMouseUp as unknown
 
     // Touch events

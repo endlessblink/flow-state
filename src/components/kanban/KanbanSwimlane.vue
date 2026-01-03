@@ -711,13 +711,36 @@ watch(() => props.tasks, () => {
   color: #fff;
 }
 
+.table-scroll-container {
+  overflow-x: auto;
+  overflow-y: visible;
+  width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+  touch-action: pan-y; /* Allow native vertical scroll, JS handles horizontal */
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 10px;
+}
+
 .swimlane-body {
   display: flex;
   gap: var(--space-4);
-  overflow-x: auto;
   padding-bottom: var(--space-3);
   padding-right: var(--space-1);
   align-items: flex-start; /* Prevent columns from stretching to match tallest */
+  width: max-content; /* Ensure body expands to fit all columns */
+  min-width: 100%;
 }
 
 /* ... existing scrollbar styles ... */

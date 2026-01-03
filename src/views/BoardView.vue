@@ -485,6 +485,14 @@ const _handleToggleTodayFilter = (event: MouseEvent) => {
 </script>
 
 <style scoped>
+.board-view-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0; /* Allows children to use flex-grow/shrink properly */
+}
+
 /* KANBAN HEADER */
 .kanban-header {
   display: flex;
@@ -789,8 +797,6 @@ const _handleToggleTodayFilter = (event: MouseEvent) => {
   overflow-x: visible; /* Allow horizontal scrolling in inner containers */
   min-height: 0; /* Critical: allows flexbox shrinking */
   padding-bottom: 2rem;
-  /* Add containment to prevent child scroll from affecting parent */
-  contain: layout style;
   position: relative;
 }
 
@@ -802,8 +808,6 @@ const _handleToggleTodayFilter = (event: MouseEvent) => {
   padding: var(--space-6) 0;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
-  /* Ensure swimlanes can scroll horizontally within their containers */
-  isolation: isolate;
+  overflow: visible;
 }
 </style>

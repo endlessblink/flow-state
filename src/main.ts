@@ -53,6 +53,14 @@ async function initializeApp() {
   // This prevents PouchDB from failing on corrupted Firefox databases
   console.log('🚀 [MAIN] Starting app initialization...')
 
+  // Detect Tauri environment and apply class for CSS optimizations
+  // WebKitGTK on Linux has limited backdrop-filter support, so we need fallbacks
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
+    document.documentElement.classList.add('tauri-app')
+    console.log('🖥️ [MAIN] Tauri environment detected - applying CSS optimizations')
+  }
+
   try {
     const preCheckResult = await runPreInitializationCheck()
 
@@ -62,6 +70,12 @@ async function initializeApp() {
       window.location.reload()
       return
     }
+
+    // Install Debug Helper for Zen/PouchDB debugging (console access)
+    // Run `debugHelper.resetReplicationCheckpoint()` in console to fix stuck sync
+    import('./utils/debugHelper').then(({ installDebugHelper }) => {
+      installDebugHelper()
+    })
 
     if (!preCheckResult.healthy && preCheckResult.error) {
       console.warn('⚠️ [MAIN] IndexedDB pre-check warning:', preCheckResult.error)

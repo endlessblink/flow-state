@@ -25,6 +25,7 @@ export class SyncOrchestrator {
     private conflictDetector: ConflictDetector
     private conflictResolver: ConflictResolver
     private offlineQueue: OfflineQueue
+    private liveSyncHandle: { cancel: () => void } | null = null
 
     // Events
     private dataPulledCallbacks: Array<() => Promise<void> | void> = []
@@ -53,7 +54,8 @@ export class SyncOrchestrator {
     public async initialize(deps: {
         backupSystem: any,
         logger: any,
-        syncValidator: any
+        syncValidator: any,
+        localDB: PouchDB.Database // INJECTED DATABASE
     }) {
         if (this.isInitialized || this.isInitializing) return
 
@@ -69,7 +71,11 @@ export class SyncOrchestrator {
         )
 
         try {
-            this.localDB = this.dbService.initializeLocal()
+            // INJECTION: Set the local DB directly
+            this.localDB = deps.localDB
+            this.dbService.setLocalDatabase(this.localDB)
+
+                // Expose for debugging
                 ; (window as any).pomoFlowDb = this.localDB
 
             this.remoteDB = await this.dbService.initializeRemote()
@@ -94,7 +100,12 @@ export class SyncOrchestrator {
             this.isInitialized = true
 
             this.state.updateStatus('idle')
-            console.debug('✅ Sync Orchestrator Initialized')
+            console.debug('✅ Sync Orchestrator Initialized (DI Mode)')
+
+            // Start Live Sync if remote is available
+            if (this.remoteDB) {
+                this.startLiveSync()
+            }
         } catch (error) {
             console.error('❌ Sync Orchestrator Initialization Failed:', error)
             throw error
@@ -105,6 +116,7 @@ export class SyncOrchestrator {
 
     public async cleanup() {
         console.debug('🧹 Cleaning up Sync Orchestrator listeners')
+        this.stopLiveSync()
         this.network.cleanup()
         this.localDB = null
         this.remoteDB = null
@@ -143,56 +155,178 @@ export class SyncOrchestrator {
     }
 
     private isSyncingProgress = false
+    private liveSyncPausedForManual = false
 
     private async performReliableSync() {
         // Prevent re-entry if already working
-        if (this.isSyncingProgress) return
+        if (this.isSyncingProgress) {
+            console.log('⏳ [SyncOrchestrator] Sync already in progress, skipping')
+            return
+        }
         this.isSyncingProgress = true
+
+        // QUICK FIX: Pause live sync during manual sync to prevent conflicts
+        const wasLiveSyncActive = this.liveSyncHandle !== null
+        if (wasLiveSyncActive) {
+            console.log('⏸️ [SyncOrchestrator] Pausing live sync for manual operation')
+            this.stopLiveSync()
+            this.liveSyncPausedForManual = true
+        }
 
         this.state.updateStatus('syncing')
 
+        // Create cancellation controller for this sync attempt
+        const controller = new AbortController()
+
+        // QUICK FIX: Increased to 120 seconds to allow for deep conflict pruning on initial sync
+        let timeoutId: ReturnType<typeof setTimeout>
+        const SYNC_TIMEOUT_MS = 120000 // 120 seconds max
+        const masterTimeout = new Promise((_, reject) => {
+            timeoutId = setTimeout(() => {
+                // FORCE KILL: Abort the underlying operations
+                controller.abort(`Sync Orchestrator Master Timeout (${SYNC_TIMEOUT_MS / 1000}s)`)
+                reject(new Error(`Sync Orchestrator Master Timeout (${SYNC_TIMEOUT_MS / 1000}s) - Force Reset`))
+            }, SYNC_TIMEOUT_MS)
+        })
+
         try {
-            await this.retrier.executeWithRetry(async () => {
-                // Ensure connections
-                if (!this.localDB) {
-                    this.localDB = this.dbService.initializeLocal()
-                }
-                if (!this.remoteDB) {
-                    this.remoteDB = await this.dbService.initializeRemote()
-                    if (!this.remoteDB) throw new Error('Remote DB unavailable')
-                }
+            await Promise.race([
+                this.retrier.executeWithRetry(async () => {
+                    // Check signal before starting loop
+                    if (controller.signal.aborted) throw new Error('Sync aborted')
 
-                // Conflicts
-                const conflicts = await this.conflictDetector.detectAllConflicts()
-                if (conflicts.length > 0) {
-                    this.state.conflicts.value = conflicts
-                    // Auto-resolve logic would go here
-                }
+                    // Ensure connections
+                    if (!this.localDB || (this.localDB as any)._closed) {
+                        console.warn('⚠️ [SyncOrchestrator] Local DB missing or closed, refreshing from singleton...')
+                        this.localDB = (window as any).pomoFlowDb
+                        if (this.localDB) {
+                            this.dbService.setLocalDatabase(this.localDB)
+                        } else {
+                            throw new Error('Local DB missing in SyncOrchestrator. Initialization error?')
+                        }
+                    }
+                    if (!this.remoteDB) {
+                        this.remoteDB = await this.dbService.initializeRemote()
+                        if (!this.remoteDB) throw new Error('Remote DB unavailable')
+                    }
 
-                const result = await this.operationService.performSync(this.localDB, this.remoteDB)
+                    // QUICK FIX: Detect and AUTO-RESOLVE conflicts before sync
+                    const conflicts = await this.conflictDetector.detectAllConflicts()
+                    if (conflicts.length > 0) {
+                        console.log(`⚔️ [SYNC] Found ${conflicts.length} conflicts - auto-resolving...`)
+                        this.state.conflicts.value = conflicts
 
-                if (!result.success) throw new Error(result.error)
+                        // Auto-resolve each conflict using LWW or smart merge
+                        let resolved = 0
+                        let failed = 0
+                        const allLosingRevs: any[] = []
 
-                if (result.pulled > 0) {
-                    await this.notifyDataPulled()
-                }
+                        for (const conflict of conflicts) {
+                            try {
+                                // Skip manual-only conflicts
+                                if (conflict.severity === 'high' && !conflict.autoResolvable) {
+                                    console.log(`⏭️ [SYNC] Skipping high-severity conflict: ${conflict.documentId}`)
+                                    continue
+                                }
 
-                this.state.updateLastSync(new Date())
-                this.state.markConnected()
-                this.state.recordMetric('success')
+                                const result = await this.conflictResolver.resolveConflict(conflict)
+                                if (result && result.resolvedDocument && this.localDB) {
+                                    const resolvedDoc = result.resolvedDocument as Record<string, any>
+                                    const docId = resolvedDoc._id || conflict.documentId
 
-            }, 'performReliableSync')
+                                    // 1. Get ALL current revisions for this document to ensure clean pruning
+                                    const currentDoc = await this.localDB.get(docId, { conflicts: true }) as any
+                                    const losingRevs = currentDoc._conflicts || []
+
+                                    // 2. Prepare the winner (Last Write Wins / Merged)
+                                    const docToSave = {
+                                        ...resolvedDoc,
+                                        _id: docId,
+                                        _rev: currentDoc._rev
+                                    }
+
+                                    // 3. Save the winner
+                                    await this.localDB.put(docToSave as PouchDB.Core.PutDocument<any>)
+                                    resolved++
+
+                                    // 4. Collect losing revisions for bulk pruning
+                                    if (losingRevs.length > 0) {
+                                        losingRevs.forEach((rev: string) => {
+                                            allLosingRevs.push({ _id: docId, _rev: rev, _deleted: true })
+                                        })
+                                    }
+                                }
+                            } catch (resolveErr) {
+                                console.warn(`⚠️ [SYNC] Failed to resolve conflict ${conflict.documentId}:`, resolveErr)
+                                failed++
+                            }
+                        }
+
+                        // 5. BULK PRUNE LOSING REVISIONS (Optimization)
+                        if (allLosingRevs.length > 0) {
+                            console.log(`🧹 [SYNC] Bulk pruning ${allLosingRevs.length} losing branches...`)
+                            try {
+                                await this.localDB.bulkDocs(allLosingRevs)
+                            } catch (bulkPruneErr) {
+                                console.warn('⚠️ [SYNC] Bulk pruning encountered errors (some revisions may remain):', bulkPruneErr)
+                            }
+                        }
+
+                        console.log(`✅ [SYNC] Conflict resolution: ${resolved} resolved, ${failed} failed`)
+
+                        // Update state with remaining unresolved conflicts
+                        this.state.conflicts.value = conflicts.filter(c =>
+                            c.severity === 'high' && !c.autoResolvable
+                        )
+                    }
+
+                    // Pass signal to operation service
+                    const result = await this.operationService.performSync(
+                        this.localDB,
+                        this.remoteDB,
+                        { signal: controller.signal }
+                    )
+
+                    if (!result.success) throw new Error(result.error)
+
+                    if (result.pulled > 0) {
+                        await this.notifyDataPulled()
+                    }
+
+                    this.state.updateLastSync(new Date())
+                    this.state.markConnected()
+                    this.state.recordMetric('success')
+
+                }, 'performReliableSync'),
+                masterTimeout
+            ])
+
+            clearTimeout(timeoutId!)
 
             this.state.updateStatus('complete')
             setTimeout(() => this.state.updateStatus('idle'), 2000)
 
         } catch (e) {
+            clearTimeout(timeoutId!)
+            // Ensure we abort if we exited via error (redundant safety)
+            if (!controller.signal.aborted) controller.abort('Sync failed with error')
+
+            const errorMsg = e instanceof Error ? e.message : 'Sync failed'
+            console.error('❌ [SyncOrchestrator] Sync failed or timed out:', errorMsg)
+
             this.state.recordMetric('failure')
-            this.state.setError('Sync failed')
+            this.state.setError(errorMsg)
             this.state.updateStatus('error')
-            throw e
+            // Don't throw, just handle the error state so UI updates
         } finally {
             this.isSyncingProgress = false
+
+            // QUICK FIX: Resume live sync if it was paused for manual operation
+            if (this.liveSyncPausedForManual && this.remoteDB) {
+                console.log('▶️ [SyncOrchestrator] Resuming live sync after manual operation')
+                this.startLiveSync()
+                this.liveSyncPausedForManual = false
+            }
         }
     }
 
@@ -266,17 +400,34 @@ export class SyncOrchestrator {
 
     // Compatibility Helpers for useAppInitialization
     public isLiveSyncActive(): boolean {
-        return this.isInitialized && this.state.syncStatus.value !== 'offline'
+        return this.liveSyncHandle !== null
     }
 
     public async startLiveSync(): Promise<boolean> {
-        // console.log('🔄 Start Live Sync (Compatibility Dummy)')
+        if (!this.localDB || !this.remoteDB) return false
+        if (this.liveSyncHandle) return true
+
+        this.liveSyncHandle = this.operationService.startLiveSync(
+            this.localDB,
+            this.remoteDB
+        )
         return true
     }
 
     public async stopLiveSync(): Promise<boolean> {
-        // console.log('⏹️ Stop Live Sync (Compatibility Dummy)')
+        if (this.liveSyncHandle) {
+            this.liveSyncHandle.cancel()
+            this.liveSyncHandle = null
+        }
         return true
+    }
+
+    public async nuclearReset(): Promise<void> {
+        if (!this.operationService) {
+            console.error('❌ [SYNC] Operation service not initialized for nuclear reset')
+            return
+        }
+        await this.operationService.nuclearReset()
     }
 
     public async configureProvider(config: any): Promise<void> {

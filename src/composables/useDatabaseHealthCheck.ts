@@ -424,6 +424,11 @@ export function useDatabaseHealthCheck() {
       }
 
       // Test database integrity
+      if (typeof db.info !== 'function') {
+        console.warn('⚠️ [HEALTH CHECK] DB instance found but .info() is missing. Initialization race? Skipping check.')
+        return { healthy: true, action: 'none' }
+      }
+
       const integrityResult = await testDatabaseIntegrity(db)
 
       if (integrityResult.healthy) {
@@ -595,7 +600,8 @@ export function detectGlobalDatabaseFailure(err: unknown): boolean {
       message.includes('invalidstateerror') ||
       message.includes('not, or is no longer, usable') ||
       message.includes('connection to indexed database server lost') ||
-      message.includes('internal error was encountered')
+      message.includes('internal error was encountered') ||
+      message.includes('unable to resolve latest revision') // Orphaned revision corruption
 
     if (isGlobalFailure) {
       globalFailureCount++

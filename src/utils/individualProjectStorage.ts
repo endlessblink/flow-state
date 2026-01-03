@@ -111,9 +111,12 @@ export const saveProject = async (
         _id: docId,
         _rev: existingDoc?._rev,
         type: 'project',
+        // Standardized root-level timestamp for validator and PouchDB efficiency
+        updatedAt: project.updatedAt instanceof Date ? project.updatedAt.toISOString() : (project.updatedAt || new Date().toISOString()),
         data: {
           ...project,
-          createdAt: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt
+          createdAt: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt,
+          updatedAt: project.updatedAt instanceof Date ? project.updatedAt.toISOString() : (project.updatedAt || new Date().toISOString())
         }
       }
 
@@ -130,15 +133,18 @@ export const saveProject = async (
       }
 
       if (pouchError.status === 409) {
-        console.log(`🔄 Conflict saving project ${project.id}, refetching and retrying...`)
+        // console.log(`🔄 Conflict saving project ${project.id}, refetching and retrying...`)
         const freshDoc = await db.get(docId)
         const doc = {
           _id: docId,
           _rev: freshDoc._rev,
           type: 'project',
+          // Standardized root-level timestamp for validator and PouchDB efficiency
+          updatedAt: project.updatedAt instanceof Date ? project.updatedAt.toISOString() : (project.updatedAt || new Date().toISOString()),
           data: {
             ...project,
-            createdAt: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt
+            createdAt: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt,
+            updatedAt: project.updatedAt instanceof Date ? project.updatedAt.toISOString() : (project.updatedAt || new Date().toISOString())
           }
         }
         return await db.put(doc)
@@ -184,9 +190,12 @@ export const saveProjects = async (
           _id: docId,
           _rev: revMap.get(docId),
           type: 'project',
+          // Standardized root-level timestamp for validator and PouchDB efficiency
+          updatedAt: project.updatedAt instanceof Date ? project.updatedAt.toISOString() : (project.updatedAt || new Date().toISOString()),
           data: {
             ...project,
-            createdAt: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt
+            createdAt: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt,
+            updatedAt: project.updatedAt instanceof Date ? project.updatedAt.toISOString() : (project.updatedAt || new Date().toISOString())
           }
         }
       })
@@ -196,7 +205,7 @@ export const saveProjects = async (
       results.forEach((result, index) => {
         const errorResult = result as PouchDB.Core.Error
         if (errorResult.error) {
-          console.error(`❌ Failed to save project ${projects[index].id}:`, errorResult.message)
+          // console.error(`❌ Failed to save project ${projects[index].id}:`, errorResult.message)
         }
       })
 
@@ -236,7 +245,7 @@ export const deleteProject = async (
     } catch (error) {
       const pouchError = error as { status?: number }
       if (pouchError.status === 404) {
-        console.log(`Project ${projectId} not found, already deleted`)
+        // console.log(`Project ${projectId} not found, already deleted`)
         return null
       }
 
@@ -300,7 +309,7 @@ export const loadAllProjects = async (
       }
 
       if (projects.length > 0) {
-        console.log(`📂 Loaded ${projects.length} projects from individual documents`)
+        // console.log(`📂 Loaded ${projects.length} projects from individual documents`)
       }
       return projects
     } catch (error) {

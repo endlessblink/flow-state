@@ -233,7 +233,8 @@ const projectsWithTasks = computed(() => {
       color: '#6B7280',
       colorType: 'hex' as const,
       viewType: 'status' as const,
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     })
   }
 

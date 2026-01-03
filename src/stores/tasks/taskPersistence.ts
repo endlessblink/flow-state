@@ -6,7 +6,8 @@ import {
     saveTasks as saveIndividualTasks,
     loadAllTasks as loadIndividualTasks,
     syncDeletedTasks,
-    migrateFromLegacyFormat
+    migrateFromLegacyFormat,
+    recoverSoftDeletedTasks
 } from '@/utils/individualTaskStorage'
 import { formatDateKey } from '@/utils/dateUtils'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
@@ -51,13 +52,9 @@ export function useTaskPersistence(
     }
 
     const saveTasksToStorage = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) {
-            return
-        }
+        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const dbInstance = (window as any).pomoFlowDb
+        const dbInstance = db.database.value
         if (!dbInstance) {
             console.error(`[SAVE-TASKS] PouchDB not available (${context})`)
             return
@@ -66,73 +63,37 @@ export function useTaskPersistence(
         // BUG-060: Pre-save validation - block tasks with invalid IDs
         const validation = validateBeforeSave(tasksToSave)
         if (validation.blockedTasks.length > 0) {
-            console.error(`🛡️ [PRE-SAVE] Blocked ${validation.blockedTasks.length} tasks with invalid IDs (${context}): `,
-                validation.blockedTasks.map(t => ({ id: t.id, title: t.title }))
-            )
-        }
-
-        // Only save valid tasks
-        const validTasksToSave = validation.validTasks
-        if (validTasksToSave.length === 0) {
-            console.warn(`🛡️ [PRE-SAVE] No valid tasks to save (${context})`)
-            return
-        }
-
-        // BUG-060: Log ID stats for debugging
-        logTaskIdStats(validTasksToSave, `save-${context}`)
-
-        if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
-            await saveIndividualTasks(dbInstance, validTasksToSave)
-            // BUG-060 FIX: Use isValidTaskId for robust filtering
-            const validIds = validTasksToSave.map(t => t.id).filter(isValidTaskId)
-            await syncDeletedTasks(dbInstance, new Set(validIds))
-        } else if (STORAGE_FLAGS.DUAL_WRITE_TASKS) {
-            await db.save(DB_KEYS.TASKS, validTasksToSave)
-            await saveIndividualTasks(dbInstance, validTasksToSave)
-            // BUG-060 FIX: Use isValidTaskId for robust filtering
-            const validIds = validTasksToSave.map(t => t.id).filter(isValidTaskId)
-            await syncDeletedTasks(dbInstance, new Set(validIds))
-        } else {
-            await db.save(DB_KEYS.TASKS, validTasksToSave)
-        }
-    }
-
-
-    // OPTIMIZATION: Save specific tasks only (no deletion sync)
-    // Used for highly frequent updates like drag-and-drop to prevent "bulk save" conflicts
-    const saveSpecificTasks = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) {
-            return
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const dbInstance = (window as any).pomoFlowDb
-        if (!dbInstance) {
-            console.error(`[SAVE - SPECIFIC] PouchDB not available(${context})`)
-            return
-        }
-
-        const validation = validateBeforeSave(tasksToSave)
-        if (validation.blockedTasks.length > 0) {
-            console.error(`🛡️[PRE - SAVE - SPECIFIC] Blocked ${validation.blockedTasks.length} tasks with invalid IDs(${context})`)
+            console.error(`🛡️ [PRE-SAVE] Blocked ${validation.blockedTasks.length} tasks with invalid IDs (${context})`)
         }
 
         const validTasksToSave = validation.validTasks
         if (validTasksToSave.length === 0) return
 
-        if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
-            await saveIndividualTasks(dbInstance, validTasksToSave)
-        } else if (STORAGE_FLAGS.DUAL_WRITE_TASKS) {
-            // In dual write, we can't easily patch the monolithic doc for just one task without reading it first.
-            // But since we are moving to INDIVIDUAL_ONLY, we prioritize that.
-            // For now, if Dual Write is on, we fall back to full save to keep monolithic sync
-            console.warn('[SAVE-SPECIFIC] Dual write enabled - falling back to full save for safety')
-            await saveTasksToStorage(tasks.value, context)
-        } else {
-            // Legacy monolithic only - must save all
-            await db.save(DB_KEYS.TASKS, tasks.value)
-        }
+        logTaskIdStats(validTasksToSave, `save-${context}`)
+
+        // ENFORCED: Individual Document Storage
+        await saveIndividualTasks(dbInstance, validTasksToSave)
+
+        // BUG-FIX: NEVER call syncDeletedTasks during auto-save or background operations!
+        // This is extremely dangerous as it mass-deletes tasks that might be filtered out
+        // or haven't arrived via sync yet.
+        // const validIds = validTasksToSave.map(t => t.id).filter(isValidTaskId)
+        // await syncDeletedTasks(dbInstance, new Set(validIds))
+        // console.debug(`🛡️ [SAVE-TASKS] Saved ${validTasksToSave.length} tasks - syncDeletedTasks skipped for safety`)
+    }
+
+    const saveSpecificTasks = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
+        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
+
+        const dbInstance = db.database.value
+        if (!dbInstance) return
+
+        const validation = validateBeforeSave(tasksToSave)
+        const validTasksToSave = validation.validTasks
+        if (validTasksToSave.length === 0) return
+
+        // ENFORCED: Individual Document Storage
+        await saveIndividualTasks(dbInstance, validTasksToSave)
     }
 
 
@@ -298,52 +259,32 @@ export function useTaskPersistence(
             isLoadingFromDatabase.value = true
             let attempts = 0
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            while (!(window as any).pomoFlowDb && attempts < 300) {
-                await new Promise(r => setTimeout(r, 100))
-                attempts++
-            }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const dbInstance = (window as any).pomoFlowDb
+            const dbInstance = db.database.value
             if (!dbInstance) return
 
             if (STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) {
-                try {
-                    const loadedTasks = await loadIndividualTasks(dbInstance)
-                    if (loadedTasks?.length) {
-                        const deletionDoc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ taskIds: [] }))
-                        const deletedIds = new Set(deletionDoc.taskIds || [])
-                        // BUG-060: Sanitize loaded tasks to filter out invalid IDs
-                        const sanitized = sanitizeLoadedTasks(loadedTasks)
-                        tasks.value = sanitized.filter(t => !deletedIds.has(t.id))
-                        logTaskIdStats(tasks.value, 'loadFromDatabase-individual')
-                    }
-                } catch { }
+                const loadedTasks = await loadIndividualTasks(dbInstance)
+                if (loadedTasks?.length) {
+                    const deletionDoc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ taskIds: [] })) as any
+                    const deletedIds = new Set((deletionDoc.taskIds || []) as string[])
+
+                    // BUG-060: Sanitize loaded tasks to filter out invalid IDs
+                    const sanitized = sanitizeLoadedTasks(loadedTasks)
+                    const filtered = sanitized.filter(t => !deletedIds.has(t.id))
+
+                    // Replace current tasks with filtered individual tasks
+                    tasks.value = [...filtered]
+                    logTaskIdStats(tasks.value, 'loadFromDatabase-individual')
+                }
             }
 
-            if ((!tasks.value.length || !STORAGE_FLAGS.READ_INDIVIDUAL_TASKS) && !STORAGE_FLAGS.INDIVIDUAL_ONLY) {
-                try {
-                    const tasksDoc = await dbInstance.get('tasks:data').catch(() => null)
-                    if (tasksDoc?.tasks) {
-                        const mappedTasks = tasksDoc.tasks.map((t: any) => ({
-                            ...t,
-                            createdAt: new Date(t.createdAt || Date.now()),
-                            updatedAt: new Date(t.updatedAt || Date.now())
-                        }))
-                        // BUG-060: Sanitize loaded tasks to filter out invalid IDs
-                        tasks.value = sanitizeLoadedTasks(mappedTasks)
-                        logTaskIdStats(tasks.value, 'loadFromDatabase-legacy')
-                    }
-                } catch { }
-            }
+            // [RECOVERY REMOVED] Legacy tasks:data merge logic removed to ensure reliability.
+            // Migration is handled by initializeFromPouchDB's runAllTaskMigrations if needed,
+            // but for a clean start, we strictly follow READ_INDIVIDUAL_TASKS.
 
             runAllTaskMigrations()
 
-            if (STORAGE_FLAGS.DUAL_WRITE_TASKS && tasks.value.length) {
-                const existing = await dbInstance.allDocs({ startkey: 'task-', endkey: 'task-\ufff0', limit: 1 })
-                if (existing.total_rows === 0) {
-                    await migrateFromLegacyFormat(dbInstance)
-                }
-            }
+            // [MIGRATION REMOVED] Legacy migration branch removed for reliability consolidation.
 
             let isInitialized = false
             try {
@@ -412,6 +353,15 @@ export function useTaskPersistence(
         loadPersistedFilters,
         persistFilters,
         importTasksFromJSON,
-        importFromRecoveryTool
+        importFromRecoveryTool,
+        recoverSoftDeletedTasks: async () => {
+            const dbInstance = db.database.value
+            if (!dbInstance) return 0
+            const count = await recoverSoftDeletedTasks(dbInstance)
+            if (count > 0) {
+                await loadFromDatabase() // Reload to show recovered tasks
+            }
+            return count
+        }
     }
 }

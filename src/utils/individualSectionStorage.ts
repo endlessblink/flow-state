@@ -112,6 +112,8 @@ export const saveSection = async (
         _id: docId,
         _rev: existingDoc?._rev,
         type: 'section',
+        // Standardized root-level timestamp for validator and PouchDB efficiency
+        updatedAt: section.updatedAt || new Date().toISOString(),
         data: {
           ...section
         }
@@ -130,12 +132,14 @@ export const saveSection = async (
       }
 
       if (pouchError.status === 409) {
-        console.log(`🔄 Conflict saving section ${section.id}, refetching and retrying...`)
+        // console.log(`🔄 Conflict saving section ${section.id}, refetching and retrying...`)
         const freshDoc = await db.get(docId)
         const doc = {
           _id: docId,
           _rev: freshDoc._rev,
           type: 'section',
+          // Standardized root-level timestamp for validator and PouchDB efficiency
+          updatedAt: section.updatedAt || new Date().toISOString(),
           data: {
             ...section
           }
@@ -157,32 +161,35 @@ export const saveSections = async (
   maxRetries: number = 3
 ): Promise<(PouchDB.Core.Response | PouchDB.Core.Error)[]> => {
   let retryCount = 0
+  let sectionsToSave = [...sections]
+  let finalResults: (PouchDB.Core.Response | PouchDB.Core.Error)[] = []
 
   while (retryCount < maxRetries) {
     try {
       const validDb = await getDbWithRetry(db)
 
-      // Get all existing section documents for revisions (metadata only is faster)
+      // Get latest revisions for accuracy
       const existingDocs = await validDb.allDocs({
         include_docs: false,
-        startkey: SECTION_DOC_PREFIX,
-        endkey: `${SECTION_DOC_PREFIX}\ufff0`
+        keys: sectionsToSave.map(s => getSectionDocId(s.id))
       })
 
       const revMap = new Map<string, string>()
       existingDocs.rows.forEach(row => {
-        if (row.value?.rev) {
+        if ('value' in row && row.value?.rev) {
           revMap.set(row.id, row.value.rev)
         }
       })
 
       // Prepare documents for bulk insert
-      const docs = sections.map(section => {
+      const docs = sectionsToSave.map(section => {
         const docId = getSectionDocId(section.id)
         return {
           _id: docId,
           _rev: revMap.get(docId),
           type: 'section',
+          // Standardized root-level timestamp for validator and PouchDB efficiency
+          updatedAt: section.updatedAt || new Date().toISOString(),
           data: {
             ...section
           }
@@ -191,12 +198,31 @@ export const saveSections = async (
 
       const results = await validDb.bulkDocs(docs)
 
+      // Separate successful results from conflicts for potential retry
+      const conflicts: CanvasGroup[] = []
+      const currentRoundResults: (PouchDB.Core.Response | PouchDB.Core.Error)[] = []
+
       results.forEach((result, index) => {
-        const errorResult = result as PouchDB.Core.Error
-        if (errorResult.error) {
-          console.error(`❌ Failed to save section ${sections[index].id}:`, errorResult.message)
+        const res = result as PouchDB.Core.Response & PouchDB.Core.Error
+        if (res.error) {
+          if (res.status === 409 || res.name === 'conflict') {
+            conflicts.push(sectionsToSave[index])
+          } else {
+            console.error(`❌ [SECTION-STORAGE] Failed to save section ${sectionsToSave[index].id}:`, res.message)
+          }
         }
+        currentRoundResults.push(result)
       })
+
+      // Merge results (replace previous errors with new results if retried)
+      if (conflicts.length > 0 && retryCount < maxRetries - 1) {
+        retryCount++
+        sectionsToSave = conflicts
+        // console.warn(`⚠️ [SECTION-STORAGE] Retrying ${conflicts.length} conflicted documents (attempt ${retryCount}/${maxRetries})...`)
+        // Small delay to allow DB/Sync to settle
+        await new Promise(resolve => setTimeout(resolve, 100 * retryCount))
+        continue
+      }
 
       return results
     } catch (error) {
@@ -295,7 +321,7 @@ export const loadAllSections = async (
       }
 
       if (sections.length > 0) {
-        console.log(`📐 Loaded ${sections.length} sections from individual documents`)
+        // console.log(`📐 Loaded ${sections.length} sections from individual documents`)
       }
       return sections
     } catch (error) {

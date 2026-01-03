@@ -1,5 +1,5 @@
-**Last Updated**: January 2, 2026 (BUG-086 Multi-node Drag Position Persistence Fix)
-**Version**: 5.13 (Data Safety)
+**Last Updated**: January 3, 2026 (BUG-062 Backup False Positive Fix)
+**Version**: 5.14 (Data Safety & Log Hygiene)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -583,7 +583,7 @@ INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration (Sections)
 | **ROAD-013** | **Sync Hardening** | **P0-CRITICAL** | **PREREQUISITE - Fix "mostly works" issues before major features** |
 | ROAD-004 | Mobile support (PWA) | P2 | PWA first → Android → iOS (paid only). Quick capture, today view, timer |
 | ROAD-005 | Auto-sync enablement | P1 | After multi-device testing |
-| ROAD-018 | **Markdown Export for Dropbox** | P1-HIGH | Hourly auto-export to .md file → Dropbox syncs versions. Independent of PouchDB/CouchDB. Human-readable recovery. |
+| ROAD-018 | **Markdown Export for Dropbox** | 🔄 **IN PROGRESS** | Being implemented as **TASK-087**. Hourly auto-export to .md file. |
 | ROAD-019 | **Write-Ahead Logging (WAL)** | P1-HIGH | **BUG-057 LESSON**: Log operation FIRST → Execute SECOND → Mark committed. Rollback uncommitted on crash. |
 | ROAD-020 | **Soft Delete Pattern** | P1-HIGH | **BUG-057 LESSON**: `_soft_deleted: true` instead of PouchDB remove(). "Trash" view for 30-day recovery. |
 | ROAD-021 | **SHA-256 Hash Verification** | P2-MEDIUM | Verify backup integrity before restore. Detect corruption/tampering. |
@@ -742,6 +742,9 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**BUG-057**~~ | ✅ **DONE** | `individualTaskStorage.ts`, `useDatabaseHealthCheck.ts` | - | - |
 | ~~**BUG-058**~~ | ✅ **DONE** | `useReliableSyncManager.ts` | - | - |
 | ~~**BUG-059**~~ | ✅ **DONE** | `useBackupSystem.ts`, `useReliableSyncManager.ts` | - | - |
+| ~~**BUG-062**~~ | ✅ **DONE** | `mockTaskDetector.ts`, `CanvasView.vue`, `BackupSettings.vue` | - | - |
+| **TASK-087** | ✅ **DONE** | `MarkdownExportService.ts`, `FileSystemService.ts`, `BackupSettings.vue` | - | ROAD-018 |
+| **TASK-088** | ✅ **DONE** | `DatabaseMaintenanceService.ts`, `useDatabase.ts` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -798,6 +801,26 @@ Phase 3 (Mobile) ←────────────────────
   - ✅ **Multi-Layer Reliability Hardening** (Jan 2 Evening):
     - **Layer 1 - Validation Utility**: `src/utils/taskValidation.ts` - Centralized ID validation
       - `isValidTaskId()` - Robust check for string, non-empty, not 'undefined'/'null'
+
+### ✅ BUG-062: Backup Blocking & Verbose Logs (Jan 3, 2026)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Backup blocked (>50% loss false positive) | CRITICAL | ✅ **FIXED** |
+| Console flood (1300+ logs) | HIGH | ✅ **FIXED** |
+
+**Symptom**: Auto-backups blocked with "Task count dropped from 144 to 0". Console unusable due to spam.
+
+**Root Cause**:
+1. **False Positive**: `mockTaskDetector` identified timestamp-based IDs (13 digits) as "Auto-generated Mock IDs" (Medium Confidence). Backup system filters Medium+ mock tasks, resulting in 0 valid tasks found.
+2. **Log Noise**: `CanvasView`, `useAppInitialization`, and `canvas.ts` had high-frequency logs left active.
+
+**Fix Applied**:
+1. ✅ **Downgraded Confidence**: Changed `Auto-generated ID Pattern` confidence from `medium` to `low` in `mockTaskDetector.ts`.
+2. ✅ **Silenced Logs**: Commented out verbose logs in identified files.
+3. ✅ **Recovery UI**: Added "Rescue Tasks" button to Settings.
+
+**SOP**: `docs/🐛 debug/sop/backup-false-positive-and-logs-fix-2026-01-03.md`
       - `validateTask()` - Full task validation with error/warning collection
       - `sanitizeTask()` - Recovers tasks with missing data, generates fallback IDs
       - `sanitizeLoadedTasks()` - Batch sanitization for database loads

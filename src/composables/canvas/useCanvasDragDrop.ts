@@ -6,6 +6,7 @@ import type { useCanvasStore } from '@/stores/canvas';
 import { type CanvasSection } from '@/stores/canvas'
 import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
 import { resolveDueDate } from '@/composables/useGroupSettings'
+import { lockTaskPosition } from '@/utils/canvasPositionLock'
 
 interface DragDropDeps {
     taskStore: ReturnType<typeof useTaskStore>
@@ -451,6 +452,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     taskStore.updateTaskWithUndo(node.id, {
                         canvasPosition: { x: absoluteX, y: absoluteY }
                     })
+                    // BUG-FIX: Lock position to prevent sync from overwriting during push
+                    lockTaskPosition(node.id, { x: absoluteX, y: absoluteY })
 
                     // Check if task moved outside the original section
                     if (!isTaskInSectionBounds(absoluteX, absoluteY, section)) {
@@ -469,6 +472,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 taskStore.updateTaskWithUndo(node.id, {
                     canvasPosition: { x: node.position.x, y: node.position.y }
                 })
+                // BUG-FIX: Lock position to prevent sync from overwriting during push
+                lockTaskPosition(node.id, { x: node.position.x, y: node.position.y })
             }
 
             // Check containment and apply properties

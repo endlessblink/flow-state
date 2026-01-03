@@ -165,7 +165,7 @@ export function sanitizeTask(task: unknown, options: {
   if (!isValidTaskId(taskId)) {
     if (generateIdIfMissing) {
       taskId = generateFallbackId(idPrefix)
-      console.log(`🛡️ [SANITIZE] Generated fallback ID: ${taskId}`)
+      // console.log(`🛡️ [SANITIZE] Generated fallback ID: ${taskId}`)
     } else {
       console.error('🛡️ [SANITIZE] Task has invalid ID and generateIdIfMissing is false')
       return null
@@ -226,7 +226,7 @@ export function sanitizeLoadedTasks(loadedData: unknown): Task[] {
       if (sanitized) {
         sanitizedTasks.push(sanitized)
         droppedCount.recovered++
-        console.log(`🛡️ [LOAD-SANITIZE] Recovered task: ${sanitized.id}`)
+        // console.log(`🛡️ [LOAD-SANITIZE] Recovered task: ${sanitized.id}`)
       } else {
         droppedCount.invalid++
         console.error('🛡️ [LOAD-SANITIZE] Dropped unrecoverable task:', item)
@@ -235,7 +235,7 @@ export function sanitizeLoadedTasks(loadedData: unknown): Task[] {
   }
 
   if (droppedCount.invalid > 0 || droppedCount.recovered > 0) {
-    console.log(`🛡️ [LOAD-SANITIZE] Summary: ${sanitizedTasks.length} valid, ${droppedCount.recovered} recovered, ${droppedCount.invalid} dropped`)
+    // console.log(`🛡️ [LOAD-SANITIZE] Summary: ${sanitizedTasks.length} valid, ${droppedCount.recovered} recovered, ${droppedCount.invalid} dropped`)
   }
 
   return sanitizedTasks

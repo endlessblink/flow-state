@@ -37,29 +37,15 @@ export const useProjectStore = defineStore('projects', () => {
             return
         }
 
-        const dbInstance = (window as any).pomoFlowDb
+        const dbInstance = db.database.value
         if (!dbInstance) {
             console.error(`❌ [SAVE-PROJECTS] PouchDB not available (${context})`)
             return
         }
 
         try {
-            if (STORAGE_FLAGS.DUAL_WRITE_PROJECTS || STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-                await saveIndividualProjects(dbInstance, projectsToSave)
-                console.log(`📋 [SAVE-PROJECTS] Projects saved to individual docs (${context}): ${projectsToSave.length} projects`)
-            }
-
-            if (!STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-                const existingDoc = await dbInstance.get('projects:data').catch(() => null)
-                await dbInstance.put({
-                    _id: 'projects:data',
-                    _rev: existingDoc?._rev || undefined,
-                    data: projectsToSave,
-                    createdAt: existingDoc?.createdAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                })
-                console.log(`📋 [SAVE-PROJECTS] Projects saved to legacy format (${context})`)
-            }
+            await saveIndividualProjects(dbInstance, projectsToSave)
+            console.log(`📋 [SAVE-PROJECTS] Projects saved to individual docs (${context}): ${projectsToSave.length} projects`)
 
             if (db.triggerSync) {
                 await db.triggerSync()
@@ -77,39 +63,14 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const loadProjectsFromPouchDB = async () => {
-        const dbInstance = (window as any).pomoFlowDb
+        const dbInstance = db.database.value
         if (!dbInstance) return
 
         isLoading.value = true
         try {
-            let loadedProjects: Project[] = []
-
-            if (STORAGE_FLAGS.DUAL_WRITE_PROJECTS || STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-                loadedProjects = await loadIndividualProjects(dbInstance)
-            }
-
-            if (loadedProjects.length === 0 && !STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-                const legacyDoc = await dbInstance.get('projects:data').catch(() => null)
-                if (legacyDoc && legacyDoc.data) {
-                    loadedProjects = legacyDoc.data.map((p: any) => ({
-                        ...p,
-                        createdAt: new Date(p.createdAt || Date.now())
-                    }))
-                    console.log(`📂 Loaded ${loadedProjects.length} projects from legacy format`)
-                }
-            }
-
+            const loadedProjects = await loadIndividualProjects(dbInstance)
             projects.value = loadedProjects
-
-            if (STORAGE_FLAGS.DUAL_WRITE_PROJECTS && loadedProjects.length > 0) {
-                const individualDocs = await dbInstance.allDocs({
-                    startkey: 'project-',
-                    endkey: 'project-\ufff0'
-                })
-                if (individualDocs.total_rows === 0) {
-                    await migrateProjectsFromLegacy(dbInstance)
-                }
-            }
+            console.log(`📂 Loaded ${loadedProjects.length} projects from individual docs`)
         } catch (error) {
             console.error('Failed to load projects:', error)
         } finally {
@@ -134,8 +95,9 @@ export const useProjectStore = defineStore('projects', () => {
                 viewType: projectData.viewType || 'status',
                 parentId: projectData.parentId || null,
                 createdAt: new Date(),
+                updatedAt: new Date(),
                 ...projectData
-            }
+            } as Project
             projects.value.push(newProject)
             await saveProjectsToStorage(projects.value, `createProject-${newProject.id}`)
             return newProject
@@ -189,7 +151,7 @@ export const useProjectStore = defineStore('projects', () => {
 
                 // BUG-054 FIX: Actually delete the project document from PouchDB
                 // This creates a tombstone that syncs to CouchDB, preventing the project from reappearing
-                const dbInstance = (window as any).pomoFlowDb
+                const dbInstance = db.database.value
                 if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
                     try {
                         await deleteProjectDoc(dbInstance, projectId)
@@ -256,7 +218,7 @@ export const useProjectStore = defineStore('projects', () => {
 
             // BUG-054 FIX: Actually delete project documents from PouchDB
             // This creates tombstones that sync to CouchDB, preventing projects from reappearing
-            const dbInstance = (window as any).pomoFlowDb
+            const dbInstance = db.database.value
             if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
                 for (const projectId of projectIds) {
                     try {
@@ -380,15 +342,40 @@ export const useProjectStore = defineStore('projects', () => {
         activeProjectId.value = projectId
     }
 
+    const updateProjectFromSync = (projectId: string, data: any) => {
+        const index = projects.value.findIndex(p => p.id === projectId)
+        const normalized = {
+            ...data,
+            createdAt: new Date(data.createdAt || Date.now()),
+            updatedAt: new Date(data.updatedAt || Date.now())
+        }
+        if (index !== -1) {
+            projects.value[index] = normalized
+        } else {
+            projects.value.push(normalized)
+        }
+    }
+
+    const removeProjectFromSync = (projectId: string) => {
+        const index = projects.value.findIndex(p => p.id === projectId)
+        if (index !== -1) {
+            projects.value.splice(index, 1)
+        }
+    }
+
     const initializeFromPouchDB = async () => {
         await loadProjectsFromPouchDB()
         return projects.value.length > 0
     }
 
     // Watchers
+    let saveTimeout: ReturnType<typeof setTimeout> | null = null
     watch(projects, (newProjects) => {
         if (manualOperationInProgress || isLoading.value || syncState.isSyncing.value) return
-        saveProjectsToStorage([...newProjects], 'auto-save')
+        if (saveTimeout) clearTimeout(saveTimeout)
+        saveTimeout = setTimeout(() => {
+            saveProjectsToStorage([...newProjects], 'auto-save')
+        }, 1000)
     }, { deep: true })
 
     return {
@@ -414,6 +401,8 @@ export const useProjectStore = defineStore('projects', () => {
         saveProjectsToStorage,
         setProjectViewType,
         moveTaskToProject,
-        initializeFromPouchDB
+        initializeFromPouchDB,
+        updateProjectFromSync,
+        removeProjectFromSync
     }
 })

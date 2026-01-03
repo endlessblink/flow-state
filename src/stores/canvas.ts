@@ -27,6 +27,10 @@ import {
 // Using unknown to avoid circular import issues - cast when accessing
 let taskStore: ReturnType<typeof import('./tasks').useTaskStore> | null = null
 
+// Flag to skip auto-save when changes come from remote sync
+// This prevents save conflicts during bidirectional sync
+let isSyncingFromRemote = false
+
 export interface GroupFilter {
   priorities?: ('low' | 'medium' | 'high')[]
   statuses?: Task['status'][]
@@ -99,6 +103,7 @@ export interface CanvasGroup {
   collectFilter?: CollectFilterSettings
   // TASK-072: Nested groups support - optional parent group ID
   parentGroupId?: string | null
+  updatedAt?: string // Standardized timestamp for sync
 }
 
 // Backward compatibility alias - keeping CanvasSection as alias for CanvasGroup
@@ -630,6 +635,37 @@ export const useCanvasStore = defineStore('canvas', () => {
     selectedNodeIds.value = []
     selectionRect.value = null
     isSelecting.value = false
+  }
+
+  const updateSectionFromSync = (id: string, data: any) => {
+    // Set flag to skip auto-save - data came from remote, no need to save it back
+    isSyncingFromRemote = true
+    try {
+      const index = groups.value.findIndex(g => g.id === id)
+      if (index !== -1) {
+        groups.value[index] = { ...data }
+      } else {
+        groups.value.push({ ...data })
+      }
+      requestSync() // Essential to update Vue Flow nodes/groups
+    } finally {
+      // Reset flag after Vue's next tick to ensure watcher sees it
+      setTimeout(() => { isSyncingFromRemote = false }, 100)
+    }
+  }
+
+  const removeSectionFromSync = (id: string) => {
+    // Set flag to skip auto-save - change came from remote sync
+    isSyncingFromRemote = true
+    try {
+      const index = groups.value.findIndex(g => g.id === id)
+      if (index !== -1) {
+        groups.value.splice(index, 1)
+        requestSync()
+      }
+    } finally {
+      setTimeout(() => { isSyncingFromRemote = false }, 100)
+    }
   }
 
   const selectNodesInRect = (rect: { x: number; y: number; width: number; height: number }, nodes: import('@vue-flow/core').Node[]) => {
@@ -1187,36 +1223,27 @@ export const useCanvasStore = defineStore('canvas', () => {
   watch(groups, (newGroups) => {
     if (groupsSaveTimer) clearTimeout(groupsSaveTimer)
     groupsSaveTimer = setTimeout(async () => {
-      // BUG-026: Only save if database is ready
-      if (!db.isReady?.value) {
-        console.log('📋 Canvas auto-save skipped: DB not ready')
+      // Skip save if changes came from remote sync - prevents conflict errors
+      if (isSyncingFromRemote) {
+        console.log('🔄 [CANVAS-STORE] Skipping auto-save (sync in progress)')
         return
       }
 
-      const dbInstance = window.pomoFlowDb
+      const dbInstance = db.database.value
       if (!dbInstance) {
-        console.error('❌ PouchDB not available for canvas persistence')
+        console.error('❌ [CANVAS-STORE] PouchDB not available')
         return
       }
 
       try {
-        // TASK-048: Individual section document storage
-        if (STORAGE_FLAGS.DUAL_WRITE_SECTIONS || STORAGE_FLAGS.INDIVIDUAL_SECTIONS_ONLY) {
-          // Save to individual section-{id} documents
-          await saveIndividualSections(dbInstance as unknown as PouchDB.Database, newGroups)
-          console.log(`📐 [TASK-048] Sections saved to individual docs: ${newGroups.length} sections`)
-        }
-
-        // Write to legacy format unless INDIVIDUAL_SECTIONS_ONLY is true
-        if (!STORAGE_FLAGS.INDIVIDUAL_SECTIONS_ONLY) {
-          await db.save(DB_KEYS.CANVAS, newGroups)
-          console.log('📋 Canvas groups auto-saved to legacy format')
-        }
+        // Save to individual group-{id} documents
+        await saveIndividualSections(dbInstance as unknown as PouchDB.Database, newGroups)
+        // console.log(`📐 [CANVAS-STORE] Groups saved to individual docs: ${newGroups.length} groups`)
       } catch (error) {
-        console.error('❌ Canvas auto-save failed:', error)
+        // console.error('❌ Canvas auto-save failed:', error)
       }
-    }, 1000)
-  }, { deep: true, flush: 'post' })
+    }, 2000) // Debounce by 2s for stability (Chief Architect Optimization)
+  }, { deep: true })
 
   // TASK-072: Auto-save viewport to IndexedDB for persistence across refreshes
   let viewportSaveTimer: ReturnType<typeof setTimeout> | null = null
@@ -1226,11 +1253,11 @@ export const useCanvasStore = defineStore('canvas', () => {
       if (!db.isReady?.value) return
       try {
         await db.save(DB_KEYS.CANVAS_VIEWPORT, newViewport)
-        console.log('🔭 [TASK-072] Viewport saved:', newViewport)
+        // console.log('🔭 [TASK-072] Viewport saved:', newViewport)
       } catch (error) {
-        console.error('❌ Viewport save failed:', error)
+        // console.error('❌ Viewport save failed:', error)
       }
-    }, 500)
+    }, 1000) // Increase to 1s
   }, { deep: true })
 
   // TASK-072: Load saved viewport on initialization
@@ -1546,9 +1573,17 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Load canvas state from IndexedDB
   // TASK-048: Updated to support individual document storage
-  const loadFromDatabase = async () => {
+  /**
+   * Safe loader that handles PouchDB initialization
+   */
+  async function loadFromDatabase(silent = false) {
+    console.log(`[CanvasStore] loadFromDatabase called at ${new Date().toISOString()} (silent: ${silent})`)
     if (isDataLoading.value) return
-    isDataLoading.value = true
+
+    // Only trigger loading state if not silent (prevents UI flicker during sync)
+    if (!silent) {
+      isDataLoading.value = true
+    }
 
     try {
       // Wait for database to be ready
@@ -1569,25 +1604,20 @@ export const useCanvasStore = defineStore('canvas', () => {
         return // Graceful exit - canvas will be empty but functional
       }
 
-      const dbInstance = window.pomoFlowDb
+      const dbInstance = db.database.value
       let savedGroups: CanvasGroup[] | null = null
 
-      // TASK-048: Check if we should read from individual documents
-      if (STORAGE_FLAGS.READ_INDIVIDUAL_SECTIONS && dbInstance) {
-        console.log('📐 [TASK-048] Loading sections from individual documents...')
+      if (dbInstance) {
+        console.log('📐 [CANVAS-STORE] Loading groups from individual documents...')
         savedGroups = await loadIndividualSections(dbInstance as unknown as PouchDB.Database)
 
-        // If no individual docs, try migrating from legacy format
         if (!savedGroups || savedGroups.length === 0) {
-          console.log('🔄 [TASK-048] No individual section docs, checking for legacy format...')
+          console.log('🔄 [CANVAS-STORE] No individual group docs, checking for migration...')
           const { migrated } = await migrateSectionsFromLegacy(dbInstance as unknown as PouchDB.Database)
           if (migrated > 0) {
             savedGroups = await loadIndividualSections(dbInstance as unknown as PouchDB.Database)
           }
         }
-      } else {
-        // Legacy: Load from canvas:data via db composable
-        savedGroups = await db.load<CanvasGroup[]>(DB_KEYS.CANVAS)
       }
       if (savedGroups && savedGroups.length > 0) {
         // Migrate old propertyValue to new assignOnDrop format
@@ -1598,7 +1628,7 @@ export const useCanvasStore = defineStore('canvas', () => {
             group.id = group.id.replace('section-', 'group-')
             console.log(`🔄 Migrated group ID from ${oldId} to ${group.id}`)
           } else {
-            console.log(`ℹ️ Group loaded with ID: ${group.id}`)
+            // console.log(`ℹ️ Group loaded with ID: ${group.id}`)
           }
 
           // Skip if already has assignOnDrop settings
@@ -1662,6 +1692,30 @@ export const useCanvasStore = defineStore('canvas', () => {
 
             const deletionDoc = (await dbInstance.get('_local/deleted-groups')) as unknown as DeletionTrackingDoc
             if (deletionDoc && deletionDoc.sectionIds && deletionDoc.sectionIds.length > 0) {
+
+              // SAFETY START: Log what we are hiding
+              console.log(`🛡️ [GROUPS SAFEGUARD] Found ${deletionDoc.sectionIds.length} locally deleted groups:`, deletionDoc.sectionIds)
+
+              // Always expose the clear function for debugging/recovery
+              if (typeof window !== 'undefined') {
+                (window as any).clearGroupDeletions = async () => {
+                  try {
+                    const latest = await dbInstance.get(deletionDoc._id)
+                    if (latest._id) {
+                      await dbInstance.remove(latest._id, latest._rev as string)
+                      console.log('✅ Deletion history cleared. Please reload.')
+                    }
+                  } catch (err) {
+                    console.error('Failed to clear deletion history:', err)
+                  }
+                }
+              }
+
+              if (filteredGroups.length === 0 && deletionDoc.sectionIds.length > 0) {
+                console.warn('⚠️ [GROUPS SAFEGUARD] Groups are hidden by local deletion history. Run `window.clearGroupDeletions()` to reset.')
+              }
+              // SAFETY END
+
               const deletedIds = new Set(deletionDoc.sectionIds)
               const beforeFilter = filteredGroups.length
 
@@ -2055,6 +2109,8 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Task synchronization
     syncTasksToCanvas,
+    updateSectionFromSync,
+    removeSectionFromSync,
 
     // External sync trigger (for undo/redo system)
     syncTrigger,

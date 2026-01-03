@@ -92,7 +92,8 @@ export const useTaskCoreStore = defineStore('taskCore', () => {
       emoji: projectData.emoji,
       viewType: projectData.viewType || 'status',
       parentId: projectData.parentId || null,
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
 
     projects.value.push(project)

@@ -51,13 +51,20 @@ export class ConflictDetector {
       const conflicts: ConflictInfo[] = []
 
       for (const doc of syncableDocs) {
+        if (!doc) continue
         try {
           const conflict = await this.detectDocumentConflict(doc)
           if (conflict) {
             conflicts.push(conflict)
           }
-        } catch (detectError) {
-          console.debug(`⚠️ Error detecting conflict for ${doc?._id}:`, detectError)
+        } catch (detectError: any) {
+          // BUG-FIX: Isolate 'revision' errors so one bad doc doesn't break all conflict detection
+          const isRevError = detectError.message?.includes('latest revision') || detectError.name === 'RevError'
+          if (isRevError) {
+            console.warn(`⚔️ [CONFLICT-DETECTOR] Skipping doc ${doc._id} - unable to resolve latest revision.`, detectError.message)
+          } else {
+            // console.debug(`⚠️ Error detecting conflict for ${doc?._id}:`, detectError)
+          }
         }
       }
 
@@ -148,7 +155,7 @@ export class ConflictDetector {
 
       return null
     } catch (error) {
-      console.debug(`⚠️ Error detecting conflict for ${doc._id}:`, error)
+      // console.debug(`⚠️ Error detecting conflict for ${doc._id}:`, error)
       return null
     }
   }

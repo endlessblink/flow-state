@@ -16,6 +16,7 @@ import { getDatabaseConfig, type DatabaseHealth as _DatabaseHealth } from '@/con
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { isQuotaExceededError, checkStorageQuota } from '@/utils/storageQuotaMonitor'
 import { detectGlobalDatabaseFailure, resetGlobalFailureCount } from '@/composables/useDatabaseHealthCheck'
+import { getMaintenanceService } from '@/services/data/DatabaseMaintenanceService'
 
 // Singleton database instance state
 let singletonDatabase: PouchDB.Database | null = null
@@ -23,6 +24,10 @@ let isInitializing = false
 let initializationPromise: Promise<void> | null = null
 let databaseRefCount = 0
 let hasRunAutoPrune = false // Singleton guard for auto-prune
+
+// BUG-057 FIX: Shared reactive ref for the database instance
+// This ensures all composables react to connection resets
+const globalDatabaseRef = ref<PouchDB.Database | null>(null)
 
 /**
  * BUG-057 FIX: Reset database singleton when connection is closed
@@ -40,6 +45,13 @@ export function resetDatabaseSingleton(): void {
     }
   }
   singletonDatabase = null
+  globalDatabaseRef.value = null // Notify all listeners
+
+  // BUG-057 FIX: Ensure window singleton is also cleared
+  if (typeof window !== 'undefined') {
+    delete (window as any).pomoFlowDb
+  }
+
   isInitializing = false
   initializationPromise = null
 }
@@ -62,6 +74,40 @@ let lastHealthCheck: Date | null = null
 let consecutiveHealthFailures = 0
 const MAX_HEALTH_FAILURES = 3
 const _HEALTH_CHECK_INTERVAL = 30000 // 30 seconds
+
+/**
+ * Emergency database reset for orphaned revision corruption
+ * Clears all PouchDB-related IndexedDB databases and reloads
+ */
+async function triggerEmergencyDatabaseReset(): Promise<void> {
+  try {
+    console.error('🔴 [EMERGENCY] Clearing corrupted local databases...')
+
+    // Get all IndexedDB databases
+    if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+      const databases = await indexedDB.databases()
+      const pouchDBs = databases.filter(db => db.name?.startsWith('_pouch_'))
+
+      console.log(`🔄 [EMERGENCY] Found ${pouchDBs.length} PouchDB databases to delete`)
+
+      for (const db of pouchDBs) {
+        if (db.name) {
+          indexedDB.deleteDatabase(db.name)
+          console.log(`🗑️ [EMERGENCY] Requested deletion of: ${db.name}`)
+        }
+      }
+    }
+
+    // Wait briefly for deletions to be queued
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    console.log('🔄 [EMERGENCY] Reloading page to re-sync from server...')
+    window.location.reload()
+  } catch (error) {
+    console.error('❌ [EMERGENCY] Auto-recovery failed:', error)
+    alert('Database corruption detected. Please clear browser data for this site and reload.')
+  }
+}
 
 export interface DatabaseStore {
   tasks: string
@@ -196,6 +242,13 @@ async function performWithRetry<T>(
         throw err
       }
 
+      // Detect orphaned revision corruption - trigger auto-recovery
+      if (err instanceof Error && err.message.includes('Unable to resolve latest revision')) {
+        console.error('🔴 [DATABASE] CRITICAL: Orphaned revision detected. Auto-recovery triggered.')
+        triggerEmergencyDatabaseReset()
+        throw err
+      }
+
       if (attempt < maxRetries) {
         // Exponential backoff with jitter
         const exponentialDelay = baseDelay * Math.pow(2, attempt - 1)
@@ -293,7 +346,9 @@ export function useDatabase(): UseDatabaseReturn {
   // Reactive state
   const isLoading = ref(false)
   const error = ref<Error | null>(null)
-  const database = ref<PouchDB.Database | null>(null)
+
+  // Use the global singleton ref instead of a local one
+  const database = globalDatabaseRef
 
   // Conflict detection state (data safety)
   const detectedConflicts = ref<DetectedConflict[]>([])
@@ -340,6 +395,23 @@ export function useDatabase(): UseDatabaseReturn {
       return
     }
 
+    // CHECK GLOBAL SINGLETON (Sync Compatibility)
+    const globalDb = (window as any).pomoFlowDb
+    if (globalDb) {
+      console.log('🔄 [DATABASE] Adopting existing global singleton PouchDB')
+      singletonDatabase = globalDb as PouchDB.Database
+      database.value = singletonDatabase
+      isLoading.value = false
+
+      // Ensure type safety
+      const w = window as Window & typeof globalThis
+      if (!w.pomoFlowDb) w.pomoFlowDb = singletonDatabase as unknown as PomoFlowDB
+
+      // Run health check anyway just to be safe
+      performDatabaseHealthCheck(singletonDatabase).catch(console.error)
+      return
+    }
+
     // Start initialization
     isInitializing = true
 
@@ -357,8 +429,13 @@ export function useDatabase(): UseDatabaseReturn {
             const db = new PouchDB(dbName, {
               adapter: 'idb',
               auto_compaction: true,
-              revs_limit: 5
+              revs_limit: 10
             })
+
+            // SINGLETON FIX: Expose immediately to prevent race conditions with DatabaseService
+            const w = window as Window & typeof globalThis
+            w.pomoFlowDb = db as unknown as PomoFlowDB
+
             await db.info() // Test the connection
             return db
           } catch (dbError) {
@@ -420,6 +497,24 @@ export function useDatabase(): UseDatabaseReturn {
 
         await singletonDatabase.info()
         await performDatabaseHealthCheck(singletonDatabase)
+
+        // BUG-057 FIX: Start global changes listener to notify UI stores of real-time updates
+        // This is THE bridge that makes live sync work. Without this, sync pulls data 
+        // but the UI doesn't know until a refresh or an manual trigger.
+        singletonDatabase.changes({
+          live: true,
+          since: 'now',
+          include_docs: true
+        }).on('change', (change) => {
+          // Dispatch custom event for useAppInitialization and stores
+          window.dispatchEvent(new CustomEvent('pouchdb-change', {
+            detail: {
+              id: change.id,
+              doc: change.doc,
+              deleted: change.deleted
+            }
+          }))
+        })
 
         database.value = singletonDatabase
 
@@ -494,6 +589,13 @@ export function useDatabase(): UseDatabaseReturn {
       hasRunAutoPrune = true
       setTimeout(() => {
         autoPruneBacklog().catch(err => console.warn('⚠️ Auto-pruning failed:', err))
+
+        // TASK-088: Run periodic database maintenance (compaction)
+        const db = singletonDatabase
+        if (db) {
+          getMaintenanceService(db)?.runScheduledMaintenance()
+            .catch(err => console.warn('⚠️ Maintenance failed:', err))
+        }
       }, 2000) // Delay to ensure stability first
     }
   })
@@ -700,12 +802,10 @@ export function useDatabase(): UseDatabaseReturn {
     try {
       const db = await waitForDatabase()
       const docs = await db.allDocs({
-        include_docs: false,
-        startkey: 'data:',
-        endkey: 'data:\ufff0'
+        include_docs: false
       })
 
-      return docs.rows.map(row => (row.id || '').replace(':data', ''))
+      return docs.rows.map(row => row.id)
     } catch (err) {
       error.value = err as Error
       errorHandler.report({
@@ -741,9 +841,20 @@ export function useDatabase(): UseDatabaseReturn {
 
       const result: Record<string, unknown> = {}
       docs.rows.forEach(row => {
-        if (row.doc && row.id?.endsWith(':data')) {
-          const key = row.id.replace(':data', '')
-          result[key] = row.doc
+        if (row.doc) {
+          if (row.id?.endsWith(':data')) {
+            const key = row.id.replace(':data', '')
+            result[key] = row.doc
+          } else if (
+            row.id.startsWith('task-') ||
+            row.id.startsWith('project-') ||
+            row.id.startsWith('section-') ||
+            row.id.startsWith('timer-') ||
+            row.id.startsWith('notif-')
+          ) {
+            // Include individual documents in export
+            result[row.id] = row.doc
+          }
         }
       })
 
@@ -766,8 +877,26 @@ export function useDatabase(): UseDatabaseReturn {
    */
   const importAll = async (data: Record<string, unknown>): Promise<void> => {
     try {
+      const db = await waitForDatabase()
       for (const [key, value] of Object.entries(data)) {
-        await save(key, value)
+        if (
+          key.startsWith('task-') ||
+          key.startsWith('project-') ||
+          key.startsWith('section-') ||
+          key.startsWith('timer-') ||
+          key.startsWith('notif-')
+        ) {
+          // Put individual document directly
+          const existing = await db.get(key).catch(() => null)
+          await db.put({
+            ...(value as any),
+            _id: key,
+            _rev: existing?._rev
+          })
+        } else {
+          // Legacy: save as monolithic :data doc
+          await save(key, value)
+        }
       }
     } catch (err) {
       error.value = err as Error
@@ -825,25 +954,68 @@ export function useDatabase(): UseDatabaseReturn {
    * Resolves the "Document has X conflicts" issue reported in logs
    */
   const autoPruneBacklog = async (): Promise<Record<string, { resolved: number; failed: number }>> => {
-    console.log('🧹 [DATABASE] Starting automatic conflict pruning backlog scan...')
-    const dbKeys = await keys()
+    console.log('🧹 [DATABASE] Starting global conflict pruning scan...')
+    const db = await waitForDatabase()
     const results: Record<string, { resolved: number; failed: number }> = {}
 
-    for (const key of dbKeys) {
-      const result = await pruneConflicts(key)
-      if (result.resolved > 0) {
-        results[key] = result
+    try {
+      // Find ALL documents with conflicts using allDocs
+      const docsWithConflicts = await db.allDocs({
+        include_docs: false,
+        conflicts: true
+      })
+
+      const candidates = docsWithConflicts.rows.filter(row => (row as any).value?.rev && (row as any).conflicts)
+
+      console.log(`🔍 [DATABASE] Scanning ${candidates.length} potential conflict candidates...`)
+
+      for (const row of candidates) {
+        // key() in useDatabase context means the docId itself for the pruning function
+        const result = await pruneConflictsById(row.id)
+        if (result.resolved > 0) {
+          results[row.id] = result
+        }
       }
+    } catch (err) {
+      console.error('❌ [DATABASE] Global auto-prune failed:', err)
     }
 
     const totalPruned = Object.values(results).reduce((sum, r) => sum + r.resolved, 0)
     if (totalPruned > 0) {
-      console.log(`✨ [DATABASE] Completed auto-pruning. Resolved ${totalPruned} conflicts across ${Object.keys(results).length} documents.`)
+      console.log(`✨ [DATABASE] Completed auto-pruning. Resolved ${totalPruned} branch conflicts across ${Object.keys(results).length} documents.`)
     } else {
-      console.log('✅ [DATABASE] No conflicts found to prune during backlog scan.')
+      console.log('✅ [DATABASE] No accumulated conflict branches found.')
     }
 
     return results
+  }
+
+  /**
+   * Internal helper to prune conflicts by absolute ID
+   */
+  const pruneConflictsById = async (docId: string): Promise<{ resolved: number; failed: number }> => {
+    let resolved = 0
+    let failed = 0
+
+    try {
+      const db = await waitForDatabase()
+      const doc = await db.get(docId, { conflicts: true }) as any
+
+      if (doc._conflicts && doc._conflicts.length > 0) {
+        for (const rev of doc._conflicts) {
+          try {
+            await db.remove(docId, rev)
+            resolved++
+          } catch (err) {
+            failed++
+          }
+        }
+      }
+
+      return { resolved, failed }
+    } catch {
+      return { resolved: 0, failed: 0 }
+    }
   }
 
   /**

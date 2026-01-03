@@ -147,6 +147,7 @@ export class SyncValidator {
   async validateDocument(document: Record<string, unknown>): Promise<ValidationResult> {
     const startTime = Date.now()
     const issues: ValidationIssue[] = []
+    const documentId = (document?._id as string) || 'unknown'
 
     // Basic structure validation
     if (!document || typeof document !== 'object') {
@@ -155,12 +156,12 @@ export class SyncValidator {
         severity: 'error',
         message: 'Document is not a valid object or is null'
       })
-      return this.createValidationResult(((document as any)?._id as string) || 'unknown', issues, Date.now() - startTime)
+      return this.createValidationResult(documentId, issues, Date.now() - startTime)
     }
 
     // Skip validation for non-syncable documents
     if (!isSyncableDocument(document)) {
-      return this.createValidationResult(document._id as string, issues, Date.now() - startTime)
+      return this.createValidationResult(documentId, issues, Date.now() - startTime)
     }
 
     // Required field validation
@@ -201,11 +202,12 @@ export class SyncValidator {
       })
     }
 
-    const duration = Date.now() - startTime
-    const result = this.createValidationResult(document._id as string, issues, duration, docType)
+    const endTime = Date.now()
+    const duration = endTime - startTime
+    const result = this.createValidationResult(documentId, issues, duration, docType)
 
     if (!result.isValid) {
-      console.error(`❌ Validation failed for ${result.documentId}:`, issues)
+      // console.error(`❌ Validation failed for ${result.documentId}:`, issues)
     }
 
     return result
@@ -291,8 +293,12 @@ export class SyncValidator {
       }
     }
 
-    // Document type validation
-    if (!document.updatedAt && !document.timestamp) {
+    // Standardized Timestamp Check (Root or Nested)
+    // Individual tasks store metadata inside 'data' wrapper
+    const data = document.data as Record<string, unknown> | undefined
+    const hasTimestamp = document.updatedAt || document.timestamp || (data && (data.updatedAt || data.timestamp))
+
+    if (!hasTimestamp) {
       issues.push({
         type: ValidationIssueType.MISSING_FIELD,
         field: 'updatedAt/timestamp',
@@ -309,9 +315,14 @@ export class SyncValidator {
   private getDocumentType(document: Record<string, unknown>): string {
     const id = typeof document._id === 'string' ? document._id : ''
 
-    if (id.startsWith('tasks:')) return 'task'
-    if (id.startsWith('projects:')) return 'project'
-    if (id.startsWith('canvas:')) return 'canvas'
+    if (id.startsWith('task-')) return 'task'
+    if (id.startsWith('project-')) return 'project' // Individual project
+    if (id.startsWith('section-') || id.startsWith('group-')) return 'canvas' // Individual section/group
+
+    if (id === 'tasks:data') return 'legacy-tasks'
+    if (id === 'projects:data') return 'legacy-projects'
+    if (id === 'canvas:data') return 'legacy-canvas'
+
     if (id.startsWith('timer:')) return 'timer'
     if (id.startsWith('settings:')) return 'settings'
 
@@ -325,6 +336,9 @@ export class SyncValidator {
     switch (type) {
       case 'task':
         this.validateTaskDocument(document, issues)
+        break
+      case 'legacy-tasks':
+        this.validateLegacyTasksDocument(document, issues)
         break
       case 'project':
         this.validateProjectDocument(document, issues)
@@ -404,6 +418,23 @@ export class SyncValidator {
           suggestions: ['Use a number between 0 and 100']
         })
       }
+    }
+  }
+
+  /**
+   * Validate legacy monolithic tasks document
+   */
+  private validateLegacyTasksDocument(document: Record<string, unknown>, issues: ValidationIssue[]): void {
+    const data = (document.data || document) as Record<string, unknown>
+
+    if (data.tasks && !Array.isArray(data.tasks)) {
+      issues.push({
+        type: ValidationIssueType.INVALID_TYPE,
+        field: 'tasks',
+        severity: 'error',
+        message: 'Legacy tasks:data must contain a tasks array',
+        suggestions: ['Check data structure', 'Ensure tasks field is an array']
+      })
     }
   }
 

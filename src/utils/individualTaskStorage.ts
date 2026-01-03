@@ -158,6 +158,8 @@ export const saveTask = async (
           _id: docId,
           _rev: freshDoc._rev,
           type: 'task',
+          // Standardized root-level timestamp for validator and PouchDB efficiency
+          updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
           data: {
             ...task,
             createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
@@ -232,6 +234,8 @@ export const saveTasks = async (
           _id: docId,
           _rev: revMap.get(docId),
           type: 'task',
+          // Standardized root-level timestamp for validator and PouchDB efficiency
+          updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
           data: {
             ...task,
             createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
@@ -354,11 +358,9 @@ export const deleteTask = async (
 /**
  * Load all tasks from individual documents
  */
-export const loadAllTasks = async (
-  db: PouchDB.Database,
-  maxRetries: number = 3
-): Promise<Task[]> => {
+export const loadAllTasks = async (db: PouchDB.Database, includeDeleted = false): Promise<Task[]> => {
   let retryCount = 0
+  const maxRetries = 3
 
   while (retryCount < maxRetries) {
     try {
@@ -369,48 +371,49 @@ export const loadAllTasks = async (
         endkey: `${TASK_DOC_PREFIX}\ufff0`
       })
 
-      const tasks: Task[] = []
-
+      const rawTasks: (Task & { deleted?: boolean })[] = []
       for (const row of result.rows) {
         if (row.doc) {
-          const doc = row.doc as unknown as Record<string, unknown>
-          let taskData: Record<string, unknown> | null = null
+          const doc = row.doc as any
+          let taskData: any = null
 
-          // Handle nested format: { data: { id, title, ... } }
-          if ('data' in doc && doc.data && typeof doc.data === 'object') {
-            taskData = doc.data as Record<string, unknown>
-          }
-          // Handle flat format: { id, title, ... } (legacy/direct format)
-          else if ('id' in doc && 'title' in doc) {
-            // Extract task data from root, excluding PouchDB internal fields
-            const { _id, _rev, _attachments, _conflicts, ...rest } = doc
-            taskData = rest as Record<string, unknown>
+          if (doc.data) {
+            taskData = doc.data
+          } else if (doc.id && doc.title !== undefined) {
+            taskData = doc
           }
 
-          if (taskData && taskData.id) {
-            // Soft Delete Filter
-            if (taskData._soft_deleted) {
+          if (taskData) {
+            // Soft delete check
+            if (taskData._soft_deleted && !includeDeleted) {
               continue
             }
 
-            tasks.push({
+            rawTasks.push({
               ...taskData,
               createdAt: new Date(taskData.createdAt as string || Date.now()),
-              updatedAt: new Date(taskData.updatedAt as string || Date.now())
-            } as Task)
+              updatedAt: new Date(taskData.updatedAt as string || Date.now()),
+              deleted: !!taskData._soft_deleted
+            } as Task & { deleted?: boolean })
           }
         }
       }
 
-      // BUG-026: Reduced logging - only log if significant
-      if (tasks.length > 0) {
-        console.log(`📂 Loaded ${tasks.length} tasks`)
+      const totalFound = rawTasks.length
+      const activeTasks = rawTasks.filter(t => !t.deleted)
+      const deletedCount = totalFound - activeTasks.length
+
+      if (totalFound > 0) {
+        // console.log(`📂 [LOAD-TASKS] Total: ${totalFound}, Active: ${activeTasks.length}, Deleted: ${deletedCount}`)
+        if (deletedCount > 0 && activeTasks.length < 20 && !includeDeleted) {
+          console.warn(`🚨 [LOAD-TASKS] Warning: High number of deleted tasks found (${deletedCount} vs ${activeTasks.length} active). Potential mass-deletion detected!`)
+        }
       }
-      return tasks
+
+      return activeTasks
     } catch (error) {
       retryCount++
 
-      // Handle connection closing error - retry
       if (isConnectionClosingError(error) && retryCount < maxRetries) {
         console.warn(`⚠️ [TASK-STORAGE] Connection closing on loadAllTasks (attempt ${retryCount}/${maxRetries}), retrying...`)
         await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
@@ -485,34 +488,90 @@ export const migrateFromLegacyFormat = async (
 
     if (legacyDoc && legacyDoc.data && Array.isArray(legacyDoc.data)) {
       const tasks: Task[] = legacyDoc.data
-      console.log(`🔄 Migrating ${tasks.length} tasks from legacy format...`)
+      console.log(`🔄 [MIGRATION] Migrating ${tasks.length} tasks from legacy format...`)
 
       // Save each task as individual document
-      await saveTasks(db, tasks)
+      const saveResults = await saveTasks(db, tasks)
+
+      // CRITICAL: Check if ALL tasks were saved successfully before deleting legacy
+      const errorCount = saveResults.filter(r => (r as PouchDB.Core.Error).error).length
+      if (errorCount > 0) {
+        console.error(`❌ [MIGRATION] Blocked legacy deletion: ${errorCount}/${tasks.length} tasks failed to save.`)
+        return { migrated: tasks.length - errorCount, deleted: false }
+      }
+
       migrated = tasks.length
 
       // Delete the legacy document
       try {
         await db.remove(legacyDoc)
         deleted = true
-        console.log('✅ Legacy tasks:data document deleted')
+        console.log('✅ [MIGRATION] Legacy tasks:data document deleted')
       } catch (deleteError) {
-        console.warn('⚠️ Failed to delete legacy document:', deleteError)
+        console.warn('⚠️ [MIGRATION] Failed to delete legacy document:', deleteError)
       }
 
-      console.log(`✅ Migration complete: ${migrated} tasks migrated`)
+      console.log(`✅ [MIGRATION] Migration complete: ${migrated} tasks migrated`)
     }
   } catch (error) {
     const pouchError = error as { status?: number }
     if (pouchError.status === 404) {
-      console.log('ℹ️ No legacy tasks:data document found, no migration needed')
+      // console.log('ℹ️ No legacy tasks:data document found, no migration needed')
     } else {
-      console.error('❌ Migration error:', error)
+      console.error('❌ [MIGRATION] Error:', error)
       throw error
     }
   }
 
   return { migrated, deleted }
+}
+
+/**
+ * Emergency Task Recovery
+ * Un-deletes all soft-deleted tasks in the database.
+ * Use this to recover from accidental mass-deletions.
+ */
+export const recoverSoftDeletedTasks = async (db: PouchDB.Database): Promise<number> => {
+  console.log('🛡️ [RECOVERY] Scanning for soft-deleted tasks...')
+  try {
+    const result = await db.allDocs({
+      include_docs: true,
+      startkey: TASK_DOC_PREFIX,
+      endkey: `${TASK_DOC_PREFIX}\ufff0`
+    })
+
+    const docsToRecover: any[] = []
+    for (const row of result.rows) {
+      if (row.doc) {
+        const doc = row.doc as any
+        const taskData = doc.data || doc
+
+        if (taskData._soft_deleted) {
+          console.log(`🛡️ [RECOVERY] Restoring task: ${taskData.title || taskData.id}`)
+          docsToRecover.push({
+            ...row.doc,
+            data: {
+              ...taskData,
+              _soft_deleted: false,
+              recoveredAt: new Date().toISOString()
+            }
+          })
+        }
+      }
+    }
+
+    if (docsToRecover.length > 0) {
+      await db.bulkDocs(docsToRecover)
+      console.log(`✅ [RECOVERY] Successfully recovered ${docsToRecover.length} tasks!`)
+    } else {
+      console.log('ℹ️ [RECOVERY] No soft-deleted tasks found.')
+    }
+
+    return docsToRecover.length
+  } catch (error) {
+    console.error('❌ [RECOVERY] Failed to recover tasks:', error)
+    return 0
+  }
 }
 
 /**
@@ -626,6 +685,16 @@ export const syncDeletedTasks = async (
   // This catches edge cases where store is partially loaded
   if (existingTaskCount > 5 && deletedCount > existingTaskCount * 0.5) {
     console.warn(`🛡️ [SAFETY] Blocked mass deletion: ${deletedCount}/${existingTaskCount} tasks (>50%)`)
+    return 0
+  }
+
+  // BUG-057: TIME-BASED STABILITY GUARD
+  // A fresh session should wait at least 15 seconds before cleaning up "orphans"
+  // to give sync a chance to populate the store.
+  const sessionStart = (window as any).PomoFlowSessionStart || Date.now()
+  const sessionAge = Date.now() - sessionStart
+  if (deletedCount > 0 && sessionAge < 15000) {
+    console.log(`🛡️ [SAFETY] Deferring deletion of ${deletedCount} orphans (Session age: ${Math.round(sessionAge / 1000)}s < 15s)`)
     return 0
   }
 

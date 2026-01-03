@@ -294,6 +294,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import type { Task, Subtask } from '@/stores/tasks'
+import { lockTaskPosition } from '@/utils/canvasPositionLock'
 import {
   X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
   Calendar, CalendarClock, Clock, TimerReset, ChevronDown, Layout
@@ -622,6 +623,14 @@ const saveTask = () => {
   console.log('🔍 DEBUG: scheduleExplicitlyRemoved:', scheduleExplicitlyRemoved)
 
   // CRITICAL FIX: Include instances in the update to preserve them
+  // BUG-FIX: Preserve canvasPosition and isInInbox to prevent position reset
+  // IMPORTANT: Use fallback to props.task to prevent undefined from triggering inbox logic
+  const originalCanvasPosition = editedTask.value.canvasPosition ?? props.task?.canvasPosition
+  const originalIsInInbox = editedTask.value.isInInbox ?? props.task?.isInInbox
+
+  console.log('🔍 DEBUG: originalCanvasPosition:', originalCanvasPosition)
+  console.log('🔍 DEBUG: originalIsInInbox:', originalIsInInbox)
+
   const updates: Record<string, unknown> = {
     title: editedTask.value.title,
     description: editedTask.value.description,
@@ -631,6 +640,14 @@ const saveTask = () => {
     scheduledDate: editedTask.value.scheduledDate,
     scheduledTime: editedTask.value.scheduledTime,
     estimatedDuration: editedTask.value.estimatedDuration
+  }
+
+  // BUG-FIX: Only include canvasPosition if it exists (don't pass undefined which triggers inbox logic)
+  if (originalCanvasPosition !== undefined) {
+    updates.canvasPosition = originalCanvasPosition
+    updates.isInInbox = false  // Task with canvas position is NOT in inbox
+  } else if (originalIsInInbox !== undefined) {
+    updates.isInInbox = originalIsInInbox
   }
 
   // CRITICAL: Preserve existing instances if we're not updating them separately
@@ -645,6 +662,12 @@ const saveTask = () => {
 
   // Update main task
   taskStore.updateTaskWithUndo(editedTask.value.id, updates)
+
+  // BUG-FIX: Lock position after modal save to prevent sync from overwriting
+  if (originalCanvasPosition) {
+    lockTaskPosition(editedTask.value.id, originalCanvasPosition)
+    console.log('🔒 DEBUG: Locked position after save:', originalCanvasPosition)
+  }
 
   // DEBUG: Check state after main task update (no async needed - undo system handles this)
   const taskAfterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)

@@ -38,3 +38,123 @@ html, body {
   background: rgba(45, 50, 60, 0.5) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
+
+/* =========================================================================
+   BROWSER OPTIMIZATIONS (ZEN / FIREFOX / TAURI-WEBKIT)
+   ========================================================================= */
+
+/* Detect Firefox/Zen via feature query (backdrop-filter fallback) or vendor specific */
+/* Firefox has notoriously slow backdrop-filter implementation compared to Chromium */
+
+/* 1. Global Glass Optimization for Firefox */
+@-moz-document url-prefix() {
+  /* Disable heavy backdrop-filter globally on Firefox/Zen */
+  .glass,
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    background-color: rgba(30, 30, 35, 0.95) !important; /* Solid fallback */
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Disable smooth scrolling for canvas to prevent jank */
+  html, body {
+    scroll-behavior: auto !important;
+  }
+
+  /* Optimize SVG painting */
+  svg {
+    shape-rendering: optimizeSpeed;
+    text-rendering: optimizeSpeed;
+  }
+}
+
+/* =========================================================================
+   TAURI / WEBKITGTK OPTIMIZATIONS (Linux Desktop App)
+   ========================================================================= */
+
+/* Tauri WebKitGTK on Linux has limited backdrop-filter support */
+/* Detect via .tauri-app class added by JavaScript or feature query fallback */
+
+/* When running in Tauri (class added by app initialization) */
+.tauri-app .glass,
+.tauri-app [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(25, 25, 30, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Fix glass panel backgrounds for Tauri */
+.tauri-app .glass-panel,
+.tauri-app [class*="glass-bg"] {
+  background: rgba(20, 22, 28, 0.95) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Tauri sidebar glass fix */
+.tauri-app aside,
+.tauri-app nav {
+  background: rgba(18, 20, 26, 0.98) !important;
+  backdrop-filter: none !important;
+}
+
+/* Tauri modal/overlay glass fix */
+.tauri-app [role="dialog"],
+.tauri-app .modal,
+.tauri-app .n-modal {
+  background: rgba(22, 24, 30, 0.98) !important;
+  backdrop-filter: none !important;
+}
+
+/* Tauri dropdown/popover glass fix */
+.tauri-app .n-dropdown,
+.tauri-app .n-popover,
+.tauri-app [class*="dropdown"] {
+  background: rgba(20, 22, 28, 0.98) !important;
+  backdrop-filter: none !important;
+}
+
+/* WebKitGTK-specific fixes using @supports */
+/* Fallback for when backdrop-filter doesn't work properly */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass,
+  [class*="backdrop-blur"],
+  .glass-panel {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(25, 25, 30, 0.98) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  }
+}
+
+/* Tauri layout fixes - ensure proper sizing within desktop window */
+.tauri-app #app,
+.tauri-app #root {
+  min-height: 100vh;
+  min-width: 100vw;
+  overflow: hidden;
+}
+
+/* Prevent Tauri horizontal scrollbar issues */
+.tauri-app {
+  overflow-x: hidden;
+}
+
+/* Tauri font rendering optimization */
+.tauri-app {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* 2. Vue Flow Specific Optimizations */
+.vue-flow__renderer {
+  will-change: transform; /* Hint for compositor */
+}
+
+/* When panned/zoomed, reduce painting */
+.vue-flow__pane.dragging,
+.vue-flow__viewport.dragging {
+  pointer-events: none; /* Disable hover effects during drag */
+}

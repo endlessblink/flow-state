@@ -125,7 +125,16 @@ export function useCanvasResize() {
                 const validatedWidth = Math.max(200, Math.min(2000, Math.abs(width)))
                 const validatedHeight = Math.max(80, Math.min(2000, Math.abs(height)))
 
-                // Update store
+                // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
+                // Store update triggers watchers → syncNodes, lock must exist first
+                lockGroupPosition(sectionId, {
+                    x: newX,
+                    y: newY,
+                    width: validatedWidth,
+                    height: validatedHeight
+                }, 'resize')
+
+                // Update store (now protected by lock)
                 canvasStore.updateSection(sectionId, {
                     position: {
                         x: newX,
@@ -134,14 +143,6 @@ export function useCanvasResize() {
                         height: validatedHeight
                     }
                 })
-
-                // TASK-089: Lock group position to prevent sync from overwriting during push
-                lockGroupPosition(sectionId, {
-                    x: newX,
-                    y: newY,
-                    width: validatedWidth,
-                    height: validatedHeight
-                }, 'resize')
 
                 // BUG-055 FIX: Inverse delta compensation for children
                 if (deltaX !== 0 || deltaY !== 0) {

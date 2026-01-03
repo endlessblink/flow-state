@@ -16,9 +16,7 @@
     :aria-pressed="isPressed"
     :aria-expanded="progressiveDisclosureEnabled ? isExpanded : undefined"
     :aria-disabled="disabled"
-    draggable="true"
-    @dragstart="handleDragStart"
-    @dragend="endDrag"
+    data-draggable="true"
     @click="handleCardClick($event)"
     @keydown="handleKeydown"
     @contextmenu.prevent="handleRightClick"
@@ -241,7 +239,6 @@
 import { ref, computed } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { Play, Edit, Calendar, List, Link, CalendarDays, Loader, CheckCircle, Inbox, PauseCircle, Zap, Timer, Clock, HelpCircle } from 'lucide-vue-next'
-import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
 import { useTaskStore } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
@@ -272,8 +269,6 @@ const isExpanded = ref(true) // Default expanded (current behavior)
 const isFocused = ref(false)
 const isPressed = ref(false)
 const taskCardRef = ref<HTMLElement>()
-
-const { startDrag, endDrag } = useDragAndDrop()
 
 // Task store for selection state
 const taskStore = useTaskStore()
@@ -396,25 +391,6 @@ const handleBlur = (event: FocusEvent) => {
 const handleRightClick = (event: MouseEvent) => {
   console.log('Right-click detected on task:', props.task.title)
   emit('contextMenu', event, props.task)
-}
-
-// Drag handler using new composable
-const handleDragStart = (event: DragEvent) => {
-  if (event.dataTransfer) {
-    const dragData: DragData = {
-      type: 'task',
-      taskId: props.task.id,
-      title: props.task.title,
-      source: 'kanban'
-    }
-
-    // Use new composable for global drag state
-    startDrag(dragData)
-
-    // Still set dataTransfer for HTML5 drag-and-drop compatibility
-    event.dataTransfer.setData('application/json', JSON.stringify(dragData))
-    event.dataTransfer.effectAllowed = 'move'
-  }
 }
 
 // Dependency check

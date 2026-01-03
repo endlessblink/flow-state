@@ -133,4 +133,12 @@ defineExpose({
   padding: var(--space-10) var(--space-6) 0;
 }
 
+.view-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
 </style>

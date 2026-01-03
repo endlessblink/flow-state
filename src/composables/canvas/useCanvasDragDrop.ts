@@ -263,7 +263,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     })
 
     // Handle node drag stop
-    const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', (event: { node: Node }) => {
+    const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', async (event: { node: Node }) => {
         const { node } = event
 
         // Preserve selection state during drag operations
@@ -468,9 +468,14 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     // TASK-089 MEMORY FIX: Use updateTask instead of updateTaskWithUndo
                     // updateTaskWithUndo saves state TWICE per call, causing memory exhaustion during drag
                     // Position updates don't need undo - users can simply drag again
-                    taskStore.updateTask(node.id, {
-                        canvasPosition: { x: absoluteX, y: absoluteY }
-                    })
+                    // TASK-089 FIX 9: Await position save to prevent data loss on refresh
+                    try {
+                        await taskStore.updateTask(node.id, {
+                            canvasPosition: { x: absoluteX, y: absoluteY }
+                        })
+                    } catch (err) {
+                        console.error(`[TASK-089] Failed to save position for task ${node.id}:`, err)
+                    }
 
                     // Check if task moved outside the original section
                     if (!isTaskInSectionBounds(absoluteX, absoluteY, section)) {
@@ -490,9 +495,14 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 lockTaskPosition(node.id, { x: node.position.x, y: node.position.y })
                 // TASK-089 MEMORY FIX: Use updateTask instead of updateTaskWithUndo
                 // updateTaskWithUndo saves state TWICE per call, causing memory exhaustion during drag
-                taskStore.updateTask(node.id, {
-                    canvasPosition: { x: node.position.x, y: node.position.y }
-                })
+                // TASK-089 FIX 9: Await position save to prevent data loss on refresh
+                try {
+                    await taskStore.updateTask(node.id, {
+                        canvasPosition: { x: node.position.x, y: node.position.y }
+                    })
+                } catch (err) {
+                    console.error(`[TASK-089] Failed to save position for task ${node.id}:`, err)
+                }
             }
 
             // Check containment and apply properties

@@ -45,6 +45,13 @@ export class SyncStateService {
     public readonly resolutions: Ref<ResolutionResult[]> = ref([])
     public readonly lastValidation: Ref<SyncValidationResult | null> = ref(null)
 
+    // Detailed Progress
+    public readonly syncProgress = ref<{ read: number; written: number; total: number }>({
+        read: 0,
+        written: 0,
+        total: 0
+    })
+
     // Metrics
     public readonly metrics: Ref<SyncMetrics> = ref({
         totalSyncs: 0,
@@ -104,6 +111,18 @@ export class SyncStateService {
         }
     }
 
+    public updateProgress(read: number, written: number) {
+        this.syncProgress.value = {
+            read: this.syncProgress.value.read + read,
+            written: this.syncProgress.value.written + written,
+            total: this.syncProgress.value.read + this.syncProgress.value.written + read + written
+        }
+    }
+
+    public resetProgress() {
+        this.syncProgress.value = { read: 0, written: 0, total: 0 }
+    }
+
     public recordMetric(type: 'success' | 'failure' | 'conflict_detected' | 'conflict_resolved', duration?: number) {
         switch (type) {
             case 'success':
@@ -148,6 +167,15 @@ export class SyncStateService {
             deviceId: 'unknown', // Set externally
             uptime: Math.floor((Date.now() - this.metrics.value.uptime) / 1000)
         }
+    }
+
+    public reset() {
+        this.syncStatus.value = 'idle'
+        this.error.value = null
+        this.conflicts.value = []
+        this.resolutions.value = []
+        this.lastValidation.value = null
+        this.syncProgress.value = { read: 0, written: 0, total: 0 }
     }
 }
 

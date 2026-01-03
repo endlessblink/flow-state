@@ -11,6 +11,8 @@ import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple
 import { useDatabaseHealthCheck, runPreInitializationCheck } from '@/composables/useDatabaseHealthCheck'
 import { initCrossTabCoordination } from '@/composables/useCrossTabCoordination'
 import { startPeriodicPruning } from '@/composables/useConflictPruning'
+import { initializeSyncService } from '@/composables/useReliableSyncManager'
+import { watch } from 'vue'
 
 export function useAppInitialization() {
     const timerStore = useTimerStore()
@@ -95,54 +97,88 @@ export function useAppInitialization() {
 
         // Handle project documents (project-{id})
         if (id.startsWith('project-')) {
-            // Projects don't have incremental update yet, but we can add it
-            console.log('📥 [APP] Project change:', id, deleted ? 'deleted' : 'updated')
+            if (deleted) {
+                projectStore.removeProjectFromSync(id.replace('project-', ''))
+            } else if (doc?.data) {
+                projectStore.updateProjectFromSync(id.replace('project-', ''), doc.data)
+            }
         }
 
         // Handle canvas section documents (section-{id} or group-{id})
         if (id.startsWith('section-') || id.startsWith('group-')) {
-            console.log('📥 [APP] Canvas section change:', id, deleted ? 'deleted' : 'updated')
+            if (deleted) {
+                canvasStore.removeSectionFromSync(id)
+            } else if (doc?.data) {
+                canvasStore.updateSectionFromSync(id, doc.data)
+            }
         }
     }
 
+    // ... existing code ...
+
     onMounted(async () => {
+        // MARK: SESSION START for stability guards in storage layer
+        if (typeof window !== 'undefined') {
+            (window as any).PomoFlowSessionStart = Date.now()
+        }
+        console.log('🚀 [APP] Starting strictly ordered initialization...')
+
         // BUG-057: Run PRE-INITIALIZATION check for Firefox/Zen browser compatibility
         // This must run FIRST - before any PouchDB operations
-        // It tests IndexedDB directly and clears corrupted databases
         const preCheckResult = await runPreInitializationCheck()
+        console.log('✅ [APP] Checkpoint 1: Pre-Initialization Check complete')
         if (preCheckResult.cleared) {
             console.log('🔄 [APP] Corrupted IndexedDB was cleared - reloading page to sync fresh data...')
-            // Give a moment for the deletion to complete
-            setTimeout(() => {
-                window.location.reload()
-            }, 500)
+            setTimeout(() => window.location.reload(), 500)
             return
-        }
-        if (!preCheckResult.healthy && preCheckResult.error) {
-            console.warn('⚠️ [APP] IndexedDB pre-check warning:', preCheckResult.error)
         }
 
         // TASK-085: Initialize cross-tab coordination for write safety
         initCrossTabCoordination()
+        console.log('✅ [APP] Checkpoint 2: Cross-tab coordination ready')
 
-        // TASK-085: Run database health check before loading data
-        // If corrupted and CouchDB has data, will auto-clear and reload page
-        const healthResult = await checkHealth()
-        if (healthResult.action === 'cleared-will-sync') {
-            // Page will reload - don't continue initialization
+        // 1. WAIT FOR DATABASE (Single Source of Truth)
+        // We expect useDatabase to auto-initialize via its internal IIFE.
+        // We poll until the 'database' ref is populated.
+        const { database } = await import('@/composables/useDatabase').then(m => m.useDatabase())
+
+        let attempts = 0
+        while (!database.value && attempts < 50) {
+            await new Promise(r => setTimeout(r, 100))
+            attempts++
+        }
+
+        if (!database.value) {
+            console.error('❌ [APP] Database failed to initialize after 5s')
             return
         }
 
-        // Load UI state from localStorage
+        const dbInstance = database.value
+        console.log('✅ [APP] Checkpoint 3: Database Instance Acquired:', dbInstance.name)
+
+        // 2. INJECT DATABASE INTO SYNC SERVICE (Dependency Injection)
+        // This ensures Sync Service uses the EXACT SAME database instance as the UI
+        try {
+            await initializeSyncService(dbInstance)
+            console.log('✅ [APP] Sync Service Initialized with injected DB')
+        } catch (e) {
+            console.error('❌ [APP] Sync Service init failed:', e)
+        }
+
+        // 3. LOAD STORES (Now that DB and Sync are ready)
+        console.log('⚡ [APP] Loading stores from valid database...')
+
+        // Load UI state first
         uiStore.loadState()
 
-        // BUG-054 FIX: Load local data IMMEDIATELY - don't block UI waiting for sync
-        // This ensures instant app responsiveness while sync runs in background
-        console.log('⚡ [APP] Loading local data immediately...')
-        await taskStore.loadFromDatabase()
-        await projectStore.loadProjectsFromPouchDB()
-        await canvasStore.loadFromDatabase()
-        console.log('✅ [APP] Local data loaded - UI ready')
+        // Load Data Stores
+        await Promise.all([
+            taskStore.loadFromDatabase(),
+            projectStore.loadProjectsFromPouchDB(),
+            canvasStore.loadFromDatabase()
+        ])
+
+        console.log('✅ [APP] All stores loaded')
 
         // Start sync in background - don't await, let it run while app is usable
         // ALWAYS reload stores after sync completes (fixes empty data on fresh browser)
@@ -185,7 +221,7 @@ export function useAppInitialization() {
         // This handles cases where sync hangs or takes too long in some browsers (Firefox/Zen)
         setTimeout(async () => {
             if (hasReloadedStores) {
-                console.log('ℹ️ [APP] Fallback timer: stores already reloaded')
+                // console.log('ℹ️ [APP] Fallback timer: stores already reloaded')
                 return
             }
             console.log('⏰ [APP] Fallback timer triggered - force reloading stores...')
@@ -208,7 +244,7 @@ export function useAppInitialization() {
 
         // Clean up legacy monolithic documents if in individual-only mode
         // This ensures database pruning after successful migration
-        const dbInstance = window.pomoFlowDb
+        // Reuse the already acquired dbInstance (Dependency Injection)
         if (dbInstance) {
             const { cleanupLegacyMonolithicDocuments } = await import('@/utils/legacyStorageCleanup')
             cleanupLegacyMonolithicDocuments(dbInstance).catch(err => {
@@ -249,9 +285,51 @@ export function useAppInitialization() {
 
         // Initialize global keyboard shortcuts (system-level: undo/redo/new-task)
         await initGlobalKeyboardShortcuts()
+        console.log('✅ [APP] Checkpoint 3.5: Keyboard shortcuts initialized')
 
         // TASK-085: Start periodic conflict pruning (hourly background job)
         startPeriodicPruning()
+        console.log('✅ [APP] Checkpoint 4: Periodic tasks started')
+
+        // DEBUG: Sample IDs to solve the "9k docs mystery"
+        setTimeout(async () => {
+            const db = (window as any).pomoFlowDb
+            if (db) {
+                try {
+                    const allDocs = await db.allDocs({ limit: 10 })
+                    console.log('🔍 [SYNC-DIAGNOSTIC] First 10 IDs in Local DB:', allDocs.rows.map((r: any) => r.id))
+
+                    const taskDocs = await db.allDocs({ startkey: 'task-', endkey: 'task-\ufff0', limit: 5 })
+                    console.log('🔍 [SYNC-DIAGNOSTIC] Individual Task IDs:', taskDocs.rows.map((r: any) => r.id))
+
+                    const legacy = await db.get('tasks:data').catch(() => null)
+                    console.log('🔍 [SYNC-DIAGNOSTIC] Legacy tasks:data found:', !!legacy)
+                } catch (e) { }
+            }
+        }, 3000)
+
+        // DEBUG: Auto-Dump DB to console to verify sync
+        console.log('🔍 [APP] Scheduling auto-dump in 5s...')
+        setTimeout(async () => {
+            const db = (window as any).pomoFlowDb
+            if (db) {
+                try {
+                    const allDocs = await db.allDocs({ include_docs: true })
+                    console.group('🔍 [AUTO-DUMP] Database Contents')
+                    console.log(`Total Docs: ${allDocs.total_rows}`)
+                    const types = {} as Record<string, number>
+                    allDocs.rows.forEach((row: any) => {
+                        const type = row.doc.type || (row.id.split('-')[0])
+                        types[type] = (types[type] || 0) + 1
+                    })
+                    console.table(types)
+                    console.log('Sample Doc:', allDocs.rows[0]?.doc)
+                    console.groupEnd()
+                } catch (e) {
+                    console.error('❌ Auto-dump failed:', e)
+                }
+            }
+        }, 5000)
     })
 
     // BUG-054/057 FIX: Cleanup on unmount

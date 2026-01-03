@@ -336,25 +336,19 @@ const {
   toggleSync
 } = reliableSync
 
-// WORKAROUND: Poll-based status update to bypass Vue reactivity issues
-// The sync manager refs aren't triggering watchers properly, so we poll directly
-// This counter forces computed properties to re-evaluate
-const forceUpdateCounter = ref(0)
-let pollInterval: ReturnType<typeof setInterval> | null = null
+// Local state for manual sync feedback
+const syncProgress = ref(0)
+const progressText = ref('')
+
+// Polling removed - using direct reactivity
+// const forceUpdateCounter = ref(0) 
 
 onMounted(() => {
-  console.log('🚀 [SyncStatus] Component mounted, starting poll interval')
-  // Start polling every 500ms to force computed re-evaluation
-  pollInterval = setInterval(() => {
-    forceUpdateCounter.value++
-  }, 500)
+  // console.log('🚀 [SyncStatus] Component mounted')
 })
 
 onUnmounted(() => {
-  if (pollInterval) {
-    clearInterval(pollInterval)
-    pollInterval = null
-  }
+  // cleanup
 })
 
 // Alias for backward compatibility
@@ -375,8 +369,7 @@ const syncMetrics = computed(() => metrics.value)
 
 // Enhanced sync state
 const showAdvancedMenu = ref(false)
-const syncProgress = ref(0)
-const progressText = ref('Initializing...')
+// syncProgress imported from useReliableSyncManager
 const syncStartTime = ref<Date | null>(null)
 const currentPhase = ref('')
 const logger = getLogger()
@@ -395,8 +388,8 @@ const statusClass = computed(() => ({
 const localIsSyncing = computed(() => isSyncing?.value || isManualSyncing.value)
 
 const statusIcon = computed(() => {
-  // Force re-evaluation via counter (workaround for reactivity issues)
-  void forceUpdateCounter.value
+  // Force re-evaluation removed
+
 
   // Read from localStorage for guaranteed persistence
   const hasConnected = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
@@ -412,8 +405,8 @@ const statusIcon = computed(() => {
 })
 
 const statusText = computed(() => {
-  // Force re-evaluation via counter (workaround for reactivity issues)
-  void forceUpdateCounter.value
+  // Force re-evaluation removed
+
 
   // Read directly from localStorage for guaranteed persistence
   const hasConnected = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'

@@ -8,28 +8,16 @@ export class DatabaseService {
     constructor() { }
 
     /**
-     * Initialize local PouchDB instance
+     * Set local PouchDB instance (Dependency Injection)
+     * Replaces internal creation logic to prevent multiple instances
      */
-    public initializeLocal(): PouchDB.Database {
-        try {
-            if (this.localDB) {
-                console.log('Using existing local DB instance')
-                return this.localDB
-            }
-
-            // Get fresh config each time
-            const config = getDatabaseConfig()
-
-            this.localDB = new PouchDB(config.local.name, {
-                adapter: config.local.adapter
-            })
-
-            console.log(`🗄️ DatabaseService: Local PouchDB initialized: ${config.local.name}`)
-            return this.localDB
-        } catch (error) {
-            console.error('❌ Failed to initialize local database:', error)
-            throw new Error(`Local database initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    public setLocalDatabase(db: PouchDB.Database): void {
+        if (!db) {
+            console.warn('⚠️ [DatabaseService] Attempted to set null database')
+            return
         }
+        this.localDB = db
+        console.log('✅ [DatabaseService] Local Database Injected')
     }
 
     /**

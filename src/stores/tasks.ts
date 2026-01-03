@@ -7,6 +7,7 @@ import { useTaskHistory } from './tasks/taskHistory'
 import { useProjectStore } from './projects'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { transactionManager } from '@/services/sync/TransactionManager'
+import { isPositionLocked, getLockedPosition } from '@/utils/canvasPositionLock'
 
 // Export types and utilities for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
@@ -129,9 +130,9 @@ export const useTaskStore = defineStore('tasks', () => {
               }
             }
             // Mark as replayed/committed
-            await transactionManager.commit(tx.id)
+            await transactionManager.commit(tx._id)
           } catch (err) {
-            console.error(`❌ Failed to replay transaction ${tx.id}`, err)
+            console.error(`❌ Failed to replay transaction ${tx._id}`, err)
             // Determine if we should rollback or retry later
           }
         }
@@ -200,6 +201,24 @@ export const useTaskStore = defineStore('tasks', () => {
           if (currentTask.updatedAt > normalizedTask.updatedAt) {
             console.log(`🛡️ [SYNC-PROTECT] Ignoring sync for ${taskId} - local version is newer (${currentTask.updatedAt.toISOString()} vs ${normalizedTask.updatedAt.toISOString()})`)
             return
+          }
+
+          // BUG-FIX: Check position lock - preserve local canvasPosition if locked
+          // This prevents sync from overwriting positions during the push window after drag
+          if (isPositionLocked(taskId)) {
+            const lockedPos = getLockedPosition(taskId)
+            if (lockedPos) {
+              console.log(`🔒 [POSITION-LOCK] Preserving local canvasPosition for ${taskId} during sync`)
+              normalizedTask.canvasPosition = lockedPos
+            }
+          }
+
+          // BUG-FIX: Preserve local canvasPosition if remote doesn't have one
+          // This prevents sync from clearing positions when remote has no position data
+          if (currentTask.canvasPosition && !normalizedTask.canvasPosition) {
+            console.log(`🛡️ [SYNC-PROTECT] Preserving local canvasPosition for ${taskId} - remote has no position`)
+            normalizedTask.canvasPosition = currentTask.canvasPosition
+            normalizedTask.isInInbox = currentTask.isInInbox
           }
 
           // Update existing task

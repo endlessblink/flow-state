@@ -172,6 +172,48 @@
           <Activity :size="16" />
           Recovery Center
         </button>
+
+        <button :disabled="isRescuing" class="action-btn danger-outline" @click="rescueTasks">
+          <Activity v-if="!isRescuing" :size="16" />
+          <Loader v-else :size="16" class="animate-spin" />
+          Rescue Tasks
+        </button>
+      </div>
+    </div>
+
+    <!-- Markdown Auto-Export -->
+    <div class="settings-section">
+      <h4>📂 Data Safety (Markdown Export)</h4>
+      <p class="subtitle" style="margin-bottom: var(--space-4)">
+        Continuously save your tasks as readable text files to a local folder.
+      </p>
+
+      <div class="setting-group">
+        <div class="action-buttons">
+            <button
+              class="action-btn"
+              :class="exportStatus.isEnabled.value ? 'primary' : 'secondary'"
+              @click="toggleAutoExport"
+            >
+              <FolderOpen :size="16" />
+              {{ exportStatus.isEnabled.value ? 'Auto-Export Active' : 'Select Export Folder' }}
+            </button>
+
+             <button
+              class="action-btn secondary"
+              :disabled="!exportStatus.isEnabled.value || exportStatus.isExporting.value"
+              @click="triggerManualExport"
+            >
+              <RefreshCw v-if="exportStatus.isExporting.value" :size="16" class="animate-spin" />
+              <Download v-else :size="16" />
+              Export Now
+            </button>
+        </div>
+        
+        <div v-if="exportStatus.isEnabled.value" class="status-item" style="margin-top: var(--space-2)">
+            <CheckCircle :size="14" style="color: var(--success)" />
+            <span style="color: var(--text-secondary)">Last export: {{ exportStatus.lastExportTime.value ? formatTime(exportStatus.lastExportTime.value) : 'Never' }} ({{ exportStatus.count.value }} files)</span>
+        </div>
       </div>
     </div>
 
@@ -270,13 +312,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBackupSystem, type BackupData, type BackupConfig } from '@/composables/useBackupSystem'
+import { useTaskStore } from '@/stores/tasks'
+import { markdownExportService } from '@/services/data/MarkdownExportService'
 import {
   Shield, Clock, Calendar, Database, RefreshCw, Download,
   Play, Pause, Square, Activity, CheckCircle, AlertTriangle,
-  X, Info, Loader
+  X, Info, Loader, LifeBuoy, FolderOpen
 } from 'lucide-vue-next'
 
 const backupSystem = useBackupSystem()
+const taskStore = useTaskStore()
 
 // Map state to component refs
 // Note: Direct refs are not used for config as we want to trigger updates via the scheduler/system
@@ -305,7 +350,8 @@ const integrityStatus = ref({ valid: true, issues: [] as string[] })
 const isCreatingBackup = ref(false)
 const isValidating = ref(false)
 const isRestoring = ref(false)
-const isSchedulerRunning = ref(false) // New system manages this internally, but doesn't expose "running" state directly as boolean ref easily accessible for play/pause toggle without logic
+const isRescuing = ref(false)
+const isSchedulerRunning = ref(false)
 const isSchedulerPaused = ref(false)
 const statusMessage = ref('')
 const statusType = ref<'success' | 'warning' | 'error' | 'info'>('info')
@@ -313,6 +359,9 @@ const statusType = ref<'success' | 'warning' | 'error' | 'info'>('info')
 const showRestoreDialog = ref(false)
 const selectedBackup = ref<BackupData | null>(null)
 const fileInput = ref<HTMLInputElement>()
+
+// Markdown Export State
+const exportStatus = markdownExportService.status
 
 // Update interval
 let updateInterval: NodeJS.Timeout
@@ -397,7 +446,31 @@ const validateData = async () => {
 }
 
 const viewRecoveryCenter = () => {
- showRestoreDialog.value = true
+  showRestoreDialog.value = true
+}
+
+const rescueTasks = async () => {
+  if (isRescuing.value) return
+  
+  const confirmed = confirm('🛡️ Emergency Task Recovery\n\nThis will scan for and restore all accidentally deleted tasks. \n\nContinue?')
+  if (!confirmed) return
+
+  isRescuing.value = true
+  showStatus('🔍 Scanning for deleted tasks...', 'info')
+
+  try {
+    const count = await taskStore.recoverSoftDeletedTasks()
+    if (count > 0) {
+      showStatus(`✅ Successfully rescued ${count} tasks!`, 'success')
+    } else {
+      showStatus('ℹ️ No deleted tasks were found to rescue.', 'info')
+    }
+  } catch (error) {
+    console.error('Rescue failed:', error)
+    showStatus('❌ Task rescue failed', 'error')
+  } finally {
+    isRescuing.value = false
+  }
 }
 
 const selectBackup = (backup: BackupData) => {
@@ -470,6 +543,27 @@ const confirmRestore = async () => {
   }
 }
 
+const toggleAutoExport = async () => {
+  if (exportStatus.isEnabled.value) {
+    markdownExportService.disableAutoExport()
+    showStatus('Auto-export disabled', 'info')
+  } else {
+    try {
+      const success = await markdownExportService.enableAutoExport()
+      if (success) {
+        showStatus('✅ Auto-export enabled! Tasks will be saved to your folder.', 'success')
+      }
+    } catch (e) {
+      showStatus('❌ Failed to enable export: ' + e, 'error')
+    }
+  }
+}
+
+const triggerManualExport = async () => {
+    await markdownExportService.runExport()
+    showStatus(`✅ Exported ${exportStatus.count.value} files`, 'success')
+}
+
 const startScheduler = () => {
     backupSystem.config.value.enabled = true
     backupSystem.startAutoBackup()
@@ -496,8 +590,8 @@ const showStatus = (message: string, type: 'success' | 'warning' | 'error' | 'in
   }, 5000)
 }
 
-const formatTime = (timestamp: number) => {
-  const date = new Date(timestamp)
+const formatTime = (timestamp: number | Date) => {
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
   return date.toLocaleString()
 }
 
@@ -752,6 +846,16 @@ onMounted(async () => {
 
 .action-btn.accent:hover:not(:disabled) {
   background: rgba(78, 205, 196, 0.08);
+}
+
+.action-btn.danger-outline {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.action-btn.danger-outline:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: var(--color-danger);
 }
 
 .history-list {

@@ -71,10 +71,12 @@ export const useCanvasDataStore = defineStore('canvasData', () => {
         if (index !== -1) {
             groups.value.splice(index, 1)
             if (STORAGE_FLAGS.DUAL_WRITE_SECTIONS || STORAGE_FLAGS.INDIVIDUAL_SECTIONS_ONLY) {
-                const dbInstance = window.pomoFlowDb
-                if (dbInstance) {
-                    await deleteIndividualSection(dbInstance as any, id)
+                const dbInstance = db.database.value
+                if (!dbInstance) {
+                    isDataLoading.value = false
+                    return
                 }
+                await deleteIndividualSection(dbInstance as any, id)
             }
         }
     }
@@ -306,7 +308,7 @@ export const useCanvasDataStore = defineStore('canvasData', () => {
     watch(groups, (newGroups) => {
         if (groupsSaveTimer) clearTimeout(groupsSaveTimer)
         groupsSaveTimer = setTimeout(async () => {
-            const dbInstance = window.pomoFlowDb
+            const dbInstance = db.database.value
             if (!dbInstance) return
             try {
                 if (STORAGE_FLAGS.DUAL_WRITE_SECTIONS || STORAGE_FLAGS.INDIVIDUAL_SECTIONS_ONLY) {
@@ -322,7 +324,7 @@ export const useCanvasDataStore = defineStore('canvasData', () => {
         if (isDataLoading.value) return
         isDataLoading.value = true
         try {
-            const dbInstance = window.pomoFlowDb
+            const dbInstance = db.database.value
             if (!dbInstance) {
                 isFirstLoadComplete.value = true
                 isDataLoading.value = false
@@ -422,6 +424,22 @@ export const useCanvasDataStore = defineStore('canvasData', () => {
         return nearest
     }
 
+    const updateSectionFromSync = (id: string, data: any) => {
+        const index = groups.value.findIndex(g => g.id === id)
+        if (index !== -1) {
+            groups.value[index] = { ...data }
+        } else {
+            groups.value.push({ ...data })
+        }
+    }
+
+    const removeSectionFromSync = (id: string) => {
+        const index = groups.value.findIndex(g => g.id === id)
+        if (index !== -1) {
+            groups.value.splice(index, 1)
+        }
+    }
+
     return {
         groups,
         nodes,
@@ -465,6 +483,8 @@ export const useCanvasDataStore = defineStore('canvasData', () => {
         updateGroupPowerKeyword,
         isPointInGroup,
         isTaskInGroup,
-        findNearestGroup
+        findNearestGroup,
+        updateSectionFromSync,
+        removeSectionFromSync
     }
 })

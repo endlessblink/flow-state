@@ -58,22 +58,50 @@ export interface ReliableSyncManagerInstance {
  * Reliable Sync Manager (Refactored Phase 3)
  * Now a lightweight wrapper around SyncOrchestrator
  */
+// Flag to ensure global listeners are only registered once
+let isInitialized = false
+
+/**
+ * Explicit Initialization (DI Pattern)
+ * Must be called by useAppInitialization with the database instance
+ */
+export const initializeSyncService = async (dbInstance: any) => {
+  if (isInitialized) return
+  isInitialized = true
+
+  console.log('🔄 [ReliableSyncManager] Initializing with injected DB...')
+
+  const { SyncValidator } = await import('@/utils/syncValidator')
+
+  await syncOrchestrator.initialize({
+    backupSystem: useBackupSystem(),
+    logger: getLogger(),
+    syncValidator: new SyncValidator(),
+    localDB: dbInstance
+  })
+
+  // Register listener for Group/Section sync updates
+  // Debounce the reload to prevent UI lag/OOM during heavy syncs
+  let reloadTimeout: ReturnType<typeof setTimeout>
+
+  // Re-enable auto-reload with silent mode to update UI when data arrives
+  // MODIFIED: Do NOT reload stores here. Full reloads wipe local in-memory state
+  // and cause sync overrides. We now rely exclusively on handlePouchDBChange
+  // in useAppInitialization.ts for granular, safe incremental updates.
+  syncOrchestrator.registerDataPulledCallback(async () => {
+    console.log('✨ [SYNC] Remote data pulled - incremental listeners will handle updates')
+  })
+
+  console.log('✅ [ReliableSyncManager] Global listeners initialized')
+}
+
 export const useReliableSyncManager = () => {
   // Access Singleton State
   const state = syncOrchestrator.getSyncState()
 
-  // Setup Dependencies for Orchestrator (if not already init)
-  // In a real app this might happen in App.vue or main.ts
-  // doing it here to ensure it runs when the composable is used.
-  // The orchestrator has an internal check to prevent double-init.
-  // Using dynamic import to avoid circular dependencies and ensure browser compatibility
-  import('@/utils/syncValidator').then(({ SyncValidator }) => {
-    syncOrchestrator.initialize({
-      backupSystem: useBackupSystem(),
-      logger: getLogger(),
-      syncValidator: new SyncValidator()
-    }).catch(err => console.error('SyncOrchestrator init failed', err))
-  })
+  // Auto-init removed in favor of Dependency Injection
+  // if (!isInitialized) { ... }
+
 
   // Expose Reactive State (direct refs from state service)
   const {
@@ -163,6 +191,7 @@ export const useReliableSyncManager = () => {
     isLiveSyncActive: () => syncOrchestrator.isLiveSyncActive(),
     startLiveSync: () => syncOrchestrator.startLiveSync(),
     stopLiveSync: () => syncOrchestrator.stopLiveSync(),
+    nuclearReset: () => syncOrchestrator.nuclearReset(),
     configureProvider: (config: any) => syncOrchestrator.configureProvider(config),
     enableProvider: () => syncOrchestrator.enableProvider(),
     disableProvider: () => syncOrchestrator.disableProvider(),

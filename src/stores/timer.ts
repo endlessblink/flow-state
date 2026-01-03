@@ -12,6 +12,7 @@ import {
 
 // Direct PouchDB changes feed for cross-device timer sync (TASK-021)
 import { useTimerChangesSync } from '@/composables/useTimerChangesSync'
+import { saveTimerSession, loadTimerSession, TIMER_DOC_ID } from '@/utils/individualTimerStorage'
 
 export interface PomodoroSession {
   id: string
@@ -354,102 +355,15 @@ export const useTimerStore = defineStore('timer', () => {
    * Uses direct PouchDB access with conflict resolution for reliable cross-device sync
    */
   const saveTimerSessionWithLeadership = async () => {
-    const maxRetries = 5
-    const docId = 'pomo-flow-timer-session:data'
+    const pouchDb = db.database.value
+    if (!pouchDb) return
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // Wait for database to be ready
-        while (!db.isReady?.value) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-
-        // Access PouchDB directly for better conflict handling
-        // Uses the global singleton exposed by useDatabase
-        const pouchDb = window.pomoFlowDb
-
-        if (!pouchDb) {
-          console.warn('⚠️ [TIMER CROSS-DEVICE] PouchDB not available')
-          return
-        }
-
-        const sessionData = currentSession.value ? {
-          session: {
-            ...currentSession.value,
-            startTime: currentSession.value.startTime.toISOString(),
-            completedAt: currentSession.value.completedAt?.toISOString()
-          },
-          deviceLeaderId: deviceId,
-          deviceLeaderLastSeen: Date.now()
-        } : {
-          session: null,
-          deviceLeaderId: null,
-          deviceLeaderLastSeen: null
-        }
-
-        // Try to get existing document with conflicts
-        let existingRev: string | undefined
-        try {
-          const existingDoc = await pouchDb.get(docId, { conflicts: true })
-          existingRev = existingDoc._rev
-
-          // If there are conflicts, resolve them by deleting conflicting revisions
-          if (existingDoc._conflicts && existingDoc._conflicts.length > 0) {
-            console.log(`🔧 [TIMER CROSS-DEVICE] Resolving ${existingDoc._conflicts.length} conflicts`)
-            for (const conflictRev of existingDoc._conflicts) {
-              try {
-                await pouchDb.remove(docId, conflictRev)
-              } catch (_e) {
-                // Ignore removal errors
-              }
-            }
-          }
-        } catch (getErr: unknown) {
-          const pouchErr = getErr as { status?: number }
-          if (pouchErr.status !== 404) {
-            throw getErr
-          }
-          // Document doesn't exist, will create new
-        }
-
-        // Save the document
-        interface TimerDocToSave {
-          _id: string
-          _rev?: string
-          data: typeof sessionData
-          updatedAt: string
-        }
-        const docToSave: TimerDocToSave = {
-          _id: docId,
-          data: sessionData,
-          updatedAt: new Date().toISOString()
-        }
-
-        if (existingRev) {
-          docToSave._rev = existingRev
-        }
-
-        await pouchDb.put(docToSave as unknown as PouchDBDocument)
-
-        if (attempt > 1) {
-          console.log(`✅ [TIMER CROSS-DEVICE] Saved on attempt ${attempt}`)
-        }
-        return // Success
-
-      } catch (error: unknown) {
-        const pouchErr = error as { status?: number }
-        if (pouchErr.status === 409 && attempt < maxRetries) {
-          // Conflict - retry with fresh _rev
-          console.log(`🔄 [TIMER CROSS-DEVICE] Conflict on attempt ${attempt}, retrying...`)
-          await new Promise(resolve => setTimeout(resolve, 50 * attempt)) // Backoff
-          continue
-        }
-
-        if (attempt === maxRetries) {
-          console.error(`❌ [TIMER CROSS-DEVICE] Failed to save after ${maxRetries} attempts:`, error)
-        }
-      }
-    }
+    await saveTimerSession(
+      pouchDb as any,
+      currentSession.value,
+      deviceId,
+      currentSession.value ? Date.now() : null
+    )
   }
 
   /**
@@ -493,12 +407,8 @@ export const useTimerStore = defineStore('timer', () => {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
 
-      interface TimerSessionData {
-        deviceLeaderId?: string
-        deviceLeaderLastSeen?: number
-        session?: PomodoroSession
-      }
-      const existingSession = await db.load<TimerSessionData>('pomo-flow-timer-session')
+      const existingDoc = await loadTimerSession(db.database.value as any)
+      const existingSession = existingDoc?.data || existingDoc // Handle potential wrapping
 
       if (existingSession?.deviceLeaderId && existingSession.deviceLeaderId !== deviceId) {
         const elapsed = Date.now() - (existingSession.deviceLeaderLastSeen || 0)
@@ -920,163 +830,11 @@ export const useTimerStore = defineStore('timer', () => {
     }
   }
 
-  // Persistence for timer session using PouchDB
-  const saveTimerSession = async () => {
-    try {
-      // Wait for database to be ready
-      while (!db.isReady?.value) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-      if (currentSession.value) {
-        const sessionData = {
-          ...currentSession.value,
-          startTime: currentSession.value.startTime.toISOString(),
-          completedAt: currentSession.value.completedAt?.toISOString()
-        }
-        await db.save('pomo-flow-timer-session', sessionData)
-      } else {
-        await db.remove('pomo-flow-timer-session')
-      }
-    } catch (error) {
-      errorHandler.report({
-        severity: ErrorSeverity.WARNING,
-        category: ErrorCategory.DATABASE,
-        message: 'Failed to save timer session to PouchDB',
-        error: error as Error,
-        context: { operation: 'saveTimerSession' },
-        showNotification: false // Non-critical for timer state
-      })
-    }
-  }
-
-  const loadTimerSession = async () => {
-    try {
-      // Wait for database to be ready
-      while (!db.isReady?.value) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-
-      // Trigger a sync FIRST to get latest timer state from remote (TASK-021 fix)
-      // This ensures we load the timer from CouchDB, not stale local data
-      try {
-        console.log('🔄 [TIMER] Syncing before loading timer session...')
-        await db.triggerSync?.()
-        console.log('✅ [TIMER] Sync complete, loading timer session...')
-      } catch (syncErr) {
-        console.warn('⚠️ [TIMER] Sync failed before load, using local data:', syncErr)
-      }
-
-      // FIXED (TASK-021): db.load returns { session: {...}, deviceLeaderId, deviceLeaderLastSeen }
-      // NOT flat session properties directly
-      interface SavedSessionData {
-        id?: string
-        taskId?: string
-        startTime?: string | Date | number
-        duration?: number
-        remainingTime?: number
-        isActive?: boolean
-        isPaused?: boolean
-        isBreak?: boolean
-        completedAt?: string | Date | number
-      }
-      interface SavedTimerDocument {
-        session?: SavedSessionData | null
-        deviceLeaderId?: string | null
-        deviceLeaderLastSeen?: number | null
-      }
-      const saved = await db.load<SavedTimerDocument>('pomo-flow-timer-session')
-
-      // Extract session from nested structure
-      const savedSession = saved?.session
-
-      if (savedSession && savedSession.isActive) {
-        const startTime = new Date(savedSession.startTime || Date.now())
-        const duration = savedSession.duration || 25 * 60
-
-        // Build session object
-        const session: PomodoroSession = {
-          id: savedSession.id || 'default',
-          taskId: savedSession.taskId || '',
-          startTime,
-          duration,
-          remainingTime: savedSession.remainingTime || duration,
-          isActive: savedSession.isActive || false,
-          isPaused: savedSession.isPaused || false,
-          isBreak: savedSession.isBreak || false,
-          completedAt: savedSession.completedAt ? new Date(savedSession.completedAt) : undefined
-        }
-
-        // CRITICAL: Recalculate remainingTime from startTime to avoid drift (TASK-021 fix)
-        // Use leader timestamp if available for accurate cross-device sync
-        if (session.isActive && !session.isPaused) {
-          const leaderTimestamp = saved?.deviceLeaderLastSeen || 0
-          lastLeaderTimestamp = leaderTimestamp
-          session.remainingTime = calculateRemainingTime(session, leaderTimestamp)
-          console.log('🔄 [TIMER] Recalculated remainingTime from startTime:', session.remainingTime, 'seconds, leaderTimestamp:', leaderTimestamp)
-        }
-
-        // Check if timer already completed
-        if (session.remainingTime <= 0 && session.isActive) {
-          console.log('⏰ [TIMER] Timer already completed, clearing session')
-          currentSession.value = null
-          return
-        }
-
-        currentSession.value = session
-
-        // Check if we're the device leader or a follower
-        const myDeviceId = deviceId
-        const isLeaderDevice = saved?.deviceLeaderId === myDeviceId
-        const leaderStillActive = saved?.deviceLeaderLastSeen &&
-          (Date.now() - saved.deviceLeaderLastSeen) < DEVICE_LEADER_TIMEOUT_MS
-
-        if (isLeaderDevice || !leaderStillActive) {
-          // We're the leader or leader timed out - run full countdown
-          console.log('👑 [TIMER] This device is/becomes leader, starting countdown')
-          isDeviceLeader.value = true
-          startDeviceHeartbeat()
-
-          timerInterval.value = setInterval(() => {
-            if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused) {
-              currentSession.value.remainingTime -= 1
-              if (currentSession.value.remainingTime <= 0) {
-                completeSession()
-              }
-            }
-          }, 1000)
-        } else {
-          // We're a follower - use follower interval that recalculates from startTime
-          console.log('👀 [TIMER] This device is follower, device leader:', saved?.deviceLeaderId)
-          isDeviceLeader.value = false
-          startFollowerInterval()
-        }
-      } else if (savedSession && !savedSession.isActive) {
-        // Timer exists but not active - just set the session without interval
-        currentSession.value = {
-          id: savedSession.id || 'default',
-          taskId: savedSession.taskId || '',
-          startTime: new Date(savedSession.startTime || Date.now()),
-          duration: savedSession.duration || 25 * 60,
-          remainingTime: savedSession.remainingTime || 25 * 60,
-          isActive: false,
-          isPaused: savedSession.isPaused || false,
-          isBreak: savedSession.isBreak || false,
-          completedAt: savedSession.completedAt ? new Date(savedSession.completedAt) : undefined
-        }
-      }
-    } catch (error) {
-      errorHandler.report({
-        severity: ErrorSeverity.WARNING,
-        category: ErrorCategory.DATABASE,
-        message: 'Failed to load timer session from PouchDB',
-        error: error as Error,
-        context: { operation: 'loadTimerSession' },
-        showNotification: false // Non-critical - timer starts fresh
-      })
-    }
-  }
+  // No local saveTimerSession/loadTimerSession here - using imported ones
 
   // Debounced save to reduce PouchDB conflicts
+  // Timer ticks every second but we only save periodically to reduce conflicts
+  // Other devices calculate remainingTime from startTime anyway
   // Timer ticks every second but we only save every 5 seconds to reduce conflicts
   // Other devices calculate remainingTime from startTime anyway
   let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -1102,14 +860,15 @@ export const useTimerStore = defineStore('timer', () => {
     // Save immediately if significant state changed (start/pause/stop)
     if (significantState !== lastSavedState) {
       lastSavedState = significantState
-      saveTimerSession()
+      saveTimerSessionWithLeadership()
       return
     }
 
-    // Otherwise, debounce remainingTime-only changes to every 5 seconds
+    // Otherwise, debounce remainingTime-only changes to every 2 seconds (was 5s, refined for balance)
+    // Minimal debounce for unified docs is 1s per user request
     saveDebounceTimer = setTimeout(() => {
-      saveTimerSession()
-    }, 5000)
+      saveTimerSessionWithLeadership()
+    }, 2000)
   }
 
   // Watch for session changes and save to PouchDB (debounced)
@@ -1133,8 +892,36 @@ export const useTimerStore = defineStore('timer', () => {
       const loadedSettings = await loadSettings()
       settings.value = { ...defaultSettings, ...(loadedSettings as typeof defaultSettings) }
 
-      // Load timer session from PouchDB
-      await loadTimerSession()
+      // Load timer session from PouchDB (using individual document utility)
+      if (db.database.value) {
+        const saved = await loadTimerSession(db.database.value as any)
+        const savedSession = saved?.session
+
+        if (savedSession && savedSession.isActive) {
+          // Rebuild session if active
+          currentSession.value = {
+            ...savedSession,
+            startTime: new Date(savedSession.startTime),
+            completedAt: savedSession.completedAt ? new Date(savedSession.completedAt) : undefined
+          }
+
+          // Check for device leadership (similar logic to old loadTimerSession but simplified)
+          if (saved.deviceLeaderId === deviceId) {
+            isDeviceLeader.value = true
+            startDeviceHeartbeat()
+            // Start local countdown
+            timerInterval.value = setInterval(() => {
+              if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused) {
+                currentSession.value.remainingTime -= 1
+                if (currentSession.value.remainingTime <= 0) completeSession()
+              }
+            }, 1000)
+          } else {
+            isDeviceLeader.value = false
+            startFollowerInterval()
+          }
+        }
+      }
 
       // Initialize cross-tab sync for timer state (same browser)
       initCrossTabSync()

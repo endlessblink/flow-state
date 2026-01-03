@@ -1720,7 +1720,7 @@ resourceManager.addWatcher(
     () => canvasStore.syncTrigger,
     (newTrigger) => {
       if (newTrigger > 0) {
-        console.log('🔄 [CANVAS] Sync triggered by external request (undo/redo)')
+        // console.log('🔄 [CANVAS] Sync triggered by external request (undo/redo)')
         syncNodes()
       }
     }
@@ -1784,7 +1784,7 @@ resourceManager.addWatcher(
 
     // Case 1: Nodes exist and are all initialized - center viewport
     if (initialized && nodeCount > 0) {
-      console.log('✅ All nodes initialized with dimensions, auto-centering viewport')
+      console.log('✅ [CANVAS] All nodes initialized, auto-centering viewport (ONCE)')
       // Position viewport instantly (duration: 0 prevents visible animation/flash)
       vueFlowFitView({ padding: 0.2, duration: 0 })
       hasInitialFit.value = true
@@ -2652,7 +2652,7 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
 
 
 onMounted(async () => {
-  console.log('🎨 CanvasView mounted, tasks:', taskStore.tasks.length)
+  console.log('🎨 [CANVAS] CanvasView mounted (Full Remount Detected), tasks:', taskStore.tasks.length)
 
   // Set Vue Flow as mounted immediately (component is ready for operations)
   isVueFlowMounted.value = true
@@ -2678,7 +2678,7 @@ onMounted(async () => {
     // Mark canvas as ready - Vue Flow will render with initialViewport computed prop
     isCanvasReady.value = true
     isVueFlowReady.value = true
-    console.log('🔭 Viewport restored from DB:', canvasStore.viewport)
+    // console.log('🔭 Viewport restored from DB:', canvasStore.viewport)
   }
 
   // Safety fallback: if canvas doesn't initialize in 3s, force ready state

@@ -54,8 +54,6 @@ export function useCanvasSync(deps: SyncDependencies) {
     // Sync nodes from store with parent-child relationships and collapsible sections
     const syncNodes = () => {
         try {
-            const allNodes: Node[] = []
-
             // Add section nodes FIRST (so they render in background) with graceful degradation
             const sections = safeStoreOperation(
                 () => canvasStore.sections || [],
@@ -64,6 +62,14 @@ export function useCanvasSync(deps: SyncDependencies) {
                 'canvasStore'
             )
 
+            // Get tasks with graceful degradation
+            // Use filteredTasks directly to respect sidebar filters (smart views)
+            const tasks = deps.filteredTasks.value || []
+
+            // 1. Build map of desired nodes (Goals)
+            const desiredNodeMap = new Map<string, Node>()
+
+            // --- Process Sections ---
             sections.forEach(section => {
                 // TASK-072 FIX: Always use recursive counting so parent groups include tasks from child groups
                 const taskCount = canvasStore.getTaskCountInGroupRecursive(section.id, Array.isArray(deps.filteredTasks.value) ? deps.filteredTasks.value : [])
@@ -91,9 +97,10 @@ export function useCanvasSync(deps: SyncDependencies) {
                     return getDepth(group.parentGroupId, depth + 1)
                 }
                 const zIndex = getDepth(section.id)
+                const nodeId = `section-${section.id}`
 
-                allNodes.push({
-                    id: `section-${section.id}`,
+                desiredNodeMap.set(nodeId, {
+                    id: nodeId,
                     type: 'sectionNode',
                     position,
                     parentNode, // TASK-072: Set parent for nested groups
@@ -123,10 +130,7 @@ export function useCanvasSync(deps: SyncDependencies) {
                 })
             })
 
-            // Get tasks with graceful degradation
-            // Use filteredTasks directly to respect sidebar filters (smart views)
-            const tasks = deps.filteredTasks.value || []
-
+            // --- Process Tasks ---
             tasks.forEach(task => {
                 // Only verify task has canvas position
                 if (task.canvasPosition) {
@@ -173,7 +177,7 @@ export function useCanvasSync(deps: SyncDependencies) {
                         }
                     }
 
-                    allNodes.push({
+                    desiredNodeMap.set(task.id, {
                         id: task.id,
                         type: 'taskNode',
                         position,
@@ -189,17 +193,93 @@ export function useCanvasSync(deps: SyncDependencies) {
                 }
             })
 
-            // Validate nodes before updating
-            const validNodes = allNodes.filter(node => {
-                if (!node || !node.id || !node.type) {
-                    console.warn('⚠️ Invalid node detected during sync:', node)
-                    return false
+            // 2. Diff & Patch Logic
+            const currentNodes = [...deps.nodes.value]
+            const nodesToRemove = new Set<string>()
+            const nodesToAdd: Node[] = []
+            const nodesToUpdate: { index: number; node: Node }[] = []
+
+            // Check existing nodes
+            currentNodes.forEach((node, index) => {
+                const desired = desiredNodeMap.get(node.id)
+                if (!desired) {
+                    // Node no longer exists
+                    nodesToRemove.add(node.id)
+                } else {
+                    // Node exists - check for updates (Simple Update)
+                    // We always update data/position to ensure sync, providing Vue Flow diff handles the DOM
+                    // Optimization: We could deep compare here, but Vue Flow handles minimal DOM updates if refs are stable
+                    nodesToUpdate.push({ index, node: desired })
+                    desiredNodeMap.delete(node.id) // Mark as processed
                 }
-                return true
             })
 
-            deps.nodes.value = validNodes
-            console.log(`🔄 [SYNC] Updated nodes: ${validNodes.length} valid nodes`)
+            // Remaining nodes in map are NEW
+            for (const newNode of desiredNodeMap.values()) {
+                nodesToAdd.push(newNode)
+            }
+
+            // 3. Apply Updates safely
+            let hasChanges = false
+
+            // Remove invalid nodes
+            if (nodesToRemove.size > 0) {
+                // Filter in-place reduction
+                const filtered = currentNodes.filter(n => !nodesToRemove.has(n.id))
+                deps.nodes.value = filtered
+                hasChanges = true
+            }
+
+            // Apply updates
+            nodesToUpdate.forEach(({ index, node }) => {
+                // We update the existing object properties to preserve component instance if possible
+                // OR we replace the object at the index if needed.
+                // Vue Flow generally tracks by ID.
+                const target = deps.nodes.value.find(n => n.id === node.id)
+                if (target) {
+                    let changed = false
+                    // Update Position
+                    if (Math.abs(target.position.x - node.position.x) > 0.1 || Math.abs(target.position.y - node.position.y) > 0.1) {
+                        target.position = node.position
+                        changed = true
+                    }
+                    // Update Data (Reactive replacement)
+                    // Simple JSON compare or just assignment? Assignment is cheaper than full compare usually
+                    // But to avoid watchers firing, maybe compare?
+                    // Let's rely on shallow checks or just assign.
+                    // Ideally we merge data.
+                    if (JSON.stringify(target.data) !== JSON.stringify(node.data)) {
+                        target.data = node.data
+                        changed = true
+                    }
+                    // Parenting
+                    if (target.parentNode !== node.parentNode) {
+                        target.parentNode = node.parentNode
+                        changed = true
+                    }
+                    // ZIndex
+                    if (target.zIndex !== node.zIndex) {
+                        target.zIndex = node.zIndex
+                        changed = true
+                    }
+                    // Style
+                    if (JSON.stringify(target.style) !== JSON.stringify(node.style)) {
+                        target.style = node.style
+                        changed = true
+                    }
+                    if (changed) hasChanges = true
+                }
+            })
+
+            // Add new nodes
+            if (nodesToAdd.length > 0) {
+                deps.nodes.value = [...deps.nodes.value, ...nodesToAdd]
+                hasChanges = true
+            }
+
+            if (hasChanges) {
+                // console.log(`🔄 [SYNC] Smart Sync: +${nodesToAdd.length}, -${nodesToRemove.size}, ~${nodesToUpdate.length} updates`)
+            }
 
             // Clean up any stale Vue Flow DOM nodes after sync
             nextTick(() => {
@@ -356,7 +436,8 @@ export function useCanvasSync(deps: SyncDependencies) {
             }
 
             // Resync data
-            console.log('🔄 [SYSTEM] Resynchronizing data...')
+            // console.log('🔄 [SYSTEM] Resynchronizing data...')
+            // if (isFirefox) console.log(`🦊 [SYNC] Firefox/Zen detected - using optimized batch settings (${batchSize})`)
             await nextTick()
             syncNodes()
             syncEdges()

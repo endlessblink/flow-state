@@ -183,7 +183,7 @@ export function useTaskOperations(
             taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${taskTitle.substring(0, 30)}`)
 
             const dbInstance = (window as any).pomoFlowDb
-            if (dbInstance && (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY)) {
+            if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_ONLY) {
                 await _deleteIndividualTask(dbInstance, taskId)
 
                 // Track deletion intent
@@ -245,7 +245,7 @@ export function useTaskOperations(
             tasks.value = tasksToKeep
 
             const dbInstance = (window as any).pomoFlowDb
-            if (dbInstance && (STORAGE_FLAGS.DUAL_WRITE_TASKS || STORAGE_FLAGS.INDIVIDUAL_ONLY)) {
+            if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_ONLY) {
                 await _deleteIndividualTasksBulk(dbInstance, taskIds)
 
                 try {

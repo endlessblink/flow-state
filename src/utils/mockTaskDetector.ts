@@ -60,13 +60,13 @@ export const MOCK_TASK_PATTERNS: MockTaskPattern[] = [
   {
     name: 'Sample Task Pattern',
     pattern: /sample|example|demo|test/i,
-    confidence: 'medium',
+    confidence: 'low',
     description: 'Contains sample/test keywords (case-insensitive)'
   },
   {
     name: 'Auto-generated ID Pattern',
     pattern: /^\d{11,}$/, // Very long numeric IDs
-    confidence: 'medium',
+    confidence: 'low',
     description: 'Auto-generated numeric IDs (11+ digits)'
   },
   {

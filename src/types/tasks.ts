@@ -114,6 +114,7 @@ export interface Project {
   viewType: 'status' | 'date' | 'priority' // Kanban view type for this project
   parentId?: string | null // For nested projects
   createdAt: Date
+  updatedAt: Date
 }
 
 // Type aliases and utility types

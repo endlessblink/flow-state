@@ -7,6 +7,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { saveIndividualNotifications, loadIndividualNotifications, deleteIndividualNotification } from '@/utils/individualNotificationStorage'
 import type {
   ScheduledNotification,
   NotificationPreferences,
@@ -87,9 +88,10 @@ export const useNotificationStore = defineStore('notifications', () => {
         return
       }
 
-      const saved = await db.load<ScheduledNotification[]>(DB_KEYS.NOTIFICATIONS)
-      if (saved) {
+      const saved = await loadIndividualNotifications(db.database.value as any)
+      if (saved && saved.length > 0) {
         scheduledNotifications.value = saved
+        console.log(`📬 Loaded ${saved.length} notifications from individual docs`)
       }
     } catch (error) {
       errorHandler.report({
@@ -381,7 +383,15 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const removeTaskNotifications = async (taskId: string) => {
     if (Array.isArray(scheduledNotifications.value)) {
+      const toDelete = scheduledNotifications.value.filter(n => n.taskId === taskId)
       scheduledNotifications.value = scheduledNotifications.value.filter(n => n.taskId !== taskId)
+
+      const pouchDb = db.database.value
+      if (pouchDb) {
+        for (const n of toDelete) {
+          await deleteIndividualNotification(pouchDb as any, n.id)
+        }
+      }
     } else {
       scheduledNotifications.value = []
     }
@@ -454,7 +464,9 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const saveScheduledNotifications = async () => {
     try {
-      await db.save(DB_KEYS.NOTIFICATIONS, scheduledNotifications.value)
+      const dbInstance = db.database.value
+      if (!dbInstance) return
+      await saveIndividualNotifications(dbInstance as any, scheduledNotifications.value)
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.WARNING,
@@ -474,8 +486,8 @@ export const useNotificationStore = defineStore('notifications', () => {
     if (notificationSaveTimer) clearTimeout(notificationSaveTimer)
     notificationSaveTimer = setTimeout(async () => {
       await saveScheduledNotifications()
-      console.log('📬 [BUG-025] Notifications auto-saved')
-    }, 500) // 500ms debounce
+      console.log('📬 [UNIFICATION] Notifications auto-saved (1s debounce)')
+    }, 1000) // Refined: 1s debounce
   }, { deep: true })
 
   /**

@@ -229,6 +229,30 @@ export function applyConsoleFiltering(): void {
       originalConsole.debug(...args)
     }
   }
+
+  // Intercept error logs to catch PouchDB "guardedConsole" errors
+  console.error = (...args: unknown[]) => {
+    const firstArg = String(args[0])
+
+    // Join all args to catch errors passed as second/third arguments (common in PouchDB)
+    const allArgsStr = args.map(a => {
+      if (a instanceof Error) return a.message + ' ' + a.stack
+      if (typeof a === 'object') return JSON.stringify(a)
+      return String(a)
+    }).join(' ')
+
+    // CRITICAL: Intercept PouchDB global failures that bypass normal error handling
+    if (allArgsStr.includes('Failed to read large IndexedDB value')) {
+      console.warn('🔥 [CONSOLE-INTERCEPT] Detected critical PouchDB error, triggering health detection...')
+      window.dispatchEvent(new CustomEvent('pouchdb-global-failure', {
+        detail: { message: allArgsStr }
+      }))
+    }
+
+    if (!shouldFilter(firstArg)) {
+      originalConsole.error(...args)
+    }
+  }
 }
 
 // Restore original console

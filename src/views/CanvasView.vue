@@ -2668,6 +2668,51 @@ onMounted(async () => {
   cleanupStaleNodes()
 
   await canvasStore.loadFromDatabase()
+
+  // TASK-089 FIX 10: Wait for task store to finish loading before syncing
+  // CanvasView's onMounted runs BEFORE App.vue's onMounted completes (Vue lifecycle order)
+  // This caused syncNodes() to run with empty tasks array
+  //
+  // Problem: isLoadingFromDatabase is FALSE initially (loading hasn't started yet!)
+  // CanvasView.onMounted runs before App.vue.onMounted even STARTS the loading.
+  //
+  // Solution: Wait until EITHER:
+  // - Tasks exist (loading completed successfully), OR
+  // - isLoadingFromDatabase becomes true then false (loading cycle completed), OR
+  // - Timeout (5 seconds max - user might genuinely have no tasks)
+  console.log(`⏳ [CANVAS] Checking task store state - tasks: ${taskStore.tasks.length}, loading: ${taskStore.isLoadingFromDatabase}`)
+
+  let waitAttempts = 0
+  const maxWaitAttempts = 50 // 5 seconds max
+  let loadingStarted = taskStore.isLoadingFromDatabase
+
+  // Wait until tasks exist OR loading cycle completes OR timeout
+  while (waitAttempts < maxWaitAttempts) {
+    // If loading started and now finished, we're done
+    if (loadingStarted && !taskStore.isLoadingFromDatabase) {
+      console.log(`✅ [CANVAS] Task loading cycle completed after ${waitAttempts * 100}ms, tasks: ${taskStore.tasks.length}`)
+      break
+    }
+
+    // Track if loading starts
+    if (taskStore.isLoadingFromDatabase) {
+      loadingStarted = true
+    }
+
+    // If tasks already exist and loading is not in progress, we're good
+    if (taskStore.tasks.length > 0 && !taskStore.isLoadingFromDatabase) {
+      console.log(`✅ [CANVAS] Tasks available (${taskStore.tasks.length}), proceeding with sync`)
+      break
+    }
+
+    await new Promise(r => setTimeout(r, 100))
+    waitAttempts++
+  }
+
+  if (waitAttempts >= maxWaitAttempts) {
+    console.warn(`⚠️ [CANVAS] Timed out waiting for tasks (${maxWaitAttempts * 100}ms), proceeding anyway with ${taskStore.tasks.length} tasks`)
+  }
+
   syncNodes()
   canvasStore.initializeDefaultSections()
 

@@ -518,6 +518,9 @@ export function useDatabase(): UseDatabaseReturn {
               deleted: change.deleted
             }
           }))
+        }).on('error', (err) => {
+          console.error('❌ [DATABASE] Changes feed error:', err)
+          detectGlobalDatabaseFailure(err)
         })
 
         database.value = singletonDatabase

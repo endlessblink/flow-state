@@ -216,6 +216,33 @@ try {
 }
 ```
 
+### Fix 10: Wait for Task Store to Load Before Canvas Sync (Jan 3, 2026)
+**Issue**: Canvas showed empty groups on initial page load, then tasks would appear after a delay.
+
+**Root Cause**: Vue's component lifecycle order means child component `onMounted` runs BEFORE parent component `onMounted`. CanvasView.vue mounts and calls `syncNodes()` BEFORE App.vue's `onMounted` completes the `Promise.all([taskStore.loadFromDatabase(), ...])`. This causes `syncNodes()` to run with an empty tasks array.
+
+**Files Fixed**:
+- `src/views/CanvasView.vue:2672-2684` - Added wait loop for `taskStore.isLoadingFromDatabase` before calling `syncNodes()`
+
+**Code Pattern**:
+```typescript
+// Before: syncNodes() runs immediately (with empty tasks)
+await canvasStore.loadFromDatabase()
+syncNodes()  // Tasks not loaded yet!
+
+// After: Wait for task store to finish loading first
+if (taskStore.isLoadingFromDatabase) {
+    console.log('⏳ [CANVAS] Waiting for task store to finish loading...')
+    let waitAttempts = 0
+    while (taskStore.isLoadingFromDatabase && waitAttempts < 50) {
+        await new Promise(r => setTimeout(r, 100))
+        waitAttempts++
+    }
+    console.log(`✅ [CANVAS] Task store ready after ${waitAttempts * 100}ms`)
+}
+syncNodes()  // Now tasks are loaded!
+```
+
 ## Files Modified
 
 | File | Changes |
@@ -228,6 +255,7 @@ try {
 | `src/composables/canvas/useCanvasSync.ts` | **Fix 5**: `syncNodes()` now respects locked task positions |
 | `src/components/tasks/TaskEditModal.vue` | **Fix 6**: Updated import to unified lock system, lock BEFORE updates |
 | `src/utils/canvasStateLock.ts` | Created in earlier session (unified lock system) |
+| `src/views/CanvasView.vue` | **Fix 10**: Wait for task store to load before syncing nodes |
 
 ## Lock System Overview
 

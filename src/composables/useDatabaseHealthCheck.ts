@@ -601,6 +601,7 @@ export function detectGlobalDatabaseFailure(err: unknown): boolean {
       message.includes('not, or is no longer, usable') ||
       message.includes('connection to indexed database server lost') ||
       message.includes('internal error was encountered') ||
+      message.includes('failed to read large indexeddb value') || // Specific large value error
       message.includes('unable to resolve latest revision') // Orphaned revision corruption
 
     if (isGlobalFailure) {
@@ -625,4 +626,13 @@ export function resetGlobalFailureCount(): void {
     console.log('✅ [DB-HEALTH] Resetting global failure count (operation succeeded)')
     globalFailureCount = 0
   }
+}
+
+// Listen for global failure events from consoleFilter interception
+if (typeof window !== 'undefined') {
+  window.addEventListener('pouchdb-global-failure', ((event: CustomEvent) => {
+    const message = event.detail?.message || 'Unknown global failure'
+    console.warn(`📥 [DB-HEALTH] Received global failure event: ${message}`)
+    detectGlobalDatabaseFailure(new Error(message))
+  }) as EventListener)
 }

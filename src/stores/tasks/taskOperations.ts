@@ -310,6 +310,7 @@ export function useTaskOperations(
         }
         task.subtasks.push(newSubtask)
         task.updatedAt = new Date()
+        saveSpecificTasks([task], `createSubtask-${newSubtask.id}`)
         return newSubtask
     }
 
@@ -320,6 +321,7 @@ export function useTaskOperations(
         if (idx !== -1) {
             task.subtasks[idx] = { ...task.subtasks[idx], ...updates, updatedAt: new Date() }
             task.updatedAt = new Date()
+            saveSpecificTasks([task], `updateSubtask-${subtaskId}`)
         }
     }
 
@@ -330,6 +332,7 @@ export function useTaskOperations(
         if (idx !== -1) {
             task.subtasks.splice(idx, 1)
             task.updatedAt = new Date()
+            saveSpecificTasks([task], `deleteSubtask-${subtaskId}`)
         }
     }
 
@@ -343,6 +346,7 @@ export function useTaskOperations(
         if (!task.instances) task.instances = []
         task.instances.push(newInstance)
         task.updatedAt = new Date()
+        saveSpecificTasks([task], `createInstance-${newInstance.id}`)
         return newInstance
     }
 
@@ -353,6 +357,7 @@ export function useTaskOperations(
         if (idx !== -1) {
             task.instances[idx] = { ...task.instances[idx], ...updates }
             task.updatedAt = new Date()
+            saveSpecificTasks([task], `updateInstance-${instanceId}`)
         }
     }
 
@@ -363,6 +368,7 @@ export function useTaskOperations(
         if (idx !== -1) {
             task.instances.splice(idx, 1)
             task.updatedAt = new Date()
+            saveSpecificTasks([task], `deleteInstance-${instanceId}`)
         }
     }
 

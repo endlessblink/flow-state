@@ -2,74 +2,32 @@
   <div class="filter-controls">
     <!-- Project Filter -->
     <div class="filter-control">
-      <select
-        :value="activeProjectId || ''"
-        class="filter-select"
-        @input="updateProjectFilter($event)"
-      >
-        <option value="">
-          All Projects
-        </option>
-        <option v-for="project in projects" :key="project.id" :value="project.id">
-          {{ project.name }}
-        </option>
-      </select>
+      <CustomSelect
+        :model-value="activeProjectId || ''"
+        :options="projectOptions"
+        placeholder="All Projects"
+        @update:model-value="updateProjectFilter"
+      />
     </div>
 
     <!-- Smart View Filter -->
     <div class="filter-control">
-      <select
-        :value="activeSmartView || ''"
-        class="filter-select"
-        @input="updateSmartView($event)"
-      >
-        <option value="">
-          All Tasks
-        </option>
-        <option value="today">
-          Today
-        </option>
-        <option value="week">
-          This Week
-        </option>
-        <option value="uncategorized">
-          Uncategorized
-        </option>
-        <option value="all_active">
-          All Active
-        </option>
-        <option value="unscheduled">
-          Unscheduled
-        </option>
-      </select>
+      <CustomSelect
+        :model-value="activeSmartView || ''"
+        :options="smartViewOptions"
+        placeholder="All Tasks"
+        @update:model-value="updateSmartView"
+      />
     </div>
 
     <!-- Status Filter -->
     <div class="filter-control">
-      <select
-        :value="activeStatusFilter || ''"
-        class="filter-select"
-        @input="updateStatusFilter($event)"
-      >
-        <option value="">
-          All Status
-        </option>
-        <option value="planned">
-          Planned
-        </option>
-        <option value="in_progress">
-          In Progress
-        </option>
-        <option value="done">
-          Done
-        </option>
-        <option value="backlog">
-          Backlog
-        </option>
-        <option value="on_hold">
-          On Hold
-        </option>
-      </select>
+      <CustomSelect
+        :model-value="activeStatusFilter || ''"
+        :options="statusOptions"
+        placeholder="All Status"
+        @update:model-value="updateStatusFilter"
+      />
     </div>
 
     <!-- Hide Done Tasks Toggle -->
@@ -97,28 +55,51 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 const taskStore = useTaskStore()
 const { projects, activeProjectId, activeSmartView, activeStatusFilter, hideDoneTasks } = storeToRefs(taskStore)
 
+// Options for CustomSelect components
+const projectOptions = computed(() => [
+  { label: 'All Projects', value: '' },
+  ...projects.value.map(p => ({ label: p.name, value: p.id }))
+])
+
+const smartViewOptions = [
+  { label: 'All Tasks', value: '' },
+  { label: 'Today', value: 'today' },
+  { label: 'This Week', value: 'week' },
+  { label: 'Uncategorized', value: 'uncategorized' },
+  { label: 'All Active', value: 'all_active' },
+  { label: 'Unscheduled', value: 'unscheduled' }
+]
+
+const statusOptions = [
+  { label: 'All Status', value: '' },
+  { label: 'Planned', value: 'planned' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Done', value: 'done' },
+  { label: 'Backlog', value: 'backlog' },
+  { label: 'On Hold', value: 'on_hold' }
+]
+
 // Filter update methods
-const updateProjectFilter = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const projectId = target.value || null
+const updateProjectFilter = (value: string | number) => {
+  const projectId = value === '' ? null : String(value)
   taskStore.setActiveProject(projectId)
 }
 
-const updateSmartView = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const view = target.value as 'today' | 'week' | 'uncategorized' | 'all_active' | 'unscheduled' | null
+const updateSmartView = (value: string | number) => {
+  const view = value === '' ? null : value as 'today' | 'week' | 'uncategorized' | 'all_active' | 'unscheduled'
   taskStore.setSmartView(view)
 }
 
-const updateStatusFilter = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const statusFilter = target.value || null
+const updateStatusFilter = (value: string | number) => {
+  const statusFilter = value === '' ? null : String(value)
   taskStore.setActiveStatusFilter(statusFilter)
 }
 
@@ -145,17 +126,15 @@ const clearAllFilters = () => {
 </script>
 
 <style scoped>
-/* Main container with glass morphism effect */
+/* Main container */
 .filter-controls {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 8px 16px;
-  background: transparent; /* Remove heavy glass bg */
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border: none; /* Remove border for cleaner look */
+  background: transparent;
+  border: none;
   border-radius: 16px;
   height: auto;
   min-height: 44px;
@@ -170,26 +149,7 @@ const clearAllFilters = () => {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-}
-
-/* Select dropdown styling */
-.filter-select {
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border-hover);
-  color: var(--text-primary);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
-  outline: none;
-  cursor: pointer;
   min-width: 120px;
-  height: 32px;
-  box-sizing: border-box;
-}
-
-.filter-select option {
-  background: var(--surface-secondary);
-  color: var(--text-primary);
 }
 
 /* Checkbox control container */
@@ -223,7 +183,7 @@ const clearAllFilters = () => {
   flex-shrink: 0;
 }
 
-/* Clear button styling - using existing design tokens */
+/* Clear button styling */
 .clear-filters-btn {
   background: var(--danger-bg-subtle);
   border: 1px solid var(--danger-border-medium);

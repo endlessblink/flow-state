@@ -105,29 +105,13 @@
       </div>
 
       <!-- Status (matches TaskTable status-cell) -->
-      <div class="task-row__status">
-        <select
-          :value="task.status"
-          class="task-row__status-select"
-          title="Change status"
-          @change="updateTaskStatus(task.id, ($event.target as HTMLSelectElement).value)"
-        >
-          <option value="planned">
-            To Do
-          </option>
-          <option value="in_progress">
-            In Progress
-          </option>
-          <option value="done">
-            Done
-          </option>
-          <option value="backlog">
-            Backlog
-          </option>
-          <option value="on_hold">
-            On Hold
-          </option>
-        </select>
+      <div class="task-row__status" @click.stop>
+        <CustomSelect
+          :model-value="task.status"
+          :options="statusOptions"
+          placeholder="Select status..."
+          @update:model-value="(val) => updateTaskStatus(task.id, String(val))"
+        />
       </div>
 
       <!-- Priority (matches TaskTable priority-cell) -->
@@ -228,6 +212,16 @@ import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Status options for CustomSelect
+const statusOptions = [
+  { label: 'To Do', value: 'planned' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Done', value: 'done' },
+  { label: 'Backlog', value: 'backlog' },
+  { label: 'On Hold', value: 'on_hold' }
+]
 
 interface Props {
   task: Task

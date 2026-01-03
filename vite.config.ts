@@ -50,7 +50,14 @@ export default defineConfig(({ mode }) => ({
     host: '0.0.0.0',
     port: 5546,
     strictPort: true, // Force single port usage - prevents multiple instances
-    open: false // Prevent multiple browser instances
+    open: false, // Prevent multiple browser instances
+    proxy: {
+      '/pomoflow-tasks': {
+        target: 'http://84.46.253.137:5984',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   build: {
     // Simplified build for faster compilation

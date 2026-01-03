@@ -22,6 +22,13 @@ import {
   deleteSection as deleteIndividualSection,
   migrateFromLegacyFormat as migrateSectionsFromLegacy
 } from '@/utils/individualSectionStorage'
+// TASK-089: Canvas state lock to prevent sync from overwriting user changes
+import {
+  isGroupPositionLocked,
+  getLockedGroupPosition,
+  isViewportLocked,
+  getLockedViewport
+} from '@/utils/canvasStateLock'
 
 // Task store import for safe sync functionality
 // Using unknown to avoid circular import issues - cast when accessing
@@ -642,10 +649,43 @@ export const useCanvasStore = defineStore('canvas', () => {
     isSyncingFromRemote = true
     try {
       const index = groups.value.findIndex(g => g.id === id)
+
+      // TASK-089: Check for position lock before updating
+      // If group is locked, preserve local position/dimensions
+      const lockedPosition = getLockedGroupPosition(id)
+
       if (index !== -1) {
-        groups.value[index] = { ...data }
+        if (lockedPosition) {
+          // Merge remote data but preserve locked position
+          // CRITICAL FIX: width/height MUST be inside position object (not at root)
+          console.log(`🛡️ [TASK-089] updateSectionFromSync: Preserving locked position for group ${id}`)
+          groups.value[index] = {
+            ...data,
+            position: {
+              x: lockedPosition.x,
+              y: lockedPosition.y,
+              width: lockedPosition.width,
+              height: lockedPosition.height
+            }
+          }
+        } else {
+          groups.value[index] = { ...data }
+        }
       } else {
-        groups.value.push({ ...data })
+        // New group - lockedPosition unlikely but handle gracefully
+        if (lockedPosition) {
+          groups.value.push({
+            ...data,
+            position: {
+              x: lockedPosition.x,
+              y: lockedPosition.y,
+              width: lockedPosition.width,
+              height: lockedPosition.height
+            }
+          })
+        } else {
+          groups.value.push({ ...data })
+        }
       }
       requestSync() // Essential to update Vue Flow nodes/groups
     } finally {
@@ -1263,6 +1303,17 @@ export const useCanvasStore = defineStore('canvas', () => {
   // TASK-072: Load saved viewport on initialization
   const loadSavedViewport = async (): Promise<boolean> => {
     try {
+      // TASK-089: Check for viewport lock before loading
+      // If user recently panned/zoomed, preserve their position
+      if (isViewportLocked()) {
+        const lockedViewport = getLockedViewport()
+        if (lockedViewport) {
+          console.log('🛡️ [TASK-089] loadSavedViewport: Preserving locked viewport, skipping database load')
+          viewport.value = lockedViewport
+          return true
+        }
+      }
+
       const savedViewport = await db.load<{ x: number; y: number; zoom: number }>(DB_KEYS.CANVAS_VIEWPORT)
       if (savedViewport && typeof savedViewport.x === 'number') {
         viewport.value = savedViewport

@@ -4,6 +4,8 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { NodeUpdateBatcher } from '@/utils/canvas/NodeUpdateBatcher'
+// TASK-089: Canvas state lock to prevent sync from overwriting user changes
+import { isAnyCanvasStateLocked } from '@/utils/canvasStateLock'
 
 interface SyncDependencies {
     nodes: Ref<Node[]>
@@ -367,17 +369,24 @@ export function useCanvasSync(deps: SyncDependencies) {
     const batchedSyncNodes = (priority: 'high' | 'normal' | 'low' = 'normal') => {
         if (_nodeUpdateBatcher) {
             _nodeUpdateBatcher.schedule(() => {
+                // TASK-089: Added isAnyCanvasStateLocked() check
                 if (!deps.isHandlingNodeChange.value &&
                     !deps.isSyncing.value &&
                     !deps.isNodeDragging.value &&
                     !deps.isDragSettlingRef.value &&
                     !deps.resizeState.value.isResizing &&
-                    !deps.isResizeSettling.value) {
+                    !deps.isResizeSettling.value &&
+                    !isAnyCanvasStateLocked()) {
                     syncNodes()
                 }
             }, priority)
         } else {
-            syncNodes()
+            // TASK-089: Guard fallback path as well
+            if (!isAnyCanvasStateLocked()) {
+                syncNodes()
+            } else {
+                console.log('🛡️ [TASK-089] syncNodes blocked in batchedSyncNodes fallback - canvas state locked')
+            }
         }
     }
 

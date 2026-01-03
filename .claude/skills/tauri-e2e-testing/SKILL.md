@@ -323,8 +323,156 @@ test('app startup under 3 seconds', async ({ page }) => {
 | `mock-tauri.ts` | Tauri API mocking helpers | `src/tests/e2e/fixtures/` |
 | `test.yml` | GitHub Actions workflow | `.github/workflows/` |
 
+## WebKitGTK UI Compatibility (Linux)
+
+### The Problem
+
+On Linux, Tauri uses **WebKitGTK** as its webview engine. Unlike Chromium (Windows/macOS), WebKitGTK renders certain UI elements using **GTK native widgets** instead of CSS:
+
+| Element | Chromium | WebKitGTK |
+|---------|----------|-----------|
+| `<select>` | CSS-styled | GTK native widget |
+| `<input type="date">` | CSS-styled | GTK native widget |
+| `<input type="color">` | CSS-styled | GTK native widget |
+| Scrollbars | CSS-styled | Often GTK native |
+
+**CSS cannot fully style these native elements** - they inherit from the system GTK theme.
+
+### Known Issues
+
+- [Tauri #11755](https://github.com/tauri-apps/tauri/issues/11755): Select element not styled correctly
+- [Tauri #1126](https://github.com/tauri-apps/tauri/issues/1126): background-color for `<select>` ignored
+
+### The Solution: Use Custom Components
+
+**Replace native form elements with custom Vue components:**
+
+```vue
+<!-- ❌ WRONG - Native select won't style in WebKitGTK -->
+<select v-model="value">
+  <option value="a">Option A</option>
+  <option value="b">Option B</option>
+</select>
+
+<!-- ✅ CORRECT - Custom component with full CSS control -->
+<CustomSelect
+  v-model="value"
+  :options="[
+    { label: 'Option A', value: 'a' },
+    { label: 'Option B', value: 'b' }
+  ]"
+/>
+```
+
+### Quick CSS Fixes (Partial)
+
+Add to your main CSS file:
+
+```css
+/* Signal dark mode to browser */
+:root {
+  color-scheme: dark;
+}
+
+/* Reset native appearance (helps with trigger button only) */
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #1e1e28;
+  color: #e0e0e0;
+}
+```
+
+**Note:** This only affects the closed select trigger, NOT the dropdown options list.
+
+### Files That Need Migration
+
+When fixing a Tauri app, search for native `<select>` usage:
+
+```bash
+grep -rn "<select" src/components/ --include="*.vue" | grep -v CustomSelect
+```
+
+Common locations in Pomo-Flow:
+- `src/components/base/FilterControls.vue` ✅ Fixed
+- `src/components/sync/BackupSettings.vue`
+- `src/components/kanban/KanbanSwimlane.vue`
+- `src/components/common/GroupModal.vue`
+- `src/components/projects/ProjectModal.vue`
+- `src/components/canvas/UnifiedGroupModal.vue`
+- `src/components/tasks/HierarchicalTaskRow.vue`
+- `src/components/tasks/TaskTable.vue`
+- `src/components/tasks/BatchEditModal.vue`
+- `src/components/canvas/GroupSettingsMenu.vue`
+- `src/components/recurrence/RecurrencePatternSelector.vue`
+
+### Migration Pattern
+
+1. **Import CustomSelect:**
+   ```typescript
+   import CustomSelect from '@/components/common/CustomSelect.vue'
+   ```
+
+2. **Create options array:**
+   ```typescript
+   const options = [
+     { label: 'All Items', value: '' },
+     { label: 'Option 1', value: 'opt1' },
+     { label: 'Option 2', value: 'opt2' }
+   ]
+   ```
+
+3. **Replace template:**
+   ```vue
+   <CustomSelect
+     :model-value="selectedValue"
+     :options="options"
+     placeholder="Select..."
+     @update:model-value="handleChange"
+   />
+   ```
+
+### Tauri Environment Detection
+
+Detect Tauri to apply conditional styling:
+
+```typescript
+// In main.ts - run early before CSS loads
+const isTauri = ('isTauri' in window && window.isTauri) ||
+                ('__TAURI__' in window) ||
+                ('__TAURI_INTERNALS__' in window)
+
+if (isTauri) {
+  document.documentElement.classList.add('tauri-app')
+}
+```
+
+Then in CSS:
+```css
+.tauri-app .some-element {
+  /* Tauri-specific overrides */
+  backdrop-filter: none;
+  background: rgba(25, 25, 30, 0.98);
+}
+```
+
+### Backdrop-Filter Limitations
+
+WebKitGTK has limited `backdrop-filter` support. Add fallbacks:
+
+```css
+/* Glass morphism fallback for Tauri */
+.tauri-app .glass,
+.tauri-app [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(25, 25, 30, 0.98) !important;
+}
+```
+
 ## References
 
 For detailed patterns and examples, see:
 - `references/testing-patterns.md` - Common test patterns
 - `references/troubleshooting.md` - Debugging guide
+- `references/webkitgtk-compatibility.md` - Full WebKitGTK UI guide

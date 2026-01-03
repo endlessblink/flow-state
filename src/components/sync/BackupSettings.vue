@@ -7,240 +7,280 @@
       </p>
     </div>
 
-    <!-- Data Integrity Status -->
-    <div class="integrity-status" :class="{ 'has-issues': !integrityStatus.valid }">
-      <div class="status-header">
+    <!-- Navigation Tabs -->
+    <div class="settings-tabs">
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeTab === 'status' }"
+        @click="activeTab = 'status'"
+      >
+        <Activity :size="16" />
+        System Status
+      </button>
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeTab === 'manual' }"
+        @click="activeTab = 'manual'"
+      >
+        <Wrench :size="16" />
+        Manual Tools
+      </button>
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeTab === 'safety' }"
+        @click="activeTab = 'safety'"
+      >
         <Shield :size="16" />
-        <span>Data Integrity</span>
-        <span class="status-indicator" :class="integrityStatus.valid ? 'valid' : 'invalid'">
-          {{ integrityStatus.valid ? '✅ Healthy' : '⚠️ Issues' }}
-        </span>
-      </div>
+        Data Portability
+      </button>
     </div>
 
-    <!-- Scheduler Status -->
-    <div class="scheduler-status">
-      <div class="status-item">
-        <Clock :size="14" />
-        <span>Status: {{ schedulerStatus }}</span>
-      </div>
-      <div class="status-item">
-        <Calendar :size="14" />
-        <span>Next backup: {{ nextBackupIn }}</span>
-      </div>
-      <div class="status-item">
-        <Database :size="14" />
-        <span>Success rate: {{ stats.successRate.toFixed(1) }}%</span>
-      </div>
-    </div>
-
-    <!-- Backup Settings -->
-    <div class="settings-section">
-      <h4>⚙️ Backup Settings</h4>
-
-      <div class="setting-group">
-        <label class="setting-label">
-          <span>Backup Frequency</span>
-          <span class="setting-description">How often to automatically create backups</span>
-        </label>
-        <select v-model="schedule.frequency" class="setting-select" @change="updateFrequency">
-          <option value="off">
-            Disabled
-          </option>
-          <option value="5min">
-            Every 5 minutes
-          </option>
-          <option value="15min">
-            Every 15 minutes
-          </option>
-          <option value="30min">
-            Every 30 minutes
-          </option>
-          <option value="1hour">
-            Every hour
-          </option>
-          <option value="6hours">
-            Every 6 hours
-          </option>
-          <option value="daily">
-            Daily
-          </option>
-          <option value="weekly">
-            Weekly
-          </option>
-        </select>
+    <!-- TAB 1: System Status -->
+    <div v-if="activeTab === 'status'" class="tab-content">
+      <!-- Data Integrity Status -->
+      <div class="integrity-status" :class="{ 'has-issues': !integrityStatus.valid }">
+        <div class="status-header">
+          <Shield :size="16" />
+          <span>Data Integrity</span>
+          <span class="status-indicator" :class="integrityStatus.valid ? 'valid' : 'invalid'">
+            {{ integrityStatus.valid ? '✅ Healthy' : '⚠️ Issues' }}
+          </span>
+        </div>
       </div>
 
-      <div class="setting-group">
-        <label class="setting-label">
-          <span>Storage Location</span>
-          <span class="setting-description">Where to store your backups</span>
-        </label>
-        <select v-model="schedule.storageLocation" class="setting-select" @change="updateStorageLocation">
-          <option value="local">
-            Local only
-          </option>
-          <option value="cloud">
-            Cloud only
-          </option>
-          <option value="both">
-            Local + Cloud
-          </option>
-        </select>
+      <!-- Scheduler Status -->
+      <div class="scheduler-status">
+        <div class="status-item">
+          <Clock :size="14" />
+          <span>Status: {{ schedulerStatus }}</span>
+        </div>
+        <div class="status-item">
+          <Calendar :size="14" />
+          <span>Next: {{ nextBackupIn }}</span>
+        </div>
+        <div class="status-item">
+          <Database :size="14" />
+          <span>History: {{ backupHistory.length }} backups</span>
+        </div>
       </div>
 
-      <div class="setting-group">
-        <label class="setting-label">
+      <!-- Backup Settings -->
+      <div class="settings-section">
+        <h4>⚙️ Automation Settings</h4>
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>Backup Frequency</span>
+            <span class="setting-description">How often to automatically create snapshots</span>
+          </label>
+          <CustomSelect
+            :model-value="schedule.frequency"
+            :options="frequencyOptions"
+            placeholder="Select frequency..."
+            @update:model-value="(val) => { schedule.frequency = String(val); updateFrequency() }"
+          />
+        </div>
+
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>Max Snapshots</span>
+            <span class="setting-description">Keep only the most recent backups</span>
+          </label>
           <input
-            v-model="schedule.autoDownload"
-            type="checkbox"
-            @change="updateAutoDownload"
+            v-model.number="schedule.maxBackups"
+            type="number"
+            min="5"
+            max="100"
+            class="setting-input"
+            @change="updateMaxBackups"
           >
-          <span>Auto-download backups</span>
-          <span class="setting-description">Automatically download backup files to your computer</span>
-        </label>
-      </div>
-
-      <div class="setting-group">
-        <label class="setting-label">
-          <span>Maximum backups</span>
-          <span class="setting-description">Keep only the most recent backups</span>
-        </label>
-        <input
-          v-model.number="schedule.maxBackups"
-          type="number"
-          min="5"
-          max="100"
-          class="setting-input"
-          @change="updateMaxBackups"
-        >
-      </div>
-    </div>
-
-    <!-- Scheduler Controls -->
-    <div class="scheduler-controls">
-      <h4>🎛️ Scheduler Controls</h4>
-
-      <div class="control-buttons">
-        <button
-          :disabled="isSchedulerRunning && !isSchedulerPaused"
-          class="control-btn start"
-          @click="startScheduler"
-        >
-          <Play :size="16" />
-          Start
-        </button>
-
-        <button
-          :disabled="!isSchedulerRunning || isSchedulerPaused"
-          class="control-btn pause"
-          @click="pauseScheduler"
-        >
-          <Pause :size="16" />
-          Pause
-        </button>
-
-        <button
-          :disabled="!isSchedulerRunning"
-          class="control-btn stop"
-          @click="stopScheduler"
-        >
-          <Square :size="16" />
-          Stop
-        </button>
-      </div>
-    </div>
-
-    <!-- Backup Actions -->
-    <div class="backup-actions">
-      <h4>🚀 Backup Actions</h4>
-
-      <div class="action-buttons">
-        <button :disabled="isCreatingBackup" class="action-btn primary" @click="createManualBackup">
-          <RefreshCw v-if="isCreatingBackup" :size="16" class="animate-spin" />
-          <Download v-else :size="16" />
-          Create Backup
-        </button>
-
-        <button :disabled="isValidating" class="action-btn secondary" @click="validateData">
-          <Shield v-if="!isValidating" :size="16" />
-          <Loader v-else :size="16" class="animate-spin" />
-          Validate Data
-        </button>
-
-        <button class="action-btn accent" @click="viewRecoveryCenter">
-          <Activity :size="16" />
-          Recovery Center
-        </button>
-
-        <button :disabled="isRescuing" class="action-btn danger-outline" @click="rescueTasks">
-          <Activity v-if="!isRescuing" :size="16" />
-          <Loader v-else :size="16" class="animate-spin" />
-          Rescue Tasks
-        </button>
-      </div>
-    </div>
-
-    <!-- Markdown Auto-Export -->
-    <div class="settings-section">
-      <h4>📂 Data Safety (Markdown Export)</h4>
-      <p class="subtitle" style="margin-bottom: var(--space-4)">
-        Continuously save your tasks as readable text files to a local folder.
-      </p>
-
-      <div class="setting-group">
-        <div class="action-buttons">
-            <button
-              class="action-btn"
-              :class="exportStatus.isEnabled.value ? 'primary' : 'secondary'"
-              @click="toggleAutoExport"
-            >
-              <FolderOpen :size="16" />
-              {{ exportStatus.isEnabled.value ? 'Auto-Export Active' : 'Select Export Folder' }}
-            </button>
-
-             <button
-              class="action-btn secondary"
-              :disabled="!exportStatus.isEnabled.value || exportStatus.isExporting.value"
-              @click="triggerManualExport"
-            >
-              <RefreshCw v-if="exportStatus.isExporting.value" :size="16" class="animate-spin" />
-              <Download v-else :size="16" />
-              Export Now
-            </button>
-        </div>
-        
-        <div v-if="exportStatus.isEnabled.value" class="status-item" style="margin-top: var(--space-2)">
-            <CheckCircle :size="14" style="color: var(--success)" />
-            <span style="color: var(--text-secondary)">Last export: {{ exportStatus.lastExportTime.value ? formatTime(exportStatus.lastExportTime.value) : 'Never' }} ({{ exportStatus.count.value }} files)</span>
         </div>
       </div>
-    </div>
 
-    <!-- Backup History -->
-    <div v-if="backupHistory.length > 0" class="backup-history">
-      <h4>📜 Recent History</h4>
-      <div class="history-list">
-        <div v-for="(backup, index) in backupHistory.slice(0, 5)" :key="index" class="history-item">
-          <div class="history-info">
-            <span class="history-time">{{ formatTime(backup.timestamp) }}</span>
-            <span class="history-status success">
-              ✅ Success
-            </span>
-            <span class="history-size">{{ formatSize(backup.metadata?.size || 0) }}</span>
+      <div class="scheduler-controls">
+         <div class="control-buttons">
+          <button :disabled="isSchedulerRunning && !isSchedulerPaused" class="control-btn start" @click="startScheduler">
+            <Play :size="16" /> Start
+          </button>
+          <button :disabled="!isSchedulerRunning || isSchedulerPaused" class="control-btn pause" @click="pauseScheduler">
+            <Pause :size="16" /> Pause
+          </button>
+          <button :disabled="!isSchedulerRunning" class="control-btn stop" @click="stopScheduler">
+            <Square :size="16" /> Stop
+          </button>
+        </div>
+      </div>
+
+      <!-- Backup History -->
+      <div v-if="backupHistory.length > 0" class="backup-history">
+        <h4>📜 Recent Snapshots</h4>
+        <div class="history-list">
+          <div v-for="(backup, index) in backupHistory.slice(0, 5)" :key="index" class="history-item">
+            <div class="history-info">
+              <span class="history-time">{{ formatTime(backup.timestamp) }}</span>
+              <span class="history-status success">✅ Success</span>
+              <span class="history-size">{{ formatSize(backup.metadata?.size || 0) }}</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Restore Dialog -->
+    <!-- TAB 2: Manual Tools -->
+    <div v-if="activeTab === 'manual'" class="tab-content">
+       <div class="backup-actions">
+        <h4>🛠️ Maintenance & Recovery</h4>
+        
+        <div class="action-grid">
+           <!-- Manual Backup -->
+           <div class="tool-card">
+              <div class="tool-icon"><Save :size="24" /></div>
+              <div class="tool-info">
+                  <h5>Create Snapshot</h5>
+                  <p>Manually save current state</p>
+              </div>
+              <button :disabled="isCreatingBackup" class="action-btn primary sm" @click="createManualBackup">
+                <RefreshCw v-if="isCreatingBackup" :size="14" class="animate-spin" />
+                <span v-else>Save Now</span>
+              </button>
+           </div>
+
+           <!-- Restore -->
+           <div class="tool-card">
+              <div class="tool-icon"><RotateCcw :size="24" /></div>
+              <div class="tool-info">
+                  <h5>Recovery Center</h5>
+                  <p>Restore from internal snapshots</p>
+              </div>
+              <button class="action-btn accent sm" @click="viewRecoveryCenter">
+                Open
+              </button>
+           </div>
+
+           <!-- Validate -->
+           <div class="tool-card">
+              <div class="tool-icon"><CheckSquare :size="24" /></div>
+              <div class="tool-info">
+                  <h5>Validate Data</h5>
+                  <p>Check for consistency issues</p>
+              </div>
+               <button :disabled="isValidating" class="action-btn secondary sm" @click="validateData">
+                <Loader v-if="isValidating" :size="14" class="animate-spin" />
+                <span v-else>Check</span>
+              </button>
+           </div>
+
+           <!-- Rescue -->
+           <div class="tool-card">
+              <div class="tool-icon"><LifeBuoy :size="24" /></div>
+              <div class="tool-info">
+                  <h5>Rescue Tasks</h5>
+                  <p>Undelete accidentally removed items</p>
+              </div>
+               <button :disabled="isRescuing" class="action-btn danger-outline sm" @click="rescueTasks">
+                <Loader v-if="isRescuing" :size="14" class="animate-spin" />
+                <span v-else>Scan</span>
+              </button>
+           </div>
+
+           <!-- Manual Reset -->
+           <div class="tool-card danger-zone">
+              <div class="tool-icon error"><AlertTriangle :size="24" /></div>
+              <div class="tool-info">
+                  <h5>Reset Local Data</h5>
+                  <p>Wipe local data & Re-sync</p>
+              </div>
+               <button :disabled="isResetting" class="action-btn error-solid sm" @click="resetLocalData">
+                <Loader v-if="isResetting" :size="14" class="animate-spin" />
+                <span v-else>Reset</span>
+              </button>
+           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Data Portability -->
+    <div v-if="activeTab === 'safety'" class="tab-content">
+      <div class="settings-section">
+        <h4>📂 Markdown Export & Import</h4>
+        <p class="subtitle" style="margin-bottom: var(--space-4)">
+          Portable, human-readable backups that you own 100%.
+        </p>
+
+        <!-- Browser Support Warning / Fallback -->
+        <div v-if="!exportStatus.isSupported.value" class="integrity-status has-issues" style="margin-bottom: var(--space-4)">
+            <div class="status-header">
+                <AlertTriangle :size="16" style="color: var(--warning)" />
+                <span>Browser Not Supported</span>
+            </div>
+            <p style="margin: var(--space-2) 0 var(--space-3) 0; font-size: var(--text-sm); color: var(--text-secondary)">
+                Your browser doesn't support automatic folder syncing. Please use the ZIP tools below.
+            </p>
+        </div>
+
+        <div class="portability-grid">
+            <!-- Auto Export (Chrome/Edge) -->
+            <div v-if="exportStatus.isSupported.value" class="portability-card">
+                <div class="card-header">
+                    <FolderOpen :size="20" />
+                    <h5>Auto-Export</h5>
+                </div>
+                 <p>Continuously sync tasks to a local folder as Markdown files.</p>
+                 <button
+                  class="action-btn"
+                  :class="exportStatus.isEnabled.value ? 'primary' : 'secondary'"
+                  :disabled="!exportStatus.isSupported.value"
+                  @click="toggleAutoExport"
+                >
+                  {{ exportStatus.isEnabled.value ? 'Auto-Export Active' : 'Select Folder' }}
+                </button>
+                <div v-if="exportStatus.isEnabled.value" class="status-micro">
+                    Last: {{ exportStatus.lastExportTime.value ? formatTime(exportStatus.lastExportTime.value) : 'Never' }}
+                </div>
+            </div>
+
+            <!-- ZIP Export -->
+            <div class="portability-card">
+                <div class="card-header">
+                    <Download :size="20" />
+                    <h5>Download ZIP</h5>
+                </div>
+                <p>Download all tasks as a ZIP archive of Markdown files.</p>
+                 <button
+                    class="action-btn secondary"
+                    :disabled="exportStatus.isExporting.value"
+                    @click="downloadZip"
+                >
+                    <RefreshCw v-if="exportStatus.isExporting.value" :size="14" class="animate-spin" />
+                    <span v-else>Download Archive</span>
+                </button>
+            </div>
+
+            <!-- ZIP Import -->
+            <div class="portability-card highlight">
+                <div class="card-header">
+                    <Upload :size="20" />
+                    <h5>Import ZIP</h5>
+                </div>
+                <p>Restore tasks from a Markdown ZIP archive.</p>
+                 <button
+                    class="action-btn accent"
+                    :disabled="exportStatus.isExporting.value"
+                    @click="triggerZipUpload"
+                >
+                    <RefreshCw v-if="exportStatus.isExporting.value" :size="14" class="animate-spin" />
+                    <span v-else>Import Archive</span>
+                </button>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Restore Dialog (Keep as is) -->
     <div v-if="showRestoreDialog" class="restore-dialog-overlay" @click="closeRestoreDialog">
       <div class="restore-dialog" @click.stop>
         <div class="dialog-header">
-          <h3>🔄 Restore from Backup</h3>
-          <button class="close-button" @click="closeRestoreDialog">
-            ×
-          </button>
+          <h3>🔄 Restore from Snapshot</h3>
+          <button class="close-button" @click="closeRestoreDialog">×</button>
         </div>
 
         <div class="backup-list">
@@ -252,45 +292,23 @@
             @click="selectBackup(backup)"
           >
             <div class="backup-info">
-              <div class="backup-time">
-                {{ formatTime(backup.timestamp) }}
-              </div>
+              <div class="backup-time">{{ formatTime(backup.timestamp) }}</div>
               <div class="backup-details">
-                {{ backup.tasks.length }} tasks,
-                {{ backup.projects.length }} projects
+                {{ backup.tasks.length }} tasks
                 <span v-if="backup.type" class="backup-type">({{ backup.type }})</span>
               </div>
             </div>
-            <div class="item-actions">
-              <button class="download-btn" title="Download JSON" @click.stop="downloadBackup(backup)">
+            <button class="download-btn" @click.stop="downloadBackup(backup)">
                 <Download :size="16" />
-              </button>
-            </div>
+            </button>
           </div>
-          <div v-if="backupHistory.length === 0" class="no-backups">
-            No backups available.
-          </div>
+           <div v-if="backupHistory.length === 0" class="no-backups">No snapshots available.</div>
         </div>
 
         <div class="dialog-actions">
-          <button
-            class="action-btn secondary"
-            @click="triggerFileUpload"
-          >
-            📁 Upload File
-          </button>
           <div class="spacer" style="flex: 1" />
-          <button
-            class="action-btn secondary"
-            @click="closeRestoreDialog"
-          >
-            Cancel
-          </button>
-          <button
-            :disabled="!selectedBackup"
-            class="action-btn primary"
-            @click="confirmRestore"
-          >
+          <button class="action-btn secondary" @click="closeRestoreDialog">Cancel</button>
+          <button :disabled="!selectedBackup" class="action-btn primary" @click="confirmRestore">
             <RefreshCw v-if="isRestoring" :size="16" class="animate-spin" />
             <span v-else>Restore Selected</span>
           </button>
@@ -298,14 +316,9 @@
       </div>
     </div>
 
-    <!-- Hidden file input -->
-    <input
-      ref="fileInput"
-      type="file"
-      accept=".json"
-      style="display: none"
-      @change="handleFileUpload"
-    >
+    <!-- Hidden Inputs -->
+    <input ref="fileInput" type="file" accept=".json" style="display: none" @change="handleFileUpload">
+    <input ref="zipInput" type="file" accept=".zip" style="display: none" @change="handleZipUpload">
   </div>
 </template>
 
@@ -314,14 +327,32 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBackupSystem, type BackupData, type BackupConfig } from '@/composables/useBackupSystem'
 import { useTaskStore } from '@/stores/tasks'
 import { markdownExportService } from '@/services/data/MarkdownExportService'
+import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import {
-  Shield, Clock, Calendar, Database, RefreshCw, Download,
+  Shield, Clock, Calendar, Database, RefreshCw, Download, Upload,
   Play, Pause, Square, Activity, CheckCircle, AlertTriangle,
-  X, Info, Loader, LifeBuoy, FolderOpen
+  X, Info, Loader, LifeBuoy, FolderOpen, Wrench, Save, RotateCcw, CheckSquare
 } from 'lucide-vue-next'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Frequency options for backup automation
+const frequencyOptions = [
+  { label: 'Disabled', value: 'off' },
+  { label: 'Every 5 minutes', value: '5min' },
+  { label: 'Every 15 minutes', value: '15min' },
+  { label: 'Every 30 minutes', value: '30min' },
+  { label: 'Every hour', value: '1hour' },
+  { label: 'Every 6 hours', value: '6hours' },
+  { label: 'Daily', value: 'daily' },
+  { label: 'Weekly', value: 'weekly' }
+]
 
 const backupSystem = useBackupSystem()
 const taskStore = useTaskStore()
+
+// UI State
+const activeTab = ref<'status' | 'manual' | 'safety'>('status')
+const zipInput = ref<HTMLInputElement>()
 
 // Map state to component refs
 // Note: Direct refs are not used for config as we want to trigger updates via the scheduler/system
@@ -351,6 +382,7 @@ const isCreatingBackup = ref(false)
 const isValidating = ref(false)
 const isRestoring = ref(false)
 const isRescuing = ref(false)
+const isResetting = ref(false)
 const isSchedulerRunning = ref(false)
 const isSchedulerPaused = ref(false)
 const statusMessage = ref('')
@@ -473,6 +505,29 @@ const rescueTasks = async () => {
   }
 }
 
+const resetLocalData = async () => {
+  if (isResetting.value) return
+  
+  const confirmed = confirm('⚠️ DANGER: RESET LOCAL DATA?\n\nThis will WIPE all data on this device and force a fresh sync from the cloud.\n\nUse this only if you are missing tasks that exist on other devices.\n\nAre you sure?')
+  if (!confirmed) return
+
+  isResetting.value = true
+  showStatus('☢️ Initiating Nuclear Reset...', 'error')
+
+  try {
+    const syncManager = getGlobalReliableSyncManager()
+    await syncManager.nuclearReset()
+    // nuclearReset will reload the page, so we don't need to do anything else
+  } catch (error) {
+    console.error('Reset failed:', error)
+    showStatus('❌ Reset failed', 'error')
+    isResetting.value = false
+  }
+}
+
+
+
+
 const selectBackup = (backup: BackupData) => {
   selectedBackup.value = backup
 }
@@ -564,6 +619,13 @@ const triggerManualExport = async () => {
     showStatus(`✅ Exported ${exportStatus.count.value} files`, 'success')
 }
 
+const downloadZip = async () => {
+    await markdownExportService.downloadAsZip()
+    if (markdownExportService.status.count.value > 0) {
+        showStatus(`✅ ZIP created with ${markdownExportService.status.count.value} files`, 'success')
+    }
+}
+
 const startScheduler = () => {
     backupSystem.config.value.enabled = true
     backupSystem.startAutoBackup()
@@ -579,6 +641,32 @@ const stopScheduler = () => {
     backupSystem.config.value.enabled = false
     backupSystem.stopAutoBackup()
     showStatus('Backup scheduler stopped', 'info')
+}
+
+const triggerZipUpload = () => {
+    zipInput.value?.click()
+}
+
+const handleZipUpload = async (event: Event) => {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (!file) return
+
+    // Confirm overwrite
+    if (!confirm('⚠️ WARNING: This will merge exported tasks into your current database.\n\nExisting tasks with same IDs will be kept (not overwritten). New tasks will be added.\n\nContinue?')) {
+        target.value = ''
+        return
+    }
+
+    try {
+        const count = await markdownExportService.importFromZip(file)
+        showStatus(`✅ Successfully imported ${count} tasks!`, 'success')
+        target.value = ''
+    } catch (e) {
+        console.error(e)
+        showStatus('❌ Import failed: ' + e, 'error')
+        target.value = ''
+    }
 }
 
 
@@ -753,15 +841,121 @@ onMounted(async () => {
   margin-right: var(--space-2);
 }
 
+
+/* Tabs */
+.settings-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  background: var(--glass-bg-soft);
+  padding: var(--space-1);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  background: var(--bg-card);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Grids & Cards */
+.action-grid, .portability-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.tool-card, .portability-card {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-3);
+    background: var(--glass-bg-medium);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    gap: var(--space-2);
+    transition: all 0.2s ease;
+}
+
+.tool-card:hover, .portability-card:hover {
+    border-color: var(--accent-alpha);
+    background: var(--glass-bg-soft);
+}
+
+.portability-card.highlight {
+    border-color: var(--accent);
+    background: var(--accent-alpha-weak);
+}
+
+.card-header, .tool-icon {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--accent);
+    margin-bottom: var(--space-1);
+}
+
+.tool-info h5, .card-header h5 {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+}
+
+.tool-info p, .portability-card p {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    line-height: 1.4;
+    flex: 1;
+}
+
+.action-btn.sm {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+    margin-top: var(--space-2);
+}
+
+.status-micro {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: var(--space-1);
+}
+
 .control-buttons, .action-buttons {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
 }
 
+/* Shared button styles */
 .control-btn, .action-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--glass-border);
@@ -769,7 +963,6 @@ onMounted(async () => {
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -856,6 +1049,25 @@ onMounted(async () => {
 .action-btn.danger-outline:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.08);
   border-color: var(--color-danger);
+}
+
+.action-btn.error-solid {
+  background: var(--color-danger);
+  color: white;
+  border-color: var(--color-danger);
+}
+
+.action-btn.error-solid:hover:not(:disabled) {
+  background: var(--danger-dark);
+}
+
+.tool-card.danger-zone {
+  border-color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.tool-icon.error {
+  color: var(--color-danger);
 }
 
 .history-list {

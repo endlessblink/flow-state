@@ -6,7 +6,8 @@ import type { useCanvasStore } from '@/stores/canvas';
 import { type CanvasSection } from '@/stores/canvas'
 import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
 import { resolveDueDate } from '@/composables/useGroupSettings'
-import { lockTaskPosition } from '@/utils/canvasPositionLock'
+// TASK-089: Updated to use unified canvas state lock system
+import { lockTaskPosition, lockGroupPosition } from '@/utils/canvasStateLock'
 
 interface DragDropDeps {
     taskStore: ReturnType<typeof useTaskStore>
@@ -313,14 +314,25 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 }
 
                 // Update dragged section's position in store (always absolute)
+                const newWidth = node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : oldBounds.width
+                const newHeight = node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : oldBounds.height
+
                 canvasStore.updateSectionWithUndo(sectionId, {
                     position: {
                         x: absoluteX,
                         y: absoluteY,
-                        width: node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : oldBounds.width,
-                        height: node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : oldBounds.height
+                        width: newWidth,
+                        height: newHeight
                     }
                 })
+
+                // TASK-089: Lock group position to prevent sync from overwriting during push
+                lockGroupPosition(sectionId, {
+                    x: absoluteX,
+                    y: absoluteY,
+                    width: newWidth,
+                    height: newHeight
+                }, 'drag')
 
                 // TASK-072 FIX: Do NOT update child section or task positions here!
                 // Vue Flow manages children automatically when parentNode is set.
@@ -449,11 +461,12 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     const absoluteX = section.position.x + node.position.x
                     const absoluteY = section.position.y + node.position.y
 
+                    // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
+                    // Store update triggers watchers → syncNodes, lock must exist first
+                    lockTaskPosition(node.id, { x: absoluteX, y: absoluteY })
                     taskStore.updateTaskWithUndo(node.id, {
                         canvasPosition: { x: absoluteX, y: absoluteY }
                     })
-                    // BUG-FIX: Lock position to prevent sync from overwriting during push
-                    lockTaskPosition(node.id, { x: absoluteX, y: absoluteY })
 
                     // Check if task moved outside the original section
                     if (!isTaskInSectionBounds(absoluteX, absoluteY, section)) {
@@ -469,11 +482,11 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     }
                 }
             } else {
+                // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
+                lockTaskPosition(node.id, { x: node.position.x, y: node.position.y })
                 taskStore.updateTaskWithUndo(node.id, {
                     canvasPosition: { x: node.position.x, y: node.position.y }
                 })
-                // BUG-FIX: Lock position to prevent sync from overwriting during push
-                lockTaskPosition(node.id, { x: node.position.x, y: node.position.y })
             }
 
             // Check containment and apply properties

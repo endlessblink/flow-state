@@ -67,23 +67,12 @@
               <span class="checkbox-label">Change Status</span>
             </label>
             <div v-if="fieldChanges.status.enabled" class="field-input-wrapper">
-              <select v-model="fieldChanges.status.value" class="field-select">
-                <option value="planned">
-                  Planned
-                </option>
-                <option value="in_progress">
-                  Active
-                </option>
-                <option value="done">
-                  ✓
-                </option>
-                <option value="backlog">
-                  Backlog
-                </option>
-                <option value="on_hold">
-                  On Hold
-                </option>
-              </select>
+              <CustomSelect
+                :model-value="fieldChanges.status.value || ''"
+                :options="statusOptions"
+                placeholder="Select status..."
+                @update:model-value="(val) => fieldChanges.status.value = val as Task['status']"
+              />
             </div>
           </div>
 
@@ -97,17 +86,12 @@
               <span class="checkbox-label">Change Priority</span>
             </label>
             <div v-if="fieldChanges.priority.enabled" class="field-input-wrapper">
-              <select v-model="fieldChanges.priority.value" class="field-select">
-                <option value="low">
-                  Low
-                </option>
-                <option value="medium">
-                  Medium
-                </option>
-                <option value="high">
-                  High
-                </option>
-              </select>
+              <CustomSelect
+                :model-value="fieldChanges.priority.value || ''"
+                :options="priorityOptions"
+                placeholder="Select priority..."
+                @update:model-value="(val) => fieldChanges.priority.value = val as Task['priority']"
+              />
             </div>
           </div>
 
@@ -121,15 +105,12 @@
               <span class="checkbox-label">Move to Project</span>
             </label>
             <div v-if="fieldChanges.projectId.enabled" class="field-input-wrapper">
-              <select v-model="fieldChanges.projectId.value" class="field-select">
-                <option
-                  v-for="project in taskStore.projects"
-                  :key="project.id"
-                  :value="project.id"
-                >
-                  {{ project.emoji || '•' }} {{ project.name }}
-                </option>
-              </select>
+              <CustomSelect
+                :model-value="fieldChanges.projectId.value || ''"
+                :options="projectOptions"
+                placeholder="Select project..."
+                @update:model-value="(val) => fieldChanges.projectId.value = String(val)"
+              />
             </div>
           </div>
 
@@ -252,6 +233,23 @@ import type { Task } from '@/stores/tasks'
 import {
   X, CheckSquare, CheckCircle, Zap, Trash2, ChevronDown
 } from 'lucide-vue-next'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Status options for CustomSelect
+const statusOptions = [
+  { label: 'Planned', value: 'planned' },
+  { label: 'Active', value: 'in_progress' },
+  { label: '✓', value: 'done' },
+  { label: 'Backlog', value: 'backlog' },
+  { label: 'On Hold', value: 'on_hold' }
+]
+
+// Priority options for CustomSelect
+const priorityOptions = [
+  { label: 'Low', value: 'low' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'High', value: 'high' }
+]
 
 interface Props {
   isOpen: boolean
@@ -289,6 +287,14 @@ const selectedTasks = computed(() => {
 const hasChanges = computed(() => {
   return Object.values(fieldChanges.value).some(field => field.enabled)
 })
+
+// Project options for CustomSelect
+const projectOptions = computed(() =>
+  taskStore.projects.map(project => ({
+    label: `${project.emoji || '•'} ${project.name}`,
+    value: project.id
+  }))
+)
 
 const getProjectName = (projectId: string | null) => {
   if (!projectId) return 'Unknown'

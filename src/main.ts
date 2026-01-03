@@ -10,6 +10,15 @@ import router from './router'
 import App from './App.vue'
 import i18n from './i18n'
 
+// Early Tauri detection - must run BEFORE CSS import for proper fallback application
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(() => {
+  const w = window as any
+  if (('isTauri' in w && w.isTauri) || ('__TAURI__' in w) || ('__TAURI_INTERNALS__' in w)) {
+    document.documentElement.classList.add('tauri-app')
+  }
+})()
+
 // Design system - Tailwind CSS must be imported here for Vite to process @tailwind directives
 import './assets/styles.css'
 
@@ -55,10 +64,19 @@ async function initializeApp() {
 
   // Detect Tauri environment and apply class for CSS optimizations
   // WebKitGTK on Linux has limited backdrop-filter support, so we need fallbacks
+  // Tauri v2 uses window.isTauri, older versions use __TAURI__ or __TAURI_INTERNALS__
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
+  const win = window as any
+  const isTauriEnv = ('isTauri' in win && win.isTauri) ||
+                     ('__TAURI__' in win) ||
+                     ('__TAURI_INTERNALS__' in win)
+
+  if (isTauriEnv) {
     document.documentElement.classList.add('tauri-app')
+    document.body?.classList.add('tauri-app')
     console.log('🖥️ [MAIN] Tauri environment detected - applying CSS optimizations')
+  } else {
+    console.log('🌐 [MAIN] Browser environment detected')
   }
 
   try {

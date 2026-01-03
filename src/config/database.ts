@@ -97,6 +97,13 @@ const getStoredCouchDBConfig = () => {
     }
   }
 
+  // FIX: Use relative proxy path in development to bypass CORS
+  // CRITICAL: PouchDB requires 'http' to use Network/HTTP adapter!
+  // V3: Clean DB to avoid conflict history bloat
+  const defaultUrl = import.meta.env.DEV
+    ? 'http://localhost:5546/pomoflow-tasks-v3'
+    : 'http://84.46.253.137:5984/pomoflow-tasks-v3'
+
   // Browser environment - check localStorage first, then env vars, then defaults
   // IMPORTANT: Use .trim() and check for empty strings, not just null
   const storedUrl = localStorage.getItem('pomo-couchdb-url')?.trim()
@@ -104,7 +111,7 @@ const getStoredCouchDBConfig = () => {
   const storedPassword = localStorage.getItem('pomo-couchdb-password')?.trim()
 
   const config = {
-    url: storedUrl || import.meta.env.VITE_COUCHDB_URL || DEFAULT_COUCHDB_URL,
+    url: storedUrl || import.meta.env.VITE_COUCHDB_URL || defaultUrl,
     username: storedUsername || import.meta.env.VITE_COUCHDB_USERNAME || DEFAULT_COUCHDB_USERNAME,
     password: storedPassword || import.meta.env.VITE_COUCHDB_PASSWORD || DEFAULT_COUCHDB_PASSWORD
   }

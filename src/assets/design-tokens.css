@@ -902,6 +902,42 @@
   --z-tooltip: 1500;
 }
 
+/* ===== TAURI / WEBKITGTK TOKEN OVERRIDES ===== */
+/* More opaque backgrounds since backdrop-filter blur won't work on WebKitGTK */
+
+.tauri-app {
+  /* Glass surfaces - increased opacity since blur won't work */
+  --glass-bg-light: rgba(30, 32, 40, 0.85);
+  --glass-bg-medium: rgba(28, 30, 38, 0.90);
+  --glass-bg-heavy: rgba(25, 27, 35, 0.95);
+  --glass-bg-solid: rgba(20, 22, 28, 0.98);
+  --glass-bg: rgba(25, 27, 35, 0.92);
+
+  /* Additional glass variants with higher opacity */
+  --glass-bg-subtle: rgba(30, 32, 40, 0.75);
+  --glass-bg-weak: rgba(28, 30, 38, 0.80);
+  --glass-bg-tint: rgba(26, 28, 36, 0.85);
+  --glass-bg-soft: rgba(24, 26, 34, 0.88);
+
+  /* Canvas backgrounds - more opaque for visibility */
+  --canvas-task-bg: rgba(34, 36, 44, 0.98);
+  --canvas-group-bg: rgba(36, 38, 46, 0.96);
+
+  /* Overlay components - increased opacity */
+  --overlay-component-bg: rgba(20, 20, 20, 0.98);
+  --overlay-component-backdrop: none;
+
+  /* Dropdown/panel backgrounds */
+  --dropdown-bg: rgba(20, 20, 20, 0.98);
+  --glass-panel-bg: rgba(20, 20, 20, 0.95);
+  --inbox-panel-bg: rgba(20, 20, 20, 0.90);
+
+  /* Kanban backgrounds - more opaque */
+  --kanban-column-bg: rgba(28, 30, 38, 0.92);
+  --kanban-column-bg-hover: rgba(32, 34, 42, 0.95);
+  --kanban-card-glass-bg: rgba(30, 30, 46, 0.95);
+}
+
 /* ===== LIGHT THEME OVERRIDES ===== */
 
 :root:not(.dark-theme) {

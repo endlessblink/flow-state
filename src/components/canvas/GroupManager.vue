@@ -98,26 +98,12 @@
           <!-- Section Type -->
           <div class="form-group">
             <label class="form-label">Group Type</label>
-            <select v-model="sectionForm.type" class="form-select">
-              <option value="custom">
-                Custom
-              </option>
-              <option value="priority">
-                Priority
-              </option>
-              <option value="status">
-                Status
-              </option>
-              <option value="project">
-                Project
-              </option>
-              <option value="date">
-                Date Range
-              </option>
-              <option value="tags">
-                Tags
-              </option>
-            </select>
+            <CustomSelect
+              :model-value="sectionForm.type"
+              :options="groupTypeOptions"
+              placeholder="Select group type..."
+              @update:model-value="(val) => sectionForm.type = val as CanvasSection['type']"
+            />
           </div>
 
           <!-- Section Color -->
@@ -199,11 +185,16 @@
             <!-- Project Filters -->
             <div v-if="sectionForm.type === 'project'" class="filter-group">
               <label class="filter-label">Projects:</label>
-              <select v-model="sectionForm.filters.projects" class="form-select" multiple>
-                <option v-for="project in availableProjects" :key="project.id" :value="project.id">
-                  {{ project.name }}
-                </option>
-              </select>
+              <div class="checkbox-group">
+                <label v-for="project in availableProjects" :key="project.id" class="checkbox-item">
+                  <input
+                    v-model="sectionForm.filters.projects"
+                    type="checkbox"
+                    :value="project.id"
+                  >
+                  <span class="checkbox-label">{{ project.name }}</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -243,6 +234,17 @@ import { Plus, Eye, EyeOff, Edit, Trash2, X, Grid3X3 } from 'lucide-vue-next'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import type { CanvasSection } from '@/stores/canvas'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Group type options for CustomSelect
+const groupTypeOptions = [
+  { label: 'Custom', value: 'custom' },
+  { label: 'Priority', value: 'priority' },
+  { label: 'Status', value: 'status' },
+  { label: 'Project', value: 'project' },
+  { label: 'Date Range', value: 'date' },
+  { label: 'Tags', value: 'tags' }
+]
 
 const canvasStore = useCanvasStore()
 const taskStore = useTaskStore()

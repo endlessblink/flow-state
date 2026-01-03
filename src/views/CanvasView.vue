@@ -397,6 +397,9 @@ import '@vue-flow/minimap/dist/style.css'
 // CRITICAL: Import AFTER Vue Flow CSS to override rasterization-causing styles (BUG-041)
 import '@/assets/vue-flow-overrides.css'
 
+// TASK-089: Canvas state lock to prevent sync from overwriting user changes
+import { isAnyCanvasStateLocked, lockViewport } from '@/utils/canvasStateLock'
+
 // Phase 1 Composables
 import { useCanvasResourceManager } from '@/composables/canvas/useCanvasResourceManager'
 import { useCanvasZoom } from '@/composables/canvas/useCanvasZoom'
@@ -683,6 +686,13 @@ const {
 // This triggers the auto-save watcher in canvas.ts (debounced 1s save to IndexedDB)
 watch(vfViewport, (newViewport) => {
   canvasStore.setViewport(newViewport.x, newViewport.y, newViewport.zoom)
+
+  // TASK-089: Lock viewport to prevent sync from overwriting user's pan/zoom
+  lockViewport({
+    x: newViewport.x,
+    y: newViewport.y,
+    zoom: newViewport.zoom
+  }, 'pan')
 }, { deep: true })
 
 // Template Helper Properties
@@ -967,7 +977,12 @@ const closeBatchEditModal = () => {
 const handleBatchEditApplied = () => {
   // Clear selection after batch edit is applied
   canvasStore.clearSelection()
-  syncNodes()
+  // TASK-089: Guard against sync during position lock
+  if (!isAnyCanvasStateLocked()) {
+    syncNodes()
+  } else {
+    console.log('🛡️ [TASK-089] syncNodes blocked in handleBatchEditApplied - canvas state locked')
+  }
   closeBatchEditModal()
 }
 
@@ -1091,8 +1106,13 @@ const retryFailedOperation = async () => {
       setOperationLoading('syncing', true)
       try {
         await nextTick()
-        syncNodes()
-        syncEdges()
+        // TASK-089: Guard against sync during position lock
+        if (!isAnyCanvasStateLocked()) {
+          syncNodes()
+          syncEdges()
+        } else {
+          console.log('🛡️ [TASK-089] syncNodes blocked in Sync Operation retry - canvas state locked')
+        }
         setOperationLoading('syncing', false)
       } catch (_error) {
         setOperationError('Sync Operation', 'Retry failed: Unable to synchronize data', true)
@@ -1720,8 +1740,13 @@ resourceManager.addWatcher(
     () => canvasStore.syncTrigger,
     (newTrigger) => {
       if (newTrigger > 0) {
-        // console.log('🔄 [CANVAS] Sync triggered by external request (undo/redo)')
-        syncNodes()
+        // TASK-089: Guard against sync during position lock
+        if (!isAnyCanvasStateLocked()) {
+          // console.log('🔄 [CANVAS] Sync triggered by external request (undo/redo)')
+          syncNodes()
+        } else {
+          console.log('🛡️ [TASK-089] syncNodes blocked in syncTrigger watcher - canvas state locked')
+        }
       }
     }
   )
@@ -1817,8 +1842,13 @@ resourceManager.addWatcher(
   watch(hideCanvasDoneTasks, (newVal, oldVal) => {
     if (newVal !== oldVal) {
       console.log('🔄 [TASK-076] hideCanvasDoneTasks changed:', { from: oldVal, to: newVal })
-      // Force immediate sync to update canvas nodes with new filter
-      syncNodes()
+      // TASK-089: Guard against sync during position lock
+      if (!isAnyCanvasStateLocked()) {
+        // Force immediate sync to update canvas nodes with new filter
+        syncNodes()
+      } else {
+        console.log('🛡️ [TASK-089] syncNodes blocked in hideCanvasDoneTasks - canvas state locked')
+      }
     }
   })
 )
@@ -1829,8 +1859,13 @@ resourceManager.addWatcher(
   watch(hideCanvasOverdueTasks, (newVal, oldVal) => {
     if (newVal !== oldVal) {
       console.log('🔄 [TASK-082] hideCanvasOverdueTasks changed:', { from: oldVal, to: newVal })
-      // Force immediate sync to update canvas nodes with new filter
-      syncNodes()
+      // TASK-089: Guard against sync during position lock
+      if (!isAnyCanvasStateLocked()) {
+        // Force immediate sync to update canvas nodes with new filter
+        syncNodes()
+      } else {
+        console.log('🛡️ [TASK-089] syncNodes blocked in hideCanvasOverdueTasks - canvas state locked')
+      }
     }
   })
 )

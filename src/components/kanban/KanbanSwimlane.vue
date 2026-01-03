@@ -180,7 +180,7 @@ watch(isDragging, (dragging) => {
 })
 
 // Store local view type to respect user selection even with smart filters
-const localViewType = ref(props.project.viewType)
+const localViewType = ref(props.project.viewType || 'status')
 
 // Current view type - prioritize user selection over smart filter forcing
 const currentViewType = computed(() => {
@@ -189,8 +189,8 @@ const currentViewType = computed(() => {
     return localViewType.value
   }
 
-  // Fallback to project's viewType
-  return props.project.viewType
+  // Fallback to project's viewType or 'status'
+  return props.project.viewType || 'status'
 })
 
 // Column definitions - reactive to showDoneColumn prop

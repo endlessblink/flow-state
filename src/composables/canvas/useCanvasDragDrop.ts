@@ -465,7 +465,10 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
                     // Store update triggers watchers → syncNodes, lock must exist first
                     lockTaskPosition(node.id, { x: absoluteX, y: absoluteY })
-                    taskStore.updateTaskWithUndo(node.id, {
+                    // TASK-089 MEMORY FIX: Use updateTask instead of updateTaskWithUndo
+                    // updateTaskWithUndo saves state TWICE per call, causing memory exhaustion during drag
+                    // Position updates don't need undo - users can simply drag again
+                    taskStore.updateTask(node.id, {
                         canvasPosition: { x: absoluteX, y: absoluteY }
                     })
 
@@ -485,7 +488,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             } else {
                 // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
                 lockTaskPosition(node.id, { x: node.position.x, y: node.position.y })
-                taskStore.updateTaskWithUndo(node.id, {
+                // TASK-089 MEMORY FIX: Use updateTask instead of updateTaskWithUndo
+                // updateTaskWithUndo saves state TWICE per call, causing memory exhaustion during drag
+                taskStore.updateTask(node.id, {
                     canvasPosition: { x: node.position.x, y: node.position.y }
                 })
             }

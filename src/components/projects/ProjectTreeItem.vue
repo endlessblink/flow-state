@@ -128,12 +128,15 @@ const handleProjectClick = (event: MouseEvent) => {
 
 // Recursively count tasks in this project and all descendants (matches BoardView filtering logic)
 const getProjectTaskCount = (projectId: string): number => {
-  // Get all child projects (same logic as filteredTasks)
-  const getChildProjectIds = (pid: string): string[] => {
+  // Get all child projects (same logic as filteredTasks) with cycle detection
+  const getChildProjectIds = (pid: string, visited = new Set<string>()): string[] => {
+    if (visited.has(pid)) return []
+    visited.add(pid)
+    
     const ids = [pid]
     const children = taskStore.projects.filter(p => p.parentId === pid)
     children.forEach(child => {
-      ids.push(...getChildProjectIds(child.id))
+      ids.push(...getChildProjectIds(child.id, visited))
     })
     return ids
   }

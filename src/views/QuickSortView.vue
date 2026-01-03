@@ -333,7 +333,6 @@ function formatTime(milliseconds: number): string {
 .quick-sort-view {
   height: 100%;
   min-height: 0; /* Allow flexbox shrinking */
-  background: var(--surface-primary);
   padding: var(--space-8);
   display: flex;
   flex-direction: column;

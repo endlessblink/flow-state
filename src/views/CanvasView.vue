@@ -113,8 +113,8 @@
         <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
           <VueFlow
             ref="vueFlowRef"
-            v-model:nodes="safeNodes"
-            v-model:edges="safeEdges"
+            v-model:nodes="nodes"
+            v-model:edges="edges"
             :class="{ 'canvas-ready': isCanvasReady }"
             class="vue-flow-container"
             :node-types="nodeTypes"
@@ -174,8 +174,10 @@
             <!-- Section Node Template -->
             <template #node-sectionNode="nodeProps">
               <GroupNodeSimple
+                v-memo="[nodeProps.id, nodeProps.data, nodeProps.selected, nodeProps.dragging]"
                 :data="nodeProps.data"
                 :selected="nodeProps.selected"
+                :dragging="nodeProps.dragging"
                 @update="handleSectionUpdate"
                 @collect="collectTasksForSection"
                 @context-menu="handleSectionContextMenu"
@@ -189,8 +191,10 @@
             <!-- Custom Task Node Template -->
             <template #node-taskNode="nodeProps">
               <TaskNode
+                v-memo="[nodeProps.id, nodeProps.data.task, nodeProps.selected, nodeProps.dragging, canvasStore.multiSelectMode, isConnecting]"
                 :task="nodeProps.data.task"
-                :is-selected="canvasStore.selectedNodeIds.includes(nodeProps.data.task.id)"
+                :is-selected="nodeProps.selected"
+                :is-dragging="nodeProps.dragging"
                 :multi-select-mode="canvasStore.multiSelectMode"
                 :show-priority="canvasStore.showPriorityIndicator"
                 :show-status="canvasStore.showStatusBadge"
@@ -615,10 +619,13 @@ const filteredTasksWithProjectFiltering = computed(() => {
       const currentTasks = taskStore.filteredTasks
 
       // Performance optimization: Only update if actually changed
+      // Skip expensive hash calculation during drag/resize to maintain 60FPS
+      if (isInteracting.value && lastFilteredTasks.length > 0) {
+        return lastFilteredTasks
+      }
+
       // FIX (Dec 5, 2025): Include dueDate and canvasPosition in hash for proper cache invalidation
-      // - dueDate: ensures filter updates when task dates change
-      // - canvasPosition: ensures syncNodes() filter at line 1758 works correctly
-      const currentHash = currentTasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${t.canvasPosition?.x ?? ''}:${t.canvasPosition?.y ?? ''}:${t.updatedAt?.getTime() ?? ''}`).join('|')
+      const currentHash = currentTasks.map(t => `${t.id}:${t.title.slice(0, 10)}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${t.updatedAt?.getTime() ?? ''}`).join('|')
       if (currentHash === lastFilteredTasksHash && lastFilteredTasks.length > 0) {
         return lastFilteredTasks
       }
@@ -781,6 +788,14 @@ const resizeState = ref({
 })
 const isResizeSettling = ref(false)
 
+// Interaction state helper to pause expensive reactivity during dragging/resizing
+const isInteracting = computed(() => 
+  isNodeDragging.value || 
+  isDragSettlingRef.value || 
+  resizeState.value.isResizing || 
+  isResizeSettling.value
+)
+
 // 🔄 Sync Logic Extracted to useCanvasSync
 const {
   syncNodes,
@@ -810,7 +825,6 @@ const {
 
 
 
-// 🔧 Vue Flow Stability System - Enhanced lifecycle, error handling, and performance monitoring
 const vueFlowStore = ref(null)
 useVueFlowStability(
   nodes,
@@ -823,7 +837,8 @@ useVueFlowStability(
     enableAutoRecovery: true,
     recoveryAttempts: 3,
     debounceDelay: 100
-  }
+  },
+  isNodeDragging
 )
 
 // 🗃️ Vue Flow State Management System - Robust state synchronization and conflict resolution
@@ -836,7 +851,8 @@ useVueFlowStateManager(
     batchDelay: 50,
     enableStateValidation: true,
     enableConflictResolution: true
-  }
+  },
+  isNodeDragging
 )
 
 // 🚨 Vue Flow Error Handling System - Comprehensive error handling and recovery
@@ -1625,39 +1641,9 @@ onEdgeContextMenu((param: EdgeMouseEvent) => {
   })
 })
 
-// Safe computed properties that prevent undefined values from reaching VueFlow
-// Using writable computed to allow Vue Flow's v-model to update nodes/edges
-const safeNodes = computed({
-  get() {
-    if (!systemHealthy.value || !Array.isArray(nodes.value)) {
-      return []
-    }
-    return nodes.value.filter(node => node && node.id && node.type)
-  },
-  set(newNodes: Node[]) {
-    nodes.value = newNodes
-  }
-})
+// Safe nodes/edges computed removed for performance - using nodes/edges refs directly
+// Data integrity is managed in useCanvasSync.ts and handleNodesChange/handleEdgesChange
 
-const safeEdges = computed({
-  get() {
-    if (!systemHealthy.value || !Array.isArray(edges.value)) {
-      return []
-    }
-    // BUG-FIX: Ensure source and target nodes actually exist in the nodes array
-    // This prevents [Vue Flow]: Edge source or target is missing warnings
-    const nodeIds = new Set(nodes.value.map(n => n.id))
-    return edges.value.filter(edge => 
-      edge && 
-      edge.id && 
-      edge.source && nodeIds.has(edge.source) && 
-      edge.target && nodeIds.has(edge.target)
-    )
-  },
-  set(newEdges: Edge[]) {
-    edges.value = newEdges
-  }
-})
 
 // Track if we've done initial viewport centering
 const hasInitialFit = ref(false)
@@ -1757,9 +1743,9 @@ resourceManager.addWatcher(
 // NO deep:true needed - single string comparison, zero garbage collection
 resourceManager.addWatcher(
   watch(
-    () => taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}`).join('|'),
-    () => {
-      batchedSyncNodes('normal')
+    () => (isInteracting.value ? null : taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}`).join('|')),
+    (val) => {
+      if (val) batchedSyncNodes('normal')
     },
     { flush: 'post' }
   )
@@ -1768,35 +1754,20 @@ resourceManager.addWatcher(
 // Watch for canvas store selection changes and sync with Vue Flow nodes - FIXED to prevent disconnection
 // NOTE: Console logs reduced to fix 0-2 FPS issue
 resourceManager.addWatcher(
-  watch(() => canvasStore.selectedNodeIds, (newSelectedIds) => {
+  watch(() => (isInteracting.value ? null : canvasStore.selectedNodeIds), (newSelectedIds) => {
+    if (!newSelectedIds) return
     // Update Vue Flow nodes to match canvas store selection
-    let _updateCount = 0
     nodes.value.forEach(node => {
       const shouldBeSelected = newSelectedIds.includes(node.id)
       const nodeWithSelection = node as Node & { selected?: boolean }
       if (nodeWithSelection.selected !== shouldBeSelected) {
         nodeWithSelection.selected = shouldBeSelected
-        _updateCount++
       }
     })
   }, { deep: true, flush: 'post' }) // Changed from 'sync' to 'post' to batch updates
 )
 
-// Watch for Vue Flow node selection changes and sync back to canvas store (bidirectional sync)
-// NOTE: Console logs removed to fix 0-2 FPS issue
-resourceManager.addWatcher(
-  watch(() => nodes.value.filter(n => 'selected' in n && n.selected).map(n => n.id), (vueFlowSelectedIds) => {
-    // Only update canvas store if there's an actual difference (prevents infinite loops)
-    const currentStoreIds = canvasStore.selectedNodeIds
-    const hasChanged = vueFlowSelectedIds.length !== currentStoreIds.length ||
-                     vueFlowSelectedIds.some(id => !currentStoreIds.includes(id)) ||
-                     currentStoreIds.some(id => !vueFlowSelectedIds.includes(id))
-
-    if (hasChanged) {
-      canvasStore.setSelectedNodes(vueFlowSelectedIds)
-    }
-  }, { deep: true, flush: 'post' }) // Changed from 'sync' to 'post' to batch updates
-)
+// Redundant watcher removed - selection is handled by @selection-change="handleSelectionChange"
 
 
 // Auto-center viewport on tasks when all nodes are initialized with dimensions - using resourceManager

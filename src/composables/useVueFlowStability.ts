@@ -44,7 +44,8 @@ export function useVueFlowStability(
   nodes: Ref<Node[]>,
   edges: Ref<Edge[]>,
   vueFlowStore: Ref<VueFlowStore | null>,
-  config: VueFlowStabilityConfig = {}
+  config: VueFlowStabilityConfig = {},
+  isInteracting?: Ref<boolean>
 ) {
   const {
     maxNodes = 1000,
@@ -130,20 +131,24 @@ export function useVueFlowStability(
    * Set up reactive watchers for nodes and edges
    */
   const setupWatchers = () => {
-    // Watch nodes with debounced updates
+    // Watch nodes with debounced updates - guarded by isInteracting
     watch(
-      nodes,
-      debounce((newNodes, oldNodes) => {
-        handleNodesChange(newNodes, oldNodes)
+      () => (isInteracting?.value ? null : nodes.value),
+      debounce((val, oldVal) => {
+        if (val) {
+          handleNodesChange(val, oldVal || [])
+        }
       }, debounceDelay),
       { deep: true }
     )
 
-    // Watch edges with debounced updates
+    // Watch edges with debounced updates - guarded by isInteracting
     watch(
-      edges,
-      debounce((newEdges, oldEdges) => {
-        handleEdgesChange(newEdges, oldEdges)
+      () => (isInteracting?.value ? null : edges.value),
+      debounce((val, oldVal) => {
+        if (val) {
+          handleEdgesChange(val, oldVal || [])
+        }
       }, debounceDelay),
       { deep: true }
     )

@@ -1,7 +1,7 @@
 <template>
   <div
     class="section-node"
-    :class="[`section-type-${section.type}`, { 'collapsed': isCollapsed }]"
+    :class="[`section-type-${section.type}`, { 'collapsed': isCollapsed, 'is-dragging': dragging }]"
     :style="{ borderColor: section.color, backgroundColor: section.color + '25' }"
     @contextmenu.prevent="handleContextMenu"
   >
@@ -67,6 +67,7 @@ interface SectionData {
 interface Props {
   data: SectionData
   selected?: boolean
+  dragging?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -210,6 +211,14 @@ const handleResizeEnd = (event: unknown) => {
     /* TASK-073: Inner subtle highlight */
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: all var(--duration-fast) ease;
+}
+
+.section-node.is-dragging {
+  transition: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
 }
 
 .section-node:hover {

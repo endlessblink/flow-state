@@ -97,14 +97,26 @@ interface CategoryNode {
 const categoryTree = computed<CategoryNode[]>(() => {
   const allProjects = taskStore.projects // All user-created projects
 
-  function buildTree(parentId: string | null | undefined, depth = 0): CategoryNode[] {
+  function buildTree(parentId: string | null | undefined, depth = 0, visited = new Set<string>()): CategoryNode[] {
+    if (depth > 10) return [] // Safety limit for depth
+
     return allProjects
       .filter(p => p.parentId === parentId)
-      .map(project => ({
-        project,
-        depth,
-        children: buildTree(project.id, depth + 1)
-      }))
+      .map(project => {
+         // Cycle detection guard
+         if (visited.has(project.id)) {
+            return { project, depth, children: [] }
+         }
+         
+         const newVisited = new Set(visited)
+         newVisited.add(project.id)
+
+         return {
+            project,
+            depth,
+            children: buildTree(project.id, depth + 1, newVisited)
+         }
+      })
   }
 
   return buildTree(null)
@@ -201,7 +213,9 @@ onUnmounted(() => {
 <style scoped>
 .category-selector {
   width: 100%;
-  max-width: 800px;
+  max-width: 600px; /* Match QuickSortCard width */
+  background: transparent !important; /* Override global tauri styles */
+  box-shadow: none !important;
 }
 
 .selector-title {
@@ -213,7 +227,7 @@ onUnmounted(() => {
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Adjusted for 600px width */
   gap: var(--space-3);
   margin-bottom: var(--space-5);
 }
@@ -274,6 +288,7 @@ onUnmounted(() => {
 }
 
 .shortcut-badge {
+  display: none; /* Hidden as per user request */
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
@@ -326,8 +341,6 @@ onUnmounted(() => {
   font-size: var(--text-sm);
   color: var(--text-secondary);
   padding: var(--space-3);
-  background: var(--glass-bg-subtle);
-  border-radius: var(--radius-md);
 }
 
 kbd {

@@ -170,6 +170,7 @@ interface Props {
   showDuration?: boolean
   showSchedule?: boolean
   isConnecting?: boolean
+  isDragging?: boolean
 }
 
 // Lazy load Handle component to prevent Vue Flow context errors in Storybook
@@ -177,10 +178,8 @@ const Handle = defineAsyncComponent(() =>
   import('@vue-flow/core').then(mod => mod.Handle)
 )
 
-// Defensive validation - gracefully handle undefined task prop
-if (!props.task) {
-  console.warn('TaskNode: task prop is undefined, component will not render')
-}
+// Defensive validation - handled by template v-if
+
 
 const { startDrag, endDrag } = useDragAndDrop()
 const timerStore = useTimerStore()
@@ -190,8 +189,8 @@ const taskStore = useTaskStore()
 const { getAlignmentClasses } = useHebrewAlignment()
 const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task?.title || ''))
 
-// Track local dragging state to prevent visual artifacts
-const isNodeDragging = ref(false)
+// Track dragging state from props to prevent visual artifacts
+const isNodeDragging = computed(() => props.isDragging || false)
 
 // Track if task was recently created for animation feedback
 const isRecentlyCreated = ref(false)
@@ -502,6 +501,7 @@ const formattedDuration = computed(() => {
   /* Prevent any blur or filter effects during drag */
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  filter: none !important;
   /* BUG-041: Changed from will-change: transform to auto to prevent text rasterization */
   will-change: auto !important;
   outline: none !important;

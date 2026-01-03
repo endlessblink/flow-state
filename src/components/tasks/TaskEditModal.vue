@@ -294,7 +294,8 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import type { Task, Subtask } from '@/stores/tasks'
-import { lockTaskPosition } from '@/utils/canvasPositionLock'
+// TASK-089: Use unified canvas state lock system (not old canvasPositionLock)
+import { lockTaskPosition } from '@/utils/canvasStateLock'
 import {
   X, Plus, Trash2, Flag, Circle, Zap, AlertCircle, PlayCircle, CheckCircle, Archive,
   Calendar, CalendarClock, Clock, TimerReset, ChevronDown, Layout
@@ -573,6 +574,12 @@ const deleteSubtask = (subtaskId: string) => {
 const updateSubtaskCompletion = (subtask: Subtask) => {
   if (!props.task) return
 
+  // TASK-089 FIX: Lock position BEFORE any store updates to prevent canvas watcher from resetting
+  const canvasPosition = editedTask.value.canvasPosition ?? props.task?.canvasPosition
+  if (canvasPosition) {
+    lockTaskPosition(editedTask.value.id, canvasPosition, 'manual')
+  }
+
   // Immediately update the subtask in the store
   taskStore.updateSubtaskWithUndo(editedTask.value.id, subtask.id, {
     isCompleted: subtask.isCompleted,
@@ -660,14 +667,15 @@ const saveTask = () => {
 
   console.log('🔍 DEBUG: Updates being applied:', updates)
 
-  // Update main task
-  taskStore.updateTaskWithUndo(editedTask.value.id, updates)
-
-  // BUG-FIX: Lock position after modal save to prevent sync from overwriting
+  // TASK-089 FIX: Lock position BEFORE update to prevent canvas watcher from resetting
+  // The canvas watcher fires during updateTaskWithUndo, so lock must be set first
   if (originalCanvasPosition) {
-    lockTaskPosition(editedTask.value.id, originalCanvasPosition)
-    console.log('🔒 DEBUG: Locked position after save:', originalCanvasPosition)
+    lockTaskPosition(editedTask.value.id, originalCanvasPosition, 'manual')
+    console.log('🔒 DEBUG: Locked position BEFORE save:', originalCanvasPosition)
   }
+
+  // Update main task (this triggers canvas watcher, but position is now locked)
+  taskStore.updateTaskWithUndo(editedTask.value.id, updates)
 
   // DEBUG: Check state after main task update (no async needed - undo system handles this)
   const taskAfterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)

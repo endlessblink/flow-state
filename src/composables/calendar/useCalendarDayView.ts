@@ -108,10 +108,16 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         if (!task) return // Skip invalid tasks
 
         try {
+          // GUARD: Limit instance processing to prevent OOM from corrupted data
+          // If a task has > 100 instances for a single day, something is wrong.
+          const MAX_INSTANCES_PER_TASK = 50
+
           // Check if task has instances scheduled for today
-          const hasInstanceForToday = task.instances && task.instances.some(instance =>
-            instance && instance.scheduledDate === dateStr
-          )
+          let instanceCount = 0
+          const hasInstanceForToday = task.instances && task.instances.some(instance => {
+            if (instanceCount++ > MAX_INSTANCES_PER_TASK) return false
+            return instance && instance.scheduledDate === dateStr
+          })
 
           // Check for legacy schedule
           const hasLegacyScheduleToday = task.scheduledDate === dateStr && task.scheduledTime

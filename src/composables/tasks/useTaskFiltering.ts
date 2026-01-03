@@ -56,12 +56,17 @@ export const useTaskFiltering = (
         return allNestedIds
     }
 
-    // Recursive project ID helper
-    const getChildProjectIds = (projectId: string): string[] => {
-        const ids = [projectId]
+    // Recursive project ID helper with cycle detection
+    const getChildProjectIds = (projectId: string, visited = new Set<string>()): string[] => {
+        if (visited.has(projectId)) {
+            return [] // Already visited, break recursion to prevent cycles
+        }
+        visited.add(projectId)
+
+        const ids = [projectId] // Include the current project ID
         const childProjects = projects.value.filter(p => p.parentId === projectId)
         childProjects.forEach(child => {
-            ids.push(...getChildProjectIds(child.id))
+            ids.push(...getChildProjectIds(child.id, visited))
         })
         return ids
     }
@@ -114,12 +119,14 @@ export const useTaskFiltering = (
 
         let nestedTasks: Task[] = []
         try {
+            // Optimization: Get project IDs once instead of inside filter loop
+            const activeProjectTreeIds = activeProjectId.value ? getChildProjectIds(activeProjectId.value) : null
+
             nestedTasks = tasks.value
                 .filter(task => nestedTaskIds.includes(task.id))
                 .filter(task => {
-                    if (activeProjectId.value) {
-                        const projectIds = getChildProjectIds(activeProjectId.value)
-                        if (!projectIds.includes(task.projectId)) return false
+                    if (activeProjectTreeIds) {
+                        if (!activeProjectTreeIds.includes(task.projectId)) return false
                     }
                     // TASK-076: Only filter done tasks for Today smart view here
                     // View-specific done filtering handled locally by each view

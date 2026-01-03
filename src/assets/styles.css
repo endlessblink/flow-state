@@ -18,11 +18,13 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   font-family: ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: visible; /* Allow canvas controls to overflow */
+  overflow: visible;
+  /* Allow canvas controls to overflow */
   height: 100vh;
   width: 100vw;
 }
@@ -30,7 +32,8 @@ html, body {
 #root {
   width: 100vw;
   height: 100vh;
-  overflow: visible; /* Allow canvas controls to overflow */
+  overflow: visible;
+  /* Allow canvas controls to overflow */
   /* Ensure no borders are applied to root element */
   border: none;
   outline: none;
@@ -88,16 +91,19 @@ select option {
 
 /* 1. Global Glass Optimization for Firefox */
 @-moz-document url-prefix() {
+
   /* Disable heavy backdrop-filter globally on Firefox/Zen */
   .glass,
   [class*="backdrop-blur"] {
     backdrop-filter: none !important;
-    background-color: rgba(30, 30, 35, 0.95) !important; /* Solid fallback */
+    background-color: rgba(30, 30, 35, 0.95) !important;
+    /* Solid fallback */
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 
   /* Disable smooth scrolling for canvas to prevent jank */
-  html, body {
+  html,
+  body {
     scroll-behavior: auto !important;
   }
 
@@ -424,9 +430,9 @@ select option {
 .tauri-app .multi-select-toggle,
 .tauri-app .done-toggle,
 .tauri-app .drag-handle {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background: rgba(30, 32, 40, 0.95) !important;
+  /* backdrop-filter: none !important; */
+  /* -webkit-backdrop-filter: none !important; */
+  /* background: rgba(30, 32, 40, 0.95) !important; */
 }
 
 /* Calendar Component fallbacks */
@@ -477,6 +483,7 @@ select option {
 /* WebKitGTK-specific fixes using @supports */
 /* Fallback for when backdrop-filter doesn't work properly */
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+
   .glass,
   [class*="backdrop-blur"],
   .glass-panel {
@@ -534,11 +541,13 @@ select option {
 
 /* 2. Vue Flow Specific Optimizations */
 .vue-flow__renderer {
-  will-change: transform; /* Hint for compositor */
+  will-change: transform;
+  /* Hint for compositor */
 }
 
 /* When panned/zoomed, reduce painting */
 .vue-flow__pane.dragging,
 .vue-flow__viewport.dragging {
-  pointer-events: none; /* Disable hover effects during drag */
+  pointer-events: none;
+  /* Disable hover effects during drag */
 }

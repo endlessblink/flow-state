@@ -189,13 +189,40 @@ if (!isAnyCanvasStateLocked()) {
 }
 ```
 
+### Fix 9: Await Position Saves to Prevent Data Loss on Refresh (Jan 3, 2026)
+**Issue**: Task positions were lost when page refreshed immediately after dragging.
+
+**Root Cause**: The `taskStore.updateTask()` calls in `handleNodeDragStop` were NOT awaited. Since `updateTask()` is async (it saves to PouchDB), if the page refreshed before the async save completed, the position was lost.
+
+**Files Fixed**:
+- `src/composables/canvas/useCanvasDragDrop.ts:266` - Made `handleNodeDragStop` callback async
+- `src/composables/canvas/useCanvasDragDrop.ts:472-478` - Added `await` + try/catch for task-in-section position save
+- `src/composables/canvas/useCanvasDragDrop.ts:499-505` - Added `await` + try/catch for free-floating task position save
+
+**Code Pattern**:
+```typescript
+// Before: Fire-and-forget (could lose data on refresh)
+taskStore.updateTask(node.id, {
+    canvasPosition: { x: absoluteX, y: absoluteY }
+})
+
+// After: Awaited with error handling
+try {
+    await taskStore.updateTask(node.id, {
+        canvasPosition: { x: absoluteX, y: absoluteY }
+    })
+} catch (err) {
+    console.error(`[TASK-089] Failed to save position for task ${node.id}:`, err)
+}
+```
+
 ## Files Modified
 
 | File | Changes |
 |------|---------|
 | `src/composables/app/useAppInitialization.ts` | Removed `canvasStore.loadFromDatabase()` from sync completion handler |
 | `src/stores/canvas.ts` | Fixed position structure in `updateSectionFromSync()`, **Fix 5**: `syncTasksToCanvas()` respects locks, **Fix 8**: Task watcher guards against sync during locks |
-| `src/composables/canvas/useCanvasDragDrop.ts` | Lock before store update (3 locations), **Fix 7**: Use `updateTask` instead of `updateTaskWithUndo` for position updates |
+| `src/composables/canvas/useCanvasDragDrop.ts` | Lock before store update (3 locations), **Fix 7**: Use `updateTask` instead of `updateTaskWithUndo`, **Fix 9**: Await position saves with error handling |
 | `src/composables/canvas/useCanvasResize.ts` | Lock before store update |
 | `src/composables/canvas/useCanvasEvents.ts` | Added lock guard to handleDrop |
 | `src/composables/canvas/useCanvasSync.ts` | **Fix 5**: `syncNodes()` now respects locked task positions |

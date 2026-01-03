@@ -457,48 +457,59 @@ const localTasks = ref({
 })
 
 // Function to update localTasks from props
+// OPTIMIZATION: Only update the currently active view type to save performance
 const updateLocalTasks = () => {
-  // Update status tasks
-  localTasks.value.status.planned = getTasksByStatus('planned')
-  localTasks.value.status.in_progress = getTasksByStatus('in_progress')
-  localTasks.value.status.backlog = getTasksByStatus('backlog')
-  localTasks.value.status.on_hold = getTasksByStatus('on_hold')
-
-  if (props.showDoneColumn) {
-    localTasks.value.status.done = getTasksByStatus('done')
-  } else {
-    localTasks.value.status.done = []
+  if (shouldLogTaskDiagnostics()) {
+    console.log(`⚡ [KanbanSwimlane] Updating tasks for view: ${currentViewType.value}`)
   }
-
-  // Update date tasks
-  localTasks.value.date.overdue = getTasksByDate('overdue')
-  localTasks.value.date.inbox = getTasksByDate('inbox')
-  localTasks.value.date.today = getTasksByDate('today')
-  localTasks.value.date.tomorrow = getTasksByDate('tomorrow')
-  localTasks.value.date.thisWeek = getTasksByDate('thisWeek')
-  localTasks.value.date.later = getTasksByDate('later')
-  localTasks.value.date.noDate = getTasksByDate('noDate')
-
-  // Update priority tasks
-  localTasks.value.priority.high = getTasksByPriority('high')
-  localTasks.value.priority.medium = getTasksByPriority('medium')
-  localTasks.value.priority.low = getTasksByPriority('low')
-  localTasks.value.priority.no_priority = getTasksByPriority('no_priority')
+  
+  const view = currentViewType.value
+  
+  if (view === 'status') {
+    localTasks.value.status.planned = getTasksByStatus('planned')
+    localTasks.value.status.in_progress = getTasksByStatus('in_progress')
+    localTasks.value.status.backlog = getTasksByStatus('backlog')
+    localTasks.value.status.on_hold = getTasksByStatus('on_hold')
+    
+    if (props.showDoneColumn) {
+      localTasks.value.status.done = getTasksByStatus('done')
+    } else {
+      localTasks.value.status.done = []
+    }
+  } else if (view === 'date') {
+    // Only pay the cost of date calculation if we are in date view
+    taskCache.value.clear() // Clear cache before processing
+    localTasks.value.date.overdue = getTasksByDate('overdue')
+    localTasks.value.date.inbox = getTasksByDate('inbox')
+    localTasks.value.date.today = getTasksByDate('today')
+    localTasks.value.date.tomorrow = getTasksByDate('tomorrow')
+    localTasks.value.date.thisWeek = getTasksByDate('thisWeek')
+    localTasks.value.date.later = getTasksByDate('later')
+    localTasks.value.date.noDate = getTasksByDate('noDate')
+  } else if (view === 'priority') {
+    localTasks.value.priority.high = getTasksByPriority('high')
+    localTasks.value.priority.medium = getTasksByPriority('medium')
+    localTasks.value.priority.low = getTasksByPriority('low')
+    localTasks.value.priority.no_priority = getTasksByPriority('no_priority')
+  }
 }
 
 // Initialize localTasks
 updateLocalTasks()
 
-// Watch for external task changes
+// Watch for external task changes - Deep watch required for status/property changes
+// Removed debounce to ensure instant UI feedback (e.g. task moving columns)
 watch(() => props.tasks, (newTasks) => {
   if (shouldLogTaskDiagnostics()) {
-    console.log(`🔄 [KanbanSwimlane] Tasks changed for project "${props.project.name}":`, newTasks.length)
+    console.log(`🔄 [KanbanSwimlane] Tasks array changed for "${props.project.name}" (Count: ${newTasks.length})`)
   }
-  // Clear the cache to ensure getTasksByDate recomputes with new task data
-  taskCache.value.clear()
-  // Update localTasks to maintain vuedraggable reactivity
   updateLocalTasks()
 }, { deep: true })
+
+// Re-run when view type changes (critical since we only compute one view at a time now)
+watch(currentViewType, () => {
+  updateLocalTasks()
+})
 
 // Also watch showDoneColumn changes
 watch(() => props.showDoneColumn, () => {

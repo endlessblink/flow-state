@@ -45,80 +45,42 @@
 
             <div class="form-group">
               <label class="form-label">Priority</label>
-              <select v-model="localSettings.priority" class="form-select">
-                <option :value="null">
-                  Don't change
-                </option>
-                <option value="high">
-                  High
-                </option>
-                <option value="medium">
-                  Medium
-                </option>
-                <option value="low">
-                  Low
-                </option>
-              </select>
+              <CustomSelect
+                :model-value="localSettings.priority || ''"
+                :options="priorityOptions"
+                placeholder="Select priority..."
+                @update:model-value="(val) => localSettings.priority = val === '' ? null : (val as AssignOnDropSettings['priority'])"
+              />
             </div>
 
             <div class="form-group">
               <label class="form-label">Status</label>
-              <select v-model="localSettings.status" class="form-select">
-                <option :value="null">
-                  Don't change
-                </option>
-                <option value="planned">
-                  Planned
-                </option>
-                <option value="in_progress">
-                  In Progress
-                </option>
-                <option value="done">
-                  Done
-                </option>
-                <option value="backlog">
-                  Backlog
-                </option>
-                <option value="on_hold">
-                  On Hold
-                </option>
-              </select>
+              <CustomSelect
+                :model-value="localSettings.status || ''"
+                :options="statusOptions"
+                placeholder="Select status..."
+                @update:model-value="(val) => localSettings.status = val === '' ? null : (val as AssignOnDropSettings['status'])"
+              />
             </div>
 
             <div class="form-group">
               <label class="form-label">Due Date</label>
-              <select v-model="localSettings.dueDate" class="form-select">
-                <option :value="null">
-                  Don't change
-                </option>
-                <option value="today">
-                  Today
-                </option>
-                <option value="tomorrow">
-                  Tomorrow
-                </option>
-                <option value="this_week">
-                  This Week
-                </option>
-                <option value="this_weekend">
-                  This Weekend
-                </option>
-                <option value="later">
-                  Later (no specific date)
-                </option>
-              </select>
+              <CustomSelect
+                :model-value="localSettings.dueDate || ''"
+                :options="dueDateOptions"
+                placeholder="Select due date..."
+                @update:model-value="(val) => localSettings.dueDate = val === '' ? null : (val as AssignOnDropSettings['dueDate'])"
+              />
             </div>
 
             <div class="form-group">
               <label class="form-label">Project</label>
-              <select v-model="localSettings.projectId" class="form-select">
-                <option :value="null">
-                  Don't change
-                </option>
-                <option v-for="project in projects" :key="project.id" :value="project.id">
-                  {{ project.name }}
-                </option>
-              </select>
+              <CustomSelect
+                :model-value="localSettings.projectId || ''"
+                :options="projectOptions"
+                placeholder="Select project..."
+                @update:model-value="(val) => localSettings.projectId = val === '' ? null : String(val)"
+              />
             </div>
           </div>
 
@@ -168,6 +130,35 @@ import { useTaskStore } from '@/stores/tasks'
 import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 import { useGroupSettings, getSettingsDescription } from '@/composables/useGroupSettings'
 import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Priority options for CustomSelect
+const priorityOptions = [
+  { label: "Don't change", value: '' },
+  { label: 'High', value: 'high' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Low', value: 'low' }
+]
+
+// Status options for CustomSelect
+const statusOptions = [
+  { label: "Don't change", value: '' },
+  { label: 'Planned', value: 'planned' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Done', value: 'done' },
+  { label: 'Backlog', value: 'backlog' },
+  { label: 'On Hold', value: 'on_hold' }
+]
+
+// Due Date options for CustomSelect
+const dueDateOptions = [
+  { label: "Don't change", value: '' },
+  { label: 'Today', value: 'today' },
+  { label: 'Tomorrow', value: 'tomorrow' },
+  { label: 'This Week', value: 'this_week' },
+  { label: 'This Weekend', value: 'this_weekend' },
+  { label: 'Later (no specific date)', value: 'later' }
+]
 
 interface Props {
   section: CanvasSection | null
@@ -197,6 +188,15 @@ const detectedKeyword = ref<PowerKeywordResult | null>(null)
 
 // Get projects for dropdown
 const projects = computed(() => taskStore.projects || [])
+
+// Project options for CustomSelect
+const projectOptions = computed(() => [
+  { label: "Don't change", value: '' },
+  ...projects.value.map(project => ({
+    label: project.name,
+    value: project.id
+  }))
+])
 
 // Settings preview text
 const settingsPreview = computed(() => {

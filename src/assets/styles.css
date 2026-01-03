@@ -1,6 +1,11 @@
 /* Import design tokens FIRST - provides all CSS custom properties */
 @import './design-tokens.css';
 
+/* Signal dark mode preference to browser - helps native controls on some systems */
+:root {
+  color-scheme: dark;
+}
+
 /* Then Tailwind CSS - provides utility classes */
 @tailwind base;
 @tailwind components;
@@ -37,6 +42,41 @@ html, body {
   /* Brighter canvas background for better element visibility */
   background: rgba(45, 50, 60, 0.5) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+/* =========================================================================
+   GLOBAL DARK MODE FOR NATIVE FORM ELEMENTS
+   These styles ensure native <select>, <input> have dark backgrounds
+   in ALL environments (Chromium, WebKitGTK, Firefox)
+   ========================================================================= */
+
+/* Force dark styling on ALL native select elements */
+select {
+  background-color: #1e1e28 !important;
+  color: #e0e0e0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px;
+}
+
+select:focus {
+  outline: none;
+  border-color: rgba(34, 211, 238, 0.5) !important;
+}
+
+select option {
+  background-color: #1e1e28 !important;
+  color: #e0e0e0 !important;
+  padding: 8px;
+}
+
+/* Specific class for filter selects with higher specificity */
+.filter-controls select,
+.filter-controls .filter-select,
+.filter-control select,
+.filter-select {
+  background-color: #1e1e28 !important;
+  color: #e0e0e0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
 /* =========================================================================
@@ -115,6 +155,267 @@ html, body {
   backdrop-filter: none !important;
 }
 
+/* Additional Tauri fallbacks for glass morphism classes */
+.tauri-app .glass-effect,
+.tauri-app .glass-surface,
+.tauri-app .glass-card,
+.tauri-app .glass-overlay,
+.tauri-app .glass-container,
+.tauri-app .task-glass,
+.tauri-app .modal-glass,
+.tauri-app .sidebar-glass {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(25, 25, 30, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Canvas-specific fallbacks */
+.tauri-app .canvas-contour {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(30, 32, 40, 0.95) !important;
+}
+
+/* Task node fallbacks */
+.tauri-app .vue-flow__node {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Vue Flow pane fallbacks */
+.tauri-app .vue-flow__pane,
+.tauri-app .vue-flow__viewport {
+  backdrop-filter: none !important;
+}
+
+/* =========================================================================
+   TAURI NATIVE FORM ELEMENTS FIX
+   WebKitGTK renders native <select>, <input> differently from Chromium.
+   CSS variables may not work - use explicit colors.
+   ========================================================================= */
+
+/* Native select dropdowns - explicit dark styling for WebKitGTK */
+.tauri-app select,
+.tauri-app .filter-select {
+  background-color: #1a1a24 !important;
+  color: #e0e0e0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  -webkit-appearance: menulist !important;
+  appearance: menulist !important;
+}
+
+.tauri-app select option,
+.tauri-app .filter-select option {
+  background-color: #1a1a24 !important;
+  color: #e0e0e0 !important;
+}
+
+/* Native input fields */
+.tauri-app input[type="text"],
+.tauri-app input[type="email"],
+.tauri-app input[type="password"],
+.tauri-app input[type="number"],
+.tauri-app input[type="search"],
+.tauri-app textarea {
+  background-color: #1a1a24 !important;
+  color: #e0e0e0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Native checkbox styling */
+.tauri-app input[type="checkbox"] {
+  accent-color: #22d3ee !important;
+}
+
+/* Placeholder text color */
+.tauri-app input::placeholder,
+.tauri-app textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Component-specific glass fallbacks */
+.tauri-app .task-node-glass,
+.tauri-app .command-palette-glass,
+.tauri-app .context-menu-glass,
+.tauri-app .sidebar-panel-glass {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(22, 24, 30, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+/* =========================================================================
+   COMPREHENSIVE TAURI COMPONENT FALLBACKS
+   These override inline backdrop-filter styles in Vue components
+   ========================================================================= */
+
+/* Modal and Dialog fallbacks */
+.tauri-app .modal-overlay,
+.tauri-app .modal-content,
+.tauri-app .modal-backdrop,
+.tauri-app .dialog-overlay,
+.tauri-app .dialog-content,
+.tauri-app .base-modal-overlay,
+.tauri-app .base-modal-content,
+.tauri-app .task-edit-modal,
+.tauri-app .settings-modal,
+.tauri-app .batch-edit-modal,
+.tauri-app .group-modal,
+.tauri-app .confirmation-modal,
+.tauri-app .welcome-modal,
+.tauri-app .quick-task-create-modal,
+.tauri-app .sync-alert-modal,
+.tauri-app .conflict-resolution-dialog,
+.tauri-app .manual-merge-modal {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(20, 22, 28, 0.98) !important;
+}
+
+/* Sidebar and Navigation fallbacks */
+.tauri-app .app-sidebar,
+.tauri-app .sidebar-content,
+.tauri-app .sidebar-smart-item,
+.tauri-app .sidebar-nav,
+.tauri-app .task-manager-sidebar,
+.tauri-app .category-selector,
+.tauri-app .filter-dropdown {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(18, 20, 26, 0.98) !important;
+}
+
+/* Context Menu fallbacks */
+.tauri-app .context-menu,
+.tauri-app .task-context-menu,
+.tauri-app .canvas-context-menu,
+.tauri-app .node-context-menu,
+.tauri-app .edge-context-menu,
+.tauri-app .context-menu-container,
+.tauri-app .context-menu-content {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(20, 22, 28, 0.98) !important;
+}
+
+/* Command Palette fallbacks */
+.tauri-app .command-palette,
+.tauri-app .command-palette-overlay,
+.tauri-app .command-palette-content,
+.tauri-app .search-modal,
+.tauri-app .search-modal-content {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(20, 22, 28, 0.98) !important;
+}
+
+/* Canvas Component fallbacks */
+.tauri-app .task-node,
+.tauri-app .task-node-content,
+.tauri-app .group-node,
+.tauri-app .group-node-simple,
+.tauri-app .canvas-group,
+.tauri-app .section-selector,
+.tauri-app .inbox-panel,
+.tauri-app .inbox-panel-header,
+.tauri-app .inbox-filters,
+.tauri-app .inbox-time-filters,
+.tauri-app .multi-selection-overlay,
+.tauri-app .canvas-empty-state {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(25, 27, 35, 0.98) !important;
+}
+
+/* Task Card fallbacks (Kanban, Calendar, etc.) */
+.tauri-app .task-card,
+.tauri-app .task-card-content,
+.tauri-app .task-row,
+.tauri-app .task-list,
+.tauri-app .task-table,
+.tauri-app .hierarchical-task-row,
+.tauri-app .quick-sort-card,
+.tauri-app .kanban-column,
+.tauri-app .kanban-swimlane {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(28, 30, 38, 0.95) !important;
+}
+
+/* Dropdown and Popover fallbacks */
+.tauri-app .base-dropdown,
+.tauri-app .base-dropdown-content,
+.tauri-app .base-popover,
+.tauri-app .base-popover-content,
+.tauri-app .custom-select,
+.tauri-app .custom-select-dropdown,
+.tauri-app .emoji-picker,
+.tauri-app .emoji-picker-content,
+.tauri-app .project-filter-dropdown {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(20, 22, 28, 0.98) !important;
+}
+
+/* Button and Interactive Element fallbacks */
+.tauri-app .base-button-glass,
+.tauri-app .base-nav-item,
+.tauri-app .view-controls,
+.tauri-app .filter-controls,
+.tauri-app .multi-select-toggle,
+.tauri-app .done-toggle,
+.tauri-app .drag-handle {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Calendar Component fallbacks */
+.tauri-app .calendar-day-view,
+.tauri-app .calendar-week-view,
+.tauri-app .calendar-header,
+.tauri-app .calendar-inbox-panel,
+.tauri-app .calendar-status-overlays,
+.tauri-app .unified-inbox-panel {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(22, 24, 30, 0.98) !important;
+}
+
+/* Sync and System UI fallbacks */
+.tauri-app .sync-status,
+.tauri-app .sync-health-dashboard,
+.tauri-app .sync-alert-system,
+.tauri-app .backup-settings,
+.tauri-app .backup-verification,
+.tauri-app .sync-integration,
+.tauri-app .user-profile,
+.tauri-app .auth-status-notice,
+.tauri-app .error-boundary {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(20, 22, 28, 0.98) !important;
+}
+
+/* Base component fallbacks */
+.tauri-app .base-card,
+.tauri-app .base-modal,
+.tauri-app .time-display,
+.tauri-app .sort-progress,
+.tauri-app .quick-task-create {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(22, 24, 30, 0.98) !important;
+}
+
+/* Project indicator fallbacks */
+.tauri-app .project-emoji-icon,
+.tauri-app [class*="project-indicator"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* WebKitGTK-specific fixes using @supports */
 /* Fallback for when backdrop-filter doesn't work properly */
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
@@ -125,6 +426,31 @@ html, body {
     -webkit-backdrop-filter: none !important;
     background-color: rgba(25, 25, 30, 0.98) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  }
+
+  /* Native form elements for WebKitGTK (no backdrop-filter support) */
+  select,
+  .filter-select {
+    background-color: #1a1a24 !important;
+    color: #e0e0e0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  }
+
+  select option,
+  .filter-select option {
+    background-color: #1a1a24 !important;
+    color: #e0e0e0 !important;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  textarea {
+    background-color: #1a1a24 !important;
+    color: #e0e0e0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
   }
 }
 

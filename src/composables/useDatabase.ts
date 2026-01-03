@@ -229,8 +229,8 @@ async function performWithRetry<T>(
 
       // BUG-057 FIX: If database is closed (Firefox OOM), reset singleton and retry
       if (isDatabaseClosedError(err)) {
-        console.warn(`⚠️ [RETRY] Database closed detected in ${operationName}, resetting singleton...`)
-        resetDatabaseSingleton()
+        console.warn(`⚠️ [RETRY] Database closed detected in ${operationName} - NOT resetting singleton to avoid loop.`)
+        // resetDatabaseSingleton() // DISABLED: This causes infinite loop in Tauri/WebKit
         // Don't throw - let it retry with fresh database
       }
 
@@ -421,7 +421,11 @@ export function useDatabase(): UseDatabaseReturn {
         const hasRemoteSync = !!config.remote?.url
         const forceLocalMode = false
 
-        const dbName = config.local.name
+        // BUG-056: Auto-recovery for corrupted IndexedDB
+        // NUCLEAR RESET V2: Support dynamic database versioning to bypass file locks
+        const dbVersion = localStorage.getItem('pomo-flow-db-version') || ''
+        const versionSuffix = dbVersion ? `-${dbVersion}` : ''
+        const dbName = config.local.name + versionSuffix
 
         // BUG-056: Auto-recovery for corrupted IndexedDB
         const createDatabase = async (retryAfterDelete = false): Promise<PouchDB.Database> => {

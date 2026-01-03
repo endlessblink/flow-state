@@ -105,107 +105,55 @@
               <!-- Priority -->
               <div class="form-group compact">
                 <label class="form-label">Priority</label>
-                <select v-model="smartSettings.priority" class="form-select">
-                  <option :value="null">
-                    Don't change
-                  </option>
-                  <option value="high">
-                    High
-                  </option>
-                  <option value="medium">
-                    Medium
-                  </option>
-                  <option value="low">
-                    Low
-                  </option>
-                </select>
+                <CustomSelect
+                  :model-value="smartSettings.priority || ''"
+                  :options="priorityOptions"
+                  placeholder="Select priority..."
+                  @update:model-value="(val) => smartSettings.priority = val === '' ? null : (val as 'high' | 'medium' | 'low')"
+                />
               </div>
 
               <!-- Status -->
               <div class="form-group compact">
                 <label class="form-label">Status</label>
-                <select v-model="smartSettings.status" class="form-select">
-                  <option :value="null">
-                    Don't change
-                  </option>
-                  <option value="planned">
-                    Planned
-                  </option>
-                  <option value="in_progress">
-                    In Progress
-                  </option>
-                  <option value="done">
-                    Done
-                  </option>
-                  <option value="backlog">
-                    Backlog
-                  </option>
-                  <option value="on_hold">
-                    On Hold
-                  </option>
-                </select>
+                <CustomSelect
+                  :model-value="smartSettings.status || ''"
+                  :options="statusOptions"
+                  placeholder="Select status..."
+                  @update:model-value="(val) => smartSettings.status = val === '' ? null : (val as 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold')"
+                />
               </div>
 
               <!-- Due Date -->
               <div class="form-group compact">
                 <label class="form-label">Due Date</label>
-                <select v-model="smartSettings.dueDate" class="form-select">
-                  <option :value="null">
-                    Don't change
-                  </option>
-                  <option value="today">
-                    Today
-                  </option>
-                  <option value="tomorrow">
-                    Tomorrow
-                  </option>
-                  <option value="this_week">
-                    This Week
-                  </option>
-                  <option value="this_weekend">
-                    This Weekend
-                  </option>
-                  <option value="later">
-                    Later (no specific date)
-                  </option>
-                </select>
+                <CustomSelect
+                  :model-value="smartSettings.dueDate || ''"
+                  :options="dueDateOptions"
+                  placeholder="Select due date..."
+                  @update:model-value="(val) => smartSettings.dueDate = val === '' ? null : (val as 'today' | 'tomorrow' | 'this_week' | 'this_weekend' | 'later')"
+                />
               </div>
               <!-- Project -->
               <div class="form-group compact">
                 <label class="form-label">Project</label>
-                <select v-model="smartSettings.projectId" class="form-select">
-                  <option :value="null">
-                    Don't change
-                  </option>
-                  <option v-for="project in projects" :key="project.id" :value="project.id">
-                    {{ project.name }}
-                  </option>
-                </select>
+                <CustomSelect
+                  :model-value="smartSettings.projectId || ''"
+                  :options="projectOptions"
+                  placeholder="Select project..."
+                  @update:model-value="(val) => smartSettings.projectId = val === '' ? null : String(val)"
+                />
               </div>
 
               <!-- Duration -->
               <div class="form-group compact">
                 <label class="form-label">Duration</label>
-                <select v-model="smartSettings.estimatedDuration" class="form-select">
-                  <option :value="null">
-                    Don't change
-                  </option>
-                  <option :value="15">
-                    Quick (<15m)
-                  </option>
-                  <option :value="30">
-                    Short (15-30m)
-                  </option>
-                  <option :value="60">
-                    Medium (30-60m)
-                  </option>
-                  <option :value="120">
-                    Long (>60m)
-                  </option>
-                  <option :value="-1">
-                    Unestimated
-                  </option>
-                </select>
+                <CustomSelect
+                  :model-value="smartSettings.estimatedDuration === null ? '' : String(smartSettings.estimatedDuration)"
+                  :options="durationOptions"
+                  placeholder="Select duration..."
+                  @update:model-value="(val) => smartSettings.estimatedDuration = val === '' ? null : Number(val)"
+                />
               </div>
 
               <!-- Settings Preview -->
@@ -264,6 +212,45 @@ import { getUndoSystem } from '@/composables/undoSingleton'
 import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 import { getSettingsDescription } from '@/composables/useGroupSettings'
 import BaseInput from '@/components/base/BaseInput.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Options for smart settings CustomSelect components
+const priorityOptions = [
+  { label: "Don't change", value: '' },
+  { label: 'High', value: 'high' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Low', value: 'low' }
+]
+
+const statusOptions = [
+  { label: "Don't change", value: '' },
+  { label: 'Planned', value: 'planned' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Done', value: 'done' },
+  { label: 'Backlog', value: 'backlog' },
+  { label: 'On Hold', value: 'on_hold' }
+]
+
+const dueDateOptions = [
+  { label: "Don't change", value: '' },
+  { label: 'Today', value: 'today' },
+  { label: 'Tomorrow', value: 'tomorrow' },
+  { label: 'This Week', value: 'this_week' },
+  { label: 'This Weekend', value: 'this_weekend' },
+  { label: 'Later (no specific date)', value: 'later' }
+]
+
+const durationOptions = [
+  { label: "Don't change", value: '' },
+  { label: 'Quick (<15m)', value: '15' },
+  { label: 'Short (15-30m)', value: '30' },
+  { label: 'Medium (30-60m)', value: '60' },
+  { label: 'Long (>60m)', value: '120' },
+  { label: 'Unestimated', value: '-1' }
+]
+
+// Project options computed - needs to be defined after taskStore is available
+// This will be a computed property that references taskStore.projects
 
 interface Props {
   isOpen: boolean
@@ -311,6 +298,15 @@ const customColor = ref('#6366f1')
 const isEditing = computed(() => !!props.group)
 
 const projects = computed(() => taskStore.projects || [])
+
+// Project options for CustomSelect
+const projectOptions = computed(() => [
+  { label: "Don't change", value: '' },
+  ...projects.value.map(p => ({
+    label: p.name,
+    value: p.id
+  }))
+])
 
 const hasSmartSettings = computed(() => {
   return smartSettings.priority || smartSettings.status || smartSettings.dueDate || smartSettings.projectId || smartSettings.estimatedDuration !== null

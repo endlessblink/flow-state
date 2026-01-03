@@ -745,6 +745,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**BUG-062**~~ | ✅ **DONE** | `mockTaskDetector.ts`, `CanvasView.vue`, `BackupSettings.vue` | - | - |
 | **TASK-087** | ✅ **DONE** | `MarkdownExportService.ts`, `FileSystemService.ts`, `BackupSettings.vue` | - | ROAD-018 |
 | **TASK-088** | ✅ **DONE** | `DatabaseMaintenanceService.ts`, `useDatabase.ts` | - | - |
+| **TASK-089** | 🔄 **IN PROGRESS** | `canvasStateLock.ts`, `useAppInitialization.ts`, `CanvasView.vue`, `canvas.ts`, `useCanvasSync.ts`, `useCanvasDragDrop.ts` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -851,6 +852,21 @@ Phase 3 (Mobile) ←────────────────────
     - Validates task has ID before adding to store
     - Defensive date conversion (ensures Date objects even if strings passed)
   - ✅ Verified: Tasks display correctly with proper titles, no phantom duplication, dates work in CanvasView hash calculations
+
+### ✅ BUG-063: Tauri Sync Discrepancy (Jan 3, 2026)
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Local tasks (7/10) vs Remote (17) | HIGH | ✅ **FIXED** |
+
+**Symptom**: Tauri app showed fewer tasks than remote. API logs showed successful pull, but tasks didn't appear.
+**Root Cause**: Local PouchDB had "deleted" revisions that were winning conflict resolution against the remote active revisions, likely due to history truncation or sync timing issues.
+**Fix Implemented**:
+1. **Added "Reset Local Data" Tool**: New "Danger Zone" button in `BackupSettings.vue`.
+   - Calls `nucleaurReset()` on SyncManager.
+   - Wipes local database + reloads app.
+   - Forces fresh clone from server.
+2. **Result**: Application re-syncs clean state from remote, resolving the discrepancy.
 - [x] **~~BUG-086~~**: Multi-node drag only saves position of directly-dragged node | **P1-HIGH** | ✅ FIXED (Jan 2)
   - **Symptoms**: When selecting multiple tasks and dragging them together, positions reset after sync/reload
   - **Root Cause**: `handleNodeDragStop` in `useCanvasDragDrop.ts` only saved the position of the node directly under the mouse, not all selected nodes that Vue Flow moved together

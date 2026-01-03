@@ -253,20 +253,12 @@
         <div class="settings-grid">
           <div class="setting-item">
             <label>Sync Interval</label>
-            <select v-model="settings.syncInterval">
-              <option value="5000">
-                5 seconds
-              </option>
-              <option value="10000">
-                10 seconds
-              </option>
-              <option value="30000">
-                30 seconds
-              </option>
-              <option value="60000">
-                1 minute
-              </option>
-            </select>
+            <CustomSelect
+              :model-value="String(settings.syncInterval)"
+              :options="syncIntervalOptions"
+              placeholder="Select interval..."
+              @update:model-value="(val) => settings.syncInterval = Number(val)"
+            />
           </div>
           <div class="setting-item">
             <label>Batch Size</label>
@@ -323,6 +315,15 @@ import {
 } from 'lucide-vue-next'
 import { useReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Sync interval options for CustomSelect
+const syncIntervalOptions = [
+  { label: '5 seconds', value: '5000' },
+  { label: '10 seconds', value: '10000' },
+  { label: '30 seconds', value: '30000' },
+  { label: '1 minute', value: '60000' }
+]
 
 interface DashboardSettings {
   syncInterval: number

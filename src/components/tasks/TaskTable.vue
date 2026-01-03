@@ -126,28 +126,13 @@
         </span>
       </div>
 
-      <div class="table-cell status-cell">
-        <select
-          :value="task.status"
-          class="status-select"
-          @change="updateTaskStatus(task.id, ($event.target as HTMLSelectElement).value as Task['status'])"
-        >
-          <option value="planned">
-            To Do
-          </option>
-          <option value="in_progress">
-            In Progress
-          </option>
-          <option value="done">
-            ✓
-          </option>
-          <option value="backlog">
-            Backlog
-          </option>
-          <option value="on_hold">
-            On Hold
-          </option>
-        </select>
+      <div class="table-cell status-cell" @click.stop>
+        <CustomSelect
+          :model-value="task.status"
+          :options="statusOptions"
+          placeholder="Select status..."
+          @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"
+        />
       </div>
 
       <div class="table-cell due-date-cell">
@@ -205,6 +190,16 @@ import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { DensityType } from '@/components/layout/ViewControls.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Status options for CustomSelect
+const statusOptions = [
+  { label: 'To Do', value: 'planned' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: '✓', value: 'done' },
+  { label: 'Backlog', value: 'backlog' },
+  { label: 'On Hold', value: 'on_hold' }
+]
 
 interface Props {
   tasks: Task[]

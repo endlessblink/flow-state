@@ -2,6 +2,8 @@ import { ref, computed } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+// TASK-089: Canvas state lock to prevent sync from overwriting user changes
+import { lockGroupPosition } from '@/utils/canvasStateLock'
 
 export function useCanvasResize() {
     const canvasStore = useCanvasStore()
@@ -132,6 +134,14 @@ export function useCanvasResize() {
                         height: validatedHeight
                     }
                 })
+
+                // TASK-089: Lock group position to prevent sync from overwriting during push
+                lockGroupPosition(sectionId, {
+                    x: newX,
+                    y: newY,
+                    width: validatedWidth,
+                    height: validatedHeight
+                }, 'resize')
 
                 // BUG-055 FIX: Inverse delta compensation for children
                 if (deltaX !== 0 || deltaY !== 0) {

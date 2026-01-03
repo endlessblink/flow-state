@@ -7,7 +7,8 @@ import { useTaskHistory } from './tasks/taskHistory'
 import { useProjectStore } from './projects'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { transactionManager } from '@/services/sync/TransactionManager'
-import { isPositionLocked, getLockedPosition } from '@/utils/canvasPositionLock'
+// TASK-089: Updated to use unified canvas state lock system
+import { isPositionLocked, getLockedPosition } from '@/utils/canvasStateLock'
 
 // Export types and utilities for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
@@ -78,7 +79,7 @@ export const useTaskStore = defineStore('tasks', () => {
     syncInProgress,
     runAllTaskMigrations
   )
-  const { saveTasksToStorage, saveSpecificTasks, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool } = persistence
+  const { saveTasksToStorage, saveSpecificTasks, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool, importTasks } = persistence
 
   // 3. Initialize Operations
   const operations = useTaskOperations(
@@ -268,6 +269,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // Helper functions
     getTaskInstances,
+    importTasks, // Exposed for Markdown Import (TASK-087)
 
     // Undo/Redo enabled actions
     ...undoRedoEnabledActions(),

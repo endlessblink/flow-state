@@ -22,21 +22,12 @@
 
         <!-- View Type Dropdown -->
         <div class="view-type-dropdown" @click.stop>
-          <select
-            v-model="localViewType"
-            class="view-type-select"
-            @change="handleViewTypeChange"
-          >
-            <option value="status">
-              Status
-            </option>
-            <option value="date">
-              Date
-            </option>
-            <option value="priority">
-              Priority
-            </option>
-          </select>
+          <CustomSelect
+            :model-value="localViewType"
+            :options="viewTypeOptions"
+            placeholder="View by..."
+            @update:model-value="(val) => { localViewType = String(val) as Project['viewType']; handleViewTypeChange({ target: { value: val } } as any) }"
+          />
         </div>
       </div>
     </div>
@@ -123,6 +114,14 @@ import TaskCard from './TaskCard.vue'
 import type { Task, Project, RecurringTaskInstance } from '@/stores/tasks'
 import { useTaskStore, parseDateKey, getTaskInstances } from '@/stores/tasks'
 import { ChevronDown, ChevronRight, Calendar, Plus } from 'lucide-vue-next'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// View type options for swimlane organization
+const viewTypeOptions = [
+  { label: 'Status', value: 'status' },
+  { label: 'Date', value: 'date' },
+  { label: 'Priority', value: 'priority' }
+]
 import { shouldLogTaskDiagnostics } from '@/utils/consoleFilter'
 import { useHorizontalDragScroll } from '@/composables/useHorizontalDragScroll'
 import { shouldUseSmartGroupLogic, getSmartGroupType } from '@/composables/useTaskSmartGroups'

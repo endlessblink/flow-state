@@ -20,21 +20,12 @@
 
       <div class="form-group">
         <label class="form-label">Parent Project (Optional)</label>
-        <select
-          v-model="projectData.parentId"
-          class="parent-project-select"
-        >
-          <option :value="null">
-            None (Top Level)
-          </option>
-          <option
-            v-for="proj in availableParentProjects"
-            :key="proj.id"
-            :value="proj.id"
-          >
-            {{ '  '.repeat(proj.depth) }}{{ proj.depth > 0 ? '└─ ' : '' }}{{ proj.name }}
-          </option>
-        </select>
+        <CustomSelect
+          :model-value="projectData.parentId || ''"
+          :options="parentProjectOptions"
+          placeholder="Select parent project..."
+          @update:model-value="(val) => projectData.parentId = val === '' ? null : String(val)"
+        />
       </div>
 
       <div class="form-group">
@@ -105,6 +96,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import EmojiPicker from '@/components/common/EmojiPicker.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 interface Props {
   isOpen: boolean
@@ -171,6 +163,15 @@ const availableParentProjects = computed<ProjectNode[]>(() => {
 
   return buildTree(null)
 })
+
+// Options for parent project CustomSelect
+const parentProjectOptions = computed(() => [
+  { label: 'None (Top Level)', value: '' },
+  ...availableParentProjects.value.map(proj => ({
+    label: '  '.repeat(proj.depth) + (proj.depth > 0 ? '└─ ' : '') + proj.name,
+    value: proj.id
+  }))
+])
 
 const handleIconSelect = (data: { type: 'emoji' | 'color'; value: string }) => {
   if (data.type === 'emoji') {

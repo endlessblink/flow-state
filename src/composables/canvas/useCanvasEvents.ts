@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+// TASK-089: Import position lock check to prevent sync from overwriting user changes
+import { isAnyCanvasStateLocked } from '@/utils/canvasStateLock'
 
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
@@ -134,7 +136,8 @@ export function useCanvasEvents(syncNodes?: () => void) {
                 isInInbox: false
             })
 
-            if (syncNodes) {
+            // TASK-089: Guard syncNodes to prevent overwriting locked positions
+            if (syncNodes && !isAnyCanvasStateLocked()) {
                 syncNodes()
             }
 

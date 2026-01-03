@@ -5,7 +5,7 @@
  * Prevents data loss through redundant storage across multiple locations
  */
 
-import { ref, watch as _watch } from 'vue'
+import { ref, watch as _watch, onUnmounted } from 'vue'
 
 // Storage priority order (most reliable first)
 const STORAGE_LAYERS = {
@@ -36,10 +36,21 @@ class PersistentStorage {
   private availableLayers: string[] = []
   private lastBackupTime: number = 0
   private backupInterval: number = 15 * 60 * 1000 // 15 minutes (reduced frequency)
+  private backupIntervalId: ReturnType<typeof setInterval> | null = null
 
   constructor() {
     this.detectAvailableStorage()
     this.startPeriodicBackup()
+  }
+
+  /**
+   * Cleanup resources (call when app shuts down)
+   */
+  destroy() {
+    if (this.backupIntervalId) {
+      clearInterval(this.backupIntervalId)
+      this.backupIntervalId = null
+    }
   }
 
   /**
@@ -276,7 +287,10 @@ class PersistentStorage {
    * Create automatic backups
    */
   private startPeriodicBackup() {
-    setInterval(() => {
+    // Only start if not already running
+    if (this.backupIntervalId) return
+
+    this.backupIntervalId = setInterval(() => {
       this.createBackup()
     }, this.backupInterval)
   }
@@ -378,24 +392,43 @@ class PersistentStorage {
 
 // Global instance
 let persistentStorage: PersistentStorage | null = null
+// Singleton health check interval - only one across all usePersistentStorage() calls
+let healthCheckIntervalId: ReturnType<typeof setInterval> | null = null
+// Shared reactive health status (singleton) with default value
+const sharedHealthStatus = ref<ReturnType<PersistentStorage['getHealthStatus']>>({
+  availableLayers: [],
+  lastBackupTime: 0,
+  nextBackupIn: 0,
+  isHealthy: false
+})
 
 /**
  * Composable for using persistent storage
+ * MEMORY LEAK FIX: Health check interval is now singleton, not created per-call
  */
 export function usePersistentStorage() {
   if (!persistentStorage) {
     persistentStorage = new PersistentStorage()
+    sharedHealthStatus.value = persistentStorage.getHealthStatus()
   }
 
-  const healthStatus = ref(persistentStorage.getHealthStatus())
-
-  // Update health status periodically
   const storage = persistentStorage
 
-  // Update health status periodically
-  setInterval(() => {
-    healthStatus.value = storage.getHealthStatus()
-  }, 30000) // Every 30 seconds
+  // MEMORY LEAK FIX: Only create ONE health check interval across all composable instances
+  if (!healthCheckIntervalId) {
+    healthCheckIntervalId = setInterval(() => {
+      if (persistentStorage) {
+        sharedHealthStatus.value = persistentStorage.getHealthStatus()
+      }
+    }, 30000) // Every 30 seconds
+  }
+
+  // Cleanup on component unmount (only clears if this is the last user)
+  // Note: For app-level singletons, this cleanup is optional but good practice
+  onUnmounted(() => {
+    // Don't clear singleton intervals on individual component unmounts
+    // They will be cleaned up when the app closes
+  })
 
   return {
     save: <T>(key: string, data: T) => storage.save(key, data),
@@ -403,7 +436,22 @@ export function usePersistentStorage() {
     createBackup: () => storage.createBackup(),
     getAllBackups: () => storage.getAllBackups(),
     restoreFromBackup: (backup: unknown) => storage.restoreFromBackup(backup as BackupData),
-    healthStatus,
+    healthStatus: sharedHealthStatus,
     STORAGE_KEYS
+  }
+}
+
+/**
+ * Cleanup function for app shutdown
+ * Call this when the app is unmounting to prevent memory leaks
+ */
+export function cleanupPersistentStorage() {
+  if (healthCheckIntervalId) {
+    clearInterval(healthCheckIntervalId)
+    healthCheckIntervalId = null
+  }
+  if (persistentStorage) {
+    persistentStorage.destroy()
+    persistentStorage = null
   }
 }

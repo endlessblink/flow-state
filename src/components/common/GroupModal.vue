@@ -72,21 +72,12 @@
         <!-- TASK-072: Parent Group Selector for Nested Groups -->
         <div class="form-group">
           <label class="form-label">Parent Group (Optional)</label>
-          <select
-            v-model="groupData.parentGroupId"
-            class="parent-select"
-          >
-            <option :value="null">
-              None (Top Level)
-            </option>
-            <option
-              v-for="parentOption in availableParentGroups"
-              :key="parentOption.id"
-              :value="parentOption.id"
-            >
-              {{ parentOption.name }}
-            </option>
-          </select>
+          <CustomSelect
+            :model-value="groupData.parentGroupId || ''"
+            :options="parentGroupOptions"
+            placeholder="Select parent group..."
+            @update:model-value="(val) => groupData.parentGroupId = val === '' ? null : String(val)"
+          />
           <p class="form-hint">
             Nest this group inside another group for better organization.
           </p>
@@ -114,6 +105,7 @@ import { ref, watch, nextTick, computed } from 'vue'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { X } from 'lucide-vue-next'
 import BaseInput from '@/components/base/BaseInput.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 interface Props {
   isOpen: boolean
@@ -218,6 +210,15 @@ const availableParentGroups = computed(() => {
   // For new groups, all existing groups are valid parents
   return allSections
 })
+
+// Options for parent group CustomSelect
+const parentGroupOptions = computed(() => [
+  { label: 'None (Top Level)', value: '' },
+  ...availableParentGroups.value.map((s: CanvasSection) => ({
+    label: s.name,
+    value: s.id
+  }))
+])
 
 const selectColor = (color: string) => {
   groupData.value.color = color

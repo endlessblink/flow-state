@@ -23,27 +23,12 @@
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Repeat
         </label>
-        <select
-          v-model="selectedPattern"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-          @change="handlePatternChange"
-        >
-          <option value="none">
-            None
-          </option>
-          <option value="daily">
-            Daily
-          </option>
-          <option value="weekly">
-            Weekly
-          </option>
-          <option value="monthly">
-            Monthly
-          </option>
-          <option value="yearly">
-            Yearly
-          </option>
-        </select>
+        <CustomSelect
+          :model-value="selectedPattern"
+          :options="patternOptions"
+          placeholder="Select pattern..."
+          @update:model-value="(val) => { selectedPattern = val as RecurrencePattern; handlePatternChange() }"
+        />
       </div>
 
       <!-- Pattern-specific options -->
@@ -95,14 +80,12 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             On day
           </label>
-          <select
-            v-model.number="dayOfMonth"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-          >
-            <option v-for="day in 31" :key="day" :value="day">
-              {{ day }}{{ getDaySuffix(day) }}
-            </option>
-          </select>
+          <CustomSelect
+            :model-value="String(dayOfMonth)"
+            :options="dayOptions"
+            placeholder="Select day..."
+            @update:model-value="(val) => dayOfMonth = Number(val)"
+          />
         </div>
 
         <!-- Yearly Options -->
@@ -111,27 +94,23 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               On
             </label>
-            <select
-              v-model.number="selectedMonth"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-            >
-              <option v-for="(month, index) in months" :key="index" :value="index + 1">
-                {{ month }}
-              </option>
-            </select>
+            <CustomSelect
+              :model-value="String(selectedMonth)"
+              :options="monthOptions"
+              placeholder="Select month..."
+              @update:model-value="(val) => selectedMonth = Number(val)"
+            />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Day
             </label>
-            <select
-              v-model.number="dayOfMonth"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-            >
-              <option v-for="day in getDaysInSelectedMonth()" :key="day" :value="day">
-                {{ day }}{{ getDaySuffix(day) }}
-              </option>
-            </select>
+            <CustomSelect
+              :model-value="String(dayOfMonth)"
+              :options="daysInSelectedMonthOptions"
+              placeholder="Select day..."
+              @update:model-value="(val) => dayOfMonth = Number(val)"
+            />
           </div>
         </div>
 
@@ -218,6 +197,49 @@ import { ref, computed, watch } from 'vue'
 import { useTaskRecurrence } from '@/composables/useTaskRecurrence'
 import { RecurrencePattern, EndCondition, type TaskRecurrence } from '@/types/recurrence'
 import { formatDateKey as _formatDateKey, parseDateKey } from '@/stores/tasks'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Pattern options for CustomSelect
+const patternOptions = [
+  { label: 'None', value: 'none' },
+  { label: 'Daily', value: 'daily' },
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'Yearly', value: 'yearly' }
+]
+
+// Month options for CustomSelect
+const monthOptions = [
+  { label: 'January', value: '1' },
+  { label: 'February', value: '2' },
+  { label: 'March', value: '3' },
+  { label: 'April', value: '4' },
+  { label: 'May', value: '5' },
+  { label: 'June', value: '6' },
+  { label: 'July', value: '7' },
+  { label: 'August', value: '8' },
+  { label: 'September', value: '9' },
+  { label: 'October', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'December', value: '12' }
+]
+
+// Helper function to get day suffix
+const getDaySuffixHelper = (day: number): string => {
+  if (day >= 11 && day <= 13) return 'th'
+  switch (day % 10) {
+    case 1: return 'st'
+    case 2: return 'nd'
+    case 3: return 'rd'
+    default: return 'th'
+  }
+}
+
+// Generate day options (1-31) for CustomSelect
+const dayOptions = Array.from({ length: 31 }, (_, i) => {
+  const day = i + 1
+  return { label: `${day}${getDaySuffixHelper(day)}`, value: String(day) }
+})
 
 interface Props {
   taskId: string
@@ -293,6 +315,16 @@ const previewDates = computed(() => {
 
   const startDate = parseDateKey(props.dueDate) || new Date()
   return getPreview(startDate, 10)
+})
+
+// Generate day options based on selected month for yearly recurrence
+const daysInSelectedMonthOptions = computed(() => {
+  const year = new Date().getFullYear()
+  const daysInMonth = new Date(year, selectedMonth.value, 0).getDate()
+  return Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1
+    return { label: `${day}${getDaySuffixHelper(day)}`, value: String(day) }
+  })
 })
 
 // Methods

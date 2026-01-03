@@ -83,6 +83,23 @@ setup((app: App) => {
   app.use(router)
 })
 
+// Global types for Storybook toolbar controls
+export const globalTypes = {
+  tauriMode: {
+    name: 'Tauri Mode',
+    description: 'Simulate Tauri WebKitGTK fallbacks (no backdrop-filter)',
+    defaultValue: false,
+    toolbar: {
+      icon: 'mobile',
+      items: [
+        { value: false, title: 'Browser (Chromium)' },
+        { value: true, title: 'Tauri (WebKitGTK)' }
+      ],
+      dynamicTitle: true,
+    }
+  }
+}
+
 const preview: Preview = {
   parameters: {
     layout: 'fullscreen',
@@ -140,6 +157,21 @@ const preview: Preview = {
   },
 
   decorators: [
+    // Tauri mode decorator - applies .tauri-app class based on global toggle
+    (story: any, context: any) => {
+      if (typeof document !== 'undefined') {
+        // Apply or remove tauri-app class based on global toggle
+        if (context.globals.tauriMode) {
+          document.documentElement.classList.add('tauri-app')
+          document.body.classList.add('tauri-app')
+        } else {
+          document.documentElement.classList.remove('tauri-app')
+          document.body.classList.remove('tauri-app')
+        }
+      }
+      return story()
+    },
+    // Dark theme and background decorator
     (story: any) => {
       if (typeof document !== 'undefined') {
         const appLayoutGradient = 'var(--app-background-gradient)'

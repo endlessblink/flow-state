@@ -191,12 +191,14 @@ export function useAppInitialization() {
             }
             hasReloadedStores = true
             if (syncCompleted) {
-                console.log('✅ [APP] Background sync completed - reloading stores...')
-                // Always reload stores after sync to catch conflict-resolved data
+                console.log('✅ [APP] Background sync completed - reloading task/project stores...')
+                // Always reload task/project stores after sync to catch conflict-resolved data
                 await taskStore.loadFromDatabase()
                 await projectStore.loadProjectsFromPouchDB()
-                await canvasStore.loadFromDatabase()
-                console.log('✅ [APP] Stores reloaded after sync')
+                // TASK-089 FIX: Do NOT reload canvas store - it resets viewport and group positions
+                // Canvas uses incremental sync via updateSectionFromSync() and handlePouchDBChange()
+                // await canvasStore.loadFromDatabase()  // <-- CAUSES POSITION RESETS
+                console.log('✅ [APP] Task/project stores reloaded (canvas preserved via incremental sync)')
             } else {
                 console.warn('⚠️ [APP] Background sync timed out - using local data')
             }
@@ -219,17 +221,20 @@ export function useAppInitialization() {
 
         // BUG-055 FALLBACK: Force reload stores after 10 seconds if sync hasn't completed
         // This handles cases where sync hangs or takes too long in some browsers (Firefox/Zen)
+        // TASK-089 FIX: Do NOT reload canvas store - it resets viewport and group positions
         setTimeout(async () => {
             if (hasReloadedStores) {
                 // console.log('ℹ️ [APP] Fallback timer: stores already reloaded')
                 return
             }
-            console.log('⏰ [APP] Fallback timer triggered - force reloading stores...')
+            console.log('⏰ [APP] Fallback timer triggered - reloading task/project stores (NOT canvas)...')
             hasReloadedStores = true
             await taskStore.loadFromDatabase()
             await projectStore.loadProjectsFromPouchDB()
-            await canvasStore.loadFromDatabase()
-            console.log('✅ [APP] Stores force-reloaded by fallback timer')
+            // TASK-089: REMOVED canvas reload - it resets viewport and positions
+            // Canvas uses incremental sync via updateSectionFromSync() and handlePouchDBChange()
+            // await canvasStore.loadFromDatabase()  // <-- CAUSES POSITION RESETS
+            console.log('✅ [APP] Task/project stores reloaded (canvas preserved)')
 
             // BUG-057 FIX: Start live sync from fallback if not already running
             if (!syncManager.isLiveSyncActive() && (syncManager.remoteConnected?.value || syncManager.hasConnectedEver?.value)) {
@@ -296,11 +301,31 @@ export function useAppInitialization() {
             const db = (window as any).pomoFlowDb
             if (db) {
                 try {
-                    const allDocs = await db.allDocs({ limit: 10 })
-                    console.log('🔍 [SYNC-DIAGNOSTIC] First 10 IDs in Local DB:', allDocs.rows.map((r: any) => r.id))
+                    // DIAGNOSTICS: Deep inspection of DB contents
+                    const dbInfo = await db.info()
+                    console.log(`🔍 [SYNC-DIAGNOSTIC] DB Name: ${dbInfo.db_name}`)
+                    console.log(`🔍 [SYNC-DIAGNOSTIC] DB Doc Count: ${dbInfo.doc_count}`)
 
-                    const taskDocs = await db.allDocs({ startkey: 'task-', endkey: 'task-\ufff0', limit: 5 })
-                    console.log('🔍 [SYNC-DIAGNOSTIC] Individual Task IDs:', taskDocs.rows.map((r: any) => r.id))
+                    const allDocs = await db.allDocs({ limit: 20, include_docs: false })
+                    console.log('🔍 [SYNC-DIAGNOSTIC] First 20 IDs (ANY type):', JSON.stringify(allDocs.rows.map((r: any) => r.id)))
+
+                    // Check specifically for tasks including deleted
+                    const taskDocs = await db.allDocs({
+                        startkey: 'task-',
+                        endkey: 'task-\ufff0',
+                        limit: 10,
+                        include_docs: true
+                    })
+                    console.log('🔍 [SYNC-DIAGNOSTIC] Detailed Task Rows:', JSON.stringify(taskDocs.rows))
+
+                    // WRITE TEST: Prove DB is usable
+                    try {
+                        const testId = `debug-write-test-${Date.now()}`
+                        await db.put({ _id: testId, type: 'debug' })
+                        console.log(`✅ [SYNC-DIAGNOSTIC] Write Test Passed: ${testId}`)
+                    } catch (e) {
+                        console.error(`❌ [SYNC-DIAGNOSTIC] Write Test FAILED:`, e)
+                    }
 
                     const legacy = await db.get('tasks:data').catch(() => null)
                     console.log('🔍 [SYNC-DIAGNOSTIC] Legacy tasks:data found:', !!legacy)

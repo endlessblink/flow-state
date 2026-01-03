@@ -105,8 +105,22 @@ export class SyncOperationService {
             const localDocs = await localDB.allDocs({ startkey: 'task-', endkey: 'task-\ufff0' })
             const localTaskCount = localDocs.rows.length
 
+            const remoteInfo = await (remoteDB as any).info()
+            console.log(`📊 [SYNC PRE-FLIGHT] Remote DB Info:`, {
+                adapter: remoteInfo.adapter || remoteInfo.backend_adapter,
+                doc_count: remoteInfo.doc_count,
+                update_seq: remoteInfo.update_seq
+            })
+
             const remoteDocs = await remoteDB.allDocs({ startkey: 'task-', endkey: 'task-\ufff0' })
             const remoteTaskCount = remoteDocs.rows.length
+
+            // DEBUG: Log the IDs seen on remote
+            if (remoteTaskCount < 20) {
+                console.log(`🔍 [SYNC-DEBUG] Remote Task IDs:`, remoteDocs.rows.map(r => r.id))
+            } else {
+                console.log(`🔍 [SYNC-DEBUG] Remote Task IDs (first 5):`, remoteDocs.rows.slice(0, 5).map(r => r.id))
+            }
 
             // CRITICAL: If remote has 0 tasks but local has many, something is wrong
             if (localTaskCount > 5 && remoteTaskCount === 0) {
@@ -127,16 +141,18 @@ export class SyncOperationService {
     private async pullFromRemote(local: PouchDB.Database, remote: PouchDB.Database, signal?: AbortSignal): Promise<number> {
         console.log('⬇️ [SYNC] Starting Pull (Remote -> Local)...')
 
-        // Firefox/Zen optimization
+        // Firefox/Zen/Tauri optimization
         const ua = navigator.userAgent.toLowerCase()
         const isZen = ua.includes('zen')
-        const isFirefox = ua.includes('firefox') || isZen
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const isTauri = !!((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__)
+        const isFirefox = ua.includes('firefox') || isZen || isTauri
 
-        // Use 25 for Zen/Firefox as per debug guide, 100 for Chromium
-        const batchSize = isFirefox ? 25 : 100
-        const batchLimit = isFirefox ? 5 : 20
+        // Restoration: Use normal parallel settings now that DB is clean
+        const batchSize = 100
+        const batchLimit = 20
 
-        if (isFirefox) console.log(`🦊 [SYNC] Firefox/Zen detected - using optimized batch settings (${batchSize})`)
+        // if (isFirefox) console.log(`🦊 [SYNC] Firefox/Zen/Tauri detected - using optimized batch settings (${batchSize})`)
 
         return new Promise((resolve, reject) => {
             if (signal?.aborted) return reject(new Error('Pull aborted'))
@@ -161,7 +177,7 @@ export class SyncOperationService {
             let timer: ReturnType<typeof setTimeout>
 
             // QUICK FIX: Reduced inactivity timeout from 60s to 30s for faster failure
-            const INACTIVITY_TIMEOUT_MS = 30000 // 30 seconds
+            const INACTIVITY_TIMEOUT_MS = 60000 // 60 seconds
             const resetTimeout = () => {
                 if (timer) clearTimeout(timer)
                 timer = setTimeout(() => {
@@ -179,29 +195,45 @@ export class SyncOperationService {
                 console.log(`⬇️ [SYNC] Pull progress: ${info.docs_read} docs`)
 
                 // DEBUG: Log sample of doc IDs to see what we are pulling
-                if ((info as any).docs && (info as any).docs.length > 0) {
-                    const sampleIds = (info as any).docs.slice(0, 5).map((d: any) => d._id)
-                    console.log(`🔍 [SYNC-DEBUG] Sample IDs pulled:`, sampleIds)
+                try {
+                    if ((info as any).docs && (info as any).docs.length > 0) {
+                        const sampleIds = (info as any).docs.slice(0, 5).map((d: any) => d._id || 'MISSING_ID')
+                        console.log(`🔍 [SYNC-DEBUG] Sample IDs pulled:`, sampleIds)
+                        // Log full doc if ID looks weird
+                        if (sampleIds.some((id: string) => id === 'MISSING_ID' || id.includes('undefined'))) {
+                            console.warn('⚠️ [SYNC-DEBUG] Weird doc detected:', (info as any).docs[0])
+                        }
+                    }
+                } catch (e) {
+                    console.error('⚠️ [SYNC-DEBUG] Error logging sample IDs:', e)
                 }
 
                 // Update UI Progress
                 import('@/services/sync/SyncStateService').then(({ syncState }) => {
                     syncState.updateProgress(info.docs_read || 0, 0)
                 })
-
-                // DEBUG: Check for section docs
-                const changeInfo = info as any
-                const sectionDocs = changeInfo.docs?.filter((d: any) => d._id.startsWith('section-'))
-                if (sectionDocs?.length) {
-                    console.log('⬇️ [SYNC] Pulled SECTIONS:', sectionDocs.map((d: any) => d._id))
-                    // Trigger custom event for CanvasStore to pick up? 
-                    // No, we rely on the debounced reload we implemented in useReliableSyncManager.
-                    // But seeing this log confirms they arrived.
-                }
             })
-            pull.on('complete', (info) => {
+            pull.on('complete', async (info) => {
                 if (timer) clearTimeout(timer)
                 if (signal) signal.removeEventListener('abort', onAbort)
+
+                // BUG-FIX: Check for errors in completion info (PouchDB sometimes completes with errors)
+                if (info.errors && info.errors.length > 0) {
+                    const errorMsg = info.errors[0].message || JSON.stringify(info.errors[0])
+                    console.error(`❌ [SYNC] Pull completed with ${info.errors.length} errors:`, info.errors)
+                    reject(new Error(`Pull failed: ${errorMsg}`))
+                    return
+                }
+
+                // DIAGNOSTIC CORE: Verify what actually landed in the DB
+                try {
+                    const allDocs = await local.allDocs({ limit: 10 })
+                    console.log(`🔍 [SYNC-POST-CHECK] Local DB Count: ${allDocs.total_rows}`)
+                    console.log(`🔍 [SYNC-POST-CHECK] First 5 IDs:`, allDocs.rows.map(r => r.id))
+                } catch (err) {
+                    console.error('❌ [SYNC-POST-CHECK] Failed to inspect DB:', err)
+                }
+
                 console.log(`✅ [SYNC] Pull complete: ${info.docs_read} docs read, ${info.docs_written} written`)
                 resolve(info.docs_written || 0)
             })
@@ -231,12 +263,14 @@ export class SyncOperationService {
         // Note: 'pushToLocal' actually pushes Local -> Remote. Keeping name for compatibility.
         console.log('⬆️ [SYNC] Starting Push (Local -> Remote)...')
 
-        // Firefox/Zen optimization
+        // Firefox/Zen/Tauri optimization
         const ua = navigator.userAgent.toLowerCase()
         const isZen = ua.includes('zen')
-        const isFirefox = ua.includes('firefox') || isZen
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const isTauri = !!((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__)
+        const isFirefox = ua.includes('firefox') || isZen || isTauri
 
-        // Use 25 for Zen/Firefox as per debug guide, 100 for Chromium
+        // Use 25 for Zen/Firefox/Tauri as per debug guide, 100 for Chromium
         const batchSize = isFirefox ? 25 : 100
         const batchLimit = isFirefox ? 5 : 20
 
@@ -286,6 +320,15 @@ export class SyncOperationService {
             push.on('complete', (info) => {
                 if (timer) clearTimeout(timer)
                 if (signal) signal.removeEventListener('abort', onAbort)
+
+                // BUG-FIX: Check for errors in completion info
+                if (info.errors && info.errors.length > 0) {
+                    const errorMsg = info.errors[0].message || JSON.stringify(info.errors[0])
+                    console.error(`❌ [SYNC] Push completed with ${info.errors.length} errors:`, info.errors)
+                    reject(new Error(`Push failed: ${errorMsg}`))
+                    return
+                }
+
                 console.log(`✅ [SYNC] Push complete: ${info.docs_written} docs written`)
                 resolve(info.docs_written || 0)
             })
@@ -326,50 +369,49 @@ export class SyncOperationService {
      */
     public async nuclearReset(): Promise<void> {
         try {
-            console.log('☢️ [NUCLEAR-RESET] Starting emergency wipe...')
+            console.log('☢️ [NUCLEAR-RESET-V2] Starting persistent wipe...')
 
-            // 1. Clear PouchDB-related IndexedDB databases
-            const databases = await indexedDB.databases()
-            const pouchDBs = databases.filter(db => db.name?.startsWith('_pouch_'))
+            // STRATEGY V2: RENAME & ABANDON
+            // Instead of trying to delete the locked database (which fails in Tauri/Safari),
+            // we simply increment a version counter and switch to a new database file.
+            // PouchDB will create a fresh, empty DB on next load.
 
-            console.log(`☢️ [NUCLEAR-RESET] Deleting ${pouchDBs.length} local databases...`)
+            // 1. Generate new version tag (timestamp)
+            const newVersion = Date.now().toString()
+            console.log(`☢️ [NUCLEAR-RESET-V2] Switching to new database version: ${newVersion}`)
 
-            const deletionPromises = pouchDBs.map(db => {
-                return new Promise<void>((resolve) => {
-                    if (!db.name) return resolve()
-                    const req = indexedDB.deleteDatabase(db.name)
-                    req.onsuccess = () => {
-                        console.log(`✅ [NUCLEAR-RESET] Deleted: ${db.name}`)
-                        resolve()
-                    }
-                    req.onerror = () => {
-                        console.error(`❌ [NUCLEAR-RESET] Failed to delete: ${db.name}`)
-                        resolve() // Continue anyway
-                    }
-                    req.onblocked = () => {
-                        console.warn(`⚠️ [NUCLEAR-RESET] Deletion blocked for: ${db.name}`)
-                        resolve()
-                    }
-                })
-            })
+            // 2. Set the version flag FIRST so it survives reloading
+            localStorage.setItem('pomo-flow-db-version', newVersion)
 
-            await Promise.all(deletionPromises)
+            // 3. Cleanup old data (Best Effort)
+            // We try to close/delete, but if it fails/blocks, we don't care because we're moving on.
 
-            // 2. Clear relevant localStorage items (optional but recommended for clean state)
-            // Leave core auth/session keys if they exist, but clear sync metadata
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const activeDB = (window as any).pomoFlowDb
+            if (activeDB) {
+                try {
+                    await activeDB.close()
+                } catch (e) { console.warn('Ignored close error:', e) }
+            }
+
+            // 4. Clear sync metadata (Essential for fresh sync)
             Object.keys(localStorage).forEach(key => {
+                // Keep the version flag we just set!
+                if (key === 'pomo-flow-db-version') return
+
                 if (key.includes('sync') || key.includes('pouch') || key.includes('last_sync')) {
                     localStorage.removeItem(key)
                 }
             })
 
-            console.log('☢️ [NUCLEAR-RESET] Wipe complete. Reloading...')
+            console.log('☢️ [NUCLEAR-RESET-V2] Wipe complete. Reloading...')
 
-            // 3. Force reload
+            // 5. Force reload to initialize new DB
             window.location.href = window.location.origin
         } catch (error) {
             console.error('❌ [NUCLEAR-RESET] Reset failed:', error)
-            alert('Emergency reset failed. Please manually clear your browser data (IndexedDB and LocalStorage) and reload.')
+            // Fallback: If even this fails, alert the user
+            alert('Emergency reset failed. Please manually clear your browser data.')
         }
     }
 

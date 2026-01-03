@@ -41,25 +41,13 @@
         <span>Sync Provider</span>
         <span class="setting-description">Choose where to store your data</span>
       </label>
-      <select
-        v-model="selectedProvider"
+      <CustomSelect
+        :model-value="selectedProvider"
+        :options="syncProviderOptions"
         :disabled="isSyncing"
-        class="setting-select"
-        @change="onProviderChange"
-      >
-        <option value="">
-          Disabled
-        </option>
-        <option value="couchdb">
-          CouchDB (Self-hosted, cross-device sync)
-        </option>
-        <option value="jsonbin">
-          JSONBin (Free, no account needed)
-        </option>
-        <option value="github">
-          GitHub Gist (Requires token)
-        </option>
-      </select>
+        placeholder="Select provider..."
+        @update:model-value="(val) => { selectedProvider = String(val); onProviderChange() }"
+      />
     </div>
 
     <!-- CouchDB Configuration -->
@@ -238,6 +226,15 @@ import type { SyncProviderType as _SyncProviderType } from '@/types/sync'
 import {
   Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap
 } from 'lucide-vue-next'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Sync provider options for CustomSelect
+const syncProviderOptions = [
+  { label: 'Disabled', value: '' },
+  { label: 'CouchDB (Self-hosted, cross-device sync)', value: 'couchdb' },
+  { label: 'JSONBin (Free, no account needed)', value: 'jsonbin' },
+  { label: 'GitHub Gist (Requires token)', value: 'github' }
+]
 
 const reliableSyncManager = getGlobalReliableSyncManager()
 const {

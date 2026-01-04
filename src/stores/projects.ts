@@ -21,6 +21,18 @@ export const useProjectStore = defineStore('projects', () => {
         return projects.value.filter(p => !p.parentId || p.parentId === 'undefined' || p.parentId === undefined)
     })
 
+    // Optimization: fast lookup map for projects
+    // Replaces O(N) array find with O(1) map lookup
+    // This significantly improves performance when rendering lists of tasks
+    // that need to look up project details (e.g. UnifiedInboxPanel)
+    const projectMap = computed(() => {
+        const map = new Map<string, Project>()
+        for (const p of projects.value) {
+            map.set(p.id, p)
+        }
+        return map
+    })
+
     // Actions
     const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {
         if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
@@ -254,7 +266,8 @@ export const useProjectStore = defineStore('projects', () => {
 
     const getProjectById = (projectId: string | null | undefined): Project | undefined => {
         if (!projectId) return undefined
-        return projects.value.find(p => p.id === projectId)
+        // Optimized O(1) lookup
+        return projectMap.value.get(projectId)
     }
 
     const getProjectDisplayName = (projectId: string | null | undefined): string => {

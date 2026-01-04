@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import PowerSyncService from '@/services/database/PowerSyncDatabase'
-import { SqlProject } from '@/services/database/SqlDatabaseTypes'
+import type { SqlProject } from '@/services/database/SqlDatabaseTypes'
 import { useNotification } from 'naive-ui'
 
 export const useSqlProjectStore = defineStore('sqlProjects', () => {

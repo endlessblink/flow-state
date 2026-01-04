@@ -116,6 +116,21 @@ import { useTaskStore, parseDateKey, getTaskInstances } from '@/stores/tasks'
 import { ChevronDown, ChevronRight, Calendar, Plus } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
+const props = withDefaults(defineProps<Props>(), {
+  currentFilter: null,
+  density: 'comfortable',
+  showDoneColumn: false
+})
+const emit = defineEmits<{
+  selectTask: [taskId: string]
+  startTimer: [taskId: string]
+  editTask: [taskId: string]
+  deleteTask: [taskId: string]
+  moveTask: [taskId: string, newStatus: Task['status']]
+  addTask: [statusOrDateKey: string]
+  contextMenu: [event: MouseEvent, task: Task]
+  groupContextMenu: [event: MouseEvent, project: Project]
+}>()
 // View type options for swimlane organization
 const viewTypeOptions = [
   { label: 'Status', value: 'status' },
@@ -133,22 +148,6 @@ interface Props {
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   showDoneColumn?: boolean
 }
-
-const props = withDefaults(defineProps<Props>(), {
-  currentFilter: null,
-  density: 'comfortable',
-  showDoneColumn: false
-})
-const emit = defineEmits<{
-  selectTask: [taskId: string]
-  startTimer: [taskId: string]
-  editTask: [taskId: string]
-  deleteTask: [taskId: string]
-  moveTask: [taskId: string, newStatus: Task['status']]
-  addTask: [statusOrDateKey: string]
-  contextMenu: [event: MouseEvent, task: Task]
-  groupContextMenu: [event: MouseEvent, project: Project]
-}>()
 
 const taskStore = useTaskStore()
 const isCollapsed = ref(false)

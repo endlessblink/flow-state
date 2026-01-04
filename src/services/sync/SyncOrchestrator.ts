@@ -1,9 +1,12 @@
 
-import PouchDB from 'pouchdb-browser'
+import type PouchDB from 'pouchdb-browser'
 import { ref, type Ref } from 'vue'
-import { syncState, SyncStateService } from './SyncStateService'
-import { networkMonitor, NetworkMonitorService } from './NetworkMonitorService'
-import { syncRetryService, SyncRetryService } from './SyncRetryService'
+import type { SyncStateService } from './SyncStateService';
+import { syncState } from './SyncStateService'
+import type { NetworkMonitorService } from './NetworkMonitorService';
+import { networkMonitor } from './NetworkMonitorService'
+import type { SyncRetryService } from './SyncRetryService';
+import { syncRetryService } from './SyncRetryService'
 import { DatabaseService } from './DatabaseService'
 import { SyncOperationService } from './SyncOperationService'
 import { ConflictDetector } from '@/utils/conflictDetector'

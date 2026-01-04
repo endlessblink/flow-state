@@ -3,7 +3,7 @@ import type { Task } from '@/types/tasks'
 import { transactionManager } from '@/services/sync/TransactionManager'
 import PowerSyncService from '@/services/database/PowerSyncDatabase'
 import { fromSqlTask } from '@/utils/taskMapper'
-import { SqlTask } from '@/services/database/SqlDatabaseTypes'
+import type { SqlTask } from '@/services/database/SqlDatabaseTypes'
 import { getLogger } from '@/utils/productionLogger'
 
 export class TrashService {

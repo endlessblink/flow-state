@@ -360,8 +360,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 // The old code only checked immediate parent, breaking for 3+ level nesting
                 // (grandchild → child → parent) where child's position is also relative
                 const absolutePos = getAbsolutePosition(node.id)
-                let absoluteX = Number.isFinite(absolutePos.x) ? absolutePos.x : section.position.x
-                let absoluteY = Number.isFinite(absolutePos.y) ? absolutePos.y : section.position.y
+                const absoluteX = Number.isFinite(absolutePos.x) ? absolutePos.x : section.position.x
+                const absoluteY = Number.isFinite(absolutePos.y) ? absolutePos.y : section.position.y
 
                 console.log(`%c[TASK-072] DRAG STOP: "${section.name}"`, 'color: #4CAF50; font-weight: bold')
                 console.log(`  Vue Flow pos: (${node.position.x.toFixed(0)}, ${node.position.y.toFixed(0)})${node.parentNode ? ' [relative]' : ' [absolute]'}`)

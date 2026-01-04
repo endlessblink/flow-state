@@ -1,5 +1,5 @@
 
-import PouchDB from 'pouchdb-browser'
+import type PouchDB from 'pouchdb-browser'
 import { SyncValidator, ValidationIssueType } from '@/utils/syncValidator'
 import type { ValidationIssue } from '@/utils/syncValidator'
 

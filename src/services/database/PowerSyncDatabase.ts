@@ -28,14 +28,14 @@ class PowerSyncService {
         try {
             // DYNAMIC IMPORT: Prevent app crash if SDK fails to load (e.g. WASM/Worker issues)
             const { WASQLitePowerSyncDatabaseOpenFactory } = await import('@journeyapps/powersync-sdk-web');
-            const { default: LogWorker } = await import('@/worker/db-worker.ts?worker&url');
+            // const { default: LogWorker } = await import('@/worker/db-worker.ts?worker&url');
 
             // Updated to use the Factory pattern which ensures correct adapter setup for Web/WASM
             const factory = new WASQLitePowerSyncDatabaseOpenFactory({
                 schema: AppSchema,
                 dbFilename: 'pomoflow_sqlite.db',
-                // @ts-ignore - workerUri is valid for WASQLite adapter
-                workerUri: LogWorker
+                // Explicitly valid via public folder asset
+                workerUri: '/powersync/WASQLiteDB.worker.js'
             });
 
             const db = factory.getInstance() as PowerSyncDatabase;

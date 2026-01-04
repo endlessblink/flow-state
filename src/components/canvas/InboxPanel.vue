@@ -342,8 +342,9 @@ const handleTaskClick = (event: MouseEvent, task: Task) => {
 }
 
 const handleTaskDoubleClick = (task: Task) => {
-  // TODO: Implement task editing functionality
-  console.log('Edit task:', task.id)
+  window.dispatchEvent(new CustomEvent('open-task-edit', {
+    detail: { taskId: task.id }
+  }))
 }
 
 const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
@@ -470,8 +471,9 @@ const closeContextMenu = () => {
 }
 
 const handleEdit = (taskId: string) => {
-  // TODO: Implement task editing functionality
-  console.log('Edit task:', taskId)
+  window.dispatchEvent(new CustomEvent('open-task-edit', {
+    detail: { taskId }
+  }))
   closeContextMenu()
 }
 

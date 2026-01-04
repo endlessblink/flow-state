@@ -30,7 +30,7 @@
           class="icon-btn"
           title="Settings"
           aria-label="Open settings"
-          @click="() => {}"
+          @click="_uiStore.openSettingsModal()"
         >
           <Settings :size="18" />
         </button>

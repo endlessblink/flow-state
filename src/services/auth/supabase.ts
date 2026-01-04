@@ -6,7 +6,15 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+let supabaseClient;
+try {
+    supabaseClient = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null
+} catch (e) {
+    console.error('Supabase client failed to initialize:', e)
+    supabaseClient = null
+}
+
+export const supabase = supabaseClient as any
 
 // Re-export types for convenience
 export type { User, Session, AuthError } from '@supabase/supabase-js'

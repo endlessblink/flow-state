@@ -21,15 +21,23 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       isLoading.value = true
 
+      if (!supabase) {
+        console.warn('Supabase client not available, staying in Guest Mode')
+        return
+      }
+
       // Check for existing session
-      const { data } = await supabase.auth.getSession()
+      const { data, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) throw sessionError
+
       session.value = data.session
       user.value = data.session?.user || null
 
       // Listen for auth changes (sign in, sign out, etc.)
-      supabase.auth.onAuthStateChange((_event, newSession) => {
+      supabase.auth.onAuthStateChange((_event: any, newSession: any) => {
         session.value = newSession
         user.value = newSession?.user || null
+        console.log('👤 [AUTH] Auth state changed:', _event, user.value?.id)
       })
 
     } catch (e: any) {
@@ -101,8 +109,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Auto-init
-  initialize()
+  // Auto-init (Removed: let composables/components control init timing)
+  // initialize()
 
   return {
     // State

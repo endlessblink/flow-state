@@ -6,6 +6,13 @@
       :is-open="uiStore.settingsModalOpen"
       @close="uiStore.closeSettingsModal()"
     />
+    
+    <!-- AUTH MODAL -->
+    <AuthModal
+      :is-open="uiStore.authModalOpen"
+      :initial-view="uiStore.authModalView"
+      @close="uiStore.closeAuthModal()"
+    />
 
     <!-- PROJECT MODAL -->
     <ProjectModal
@@ -97,6 +104,7 @@ import { createLazyModal } from '@/composables/useLazyComponent'
 import { Edit, Palette, Copy, Trash2 } from 'lucide-vue-next'
 
 // Components
+import AuthModal from '@/components/auth/AuthModal.vue'
 import SettingsModal from '@/components/layout/SettingsModal.vue'
 import ProjectModal from '@/components/projects/ProjectModal.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'

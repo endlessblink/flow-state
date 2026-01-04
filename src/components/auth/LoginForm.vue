@@ -2,8 +2,9 @@
 <template>
   <div class="login-form">
     <div class="form-header">
+      <div class="auth-brand-icon">🍅</div>
       <h2 class="form-title">
-        {{ t('auth.login.title') }}
+        <span class="gradient-text">{{ t('auth.login.title') }}</span>
       </h2>
       <p class="form-subtitle">
         {{ t('auth.login.subtitle') }}
@@ -188,21 +189,38 @@ async function handleSubmit() {
 
 .form-header {
   text-align: center;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.auth-brand-icon {
+  font-size: 40px;
+  filter: drop-shadow(0 0 10px var(--brand-primary-alpha-30));
+  margin-bottom: var(--space-2);
 }
 
 .form-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin-bottom: var(--space-1);
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .form-subtitle {
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin: 0;
   line-height: var(--leading-normal);
+  max-width: 250px;
 }
 
 .auth-form {
@@ -319,18 +337,19 @@ async function handleSubmit() {
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--glass-border);
+  background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
 }
 
 .divider span {
   position: relative;
   display: inline-block;
-  padding: 0 var(--space-3);
-  background: rgba(20, 20, 20, 0.95);
+  padding: 0 var(--space-4);
+  background: #141428; /* Matches modal bg */
   color: var(--text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 /* Footer */

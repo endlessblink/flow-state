@@ -2,6 +2,7 @@
   <!-- LEFT SIDEBAR NAVIGATION - Extracted from App.vue -->
   <Transition name="sidebar-slide">
     <aside
+      v-if="uiStore"
       v-show="uiStore.mainSidebarVisible"
       class="sidebar"
       aria-label="Main navigation"
@@ -322,6 +323,26 @@
           />
         </nav>
       </div>
+
+
+      <!-- User Profile Footer -->
+      <div class="sidebar-footer">
+        <button v-if="!authStore.user" class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
+           <span style="font-weight: 600;">Sign In</span>
+        </button>
+        <div v-else class="user-profile-row">
+            <div class="user-avatar-circle">
+                {{ (authStore.user?.email ? authStore.user.email[0].toUpperCase() : 'U') }}
+            </div>
+            <div class="user-info-col">
+                <span class="user-email" :title="authStore.user?.email || ''">{{ authStore.user?.email || 'Authenticated' }}</span>
+                <span class="user-status">Online</span>
+            </div>
+             <button class="settings-mini-btn" @click="uiStore.openSettingsModal()" title="Settings">
+                <Settings :size="16" />
+            </button>
+        </div>
+      </div>
     </aside>
   </Transition>
 </template>
@@ -331,6 +352,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Project } from '@/stores/tasks'
+import { useAuthStore } from '@/stores/auth'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import {
   Plus, PanelLeftClose, Settings, FolderOpen,
@@ -340,13 +362,18 @@ import {
 } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseNavItem from '@/components/base/BaseNavItem.vue'
 import SidebarSmartItem from '@/components/layout/SidebarSmartItem.vue'
 import ProjectTreeItem from '@/components/projects/ProjectTreeItem.vue'
 
 const router = useRouter()
 const uiStore = useUIStore()
 const taskStore = useTaskStore()
+const authStore = useAuthStore()
 const sidebar = useSidebarManagement()
+
+// Initialize auth
+authStore.initialize()
 
 // Project Multi-Select State (Now Global)
 const selectedProjectIds = computed(() => uiStore.selectedProjectIds)
@@ -694,6 +721,89 @@ defineExpose({
     inset -1px 0 0 var(--glass-bg-heavy);
   contain: layout style; /* Performance optimization */
   overflow: hidden; /* Prevent sidebar content from causing horizontal scroll */
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid var(--glass-border);
+  background: var(--glass-bg-soft);
+}
+
+.sidebar-login-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary-alpha-40);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-login-btn:hover {
+  background: var(--brand-primary-alpha-10);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 15px var(--brand-primary-alpha-20);
+}
+
+.user-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+}
+
+.user-avatar-circle {
+  width: 32px;
+  height: 32px;
+  background: var(--brand-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.user-info-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.user-email {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.user-status {
+  font-size: 11px;
+  color: var(--success);
+}
+
+.settings-mini-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.settings-mini-btn:hover {
+  background: var(--glass-border);
+  color: var(--text-primary);
 }
 
 /* Sidebar toggle transitions */

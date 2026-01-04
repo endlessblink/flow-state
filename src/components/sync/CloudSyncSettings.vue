@@ -50,6 +50,44 @@
       />
     </div>
 
+    <!-- Supabase Configuration -->
+    <div v-if="selectedProvider === 'supabase'" class="setting-group">
+        <label class="setting-label">
+            <span>Authentication</span>
+            <span class="setting-description">Sign in to sync your data</span>
+        </label>
+        
+        <div v-if="!authStore.user" class="supabase-auth-actions" style="margin-top: 8px;">
+            <div class="auth-message" style="margin-bottom: 12px; font-size: 0.9em; color: var(--text-muted);">
+                Sign in to synchronize your tasks across devices.
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="action-btn success" @click="uiStore.openAuthModal('login')">
+                    Log In
+                </button>
+                <button class="action-btn secondary" @click="uiStore.openAuthModal('signup')">
+                    Create Account
+                </button>
+            </div>
+        </div>
+
+        <div v-else class="supabase-user-info" style="background: var(--glass-bg-soft); padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <div style="background: var(--brand-primary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                    <User :size="16" />
+                </div>
+                <div>
+                    <div style="font-weight: 600; font-size: 0.9em;">{{ authStore.user.email }}</div>
+                    <div style="font-size: 0.8em; color: var(--success);">● Authenticated</div>
+                </div>
+            </div>
+            <button class="action-btn danger" style="width: 100%; justify-content: center;" @click="authStore.signOut()">
+                <LogOut :size="14" />
+                Sign Out
+            </button>
+        </div>
+    </div>
+
     <!-- CouchDB Configuration -->
     <div v-if="selectedProvider === 'couchdb'" class="setting-group couchdb-config">
       <label class="setting-label">
@@ -224,14 +262,20 @@ import { getGlobalReliableSyncManager, type ReliableSyncManagerInstance } from '
 import { usePersistentStorage } from '@/composables/usePersistentStorage'
 import type { SyncProviderType as _SyncProviderType } from '@/types/sync'
 import {
-  Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap
+  Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap, LogOut, User
 } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useUIStore } from '@/stores/ui'
+
+const authStore = useAuthStore()
+const uiStore = useUIStore()
 
 // Sync provider options for CustomSelect
 const syncProviderOptions = [
   { label: 'Disabled', value: '' },
-  { label: 'CouchDB (Self-hosted, cross-device sync)', value: 'couchdb' },
+  { label: 'Supabase (Cloud/Local)', value: 'supabase' },
+  { label: 'CouchDB (Legacy)', value: 'couchdb' },
   { label: 'JSONBin (Free, no account needed)', value: 'jsonbin' },
   { label: 'GitHub Gist (Requires token)', value: 'github' }
 ]

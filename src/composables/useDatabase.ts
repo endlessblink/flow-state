@@ -175,7 +175,7 @@ export interface UseDatabaseReturn {
   // Sync state (from useSimpleSyncManager)
   syncStatus: Ref<'idle' | 'syncing' | 'complete' | 'error' | 'paused' | 'offline'>
   isOnline: Ref<boolean>
-  hasRemoteSync: boolean
+  hasRemoteSync: Ref<boolean>
 
   // Sync operations
   triggerSync: () => Promise<void>
@@ -358,8 +358,8 @@ export function useDatabase(): UseDatabaseReturn {
   }
 
   // Initialize sync functionality
-  const config = getDatabaseConfig()
-  const hasRemoteSync = !!config.remote?.url
+  // const config = getDatabaseConfig() // MOVED to initializeDatabase for dynamic auth awareness
+  const hasRemoteSync = ref(false) // Startup default, updated after auth check
 
   // Network optimizer removed - was causing architectural mismatches
 
@@ -417,8 +417,32 @@ export function useDatabase(): UseDatabaseReturn {
 
     initializationPromise = (async () => {
       try {
-        const config = getDatabaseConfig()
-        const hasRemoteSync = !!config.remote?.url
+        // TASK-097: Integrate Supabase Auth Status
+        // We must know if a user is logged in to determine if we should sync
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+
+        // Wait for auth verification with a short timeout to prevent app hanging
+        try {
+          await Promise.race([
+            authStore.initialize(),
+            new Promise(resolve => setTimeout(resolve, 2000)) // 2s max wait
+          ])
+        } catch (e) {
+          console.warn('Auth check stalled or failed, continuing in default mode:', e)
+        }
+
+        // Setup Watcher: Reload page on auth state change (Guest <-> User)
+        const initialUserId = authStore.user?.id
+        watch(() => authStore.user?.id, (newId, oldId) => {
+          if (newId !== oldId && typeof window !== 'undefined') {
+            console.log('👤 [AUTH] User changed, reloading to reset database context...')
+            window.location.reload()
+          }
+        })
+
+        const config = getDatabaseConfig(authStore.user?.id)
+        hasRemoteSync.value = !!config.remote?.url
         const forceLocalMode = false
 
         // BUG-056: Auto-recovery for corrupted IndexedDB
@@ -532,7 +556,7 @@ export function useDatabase(): UseDatabaseReturn {
 
         // BUG-028 FIX: Start sync in BACKGROUND (don't await)
         // This way UI loads immediately with local data, sync merges in background
-        if (hasRemoteSync && !forceLocalMode && !syncManager) {
+        if (hasRemoteSync.value && !forceLocalMode && !syncManager) {
           syncManager = getGlobalReliableSyncManager()
           console.log('🔄 [DATABASE] Starting background sync...')
           // Don't await - let sync happen in background

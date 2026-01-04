@@ -1,0 +1,5 @@
+FROM postgres:15-alpine
+COPY scripts/certificates/server.crt /etc/postgresql/server.crt
+COPY scripts/certificates/server.key /etc/postgresql/server.key
+RUN chown postgres:postgres /etc/postgresql/server.crt /etc/postgresql/server.key && \
+    chmod 600 /etc/postgresql/server.key

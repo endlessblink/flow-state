@@ -1,5 +1,5 @@
-**Last Updated**: January 3, 2026 (BUG-065 Kanban & Scroll Overhaul)
-**Version**: 5.15 (Kanban & Scroll Stability)
+**Last Updated**: January 4, 2026 (BUG-087 Migration Data Loss Fix)
+**Version**: 5.16 (SQLite Migration Stability)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -746,6 +746,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**BUG-064**~~ | ✅ **DONE** | `styles.css` | - | - |
 | ~~**BUG-065**~~ | ✅ **DONE** | `useHorizontalDragScroll.ts`, `KanbanSwimlane.vue`, `BoardView.vue`, `MainLayout.vue` | - | - |
 | ~~**TASK-091**~~ | ✅ **DONE** | `useHorizontalDragScroll.ts`, `TaskCard.vue`, `KanbanColumn.vue` | - | - |
+| ~~**BUG-087**~~ | ✅ **DONE** | `migratePouchToSql.ts` | TASK-093 | - |
 | **TASK-087** | ✅ **DONE** | `MarkdownExportService.ts`, `FileSystemService.ts`, `BackupSettings.vue` | - | ROAD-018 |
 | **TASK-088** | ✅ **DONE** | `DatabaseMaintenanceService.ts`, `useDatabase.ts` | - | - |
 | ~~**TASK-089**~~ | ✅ **DONE** | `canvasStateLock.ts`, `useAppInitialization.ts`, `canvas.ts`, `useCanvasDragDrop.ts`, `useCanvasResize.ts`, `useCanvasEvents.ts` | - | - |
@@ -795,21 +796,37 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~BUG-059~~**: Backup system overwrites with empty data during store corruption | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Golden backup, max task count tracking, suspicious backup detection, sync pre-flight validation
 
 ### 🚀 TASK-093: Database Engine Migration (PouchDB → SQLite)
-**Status**: 🔄 **PHASE 1 COMPLETE** (Jan 3, 2026)
-**Goal**: Replace unstable IndexedDB adapter with PowerSync (SQLite WASM) for crash-proof local storage and 5x mobile performance.
+**Status**: ✅ **PHASE 4 COMPLETE** (Jan 4, 2026)
+**Goal**: Replace unstable IndexedDB adapter with PowerSync (SQLite WASM) for crash-proof local storage, cross-device sync, and 5x mobile performance.
 **Phases**:
-1. [x] **Phase 1: Plumbing & Isolation** (Jan 3)
+1. [x] **Phase 1: Plumbing & Isolation** (Jan 3) ✅
    - Installed `powersync` + `sqlite-wasm`
    - Defined strict SQL Schema (Tasks/Projects)
    - Created `SqlTaskStore` & `SqlProjectStore` replacements
    - Implemented `migratePouchToSql` utility
-2. [ ] **Phase 2: The Swap** (In Progress)
+2. [x] **Phase 2: The Swap** (Complete - Jan 4) ✅
    - [x] Expose `window.migrate()` & UI Button
    - [x] Fix Schema Runtime Errors
-   - [ ] Connect UI to new SQL stores
-   - [ ] Perform data verification
-3. [ ] **Phase 3: Cleanup**
+   - [x] Connect UI to new SQL stores
+   - [x] Perform data verification
+3. [x] **Phase 3: Cleanup** (Complete - Jan 4) ✅
    - Delete PouchDB code & legacies
+4. [x] **Phase 4: PowerSync Backend Deployment** (Complete - Jan 4) ✅
+   - [x] Start Docker stack (`docker-compose up -d`)
+   - [x] Initialize PostgreSQL schema (`scripts/init-postgres.sql`)
+   - [x] Verify PowerSync replication connection (logs show "Replication lag: 0s")
+   - [x] PostgreSQL has data: 6 tasks, 1 project
+   - [ ] Production deployment (optional - for remote server)
+
+**Infrastructure Ready** (all files exist):
+- `docker-compose.yml` - Full stack (PostgreSQL, MongoDB, Redis, PowerSync, Sync Backend)
+- `powersync-config.yaml` - PowerSync service configuration
+- `sync-rules.yaml` - Sync bucket definitions
+- `scripts/init-postgres.sql` - Complete database schema
+- `scripts/sync-backend.cjs` - Upload handler API
+- `Dockerfile.postgres`, `Dockerfile.sync-backend` - Container definitions
+
+**Deployment Guide**: `docs/POWERSYNC-DEPLOYMENT.md`
 
 - [x] **~~BUG-060~~**: Sync stability & persistence fixes | **P0-CRITICAL** | ✅ FIXED (Jan 2)
   - ✅ btoa() UTF-8 encoding fix (conflictDetector.ts)
@@ -925,6 +942,19 @@ Phase 3 (Mobile) ←────────────────────
   - **Root Cause**: `handleNodeDragStop` in `useCanvasDragDrop.ts` only saved the position of the node directly under the mouse, not all selected nodes that Vue Flow moved together
   - **Fix**: Added code to save positions for ALL selected task nodes, not just the primary dragged node
   - **Location**: `useCanvasDragDrop.ts:578-613`
+- [x] **~~BUG-087~~**: PouchDB to SQLite Migration Data Loss | **P0-CRITICAL** | ✅ FIXED (Jan 4)
+  - **Symptoms**: Tasks showing "Recovered Task (1766666932...)" instead of real titles, deleted content reappearing, NaN errors in canvas
+  - **Root Cause**:
+    1. PouchDB documents have nested structure `{ type: 'task', data: { title: '...' } }` but migration looked at `doc.title`
+    2. Migration imported deleted documents, self-healing migration re-ran when SQLite appeared empty
+    3. Canvas positions defaulted to null causing NaN errors
+  - **Fixes Applied**:
+    - Fixed nested data structure: `const data = doc.data || doc` pattern
+    - Skip deleted documents: Check `data.deleted || data.isDeleted || data.is_deleted || doc._deleted`
+    - Added `purgeDeletedRecords()` for permanent deletion (exposed as `window.purgeDeleted()`)
+    - Default canvas positions to 0,0 instead of null
+  - **Location**: `src/utils/migratePouchToSql.ts`
+  - **SOP**: `docs/sop/active/MIGRATION-pouchdb-to-sqlite.md`
 - [/] **Phase 9**: Operation Defrag - CalendarView Modularization | **P1-HIGH** | Refactor CalendarView.vue (~3k lines)
 - [ ] **Phase 10**: Sync Reliability Hardening | **P1-HIGH** | Refactor useReliableSyncManager.ts (1.6k lines)
 - [ ] **TASK-082**: Auto-move Today tasks to Overdue at midnight (canvas only) | **P2-MEDIUM** | 👀 READY FOR TESTING - Test: `window.__simulateMidnightTransition()` in browser console

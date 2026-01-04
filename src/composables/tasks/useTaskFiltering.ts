@@ -72,19 +72,25 @@ export const useTaskFiltering = (
     }
 
     const filteredTasks = computed(() => {
-        if (!tasks.value || !Array.isArray(tasks.value)) return []
+        if (!tasks.value || !Array.isArray(tasks.value)) {
+            // console.debug('⚠️ [FILTER-DEBUG] No tasks to filter')
+            return []
+        }
 
         let filtered = tasks.value
+        // console.debug(`🔍 [FILTER-DEBUG] Starting filter with ${filtered.length} tasks`)
 
         // 1. Smart View
         if (activeSmartView.value) {
             filtered = applySmartViewFilter(filtered, activeSmartView.value)
+            // console.debug(`🔍 [FILTER-DEBUG] After SmartView (${activeSmartView.value}): ${filtered.length}`)
         }
 
         // 2. Project
         if (activeProjectId.value) {
             const projectIds = getChildProjectIds(activeProjectId.value)
             filtered = filtered.filter(task => projectIds.includes(task.projectId))
+            // console.debug(`🔍 [FILTER-DEBUG] After Project (${activeProjectId.value}): ${filtered.length}`)
         }
 
         // 3. Status
@@ -138,9 +144,12 @@ export const useTaskFiltering = (
         }
 
         const allTasks = [...filtered, ...nestedTasks]
-        return allTasks.filter((task, index, self) =>
+        const finalResult = allTasks.filter((task, index, self) =>
             index === self.findIndex(t => t.id === task.id)
         )
+
+        console.debug(`✅ [FILTER-DEBUG] Final filtered tasks: ${finalResult.length} (ActiveProject: ${activeProjectId.value || 'None'})`)
+        return finalResult
     })
 
     const tasksByStatus = computed(() => {

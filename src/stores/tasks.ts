@@ -93,9 +93,9 @@ export const useTaskStore = defineStore('tasks', () => {
   const { restoreState, undoRedoEnabledActions } = history
 
   // 5. Initialization Logic
-  const initializeFromPouchDB = async () => {
+  const initializeFromDatabase = async () => {
     try {
-      const dbReady = await projectStore.initializeFromPouchDB()
+      const dbReady = await projectStore.initializeFromDatabase()
       if (!dbReady) console.debug('⚠️ Project store failed to initialize')
       await loadFromDatabase()
       runAllTaskMigrations()
@@ -154,7 +154,7 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Auto-init on store creation
-  initializeFromPouchDB().catch(() => { })
+  initializeFromDatabase().catch(() => { })
 
   // BUG-057 FIX: Incremental update from sync - updates individual task without full reload
   // This prevents infinite loops by not triggering save watchers
@@ -259,7 +259,7 @@ export const useTaskStore = defineStore('tasks', () => {
     getProjectHierarchy: projectStore.getProjectHierarchy,
     setProjectViewType: projectStore.setProjectViewType,
     // Undo/Redo support
-    initializeFromPouchDB,
+    initializeFromDatabase,
     restoreState,
 
     // BUG-057 FIX: Incremental sync update

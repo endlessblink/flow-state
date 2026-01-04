@@ -42,7 +42,7 @@ function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: 
 
 export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
-  const { getPriorityColor, getDateString: _getDateString } = useCalendarCore()
+  const { getPriorityColor, getDateString } = useCalendarCore()
 
   const hours = Array.from({ length: 24 }, (_, i) => i)
 
@@ -76,7 +76,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   // Generate time slots for current day
   const timeSlots = computed<TimeSlot[]>(() => {
     const slots: TimeSlot[] = []
-    const dateStr = currentDate.value.toISOString().split('T')[0]
+    const dateStr = getDateString(currentDate.value)
     let slotIndex = 0
 
     hours.forEach(hour => {
@@ -98,7 +98,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   // Generate calendar events with overlap positioning - simplified and error-resistant
   const calendarEvents = computed<CalendarEvent[]>(() => {
     try {
-      const dateStr = currentDate.value.toISOString().split('T')[0]
+      const dateStr = getDateString(currentDate.value)
       const events: CalendarEvent[] = []
 
       // Use filteredTasks to respect sidebar smart view and project filters

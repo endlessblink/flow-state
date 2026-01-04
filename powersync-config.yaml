@@ -1,0 +1,29 @@
+port: 8080
+
+client_auth:
+  audience: ["pomoflow"]
+  jwks:
+    keys:
+      - kty: "oct"
+        kid: "local-dev-key"
+        alg: "HS256"
+        k: "ZGV2X3NlY3JldA"
+
+storage:
+  type: mongodb
+  uri: "mongodb://mongodb:27017/powersync?replicaSet=rs0"
+
+replication:
+  connections:
+    - type: postgresql
+      # Now that Postgres has SSL enabled, we can use require
+      uri: "postgresql://user:password@postgres:5432/pomoflow?sslmode=require"
+      slot: powersync_replication_slot
+      publication: powersync
+
+replication_storage:
+  type: mongodb
+  uri: "mongodb://mongodb:27017/powersync?replicaSet=rs0"
+
+sync_rules:
+  path: /etc/powersync/sync-rules.yaml

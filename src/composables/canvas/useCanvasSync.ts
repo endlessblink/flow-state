@@ -55,6 +55,9 @@ export function useCanvasSync(deps: SyncDependencies) {
 
     // Sync nodes from store with parent-child relationships and collapsible sections
     const syncNodes = () => {
+        // Guard: Set syncing flag to prevent update loops in CanvasView
+        deps.isSyncing.value = true
+
         try {
             // Add section nodes FIRST (so they render in background) with graceful degradation
             const sections = safeStoreOperation(
@@ -85,9 +88,12 @@ export function useCanvasSync(deps: SyncDependencies) {
                     if (parentGroup) {
                         parentNode = `section-${parentGroup.id}`
                         // Convert absolute position to relative (like we do for tasks)
+                        const relX = section.position.x - parentGroup.position.x
+                        const relY = section.position.y - parentGroup.position.y
+
                         position = {
-                            x: section.position.x - parentGroup.position.x,
-                            y: section.position.y - parentGroup.position.y
+                            x: Number.isFinite(relX) ? relX : 0,
+                            y: Number.isFinite(relY) ? relY : 0
                         }
                     }
                 }
@@ -119,8 +125,8 @@ export function useCanvasSync(deps: SyncDependencies) {
                         type: section.type // BUG-034: Add type for styling
                     },
                     style: {
-                        width: `${section.position.width || 300}px`,
-                        height: `${section.position.height || 200}px`,
+                        width: `${Number.isFinite(section.position.width) ? section.position.width : 300}px`,
+                        height: `${Number.isFinite(section.position.height) ? section.position.height : 200}px`,
                         zIndex // TASK-072: Deeper nested groups render above parents
                     },
                     draggable: true, // Allow dragging sections
@@ -176,11 +182,12 @@ export function useCanvasSync(deps: SyncDependencies) {
                         // Task is visually inside a section - make it a child
                         parentNode = `section-${section.id}`
                         // BUG-034 FIX: Convert ABSOLUTE to RELATIVE for Vue Flow parent-child system
-                        // Vue Flow expects position to be RELATIVE when parentNode is set
-                        // See: https://github.com/bcakmakoglu/vue-flow/discussions/1202
+                        const relX = position.x - section.position.x
+                        const relY = position.y - section.position.y
+
                         position = {
-                            x: position.x - section.position.x,
-                            y: position.y - section.position.y
+                            x: Number.isFinite(relX) ? relX : 0,
+                            y: Number.isFinite(relY) ? relY : 0
                         }
                     }
 
@@ -300,6 +307,9 @@ export function useCanvasSync(deps: SyncDependencies) {
             console.error('❌ Critical error in syncNodes():', error)
             // Attempt to recover by clearing nodes to force re-render
             console.log('🔧 Recovery: Clearing nodes to force re-render')
+        } finally {
+            // Always reset syncing flag
+            deps.isSyncing.value = false
         }
     }
 
@@ -318,9 +328,9 @@ export function useCanvasSync(deps: SyncDependencies) {
 
             const taskIds = new Set(tasks.map(t => t.id))
 
-            tasks.forEach(task => {
+            tasks.forEach((task: Task) => {
                 if (task.dependsOn && task.dependsOn.length > 0) {
-                    task.dependsOn.forEach(dependencyId => {
+                    task.dependsOn.forEach((dependencyId: string) => {
                         // Verify dependency exists and is valid
                         if (taskIds.has(dependencyId)) {
                             const edgeId = `e-${dependencyId}-${task.id}`
@@ -338,7 +348,7 @@ export function useCanvasSync(deps: SyncDependencies) {
                                 animated: false,
                                 style: { stroke: '#6366f1', strokeWidth: 2 },
                                 data: {
-                                    sourceTask: tasks.find(t => t.id === dependencyId),
+                                    sourceTask: tasks.find((t: Task) => t.id === dependencyId),
                                     targetTask: task
                                 },
                                 // Enable interactivity

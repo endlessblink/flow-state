@@ -111,7 +111,8 @@ const getDbWithRetry = async (db: PouchDB.Database): Promise<PouchDB.Database> =
 export const saveTask = async (
   db: PouchDB.Database,
   task: Task,
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  bypassSql: boolean = false
 ): Promise<PouchDB.Core.Response | null> => {
   // BUG-060 FIX: Guard against undefined task IDs (causes phantom tasks)
   if (!task?.id) {
@@ -123,91 +124,48 @@ export const saveTask = async (
   const docId = getTaskDocId(task.id)
 
   // BRANCH: SQLite
-  if (shouldUseSqlite()) {
+  if (shouldUseSqlite() && !bypassSql) {
     try {
       const dbInstance = await PowerSyncService.getInstance()
-      const sqlTask = toSqlTask(task)
+      const t = toSqlTask(task)
 
       await dbInstance.execute(`
         INSERT OR REPLACE INTO tasks (
-          id, title, status, project_id, description, 
-          total_pomodoros, estimated_pomodoros, "order", column_id,
-          created_at, updated_at, completed_at, is_deleted, deleted_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, title, description, status, priority,
+            project_id, parent_task_id,
+            total_pomodoros, estimated_pomodoros, progress,
+            due_date, scheduled_date, scheduled_time, estimated_duration,
+            instances_json, subtasks_json, depends_on_json, tags_json,
+            connection_types_json, recurrence_json, recurring_instances_json, notification_prefs_json,
+            canvas_position_x, canvas_position_y, is_in_inbox,
+            "order", column_id,
+            created_at, updated_at, completed_at,
+            is_deleted, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        sqlTask.id, sqlTask.title, sqlTask.status, sqlTask.project_id, sqlTask.description,
-        sqlTask.total_pomodoros, sqlTask.estimated_pomodoros, sqlTask.order, sqlTask.column_id,
-        sqlTask.created_at, sqlTask.updated_at, sqlTask.completed_at, sqlTask.is_deleted, sqlTask.deleted_at
+        t.id, t.title, t.description, t.status, t.priority,
+        t.project_id, t.parent_task_id,
+        t.total_pomodoros, t.estimated_pomodoros, t.progress,
+        t.due_date, t.scheduled_date, t.scheduled_time, t.estimated_duration,
+        t.instances_json, t.subtasks_json, t.depends_on_json, t.tags_json,
+        t.connection_types_json, t.recurrence_json, t.recurring_instances_json, t.notification_prefs_json,
+        t.canvas_position_x, t.canvas_position_y, t.is_in_inbox,
+        t.order, t.column_id,
+        t.created_at, t.updated_at, t.completed_at,
+        t.is_deleted, t.deleted_at
       ])
 
-      // Mock PouchDB response
-      return { ok: true, id: docId, rev: '1-sqlite' }
+      // If SQLite is active, we are done
+      return { ok: true, id: task.id, rev: '1-sqlite' }
     } catch (err) {
       console.error('❌ [SQL-ADAPTER] Save failed:', err)
       throw err
     }
   }
 
-  let retryCount = 0
-
-  while (retryCount < maxRetries) {
-    try {
-      // Get valid database connection
-      const validDb = await getDbWithRetry(db)
-
-      // Try to get existing document for revision
-      const existingDoc = await validDb.get(docId).catch(() => null)
-
-      const doc = {
-        _id: docId,
-        _rev: existingDoc?._rev,
-        type: 'task',
-        data: {
-          ...task,
-          // Ensure dates are serializable
-          createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
-          updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
-          dueDate: task.dueDate || null
-        }
-      }
-
-      return await validDb.put(doc)
-    } catch (error) {
-      retryCount++
-      const pouchError = error as { status?: number; message?: string }
-
-      // Handle connection closing error - retry
-      if (isConnectionClosingError(error) && retryCount < maxRetries) {
-        console.warn(`⚠️ [TASK-STORAGE] Connection closing on task ${task.id} (attempt ${retryCount}/${maxRetries}), retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        // Update db reference from window
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-        continue
-      }
-
-      // Handle conflict by refetching and retrying
-      if (pouchError.status === 409) {
-        console.log(`🔄 Conflict saving task ${task.id}, refetching and retrying...`)
-        const freshDoc = await db.get(docId)
-        const doc = {
-          _id: docId,
-          _rev: freshDoc._rev,
-          type: 'task',
-          // Standardized root-level timestamp for validator and PouchDB efficiency
-          updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
-          data: {
-            ...task,
-            createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
-            updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
-            dueDate: task.dueDate || null
-          }
-        }
-        return await db.put(doc)
-      }
-      throw error
-    }
-  }
-  throw new Error(`Failed to save task ${task.id} after ${maxRetries} attempts`)
+  // PouchDB branch removed during decommissioning
+  console.warn('⚠️ [TASK-STORAGE] PouchDB save attempted but disabled.')
+  return null
 }
 
 /**
@@ -216,7 +174,8 @@ export const saveTask = async (
 export const saveTasks = async (
   db: PouchDB.Database,
   tasks: Task[],
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  bypassSql: boolean = false
 ): Promise<(PouchDB.Core.Response | PouchDB.Core.Error)[]> => {
   // BUG-060 FIX: Filter out tasks with undefined IDs before bulk save
   const validTasks = tasks.filter(task => {
@@ -236,27 +195,41 @@ export const saveTasks = async (
   const finalResults: (PouchDB.Core.Response | PouchDB.Core.Error)[] = new Array(validTasks.length).fill({ error: true, message: 'Unprocessed' } as any)
 
   // BRANCH: SQLite
-  if (shouldUseSqlite()) {
+  if (shouldUseSqlite() && !bypassSql) {
     try {
       const dbInstance = await PowerSyncService.getInstance()
       await dbInstance.writeTransaction(async (tx) => {
         for (const task of validTasks) {
-          const sqlTask = toSqlTask(task)
+          const t = toSqlTask(task)
           await tx.execute(`
               INSERT OR REPLACE INTO tasks (
-                id, title, status, project_id, description, 
-                total_pomodoros, estimated_pomodoros, "order", column_id,
-                created_at, updated_at, completed_at, is_deleted, deleted_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                id, title, description, status, priority,
+                project_id, parent_task_id,
+                total_pomodoros, estimated_pomodoros, progress,
+                due_date, scheduled_date, scheduled_time, estimated_duration,
+                instances_json, subtasks_json, depends_on_json, tags_json,
+                connection_types_json, recurrence_json, recurring_instances_json, notification_prefs_json,
+                canvas_position_x, canvas_position_y, is_in_inbox,
+                "order", column_id,
+                created_at, updated_at, completed_at,
+                is_deleted, deleted_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
-            sqlTask.id, sqlTask.title, sqlTask.status, sqlTask.project_id, sqlTask.description,
-            sqlTask.total_pomodoros, sqlTask.estimated_pomodoros, sqlTask.order, sqlTask.column_id,
-            sqlTask.created_at, sqlTask.updated_at, sqlTask.completed_at, sqlTask.is_deleted, sqlTask.deleted_at
+            t.id, t.title, t.description, t.status, t.priority,
+            t.project_id, t.parent_task_id,
+            t.total_pomodoros, t.estimated_pomodoros, t.progress,
+            t.due_date, t.scheduled_date, t.scheduled_time, t.estimated_duration,
+            t.instances_json, t.subtasks_json, t.depends_on_json, t.tags_json,
+            t.connection_types_json, t.recurrence_json, t.recurring_instances_json, t.notification_prefs_json,
+            t.canvas_position_x, t.canvas_position_y, t.is_in_inbox,
+            t.order, t.column_id,
+            t.created_at, t.updated_at, t.completed_at,
+            t.is_deleted, t.deleted_at
           ])
         }
       })
 
-      // Success for all
+      // Continue to PouchDB save unless decommissioned
       return validTasks.map(t => ({ ok: true, id: t.id, rev: '1-sqlite' }))
     } catch (err: any) {
       console.error('❌ [SQL-ADAPTER] Bulk save failed:', err)
@@ -264,105 +237,9 @@ export const saveTasks = async (
     }
   }
 
-  // Map taskId to its index in validTasks for result placement
-  const idToIndex = new Map<string, number>()
-  validTasks.forEach((t, i) => idToIndex.set(t.id, i))
-
-  // Queue of tasks to process (initially all)
-  let tasksToProcess = [...validTasks]
-  let retryCount = 0
-
-  while (retryCount < maxRetries && tasksToProcess.length > 0) {
-    try {
-      // Get valid database connection
-      const validDb = await getDbWithRetry(db)
-
-      // Fetch revs for currently processing tasks
-      const keys = tasksToProcess.map(t => getTaskDocId(t.id))
-      const existingDocs = await validDb.allDocs({
-        include_docs: false,
-        keys
-      })
-
-      const revMap = new Map<string, string>()
-      existingDocs.rows.forEach(row => {
-        if (!('error' in row) && row.value?.rev) {
-          revMap.set(row.id, row.value.rev)
-        }
-      })
-
-      // Prepare docs
-      const docs = tasksToProcess.map(task => {
-        const docId = getTaskDocId(task.id)
-        return {
-          _id: docId,
-          _rev: revMap.get(docId),
-          type: 'task',
-          // Standardized root-level timestamp for validator and PouchDB efficiency
-          updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
-          data: {
-            ...task,
-            createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
-            updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
-            dueDate: task.dueDate || null
-          }
-        }
-      })
-
-      // Bulk write
-      const results = await validDb.bulkDocs(docs)
-
-      // Analyze results
-      const nextRetryTasks: Task[] = []
-
-      results.forEach((result, i) => {
-        const task = tasksToProcess[i]
-        const originalIndex = idToIndex.get(task.id)!
-
-        finalResults[originalIndex] = result
-
-        const errorResult = result as PouchDB.Core.Error
-        if (errorResult.error) {
-          if (errorResult.status === 409) {
-            // Conflict - Add to retry queue
-            nextRetryTasks.push(task)
-          } else {
-            console.error(`❌ Failed to save task ${task.id}:`, errorResult.message)
-          }
-        }
-      })
-
-      tasksToProcess = nextRetryTasks
-
-      if (tasksToProcess.length > 0) {
-        // If we have conflicts, wait a bit before retry (exponential backoff)
-        const delay = 300 * Math.pow(2, retryCount)
-        console.warn(`⚠️ [TASK-STORAGE] ${tasksToProcess.length} conflicts in bulk save, retrying in ${delay}ms... (Attempt ${retryCount + 1}/${maxRetries})`)
-        await new Promise(resolve => setTimeout(resolve, delay))
-        retryCount++
-
-        // Refresh DB ref just in case
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-      }
-
-    } catch (error) {
-      // If the WHOLE operation fails (e.g. connection error), retry everything currently in queue
-      retryCount++
-      if (isConnectionClosingError(error) && retryCount < maxRetries) {
-        console.warn(`⚠️ [TASK-STORAGE] Connection closing on bulk save (attempt ${retryCount}/${maxRetries}), retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-        continue
-      }
-      throw error
-    }
-  }
-
-  if (tasksToProcess.length > 0) {
-    console.error(`❌ [TASK-STORAGE] Failed to save ${tasksToProcess.length} tasks after ${maxRetries} attempts due to conflicts.`)
-  }
-
-  return finalResults
+  // PouchDB branch removed during decommissioning
+  console.warn('⚠️ [TASK-STORAGE] PouchDB saveTasks attempted but disabled.')
+  return []
 }
 
 /**
@@ -385,55 +262,14 @@ export const deleteTask = async (
       } else {
         await dbInstance.execute('UPDATE tasks SET is_deleted = 1, deleted_at = ? WHERE id = ?', [new Date().toISOString(), taskId])
       }
-      return { ok: true, id: docId, rev: '1-sqlite' }
+      console.log(`[SQL-ADAPTER] Deleted task ${taskId} from SQLite`)
     } catch (err) {
       console.error('❌ [SQL-ADAPTER] Delete failed:', err)
-      return null
     }
   }
 
-  let retryCount = 0
-
-  while (retryCount < maxRetries) {
-    try {
-      const validDb = await getDbWithRetry(db)
-      const doc = await validDb.get(docId)
-
-      if (hardDelete) {
-        return await validDb.remove(doc)
-      } else {
-        // Soft Delete: Mark as deleted but keep data
-        const taskData = (doc as any).data || {}
-        return await validDb.put({
-          ...doc,
-          data: {
-            ...taskData,
-            _soft_deleted: true,
-            deletedAt: new Date().toISOString()
-          }
-        })
-      }
-    } catch (error) {
-      const pouchError = error as { status?: number }
-      if (pouchError.status === 404) {
-        console.log(`Task ${taskId} not found, already deleted`)
-        return null
-      }
-
-      retryCount++
-
-      // Handle connection closing error - retry
-      if (isConnectionClosingError(error) && retryCount < maxRetries) {
-        console.warn(`⚠️ [TASK-STORAGE] Connection closing on delete ${taskId} (attempt ${retryCount}/${maxRetries}), retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-        continue
-      }
-
-      throw error
-    }
-  }
-  throw new Error(`Failed to delete task ${taskId} after ${maxRetries} attempts`)
+  // SQLite branch handles the deletion
+  return { ok: true, id: taskId, rev: '1-sqlite' }
 }
 
 /**
@@ -459,69 +295,8 @@ export const loadAllTasks = async (db: PouchDB.Database, includeDeleted = false)
     }
   }
 
-  while (retryCount < maxRetries) {
-    try {
-      const validDb = await getDbWithRetry(db)
-      const result = await validDb.allDocs({
-        include_docs: true,
-        startkey: TASK_DOC_PREFIX,
-        endkey: `${TASK_DOC_PREFIX}\ufff0`
-      })
-
-      const rawTasks: (Task & { deleted?: boolean })[] = []
-      for (const row of result.rows) {
-        if (row.doc) {
-          const doc = row.doc as any
-          let taskData: any = null
-
-          if (doc.data) {
-            taskData = doc.data
-          } else if (doc.id && doc.title !== undefined) {
-            taskData = doc
-          }
-
-          if (taskData) {
-            // Soft delete check
-            if (taskData._soft_deleted && !includeDeleted) {
-              continue
-            }
-
-            rawTasks.push({
-              ...taskData,
-              createdAt: new Date(taskData.createdAt as string || Date.now()),
-              updatedAt: new Date(taskData.updatedAt as string || Date.now()),
-              deleted: !!taskData._soft_deleted
-            } as Task & { deleted?: boolean })
-          }
-        }
-      }
-
-      const totalFound = rawTasks.length
-      const activeTasks = rawTasks.filter(t => !t.deleted)
-      const deletedCount = totalFound - activeTasks.length
-
-      if (totalFound > 0) {
-        // console.log(`📂 [LOAD-TASKS] Total: ${totalFound}, Active: ${activeTasks.length}, Deleted: ${deletedCount}`)
-        if (deletedCount > 0 && activeTasks.length < 20 && !includeDeleted) {
-          console.warn(`🚨 [LOAD-TASKS] Warning: High number of deleted tasks found (${deletedCount} vs ${activeTasks.length} active). Potential mass-deletion detected!`)
-        }
-      }
-
-      return activeTasks
-    } catch (error) {
-      retryCount++
-
-      if (isConnectionClosingError(error) && retryCount < maxRetries) {
-        console.warn(`⚠️ [TASK-STORAGE] Connection closing on loadAllTasks (attempt ${retryCount}/${maxRetries}), retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-        continue
-      }
-
-      throw error
-    }
-  }
-  throw new Error(`Failed to load tasks after ${maxRetries} attempts`)
+  // SQLite branch handles the load
+  return []
 }
 
 /**
@@ -533,41 +308,14 @@ export const loadTask = async (
   maxRetries: number = 3
 ): Promise<Task | null> => {
   const docId = getTaskDocId(taskId)
-  let retryCount = 0
-
-  while (retryCount < maxRetries) {
-    try {
-      const validDb = await getDbWithRetry(db)
-      const doc = await validDb.get(docId) as TaskDocument
-      if (doc.data) {
-        const taskData = doc.data as Record<string, unknown>
-        return {
-          ...taskData,
-          createdAt: new Date(taskData.createdAt as string),
-          updatedAt: new Date(taskData.updatedAt as string)
-        } as Task
-      }
-      return null
-    } catch (error) {
-      const pouchError = error as { status?: number }
-      if (pouchError.status === 404) {
-        return null
-      }
-
-      retryCount++
-
-      // Handle connection closing error - retry
-      if (isConnectionClosingError(error) && retryCount < maxRetries) {
-        console.warn(`⚠️ [TASK-STORAGE] Connection closing on loadTask ${taskId} (attempt ${retryCount}/${maxRetries}), retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-        continue
-      }
-
-      throw error
-    }
+  try {
+    const dbInstance = await PowerSyncService.getInstance()
+    const result = await dbInstance.get<SqlTask>('SELECT * FROM tasks WHERE id = ?', [taskId])
+    return result ? fromSqlTask(result) : null
+  } catch (err) {
+    console.error(`❌ [SQL-ADAPTER] Load task ${taskId} failed:`, err)
+    return null
   }
-  throw new Error(`Failed to load task ${taskId} after ${maxRetries} attempts`)
 }
 
 /**

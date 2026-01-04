@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
@@ -167,6 +167,17 @@ onMounted(() => {
 
   // Listen for kanban settings changes
   window.addEventListener('kanban-settings-changed', handleKanbanSettingsChange)
+
+  // DEBUG: Trace reactivity
+  watch(() => taskStore.filteredTasks, (newTasks) => {
+    console.log(`🔍 [BOARD-VIEW-DEBUG] filteredTasks changed: ${newTasks?.length || 0} tasks`)
+    newTasks?.forEach(t => console.log(`   - Task: ${t.title} (Project: ${t.projectId})`))
+  }, { deep: true, immediate: true })
+
+  watch(() => taskStore.projects, (newProjects) => {
+      console.log(`🔍 [BOARD-VIEW-DEBUG] projects changed: ${newProjects?.length || 0} projects`)
+      newProjects?.forEach(p => console.log(`   - Project: ${p.name} (ID: ${p.id})`))
+  }, { deep: true, immediate: true })
 })
 
 // Clean up event listener

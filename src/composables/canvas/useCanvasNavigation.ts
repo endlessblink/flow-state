@@ -10,9 +10,9 @@ export function useCanvasNavigation(canvasStore: any) {
     const initialViewport = computed(() => {
         const vp = canvasStore?.viewport || { x: 0, y: 0, zoom: 1 }
         return {
-            x: vp.x ?? 0,
-            y: vp.y ?? 0,
-            zoom: vp.zoom ?? 1
+            x: Number.isFinite(vp.x) ? vp.x : 0,
+            y: Number.isFinite(vp.y) ? vp.y : 0,
+            zoom: (Number.isFinite(vp.zoom) && vp.zoom > 0) ? vp.zoom : 1
         }
     })
 

@@ -106,6 +106,7 @@ defineEmits<{
         v-for="slot in timeSlots"
         :key="slot.id"
         class="time-slot"
+        :data-slot-index="slot.slotIndex"
         :class="{
           'drag-over': activeDropSlot === slot.slotIndex,
           'current-time': isCurrentTimeSlot(slot)

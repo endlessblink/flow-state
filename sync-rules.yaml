@@ -1,0 +1,15 @@
+# PowerSync Sync Rules
+# Defines how data is partitioned into buckets for synchronization.
+# Documentation: https://docs.powersync.com/usage/sync-rules
+
+bucket_definitions:
+  # Global bucket for all projects and tasks
+  all_data:
+    data:
+      - select * from tasks
+      - select * from projects
+      - select * from groups
+      - select * from subtasks
+      - select * from timer_sessions
+      - select * from notifications
+      - select * from settings

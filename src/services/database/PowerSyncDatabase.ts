@@ -1,6 +1,6 @@
-// import { WASQLitePowerSyncDatabaseOpenFactory, PowerSyncDatabase } from '@journeyapps/powersync-sdk-web';
-import type { PowerSyncDatabase } from '@journeyapps/powersync-sdk-web';
+import { PowerSyncDatabase, WASQLiteOpenFactory } from '@powersync/web';
 import { AppSchema } from '@/database/AppSchema';
+import { PowerSyncConnector } from './PowerSyncConnector';
 
 class PowerSyncService {
     private static instance: PowerSyncDatabase | null = null;
@@ -8,49 +8,40 @@ class PowerSyncService {
 
     private constructor() { }
 
-    /**
-     * Initialize the PowerSync database (Offline/Local Mode)
-     */
     public static async getInstance(): Promise<PowerSyncDatabase> {
         if (this.instance) return this.instance;
-
-        // Prevent multiple concurrent initializations
         if (!this.initPromise) {
             this.initPromise = this.init();
         }
-
         return this.initPromise;
     }
 
     private static async init(): Promise<PowerSyncDatabase> {
-        console.log('🔋 [POWERSYNC] Initializing WASM SQLite via Factory...');
+        console.log('🔋 [POWERSYNC] Initializing Remote Sync via @powersync/web...');
 
         try {
-            // DYNAMIC IMPORT: Prevent app crash if SDK fails to load (e.g. WASM/Worker issues)
-            const { WASQLitePowerSyncDatabaseOpenFactory } = await import('@journeyapps/powersync-sdk-web');
-            // const { default: LogWorker } = await import('@/worker/db-worker.ts?worker&url');
-
-            // Updated to use the Factory pattern which ensures correct adapter setup for Web/WASM
-            const factory = new WASQLitePowerSyncDatabaseOpenFactory({
-                schema: AppSchema,
-                dbFilename: 'pomoflow_sqlite.db',
-                // Explicitly valid via public folder asset
-                workerUri: '/powersync/WASQLiteDB.worker.js'
+            const factory = new WASQLiteOpenFactory({
+                dbFilename: 'pomoflow_sqlite_v2.db',
             });
 
-            const db = factory.getInstance() as PowerSyncDatabase;
-            // DEBUG: Inspect the DB instance
-            console.log('🔍 [POWERSYNC-DEBUG] DB Instance created via Factory');
-            console.log('🔍 [POWERSYNC-DEBUG] Has registerListener?', (db as any).registerListener ? 'YES' : 'NO');
+            const db = new PowerSyncDatabase({
+                schema: AppSchema,
+                database: factory
+            });
 
             await db.init();
-            console.log('✅ [POWERSYNC] Database initialized successfully (Offline Mode)');
+
+            // Connect to remote sync service
+            const connector = new PowerSyncConnector();
+            db.connect(connector);
+
+            console.log('✅ [POWERSYNC] Connected to remote sync stack');
             this.instance = db;
             return db;
 
         } catch (err) {
-            console.error('❌ [POWERSYNC] Failed to initialize database:', err);
-            this.initPromise = null; // Reset promise to allow retry
+            console.error('❌ [POWERSYNC] Initialization failed:', err);
+            this.initPromise = null;
             throw err;
         }
     }

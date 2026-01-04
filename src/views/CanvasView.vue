@@ -686,12 +686,25 @@ const {
   screenToFlowCoordinate, // BUG-044 FIX: Use official coordinate projection
   updateNodeData, // TASK-072: Official Vue Flow API for updating node data reactively
   updateNode, // BUG-055: Update node position for inverse delta compensation
-  // setViewport: vueFlowSetViewport // TASK-072: Restore saved viewport position // Unused
+  setViewport: vueFlowSetViewport // Required for force-resetting corrupted viewports
 } = useVueFlow()
 
 // TASK-072: Sync Vue Flow viewport changes to canvas store for persistence
 // This triggers the auto-save watcher in canvas.ts (debounced 1s save to IndexedDB)
 watch(vfViewport, (newViewport) => {
+  // SAFETY: Sanitize viewport to prevent NaNs
+  // If we receive NaNs, it corrupts the store and drag logic
+  if (!Number.isFinite(newViewport.x) || 
+      !Number.isFinite(newViewport.y) || 
+      !Number.isFinite(newViewport.zoom) || 
+      newViewport.zoom <= 0) {
+      
+      console.error('🚨 [CANVAS-VIEW] Corrupted viewport detected from Vue Flow:', newViewport)
+      // Force reset internal Vue Flow state to break the loop
+      vueFlowSetViewport({ x: 0, y: 0, zoom: 1 })
+      return
+  }
+
   canvasStore.setViewport(newViewport.x, newViewport.y, newViewport.zoom)
 
   // TASK-089: Lock viewport to prevent sync from overwriting user's pan/zoom
@@ -1304,12 +1317,29 @@ const dynamicNodeExtent = computed(() => {
     const contentBounds = canvasStore.calculateContentBounds(tasks)
     const padding = 1000
 
+    // FIX: create compatible bounds object from store return value {x,y,width,height}
+    // The store does NOT return minX/minY/maxX/maxY directly
+    const bounds = {
+      minX: contentBounds.x,
+      minY: contentBounds.y,
+      maxX: contentBounds.x + contentBounds.width,
+      maxY: contentBounds.y + contentBounds.height
+    }
+
+    // Safety fallback if calculation failed
+    if (isNaN(bounds.minX) || isNaN(bounds.maxX)) {
+        bounds.minX = -2000
+        bounds.minY = -2000
+        bounds.maxX = 5000
+        bounds.maxY = 5000
+    }
+
     // Expand bounds significantly to allow for extreme zoom levels
     const expandedBounds = {
-      minX: contentBounds.minX - padding * 10,
-      minY: contentBounds.minY - padding * 10,
-      maxX: contentBounds.maxX + padding * 10,
-      maxY: contentBounds.maxY + padding * 10
+      minX: bounds.minX - padding * 10,
+      minY: bounds.minY - padding * 10,
+      maxX: bounds.maxX + padding * 10,
+      maxY: bounds.maxY + padding * 10
     }
 
     const result = [
@@ -1975,6 +2005,11 @@ const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes
 
     // Handle section resize - ONLY update dimensions, not position, and prevent during active resize
     if (change.type === 'dimensions' && change.id && change.id.startsWith('section-')) {
+      // FIX: Guard against sync-triggered dimension updates causing infinite loops
+      if (isSyncing.value || isHandlingNodeChange.value) {
+        return
+      }
+
       const sectionId = change.id.replace('section-', '')
 
       // Skip dimension updates during active resize to prevent coordinate conflicts
@@ -1987,6 +2022,14 @@ const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes
         // Update ONLY width and height, preserve position
         const currentSection = canvasStore.sections.find(s => s.id === sectionId)
         if (currentSection) {
+          // FIX: Add tolerance check to prevent rounding errors triggering updates
+          const widthDiff = Math.abs(currentSection.position.width - change.dimensions.width)
+          const heightDiff = Math.abs(currentSection.position.height - change.dimensions.height)
+
+          if (widthDiff < 1 && heightDiff < 1) {
+            return
+          }
+
           canvasStore.updateSectionWithUndo(sectionId, {
             position: {
               x: currentSection.position.x, // Preserve current position
@@ -2714,7 +2757,7 @@ onMounted(async () => {
   }
 
   syncNodes()
-  canvasStore.initializeDefaultSections()
+
 
   // TASK-072: Restore saved viewport position
   // BUG-048 FIX: Set hasInitialFit BEFORE applying viewport to prevent auto-centering

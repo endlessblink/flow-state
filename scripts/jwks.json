@@ -1,0 +1,10 @@
+{
+    "keys": [
+        {
+            "kty": "oct",
+            "kid": "local-dev-key",
+            "alg": "HS256",
+            "k": "bG9jYWxfZGV2X3NlY3JldF9rZXlfY2hhbmdlX21l"
+        }
+    ]
+}

@@ -1,7 +1,7 @@
 # Pomo-Flow Standard Operating Procedures (SOPs)
 
-**Last Updated**: January 2026
-**Total Documents**: 27 (reorganized from 44)
+**Last Updated**: January 4, 2026
+**Total Documents**: 28 (added MIGRATION-pouchdb-to-sqlite.md)
 
 ---
 
@@ -11,6 +11,7 @@
 |----------|--------|-------------|
 | Canvas | `CANVAS-` | Vue Flow canvas view fixes |
 | Calendar | `CALENDAR-` | Calendar drag, resize, scheduling |
+| Migration | `MIGRATION-` | Database migration procedures |
 | Sync | `SYNC-` | PouchDB/CouchDB sync, conflicts |
 | Styling | `STYLING-` | CSS, glassmorphism, design tokens |
 | Tasks | `TASKS-` | Task store, persistence, reactivity |
@@ -66,6 +67,12 @@ docs/sop/
 |------|-------------|
 | `STYLING-glassmorphism-guide.md` | **Consolidated**: All glass/CSS debugging |
 | `STYLING-dark-theme-fix.md` | Dark theme visibility issues |
+
+### Migration (MIGRATION-*)
+
+| File | Description |
+|------|-------------|
+| `MIGRATION-pouchdb-to-sqlite.md` | PouchDB → SQLite migration fixes (BUG-087) |
 
 ### Tasks (TASKS-*)
 

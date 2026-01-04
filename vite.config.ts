@@ -45,22 +45,12 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Fix: uuid CommonJS -> ESM interop
+      'uuid': fileURLToPath(new URL('./node_modules/uuid/dist/esm-browser/index.js', import.meta.url))
     }
   },
-  server: {
-    host: '0.0.0.0',
-    port: 5546,
-    strictPort: true, // Force single port usage - prevents multiple instances
-    open: false, // Prevent multiple browser instances
-    proxy: {
-      '/pomoflow-tasks': {
-        target: 'http://84.46.253.137:5984',
-        changeOrigin: true,
-        secure: false
-      }
-    }
-  },
+  // ...
   build: {
     // Simplified build for faster compilation
     minify: 'esbuild',
@@ -68,21 +58,17 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       external: ['fsevents'],
       output: {
+        format: 'es', // Workers MUST be 'es' format
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('pouchdb')) return 'vendor-pouchdb'
-            if (id.includes('naive-ui')) return 'vendor-ui'
-            if (id.includes('lucide-vue-next')) return 'vendor-ui'
-            if (id.includes('@vue-flow')) return 'vendor-flow'
-            if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router') || id.includes('@vueuse')) return 'vendor-core'
-            return 'vendor'
+            // ... existing chunks
           }
         }
       }
     },
-    // Reduce complexity for testing
-    // Reduce complexity for testing
-    chunkSizeWarningLimit: 1000,
+    commonjsOptions: {
+      include: [/node_modules/]
+    },
     target: 'esnext'
   },
   // Development optimizations
@@ -94,11 +80,20 @@ export default defineConfig(({ mode }) => ({
       'naive-ui',
       '@vueuse/core',
       '@vue-flow/core',
-      'date-fns'
+      'date-fns',
+      'js-logger' // Transitively required by PowerSync
     ],
+    exclude: [
+      '@powersync/web',
+      '@journeyapps/wa-sqlite'
+    ],
+    // Force ESM interop for CJS modules
+    needsInterop: [
+      'uuid'
+    ]
   },
   worker: {
-    format: 'es',
+    format: 'es', // CRITICAL: production builds require 'es' format
     plugins: () => [
       wasm(),
       topLevelAwait()

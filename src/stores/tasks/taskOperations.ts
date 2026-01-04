@@ -16,8 +16,10 @@ import { useProjectStore } from '../projects'
 export function useTaskOperations(
     tasks: Ref<Task[]>,
     selectedTaskIds: Ref<string[]>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     activeSmartView: Ref<any>,
     activeStatusFilter: Ref<string | null>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     activeDurationFilter: Ref<any>,
     hideDoneTasks: Ref<boolean>,
     hideCanvasDoneTasks: Ref<boolean>,
@@ -35,11 +37,12 @@ export function useTaskOperations(
     const triggerCanvasSync = () => {
         try {
             // Dynamic import to avoid circular dependency and context issues
+            // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
             const { useCanvasUiStore } = require('../canvas/canvasUi')
             const canvasUiStore = useCanvasUiStore()
             canvasUiStore.requestSync()
             console.log('🔄 [CANVAS-SYNC] Triggered canvas sync after task operation')
-        } catch (e) {
+        } catch (_e) {
             // Ignore if canvas store not available (e.g., in non-canvas views)
         }
     }
@@ -154,9 +157,7 @@ export function useTaskOperations(
 
             if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || !task.instances.length)) {
                 // updates.isInInbox = true // Wait, why force inbox true if just position is undefined but task has position? 
-                // This logic seems fragile. If I update just title, updates.canvasPosition is undefined. 
-                // Ah, this checks if I am explicitly REMOVING position? No, undefined means "no change" in typical partial updates. 
-                // But here logic implies check if task HAS position. 
+                // This logic implies check if task HAS position.
                 // Let's log if this triggers.
             }
 
@@ -211,6 +212,7 @@ export function useTaskOperations(
             const taskTitle = deletedTask?.title || 'unknown'
             taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${taskTitle.substring(0, 30)}`)
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const dbInstance = (window as any).pomoFlowDb
             if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_ONLY) {
                 await _deleteIndividualTask(dbInstance, taskId)
@@ -223,7 +225,9 @@ export function useTaskOperations(
                         doc.deletedAt[taskId] = new Date().toISOString()
                         await dbInstance.put(doc)
                     }
-                } catch { }
+                } catch {
+                     // ignore
+                }
             }
 
             if (!STORAGE_FLAGS.INDIVIDUAL_ONLY) {
@@ -276,6 +280,7 @@ export function useTaskOperations(
             taskDisappearanceLogger.takeSnapshot(tasksToKeep, `bulkDelete-${taskIds.length} tasks`)
             tasks.value = tasksToKeep
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const dbInstance = (window as any).pomoFlowDb
             if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_ONLY) {
                 await _deleteIndividualTasksBulk(dbInstance, taskIds)
@@ -292,7 +297,9 @@ export function useTaskOperations(
                         }
                     })
                     if (dirty) await dbInstance.put(doc)
-                } catch { }
+                } catch {
+                     // ignore
+                }
             }
 
             if (!STORAGE_FLAGS.INDIVIDUAL_ONLY) {
@@ -429,13 +436,28 @@ export function useTaskOperations(
         const today = new Date()
         let dueDate = ''
         switch (type.toLowerCase()) {
-            case 'today': dueDate = formatDateKey(today); break
-            case 'tomorrow':
-                const tom = new Date(today); tom.setDate(today.getDate() + 1); dueDate = formatDateKey(tom); break
-            case 'this weekend':
-                const sat = new Date(today); sat.setDate(today.getDate() + ((6 - today.getDay() + 7) % 7 || 7)); dueDate = formatDateKey(sat); break
-            case 'this week':
-                const sun = new Date(today); sun.setDate(today.getDate() + ((7 - today.getDay()) % 7 || 7)); dueDate = formatDateKey(sun); break
+            case 'today': {
+                dueDate = formatDateKey(today)
+                break
+            }
+            case 'tomorrow': {
+                const tom = new Date(today)
+                tom.setDate(today.getDate() + 1)
+                dueDate = formatDateKey(tom)
+                break
+            }
+            case 'this weekend': {
+                const sat = new Date(today)
+                sat.setDate(today.getDate() + ((6 - today.getDay() + 7) % 7 || 7))
+                dueDate = formatDateKey(sat)
+                break
+            }
+            case 'this week': {
+                const sun = new Date(today)
+                sun.setDate(today.getDate() + ((7 - today.getDay()) % 7 || 7))
+                dueDate = formatDateKey(sun)
+                break
+            }
         }
         updateTask(taskId, { dueDate })
     }
@@ -461,8 +483,9 @@ export function useTaskOperations(
                 scheduledDate: formatDateKey(target),
                 scheduledTime: '09:00',
                 duration: task.estimatedDuration || 60,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 isLater: dateColumn === 'later'
-            }]
+            } as any]
         }
         updateTask(taskId, updates)
     }
@@ -480,6 +503,7 @@ export function useTaskOperations(
         persistFilters()
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const setSmartView = (view: any) => {
         activeSmartView.value = view
         persistFilters()
@@ -511,12 +535,14 @@ export function useTaskOperations(
         setActiveStatusFilter(activeStatusFilter.value === status ? null : status)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const setActiveDurationFilter = (duration: any) => {
         activeDurationFilter.value = duration
         if (duration) activeStatusFilter.value = null
         persistFilters()
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const toggleDurationFilter = (duration: any) => {
         setActiveDurationFilter(activeDurationFilter.value === duration ? null : duration)
     }

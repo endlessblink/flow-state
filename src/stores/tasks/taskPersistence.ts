@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { type Ref } from 'vue'
 import PowerSyncService from '@/services/database/PowerSyncDatabase'
 import { toSqlTask, fromSqlTask } from '@/utils/taskMapper'
 import type { Task } from '@/types/tasks'
@@ -10,19 +10,21 @@ export function useTaskPersistence(
     hideDoneTasks: Ref<boolean>,
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     activeSmartView: Ref<any>,
     activeStatusFilter: Ref<string | null>,
     isLoadingFromDatabase: Ref<boolean>,
-    manualOperationInProgress: Ref<boolean>,
+    _manualOperationInProgress: Ref<boolean>,
     isLoadingFilters: Ref<boolean>,
-    syncInProgress: Ref<boolean>,
-    runAllTaskMigrations: () => void
+    _syncInProgress: Ref<boolean>,
+    _runAllTaskMigrations: () => void
 ) {
     const projectStore = useProjectStore()
     const FILTER_STORAGE_KEY = 'pomo-flow-filters'
 
     interface PersistedFilterState {
         activeProjectId: string | null
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         activeSmartView: any
         activeStatusFilter: string | null
         hideCanvasDoneTasks?: boolean
@@ -32,6 +34,7 @@ export function useTaskPersistence(
     // --- SQL PERSISTENCE ---
 
     const saveTasksToStorage = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
         try {
@@ -86,9 +89,11 @@ export function useTaskPersistence(
             // --- POUCHDB SYNC (DUAL SAVE) ---
             // While we are still using PouchDB for cross-device sync, we MUST update it too.
             // This also prevents the "Self-Healing Migration" from overwriting fresh data.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const pouchDbInstance = (window as any).pomoFlowDb
             if (pouchDbInstance) {
                 const { saveTasks: saveToPouch } = await import('@/utils/individualTaskStorage')
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 await (saveToPouch as any)(pouchDbInstance, validTasksToSave, 3, true) // bypassSql=true (internal flag needed or handled in utility)
             }
 
@@ -107,6 +112,7 @@ export function useTaskPersistence(
             const db = await PowerSyncService.getInstance()
 
             // Query all non-deleted tasks
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const countResult = await db.getAll('SELECT count(*) as count FROM tasks') as any[]
             console.log('🔍 [SQL-DEBUG] Total tasks in DB:', countResult[0]?.count)
 
@@ -162,6 +168,7 @@ export function useTaskPersistence(
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let persistTimeout: any = null
     const persistFilters = async () => {
         if (isLoadingFilters.value) return
@@ -186,8 +193,12 @@ export function useTaskPersistence(
         loadFromDatabase,
         loadPersistedFilters,
         persistFilters,
-        importTasksFromJSON: async () => { }, // Disabled / TBD
-        importFromRecoveryTool: async () => { }, // Disabled
+        importTasksFromJSON: async () => {
+             // Disabled / TBD
+        },
+        importFromRecoveryTool: async () => {
+             // Disabled
+        },
         recoverSoftDeletedTasks: async () => 0, // TBD: SQL Implementation needed later
         importTasks: async (tasksToImport: Task[]) => {
             // Basic import logic reused
@@ -201,4 +212,3 @@ export function useTaskPersistence(
         }
     }
 }
-

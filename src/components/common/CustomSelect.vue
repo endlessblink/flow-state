@@ -1,7 +1,7 @@
 <template>
   <div ref="selectRef" class="custom-select">
     <button
-      ref="triggerRef"
+      ref="triggerElement"
       type="button"
       class="select-trigger"
       :class="{ 'is-open': isOpen }"
@@ -73,7 +73,7 @@ const emit = defineEmits<{
 }>()
 
 const selectRef = ref<HTMLElement>()
-const triggerRef = ref<HTMLButtonElement>()
+const triggerElement = ref<HTMLButtonElement>()
 const isOpen = ref(false)
 const focusedIndex = ref(0)
 
@@ -86,9 +86,9 @@ const dropdownStyle = ref({
 })
 
 const calculateDropdownPosition = () => {
-  if (!triggerRef.value) return
+  if (!triggerElement.value) return
 
-  const rect = triggerRef.value.getBoundingClientRect()
+  const rect = triggerElement.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const spaceBelow = viewportHeight - rect.bottom
   const spaceAbove = rect.top

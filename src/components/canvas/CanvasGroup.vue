@@ -154,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted as _onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ChevronDown, ChevronRight, Eye, Maximize2, Archive, Zap, Magnet, Timer, Clock } from 'lucide-vue-next'
 import type { CanvasSection } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'

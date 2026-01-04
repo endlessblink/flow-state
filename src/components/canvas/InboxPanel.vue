@@ -9,6 +9,8 @@
       <h3 v-if="!isCollapsed" class="inbox-title">
         Inbox
       </h3>
+      
+
 
       <!-- Expanded state count -->
       <NBadge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
@@ -234,6 +236,8 @@ const {
   parsedTaskCount,
   processBrainDump
 } = useBrainDump()
+
+
 
 const newTaskTitle = ref('')
 const isCollapsed = ref(true) // Start collapsed to avoid overwhelming the user

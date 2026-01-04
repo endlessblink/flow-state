@@ -1,549 +1,125 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-// ⚠️ Firebase disabled for stability
-// import {
-//   signInWithEmailAndPassword,
-//   createUserWithEmailAndPassword,
-//   signInWithPopup,
-//   GoogleAuthProvider,
-//   signOut as firebaseSignOut,
-//   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
-//   updateProfile as firebaseUpdateProfile,
-//   updatePassword as firebaseUpdatePassword,
-//   onAuthStateChanged,
-//   type User
-// } from 'firebase/auth'
-// import { doc, getDoc, setDoc, updateDoc, serverTimestamp, type Timestamp } from 'firebase/firestore'
-// import { auth, db, waitForFirebase } from '@/config/firebase'
-
-// Mock type definitions for Firebase compatibility
-export interface FirebaseUser {
-  uid: string
-  email: string | null
-  displayName: string | null
-  photoURL: string | null
-}
-export type User = FirebaseUser | null
-type _Timestamp = Date
-
-// Document reference type for Firestore stubs
-interface _DocumentRef {
-  exists: () => boolean
-  data: () => Record<string, unknown>
-}
-
-const _auth: null = null
-const _db: null = null
-const _waitForFirebase = (_timeout?: number): Promise<boolean> => Promise.resolve(false)
-const _serverTimestamp = (): Date => new Date()
-const _doc = (_db: unknown, ..._path: string[]): _DocumentRef => ({ exists: () => false, data: () => ({}) })
-const _getDoc = (_ref: _DocumentRef): Promise<_DocumentRef> => Promise.resolve({ exists: () => false, data: () => ({}) })
-const _setDoc = (_ref: _DocumentRef, _data: unknown): Promise<void> => Promise.resolve()
-const _updateDoc = (_ref: _DocumentRef, _data: unknown): Promise<void> => Promise.resolve()
-const _createUserWithEmailAndPassword = (_auth: unknown, _email: string, _password: string): Promise<{ user: FirebaseUser }> =>
-  Promise.reject(new Error('Firebase disabled'))
-const _signInWithEmailAndPassword = (_auth: unknown, _email: string, _password: string): Promise<{ user: FirebaseUser }> =>
-  Promise.reject(new Error('Firebase disabled'))
-const _signInWithPopup = (_auth: unknown, _provider: unknown): Promise<{ user: FirebaseUser }> =>
-  Promise.reject(new Error('Firebase disabled'))
-const _GoogleAuthProvider: { new(): { setCustomParameters: (params: Record<string, string>) => void } } = class { setCustomParameters(_params: Record<string, string>) { } }
-const _firebaseSignOut = (_auth: unknown): Promise<void> => Promise.resolve()
-const _firebaseSendPasswordResetEmail = (_auth: unknown, _email: string): Promise<void> =>
-  Promise.reject(new Error('Firebase disabled'))
-const _firebaseUpdateProfile = (_user: FirebaseUser, _data: { displayName?: string; photoURL?: string }): Promise<void> =>
-  Promise.reject(new Error('Firebase disabled'))
-const _firebaseUpdatePassword = (_user: FirebaseUser, _newPassword: string): Promise<void> =>
-  Promise.reject(new Error('Firebase disabled'))
-const _onAuthStateChanged: () => () => void = () => () => { }
-
-/**
- * User profile data stored in Firestore
- */
-export interface UserProfile {
-  uid: string
-  email: string
-  displayName: string | null
-  photoURL: string | null
-  createdAt: Date
-  lastLoginAt: Date
-  preferences: {
-    language: 'en' | 'he'
-    theme: 'light' | 'dark' | 'auto'
-    notifications: {
-      email: boolean
-      push: boolean
-    }
-    timezone: string
-  }
-  stats: {
-    totalTasks: number
-    completedTasks: number
-    totalPomodoros: number
-  }
-}
-
-/**
- * Firebase Auth error codes with user-friendly messages
- */
-const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  'auth/email-already-in-use': 'This email is already registered',
-  'auth/invalid-email': 'Invalid email address',
-  'auth/operation-not-allowed': 'Email/password sign-in is disabled',
-  'auth/weak-password': 'Password must be at least 8 characters',
-  'auth/user-disabled': 'This account has been disabled',
-  'auth/user-not-found': 'No account found with this email',
-  'auth/wrong-password': 'Incorrect password',
-  'auth/too-many-requests': 'Too many failed attempts. Please try again later',
-  'auth/network-request-failed': 'Network error. Please check your connection',
-  'auth/popup-blocked': 'Popup was blocked by the browser. Please allow popups.',
-  'auth/popup-closed-by-user': 'Sign-in cancelled',
-  'auth/account-exists-with-different-credential': 'Email already registered with different provider',
-  'auth/cancelled-popup-request': 'Only one popup request at a time'
-}
-
-/**
- * Get user-friendly error message from Firebase error code
- */
-interface FirebaseError {
-  code?: string
-  message?: string
-}
-
-function isFirebaseError(error: unknown): error is FirebaseError {
-  return typeof error === 'object' && error !== null
-}
-
-function getErrorMessage(error: unknown): string {
-  if (isFirebaseError(error) && error.code && AUTH_ERROR_MESSAGES[error.code]) {
-    return AUTH_ERROR_MESSAGES[error.code]
-  }
-  if (isFirebaseError(error) && error.message) {
-    return error.message
-  }
-  return 'An unexpected error occurred'
-}
-
-/**
- * Default user profile preferences
- */
-const DEFAULT_PREFERENCES: UserProfile['preferences'] = {
-  language: 'en',
-  theme: 'auto',
-  notifications: {
-    email: true,
-    push: true
-  },
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-}
-
-/**
- * Default user stats
- */
-const DEFAULT_STATS: UserProfile['stats'] = {
-  totalTasks: 0,
-  completedTasks: 0,
-  totalPomodoros: 0
-}
+import { supabase, type User, type Session, type AuthError } from '@/services/auth/supabase'
 
 export const useAuthStore = defineStore('auth', () => {
-  // ===== State =====
+  // State
   const user = ref<User | null>(null)
-  const profile = ref<UserProfile | null>(null)
-  const isLoading = ref(true) // Start as loading to prevent flash of unauthenticated state
-  const error = ref<string | null>(null)
-  const authListenerInitialized = ref(false)
+  const session = ref<Session | null>(null)
+  const isLoading = ref(false)
+  const error = ref<AuthError | null>(null)
+  const isInitialized = ref(false)
 
-  // ===== Computed =====
-  const isAuthenticated = computed(() => user.value !== null)
-  const userEmail = computed(() => user.value?.email || null)
-  const userDisplayName = computed(() => profile.value?.displayName || user.value?.displayName || null)
-  const userPhotoURL = computed(() => profile.value?.photoURL || user.value?.photoURL || null)
+  // Getters
+  const isAuthenticated = computed(() => !!user.value)
+  const errorMessage = computed(() => error.value?.message || null)
 
-  // ===== Actions =====
-
-  /**
-   * Initialize auth state listener
-   * Called once on app mount to listen for auth state changes
-   */
-  async function initAuthListener(): Promise<void> {
-    if (authListenerInitialized.value) {
-      console.warn('Auth listener already initialized')
-      return
-    }
-
-    // Wait for Firebase to be initialized
-    console.log('🔄 Waiting for Firebase initialization...')
-    const firebaseReady = await _waitForFirebase(10000) // Wait up to 10 seconds
-
-    if (!firebaseReady) {
-      console.warn('⚠️ Firebase initialization failed or timed out - running in offline mode')
-      console.log('ℹ️ App will work offline. Configure Firebase credentials in .env.local for full functionality.')
-      isLoading.value = false
-      return
-    }
-
-    // Check if Firebase Auth is available
-    if (!_auth) {
-      console.warn('⚠️ Firebase Auth not available - running without authentication')
-      console.log('ℹ️ Please configure Firebase credentials in .env.local for authentication features.')
-      isLoading.value = false
-      return
-    }
-
-    console.log('⚠️ Firebase Auth disabled - running without authentication')
-
-    // Firebase Auth disabled - no listener needed
-    console.log('👤 Running in local-only mode - no authentication')
-
-    isLoading.value = false
-    authListenerInitialized.value = true
-  }
-
-  /**
-   * Load user profile from Firestore
-   */
-  async function loadUserProfile(uid: string): Promise<void> {
-    try {
-      const profileRef = _doc(_db, 'users', uid, 'profile', 'main')
-      const profileSnap = await _getDoc(profileRef)
-
-      if (profileSnap.exists()) {
-        const data = profileSnap.data() as Record<string, unknown>
-
-        // Convert Firestore Timestamps to Dates (Firebase disabled - just use defaults)
-        const createdAtField = data.createdAt as { toDate?: () => Date } | undefined
-        const lastLoginAtField = data.lastLoginAt as { toDate?: () => Date } | undefined
-
-        profile.value = {
-          ...data,
-          createdAt: createdAtField?.toDate?.() || new Date(),
-          lastLoginAt: lastLoginAtField?.toDate?.() || new Date()
-        } as UserProfile
-      } else {
-        console.warn('Profile document does not exist, creating default profile')
-        await createUserProfile(uid)
-      }
-    } catch (err) {
-      console.error('Failed to load user profile:', err)
-      error.value = 'Failed to load user profile'
-    }
-  }
-
-  /**
-   * Create user profile document in Firestore
-   */
-  async function createUserProfile(uid: string): Promise<void> {
-    if (!user.value) return
-
-    const now = new Date()
-
-    const newProfile: Omit<UserProfile, 'createdAt' | 'lastLoginAt'> & {
-      createdAt: ReturnType<typeof _serverTimestamp>
-      lastLoginAt: ReturnType<typeof _serverTimestamp>
-    } = {
-      uid,
-      email: user.value.email || '',
-      displayName: user.value.displayName || null,
-      photoURL: user.value.photoURL || null,
-      createdAt: _serverTimestamp(),
-      lastLoginAt: _serverTimestamp(),
-      preferences: { ...DEFAULT_PREFERENCES },
-      stats: { ...DEFAULT_STATS }
-    }
+  // Actions
+  const initialize = async () => {
+    if (isInitialized.value) return
 
     try {
-      const profileRef = _doc(_db, 'users', uid, 'profile', 'main')
-      await _setDoc(profileRef, newProfile)
+      isLoading.value = true
 
-      // Set local profile with actual dates
-      profile.value = {
-        ...newProfile,
-        createdAt: now,
-        lastLoginAt: now
-      } as UserProfile
+      // Check for existing session
+      const { data } = await supabase.auth.getSession()
+      session.value = data.session
+      user.value = data.session?.user || null
 
-      console.log('✅ User profile created')
-    } catch (err) {
-      console.error('Failed to create user profile:', err)
-      throw err
-    }
-  }
-
-  /**
-   * Update last login timestamp
-   */
-  async function _updateLastLogin(uid: string): Promise<void> {
-    try {
-      const profileRef = _doc(_db, 'users', uid, 'profile', 'main')
-      await _updateDoc(profileRef, {
-        lastLoginAt: _serverTimestamp()
-      })
-    } catch (err) {
-      console.error('Failed to update last login:', err)
-    }
-  }
-
-  /**
-   * Sign up with email and password
-   */
-  async function signUpWithEmail(email: string, password: string, displayName?: string): Promise<void> {
-    error.value = null
-    isLoading.value = true
-
-    try {
-      // Create Firebase Auth user
-      const userCredential = await _createUserWithEmailAndPassword(_auth, email, password)
-      user.value = userCredential.user
-
-      // Update display name if provided
-      if (displayName) {
-        await _firebaseUpdateProfile(userCredential.user, { displayName })
-      }
-
-      // Create user profile in Firestore
-      await createUserProfile(userCredential.user.uid)
-
-      console.log('✅ User signed up:', email)
-    } catch (err: unknown) {
-      error.value = getErrorMessage(err)
-      console.error('Sign up error:', err)
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  /**
-   * Sign in with email and password
-   */
-  async function signInWithEmail(email: string, password: string): Promise<void> {
-    error.value = null
-    isLoading.value = true
-
-    try {
-      const userCredential = await _signInWithEmailAndPassword(_auth, email, password)
-      user.value = userCredential.user
-
-      console.log('✅ User signed in:', email)
-    } catch (err: unknown) {
-      error.value = getErrorMessage(err)
-      console.error('Sign in error:', err)
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  /**
-   * Sign in with Google
-   */
-  async function signInWithGoogle(): Promise<void> {
-    error.value = null
-    isLoading.value = true
-
-    try {
-      const provider = new _GoogleAuthProvider()
-
-      // Always show account picker
-      provider.setCustomParameters({
-        prompt: 'select_account'
+      // Listen for auth changes (sign in, sign out, etc.)
+      supabase.auth.onAuthStateChange((_event, newSession) => {
+        session.value = newSession
+        user.value = newSession?.user || null
       })
 
-      const result = await _signInWithPopup(_auth, provider)
-      user.value = result.user
+    } catch (e: any) {
+      console.error('Auth initialization failed:', e)
+      error.value = e
+    } finally {
+      isLoading.value = false
+      isInitialized.value = true
+    }
+  }
 
-      // Check if profile exists, create if not
-      const profileRef = _doc(_db, 'users', result.user.uid, 'profile', 'main')
-      const profileSnap = await _getDoc(profileRef)
+  const signInWithPassword = async (email: string, password: string) => {
+    try {
+      isLoading.value = true
+      error.value = null
 
-      if (!profileSnap.exists()) {
-        await createUserProfile(result.user.uid)
-      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
 
-      console.log('✅ User signed in with Google:', result.user.email)
-    } catch (err: unknown) {
-      error.value = getErrorMessage(err)
-      console.error('Google sign in error:', err)
-      throw err
+      if (signInError) throw signInError
+
+    } catch (e: any) {
+      error.value = e
+      throw e
     } finally {
       isLoading.value = false
     }
   }
 
-  /**
-   * Sign out
-   */
-  async function signOut(): Promise<void> {
-    error.value = null
-
+  const signIn = async (email: string) => { // Basic Magic Link for now (easiest to start)
     try {
-      await _firebaseSignOut(_auth)
+      isLoading.value = true
+      error.value = null
+
+      const { error: signInError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          // Redirect back to app after login
+          emailRedirectTo: window.location.origin
+        }
+      })
+
+      if (signInError) throw signInError
+
+    } catch (e: any) {
+      error.value = e
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const signOut = async () => {
+    try {
+      isLoading.value = true
+      const { error: signOutError } = await supabase.auth.signOut()
+      if (signOutError) throw signOutError
+
+      // Clear state
       user.value = null
-      profile.value = null
-
-      // IMPORTANT: Open auth modal immediately after sign out
-      // Import at top to avoid circular dependency: import { useUIStore } from '@/stores/ui'
-      const { useUIStore } = await import('@/stores/ui')
-      const uiStore = useUIStore()
-      uiStore.openAuthModal('login', '/')
-
-      console.log('👋 User signed out')
-    } catch (err: unknown) {
-      error.value = getErrorMessage(err)
-      console.error('Sign out error:', err)
-      throw err
+      session.value = null
+    } catch (e: any) {
+      error.value = e
+      console.error('Sign out failed:', e)
+    } finally {
+      isLoading.value = false
     }
   }
 
-  /**
-   * Send password reset email
-   */
-  async function sendPasswordResetEmail(email: string): Promise<void> {
-    error.value = null
+  // Auto-init
+  initialize()
 
-    try {
-      await _firebaseSendPasswordResetEmail(_auth, email)
-      console.log('✅ Password reset email sent to:', email)
-    } catch (err: unknown) {
-      error.value = getErrorMessage(err)
-      console.error('Password reset error:', err)
-      throw err
-    }
-  }
-
-  /**
-   * Update user password
-   */
-  async function updatePassword(newPassword: string): Promise<void> {
-    if (!user.value) {
-      throw new Error('No user logged in')
-    }
-
-    error.value = null
-
-    try {
-      await _firebaseUpdatePassword(user.value, newPassword)
-      console.log('✅ Password updated')
-    } catch (err: unknown) {
-      error.value = getErrorMessage(err)
-      console.error('Update password error:', err)
-      throw err
-    }
-  }
-
-  /**
-   * Update user profile
-   */
-  async function updateUserProfile(data: Partial<UserProfile>): Promise<void> {
-    if (!user.value || !profile.value) {
-      throw new Error('No user logged in')
-    }
-
-    error.value = null
-
-    try {
-      const profileRef = _doc(_db, 'users', user.value.uid, 'profile', 'main')
-
-      // Update Firestore
-      await _updateDoc(profileRef, {
-        ...data,
-        updatedAt: _serverTimestamp()
-      })
-
-      // Update local profile (optimistic update)
-      profile.value = {
-        ...profile.value,
-        ...data
-      }
-
-      // Update Firebase Auth profile if display name or photo changed
-      if (data.displayName !== undefined || data.photoURL !== undefined) {
-        await _firebaseUpdateProfile(user.value, {
-          displayName: (data.displayName ?? user.value.displayName) || undefined,
-          photoURL: (data.photoURL ?? user.value.photoURL) || undefined
-        })
-      }
-
-      console.log('✅ Profile updated')
-    } catch (err: unknown) {
-      error.value = getErrorMessage(err)
-      console.error('Update profile error:', err)
-
-      // Rollback optimistic update
-      await loadUserProfile(user.value.uid)
-
-      throw err
-    }
-  }
-
-  /**
-   * Update user preferences
-   */
-  async function updatePreferences(preferences: Partial<UserProfile['preferences']>): Promise<void> {
-    if (!user.value || !profile.value) {
-      throw new Error('No user logged in')
-    }
-
-    const updatedPreferences = {
-      ...profile.value.preferences,
-      ...preferences
-    }
-
-    await updateUserProfile({
-      preferences: updatedPreferences
-    })
-  }
-
-  /**
-   * Update user stats
-   */
-  async function updateStats(stats: Partial<UserProfile['stats']>): Promise<void> {
-    if (!user.value || !profile.value) {
-      throw new Error('No user logged in')
-    }
-
-    const updatedStats = {
-      ...profile.value.stats,
-      ...stats
-    }
-
-    await updateUserProfile({
-      stats: updatedStats
-    })
-  }
-
-  /**
-   * Clear error message
-   */
-  function clearError(): void {
-    error.value = null
-  }
-
-  // ===== Return =====
   return {
     // State
     user,
-    profile,
+    session,
     isLoading,
     error,
+    isInitialized,
 
-    // Computed
+    // Getters
     isAuthenticated,
-    userEmail,
-    userDisplayName,
-    userPhotoURL,
+    errorMessage,
 
     // Actions
-    initAuthListener,
-    signUpWithEmail,
-    signInWithEmail,
-    signInWithGoogle,
-    signOut,
-    sendPasswordResetEmail,
-    updatePassword,
-    updateUserProfile,
-    updatePreferences,
-    updateStats,
-    clearError
+    initialize,
+    signIn,
+    signInWithPassword,
+    signOut
   }
 })

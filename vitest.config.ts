@@ -21,7 +21,15 @@ export default defineConfig({
     // Increase timeout for file system operations
     testTimeout: 30000,
     hookTimeout: 30000,
-    projects: [{
+    projects: [
+      {
+        name: 'unit',
+        test: {
+          include: ['tests/**/*.{test,spec}.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
+          environment: 'jsdom', // Use jsdom for Vue component/composable testing
+        }
+      },
+      {
       extends: true,
       plugins: [
       // The plugin will run tests for the stories defined in your Storybook config

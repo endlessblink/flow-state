@@ -289,7 +289,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch as _watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { getGlobalReliableSyncManager, type SyncValidationResult } from '@/composables/useReliableSyncManager'
 import { getLogger } from '@/utils/productionLogger'
 import type { QueueStats } from '@/utils/offlineQueue'

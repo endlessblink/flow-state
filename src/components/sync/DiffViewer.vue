@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed as _computed } from 'vue'
+import { computed } from 'vue'
 import TextDiff from './diffs/TextDiff.vue'
 import ArrayDiff from './diffs/ArrayDiff.vue'
 import ObjectDiff from './diffs/ObjectDiff.vue'

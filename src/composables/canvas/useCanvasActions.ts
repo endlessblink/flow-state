@@ -1,5 +1,5 @@
 
-import { type Ref, nextTick } from 'vue' // Removed global import
+import { type Ref, nextTick } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
@@ -58,7 +58,21 @@ export function useCanvasActions(
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     // BUG-044 FIX: Get viewport directly from Vue Flow (not stale store value)
-    const { getSelectedNodes, screenToFlowCoordinate, viewport: vfViewport } = useVueFlow()
+    const { getSelectedNodes, screenToFlowCoordinate, viewport: vfViewport, removeNodes } = useVueFlow()
+
+    // --- Helper for Ghost Removal ---
+    const forceRemoveGhostNode = (id: string) => {
+        const nodeId = id.startsWith('section-') ? id : `section-${id}`
+        console.warn('👻 [CanvasActions] Force removing ghost node:', nodeId)
+
+        // 1. Remove from Vue Flow (triggers internal cleanup)
+        removeNodes([nodeId])
+
+        // 2. Remove from Store Nodes Ref (ensures reactivity even if v-model lags)
+        if (canvasStore.nodes) {
+            canvasStore.nodes = canvasStore.nodes.filter(n => n.id !== nodeId)
+        }
+    }
 
     // --- Task Creation ---
 
@@ -216,10 +230,21 @@ export function useCanvasActions(
         const section = state.groupPendingDelete.value
         if (!section) return
 
-        // Perform the deletion with undo support
-        canvasStore.deleteSectionWithUndo(section.id)
+        const sectionNodeId = `section-${section.id}`
+        console.log(`🗑️ [CanvasActions] Confirming delete for group: ${section.name} (${section.id})`)
 
-        // Force high priority sync
+        // BUG-091 FIX: Check if section exists in store (might be a ghost)
+        const existsInStore = canvasStore.sections.some(s => s.id === section.id)
+
+        if (!existsInStore) {
+            console.warn('👻 [CanvasActions] Ghost section detected, forcing direct removal:', sectionNodeId)
+            forceRemoveGhostNode(section.id)
+        } else {
+            // Perform the deletion (safe to call even if not in store)
+            canvasStore.deleteSection(section.id)
+        }
+
+        // Force high priority sync which cleans up/re-verifies
         nextTick(() => deps.batchedSyncNodes('high'))
 
         // Close the modal
@@ -293,6 +318,25 @@ export function useCanvasActions(
             state.canvasContextMenuY.value = mouseEvent.clientY || 0
             state.canvasContextSection.value = section
             state.showCanvasContextMenu.value = true
+        } else {
+            // Fix: Also show for ghost nodes (similar to handleSectionContextMenu)
+            // But here we clicked a NODE, so we have the node object.
+            // We can construct a ghost section from the node data or just ID.
+            const ghostSection: CanvasSection = {
+                id: sectionId,
+                name: (event.node.data?.name as string) || 'Unknown Group (Ghost)',
+                color: (event.node.data?.color as string) || '#6366f1',
+                position: { x: 0, y: 0, width: 300, height: 200 },
+                isCollapsed: false,
+                items: [],
+                type: 'custom',
+                layout: 'freeform',
+                isVisible: true
+            }
+            state.canvasContextMenuX.value = mouseEvent.clientX || 0
+            state.canvasContextMenuY.value = mouseEvent.clientY || 0
+            state.canvasContextSection.value = ghostSection
+            state.showCanvasContextMenu.value = true
         }
 
         deps.closeEdgeContextMenu()
@@ -308,21 +352,26 @@ export function useCanvasActions(
 
         if (state.selectedNode.value.id.startsWith('section-')) {
             const sectionId = state.selectedNode.value.id.replace('section-', '')
-            const section = canvasStore.sections.find(s => s.id === sectionId)
+            // Check existence
+            const existsInStore = canvasStore.sections.some(s => s.id === sectionId)
 
-            if (!section) {
-                closeNodeContextMenu()
-                return
-            }
+            if (!existsInStore) {
+                if (confirm('Delete this ghost group?')) {
+                    forceRemoveGhostNode(sectionId)
+                }
+            } else {
+                const section = canvasStore.sections.find(s => s.id === sectionId)
+                if (section) {
+                    const taskCount = canvasStore.getTaskCountInGroupRecursive(section.id, state.filteredTasks.value)
+                    const msg = taskCount > 0
+                        ? `Delete "${section.name}" section? It contains ${taskCount} task(s).`
+                        : `Delete "${section.name}" section?`
 
-            const tasksInSection = canvasStore.getTasksInSection(section, state.filteredTasks.value)
-            const msg = tasksInSection.length > 0
-                ? `Delete "${section.name}" section? It contains ${tasksInSection.length} task(s).`
-                : `Delete "${section.name}" section?`
-
-            if (confirm(msg)) {
-                canvasStore.deleteSectionWithUndo(sectionId)
-                deps.syncNodes()
+                    if (confirm(msg)) {
+                        canvasStore.deleteSection(sectionId)
+                        deps.syncNodes()
+                    }
+                }
             }
         }
         closeNodeContextMenu()
@@ -360,6 +409,7 @@ export function useCanvasActions(
             if (node.id.startsWith('section-')) {
                 const sectionId = node.id.replace('section-', '')
                 const section = canvasStore.sections.find(s => s.id === sectionId)
+                const exists = !!section
                 itemsToDelete.push({
                     id: sectionId,
                     name: section?.name || 'Unknown Section',
@@ -390,7 +440,12 @@ export function useCanvasActions(
 
         for (const item of items) {
             if (item.type === 'section') {
-                await canvasStore.deleteSectionWithUndo(item.id)
+                const exists = canvasStore.sections.some(s => s.id === item.id)
+                if (!exists) {
+                    forceRemoveGhostNode(item.id)
+                } else {
+                    await canvasStore.deleteSection(item.id)
+                }
             } else if (isPermanent) {
                 // [DEEP-DIVE FIX] Call explicit permanent delete
                 await taskStore.permanentlyDeleteTask(item.id)

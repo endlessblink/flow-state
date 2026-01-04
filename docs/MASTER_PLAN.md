@@ -600,6 +600,7 @@ INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration (Sections)
 | ROAD-015 | **P2P Sync (YJS/WebRTC)** | Direct tab-to-tab sync without server. Alternative to CouchDB for offline-first |
 | ROAD-016 | **Advanced ADHD Mode** | Progressive Disclosure UI - hide complexity, reveal on demand. Focus enhancement features |
 | ROAD-017 | **GitHub Public Release** | **P2-LOW** | Security cleanup, BFG history rewrite, documentation. Free local + self-host sync |
+| ROAD-022 | **Open Source Authentication** | P1-HIGH | Replace anonymous UUIDs with real accounts. FOSS candidates: **Supabase** (Self-hosted), **Appwrite**, or **Keycloak**. Must issue JWTs for PowerSync. |
 
 ---
 
@@ -660,6 +661,7 @@ Phase 3 (Mobile) ←────────────────────
 |----|--------|---------------|---------|--------|
 
 | ~~TASK-022~~ | ✅ **DONE** | `tasks.ts`, `taskDisappearanceLogger.ts` | - | ~~TASK-034~~ |
+| **TASK-097** | 🔄 **IN PROGRESS** | `useAuthStore.ts`, `LoginForm.vue` | - | - |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | ~~TASK-014~~ | ✅ COMPLETE | `*.stories.ts`, `*.vue` (UI) | - | - |
 | ~~TASK-019~~ | ✅ DONE | ~~`tasks.ts`, stores, views~~ | - | Superseded by TASK-027 |
@@ -702,7 +704,7 @@ Phase 3 (Mobile) ←────────────────────
 | ~~TASK-053~~ | ✅ **DONE** | `dev-manager/kanban/index.html`, `dev-manager/server.js` | - | - |
 | ~~TASK-054~~ | ✅ **DONE** | `src/stores/tasks.ts`, `useDemoGuard.ts`, sidebar | - | - |
 | ~~**TASK-055**~~ | ✅ **DONE** | `SyncAlertSystem.vue`, `LoginForm.vue`, `AuthModal.vue`, etc. | - | - |
-| **TASK-056** | 🔄 **IN PROGRESS** | `src/stores/tasks.ts`, `src/composables/tasks/*` | - | - |
+| ~~**TASK-056**~~ | ✅ **DONE** | `src/stores/tasks.ts`, `src/composables/tasks/*` | - | - |
 | ~~TASK-057~~ | ✅ **DONE** | `src/stores/canvas.ts` | - | - |
 | TASK-058 | PLANNED | `src/stores/timer.ts` | - | - |
 | ~~**TASK-059**~~ | ✅ **DONE** | `vite.config.ts`, `src/utils/legacyStorageCleanup.ts` | - | - |
@@ -733,12 +735,12 @@ Phase 3 (Mobile) ←────────────────────
 | ~~**BUG-047**~~ | ✅ **DONE** | `useCanvasDragDrop.ts` | - | - |
 | ~~**BUG-048**~~ | ✅ **DONE** | `CanvasView.vue` | - | - |
 | ~~**BUG-050**~~ | ✅ **DONE** | `CanvasView.vue`, `KanbanColumn.vue` | - | - |
-| **TASK-082** | 👀 **REVIEW** | `useDateTransition.ts`, `CanvasView.vue` | - | - |
+| ~~**TASK-082**~~ | ✅ **DONE** | `useDateTransition.ts`, `CanvasView.vue` | - | - |
 | **TASK-083** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | - |
 | **TASK-084** | 📋 **TODO** | `AppSidebar.vue`, `tasks.ts`, `ui.ts` | - | TASK-083 |
 | ~~**TASK-085**~~ | ✅ **DONE** | `useDatabaseHealthCheck.ts`, `useCrossTabCoordination.ts`, `useConflictPruning.ts` | - | - |
 | ~~**BUG-051**~~ | ✅ **DONE** | `QuickSortView.vue`, `CategorySelector.vue` | - | - |
-| **BUG-055** | 🔴 **IN PROGRESS** | `CanvasView.vue` | - | - |
+| ~~**BUG-055**~~ | ✅ **DONE** | `CanvasView.vue` | - | - |
 | ~~**BUG-057**~~ | ✅ **DONE** | `individualTaskStorage.ts`, `useDatabaseHealthCheck.ts` | - | - |
 | ~~**BUG-058**~~ | ✅ **DONE** | `useReliableSyncManager.ts` | - | - |
 | ~~**BUG-059**~~ | ✅ **DONE** | `useBackupSystem.ts`, `useReliableSyncManager.ts` | - | - |
@@ -750,6 +752,8 @@ Phase 3 (Mobile) ←────────────────────
 | **TASK-087** | ✅ **DONE** | `MarkdownExportService.ts`, `FileSystemService.ts`, `BackupSettings.vue` | - | ROAD-018 |
 | **TASK-088** | ✅ **DONE** | `DatabaseMaintenanceService.ts`, `useDatabase.ts` | - | - |
 | ~~**TASK-089**~~ | ✅ **DONE** | `canvasStateLock.ts`, `useAppInitialization.ts`, `canvas.ts`, `useCanvasDragDrop.ts`, `useCanvasResize.ts`, `useCanvasEvents.ts` | - | - |
+| **TASK-095** | 📋 **TODO** | `src/**/*` | - | - |
+| **TASK-096** | 📋 **TODO** | `N/A` | - | - |
 
 **STATUS**: ✅ E2E Recovery Initiative Complete - Infrastructure Hardened.
 
@@ -789,11 +793,20 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~TASK-085~~**: IndexedDB Corruption Prevention Safeguards | **P1-HIGH** | ✅ DONE (Jan 1) - Health check, cross-tab coordination, conflict pruning
 - [x] **~~TASK-086~~**: Refactor useReliableSyncManager into Services | **P1-HIGH** | ✅ DONE (Jan 2) - Extracted `DatabaseService` and `SyncOperationService`
 
-- [x] **~~TASK-085~~**: IndexedDB Corruption Prevention Safeguards | **P1-HIGH** | ✅ DONE (Jan 1) - Health check, cross-tab coordination, conflict pruning
+- [x] **~~TASK-094~~**: Persistence Polish | **P2-MEDIUM** | ✅ DONE (Jan 4) - Persisted active view, expansion state, sidebar sections
 - [x] **~~BUG-057~~**: PouchDB sync infinite loop causing data loss | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added safety guards to syncDeletedTasks(), pre-initialization health check
 - [x] **~~TASK-089~~**: Canvas position reset comprehensive fix | **P0-CRITICAL** | ✅ FIXED (Jan 3) - Fixed race condition: lock BEFORE store update, fixed position structure in updateSectionFromSync, removed canvasStore.loadFromDatabase() from sync handler
 - [x] **~~BUG-058~~**: Non-syncable docs (notifications) causing constant sync loop | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added filter to live sync to exclude local-only documents
 - [x] **~~BUG-059~~**: Backup system overwrites with empty data during store corruption | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Golden backup, max task count tracking, suspicious backup detection, sync pre-flight validation
+- [x] **~~BUG-088~~**: Calendar broken in positive timezones | **P0-CRITICAL** | ✅ FIXED (Jan 4) - Replaced toISOString with local date generation
+- [ ] **TASK-097**: Integrate Supabase Authentication | **P1-HIGH** | 🔄 IN PROGRESS
+  - [ ] **Subtask A**: Install Supabase Client & Create `useAuthStore`
+  - [ ] **Subtask B**: Refactor `LoginForm.vue` & `AuthModal.vue` to use real auth
+  - [ ] **Subtask C**: Update `database.ts` to use User ID / JWT
+  - [ ] **Subtask D**: Implement "Guest Mode" toggle in settings
+- [ ] **TASK-095**: Complete TypeScript & Lint Cleaning | **P2-MEDIUM** | 📋 TODO
+- [ ] **TASK-096**: System Refactor Analysis | **P2-MEDIUM** | 📋 TODO - Identify technical debt and structure needs
+
 
 ### 🚀 TASK-093: Database Engine Migration (PouchDB → SQLite)
 **Status**: ✅ **PHASE 4 COMPLETE** (Jan 4, 2026)
@@ -1473,7 +1486,7 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### TASK-082: Auto-Move Today Tasks to Overdue at Midnight (🔄 IMPLEMENTED - Awaiting Test)
+### TASK-082: Auto-Move Today Tasks to Overdue at Midnight (✅ DONE)
 
 | Feature | Priority | Status |
 |---------|----------|--------|
@@ -1499,11 +1512,11 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### TASK-083: "All Projects" Filter (📋 TODO)
+### TASK-083: "All Projects" Filter (✅ DONE)
 
 | Feature | Priority | Status |
 |---------|----------|--------|
-| All Projects filter | P2-MEDIUM | 📋 TODO |
+| All Projects filter | P2-MEDIUM | ✅ DONE |
 
 **Goal**: Add a filter option in the sidebar to see all tasks from all projects at once, regardless of which project they belong to.
 
@@ -1527,11 +1540,11 @@ All header action buttons were removed and moved to the context menu for a clean
 
 ---
 
-### TASK-084: Multi-Select Projects Filter (📋 TODO)
+### TASK-084: Multi-Select Projects Filter (✅ DONE)
 
 | Feature | Priority | Status |
 |---------|----------|--------|
-| Multi-select projects | P2-MEDIUM | 📋 TODO |
+| Multi-select projects | P2-MEDIUM | ✅ DONE |
 
 **Goal**: Enable Ctrl+Click to select multiple projects in the sidebar, showing combined tasks from all selected projects.
 
@@ -1557,6 +1570,27 @@ All header action buttons were removed and moved to the context menu for a clean
 - `src/stores/tasks.ts` - Support array of project IDs in filters
 - `src/components/layout/AppSidebar.vue` - Add Ctrl+Click handler
 - `src/components/projects/ProjectTreeItem.vue` - Multi-select visual state
+
+---
+
+### TASK-094: Persistence Polish (✅ DONE)
+
+| Feature | Priority | Status |
+|---------|----------|--------|
+| Persist Project Expansion | P3-LOW | ✅ DONE |
+| Persist Sidebar Sections | P3-LOW | ✅ DONE |
+| Persist Active View | P2-MEDIUM | ✅ DONE |
+
+**Goal**: Improve UX by preserving UI state across page reloads (F5).
+
+**Scope**:
+- Persist `expandedProjects` (sidebar folders)
+- Persist `isDurationSectionExpanded` (sidebar section)
+- Persist `activeView` (Board vs Canvas vs Calendar)
+
+**Files to Modify**:
+- `src/stores/ui.ts`
+- `src/composables/app/useSidebarManagement.ts`
 
 ---
 

@@ -380,6 +380,8 @@ export const useProjectStore = defineStore('projects', () => {
         isLoading,
         rootProjects,
         loadProjectsFromDatabase,
+        // Alias for backward compatibility with app initialization
+        loadProjectsFromPouchDB: loadProjectsFromDatabase,
         createProject,
         updateProject,
         deleteProject,

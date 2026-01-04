@@ -162,7 +162,7 @@ async function handleSubmit() {
   isLoading.value = true
 
   try {
-    await authStore.signInWithEmail(email.value.trim(), password.value)
+    await authStore.signInWithPassword(email.value.trim(), password.value)
 
     // Success - emit event
     emit('success', authStore.user)

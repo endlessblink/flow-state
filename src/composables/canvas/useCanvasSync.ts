@@ -195,7 +195,10 @@ export function useCanvasSync(deps: SyncDependencies) {
                         id: task.id,
                         type: 'taskNode',
                         position,
-                        data: { task },
+                        // BUG-FIX: Spread task object to create new reference
+                        // This ensures v-memo detects changes when task properties (status, priority, etc.) are updated
+                        // Without this, task mutations don't trigger re-renders because same object reference is reused
+                        data: { task: { ...task } },
                         parentNode, // Set parent if found
                         extent: undefined, // Allow free movement - we use absolute coordinates (BUG-034 fix)
                         expandParent: false, // Don't expand parent on drag
@@ -258,11 +261,16 @@ export function useCanvasSync(deps: SyncDependencies) {
                         changed = true
                     }
                     // Update Data (Reactive replacement)
-                    // Simple JSON compare or just assignment? Assignment is cheaper than full compare usually
-                    // But to avoid watchers firing, maybe compare?
-                    // Let's rely on shallow checks or just assign.
-                    // Ideally we merge data.
-                    if (JSON.stringify(target.data) !== JSON.stringify(node.data)) {
+                    // BUG-FIX: For task nodes, always update data to ensure v-memo gets new reference
+                    // JSON comparison fails when task is mutated in place (both old and new stringify the same)
+                    // For section nodes, use JSON comparison as their data isn't mutated
+                    if (node.type === 'taskNode') {
+                        // Task nodes: always update data with new task reference (spread in desiredNodeMap)
+                        // This ensures v-memo detects property changes like status/priority
+                        target.data = node.data
+                        changed = true
+                    } else if (JSON.stringify(target.data) !== JSON.stringify(node.data)) {
+                        // Section nodes: use JSON comparison
                         target.data = node.data
                         changed = true
                     }

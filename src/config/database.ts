@@ -146,10 +146,9 @@ export const getDatabaseConfig = (userId?: string | null): DatabaseConfig => {
 
   return {
     local: {
-      // FIX: Isolate dev browser from Tauri app/production to prevent accidental sync
-      // If user is logged in, append ID to isolate user data locally too? 
-      // For now, keep simple separation between environments
-      name: import.meta.env.DEV ? 'pomoflow-app-dev' : 'pomoflow-app'
+      // FIX: Isolate dev browser from Tauri app/production
+      // NEW: Total Data Insulation - include userId in local name to prevent data leaking between users/guest
+      name: (import.meta.env.DEV ? 'pomoflow-app-dev' : 'pomoflow-app') + (userId ? `-${userId}` : '')
     },
     remote: shouldSync ? {
       url: couchConfig.url,

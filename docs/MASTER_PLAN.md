@@ -600,7 +600,7 @@ INDIVIDUAL_SECTIONS_ONLY: true   // ✅ Full migration (Sections)
 | ROAD-015 | **P2P Sync (YJS/WebRTC)** | Direct tab-to-tab sync without server. Alternative to CouchDB for offline-first |
 | ROAD-016 | **Advanced ADHD Mode** | Progressive Disclosure UI - hide complexity, reveal on demand. Focus enhancement features |
 | ROAD-017 | **GitHub Public Release** | **P2-LOW** | Security cleanup, BFG history rewrite, documentation. Free local + self-host sync |
-| ROAD-022 | **Open Source Authentication** | P1-HIGH | Replace anonymous UUIDs with real accounts. FOSS candidates: **Supabase** (Self-hosted), **Appwrite**, or **Keycloak**. Must issue JWTs for PowerSync. |
+| ~~ROAD-022~~ | ✅ **DONE** (Jan 4) | **Open Source Authentication** | P1-HIGH | Integrated **Supabase** (Self-hosted) for real user accounts. Replaced Firebase stubs. |
 
 ---
 
@@ -661,7 +661,7 @@ Phase 3 (Mobile) ←────────────────────
 |----|--------|---------------|---------|--------|
 
 | ~~TASK-022~~ | ✅ **DONE** | `tasks.ts`, `taskDisappearanceLogger.ts` | - | ~~TASK-034~~ |
-| **TASK-097** | 🔄 **IN PROGRESS** | `useAuthStore.ts`, `LoginForm.vue` | - | - |
+| ~~**TASK-097**~~ | ✅ **DONE** (Jan 4) | `useAuthStore.ts`, `database.ts`, `LoginForm.vue` | - | - |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | ~~TASK-014~~ | ✅ COMPLETE | `*.stories.ts`, `*.vue` (UI) | - | - |
 | ~~TASK-019~~ | ✅ DONE | ~~`tasks.ts`, stores, views~~ | - | Superseded by TASK-027 |
@@ -799,11 +799,11 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~BUG-058~~**: Non-syncable docs (notifications) causing constant sync loop | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added filter to live sync to exclude local-only documents
 - [x] **~~BUG-059~~**: Backup system overwrites with empty data during store corruption | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Golden backup, max task count tracking, suspicious backup detection, sync pre-flight validation
 - [x] **~~BUG-088~~**: Calendar broken in positive timezones | **P0-CRITICAL** | ✅ FIXED (Jan 4) - Replaced toISOString with local date generation
-- [ ] **TASK-097**: Integrate Supabase Authentication | **P1-HIGH** | 🔄 IN PROGRESS
-  - [ ] **Subtask A**: Install Supabase Client & Create `useAuthStore`
-  - [ ] **Subtask B**: Refactor `LoginForm.vue` & `AuthModal.vue` to use real auth
-  - [ ] **Subtask C**: Update `database.ts` to use User ID / JWT
-  - [ ] **Subtask D**: Implement "Guest Mode" toggle in settings
+- [x] **~~TASK-097~~**: Integrate Supabase Authentication | **P1-HIGH** | ✅ DONE (Jan 4)
+  - [x] **Subtask A**: Install Supabase Client & Create `useAuthStore`
+  - [x] **Subtask B**: Refactor `LoginForm.vue` & `AuthModal.vue` to use real auth (Premium Restyle)
+  - [x] **Subtask C**: Update `database.ts` to use User ID / JWT + **Total Data Insulation**
+  - [x] **Subtask D**: Implement "Guest Mode" toggle via Login/Logout flow
 - [ ] **TASK-095**: Complete TypeScript & Lint Cleaning | **P2-MEDIUM** | 📋 TODO
 - [ ] **TASK-096**: System Refactor Analysis | **P2-MEDIUM** | 📋 TODO - Identify technical debt and structure needs
 
@@ -999,6 +999,7 @@ Phase 3 (Mobile) ←────────────────────
 - ✅ TASK-067: TaskNode priority indicator visual fix (Dec 27)
 - ✅ TASK-066: Enter key triggers project creation in ProjectModal (Dec 27)
 - ✅ TASK-033: Claude dev infrastructure plugin (core plugin complete at ~/claude-plugins/)
+- ✅ TASK-097: Supabase Authentication & **Total Data Insulation** (Jan 4)
 - ✅ TASK-055: Global UI Polish & Component Streamlining (Sync/Auth)
 - ✅ TASK-054: Remove demo content safeguards (task documented)
 - ✅ TASK-045: Consolidate backup composables (deleted 5 redundant files)
@@ -3768,7 +3769,7 @@ Dec 5, 2025 - Canvas groups auto-detect keywords and provide "power" functionali
 | ~~ISSUE-012~~ | ~~**Data Loss Investigation - E2E Analysis**~~ | ~~P0-CRITICAL~~ | ✅ RESOLVED Dec 20, 2025 - User data restored from conflicting revision |
 | ~~ISSUE-013~~ | ~~**App.vue 3,300 lines - maintenance risk**~~ | ~~P2-MEDIUM~~ | ✅ RESOLVED Dec 23, 2025 - See TASK-044 |
 | ISSUE-014 | **tasks.ts 3,000 lines - maintenance risk** | P2-MEDIUM | Large store complexity. Monitor for extraction opportunities |
-| ISSUE-015 | **Firebase dependency (stubbed)** | P3-LOW | Auth features stubbed. Consider CouchDB auth or full backend migration |
+| ~~ISSUE-015~~ | ✅ **RESOLVED** | **Firebase dependency (stubbed)** | P3-LOW | Migration to Supabase complete. |
 
 ### ~~ISSUE-011: PouchDB Document Conflict Accumulation~~ ✅ RESOLVED
 

@@ -14,7 +14,8 @@ export const useTaskFiltering = (
     activeStatusFilter: Ref<string | null>,
     activeDurationFilter: Ref<string | null>,
     hideDoneTasks: Ref<boolean>,
-    hideCalendarDoneTasks?: Ref<boolean>
+    hideCalendarDoneTasks?: Ref<boolean>,
+    selectedProjectIds?: Ref<Set<string>> // TASK-084: Multi-select support
 ) => {
     const {
         applySmartViewFilter,
@@ -86,8 +87,17 @@ export const useTaskFiltering = (
             // console.debug(`🔍 [FILTER-DEBUG] After SmartView (${activeSmartView.value}): ${filtered.length}`)
         }
 
-        // 2. Project
-        if (activeProjectId.value) {
+        // 2. Project (Single or Multi-select)
+        if (selectedProjectIds?.value && selectedProjectIds.value.size > 0) {
+            // TASK-084: Multi-select mode
+            const allTargetProjectIds = new Set<string>()
+            selectedProjectIds.value.forEach(pid => {
+                const childIds = getChildProjectIds(pid)
+                childIds.forEach(cid => allTargetProjectIds.add(cid))
+            })
+            filtered = filtered.filter(task => allTargetProjectIds.has(task.projectId))
+        } else if (activeProjectId.value) {
+            // Standard single project mode
             const projectIds = getChildProjectIds(activeProjectId.value)
             filtered = filtered.filter(task => projectIds.includes(task.projectId))
             // console.debug(`🔍 [FILTER-DEBUG] After Project (${activeProjectId.value}): ${filtered.length}`)
@@ -126,7 +136,19 @@ export const useTaskFiltering = (
         let nestedTasks: Task[] = []
         try {
             // Optimization: Get project IDs once instead of inside filter loop
-            const activeProjectTreeIds = activeProjectId.value ? getChildProjectIds(activeProjectId.value) : null
+            let activeProjectTreeIds: string[] | null = null
+
+            if (activeProjectId.value) {
+                activeProjectTreeIds = getChildProjectIds(activeProjectId.value)
+            }
+
+            // TASK-084: Handle nesting for multi-select
+            if (selectedProjectIds?.value && selectedProjectIds.value.size > 0) {
+                activeProjectTreeIds = []
+                selectedProjectIds.value.forEach(pid => {
+                    activeProjectTreeIds!.push(...getChildProjectIds(pid))
+                })
+            }
 
             nestedTasks = tasks.value
                 .filter(task => nestedTaskIds.includes(task.id))

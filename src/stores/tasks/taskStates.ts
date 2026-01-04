@@ -1,11 +1,13 @@
 import { ref, toRef, computed } from 'vue'
 import { useProjectStore } from '../projects'
+import { useUIStore } from '../ui' // Import UI Store
 import { useTaskMigrations } from '@/composables/tasks/useTaskMigrations'
 import { useTaskFiltering } from '@/composables/tasks/useTaskFiltering'
 import type { Task } from '@/types/tasks'
 
 export function useTaskStates() {
     const projectStore = useProjectStore()
+    const uiStore = useUIStore() // Init UI Store
 
     // State - Start with empty tasks array
     const tasks = ref<Task[]>([])
@@ -56,7 +58,8 @@ export function useTaskStates() {
         activeStatusFilter,
         activeDurationFilter,
         hideDoneTasks,
-        hideCalendarDoneTasks
+        hideCalendarDoneTasks,
+        toRef(uiStore, 'selectedProjectIds') // Pass global multi-select state
     )
 
     // Flags to manage store state

@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, reactive } from 'vue'
 import draggable from 'vuedraggable'
 import KanbanColumn from './KanbanColumn.vue' 
 import TaskCard from './TaskCard.vue'

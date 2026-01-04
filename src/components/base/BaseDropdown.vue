@@ -1,5 +1,5 @@
 <template>
-  <div ref="triggerRef" class="base-dropdown">
+  <div ref="triggerElement" class="base-dropdown">
     <button
       type="button"
       class="dropdown-trigger"
@@ -100,7 +100,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[]]
 }>()
 
-const triggerRef = ref<HTMLElement>()
+const triggerElement = ref<HTMLElement>()
 const isOpen = ref(false)
 const focusedIndex = ref(0)
 const popoverX = ref(0)
@@ -139,9 +139,9 @@ const isSelected = (option: DropdownOption) => {
 }
 
 const calculatePopoverPosition = () => {
-  if (!triggerRef.value) return
+  if (!triggerElement.value) return
 
-  const rect = triggerRef.value.getBoundingClientRect()
+  const rect = triggerElement.value.getBoundingClientRect()
   popoverX.value = rect.left
   popoverY.value = rect.bottom + 4 // 4px offset from trigger
 }

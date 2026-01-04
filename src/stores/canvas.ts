@@ -225,6 +225,26 @@ export const useCanvasStore = defineStore('canvas', () => {
     return count
   }
 
+  const getTasksInSection = (groupId: string): Task[] => {
+    if (!taskStore || !taskStore.tasks) return []
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) return []
+
+    // Direct tasks in this group
+    return taskStore.tasks.filter((t: Task) => {
+      if (t.canvasPosition) {
+        return isPointInRect(t.canvasPosition.x, t.canvasPosition.y, group.position)
+      }
+      return false
+    })
+  }
+
+  const taskMatchesSection = (task: Task, sectionId: string): boolean => {
+    const group = groups.value.find(g => g.id === sectionId)
+    if (!group || !task.canvasPosition) return false
+    return isPointInRect(task.canvasPosition.x, task.canvasPosition.y, group.position)
+  }
+
   const calculateContentBounds = (tasks: Task[]) => {
     // Initialize bounds
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -340,6 +360,19 @@ export const useCanvasStore = defineStore('canvas', () => {
     selectedNodeIds.value = ids
   }
 
+  const toggleNodeSelection = (id: string) => {
+    const index = selectedNodeIds.value.indexOf(id)
+    if (index === -1) {
+      selectedNodeIds.value.push(id)
+    } else {
+      selectedNodeIds.value.splice(index, 1)
+    }
+  }
+
+  const togglePowerMode = async (groupId: string, active: boolean) => {
+    await updateGroup(groupId, { isPowerMode: active })
+  }
+
   // Undo alias (fallback to regular update for now)
   const updateSectionWithUndo = updateGroup
 
@@ -365,6 +398,10 @@ export const useCanvasStore = defineStore('canvas', () => {
     getTaskCountInGroupRecursive,
     calculateContentBounds,
     setSelectedNodes,
+    getTasksInSection,
+    taskMatchesSection,
+    toggleNodeSelection,
+    togglePowerMode,
 
     // Aliases for compatibility
     sections: groups,

@@ -194,7 +194,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed as _computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { useDirection as _useDirection } from '@/i18n/useDirection'

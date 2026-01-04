@@ -347,7 +347,8 @@ import {
   onMounted,
   onBeforeUnmount,
   nextTick,
-  markRaw
+  markRaw,
+  reactive
 } from 'vue'
 import {
   VueFlow,
@@ -408,6 +409,7 @@ import { isAnyCanvasStateLocked, lockViewport } from '@/utils/canvasStateLock'
 import { useCanvasResourceManager } from '@/composables/canvas/useCanvasResourceManager'
 import { useCanvasZoom } from '@/composables/canvas/useCanvasZoom'
 import { useDateTransition } from '@/composables/useDateTransition'
+import { useMidnightTaskMover } from '@/composables/canvas/useMidnightTaskMover'
 import { useCanvasAlignment } from '@/composables/canvas/useCanvasAlignment'
 // REMOVED: Library styles were forcing circular handles
 // import '@vue-flow/node-resizer/dist/style.css'
@@ -453,78 +455,12 @@ const storeHealth = validateStores()
 const { initialViewport, fitCanvas, zoomToSelection } = useCanvasNavigation(canvasStore)
 
 // TASK-082: Date transition handler - move Today tasks to Overdue at midnight
-const handleMidnightTransition = async (_previousDate: Date, _newDate: Date) => {
-  console.log('[TASK-082] Midnight transition detected - checking for Today → Overdue task moves')
-
-  // Find "Today" and "Overdue" groups by name (case-insensitive, partial match)
-  const todayGroup = canvasStore.groups.find(g =>
-    g.name?.toLowerCase().includes('today')
-  )
-  const overdueGroup = canvasStore.groups.find(g =>
-    g.name?.toLowerCase().includes('overdue')
-  )
-
-  if (!todayGroup) {
-    console.log('[TASK-082] No "Today" group found on canvas - skipping transition')
-    return
-  }
-
-  if (!overdueGroup) {
-    console.log('[TASK-082] No "Overdue" group found on canvas - tasks will stay in Today')
-    return
-  }
-
-  // Find tasks that are visually inside the "Today" group (canvasPosition within group bounds)
-  const todayBounds = todayGroup.position
-  const tasksInToday = taskStore.tasks.filter(task => {
-    if (!task.canvasPosition || task.isInInbox) return false
-    const pos = task.canvasPosition
-    return (
-      pos.x >= todayBounds.x &&
-      pos.x <= todayBounds.x + todayBounds.width &&
-      pos.y >= todayBounds.y &&
-      pos.y <= todayBounds.y + todayBounds.height
-    )
-  })
-
-  if (tasksInToday.length === 0) {
-    console.log('[TASK-082] No tasks in "Today" group to move')
-    return
-  }
-
-  console.log(`[TASK-082] Moving ${tasksInToday.length} tasks from "Today" to "Overdue"`)
-
-  // Calculate positions in the Overdue group
-  const overdueBounds = overdueGroup.position
-  const taskWidth = 220
-  const taskHeight = 100
-  const padding = 20
-  const headerHeight = 60
-  const cols = Math.max(1, Math.floor((overdueBounds.width - padding * 2) / (taskWidth + 10)))
-
-  // Move each task to the Overdue group
-  for (let i = 0; i < tasksInToday.length; i++) {
-    const task = tasksInToday[i]
-    const col = i % cols
-    const row = Math.floor(i / cols)
-    const newX = overdueBounds.x + padding + col * (taskWidth + 10)
-    const newY = overdueBounds.y + headerHeight + padding + row * (taskHeight + 10)
-
-    try {
-      await taskStore.updateTask(task.id, {
-        canvasPosition: { x: newX, y: newY }
-      })
-    } catch (error) {
-      console.error(`[TASK-082] Failed to move task ${task.id}:`, error)
-    }
-  }
-
-  console.log(`[TASK-082] Successfully moved ${tasksInToday.length} tasks to "Overdue" group`)
-}
+// Logic extracted to composable for testability (Jan 4, 2026)
+const { moveTodayTasksToOverdue } = useMidnightTaskMover(canvasStore, taskStore)
 
 // Initialize date transition watcher
 const { simulateTransition } = useDateTransition({
-  onDayChange: handleMidnightTransition,
+  onDayChange: moveTodayTasksToOverdue,
   autoStart: true,
   debug: true
 })
@@ -1044,9 +980,27 @@ const handleSectionContextMenu = (event: MouseEvent, sectionData: { id: string; 
   event.stopPropagation()
   canvasContextMenuX.value = event.clientX
   canvasContextMenuY.value = event.clientY
+  
   // Find the full section data from the store using the section ID
   const fullSection = canvasStore.sections.find(s => s.id === sectionData.id)
-  canvasContextSection.value = fullSection || null
+
+  if (fullSection) {
+    canvasContextSection.value = fullSection
+  } else {
+    // BUG-091 FIX: Handle "ghost" sections that exist on canvas but not in store
+    // Provide a partial section object so the menu can still open and allow deletion
+    console.warn('👻 [CanvasView] Ghost section detected:', sectionData.id)
+    canvasContextSection.value = {
+      id: sectionData.id,
+      name: sectionData.name || 'Unknown Group (Ghost)',
+      color: sectionData.color || '#6366f1',
+      position: { x: 0, y: 0, width: 300, height: 200 }, // Dummy values
+      isCollapsed: false,
+      items: [],
+      type: 'custom'
+    } as CanvasSection
+  }
+
   showCanvasContextMenu.value = true
 }
 

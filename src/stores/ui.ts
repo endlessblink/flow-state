@@ -35,6 +35,11 @@ export const useUIStore = defineStore('ui', () => {
   const focusMode = ref(false)
   const boardDensity = ref<'ultrathin' | 'compact' | 'comfortable'>('comfortable')
 
+  // Project Multi-Selection State (Global for filtering)
+  // We use a Set for efficiency but expose as array for compatibility if needed
+  const selectedProjectIds = ref<Set<string>>(new Set())
+  const lastSelectedProjectId = ref<string | null>(null) // For Shift+Click range selection
+
   // Theme and additional UI state
   const theme = ref<'light' | 'dark' | 'auto'>('dark')
   const sidebarCollapsed = ref(false) // Legacy compatibility property
@@ -42,6 +47,12 @@ export const useUIStore = defineStore('ui', () => {
 
   // Power group settings
   const powerGroupOverrideMode = ref<PowerGroupOverrideMode>('always')
+
+  // Expanded State (Persisted)
+  // We use Array/Boolean here but we could use Set for projects if preferred.
+  // Using Array for simple JSON serialization matching current implementation.
+  const expandedProjectIds = ref<string[]>([])
+  const isDurationSectionExpanded = ref(true)
 
   // Language and direction state
   const availableLanguages = [
@@ -62,6 +73,38 @@ export const useUIStore = defineStore('ui', () => {
   const settingsModalOpen = ref(false)
 
   // Actions
+  const toggleProjectSelection = (projectId: string, multiSelect: boolean = true) => {
+    if (!multiSelect) {
+      selectedProjectIds.value = new Set([projectId])
+      lastSelectedProjectId.value = projectId
+      return
+    }
+
+    const newSet = new Set(selectedProjectIds.value)
+    if (newSet.has(projectId)) {
+      newSet.delete(projectId)
+      if (projectId === lastSelectedProjectId.value) {
+        lastSelectedProjectId.value = null
+      }
+    } else {
+      newSet.add(projectId)
+      lastSelectedProjectId.value = projectId
+    }
+    selectedProjectIds.value = newSet
+  }
+
+  const setProjectSelection = (ids: string[]) => {
+    selectedProjectIds.value = new Set(ids)
+    lastSelectedProjectId.value = ids.length > 0 ? ids[ids.length - 1] : null
+  }
+
+  const clearProjectSelection = () => {
+    if (selectedProjectIds.value.size > 0) {
+      selectedProjectIds.value = new Set()
+      lastSelectedProjectId.value = null
+    }
+  }
+
   const toggleMainSidebar = () => {
     mainSidebarVisible.value = !mainSidebarVisible.value
     if (!mainSidebarVisible.value) {
@@ -176,7 +219,11 @@ export const useUIStore = defineStore('ui', () => {
       boardDensity: boardDensity.value,
       locale: locale.value,
       directionPreference: directionPreference.value,
-      powerGroupOverrideMode: powerGroupOverrideMode.value
+      powerGroupOverrideMode: powerGroupOverrideMode.value,
+      // New persisted fields
+      activeView: activeView.value,
+      expandedProjectIds: expandedProjectIds.value,
+      isDurationSectionExpanded: isDurationSectionExpanded.value
     }
     localStorage.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(state))
   }
@@ -190,6 +237,19 @@ export const useUIStore = defineStore('ui', () => {
         secondarySidebarVisible.value = state.secondarySidebarVisible ?? true
         focusMode.value = state.focusMode ?? false
         boardDensity.value = state.boardDensity ?? 'comfortable'
+
+        // Restore active view if valid
+        if (state.activeView && ['board', 'canvas', 'calendar', 'all-tasks'].includes(state.activeView)) {
+          activeView.value = state.activeView
+        }
+
+        // Restore expansion states
+        if (Array.isArray(state.expandedProjectIds)) {
+          expandedProjectIds.value = state.expandedProjectIds
+        }
+        if (typeof state.isDurationSectionExpanded === 'boolean') {
+          isDurationSectionExpanded.value = state.isDurationSectionExpanded
+        }
 
         // Restore language and direction preferences
         if (state.locale && ['en', 'he'].includes(state.locale)) {
@@ -246,14 +306,24 @@ export const useUIStore = defineStore('ui', () => {
     // Power group settings
     powerGroupOverrideMode,
 
+    // Expansion State
+    expandedProjectIds,
+    isDurationSectionExpanded,
+
     // Actions
     toggleMainSidebar,
     toggleSecondarySidebar,
     toggleFocusMode,
-    showAllSidebars,
-    hideAllSidebars,
     setBoardDensity,
     setPowerGroupOverrideMode,
+
+    // Multi-select exports
+    selectedProjectIds,
+    lastSelectedProjectId,
+    toggleProjectSelection,
+    setProjectSelection,
+    clearProjectSelection,
+
     openAuthModal,
     closeAuthModal,
     switchAuthView,

@@ -295,6 +295,19 @@
           :aria-activedescendant="taskStore.activeProjectId ? `project-${taskStore.activeProjectId}` : undefined"
           @keydown="handleProjectTreeKeydown"
         >
+          <!-- All Projects Option -->
+          <div class="project-tree-item">
+            <BaseNavItem
+              :active="!taskStore.activeProjectId && selectedProjectIds.size === 0"
+              @click="handleAllProjectsClick"
+            >
+              <template #icon>
+                <Layers :size="16" />
+              </template>
+              All Projects
+            </BaseNavItem>
+          </div>
+
           <ProjectTreeItem
             v-for="project in taskStore.projects.filter(p => !p.parentId)"
             :key="project.id"
@@ -322,7 +335,8 @@ import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import {
   Plus, PanelLeftClose, Settings, FolderOpen,
   Calendar, List, Inbox, Zap, Clock, Timer, HelpCircle,
-  ChevronRight, Coffee, Hourglass, Mountain, Trash2, X
+  ChevronRight, Coffee, Hourglass, Mountain, Trash2, X,
+  Layers // Added Layers icon
 } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -334,19 +348,24 @@ const uiStore = useUIStore()
 const taskStore = useTaskStore()
 const sidebar = useSidebarManagement()
 
-// Project Multi-Select State
-const selectedProjectIds = ref<Set<string>>(new Set())
-const lastSelectedProjectId = ref<string | null>(null)
-const multiSelectMode = computed(() => selectedProjectIds.value.size > 0)
+// Project Multi-Select State (Now Global)
+const selectedProjectIds = computed(() => uiStore.selectedProjectIds)
+const lastSelectedProjectId = computed(() => uiStore.lastSelectedProjectId)
+const multiSelectMode = computed(() => uiStore.selectedProjectIds.size > 0)
 const showDeleteConfirm = ref(false)
+
+// Handle "All Projects" click
+const handleAllProjectsClick = () => {
+  taskStore.setActiveProject(null)
+  uiStore.clearProjectSelection()
+}
 
 // Project Selection Handlers
 const handleProjectClick = (event: MouseEvent, project: Project) => {
   // Handle Shift+Click (Range Selection)
   if (event.shiftKey) {
     if (!lastSelectedProjectId.value) {
-      selectedProjectIds.value = new Set([project.id])
-      lastSelectedProjectId.value = project.id
+      uiStore.setProjectSelection([project.id])
       return
     }
 
@@ -356,8 +375,7 @@ const handleProjectClick = (event: MouseEvent, project: Project) => {
     const currentIndex = allProjects.findIndex(p => p.id === project.id)
 
     if (lastIndex === -1) {
-      selectedProjectIds.value = new Set([project.id])
-      lastSelectedProjectId.value = project.id
+      uiStore.setProjectSelection([project.id])
       return
     }
 
@@ -365,38 +383,29 @@ const handleProjectClick = (event: MouseEvent, project: Project) => {
       const start = Math.min(lastIndex, currentIndex)
       const end = Math.max(lastIndex, currentIndex)
       const rangeProjects = allProjects.slice(start, end + 1)
-
-      const newSet = new Set(selectedProjectIds.value)
-      rangeProjects.forEach(p => newSet.add(p.id))
-      selectedProjectIds.value = newSet
+      
+      const ids = rangeProjects.map(p => p.id)
+      // Merge with existing selection if Ctrl also held? No, standard range replace.
+      // But typically Shift appends range to selection if Ctrl held? simpler for now: replace.
+      uiStore.setProjectSelection(ids)
     }
     return
   }
 
   // Handle Ctrl/Cmd+Click (Toggle Selection)
   if (event.ctrlKey || event.metaKey) {
-    const newSet = new Set(selectedProjectIds.value)
-    if (newSet.has(project.id)) {
-      newSet.delete(project.id)
-      if (project.id === lastSelectedProjectId.value) {
-        lastSelectedProjectId.value = null
-      }
-    } else {
-      newSet.add(project.id)
-      lastSelectedProjectId.value = project.id
-    }
-    selectedProjectIds.value = newSet
+    uiStore.toggleProjectSelection(project.id)
     return
   }
 
   // Single click - clear selection and select project normally
+  // This is the "All Projects" feature: accessing a single project clears multi-select
   clearProjectSelection()
   sidebar.selectProject(project)
 }
 
 const clearProjectSelection = () => {
-  selectedProjectIds.value = new Set()
-  lastSelectedProjectId.value = null
+  uiStore.clearProjectSelection()
   showDeleteConfirm.value = false
 }
 

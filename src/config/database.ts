@@ -129,25 +129,29 @@ export const isSyncEnabled = (): boolean => {
   return false
 }
 
-// Get configuration based on environment
-export const getDatabaseConfig = (): DatabaseConfig => {
+// Get configuration based on environment and user state
+export const getDatabaseConfig = (userId?: string | null): DatabaseConfig => {
   // Get dynamic config each time (reads from localStorage → env vars)
   const couchConfig = getStoredCouchDBConfig()
   const syncEnabled = isSyncEnabled()
 
-  /*
-  if (syncEnabled) {
-    console.log('🔧 [DATABASE CONFIG] Sync enabled - URL:', couchConfig.url)
-  } else {
-    console.log('🔧 [DATABASE CONFIG] Local-only mode (no sync configured)')
-  }
-  */
+  // Determine if we should sync based on authentication
+  // 1. If explicit dev flag is on, trust it
+  // 2. If valid user ID is provided, allow sync (Authenticated Mode)
+  // 3. Otherwise default to Guest Mode (Local Only)
+  const shouldSync = syncEnabled && (
+    import.meta.env.VITE_ENABLE_DEV_SYNC === 'true' ||
+    (!!userId && import.meta.env.PROD)
+  )
 
   return {
     local: {
-      name: 'pomoflow-app'
+      // FIX: Isolate dev browser from Tauri app/production to prevent accidental sync
+      // If user is logged in, append ID to isolate user data locally too? 
+      // For now, keep simple separation between environments
+      name: import.meta.env.DEV ? 'pomoflow-app-dev' : 'pomoflow-app'
     },
-    remote: syncEnabled ? {
+    remote: shouldSync ? {
       url: couchConfig.url,
       auth: {
         username: couchConfig.username,
@@ -156,7 +160,7 @@ export const getDatabaseConfig = (): DatabaseConfig => {
       batchSize: 100,
       batchesLimit: 10
     } : undefined,
-    sync: syncEnabled ? {
+    sync: shouldSync ? {
       live: true,
       retry: true,
       timeout: 30000,

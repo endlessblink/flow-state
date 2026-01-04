@@ -1,7 +1,7 @@
 <template>
   <div ref="selectRef" class="section-selector">
     <button
-      ref="triggerRef"
+      ref="triggerElement"
       type="button"
       class="select-trigger"
       :class="{ 'is-open': isOpen }"
@@ -89,7 +89,7 @@ const emit = defineEmits<{
 
 const canvasStore = useCanvasStore()
 const selectRef = ref<HTMLElement>()
-const triggerRef = ref<HTMLButtonElement>()
+const triggerElement = ref<HTMLButtonElement>()
 const isOpen = ref(false)
 
 // Dropdown positioning (copied from CustomSelect for consistency)
@@ -101,9 +101,9 @@ const dropdownStyle = ref({
 })
 
 const calculateDropdownPosition = () => {
-  if (!triggerRef.value) return
+  if (!triggerElement.value) return
 
-  const rect = triggerRef.value.getBoundingClientRect()
+  const rect = triggerElement.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const spaceBelow = viewportHeight - rect.bottom
   const spaceAbove = rect.top

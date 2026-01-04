@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, toRefs } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useRouter } from 'vue-router'
@@ -22,14 +22,16 @@ import type { Project } from '@/types/tasks'
 // Shared state instances to ensure all components see the same sidebar state
 const newTaskTitle = ref('')
 const showCreateProject = ref(false)
-const expandedProjects = ref<string[]>([]) // For nested project expand/collapse
+// const expandedProjects = ref<string[]>([]) // Moved to UI Store
 const showProjectModal = ref(false)
 const editingProject = ref<Project | null>(null)
-const isDurationSectionExpanded = ref(true) // Default to expanded
+// const isDurationSectionExpanded = ref(true) // Moved to UI Store
 
 export function useSidebarManagement() {
   const taskStore = useTaskStore()
-  const _uiStore = useUIStore()
+  const uiStore = useUIStore()
+  const { isDurationSectionExpanded, expandedProjectIds: expandedProjects } = toRefs(uiStore)
+
   const router = useRouter()
 
   // Platform detection
@@ -37,6 +39,7 @@ export function useSidebarManagement() {
 
   // Helper function to filter projects for sidebar display
   const filterSidebarProjects = (projects: Project[]): Project[] => {
+    // ... (rest of function unchanged, just need to make sure we don't break indentation)
     console.log('🔍 filterSidebarProjects input:', projects.length, 'projects')
 
     // FIX: More robust filtering logic
@@ -283,6 +286,7 @@ export function useSidebarManagement() {
     } else {
       expandedProjects.value.push(projectId)
     }
+    uiStore.persistState() // Manual save trigger since we're modifying the array in place
   }
 
   const selectProject = (project: Project) => {
@@ -353,6 +357,7 @@ export function useSidebarManagement() {
     if (currentProjectId && hasChildren(currentProjectId)) {
       if (!expandedProjects.value.includes(currentProjectId)) {
         expandedProjects.value.push(currentProjectId)
+        uiStore.persistState()
       }
     }
   }
@@ -365,6 +370,7 @@ export function useSidebarManagement() {
     if (hasChildren(currentProjectId) && expandedProjects.value.includes(currentProjectId)) {
       const index = expandedProjects.value.indexOf(currentProjectId)
       expandedProjects.value.splice(index, 1)
+      uiStore.persistState()
     } else {
       // Otherwise, navigate to parent if exists
       const project = taskStore.getProjectById(currentProjectId)
@@ -424,6 +430,7 @@ export function useSidebarManagement() {
 
   const toggleDurationSection = () => {
     isDurationSectionExpanded.value = !isDurationSectionExpanded.value
+    uiStore.persistState()
   }
 
   const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active' | 'quick' | 'short' | 'medium' | 'long' | 'unestimated') => {

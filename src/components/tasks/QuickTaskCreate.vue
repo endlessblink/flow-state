@@ -1,5 +1,12 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
+  <div
+    v-if="isOpen"
+    class="modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Quick create task"
+    @click.self="$emit('close')"
+  >
     <div class="quick-create-modal">
       <!-- Task Title Input -->
       <input
@@ -7,6 +14,7 @@
         v-model="taskTitle"
         type="text"
         placeholder="Task name"
+        aria-label="Task name"
         class="title-input"
         @keydown.enter="handleCreate"
         @keydown.esc="$emit('close')"
@@ -17,6 +25,7 @@
         v-model="taskDescription"
         type="text"
         placeholder="Description"
+        aria-label="Task description"
         class="description-input"
         @keydown.enter="handleCreate"
         @keydown.esc="$emit('close')"
@@ -35,6 +44,7 @@
               type="date"
               class="date-input-hidden"
               :value="localDate"
+              aria-label="Due date"
               @change="updateDate"
             >
           </div>
@@ -85,12 +95,14 @@
               v-model="localStartTime"
               type="time"
               class="time-input"
+              aria-label="Start time"
             >
             <span class="time-separator">-</span>
             <input
               v-model="localEndTime"
               type="time"
               class="time-input"
+              aria-label="End time"
             >
           </div>
         </div>
@@ -118,6 +130,7 @@
             min="15"
             step="15"
             class="duration-input"
+            aria-label="Duration in minutes"
           >
           <span>mins</span>
         </div>
@@ -451,9 +464,14 @@ watch(() => props.isOpen, (isOpen) => {
   position: relative;
 }
 
-.date-display:hover {
+.date-display:hover,
+.date-display:focus-within {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.15);
+}
+
+.date-display:focus-within {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .date-input-hidden {

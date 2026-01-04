@@ -246,7 +246,7 @@ export function useCalendarCore() {
     const slotEnd = new Date(slotDate.getTime() + 30 * 60000)
 
     return currentTime >= slotDate && currentTime < slotEnd &&
-      slot.date === currentTime.toISOString().split('T')[0]
+      slot.date === getDateString(currentTime)
   }
 
   /**

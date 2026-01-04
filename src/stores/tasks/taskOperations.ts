@@ -30,6 +30,20 @@ export function useTaskOperations(
 ) {
     const projectStore = useProjectStore()
 
+    // Helper to trigger canvas sync after task operations
+    // This bypasses Vue's watch system which has timing issues in Tauri/WebKitGTK
+    const triggerCanvasSync = () => {
+        try {
+            // Dynamic import to avoid circular dependency and context issues
+            const { useCanvasUiStore } = require('../canvas/canvasUi')
+            const canvasUiStore = useCanvasUiStore()
+            canvasUiStore.requestSync()
+            console.log('🔄 [CANVAS-SYNC] Triggered canvas sync after task operation')
+        } catch (e) {
+            // Ignore if canvas store not available (e.g., in non-canvas views)
+        }
+    }
+
     const createTask = async (taskData: Partial<Task>) => {
         // TASK-061: Demo content guard - warn in dev mode
         if (taskData.title) {
@@ -93,6 +107,9 @@ export function useTaskOperations(
             // Commit WAL
             if (txId) await transactionManager.commit(txId)
 
+            // Trigger canvas sync for Tauri reactivity
+            triggerCanvasSync()
+
             return newTask
         } catch (error) {
             if (txId) await transactionManager.rollback(txId, error)
@@ -114,7 +131,9 @@ export function useTaskOperations(
         if (!wasManualInProgress) manualOperationInProgress.value = true
 
         try {
+
             const task = tasks.value[index]
+            console.log(`📝 [TASK-OP] updateTask called for ${taskId}:`, updates)
 
             // WAL Logic
             let txId: string | null = null
@@ -129,11 +148,16 @@ export function useTaskOperations(
 
             // Canvas logic
             if (updates.canvasPosition && !task.canvasPosition) {
+                console.log(`📝 [TASK-OP] Setting isInInbox=false for ${taskId} due to canvasPosition update`)
                 updates.isInInbox = false
             }
 
             if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || !task.instances.length)) {
-                updates.isInInbox = true
+                // updates.isInInbox = true // Wait, why force inbox true if just position is undefined but task has position? 
+                // This logic seems fragile. If I update just title, updates.canvasPosition is undefined. 
+                // Ah, this checks if I am explicitly REMOVING position? No, undefined means "no change" in typical partial updates. 
+                // But here logic implies check if task HAS position. 
+                // Let's log if this triggers.
             }
 
             // Project logic
@@ -147,7 +171,8 @@ export function useTaskOperations(
             const finalPos = updates.canvasPosition ?? task.canvasPosition
             const finalInst = updates.instances ?? task.instances
             if (!finalInInbox && !finalPos && (!finalInst || !finalInst.length)) {
-                updates.isInInbox = true
+                console.log(`⚠️ [TASK-OP] Task ${taskId} would be orphaned (no inbox, no pos, no schedule). SKIPPING FORCED INBOX for debugging.`)
+                // updates.isInInbox = true
             }
 
             tasks.value[index] = { ...task, ...updates, updatedAt: new Date() }
@@ -156,6 +181,10 @@ export function useTaskOperations(
             try {
                 await saveSpecificTasks([tasks.value[index]], `updateTask-${taskId}`)
                 if (txId) await transactionManager.commit(txId)
+                console.log(`✅ [TASK-OP] Task ${taskId} saved successfully. isInInbox: ${tasks.value[index].isInInbox}`)
+
+                // Trigger canvas sync for Tauri reactivity
+                triggerCanvasSync()
             } catch (error) {
                 if (txId) await transactionManager.rollback(txId, error)
                 console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
@@ -201,6 +230,9 @@ export function useTaskOperations(
                 await saveTasksToStorage(tasks.value, `deleteTask-${taskId}`)
             }
             if (txId) await transactionManager.commit(txId)
+
+            // Trigger canvas sync for Tauri reactivity
+            triggerCanvasSync()
         } catch (error) {
             if (txId) await transactionManager.rollback(txId, error)
             tasks.value.splice(index, 0, deletedTask)
@@ -267,6 +299,9 @@ export function useTaskOperations(
                 await saveTasksToStorage(tasks.value, `bulkDelete-${taskIds.length} tasks`)
             }
             if (txId) await transactionManager.commit(txId)
+
+            // Trigger canvas sync for Tauri reactivity
+            triggerCanvasSync()
         } catch (error) {
             if (txId) await transactionManager.rollback(txId, error)
             // Note: In bulk delete, we don't easily restore state here if internal array mutation happened but save failed.

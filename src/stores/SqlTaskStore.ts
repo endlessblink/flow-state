@@ -17,14 +17,30 @@ export const useSqlTaskStore = defineStore('sqlTasks', () => {
     // --- Actions ---
 
     /**
-     * Load all tasks from SQLite
+     * Load all tasks from SQLite and stay in sync
      */
     async function loadTasks() {
         isLoading.value = true
         try {
             const db = await PowerSyncService.getInstance()
-            const result = await db.getAll<SqlTask>('SELECT * FROM tasks WHERE is_deleted = 0 ORDER BY "order" ASC')
-            tasks.value = result
+
+            // PowerSync watch() returns an AsyncIterable
+            const observable = db.watch('SELECT * FROM tasks WHERE is_deleted = 0 ORDER BY "order" ASC')
+
+                // Start the background watcher loop
+                ; (async () => {
+                    try {
+                        for await (const result of observable) {
+                            // QueryResult has a .rows property which is an Iterable of rows
+                            const rows = result.rows?._array as SqlTask[] || []
+                            console.debug('🔋 [SQL-TASKS] Tasks updated from DB', rows.length)
+                            tasks.value = rows
+                        }
+                    } catch (err) {
+                        console.error('❌ [SQL-TASKS] Watcher loop error:', err)
+                    }
+                })()
+
         } catch (err) {
             console.error('❌ [SQL-TASKS] Failed to load tasks:', err)
             notification?.error({ content: 'Failed to load tasks from local database.' })
@@ -50,6 +66,7 @@ export const useSqlTaskStore = defineStore('sqlTasks', () => {
                 description: task.description,
                 total_pomodoros: task.total_pomodoros || 0,
                 estimated_pomodoros: task.estimated_pomodoros || 1,
+                progress: task.progress || 0,
                 order: task.order || 0,
                 column_id: task.column_id,
                 created_at: task.created_at || now,
@@ -61,23 +78,17 @@ export const useSqlTaskStore = defineStore('sqlTasks', () => {
 
             await db.execute(`
         INSERT OR REPLACE INTO tasks (
-          id, title, status, project_id, description, 
-          total_pomodoros, estimated_pomodoros, "order", column_id,
+          id, title, status, project_id, description,
+          total_pomodoros, estimated_pomodoros, progress, "order", column_id,
           created_at, updated_at, completed_at, is_deleted, deleted_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
                 fullTask.id, fullTask.title, fullTask.status, fullTask.project_id, fullTask.description,
-                fullTask.total_pomodoros, fullTask.estimated_pomodoros, fullTask.order, fullTask.column_id,
+                fullTask.total_pomodoros, fullTask.estimated_pomodoros, fullTask.progress, fullTask.order, fullTask.column_id,
                 fullTask.created_at, fullTask.updated_at, fullTask.completed_at, fullTask.is_deleted, fullTask.deleted_at
             ])
 
-            // Optimistic Update
-            const index = tasks.value.findIndex(t => t.id === fullTask.id)
-            if (index !== -1) {
-                tasks.value[index] = fullTask
-            } else {
-                tasks.value.push(fullTask)
-            }
+            // NOTE: No optimistic update needed! db.watch() handles the UI update instantly.
 
         } catch (err) {
             console.error('❌ [SQL-TASKS] Failed to save task:', err)
@@ -95,11 +106,7 @@ export const useSqlTaskStore = defineStore('sqlTasks', () => {
 
             await db.execute('UPDATE tasks SET is_deleted = 1, deleted_at = ? WHERE id = ?', [now, id])
 
-            // Optimistic remove
-            const index = tasks.value.findIndex(t => t.id === id)
-            if (index !== -1) {
-                tasks.value.splice(index, 1) // Remove from UI view immediately
-            }
+            // NOTE: No optimistic removal needed! db.watch() handles it.
         } catch (err) {
             console.error('❌ [SQL-TASKS] Failed to delete task:', err)
         }

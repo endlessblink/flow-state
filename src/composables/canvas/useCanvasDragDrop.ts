@@ -87,16 +87,20 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         const node = nodes.value.find(n => n.id === nodeId)
         if (!node) return { x: 0, y: 0 }
 
+        // Sanitize node position
+        const nodeX = Number.isNaN(node.position.x) ? 0 : node.position.x
+        const nodeY = Number.isNaN(node.position.y) ? 0 : node.position.y
+
         if (!node.parentNode) {
             // No parent = position is already absolute
-            return { x: node.position.x, y: node.position.y }
+            return { x: nodeX, y: nodeY }
         }
 
         // Has parent: recursively get parent's absolute position and add this node's relative position
         const parentAbsolute = getAbsolutePosition(node.parentNode)
         return {
-            x: parentAbsolute.x + node.position.x,
-            y: parentAbsolute.y + node.position.y
+            x: parentAbsolute.x + nodeX,
+            y: parentAbsolute.y + nodeY
         }
     }
 
@@ -249,17 +253,83 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         }
     }
 
+    // TASK-089 FIX: Track timeout IDs to cancel them if a new drag starts immediately
+    const dragSettlingTimeoutId = ref<any>(null)
+    const nodeDraggingTimeoutId = ref<any>(null)
+
+    // Helper: Force reset drag state (called on start of new drag)
+    const resetDragState = () => {
+        if (dragSettlingTimeoutId.value) {
+            clearTimeout(dragSettlingTimeoutId.value)
+            dragSettlingTimeoutId.value = null
+        }
+        if (nodeDraggingTimeoutId.value) {
+            clearTimeout(nodeDraggingTimeoutId.value)
+            nodeDraggingTimeoutId.value = null
+        }
+        isNodeDragging.value = false
+        isDragSettling.value = false
+    }
+
     // Handle node drag start
     const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: { node: Node }) => {
+        // CRITICAL FIX: Reset any pending settling states from previous drags
+        // This prevents a previous "drag stop" timeout from firing mid-drag and ruining the state
+        resetDragState()
+
         const { node } = event
         isNodeDragging.value = true
         // TASK-072 FIX: Also set isDragSettling to true immediately
         // This blocks syncNodes from the moment drag starts until settling period ends
         isDragSettling.value = true
 
+        // TASK-089 FIX: Validate start position to ensure we have a valid recovery point
+        let startX = node.position.x
+        let startY = node.position.y
+
+        if (Number.isNaN(startX) || Number.isNaN(startY)) {
+            console.warn(`⚠️ [TASK-089] NaN start position detected for ${node.id}. Attempting to recover from store.`)
+
+            if (node.id.startsWith('section-')) {
+                const sectionId = node.id.replace('section-', '')
+                const section = canvasStore.sections.find(s => s.id === sectionId)
+                if (section) {
+                    startX = section.position.x
+                    startY = section.position.y
+                    console.log(`✅ [RECOVERY] Recovered start position from section store: (${startX}, ${startY})`)
+                }
+            } else {
+                // Assume task
+                const task = taskStore.tasks.find((t: Task) => t.id === node.id)
+                if (task?.canvasPosition) {
+                    startX = task.canvasPosition.x
+                    startY = task.canvasPosition.y
+                    console.log(`✅ [RECOVERY] Recovered start position from task store: (${startX}, ${startY})`)
+                }
+            }
+
+            // Final fallback
+            if (Number.isNaN(startX)) startX = 0
+            if (Number.isNaN(startY)) startY = 0
+
+            // CRITICAL FIX: Apply recovered start position to node IMMEDIATELY
+            // If we don't do this, Vue Flow continues to drag a "NaN" node, causing immediate renderer crashes
+            node.position.x = startX
+            node.position.y = startY
+
+            const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+            if (nodeIndex !== -1) {
+                nodes.value[nodeIndex] = {
+                    ...nodes.value[nodeIndex],
+                    position: { x: startX, y: startY }
+                }
+            }
+        }
+
         // TASK-072 FIX: Store starting position for accurate delta calculation
         // This is critical for nested sections where node.position is relative to parent
-        dragStartPositions.set(node.id, { x: node.position.x, y: node.position.y })
+        dragStartPositions.set(node.id, { x: startX, y: startY })
+        console.log(`[DRAG START] "${node.id}" at (${startX}, ${startY})`)
     })
 
     // Handle node drag stop
@@ -290,8 +360,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 // The old code only checked immediate parent, breaking for 3+ level nesting
                 // (grandchild → child → parent) where child's position is also relative
                 const absolutePos = getAbsolutePosition(node.id)
-                const absoluteX = absolutePos.x
-                const absoluteY = absolutePos.y
+                let absoluteX = Number.isFinite(absolutePos.x) ? absolutePos.x : section.position.x
+                let absoluteY = Number.isFinite(absolutePos.y) ? absolutePos.y : section.position.y
 
                 console.log(`%c[TASK-072] DRAG STOP: "${section.name}"`, 'color: #4CAF50; font-weight: bold')
                 console.log(`  Vue Flow pos: (${node.position.x.toFixed(0)}, ${node.position.y.toFixed(0)})${node.parentNode ? ' [relative]' : ' [absolute]'}`)
@@ -450,8 +520,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 // syncNodes() // REMOVED - was causing position resets
             }
         } else {
-            // TASK-072: Clean up stored start position for task nodes too
-            dragStartPositions.delete(node.id)
+            // TASK-072: Start position cleanup moved to end of block
+
 
             // For task nodes, update position with improved section handling
             if (node.parentNode) {
@@ -459,8 +529,61 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 const section = canvasStore.sections.find(s => s.id === sectionId)
 
                 if (section) {
-                    const absoluteX = section.position.x + node.position.x
-                    const absoluteY = section.position.y + node.position.y
+                    let absoluteX = section.position.x + node.position.x
+                    let absoluteY = section.position.y + node.position.y
+
+                    // CRITICAL FIX: Validate coordinates before any updates
+                    if (Number.isNaN(absoluteX) || Number.isNaN(absoluteY)) {
+                        console.warn(`⚠️ [TASK-089] NaN absolute position for task ${node.id} in section ${sectionId}`, { relPos: node.position, secPos: section.position })
+
+                        // Try recovery from start position if available
+                        const startPos = dragStartPositions.get(node.id)
+                        if (startPos && !Number.isNaN(startPos.x) && !Number.isNaN(startPos.y)) {
+                            console.log(`RECOVERY: Reverting to start position due to NaN calc`)
+                            absoluteX = startPos.x
+                            absoluteY = startPos.y
+
+                            // FORCE VISUAL RECOVERY: Directly update Vue Flow node to kill NaNs
+                            const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+                            if (nodeIndex !== -1) {
+                                // Calculate valid relative position for the visual node
+                                const relativeX = absoluteX - section.position.x
+                                const relativeY = absoluteY - section.position.y
+
+                                nodes.value[nodeIndex] = {
+                                    ...nodes.value[nodeIndex],
+                                    position: { x: relativeX, y: relativeY }
+                                }
+                                // Also mutate the event node reference just in case
+                                node.position.x = relativeX
+                                node.position.y = relativeY
+                            }
+                        } else {
+                            console.error('CRITICAL: Aborting update due to NaN calculation.')
+                            dragStartPositions.delete(node.id)
+                            isNodeDragging.value = false
+                            isDragSettling.value = false
+                            return
+                        }
+                    }
+
+                    // CRITICAL FIX: Validate coordinates before any updates
+                    if (Number.isNaN(absoluteX) || Number.isNaN(absoluteY)) {
+                        console.warn(`⚠️ [TASK-089] NaN absolute position for task ${node.id} in section ${sectionId}`, { relPos: node.position, secPos: section.position })
+                        // Fallback to relative if section position is corrupted, or just abort
+                        if (!Number.isNaN(node.position.x) && !Number.isNaN(node.position.y)) {
+                            // Try to use just relative position as absolute if section is weird? No, that's dangerous.
+                            // Best to abort.
+                            console.error('CRITICAL: Aborting update due to NaN calculation.')
+                            isNodeDragging.value = false
+                            isDragSettling.value = false
+                            return
+                        }
+                    }
+
+                    // BUG-FIX: Ensure absolute coordinates are finite
+                    if (!Number.isFinite(absoluteX)) absoluteX = 0
+                    if (!Number.isFinite(absoluteY)) absoluteY = 0
 
                     // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
                     // Store update triggers watchers → syncNodes, lock must exist first
@@ -491,14 +614,50 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     }
                 }
             } else {
+                // Check if starting position is stored
+                const startPos = dragStartPositions.get(node.id)
+
+                // CRITICAL FIX: Validate coordinates before any updates
+                // If Vue Flow gives us NaN, we must fallback to start position or abort
+                let targetX = node.position.x
+                let targetY = node.position.y
+
+                if (Number.isNaN(targetX) || Number.isNaN(targetY)) {
+                    console.warn(`⚠️ [TASK-089] NaN position detected for task ${node.id} at drag stop!`, { pos: node.position, startPos })
+                    if (startPos && !Number.isNaN(startPos.x) && !Number.isNaN(startPos.y)) {
+                        targetX = startPos.x
+                        targetY = startPos.y
+                        console.log(`RECOVERY: Reverted to start position (${targetX}, ${targetY})`)
+
+                        // FORCE VISUAL RECOVERY: Directly update Vue Flow node to kill NaNs
+                        const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+                        if (nodeIndex !== -1) {
+                            nodes.value[nodeIndex] = {
+                                ...nodes.value[nodeIndex],
+                                position: { x: targetX, y: targetY }
+                            }
+                            // Also mutate the event node reference just in case
+                            node.position.x = targetX
+                            node.position.y = targetY
+                        }
+                    } else {
+                        console.error('CRITICAL: No start position for recovery. Aborting update.')
+                        dragStartPositions.delete(node.id)
+                        isNodeDragging.value = false
+                        isDragSettling.value = false
+                        return
+                    }
+                }
+
                 // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
-                lockTaskPosition(node.id, { x: node.position.x, y: node.position.y })
+                lockTaskPosition(node.id, { x: targetX, y: targetY })
+
                 // TASK-089 MEMORY FIX: Use updateTask instead of updateTaskWithUndo
                 // updateTaskWithUndo saves state TWICE per call, causing memory exhaustion during drag
                 // TASK-089 FIX 9: Await position save to prevent data loss on refresh
                 try {
                     await taskStore.updateTask(node.id, {
-                        canvasPosition: { x: node.position.x, y: node.position.y }
+                        canvasPosition: { x: targetX, y: targetY }
                     })
                 } catch (err) {
                     console.error(`[TASK-089] Failed to save position for task ${node.id}:`, err)
@@ -521,6 +680,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 checkX = node.position.x
                 checkY = node.position.y
             }
+
+            // Cleanup start position AFTER use
+            dragStartPositions.delete(node.id)
 
             const containingSection = getContainingSection(checkX, checkY)
 
@@ -586,15 +748,13 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         // 1. Store updates to propagate
         // 2. Watchers to fire and be blocked
         // 3. Vue Flow to stabilize positions
-        setTimeout(() => {
+        nodeDraggingTimeoutId.value = setTimeout(() => {
             isNodeDragging.value = false
         }, 50)
 
         // TASK-072 FIX: Clear isDragSettling after a longer delay (500ms)
-        // This is the key fix for position resets - watchers trigger syncNodes after
-        // isNodeDragging becomes false, but isDragSettling blocks them until
-        // all store updates have fully propagated.
-        setTimeout(() => {
+        // We capture the timeout ID so we can cancel it if a new drag starts
+        dragSettlingTimeoutId.value = setTimeout(() => {
             isDragSettling.value = false
             console.log(`%c[TASK-072] Drag settling complete - syncNodes unblocked`, 'color: #4CAF50')
         }, 500)
@@ -602,7 +762,28 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
 
     // Handle node drag (continuous during drag - kept lightweight)
     const handleNodeDrag = (_event: { node: Node }) => {
-        // No-op for now - heavy operations should be in handleNodeDragStop
+        const { node } = _event
+        // CRITICAL FIX: Guard against NaNs appearing mid-drag
+        // This stops the "Invalid value for <rect>" errors from flooding the console
+        if (Number.isNaN(node.position.x) || Number.isNaN(node.position.y)) {
+            console.warn(`⚠️ [TASK-089] NaN positions detected DURING drag for ${node.id}. Force reverting.`)
+            const startPos = dragStartPositions.get(node.id)
+            if (startPos) {
+                node.position.x = startPos.x
+                node.position.y = startPos.y
+            } else {
+                node.position.x = 0
+                node.position.y = 0
+            }
+
+            // SAFETY: If we are getting NaNs, checks the viewport state too
+            // If viewport is corrupt, it causes projection errors which cause NaNs
+            const vp = canvasStore.viewport
+            if (!Number.isFinite(vp.x) || !Number.isFinite(vp.y) || !Number.isFinite(vp.zoom) || vp.zoom <= 0) {
+                console.error('🚨 [TASK-089] CORRUPTED VIEWPORT DETECTED DURING DRAG. FORCE RESETTING.')
+                canvasStore.setViewport(0, 0, 1)
+            }
+        }
     }
 
     return {

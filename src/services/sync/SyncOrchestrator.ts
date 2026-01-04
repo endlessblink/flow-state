@@ -78,34 +78,17 @@ export class SyncOrchestrator {
                 // Expose for debugging
                 ; (window as any).pomoFlowDb = this.localDB
 
-            this.remoteDB = await this.dbService.initializeRemote()
+            // CASE: PouchDB sync decommissioned.
+            console.log('🔌 [SYNC] Local-only mode: PouchDB sync transport decommissioned.')
 
-            if (!this.remoteDB) {
-                this.state.updateStatus('offline')
-                this.isInitialized = true
-                return
-            }
-
-            // Init Conflicts
-            if (this.localDB) {
-                await this.conflictDetector.initialize(this.localDB, this.remoteDB)
-            }
-
-            // Setup Network Listeners
+            // Still initialize network monitor so we can show "offline" vs "online" (local) status if desired
             this.network.setupListeners(
                 () => this.handleOnline(),
                 () => this.handleOffline()
             )
 
+            this.state.updateStatus('offline')
             this.isInitialized = true
-
-            this.state.updateStatus('idle')
-            console.debug('✅ Sync Orchestrator Initialized (DI Mode)')
-
-            // Start Live Sync if remote is available
-            if (this.remoteDB) {
-                this.startLiveSync()
-            }
         } catch (error) {
             console.error('❌ Sync Orchestrator Initialization Failed:', error)
             throw error
@@ -135,23 +118,9 @@ export class SyncOrchestrator {
     }
 
     public async triggerSync() {
-        const now = Date.now()
-        if (now - this.lastManualSyncTime < this.MANUAL_SYNC_COOLDOWN) {
-            // console.log('⏳ [SyncOrchestrator] Msg throttled')
-            return
-        }
-        this.lastManualSyncTime = now
-
-        if (!this.network.getStatus().value) {
-            // console.warn('⚠️ [SyncOrchestrator] Cannot sync: Offline')
-            return
-        }
-
-        try {
-            await this.performReliableSync()
-        } catch (e) {
-            console.error('❌ [SyncOrchestrator] Manual sync failed', e)
-        }
+        // Disabled during decommissioning
+        console.log('ℹ️ [SYNC] Sync triggered but disabled (Local-only mode)')
+        return
     }
 
     private isSyncingProgress = false
@@ -404,14 +373,8 @@ export class SyncOrchestrator {
     }
 
     public async startLiveSync(): Promise<boolean> {
-        if (!this.localDB || !this.remoteDB) return false
-        if (this.liveSyncHandle) return true
-
-        this.liveSyncHandle = this.operationService.startLiveSync(
-            this.localDB,
-            this.remoteDB
-        )
-        return true
+        // Disabled during decommissioning
+        return false
     }
 
     public async stopLiveSync(): Promise<boolean> {

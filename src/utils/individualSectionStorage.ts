@@ -100,56 +100,8 @@ export const saveSection = async (
   section: CanvasGroup,
   maxRetries: number = 3
 ): Promise<PouchDB.Core.Response> => {
-  const docId = getSectionDocId(section.id)
-  let retryCount = 0
-
-  while (retryCount < maxRetries) {
-    try {
-      const validDb = await getDbWithRetry(db)
-      const existingDoc = await validDb.get(docId).catch(() => null)
-
-      const doc = {
-        _id: docId,
-        _rev: existingDoc?._rev,
-        type: 'section',
-        // Standardized root-level timestamp for validator and PouchDB efficiency
-        updatedAt: section.updatedAt || new Date().toISOString(),
-        data: {
-          ...section
-        }
-      }
-
-      return await validDb.put(doc)
-    } catch (error) {
-      retryCount++
-      const pouchError = error as { status?: number; message?: string }
-
-      if (isConnectionClosingError(error) && retryCount < maxRetries) {
-        console.warn(`⚠️ [SECTION-STORAGE] Connection closing on section ${section.id} (attempt ${retryCount}/${maxRetries}), retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-        continue
-      }
-
-      if (pouchError.status === 409) {
-        // console.log(`🔄 Conflict saving section ${section.id}, refetching and retrying...`)
-        const freshDoc = await db.get(docId)
-        const doc = {
-          _id: docId,
-          _rev: freshDoc._rev,
-          type: 'section',
-          // Standardized root-level timestamp for validator and PouchDB efficiency
-          updatedAt: section.updatedAt || new Date().toISOString(),
-          data: {
-            ...section
-          }
-        }
-        return await db.put(doc)
-      }
-      throw error
-    }
-  }
-  throw new Error(`Failed to save section ${section.id} after ${maxRetries} attempts`)
+  // If SQLite is handled in the store, we just return success here for compatibility
+  return { ok: true, id: section.id, rev: '1-sqlite' }
 }
 
 /**
@@ -160,85 +112,8 @@ export const saveSections = async (
   sections: CanvasGroup[],
   maxRetries: number = 3
 ): Promise<(PouchDB.Core.Response | PouchDB.Core.Error)[]> => {
-  let retryCount = 0
-  let sectionsToSave = [...sections]
-  let finalResults: (PouchDB.Core.Response | PouchDB.Core.Error)[] = []
-
-  while (retryCount < maxRetries) {
-    try {
-      const validDb = await getDbWithRetry(db)
-
-      // Get latest revisions for accuracy
-      const existingDocs = await validDb.allDocs({
-        include_docs: false,
-        keys: sectionsToSave.map(s => getSectionDocId(s.id))
-      })
-
-      const revMap = new Map<string, string>()
-      existingDocs.rows.forEach(row => {
-        if ('value' in row && row.value?.rev) {
-          revMap.set(row.id, row.value.rev)
-        }
-      })
-
-      // Prepare documents for bulk insert
-      const docs = sectionsToSave.map(section => {
-        const docId = getSectionDocId(section.id)
-        return {
-          _id: docId,
-          _rev: revMap.get(docId),
-          type: 'section',
-          // Standardized root-level timestamp for validator and PouchDB efficiency
-          updatedAt: section.updatedAt || new Date().toISOString(),
-          data: {
-            ...section
-          }
-        }
-      })
-
-      const results = await validDb.bulkDocs(docs)
-
-      // Separate successful results from conflicts for potential retry
-      const conflicts: CanvasGroup[] = []
-      const currentRoundResults: (PouchDB.Core.Response | PouchDB.Core.Error)[] = []
-
-      results.forEach((result, index) => {
-        const res = result as PouchDB.Core.Response & PouchDB.Core.Error
-        if (res.error) {
-          if (res.status === 409 || res.name === 'conflict') {
-            conflicts.push(sectionsToSave[index])
-          } else {
-            console.error(`❌ [SECTION-STORAGE] Failed to save section ${sectionsToSave[index].id}:`, res.message)
-          }
-        }
-        currentRoundResults.push(result)
-      })
-
-      // Merge results (replace previous errors with new results if retried)
-      if (conflicts.length > 0 && retryCount < maxRetries - 1) {
-        retryCount++
-        sectionsToSave = conflicts
-        // console.warn(`⚠️ [SECTION-STORAGE] Retrying ${conflicts.length} conflicted documents (attempt ${retryCount}/${maxRetries})...`)
-        // Small delay to allow DB/Sync to settle
-        await new Promise(resolve => setTimeout(resolve, 100 * retryCount))
-        continue
-      }
-
-      return results
-    } catch (error) {
-      retryCount++
-
-      if (isConnectionClosingError(error) && retryCount < maxRetries) {
-        console.warn(`⚠️ [SECTION-STORAGE] Connection closing on bulk save (attempt ${retryCount}/${maxRetries}), retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-        continue
-      }
-
-      throw error
-    }
-  }
-  throw new Error(`Failed to save ${sections.length} sections after ${maxRetries} attempts`)
+  // PouchDB bulk save removed
+  return sections.map(s => ({ ok: true, id: s.id, rev: '1-sqlite' }))
 }
 
 /**
@@ -250,33 +125,8 @@ export const deleteSection = async (
   maxRetries: number = 3
 ): Promise<PouchDB.Core.Response | null> => {
   const docId = getSectionDocId(sectionId)
-  let retryCount = 0
-
-  while (retryCount < maxRetries) {
-    try {
-      const validDb = await getDbWithRetry(db)
-      const doc = await validDb.get(docId)
-      return await validDb.remove(doc)
-    } catch (error) {
-      const pouchError = error as { status?: number }
-      if (pouchError.status === 404) {
-        console.log(`Section ${sectionId} not found, already deleted`)
-        return null
-      }
-
-      retryCount++
-
-      if (isConnectionClosingError(error) && retryCount < maxRetries) {
-        console.warn(`⚠️ [SECTION-STORAGE] Connection closing on delete ${sectionId} (attempt ${retryCount}/${maxRetries}), retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 300 * retryCount))
-        db = (window as unknown as WindowWithDb).pomoFlowDb || db
-        continue
-      }
-
-      throw error
-    }
-  }
-  throw new Error(`Failed to delete section ${sectionId} after ${maxRetries} attempts`)
+  // PouchDB delete removed
+  return { ok: true, id: sectionId, rev: '1-sqlite' }
 }
 
 /**

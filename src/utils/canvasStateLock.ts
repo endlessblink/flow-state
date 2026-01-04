@@ -58,6 +58,12 @@ const LOCK_DURATION_MS = 7000
  * Lock a task's position after a local drag operation.
  */
 export function lockTaskPosition(taskId: string, position: TaskPosition, source: CanvasLock['source'] = 'drag'): void {
+  // Validate coordinates
+  if (Number.isNaN(position.x) || Number.isNaN(position.y)) {
+    console.warn(`⚠️ [CANVAS-LOCK] Rejected NaN position lock for Task ${taskId}`, position)
+    return
+  }
+
   const lock: CanvasLock = {
     type: 'task',
     id: taskId,
@@ -73,6 +79,12 @@ export function lockTaskPosition(taskId: string, position: TaskPosition, source:
  * Lock a group/section's position and dimensions after drag/resize.
  */
 export function lockGroupPosition(groupId: string, position: GroupPosition, source: CanvasLock['source'] = 'drag'): void {
+  // Validate coordinates
+  if (Number.isNaN(position.x) || Number.isNaN(position.y) || Number.isNaN(position.width) || Number.isNaN(position.height)) {
+    console.warn(`⚠️ [CANVAS-LOCK] Rejected NaN position lock for Group ${groupId}`, position)
+    return
+  }
+
   const lock: CanvasLock = {
     type: 'group',
     id: groupId,
@@ -88,6 +100,12 @@ export function lockGroupPosition(groupId: string, position: GroupPosition, sour
  * Lock the viewport state after pan/zoom.
  */
 export function lockViewport(viewport: ViewportState, source: CanvasLock['source'] = 'pan'): void {
+  // Validate coordinates
+  if (Number.isNaN(viewport.x) || Number.isNaN(viewport.y) || Number.isNaN(viewport.zoom)) {
+    console.warn(`⚠️ [CANVAS-LOCK] Rejected NaN viewport lock`, viewport)
+    return
+  }
+
   viewportLock.current = {
     type: 'viewport',
     id: 'viewport',

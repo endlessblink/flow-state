@@ -107,9 +107,11 @@ export function useAppInitialization() {
         // Handle canvas section documents (section-{id} or group-{id})
         if (id.startsWith('section-') || id.startsWith('group-')) {
             if (deleted) {
-                canvasStore.removeSectionFromSync(id)
+                // Use deleteGroup directly (PowerSync enabled)
+                canvasStore.deleteGroup(id)
             } else if (doc?.data) {
-                canvasStore.updateSectionFromSync(id, doc.data)
+                // Use updateGroup directly (PowerSync enabled)
+                canvasStore.updateGroup(id, doc.data)
             }
         }
     }
@@ -156,11 +158,110 @@ export function useAppInitialization() {
         const dbInstance = database.value
         console.log('✅ [APP] Checkpoint 3: Database Instance Acquired:', dbInstance.name)
 
+        // DIAGNOSTIC EXTRAS: Check LocalStorage Backups
+        try {
+            const golden = localStorage.getItem('pomo-flow-golden-backup')
+            if (golden) {
+                const parsed = JSON.parse(golden)
+                console.log(`💾 [BACKUP-CHECK] Found GOLDEN backup in localStorage: ${parsed.metadata?.taskCount} tasks.`)
+            } else {
+                console.log('❌ [BACKUP-CHECK] No GOLDEN backup found in localStorage.')
+            }
+        } catch (e) {
+            console.warn('⚠️ [BACKUP-CHECK] Failed to read backups:', e)
+        }
+
+        // AUTOMATIC MIGRATION CHECK & SELF-HEALING
+        // Determine if we need to migrate:
+        // 1. Flag is missing (first run)
+        // 2. Flag is present but DB is empty (failed persistence check)
+
+        let needsMigration = false
+        const isMigrationComplete = localStorage.getItem('POWERSYNC_MIGRATION_COMPLETE') === 'true'
+
+        if (!isMigrationComplete) {
+            needsMigration = true
+        } else {
+            // SELF-HEALING: Verify data actually exists
+            try {
+                const { default: PowerSyncService } = await import('@/services/database/PowerSyncDatabase')
+                const db = await PowerSyncService.getInstance()
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const countResult = await db.getAll('SELECT count(*) as count FROM tasks') as any[]
+                const count = countResult[0]?.count || 0
+
+                // SELF-HEALING: Only trigger if SQLite is TRULY empty and PouchDB is not
+                if (count === 0) {
+                    try {
+                        const pouchInfo = await dbInstance.info()
+                        if (pouchInfo.doc_count > 0) {
+                            console.warn(`⚠️ [APP] Data Mismatch Detected: SQLite is empty but PouchDB has ${pouchInfo.doc_count} docs. Forcing re-migration.`)
+                            needsMigration = true
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ [APP] Failed to check PouchDB for self-healing:', e)
+                    }
+                } else {
+                    // Check schema version - trigger if version mismatch
+                    const currentVersion = parseInt(localStorage.getItem('POWERSYNC_MIGRATION_VERSION') || '0')
+                    if (currentVersion < 2) {
+                        console.log(`🔄 [APP] SQLite Schema Version Mismatch (${currentVersion} < 2). Triggering migration update.`)
+                        needsMigration = true
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ [APP] Failed to verify SQLite state, assuming healthy to prevent loops:', e)
+                // If we crash checking the DB, don't infinite loop migration
+            }
+        }
+
+        const SAFE_GUARD_LIMIT = 2
+        const currentAttempts = parseInt(localStorage.getItem('MIGRATION_ATTEMPTS') || '0')
+
+        if (needsMigration && currentAttempts < SAFE_GUARD_LIMIT) {
+            console.log(`🚀 [APP] Auto-Migration Triggered (Attempt ${currentAttempts + 1}/${SAFE_GUARD_LIMIT})...`)
+
+            // Increment attempt counter
+            localStorage.setItem('MIGRATION_ATTEMPTS', (currentAttempts + 1).toString())
+
+            try {
+                const { migratePouchToSql } = await import('@/utils/migratePouchToSql')
+
+                // Pass existing PouchDB instance to avoid re-opening if possible
+                await migratePouchToSql(dbInstance)
+
+                console.log('✅ [APP] Auto-Migration finished. Page should reload shortly.')
+                setTimeout(() => window.location.reload(), 500)
+                return // Stop further initialization
+            } catch (err) {
+                console.error('❌ [APP] Auto-Migration Failed:', err)
+            }
+        } else if (needsMigration && currentAttempts >= SAFE_GUARD_LIMIT) {
+            console.error('🛑 [APP] Auto-Migration halted: Max attempts reached. Data mismatches may persist.')
+        }
+
+
         // 2. INJECT DATABASE INTO SYNC SERVICE (Dependency Injection)
         // This ensures Sync Service uses the EXACT SAME database instance as the UI
         try {
             await initializeSyncService(dbInstance)
             console.log('✅ [APP] Sync Service Initialized with injected DB')
+
+            // CRITICAL FIX: Ensure 'todo' status is mapped to 'planned' for existing data
+            // This fixes the "Hidden Tasks" bug where tasks exist but don't appear in Kanban columns
+            try {
+                // Determine DB instance for Query
+                const { default: PowerSyncService } = await import('@/services/database/PowerSyncDatabase')
+                const autoFixDb = await PowerSyncService.getInstance()
+
+                const result = await autoFixDb.execute(`UPDATE tasks SET status = 'planned' WHERE status = 'todo'`)
+                if (result.rowsAffected > 0) {
+                    console.log(`🛠️ [AUTO-FIX] Updated ${result.rowsAffected} tasks from 'todo' to 'planned'`)
+                }
+            } catch (e) {
+                console.warn('⚠️ [AUTO-FIX] Failed to update legacy statuses:', e)
+            }
+
         } catch (e) {
             console.error('❌ [APP] Sync Service init failed:', e)
         }

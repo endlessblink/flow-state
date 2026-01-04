@@ -1,21 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
-import { STORAGE_FLAGS } from '@/config/database'
-import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
-import { guardProjectCreation } from '@/utils/demoContentGuard'
+import PowerSyncService from '@/services/database/PowerSyncDatabase'
+import { toSqlProject, fromSqlProject } from '@/utils/projectMapper'
 import type { Project } from '@/types/tasks'
-import {
-    saveProjects as saveIndividualProjects,
-    loadAllProjects as loadIndividualProjects,
-    migrateFromLegacyFormat as migrateProjectsFromLegacy,
-    deleteProject as deleteProjectDoc
-} from '@/utils/individualProjectStorage'
 import { useTaskStore } from './tasks'
 import { syncState } from '@/services/sync/SyncStateService'
 
 export const useProjectStore = defineStore('projects', () => {
-    const db = useDatabase()
 
     // State
     const projects = ref<Project[]>([])
@@ -32,58 +23,62 @@ export const useProjectStore = defineStore('projects', () => {
 
     // Actions
     const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {
-        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) {
-            console.log('🔒 [STORYBOOK] Skipping project persistence:', context)
-            return
-        }
-
-        const dbInstance = db.database.value
-        if (!dbInstance) {
-            console.error(`❌ [SAVE-PROJECTS] PouchDB not available (${context})`)
-            return
-        }
+        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
         try {
-            await saveIndividualProjects(dbInstance, projectsToSave)
-            console.log(`📋 [SAVE-PROJECTS] Projects saved to individual docs (${context}): ${projectsToSave.length} projects`)
+            const db = await PowerSyncService.getInstance()
 
-            if (db.triggerSync) {
-                await db.triggerSync()
-            }
-        } catch (error) {
-            errorHandler.report({
-                severity: ErrorSeverity.ERROR,
-                category: ErrorCategory.DATABASE,
-                message: 'Projects save failed',
-                error: error as Error,
-                context: { projectCount: projectsToSave.length, context },
-                showNotification: false
+            // Convert to SQL format
+            const sqlProjects = projectsToSave.map(toSqlProject)
+
+            // Execute Transaction - ALL FIELDS
+            await db.writeTransaction(async (tx) => {
+                for (const p of sqlProjects) {
+                    await tx.execute(`
+                        INSERT OR REPLACE INTO projects (
+                            id, name, description, color, color_type, icon, emoji,
+                            parent_id, view_type, "order",
+                            created_at, updated_at, is_deleted, deleted_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        p.id, p.name, p.description, p.color, p.color_type, p.icon, p.emoji,
+                        p.parent_id, p.view_type, p.order,
+                        p.created_at, p.updated_at, p.is_deleted, p.deleted_at
+                    ])
+                }
             })
+            console.debug(`✅ [SQL] Saved ${sqlProjects.length} projects (${context})`)
+
+            // PouchDB dual-sync removed during decommissioning
+
+        } catch (e) {
+            console.error(`❌ [SQL] Project save failed (${context}):`, e)
         }
     }
 
-    const loadProjectsFromPouchDB = async () => {
-        const dbInstance = db.database.value
-        if (!dbInstance) return
-
+    const loadProjectsFromDatabase = async () => {
         isLoading.value = true
         try {
-            const loadedProjects = await loadIndividualProjects(dbInstance)
+            const db = await PowerSyncService.getInstance()
+
+            // Query all non-deleted projects
+            const result = await db.getAll('SELECT * FROM projects WHERE is_deleted = 0')
+
+            // Map back to Frontend Project objects
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const loadedProjects = result.map(row => fromSqlProject(row as any))
+
             projects.value = loadedProjects
-            console.log(`📂 Loaded ${loadedProjects.length} projects from individual docs`)
+            console.log(`✅ [SQL] Loaded ${loadedProjects.length} projects from SQLite`)
+
         } catch (error) {
-            console.error('Failed to load projects:', error)
+            console.error('❌ [SQL] Projects load failed:', error)
         } finally {
             isLoading.value = false
         }
     }
 
     const createProject = async (projectData: Partial<Project>) => {
-        // TASK-061: Demo content guard - warn in dev mode
-        if (projectData.name) {
-            guardProjectCreation(projectData.name)
-        }
-
         manualOperationInProgress = true
         try {
             const newProject: Project = {
@@ -147,19 +142,13 @@ export const useProjectStore = defineStore('projects', () => {
                 })
 
                 projects.value.splice(projectIndex, 1)
-                await saveProjectsToStorage(projects.value, `deleteProject-${projectId}`)
 
-                // BUG-054 FIX: Actually delete the project document from PouchDB
-                // This creates a tombstone that syncs to CouchDB, preventing the project from reappearing
-                const dbInstance = db.database.value
-                if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-                    try {
-                        await deleteProjectDoc(dbInstance, projectId)
-                        console.log(`🗑️ [PROJECT] Deleted document for project ${projectId}`)
-                    } catch (deleteErr) {
-                        console.warn(`⚠️ [PROJECT] Failed to delete document for ${projectId}:`, deleteErr)
-                    }
-                }
+                // SQL Delete (Soft delete)
+                const db = await PowerSyncService.getInstance()
+                await db.execute('UPDATE projects SET is_deleted = 1 WHERE id = ?', [projectId])
+
+            } catch (e) {
+                console.error('Failed to delete project:', e)
             } finally {
                 manualOperationInProgress = false
             }
@@ -168,9 +157,6 @@ export const useProjectStore = defineStore('projects', () => {
 
     /**
      * Bulk delete multiple projects at once
-     * - Moves all tasks from deleted projects to 'uncategorized'
-     * - Re-parents child projects to their grandparent (or root if no grandparent)
-     * - Single database write for efficiency
      */
     const deleteProjects = async (projectIds: string[]) => {
         if (projectIds.length === 0) return
@@ -214,21 +200,14 @@ export const useProjectStore = defineStore('projects', () => {
             // Remove all deleted projects
             projects.value = projects.value.filter(p => !projectIdSet.has(p.id))
 
-            await saveProjectsToStorage(projects.value, `deleteProjects-${projectIds.length}`)
-
-            // BUG-054 FIX: Actually delete project documents from PouchDB
-            // This creates tombstones that sync to CouchDB, preventing projects from reappearing
-            const dbInstance = db.database.value
-            if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_PROJECTS_ONLY) {
-                for (const projectId of projectIds) {
-                    try {
-                        await deleteProjectDoc(dbInstance, projectId)
-                        console.log(`🗑️ [PROJECT] Deleted document for project ${projectId}`)
-                    } catch (deleteErr) {
-                        console.warn(`⚠️ [PROJECT] Failed to delete document for ${projectId}:`, deleteErr)
-                    }
+            // SQL Bulk Delete
+            const db = await PowerSyncService.getInstance()
+            await db.writeTransaction(async (tx) => {
+                for (const id of projectIds) {
+                    await tx.execute('UPDATE projects SET is_deleted = 1 WHERE id = ?', [id])
                 }
-            }
+            })
+
         } finally {
             manualOperationInProgress = false
         }
@@ -380,8 +359,8 @@ export const useProjectStore = defineStore('projects', () => {
         }
     }
 
-    const initializeFromPouchDB = async () => {
-        await loadProjectsFromPouchDB()
+    const initializeFromDatabase = async () => {
+        await loadProjectsFromDatabase()
         return projects.value.length > 0
     }
 
@@ -400,7 +379,7 @@ export const useProjectStore = defineStore('projects', () => {
         activeProjectId,
         isLoading,
         rootProjects,
-        loadProjectsFromPouchDB,
+        loadProjectsFromDatabase,
         createProject,
         updateProject,
         deleteProject,
@@ -418,7 +397,7 @@ export const useProjectStore = defineStore('projects', () => {
         saveProjectsToStorage,
         setProjectViewType,
         moveTaskToProject,
-        initializeFromPouchDB,
+        initializeFromDatabase,
         updateProjectFromSync,
         removeProjectFromSync
     }

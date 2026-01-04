@@ -408,7 +408,7 @@ const saveSection = () => {
 
 onMounted(() => {
   // Initialize with empty sections
-  canvasStore.initializeDefaultSections()
+
 })
 </script>
 

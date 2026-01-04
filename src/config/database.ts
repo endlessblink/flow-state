@@ -125,8 +125,8 @@ const getStoredCouchDBConfig = () => {
  * (either via localStorage settings from UI or environment variables)
  */
 export const isSyncEnabled = (): boolean => {
-  const config = getStoredCouchDBConfig()
-  return !!(config.url && config.username && config.password)
+  // Sync globally disabled during PouchDB decommissioning
+  return false
 }
 
 // Get configuration based on environment

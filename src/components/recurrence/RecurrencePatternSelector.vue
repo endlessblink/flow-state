@@ -199,6 +199,12 @@ import { RecurrencePattern, EndCondition, type TaskRecurrence } from '@/types/re
 import { formatDateKey as _formatDateKey, parseDateKey } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  recurrenceChanged: [recurrence: TaskRecurrence | null]
+}>()
+
 // Pattern options for CustomSelect
 const patternOptions = [
   { label: 'None', value: 'none' },
@@ -246,12 +252,6 @@ interface Props {
   dueDate?: string
   dueTime?: string
 }
-
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  recurrenceChanged: [recurrence: TaskRecurrence | null]
-}>()
 
 // Use the recurrence composable
 const {

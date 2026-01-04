@@ -1,7 +1,7 @@
 import { type Ref } from 'vue'
 import { type Node, type Edge, type EdgeMouseEvent, type Connection, useVueFlow } from '@vue-flow/core'
-import { useCanvasStore } from '@/stores/canvas'
-import { useTaskStore } from '@/stores/tasks'
+import type { useCanvasStore } from '@/stores/canvas'
+import type { useTaskStore } from '@/stores/tasks'
 
 interface InteractionHandlersDeps {
     nodes: Ref<Node[]>

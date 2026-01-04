@@ -10,14 +10,14 @@ import router from './router'
 import App from './App.vue'
 import i18n from './i18n'
 
-// Early Tauri detection - must run BEFORE CSS import for proper fallback application
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-;(() => {
-  const w = window as any
-  if (('isTauri' in w && w.isTauri) || ('__TAURI__' in w) || ('__TAURI_INTERNALS__' in w)) {
-    document.documentElement.classList.add('tauri-app')
-  }
-})()
+  // Early Tauri detection - must run BEFORE CSS import for proper fallback application
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ; (() => {
+    const w = window as any
+    if (('isTauri' in w && w.isTauri) || ('__TAURI__' in w) || ('__TAURI_INTERNALS__' in w)) {
+      document.documentElement.classList.add('tauri-app')
+    }
+  })()
 
 // Design system - Tailwind CSS must be imported here for Vite to process @tailwind directives
 import './assets/styles.css'
@@ -68,8 +68,8 @@ async function initializeApp() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const win = window as any
   const isTauriEnv = ('isTauri' in win && win.isTauri) ||
-                     ('__TAURI__' in win) ||
-                     ('__TAURI_INTERNALS__' in win)
+    ('__TAURI__' in win) ||
+    ('__TAURI_INTERNALS__' in win)
 
   if (isTauriEnv) {
     document.documentElement.classList.add('tauri-app')
@@ -93,6 +93,16 @@ async function initializeApp() {
     // Run `debugHelper.resetReplicationCheckpoint()` in console to fix stuck sync
     import('./utils/debugHelper').then(({ installDebugHelper }) => {
       installDebugHelper()
+    })
+
+    // TASK-093: Migration Utility (Dev Access)
+    import('./utils/migratePouchToSql').then(({ migratePouchToSql }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).migrate = async () => {
+        console.log('🏁 [MIGRATION] Manual trigger via console...')
+        return await migratePouchToSql();
+      }
+      console.log('🛠️ [MIGRATION] Utility loaded. Run `window.migrate()` to start.')
     })
 
     if (!preCheckResult.healthy && preCheckResult.error) {

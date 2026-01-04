@@ -122,6 +122,7 @@
     <template v-if="selectedCount >= 2">
       <div class="menu-divider" />
       <div
+        ref="submenuItemRef"
         class="menu-item submenu-item"
         @mouseenter="handleLayoutSubmenuEnter"
         @mouseleave="handleLayoutSubmenuLeave"
@@ -129,78 +130,79 @@
         <LayoutGrid :size="16" :stroke-width="1.5" class="menu-icon" />
         <span class="menu-text">Layout</span>
         <ChevronRight :size="16" :stroke-width="1.5" class="submenu-arrow" />
-
-        <!-- Layout Submenu with all align/distribute/arrange options -->
-        <div
-          v-if="showLayoutSubmenu"
-          ref="submenuRef"
-          class="submenu"
-          :class="{ 'submenu-flipped': submenuPosition.flipHorizontal }"
-          :style="{ top: `${submenuPosition.adjustVertical}px` }"
-          @mouseenter="handleLayoutSubmenuEnter"
-          @mouseleave="handleLayoutSubmenuLeave"
-        >
-          <!-- Align Options -->
-          <button class="menu-item" @click="handleAlignLeft">
-            <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Align Left</span>
-          </button>
-          <button class="menu-item" @click="handleAlignRight">
-            <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Align Right</span>
-          </button>
-          <button class="menu-item" @click="handleAlignTop">
-            <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Align Top</span>
-          </button>
-          <button class="menu-item" @click="handleAlignBottom">
-            <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Align Bottom</span>
-          </button>
-          <button class="menu-item" @click="handleAlignCenterHorizontal">
-            <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Center Horizontally</span>
-          </button>
-          <button class="menu-item" @click="handleAlignCenterVertical">
-            <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Center Vertically</span>
-          </button>
-
-          <!-- Distribute Options (3+ tasks) -->
-          <template v-if="selectedCount >= 3">
-            <div class="menu-divider" />
-            <button class="menu-item" @click="handleDistributeHorizontal">
-              <ArrowLeftRight :size="16" :stroke-width="1.5" class="menu-icon" />
-              <span class="menu-text">Distribute Horizontally</span>
-            </button>
-            <button class="menu-item" @click="handleDistributeVertical">
-              <ArrowUpDown :size="16" :stroke-width="1.5" class="menu-icon" />
-              <span class="menu-text">Distribute Vertically</span>
-            </button>
-          </template>
-
-          <!-- Arrange Options -->
-          <div class="menu-divider" />
-          <button class="menu-item" @click="handleArrangeInRow">
-            <Rows :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Arrange in a row</span>
-          </button>
-          <button class="menu-item" @click="handleArrangeInColumn">
-            <LayoutList :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Arrange in a column</span>
-          </button>
-          <button class="menu-item" @click="handleArrangeInGrid">
-            <Grid3x3 :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Arrange in a grid</span>
-          </button>
-        </div>
       </div>
     </template>
+
+    <!-- Teleported Layout Submenu (escapes overflow clipping) -->
+    <Teleport to="body">
+      <div
+        v-if="showLayoutSubmenu && selectedCount >= 2"
+        ref="submenuRef"
+        class="submenu submenu-teleported"
+        :style="submenuStyle"
+        @mouseenter="handleLayoutSubmenuEnter"
+        @mouseleave="handleLayoutSubmenuLeave"
+      >
+        <!-- Align Options -->
+        <button class="menu-item" @click="handleAlignLeft">
+          <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Align Left</span>
+        </button>
+        <button class="menu-item" @click="handleAlignRight">
+          <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Align Right</span>
+        </button>
+        <button class="menu-item" @click="handleAlignTop">
+          <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Align Top</span>
+        </button>
+        <button class="menu-item" @click="handleAlignBottom">
+          <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Align Bottom</span>
+        </button>
+        <button class="menu-item" @click="handleAlignCenterHorizontal">
+          <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Center Horizontally</span>
+        </button>
+        <button class="menu-item" @click="handleAlignCenterVertical">
+          <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Center Vertically</span>
+        </button>
+
+        <!-- Distribute Options (3+ tasks) -->
+        <template v-if="selectedCount >= 3">
+          <div class="menu-divider" />
+          <button class="menu-item" @click="handleDistributeHorizontal">
+            <ArrowLeftRight :size="16" :stroke-width="1.5" class="menu-icon" />
+            <span class="menu-text">Distribute Horizontally</span>
+          </button>
+          <button class="menu-item" @click="handleDistributeVertical">
+            <ArrowUpDown :size="16" :stroke-width="1.5" class="menu-icon" />
+            <span class="menu-text">Distribute Vertically</span>
+          </button>
+        </template>
+
+        <!-- Arrange Options -->
+        <div class="menu-divider" />
+        <button class="menu-item" @click="handleArrangeInRow">
+          <Rows :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Arrange in a row</span>
+        </button>
+        <button class="menu-item" @click="handleArrangeInColumn">
+          <LayoutList :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Arrange in a column</span>
+        </button>
+        <button class="menu-item" @click="handleArrangeInGrid">
+          <Grid3x3 :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Arrange in a grid</span>
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import {
   PlusCircle, Group, AlignLeft as _AlignLeft, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd,
   AlignHorizontalJustifyCenter, AlignVerticalJustifyStart,
@@ -256,9 +258,43 @@ const emit = defineEmits<{
 
 const menuRef = ref<HTMLElement | null>(null)
 const submenuRef = ref<HTMLElement | null>(null)
+const submenuItemRef = ref<HTMLElement | null>(null)
 const showLayoutSubmenu = ref(false)
 const submenuTimeout = ref<number | null>(null)
 const submenuPosition = ref({ flipHorizontal: false, adjustVertical: 0 })
+
+// Computed style for teleported submenu - uses fixed positioning
+const submenuStyle = computed((): Record<string, string> => {
+  if (!submenuItemRef.value) {
+    return { display: 'none' }
+  }
+
+  const rect = submenuItemRef.value.getBoundingClientRect()
+  const viewport = { width: window.innerWidth, height: window.innerHeight }
+
+  // Default: appear to the right of the menu item
+  let left = rect.right + 4 // 4px gap
+  let top = rect.top
+
+  // Check if submenu would overflow right edge - flip to left side
+  const submenuWidth = 200 // Approximate submenu width
+  if (left + submenuWidth > viewport.width) {
+    left = rect.left - submenuWidth - 4
+  }
+
+  // Check if submenu would overflow bottom - adjust upward
+  const submenuHeight = 400 // Approximate max height
+  if (top + submenuHeight > viewport.height) {
+    top = Math.max(8, viewport.height - submenuHeight - 8)
+  }
+
+  return {
+    position: 'fixed',
+    left: `${left}px`,
+    top: `${top}px`,
+    zIndex: '9999'
+  }
+})
 
 // Use unified positioning system with reactive getters
 const { menuPosition, updatePosition } = useContextMenuPositioning({
@@ -655,6 +691,77 @@ const handleArrangeInGrid = () => {
   from {
     opacity: 0;
     transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+</style>
+
+<!-- Global styles for teleported submenu (escapes scoped styles) -->
+<style>
+.submenu-teleported {
+  /* Glass morphism - transparent with purple tint and blur */
+  background: rgba(20, 20, 40, 0.95);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  /* Stroke border - more visible */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md, 8px);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+  padding: var(--space-2, 8px) 0;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 60vh;
+  overflow-y: auto;
+  pointer-events: auto;
+  animation: teleportedSubmenuSlideIn 150ms ease-out;
+  /* Ensure backdrop-filter works */
+  isolation: isolate;
+}
+
+.submenu-teleported .menu-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #e5e5e5);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-size: var(--text-sm, 14px);
+  font-weight: var(--font-normal, 400);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  transition: background-color 0.15s ease;
+}
+
+.submenu-teleported .menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.submenu-teleported .menu-icon {
+  flex-shrink: 0;
+}
+
+.submenu-teleported .menu-text {
+  flex: 1;
+  font-weight: var(--font-normal, 400);
+}
+
+.submenu-teleported .menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: var(--space-2, 8px) 0;
+}
+
+@keyframes teleportedSubmenuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
   }
   to {
     opacity: 1;

@@ -233,6 +233,7 @@ class MarkdownExportService {
             console.log(`📦 [MarkdownExport] ZIP download triggered for ${count} tasks`)
         } catch (error) {
             console.error('📦 [MarkdownExport] ZIP generation failed:', error)
+            throw error
         } finally {
             this.isExporting.value = false
         }

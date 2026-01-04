@@ -59,3 +59,4 @@ playwright-report/data/
 # Debug images
 docs/.debug/
 .debug-images
+src-tauri/*.zip

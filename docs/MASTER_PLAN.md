@@ -793,6 +793,24 @@ Phase 3 (Mobile) ←────────────────────
 - [x] **~~TASK-089~~**: Canvas position reset comprehensive fix | **P0-CRITICAL** | ✅ FIXED (Jan 3) - Fixed race condition: lock BEFORE store update, fixed position structure in updateSectionFromSync, removed canvasStore.loadFromDatabase() from sync handler
 - [x] **~~BUG-058~~**: Non-syncable docs (notifications) causing constant sync loop | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Added filter to live sync to exclude local-only documents
 - [x] **~~BUG-059~~**: Backup system overwrites with empty data during store corruption | **P0-CRITICAL** | ✅ FIXED (Jan 2) - Golden backup, max task count tracking, suspicious backup detection, sync pre-flight validation
+
+### 🚀 TASK-093: Database Engine Migration (PouchDB → SQLite)
+**Status**: 🔄 **PHASE 1 COMPLETE** (Jan 3, 2026)
+**Goal**: Replace unstable IndexedDB adapter with PowerSync (SQLite WASM) for crash-proof local storage and 5x mobile performance.
+**Phases**:
+1. [x] **Phase 1: Plumbing & Isolation** (Jan 3)
+   - Installed `powersync` + `sqlite-wasm`
+   - Defined strict SQL Schema (Tasks/Projects)
+   - Created `SqlTaskStore` & `SqlProjectStore` replacements
+   - Implemented `migratePouchToSql` utility
+2. [ ] **Phase 2: The Swap** (In Progress)
+   - [x] Expose `window.migrate()` & UI Button
+   - [x] Fix Schema Runtime Errors
+   - [ ] Connect UI to new SQL stores
+   - [ ] Perform data verification
+3. [ ] **Phase 3: Cleanup**
+   - Delete PouchDB code & legacies
+
 - [x] **~~BUG-060~~**: Sync stability & persistence fixes | **P0-CRITICAL** | ✅ FIXED (Jan 2)
   - ✅ btoa() UTF-8 encoding fix (conflictDetector.ts)
   - ✅ Undefined task ID guards in saveTask/saveTasks

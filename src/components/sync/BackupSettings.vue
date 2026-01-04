@@ -194,6 +194,19 @@
                 <span v-else>Reset</span>
               </button>
            </div>
+
+           <!-- TASK-093: SQLite Migration -->
+           <div class="tool-card highlight">
+              <div class="tool-icon primary"><Database :size="24" /></div>
+              <div class="tool-info">
+                  <h5>Migrate to SQLite</h5>
+                  <p>Upgrade database (Phase 2)</p>
+              </div>
+               <button :disabled="isMigrating" class="action-btn primary sm" @click="runMigration">
+                <Loader v-if="isMigrating" :size="14" class="animate-spin" />
+                <span v-else>Migrate</span>
+              </button>
+           </div>
         </div>
       </div>
     </div>
@@ -325,8 +338,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBackupSystem, type BackupData, type BackupConfig } from '@/composables/useBackupSystem'
+import { useDatabase } from '@/composables/useDatabase'
 import { useTaskStore } from '@/stores/tasks'
 import { markdownExportService } from '@/services/data/MarkdownExportService'
+import { migratePouchToSql } from '@/utils/migratePouchToSql'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import {
   Shield, Clock, Calendar, Database, RefreshCw, Download, Upload,
@@ -525,6 +540,41 @@ const resetLocalData = async () => {
   }
 }
 
+const isMigrating = ref(false)
+
+const runMigration = async () => {
+  if (isMigrating.value) return
+  
+  const confirmed = confirm('🚀 READY TO MIGRATE?\n\nThis will copy all data from the old PouchDB to the new SQLite database.\n\nYour existing data is safe and will not be deleted.\n\nContinue?')
+  if (!confirmed) return
+
+  isMigrating.value = true
+  showStatus('📦 Migrating data to SQLite...', 'info')
+
+  try {
+    // Get the active PouchDB instance to avoid connection conflicts
+    const { database } = useDatabase()
+    
+    // Check if database is ready
+    if (!database.value) {
+        throw new Error('Database not initialized. Please reload.')
+    }
+
+    const result = await migratePouchToSql(database.value)
+    if (result.errors.length > 0) {
+      console.warn('Migration warnings:', result.errors)
+      showStatus(`⚠️ Migration finished with potential issues. Check console.`, 'warning')
+    } else {
+      showStatus(`✅ Migration Successful! Copied ${result.tasks} tasks and ${result.projects} projects.`, 'success')
+    }
+  } catch (error) {
+    console.error('Migration failed:', error)
+    showStatus('❌ Migration failed check console', 'error')
+  } finally {
+    isMigrating.value = false
+  }
+}
+
 
 
 
@@ -620,9 +670,14 @@ const triggerManualExport = async () => {
 }
 
 const downloadZip = async () => {
-    await markdownExportService.downloadAsZip()
-    if (markdownExportService.status.count.value > 0) {
-        showStatus(`✅ ZIP created with ${markdownExportService.status.count.value} files`, 'success')
+    try {
+        await markdownExportService.downloadAsZip()
+        if (markdownExportService.status.count.value > 0) {
+            showStatus(`✅ ZIP created with ${markdownExportService.status.count.value} files`, 'success')
+        }
+    } catch (e) {
+        console.error(e)
+        showStatus('❌ ZIP download failed', 'error')
     }
 }
 

@@ -11,6 +11,14 @@
  */
 
 import type { Task } from '@/types/tasks'
+import PowerSyncService from '@/services/database/PowerSyncDatabase'
+import { toSqlTask, fromSqlTask } from '@/utils/taskMapper'
+import type { SqlTask } from '@/services/database/SqlDatabaseTypes'
+
+// Feature Flag: Check if we should use SQLite
+const shouldUseSqlite = () => {
+  return localStorage.getItem('POWERSYNC_MIGRATION_COMPLETE') === 'true'
+}
 
 // PouchDB document interfaces
 interface TaskDocument extends PouchDB.Core.IdMeta, PouchDB.Core.GetMeta {
@@ -113,6 +121,33 @@ export const saveTask = async (
   }
 
   const docId = getTaskDocId(task.id)
+
+  // BRANCH: SQLite
+  if (shouldUseSqlite()) {
+    try {
+      const dbInstance = await PowerSyncService.getInstance()
+      const sqlTask = toSqlTask(task)
+
+      await dbInstance.execute(`
+        INSERT OR REPLACE INTO tasks (
+          id, title, status, project_id, description, 
+          total_pomodoros, estimated_pomodoros, "order", column_id,
+          created_at, updated_at, completed_at, is_deleted, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        sqlTask.id, sqlTask.title, sqlTask.status, sqlTask.project_id, sqlTask.description,
+        sqlTask.total_pomodoros, sqlTask.estimated_pomodoros, sqlTask.order, sqlTask.column_id,
+        sqlTask.created_at, sqlTask.updated_at, sqlTask.completed_at, sqlTask.is_deleted, sqlTask.deleted_at
+      ])
+
+      // Mock PouchDB response
+      return { ok: true, id: docId, rev: '1-sqlite' }
+    } catch (err) {
+      console.error('❌ [SQL-ADAPTER] Save failed:', err)
+      throw err
+    }
+  }
+
   let retryCount = 0
 
   while (retryCount < maxRetries) {
@@ -199,6 +234,35 @@ export const saveTasks = async (
 
   // Final results array, initialized with errors (placeholder)
   const finalResults: (PouchDB.Core.Response | PouchDB.Core.Error)[] = new Array(validTasks.length).fill({ error: true, message: 'Unprocessed' } as any)
+
+  // BRANCH: SQLite
+  if (shouldUseSqlite()) {
+    try {
+      const dbInstance = await PowerSyncService.getInstance()
+      await dbInstance.writeTransaction(async (tx) => {
+        for (const task of validTasks) {
+          const sqlTask = toSqlTask(task)
+          await tx.execute(`
+              INSERT OR REPLACE INTO tasks (
+                id, title, status, project_id, description, 
+                total_pomodoros, estimated_pomodoros, "order", column_id,
+                created_at, updated_at, completed_at, is_deleted, deleted_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+            sqlTask.id, sqlTask.title, sqlTask.status, sqlTask.project_id, sqlTask.description,
+            sqlTask.total_pomodoros, sqlTask.estimated_pomodoros, sqlTask.order, sqlTask.column_id,
+            sqlTask.created_at, sqlTask.updated_at, sqlTask.completed_at, sqlTask.is_deleted, sqlTask.deleted_at
+          ])
+        }
+      })
+
+      // Success for all
+      return validTasks.map(t => ({ ok: true, id: t.id, rev: '1-sqlite' }))
+    } catch (err: any) {
+      console.error('❌ [SQL-ADAPTER] Bulk save failed:', err)
+      return validTasks.map(t => ({ error: true, name: 'SqlError', message: err.message, status: 500 }))
+    }
+  }
 
   // Map taskId to its index in validTasks for result placement
   const idToIndex = new Map<string, number>()
@@ -311,6 +375,23 @@ export const deleteTask = async (
   hardDelete: boolean = false
 ): Promise<PouchDB.Core.Response | null> => {
   const docId = getTaskDocId(taskId)
+
+  // BRANCH: SQLite
+  if (shouldUseSqlite()) {
+    try {
+      const dbInstance = await PowerSyncService.getInstance()
+      if (hardDelete) {
+        await dbInstance.execute('DELETE FROM tasks WHERE id = ?', [taskId])
+      } else {
+        await dbInstance.execute('UPDATE tasks SET is_deleted = 1, deleted_at = ? WHERE id = ?', [new Date().toISOString(), taskId])
+      }
+      return { ok: true, id: docId, rev: '1-sqlite' }
+    } catch (err) {
+      console.error('❌ [SQL-ADAPTER] Delete failed:', err)
+      return null
+    }
+  }
+
   let retryCount = 0
 
   while (retryCount < maxRetries) {
@@ -361,6 +442,22 @@ export const deleteTask = async (
 export const loadAllTasks = async (db: PouchDB.Database, includeDeleted = false): Promise<Task[]> => {
   let retryCount = 0
   const maxRetries = 3
+
+  // BRANCH: SQLite
+  if (shouldUseSqlite()) {
+    try {
+      const dbInstance = await PowerSyncService.getInstance()
+      const sqlQuery = includeDeleted
+        ? 'SELECT * FROM tasks'
+        : 'SELECT * FROM tasks WHERE is_deleted = 0'
+      const sqlTasks = await dbInstance.getAll<SqlTask>(sqlQuery)
+      return sqlTasks.map(fromSqlTask)
+    } catch (err) {
+      console.error('❌ [SQL-ADAPTER] Load failed:', err)
+      // Fallback to empty or throw? Throwing is safer to prevent data loss perception
+      throw err
+    }
+  }
 
   while (retryCount < maxRetries) {
     try {
@@ -634,6 +731,9 @@ export const syncDeletedTasks = async (
   db: PouchDB.Database,
   currentTaskIds: Set<string>
 ): Promise<number> => {
+  // Branch: SQLite doesn't need this complex logic (handled via WHERE is_deleted=0)
+  if (shouldUseSqlite()) return 0;
+
   const result = await db.allDocs({
     include_docs: true,
     startkey: TASK_DOC_PREFIX,

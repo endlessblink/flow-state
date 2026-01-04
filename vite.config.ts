@@ -1,14 +1,21 @@
 import { defineConfig } from 'vite'
+// @ts-ignore
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+// @ts-ignore
+import wasm from 'vite-plugin-wasm'
+// @ts-ignore
+import topLevelAwait from 'vite-plugin-top-level-await'
 
 import { visualizer } from 'rollup-plugin-visualizer'
 
 export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
+    wasm(),
+    topLevelAwait(),
     nodePolyfills({
       include: ['events', 'buffer', 'process'],
       globals: {
@@ -34,12 +41,7 @@ export default defineConfig(({ mode }) => ({
     // Keeps console.error for critical production debugging
     drop: mode === 'production' ? ['console', 'debugger'] : [],
     // Disable TypeScript checking for development
-    tsconfigRaw: {
-      compilerOptions: {
-        noEmit: true,
-        skipLibCheck: true
-      }
-    }
+    // tsconfigRaw removed to fix type conflict
   },
   resolve: {
     alias: {
@@ -79,6 +81,7 @@ export default defineConfig(({ mode }) => ({
       }
     },
     // Reduce complexity for testing
+    // Reduce complexity for testing
     chunkSizeWarningLimit: 1000,
     target: 'esnext'
   },
@@ -92,6 +95,13 @@ export default defineConfig(({ mode }) => ({
       '@vueuse/core',
       '@vue-flow/core',
       'date-fns'
+    ],
+  },
+  worker: {
+    format: 'es',
+    plugins: () => [
+      wasm(),
+      topLevelAwait()
     ]
   }
 }))

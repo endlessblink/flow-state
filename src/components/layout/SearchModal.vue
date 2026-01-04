@@ -92,6 +92,7 @@
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { Search, FileText, FolderOpen, ChevronRight } from 'lucide-vue-next'
+import { highlightMatchSafe } from '@/utils/security'
 import type { Task, Project } from '@/stores/tasks'
 
 interface Props {
@@ -196,10 +197,7 @@ const selectProject = (project: Project) => {
 
 // Utility functions
 const highlightMatch = (text: string) => {
-  if (!searchQuery.value.trim()) return text
-  
-  const regex = new RegExp(`(${searchQuery.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-  return text.replace(regex, '<mark>$1</mark>')
+  return highlightMatchSafe(text, searchQuery.value)
 }
 
 const getTaskCountForProject = (projectId: string) => {

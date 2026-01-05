@@ -447,7 +447,7 @@ export const useNotificationStore = defineStore('notifications', () => {
           task.id,
           task.title,
           task.dueDate,
-          undefined, // TODO: Add time field to tasks
+          task.dueTime,
           task.notificationPreferences as unknown as NotificationPreferences
         )
       }

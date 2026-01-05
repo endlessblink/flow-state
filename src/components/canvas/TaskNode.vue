@@ -134,6 +134,7 @@ import { Calendar, Timer, Zap, Clock, Check } from 'lucide-vue-next'
 import { marked } from 'marked'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
+import { processMarkdownCheckboxes } from '@/utils/security'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTimerStore } from '@/stores/timer'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
@@ -233,15 +234,8 @@ const parsedDescription = computed(() => {
   // Parse markdown to HTML
   const html = marked.parse(props.task.description) as string
 
-  // Add data attributes to checkboxes for interactivity
-  // Replace checkbox inputs with clickable versions
-  return html.replace(
-    /<input type="checkbox"([^>]*)>/g,
-    (_match, attrs) => {
-      const isChecked = attrs.includes('checked')
-      return `<input type="checkbox" class="md-checkbox" ${isChecked ? 'checked' : ''}>`
-    }
-  )
+  // Sanitize and process checkboxes
+  return processMarkdownCheckboxes(html)
 })
 
 // Handle checkbox clicks in markdown description

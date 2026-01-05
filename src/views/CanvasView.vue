@@ -1346,21 +1346,6 @@ const nodeTypes = markRaw({
 const { width, height } = useWindowSize()
 const { ctrl: _ctrl, shift: _shift } = useMagicKeys()
 
-// 🎯 Automatic canvas position generation for tasks without positions
-const _generateCanvasPosition = (taskIndex: number): { x: number; y: number } => {
-  const gridSize = 200
-  const padding = 100
-  const cols = Math.floor((width.value - padding * 2) / gridSize)
-
-  const row = Math.floor(taskIndex / cols)
-  const col = taskIndex % cols
-
-  return {
-    x: padding + col * gridSize + Math.random() * 50, // Add small random variation
-    y: padding + row * gridSize + Math.random() * 50
-  }
-}
-
 // 🚀 CPU Optimization: Efficient Node Update Batching System
 // Extracted to src/utils/canvas/NodeUpdateBatcher.ts
 // MOVED: nodeUpdateBatcher initialization moved to after vueFlowRef declaration

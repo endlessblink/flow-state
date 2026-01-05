@@ -104,25 +104,10 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
 
     // --- Helper Logic ---
 
-    const generateCanvasPosition = (taskIndex: number): { x: number; y: number } => {
-        const gridSize = 200
-        const padding = 100
-        const cols = Math.floor((width.value - padding * 2) / gridSize) || 1
-
-        const row = Math.floor(taskIndex / cols)
-        const col = taskIndex % cols
-
-        return {
-            x: padding + col * gridSize + Math.random() * 50,
-            y: padding + row * gridSize + Math.random() * 50
-        }
-    }
-
     return {
         tasksWithCanvasPosition,
         hasNoTasks,
         hasInboxTasks,
-        dynamicNodeExtent,
-        generateCanvasPosition
+        dynamicNodeExtent
     }
 }

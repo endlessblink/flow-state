@@ -63,7 +63,7 @@ function convertTaskDoc(doc: any): SqlTask | null {
 
     // Check multiple possible title fields (PouchDB schemas vary)
     const title = data.title || data.content || data.name || data.text || data.label || data.summary ||
-                  doc.title || doc.content || doc.name;
+        doc.title || doc.content || doc.name;
 
     // For task-* documents: be lenient - they're obviously tasks even if corrupted
     const isTaskId = doc._id?.startsWith('task-');
@@ -91,8 +91,8 @@ function convertTaskDoc(doc: any): SqlTask | null {
     // For non-task-* documents: require task-like properties to avoid importing debug docs
     const isExplicitTask = doc.type === 'task' || isTaskId;
     const hasTaskProperties = doc.status || doc.projectId || doc.completedPomodoros !== undefined ||
-                               doc.estimatedPomodoros !== undefined || doc.dueDate || doc.instances ||
-                               doc.canvasPosition || doc.isInInbox !== undefined;
+        doc.estimatedPomodoros !== undefined || doc.dueDate || doc.instances ||
+        doc.canvasPosition || doc.isInInbox !== undefined;
 
     if (!isExplicitTask && !hasTaskProperties) {
         console.log(`[MIGRATION] Skipping non-task doc: ${doc._id} (has title but no task properties)`);
@@ -592,7 +592,7 @@ export async function migratePouchToSql(existingPouch?: PouchDB.Database): Promi
 
             // SKIP DELETED DOCUMENTS - they should stay deleted!
             const data = doc.data || doc;
-            if (data.deleted || data.isDeleted || data.is_deleted || doc._deleted) {
+            if (data.deleted || data.isDeleted || data.is_deleted || data._soft_deleted || doc._deleted) {
                 console.log(`[MIGRATION] Skipping deleted doc: ${doc._id}`);
                 continue;
             }

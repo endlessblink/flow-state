@@ -8,9 +8,9 @@
  * Migration Phase: Complete Schema (Phase 2)
  */
 
-import type { Task, Subtask, TaskInstance, TaskRecurrence, RecurringTaskInstance, NotificationPreferences } from '@/types/tasks'
-import type { SqlTask } from '@/services/database/SqlDatabaseTypes'
-import { parseJsonColumn, stringifyForSql, sqlBoolToJs, jsBoolToSql } from '@/services/database/SqlDatabaseTypes'
+import type { Task, Subtask, TaskInstance, TaskRecurrence, RecurringTaskInstance, NotificationPreferences } from '../types/tasks'
+import type { SqlTask } from '../services/database/SqlDatabaseTypes'
+import { parseJsonColumn, stringifyForSql, sqlBoolToJs, jsBoolToSql } from '../services/database/SqlDatabaseTypes'
 
 /**
  * Convert Task (app model) to SqlTask (database model)
@@ -25,32 +25,32 @@ export function toSqlTask(task: Task): SqlTask {
         title: task.title,
         description: task.description || '',
         status: task.status,
-        priority: task.priority || null,
+        priority: task.priority ?? undefined,
 
         // Project & Hierarchy
         project_id: task.projectId || 'uncategorized',
-        parent_task_id: task.parentTaskId || null,
+        parent_task_id: task.parentTaskId || undefined,
 
         // Pomodoro Tracking
-        total_pomodoros: task.completedPomodoros || 0,
-        estimated_pomodoros: task.estimatedPomodoros || 1,
-        progress: task.progress || 0,
+        total_pomodoros: task.completedPomodoros ?? 0,
+        estimated_pomodoros: task.estimatedPomodoros ?? 1,
+        progress: task.progress ?? 0,
 
         // Scheduling & Calendar
-        due_date: task.dueDate || null,
-        scheduled_date: task.scheduledDate || null,
-        scheduled_time: task.scheduledTime || null,
-        estimated_duration: task.estimatedDuration || null,
+        due_date: task.dueDate || undefined,
+        scheduled_date: task.scheduledDate || undefined,
+        scheduled_time: task.scheduledTime || undefined,
+        estimated_duration: task.estimatedDuration ?? undefined,
 
         // Complex Fields (JSON serialized)
-        instances_json: stringifyForSql(task.instances),
-        subtasks_json: stringifyForSql(task.subtasks),
-        depends_on_json: stringifyForSql(task.dependsOn),
-        tags_json: stringifyForSql(task.tags),
-        connection_types_json: stringifyForSql(task.connectionTypes),
-        recurrence_json: stringifyForSql(task.recurrence),
-        recurring_instances_json: stringifyForSql(task.recurringInstances),
-        notification_prefs_json: stringifyForSql(task.notificationPreferences),
+        instances_json: stringifyForSql(task.instances) || undefined,
+        subtasks_json: stringifyForSql(task.subtasks) || undefined,
+        depends_on_json: stringifyForSql(task.dependsOn) || undefined,
+        tags_json: stringifyForSql(task.tags) || undefined,
+        connection_types_json: stringifyForSql(task.connectionTypes) || undefined,
+        recurrence_json: stringifyForSql(task.recurrence) || undefined,
+        recurring_instances_json: stringifyForSql(task.recurringInstances) || undefined,
+        notification_prefs_json: stringifyForSql(task.notificationPreferences) || undefined,
 
         // Canvas & Spatial
         canvas_position_x: (task.canvasPosition?.x != null && !Number.isNaN(task.canvasPosition.x)) ? task.canvasPosition.x : undefined,
@@ -58,8 +58,8 @@ export function toSqlTask(task: Task): SqlTask {
         is_in_inbox: jsBoolToSql(task.isInInbox),
 
         // Kanban Workflow
-        order: task.order || 0,
-        column_id: task.columnId || null,
+        order: task.order ?? 0,
+        column_id: task.columnId ?? undefined,
 
         // Timestamps
         created_at: task.createdAt instanceof Date
@@ -68,13 +68,13 @@ export function toSqlTask(task: Task): SqlTask {
         updated_at: now, // Always freshen on save
         completed_at: task.completedAt
             ? (task.completedAt instanceof Date ? task.completedAt.toISOString() : task.completedAt as string)
-            : null,
+            : undefined,
 
         // Soft Delete Support
         is_deleted: jsBoolToSql(task._soft_deleted),
         deleted_at: task.deletedAt
             ? (task.deletedAt instanceof Date ? task.deletedAt.toISOString() : task.deletedAt as string)
-            : null
+            : undefined
     };
 }
 
@@ -114,22 +114,22 @@ export function fromSqlTask(sqlTask: SqlTask): Task {
         title: sqlTask.title,
         description: sqlTask.description || '',
         status: sqlTask.status as Task['status'],
-        priority: (sqlTask.priority as Task['priority']) || null,
+        priority: (sqlTask.priority as Task['priority']) ?? null,
 
         // Project & Hierarchy
-        projectId: sqlTask.project_id || 'uncategorized',
-        parentTaskId: sqlTask.parent_task_id || null,
+        projectId: sqlTask.project_id ?? 'uncategorized',
+        parentTaskId: sqlTask.parent_task_id ?? null,
 
         // Pomodoro Tracking
-        completedPomodoros: sqlTask.total_pomodoros || 0,
-        estimatedPomodoros: sqlTask.estimated_pomodoros || 1,
-        progress: sqlTask.progress || 0,
+        completedPomodoros: sqlTask.total_pomodoros ?? 0,
+        estimatedPomodoros: sqlTask.estimated_pomodoros ?? 1,
+        progress: sqlTask.progress ?? 0,
 
         // Scheduling & Calendar
-        dueDate: sqlTask.due_date || '',
-        scheduledDate: sqlTask.scheduled_date || undefined,
-        scheduledTime: sqlTask.scheduled_time || undefined,
-        estimatedDuration: sqlTask.estimated_duration || undefined,
+        dueDate: sqlTask.due_date ?? '',
+        scheduledDate: sqlTask.scheduled_date ?? undefined,
+        scheduledTime: sqlTask.scheduled_time ?? undefined,
+        estimatedDuration: sqlTask.estimated_duration ?? undefined,
 
         // Complex Fields (parsed from JSON)
         instances: instances,
@@ -146,8 +146,8 @@ export function fromSqlTask(sqlTask: SqlTask): Task {
         isInInbox: sqlBoolToJs(sqlTask.is_in_inbox),
 
         // Kanban Workflow
-        order: sqlTask.order || 0,
-        columnId: sqlTask.column_id || undefined,
+        order: sqlTask.order ?? 0,
+        columnId: sqlTask.column_id ?? undefined,
 
         // Timestamps
         createdAt: new Date(sqlTask.created_at),

@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { join, dirname, resolve } from 'path'
-import { fileURLToPath } from 'url'
 
 // Get project root directory
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-const projectRoot = join(__dirname, '../..')
+const projectRoot = process.cwd()
 const srcDir = join(projectRoot, 'src')
 
 interface DependencyNode {
@@ -221,7 +218,7 @@ class DependencyAnalyzer {
     const visited = new Set<string>()
     const path: string[] = []
 
-    const dfs = (current: string): boolean => {
+    const dfs = (current: string): string[] | null => {
       if (path.includes(current)) {
         const cycleStart = path.indexOf(current)
         return path.slice(cycleStart)
@@ -377,7 +374,7 @@ describe('Circular Dependency Detection', () => {
               const importedName = importStatement.match(/import\s+\{([^}]+)\}/)?.[1]?.trim()
               if (importedName) {
                 const isUsed = content.includes(importedName) &&
-                             !content.includes(`import { ${importedName} }`) // Avoid false positive
+                  !content.includes(`import { ${importedName} }`) // Avoid false positive
                 if (!isUsed && importedName !== 'type') {
                   antiPatterns.push(`${relativePath}: Potentially unused import '${importedName}' from ${importPath}`)
                 }

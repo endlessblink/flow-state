@@ -8,9 +8,9 @@
  * Migration Phase: Complete Schema (Phase 2)
  */
 
-import type { Project } from '@/types/tasks'
-import type { SqlProject } from '@/services/database/SqlDatabaseTypes'
-import { jsBoolToSql, sqlBoolToJs } from '@/services/database/SqlDatabaseTypes'
+import type { Project } from '../types/tasks'
+import type { SqlProject } from '../services/database/SqlDatabaseTypes'
+import { jsBoolToSql, sqlBoolToJs } from '../services/database/SqlDatabaseTypes'
 
 /**
  * Convert Project (app model) to SqlProject (database model)
@@ -19,24 +19,24 @@ export function toSqlProject(project: Project): SqlProject {
     const now = new Date().toISOString();
 
     // Determine color type and extract primary color
-    const isEmoji = project.colorType === 'emoji' || (project.emoji && !project.color?.startsWith('#'));
     const primaryColor = Array.isArray(project.color) ? project.color[0] : project.color;
+    const isEmoji = project.colorType === 'emoji' || (project.emoji && !primaryColor?.startsWith('#'));
 
     return {
         id: project.id,
 
         // Core Identity
         name: project.name,
-        description: (project as any).description || null, // May not exist on old projects
+        description: (project as any).description || undefined, // May not exist on old projects
 
         // Appearance
         color: primaryColor,
         color_type: project.colorType || (isEmoji ? 'emoji' : 'hex'),
-        icon: project.emoji || null,
-        emoji: project.emoji || null,
+        icon: project.emoji || undefined,
+        emoji: project.emoji || undefined,
 
         // Hierarchy
-        parent_id: project.parentId || null,
+        parent_id: project.parentId || undefined,
 
         // View Configuration
         view_type: project.viewType || 'status',
@@ -56,7 +56,7 @@ export function toSqlProject(project: Project): SqlProject {
             ? ((project as any).deletedAt instanceof Date
                 ? (project as any).deletedAt.toISOString()
                 : (project as any).deletedAt)
-            : null
+            : undefined
     };
 }
 

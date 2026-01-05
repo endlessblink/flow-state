@@ -36,9 +36,11 @@ export const EMOJI_SVG_MAP: Record<string, EmojiSvgData> = {
   },
   '💼': {
     path: 'M6 2H14C15.1 2 16 2.9 16 4V16C16 17.1 15.1 18 14 18H6C4.9 18 4 17.1 4 16V4C4 2.9 4.9 2 6 2zM6 4V16H14V4H6zM8 6H12V8H8V6zM8 10H12V12H8V10z',
+    colorfulSvg: '<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="briefcaseBody" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#4B5563;stop-opacity:1" /><stop offset="100%" style="stop-color:#1F2937;stop-opacity:1" /></linearGradient><linearGradient id="briefcaseHandle" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#9CA3AF;stop-opacity:1" /><stop offset="100%" style="stop-color:#4B5563;stop-opacity:1" /></linearGradient><linearGradient id="briefcaseClasp" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#FDE047;stop-opacity:1" /><stop offset="100%" style="stop-color:#CA8A04;stop-opacity:1" /></linearGradient></defs><rect x="4" y="6" width="12" height="10" rx="1.5" fill="url(#briefcaseBody)" stroke="#111827" stroke-width="0.5"/><path d="M7 6V4.5C7 3.67 7.67 3 8.5 3h3c0.83 0 1.5 0.67 1.5 1.5V6" fill="none" stroke="url(#briefcaseHandle)" stroke-width="0.7"/><rect x="9" y="8" width="2" height="1.5" rx="0.3" fill="url(#briefcaseClasp)" stroke="#854D0E" stroke-width="0.2"/><path d="M4 10h12" fill="none" stroke="#111827" stroke-width="0.3" opacity="0.5"/></svg>',
     viewBox: '0 0 20 20',
     width: 20,
-    height: 20
+    height: 20,
+    isColorful: true
   },
   '🚀': {
     path: 'M10 2L8 8h4L10 2zm0 6C7.24 8 5 10.24 5 13s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z',
@@ -71,6 +73,22 @@ export const EMOJI_SVG_MAP: Record<string, EmojiSvgData> = {
     width: 14,
     height: 14,
     fill: 'currentColor',
+    isColorful: true
+  },
+  '📚': {
+    path: 'M4 6H2V20H18V18H4V6ZM20 2H7C5.9 2 5 2.9 5 4V14C5 15.1 5.9 16 7 16H20C21.1 16 22 15.1 22 14V4C22 2.9 21.1 2 20 2ZM20 14H7V4H20V14Z',
+    colorfulSvg: '<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="book1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" /><stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" /></linearGradient><linearGradient id="book2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#10B981;stop-opacity:1" /><stop offset="100%" style="stop-color:#065F46;stop-opacity:1" /></linearGradient><linearGradient id="book3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" /><stop offset="100%" style="stop-color:#B45309;stop-opacity:1" /></linearGradient></defs><rect x="3" y="6" width="12" height="12" rx="1" fill="url(#book1)" stroke="#1E3A8A" stroke-width="0.5"/><rect x="5" y="4" width="12" height="12" rx="1" fill="url(#book2)" stroke="#064E3B" stroke-width="0.5"/><rect x="7" y="2" width="12" height="12" rx="1" fill="url(#book3)" stroke="#78350F" stroke-width="0.5"/><rect x="9" y="3" width="1" height="10" fill="rgba(255,255,255,0.2)"/></svg>',
+    viewBox: '0 0 20 20',
+    width: 20,
+    height: 20,
+    isColorful: true
+  },
+  '💡': {
+    path: 'M9 21C9 21.55 9.45 22 10 22H14C14.55 22 15 21.55 15 21V20H9V21ZM12 2C8.14 2 5 5.14 5 9C5 11.38 6.19 13.47 8 14.74V17C8 17.55 8.45 18 9 18H15C15.55 18 16 17.55 16 17V14.74C17.81 13.47 19 11.38 19 9C19 5.14 15.86 2 12 2Z',
+    colorfulSvg: '<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bulbGlow"><stop offset="0%" style="stop-color:#FDE047;stop-opacity:1" /><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:1" /></radialGradient><linearGradient id="bulbBase" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#9CA3AF;stop-opacity:1" /><stop offset="100%" style="stop-color:#4B5563;stop-opacity:1" /></linearGradient></defs><path d="M10 2a6 6 0 00-6 6c0 2.5 1.5 4.5 3.5 5.5V16h5v-2.5c2-1 3.5-3 3.5-5.5a6 6 0 00-6-6z" fill="url(#bulbGlow)" stroke="#D97706" stroke-width="0.5"/><rect x="8.5" y="16.5" width="3" height="1" rx="0.2" fill="url(#bulbBase)" stroke="#374151" stroke-width="0.3"/><rect x="8" y="17.5" width="4" height="1" rx="0.2" fill="url(#bulbBase)" stroke="#374151" stroke-width="0.3"/><path d="M10 4v2m4 1.5l1.5-1.5m-11 0L6 7.5" stroke="#FFF" stroke-width="0.8" stroke-linecap="round" opacity="0.6"/></svg>',
+    viewBox: '0 0 20 20',
+    width: 20,
+    height: 20,
     isColorful: true
   },
 }

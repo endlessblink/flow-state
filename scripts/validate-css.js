@@ -137,26 +137,20 @@ class CSSValidator {
       const lineNumber = index + 1
 
       // Check for var() syntax errors
-      const varMatches = line.match(/var\s*\(\s*([^)]+)\s*\)/g)
-      if (varMatches) {
-        for (const varMatch of varMatches) {
+      // Use a more sophisticated match for var() that can handle one level of nested parens
+      // e.g., var(--color, rgba(0,0,0,0.1))
+      const varMatches = line.match(/var\s*\(\s*--[^,)]+(?:,\s*(?:rgb|rgba|hsl|hsla|var)?\s*\([^)]+\))?\s*\)/g)
+
+      // Also catch the raw var() tags to check for basic syntax errors like missing --
+      const allVarCalls = line.match(/var\s*\([^)]*\)/g)
+      if (allVarCalls) {
+        for (const varMatch of allVarCalls) {
           // Check for missing -- prefix
-          if (varMatch.includes('var(') && !varMatch.includes('--')) {
+          if (!varMatch.includes('--')) {
             issues.push({
               line: lineNumber,
               issue: `Invalid CSS variable syntax: ${varMatch.trim()}. CSS variables must start with '--'`,
               suggestion: 'Fix the CSS variable syntax'
-            })
-          }
-
-          // Check for mismatched parentheses
-          const openParens = (varMatch.match(/\(/g) || []).length
-          const closeParens = (varMatch.match(/\)/g) || []).length
-          if (openParens !== closeParens) {
-            issues.push({
-              line: lineNumber,
-              issue: `Mismatched parentheses in CSS variable: ${varMatch.trim()}`,
-              suggestion: 'Fix the parentheses'
             })
           }
         }

@@ -251,9 +251,7 @@ export const deleteTask = async (
   maxRetries: number = 3,
   hardDelete: boolean = false
 ): Promise<PouchDB.Core.Response | null> => {
-  const docId = getTaskDocId(taskId)
-
-  // BRANCH: SQLite
+  // SQLite branch handles the deletion
   if (shouldUseSqlite()) {
     try {
       const dbInstance = await PowerSyncService.getInstance()
@@ -266,10 +264,35 @@ export const deleteTask = async (
     } catch (err) {
       console.error('❌ [SQL-ADAPTER] Delete failed:', err)
     }
+    return { ok: true, id: taskId, rev: '1-sqlite' }
   }
 
-  // SQLite branch handles the deletion
-  return { ok: true, id: taskId, rev: '1-sqlite' }
+  if (!db) {
+    console.warn('⚠️ [TASK-STORAGE] deleteTask called without PouchDB instance and SQLite disabled.')
+    return { ok: true, id: taskId, rev: '1-no-op' }
+  }
+
+  const docId = getTaskDocId(taskId)
+  try {
+    const doc = await db.get(docId)
+    if (hardDelete) {
+      return await db.remove(doc)
+    } else {
+      const taskData = (doc as any).data || {}
+      return await db.put({
+        ...doc,
+        data: {
+          ...taskData,
+          _soft_deleted: true,
+          deletedAt: new Date().toISOString()
+        }
+      })
+    }
+  } catch (error) {
+    const pouchError = error as { status?: number }
+    if (pouchError.status === 404) return { ok: true, id: taskId, rev: '404' }
+    throw error
+  }
 }
 
 /**
@@ -430,7 +453,31 @@ export const deleteTasks = async (
 ): Promise<void> => {
   if (!taskIds.length) return
 
-  // 1. Fetch current revisions
+  // BRANCH: SQLite
+  if (shouldUseSqlite()) {
+    try {
+      const dbInstance = await PowerSyncService.getInstance()
+      await dbInstance.writeTransaction(async (tx) => {
+        for (const id of taskIds) {
+          if (hardDelete) {
+            await tx.execute('DELETE FROM tasks WHERE id = ?', [id])
+          } else {
+            await tx.execute('UPDATE tasks SET is_deleted = 1, deleted_at = ? WHERE id = ?', [new Date().toISOString(), id])
+          }
+        }
+      })
+      console.log(`[SQL-ADAPTER] Bulk deleted ${taskIds.length} tasks from SQLite`)
+    } catch (err) {
+      console.error('❌ [SQL-ADAPTER] Bulk delete failed:', err)
+    }
+  }
+
+  // 1. Fetch current revisions (PouchDB branch)
+  if (!db) {
+    console.warn('⚠️ [TASK-STORAGE] Bulk delete: PouchDB instance missing, skipping PouchDB branch.')
+    return
+  }
+
   const keys = taskIds.map(id => id.startsWith(TASK_DOC_PREFIX) ? id : `task-${id}`)
 
   try {

@@ -5,10 +5,17 @@
 import { ref, computed, nextTick } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
-import { useTaskStore } from '@/stores/tasks'
-import type { Task } from '@/stores/tasks'
-import { useCanvasStore, type CanvasGroup } from '@/stores/canvas'
-import { guardTaskCreation } from '@/utils/demoContentGuard'
+import { useTaskStore } from '../stores/tasks'
+import type { Task } from '../stores/tasks'
+import { useCanvasStore } from '../stores/canvas'
+import type { CanvasGroup } from '../stores/canvas/types'
+import { guardTaskCreation } from '../utils/demoContentGuard'
+
+declare global {
+  interface Window {
+    __pomoFlowUndoSystem?: any
+  }
+}
 
 // Combined state interface for tracking both tasks and groups
 interface UnifiedUndoState {
@@ -127,6 +134,8 @@ const performUndo = async () => {
   if (previousState && typeof previousState === 'object' && 'tasks' in previousState) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
+    const { useCanvasUiStore } = await import('../stores/canvas/canvasUi')
+    const canvasUiStore = useCanvasUiStore()
 
     console.log('🔄 [UNDO] Restoring:', previousState.tasks.length, 'tasks,', previousState.groups.length, 'groups')
 
@@ -136,12 +145,12 @@ const performUndo = async () => {
 
     // BUG-008 FIX: Restore groups FIRST (synchronous, no DB dependency)
     // This ensures groups are restored immediately even if task DB save hangs
-    canvasStore.restoreGroups(previousState.groups)
+    canvasStore.groups = [...previousState.groups]
     console.log('🔄 [UNDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
     // Request canvas sync IMMEDIATELY after group restore
     try {
-      canvasStore.requestSync()
+      canvasUiStore.requestSync()
       console.log('🔄 [UNDO] Requested canvas sync after group restore')
     } catch (error) {
       console.warn('⚠️ [UNDO] Could not request canvas sync:', error)
@@ -151,7 +160,7 @@ const performUndo = async () => {
     // Don't await - let it run in background to avoid blocking UI
     taskStore.restoreState(previousState.tasks).then(() => {
       console.log('🔄 [UNDO] Task store restore completed. Tasks:', taskStore.tasks.length)
-    }).catch((err) => {
+    }).catch((err: any) => {
       console.error('❌ [UNDO] Task store restore failed:', err)
     })
 
@@ -173,16 +182,18 @@ const performRedo = async () => {
   if (nextState && typeof nextState === 'object' && 'tasks' in nextState) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
+    const { useCanvasUiStore } = await import('../stores/canvas/canvasUi')
+    const canvasUiStore = useCanvasUiStore()
 
     console.log('🔄 [REDO] Restoring:', nextState.tasks.length, 'tasks,', nextState.groups.length, 'groups')
 
     // BUG-008 FIX: Restore groups FIRST (synchronous, no DB dependency)
-    canvasStore.restoreGroups(nextState.groups)
+    canvasStore.groups = [...nextState.groups]
     console.log('🔄 [REDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
     // Request canvas sync IMMEDIATELY after group restore
     try {
-      canvasStore.requestSync()
+      canvasUiStore.requestSync()
       console.log('🔄 [REDO] Requested canvas sync after group restore')
     } catch (error) {
       console.warn('⚠️ [REDO] Could not request canvas sync:', error)
@@ -192,7 +203,7 @@ const performRedo = async () => {
     // Don't await - let it run in background to avoid blocking UI
     taskStore.restoreState(nextState.tasks).then(() => {
       console.log('🔄 [REDO] Task store restore completed. Tasks:', taskStore.tasks.length)
-    }).catch((err) => {
+    }).catch((err: any) => {
       console.error('❌ [REDO] Task store restore failed:', err)
     })
 
@@ -329,7 +340,7 @@ const createGroupWithUndo = async (groupData: Omit<CanvasGroup, 'id'>) => {
 
   try {
     // Perform the creation
-    const newGroup = canvasStore.createGroup(groupData)
+    const newGroup = await canvasStore.createGroup(groupData)
     console.log(`✅ Group created: ${newGroup.name}`)
 
     // Save state after operation
@@ -360,7 +371,7 @@ const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup
 
   try {
     // Perform the update
-    canvasStore.updateGroup(groupId, updates)
+    await canvasStore.updateGroup(groupId, updates)
     console.log(`✅ Group updated: ${groupId}`)
 
     // Save state after operation
@@ -390,7 +401,7 @@ const deleteGroupWithUndo = async (groupId: string) => {
 
   try {
     // Perform the deletion
-    canvasStore.deleteGroup(groupId)
+    await canvasStore.deleteGroup(groupId)
     console.log(`✅ Group deleted. Current groups count: ${canvasStore.groups.length}`)
 
     // Save state after operation

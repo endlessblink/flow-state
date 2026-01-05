@@ -98,8 +98,9 @@
 - KDE Taskbar Progress (D-Bus).
 - Fokus-style Break Splash Screen.
 
-### TASK-095: Complete TypeScript & Lint Cleaning (📋 TODO)
-- Address remaining TS/Lint errors system-wide.
+### TASK-095: Complete TypeScript & Lint Cleaning (🔄 IN PROGRESS)
+- [x] Stabilize merged PRs (17 PRs merged & verified).
+- [ ] Address remaining TS/Lint errors system-wide.
 
 ### TASK-096: System Refactor Analysis (📋 TODO)
 - Analyze codebase for refactoring opportunities.

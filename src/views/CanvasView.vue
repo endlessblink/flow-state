@@ -771,9 +771,25 @@ const {
   isResizeSettling,
   resourceManager,
   validateStores,
-  setOperationLoading,
   setOperationError,
   clearOperationError
+})
+
+// TASK-082 & REACTIVITY FIX: Watch filteredTasks to trigger sync
+// extensive debugging revealed this was missing/lost in merge, causing stale canvas
+watch(filteredTasks, () => {
+  if (!isAnyCanvasStateLocked()) {
+    batchedSyncNodes('high')
+    batchedSyncEdges('high')
+  }
+}, { deep: true, immediate: true })
+
+// WATCHER: Also watch edges for external changes (optional safety)
+watch(edges, (newEdges) => {
+  if (newEdges.length === 0 && filteredTasks.value.length > 0 && !isSyncing.value) {
+    // Edge case recovery
+    batchedSyncEdges('normal')
+  }
 })
 
 

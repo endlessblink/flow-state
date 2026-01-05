@@ -33,9 +33,6 @@ let clear: (() => void) | null = null
  * Initialize the single refHistory instance
  */
 function initializeRefHistory() {
-  // BUG-008 DEBUG: Log immediately on function entry
-  console.log('🔄 [UNDO-INIT] initializeRefHistory() ENTERED, refHistoryInstance exists?', !!refHistoryInstance)
-
   if (refHistoryInstance) {
     console.log('🔄 [UNDO-INIT] Early return - refHistoryInstance already exists')
     return

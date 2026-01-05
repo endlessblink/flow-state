@@ -222,11 +222,7 @@ const systemHealthy = computed(() => !!taskStore && !!timerStore && !!uiStore)
 const systemHealthMessage = computed(() => !systemHealthy.value ? 'Critical stores failed to initialize' : '')
 
 const handleValidateStores = () => {
-  console.log('Validating stores...', {
-    taskStore: !!taskStore,
-    timerStore: !!timerStore,
-    uiStore: !!uiStore
-  })
+  // Store validation logic if needed
 }
 
 const handleRetryFailedOperation = () => {
@@ -372,7 +368,6 @@ const _handleVueDraggableAdd = (evt: SortableEvent) => {
   const taskId = droppedElement?.dataset?.taskId
 
   if (!taskId) {
-    console.warn('[Calendar] vuedraggable drop: no taskId found on dropped element')
     return
   }
 
@@ -384,7 +379,6 @@ const _handleVueDraggableAdd = (evt: SortableEvent) => {
     const targetDate = new Date(currentDate.value)
     targetDate.setHours(slot.hour, slot.minute, 0, 0)
 
-    console.log(`📅 [Calendar] vuedraggable: Scheduling task ${taskId} to ${targetDate.toISOString()}`)
     taskStore.updateTaskWithUndo(taskId, { scheduledDate: targetDate.toISOString() })
   }
 
@@ -394,7 +388,6 @@ const _handleVueDraggableAdd = (evt: SortableEvent) => {
 
 const _handleVueDraggableChange = (evt: unknown) => {
   // Optional: handle change events for debugging
-  console.log('[Calendar] vuedraggable change:', evt)
 }
 
 // Native HTML5 Drag-Drop handlers for inbox → calendar (per PomoFlow Development Prompt)
@@ -407,8 +400,6 @@ const onDragOver = (e: DragEvent, slot: TimeSlot) => {
     e.dataTransfer.dropEffect = 'move'
   }
 
-  console.log('🔄 [CalendarDrag] onDragOver - drop target validated for slot:', slot.slotIndex)
-
   // Call the existing handler from composable
   handleDragOver(e, slot)
 }
@@ -419,8 +410,6 @@ const onDragEnter = (e: DragEvent, slot: TimeSlot) => {
   if (e.dataTransfer) {
     e.dataTransfer.dropEffect = 'move'
   }
-
-  console.log('📍 [CalendarDrag] onDragEnter - slot entered:', slot.slotIndex)
 
   // Track active drop slot for visual feedback (handled by composable)
   handleDragEnter(e, slot)
@@ -435,8 +424,6 @@ const onDropSlot = (e: DragEvent, slot: TimeSlot) => {
   // BUT be explicit for clarity and add stopPropagation
   e.preventDefault()
   e.stopPropagation()
-
-  console.log('🎯 [CalendarDrag] onDropSlot called for slot:', slot.slotIndex)
 
   // Use existing handleDrop from composable
   handleDrop(e, slot)
@@ -535,9 +522,8 @@ onMounted(() => {
     calendarEl.addEventListener('dragover', (e: Event) => handleDragOverCapture(e as DragEvent), true)
     calendarEl.addEventListener('dragleave', (e: Event) => handleDragLeaveCapture(e as DragEvent), true)
     calendarEl.addEventListener('drop', (e: Event) => handleDropCapture(e as DragEvent), true)
-    console.log('✅ [CalendarDrag] Capture phase listeners attached to .calendar-main')
   } else {
-    console.error('❌ [CalendarDrag] .calendar-main element not found for capture listeners')
+    // Optional: Log warning if element not found, but avoiding console.error for cleaner console
   }
 })
 
@@ -560,7 +546,6 @@ onUnmounted(() => {
   if (calendarEl) {
     // Note: Can't remove arrow functions added with addEventListener
     // This is expected - the capture phase listeners will persist until page unload
-    console.log('✅ [CalendarDrag] Capture phase listeners cleanup skipped (arrow functions persist)')
   }
 })
 
@@ -613,7 +598,6 @@ const _handleStartTimer = (taskId: string) => {
 
 // TASK CREATED HANDLER
 const handleTaskCreated = (task: Task) => {
-  console.log('Task created:', task)
   dragCreate.showQuickCreateModal.value = false
   dragCreate.resetCreateDrag()
 }

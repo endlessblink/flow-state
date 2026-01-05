@@ -176,6 +176,25 @@
           </div>
         </div>
       </div>
+
+      <!-- Empty State -->
+      <div v-if="inboxTasks.length === 0" class="empty-state">
+        <div class="empty-state-icon">
+          <CalendarDays v-if="baseInboxTasks.length > 0" :size="32" class="text-muted" />
+          <div v-else class="text-2xl">🎉</div>
+        </div>
+        <p class="empty-state-text">
+          {{ baseInboxTasks.length > 0 ? 'No tasks match current filters' : 'Inbox Zero! All caught up.' }}
+        </p>
+        <NButton
+          v-if="baseInboxTasks.length > 0"
+          size="small"
+          secondary
+          @click="clearAllFilters"
+        >
+          Clear Filters
+        </NButton>
+      </div>
     </div>
 
     <!-- Context Menu -->
@@ -201,6 +220,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { NButton, NBadge, NTag } from 'naive-ui'
 import { ChevronLeft, ChevronRight, Timer, CalendarDays } from 'lucide-vue-next'
 import { useTaskStore, type Task } from '@/stores/tasks'
@@ -215,6 +235,7 @@ import { useInboxFiltering } from '@/composables/useInboxFiltering'
 import { useInboxDrag } from '@/composables/useInboxDrag'
 import { useBrainDump } from '@/composables/useBrainDump'
 
+const router = useRouter()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 
@@ -276,13 +297,10 @@ const addTask = () => {
 
 // Task interaction handlers
 const handleTaskClick = (event: MouseEvent, task: Task) => {
-  console.log('🖱️ Clicked task:', task.id, 'Shift:', event.shiftKey, 'Ctrl:', event.ctrlKey, 'Last:', lastSelectedTaskId.value)
-  
   // Handle Shift+Click (Range Selection)
   if (event.shiftKey) {
     if (!lastSelectedTaskId.value) {
       // No start point? Treat as first click of a range (Single Select)
-      console.log('Shift click without anchor - setting anchor')
       selectedTaskIds.value = new Set([task.id])
       lastSelectedTaskId.value = task.id
       return
@@ -295,26 +313,21 @@ const handleTaskClick = (event: MouseEvent, task: Task) => {
     
     // Check if anchor is still visible/valid
     if (lastIndex === -1) {
-       console.warn('Anchor task not found in view - treating as new anchor')
        selectedTaskIds.value = new Set([task.id])
        lastSelectedTaskId.value = task.id
        return
     }
 
     if (currentIndex !== -1) {
-      console.log('Range Select: lastIndex', lastIndex, 'currentIndex', currentIndex)
       const start = Math.min(lastIndex, currentIndex)
       const end = Math.max(lastIndex, currentIndex)
       
       const rangeTasks = tasks.slice(start, end + 1)
-      console.log(`Selecting range of ${rangeTasks.length} tasks`)
       
       // Merge with existing selection (don't clear)
       const newSet = new Set(selectedTaskIds.value) // Keep existing
       rangeTasks.forEach(t => newSet.add(t.id))
       selectedTaskIds.value = newSet
-    } else {
-      console.warn('Shift+Click target not found in list (?)')
     }
     
     // CRITICAL: Always return if Shift was held to prevent falling through to Single Selection
@@ -335,22 +348,19 @@ const handleTaskClick = (event: MouseEvent, task: Task) => {
     selectedTaskIds.value = newSet
   } else {
     // Single Selection (No modifiers)
-    console.log('Single selection:', task.id)
     selectedTaskIds.value = new Set([task.id])
     lastSelectedTaskId.value = task.id
   }
 }
 
 const handleTaskDoubleClick = (task: Task) => {
-  // TODO: Implement task editing functionality
-  console.log('Edit task:', task.id)
+  handleEdit(task.id)
 }
 
 const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
   // Handle Delete/Backspace key to delete task
   if (event.key === 'Delete' || event.key === 'Backspace') {
     event.preventDefault()
-    console.log('🗑️ Delete key pressed on inbox task:', task.id)
 
     // If this task is selected along with others, delete all selected
     if (selectedTaskIds.value.has(task.id) && selectedTaskIds.value.size > 1) {
@@ -441,8 +451,10 @@ const handleSetDueDate = (dateType: string) => {
 }
 
 const handleEnterFocusMode = () => {
-  // TODO: Implement focus mode functionality
-  console.log('Enter focus mode for task:', contextMenuTask.value?.id)
+  const taskId = contextMenuTask.value?.id
+  if (taskId) {
+    router.push({ name: 'focus', params: { taskId } })
+  }
   closeContextMenu()
 }
 
@@ -470,8 +482,10 @@ const closeContextMenu = () => {
 }
 
 const handleEdit = (taskId: string) => {
-  // TODO: Implement task editing functionality
-  console.log('Edit task:', taskId)
+  // Dispatch event to open edit modal (handled by ModalManager)
+  window.dispatchEvent(new CustomEvent('open-task-edit', {
+    detail: { taskId }
+  }))
   closeContextMenu()
 }
 
@@ -763,6 +777,29 @@ onBeforeUnmount(() => {
 .duration-badge {
   color: var(--text-muted);
   font-size: 0.75rem;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.empty-state-icon {
+  opacity: 0.5;
+  font-size: 2rem;
+}
+
+.empty-state-text {
+  font-size: 0.875rem;
+  max-width: 200px;
 }
 
 /* Collapsed state adjustments */

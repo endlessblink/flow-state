@@ -42,6 +42,7 @@
       }"
       @confirm-delete="handleContextMenuDelete"
       @move-to-section="handleMoveToSection"
+      @enter-focus-mode="handleEnterFocusMode"
     />
 
     <!-- PROJECT CONTEXT MENU -->
@@ -95,6 +96,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Task, type Project } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -117,6 +119,7 @@ import SectionSelectionModal from '@/components/canvas/SectionSelectionModal.vue
 const CommandPalette = createLazyModal(() => import('@/components/layout/CommandPalette.vue'))
 
 // Stores
+const router = useRouter()
 const uiStore = useUIStore()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
@@ -183,6 +186,13 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
     showConfirmModal.value = true
   } else {
     confirmDeleteTask(task)
+  }
+}
+
+const handleEnterFocusMode = () => {
+  if (contextMenuTask.value) {
+    router.push({ name: 'focus', params: { taskId: contextMenuTask.value.id } })
+    closeTaskContextMenu()
   }
 }
 

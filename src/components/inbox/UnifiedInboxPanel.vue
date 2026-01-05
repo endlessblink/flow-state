@@ -121,10 +121,11 @@ Call client"
       <!-- Empty State -->
       <div v-if="inboxTasks.length === 0" class="empty-inbox">
         <div class="empty-icon">
-          📋
+          <span v-if="baseInboxTasks.length === 0">🎉</span>
+          <span v-else>📋</span>
         </div>
         <p class="empty-text">
-          No tasks found
+          {{ baseInboxTasks.length === 0 ? 'Inbox Zero!' : 'No tasks found' }}
         </p>
         <p class="empty-subtext">
           {{ getEmptyMessage() }}
@@ -489,7 +490,10 @@ const getDueStatus = (task: Task) => {
 }
 
 const getEmptyMessage = () => {
-  if (taskStore.filteredTasks.length === 0) {
+  if (baseInboxTasks.value.length === 0) {
+    return 'All caught up! Why not take a break?'
+  }
+  if (inboxTasks.value.length === 0) {
     return 'No tasks match your current view filters'
   }
   return 'All filtered tasks are already on the board/calendar'

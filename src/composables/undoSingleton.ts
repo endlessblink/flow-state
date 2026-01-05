@@ -240,13 +240,6 @@ const saveState = (description?: string) => {
     console.log(`💾 [UNDO-DEBUG] Saving state: ${canvasTasks.length} canvas tasks, ${canvasStore.groups.length} groups`)
 
     commit()
-    // BUG-008 DEBUG: Log all history state after commit
-    console.log(`💾 State saved: ${description || 'Operation'}`, {
-      historyLength: refHistoryInstance.history.value.length,
-      undoStackLength: refHistoryInstance.undoStack.value.length,
-      canUndo: refHistoryInstance.canUndo.value,
-      canRedo: refHistoryInstance.canRedo.value
-    })
     return true
   } catch (error) {
     console.error('❌ Failed to save state:', error)

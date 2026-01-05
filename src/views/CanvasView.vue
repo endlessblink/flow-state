@@ -31,7 +31,10 @@
 -->
 
 <template>
-  <div class="canvas-layout canvas-contour">
+  <div
+    class="canvas-layout canvas-contour"
+    :class="{ 'shift-selecting': shift }"
+  >
     <!-- ================================================================= -->
     <!-- TEMPLATE ORGANIZATION - Phase 1 (Zero Risk)               -->
     <!-- ================================================================= -->
@@ -1344,7 +1347,7 @@ const nodeTypes = markRaw({
 
 // 🚀 Phase 2: Vue Flow Integration & Canvas Positioning - Add VueUse composables
 const { width, height } = useWindowSize()
-const { ctrl: _ctrl, shift: _shift } = useMagicKeys()
+const { ctrl: _ctrl, shift } = useMagicKeys()
 
 // 🚀 CPU Optimization: Efficient Node Update Batching System
 // Extracted to src/utils/canvas/NodeUpdateBatcher.ts
@@ -3817,6 +3820,16 @@ body.dragging-active .vue-flow__background {
 
 .vue-flow.canvas-ready {
   opacity: 1;
+}
+
+/*
+   SHIFT-DRAG SELECTION SUPPORT
+   When Shift is held, disable pointer events on Section/Group nodes
+   so the drag event falls through to the Pane to start the selection box.
+   This enables rubber-band selection starting from inside a group.
+*/
+.shift-selecting :deep(.vue-flow__node-sectionNode) {
+  pointer-events: none !important;
 }
 
 </style>

@@ -1,92 +1,116 @@
 # Pomo-Flow
 
-A sophisticated Vue 3 productivity application combining Pomodoro timer functionality with task management across multiple views.
+A sophisticated Vue 3 productivity application combining Pomodoro timer functionality with comprehensive task management across multiple synchronized views. Designed for developers and power users who need flexible ways to visualize and manage their work.
 
 ## Features
 
-- **7 Task Views**: Board, Calendar, Canvas, Focus, QuickSort, AllTasks, CalendarVueCal
-- **Pomodoro Timer**: Work/break sessions with browser notifications
-- **Task Management**: Projects, priorities, due dates, subtasks, recurring tasks
-- **Canvas Organization**: Free-form spatial task arrangement with Vue Flow
-- **Persistent Storage**: IndexedDB via LocalForage with automatic backup
-- **Glass Morphism UI**: Modern design system with dark/light themes
+### 🖥️ Multi-View Task Management
+- **Canvas View**: Free-form spatial task arrangement using Vue Flow. Organize tasks visually with groups and connectors.
+- **Board View**: Classic Kanban-style columns for stage-based workflow management.
+- **Calendar View**: Time-based planning with drag-and-drop scheduling (featuring standard and VueCal implementations).
+- **Focus View**: Distraction-free interface for the current active task, integrated with the timer.
+- **Quick Sort**: A specialized view for rapidly processing and categorizing inbox tasks.
+- **All Tasks**: A comprehensive list view with advanced filtering and sorting.
 
-## Quick Start
+### 🍅 Productivity Tools
+- **Pomodoro Timer**: Integrated work/break sessions with browser notifications and audio cues.
+- **Smart Organization**: Nestable projects, priority levels, tags, and duration estimates.
+- **Unified Task Service**: Centralized coordination connecting the Pomo-Flow app with external tools like the Markdown Task Manager and GitHub issues.
 
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-# Open http://localhost:5546
-```
-
-## Optional: Multi-Device Sync
-
-Pomo-Flow works fully offline with local browser storage (IndexedDB). No account required!
-
-For multi-device sync, you can self-host CouchDB:
-
-### Quick Start (Docker)
-
-```bash
-docker run -d --name pomoflow-couchdb \
-  -p 5984:5984 \
-  -e COUCHDB_USER=admin \
-  -e COUCHDB_PASSWORD=your-secure-password \
-  couchdb:3
-```
-
-Then create a `.env` file:
-
-```env
-VITE_COUCHDB_URL=http://localhost:5984/pomoflow
-VITE_COUCHDB_USERNAME=admin
-VITE_COUCHDB_PASSWORD=your-secure-password
-```
-
-See `.env.example` for all configuration options.
-
-## Development Commands
-
-```bash
-npm run dev          # Development server (port 5546)
-npm run build        # Production build
-npm run test         # Run tests
-npm run test:watch   # Tests with UI
-npm run storybook    # Component documentation (port 6006)
-npm run kill         # Kill all PomoFlow processes
-npm run lint         # Lint code
-npm run lint:fix     # Fix linting issues
-```
+### 🔄 Data & Sync
+- **Local-First Architecture**: Built on **PowerSync** (SQLite/WASM) for robust offline capability and instant local updates.
+- **Seamless Synchronization**: Background syncing with Supabase/Postgres (configurable).
+- **Data Persistence**: Automatic local backup and conflict resolution.
 
 ## Technology Stack
 
-- **Core**: Vue 3 + TypeScript + Pinia
-- **UI**: Tailwind CSS + Naive UI + Lucide Icons
-- **Canvas**: Vue Flow (@vue-flow/core)
-- **Calendar**: vue-cal
-- **Storage**: PouchDB (IndexedDB) + optional CouchDB sync
-- **Build**: Vite 7.2.4
-- **Testing**: Vitest + Playwright
+- **Core**: Vue 3 (Composition API) + TypeScript
+- **State Management**: Pinia
+- **UI Framework**: Tailwind CSS + Naive UI
+- **Icons**: Lucide Vue Next
+- **Visualizations**: @vue-flow/core (Canvas), vue-cal (Calendar)
+- **Database**: PowerSync (SQLite via WASM) + Supabase
+- **Testing**: Vitest (Unit) + Playwright (E2E)
+- **Build Tool**: Vite 7
+
+## Quick Start
+
+### Prerequisites
+- Node.js >= 20.19.0
+- npm >= 10.0.0
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd pomo-flow
+
+# Install dependencies (legacy-peer-deps may be required due to Storybook/Vite 7 conflicts)
+npm install
+```
+
+### Running the App
+
+```bash
+# Start the development server
+npm run dev
+# The app will be available at http://localhost:5546
+```
+
+## Development Tools
+
+### Standalone Dev Manager
+The project includes a standalone Kanban board tool for managing the project's own roadmap, parsing `docs/MASTER_PLAN.md`.
+
+```bash
+# Start the dev manager
+npm run dev:manager
+```
+
+### Testing & Quality
+
+```bash
+# Run unit tests
+npm run test
+
+# Run tests with UI
+npm run test:watch
+
+# Run end-to-end tests
+npm run test:task-flows
+
+# Linting
+npm run lint
+```
+
+### Component Library
+Explore the UI components in isolation:
+
+```bash
+npm run storybook
+# Opens Storybook at http://localhost:6006
+```
 
 ## Project Structure
 
 ```
 src/
-├── views/           # 7 application views
-├── components/      # Reusable UI components (10 directories)
-├── stores/          # 12 Pinia stores
-├── composables/     # 56 Vue 3 composables
-├── assets/          # Styles and design tokens
-└── utils/           # Utility functions
+├── views/           # Application views (Canvas, Board, Calendar, etc.)
+├── components/      # Reusable Vue components
+├── stores/          # Pinia state stores (Tasks, UI, Auth)
+├── services/        # Core logic (UnifiedTaskService, PowerSync)
+├── composables/     # Shared logic (Vue 3 hooks)
+├── layouts/         # App shells (Sidebar, Header)
+├── assets/          # Styles and static assets
+└── types/           # TypeScript interfaces
 ```
 
 ## Documentation
 
-- **CLAUDE.md** - Development guidance and patterns
-- **docs/MASTER_PLAN.md** - Project roadmap and architecture
+- **docs/MASTER_PLAN.md**: Comprehensive project roadmap and architecture.
+- **CLAUDE.md**: Developer guidelines and common commands.
+- **AGENTS.md**: Instructions for AI agents working on the codebase.
 
 ## License
 

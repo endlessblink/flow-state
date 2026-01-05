@@ -47,6 +47,7 @@
           type="text"
           class="quick-task-input"
           placeholder="Quick add task (Enter)..."
+          aria-label="Quick add task"
           @keydown.enter.prevent="createQuickTask"
         >
       </div>

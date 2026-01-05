@@ -157,7 +157,7 @@ export const useProjectStore = defineStore('projects', () => {
 
                 // SQL Delete (Soft delete)
                 const db = await PowerSyncService.getInstance()
-                await db.execute('UPDATE projects SET is_deleted = 1 WHERE id = ?', [projectId])
+                await db.execute('UPDATE projects SET is_deleted = 1, deleted_at = ? WHERE id = ?', [new Date().toISOString(), projectId])
 
             } catch (e) {
                 console.error('Failed to delete project:', e)
@@ -214,9 +214,10 @@ export const useProjectStore = defineStore('projects', () => {
 
             // SQL Bulk Delete
             const db = await PowerSyncService.getInstance()
+            const now = new Date().toISOString()
             await db.writeTransaction(async (tx) => {
                 for (const id of projectIds) {
-                    await tx.execute('UPDATE projects SET is_deleted = 1 WHERE id = ?', [id])
+                    await tx.execute('UPDATE projects SET is_deleted = 1, deleted_at = ? WHERE id = ?', [now, id])
                 }
             })
 

@@ -86,17 +86,6 @@ export function useTaskPersistence(
             })
             // console.debug(`✅ [SQL] Saved ${sqlTasks.length} tasks (${context})`)
 
-            // --- POUCHDB SYNC (DUAL SAVE) ---
-            // While we are still using PouchDB for cross-device sync, we MUST update it too.
-            // This also prevents the "Self-Healing Migration" from overwriting fresh data.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const pouchDbInstance = (window as any).pomoFlowDb
-            if (pouchDbInstance) {
-                const { saveTasks: saveToPouch } = await import('@/utils/individualTaskStorage')
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                await (saveToPouch as any)(pouchDbInstance, validTasksToSave, 3, true) // bypassSql=true (internal flag needed or handled in utility)
-            }
-
         } catch (e) {
             console.error(`❌ [SQL] Save failed (${context}):`, e)
         }
@@ -194,10 +183,10 @@ export function useTaskPersistence(
         loadPersistedFilters,
         persistFilters,
         importTasksFromJSON: async () => {
-             // Disabled / TBD
+            // Disabled / TBD
         },
         importFromRecoveryTool: async () => {
-             // Disabled
+            // Disabled
         },
         recoverSoftDeletedTasks: async () => 0, // TBD: SQL Implementation needed later
         importTasks: async (tasksToImport: Task[]) => {

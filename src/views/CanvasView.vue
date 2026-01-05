@@ -1,3 +1,4 @@
+<!-- /// <reference types="vite/client" /> -->
 <!--
   ⚠️ CRITICAL: Vue Flow Integration Rules - DO NOT VIOLATE
 
@@ -418,7 +419,7 @@ import { useCanvasActions } from '@/composables/canvas/useCanvasActions'
 import { useCanvasConnections } from '@/composables/canvas/useCanvasConnections'
 import { useCanvasSync } from '@/composables/canvas/useCanvasSync'
 import { useCanvasResize } from '@/composables/canvas/useCanvasResize'
-import { NodeUpdateBatcher } from '@/utils/canvas/NodeUpdateBatcher'
+import { NodeUpdateBatcher } from '../utils/canvas/NodeUpdateBatcher'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()

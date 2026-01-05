@@ -214,19 +214,24 @@ export function useTaskOperations(
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const dbInstance = (window as any).pomoFlowDb
-            if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+
+            // DEEP-DIVE FIX: Call _deleteIndividualTask regardless of dbInstance availability.
+            // Internal shouldUseSqlite() handles the primary storage logic.
+            if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
                 await _deleteIndividualTask(dbInstance, taskId)
 
-                // Track deletion intent
-                try {
-                    const doc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ _id: '_local/deleted-tasks', taskIds: [], deletedAt: {} }))
-                    if (!doc.taskIds.includes(taskId)) {
-                        doc.taskIds.push(taskId)
-                        doc.deletedAt[taskId] = new Date().toISOString()
-                        await dbInstance.put(doc)
+                // Track deletion intent in PouchDB ONLY if instance exists
+                if (dbInstance) {
+                    try {
+                        const doc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ _id: '_local/deleted-tasks', taskIds: [], deletedAt: {} }))
+                        if (!doc.taskIds.includes(taskId)) {
+                            doc.taskIds.push(taskId)
+                            doc.deletedAt[taskId] = new Date().toISOString()
+                            await dbInstance.put(doc)
+                        }
+                    } catch {
+                        // ignore
                     }
-                } catch {
-                     // ignore
                 }
             }
 
@@ -282,23 +287,29 @@ export function useTaskOperations(
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const dbInstance = (window as any).pomoFlowDb
-            if (dbInstance && STORAGE_FLAGS.INDIVIDUAL_ONLY) {
+
+            // DEEP-DIVE FIX: Call _deleteIndividualTasksBulk regardless of dbInstance availability.
+            // Internal shouldUseSqlite() handles the primary storage logic.
+            if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
                 await _deleteIndividualTasksBulk(dbInstance, taskIds)
 
-                try {
-                    const doc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ _id: '_local/deleted-tasks', taskIds: [], deletedAt: {} }))
-                    let dirty = false
-                    const now = new Date().toISOString()
-                    taskIds.forEach(id => {
-                        if (!doc.taskIds.includes(id)) {
-                            doc.taskIds.push(id)
-                            doc.deletedAt[id] = now
-                            dirty = true
-                        }
-                    })
-                    if (dirty) await dbInstance.put(doc)
-                } catch {
-                     // ignore
+                // Track deletion intent in PouchDB ONLY if instance exists
+                if (dbInstance) {
+                    try {
+                        const doc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ _id: '_local/deleted-tasks', taskIds: [], deletedAt: {} }))
+                        let dirty = false
+                        const now = new Date().toISOString()
+                        taskIds.forEach(id => {
+                            if (!doc.taskIds.includes(id)) {
+                                doc.taskIds.push(id)
+                                doc.deletedAt[id] = now
+                                dirty = true
+                            }
+                        })
+                        if (dirty) await dbInstance.put(doc)
+                    } catch {
+                        // ignore
+                    }
                 }
             }
 

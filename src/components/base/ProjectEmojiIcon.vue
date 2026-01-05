@@ -3,19 +3,37 @@
     class="project-emoji-icon"
     :class="{
       'project-emoji-icon--native': shouldUseNative,
+      'project-emoji-icon--svg': hasSvg || hasColorfulSvg,
       'project-emoji-icon--clickable': clickable,
       'project-emoji-icon--default': variant === 'default',
       'project-emoji-icon--plain': variant === 'plain'
     }"
     :style="customStyles"
-    :title="title"
-    :aria-label="title"
+    :title="_computedTitle"
+    :aria-label="_computedTitle"
     role="img"
     @click="$emit('click', $event)"
   >
-    <!-- Native emoji first with Noto Color Emoji font -->
+    <!-- Colorful SVG (Premium Gradients) -->
+    <div
+      v-if="hasColorfulSvg"
+      class="project-emoji-icon__colorful"
+      v-html="colorfulSvg"
+    />
+
+    <!-- Regular SVG (Crisp Vector) -->
+    <svg
+      v-else-if="hasSvg"
+      class="project-emoji-icon__svg"
+      :viewBox="svgData?.viewBox"
+      aria-hidden="true"
+    >
+      <path :d="svgData?.path" :fill="svgData?.fill || 'currentColor'" />
+    </svg>
+
+    <!-- Native emoji fallback -->
     <span
-      v-if="shouldUseNative"
+      v-else
       class="project-emoji-icon__native"
       :style="nativeStyles"
       aria-hidden="true"
@@ -27,6 +45,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { getEmojiSvgData, getColorfulSvgData, hasSvgRepresentation, hasColorfulSvgRepresentation } from '@/utils/emojiSvgMap'
 
 interface Props {
   emoji: string
@@ -45,12 +64,18 @@ const props = withDefaults(defineProps<Props>(), {
   variant: 'plain' // Default to plain (no background/border) to avoid gray dots
 })
 
-const _emit = defineEmits<{
+defineEmits<{
   click: [event: MouseEvent]
 }>()
 
-// Always use native emoji rendering with Noto Color Emoji
-const shouldUseNative = computed(() => true)
+// SVG Detection
+const hasSvg = computed(() => hasSvgRepresentation(props.emoji))
+const hasColorfulSvg = computed(() => hasColorfulSvgRepresentation(props.emoji))
+const svgData = computed(() => getEmojiSvgData(props.emoji))
+const colorfulSvg = computed(() => getColorfulSvgData(props.emoji))
+
+// Only use native if no SVG is found
+const shouldUseNative = computed(() => !hasSvg.value && !hasColorfulSvg.value)
 
 // Size calculations
 const sizeMap = {
@@ -152,6 +177,28 @@ const _computedTitle = computed(() => {
   /* Ensure proper emoji display */
   -webkit-text-stroke-width: 0;
   -webkit-text-stroke-color: transparent;
+}
+
+/* SVG Emoji Styles */
+.project-emoji-icon__svg {
+  width: 75%;
+  height: 75%;
+  display: block;
+}
+
+.project-emoji-icon__colorful {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure raw SVG inside colorful container respects container size */
+.project-emoji-icon__colorful :deep(svg) {
+  width: 85%;
+  height: 85%;
+  display: block;
 }
 
 /* Theme integration - only for default variant */

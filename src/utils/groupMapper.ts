@@ -8,9 +8,9 @@
  * Migration Phase: Complete Schema (Phase 2)
  */
 
-import type { CanvasGroup } from '@/stores/canvas'
-import type { SqlGroup } from '@/services/database/SqlDatabaseTypes'
-import { parseJsonColumn, stringifyForSql, jsBoolToSql, sqlBoolToJs } from '@/services/database/SqlDatabaseTypes'
+import type { CanvasGroup } from '../stores/canvas'
+import type { SqlGroup } from '../services/database/SqlDatabaseTypes'
+import { parseJsonColumn, stringifyForSql, jsBoolToSql, sqlBoolToJs } from '../services/database/SqlDatabaseTypes'
 
 /**
  * Convert CanvasGroup (app model) to SqlGroup (database model)
@@ -39,16 +39,16 @@ export function toSqlGroup(group: CanvasGroup): SqlGroup {
         collapsed_height: group.collapsedHeight || 0,
 
         // Hierarchy
-        parent_group_id: group.parentGroupId || null,
+        parent_group_id: group.parentGroupId || undefined,
 
         // Advanced Features (Power Groups)
         is_power_mode: jsBoolToSql((group as any).isPowerMode),
-        power_keyword_json: stringifyForSql((group as any).powerKeyword),
-        assign_on_drop_json: stringifyForSql((group as any).assignOnDrop),
-        collect_filter_json: stringifyForSql((group as any).collectFilter),
+        power_keyword_json: stringifyForSql((group as any).powerKeyword) || undefined,
+        assign_on_drop_json: stringifyForSql((group as any).assignOnDrop) || undefined,
+        collect_filter_json: stringifyForSql((group as any).collectFilter) || undefined,
         auto_collect: jsBoolToSql((group as any).autoCollect),
         is_pinned: jsBoolToSql((group as any).isPinned),
-        property_value: (group as any).propertyValue || null,
+        property_value: (group as any).propertyValue || undefined,
 
         // Timestamps
         created_at: (group as any).createdAt || now,

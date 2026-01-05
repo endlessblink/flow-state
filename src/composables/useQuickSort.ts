@@ -1,4 +1,4 @@
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useQuickSortStore } from '@/stores/quickSort'
 import { useSmartViews } from '@/composables/useSmartViews'
@@ -17,6 +17,20 @@ export function useQuickSort() {
   // Fixed: Use direct filtering instead of mutating store state (antipattern)
   const uncategorizedTasks = computed<Task[]>(() => {
     return taskStore.tasks.filter(task => isUncategorizedTask(task))
+  })
+
+  // Watch for list updates to clamp index
+  // This handles cases where tasks are removed or the list shrinks
+  watch(uncategorizedTasks, (newTasks) => {
+    if (newTasks.length === 0) {
+      if (quickSortStore.isActive && !isComplete.value) {
+          // Logic handled by isComplete view watcher mostly, but ensuring internal consistency
+      }
+    } else if (currentIndex.value >= newTasks.length) {
+      // If we were at the end and items were removed, wrap to start
+      // Or if list shrank significantly
+      currentIndex.value = 0
+    }
   })
 
   const currentTask = computed<Task | null>(() => {
@@ -64,6 +78,21 @@ export function useQuickSort() {
     return summary
   }
 
+  function handleTaskProcessed() {
+    // Called when a task is removed from the list (categorized, done, deleted)
+    // The list will update reactively.
+    // The watcher will handle clamping if currentIndex becomes invalid.
+
+    // Check completion
+    if (isComplete.value) {
+      endSession()
+    }
+
+    // Note: We DO NOT increment currentIndex here.
+    // Because the current item was removed, the next item slides into this index.
+    // So we are effectively looking at the next item already.
+  }
+
   function categorizeTask(taskId: string, projectId: string) {
     const task = taskStore.tasks.find((t) => t.id === taskId)
     if (!task) return
@@ -86,16 +115,19 @@ export function useQuickSort() {
     // Record action
     quickSortStore.recordAction(action)
 
-    // Move to next task automatically
-    moveToNext()
+    handleTaskProcessed()
   }
 
-  function moveToNext() {
-    if (hasNext.value) {
-      currentIndex.value++
-    } else if (isComplete.value) {
-      // All tasks categorized
-      endSession()
+  // Renamed from moveToNext to avoid confusion - this is for SKIPPING
+  function skipTask() {
+    if (uncategorizedTasks.value.length === 0) return
+
+    // Increment index
+    currentIndex.value++
+
+    // Wrap around if we reach the end
+    if (currentIndex.value >= uncategorizedTasks.value.length) {
+      currentIndex.value = 0
     }
   }
 
@@ -103,11 +135,6 @@ export function useQuickSort() {
     if (hasPrevious.value) {
       currentIndex.value--
     }
-  }
-
-  function skipTask() {
-    // Skip without categorizing
-    moveToNext()
   }
 
   function undoLastCategorization() {
@@ -118,6 +145,9 @@ export function useQuickSort() {
     taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
 
     // Adjust index if needed
+    // If the restored task reappears at the current index, we might not need to move.
+    // But if we want to "go back" to it, we might need to decrement.
+    // Current logic:
     if (currentIndex.value > 0) {
       currentIndex.value--
     }
@@ -130,8 +160,7 @@ export function useQuickSort() {
     // Reapply the task update
     taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
 
-    // Move forward
-    moveToNext()
+    handleTaskProcessed()
   }
 
   function cancelSession() {
@@ -156,15 +185,14 @@ export function useQuickSort() {
     // Record action
     quickSortStore.recordAction(action)
 
-    // Move to next task
-    moveToNext()
+    handleTaskProcessed()
   }
 
   function markDoneAndDeleteTask(taskId: string) {
-    // First mark as done
-    taskStore.updateTask(taskId, { status: 'done' })
+    // First mark as done (for consistent history tracking/logging usually)
+    // But here we just delete it.
 
-    // Create action for undo/redo
+    // Create action for undo/redo - treat as categorize for now to keep simple
     const action: CategoryAction = {
       id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: 'CATEGORIZE_TASK',
@@ -180,8 +208,7 @@ export function useQuickSort() {
     // Delete the task
     taskStore.deleteTask(taskId)
 
-    // Move to next task
-    moveToNext()
+    handleTaskProcessed()
   }
 
   function goToTask(index: number) {
@@ -220,7 +247,7 @@ export function useQuickSort() {
     categorizeTask,
     markTaskDone,
     markDoneAndDeleteTask,
-    moveToNext,
+    moveToNext: skipTask, // Alias for backward compatibility if needed, or just use skipTask
     moveToPrevious,
     skipTask,
     undoLastCategorization,

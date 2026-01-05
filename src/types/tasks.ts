@@ -78,6 +78,7 @@ export interface Task {
   completedPomodoros: number
   subtasks: Subtask[]
   dueDate: string // Simplified: Single date field - when this task needs to be completed by
+  dueTime?: string // Optional specific time for the due date (HH:MM format)
   estimatedDuration?: number // in minutes
   // Legacy scheduling fields (for backward compatibility)
   scheduledDate?: string // YYYY-MM-DD format for legacy support
@@ -167,6 +168,7 @@ export interface CreateTaskData {
   status?: TaskStatus
   priority?: TaskPriority
   dueDate?: string
+  dueTime?: string
   estimatedDuration?: number
   estimatedPomodoros?: number
   parentTaskId?: string | null

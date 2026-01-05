@@ -60,6 +60,7 @@ const router = createRouter({
       path: '/focus/:taskId',
       name: 'focus',
       component: () => import('@/views/FocusView.vue'),
+      props: true,
       meta: { requiresAuth: true }
     },
       {

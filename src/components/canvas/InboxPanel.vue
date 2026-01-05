@@ -201,6 +201,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { NButton, NBadge, NTag } from 'naive-ui'
 import { ChevronLeft, ChevronRight, Timer, CalendarDays } from 'lucide-vue-next'
 import { useTaskStore, type Task } from '@/stores/tasks'
@@ -215,6 +216,7 @@ import { useInboxFiltering } from '@/composables/useInboxFiltering'
 import { useInboxDrag } from '@/composables/useInboxDrag'
 import { useBrainDump } from '@/composables/useBrainDump'
 
+const router = useRouter()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 
@@ -442,8 +444,11 @@ const handleSetDueDate = (dateType: string) => {
 }
 
 const handleEnterFocusMode = () => {
-  // TODO: Implement focus mode functionality
-  console.log('Enter focus mode for task:', contextMenuTask.value?.id)
+  const taskId = contextMenuTask.value?.id
+  if (taskId) {
+    console.log('Enter focus mode for task:', taskId)
+    router.push({ name: 'focus', params: { taskId } })
+  }
   closeContextMenu()
 }
 

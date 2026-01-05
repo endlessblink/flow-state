@@ -662,6 +662,9 @@ Phase 3 (Mobile) ←────────────────────
 
 | ~~TASK-022~~ | ✅ **DONE** | `tasks.ts`, `taskDisappearanceLogger.ts` | - | ~~TASK-034~~ |
 | ~~**TASK-097**~~ | ✅ **DONE** (Jan 4) | `useAuthStore.ts`, `database.ts`, `LoginForm.vue` | - | - |
+| ~~**TASK-098**~~ | ✅ **DONE** | `SettingsModal.vue`, `useAuthStore.ts` | TASK-097 | - |
+| **TASK-099** | 📋 **PLANNED** | `useAuthStore.ts`, `useDatabase.ts` | - | - |
+| **TASK-100** | 📋 **PLANNED** | `assets/emojis/`, `ui.ts` | - | - |
 | ~~TASK-021~~ | ✅ DONE | `timer.ts`, `useTimerChangesSync.ts` | - | ~~TASK-017~~ |
 | ~~TASK-014~~ | ✅ COMPLETE | `*.stories.ts`, `*.vue` (UI) | - | - |
 | ~~TASK-019~~ | ✅ DONE | ~~`tasks.ts`, stores, views~~ | - | Superseded by TASK-027 |

@@ -9,6 +9,7 @@
     :type="type"
     :disabled="disabled"
     :title="title"
+    :aria-label="ariaLabel || title"
     @click="$emit('click', $event)"
   >
     <slot />
@@ -23,6 +24,7 @@ interface Props {
   disabled?: boolean
   type?: 'button' | 'submit' | 'reset'
   title?: string
+  ariaLabel?: string
 }
 
 withDefaults(defineProps<Props>(), {
@@ -31,7 +33,8 @@ withDefaults(defineProps<Props>(), {
   active: false,
   disabled: false,
   type: 'button',
-  title: undefined
+  title: undefined,
+  ariaLabel: undefined
 })
 
 defineEmits<{

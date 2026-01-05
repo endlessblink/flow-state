@@ -328,19 +328,19 @@
       <!-- User Profile Footer -->
       <div class="sidebar-footer">
         <button v-if="!authStore.user" class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
-           <span style="font-weight: 600;">Sign In</span>
+          <span style="font-weight: 600;">Sign In</span>
         </button>
         <div v-else class="user-profile-row">
-            <div class="user-avatar-circle">
-                {{ (authStore.user?.email ? authStore.user.email[0].toUpperCase() : 'U') }}
-            </div>
-            <div class="user-info-col">
-                <span class="user-email" :title="authStore.user?.email || ''">{{ authStore.user?.email || 'Authenticated' }}</span>
-                <span class="user-status">Online</span>
-            </div>
-             <button class="settings-mini-btn" @click="uiStore.openSettingsModal()" title="Settings">
-                <Settings :size="16" />
-            </button>
+          <div class="user-avatar-circle">
+            {{ (authStore.user?.email ? authStore.user.email[0].toUpperCase() : 'U') }}
+          </div>
+          <div class="user-info-col">
+            <span class="user-email" :title="authStore.user?.email || ''">{{ authStore.user?.email || 'Authenticated' }}</span>
+            <span class="user-status">Online</span>
+          </div>
+          <button class="settings-mini-btn" title="Settings" @click="uiStore.openSettingsModal()">
+            <Settings :size="16" />
+          </button>
         </div>
       </div>
     </aside>

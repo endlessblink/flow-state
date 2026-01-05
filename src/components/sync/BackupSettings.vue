@@ -97,7 +97,7 @@
       </div>
 
       <div class="scheduler-controls">
-         <div class="control-buttons">
+        <div class="control-buttons">
           <button :disabled="isSchedulerRunning && !isSchedulerPaused" class="control-btn start" @click="startScheduler">
             <Play :size="16" /> Start
           </button>
@@ -127,86 +127,98 @@
 
     <!-- TAB 2: Manual Tools -->
     <div v-if="activeTab === 'manual'" class="tab-content">
-       <div class="backup-actions">
+      <div class="backup-actions">
         <h4>🛠️ Maintenance & Recovery</h4>
         
         <div class="action-grid">
-           <!-- Manual Backup -->
-           <div class="tool-card">
-              <div class="tool-icon"><Save :size="24" /></div>
-              <div class="tool-info">
-                  <h5>Create Snapshot</h5>
-                  <p>Manually save current state</p>
-              </div>
-              <button :disabled="isCreatingBackup" class="action-btn primary sm" @click="createManualBackup">
-                <RefreshCw v-if="isCreatingBackup" :size="14" class="animate-spin" />
-                <span v-else>Save Now</span>
-              </button>
-           </div>
+          <!-- Manual Backup -->
+          <div class="tool-card">
+            <div class="tool-icon">
+              <Save :size="24" />
+            </div>
+            <div class="tool-info">
+              <h5>Create Snapshot</h5>
+              <p>Manually save current state</p>
+            </div>
+            <button :disabled="isCreatingBackup" class="action-btn primary sm" @click="createManualBackup">
+              <RefreshCw v-if="isCreatingBackup" :size="14" class="animate-spin" />
+              <span v-else>Save Now</span>
+            </button>
+          </div>
 
-           <!-- Restore -->
-           <div class="tool-card">
-              <div class="tool-icon"><RotateCcw :size="24" /></div>
-              <div class="tool-info">
-                  <h5>Recovery Center</h5>
-                  <p>Restore from internal snapshots</p>
-              </div>
-              <button class="action-btn accent sm" @click="viewRecoveryCenter">
-                Open
-              </button>
-           </div>
+          <!-- Restore -->
+          <div class="tool-card">
+            <div class="tool-icon">
+              <RotateCcw :size="24" />
+            </div>
+            <div class="tool-info">
+              <h5>Recovery Center</h5>
+              <p>Restore from internal snapshots</p>
+            </div>
+            <button class="action-btn accent sm" @click="viewRecoveryCenter">
+              Open
+            </button>
+          </div>
 
-           <!-- Validate -->
-           <div class="tool-card">
-              <div class="tool-icon"><CheckSquare :size="24" /></div>
-              <div class="tool-info">
-                  <h5>Validate Data</h5>
-                  <p>Check for consistency issues</p>
-              </div>
-               <button :disabled="isValidating" class="action-btn secondary sm" @click="validateData">
-                <Loader v-if="isValidating" :size="14" class="animate-spin" />
-                <span v-else>Check</span>
-              </button>
-           </div>
+          <!-- Validate -->
+          <div class="tool-card">
+            <div class="tool-icon">
+              <CheckSquare :size="24" />
+            </div>
+            <div class="tool-info">
+              <h5>Validate Data</h5>
+              <p>Check for consistency issues</p>
+            </div>
+            <button :disabled="isValidating" class="action-btn secondary sm" @click="validateData">
+              <Loader v-if="isValidating" :size="14" class="animate-spin" />
+              <span v-else>Check</span>
+            </button>
+          </div>
 
-           <!-- Rescue -->
-           <div class="tool-card">
-              <div class="tool-icon"><LifeBuoy :size="24" /></div>
-              <div class="tool-info">
-                  <h5>Rescue Tasks</h5>
-                  <p>Undelete accidentally removed items</p>
-              </div>
-               <button :disabled="isRescuing" class="action-btn danger-outline sm" @click="rescueTasks">
-                <Loader v-if="isRescuing" :size="14" class="animate-spin" />
-                <span v-else>Scan</span>
-              </button>
-           </div>
+          <!-- Rescue -->
+          <div class="tool-card">
+            <div class="tool-icon">
+              <LifeBuoy :size="24" />
+            </div>
+            <div class="tool-info">
+              <h5>Rescue Tasks</h5>
+              <p>Undelete accidentally removed items</p>
+            </div>
+            <button :disabled="isRescuing" class="action-btn danger-outline sm" @click="rescueTasks">
+              <Loader v-if="isRescuing" :size="14" class="animate-spin" />
+              <span v-else>Scan</span>
+            </button>
+          </div>
 
-           <!-- Manual Reset -->
-           <div class="tool-card danger-zone">
-              <div class="tool-icon error"><AlertTriangle :size="24" /></div>
-              <div class="tool-info">
-                  <h5>Reset Local Data</h5>
-                  <p>Wipe local data & Re-sync</p>
-              </div>
-               <button :disabled="isResetting" class="action-btn error-solid sm" @click="resetLocalData">
-                <Loader v-if="isResetting" :size="14" class="animate-spin" />
-                <span v-else>Reset</span>
-              </button>
-           </div>
+          <!-- Manual Reset -->
+          <div class="tool-card danger-zone">
+            <div class="tool-icon error">
+              <AlertTriangle :size="24" />
+            </div>
+            <div class="tool-info">
+              <h5>Reset Local Data</h5>
+              <p>Wipe local data & Re-sync</p>
+            </div>
+            <button :disabled="isResetting" class="action-btn error-solid sm" @click="resetLocalData">
+              <Loader v-if="isResetting" :size="14" class="animate-spin" />
+              <span v-else>Reset</span>
+            </button>
+          </div>
 
-           <!-- TASK-093: SQLite Migration -->
-           <div class="tool-card highlight">
-              <div class="tool-icon primary"><Database :size="24" /></div>
-              <div class="tool-info">
-                  <h5>Migrate to SQLite</h5>
-                  <p>Upgrade database (Phase 2)</p>
-              </div>
-               <button :disabled="isMigrating" class="action-btn primary sm" @click="runMigration">
-                <Loader v-if="isMigrating" :size="14" class="animate-spin" />
-                <span v-else>Migrate</span>
-              </button>
-           </div>
+          <!-- TASK-093: SQLite Migration -->
+          <div class="tool-card highlight">
+            <div class="tool-icon primary">
+              <Database :size="24" />
+            </div>
+            <div class="tool-info">
+              <h5>Migrate to SQLite</h5>
+              <p>Upgrade database (Phase 2)</p>
+            </div>
+            <button :disabled="isMigrating" class="action-btn primary sm" @click="runMigration">
+              <Loader v-if="isMigrating" :size="14" class="animate-spin" />
+              <span v-else>Migrate</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -221,69 +233,69 @@
 
         <!-- Browser Support Warning / Fallback -->
         <div v-if="!exportStatus.isSupported.value" class="integrity-status has-issues" style="margin-bottom: var(--space-4)">
-            <div class="status-header">
-                <AlertTriangle :size="16" style="color: var(--warning)" />
-                <span>Browser Not Supported</span>
-            </div>
-            <p style="margin: var(--space-2) 0 var(--space-3) 0; font-size: var(--text-sm); color: var(--text-secondary)">
-                Your browser doesn't support automatic folder syncing. Please use the ZIP tools below.
-            </p>
+          <div class="status-header">
+            <AlertTriangle :size="16" style="color: var(--warning)" />
+            <span>Browser Not Supported</span>
+          </div>
+          <p style="margin: var(--space-2) 0 var(--space-3) 0; font-size: var(--text-sm); color: var(--text-secondary)">
+            Your browser doesn't support automatic folder syncing. Please use the ZIP tools below.
+          </p>
         </div>
 
         <div class="portability-grid">
-            <!-- Auto Export (Chrome/Edge) -->
-            <div v-if="exportStatus.isSupported.value" class="portability-card">
-                <div class="card-header">
-                    <FolderOpen :size="20" />
-                    <h5>Auto-Export</h5>
-                </div>
-                 <p>Continuously sync tasks to a local folder as Markdown files.</p>
-                 <button
-                  class="action-btn"
-                  :class="exportStatus.isEnabled.value ? 'primary' : 'secondary'"
-                  :disabled="!exportStatus.isSupported.value"
-                  @click="toggleAutoExport"
-                >
-                  {{ exportStatus.isEnabled.value ? 'Auto-Export Active' : 'Select Folder' }}
-                </button>
-                <div v-if="exportStatus.isEnabled.value" class="status-micro">
-                    Last: {{ exportStatus.lastExportTime.value ? formatTime(exportStatus.lastExportTime.value) : 'Never' }}
-                </div>
+          <!-- Auto Export (Chrome/Edge) -->
+          <div v-if="exportStatus.isSupported.value" class="portability-card">
+            <div class="card-header">
+              <FolderOpen :size="20" />
+              <h5>Auto-Export</h5>
             </div>
+            <p>Continuously sync tasks to a local folder as Markdown files.</p>
+            <button
+              class="action-btn"
+              :class="exportStatus.isEnabled.value ? 'primary' : 'secondary'"
+              :disabled="!exportStatus.isSupported.value"
+              @click="toggleAutoExport"
+            >
+              {{ exportStatus.isEnabled.value ? 'Auto-Export Active' : 'Select Folder' }}
+            </button>
+            <div v-if="exportStatus.isEnabled.value" class="status-micro">
+              Last: {{ exportStatus.lastExportTime.value ? formatTime(exportStatus.lastExportTime.value) : 'Never' }}
+            </div>
+          </div>
 
-            <!-- ZIP Export -->
-            <div class="portability-card">
-                <div class="card-header">
-                    <Download :size="20" />
-                    <h5>Download ZIP</h5>
-                </div>
-                <p>Download all tasks as a ZIP archive of Markdown files.</p>
-                 <button
-                    class="action-btn secondary"
-                    :disabled="exportStatus.isExporting.value"
-                    @click="downloadZip"
-                >
-                    <RefreshCw v-if="exportStatus.isExporting.value" :size="14" class="animate-spin" />
-                    <span v-else>Download Archive</span>
-                </button>
+          <!-- ZIP Export -->
+          <div class="portability-card">
+            <div class="card-header">
+              <Download :size="20" />
+              <h5>Download ZIP</h5>
             </div>
+            <p>Download all tasks as a ZIP archive of Markdown files.</p>
+            <button
+              class="action-btn secondary"
+              :disabled="exportStatus.isExporting.value"
+              @click="downloadZip"
+            >
+              <RefreshCw v-if="exportStatus.isExporting.value" :size="14" class="animate-spin" />
+              <span v-else>Download Archive</span>
+            </button>
+          </div>
 
-            <!-- ZIP Import -->
-            <div class="portability-card highlight">
-                <div class="card-header">
-                    <Upload :size="20" />
-                    <h5>Import ZIP</h5>
-                </div>
-                <p>Restore tasks from a Markdown ZIP archive.</p>
-                 <button
-                    class="action-btn accent"
-                    :disabled="exportStatus.isExporting.value"
-                    @click="triggerZipUpload"
-                >
-                    <RefreshCw v-if="exportStatus.isExporting.value" :size="14" class="animate-spin" />
-                    <span v-else>Import Archive</span>
-                </button>
+          <!-- ZIP Import -->
+          <div class="portability-card highlight">
+            <div class="card-header">
+              <Upload :size="20" />
+              <h5>Import ZIP</h5>
             </div>
+            <p>Restore tasks from a Markdown ZIP archive.</p>
+            <button
+              class="action-btn accent"
+              :disabled="exportStatus.isExporting.value"
+              @click="triggerZipUpload"
+            >
+              <RefreshCw v-if="exportStatus.isExporting.value" :size="14" class="animate-spin" />
+              <span v-else>Import Archive</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -293,7 +305,9 @@
       <div class="restore-dialog" @click.stop>
         <div class="dialog-header">
           <h3>🔄 Restore from Snapshot</h3>
-          <button class="close-button" @click="closeRestoreDialog">×</button>
+          <button class="close-button" @click="closeRestoreDialog">
+            ×
+          </button>
         </div>
 
         <div class="backup-list">
@@ -305,22 +319,28 @@
             @click="selectBackup(backup)"
           >
             <div class="backup-info">
-              <div class="backup-time">{{ formatTime(backup.timestamp) }}</div>
+              <div class="backup-time">
+                {{ formatTime(backup.timestamp) }}
+              </div>
               <div class="backup-details">
                 {{ backup.tasks.length }} tasks
                 <span v-if="backup.type" class="backup-type">({{ backup.type }})</span>
               </div>
             </div>
             <button class="download-btn" @click.stop="downloadBackup(backup)">
-                <Download :size="16" />
+              <Download :size="16" />
             </button>
           </div>
-           <div v-if="backupHistory.length === 0" class="no-backups">No snapshots available.</div>
+          <div v-if="backupHistory.length === 0" class="no-backups">
+            No snapshots available.
+          </div>
         </div>
 
         <div class="dialog-actions">
           <div class="spacer" style="flex: 1" />
-          <button class="action-btn secondary" @click="closeRestoreDialog">Cancel</button>
+          <button class="action-btn secondary" @click="closeRestoreDialog">
+            Cancel
+          </button>
           <button :disabled="!selectedBackup" class="action-btn primary" @click="confirmRestore">
             <RefreshCw v-if="isRestoring" :size="16" class="animate-spin" />
             <span v-else>Restore Selected</span>
@@ -330,8 +350,20 @@
     </div>
 
     <!-- Hidden Inputs -->
-    <input ref="fileInput" type="file" accept=".json" style="display: none" @change="handleFileUpload">
-    <input ref="zipInput" type="file" accept=".zip" style="display: none" @change="handleZipUpload">
+    <input
+      ref="fileInput"
+      type="file"
+      accept=".json"
+      style="display: none"
+      @change="handleFileUpload"
+    >
+    <input
+      ref="zipInput"
+      type="file"
+      accept=".zip"
+      style="display: none"
+      @change="handleZipUpload"
+    >
   </div>
 </template>
 

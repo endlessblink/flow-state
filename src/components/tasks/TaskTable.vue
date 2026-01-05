@@ -192,6 +192,16 @@ import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  select: [taskId: string]
+  startTimer: [taskId: string]
+  edit: [taskId: string]
+  contextMenu: [event: MouseEvent, task: Task]
+  updateTask: [taskId: string, updates: Partial<Task>]
+}>()
+
 // Status options for CustomSelect
 const statusOptions = [
   { label: 'To Do', value: 'planned' },
@@ -205,15 +215,6 @@ interface Props {
   tasks: Task[]
   density: DensityType
 }
-
-const props = defineProps<Props>()
-const emit = defineEmits<{
-  select: [taskId: string]
-  startTimer: [taskId: string]
-  edit: [taskId: string]
-  contextMenu: [event: MouseEvent, task: Task]
-  updateTask: [taskId: string, updates: Partial<Task>]
-}>()
 
 const taskStore = useTaskStore()
 

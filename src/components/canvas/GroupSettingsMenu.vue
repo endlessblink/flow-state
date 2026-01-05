@@ -132,6 +132,13 @@ import { useGroupSettings, getSettingsDescription } from '@/composables/useGroup
 import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  close: []
+  save: [settings: { assignOnDrop: AssignOnDropSettings }]
+}>()
+
 // Priority options for CustomSelect
 const priorityOptions = [
   { label: "Don't change", value: '' },
@@ -164,13 +171,6 @@ interface Props {
   section: CanvasSection | null
   isVisible: boolean
 }
-
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  close: []
-  save: [settings: { assignOnDrop: AssignOnDropSettings }]
-}>()
 
 const taskStore = useTaskStore()
 const { getAutoFilledSettings } = useGroupSettings()

@@ -1,4 +1,4 @@
-import { PowerSyncBackendConnector, AbstractPowerSyncDatabase } from '@powersync/web';
+import type { PowerSyncBackendConnector, AbstractPowerSyncDatabase } from '@powersync/web';
 import * as jose from 'jose';
 
 /**

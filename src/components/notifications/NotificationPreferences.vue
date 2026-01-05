@@ -183,6 +183,12 @@ import { useNotificationStore } from '@/stores/notifications'
 import type { NotificationPreferences } from '@/types/recurrence'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  preferencesChanged: [preferences: NotificationPreferences]
+}>()
+
 // Snooze duration options for CustomSelect
 const snoozeSelectOptions = [
   { label: '5 minutes', value: '5' },
@@ -196,12 +202,6 @@ interface Props {
   taskId: string
   initialPreferences?: NotificationPreferences
 }
-
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  preferencesChanged: [preferences: NotificationPreferences]
-}>()
 
 const notificationStore = useNotificationStore()
 

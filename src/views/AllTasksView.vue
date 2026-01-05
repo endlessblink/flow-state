@@ -129,30 +129,22 @@ const taskToDelete = ref<string | null>(null)
 
 // Computed Tasks - Access store's computed directly (maintains full reactivity)
 const filteredTasks = computed(() => {
-  const tasks = taskStore.filteredTasks
-  console.log('🔍 [AllTasksView] filteredTasks computed:', {
-    taskCount: tasks.length,
-    tasks: tasks.slice(0, 3), // Show first 3 tasks for debugging
-    storeInitialized: taskStore.tasks.length > 0,
-    allTasksCount: taskStore.tasks.length
-  })
-  return tasks
+  return taskStore.filteredTasks
 })
 
 const sortedTasks = computed(() => {
   const tasks = [...filteredTasks.value]
-  console.log('🔍 [AllTasksView] sortedTasks computed:', {
-    beforeSort: tasks.length,
-    sortBy: sortBy.value,
-    viewType: viewType.value
-  })
 
   switch (sortBy.value) {
     case 'dueDate':
       return tasks.sort((a, b) => {
+        // Optimized: Use string comparison for dates (YYYY-MM-DD format works with lexical sort)
+        // This avoids creating 2*N Date objects per sort
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        if (a.dueDate < b.dueDate) return -1
+        if (a.dueDate > b.dueDate) return 1
+        return 0
       })
     case 'priority': {
       const priorityOrder = { high: 0, medium: 1, low: 2 }
@@ -166,7 +158,9 @@ const sortedTasks = computed(() => {
       return tasks.sort((a, b) => a.title.localeCompare(b.title))
     case 'created':
       return tasks.sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        // Optimized: createdAt is already a Date object, use getTime() directly
+        // This avoids creating 2*N Date objects per sort
+        return b.createdAt.getTime() - a.createdAt.getTime()
       })
     default:
       return tasks
@@ -264,13 +258,9 @@ const handleMoveTask = (taskId: string, targetProjectId: string | null, targetPa
 const handleToggleDoneTasks = (event: MouseEvent) => {
   // Prevent event bubbling that might interfere with other click handlers
   event.stopPropagation()
-  console.log('🔧 AllTasksView: Toggle button clicked!')
-  console.log('🔧 AllTasksView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
-
+  // Logs removed for performance
   try {
     taskStore.toggleHideDoneTasks()
-    console.log('🔧 AllTasksView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
-    console.log('🔧 AllTasksView: Method call successful')
   } catch (error) {
     console.error('🔧 AllTasksView: Error calling toggleHideDoneTasks:', error)
   }
@@ -278,12 +268,7 @@ const handleToggleDoneTasks = (event: MouseEvent) => {
 
 // Debug lifecycle hook
 onMounted(() => {
-  console.log('🚀 [AllTasksView] Component mounted', {
-    totalTasks: taskStore.tasks.length,
-    filteredTasks: taskStore.filteredTasks.length,
-    viewType: viewType.value,
-    sortBy: sortBy.value
-  })
+  // Logs removed for performance
 })
 </script>
 

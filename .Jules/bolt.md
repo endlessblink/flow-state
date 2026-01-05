@@ -1,0 +1,3 @@
+## 2024-05-24 - [Date Object Allocation in Sort Loops]
+**Learning:** `AllTasksView` was creating new `Date` objects inside the `sort` comparison function for every comparison. For `createdAt`, the property was already a `Date` object, making the new allocation redundant. For `dueDate`, the property is a string (ISO-like), which can be compared directly as strings without parsing.
+**Action:** Always check if a property is already a `Date` object before wrapping it in `new Date()`. For sort keys, use primitives (number timestamp or ISO string) whenever possible to avoid object allocation overhead in O(N log N) loops.

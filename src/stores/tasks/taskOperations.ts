@@ -35,16 +35,14 @@ export function useTaskOperations(
     // Helper to trigger canvas sync after task operations
     // This bypasses Vue's watch system which has timing issues in Tauri/WebKitGTK
     const triggerCanvasSync = () => {
-        try {
-            // Dynamic import to avoid circular dependency and context issues
-            // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-            const { useCanvasUiStore } = require('../canvas/canvasUi')
+        // Dynamic import to avoid circular dependency and context issues
+        import('../canvas/canvasUi').then(({ useCanvasUiStore }) => {
             const canvasUiStore = useCanvasUiStore()
             canvasUiStore.requestSync()
             console.log('🔄 [CANVAS-SYNC] Triggered canvas sync after task operation')
-        } catch (_e) {
+        }).catch(_e => {
             // Ignore if canvas store not available (e.g., in non-canvas views)
-        }
+        })
     }
 
     const createTask = async (taskData: Partial<Task>) => {

@@ -395,24 +395,21 @@ export function useCanvasSync(deps: SyncDependencies) {
     const batchedSyncNodes = (priority: 'high' | 'normal' | 'low' = 'normal') => {
         if (_nodeUpdateBatcher) {
             _nodeUpdateBatcher.schedule(() => {
-                // TASK-089: Added isAnyCanvasStateLocked() check
+                // TASK-089: Removed isAnyCanvasStateLocked() global check
+                // This was blocking ALL updates (including status changes/new tasks) if anything was locked.
+                // syncNodes() now handles individual locks internally.
                 if (!deps.isHandlingNodeChange.value &&
                     !deps.isSyncing.value &&
                     !deps.isNodeDragging.value &&
                     !deps.isDragSettlingRef.value &&
                     !deps.resizeState.value.isResizing &&
-                    !deps.isResizeSettling.value &&
-                    !isAnyCanvasStateLocked()) {
+                    !deps.isResizeSettling.value) {
                     syncNodes()
                 }
             }, priority)
         } else {
-            // TASK-089: Guard fallback path as well
-            if (!isAnyCanvasStateLocked()) {
-                syncNodes()
-            } else {
-                console.log('🛡️ [TASK-089] syncNodes blocked in batchedSyncNodes fallback - canvas state locked')
-            }
+            // TASK-089: Removed global lock check here too
+            syncNodes()
         }
     }
 

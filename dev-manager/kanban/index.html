@@ -846,12 +846,13 @@
       position: absolute;
       top: 100%;
       right: 0;
-      z-index: 1000;
+      z-index: 9999;
       min-width: 140px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
+      background: #1f2937;
+      /* Solid dark background */
+      border: 1px solid var(--border-medium);
       border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
       padding: 4px;
       margin-top: 4px;
       display: none;
@@ -871,26 +872,30 @@
     .badge-dropdown-option {
       display: block;
       width: 100%;
-      padding: 6px 10px;
-      font-size: 11px;
-      font-weight: 600;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 500;
       text-align: left;
       border: none;
       border-radius: 4px;
       cursor: pointer;
       background: transparent;
-      color: var(--text-primary);
+      color: #e5e7eb;
       transition: background 0.1s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .badge-dropdown-option:hover {
-      background: var(--bg-hover);
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .badge-dropdown-option.selected {
-      background: var(--accent);
-      color: white;
+      background: var(--brand-subtle);
+      color: var(--brand-primary);
     }
+
 
     /* Priority dots for dropdown options */
     .priority-dot {

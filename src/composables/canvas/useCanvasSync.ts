@@ -185,10 +185,13 @@ export function useCanvasSync(deps: SyncDependencies) {
                         const relX = position.x - section.position.x
                         const relY = position.y - section.position.y
 
-                        position = {
-                            x: Number.isFinite(relX) ? relX : 0,
-                            y: Number.isFinite(relY) ? relY : 0
+                        // Fix: Only assign parent if relative calculation is valid
+                        // This prevents tasks from stacking at (0,0) relative to group if calculation fails
+                        if (Number.isFinite(relX) && Number.isFinite(relY)) {
+                            parentNode = `section-${section.id}`
+                            position = { x: relX, y: relY }
                         }
+                        // Else: Keep position as Absolute (from task.canvasPosition). Keep parentNode as undefined.
                     }
 
                     desiredNodeMap.set(task.id, {

@@ -55,7 +55,44 @@ export function useCanvasEvents(syncNodes?: () => void) {
 
     // --- Event Handlers ---
 
-    const handlePaneClick = () => {
+    const handlePaneClick = (event: MouseEvent) => {
+        // SHIFT+CLICK ON GROUP BODY SUPPORT
+        // Since we disable pointer-events on groups when Shift is held (to allow rubber-band selection),
+        // we must manually handle Shift+Click on a group to toggle its selection.
+        if (event.shiftKey) {
+            // ✅ DRIFT FIX: Use Vue Flow native projection
+            const { x, y } = screenToFlowCoordinate({
+                x: event.clientX,
+                y: event.clientY
+            })
+
+            // Find all groups that contain this point
+            const hitGroups = canvasStore.groups.filter(group => {
+                const gx = group.position.x
+                const gy = group.position.y
+                const gw = group.position.width
+                const gh = group.position.height
+                return x >= gx && x <= gx + gw && y >= gy && y <= gy + gh
+            })
+
+            if (hitGroups.length > 0) {
+                // If multiple groups (nested), pick the smallest one (likely the child)
+                hitGroups.sort((a, b) => (a.position.width * a.position.height) - (b.position.width * b.position.height))
+
+                const targetGroup = hitGroups[0]
+                canvasStore.toggleNodeSelection(targetGroup.id)
+
+                // Don't clear selection or close menus if we hit a group
+                return
+            }
+
+            // If we clicked empty space with Shift, we generally want to preserve selection
+            // (or let Vue Flow handle it, but pane click implies we are here)
+            // So we return without clearing selection.
+            closeAllContextMenus()
+            return
+        }
+
         canvasStore.setSelectedNodes([])
         closeAllContextMenus()
     }

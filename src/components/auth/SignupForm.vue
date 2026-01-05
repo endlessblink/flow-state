@@ -1,7 +1,9 @@
 <template>
   <div class="signup-form">
     <div class="form-header">
-      <div class="auth-brand-icon">🍅</div>
+      <div class="auth-brand-icon">
+        🍅
+      </div>
       <h2 class="form-title">
         <span class="gradient-text">{{ t('auth.signup.title') }}</span>
       </h2>

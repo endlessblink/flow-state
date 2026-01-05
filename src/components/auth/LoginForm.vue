@@ -2,7 +2,9 @@
 <template>
   <div class="login-form">
     <div class="form-header">
-      <div class="auth-brand-icon">🍅</div>
+      <div class="auth-brand-icon">
+        🍅
+      </div>
       <h2 class="form-title">
         <span class="gradient-text">{{ t('auth.login.title') }}</span>
       </h2>

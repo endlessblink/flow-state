@@ -1,8 +1,8 @@
-import PouchDB from 'pouchdb-browser'
-import { ConflictDetector } from '@/utils/conflictDetector'
-import { SyncValidator } from '@/utils/syncValidator'
+import type PouchDB from 'pouchdb-browser'
+import type { ConflictDetector } from '@/utils/conflictDetector'
+import type { SyncValidator } from '@/utils/syncValidator'
 import type { BackupData } from '@/composables/useBackupSystem'
-import { getLogger } from '@/utils/productionLogger'
+import type { getLogger } from '@/utils/productionLogger'
 
 // Interface for BackupSystem (subset of useBackupSystem return)
 export interface IBackupSystem {

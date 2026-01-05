@@ -386,7 +386,7 @@ export function useCanvasSync(deps: SyncDependencies) {
     }
 
     // Optimized sync functions using the batching system
-    let _nodeUpdateBatcher: NodeUpdateBatcher | null = new NodeUpdateBatcher(deps.vueFlowRef)
+    const _nodeUpdateBatcher: NodeUpdateBatcher | null = new NodeUpdateBatcher(deps.vueFlowRef)
     deps.resourceManager.setNodeBatcher(_nodeUpdateBatcher)
 
     const batchedSyncNodes = (priority: 'high' | 'normal' | 'low' = 'normal') => {

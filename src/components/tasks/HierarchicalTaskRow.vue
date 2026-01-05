@@ -215,23 +215,6 @@ import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
-// Status options for CustomSelect
-const statusOptions = [
-  { label: 'To Do', value: 'planned' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Done', value: 'done' },
-  { label: 'Backlog', value: 'backlog' },
-  { label: 'On Hold', value: 'on_hold' }
-]
-
-interface Props {
-  task: Task
-  indentLevel?: number
-  selected?: boolean
-  expandedTasks?: Set<string>
-  visitedIds?: Set<string>
-}
-
 const props = withDefaults(defineProps<Props>(), {
   indentLevel: 0,
   selected: false,
@@ -250,6 +233,23 @@ const emit = defineEmits<{
   moveTask: [taskId: string, targetProjectId: string | null, targetParentId: string | null]
   updateTask: [taskId: string, updates: Partial<Task>]
 }>()
+
+// Status options for CustomSelect
+const statusOptions = [
+  { label: 'To Do', value: 'planned' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Done', value: 'done' },
+  { label: 'Backlog', value: 'backlog' },
+  { label: 'On Hold', value: 'on_hold' }
+]
+
+interface Props {
+  task: Task
+  indentLevel?: number
+  selected?: boolean
+  expandedTasks?: Set<string>
+  visitedIds?: Set<string>
+}
 
 const taskStore = useTaskStore()
 const { startDrag, endDrag } = useDragAndDrop()

@@ -235,6 +235,13 @@ import {
 } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  close: []
+  applied: []
+}>()
+
 // Status options for CustomSelect
 const statusOptions = [
   { label: 'Planned', value: 'planned' },
@@ -255,13 +262,6 @@ interface Props {
   isOpen: boolean
   taskIds: string[]
 }
-
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  close: []
-  applied: []
-}>()
 
 const taskStore = useTaskStore()
 

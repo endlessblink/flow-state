@@ -276,7 +276,7 @@ export const deleteTask = async (
  * Load all tasks from individual documents
  */
 export const loadAllTasks = async (db: PouchDB.Database, includeDeleted = false): Promise<Task[]> => {
-  let retryCount = 0
+  const retryCount = 0
   const maxRetries = 3
 
   // BRANCH: SQLite

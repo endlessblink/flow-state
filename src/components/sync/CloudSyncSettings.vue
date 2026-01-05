@@ -52,40 +52,44 @@
 
     <!-- Supabase Configuration -->
     <div v-if="selectedProvider === 'supabase'" class="setting-group">
-        <label class="setting-label">
-            <span>Authentication</span>
-            <span class="setting-description">Sign in to sync your data</span>
-        </label>
+      <label class="setting-label">
+        <span>Authentication</span>
+        <span class="setting-description">Sign in to sync your data</span>
+      </label>
         
-        <div v-if="!authStore.user" class="supabase-auth-actions" style="margin-top: 8px;">
-            <div class="auth-message" style="margin-bottom: 12px; font-size: 0.9em; color: var(--text-muted);">
-                Sign in to synchronize your tasks across devices.
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="action-btn success" @click="uiStore.openAuthModal('login')">
-                    Log In
-                </button>
-                <button class="action-btn secondary" @click="uiStore.openAuthModal('signup')">
-                    Create Account
-                </button>
-            </div>
+      <div v-if="!authStore.user" class="supabase-auth-actions" style="margin-top: 8px;">
+        <div class="auth-message" style="margin-bottom: 12px; font-size: 0.9em; color: var(--text-muted);">
+          Sign in to synchronize your tasks across devices.
         </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="action-btn success" @click="uiStore.openAuthModal('login')">
+            Log In
+          </button>
+          <button class="action-btn secondary" @click="uiStore.openAuthModal('signup')">
+            Create Account
+          </button>
+        </div>
+      </div>
 
-        <div v-else class="supabase-user-info" style="background: var(--glass-bg-soft); padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                <div style="background: var(--brand-primary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                    <User :size="16" />
-                </div>
-                <div>
-                    <div style="font-weight: 600; font-size: 0.9em;">{{ authStore.user.email }}</div>
-                    <div style="font-size: 0.8em; color: var(--success);">● Authenticated</div>
-                </div>
+      <div v-else class="supabase-user-info" style="background: var(--glass-bg-soft); padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <div style="background: var(--brand-primary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+            <User :size="16" />
+          </div>
+          <div>
+            <div style="font-weight: 600; font-size: 0.9em;">
+              {{ authStore.user.email }}
             </div>
-            <button class="action-btn danger" style="width: 100%; justify-content: center;" @click="authStore.signOut()">
-                <LogOut :size="14" />
-                Sign Out
-            </button>
+            <div style="font-size: 0.8em; color: var(--success);">
+              ● Authenticated
+            </div>
+          </div>
         </div>
+        <button class="action-btn danger" style="width: 100%; justify-content: center;" @click="authStore.signOut()">
+          <LogOut :size="14" />
+          Sign Out
+        </button>
+      </div>
     </div>
 
     <!-- CouchDB Configuration -->

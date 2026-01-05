@@ -46,8 +46,12 @@ defineEmits<{
         :key="index"
         class="week-day-header"
       >
-        <div class="week-day-name">{{ day.dayName }}</div>
-        <div class="week-day-date">{{ day.date }}</div>
+        <div class="week-day-name">
+          {{ day.dayName }}
+        </div>
+        <div class="week-day-date">
+          {{ day.date }}
+        </div>
       </div>
     </div>
 
@@ -140,7 +144,9 @@ defineEmits<{
               @contextmenu.prevent="$emit('eventContextMenu', $event, event)"
             >
               <div class="event-header">
-                <div class="event-title">{{ event.title }}</div>
+                <div class="event-title">
+                  {{ event.title }}
+                </div>
                 <div class="event-actions">
                   <div
                     class="status-indicator"
@@ -152,10 +158,14 @@ defineEmits<{
                   <button
                     class="remove-from-calendar-btn"
                     @click.stop="$emit('removeFromCalendar', event)"
-                  >✕</button>
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
-              <div class="event-duration">{{ event.duration }}min</div>
+              <div class="event-duration">
+                {{ event.duration }}min
+              </div>
             </div>
 
             <!-- Bottom Resize Handle -->

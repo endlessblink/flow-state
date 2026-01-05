@@ -214,6 +214,17 @@ import { getSettingsDescription } from '@/composables/useGroupSettings'
 import BaseInput from '@/components/base/BaseInput.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
+const props = withDefaults(defineProps<Props>(), {
+  group: null,
+  position: () => ({ x: 100, y: 100 })
+})
+
+const emit = defineEmits<{
+  close: []
+  created: [group: CanvasGroup]
+  updated: [group: CanvasGroup]
+}>()
+
 // Options for smart settings CustomSelect components
 const priorityOptions = [
   { label: "Don't change", value: '' },
@@ -257,17 +268,6 @@ interface Props {
   group?: CanvasGroup | null
   position?: { x: number; y: number }
 }
-
-const props = withDefaults(defineProps<Props>(), {
-  group: null,
-  position: () => ({ x: 100, y: 100 })
-})
-
-const emit = defineEmits<{
-  close: []
-  created: [group: CanvasGroup]
-  updated: [group: CanvasGroup]
-}>()
 
 // Stores
 const canvasStore = useCanvasStore()

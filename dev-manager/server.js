@@ -75,6 +75,37 @@ app.get('/api/master-plan', async (req, res) => {
   }
 });
 
+// API: List project files
+app.get('/api/files', async (req, res) => {
+  try {
+    const files = [];
+
+    async function recurse(dir) {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relPath = path.relative(PROJECT_ROOT, fullPath);
+
+        // Skip common ignore patterns
+        if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'build') {
+          continue;
+        }
+
+        if (entry.isDirectory()) {
+          await recurse(fullPath);
+        } else {
+          files.push(relPath);
+        }
+      }
+    }
+
+    await recurse(PROJECT_ROOT);
+    res.json({ files });
+  } catch (error) {
+    res.status(500).json({ error: error.message, files: [] });
+  }
+});
+
 // API: Get Git Diff
 app.get('/api/diff', (req, res) => {
   const options = { cwd: PROJECT_ROOT, maxBuffer: 1024 * 1024 * 10 }; // 10MB buffer
@@ -216,25 +247,14 @@ io.on('connection', (socket) => {
   console.log('[Socket] Client connected', socket.id);
   let ptyProcess = null;
 
-  socket.on('agent-start', ({ taskId, taskTitle, taskDescription }) => {
+  socket.on('agent-start', ({ taskId, taskTitle, taskDescription, command, contextFiles }) => {
     if (ptyProcess) {
       socket.emit('agent-error', 'Agent already running');
       return;
     }
 
     const shell = process.env.SHELL || 'bash';
-    const agentCommand = process.env.AGENT_COMMAND || 'claude';
-
-    // Construct initial prompt
-    // Note: This depends on how the CLI accepts input.
-    // If it's `claude "prompt"`, we run that.
-    // If it's interactive, we might just start `claude` and type into it.
-    // Assuming `claude` CLI starts a REPL, and we want to feed it the task.
-    // Or we run `claude -p "prompt"`.
-    // Let's try running the command directly. If the user wants to pass the task context,
-    // they can configure AGENT_COMMAND to be a wrapper script or we assume `claude`.
-
-    // For now, let's spawn a shell and type the command for them, so they see it.
+    const agentCommand = command || process.env.AGENT_COMMAND || 'claude';
 
     ptyProcess = pty.spawn(shell, [], {
       name: 'xterm-color',
@@ -257,21 +277,25 @@ io.on('connection', (socket) => {
     // Start the agent automatically
     // We construct a prompt based on the task
     const prompt = `I am working on task ${taskId}: "${taskTitle}".\n${taskDescription}\n\nPlease help me complete this task.`;
-    // Escape prompt for shell
     const escapedPrompt = prompt.replace(/"/g, '\\"');
 
-    // Send command to shell
-    // We use echo to show what's happening, then run the agent
-    // ptyProcess.write(`echo "Starting Agent for ${taskId}..."\r`);
+    // Construct file context arguments
+    let fileArgs = '';
+    if (contextFiles && contextFiles.length > 0) {
+      // Escape filenames just in case
+      fileArgs = contextFiles.map(f => `"${f.replace(/"/g, '\\"')}"`).join(' ');
+    }
 
-    // If command is 'claude', we might want to pass the prompt as an argument if supported,
-    // or just start it and let the user paste/type.
-    // "Claude Code" (the beta CLI) typically works by `claude` -> interactive repl.
-    // Or `claude "do this"` -> executes and returns (or enters interactive mode).
-    // Let's try `claude "prompt"` strategy if the command looks like `claude`.
+    // Run command: agent "prompt" file1 file2 ...
+    // Note: This assumes the agent CLI accepts the prompt as the first arg and files as subsequent args
+    // Adjust if specific agent syntax differs (e.g. -p "prompt")
+    const cmd = `${agentCommand} "${escapedPrompt}" ${fileArgs}`;
 
-    const cmd = `${agentCommand} "${escapedPrompt}"`;
-    ptyProcess.write(`${cmd}\r`);
+    // Echo the command so the user sees what's running
+    ptyProcess.write(`echo "Running: ${agentCommand} [prompt] ${fileArgs}"\r`);
+    setTimeout(() => {
+      ptyProcess.write(`${cmd}\r`);
+    }, 500);
   });
 
   socket.on('agent-input', (data) => {

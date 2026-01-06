@@ -2054,6 +2054,29 @@
         </div>
       </div>
 
+      <!-- Agent Configuration -->
+      <div style="margin-bottom: 16px; padding: 12px; background: var(--surface-primary); border-radius: 10px;">
+        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+          <div style="flex: 1;">
+            <label style="font-size: 11px; color: var(--text-subtle); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 4px;">Agent Command</label>
+            <input type="text" id="agentCommandInput" placeholder="claude" value="claude" style="width: 100%; padding: 8px; background: var(--surface-tertiary); border: 1px solid var(--border-medium); color: var(--text-primary); border-radius: 6px; font-family: monospace;">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; color: var(--text-subtle); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 4px;">Context Files</label>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="text" id="fileSearchInput" placeholder="Search files..." oninput="filterFiles()" style="flex: 1; padding: 6px 8px; background: var(--surface-tertiary); border: 1px solid var(--border-medium); color: var(--text-primary); border-radius: 4px; font-size: 12px;">
+          </div>
+          <div id="fileListContainer" style="height: 120px; overflow-y: auto; background: var(--surface-tertiary); border: 1px solid var(--border-medium); border-radius: 6px; padding: 4px;">
+            <div style="padding: 8px; color: var(--text-muted); font-size: 12px; text-align: center;">Loading files...</div>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; text-align: right;">
+            Selected: <span id="selectedFileCount">0</span>
+          </div>
+        </div>
+      </div>
+
       <div class="task-modal-description" id="modalDescription">
         Task description will appear here...
       </div>
@@ -3476,6 +3499,7 @@
     // Track current task being edited
     let currentEditTask = null;
     let pendingChanges = {};
+    let projectFiles = []; // Cache for file list
 
     function showTaskModal(item) {
       console.log('Opening modal for item:', item);
@@ -3525,6 +3549,13 @@
       document.getElementById('modalProgressSlider').value = progress;
       document.getElementById('modalProgressValue').textContent = progress + '%';
 
+      // Load saved agent command
+      const savedCommand = localStorage.getItem('agent-command') || 'claude';
+      document.getElementById('agentCommandInput').value = savedCommand;
+
+      // Initialize file picker
+      loadProjectFiles();
+
       // Use structured HTML rendering for description
       const descElement = document.getElementById('modalDescription');
       if (item.description || (item.subtasks && item.subtasks.length > 0)) {
@@ -3543,6 +3574,79 @@
 
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
+    }
+
+    // File Picker Logic
+    async function loadProjectFiles() {
+      const container = document.getElementById('fileListContainer');
+
+      // If we already have files, just re-render
+      if (projectFiles.length > 0) {
+        renderFileList(projectFiles);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/files`);
+        const data = await response.json();
+        projectFiles = data.files || [];
+        renderFileList(projectFiles);
+      } catch (error) {
+        container.innerHTML = `<div style="padding:8px; color:#ef4444; font-size:12px;">Error loading files: ${error.message}</div>`;
+      }
+    }
+
+    function renderFileList(files) {
+      const container = document.getElementById('fileListContainer');
+      const searchQuery = document.getElementById('fileSearchInput').value.toLowerCase();
+
+      // Filter files
+      const filtered = files.filter(f => f.toLowerCase().includes(searchQuery));
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div style="padding:8px; color:var(--text-muted); font-size:12px; text-align:center;">No files found</div>`;
+        return;
+      }
+
+      // Build HTML
+      // Note: In a real app we'd use a virtual list for performance if many files,
+      // but for < 1000 files simple DOM is fine.
+      let html = '';
+      filtered.forEach(file => {
+        // Check if previously selected (persisted in DOM or state? Let's use simple DOM check for now, or reset on open)
+        // For simplicity, we reset selection on open unless we track it in `currentEditTask` metadata (future enhancement)
+        const isChecked = false;
+
+        html += `
+          <label style="display: flex; align-items: center; gap: 8px; padding: 4px 8px; cursor: pointer; border-radius: 4px; transition: background 0.1s;">
+            <input type="checkbox" class="file-checkbox" value="${file}" onchange="updateSelectedCount()" ${isChecked ? 'checked' : ''}>
+            <span style="font-family: monospace; font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${file}">${file}</span>
+          </label>
+        `;
+      });
+
+      container.innerHTML = html;
+
+      // Add hover effect via JS since inline styles are tricky for hover
+      container.querySelectorAll('label').forEach(el => {
+        el.onmouseenter = () => el.style.backgroundColor = 'var(--surface-hover)';
+        el.onmouseleave = () => el.style.backgroundColor = 'transparent';
+      });
+
+      updateSelectedCount();
+    }
+
+    function filterFiles() {
+      renderFileList(projectFiles);
+    }
+
+    function updateSelectedCount() {
+      const count = document.querySelectorAll('.file-checkbox:checked').length;
+      document.getElementById('selectedFileCount').textContent = count;
+    }
+
+    function getSelectedFiles() {
+      return Array.from(document.querySelectorAll('.file-checkbox:checked')).map(cb => cb.value);
     }
 
     function closeTaskModal() {
@@ -4562,6 +4666,13 @@
     function openAgent() {
       if (!currentEditTask) return;
 
+      // Save command preference
+      const command = document.getElementById('agentCommandInput').value.trim() || 'claude';
+      localStorage.setItem('agent-command', command);
+
+      // Get selected files
+      const contextFiles = getSelectedFiles();
+
       const modal = document.getElementById('agentModal');
       document.getElementById('agent-task-id').textContent = currentEditTask.id;
       modal.classList.add('active');
@@ -4590,12 +4701,16 @@
           fitTerminal();
         });
         resizeObserver.observe(container);
+      } else {
+        term.clear();
       }
 
       socket.emit('agent-start', {
         taskId: currentEditTask.id,
         taskTitle: currentEditTask.title,
-        taskDescription: currentEditTask.description || ''
+        taskDescription: currentEditTask.description || '',
+        command: command,
+        contextFiles: contextFiles
       });
 
       setTimeout(() => {

@@ -57,20 +57,44 @@
       </div>
     </div>
 
-    <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
-    <!-- TASK-076: Added hide-done-tasks for view-specific done filter -->
-    <InboxFilters
-      v-if="!isCollapsed"
-      v-model:unscheduled-only="unscheduledOnly"
-      v-model:selected-priority="selectedPriority"
-      v-model:selected-project="selectedProject"
-      v-model:selected-duration="selectedDuration"
-      :hide-done-tasks="currentHideDoneTasks"
-      :tasks="baseInboxTasks"
-      :projects="taskStore.rootProjects"
-      @update:hide-done-tasks="toggleHideDoneTasks"
-      @clear-all="clearAllFilters"
-    />
+    <!-- TASK-106: Canvas Group Filter (Primary - reduces cognitive overload) -->
+    <div v-if="!isCollapsed && canvasGroupOptions.length > 1" class="canvas-group-filter">
+      <CustomSelect
+        v-model="selectedCanvasGroup"
+        :options="canvasGroupOptions"
+        placeholder="Show from: All Tasks"
+      />
+    </div>
+
+    <!-- TASK-106: Collapsible Advanced Filters -->
+    <div v-if="!isCollapsed" class="advanced-filters-section">
+      <button
+        class="toggle-filters-btn"
+        :class="{ active: showAdvancedFilters }"
+        @click="showAdvancedFilters = !showAdvancedFilters"
+      >
+        <Filter :size="14" />
+        <span>{{ showAdvancedFilters ? 'Hide filters' : 'More filters' }}</span>
+        <ChevronDown :size="14" class="toggle-icon" :class="{ rotated: showAdvancedFilters }" />
+      </button>
+
+      <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
+      <!-- TASK-076: Added hide-done-tasks for view-specific done filter -->
+      <Transition name="slide-down">
+        <InboxFilters
+          v-if="showAdvancedFilters"
+          v-model:unscheduled-only="unscheduledOnly"
+          v-model:selected-priority="selectedPriority"
+          v-model:selected-project="selectedProject"
+          v-model:selected-duration="selectedDuration"
+          :hide-done-tasks="currentHideDoneTasks"
+          :tasks="baseInboxTasks"
+          :projects="taskStore.rootProjects"
+          @update:hide-done-tasks="toggleHideDoneTasks"
+          @clear-all="clearAllFilters"
+        />
+      </Transition>
+    </div>
 
     <!-- Quick Add Input -->
     <div v-if="!isCollapsed" class="quick-add">
@@ -121,13 +145,13 @@ Call client"
       <!-- Empty State -->
       <div v-if="inboxTasks.length === 0" class="empty-inbox">
         <div class="empty-icon">
-          📋
+          {{ selectedCanvasGroup ? '🎯' : '📋' }}
         </div>
         <p class="empty-text">
-          No tasks found
+          {{ selectedCanvasGroup ? 'No tasks in this group' : 'No tasks found' }}
         </p>
         <p class="empty-subtext">
-          {{ getEmptyMessage() }}
+          {{ selectedCanvasGroup ? 'Drag tasks to this group on the Canvas.' : getEmptyMessage() }}
         </p>
       </div>
 
@@ -250,15 +274,17 @@ import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
 import {
   ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock, CalendarDays,
-  Target as _Target, Calendar as _CalendarIcon, Clipboard as _Clipboard, Folder as _Folder, Trash2, X
+  Target as _Target, Calendar as _CalendarIcon, Clipboard as _Clipboard, Folder as _Folder, Trash2, X, Filter, ChevronDown
 } from 'lucide-vue-next'
 import { NButton, NBadge, NTag } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 import { useSmartViews } from '@/composables/useSmartViews'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 // Props
 interface Props {
@@ -281,6 +307,7 @@ const props = withDefaults(defineProps<Props>(), {
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const { isTodayTask } = useSmartViews()
+const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
 
 // TASK-076: Inbox has its OWN local state for done filter (independent of canvas/calendar toggles)
 // The canvas Done toggle only affects canvas view, not this inbox panel
@@ -312,6 +339,27 @@ const unscheduledOnly = ref(false)
 const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
 const selectedProject = ref<string | null>(null)
 const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
+
+// TASK-106: Canvas group filter (primary filter for reducing cognitive overload)
+const selectedCanvasGroup = ref<string | null>(null)
+const showAdvancedFilters = ref(false)
+
+// TASK-106: Options for canvas group dropdown
+const canvasGroupOptions = computed(() => {
+  const options = [
+    { label: 'All Tasks', value: '' }
+  ]
+
+  // Add canvas groups with task counts
+  groupsWithCounts.value.forEach(group => {
+    options.push({
+      label: `${group.name} (${group.taskCount})`,
+      value: group.id
+    })
+  })
+
+  return options
+})
 
 // Base inbox tasks (Source from filteredTasks to satisfy global filter requirements)
 const baseInboxTasks = computed(() => {
@@ -355,6 +403,7 @@ const clearAllFilters = () => {
   selectedProject.value = null
   selectedDuration.value = null
   activeTimeFilter.value = 'all'
+  selectedCanvasGroup.value = null  // TASK-106
 }
 
 // Time filter state (TASK-080: Today Quick Filter)
@@ -380,9 +429,13 @@ const todayCount = computed(() => {
 const inboxTasks = computed(() => {
   let tasks = baseInboxTasks.value
 
+  // TASK-106: Apply canvas group filter FIRST (primary filter)
+  if (selectedCanvasGroup.value && selectedCanvasGroup.value !== '') {
+    tasks = filterTasksByGroup(tasks, selectedCanvasGroup.value)
+  }
+
   // Apply Today filter (TASK-080)
   if (activeTimeFilter.value === 'today') {
-    const todayStr = getToday().toISOString().split('T')[0]
     tasks = tasks.filter(task => isTodayTask(task))
   }
 
@@ -413,7 +466,7 @@ const inboxTasks = computed(() => {
       const d = task.estimatedDuration
       if (selectedDuration.value === 'unestimated') return !d
       if (!d) return false
-      
+
       switch (selectedDuration.value) {
         case 'quick': return d <= 15
         case 'short': return d > 15 && d <= 30
@@ -1321,5 +1374,91 @@ onBeforeUnmount(() => {
 .inbox-tasks {
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
+}
+
+/* TASK-106: Canvas Group Filter Styles */
+.canvas-group-filter {
+  margin-bottom: var(--space-2);
+}
+
+.canvas-group-filter :deep(.custom-select) {
+  width: 100%;
+}
+
+.canvas-group-filter :deep(.select-trigger) {
+  width: 100%;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.canvas-group-filter :deep(.select-trigger:hover) {
+  border-color: var(--glass-border-hover);
+}
+
+/* TASK-106: Advanced Filters Toggle */
+.advanced-filters-section {
+  margin-bottom: var(--space-2);
+}
+
+.toggle-filters-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.toggle-filters-btn:hover {
+  background: var(--glass-bg-soft);
+  border-color: var(--border-medium);
+  color: var(--text-secondary);
+}
+
+.toggle-filters-btn.active {
+  background: var(--glass-bg-light);
+  border-style: solid;
+  border-color: var(--glass-border);
+  color: var(--text-primary);
+}
+
+.toggle-filters-btn .toggle-icon {
+  margin-left: auto;
+  transition: transform var(--duration-fast);
+}
+
+.toggle-filters-btn .toggle-icon.rotated {
+  transform: rotate(180deg);
+}
+
+/* Slide down transition for filters */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all var(--duration-normal) ease;
+  overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  opacity: 1;
+  max-height: 300px;
+  margin-top: var(--space-2);
 }
 </style>

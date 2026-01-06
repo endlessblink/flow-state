@@ -36,7 +36,15 @@
       <div class="date-time-row">
         <!-- Date Picker -->
         <div class="date-picker-section">
-          <div class="date-display" @click="openDatePicker">
+          <div
+            class="date-display"
+            @click="openDatePicker"
+            role="button"
+            tabindex="0"
+            aria-label="Open date picker"
+            @keydown.enter="openDatePicker"
+            @keydown.space.prevent="openDatePicker"
+          >
             <Calendar :size="14" />
             <span>{{ formattedDate }}</span>
             <input
@@ -46,6 +54,7 @@
               :value="localDate"
               aria-label="Due date"
               @change="updateDate"
+              tabindex="-1"
             >
           </div>
           <!-- Quick Date Shortcuts -->

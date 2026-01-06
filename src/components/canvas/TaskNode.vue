@@ -35,11 +35,10 @@
 
       <!-- Description (if available) - TASK-075: Markdown rendering -->
       <div v-if="task?.description" class="task-description" :class="titleAlignmentClasses">
-        <div
-          class="description-content markdown-content"
+        <MarkdownRenderer
+          :content="task.description"
           :class="{ 'expanded': isDescriptionExpanded || !isDescriptionLong }"
-          @click="handleDescriptionClick"
-          v-html="parsedDescription"
+          @checkbox-click="handleCheckboxClick"
         />
         <button
           v-if="isDescriptionLong"
@@ -131,14 +130,13 @@
 import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
 import { Calendar, Timer, Zap, Clock, Check } from 'lucide-vue-next'
-import { marked } from 'marked'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
-import { processMarkdownCheckboxes } from '@/utils/security'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTimerStore } from '@/stores/timer'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue'
 
 const props = withDefaults(defineProps<Props>(), {
   isSelected: false,
@@ -155,12 +153,6 @@ const emit = defineEmits<{
   select: [task: Task, multiSelect: boolean]
   contextMenu: [event: MouseEvent, task: Task]
 }>()
-
-// Configure marked for safe rendering
-marked.setOptions({
-  gfm: true, // GitHub Flavored Markdown
-  breaks: true // Convert \n to <br>
-})
 
 interface Props {
   task: Task
@@ -227,52 +219,23 @@ const toggleDescriptionExpanded = () => {
   isDescriptionExpanded.value = !isDescriptionExpanded.value
 }
 
-// TASK-075: Parse markdown description with checkbox support
-const parsedDescription = computed(() => {
-  if (!props.task?.description) return ''
+// TASK-075: Checkbox interactivity logic
+const handleCheckboxClick = (clickedIndex: number) => {
+  const description = props.task?.description || ''
+  const checkboxPattern = /- \[([ x])\]/g
+  const matches = [...description.matchAll(checkboxPattern)]
 
-  // Parse markdown to HTML
-  const html = marked.parse(props.task.description) as string
-
-  // Sanitize and process checkboxes
-  return processMarkdownCheckboxes(html)
-})
-
-// Handle checkbox clicks in markdown description
-const handleDescriptionClick = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-
-  // Check if clicked element is a markdown checkbox
-  if (target.tagName === 'INPUT' && target.classList.contains('md-checkbox')) {
-    event.stopPropagation()
-    event.preventDefault()
-
-    const description = props.task?.description || ''
-
-    // Find all checkboxes in the description
-    const checkboxPattern = /- \[([ x])\]/g
-    const matches = [...description.matchAll(checkboxPattern)]
-
-    // Find which checkbox was clicked by counting preceding checkboxes in DOM
-    const allCheckboxes = (target.closest('.description-content') as HTMLElement)?.querySelectorAll('.md-checkbox')
-    const clickedIndex = Array.from(allCheckboxes || []).indexOf(target)
-
-    if (clickedIndex >= 0 && clickedIndex < matches.length) {
-      // Toggle the checkbox state in the raw markdown
-      let currentIndex = 0
-      const newDescription = description.replace(checkboxPattern, (match) => {
-        if (currentIndex === clickedIndex) {
-          currentIndex++
-          // Toggle: [ ] -> [x] or [x] -> [ ]
-          return match === '- [ ]' ? '- [x]' : '- [ ]'
-        }
+  if (clickedIndex >= 0 && clickedIndex < matches.length) {
+    let currentIndex = 0
+    const newDescription = description.replace(checkboxPattern, (match) => {
+      if (currentIndex === clickedIndex) {
         currentIndex++
-        return match
-      })
-
-      // Update the task description
-      taskStore.updateTask(props.task.id, { description: newDescription })
-    }
+        return match === '- [ ]' ? '- [x]' : '- [ ]'
+      }
+      currentIndex++
+      return match
+    })
+    taskStore.updateTask(props.task.id, { description: newDescription })
   }
 }
 

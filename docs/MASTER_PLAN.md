@@ -169,12 +169,21 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 **Priority**: P1-HIGH
 - Ensure the Tauri app design mimics 1-to-1 the web app design.
 
-### TASK-109: Markdown Support for Task Descriptions (🔄 IN PROGRESS)
-**Priority**: P1-HIGH
-- Add `description` field to task schema.
-- Implement Markdown rendering and editing in Task Edit Modal.
-- Ensure RTL and mixed-content support in descriptions.
 
+
+### ~~TASK-109~~: Premium "Obsidian-Like" Markdown Editor (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 6, 2026
+
+Implemented a professional, seamless Live Preview (WYSIWYG) experience using the **Milkdown** editor core, delivering an Obsidian-like behavior for task descriptions.
+
+**Features**:
+- [x] **Live Preview (WYSIWYG)**: Content renders instantly as you type (headings, bold, lists), eliminating the need for a separate "Preview" tab for basic editing.
+- [x] **Milkdown Core**: Sophisticated ProseMirror-based engine for high-performance editing and reliable GFM support.
+- [x] **Stable Architecture**: Implemented a parent-child structure (`MarkdownEditor` shell + `MilkdownEditorSurface`) to ensure reliable context injection and application stability.
+- [x] **Interactive Checkboxes**: Users can toggle task list checkboxes directly within the live editor surface.
+- [x] **Full RTL & Mixed Content**: Deep integration with our Hebrew alignment logic, ensuring perfectly aligned right-to-left text flow with automatic detection.
+- [x] **Premium UI**: Custom-styled glassmorphism surface with a floating toolbar (Bold, Italic, Lists, Links, Undo/Redo).
 
 ### ~~TASK-104~~: Fix Critical Notification Store Crash (✅ DONE)
 - Fixed `ReferenceError: scheduledNotifications is not defined` in `notifications.ts`.

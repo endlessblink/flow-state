@@ -83,14 +83,13 @@ export function useTaskHistory(
                 await store.bulkDeleteTasks(taskIds)
             },
             startTaskNowWithUndo: async (taskId: string) => {
-                try {
-                    const { getUndoRedoComposable } = await import('@/composables/useDynamicImports')
-                    const useUnifiedUndoRedo = await getUndoRedoComposable()
-                    const actions = useUnifiedUndoRedo()
-                    if (actions && typeof actions.startTaskNow === 'function') {
-                        return (actions as any).startTaskNow(taskId)
-                    }
-                } catch { }
+                const { useTaskStore } = await import('../tasks')
+                const store = useTaskStore()
+                const undoSystem = getUndoSystem()
+                undoSystem.saveState('Before start task now')
+                store.startTaskNow(taskId)
+                await nextTick()
+                undoSystem.saveState('After start task now')
             },
 
             // Instance methods wrapped with undo

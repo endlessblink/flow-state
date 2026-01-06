@@ -476,8 +476,15 @@ export function fromSupabaseNotification(record: SupabaseNotification): Schedule
 // -- Timer Session Mappers --
 
 export function toSupabaseTimerSession(session: any, userId: string, deviceId: string): SupabaseTimerSession {
+    // SAFETY: Validate session ID - generate new UUID if invalid (prevents timestamp IDs from breaking DB)
+    const validSessionId = isValidUUID(session.id) ? session.id : crypto.randomUUID()
+
+    if (!isValidUUID(session.id)) {
+        console.warn(`[SUPABASE-MAPPER] Timer session had invalid ID: "${session.id}", generated new UUID: ${validSessionId}`)
+    }
+
     return {
-        id: session.id,
+        id: validSessionId,
         user_id: userId,
         task_id: session.taskId,
         start_time: session.startTime.toISOString(),
@@ -511,8 +518,15 @@ export function fromSupabaseTimerSession(record: SupabaseTimerSession): any {
 // -- Quick Sort Mappers --
 
 export function toSupabaseQuickSortSession(summary: any, userId: string): SupabaseQuickSortSession {
+    // SAFETY: Validate session ID - generate new UUID if invalid
+    const validId = isValidUUID(summary.id) ? summary.id : crypto.randomUUID()
+
+    if (!isValidUUID(summary.id)) {
+        console.warn(`[SUPABASE-MAPPER] QuickSort session had invalid ID: "${summary.id}", generated new UUID: ${validId}`)
+    }
+
     return {
-        id: summary.id,
+        id: validId,
         user_id: userId,
         tasks_processed: summary.tasksProcessed,
         time_spent: summary.timeSpent,

@@ -270,7 +270,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     const sessionDuration = duration || settings.value.workDuration
     currentSession.value = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       taskId,
       startTime: new Date(),
       duration: sessionDuration,

@@ -68,7 +68,7 @@ export function useDatabase() {
   return {
     // State
     isConnected,
-    isSyncing,
+    // isSyncing, (provided by supabase)
     syncError,
     detectedConflicts,
 

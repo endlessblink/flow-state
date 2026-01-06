@@ -3,7 +3,7 @@
  * Allows users to create custom conflict resolution strategies
  */
 
-import type { UserResolutionRule } from './conflictResolution'
+import type { UserResolutionRule } from './conflictResolver'
 
 export interface RuleTemplate {
   id: string
@@ -284,9 +284,9 @@ export class UserResolutionRulesManager {
   getTemplatesForField(fieldName: string, fieldType: string): RuleTemplate[] {
     return this.ruleTemplates.filter(template => {
       const fieldMatch = template.fields.includes('*') ||
-                        template.fields.includes(fieldName)
+        template.fields.includes(fieldName)
       const typeMatch = template.applicableTypes.includes('*') ||
-                       template.applicableTypes.includes(fieldType)
+        template.applicableTypes.includes(fieldType)
 
       return fieldMatch && typeMatch
     })
@@ -382,8 +382,8 @@ export class UserResolutionRulesManager {
     return allRules.filter(rule => {
       // Field match
       const fieldMatch = rule.field === '*' ||
-                        rule.field === fieldName ||
-                        (rule.field.includes('*') && this.matchPattern(rule.field, fieldName))
+        rule.field === fieldName ||
+        (rule.field.includes('*') && this.matchPattern(rule.field, fieldName))
 
       if (!fieldMatch) return false
 

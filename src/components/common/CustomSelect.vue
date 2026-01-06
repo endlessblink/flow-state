@@ -20,6 +20,7 @@
       <Transition name="dropdown">
         <ul
           v-if="isOpen"
+          ref="dropdownRef"
           class="select-dropdown"
           :style="dropdownStyle"
           role="listbox"
@@ -74,6 +75,7 @@ const emit = defineEmits<{
 
 const selectRef = ref<HTMLElement>()
 const triggerElement = ref<HTMLButtonElement>()
+const dropdownRef = ref<HTMLElement>()
 const isOpen = ref(false)
 const focusedIndex = ref(0)
 
@@ -163,9 +165,13 @@ const selectOption = (option: SelectOption) => {
   closeDropdown()
 }
 
-// Click outside to close
+// Click outside to close (must check both trigger AND teleported dropdown)
 const handleClickOutside = (event: MouseEvent) => {
-  if (selectRef.value && !selectRef.value.contains(event.target as Node)) {
+  const target = event.target as Node
+  const isInsideTrigger = selectRef.value?.contains(target)
+  const isInsideDropdown = dropdownRef.value?.contains(target)
+
+  if (!isInsideTrigger && !isInsideDropdown) {
     closeDropdown()
   }
 }

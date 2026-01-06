@@ -148,7 +148,7 @@ async function handleSubmit() {
     emit('success')
   } catch (_error: unknown) {
     // Error message is already set by auth store
-    errorMessage.value = authStore.error || 'Failed to send reset email. Please try again.'
+    errorMessage.value = authStore.errorMessage || 'Failed to send reset email. Please try again.'
   } finally {
     isLoading.value = false
   }

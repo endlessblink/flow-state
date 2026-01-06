@@ -139,7 +139,7 @@ const updateName = () => {
 }
 
 const toggleCollapse = () => {
-  canvasStore.toggleSectionCollapse(props.data.id, taskStore.filteredTasks)
+  canvasStore.toggleSectionCollapse(props.data.id)
 }
 
 // TASK-068: Removed toggleAutoCollect - feature consolidated

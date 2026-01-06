@@ -133,12 +133,10 @@ const uiStore = useUIStore()
 const syncProviderOptions = [
   { label: 'Disabled', value: '' },
   { label: 'Supabase (Cloud/Local)', value: 'supabase' },
-  { label: 'CouchDB (Legacy)', value: 'couchdb' },
-  { label: 'JSONBin (Free, no account needed)', value: 'jsonbin' },
-  { label: 'GitHub Gist (Requires token)', value: 'github' }
+  { label: 'JSONBin (Free, no account needed)', value: 'jsonbin' }
 ]
 
-const { fetchStatus } = useSupabaseDatabase()
+const db = useSupabaseDatabase()
 
 // State
 const selectedProvider = ref('supabase')
@@ -220,31 +218,11 @@ const truncateId = (id: string) => {
   return id.substring(0, 6) + '...' + id.substring(id.length - 4)
 }
 
-// Load saved settings
 const loadSettings = () => {
   const savedProvider = localStorage.getItem('pomo-cloud-provider')
   if (savedProvider) {
     selectedProvider.value = savedProvider
     syncEnabled.value = !!savedProvider
-  }
-
-  const savedToken = localStorage.getItem('github-token')
-  if (savedToken) {
-    githubToken.value = savedToken
-  }
-
-  // Load CouchDB settings
-  const savedCouchdbUrl = localStorage.getItem('pomo-couchdb-url')
-  if (savedCouchdbUrl) {
-    couchdbUrl.value = savedCouchdbUrl
-  }
-  const savedCouchdbUsername = localStorage.getItem('pomo-couchdb-username')
-  if (savedCouchdbUsername) {
-    couchdbUsername.value = savedCouchdbUsername
-  }
-  const savedCouchdbPassword = localStorage.getItem('pomo-couchdb-password')
-  if (savedCouchdbPassword) {
-    couchdbPassword.value = savedCouchdbPassword
   }
 }
 
@@ -254,12 +232,12 @@ let statusTimer: NodeJS.Timeout
 const updateStatus = () => {
   if (syncEnabled.value && syncStatus.value.lastSyncTime > 0) {
     // Check if we need to show next sync countdown
-    const nextSyncIn = syncStatus.value.nextSyncIn
-    if (nextSyncIn > 0) {
-      const minutes = Math.floor(nextSyncIn / 60000)
-      const seconds = Math.floor((nextSyncIn % 60000) / 1000)
-      console.log(`Next automatic sync in: ${minutes}m ${seconds}s`)
-    }
+    // const nextSyncIn = syncStatus.value.nextSyncIn
+    // if (nextSyncIn > 0) {
+    //   const minutes = Math.floor(nextSyncIn / 60000)
+    //   const seconds = Math.floor((nextSyncIn % 60000) / 1000)
+    //   console.log(`Next automatic sync in: ${minutes}m ${seconds}s`)
+    // }
   }
 }
 
@@ -688,53 +666,5 @@ onUnmounted(() => {
 
 .history-status.error {
   color: var(--danger);
-}
-
-/* CouchDB Configuration Styles */
-.couchdb-config {
-  margin-top: var(--space-2);
-}
-
-.couchdb-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.couchdb-auth {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.couchdb-auth .token-input {
-  flex: 1;
-}
-
-.connection-test-result {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  margin-top: var(--space-2);
-}
-
-.connection-test-result.success {
-  background: rgba(34, 197, 94, 0.1);
-  color: var(--success);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-.connection-test-result.error {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 </style>

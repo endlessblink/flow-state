@@ -70,32 +70,6 @@
               Clear Errors
             </button>
 
-            <button
-              :disabled="isTesting"
-              class="btn btn-ghost"
-              @click="runTests"
-            >
-              <span v-if="isTesting" class="flex items-center gap-2">
-                <svg
-                  class="animate-spin h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  />
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Testing...
-              </span>
-              <span v-else>Run Tests</span>
-            </button>
           </div>
         </div>
 
@@ -205,25 +179,7 @@
         </div>
 
         <!-- Test Results -->
-        <div v-if="testResults" class="test-results">
-          <h3>Test Results</h3>
-          <div class="test-summary">
-            <span :class="{ success: testResults.failed === 0, failure: testResults.failed > 0 }">
-              {{ testResults.passed }}/{{ testResults.tests.length }} tests passed
-            </span>
-            <span class="test-duration">{{ testResults.totalDuration }}ms</span>
-          </div>
-          <div class="test-details">
-            <div v-for="test in testResults.tests" :key="test.name" class="test-result-item">
-              <span class="test-status">{{ test.passed ? '✅' : '❌' }}</span>
-              <span class="test-name">{{ test.name }}</span>
-              <span class="test-duration">{{ test.duration }}ms</span>
-              <div v-if="!test.passed && test.error" class="test-error">
-                {{ test.error }}
-              </div>
-            </div>
-          </div>
-        </div>
+
       </div>
     </SyncErrorBoundary>
   </div>
@@ -233,7 +189,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import { getDatabaseComposable } from '@/composables/useDynamicImports'
-import { runSyncSystemTests, type TestSuite } from '@/utils/syncTestSuite'
 import SyncStatusIndicator from './SyncStatusIndicator.vue'
 import SyncErrorBoundary from './SyncErrorBoundary.vue'
 
@@ -273,7 +228,7 @@ const testKey = ref('example-key')
 const testValue = ref('example-value')
 const operationResult = ref('')
 const isTesting = ref(false)
-const testResults = ref<TestSuite | null>(null)
+
 
 // Computed properties (adapted for ReliableSyncManager API)
 const _syncStatus = computed(() => syncManager.syncStatus.value)
@@ -390,18 +345,7 @@ const removeTestData = async () => {
   }
 }
 
-const runTests = async () => {
-  isTesting.value = true
-  try {
-    operationResult.value = 'Running comprehensive sync system tests...'
-    testResults.value = await runSyncSystemTests()
-    operationResult.value = `Tests completed: ${testResults.value.passed}/${testResults.value.tests.length} passed`
-  } catch (error) {
-    operationResult.value = `Test suite failed: ${getErrorMessage(error)}`
-  } finally {
-    isTesting.value = false
-  }
-}
+
 
 const formatTimestamp = (date: Date): string => {
   return new Intl.DateTimeFormat('en-US', {

@@ -335,6 +335,8 @@ const lastSyncTime = ref<Date | null>(new Date()) // TODO: Persist this
 const syncStatus = computed(() => {
   if (isSyncing.value) return 'syncing'
   if (hasErrors.value) return 'error'
+  // Mock paused state support
+  if (false) return 'paused' 
   if (remoteConnected.value) return 'complete'
   return 'local'
 })
@@ -420,9 +422,31 @@ const getErrorSummary = (errorMessage: string): string => {
   return errorMessage.length > 30 ? errorMessage.substring(0, 30) + '...' : errorMessage
 }
 
+// Methods
+const formatUptime = (ms: number): string => {
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ${minutes % 60}m`
+}
+
 // Stats placeholders for Phase 2 indicators (mostly empty for now)
-const conflicts = ref([])
-const queueStats = ref({ length: 0, processing: false, oldestOperation: null })
+const conflicts = ref<Array<{
+  documentId: string
+  severity: 'low' | 'medium' | 'high'
+  conflictType: string
+  autoResolvable: boolean
+}>>([])
+
+const queueStats = ref({ length: 0, processing: false, oldestOperation: null as string | null }) // Fixed type
+
+const lastValidation = ref<{
+  validDocuments: number
+  totalValidated: number
+  issues: Array<{ message: string, severity: 'error' | 'warning', field?: string }>
+  duration: number
+} | null>(null) // Added ref
+
 const syncHealth = computed(() => ({
   syncStatus: syncStatus.value,
   isOnline: isOnline.value,

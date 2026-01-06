@@ -7,8 +7,8 @@ import type { Ref, ComputedRef } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
 import { useTaskStore } from '../stores/tasks'
 import type { Task } from '../stores/tasks'
-import { useCanvasStore } from '../stores/canvas'
-import type { CanvasGroup } from '../stores/canvas/types'
+import { useCanvasStore } from '@/stores/canvas'
+import type { CanvasGroup } from '@/stores/canvas/types'
 import { guardTaskCreation } from '../utils/demoContentGuard'
 
 declare global {
@@ -113,7 +113,13 @@ function initializeRefHistory() {
       undo,
       redo,
       commit,
-      clear
+      clear,
+      collectFilter: {
+        matchDueDate: null, // Was false, fixed to match CollectFilterSettings
+        matchPriority: undefined,
+        matchStatus: undefined,
+        matchDuration: 'quick'
+      }
     }
   }
 
@@ -145,7 +151,7 @@ const performUndo = async () => {
 
     // BUG-008 FIX: Restore groups FIRST (synchronous, no DB dependency)
     // This ensures groups are restored immediately even if task DB save hangs
-    canvasStore.groups = [...previousState.groups]
+    canvasStore.setGroups([...previousState.groups])
     console.log('🔄 [UNDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
     // Request canvas sync IMMEDIATELY after group restore
@@ -188,7 +194,7 @@ const performRedo = async () => {
     console.log('🔄 [REDO] Restoring:', nextState.tasks.length, 'tasks,', nextState.groups.length, 'groups')
 
     // BUG-008 FIX: Restore groups FIRST (synchronous, no DB dependency)
-    canvasStore.groups = [...nextState.groups]
+    canvasStore.setGroups([...nextState.groups])
     console.log('🔄 [REDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
     // Request canvas sync IMMEDIATELY after group restore

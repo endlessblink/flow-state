@@ -380,8 +380,12 @@ export function useTaskOperations(
     }
 
     const startTaskNow = (taskId: string) => {
+        console.log('🎯 startTaskNow (operations) called for task:', taskId)
         const task = _rawTasks.value.find(t => t.id === taskId)
-        if (!task) return
+        if (!task) {
+            console.warn('🎯 startTaskNow: Task not found:', taskId)
+            return
+        }
         const now = new Date()
         const currentMinutes = now.getMinutes()
         const roundedMinutes = currentMinutes < 30 ? 0 : 30
@@ -394,7 +398,9 @@ export function useTaskOperations(
             scheduledTime: `${roundedTime.getHours().toString().padStart(2, '0')}:${roundedTime.getMinutes().toString().padStart(2, '0')}`,
             duration: task.estimatedDuration || 60
         }
+        console.log('🎯 startTaskNow: Creating instance:', newInstance)
         updateTask(taskId, { instances: [newInstance], status: 'in_progress' })
+        console.log('🎯 startTaskNow: Task updated with instance')
     }
 
     const moveTaskToSmartGroup = (taskId: string, type: string) => {

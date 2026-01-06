@@ -272,72 +272,147 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     }
 
     // Handle node drag start
-    const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: { node: Node }) => {
+    // BUG-002 FIX: Use correct event type with nodes array for multi-select drag
+    const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: { node: Node, nodes: Node[] }) => {
         // CRITICAL FIX: Reset any pending settling states from previous drags
         // This prevents a previous "drag stop" timeout from firing mid-drag and ruining the state
         resetDragState()
 
-        const { node } = event
+        const { nodes: draggedNodes } = event
         isNodeDragging.value = true
         // TASK-072 FIX: Also set isDragSettling to true immediately
         // This blocks syncNodes from the moment drag starts until settling period ends
         isDragSettling.value = true
 
-        // TASK-089 FIX: Validate start position to ensure we have a valid recovery point
-        let startX = node.position.x
-        let startY = node.position.y
+        // BUG-002 FIX: Store start positions for ALL nodes being dragged (not just primary)
+        draggedNodes.forEach(node => {
+            // TASK-089 FIX: Validate start position to ensure we have a valid recovery point
+            let startX = node.position.x
+            let startY = node.position.y
 
-        if (Number.isNaN(startX) || Number.isNaN(startY)) {
-            console.warn(`⚠️ [TASK-089] NaN start position detected for ${node.id}. Attempting to recover from store.`)
+            if (Number.isNaN(startX) || Number.isNaN(startY)) {
+                console.warn(`⚠️ [TASK-089] NaN start position detected for ${node.id}. Attempting to recover from store.`)
 
-            if (node.id.startsWith('section-')) {
-                const sectionId = node.id.replace('section-', '')
-                const section = canvasStore.sections.find(s => s.id === sectionId)
-                if (section) {
-                    startX = section.position.x
-                    startY = section.position.y
-                    console.log(`✅ [RECOVERY] Recovered start position from section store: (${startX}, ${startY})`)
+                if (node.id.startsWith('section-')) {
+                    const sectionId = node.id.replace('section-', '')
+                    const section = canvasStore.sections.find(s => s.id === sectionId)
+                    if (section) {
+                        startX = section.position.x
+                        startY = section.position.y
+                        console.log(`✅ [RECOVERY] Recovered start position from section store: (${startX}, ${startY})`)
+                    }
+                } else {
+                    // Assume task
+                    const task = taskStore.tasks.find((t: Task) => t.id === node.id)
+                    if (task?.canvasPosition) {
+                        startX = task.canvasPosition.x
+                        startY = task.canvasPosition.y
+                        console.log(`✅ [RECOVERY] Recovered start position from task store: (${startX}, ${startY})`)
+                    }
                 }
-            } else {
-                // Assume task
-                const task = taskStore.tasks.find((t: Task) => t.id === node.id)
-                if (task?.canvasPosition) {
-                    startX = task.canvasPosition.x
-                    startY = task.canvasPosition.y
-                    console.log(`✅ [RECOVERY] Recovered start position from task store: (${startX}, ${startY})`)
+
+                // Final fallback
+                if (Number.isNaN(startX)) startX = 0
+                if (Number.isNaN(startY)) startY = 0
+
+                // CRITICAL FIX: Apply recovered start position to node IMMEDIATELY
+                node.position.x = startX
+                node.position.y = startY
+
+                const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+                if (nodeIndex !== -1) {
+                    nodes.value[nodeIndex] = {
+                        ...nodes.value[nodeIndex],
+                        position: { x: startX, y: startY }
+                    }
                 }
             }
 
-            // Final fallback
-            if (Number.isNaN(startX)) startX = 0
-            if (Number.isNaN(startY)) startY = 0
+            // Store starting position for this node
+            dragStartPositions.set(node.id, { x: startX, y: startY })
+        })
 
-            // CRITICAL FIX: Apply recovered start position to node IMMEDIATELY
-            // If we don't do this, Vue Flow continues to drag a "NaN" node, causing immediate renderer crashes
-            node.position.x = startX
-            node.position.y = startY
-
-            const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
-            if (nodeIndex !== -1) {
-                nodes.value[nodeIndex] = {
-                    ...nodes.value[nodeIndex],
-                    position: { x: startX, y: startY }
-                }
-            }
-        }
-
-        // TASK-072 FIX: Store starting position for accurate delta calculation
-        // This is critical for nested sections where node.position is relative to parent
-        dragStartPositions.set(node.id, { x: startX, y: startY })
-        console.log(`[DRAG START] "${node.id}" at (${startX}, ${startY})`)
+        console.log(`[DRAG START] ${draggedNodes.length} nodes being dragged`)
     })
 
     // Handle node drag stop
-    const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', async (event: { node: Node }) => {
-        const { node } = event
+    // BUG-002 FIX: Use correct event type with nodes array for multi-select drag
+    const handleNodeDragStop = withVueFlowErrorBoundary('handleNodeDragStop', async (event: { node: Node, nodes: Node[] }) => {
+        const { node, nodes: draggedNodes } = event
 
         // Preserve selection state during drag operations
         const selectedIdsBeforeDrag = [...canvasStore.selectedNodeIds]
+
+        // BUG-002 FIX: Detect multi-node drag
+        const isMultiDrag = draggedNodes.length > 1
+
+        // BUG-002 FIX: For multi-drag of TASK nodes, process ALL of them together
+        // Skip containment recalculation to preserve relative positions
+        if (isMultiDrag) {
+            const taskNodes = draggedNodes.filter(n => !n.id.startsWith('section-'))
+
+            if (taskNodes.length > 0) {
+                console.log(`%c[BUG-002] Multi-drag stop: ${taskNodes.length} tasks`, 'color: #9C27B0; font-weight: bold')
+
+                // Save positions for ALL task nodes, preserving their current parentNode state
+                for (const taskNode of taskNodes) {
+                    // Calculate absolute position
+                    let absoluteX: number, absoluteY: number
+
+                    if (taskNode.parentNode) {
+                        const sectionId = taskNode.parentNode.replace('section-', '')
+                        const section = canvasStore.sections.find(s => s.id === sectionId)
+                        if (section) {
+                            absoluteX = section.position.x + taskNode.position.x
+                            absoluteY = section.position.y + taskNode.position.y
+                        } else {
+                            absoluteX = taskNode.position.x
+                            absoluteY = taskNode.position.y
+                        }
+                    } else {
+                        absoluteX = taskNode.position.x
+                        absoluteY = taskNode.position.y
+                    }
+
+                    // Validate and save
+                    if (Number.isFinite(absoluteX) && Number.isFinite(absoluteY)) {
+                        lockTaskPosition(taskNode.id, { x: absoluteX, y: absoluteY })
+                        try {
+                            await taskStore.updateTask(taskNode.id, {
+                                canvasPosition: { x: absoluteX, y: absoluteY }
+                            })
+                        } catch (err) {
+                            console.error(`[BUG-002] Failed to save position for task ${taskNode.id}:`, err)
+                        }
+                    }
+
+                    dragStartPositions.delete(taskNode.id)
+                }
+
+                // Restore selection state
+                if (selectedIdsBeforeDrag.length > 0) {
+                    canvasStore.setSelectedNodes(selectedIdsBeforeDrag)
+                    nodes.value.forEach(n => {
+                        const nodeWithSelection = n as Node & { selected?: boolean }
+                        nodeWithSelection.selected = selectedIdsBeforeDrag.includes(n.id)
+                    })
+                }
+
+                // Handle any sections in the drag
+                const sectionNodes = draggedNodes.filter(n => n.id.startsWith('section-'))
+                if (sectionNodes.length === 0) {
+                    // No sections, just tasks - done
+                    nodeDraggingTimeoutId.value = setTimeout(() => {
+                        isNodeDragging.value = false
+                    }, 50)
+                    dragSettlingTimeoutId.value = setTimeout(() => {
+                        isDragSettling.value = false
+                    }, 500)
+                    return
+                }
+                // Fall through to process sections below
+            }
+        }
 
         // Check if it's a section node or task node
         if (node.id.startsWith('section-')) {
@@ -684,51 +759,63 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             // Cleanup start position AFTER use
             dragStartPositions.delete(node.id)
 
-            const containingSection = getContainingSection(checkX, checkY)
+            // BUG-002 FIX: When multiple tasks are selected, skip automatic section containment changes
+            // This preserves their relative positions. If containment changed individually per task,
+            // some would get relative coords (inside section) while others get absolute coords,
+            // breaking their visual arrangement.
+            const isMultiDrag = selectedIdsBeforeDrag.length > 1 && selectedIdsBeforeDrag.includes(node.id)
 
-            if (containingSection) {
-                if (containingSection.type !== 'custom' || shouldUseSmartGroupLogic(containingSection.name)) {
-                    applySectionPropertiesToTask(node.id, containingSection)
-                }
-            }
+            if (!isMultiDrag) {
+                // Single task drag - apply section containment as usual
+                const containingSection = getContainingSection(checkX, checkY)
 
-            // TASK-072 FIX: Directly update Vue Flow node's parentNode instead of calling syncNodes()
-            // syncNodes() rebuilds ALL nodes including sections, which breaks nested group positions
-            const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
-            if (nodeIndex !== -1) {
-                const currentParentNode = nodes.value[nodeIndex].parentNode
-                const newParentNode = containingSection ? `section-${containingSection.id}` : undefined
-
-                // Only update if parentNode actually changed
-                if (currentParentNode !== newParentNode) {
-                    console.log(`%c[TASK-072] Task parentNode change: ${currentParentNode} → ${newParentNode}`, 'color: #2196F3; font-weight: bold')
-
-                    // Extract section IDs for task count updates
-                    const oldSectionId = currentParentNode?.replace('section-', '')
-                    const newSectionId = newParentNode?.replace('section-', '')
-
-                    if (containingSection) {
-                        // Convert to relative position
-                        const relativeX = checkX - containingSection.position.x
-                        const relativeY = checkY - containingSection.position.y
-                        nodes.value[nodeIndex] = {
-                            ...nodes.value[nodeIndex],
-                            parentNode: newParentNode,
-                            position: { x: relativeX, y: relativeY }
-                        }
-                    } else {
-                        // No containing section - use absolute position
-                        nodes.value[nodeIndex] = {
-                            ...nodes.value[nodeIndex],
-                            parentNode: undefined,
-                            position: { x: checkX, y: checkY }
-                        }
+                if (containingSection) {
+                    if (containingSection.type !== 'custom' || shouldUseSmartGroupLogic(containingSection.name)) {
+                        applySectionPropertiesToTask(node.id, containingSection)
                     }
-
-                    // TASK-072 FIX: Update task counts on affected sections immediately
-                    // Without this, group headers show stale counts until next syncNodes()
-                    updateSectionTaskCounts(oldSectionId, newSectionId)
                 }
+
+                // TASK-072 FIX: Directly update Vue Flow node's parentNode instead of calling syncNodes()
+                // syncNodes() rebuilds ALL nodes including sections, which breaks nested group positions
+                const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+                if (nodeIndex !== -1) {
+                    const currentParentNode = nodes.value[nodeIndex].parentNode
+                    const newParentNode = containingSection ? `section-${containingSection.id}` : undefined
+
+                    // Only update if parentNode actually changed
+                    if (currentParentNode !== newParentNode) {
+                        console.log(`%c[TASK-072] Task parentNode change: ${currentParentNode} → ${newParentNode}`, 'color: #2196F3; font-weight: bold')
+
+                        // Extract section IDs for task count updates
+                        const oldSectionId = currentParentNode?.replace('section-', '')
+                        const newSectionId = newParentNode?.replace('section-', '')
+
+                        if (containingSection) {
+                            // Convert to relative position
+                            const relativeX = checkX - containingSection.position.x
+                            const relativeY = checkY - containingSection.position.y
+                            nodes.value[nodeIndex] = {
+                                ...nodes.value[nodeIndex],
+                                parentNode: newParentNode,
+                                position: { x: relativeX, y: relativeY }
+                            }
+                        } else {
+                            // No containing section - use absolute position
+                            nodes.value[nodeIndex] = {
+                                ...nodes.value[nodeIndex],
+                                parentNode: undefined,
+                                position: { x: checkX, y: checkY }
+                            }
+                        }
+
+                        // TASK-072 FIX: Update task counts on affected sections immediately
+                        // Without this, group headers show stale counts until next syncNodes()
+                        updateSectionTaskCounts(oldSectionId, newSectionId)
+                    }
+                }
+            } else {
+                // Multi-drag: Keep existing parentNode to preserve relative positions
+                console.log(`%c[BUG-002] Multi-drag detected - preserving parentNode for ${node.id}`, 'color: #9C27B0')
             }
             // syncNodes() // REMOVED - was causing section position resets (TASK-072)
 

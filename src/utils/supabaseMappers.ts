@@ -500,8 +500,15 @@ export function toSupabaseTimerSession(session: any, userId: string, deviceId: s
 }
 
 export function fromSupabaseTimerSession(record: SupabaseTimerSession): any {
+    // SAFETY: Ensure ID is valid UUID when loading (in case DB has corrupted data)
+    const validId = isValidUUID(record.id) ? record.id : crypto.randomUUID()
+
+    if (!isValidUUID(record.id)) {
+        console.warn(`[SUPABASE-MAPPER] Loaded timer session had invalid ID: "${record.id}", generated new UUID: ${validId}`)
+    }
+
     return {
-        id: record.id,
+        id: validId,
         taskId: record.task_id,
         startTime: new Date(record.start_time),
         duration: record.duration,

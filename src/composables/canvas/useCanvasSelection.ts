@@ -130,6 +130,12 @@ export function useCanvasSelection() {
         const selectedIds: string[] = []
         const debugSample: any[] = []
 
+        // Selection box bounds
+        const boxLeft = selectionBox.x
+        const boxTop = selectionBox.y
+        const boxRight = selectionBox.x + selectionBox.width
+        const boxBottom = selectionBox.y + selectionBox.height
+
         nodes.forEach(node => {
             // 1. Get Absolute Graph Position via Recursive Calculation
             const { x: graphX, y: graphY } = getAbsolutePosition(node, nodes)
@@ -145,11 +151,27 @@ export function useCanvasSelection() {
 
             // 3. Check Intersection
             const intersects = (
-                screenX < (selectionBox.x + selectionBox.width) &&
-                (screenX + screenW) > selectionBox.x &&
-                screenY < (selectionBox.y + selectionBox.height) &&
-                (screenY + screenH) > selectionBox.y
+                screenX < boxRight &&
+                (screenX + screenW) > boxLeft &&
+                screenY < boxBottom &&
+                (screenY + screenH) > boxTop
             )
+
+            // 4. For section nodes: skip if the selection box is INSIDE the section
+            // This prevents selecting a parent group when shift+dragging inside it
+            // Groups should only be selected via their label header
+            if (intersects && node.type === 'sectionNode') {
+                const selectionInsideSection = (
+                    screenX <= boxLeft &&
+                    screenY <= boxTop &&
+                    (screenX + screenW) >= boxRight &&
+                    (screenY + screenH) >= boxBottom
+                )
+                if (selectionInsideSection) {
+                    // Skip this section - selection is entirely inside it
+                    return
+                }
+            }
 
             if (intersects) {
                 selectedIds.push(node.id)

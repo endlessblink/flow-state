@@ -10,9 +10,9 @@ import { ConflictType, ResolutionType } from '@/types/conflicts'
 export interface UserResolutionRule {
   name: string
   field: string
-  condition: 'always' | 'when-newer' | 'when-empty' | 'when-contains'
+  condition: 'always' | 'when-newer' | 'when-empty' | 'when-contains' | 'when-longer'
   value?: unknown
-  action: 'prefer-local' | 'prefer-remote' | 'merge' | 'prefer-truthy' | 'prefer-either-true' | 'prefer-longer'
+  action: 'prefer-local' | 'prefer-remote' | 'merge' | 'prefer-truthy' | 'prefer-either-true' | 'prefer-longer' | 'prefer-true' | 'prefer-false' | 'prefer-newer' | 'prefer-earlier' | 'prefer-higher' | 'union' | 'merge-deep' | 'ask' | 'prefer-non-empty'
   priority: number
 }
 

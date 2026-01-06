@@ -334,6 +334,7 @@ export const useUIStore = defineStore('ui', () => {
     setLanguage,
     setDirectionPreference,
     toggleDirection,
-    loadState
+    loadState,
+    persistState
   }
 })

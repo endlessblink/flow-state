@@ -266,7 +266,7 @@ const handleMouseUp = () => {
   
   // Select nodes within the selection rectangle
   if (selectionRect.value) {
-    canvasStore.selectNodesInRect(selectionRect.value, props.nodes)
+    canvasStore.selectNodesInRect(selectionRect.value)
     emit('selectionChange', canvasStore.selectedNodeIds)
   }
   

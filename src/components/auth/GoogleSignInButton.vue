@@ -84,7 +84,9 @@ async function handleGoogleSignIn() {
     console.log('✅ Emitting success event with user:', authStore.user)
 
     // Success - emit event
-    emit('success', authStore.user)
+    if (authStore.user) {
+      emit('success', authStore.user as User)
+    }
   } catch (error: unknown) {
     console.error('❌ Google sign-in error:', error)
     emit('error', error as Error)

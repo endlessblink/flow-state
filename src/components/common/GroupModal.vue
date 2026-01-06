@@ -237,12 +237,12 @@ const handleColorPickerChange = () => {
   groupData.value.color = customColor.value
 }
 
-const saveGroup = () => {
+const saveGroup = async () => {
   if (!groupData.value.name.trim()) return
 
   if (isEditing.value && props.group) {
     // Update existing group
-    canvasStore.updateSection(props.group.id, {
+    await canvasStore.updateSection(props.group.id, {
       name: groupData.value.name.trim(),
       color: groupData.value.color,
       parentGroupId: groupData.value.parentGroupId  // TASK-072: Update parent group
@@ -254,7 +254,7 @@ const saveGroup = () => {
     }
   } else {
     // Create new group at specified position
-    const newGroup = canvasStore.createSection({
+    const newGroup = await canvasStore.createSection({
       name: groupData.value.name.trim(),
       type: 'custom',
       position: {

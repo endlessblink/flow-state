@@ -245,7 +245,10 @@ async function handleSubmit() {
     )
 
     // Success - emit event
-    emit('success', authStore.user)
+    // Success - emit event
+    if (authStore.user) {
+      emit('success', authStore.user)
+    }
 
     // Clear form
     email.value = ''
@@ -254,7 +257,7 @@ async function handleSubmit() {
     displayName.value = ''
   } catch (_error: unknown) {
     // Error message is already set by auth store
-    errorMessage.value = authStore.error || 'Sign up failed. Please try again.'
+    errorMessage.value = authStore.errorMessage || 'Sign up failed. Please try again.'
   } finally {
     isLoading.value = false
   }

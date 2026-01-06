@@ -1,5 +1,5 @@
-**Last Updated**: January 6, 2026 (BUG-002 Timer UUID & Auth Fix)
-**Version**: 5.21 (Timer Auth Guard + UUID Validation)
+**Last Updated**: January 7, 2026 (TASK-111 Multi-Select Group Filter)
+**Version**: 5.22 (Ctrl+Click Group Multi-Select)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -93,7 +93,7 @@
 **Priority**: P2-MEDIUM
 - Define custom recurrence syntax and parsing logic.
 
-### TASK-046: Establish Canvas Performance Baselines (📋 PLANNED)
+### TASK-046: Establish Canvas Performance Baselines (🔄 IN PROGRESS)
 **Priority**: P1-HIGH
 - Establishment of latency metrics using `performanceBenchmark.ts`.
 
@@ -160,7 +160,7 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 - [x] Automatic text direction detection in `useBrainDump.ts`.
 - [x] Bidirectional rendering support in Inbox components.
 
-### TASK-107: New Branding: "Cyber Tomato" (📋 PLANNED)
+### TASK-110: New Branding: "Cyber Tomato" (📋 PLANNED)
 **Priority**: P2-MEDIUM
 - Design and implement new clean, minimal, cyberpunky "Cyber Tomato" icon set.
 - Includes: Main logo, Tauri app icon, and favicon.
@@ -184,6 +184,13 @@ Implemented a professional, seamless Live Preview (WYSIWYG) experience using the
 - [x] **Interactive Checkboxes**: Users can toggle task list checkboxes directly within the live editor surface.
 - [x] **Full RTL & Mixed Content**: Deep integration with our Hebrew alignment logic, ensuring perfectly aligned right-to-left text flow with automatic detection.
 - [x] **Premium UI**: Custom-styled glassmorphism surface with a floating toolbar (Bold, Italic, Lists, Links, Undo/Redo).
+
+**Critical Bug Fixes (January 6, 2026)**:
+- [x] Fixed `MilkdownError: Context "editorView" not found` on Enter key press
+- [x] Removed incorrect `.create()` call from useEditor chain (Milkdown Vue handles creation internally)
+- [x] Added `rows` prop to MarkdownEditor to prevent Vue attribute fallthrough to MilkdownProvider
+- [x] Updated TaskEditModal keyboard handler to recognize ProseMirror contenteditable elements
+- [x] Enter key now creates newlines in editor, Ctrl/Cmd+Enter saves the task
 
 ### ~~TASK-104~~: Fix Critical Notification Store Crash (✅ DONE)
 - Fixed `ReferenceError: scheduledNotifications is not defined` in `notifications.ts`.
@@ -305,7 +312,28 @@ When task position was locked (from drag or edit), syncNodes() still recalculate
 - [x] Skip absolute→relative conversion when position is locked to prevent drift
 - [x] Build passes, no TypeScript errors
 
-### ~~TASK-106~~: Canvas Group Filter for Calendar Inbox (✅ DONE)
+### ~~BUG-004~~: Multi-Drag Positions Reset After Click (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 6, 2026
+
+Fixed multi-selected tasks (Ctrl+click) losing their relative positions after drag and click-to-deselect.
+
+**Root Causes**:
+- `onNodeDragStop` handler only processed `event.node` (single node), ignoring other selected nodes in `event.nodes`
+- `syncNodes()` recalculated section containment for each task individually, causing mixed coordinate systems
+- Tasks near section boundaries got different parentNode assignments, breaking relative arrangement
+
+**Fix Applied**:
+- [x] `useCanvasDragDrop.ts`: Updated `handleNodeDragStart` to store positions for ALL nodes in `event.nodes`
+- [x] `useCanvasDragDrop.ts`: Updated `handleNodeDragStop` to process ALL dragged nodes together
+- [x] For multi-drag, save all positions without recalculating containment
+- [x] `useCanvasSync.ts`: Preserve existing parentNode relationships using `.has()` check
+- [x] `useCanvasSync.ts`: Preserve existing node positions when position is locked
+
+**Key Insight** (from [Vue Flow TypeDocs](https://vueflow.dev/typedocs/interfaces/NodeDragEvent.html)):
+`NodeDragEvent.nodes` contains ALL nodes being dragged, not just the primary `node`.
+
+### ~~TASK-111~~: Canvas Group Filter for Calendar Inbox (✅ DONE)
 **Priority**: P2-MEDIUM
 **Completed**: January 6, 2026
 
@@ -328,10 +356,17 @@ Reduced cognitive overload in calendar inbox by adding canvas group filtering.
 - `src/components/inbox/CalendarInboxPanel.vue` - Storybook version updated for consistency
 
 **Key Features**:
-- Canvas group dropdown shows all groups with task counts
+- Canvas group filter chips (replaced dropdown for better UX)
+- **Ctrl+click multi-select**: Select multiple groups at once (OR logic)
 - "More filters" button collapses advanced filters (hidden by default)
 - Contextual empty state: "No tasks in this group. Drag tasks to this group on Canvas."
 - Group membership computed dynamically from task.canvasPosition vs group.position bounds
+
+**Enhancement (January 7, 2026)**: Added Ctrl+click multi-select support
+- Changed `selectedCanvasGroup` (string) → `selectedCanvasGroups` (Set)
+- Regular click: single-select toggle
+- Ctrl/Cmd+click: multi-select toggle (add/remove groups)
+- Filter shows tasks in ANY selected group (OR logic)
 
 </details>
 

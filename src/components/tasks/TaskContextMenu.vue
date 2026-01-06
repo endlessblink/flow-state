@@ -657,10 +657,13 @@ const enterFocus = () => {
 }
 
 const startTaskNow = () => {
+  console.log('🚀 startTaskNow called', { currentTask: currentTask.value, isBatchOperation: isBatchOperation.value })
   if (currentTask.value && !isBatchOperation.value) {
+    console.log('🚀 Calling startTaskNowWithUndo for task:', currentTask.value.id)
     taskStore.startTaskNowWithUndo(currentTask.value.id)
 
     // Start the pomodoro timer immediately
+    console.log('🚀 Starting timer for task:', currentTask.value.id)
     timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
 
     // Navigate to calendar view if not already there
@@ -672,13 +675,19 @@ const startTaskNow = () => {
     window.dispatchEvent(new CustomEvent('start-task-now', {
       detail: { taskId: currentTask.value.id }
     }))
+  } else {
+    console.warn('🚀 startTaskNow: No task or batch operation', { currentTask: currentTask.value, isBatchOperation: isBatchOperation.value })
   }
   emit('close')
 }
 
 const startTimer = () => {
+  console.log('⏱️ startTimer called', { currentTask: currentTask.value, isBatchOperation: isBatchOperation.value })
   if (currentTask.value && !isBatchOperation.value) {
+    console.log('⏱️ Starting timer for task:', currentTask.value.id)
     timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
+  } else {
+    console.warn('⏱️ startTimer: No task or batch operation', { currentTask: currentTask.value, isBatchOperation: isBatchOperation.value })
   }
   emit('close')
 }

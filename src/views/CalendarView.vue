@@ -13,8 +13,9 @@
     />
 
     <!-- Unified Inbox Panel -->
+    <!-- key forces Vue to recreate component when switching views -->
     <Transition name="sidebar-slide">
-      <UnifiedInboxPanel v-show="uiStore.secondarySidebarVisible" context="calendar" />
+      <UnifiedInboxPanel v-show="uiStore.secondarySidebarVisible" context="calendar" key="calendar-inbox" />
     </Transition>
 
     <!-- Task Edit Modal -->
@@ -320,7 +321,6 @@ const {
   handleSlotTaskMouseLeave,
   handleEventDblClick,
   handleEventContextMenu,
-  handleInboxContextMenu,
   handleRemoveFromCalendar,
   handleEventClick,
   handleKeyDown,

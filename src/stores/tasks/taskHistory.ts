@@ -83,11 +83,14 @@ export function useTaskHistory(
                 await store.bulkDeleteTasks(taskIds)
             },
             startTaskNowWithUndo: async (taskId: string) => {
+                console.log('📋 startTaskNowWithUndo called for task:', taskId)
                 const { useTaskStore } = await import('../tasks')
                 const store = useTaskStore()
                 const undoSystem = getUndoSystem()
                 undoSystem.saveState('Before start task now')
+                console.log('📋 Calling store.startTaskNow...')
                 store.startTaskNow(taskId)
+                console.log('📋 store.startTaskNow completed')
                 await nextTick()
                 undoSystem.saveState('After start task now')
             },

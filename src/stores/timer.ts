@@ -231,6 +231,14 @@ export const useTimerStore = defineStore('timer', () => {
 
   const saveTimerSessionWithLeadership = async () => {
     if (!currentSession.value) return
+
+    // SAFETY: Ensure session has a valid UUID before saving (guards against cached timestamp IDs)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(currentSession.value.id)) {
+      console.warn(`[TIMER] Session had invalid ID: "${currentSession.value.id}", regenerating UUID`)
+      currentSession.value.id = crypto.randomUUID()
+    }
+
     await saveActiveTimerSession(currentSession.value, deviceId)
   }
 

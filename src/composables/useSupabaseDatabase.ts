@@ -410,7 +410,9 @@ export function useSupabaseDatabase() {
 
     const saveActiveTimerSession = async (session: any, deviceId: string): Promise<void> => {
         try {
-            const userId = getUserId()
+            const userId = getUserIdSafe()
+            if (!userId) return // Skip Supabase sync when not authenticated (local-only mode)
+
             const payload = toSupabaseTimerSession(session, userId, deviceId)
             const { error } = await supabase.from('timer_sessions').upsert(payload)
             if (error) throw error
@@ -421,6 +423,9 @@ export function useSupabaseDatabase() {
 
     const deleteTimerSession = async (id: string): Promise<void> => {
         try {
+            const userId = getUserIdSafe()
+            if (!userId) return // Skip Supabase sync when not authenticated (local-only mode)
+
             const { error } = await supabase.from('timer_sessions').delete().eq('id', id)
             if (error) throw error
         } catch (e: any) {

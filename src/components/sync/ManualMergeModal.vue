@@ -122,7 +122,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { ConflictDiff } from '@/utils/conflictResolution'
+import type { ConflictDiff } from '@/utils/threeWayMerge'
 import ValueDisplay from './ValueDisplay.vue'
 
 interface Props {

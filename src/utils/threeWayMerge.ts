@@ -3,7 +3,18 @@
  * Advanced merging based on Git's three-way merge approach
  */
 
-import type { ConflictDiff, ConflictResolution } from './conflictResolution'
+export type ConflictResolution = 'ask' | 'merge'
+
+export interface ConflictDiff {
+  field: string
+  localValue: unknown
+  remoteValue: unknown
+  baseValue: unknown
+  conflictType: 'value' | 'deletion'
+  severity: 'low' | 'medium' | 'high'
+  autoResolvable: boolean
+  suggestedResolution?: unknown
+}
 
 export interface ThreeWayMergeResult {
   mergedTask: Record<string, unknown>
@@ -131,7 +142,7 @@ export class ThreeWayMergeEngine {
         // Field was deleted in source
         if (mergedTask[change.field] !== undefined) {
           if (this.shouldDelete(mergedTask[change.field], change.field, baseTask[change.field])) {
-          delete mergedTask[change.field]
+            delete mergedTask[change.field]
           } else {
             // Conflict - other version kept the field
             conflicts.push({
@@ -271,8 +282,8 @@ export class ThreeWayMergeEngine {
    */
   private canAutoResolveField(field: string): boolean {
     return this.strategy.preferLocal.includes(field) ||
-           this.strategy.preferRemote.includes(field) ||
-           this.strategy.autoMerge.includes(field)
+      this.strategy.preferRemote.includes(field) ||
+      this.strategy.autoMerge.includes(field)
   }
 
   /**

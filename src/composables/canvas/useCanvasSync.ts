@@ -140,6 +140,15 @@ export function useCanvasSync(deps: SyncDependencies) {
             })
 
             // --- Process Tasks ---
+            // BUG-002 FIX: Build map of existing node parentNode relationships BEFORE processing
+            // This preserves parent-child relationships established during drag operations
+            const existingNodeParents = new Map<string, string | undefined>()
+            deps.nodes.value.forEach(n => {
+                if (n.type === 'taskNode') {
+                    existingNodeParents.set(n.id, n.parentNode)
+                }
+            })
+
             tasks.forEach(task => {
                 // Only verify task has canvas position
                 if (task.canvasPosition) {
@@ -152,47 +161,80 @@ export function useCanvasSync(deps: SyncDependencies) {
                         ? { x: lockedPosition.x, y: lockedPosition.y }
                         : { ...task.canvasPosition }
 
-                    // Check if task belongs to a section visually
-                    // BUG-034 FIX: Use task CENTER for bounds check (consistent with getTasksInSectionBounds)
-                    const TASK_WIDTH = 220
-                    const TASK_HEIGHT = 100
-                    const taskCenterX = position.x + TASK_WIDTH / 2
-                    const taskCenterY = position.y + TASK_HEIGHT / 2
+                    // BUG-002 FIX: Check if this task already exists in current nodes
+                    // If so, preserve its parentNode state (prevents multi-drag position corruption)
+                    // Use .has() to check existence - handles both tasks WITH parentNode AND root-level tasks
+                    const taskExistsInNodes = existingNodeParents.has(task.id)
+                    const existingParent = existingNodeParents.get(task.id)
+                    let skipContainmentCalc = false
 
-                    // TASK-072 FIX: Find the MOST SPECIFIC (smallest/nested) section that contains the task
-                    // If task is inside both parent and nested group, prefer the nested group
-                    const containingSections = sections.filter(s => {
-                        const sx = s.position.x
-                        const sy = s.position.y
-                        const sw = s.position.width || 300
-                        const sh = s.position.height || 200
-                        return taskCenterX >= sx && taskCenterX <= sx + sw &&
-                            taskCenterY >= sy && taskCenterY <= sy + sh
-                    })
-                    // Sort by area (smallest first) and pick the smallest containing section
-                    // Smaller sections are more specific (nested groups are smaller than their parents)
-                    const section = containingSections.length > 0
-                        ? containingSections.sort((a, b) => {
-                            const areaA = (a.position.width || 300) * (a.position.height || 200)
-                            const areaB = (b.position.width || 300) * (b.position.height || 200)
-                            return areaA - areaB
-                        })[0]
-                        : undefined
-
-                    if (section) {
-                        // Task is visually inside a section - make it a child
-                        parentNode = `section-${section.id}`
-                        // BUG-034 FIX: Convert ABSOLUTE to RELATIVE for Vue Flow parent-child system
-                        const relX = position.x - section.position.x
-                        const relY = position.y - section.position.y
-
-                        // Fix: Only assign parent if relative calculation is valid
-                        // This prevents tasks from stacking at (0,0) relative to group if calculation fails
-                        if (Number.isFinite(relX) && Number.isFinite(relY)) {
-                            parentNode = `section-${section.id}`
-                            position = { x: relX, y: relY }
+                    if (taskExistsInNodes) {
+                        if (existingParent) {
+                            // Task has a parentNode - preserve the relationship
+                            const sectionId = existingParent.replace('section-', '')
+                            const section = sections.find(s => s.id === sectionId)
+                            if (section) {
+                                parentNode = existingParent
+                                // Use relative position (store has absolute, convert to relative)
+                                const relX = position.x - section.position.x
+                                const relY = position.y - section.position.y
+                                if (Number.isFinite(relX) && Number.isFinite(relY)) {
+                                    position = { x: relX, y: relY }
+                                }
+                                skipContainmentCalc = true
+                            }
+                            // If section no longer exists, fall through to containment check
+                        } else {
+                            // Task exists at ROOT level (no parentNode) - keep it at root
+                            // Don't recalculate containment - user intentionally placed it outside sections
+                            skipContainmentCalc = true
                         }
-                        // Else: Keep position as Absolute (from task.canvasPosition). Keep parentNode as undefined.
+                    }
+
+                    // Only calculate containment for NEW tasks (not in current nodes)
+                    if (!skipContainmentCalc) {
+                        // Check if task belongs to a section visually
+                        // BUG-034 FIX: Use task CENTER for bounds check (consistent with getTasksInSectionBounds)
+                        const TASK_WIDTH = 220
+                        const TASK_HEIGHT = 100
+                        const taskCenterX = position.x + TASK_WIDTH / 2
+                        const taskCenterY = position.y + TASK_HEIGHT / 2
+
+                        // TASK-072 FIX: Find the MOST SPECIFIC (smallest/nested) section that contains the task
+                        // If task is inside both parent and nested group, prefer the nested group
+                        const containingSections = sections.filter(s => {
+                            const sx = s.position.x
+                            const sy = s.position.y
+                            const sw = s.position.width || 300
+                            const sh = s.position.height || 200
+                            return taskCenterX >= sx && taskCenterX <= sx + sw &&
+                                taskCenterY >= sy && taskCenterY <= sy + sh
+                        })
+                        // Sort by area (smallest first) and pick the smallest containing section
+                        // Smaller sections are more specific (nested groups are smaller than their parents)
+                        const section = containingSections.length > 0
+                            ? containingSections.sort((a, b) => {
+                                const areaA = (a.position.width || 300) * (a.position.height || 200)
+                                const areaB = (b.position.width || 300) * (b.position.height || 200)
+                                return areaA - areaB
+                            })[0]
+                            : undefined
+
+                        if (section) {
+                            // Task is visually inside a section - make it a child
+                            parentNode = `section-${section.id}`
+                            // BUG-034 FIX: Convert ABSOLUTE to RELATIVE for Vue Flow parent-child system
+                            const relX = position.x - section.position.x
+                            const relY = position.y - section.position.y
+
+                            // Fix: Only assign parent if relative calculation is valid
+                            // This prevents tasks from stacking at (0,0) relative to group if calculation fails
+                            if (Number.isFinite(relX) && Number.isFinite(relY)) {
+                                parentNode = `section-${section.id}`
+                                position = { x: relX, y: relY }
+                            }
+                            // Else: Keep position as Absolute (from task.canvasPosition). Keep parentNode as undefined.
+                        }
                     }
 
                     desiredNodeMap.set(task.id, {

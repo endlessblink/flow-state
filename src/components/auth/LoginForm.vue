@@ -168,14 +168,16 @@ async function handleSubmit() {
     await authStore.signInWithPassword(email.value.trim(), password.value)
 
     // Success - emit event
-    emit('success', authStore.user)
+    if (authStore.user) {
+      emit('success', authStore.user as User)
+    }
 
     // Clear form
     email.value = ''
     password.value = ''
   } catch (_error: unknown) {
     // Error message is already set by auth store
-    errorMessage.value = authStore.error || 'Sign in failed. Please try again.'
+    errorMessage.value = authStore.errorMessage || 'Sign in failed. Please try again.'
   } finally {
     isLoading.value = false
   }

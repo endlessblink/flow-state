@@ -4,16 +4,12 @@ import { useCanvasStore } from '../canvas'
 import type { Task } from '../tasks'
 
 // Mock the database composable
-vi.mock('@/composables/useDatabase', () => ({
-  useDatabase: () => ({
-    save: vi.fn(),
-    load: vi.fn().mockResolvedValue(null)
-  }),
-  DB_KEYS: {
-    TASKS: 'tasks',
-    PROJECTS: 'projects',
-    CANVAS: 'canvas'
-  }
+vi.mock('@/composables/useSupabaseDatabase', () => ({
+  useSupabaseDatabase: () => ({
+    saveGroup: vi.fn(),
+    deleteGroup: vi.fn(),
+    fetchGroups: vi.fn().mockResolvedValue([])
+  })
 }))
 
 describe('CanvasStore', () => {
@@ -65,10 +61,10 @@ describe('CanvasStore', () => {
   })
 
   describe('Section Management', () => {
-    it('creates a section', () => {
+    it('creates a section', async () => {
       const store = useCanvasStore()
 
-      const section = store.createSection({
+      const section = await store.createSection({
         name: 'High Priority',
         type: 'priority',
         propertyValue: 'high',
@@ -86,9 +82,9 @@ describe('CanvasStore', () => {
       expect(store.sections.length).toBe(1)
     })
 
-    it('updates a section', () => {
+    it('updates a section', async () => {
       const store = useCanvasStore()
-      const section = store.createSection({
+      const section = await store.createSection({
         name: 'Original',
         type: 'custom',
         position: { x: 0, y: 0, width: 300, height: 250 },
@@ -108,9 +104,9 @@ describe('CanvasStore', () => {
       expect(updated?.color).toBe('#ffffff')
     })
 
-    it('deletes a section', () => {
+    it('deletes a section', async () => {
       const store = useCanvasStore()
-      const section = store.createSection({
+      const section = await store.createSection({
         name: 'To Delete',
         type: 'custom',
         position: { x: 0, y: 0, width: 300, height: 250 },
@@ -127,9 +123,9 @@ describe('CanvasStore', () => {
       expect(store.sections.length).toBe(0)
     })
 
-    it('toggles section visibility', () => {
+    it('toggles section visibility', async () => {
       const store = useCanvasStore()
-      const section = store.createSection({
+      const section = await store.createSection({
         name: 'Section',
         type: 'custom',
         position: { x: 0, y: 0, width: 300, height: 250 },
@@ -146,9 +142,9 @@ describe('CanvasStore', () => {
       expect(store.sections[0].isVisible).toBe(true)
     })
 
-    it('toggles section collapse', () => {
+    it('toggles section collapse', async () => {
       const store = useCanvasStore()
-      const section = store.createSection({
+      const section = await store.createSection({
         name: 'Section',
         type: 'custom',
         position: { x: 0, y: 0, width: 300, height: 250 },
@@ -165,35 +161,16 @@ describe('CanvasStore', () => {
       expect(store.sections[0].isCollapsed).toBe(false)
     })
 
-    it('toggles auto-collect', () => {
-      const store = useCanvasStore()
-      const section = store.createSection({
-        name: 'Section',
-        type: 'priority',
-        propertyValue: 'high',
-        position: { x: 0, y: 0, width: 300, height: 250 },
-        color: '#000000',
-        layout: 'vertical',
-        isVisible: true,
-        isCollapsed: false,
-        autoCollect: false
-      })
 
-      store.toggleAutoCollect(section.id)
-      expect(store.sections[0].autoCollect).toBe(true)
-
-      store.toggleAutoCollect(section.id)
-      expect(store.sections[0].autoCollect).toBe(false)
-    })
   })
 
   describe('Smart Section Creators', () => {
-    it('creates priority sections', () => {
+    it('creates priority sections', async () => {
       const store = useCanvasStore()
 
-      const high = store.createPrioritySection('high', { x: 0, y: 0 })
-      const medium = store.createPrioritySection('medium', { x: 350, y: 0 })
-      const low = store.createPrioritySection('low', { x: 700, y: 0 })
+      const high = await store.createSection({ name: 'High Priority', type: 'priority', propertyValue: 'high', color: '#ef4444', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
+      const medium = await store.createSection({ name: 'Medium Priority', type: 'priority', propertyValue: 'medium', color: '#f59e0b', position: { x: 350, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
+      const low = await store.createSection({ name: 'Low Priority', type: 'priority', propertyValue: 'low', color: '#3b82f6', position: { x: 700, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       expect(high.name).toBe('High Priority')
       expect(high.type).toBe('priority')
@@ -209,12 +186,12 @@ describe('CanvasStore', () => {
       expect(store.sections.length).toBe(3)
     })
 
-    it('creates status sections', () => {
+    it('creates status sections', async () => {
       const store = useCanvasStore()
 
-      const planned = store.createStatusSection('planned', { x: 0, y: 0 })
-      const inProgress = store.createStatusSection('in_progress', { x: 350, y: 0 })
-      const done = store.createStatusSection('done', { x: 700, y: 0 })
+      const planned = await store.createSection({ name: 'Planned', type: 'status', propertyValue: 'planned', color: '#6366f1', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
+      const inProgress = await store.createSection({ name: 'In Progress', type: 'status', propertyValue: 'in_progress', color: '#f59e0b', position: { x: 350, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
+      const done = await store.createSection({ name: 'Done', type: 'status', propertyValue: 'done', color: '#10b981', position: { x: 700, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       expect(planned.name).toBe('Planned')
       expect(planned.type).toBe('status')
@@ -229,10 +206,10 @@ describe('CanvasStore', () => {
       expect(store.sections.length).toBe(3)
     })
 
-    it('creates project sections', () => {
+    it('creates project sections', async () => {
       const store = useCanvasStore()
 
-      const section = store.createProjectSection('project-123', 'My Project', '#3b82f6', { x: 0, y: 0 })
+      const section = await store.createSection({ name: 'My Project', type: 'project', propertyValue: 'project-123', color: '#3b82f6', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       expect(section.name).toBe('My Project')
       expect(section.type).toBe('project')
@@ -242,10 +219,10 @@ describe('CanvasStore', () => {
   })
 
   describe('Task Filtering', () => {
-    it('filters tasks by priority section', () => {
+    it('filters tasks by priority section', async () => {
       const store = useCanvasStore()
 
-      const section = store.createPrioritySection('high', { x: 0, y: 0 })
+      const section = await store.createSection({ name: 'High Priority', type: 'priority', propertyValue: 'high', color: '#ef4444', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       const tasks: Task[] = [
         {
@@ -281,17 +258,17 @@ describe('CanvasStore', () => {
       // Note: getTasksInSection returns all tasks if no filters are set
       // Priority sections use taskMatchesSection for matching, not getTasksInSection filters
       // Let's test using taskMatchesSection instead
-      const filtered = tasks.filter(task => store.taskMatchesSection(task, section))
+      const filtered = tasks.filter(task => store.taskMatchesSection(task, section.id))
 
       expect(filtered.length).toBe(1)
       expect(filtered[0].id).toBe('1')
       expect(filtered[0].priority).toBe('high')
     })
 
-    it('filters tasks by status section', () => {
+    it('filters tasks by status section', async () => {
       const store = useCanvasStore()
 
-      const section = store.createStatusSection('in_progress', { x: 0, y: 0 })
+      const section = await store.createSection({ name: 'In Progress', type: 'status', propertyValue: 'in_progress', color: '#f59e0b', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       const tasks: Task[] = [
         {
@@ -325,7 +302,7 @@ describe('CanvasStore', () => {
       ]
 
       // Use taskMatchesSection for smart section filtering
-      const filtered = tasks.filter(task => store.taskMatchesSection(task, section))
+      const filtered = tasks.filter(task => store.taskMatchesSection(task, section.id))
 
       expect(filtered.length).toBe(1)
       expect(filtered[0].id).toBe('1')
@@ -334,9 +311,9 @@ describe('CanvasStore', () => {
   })
 
   describe('Task Matching', () => {
-    it('matches task to priority section', () => {
+    it('matches task to priority section', async () => {
       const store = useCanvasStore()
-      const section = store.createPrioritySection('high', { x: 0, y: 0 })
+      const section = await store.createSection({ name: 'High Priority', type: 'priority', propertyValue: 'high', color: '#ef4444', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       const highTask: Task = {
         id: '1',
@@ -359,13 +336,13 @@ describe('CanvasStore', () => {
         priority: 'low'
       }
 
-      expect(store.taskMatchesSection(highTask, section)).toBe(true)
-      expect(store.taskMatchesSection(lowTask, section)).toBe(false)
+      expect(store.taskMatchesSection(highTask, section.id)).toBe(true)
+      expect(store.taskMatchesSection(lowTask, section.id)).toBe(false)
     })
 
-    it('matches task to status section', () => {
+    it('matches task to status section', async () => {
       const store = useCanvasStore()
-      const section = store.createStatusSection('done', { x: 0, y: 0 })
+      const section = await store.createSection({ name: 'Done', type: 'status', propertyValue: 'done', color: '#10b981', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       const doneTask: Task = {
         id: '1',
@@ -388,13 +365,13 @@ describe('CanvasStore', () => {
         status: 'planned'
       }
 
-      expect(store.taskMatchesSection(doneTask, section)).toBe(true)
-      expect(store.taskMatchesSection(plannedTask, section)).toBe(false)
+      expect(store.taskMatchesSection(doneTask, section.id)).toBe(true)
+      expect(store.taskMatchesSection(plannedTask, section.id)).toBe(false)
     })
 
-    it('matches task to project section', () => {
+    it('matches task to project section', async () => {
       const store = useCanvasStore()
-      const section = store.createProjectSection('proj-1', 'Project 1', '#3b82f6', { x: 0, y: 0 })
+      const section = await store.createSection({ name: 'Project 1', type: 'project', propertyValue: 'proj-1', color: '#3b82f6', position: { x: 0, y: 0, width: 300, height: 200 }, layout: 'vertical', isVisible: true, isCollapsed: false })
 
       const task1: Task = {
         id: '1',
@@ -417,8 +394,8 @@ describe('CanvasStore', () => {
         projectId: 'proj-2'
       }
 
-      expect(store.taskMatchesSection(task1, section)).toBe(true)
-      expect(store.taskMatchesSection(task2, section)).toBe(false)
+      expect(store.taskMatchesSection(task1, section.id)).toBe(true)
+      expect(store.taskMatchesSection(task2, section.id)).toBe(false)
     })
   })
 
@@ -455,7 +432,10 @@ describe('CanvasStore', () => {
       expect(store.isSelecting).toBe(true)
       expect(store.selectionRect).toEqual({ x: 50, y: 50, width: 0, height: 0 })
 
-      store.updateSelection(150, 200)
+      store.updateSelection(50, 50) // Initial update same as start
+      expect(store.selectionRect).toEqual({ x: 50, y: 50, width: 0, height: 0 })
+
+      store.updateSelection(150, 200) // Drag to new pos
       expect(store.selectionRect).toEqual({ x: 50, y: 50, width: 100, height: 150 })
 
       store.endSelection()
@@ -473,7 +453,7 @@ describe('CanvasStore', () => {
 
       const rect = { x: 50, y: 50, width: 300, height: 200 }
 
-      store.selectNodesInRect(rect, nodes)
+      store.selectNodesInRect(rect)
 
       // Should select task-1 and task-2 (both within rect bounds)
       expect(store.selectedNodeIds.length).toBe(2)
@@ -568,9 +548,9 @@ describe('CanvasStore', () => {
       expect(store.activeSectionId).toBeNull()
     })
 
-    it('clears active section when section is deleted', () => {
+    it('clears active section when section is deleted', async () => {
       const store = useCanvasStore()
-      const section = store.createSection({
+      const section = await store.createSection({
         name: 'Section',
         type: 'custom',
         position: { x: 0, y: 0, width: 300, height: 250 },

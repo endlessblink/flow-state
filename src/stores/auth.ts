@@ -15,6 +15,21 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value)
   const errorMessage = computed(() => error.value?.message || null)
 
+  // Compatibility getters for Supabase/Firebase differences
+  const displayName = computed(() =>
+    user.value?.user_metadata?.full_name ||
+    user.value?.user_metadata?.display_name ||
+    user.value?.user_metadata?.name ||
+    user.value?.email?.split('@')[0] ||
+    'User'
+  )
+  const photoURL = computed(() =>
+    user.value?.user_metadata?.avatar_url ||
+    user.value?.user_metadata?.photo_url ||
+    user.value?.user_metadata?.picture ||
+    null
+  )
+
   // Actions
   const initialize = async () => {
     if (isInitialized.value) return
@@ -162,6 +177,79 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const signInWithGoogle = async () => {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      })
+
+      if (signInError) throw signInError
+    } catch (e: any) {
+      console.error('Google sign in failed:', e)
+      error.value = e
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const signUpWithEmail = async (email: string, password: string, metadata?: any) => {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata
+        }
+      })
+
+      if (signUpError) throw signUpError
+
+      // If auto-confirm is on, we might get a session immediately
+      if (data.session) {
+        session.value = data.session
+        user.value = data.user
+        await migrateGuestData()
+      }
+
+      return data
+    } catch (e: any) {
+      console.error('Sign up failed:', e)
+      error.value = e
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const sendPasswordResetEmail = async (email: string) => {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+
+      if (resetError) throw resetError
+    } catch (e: any) {
+      console.error('Password reset failed:', e)
+      error.value = e
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   // Auto-init (Removed: let composables/components control init timing)
   // initialize()
 
@@ -176,11 +264,16 @@ export const useAuthStore = defineStore('auth', () => {
     // Getters
     isAuthenticated,
     errorMessage,
+    displayName,
+    photoURL,
 
     // Actions
     initialize,
     signIn,
     signInWithPassword,
+    signInWithGoogle,
+    signUpWithEmail,
+    sendPasswordResetEmail,
     signOut
   }
 })

@@ -109,7 +109,9 @@
       </div>
 
       <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
-      <UnifiedInboxPanel />
+      <!-- context="canvas" to hide group filter chips (shown only in calendar) -->
+      <!-- key forces Vue to recreate component when switching views -->
+      <UnifiedInboxPanel context="canvas" key="canvas-inbox" />
 
       <!-- Always show VueFlow canvas, even when empty -->
       <div class="canvas-container-wrapper">
@@ -843,6 +845,7 @@ const {
   resourceManager,
   validateStores,
   setOperationError,
+  setOperationLoading,
   clearOperationError
 })
 
@@ -1114,7 +1117,9 @@ const handleSectionContextMenu = (event: MouseEvent, sectionData: { id: string; 
       position: { x: 0, y: 0, width: 300, height: 200 }, // Dummy values
       isCollapsed: false,
       items: [],
-      type: 'custom'
+      type: 'custom',
+      layout: 'vertical',
+      isVisible: true
     } as CanvasSection
   }
 
@@ -1989,7 +1994,7 @@ const collectTasksForSection = (sectionId: string) => {
     name: section.name,
     type: section.type,
     propertyValue: section.propertyValue,
-    autoCollect: section.autoCollect
+    autoCollect: section.collectFilter
   })
 
   // Get tasks currently in inbox ONLY (not canvas tasks, excluding done tasks)
@@ -2006,7 +2011,7 @@ const collectTasksForSection = (sectionId: string) => {
 
   // Find tasks that match this section's criteria
   const matchingTasks = inboxTasks.filter(task => {
-    const matches = canvasStore.taskMatchesSection(task, section)
+    const matches = canvasStore.taskMatchesSection(task, section.id)
     console.log(`[Auto-Collect]   "${task.title}": priority=${task.priority}, wants=${section.propertyValue}, match=${matches}`)
     return matches
   })
@@ -2643,7 +2648,7 @@ const handleOpenSectionSettingsFromContext = (section: CanvasSection) => {
 
 const handleTogglePowerMode = (section: CanvasSection) => {
   console.log('⚡ [CanvasView] Toggle power mode for:', section.name)
-  canvasStore.togglePowerMode(section.id)
+  canvasStore.togglePowerMode(section.id, !section.isPowerMode)
 }
 
 const handleCollectTasksFromMenu = (section: CanvasSection) => {
@@ -2709,7 +2714,7 @@ const createTaskInGroup = async (section: CanvasSection) => {
 
   
 const _getTasksForSection = (section: CanvasSection) => {
-  const tasks = canvasStore.getTasksInSection(section, Array.isArray(filteredTasks.value) ? filteredTasks.value : [])
+  const tasks = canvasStore.getTasksInSection(section.id, Array.isArray(filteredTasks.value) ? filteredTasks.value : [])
   // If section is collapsed, return empty array to hide tasks
   return section.isCollapsed ? [] : tasks
 }

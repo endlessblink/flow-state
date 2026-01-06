@@ -111,11 +111,25 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
 
     const loadSavedViewport = async (): Promise<boolean> => {
         try {
-            const savedViewport = await db.load<{ x: number; y: number; zoom: number }>(DB_KEYS.CANVAS_VIEWPORT)
+            // Try loading from Supabase user settings
+            const settings = await db.fetchUserSettings()
+            const savedViewport = settings?.canvas_viewport as { x: number; y: number; zoom: number } | undefined
+
             if (savedViewport && typeof savedViewport.x === 'number') {
                 viewport.value = savedViewport
-                console.log('🔭 [canvasUi] Viewport restored:', savedViewport)
+                console.log('🔭 [canvasUi] Viewport restored from cloud:', savedViewport)
                 return true
+            }
+
+            // Fallback to local storage (handled by caller or component mount usually, but here for completeness if needed)
+            const local = localStorage.getItem('canvas-viewport')
+            if (local) {
+                const parsed = JSON.parse(local)
+                if (parsed && typeof parsed.x === 'number') {
+                    viewport.value = parsed
+                    console.log('🔭 [canvasUi] Viewport restored from local storage:', parsed)
+                    return true
+                }
             }
         } catch (error) {
             console.warn('⚠️ Failed to load saved viewport:', error)

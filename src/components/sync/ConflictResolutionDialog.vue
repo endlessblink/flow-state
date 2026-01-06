@@ -83,7 +83,7 @@
                 Local (This Device)
               </div>
               <div class="timestamp">
-                {{ formatTimestamp(localTask.updatedAt as number) }}
+                {{ formatTimestamp(localTask.updatedAt as unknown as number) }}
               </div>
             </div>
             <div class="value-display">
@@ -125,7 +125,7 @@
                 Remote (Synced)
               </div>
               <div class="timestamp">
-                {{ formatTimestamp(remoteTask.updatedAt as number) }}
+                {{ formatTimestamp(remoteTask.updatedAt as unknown as number) }}
               </div>
             </div>
             <div class="value-display">
@@ -275,7 +275,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import type { ConflictDiff, TaskConflict } from '@/utils/conflictResolution'
+import type { TaskConflict } from '@/utils/conflict-resolution'
+import type { ConflictDiff } from '@/utils/threeWayMerge'
 import DiffViewer from './DiffViewer.vue'
 import ValueDisplay from './ValueDisplay.vue'
 import ManualMergeModal from './ManualMergeModal.vue'
@@ -478,10 +479,10 @@ function applyResolutions(): void {
   Object.entries(selectedResolution.value).forEach(([field, resolution]) => {
     switch (resolution) {
       case 'local':
-        resolutions[field] = localTask.value[field] || getNestedValue(localTask.value as Record<string, unknown>, field)
+        resolutions[field] = (localTask.value as Record<string, any>)[field] || getNestedValue(localTask.value as unknown as Record<string, unknown>, field)
         break
       case 'remote':
-        resolutions[field] = remoteTask.value[field] || getNestedValue(remoteTask.value as Record<string, unknown>, field)
+       resolutions[field] = (remoteTask.value as Record<string, any>)[field] || getNestedValue(remoteTask.value as unknown as Record<string, unknown>, field)
         break
       case 'suggested':
       case 'custom':

@@ -1,5 +1,5 @@
-**Last Updated**: January 6, 2026 (TASK-105 Supabase Migration & Sync Fixes)
-**Version**: 5.18 (Supabase Migration Complete)
+**Last Updated**: January 6, 2026 (TASK-095 TypeScript Cleanup)
+**Version**: 5.20 (TypeScript Clean Baseline)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -99,9 +99,11 @@
 - KDE Taskbar Progress (D-Bus).
 - Fokus-style Break Splash Screen.
 
-### TASK-095: Complete TypeScript & Lint Cleaning (🔄 IN PROGRESS)
-- [x] Stabilize merged PRs (17 PRs merged & verified).
-- [ ] Address remaining TS/Lint errors system-wide.
+### ~~TASK-095~~: Complete TypeScript & Lint Cleaning (✅ DONE)
+- [x] Address remaining TS/Lint errors system-wide (Zero errors baseline achieved).
+- [x] Fix `ConflictResolutionDialog` and `SyncHealthDashboard` type mismatches.
+- [x] Standardize auth store getters and component access.
+- [x] Align Canvas store actions and exports.
 
 ### ~~TASK-100~~: Implement Overdue Smart Group in Canvas (✅ DONE)
 - Create "Overdue" smart group logic.
@@ -194,35 +196,55 @@ Fixed rubber-band (shift+drag) selection failing inside groups while working out
 - CSS `:deep()` only works in `<style scoped>`, not unscoped styles
 - Read viewport from `.vue-flow__transformationpane` CSS transform for reliable values in event handlers
 
-### TASK-106: Canvas Group Filter for Calendar Inbox (🔄 IN PROGRESS)
-**Priority**: P2-MEDIUM
-**Started**: January 6, 2026
+### ~~BUG-002~~: Fix Timer Session UUID Type Error (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 6, 2026
+**SOP**: [SYNC-timer-uuid-validation.md](./sop/active/SYNC-timer-uuid-validation.md)
 
-Reduce cognitive overload in calendar inbox by adding canvas group filtering.
+Fixed PostgreSQL UUID type error when saving timer sessions: `invalid input syntax for type uuid: "1767688720801"`.
+
+**Root Cause**:
+- [x] Timer session ID was a Unix timestamp instead of UUID (likely from legacy/corrupted session)
+- [x] `toSupabaseTimerSession()` mapper passed ID directly without validation
+- [x] Supabase `timer_sessions.id` column requires valid UUID format
+
+**Changes**:
+- [x] `supabaseMappers.ts`: Added UUID validation to `toSupabaseTimerSession()`
+- [x] `supabaseMappers.ts`: Added UUID validation to `toSupabaseQuickSortSession()`
+- [x] Invalid IDs now auto-generate new UUIDs with warning logged
+
+**Key Pattern**:
+```typescript
+const validId = isValidUUID(session.id) ? session.id : crypto.randomUUID()
+```
+
+### ~~TASK-106~~: Canvas Group Filter for Calendar Inbox (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 6, 2026
+
+Reduced cognitive overload in calendar inbox by adding canvas group filtering.
 
 **Problem**:
 - Too many tasks even with "Today" filter active
-- Current filter buttons (Priority, Project, Duration) are overwhelming
-- User wants to filter calendar inbox by canvas groups
+- Current filter buttons (Priority, Project, Duration) were overwhelming
+- User wanted to filter calendar inbox by canvas groups
 
 **Solution**:
-- [ ] Add "Show from: [Canvas Group]" dropdown as primary filter
-- [ ] Collapse existing filters into "More filters" toggle (hidden by default)
-- [ ] Create `useCanvasGroupMembership.ts` composable for group membership helpers
-- [ ] Test with various group configurations
+- [x] Add "Show from: [Canvas Group]" dropdown as primary filter
+- [x] Collapse existing filters into "More filters" toggle (hidden by default)
+- [x] Create `useCanvasGroupMembership.ts` composable for group membership helpers
+- [x] Test with various group configurations
 
-**Files**:
-- `src/composables/canvas/useCanvasGroupMembership.ts` (NEW)
-- `src/components/inbox/CalendarInboxPanel.vue`
-- `src/components/inbox/UnifiedInboxPanel.vue`
+**Changes**:
+- `src/composables/canvas/useCanvasGroupMembership.ts` (NEW) - Group membership helpers
+- `src/components/inbox/UnifiedInboxPanel.vue` - Added dropdown + collapsible filters
+- `src/components/inbox/CalendarInboxPanel.vue` - Storybook version updated for consistency
 
-**Files Deleted** (legacy code removal):
-- `useCouchDBSync.ts`, `useConflictPruning.ts`, `useCrossTabCoordination.ts`
-- `useDatabaseHealthCheck.ts`, `conflictDetector.ts`, `conflictResolution.ts`
-- `debugHelper.ts`, `legacyStorageCleanup.ts`, `migratePouchToSql.ts`
-- `SqlCanvasStore.ts`, `SqlProjectStore.ts`, `SqlTaskStore.ts`
-- `PowerSyncConnector.ts`, `PowerSyncDatabase.ts`, `SqlDatabaseTypes.ts`
-- Various mapper files (`groupMapper.ts`, `projectMapper.ts`, `taskMapper.ts`)
+**Key Features**:
+- Canvas group dropdown shows all groups with task counts
+- "More filters" button collapses advanced filters (hidden by default)
+- Contextual empty state: "No tasks in this group. Drag tasks to this group on Canvas."
+- Group membership computed dynamically from task.canvasPosition vs group.position bounds
 
 </details>
 

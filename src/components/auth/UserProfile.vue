@@ -3,8 +3,8 @@
     <div ref="profileRef" class="user-profile">
       <div class="avatar-circle">
         <img
-          v-if="authStore.user?.photoURL"
-          :src="authStore.user.photoURL"
+          v-if="authStore.photoURL"
+          :src="authStore.photoURL"
           alt="User avatar"
           class="avatar-image"
           crossorigin="anonymous"
@@ -86,7 +86,7 @@ const userInitial = computed(() => {
 })
 
 const displayName = computed(() => {
-  return authStore.user?.displayName || authStore.user?.email?.split('@')[0] || 'User'
+  return authStore.displayName
 })
 
 const dropdownStyle = computed((): CSSProperties => {
@@ -157,8 +157,8 @@ onMounted(() => {
   console.log('  📊 Auth state:')
   console.log('    • isAuthenticated:', authStore.isAuthenticated)
   console.log('    • user email:', authStore.user?.email)
-  console.log('    • user displayName:', authStore.user?.displayName)
-  console.log('    • user photoURL:', authStore.user?.photoURL)
+  console.log('    • user displayName:', authStore.displayName)
+  console.log('    • user photoURL:', authStore.photoURL)
 
   // NUCLEAR OPTION: Direct DOM event listener with capture phase
   // Using ONLY pointerdown to prevent double-toggle (pointerdown + click both firing)

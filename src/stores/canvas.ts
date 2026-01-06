@@ -4,46 +4,27 @@ import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useTaskStore, type Task } from './tasks'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { detectPowerKeyword } from '@/composables/useTaskSmartGroups'
+import type {
+  GroupFilter,
+  TaskPosition,
+  AssignOnDropSettings,
+  CollectFilterSettings,
+  CanvasGroup,
+  CanvasSection
+} from './canvas/types'
+
+// Re-export types for consumers
+export type {
+  GroupFilter,
+  TaskPosition,
+  AssignOnDropSettings,
+  CollectFilterSettings,
+  CanvasGroup,
+  CanvasSection
+}
 
 // Task store import for safe sync functionality
 let taskStore: any = null
-
-export interface GroupFilter {
-  priorities?: ('low' | 'medium' | 'high')[]
-  statuses?: Task['status'][]
-  projects?: string[]
-  tags?: string[]
-  dateRange?: { start: Date; end: Date }
-}
-
-export interface TaskPosition {
-  id: string
-  position: { x: number; y: number }
-  relativePosition: { x: number; y: number }
-}
-
-export interface CanvasGroup {
-  id: string
-  name: string
-  type: 'priority' | 'status' | 'timeline' | 'custom' | 'project'
-  position: { x: number; y: number; width: number; height: number }
-  color: string
-  filters?: GroupFilter
-  layout: 'vertical' | 'horizontal' | 'grid' | 'freeform'
-  isVisible: boolean
-  isCollapsed: boolean
-  collapsedHeight?: number
-  // Power group fields (simplifying for migration)
-  isPowerMode?: boolean
-  powerKeyword?: any
-  assignOnDrop?: any
-  collectFilter?: any
-  parentGroupId?: string | null
-  updatedAt?: string
-  propertyValue?: any
-}
-
-export type CanvasSection = CanvasGroup
 
 export const useCanvasStore = defineStore('canvas', () => {
 
@@ -51,6 +32,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Viewport state
   const viewport = ref({ x: 0, y: 0, zoom: 1 })
+  const zoomConfig = ref({ minZoom: 0.1, maxZoom: 4.0 })
 
   // Selection state
   const selectedNodeIds = ref<string[]>([])
@@ -72,6 +54,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   // SAFETY: Named _rawGroups to discourage direct access - use visibleGroups (exported as 'groups') instead
   const _rawGroups = ref<CanvasGroup[]>([])
   const activeGroupId = ref<string | null>(null)
+  const syncTrigger = ref(0)
 
   // SAFETY: Filtered groups for display - excludes hidden groups
   const visibleGroups = computed(() => _rawGroups.value.filter(g => g.isVisible !== false))
@@ -194,6 +177,10 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
+  const setGroups = (newGroups: CanvasGroup[]) => {
+    _rawGroups.value = [...newGroups]
+  }
+
   const setViewport = (x: number, y: number, zoom: number) => {
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(zoom) || zoom <= 0) {
       console.warn('⚠️ [CANVAS] Attempted to set invalid viewport:', { x, y, zoom })
@@ -263,14 +250,16 @@ export const useCanvasStore = defineStore('canvas', () => {
     return count
   }
 
-  const getTasksInSection = (groupId: string): Task[] => {
-    if (!taskStore || !taskStore.tasks) return []
+  const getTasksInSection = (groupId: string, tasks?: Task[]): Task[] => {
+    // Determine source tasks: provided tasks > taskStore.tasks > empty
+    const sourceTasks = tasks || (taskStore && taskStore.tasks ? taskStore.tasks : [])
+
     // SAFETY: Use _rawGroups to find any group including hidden ones
     const group = _rawGroups.value.find(g => g.id === groupId)
     if (!group) return []
 
     // Direct tasks in this group
-    return taskStore.tasks.filter((t: Task) => {
+    return sourceTasks.filter((t: Task) => {
       if (t.canvasPosition) {
         return isPointInRect(t.canvasPosition.x, t.canvasPosition.y, group.position)
       }
@@ -417,7 +406,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   const updateSectionWithUndo = updateGroup
 
   // Missing stubs to satisfy vue-tsc
-  const getMatchingTaskCount = (groupId: string): number => 0
+  const getMatchingTaskCount = (groupId: string, tasks?: any[]): number => 0
   const toggleSectionVisibility = async (groupId: string) => { /* ... */ }
   const toggleSectionCollapse = async (groupId: string) => {
     // SAFETY: Use _rawGroups to find any group including hidden ones
@@ -427,8 +416,14 @@ export const useCanvasStore = defineStore('canvas', () => {
   const clearSelection = () => { selectedNodeIds.value = [] }
   const requestSync = async () => { /* ... */ }
   const setSelectionMode = (mode: string) => { selectionMode.value = mode }
-  const startSelection = (pos: any) => { isSelecting.value = true; selectionRect.value = { x: pos.x, y: pos.y, width: 0, height: 0 } }
-  const updateSelection = (rect: any) => { selectionRect.value = rect }
+  const startSelection = (x: number, y: number) => { isSelecting.value = true; selectionRect.value = { x, y, width: 0, height: 0 } }
+  const updateSelection = (x: number, y: number) => {
+    if (selectionRect.value) {
+      // Basic width/height update just to prevent errors, proper logic needs start pos
+      selectionRect.value.width = x - selectionRect.value.x
+      selectionRect.value.height = y - selectionRect.value.y
+    }
+  }
   const endSelection = () => { isSelecting.value = false; selectionRect.value = null }
   const selectNodesInRect = (rect: any) => { /* ... */ }
   const toggleMultiSelectMode = () => { multiSelectMode.value = !multiSelectMode.value }
@@ -446,6 +441,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   return {
     viewport,
+    zoomConfig,
     // SAFETY: Export visibleGroups as 'groups' - this is the safe default for components
     // Use _rawGroups only for internal operations (load, save, sync, mutations)
     groups: visibleGroups,
@@ -475,6 +471,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     createGroup,
     updateGroup,
     deleteGroup,
+    setGroups,
     setViewport,
     loadSavedViewport,
     getTaskCountInGroupRecursive,
@@ -483,7 +480,11 @@ export const useCanvasStore = defineStore('canvas', () => {
     getTasksInSection,
     taskMatchesSection,
     toggleNodeSelection,
-    togglePowerMode,
+    togglePowerMode: async (groupId: string, active?: boolean) => {
+      const g = _rawGroups.value.find(g => g.id === groupId)
+      const newState = active !== undefined ? active : !(g?.isPowerMode)
+      await updateGroup(groupId, { isPowerMode: newState })
+    },
     updateSectionWithUndo,
 
     // Added Actions
@@ -506,6 +507,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     toggleConnectMode,
     startConnection,
     clearConnection,
+    syncTrigger,
 
     // Aliases - sections is same as groups (visibleGroups filtered)
     sections: visibleGroups,

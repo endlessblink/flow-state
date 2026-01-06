@@ -293,7 +293,7 @@ const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimate
 const showTodayOnly = ref(false)
 
 // TASK-106: Canvas group filter (primary filter for reducing overload)
-const selectedCanvasGroup = ref<string | null>(null)
+const selectedCanvasGroup = ref<string>('')
 const showAdvancedFilters = ref(false)
 
 // TASK-106: Options for canvas group dropdown
@@ -437,7 +437,7 @@ const clearAllFilters = () => {
   selectedPriority.value = null
   selectedProject.value = null
   selectedDuration.value = null
-  selectedCanvasGroup.value = null  // TASK-106
+  selectedCanvasGroup.value = ''  // TASK-106
 }
 
 const addTask = () => {

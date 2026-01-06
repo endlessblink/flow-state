@@ -7,7 +7,7 @@
 import { ref, computed } from 'vue'
 
 // Type stubs for backward compatibility
-export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error' | 'offline' | 'paused'
+export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error' | 'offline' | 'paused' | 'validating' | 'resolving_conflicts'
 
 export interface SyncMetrics {
   totalSyncs: number
@@ -46,6 +46,11 @@ export function useReliableSyncManager() {
   const isSyncing = ref(false)
   const lastError = ref<string | null>(null)
   const isOnline = ref(true)
+  const remoteConnected = ref(true) // Add missing ref
+  const hasErrors = ref(false) // Add missing ref
+  const conflicts = ref([]) // Add missing ref
+  const lastSyncTime = ref<Date | null>(new Date()) // Add missing ref
+  const error = lastError // Alias
 
   const syncHealth = computed<SyncHealth>(() => ({
     syncStatus: status.value,
@@ -65,22 +70,59 @@ export function useReliableSyncManager() {
     conflictsRate: 0
   }))
 
+  const getSyncMetrics = () => syncMetrics.value
+
+  const resolutions = ref<any[]>([])
+  const metrics = ref({
+    totalSyncs: 0,
+    successfulSyncs: 0,
+    failedSyncs: 0,
+    successRate: 1,
+    conflictsRate: 0,
+    averageSyncTime: 0
+  })
+  const networkOptimizer = {
+    getMetrics: () => ({ currentCondition: 'good' })
+  }
+  const throttledSync = async (_priority: string) => { /* stub */ }
+  const getSyncHealth = () => ({
+    syncStatus: 'complete',
+    hasErrors: false,
+    conflictCount: 0,
+    isOnline: true
+  })
+  const queueSize = ref(0) // Added based on the return block
+
   return {
     // State
     status,
+    syncStatus: status, // Alias
     isSyncing,
     lastError,
+    error, // Alias
     isOnline,
+    remoteConnected, // Add missing
+    hasErrors, // Add missing
+    conflicts, // Add missing
+    lastSyncTime, // Add missing
     syncHealth,
     syncMetrics,
+    resolutions,
+    metrics,
+    networkOptimizer,
+    queueSize,
 
     // Stub methods (no-op for Supabase mode)
-    startSync: async () => {},
-    stopSync: async () => {},
-    pauseSync: () => {},
-    resumeSync: () => {},
-    forceSync: async () => {},
+    startSync: async () => { },
+    init: async () => { }, // Alias
+    stopSync: async () => { },
+    pauseSync: () => { },
+    cleanup: async () => { }, // Alias
+    resumeSync: () => { },
+    forceSync: async () => { },
+    triggerSync: async () => { }, // Alias
     clearErrors: () => { lastError.value = null },
+    clearSyncErrors: () => { lastError.value = null }, // Alias
     getConflicts: () => [],
     resolveConflict: async () => true,
     getQueueStats: () => ({ length: 0, processing: false, oldestOperation: null }),
@@ -89,14 +131,17 @@ export function useReliableSyncManager() {
     // Health monitoring stubs
     getHealthStatus: () => syncHealth.value,
     getMetrics: () => syncMetrics.value,
+    getSyncMetrics,
+    throttledSync,
+    getSyncHealth,
 
     // Event handlers (no-op)
-    onSyncComplete: () => {},
-    onSyncError: () => {},
-    onConflictDetected: () => {},
+    onSyncComplete: () => { },
+    onSyncError: () => { },
+    onConflictDetected: () => { },
 
     // Cleanup
-    dispose: () => {}
+    dispose: () => { }
   }
 }
 

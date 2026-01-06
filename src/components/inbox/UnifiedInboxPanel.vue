@@ -57,13 +57,20 @@
       </div>
     </div>
 
-    <!-- TASK-106: Canvas Group Filter (Primary - reduces cognitive overload) -->
-    <div v-if="!isCollapsed && canvasGroupOptions.length > 1" class="canvas-group-filter">
-      <CustomSelect
-        v-model="selectedCanvasGroup"
-        :options="canvasGroupOptions"
-        placeholder="Show from: All Tasks"
-      />
+    <!-- TASK-106: Canvas Group Filter Chips - Only show in calendar context -->
+    <!-- Canvas view already shows groups visually, so filter chips would be redundant -->
+    <div v-if="!isCollapsed && props.context === 'calendar' && canvasGroupOptions.length > 1" class="group-filter-chips">
+      <button
+        v-for="group in canvasGroupOptions"
+        :key="group.value"
+        class="group-chip"
+        :class="{ active: selectedCanvasGroup === group.value }"
+        :style="getChipStyle(group)"
+        @click="selectedCanvasGroup = selectedCanvasGroup === group.value ? null : group.value"
+      >
+        <span v-if="group.color" class="chip-dot" :style="{ backgroundColor: group.color }" />
+        <span class="chip-label">{{ group.label }}</span>
+      </button>
     </div>
 
     <!-- TASK-106: Collapsible Advanced Filters -->
@@ -284,7 +291,7 @@ import BaseBadge from '@/components/base/BaseBadge.vue'
 import { useSmartViews } from '@/composables/useSmartViews'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
-import CustomSelect from '@/components/common/CustomSelect.vue'
+// CustomSelect removed - replaced with filter chips for better UX (TASK-106)
 
 // Props
 interface Props {
@@ -344,22 +351,42 @@ const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimate
 const selectedCanvasGroup = ref<string | null>(null)
 const showAdvancedFilters = ref(false)
 
-// TASK-106: Options for canvas group dropdown
-const canvasGroupOptions = computed(() => {
-  const options = [
-    { label: 'All Tasks', value: '' }
+// TASK-106: Options for canvas group filter chips
+interface GroupOption {
+  label: string
+  value: string
+  color?: string
+}
+
+const canvasGroupOptions = computed((): GroupOption[] => {
+  const options: GroupOption[] = [
+    { label: 'All', value: '', color: undefined }
   ]
 
-  // Add canvas groups with task counts
+  // Add canvas groups with task counts and colors
   groupsWithCounts.value.forEach(group => {
     options.push({
-      label: `${group.name} (${group.taskCount})`,
-      value: group.id
+      label: `${group.name} ${group.taskCount}`,
+      value: group.id,
+      color: group.color || '#4ecdc4'
     })
   })
 
   return options
 })
+
+// TASK-106: Get chip style based on active state and group color
+const getChipStyle = (group: GroupOption) => {
+  const isActive = selectedCanvasGroup.value === group.value
+  if (!isActive || !group.color) return {}
+
+  return {
+    '--chip-color': group.color,
+    backgroundColor: `${group.color}20`,
+    borderColor: group.color,
+    color: group.color
+  }
+}
 
 // Base inbox tasks (Source from filteredTasks to satisfy global filter requirements)
 const baseInboxTasks = computed(() => {
@@ -1376,27 +1403,54 @@ onBeforeUnmount(() => {
   scrollbar-color: var(--glass-border) transparent;
 }
 
-/* TASK-106: Canvas Group Filter Styles */
-.canvas-group-filter {
+/* TASK-106: Canvas Group Filter Chips */
+.group-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
   margin-bottom: var(--space-2);
+  padding: var(--space-1) 0;
 }
 
-.canvas-group-filter :deep(.custom-select) {
-  width: 100%;
-}
-
-.canvas-group-filter :deep(.select-trigger) {
-  width: 100%;
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--spring-smooth);
+  white-space: nowrap;
 }
 
-.canvas-group-filter :deep(.select-trigger:hover) {
+.group-chip:hover {
+  background: var(--glass-bg-light);
   border-color: var(--glass-border-hover);
+  color: var(--text-secondary);
+  transform: translateY(-1px);
+}
+
+.group-chip.active {
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  box-shadow: 0 0 8px rgba(78, 205, 196, 0.2);
+}
+
+.group-chip .chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.group-chip .chip-label {
+  line-height: 1;
 }
 
 /* TASK-106: Advanced Filters Toggle */

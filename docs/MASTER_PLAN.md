@@ -1,5 +1,5 @@
-**Last Updated**: January 6, 2026 (TASK-095 TypeScript Cleanup)
-**Version**: 5.20 (TypeScript Clean Baseline)
+**Last Updated**: January 6, 2026 (BUG-002 Timer UUID & Auth Fix)
+**Version**: 5.21 (Timer Auth Guard + UUID Validation)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -196,25 +196,34 @@ Fixed rubber-band (shift+drag) selection failing inside groups while working out
 - CSS `:deep()` only works in `<style scoped>`, not unscoped styles
 - Read viewport from `.vue-flow__transformationpane` CSS transform for reliable values in event handlers
 
-### ~~BUG-002~~: Fix Timer Session UUID Type Error (✅ DONE)
+### ~~BUG-002~~: Fix Timer Session UUID & Auth Errors (✅ DONE)
 **Priority**: P1-HIGH
 **Completed**: January 6, 2026
 **SOP**: [SYNC-timer-uuid-validation.md](./sop/active/SYNC-timer-uuid-validation.md)
 
-Fixed PostgreSQL UUID type error when saving timer sessions: `invalid input syntax for type uuid: "1767688720801"`.
+Fixed PostgreSQL UUID type error and "User not authenticated" errors when saving timer sessions.
 
-**Root Cause**:
-- [x] Timer session ID was a Unix timestamp instead of UUID (likely from legacy/corrupted session)
-- [x] `toSupabaseTimerSession()` mapper passed ID directly without validation
-- [x] Supabase `timer_sessions.id` column requires valid UUID format
+**Root Causes Fixed**:
+- [x] Timer session ID was Unix timestamp instead of UUID (legacy code used `Date.now().toString()`)
+- [x] `saveActiveTimerSession()` and `deleteTimerSession()` used `getUserId()` which throws when not authenticated
+- [x] Timer failed in local-only mode (not logged into Supabase)
 
 **Changes**:
-- [x] `supabaseMappers.ts`: Added UUID validation to `toSupabaseTimerSession()`
-- [x] `supabaseMappers.ts`: Added UUID validation to `toSupabaseQuickSortSession()`
-- [x] Invalid IDs now auto-generate new UUIDs with warning logged
+- [x] `timer.ts`: Changed session ID generation to `crypto.randomUUID()`
+- [x] `timer.ts`: Added UUID validation safeguard in `saveTimerSessionWithLeadership()` before every save
+- [x] `useSupabaseDatabase.ts`: Changed `saveActiveTimerSession` to use `getUserIdSafe()` and skip sync when not authenticated
+- [x] `useSupabaseDatabase.ts`: Changed `deleteTimerSession` to use `getUserIdSafe()` and skip sync when not authenticated
+- [x] `supabaseMappers.ts`: Added UUID validation to `toSupabaseTimerSession()` (triple-layer protection)
 
-**Key Pattern**:
+**Key Pattern - Three Layer UUID Protection**:
 ```typescript
+// Layer 1: Creation - timer.ts startTimer()
+id: crypto.randomUUID()
+
+// Layer 2: Pre-save validation - timer.ts saveTimerSessionWithLeadership()
+if (!uuidRegex.test(session.id)) session.id = crypto.randomUUID()
+
+// Layer 3: Mapper validation - supabaseMappers.ts toSupabaseTimerSession()
 const validId = isValidUUID(session.id) ? session.id : crypto.randomUUID()
 ```
 

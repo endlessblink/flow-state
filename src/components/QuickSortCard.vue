@@ -12,9 +12,11 @@
       </h2>
 
       <!-- Task Description -->
-      <p v-if="task.description" class="task-description">
-        {{ task.description }}
-      </p>
+      <MarkdownRenderer
+        v-if="task.description"
+        :content="task.description"
+        class="task-description"
+      />
 
       <!-- Task Metadata -->
       <div class="task-metadata">
@@ -186,6 +188,7 @@
 import { ref, computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { Calendar, Flag, ListTodo, Timer, ArrowRight, ArrowLeft, CheckCircle, Trash2, Edit } from 'lucide-vue-next'
+import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue'
 
 interface Props {
   task: Task

@@ -32,14 +32,11 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Description</label>
-              <textarea
+              <label class="form-label">Description (Markdown)</label>
+              <MarkdownEditor
                 v-model="editedTask.description"
-                class="form-textarea"
-                :class="[descriptionAlignmentClasses]"
-                :style="descriptionAlignmentStyles"
-                rows="3"
                 placeholder="Describe what needs to be done..."
+                :rows="4"
               />
             </div>
 
@@ -302,6 +299,7 @@ import {
 } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import SectionSelector from '@/components/canvas/SectionSelector.vue'
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue'
 import { useCanvasStore } from '@/stores/canvas'
 
 interface Props {

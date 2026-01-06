@@ -34,16 +34,11 @@
 
       <!-- Optional Description -->
       <div class="form-group">
-        <label for="task-description-input" class="form-label">Description (Optional)</label>
-        <textarea
-          id="task-description-input"
+        <label for="task-description-input" class="form-label">Description (Markdown)</label>
+        <MarkdownEditor
           v-model="taskDescription"
-          class="form-textarea"
-          :class="[descriptionAlignmentClasses]"
-          :style="descriptionAlignmentStyles"
-          rows="3"
           placeholder="Add a description..."
-          maxlength="500"
+          :rows="3"
         />
         <div class="input-help">
           {{ taskDescription.length }}/500 characters
@@ -77,6 +72,7 @@
 import { ref, computed, nextTick } from 'vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {
@@ -106,8 +102,6 @@ const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
 // Computed properties for Hebrew text alignment
 const titleAlignmentClasses = computed(() => getAlignmentClasses(taskTitle.value))
 const titleAlignmentStyles = computed(() => applyInputAlignment(taskTitle.value))
-const descriptionAlignmentClasses = computed(() => getAlignmentClasses(taskDescription.value))
-const descriptionAlignmentStyles = computed(() => applyInputAlignment(taskDescription.value))
 
 // Handle after open to focus the title input
 const handleAfterOpen = () => {

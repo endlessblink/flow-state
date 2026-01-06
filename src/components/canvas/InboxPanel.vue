@@ -85,6 +85,7 @@
     <div v-if="!isCollapsed && brainDumpMode" class="brain-dump">
       <textarea
         v-model="brainDumpText"
+        :dir="textDirection"
         class="brain-dump-textarea"
         rows="8"
         placeholder="Paste or type tasks (one per line):
@@ -159,7 +160,7 @@
         </div>
 
         <div class="task-content">
-          <div class="task-title">
+          <div class="task-title" dir="auto">
             {{ task.title }}
           </div>
           <div class="task-meta">
@@ -235,6 +236,7 @@ const {
 const {
   brainDumpMode,
   brainDumpText,
+  textDirection,
   parsedTaskCount,
   processBrainDump
 } = useBrainDump()
@@ -642,6 +644,8 @@ onBeforeUnmount(() => {
   resize: vertical;
   min-height: 120px;
   transition: all var(--duration-fast) var(--spring-smooth);
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 .brain-dump-textarea:hover {

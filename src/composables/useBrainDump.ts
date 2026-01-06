@@ -61,9 +61,23 @@ export function useBrainDump() {
         brainDumpMode.value = false
     }
 
+    // Detect text direction based on content
+    const textDirection = computed(() => {
+        if (!brainDumpText.value.trim()) return 'ltr'
+
+        // Check first non-whitespace character
+        const firstChar = brainDumpText.value.trim()[0]
+
+        // RTL character ranges (Hebrew: \u0590-\u05FF, Arabic: \u0600-\u06FF, etc.)
+        const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+
+        return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+    })
+
     return {
         brainDumpMode,
         brainDumpText,
+        textDirection,
         parsedTaskCount,
         processBrainDump
     }

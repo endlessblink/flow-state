@@ -9,12 +9,13 @@ import type { SyncRetryService } from './SyncRetryService';
 import { syncRetryService } from './SyncRetryService'
 import { DatabaseService } from './DatabaseService'
 import { SyncOperationService } from './SyncOperationService'
-import { ConflictDetector } from '@/utils/conflictDetector'
-import { ConflictResolver } from '@/utils/conflictResolver'
+import { ConflictDetector } from '@/utils/conflict-detector'
+import { ConflictResolutionService } from '@/utils/conflict-resolution'
 import { OfflineQueue } from '@/utils/offlineQueue'
 import { getNetworkOptimizer } from '@/utils/networkOptimizer'
 import { getTimezoneManager } from '@/utils/timezoneCompatibility'
 import type { QueueStats } from '@/utils/offlineQueue'
+import type { ConflictInfo } from '@/types/conflicts'
 
 export class SyncOrchestrator {
     private localDB: PouchDB.Database | null = null
@@ -26,7 +27,7 @@ export class SyncOrchestrator {
     private dbService: DatabaseService
     private operationService!: SyncOperationService
     private conflictDetector: ConflictDetector
-    private conflictResolver: ConflictResolver
+    private conflictResolver: ConflictResolutionService
     private offlineQueue: OfflineQueue
     private liveSyncHandle: { cancel: () => void } | null = null
 
@@ -45,7 +46,7 @@ export class SyncOrchestrator {
 
         // Initialize Utils
         this.conflictDetector = new ConflictDetector()
-        this.conflictResolver = new ConflictResolver(this.conflictDetector.getDeviceId())
+        this.conflictResolver = new ConflictResolutionService(this.conflictDetector.getDeviceId())
         this.offlineQueue = new OfflineQueue()
 
         // Operation service will be initialized in initialize() when dependencies are available
@@ -247,7 +248,7 @@ export class SyncOrchestrator {
                         console.log(`✅ [SYNC] Conflict resolution: ${resolved} resolved, ${failed} failed`)
 
                         // Update state with remaining unresolved conflicts
-                        this.state.conflicts.value = conflicts.filter(c =>
+                        this.state.conflicts.value = conflicts.filter((c: ConflictInfo) =>
                             c.severity === 'high' && !c.autoResolvable
                         )
                     }

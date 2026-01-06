@@ -341,7 +341,12 @@ const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
     emit('close')
   } else if (event.key === 'Enter') {
-    // Support both plain Enter and Ctrl/Cmd+Enter for saving
+    if (event.shiftKey) {
+      // Shift+Enter: Allow newline in textareas (don't prevent default)
+      return
+    }
+    // Regular Enter: Save task and prevent newline
+    event.preventDefault()
     saveTask()
   }
 }

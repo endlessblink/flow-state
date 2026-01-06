@@ -2326,9 +2326,16 @@
               } else if (id.startsWith('ISSUE-')) {
                 data.issues.push(item);
               } else if (id.startsWith('TASK-')) {
-                // Only add if not already present (TASK headers are parsed separately with more detail)
+                // Update existing task if present (TASK headers are parsed separately)
                 const existingTask = data.activeWork.find(t => t.id === id);
-                if (!existingTask) {
+                if (existingTask) {
+                  // Merge priority from table if header parser didn't find it
+                  if (!existingTask.priority && item.priority) {
+                    existingTask.priority = item.priority;
+                  }
+                  // Merge notes/title if needed
+                  if (!existingTask.notes && item.notes) existingTask.notes = item.notes;
+                } else {
                   data.activeWork.push(item);
                 }
               }
@@ -2542,9 +2549,10 @@
               card.setAttribute('data-id', task.id);
 
               // Use direct properties from MASTER_PLAN parser
-              const priority = task.priority || '';
+              const priority = task.priority || 'UNASSIGNED';
               const priorityClass = priority.toLowerCase().includes('p1') || priority.toLowerCase().includes('high') ? 'high' :
-                priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' : 'low';
+                priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' :
+                  priority.toLowerCase().includes('p3') || priority.toLowerCase().includes('low') ? 'low' : '';
 
               // Get type badge based on ID prefix
               const typeLabel = task.id.startsWith('BUG-') ? `${ICONS.bug}Bug` :
@@ -2592,7 +2600,6 @@
                     <button class="badge-dropdown-option${task.status === 'done' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'done', event)">${ICONS.done}DONE</button>
                   </div>
                 </div>
-                ${priority ? `
                 <div class="badge-wrapper">
                   <div class="task-priority ${priorityClass} editable" onclick="togglePriorityDropdown('${task.id}', event)" title="Click to change priority">${priority}</div>
                   <div class="badge-dropdown priority-dropdown" id="priority-dropdown-${task.id}">
@@ -2601,7 +2608,6 @@
                     <button class="badge-dropdown-option${priorityClass === 'low' ? ' selected' : ''}" onclick="updateInlinePriority('${task.id}', 'P3-LOW', event)"><span class="priority-dot low"></span>P3-LOW</button>
                   </div>
                 </div>
-                ` : ''}
               </div>
               <div class="task-title">${task.title}</div>
               ${description ? `<div class="task-description">${description}</div>` : ''}
@@ -2704,7 +2710,7 @@
               card.innerHTML = `
                 <div class="task-header">
                   <div class="task-id">${idea.id}</div>
-                  ${idea.priority ? `<div class="task-priority">${idea.priority}</div>` : ''}
+                  <div class="task-priority">${idea.priority || 'UNASSIGNED'}</div>
                 </div>
                 <div class="task-title">${idea.title}</div>
                 ${idea.description ? `<div class="task-description">${idea.description}</div>` : ''}
@@ -2820,12 +2826,13 @@
               const card = document.createElement('div');
               card.className = 'task-card';
               const priorityClass = item.priority?.includes('P1') || item.priority?.includes('HIGH') ? 'high' :
-                item.priority?.includes('P2') || item.priority?.includes('MEDIUM') ? 'medium' : 'low';
+                item.priority?.includes('P2') || item.priority?.includes('MEDIUM') ? 'medium' :
+                  item.priority?.includes('P3') || item.priority?.includes('LOW') ? 'low' : '';
 
               card.innerHTML = `
                 <div class="task-header">
                   <div class="task-id">${item.id}</div>
-                  ${item.priority ? `<div class="task-priority ${priorityClass}">${item.priority}</div>` : ''}
+                  <div class="task-priority ${priorityClass}">${item.priority || 'UNASSIGNED'}</div>
                 </div>
                 <div class="task-title">${item.title}</div>
                 ${item.notes ? `<div class="task-description">${item.notes}</div>` : ''}
@@ -2961,7 +2968,8 @@
 
             const priority = task.priority || '';
             const priorityClass = priority.toLowerCase().includes('p1') || priority.toLowerCase().includes('high') ? 'high' :
-              priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' : 'low';
+              priority.toLowerCase().includes('p2') || priority.toLowerCase().includes('medium') ? 'medium' :
+                priority.toLowerCase().includes('p3') || priority.toLowerCase().includes('low') ? 'low' : '';
 
             // Get type badge based on ID prefix
             const typeLabel = task.id.startsWith('BUG-') ? `${ICONS.bug}Bug Fixed` :
@@ -2971,7 +2979,7 @@
             card.innerHTML = `
               <div class="task-header">
                 <div class="task-id">${task.id}</div>
-                ${priority ? `<div class="task-priority ${priorityClass}">${priority}</div>` : ''}
+                <div class="task-priority ${priorityClass}">${task.priority || 'UNASSIGNED'}</div>
               </div>
               <div class="task-title">${task.title}</div>
               ${task.notes ? `<div class="task-description">${task.notes}</div>` : ''}

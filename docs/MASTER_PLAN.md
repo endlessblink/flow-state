@@ -167,6 +167,55 @@ Fixed critical bugs after Supabase migration causing app not to load and ghost p
 - [x] Deleted 18+ legacy PouchDB/CouchDB files (~10,000 lines removed)
 - [x] Build verified passing
 
+### ~~BUG-001~~: Fix Shift+Drag Selection Inside Groups (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 6, 2026
+**SOP**: [CANVAS-shift-drag-selection-fix.md](./sop/active/CANVAS-shift-drag-selection-fix.md)
+
+Fixed rubber-band (shift+drag) selection failing inside groups while working outside groups.
+
+**Root Causes Fixed**:
+- [x] CSS `:deep()` selector not working in unscoped style block (only works in scoped styles)
+- [x] `useVueFlow()` returning stale viewport `{x:0, y:0, zoom:1}` in event handlers
+- [x] Groups selected instead of tasks (selection logic didn't filter properly)
+- [x] Ctrl+click not working for multi-selection on tasks
+- [x] Click on empty space not clearing selection
+
+**Changes**:
+- [x] `CanvasView.vue`: Removed `:deep()` from unscoped CSS selector
+- [x] `CanvasView.vue`: Added `handleCanvasContainerClick` for clearing selection
+- [x] `useCanvasSelection.ts`: Added `getViewportFromDOM()` helper to read viewport from CSS transform
+- [x] `useCanvasSelection.ts`: Added recursive `getAbsolutePosition()` for nested nodes
+- [x] `useCanvasEvents.ts`: Added Ctrl/Meta+click support for group selection toggle
+- [x] `TaskNode.vue`: Fixed Ctrl/Cmd/Shift+click for multi-select
+
+**Key Learnings**:
+- Vue Flow uses flat DOM structure - child nodes are NOT DOM children of parent nodes
+- CSS `:deep()` only works in `<style scoped>`, not unscoped styles
+- Read viewport from `.vue-flow__transformationpane` CSS transform for reliable values in event handlers
+
+### TASK-106: Canvas Group Filter for Calendar Inbox (🔄 IN PROGRESS)
+**Priority**: P2-MEDIUM
+**Started**: January 6, 2026
+
+Reduce cognitive overload in calendar inbox by adding canvas group filtering.
+
+**Problem**:
+- Too many tasks even with "Today" filter active
+- Current filter buttons (Priority, Project, Duration) are overwhelming
+- User wants to filter calendar inbox by canvas groups
+
+**Solution**:
+- [ ] Add "Show from: [Canvas Group]" dropdown as primary filter
+- [ ] Collapse existing filters into "More filters" toggle (hidden by default)
+- [ ] Create `useCanvasGroupMembership.ts` composable for group membership helpers
+- [ ] Test with various group configurations
+
+**Files**:
+- `src/composables/canvas/useCanvasGroupMembership.ts` (NEW)
+- `src/components/inbox/CalendarInboxPanel.vue`
+- `src/components/inbox/UnifiedInboxPanel.vue`
+
 **Files Deleted** (legacy code removal):
 - `useCouchDBSync.ts`, `useConflictPruning.ts`, `useCrossTabCoordination.ts`
 - `useDatabaseHealthCheck.ts`, `conflictDetector.ts`, `conflictResolution.ts`

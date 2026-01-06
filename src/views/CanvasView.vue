@@ -114,10 +114,11 @@
       <!-- Always show VueFlow canvas, even when empty -->
       <div class="canvas-container-wrapper">
         <!-- Canvas with tasks -->
-        <div 
-          class="canvas-container" 
+        <div
+          class="canvas-container"
           style="width: 100%; height: 100vh; position: relative;"
           @mousedown.capture="handleMouseDown"
+          @click="handleCanvasContainerClick"
         >
           <VueFlow
             ref="vueFlowRef"
@@ -504,6 +505,27 @@ const handleMouseMove = (event: MouseEvent) => {
 const handleMouseUp = (event: MouseEvent) => {
   if (selectionBox.isVisible) {
     endSelection(event)
+  }
+}
+
+// Handle click on canvas container - clear selection when clicking on empty space
+const handleCanvasContainerClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+
+  // Only clear selection if clicking on the pane/background elements
+  // Don't clear if clicking on nodes, edges, or other interactive elements
+  const isPaneClick = target.classList.contains('vue-flow__pane') ||
+                      target.classList.contains('vue-flow__viewport') ||
+                      target.classList.contains('vue-flow__transformationpane') ||
+                      target.classList.contains('vue-flow__container') ||
+                      target.classList.contains('canvas-container')
+
+  // Also check if click is inside a node or edge
+  const isInsideNode = target.closest('.vue-flow__node')
+  const isInsideEdge = target.closest('.vue-flow__edge')
+
+  if (isPaneClick && !isInsideNode && !isInsideEdge && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+    canvasStore.setSelectedNodes([])
   }
 }
 

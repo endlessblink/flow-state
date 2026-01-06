@@ -70,6 +70,43 @@ export function useCanvasSelection() {
         selectionBox.height = height
     }
 
+    // Helper: Recursively calculate absolute position by summing parent offsets
+    // This bypasses unreliable computedPosition for nested nodes
+    const getAbsolutePosition = (node: Node, allNodes: Node[]): { x: number, y: number } => {
+        let x = node.position.x
+        let y = node.position.y
+        let parentId = node.parentNode
+
+        while (parentId) {
+            const parent = allNodes.find(n => n.id === parentId)
+            if (parent) {
+                x += parent.position.x
+                y += parent.position.y
+                parentId = parent.parentNode
+            } else {
+                break // Parent not found or invalid
+            }
+        }
+        return { x, y }
+    }
+
+    // Helper: Get viewport from DOM transform (more reliable than useVueFlow() in event handlers)
+    const getViewportFromDOM = (): { x: number, y: number, zoom: number } => {
+        const transformPane = document.querySelector('.vue-flow__transformationpane') as HTMLElement
+        if (!transformPane) return { x: 0, y: 0, zoom: 1 }
+
+        const transform = transformPane.style.transform
+        const match = transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)\s*scale\(([-\d.]+)\)/)
+        if (match) {
+            return {
+                x: parseFloat(match[1]),
+                y: parseFloat(match[2]),
+                zoom: parseFloat(match[3])
+            }
+        }
+        return { x: 0, y: 0, zoom: 1 }
+    }
+
     const endSelection = (event: MouseEvent) => {
         // Clean up listeners immediately
         window.removeEventListener('mousemove', updateSelection)
@@ -77,9 +114,10 @@ export function useCanvasSelection() {
 
         if (!selectionBox.isVisible) return
 
-        const { viewport } = useVueFlow()
+        // Get viewport from DOM transform (useVueFlow() returns stale values in event handlers)
+        const viewport = getViewportFromDOM()
 
-        // 1. Get Canvas Bounds (to convert screen -> relative canvas coords)
+        // 1. Get Canvas Bounds
         const flowContainer = document.querySelector('.vue-flow__container') || document.querySelector('.canvas-container')
         if (!flowContainer) {
             console.error('❌ [SELECTION] Cannot find flow container for projection')
@@ -87,44 +125,23 @@ export function useCanvasSelection() {
         }
         const rect = flowContainer.getBoundingClientRect()
 
-        // 2. Calculate Selection Box in Screen Space relative to Canvas
-        // (selectionBox.x is clientX, so subtract rect.left)
-        const boxScreenX = selectionBox.x - rect.left
-        const boxScreenY = selectionBox.y - rect.top
-
-        // 3. Screen-Space Intersection Strategy
-        // We match "What I See" (Screen Pixels) with "Where Nodes Are" (Projected to Screen)
+        // 2. Screen-Space Intersection Strategy
         const nodes = getNodes.value
         const selectedIds: string[] = []
-
-        // Debug info
         const debugSample: any[] = []
 
         nodes.forEach(node => {
-            // Debug: Check if computedPosition is trustworthy
-            const hasParent = !!node.parentNode
-            const isChild = hasParent
-
-            // 1. Get Absolute Graph Position
-            // HYPOTHESIS: computedPosition might be missing/wrong for children
-            let graphX = node.computedPosition?.x
-            let graphY = node.computedPosition?.y
-
-            // Fallback for debugging - check if we are falling back to relative
-            const isFallback = graphX === undefined
-            if (isFallback) {
-                graphX = node.position.x
-                graphY = node.position.y
-            }
+            // 1. Get Absolute Graph Position via Recursive Calculation
+            const { x: graphX, y: graphY } = getAbsolutePosition(node, nodes)
 
             const graphW = Number(node.dimensions?.width ?? node.width ?? 200)
             const graphH = Number(node.dimensions?.height ?? node.height ?? 100)
 
             // 2. Project to Screen Space
-            const screenX = (graphX! * viewport.value.zoom) + viewport.value.x + rect.left
-            const screenY = (graphY! * viewport.value.zoom) + viewport.value.y + rect.top
-            const screenW = graphW * viewport.value.zoom
-            const screenH = graphH * viewport.value.zoom
+            const screenX = (graphX * viewport.zoom) + viewport.x + rect.left
+            const screenY = (graphY * viewport.zoom) + viewport.y + rect.top
+            const screenW = graphW * viewport.zoom
+            const screenH = graphH * viewport.zoom
 
             // 3. Check Intersection
             const intersects = (
@@ -138,20 +155,19 @@ export function useCanvasSelection() {
                 selectedIds.push(node.id)
             }
 
-            // Extensive log for child nodes (inside groups)
-            if (isChild || debugSample.length < 5) {
+            if (node.parentNode || debugSample.length < 5) {
                 debugSample.push({
                     id: node.id,
                     parent: node.parentNode,
-                    posMode: isFallback ? 'RELATIVE (Fallback)' : 'ABSOLUTE (Computed)',
+                    posMode: 'RECURSIVE_CALC',
                     coords: { graphX, graphY, screenX: Math.round(screenX) },
-                    box: { l: Math.round(selectionBox.x), r: Math.round(selectionBox.x + selectionBox.width) },
+                    box: { x: Math.round(selectionBox.x), y: Math.round(selectionBox.y), w: Math.round(selectionBox.width), h: Math.round(selectionBox.height) },
                     intersects
                 })
             }
         })
 
-        console.log('📐 [SELECTION DEBUG FINAL]', {
+        console.log('📐 [SELECTION ROBUST RECURSIVE]', {
             found: selectedIds.length,
             box: { l: selectionBox.x, t: selectionBox.y, w: selectionBox.width, h: selectionBox.height },
             sample: debugSample
@@ -213,4 +229,3 @@ export function useCanvasSelection() {
         getNodeColor
     }
 }
-

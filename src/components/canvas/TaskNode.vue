@@ -340,19 +340,27 @@ const isTimerActive = computed(() => {
 const handleClick = (event: MouseEvent) => {
   if (!props.task) return
 
+  const isModifierClick = event.ctrlKey || event.metaKey || event.shiftKey
+
   // Prevent edit modal when connecting to avoid conflicts
   if (props.isConnecting) {
     // Don't emit edit event when connecting, just handle selection
-    emit('select', props.task, event.ctrlKey || event.metaKey)
+    emit('select', props.task, isModifierClick)
+    return
+  }
+
+  // Ctrl/Cmd/Shift+click always toggles selection (for multi-select)
+  if (isModifierClick) {
+    emit('select', props.task, true)
     return
   }
 
   // If task is already selected and clicking again (without modifiers), open edit modal
-  if (props.isSelected && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+  if (props.isSelected) {
     emit('edit', props.task)
-  } else if (props.multiSelectMode) {
-    // Don't stopPropagation - it blocks double-click events!
-    emit('select', props.task, event.ctrlKey || event.metaKey)
+  } else {
+    // Single click on unselected task - select it (replacing other selections)
+    emit('select', props.task, false)
   }
 }
 

@@ -256,6 +256,7 @@ import {
 } from 'lucide-vue-next'
 import { NButton, NBadge, NTag } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
+import { useSmartViews } from '@/composables/useSmartViews'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 
@@ -279,10 +280,12 @@ const props = withDefaults(defineProps<Props>(), {
 // Stores
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const { isTodayTask } = useSmartViews()
 
 // TASK-076: Inbox has its OWN local state for done filter (independent of canvas/calendar toggles)
 // The canvas Done toggle only affects canvas view, not this inbox panel
-const hideInboxDoneTasks = ref(false)
+// User Request: Calendar inbox needs to filter out done tasks by default
+const hideInboxDoneTasks = ref(props.context === 'calendar')
 
 // TASK-076: Current view's hide done setting - uses LOCAL inbox state
 const currentHideDoneTasks = computed(() => hideInboxDoneTasks.value)
@@ -317,6 +320,11 @@ const baseInboxTasks = computed(() => {
     // TASK-076: Respect view-specific hide done filter
     if (currentHideDoneTasks.value && task.status === 'done') {
       return false
+    }
+
+    if (task._soft_deleted) {
+       console.warn('⚠️ [INBOX-DEBUG] Soft deleted task found in filteredTasks (should be filtered out upstream):', task.title, task.id)
+       return false
     }
 
     // Keep context-specific filtering (Canvas/Calendar)
@@ -359,17 +367,12 @@ const getToday = () => {
   return today
 }
 
-// Count tasks scheduled for today (TASK-080: Today Quick Filter)
+// Number of tasks in the current base list that match "Today" criteria
 const todayCount = computed(() => {
-  const todayStr = getToday().toISOString().split('T')[0]
-  return baseInboxTasks.value.filter(task => {
-    // Check instances for today scheduling
-    if (task.instances && task.instances.length > 0) {
-      return task.instances.some((inst) => inst.scheduledDate === todayStr)
-    }
-    // Fallback to legacy scheduledDate
-    return task.scheduledDate === todayStr
-  }).length
+  // Use the same centralized logic as the sidebar for consistency
+  // BUG-056: If baseInboxTasks are already filtered by !hasInstances,
+  // we should ensure this doesn't conflict with isTodayTask's checks.
+  return baseInboxTasks.value.filter(task => isTodayTask(task)).length
 })
 
 // Apply additional filters (TASK-018: Unscheduled, Priority, Project)
@@ -380,14 +383,7 @@ const inboxTasks = computed(() => {
   // Apply Today filter (TASK-080)
   if (activeTimeFilter.value === 'today') {
     const todayStr = getToday().toISOString().split('T')[0]
-    tasks = tasks.filter(task => {
-      // Check instances for today scheduling
-      if (task.instances && task.instances.length > 0) {
-        return task.instances.some((inst) => inst.scheduledDate === todayStr)
-      }
-      // Fallback to legacy scheduledDate
-      return task.scheduledDate === todayStr
-    })
+    tasks = tasks.filter(task => isTodayTask(task))
   }
 
   // Apply Unscheduled filter - show only tasks NOT on calendar

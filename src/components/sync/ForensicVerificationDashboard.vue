@@ -207,7 +207,7 @@
 // TASK-045: Migrated from useSimpleBackup to useBackupSystem (Dec 23, 2025)
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ForensicLogger, type BackupSnapshot as _BackupSnapshot } from '@/utils/forensicBackupLogger'
-import { backupSystem, type BackupData as BackupSystemData } from '@/composables/useBackupSystem'
+import { useBackupSystem, type BackupData as BackupSystemData } from '@/composables/useBackupSystem'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
 
@@ -241,6 +241,7 @@ interface TestResult {
 }
 
 const taskStore = useTaskStore()
+const backupSystem = useBackupSystem()
 
 // Reactive state
 const isVerifying = ref(false)

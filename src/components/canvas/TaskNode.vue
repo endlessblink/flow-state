@@ -57,7 +57,7 @@
         <span v-if="showStatus" class="status-badge">{{ statusLabel }}</span>
         <span v-if="task?.dueDate" class="due-date-badge" title="Due Date">
           <Calendar :size="12" />
-          {{ task.dueDate }}
+          {{ formattedDueDate }}
         </span>
         <span
           class="project-emoji-badge"
@@ -312,6 +312,22 @@ const hasSchedule = computed(() =>
 const projectVisual = computed(() =>
   taskStore.getProjectVisual(props.task?.projectId)
 )
+
+// TASK-091: Format due date for clean display
+const formattedDueDate = computed(() => {
+  if (!props.task?.dueDate) return ''
+  try {
+    const date = new Date(props.task.dueDate)
+    if (isNaN(date.getTime())) return props.task.dueDate
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(date)
+  } catch (e) {
+    return props.task.dueDate
+  }
+})
 
 // Check if this task has an active timer
 const isTimerActive = computed(() => {

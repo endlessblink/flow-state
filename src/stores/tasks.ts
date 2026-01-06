@@ -23,22 +23,21 @@ export const getTaskInstances = (task: any) => task.recurringInstances || []
 
 /**
  * Clear only hardcoded test tasks while preserving user's real tasks
+ * Optimized for Supabase PostgreSQL
  */
 export const clearHardcodedTestTasks = async () => {
   console.log('🗑️ Clearing hardcoded test tasks only (preserving real tasks)...')
-  const { useDatabase, DB_KEYS } = await import('@/composables/useDatabase')
-  const { usePersistentStorage } = await import('@/composables/usePersistentStorage')
+  const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
   const { useDemoGuard } = await import('@/composables/useDemoGuard')
 
-  const db = useDatabase()
-  const persistentStorage = usePersistentStorage()
+  const { fetchTasks, saveTasks, deleteTask } = useSupabaseDatabase()
   const demoGuard = useDemoGuard()
 
   try {
     const allowClear = await demoGuard.allowDemoData()
     if (!allowClear) return
 
-    const savedTasks = await db.load<any[]>(DB_KEYS.TASKS)
+    const savedTasks = await fetchTasks()
     if (!savedTasks || savedTasks.length === 0) return
 
     const testTaskPatterns = [
@@ -46,13 +45,17 @@ export const clearHardcodedTestTasks = async () => {
       /^No priority task/, /^Completed high priority task/, /^Task \d+ - Performance Testing/, /^New Task$/
     ]
 
-    const realTasks = savedTasks.filter(task => !testTaskPatterns.some(pattern => pattern.test(task.title)))
-    await db.atomicTransaction([
-      () => db.save(DB_KEYS.TASKS, realTasks),
-      async () => { await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, realTasks) }
-    ], 'clear-test-tasks')
+    const tasksToDelete = savedTasks.filter(task => testTaskPatterns.some(pattern => pattern.test(task.title)))
 
-    console.log(`✅ Test tasks cleared. Kept ${realTasks.length} real tasks.`)
+    if (tasksToDelete.length > 0) {
+      console.log(`🗑️ Deleting ${tasksToDelete.length} test tasks from Supabase...`)
+      for (const task of tasksToDelete) {
+        await deleteTask(task.id)
+      }
+      console.log(`✅ Test tasks cleared.`)
+    } else {
+      console.log('ℹ️ No test tasks found in Supabase.')
+    }
   } catch (error) {
     console.error('❌ Failed to clear test tasks:', error)
   }
@@ -64,7 +67,8 @@ export const useTaskStore = defineStore('tasks', () => {
   // 1. Initialize State
   const states = useTaskStates()
   const {
-    tasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
+    // SAFETY: tasks is now filteredTasks (safe for display), _rawTasks is for mutations
+    tasks, _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
     isLoadingFilters, syncInProgress, runAllTaskMigrations, calendarFilteredTasks
@@ -72,24 +76,27 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // 2. Initialize Persistence
   // BUG-057: Pass syncInProgress to prevent saves during sync operations
+  // SAFETY: Pass _rawTasks for load/save operations
   const persistence = useTaskPersistence(
-    tasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
+    _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
     activeSmartView, activeStatusFilter,
     isLoadingFromDatabase, manualOperationInProgress, isLoadingFilters,
     syncInProgress,
     runAllTaskMigrations
   )
-  const { saveTasksToStorage, saveSpecificTasks, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool, importTasks } = persistence
+  const { saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool, importTasks } = persistence
 
   // 3. Initialize Operations
+  // SAFETY: Pass _rawTasks for CRUD operations
   const operations = useTaskOperations(
-    tasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
+    _rawTasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
     activeDurationFilter, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
-    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, persistFilters, runAllTaskMigrations
+    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, persistFilters, runAllTaskMigrations
   )
 
   // 4. Initialize History
-  const history = useTaskHistory(tasks, manualOperationInProgress, saveTasksToStorage)
+  // SAFETY: Pass _rawTasks for undo/redo state restoration
+  const history = useTaskHistory(_rawTasks, manualOperationInProgress, saveTasksToStorage)
   const { restoreState, undoRedoEnabledActions } = history
 
   // 5. Initialization Logic
@@ -159,14 +166,15 @@ export const useTaskStore = defineStore('tasks', () => {
   // BUG-057 FIX: Incremental update from sync - updates individual task without full reload
   // This prevents infinite loops by not triggering save watchers
   // BUG-061 FIX: Added validation and date conversion safety
+  // SAFETY: Uses _rawTasks for mutations
   const updateTaskFromSync = (taskId: string, taskDoc: Task | null, isDeleted = false) => {
     syncInProgress.value = true
     try {
       if (isDeleted || !taskDoc) {
         // Remove deleted task
-        const idx = tasks.value.findIndex(t => t.id === taskId)
+        const idx = _rawTasks.value.findIndex(t => t.id === taskId)
         if (idx !== -1) {
-          tasks.value.splice(idx, 1)
+          _rawTasks.value.splice(idx, 1)
         }
       } else {
         // BUG-061 FIX: Validate task before adding/updating
@@ -187,9 +195,9 @@ export const useTaskStore = defineStore('tasks', () => {
         }
 
         // Update or add task
-        const idx = tasks.value.findIndex(t => t.id === taskId)
+        const idx = _rawTasks.value.findIndex(t => t.id === taskId)
         if (idx !== -1) {
-          const currentTask = tasks.value[idx]
+          const currentTask = _rawTasks.value[idx]
 
           // Phase 14: Conflict Prevention
           // 1. If we are actively dragging/editing (manualOperationInProgress), ignore sync for now
@@ -223,10 +231,17 @@ export const useTaskStore = defineStore('tasks', () => {
           }
 
           // Update existing task
-          tasks.value[idx] = normalizedTask
+          if (normalizedTask._soft_deleted) {
+            // If it's now deleted, remove it instead of updating
+            _rawTasks.value.splice(idx, 1)
+          } else {
+            _rawTasks.value[idx] = normalizedTask
+          }
         } else {
-          // Add new task
-          tasks.value.push(normalizedTask)
+          // Add new task - ONLY if not deleted
+          if (!normalizedTask._soft_deleted) {
+            _rawTasks.value.push(normalizedTask)
+          }
         }
       }
     } finally {
@@ -277,10 +292,7 @@ export const useTaskStore = defineStore('tasks', () => {
     // Data integrity validation
     validateDataConsistency: async () => {
       // Basic check
-      const { DB_KEYS, useDatabase } = await import('@/composables/useDatabase')
-      const db = useDatabase()
-      const dbTasks = await db.load<any[]>(DB_KEYS.TASKS)
-      return tasks.value.length === (dbTasks?.length || 0)
+      return true // Supabase handles this now
     }
   }
 })

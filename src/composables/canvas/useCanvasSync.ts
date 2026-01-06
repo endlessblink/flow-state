@@ -122,7 +122,8 @@ export function useCanvasSync(deps: SyncDependencies) {
                         isCollapsed: section.isCollapsed || false,
                         theme: (section as unknown as { theme?: string }).theme || 'default',
                         taskCount, // BUG-034: Add task count (now uses recursive for nested)
-                        type: section.type // BUG-034: Add type for styling
+                        type: section.type, // BUG-034: Add type for styling
+                        color: section.color // FIX: Add color for reactivity
                     },
                     style: {
                         width: `${Number.isFinite(section.position.width) ? section.position.width : 300}px`,

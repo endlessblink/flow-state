@@ -35,17 +35,6 @@
       @created="handleTaskCreated"
     />
 
-    <!-- Task Context Menu -->
-    <TaskContextMenu
-      :is-visible="showContextMenu"
-      :x="contextMenuX"
-      :y="contextMenuY"
-      :task="contextMenuTask"
-      :compact-mode="false"
-      @close="closeContextMenu"
-      @edit="handleEditTask"
-      @confirm-delete="handleConfirmDelete"
-    />
 
     <!-- Delete Confirmation Modal -->
     <ConfirmationModal
@@ -194,7 +183,6 @@ import CalendarDayView from '@/components/calendar/CalendarDayView.vue'
 import CalendarWeekView from '@/components/calendar/CalendarWeekView.vue'
 import CalendarMonthView from '@/components/calendar/CalendarMonthView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
-import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
 import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
@@ -326,15 +314,10 @@ const isCurrentTimeSlot = (slot: TimeSlot) => checkCurrentTimeSlot(slot, current
 
 // Interaction Handlers (Extracted)
 const {
-  showContextMenu,
-  contextMenuX,
-  contextMenuY,
-  contextMenuTask,
   selectedCalendarEvents,
   hoveredEventId,
   handleSlotTaskMouseEnter,
   handleSlotTaskMouseLeave,
-  closeContextMenu,
   handleEventDblClick,
   handleEventContextMenu,
   handleInboxContextMenu,
@@ -525,7 +508,6 @@ onMounted(() => {
   // Add event listeners
   window.addEventListener('start-task-now', handleStartTaskNow)
   window.addEventListener('keydown', handleKeyDown)
-  window.addEventListener('task-context-menu' as any, handleInboxContextMenu as unknown as EventListener)
 
   // ✅ ADD CAPTURE PHASE DRAG EVENT LISTENERS
   const calendarEl = document.querySelector('.calendar-main')
@@ -553,7 +535,6 @@ onUnmounted(() => {
   // Remove event listeners
   window.removeEventListener('start-task-now', handleStartTaskNow)
   window.removeEventListener('keydown', handleKeyDown)
-  window.removeEventListener('task-context-menu' as any, handleInboxContextMenu as unknown as EventListener)
 
   // ✅ CLEANUP CAPTURE PHASE DRAG EVENT LISTENERS
   const calendarEl = document.querySelector('.calendar-main')

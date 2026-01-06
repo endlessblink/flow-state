@@ -10,7 +10,8 @@ export function useTaskStates() {
     const uiStore = useUIStore() // Init UI Store
 
     // State - Start with empty tasks array
-    const tasks = ref<Task[]>([])
+    // SAFETY: Named _rawTasks to discourage direct access - use filteredTasks (exported as 'tasks') instead
+    const _rawTasks = ref<Task[]>([])
 
     // State for filtering
     const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
@@ -35,7 +36,7 @@ export function useTaskStates() {
     })
 
     // Initialize extracted composables
-    const { runAllTaskMigrations } = useTaskMigrations(tasks)
+    const { runAllTaskMigrations } = useTaskMigrations(_rawTasks)
 
     const {
         filteredTasks,
@@ -51,7 +52,7 @@ export function useTaskStates() {
         tasksWithCanvasPosition,
         calendarFilteredTasks
     } = useTaskFiltering(
-        tasks,
+        _rawTasks,
         toRef(projectStore, 'projects'),
         toRef(projectStore, 'activeProjectId'),
         activeSmartView as any,
@@ -75,7 +76,10 @@ export function useTaskStates() {
     const selectedTaskIds = ref<string[]>([])
 
     return {
-        tasks,
+        // SAFETY: Export filteredTasks as 'tasks' - this is the safe default for components
+        // Use _rawTasks only for internal operations (load, save, sync, mutations)
+        tasks: filteredTasks,
+        _rawTasks,
         activeSmartView,
         activeStatusFilter,
         activeDurationFilter,
@@ -84,7 +88,7 @@ export function useTaskStates() {
         hideCalendarDoneTasks,
         hideCanvasOverdueTasks,
         runAllTaskMigrations,
-        filteredTasks,
+        filteredTasks, // Keep for backward compatibility
         tasksByStatus,
         filteredTasksWithCanvasPosition,
         smartViewTaskCounts,

@@ -266,7 +266,8 @@ export function useCanvasActions(
             try {
                 await undoHistory.updateTaskWithUndo(nodeId, {
                     isInInbox: true,
-                    canvasPosition: undefined
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    canvasPosition: null as any
                 })
             } catch (e) {
                 console.error(`Failed to move task ${nodeId}:`, e)
@@ -328,7 +329,6 @@ export function useCanvasActions(
                 color: (event.node.data?.color as string) || '#6366f1',
                 position: { x: 0, y: 0, width: 300, height: 200 },
                 isCollapsed: false,
-                items: [],
                 type: 'custom',
                 layout: 'freeform',
                 isVisible: true
@@ -452,7 +452,9 @@ export function useCanvasActions(
             } else {
                 // Move to inbox (soft delete)
                 await undoHistory.updateTaskWithUndo(item.id, {
-                    canvasPosition: undefined,
+                    // Force null to ensure DB update clears the fields
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    canvasPosition: null as any,
                     isInInbox: true,
                     instances: [],
                     scheduledDate: undefined,

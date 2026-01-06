@@ -3,18 +3,16 @@ import { type Ref } from 'vue'
 import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
 import { guardTaskCreation } from '@/utils/demoContentGuard'
-import { STORAGE_FLAGS } from '@/config/database'
-import {
-    deleteTask as _deleteIndividualTask,
-    deleteTasks as _deleteIndividualTasksBulk
-} from '@/utils/individualTaskStorage'
 import { formatDateKey } from '@/utils/dateUtils'
+// TASK-089 FIX: Unlock position when removing from canvas
+import { clearTaskLock } from '@/utils/canvasStateLock'
 
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
 
 export function useTaskOperations(
-    tasks: Ref<Task[]>,
+    // SAFETY: Named _rawTasks to indicate this is the raw array for mutations
+    _rawTasks: Ref<Task[]>,
     selectedTaskIds: Ref<string[]>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     activeSmartView: Ref<any>,
@@ -27,6 +25,7 @@ export function useTaskOperations(
     manualOperationInProgress: Ref<boolean>,
     saveTasksToStorage: (tasks: Task[], context: string) => Promise<void>,
     saveSpecificTasks: (tasks: Task[], context: string) => Promise<void>,
+    deleteTaskFromStorage: (taskId: string) => Promise<void>,  // BUGFIX: Add deletion persistence
     persistFilters: () => void,
     _runAllTaskMigrations: () => void
 ) {
@@ -77,7 +76,7 @@ export function useTaskOperations(
 
             let projectId = taskData.projectId || 'uncategorized'
             if (taskData.parentTaskId) {
-                const parentTask = tasks.value.find(t => t.id === taskData.parentTaskId)
+                const parentTask = _rawTasks.value.find(t => t.id === taskData.parentTaskId)
                 if (parentTask) projectId = parentTask.projectId
             }
 
@@ -102,7 +101,7 @@ export function useTaskOperations(
                 ...taskDataWithoutPosition
             }
 
-            tasks.value.push(newTask)
+            _rawTasks.value.push(newTask)
             await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
 
             // Commit WAL
@@ -114,8 +113,8 @@ export function useTaskOperations(
             return newTask
         } catch (error) {
             if (txId) await transactionManager.rollback(txId, error)
-            const index = tasks.value.findIndex(t => t.id === taskId)
-            if (index !== -1) tasks.value.splice(index, 1)
+            const index = _rawTasks.value.findIndex(t => t.id === taskId)
+            if (index !== -1) _rawTasks.value.splice(index, 1)
             throw error
         } finally {
             manualOperationInProgress.value = false
@@ -123,7 +122,7 @@ export function useTaskOperations(
     }
 
     const updateTask = async (taskId: string, updates: Partial<Task>) => {
-        const index = tasks.value.findIndex(t => t.id === taskId)
+        const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
         // BUG-060 FIX: Suppress watcher during manual update to prevent concurrent bulk saves
@@ -133,7 +132,7 @@ export function useTaskOperations(
 
         try {
 
-            const task = tasks.value[index]
+            const task = _rawTasks.value[index]
             console.log(`📝 [TASK-OP] updateTask called for ${taskId}:`, updates)
 
             // WAL Logic
@@ -151,6 +150,13 @@ export function useTaskOperations(
             if (updates.canvasPosition && !task.canvasPosition) {
                 console.log(`📝 [TASK-OP] Setting isInInbox=false for ${taskId} due to canvasPosition update`)
                 updates.isInInbox = false
+            }
+
+            // BUG-FIX: Explicitly unlock position if removing from canvas
+            // This prevents sync from restoring the position due to "Preserve local canvasPosition" logic
+            if (updates.canvasPosition === null) {
+                console.log(`🔓 [TASK-OP] Task ${taskId} removed from canvas - clearing position lock`)
+                clearTaskLock(taskId)
             }
 
             if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || !task.instances.length)) {
@@ -174,13 +180,13 @@ export function useTaskOperations(
                 // updates.isInInbox = true
             }
 
-            tasks.value[index] = { ...task, ...updates, updatedAt: new Date() }
+            _rawTasks.value[index] = { ...task, ...updates, updatedAt: new Date() }
 
             // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
             try {
-                await saveSpecificTasks([tasks.value[index]], `updateTask-${taskId}`)
+                await saveSpecificTasks([_rawTasks.value[index]], `updateTask-${taskId}`)
                 if (txId) await transactionManager.commit(txId)
-                console.log(`✅ [TASK-OP] Task ${taskId} saved successfully. isInInbox: ${tasks.value[index].isInInbox}`)
+                console.log(`✅ [TASK-OP] Task ${taskId} saved successfully. isInInbox: ${_rawTasks.value[index].isInInbox}`)
 
                 // Trigger canvas sync for Tauri reactivity
                 triggerCanvasSync()
@@ -195,10 +201,10 @@ export function useTaskOperations(
     }
 
     const deleteTask = async (taskId: string) => {
-        const index = tasks.value.findIndex(t => t.id === taskId)
+        const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
-        const deletedTask = tasks.value[index]
+        const deletedTask = _rawTasks.value[index]
         taskDisappearanceLogger.markUserDeletion(taskId)
         manualOperationInProgress.value = true
 
@@ -206,43 +212,20 @@ export function useTaskOperations(
         try {
             txId = await transactionManager.beginTransaction('delete', 'tasks', { taskId })
 
-            tasks.value.splice(index, 1)
-            const taskTitle = deletedTask?.title || 'unknown'
-            taskDisappearanceLogger.takeSnapshot(tasks.value, `deleteTask-${taskTitle.substring(0, 30)}`)
+            // BUGFIX: Persist deletion to Supabase FIRST (soft delete)
+            // This ensures task won't reappear on refresh
+            await deleteTaskFromStorage(taskId)
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const dbInstance = (window as any).pomoFlowDb
-
-            // DEEP-DIVE FIX: Call _deleteIndividualTask regardless of dbInstance availability.
-            // Internal shouldUseSqlite() handles the primary storage logic.
-            if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
-                await _deleteIndividualTask(dbInstance, taskId)
-
-                // Track deletion intent in PouchDB ONLY if instance exists
-                if (dbInstance) {
-                    try {
-                        const doc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ _id: '_local/deleted-tasks', taskIds: [], deletedAt: {} }))
-                        if (!doc.taskIds.includes(taskId)) {
-                            doc.taskIds.push(taskId)
-                            doc.deletedAt[taskId] = new Date().toISOString()
-                            await dbInstance.put(doc)
-                        }
-                    } catch {
-                        // ignore
-                    }
-                }
-            }
-
-            if (!STORAGE_FLAGS.INDIVIDUAL_ONLY) {
-                await saveTasksToStorage(tasks.value, `deleteTask-${taskId}`)
-            }
+            _rawTasks.value.splice(index, 1)
             if (txId) await transactionManager.commit(txId)
 
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
+            console.log(`✅ [DELETE] Task ${taskId} deleted from local state and Supabase`)
         } catch (error) {
             if (txId) await transactionManager.rollback(txId, error)
-            tasks.value.splice(index, 0, deletedTask)
+            _rawTasks.value.splice(index, 0, deletedTask)
+            console.error(`❌ [DELETE] Failed to delete task ${taskId}:`, error)
             throw error
         } finally {
             manualOperationInProgress.value = false
@@ -251,13 +234,13 @@ export function useTaskOperations(
 
     // [DEEP-DIVE FIX] Added permanent delete operation
     const permanentlyDeleteTask = async (taskId: string) => {
-        const index = tasks.value.findIndex(t => t.id === taskId)
+        const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
         manualOperationInProgress.value = true
         try {
             // 1. Remove from local state immediately (Optimistic UI)
-            tasks.value.splice(index, 1)
+            _rawTasks.value.splice(index, 1)
 
             // 2. Call TrashService for DB removal (Hard Delete)
             const { trashService } = await import('@/services/trash/TrashService')
@@ -279,50 +262,23 @@ export function useTaskOperations(
         try {
             txId = await transactionManager.beginTransaction('bulk_update', 'tasks', { type: 'bulk_delete', taskIds })
 
-            const tasksToKeep = tasks.value.filter(t => !taskIds.includes(t.id))
+            // BUGFIX: Persist deletions to Supabase FIRST
+            for (const taskId of taskIds) {
+                await deleteTaskFromStorage(taskId)
+            }
+
+            const tasksToKeep = _rawTasks.value.filter(t => !taskIds.includes(t.id))
             taskDisappearanceLogger.takeSnapshot(tasksToKeep, `bulkDelete-${taskIds.length} tasks`)
-            tasks.value = tasksToKeep
+            _rawTasks.value = tasksToKeep
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const dbInstance = (window as any).pomoFlowDb
-
-            // DEEP-DIVE FIX: Call _deleteIndividualTasksBulk regardless of dbInstance availability.
-            // Internal shouldUseSqlite() handles the primary storage logic.
-            if (STORAGE_FLAGS.INDIVIDUAL_ONLY) {
-                await _deleteIndividualTasksBulk(dbInstance, taskIds)
-
-                // Track deletion intent in PouchDB ONLY if instance exists
-                if (dbInstance) {
-                    try {
-                        const doc = await dbInstance.get('_local/deleted-tasks').catch(() => ({ _id: '_local/deleted-tasks', taskIds: [], deletedAt: {} }))
-                        let dirty = false
-                        const now = new Date().toISOString()
-                        taskIds.forEach(id => {
-                            if (!doc.taskIds.includes(id)) {
-                                doc.taskIds.push(id)
-                                doc.deletedAt[id] = now
-                                dirty = true
-                            }
-                        })
-                        if (dirty) await dbInstance.put(doc)
-                    } catch {
-                        // ignore
-                    }
-                }
-            }
-
-            if (!STORAGE_FLAGS.INDIVIDUAL_ONLY) {
-                await saveTasksToStorage(tasks.value, `bulkDelete-${taskIds.length} tasks`)
-            }
             if (txId) await transactionManager.commit(txId)
 
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
+            console.log(`✅ [BULK-DELETE] ${taskIds.length} tasks deleted from local state and Supabase`)
         } catch (error) {
             if (txId) await transactionManager.rollback(txId, error)
-            // Note: In bulk delete, we don't easily restore state here if internal array mutation happened but save failed.
-            // Ideally we should mutate state AFTER external saves, but that breaks optimistic UI.
-            // For now, we accept UI might be out of sync if save fails, but we don't crash.
+            console.error(`❌ [BULK-DELETE] Failed to delete ${taskIds.length} tasks:`, error)
             throw error
         } finally {
             manualOperationInProgress.value = false
@@ -347,7 +303,7 @@ export function useTaskOperations(
     }
 
     const createSubtask = (taskId: string, subtaskData: Partial<Subtask>) => {
-        const task = tasks.value.find(t => t.id === taskId)
+        const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return null
         const newSubtask: Subtask = {
             id: Date.now().toString(),
@@ -366,7 +322,7 @@ export function useTaskOperations(
     }
 
     const updateSubtask = (taskId: string, subtaskId: string, updates: Partial<Subtask>) => {
-        const task = tasks.value.find(t => t.id === taskId)
+        const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
         const idx = task.subtasks.findIndex(st => st.id === subtaskId)
         if (idx !== -1) {
@@ -377,7 +333,7 @@ export function useTaskOperations(
     }
 
     const deleteSubtask = (taskId: string, subtaskId: string) => {
-        const task = tasks.value.find(t => t.id === taskId)
+        const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
         const idx = task.subtasks.findIndex(st => st.id === subtaskId)
         if (idx !== -1) {
@@ -388,7 +344,7 @@ export function useTaskOperations(
     }
 
     const createTaskInstance = (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => {
-        const task = tasks.value.find(t => t.id === taskId)
+        const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return null
         const newInstance: TaskInstance = {
             id: Date.now().toString(),
@@ -402,7 +358,7 @@ export function useTaskOperations(
     }
 
     const updateTaskInstance = (taskId: string, instanceId: string, updates: Partial<TaskInstance>) => {
-        const task = tasks.value.find(t => t.id === taskId)
+        const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task || !task.instances) return
         const idx = task.instances.findIndex(inst => inst.id === instanceId)
         if (idx !== -1) {
@@ -413,7 +369,7 @@ export function useTaskOperations(
     }
 
     const deleteTaskInstance = (taskId: string, instanceId: string) => {
-        const task = tasks.value.find(t => t.id === taskId)
+        const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task || !task.instances) return
         const idx = task.instances.findIndex(inst => inst.id === instanceId)
         if (idx !== -1) {
@@ -424,7 +380,7 @@ export function useTaskOperations(
     }
 
     const startTaskNow = (taskId: string) => {
-        const task = tasks.value.find(t => t.id === taskId)
+        const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
         const now = new Date()
         const currentMinutes = now.getMinutes()
@@ -472,7 +428,7 @@ export function useTaskOperations(
     }
 
     const moveTaskToDate = (taskId: string, dateColumn: string) => {
-        const task = tasks.value.find(t => t.id === taskId)
+        const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
         const today = new Date(); today.setHours(0, 0, 0, 0)
         let target: Date | null = null
@@ -556,15 +512,15 @@ export function useTaskOperations(
         setActiveDurationFilter(activeDurationFilter.value === duration ? null : duration)
     }
 
-    const getTask = (taskId: string) => tasks.value.find(t => t.id === taskId)
+    const getTask = (taskId: string) => _rawTasks.value.find(t => t.id === taskId)
 
     const getUncategorizedTaskCount = () => {
         const { isUncategorizedTask } = useSmartViews()
-        return tasks.value.filter(t => t.status !== 'done' && isUncategorizedTask(t)).length
+        return _rawTasks.value.filter(t => t.status !== 'done' && isUncategorizedTask(t)).length
     }
 
-    const getNestedTasks = (parent: string | null = null) => tasks.value.filter(t => t.parentTaskId === parent)
-    const getTaskChildren = (taskId: string) => tasks.value.filter(t => t.parentTaskId === taskId)
+    const getNestedTasks = (parent: string | null = null) => _rawTasks.value.filter(t => t.parentTaskId === parent)
+    const getTaskChildren = (taskId: string) => _rawTasks.value.filter(t => t.parentTaskId === taskId)
     const getTaskHierarchy = (taskId: string) => {
         const list: Task[] = []
         const visited = new Set<string>()
@@ -580,7 +536,7 @@ export function useTaskOperations(
         return list
     }
     const isNestedTask = (id: string) => !!getTask(id)?.parentTaskId
-    const hasNestedTasks = (id: string) => tasks.value.some(t => t.parentTaskId === id)
+    const hasNestedTasks = (id: string) => _rawTasks.value.some(t => t.parentTaskId === id)
 
     return {
         createTask,

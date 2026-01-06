@@ -284,7 +284,8 @@ const isScheduledOnCalendar = (task: Task): boolean => {
 
 const baseInboxTasks = computed(() => {
   // Calendar inbox base: Show tasks NOT yet scheduled on the calendar grid
-  return taskStore.tasks.filter(task => {
+  // BUG-FIX: Use filteredTasks instead of tasks to respect _soft_deleted filter
+  return taskStore.filteredTasks.filter(task => {
     // TASK-076: Use store filter instead of hardcoding done task removal
     if (hideCalendarDoneTasks.value && task.status === 'done') return false
     return !isScheduledOnCalendar(task)

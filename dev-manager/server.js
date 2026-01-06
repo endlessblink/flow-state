@@ -210,7 +210,7 @@ function updateTaskProperty(content, taskId, property, value) {
     // Update dependency table row
     // Format: | TASK-XXX | STATUS | files | depends | blocks |
     if (line.includes(`| ${taskId}`) || line.includes(`| ~~${taskId}~~`) ||
-        line.includes(`|${taskId}`) || line.includes(`|~~${taskId}~~`)) {
+      line.includes(`|${taskId}`) || line.includes(`|~~${taskId}~~`)) {
 
       if (property === 'status') {
         lines[i] = updateTableRowStatus(line, taskId, value);
@@ -256,7 +256,6 @@ function updateTaskProperty(content, taskId, property, value) {
     }
 
     // Update **Priority**: line within task section (only if we're in the target task)
-    // Check for any line containing **Priority** for debugging
     if (line.includes('**Priority**')) {
       foundPriorityLines.push({ lineNum: i, line: line.substring(0, 50), inTargetSection });
     }
@@ -265,6 +264,41 @@ function updateTaskProperty(content, taskId, property, value) {
       console.log(`[updateTaskProperty] UPDATING priority at line ${i}: "${line}" -> "**Priority**: ${value}"`);
       lines[i] = `**Priority**: ${value}`;
       updated = true;
+    }
+  }
+
+  // If not updated and property is 'priority' or 'status', we need to INSERT it
+  if (!updated && (property === 'priority' || property === 'status')) {
+    console.log(`[updateTaskProperty] Property ${property} not found, attempting insertion...`);
+    let insertIndex = -1;
+    let foundTask = false;
+
+    // Find the task header again to determine insertion point
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const taskHeader = line.match(new RegExp(`^### (?:~~)?(${taskIdPattern})(?:~~)?:`));
+
+      if (taskHeader && taskHeader[1] === taskId) {
+        foundTask = true;
+        // Insert after the header line
+        insertIndex = i + 1;
+        break;
+      }
+    }
+
+    if (foundTask && insertIndex !== -1) {
+      if (property === 'priority') {
+        lines.splice(insertIndex, 0, `**Priority**: ${value}`);
+        updated = true;
+        console.log(`[updateTaskProperty] INSERTED priority at line ${insertIndex}`);
+      } else if (property === 'status') {
+        // Usually status is in header, but if we want to add a status line:
+        const statusEmoji = getStatusEmoji(value);
+        const statusText = getStatusText(value);
+        lines.splice(insertIndex, 0, `**Status**: ${statusEmoji} ${statusText}`);
+        updated = true;
+        console.log(`[updateTaskProperty] INSERTED status at line ${insertIndex}`);
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 # Pomo-Flow Standard Operating Procedures (SOPs)
 
-**Last Updated**: January 4, 2026
-**Total Documents**: 28 (added MIGRATION-pouchdb-to-sqlite.md)
+**Last Updated**: January 6, 2026
+**Total Documents**: 30 (added SYNC-supabase-circular-loop-fix.md)
 
 ---
 
@@ -60,6 +60,7 @@ docs/sop/
 | `SYNC-cross-browser.md` | Cross-browser sync compatibility |
 | `SYNC-backup-false-positive.md` | Backup system false positive fix |
 | `SYNC-system-consolidation.md` | **Consolidated**: Duplicate system removal |
+| `SYNC-supabase-circular-loop-fix.md` | **NEW**: Supabase realtime circular loop fix |
 
 ### Styling (STYLING-*)
 
@@ -80,6 +81,7 @@ docs/sop/
 |------|-------------|
 | `TASKS-store-patterns.md` | **Consolidated**: Store refactoring & reactivity |
 | `TASKS-multi-instance-locking.md` | Multi-Claude-instance task locking |
+| `TASKS-raw-safety-pattern.md` | `_raw*` prefix pattern for safe store data access |
 
 ### UI (UI-*)
 

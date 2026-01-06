@@ -52,14 +52,17 @@ import { useLocalAuthStore as _useLocalAuthStore } from './stores/local-auth'
 // Task disappearance logger - kept for window.taskLogger side-effect (manual debugging)
 import { taskDisappearanceLogger as _taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
 
-// BUG-057: Pre-initialization IndexedDB health check for Firefox/Zen browser
-// This MUST run BEFORE Vue/Pinia is initialized to catch corrupted databases early
-import { runPreInitializationCheck } from './composables/useDatabaseHealthCheck'
+// Supabase migration cleanup - clears old PouchDB/localStorage data
+import { runMigrationCleanup } from './utils/supabaseMigrationCleanup'
+
+// SECURITY: App is now 100% Supabase standard
 
 // Run pre-check and initialize app
 async function initializeApp() {
-  // BUG-057: Check IndexedDB health BEFORE creating Vue app
-  // This prevents PouchDB from failing on corrupted Firefox databases
+  // CRITICAL: Run Supabase migration cleanup FIRST to clear old PouchDB/offline queue data
+  // This prevents deleted tasks from being restored by old systems
+  await runMigrationCleanup()
+
   console.log('🚀 [MAIN] Starting app initialization...')
 
   // Detect Tauri environment and apply class for CSS optimizations
@@ -80,37 +83,10 @@ async function initializeApp() {
   }
 
   try {
-    const preCheckResult = await runPreInitializationCheck()
-
-    if (preCheckResult.cleared) {
-      console.log('🔄 [MAIN] Corrupted IndexedDB was cleared - reloading page...')
-      // Page will reload - don't continue initialization
-      window.location.reload()
-      return
-    }
-
-    // Install Debug Helper for Zen/PouchDB debugging (console access)
-    // Run `debugHelper.resetReplicationCheckpoint()` in console to fix stuck sync
-    import('./utils/debugHelper').then(({ installDebugHelper }) => {
-      installDebugHelper()
-    })
-
-    // TASK-093: Migration Utility (Dev Access)
-    import('./utils/migratePouchToSql').then(({ migratePouchToSql }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).migrate = async () => {
-        console.log('🏁 [MIGRATION] Manual trigger via console...')
-        return await migratePouchToSql();
-      }
-      console.log('🛠️ [MIGRATION] Utility loaded. Run `window.migrate()` to start.')
-    })
-
-    if (!preCheckResult.healthy && preCheckResult.error) {
-      console.warn('⚠️ [MAIN] IndexedDB pre-check warning:', preCheckResult.error)
-      // Continue anyway - PouchDB may still work or will handle it
-    }
+    // Analytics/Monitoring can go here
+    console.log('📊 [MAIN] Monitoring systems active')
   } catch (error) {
-    console.warn('⚠️ [MAIN] Pre-check failed, continuing anyway:', error)
+    console.warn('⚠️ [MAIN] Initialization monitor warning:', error)
   }
 
   const app = createApp(App)

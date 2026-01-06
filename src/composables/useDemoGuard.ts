@@ -1,4 +1,5 @@
 import { ref as _ref } from 'vue'
+import { useSupabaseDatabase } from './useSupabaseDatabase'
 
 // Interface for task-like objects in demo guard
 interface TaskLike {
@@ -63,7 +64,7 @@ export function useDemoGuard() {
       // Has meaningful English content but not demo patterns
       if (!isDemoData(task)) {
         const meaningfulEnglish = task.title.length > 10 &&
-                                 !/^(task|Test|New|Debug)/i.test(task.title.trim())
+          !/^(task|Test|New|Debug)/i.test(task.title.trim())
         if (meaningfulEnglish) return true
       }
 
@@ -124,16 +125,14 @@ export function useDemoGuard() {
   // Check if current data might be demo data
   const isCurrentDataLikelyDemo = async (): Promise<boolean> => {
     try {
-      // Check IndexedDB for demo data indicators
-      const { useDatabase } = await import('@/composables/useDatabase')
-      const db = useDatabase()
-
-      const tasks = await db.load('tasks')
+      // Check Supabase for demo data indicators
+      const { fetchTasks } = useSupabaseDatabase()
+      const tasks = await fetchTasks()
       if (tasks && Array.isArray(tasks)) {
         const demoCount = tasks.filter(task => isDemoData(task)).length
 
         // If more than 50% of tasks look like demo data, flag as likely demo
-        return demoCount > tasks.length * 0.5
+        return demoCount > (tasks.length * 0.5)
       }
     } catch (error) {
       console.error('❌ Failed to check current data:', error)

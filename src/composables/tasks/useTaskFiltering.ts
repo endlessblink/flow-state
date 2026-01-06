@@ -38,7 +38,7 @@ export const useTaskFiltering = (
         const visited = new Set<string>()
 
         const collectChildren = (parentId: string) => {
-            const children = tasks.value.filter(task => task.parentTaskId === parentId)
+            const children = tasks.value.filter(task => task.parentTaskId === parentId && !task._soft_deleted)
             children.forEach(child => {
                 if (!visited.has(child.id)) {
                     visited.add(child.id)
@@ -78,8 +78,8 @@ export const useTaskFiltering = (
             return []
         }
 
-        let filtered = tasks.value
-        // console.debug(`🔍 [FILTER-DEBUG] Starting filter with ${filtered.length} tasks`)
+        let filtered = tasks.value.filter(task => !task._soft_deleted)
+        // console.debug(`🔍 [FILTER-DEBUG] Starting filter with ${filtered.length} tasks (excluding deleted)`)
 
         // 1. Smart View
         if (activeSmartView.value) {
@@ -151,7 +151,7 @@ export const useTaskFiltering = (
             }
 
             nestedTasks = tasks.value
-                .filter(task => nestedTaskIds.includes(task.id))
+                .filter(task => nestedTaskIds.includes(task.id) && !task._soft_deleted)
                 .filter(task => {
                     if (activeProjectTreeIds) {
                         if (!activeProjectTreeIds.includes(task.projectId)) return false
@@ -198,7 +198,7 @@ export const useTaskFiltering = (
     })
 
     const calendarFilteredTasks = computed(() => {
-        let filtered = tasks.value
+        let filtered = tasks.value.filter(task => !task._soft_deleted)
 
         // 1. Project
         if (activeProjectId.value) {
@@ -214,8 +214,8 @@ export const useTaskFiltering = (
         return filtered
     })
 
-    const totalTasks = computed(() => tasks.value.filter(task => task.status !== 'done').length)
-    const completedTasks = computed(() => tasks.value.filter(task => task.status === 'done').length)
+    const totalTasks = computed(() => tasks.value.filter(task => task.status !== 'done' && !task._soft_deleted).length)
+    const completedTasks = computed(() => tasks.value.filter(task => task.status === 'done' && !task._soft_deleted).length)
 
     const totalPomodoros = computed(() =>
         tasks.value.reduce((sum, task) => sum + (task.completedPomodoros || 0), 0)
@@ -251,7 +251,7 @@ export const useTaskFiltering = (
     })
 
     const smartViewTaskCounts = computed(() => {
-        let baseTasks = tasks.value
+        let baseTasks = tasks.value.filter(task => !task._soft_deleted)
 
         if (activeProjectId.value) {
             const projectIds = getChildProjectIds(activeProjectId.value)

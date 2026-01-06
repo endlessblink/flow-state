@@ -17,10 +17,6 @@ export function useCalendarInteractionHandlers(
     const taskStore = useTaskStore()
 
     // State
-    const showContextMenu = ref(false)
-    const contextMenuX = ref(0)
-    const contextMenuY = ref(0)
-    const contextMenuTask = ref<Task | null>(null)
     const selectedCalendarEvents = ref<CalendarEvent[]>([])
     const hoveredEventId = ref<string | null>(null)
 
@@ -33,14 +29,6 @@ export function useCalendarInteractionHandlers(
 
     const handleSlotTaskMouseLeave = () => {
         hoveredEventId.value = null
-    }
-
-    /**
-     * Close the task context menu
-     */
-    const closeContextMenu = () => {
-        showContextMenu.value = false
-        contextMenuTask.value = null
     }
 
     /**
@@ -60,22 +48,15 @@ export function useCalendarInteractionHandlers(
         const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
         if (!task) return
 
-        contextMenuX.value = mouseEvent.clientX
-        contextMenuY.value = mouseEvent.clientY
-        contextMenuTask.value = task
-        showContextMenu.value = true
-    }
-
-    /**
-     * Handle context menu trigger from inbox/sidebar
-     */
-    const handleInboxContextMenu = (customEvent: CustomEvent<{ event: MouseEvent; task: Task; isCalendarEvent: boolean }>) => {
-        const { event: mouseEvent, task } = customEvent.detail
-
-        contextMenuX.value = mouseEvent.clientX
-        contextMenuY.value = mouseEvent.clientY
-        contextMenuTask.value = task
-        showContextMenu.value = true
+        // Dispatch global event for ModalManager to handle
+        window.dispatchEvent(new CustomEvent('task-context-menu', {
+            detail: {
+                event: mouseEvent,
+                task,
+                instanceId: calendarEvent.instanceId,
+                isCalendarEvent: true
+            }
+        }))
     }
 
     /**
@@ -151,18 +132,12 @@ export function useCalendarInteractionHandlers(
     }
 
     return {
-        showContextMenu,
-        contextMenuX,
-        contextMenuY,
-        contextMenuTask,
         selectedCalendarEvents,
         hoveredEventId,
         handleSlotTaskMouseEnter,
         handleSlotTaskMouseLeave,
-        closeContextMenu,
         handleEventDblClick,
         handleEventContextMenu,
-        handleInboxContextMenu,
         handleRemoveFromCalendar,
         handleEventClick,
         handleKeyDown,

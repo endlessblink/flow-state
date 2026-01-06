@@ -3,17 +3,14 @@ import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
-import { useDatabase } from '@/composables/useDatabase'
-import { usePersistentStorage } from '@/composables/usePersistentStorage'
 
 
 export function useTaskHistory(
-    tasks: Ref<Task[]>,
+    // SAFETY: Named _rawTasks to indicate this is the raw array for undo/redo operations
+    _rawTasks: Ref<Task[]>,
     manualOperationInProgress: Ref<boolean>,
     saveTasksToStorage: (tasks: Task[], context: string) => Promise<void>
 ) {
-    const db = useDatabase()
-    const persistentStorage = usePersistentStorage()
 
 
     const restoreState = async (newTasks: Task[]) => {
@@ -38,20 +35,17 @@ export function useTaskHistory(
             return
         }
 
-        const backupTasks = [...tasks.value]
+        const backupTasks = [..._rawTasks.value]
         manualOperationInProgress.value = true
 
         try {
-            const oldTasks = [...tasks.value]
-            tasks.value = [...newTasks]
-            taskDisappearanceLogger.logArrayReplacement(oldTasks, tasks.value, 'undo-restoreTaskState')
+            const oldTasks = [..._rawTasks.value]
+            _rawTasks.value = [...newTasks]
+            taskDisappearanceLogger.logArrayReplacement(oldTasks, _rawTasks.value, 'undo-restoreTaskState')
 
-            if (db.isReady?.value) {
-                await saveTasksToStorage(tasks.value, 'undo-restoreTaskState')
-            }
-            await persistentStorage.save(persistentStorage.STORAGE_KEYS.TASKS, tasks.value)
+            await saveTasksToStorage(_rawTasks.value, 'undo-restoreTaskState')
         } catch (error) {
-            tasks.value = backupTasks
+            _rawTasks.value = backupTasks
             errorHandler.report({
                 severity: ErrorSeverity.ERROR,
                 category: ErrorCategory.STATE,

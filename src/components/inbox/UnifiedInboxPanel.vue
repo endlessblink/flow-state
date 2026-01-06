@@ -59,14 +59,16 @@
 
     <!-- TASK-106: Canvas Group Filter Chips - Only show in calendar context -->
     <!-- Canvas view already shows groups visually, so filter chips would be redundant -->
+    <!-- Ctrl+click to select multiple groups -->
     <div v-if="!isCollapsed && props.context === 'calendar' && canvasGroupOptions.length > 1" class="group-filter-chips">
       <button
         v-for="group in canvasGroupOptions"
         :key="group.value"
         class="group-chip"
-        :class="{ active: selectedCanvasGroup === group.value }"
+        :class="{ active: group.value === '' ? selectedCanvasGroups.size === 0 : selectedCanvasGroups.has(group.value) }"
         :style="getChipStyle(group)"
-        @click="selectedCanvasGroup = selectedCanvasGroup === group.value ? null : group.value"
+        :title="group.value === '' ? 'Show all tasks' : `Filter by ${group.label} (Ctrl+click for multi-select)`"
+        @click="handleChipClick($event, group)"
       >
         <span v-if="group.color" class="chip-dot" :style="{ backgroundColor: group.color }" />
         <span class="chip-label">{{ group.label }}</span>
@@ -103,10 +105,10 @@
       </Transition>
     </div>
 
-    <!-- Quick Add Input -->
     <div v-if="!isCollapsed" class="quick-add">
       <input
         v-model="newTaskTitle"
+        :dir="quickAddDirection"
         placeholder="Quick add task (Enter)..."
         class="quick-add-input"
         @keydown.enter="addTask"
@@ -133,6 +135,7 @@
 Write proposal !!!
 Review code 2h
 Call client"
+          :dir="textDirection"
           class="brain-dump-textarea"
           rows="5"
         />
@@ -152,13 +155,13 @@ Call client"
       <!-- Empty State -->
       <div v-if="inboxTasks.length === 0" class="empty-inbox">
         <div class="empty-icon">
-          {{ selectedCanvasGroup ? '🎯' : '📋' }}
+          {{ selectedCanvasGroups.size > 0 ? '🎯' : '📋' }}
         </div>
         <p class="empty-text">
-          {{ selectedCanvasGroup ? 'No tasks in this group' : 'No tasks found' }}
+          {{ selectedCanvasGroups.size > 0 ? (selectedCanvasGroups.size === 1 ? 'No tasks in this group' : 'No tasks in selected groups') : 'No tasks found' }}
         </p>
         <p class="empty-subtext">
-          {{ selectedCanvasGroup ? 'Drag tasks to this group on the Canvas.' : getEmptyMessage() }}
+          {{ selectedCanvasGroups.size > 0 ? 'Drag tasks to these groups on the Canvas.' : getEmptyMessage() }}
         </p>
       </div>
 
@@ -200,7 +203,7 @@ Call client"
 
         <!-- Task Content -->
         <div class="task-content">
-          <div class="task-title">
+          <div class="task-title" dir="auto">
             {{ task.title }}
           </div>
 
@@ -282,6 +285,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
+import { useBrainDump } from '@/composables/useBrainDump'
 import {
   ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock, CalendarDays,
   Target as _Target, Calendar as _CalendarIcon, Clipboard as _Clipboard, Folder as _Folder, Trash2, X, Filter, ChevronDown
@@ -315,8 +319,21 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const { isTodayTask } = useSmartViews()
 const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
+const {
+  brainDumpMode,
+  brainDumpText,
+  textDirection,
+  parsedTaskCount,
+  processBrainDump
+} = useBrainDump()
 
-// TASK-076: Inbox has its OWN local state for done filter (independent of canvas/calendar toggles)
+// RTL detection for quick add
+const quickAddDirection = computed(() => {
+  if (!newTaskTitle.value.trim()) return 'ltr'
+  const firstChar = newTaskTitle.value.trim()[0]
+  const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+})
 // The canvas Done toggle only affects canvas view, not this inbox panel
 // User Request: Calendar inbox needs to filter out done tasks by default
 const hideInboxDoneTasks = ref(props.context === 'calendar')
@@ -332,8 +349,7 @@ const toggleHideDoneTasks = () => {
 // State
 const isCollapsed = ref(props.startCollapsed)
 const newTaskTitle = ref('')
-const brainDumpMode = ref(false)
-const brainDumpText = ref('')
+// brainDumpMode, brainDumpText now provided by useBrainDump() composable
 const draggingTaskId = ref<string | null>(null)
 
 // Multi-select state
@@ -348,7 +364,8 @@ const selectedProject = ref<string | null>(null)
 const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
 
 // TASK-106: Canvas group filter (primary filter for reducing cognitive overload)
-const selectedCanvasGroup = ref<string | null>(null)
+// Changed to Set for multi-select support (Ctrl+click)
+const selectedCanvasGroups = ref<Set<string>>(new Set())
 const showAdvancedFilters = ref(false)
 
 // TASK-106: Options for canvas group filter chips
@@ -377,7 +394,9 @@ const canvasGroupOptions = computed((): GroupOption[] => {
 
 // TASK-106: Get chip style based on active state and group color
 const getChipStyle = (group: GroupOption) => {
-  const isActive = selectedCanvasGroup.value === group.value
+  const isActive = group.value === ''
+    ? selectedCanvasGroups.value.size === 0  // "All" is active when no groups selected
+    : selectedCanvasGroups.value.has(group.value)
   if (!isActive || !group.color) return {}
 
   return {
@@ -385,6 +404,36 @@ const getChipStyle = (group: GroupOption) => {
     backgroundColor: `${group.color}20`,
     borderColor: group.color,
     color: group.color
+  }
+}
+
+// TASK-106: Handle chip click with Ctrl+click for multi-select
+const handleChipClick = (event: MouseEvent, group: GroupOption) => {
+  // "All" chip - clears selection
+  if (group.value === '') {
+    selectedCanvasGroups.value = new Set()
+    return
+  }
+
+  // Ctrl/Cmd+click: toggle individual group (multi-select)
+  if (event.ctrlKey || event.metaKey) {
+    const newSet = new Set(selectedCanvasGroups.value)
+    if (newSet.has(group.value)) {
+      newSet.delete(group.value)
+    } else {
+      newSet.add(group.value)
+    }
+    selectedCanvasGroups.value = newSet
+    return
+  }
+
+  // Regular click: single select (toggle)
+  if (selectedCanvasGroups.value.size === 1 && selectedCanvasGroups.value.has(group.value)) {
+    // Clicking active chip deselects it (back to "All")
+    selectedCanvasGroups.value = new Set()
+  } else {
+    // Select only this group
+    selectedCanvasGroups.value = new Set([group.value])
   }
 }
 
@@ -430,7 +479,7 @@ const clearAllFilters = () => {
   selectedProject.value = null
   selectedDuration.value = null
   activeTimeFilter.value = 'all'
-  selectedCanvasGroup.value = null  // TASK-106
+  selectedCanvasGroups.value = new Set()  // TASK-106: Clear multi-select
 }
 
 // Time filter state (TASK-080: Today Quick Filter)
@@ -457,8 +506,12 @@ const inboxTasks = computed(() => {
   let tasks = baseInboxTasks.value
 
   // TASK-106: Apply canvas group filter FIRST (primary filter)
-  if (selectedCanvasGroup.value && selectedCanvasGroup.value !== '') {
-    tasks = filterTasksByGroup(tasks, selectedCanvasGroup.value)
+  // Supports multi-select: filter tasks that belong to ANY selected group
+  if (selectedCanvasGroups.value.size > 0) {
+    const groupIds = Array.from(selectedCanvasGroups.value)
+    tasks = tasks.filter(task =>
+      groupIds.some(groupId => filterTasksByGroup([task], groupId).length > 0)
+    )
   }
 
   // Apply Today filter (TASK-080)
@@ -571,10 +624,7 @@ const getEmptyMessage = () => {
   return 'All filtered tasks are already on the board/calendar'
 }
 
-const parsedTaskCount = computed(() => {
-  if (!brainDumpText.value.trim()) return 0
-  return brainDumpText.value.split('\n').filter(line => line.trim()).length
-})
+// Brain dump logic provided by useBrainDump() composable
 
 // Task management methods
 const addTask = () => {
@@ -590,50 +640,7 @@ const addTask = () => {
   newTaskTitle.value = ''
 }
 
-const processBrainDump = () => {
-  if (!brainDumpText.value.trim()) return
-
-  const lines = brainDumpText.value.split('\n').filter(line => line.trim())
-  const { createTaskWithUndo } = useUnifiedUndoRedo()
-
-  lines.forEach(line => {
-    const cleanedLine = line.trim()
-    let title = cleanedLine
-    let priority: 'high' | 'medium' | 'low' | null = null
-    let estimatedDuration: number | undefined
-
-    // Extract priority (e.g., "!!!", "!!", "!")
-    const priorityMatch = cleanedLine.match(/(!+)$/)
-    if (priorityMatch) {
-      const exclamationCount = priorityMatch[1].length
-      if (exclamationCount >= 3) priority = 'high'
-      else if (exclamationCount === 2) priority = 'medium'
-      else if (exclamationCount === 1) priority = 'low'
-      title = cleanedLine.replace(/\s*!+$/, '').trim()
-    }
-
-    // Extract duration (e.g., "2h", "30m")
-    const durationMatch = cleanedLine.match(/(\d+)([hm])$/i)
-    if (durationMatch) {
-      const value = parseInt(durationMatch[1])
-      const unit = durationMatch[2].toLowerCase()
-      if (unit === 'h') estimatedDuration = value * 60
-      else estimatedDuration = value
-      title = cleanedLine.replace(/\s*\d+[hm]$/i, '').trim()
-    }
-
-    createTaskWithUndo({
-      title,
-      priority,
-      estimatedDuration,
-      status: 'planned',
-      isInInbox: true
-    })
-  })
-
-  brainDumpText.value = ''
-  brainDumpMode.value = false
-}
+// processBrainDump now provided by useBrainDump() composable
 
 // Task interaction handlers
 const handleTaskClick = (event: MouseEvent, task: Task) => {
@@ -1083,6 +1090,8 @@ onBeforeUnmount(() => {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 /* Naive UI components handle their own basic layout,
@@ -1117,6 +1126,8 @@ onBeforeUnmount(() => {
   font-family: inherit;
   resize: vertical;
   margin-bottom: var(--space-2);
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 .brain-dump-textarea:focus {

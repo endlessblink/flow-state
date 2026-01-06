@@ -4,8 +4,9 @@
  */
 
 import CryptoJS from 'crypto-js'
-import { filterMockTasks, detectMockTask, MockTaskDetectionResult as _MockTaskDetectionResult } from './mockTaskDetector'
-import type { Task } from '@/types/tasks' // Use the canonical Task interface
+import { filterMockTasks, detectMockTask } from './mockTaskDetector'
+import type { Task } from '@/types/tasks'
+import IntegrityService from './integrity'
 
 export interface BackupSnapshot {
   timestamp: string
@@ -77,39 +78,14 @@ export class ForensicLogger {
    * Compute SHA-256 hash of task data
    */
   static computeTaskHash(tasks: Task[]): string {
-    const normalized = tasks
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .map(task => ({
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
-        projectId: task.projectId,
-        // Only hash fields that matter for integrity
-        createdAt: task.createdAt.toISOString(),
-        updatedAt: task.updatedAt.toISOString()
-      }))
-
-    return CryptoJS.SHA256(JSON.stringify(normalized)).toString()
+    return IntegrityService.computeTaskHash(tasks)
   }
 
   /**
    * Create deterministic fingerprint (ignores timestamps)
    */
   static createTaskFingerprint(tasks: Task[]): string {
-    const normalized = tasks
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .map(task => ({
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
-        projectId: task.projectId
-      }))
-
-    return CryptoJS.SHA256(JSON.stringify(normalized)).toString()
+    return IntegrityService.createTaskFingerprint(tasks)
   }
 
   /**
@@ -170,8 +146,8 @@ export class ForensicLogger {
 
       const snapshot: BackupSnapshot = {
         timestamp,
-        taskHash: this.computeTaskHash(validTasks),
-        taskFingerprint: this.createTaskFingerprint(validTasks),
+        taskHash: this.computeTaskHash(validTasks as Task[]),
+        taskFingerprint: this.createTaskFingerprint(validTasks as Task[]),
         taskCount: validTasks.length,
         mockTasksDetected: mockFilter.mockTasks.length,
         realTasks: mockFilter.cleanTasks.length,

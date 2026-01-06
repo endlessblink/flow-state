@@ -78,23 +78,33 @@
 - [x] Migrated from PouchDB/CouchDB to Supabase.
 
 ### TASK-017: KDE Plasma Widget (Plasmoid) (READY)
+**Priority**: P3-LOW
 - Create a KDE Plasma 6 taskbar widget.
 
-### TASK-039: Duplicate Systems Consolidation (📋 PLANNED)
-- Consolidate conflict resolution and backup systems.
+### ~~TASK-039~~: Duplicate Systems Consolidation (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 6, 2026
+- [x] Consolidate `ConflictResolver` and `conflict-resolution` service.
+- [x] Create unified `integrity.ts` for hashing and checksums.
+- [x] Refactor `useBackupSystem` and `ForensicLogger` to use `integrity.ts`.
+- [x] Fixed all broken imports and MIME type errors following file deletions.
 
 ### TASK-041: Implement Custom Recurrence Patterns (📋 PLANNED)
+**Priority**: P2-MEDIUM
 - Define custom recurrence syntax and parsing logic.
 
 ### TASK-046: Establish Canvas Performance Baselines (📋 PLANNED)
+**Priority**: P1-HIGH
 - Establishment of latency metrics using `performanceBenchmark.ts`.
 
 ### TASK-065: GitHub Release (📋 TODO)
+**Priority**: P3-LOW
 - Remove hardcoded CouchDB credentials.
 - Add Docker self-host guide to README.
 - Create MIT LICENSE.
 
 ### TASK-079: Tauri Desktop (📋 PLANNED)
+**Priority**: P1-HIGH
 - System Tray (icon + menu).
 - KDE Taskbar Progress (D-Bus).
 - Fokus-style Break Splash Screen.
@@ -110,6 +120,7 @@
 - Implement auto-collection of overdue non-recurring tasks.
 
 ### TASK-096: System Refactor Analysis (📋 TODO)
+**Priority**: P1-HIGH
 - Analyze codebase for refactoring opportunities.
 
 ### ~~TASK-101~~: Store Safety Pattern (`_raw*` prefix) (✅ DONE)
@@ -141,6 +152,29 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 ### ~~TASK-103~~: Debug Sync Error (Auth Guard) (✅ DONE)
 - Fixed "User not authenticated" sync errors in Guest Mode.
 - Implemented Auth Guards in `projects`, `tasks`, and `canvas` stores.
+
+### ~~TASK-106~~: Brain Dump RTL Support (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 6, 2026
+- [x] Implement correct RTL and Hebrew/English mix support for Brain Dump section in canvas inbox.
+- [x] Automatic text direction detection in `useBrainDump.ts`.
+- [x] Bidirectional rendering support in Inbox components.
+
+### TASK-107: New Branding: "Cyber Tomato" (📋 PLANNED)
+**Priority**: P2-MEDIUM
+- Design and implement new clean, minimal, cyberpunky "Cyber Tomato" icon set.
+- Includes: Main logo, Tauri app icon, and favicon.
+
+### TASK-108: Tauri/Web Design Parity (📋 PLANNED)
+**Priority**: P1-HIGH
+- Ensure the Tauri app design mimics 1-to-1 the web app design.
+
+### TASK-109: Markdown Support for Task Descriptions (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+- Add `description` field to task schema.
+- Implement Markdown rendering and editing in Task Edit Modal.
+- Ensure RTL and mixed-content support in descriptions.
+
 
 ### ~~TASK-104~~: Fix Critical Notification Store Crash (✅ DONE)
 - Fixed `ReferenceError: scheduledNotifications is not defined` in `notifications.ts`.
@@ -226,6 +260,41 @@ if (!uuidRegex.test(session.id)) session.id = crypto.randomUUID()
 // Layer 3: Mapper validation - supabaseMappers.ts toSupabaseTimerSession()
 const validId = isValidUUID(session.id) ? session.id : crypto.randomUUID()
 ```
+
+### ~~TASK-107~~: Shift+Enter for Newlines in Task Edit Modal (✅ DONE)
+**Priority**: P3-LOW
+**Completed**: January 6, 2026
+
+Allow users to insert newlines in text fields (description, subtask descriptions) using Shift+Enter in the TaskEditModal.
+
+**Problem**:
+- Pressing Enter anywhere in the modal triggered save
+- Users couldn't add line breaks to descriptions
+
+**Solution**:
+- [x] Modified `handleKeyDown` to check for Shift modifier and target element type
+- [x] Enter in textareas naturally creates newlines (no save)
+- [x] Ctrl/Cmd+Enter anywhere triggers save
+- [x] Tested and verified with Playwright
+
+**Changes**:
+- `src/components/tasks/TaskEditModal.vue`: Updated `handleKeyDown` function (lines 338-358)
+
+### ~~BUG-003~~: Task Jumps to Different Location After Edit (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 6, 2026
+**Plan**: [plans/fix-task-position-jump-after-edit.md](../plans/fix-task-position-jump-after-edit.md)
+
+Fixed task position jumping after editing by preserving existing Vue Flow node positions when position is locked.
+
+**Root Cause**:
+When task position was locked (from drag or edit), syncNodes() still recalculated relative position from absolute coordinates. If section position had slightly changed, this caused position drift.
+
+**Fix Applied** (`useCanvasSync.ts`):
+- [x] Added `existingNodePositions` map to track current Vue Flow node positions
+- [x] When position is locked AND task exists with parentNode, preserve existing node position
+- [x] Skip absolute→relative conversion when position is locked to prevent drift
+- [x] Build passes, no TypeScript errors
 
 ### ~~TASK-106~~: Canvas Group Filter for Calendar Inbox (✅ DONE)
 **Priority**: P2-MEDIUM

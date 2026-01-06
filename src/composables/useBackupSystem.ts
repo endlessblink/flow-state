@@ -1,3 +1,5 @@
+import IntegrityService from '@/utils/integrity'
+
 /**
  * Unified Backup System
  *
@@ -94,14 +96,7 @@ const DEFAULT_CONFIG: BackupConfig = {
  * Calculate simple checksum for data integrity verification
  */
 function calculateChecksum(data: unknown): string {
-  const str = JSON.stringify(data)
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash
-  }
-  return hash.toString(16)
+  return IntegrityService.calculateChecksum(data)
 }
 
 /**

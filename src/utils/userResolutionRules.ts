@@ -3,7 +3,7 @@
  * Allows users to create custom conflict resolution strategies
  */
 
-import type { UserResolutionRule } from './conflictResolver'
+import type { UserResolutionRule } from './conflict-resolution'
 
 export interface RuleTemplate {
   id: string

@@ -65,7 +65,7 @@
     <!-- TASK-106: Canvas Group Filter (Primary - reduces cognitive overload) -->
     <div v-if="!isCollapsed && canvasGroupOptions.length > 1" class="canvas-group-filter">
       <CustomSelect
-        v-model="selectedCanvasGroup"
+        v-model="selectedCanvasGroups"
         :options="canvasGroupOptions"
         placeholder="Show from: All Tasks"
       />
@@ -105,6 +105,7 @@
     <div v-if="!isCollapsed" class="quick-add">
       <input
         v-model="newTaskTitle"
+        :dir="quickAddDirection"
         placeholder="Quick add task (Enter)..."
         class="quick-add-input"
         @keydown.enter="addTask"
@@ -127,6 +128,7 @@
       <div v-if="brainDumpMode" class="brain-dump-container">
         <textarea
           v-model="brainDumpText"
+          :dir="textDirection"
           class="brain-dump-textarea"
           rows="5"
           placeholder="Paste or type tasks (one per line)..."
@@ -134,10 +136,10 @@
         <NButton
           type="primary"
           block
-          :disabled="!brainDumpText.trim()"
+          :disabled="parsedTaskCount === 0"
           @click="processBrainDump"
         >
-          Add {{ brainDumpText.split('\n').filter(l => l.trim()).length }} Tasks
+          Add {{ parsedTaskCount }} Tasks
         </NButton>
       </div>
     </div>
@@ -147,11 +149,11 @@
       <!-- Empty State -->
       <div v-if="inboxTasks.length === 0" class="empty-inbox">
         <div class="empty-icon">
-          {{ selectedCanvasGroup ? '🎯' : '📋' }}
+          {{ selectedCanvasGroups.size > 0 ? '🎯' : '📋' }}
         </div>
         <p class="empty-text">
-          {{ selectedCanvasGroup
-            ? 'No tasks in this group. Drag tasks to this group on the Canvas.'
+          {{ selectedCanvasGroups.size > 0
+            ? 'No tasks in this group. Drag tasks to these groups on the Canvas.'
             : 'No tasks in inbox'
           }}
         </p>
@@ -181,7 +183,7 @@
 
         <!-- Task Content -->
         <div class="task-content">
-          <div class="task-title">
+          <div class="task-title" dir="auto">
             {{ task.title }}
           </div>
 
@@ -264,6 +266,7 @@ import BaseBadge from '@/components/base/BaseBadge.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { useBrainDump } from '@/composables/useBrainDump'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
@@ -282,8 +285,22 @@ const toggleHideDoneTasks = () => {
 const isCollapsed = ref(false)
 const newTaskTitle = ref('')
 const draggingTaskId = ref<string | null>(null)
-const brainDumpMode = ref(false)
-const brainDumpText = ref('')
+
+const {
+  brainDumpMode,
+  brainDumpText,
+  textDirection,
+  parsedTaskCount,
+  processBrainDump
+} = useBrainDump()
+
+// RTL detection for quick add
+const quickAddDirection = computed(() => {
+  if (!newTaskTitle.value.trim()) return 'ltr'
+  const firstChar = newTaskTitle.value.trim()[0]
+  const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+})
 
 // Filter state
 const unscheduledOnly = ref(false)
@@ -293,7 +310,7 @@ const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimate
 const showTodayOnly = ref(false)
 
 // TASK-106: Canvas group filter (primary filter for reducing overload)
-const selectedCanvasGroup = ref<string>('')
+const selectedCanvasGroups = ref<Set<string>>(new Set())
 const showAdvancedFilters = ref(false)
 
 // TASK-106: Options for canvas group dropdown
@@ -323,7 +340,7 @@ const hasActiveFilters = computed(() => {
     selectedPriority.value !== null ||
     selectedProject.value !== null ||
     selectedDuration.value !== null ||
-    (selectedCanvasGroup.value !== null && selectedCanvasGroup.value !== '')
+    (selectedCanvasGroups.value.size > 0)
 })
 
 // Count tasks due today (BUG-046)
@@ -352,8 +369,11 @@ const inboxTasks = computed(() => {
   let tasks = baseInboxTasks.value
 
   // TASK-106: Apply canvas group filter FIRST (primary filter)
-  if (selectedCanvasGroup.value && selectedCanvasGroup.value !== '') {
-    tasks = filterTasksByGroup(tasks, selectedCanvasGroup.value)
+  if (selectedCanvasGroups.value.size > 0) {
+    const groupIds = Array.from(selectedCanvasGroups.value)
+    tasks = tasks.filter(task =>
+      groupIds.some(groupId => filterTasksByGroup([task], groupId).length > 0)
+    )
   }
 
   // Apply Today filter (BUG-046)
@@ -437,7 +457,7 @@ const clearAllFilters = () => {
   selectedPriority.value = null
   selectedProject.value = null
   selectedDuration.value = null
-  selectedCanvasGroup.value = ''  // TASK-106
+  selectedCanvasGroups.value = new Set()  // TASK-106
 }
 
 const addTask = () => {
@@ -452,22 +472,7 @@ const addTask = () => {
   newTaskTitle.value = ''
 }
 
-const processBrainDump = () => {
-  if (!brainDumpText.value.trim()) return
-
-  const lines = brainDumpText.value.split('\n').filter(line => line.trim())
-  
-  lines.forEach(line => {
-    createTaskWithUndo({
-      title: line.trim(),
-      status: 'planned',
-      isInInbox: true
-    })
-  })
-
-  brainDumpText.value = ''
-  brainDumpMode.value = false
-}
+// processBrainDump handled by useBrainDump()
 
 const handleTaskClick = (_event: MouseEvent, _task: Task) => {
   if (draggingTaskId.value) return
@@ -665,6 +670,8 @@ const handleQuickAddTask = () => {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 .brain-dump-toggle {
@@ -692,6 +699,8 @@ const handleQuickAddTask = () => {
   font-size: var(--text-sm);
   resize: vertical;
   margin-bottom: var(--space-2);
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 .inbox-tasks {

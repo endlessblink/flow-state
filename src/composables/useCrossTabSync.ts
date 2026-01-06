@@ -2,7 +2,7 @@ import { ref, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useCanvasStore } from '@/stores/canvas'
-import { ConflictResolver } from '@/utils/conflictResolver'
+import { ConflictResolutionService } from '@/utils/conflict-resolution'
 import type { ConflictInfo, DocumentVersion } from '@/types/conflicts'
 import { ConflictType } from '@/types/conflicts'
 import type { ConflictResolutionStrategy as _ConflictResolutionStrategy } from '@/types/sync'
@@ -112,7 +112,7 @@ const messageQueue = ref<CrossTabMessage[]>([])
 const lastProcessedTimestamp = ref(0)
 const isProcessing = ref(false)
 const pendingLocalOperations = ref<Map<string, TaskOperation>>(new Map())
-const conflictResolver = new ConflictResolver('cross-tab-sync')
+const conflictResolver = new ConflictResolutionService('cross-tab-sync')
 // saveCoordinator removed - Phase 2 simplification
 const performanceMonitor = new CrossTabPerformance()
 const browserCompatibility = new CrossTabBrowserCompatibility()

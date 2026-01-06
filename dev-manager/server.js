@@ -180,6 +180,7 @@ function updateTaskProperty(content, taskId, property, value) {
   console.log(`[updateTaskProperty] taskId=${taskId}, property=${property}, value=${value}`);
   const lines = content.split('\n');
   let updated = false;
+  let updatedSection = false; // Specifically track if the detail section was updated
   let inTargetSection = false;  // Track if we're in the target task's section
   let foundPriorityLines = [];  // Debug: track all priority lines found
 
@@ -190,20 +191,14 @@ function updateTaskProperty(content, taskId, property, value) {
     const line = lines[i];
 
     // Check if we're entering a new task section (any ### TASK-XXX header)
-    const anyTaskHeader = line.match(/^### (?:~~)?([A-Z]+-\d+)(?:~~)?:/);
+    // Relaxed pattern to catch variations
+    const anyTaskHeader = line.match(/^### (?:~~)?([A-Z]+-\d+)(?:~~)?(?:\:|\s|$)/);
     if (anyTaskHeader) {
-      const wasInTarget = inTargetSection;
       // Check if this is OUR target task
       inTargetSection = anyTaskHeader[1] === taskId;
-      if (inTargetSection) {
-        console.log(`[updateTaskProperty] FOUND target section at line ${i}: "${line.substring(0, 60)}..."`);
-      }
     }
     // Also reset on major section dividers
     if (line.startsWith('## ') || line === '---') {
-      if (inTargetSection) {
-        console.log(`[updateTaskProperty] EXITED target section at line ${i}: "${line.substring(0, 40)}"`);
-      }
       inTargetSection = false;
     }
 
@@ -230,75 +225,66 @@ function updateTaskProperty(content, taskId, property, value) {
     }
 
     // Update task header section
-    // Format: ### TASK-XXX: Title (STATUS)
-    // Or: ### ~~TASK-XXX~~: Title (STATUS)
-    const headerMatch = line.match(new RegExp(`^### (?:~~)?(${taskIdPattern})(?:~~)?:\\s*(.+?)(?:\\s*\\(([^)]+)\\))?$`));
-    if (headerMatch) {
+    // Relaxed header match to be more robust
+    if (inTargetSection && line.startsWith('### ')) {
       if (property === 'status') {
-        const title = headerMatch[2].replace(/\s*[✅🔄⏳👀🕐🚧⏸️]+\s*(DONE|COMPLETE|IN PROGRESS|MONITORING|PENDING|PAUSED)?/gi, '').trim();
-        const statusEmoji = getStatusEmoji(value);
-        const statusText = getStatusText(value);
+        const headerMatch = line.match(/^### (?:~~)?(.+?)(?:\s*:?\s*(.+?))?(?:\s*\(([^)]+)\))?$/);
+        if (headerMatch) {
+          const title = headerMatch[2] ? headerMatch[2].replace(/\s*[✅🔄⏳👀🕐🚧⏸️]+\s*(DONE|COMPLETE|IN PROGRESS|MONITORING|PENDING|PAUSED)?/gi, '').trim() : '';
+          const statusEmoji = getStatusEmoji(value);
+          const statusText = getStatusText(value);
 
-        if (value === 'done') {
-          lines[i] = `### ~~${taskId}~~: ${title} ${statusEmoji} ${statusText}`;
-        } else {
-          lines[i] = `### ${taskId}: ${title} (${statusEmoji} ${statusText})`;
+          if (value === 'done') {
+            lines[i] = `### ~~${taskId}~~: ${title} ${statusEmoji} ${statusText}`;
+          } else {
+            lines[i] = `### ${taskId}: ${title} (${statusEmoji} ${statusText})`;
+          }
+          updated = true;
+          updatedSection = true;
         }
-        updated = true;
       }
     }
 
     // Update **Status**: line within task section
-    if (line.startsWith('**Status**:') && updated && property === 'status') {
+    if (line.startsWith('**Status**:') && property === 'status' && inTargetSection) {
       const statusEmoji = getStatusEmoji(value);
       const statusText = getStatusText(value);
       lines[i] = `**Status**: ${statusEmoji} ${statusText}`;
+      updated = true;
+      updatedSection = true;
     }
 
     // Update **Priority**: line within task section (only if we're in the target task)
-    if (line.includes('**Priority**')) {
-      foundPriorityLines.push({ lineNum: i, line: line.substring(0, 50), inTargetSection });
-    }
-
     if (line.startsWith('**Priority**:') && property === 'priority' && inTargetSection) {
       console.log(`[updateTaskProperty] UPDATING priority at line ${i}: "${line}" -> "**Priority**: ${value}"`);
       lines[i] = `**Priority**: ${value}`;
       updated = true;
+      updatedSection = true;
     }
   }
 
-  // If not updated and property is 'priority' or 'status', we need to INSERT it
-  if (!updated && (property === 'priority' || property === 'status')) {
-    console.log(`[updateTaskProperty] Property ${property} not found, attempting insertion...`);
+  // If priority wasn't updated in section but was requested, attempt insertion.
+  if (property === 'priority' && !updatedSection) {
+    console.log(`[updateTaskProperty] Priority not found in section for ${taskId}, attempting insertion...`);
     let insertIndex = -1;
     let foundTask = false;
 
-    // Find the task header again to determine insertion point
+    // Find the task header one more time to determine insertion point
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const taskHeader = line.match(new RegExp(`^### (?:~~)?(${taskIdPattern})(?:~~)?:`));
+      const taskHeader = line.match(new RegExp(`^### (?:~~)?(${taskIdPattern})(?:~~)?(?:\:|\s|$)`));
 
       if (taskHeader && taskHeader[1] === taskId) {
         foundTask = true;
-        // Insert after the header line
         insertIndex = i + 1;
         break;
       }
     }
 
     if (foundTask && insertIndex !== -1) {
-      if (property === 'priority') {
-        lines.splice(insertIndex, 0, `**Priority**: ${value}`);
-        updated = true;
-        console.log(`[updateTaskProperty] INSERTED priority at line ${insertIndex}`);
-      } else if (property === 'status') {
-        // Usually status is in header, but if we want to add a status line:
-        const statusEmoji = getStatusEmoji(value);
-        const statusText = getStatusText(value);
-        lines.splice(insertIndex, 0, `**Status**: ${statusEmoji} ${statusText}`);
-        updated = true;
-        console.log(`[updateTaskProperty] INSERTED status at line ${insertIndex}`);
-      }
+      lines.splice(insertIndex, 0, `**Priority**: ${value}`);
+      updated = true;
+      console.log(`[updateTaskProperty] INSERTED priority for ${taskId} at line ${insertIndex}`);
     }
   }
 

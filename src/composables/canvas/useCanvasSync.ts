@@ -143,9 +143,12 @@ export function useCanvasSync(deps: SyncDependencies) {
             // BUG-002 FIX: Build map of existing node parentNode relationships BEFORE processing
             // This preserves parent-child relationships established during drag operations
             const existingNodeParents = new Map<string, string | undefined>()
+            // BUG-003 FIX: Also track existing node POSITIONS to preserve them when locked
+            const existingNodePositions = new Map<string, { x: number; y: number }>()
             deps.nodes.value.forEach(n => {
                 if (n.type === 'taskNode') {
                     existingNodeParents.set(n.id, n.parentNode)
+                    existingNodePositions.set(n.id, { x: n.position.x, y: n.position.y })
                 }
             })
 
@@ -175,17 +178,31 @@ export function useCanvasSync(deps: SyncDependencies) {
                             const section = sections.find(s => s.id === sectionId)
                             if (section) {
                                 parentNode = existingParent
-                                // Use relative position (store has absolute, convert to relative)
-                                const relX = position.x - section.position.x
-                                const relY = position.y - section.position.y
-                                if (Number.isFinite(relX) && Number.isFinite(relY)) {
-                                    position = { x: relX, y: relY }
+
+                                // BUG-003 FIX: If position is locked, preserve EXISTING node position
+                                // This prevents drift when converting absolute→relative with changed section position
+                                // The existing Vue Flow node already has the correct relative position
+                                const existingPos = existingNodePositions.get(task.id)
+                                if (lockedPosition && existingPos) {
+                                    position = { x: existingPos.x, y: existingPos.y }
+                                } else {
+                                    // No lock - recalculate relative position from absolute
+                                    const relX = position.x - section.position.x
+                                    const relY = position.y - section.position.y
+                                    if (Number.isFinite(relX) && Number.isFinite(relY)) {
+                                        position = { x: relX, y: relY }
+                                    }
                                 }
                                 skipContainmentCalc = true
                             }
                             // If section no longer exists, fall through to containment check
                         } else {
                             // Task exists at ROOT level (no parentNode) - keep it at root
+                            // BUG-003 FIX: Preserve existing position when locked
+                            const existingPos = existingNodePositions.get(task.id)
+                            if (lockedPosition && existingPos) {
+                                position = { x: existingPos.x, y: existingPos.y }
+                            }
                             // Don't recalculate containment - user intentionally placed it outside sections
                             skipContainmentCalc = true
                         }

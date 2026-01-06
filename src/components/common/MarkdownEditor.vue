@@ -58,7 +58,7 @@
 import { ref, watch, computed } from 'vue'
 import { Edit2, Eye, Bold as BoldIcon, Italic as ItalicIcon, List, CheckSquare, Link as LinkIcon, Undo, Redo } from 'lucide-vue-next'
 import { MilkdownProvider } from '@milkdown/vue'
-import { Editor, editorViewCtx, EditorStatus } from '@milkdown/core'
+import { Editor, editorViewCtx, EditorStatus, commandsCtx } from '@milkdown/core'
 import { toggleStrongCommand, toggleEmphasisCommand, wrapInBulletListCommand, toggleLinkCommand } from '@milkdown/preset-commonmark'
 import { undoCommand, redoCommand } from '@milkdown/plugin-history'
 import { replaceAll } from '@milkdown/utils'
@@ -100,37 +100,48 @@ watch(() => props.modelValue, (newVal) => {
   if (newVal !== internalValue.value) {
     internalValue.value = newVal
     if (editorInstance && editorInstance.status === EditorStatus.Created) {
-      editorInstance.action((ctx) => {
-        const view = ctx.get(editorViewCtx)
-        if (view) {
-          view.dispatch(ctx.get(replaceAll(newVal)))
-        }
-      })
+      // Use replaceAll macro directly via editor.action()
+      editorInstance.action(replaceAll(newVal))
     }
   }
 })
 
 const handleToolbar = (command: string) => {
   if (!editorInstance || editorInstance.status !== EditorStatus.Created) return
-  
+
   editorInstance.action((ctx) => {
+    const commandManager = ctx.get(commandsCtx)
     const view = ctx.get(editorViewCtx)
-    if (!view) return
 
     switch (command) {
-      case 'Bold': view.dispatch(ctx.get(toggleStrongCommand.key)()); break;
-      case 'Italic': view.dispatch(ctx.get(toggleEmphasisCommand.key)()); break;
-      case 'BulletList': view.dispatch(ctx.get(wrapInBulletListCommand.key)()); break;
+      case 'Bold':
+        commandManager.call(toggleStrongCommand.key)
+        break
+      case 'Italic':
+        commandManager.call(toggleEmphasisCommand.key)
+        break
+      case 'BulletList':
+        commandManager.call(wrapInBulletListCommand.key)
+        break
       case 'TaskList': {
-        const { state, dispatch } = view;
-        const { tr, selection } = state;
-        const lineStart = state.doc.resolve(selection.from).start();
-        dispatch(tr.insertText("- [ ] ", lineStart));
-        break;
+        // Insert task list item at cursor position
+        if (view) {
+          const { state, dispatch } = view
+          const { tr, selection } = state
+          const lineStart = state.doc.resolve(selection.from).start()
+          dispatch(tr.insertText('- [ ] ', lineStart))
+        }
+        break
       }
-      case 'Link': view.dispatch(ctx.get(toggleLinkCommand.key)()); break;
-      case 'Undo': view.dispatch(ctx.get(undoCommand.key)()); break;
-      case 'Redo': view.dispatch(ctx.get(redoCommand.key)()); break;
+      case 'Link':
+        commandManager.call(toggleLinkCommand.key)
+        break
+      case 'Undo':
+        commandManager.call(undoCommand.key)
+        break
+      case 'Redo':
+        commandManager.call(redoCommand.key)
+        break
     }
   })
 }
@@ -144,20 +155,15 @@ const handlePreviewCheckboxClick = (index: number) => {
     const match = matches[index]
     const matchIndex = match.index!
     const checkboxContentIndex = matchIndex + (match[0].indexOf('[')) + 1
-    
+
     const newState = match[1] === ' ' ? 'x' : ' '
     const newValue = text.substring(0, checkboxContentIndex) + newState + text.substring(checkboxContentIndex + 1)
-    
+
     handleInternalUpdate(newValue)
-    
-    // Sync back to editor if it exists and is ready
+
+    // Sync back to editor using replaceAll macro
     if (editorInstance && editorInstance.status === EditorStatus.Created) {
-      editorInstance.action((ctx) => {
-        const view = ctx.get(editorViewCtx)
-        if (view) {
-          view.dispatch(ctx.get(replaceAll(newValue)))
-        }
-      })
+      editorInstance.action(replaceAll(newValue))
     }
   }
 }

@@ -30,6 +30,10 @@ const PORT = process.env.PORT || 6010;
 // SSE clients for live file sync
 let sseClients = [];
 
+// Session management
+// Map: taskId -> { ptyProcess, history: string, sockets: Set<Socket> }
+const agentSessions = new Map();
+
 // Paths
 const DEV_MANAGER_DIR = __dirname;
 const PROJECT_ROOT = path.join(__dirname, '..');
@@ -37,6 +41,12 @@ const MASTER_PLAN_PATH = process.env.MASTER_PLAN_PATH
   ? path.resolve(process.env.MASTER_PLAN_PATH)
   : path.join(__dirname, '..', 'docs', 'MASTER_PLAN.md');
 const LOCKS_DIR = path.join(__dirname, '..', '.claude', 'locks');
+const WORKTREES_DIR = path.join(__dirname, '.worktrees');
+
+// Ensure worktrees directory exists
+if (!fsSync.existsSync(WORKTREES_DIR)) {
+  fsSync.mkdirSync(WORKTREES_DIR, { recursive: true });
+}
 
 // Middleware
 app.use(cors());
@@ -108,23 +118,27 @@ app.get('/api/files', async (req, res) => {
 
 // API: Get Git Diff
 app.get('/api/diff', (req, res) => {
-  const options = { cwd: PROJECT_ROOT, maxBuffer: 1024 * 1024 * 10 }; // 10MB buffer
-  exec('git diff --color=always', options, (error, stdout, stderr) => {
-    if (error) {
-      // It's okay if it fails (e.g. not a git repo), but return empty
-      // console.error(`exec error: ${error}`);
-      return res.json({ diff: stdout || stderr || '' });
-    }
-    // Convert ANSI colors to HTML if needed, but xterm handles ANSI.
-    // However, if we want a static diff view we might need a converter.
-    // For now, let's return raw text and handle it on frontend or just rely on terminal.
-    // Actually, let's use `git diff` without color for the text view, or with color for terminal view.
-    // Let's return raw text for now.
+  const { worktree } = req.query; // Optional: worktree path relative to PROJECT_ROOT
 
-    // Better: return diff of staged + unstaged changes
-    exec('git diff HEAD', options, (err, out, serr) => {
-       res.json({ diff: out || stdout || '' });
-    });
+  // Use plain diff so frontend can parse lines starting with + or -
+  let cmd = 'git diff HEAD';
+  let cwd = PROJECT_ROOT;
+
+  if (worktree) {
+    // If worktree is specified, run diff inside it comparing against HEAD (of main repo essentially)
+    // Note: worktrees share the .git dir, so git diff HEAD compares worktree state to the commit HEAD points to.
+    const worktreePath = path.resolve(PROJECT_ROOT, worktree);
+    if (worktreePath.startsWith(PROJECT_ROOT)) { // Security check
+       cwd = worktreePath;
+       // We want to see what changed in the worktree compared to where it started (HEAD)
+       cmd = 'git diff HEAD';
+    }
+  }
+
+  const options = { cwd, maxBuffer: 1024 * 1024 * 10 }; // 10MB buffer
+  exec(cmd, options, (error, stdout, stderr) => {
+    // It's okay if it returns exit code 1 (diff found)
+    res.json({ diff: stdout || stderr || '' });
   });
 });
 
@@ -245,75 +259,157 @@ app.get('/api/locks', async (req, res) => {
 
 io.on('connection', (socket) => {
   console.log('[Socket] Client connected', socket.id);
-  let ptyProcess = null;
+  let connectedTaskId = null;
 
-  socket.on('agent-start', ({ taskId, taskTitle, taskDescription, command, contextFiles }) => {
-    if (ptyProcess) {
-      socket.emit('agent-error', 'Agent already running');
+  socket.on('agent-start', async ({ taskId, taskTitle, taskDescription, command, contextFiles, useWorktree }) => {
+    // If client connects to existing session
+    if (agentSessions.has(taskId)) {
+      const session = agentSessions.get(taskId);
+
+      // Update our local ref
+      connectedTaskId = taskId;
+
+      // Add this socket to the session
+      session.sockets.add(socket);
+
+      // Replay history
+      socket.emit('agent-output', session.history);
+      socket.emit('agent-status', { running: true, pid: session.ptyProcess.pid, worktree: session.worktree });
       return;
     }
 
+    // Prepare Environment
     const shell = process.env.SHELL || 'bash';
     const agentCommand = command || process.env.AGENT_COMMAND || 'claude';
+    let cwd = PROJECT_ROOT;
+    let worktreePathRel = null;
 
-    ptyProcess = pty.spawn(shell, [], {
+    // WORKTREE LOGIC
+    if (useWorktree) {
+      try {
+        const branchName = `agent/${taskId.toLowerCase()}`;
+        const worktreeDir = path.join(WORKTREES_DIR, taskId);
+        worktreePathRel = path.relative(PROJECT_ROOT, worktreeDir);
+
+        // Ensure parent dir exists
+        if (!fsSync.existsSync(WORKTREES_DIR)) fsSync.mkdirSync(WORKTREES_DIR);
+
+        // Remove existing worktree dir if it exists (cleanup)
+        // Note: git worktree remove is cleaner but might fail if dirty.
+        // For MVP, we'll try to add, if it fails, we assume it exists or needs manual intervention.
+        // Or we just try to use it if it exists.
+
+        const exists = fsSync.existsSync(worktreeDir);
+        if (!exists) {
+          // Create worktree
+          // git worktree add -b <new-branch> <path> <commit-ish>
+          // We use -f to force if branch exists but checked out elsewhere (though worktrees avoid this issue mostly)
+          // We assume we branch off HEAD
+          const cmd = `git worktree add -b ${branchName} ${worktreeDir} HEAD || git worktree add ${worktreeDir} ${branchName}`;
+          // If branch exists, second command runs
+
+          await new Promise((resolve, reject) => {
+            exec(cmd, { cwd: PROJECT_ROOT }, (err, stdout, stderr) => {
+              if (err && !stderr.includes('already exists')) {
+                 // If it failed but not because it exists, reject
+                 // Actually git worktree add fails if path exists.
+                 // Let's simplified: check if dir exists. If not, create.
+                 return reject(err);
+              }
+              resolve();
+            });
+          });
+        }
+
+        cwd = worktreeDir;
+        socket.emit('agent-log', `Created worktree at ${worktreePathRel}`);
+      } catch (e) {
+        socket.emit('agent-error', `Failed to create worktree: ${e.message}`);
+        return;
+      }
+    }
+
+    const ptyProcess = pty.spawn(shell, [], {
       name: 'xterm-color',
       cols: 80,
       rows: 30,
-      cwd: PROJECT_ROOT,
-      env: process.env
+      cwd: cwd,
+      env: { ...process.env, TERM: 'xterm-256color' }
     });
 
-    // Pipe pty output to socket
+    const session = {
+      ptyProcess,
+      history: '',
+      sockets: new Set([socket]),
+      worktree: worktreePathRel
+    };
+
+    agentSessions.set(taskId, session);
+    connectedTaskId = taskId;
+
+    // Pipe pty output
     ptyProcess.onData((data) => {
-      socket.emit('agent-output', data);
+      session.history += data;
+      // Broadcast to all sockets watching this task
+      for (const s of session.sockets) {
+        s.emit('agent-output', data);
+      }
     });
 
     ptyProcess.onExit((res) => {
-      socket.emit('agent-exit', res);
-      ptyProcess = null;
+      // Broadcast exit
+      for (const s of session.sockets) {
+        s.emit('agent-exit', res);
+      }
+      agentSessions.delete(taskId);
     });
 
     // Start the agent automatically
-    // We construct a prompt based on the task
     const prompt = `I am working on task ${taskId}: "${taskTitle}".\n${taskDescription}\n\nPlease help me complete this task.`;
     const escapedPrompt = prompt.replace(/"/g, '\\"');
 
     // Construct file context arguments
     let fileArgs = '';
     if (contextFiles && contextFiles.length > 0) {
-      // Escape filenames just in case
       fileArgs = contextFiles.map(f => `"${f.replace(/"/g, '\\"')}"`).join(' ');
     }
 
-    // Run command: agent "prompt" file1 file2 ...
-    // Note: This assumes the agent CLI accepts the prompt as the first arg and files as subsequent args
-    // Adjust if specific agent syntax differs (e.g. -p "prompt")
     const cmd = `${agentCommand} "${escapedPrompt}" ${fileArgs}`;
 
-    // Echo the command so the user sees what's running
     ptyProcess.write(`echo "Running: ${agentCommand} [prompt] ${fileArgs}"\r`);
     setTimeout(() => {
       ptyProcess.write(`${cmd}\r`);
     }, 500);
+
+    socket.emit('agent-status', { running: true, pid: ptyProcess.pid, worktree: worktreePathRel });
   });
 
   socket.on('agent-input', (data) => {
-    if (ptyProcess) {
-      ptyProcess.write(data);
+    if (connectedTaskId && agentSessions.has(connectedTaskId)) {
+      agentSessions.get(connectedTaskId).ptyProcess.write(data);
+    }
+  });
+
+  socket.on('agent-stop', () => {
+    if (connectedTaskId && agentSessions.has(connectedTaskId)) {
+      const session = agentSessions.get(connectedTaskId);
+      session.ptyProcess.kill();
+      // Cleanup happens in onExit
     }
   });
 
   socket.on('agent-resize', ({ cols, rows }) => {
-    if (ptyProcess) {
-      ptyProcess.resize(cols, rows);
+    if (connectedTaskId && agentSessions.has(connectedTaskId)) {
+      agentSessions.get(connectedTaskId).ptyProcess.resize(cols, rows);
     }
   });
 
   socket.on('disconnect', () => {
     console.log('[Socket] Client disconnected');
-    if (ptyProcess) {
-      ptyProcess.kill();
+    if (connectedTaskId && agentSessions.has(connectedTaskId)) {
+      const session = agentSessions.get(connectedTaskId);
+      session.sockets.delete(socket);
+      // We DO NOT kill the process here. Persistence!
     }
   });
 });

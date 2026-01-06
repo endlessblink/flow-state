@@ -1999,7 +1999,10 @@
             <div class="agent-tab" data-tab="diff" onclick="switchAgentTab('diff')">Review Changes</div>
           </div>
         </div>
-        <button class="task-modal-close" onclick="closeAgentModal()">&times;</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" onclick="stopAgent()" style="border-color: #ef4444; color: #ef4444;">Stop</button>
+          <button class="task-modal-close" onclick="closeAgentModal()">&times;</button>
+        </div>
       </div>
       <div class="agent-body">
         <div id="agent-terminal-view" class="agent-view active">
@@ -2060,6 +2063,13 @@
           <div style="flex: 1;">
             <label style="font-size: 11px; color: var(--text-subtle); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 4px;">Agent Command</label>
             <input type="text" id="agentCommandInput" placeholder="claude" value="claude" style="width: 100%; padding: 8px; background: var(--surface-tertiary); border: 1px solid var(--border-medium); color: var(--text-primary); border-radius: 6px; font-family: monospace;">
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-subtle); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 4px;">Isolation</label>
+            <div style="padding: 8px; background: var(--surface-tertiary); border: 1px solid var(--border-medium); border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="worktreeCheckbox">
+              <span style="font-size: 13px; color: var(--text-secondary);">Run in Git Worktree</span>
+            </div>
           </div>
         </div>
 
@@ -4650,15 +4660,34 @@
     // ===== AGENT INTEGRATION =====
     let socket = null;
     let term = null;
+    let currentWorktree = null;
 
     function initSocket() {
       if (!socket) {
         socket = io();
+
         socket.on('agent-output', (data) => {
           if (term) term.write(data);
         });
+
         socket.on('agent-exit', () => {
-          if (term) term.write('\r\n\x1b[33m[Agent exited]\x1b[0m\r\n');
+          if (term) term.write('\r\n\x1b[33m[Agent process exited]\x1b[0m\r\n');
+        });
+
+        socket.on('agent-status', (status) => {
+          console.log('[Agent] Status:', status);
+          currentWorktree = status.worktree;
+          if (status.running && term) {
+             term.write('\r\n\x1b[32m[Attached to running session]\x1b[0m\r\n');
+          }
+        });
+
+        socket.on('agent-log', (msg) => {
+           if (term) term.write(`\r\n\x1b[36m[System] ${msg}\x1b[0m\r\n`);
+        });
+
+        socket.on('agent-error', (msg) => {
+           if (term) term.write(`\r\n\x1b[31m[Error] ${msg}\x1b[0m\r\n`);
         });
       }
     }
@@ -4669,6 +4698,8 @@
       // Save command preference
       const command = document.getElementById('agentCommandInput').value.trim() || 'claude';
       localStorage.setItem('agent-command', command);
+
+      const useWorktree = document.getElementById('worktreeCheckbox').checked;
 
       // Get selected files
       const contextFiles = getSelectedFiles();
@@ -4710,13 +4741,20 @@
         taskTitle: currentEditTask.title,
         taskDescription: currentEditTask.description || '',
         command: command,
-        contextFiles: contextFiles
+        contextFiles: contextFiles,
+        useWorktree: useWorktree
       });
 
       setTimeout(() => {
         term.focus();
         fitTerminal();
       }, 100);
+    }
+
+    function stopAgent() {
+      if (socket) {
+        socket.emit('agent-stop');
+      }
     }
 
     function fitTerminal() {
@@ -4730,6 +4768,7 @@
 
     function closeAgentModal() {
       document.getElementById('agentModal').classList.remove('active');
+      // We do not disconnect socket here to allow background persistence
     }
 
     function switchAgentTab(tabName) {
@@ -4752,7 +4791,12 @@
       container.innerHTML = 'Loading diff...';
 
       try {
-        const response = await fetch(`${API_BASE}/api/diff`);
+        let url = `${API_BASE}/api/diff`;
+        if (currentWorktree) {
+          url += `?worktree=${encodeURIComponent(currentWorktree)}`;
+        }
+
+        const response = await fetch(url);
         const data = await response.json();
 
         if (!data.diff) {

@@ -4,61 +4,66 @@ A sophisticated Vue 3 productivity application combining Pomodoro timer function
 
 ## Features
 
-- **7 Task Views**: Board, Calendar, Canvas, Focus, QuickSort, AllTasks, CalendarVueCal
-- **Pomodoro Timer**: Work/break sessions with browser notifications
-- **Task Management**: Projects, priorities, due dates, subtasks, recurring tasks
-- **Canvas Organization**: Free-form spatial task arrangement with Vue Flow
-- **Persistent Storage**: IndexedDB via LocalForage with automatic backup
-- **Glass Morphism UI**: Modern design system with dark/light themes
+- **7 Task Views**:
+    - **All Tasks**: Comprehensive list view.
+    - **Board**: Kanban-style board.
+    - **Calendar**: Month/week/day views.
+    - **Canvas**: Free-form spatial task arrangement with Vue Flow.
+    - **Focus**: Distraction-free single task view.
+    - **QuickSort**: Rapidly categorize inbox tasks.
+    - **CalendarVueCal**: Alternative calendar implementation.
+- **Pomodoro Timer**: Work/break sessions with browser notifications and comprehensive timer management.
+- **Task Management**: Projects, priorities, due dates, subtasks, recurring tasks.
+- **Dev Manager**: Integrated agentic development dashboard for tracking project progress via `MASTER_PLAN.md`.
+- **Persistent Storage**: Robust offline-first storage using PowerSync (SQLite/WASM) with Supabase synchronization.
+- **Glass Morphism UI**: Modern design system with dark/light themes using Tailwind CSS and Naive UI.
 
 ## Quick Start
 
-```bash
-# Install dependencies
-npm install
+### Prerequisites
+- Node.js >= 20.19.0
+- npm >= 10.0.0
 
+### Installation
+
+```bash
+# Install dependencies (requires legacy-peer-deps due to Storybook/Vite conflicts)
+npm install --legacy-peer-deps
+```
+
+### Development
+
+```bash
 # Start development server
 npm run dev
 # Open http://localhost:5546
+
+# Start Dev Manager (Agent Dashboard)
+npm run dev:manager
+# Open http://localhost:6010
 ```
 
-## Optional: Multi-Device Sync
+## Storage & Sync
 
-Pomo-Flow works fully offline with local browser storage (IndexedDB). No account required!
+Pomo-Flow uses an offline-first architecture:
+- **Local**: SQLite via PowerSync (WASM) for robust local storage.
+- **Remote**: Supabase (PostgreSQL) for cloud synchronization.
 
-For multi-device sync, you can self-host CouchDB:
-
-### Quick Start (Docker)
-
-```bash
-docker run -d --name pomoflow-couchdb \
-  -p 5984:5984 \
-  -e COUCHDB_USER=admin \
-  -e COUCHDB_PASSWORD=your-secure-password \
-  couchdb:3
-```
-
-Then create a `.env` file:
-
-```env
-VITE_COUCHDB_URL=http://localhost:5984/pomoflow
-VITE_COUCHDB_USERNAME=admin
-VITE_COUCHDB_PASSWORD=your-secure-password
-```
-
-See `.env.example` for all configuration options.
+Configuration files:
+- `powersync-config.yaml`
+- `sync-rules.yaml`
 
 ## Development Commands
 
 ```bash
 npm run dev          # Development server (port 5546)
+npm run dev:manager  # Dev Manager dashboard (port 6010)
 npm run build        # Production build
-npm run test         # Run tests
+npm run test         # Run unit tests (Vitest)
 npm run test:watch   # Tests with UI
 npm run storybook    # Component documentation (port 6006)
-npm run kill         # Kill all PomoFlow processes
 npm run lint         # Lint code
-npm run lint:fix     # Fix linting issues
+npm run type-check:watch # TypeScript type checking
 ```
 
 ## Technology Stack
@@ -67,7 +72,7 @@ npm run lint:fix     # Fix linting issues
 - **UI**: Tailwind CSS + Naive UI + Lucide Icons
 - **Canvas**: Vue Flow (@vue-flow/core)
 - **Calendar**: vue-cal
-- **Storage**: PouchDB (IndexedDB) + optional CouchDB sync
+- **Storage**: PowerSync (SQLite/WASM) + Supabase
 - **Build**: Vite 7.2.4
 - **Testing**: Vitest + Playwright
 
@@ -75,18 +80,22 @@ npm run lint:fix     # Fix linting issues
 
 ```
 src/
-├── views/           # 7 application views
-├── components/      # Reusable UI components (10 directories)
-├── stores/          # 12 Pinia stores
-├── composables/     # 56 Vue 3 composables
+├── views/           # Application views (AllTasks, Board, Canvas, etc.)
+├── components/      # Reusable UI components
+├── stores/          # Pinia state management
+├── services/        # Business logic and storage services (PowerSync, etc.)
+├── composables/     # Vue 3 composables
 ├── assets/          # Styles and design tokens
 └── utils/           # Utility functions
+
+dev-manager/         # Standalone agentic development dashboard
 ```
 
 ## Documentation
 
 - **CLAUDE.md** - Development guidance and patterns
 - **docs/MASTER_PLAN.md** - Project roadmap and architecture
+- **AGENTS.md** - Instructions for AI agents working on the codebase
 
 ## License
 

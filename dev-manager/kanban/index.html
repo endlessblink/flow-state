@@ -5,6 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pomo-Flow Task Management</title>
+  <link rel="stylesheet" href="/node_modules/xterm/css/xterm.css" />
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/node_modules/xterm/lib/xterm.js"></script>
   <style>
     /* Design tokens - Pure black theme (matching Storybook) */
     :root {
@@ -1481,6 +1484,135 @@
       margin-bottom: 16px;
     }
 
+    /* AGENT MODAL */
+    .agent-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1100;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .agent-modal.active {
+      display: flex;
+    }
+
+    .agent-modal-content {
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-medium);
+      border-radius: 12px;
+      width: 95%;
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .agent-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-medium);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface-elevated);
+    }
+
+    .agent-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .agent-tabs {
+      display: flex;
+      gap: 4px;
+      margin-left: 20px;
+    }
+
+    .agent-tab {
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .agent-tab:hover {
+      background: var(--surface-hover);
+      color: var(--text-secondary);
+    }
+
+    .agent-tab.active {
+      background: var(--surface-tertiary);
+      color: var(--brand-primary);
+    }
+
+    .agent-body {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .agent-view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+    }
+
+    .agent-view.active {
+      display: flex;
+    }
+
+    #terminal-container {
+      flex: 1;
+      background: #000;
+      padding: 8px;
+      overflow: hidden;
+    }
+
+    #diff-container {
+      flex: 1;
+      background: var(--surface-primary);
+      padding: 20px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .diff-added { color: #10b981; }
+    .diff-removed { color: #ef4444; }
+    .diff-header { color: #8b5cf6; font-weight: bold; }
+
+    .task-modal-btn.agent {
+      background: rgba(124, 58, 237, 0.1);
+      border-color: #7c3aed;
+      color: #a78bfa;
+    }
+
+    .task-modal-btn.agent:hover {
+      background: rgba(124, 58, 237, 0.2);
+      border-color: #8b5cf6;
+      color: #c4b5fd;
+    }
+
     /* SCROLLBAR - Always visible */
     ::-webkit-scrollbar {
       width: 12px;
@@ -1855,6 +1987,34 @@
     </div>
   </div>
 
+  <!-- AGENT MODAL -->
+  <div class="agent-modal" id="agentModal">
+    <div class="agent-modal-content">
+      <div class="agent-header">
+        <div class="agent-title">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+          AI Agent - <span id="agent-task-id"></span>
+          <div class="agent-tabs">
+            <div class="agent-tab active" data-tab="terminal" onclick="switchAgentTab('terminal')">Terminal</div>
+            <div class="agent-tab" data-tab="diff" onclick="switchAgentTab('diff')">Review Changes</div>
+          </div>
+        </div>
+        <button class="task-modal-close" onclick="closeAgentModal()">&times;</button>
+      </div>
+      <div class="agent-body">
+        <div id="agent-terminal-view" class="agent-view active">
+          <div id="terminal-container"></div>
+        </div>
+        <div id="agent-diff-view" class="agent-view">
+          <div id="diff-container">Loading diff...</div>
+          <div style="padding: 10px; border-top: 1px solid var(--border-medium); text-align: right;">
+            <button class="btn" onclick="refreshDiff()">Refresh Diff</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TASK MODAL -->
   <div class="task-modal" id="taskModal">
     <div class="task-modal-content">
@@ -1901,6 +2061,7 @@
       <div class="task-modal-sync-status" id="modalSyncStatus"></div>
 
       <div class="task-modal-actions">
+        <button class="task-modal-btn agent" onclick="openAgent()"><span class="icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-1 5h2v6h-2V9zm0-4h2v2h-2V5z"/></svg></span> Run Agent</button>
         <button class="task-modal-btn" onclick="closeTaskModal()">Close</button>
         <button class="task-modal-btn primary btn-icon" onclick="saveAndClose()"><span class="icon"><svg
               viewBox="0 0 24 24">
@@ -4381,6 +4542,125 @@
       console.log('Window focused - refreshing data...');
       renderKanban();
     });
+
+    // ===== AGENT INTEGRATION =====
+    let socket = null;
+    let term = null;
+
+    function initSocket() {
+      if (!socket) {
+        socket = io();
+        socket.on('agent-output', (data) => {
+          if (term) term.write(data);
+        });
+        socket.on('agent-exit', () => {
+          if (term) term.write('\r\n\x1b[33m[Agent exited]\x1b[0m\r\n');
+        });
+      }
+    }
+
+    function openAgent() {
+      if (!currentEditTask) return;
+
+      const modal = document.getElementById('agentModal');
+      document.getElementById('agent-task-id').textContent = currentEditTask.id;
+      modal.classList.add('active');
+
+      initSocket();
+
+      if (!term) {
+        term = new Terminal({
+          cursorBlink: true,
+          fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+          fontSize: 14,
+          theme: {
+            background: '#000000',
+            foreground: '#ffffff'
+          }
+        });
+
+        const container = document.getElementById('terminal-container');
+        term.open(container);
+
+        term.onData((data) => {
+          socket.emit('agent-input', data);
+        });
+
+        const resizeObserver = new ResizeObserver(() => {
+          fitTerminal();
+        });
+        resizeObserver.observe(container);
+      }
+
+      socket.emit('agent-start', {
+        taskId: currentEditTask.id,
+        taskTitle: currentEditTask.title,
+        taskDescription: currentEditTask.description || ''
+      });
+
+      setTimeout(() => {
+        term.focus();
+        fitTerminal();
+      }, 100);
+    }
+
+    function fitTerminal() {
+       if (!term) return;
+       const container = document.getElementById('terminal-container');
+       const cols = Math.floor(container.clientWidth / 9);
+       const rows = Math.floor(container.clientHeight / 17);
+       term.resize(cols, rows);
+       socket.emit('agent-resize', { cols, rows });
+    }
+
+    function closeAgentModal() {
+      document.getElementById('agentModal').classList.remove('active');
+    }
+
+    function switchAgentTab(tabName) {
+      document.querySelectorAll('.agent-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.agent-tab[data-tab="${tabName}"]`).classList.add('active');
+
+      document.querySelectorAll('.agent-view').forEach(v => v.classList.remove('active'));
+      document.getElementById(`agent-${tabName}-view`).classList.add('active');
+
+      if (tabName === 'terminal' && term) {
+        term.focus();
+        fitTerminal();
+      } else if (tabName === 'diff') {
+        refreshDiff();
+      }
+    }
+
+    async function refreshDiff() {
+      const container = document.getElementById('diff-container');
+      container.innerHTML = 'Loading diff...';
+
+      try {
+        const response = await fetch(`${API_BASE}/api/diff`);
+        const data = await response.json();
+
+        if (!data.diff) {
+          container.innerHTML = 'No changes detected.';
+          return;
+        }
+
+        let html = data.diff
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .split('\n')
+          .map(line => {
+            if (line.startsWith('+')) return `<span class="diff-added">${line}</span>`;
+            if (line.startsWith('-')) return `<span class="diff-removed">${line}</span>`;
+            if (line.startsWith('diff')) return `<span class="diff-header">${line}</span>`;
+            return line;
+          })
+          .join('\n');
+
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = 'Error loading diff: ' + e.message;
+      }
+    }
 
     // ===== LIVE FILE SYNC (SSE) =====
     let eventSource = null;

@@ -190,35 +190,6 @@
             </button>
           </div>
 
-          <!-- Manual Reset -->
-          <div class="tool-card danger-zone">
-            <div class="tool-icon error">
-              <AlertTriangle :size="24" />
-            </div>
-            <div class="tool-info">
-              <h5>Reset Local Data</h5>
-              <p>Wipe local data & Re-sync</p>
-            </div>
-            <button :disabled="isResetting" class="action-btn error-solid sm" @click="resetLocalData">
-              <Loader v-if="isResetting" :size="14" class="animate-spin" />
-              <span v-else>Reset</span>
-            </button>
-          </div>
-
-          <!-- TASK-093: SQLite Migration -->
-          <div class="tool-card highlight">
-            <div class="tool-icon primary">
-              <Database :size="24" />
-            </div>
-            <div class="tool-info">
-              <h5>Migrate to SQLite</h5>
-              <p>Upgrade database (Phase 2)</p>
-            </div>
-            <button :disabled="isMigrating" class="action-btn primary sm" @click="runMigration">
-              <Loader v-if="isMigrating" :size="14" class="animate-spin" />
-              <span v-else>Migrate</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -370,11 +341,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBackupSystem, type BackupData, type BackupConfig } from '@/composables/useBackupSystem'
-import { useDatabase } from '@/composables/useDatabase'
 import { useTaskStore } from '@/stores/tasks'
 import { markdownExportService } from '@/services/data/MarkdownExportService'
-import { migratePouchToSql } from '@/utils/migratePouchToSql'
-import { getGlobalReliableSyncManager } from '@/composables/useReliableSyncManager'
 import {
   Shield, Clock, Calendar, Database, RefreshCw, Download, Upload,
   Play, Pause, Square, Activity, CheckCircle, AlertTriangle,
@@ -552,60 +520,7 @@ const rescueTasks = async () => {
   }
 }
 
-const resetLocalData = async () => {
-  if (isResetting.value) return
-  
-  const confirmed = confirm('⚠️ DANGER: RESET LOCAL DATA?\n\nThis will WIPE all data on this device and force a fresh sync from the cloud.\n\nUse this only if you are missing tasks that exist on other devices.\n\nAre you sure?')
-  if (!confirmed) return
-
-  isResetting.value = true
-  showStatus('☢️ Initiating Nuclear Reset...', 'error')
-
-  try {
-    const syncManager = getGlobalReliableSyncManager()
-    await syncManager.nuclearReset()
-    // nuclearReset will reload the page, so we don't need to do anything else
-  } catch (error) {
-    console.error('Reset failed:', error)
-    showStatus('❌ Reset failed', 'error')
-    isResetting.value = false
-  }
-}
-
-const isMigrating = ref(false)
-
-const runMigration = async () => {
-  if (isMigrating.value) return
-  
-  const confirmed = confirm('🚀 READY TO MIGRATE?\n\nThis will copy all data from the old PouchDB to the new SQLite database.\n\nYour existing data is safe and will not be deleted.\n\nContinue?')
-  if (!confirmed) return
-
-  isMigrating.value = true
-  showStatus('📦 Migrating data to SQLite...', 'info')
-
-  try {
-    // Get the active PouchDB instance to avoid connection conflicts
-    const { database } = useDatabase()
-    
-    // Check if database is ready
-    if (!database.value) {
-        throw new Error('Database not initialized. Please reload.')
-    }
-
-    const result = await migratePouchToSql(database.value)
-    if (result.errors.length > 0) {
-      console.warn('Migration warnings:', result.errors)
-      showStatus(`⚠️ Migration finished with potential issues. Check console.`, 'warning')
-    } else {
-      showStatus(`✅ Migration Successful! Copied ${result.tasks} tasks and ${result.projects} projects.`, 'success')
-    }
-  } catch (error) {
-    console.error('Migration failed:', error)
-    showStatus('❌ Migration failed check console', 'error')
-  } finally {
-    isMigrating.value = false
-  }
-}
+// Migration and Reset methods removed as they are legacy
 
 
 

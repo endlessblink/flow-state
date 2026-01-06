@@ -92,152 +92,7 @@
       </div>
     </div>
 
-    <!-- CouchDB Configuration -->
-    <div v-if="selectedProvider === 'couchdb'" class="setting-group couchdb-config">
-      <label class="setting-label">
-        <span>CouchDB Server</span>
-        <span class="setting-description">Your CouchDB server URL and credentials</span>
-      </label>
-      <div class="couchdb-fields">
-        <input
-          v-model="couchdbUrl"
-          type="text"
-          placeholder="http://your-server:5984/database"
-          class="token-input"
-          :disabled="isSyncing"
-        >
-        <div class="couchdb-auth">
-          <input
-            v-model="couchdbUsername"
-            type="text"
-            placeholder="Username"
-            class="token-input"
-            :disabled="isSyncing"
-          >
-          <input
-            v-model="couchdbPassword"
-            type="password"
-            placeholder="Password"
-            class="token-input"
-            :disabled="isSyncing"
-          >
-        </div>
-        <button :disabled="!couchdbUrl || isSyncing" class="save-token-btn" @click="saveCouchDBConfig">
-          <Key :size="16" />
-          Save & Test Connection
-        </button>
-      </div>
-      <div v-if="couchdbConnectionStatus" class="connection-test-result" :class="couchdbConnectionStatus">
-        {{ couchdbConnectionMessage }}
-      </div>
-    </div>
-
-    <!-- GitHub Token Input -->
-    <div v-if="selectedProvider === 'github'" class="setting-group">
-      <label class="setting-label">
-        <span>GitHub Token</span>
-        <span class="setting-description">Personal access token with gist permissions</span>
-      </label>
-      <div class="token-input-group">
-        <input
-          v-model="githubToken"
-          type="password"
-          placeholder="ghp_xxxxxxxxxxxx"
-          class="token-input"
-          :disabled="isSyncing"
-        >
-        <button :disabled="!githubToken || isSyncing" class="save-token-btn" @click="saveGitHubToken">
-          <Key :size="16" />
-          Save
-        </button>
-      </div>
-      <div class="token-help">
-        <a href="https://github.com/settings/tokens/new?scopes=gist" target="_blank" rel="noopener noreferrer">
-          Create GitHub Token →
-        </a>
-      </div>
-    </div>
-
-    <!-- Sync Actions -->
-    <div v-if="selectedProvider" class="sync-actions">
-      <button
-        :disabled="isSyncing"
-        class="action-btn"
-        :class="syncEnabled ? 'danger' : 'primary'"
-        @click="toggleSync"
-      >
-        <Power v-if="syncEnabled" :size="16" />
-        <Cloud v-else :size="16" />
-        {{ syncEnabled ? 'Disable Sync' : 'Enable Sync' }}
-      </button>
-
-      <button :disabled="!syncEnabled || isSyncing" class="action-btn secondary" @click="manualSync">
-        <RefreshCw v-if="isSyncing" :size="16" class="animate-spin" />
-        <Download v-else :size="16" />
-        {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
-      </button>
-
-      <button v-if="syncStatus.syncUrl" class="action-btn secondary" @click="copySyncUrl">
-        <Copy :size="16" />
-        Copy URL
-      </button>
-    </div>
-
-    <!-- Live Sync Toggle -->
-    <div v-if="selectedProvider === 'couchdb' && syncEnabled" class="setting-group live-sync-toggle">
-      <label class="setting-label">
-        <span>Live Sync (Auto)</span>
-        <span class="setting-description">Automatically sync changes across tabs/browsers in real-time</span>
-      </label>
-      <div class="live-sync-controls">
-        <button
-          :disabled="isSyncing"
-          class="action-btn"
-          :class="liveSyncActive ? 'danger' : 'success'"
-          @click="toggleLiveSync"
-        >
-          <RefreshCw v-if="liveSyncActive" :size="16" class="animate-pulse" />
-          <Zap v-else :size="16" />
-          {{ liveSyncActive ? 'Stop Live Sync' : 'Start Live Sync' }}
-        </button>
-        <span v-if="liveSyncActive" class="live-sync-status">
-          🟢 Live sync active
-        </span>
-      </div>
-    </div>
-
-    <!-- Device Info -->
-    <div v-if="syncEnabled" class="device-info">
-      <div class="info-header">
-        <Monitor :size="14" />
-        <span>This Device</span>
-      </div>
-      <div class="device-details">
-        <div class="device-name">
-          {{ syncStatus.deviceName }}
-        </div>
-        <div class="device-id">
-          ID: {{ truncateId(syncStatus.deviceId) }}
-        </div>
-      </div>
-    </div>
-
-    <!-- Sync Progress -->
-    <div v-if="isSyncing" class="sync-progress">
-      <div class="progress-header">
-        <div class="progress-text">
-          Syncing data...
-        </div>
-        <div class="progress-status">
-          {{ syncProgress }}
-        </div>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill" :style="{ width: `${progressPercent}%` }" />
-      </div>
-    </div>
-
-    <!-- Sync History -->
+    <!-- Sync History (Placeholder for Supabase events) -->
     <div v-if="syncHistory.length > 0" class="sync-history">
       <div class="history-header">
         <Clock :size="14" />
@@ -262,8 +117,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { getGlobalReliableSyncManager, type ReliableSyncManagerInstance } from '@/composables/useReliableSyncManager'
-import { usePersistentStorage } from '@/composables/usePersistentStorage'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { SyncProviderType as _SyncProviderType } from '@/types/sync'
 import {
   Wifi, WifiOff, Cloud, Download, RefreshCw, Copy, Key, Power, Monitor, Clock, Zap, LogOut, User
@@ -284,28 +138,12 @@ const syncProviderOptions = [
   { label: 'GitHub Gist (Requires token)', value: 'github' }
 ]
 
-const reliableSyncManager = getGlobalReliableSyncManager()
-const {
-  isOnline,
-  remoteConnected,
-  hasConnectedEver,
-  lastSyncTime,
-  _isLiveSyncActive,
-} = reliableSyncManager as ReliableSyncManagerInstance & {
-  configureProvider?: (config: unknown) => Promise<void>
-  enableProvider?: () => Promise<void>
-  disableProvider?: () => Promise<void>
-  _isLiveSyncActive?: import('vue').Ref<boolean>
-}
-const _persistentStorage = usePersistentStorage()
+const { fetchStatus } = useSupabaseDatabase()
 
-// State - Initialize from localStorage for persistence across page refreshes
-// If hasConnectedEver is true, default to 'couchdb' even if pomo-cloud-provider wasn't explicitly set
-const savedProvider = localStorage.getItem('pomo-cloud-provider')
-const selectedProvider = ref(savedProvider || (hasConnectedEver.value ? 'couchdb' : ''))
-const githubToken = ref(localStorage.getItem('github-token') || '')
-const isSyncing = ref(false) // Local UI state for sync in progress
-const syncEnabled = ref(!!savedProvider || hasConnectedEver.value)
+// State
+const selectedProvider = ref('supabase')
+const isSyncing = ref(false)
+const syncEnabled = ref(true)
 const syncProgress = ref('')
 const progressPercent = ref(0)
 const syncHistory = ref<Array<{
@@ -315,326 +153,33 @@ const syncHistory = ref<Array<{
   success: boolean
 }>>([])
 
-// CouchDB State - Initialize from localStorage
-const couchdbUrl = ref(localStorage.getItem('pomo-couchdb-url') || 'http://84.46.253.137:5984/pomoflow-tasks')
-const couchdbUsername = ref(localStorage.getItem('pomo-couchdb-username') || 'admin')
-const couchdbPassword = ref(localStorage.getItem('pomo-couchdb-password') || 'pomoflow-2024')
-const couchdbConnectionStatus = ref<'success' | 'error' | ''>('')
-const couchdbConnectionMessage = ref('')
-
-// Live Sync State - Persist to localStorage
-const liveSyncActive = ref(localStorage.getItem('pomo-live-sync-active') === 'true')
-
 // WORKAROUND: Poll-based status update to bypass Vue reactivity issues with localStorage
 // This counter forces computed properties to re-evaluate
 const forceUpdateCounter = ref(0)
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
 // Computed
+// Computed status for Supabase
 const syncStatus = computed(() => {
-  // Force re-evaluation via counter (workaround for reactivity issues)
-  void forceUpdateCounter.value
-  // Check localStorage for persistent connection status
-  // const hasConnectedEver = localStorage.getItem('pomoflow_hasConnectedEver') === 'true' // Now using destructured hasConnectedEver
-  // Read lastSyncTime from localStorage for reliable persistence
-  const storedLastSync = localStorage.getItem('pomoflow_lastSyncTime')
-  const lastSyncTimestamp = storedLastSync ? new Date(storedLastSync).getTime() : 0
-
-  // Determine provider name based on selection, connection status, or connection history
-  let providerName = 'Local Only'
-
-  // Check multiple conditions for connection
-  const hasConnected = hasConnectedEver.value || remoteConnected.value
-
-  if (selectedProvider.value === 'couchdb') {
-    providerName = 'CouchDB'
-  } else if (selectedProvider.value === 'jsonbin' && (syncEnabled.value || hasConnected)) {
-    providerName = 'JSONBin'
-  } else if (selectedProvider.value === 'github' && (syncEnabled.value || hasConnected)) {
-    providerName = 'GitHub Gist'
-  }
-
+  const user = authStore.user
   return {
-    isOnline: isOnline.value || hasConnected, // Use the manager's isOnline or our derived hasConnected
-    provider: providerName,
-    lastSyncTime: lastSyncTimestamp || lastSyncTime.value?.getTime() || 0,
-    syncUrl: selectedProvider.value === 'couchdb' ? couchdbUrl.value : '',
-    deviceName: 'PomoFlow Device',
-    deviceId: localStorage.getItem('pomo-device-id') || 'device-' + Math.random().toString(36).substring(7),
-    nextSyncIn: 0
+    isOnline: !!user,
+    provider: 'Supabase',
+    lastSyncTime: Date.now(), // Realtime is active
+    syncUrl: 'Supabase Cloud',
+    deviceName: 'This Device',
+    deviceId: 'default'
   }
 })
 
 // Methods
-const onProviderChange = async () => {
-  if (selectedProvider.value) {
-    await enableSync()
-  } else {
-    await disableSync()
-  }
-}
-
-const enableSync = async () => {
-  if (!selectedProvider.value) return
-
-  try {
-    isSyncing.value = true
-    syncProgress.value = 'Initializing sync...'
-
-    // Configure cloud backup provider through unified manager
-    const providerConfig = {
-      provider: selectedProvider.value as 'jsonbin' | 'github-gist',
-      apiKey: selectedProvider.value === 'github-gist' ? githubToken.value : undefined,
-      autoSync: true,
-      syncInterval: 5 * 60 * 1000, // 5 minutes
-      compressionEnabled: true
-    }
-
-    await reliableSyncManager.configureProvider?.(providerConfig)
-    await reliableSyncManager.enableProvider?.()
-    syncEnabled.value = true
-
-    addHistoryEntry('Sync enabled', true)
-
-    // Perform initial sync
-    await manualSync()
-
-  } catch (error) {
-    console.error('Failed to enable sync:', error)
-    addHistoryEntry('Failed to enable sync', false)
-  } finally {
-    isSyncing.value = false
-  }
-}
-
-const disableSync = async () => {
-  try {
-    isSyncing.value = true
-    syncProgress.value = 'Disabling sync...'
-
-    await reliableSyncManager.disableProvider?.()
-    syncEnabled.value = false
-
-    addHistoryEntry('Sync disabled', true)
-
-  } catch (error) {
-    console.error('Failed to disable sync:', error)
-    addHistoryEntry('Failed to disable sync', false)
-  } finally {
-    isSyncing.value = false
-  }
-}
-
-const toggleSync = async () => {
-  if (syncEnabled.value) {
-    await disableSync()
-  } else {
-    await enableSync()
-  }
-}
-
-const manualSync = async () => {
-  if (!syncEnabled.value) return
-
-  try {
-    isSyncing.value = true
-    progressPercent.value = 0
-    syncProgress.value = 'Preparing data...'
-
-    // Step 1: Upload current data
-    progressPercent.value = 25
-    syncProgress.value = 'Uploading local changes...'
-    try {
-      await reliableSyncManager.triggerSync()
-    } catch (syncError) {
-      throw new Error((syncError as Error)?.message || 'Failed to upload data')
-    }
-
-    // Step 2: Download remote changes
-    progressPercent.value = 50
-    syncProgress.value = 'Checking for remote changes...'
-    try {
-      await reliableSyncManager.triggerSync()
-    } catch (_syncError) {
-      // Sync error on download - still partial success
-    }
-
-    progressPercent.value = 100
-    syncProgress.value = 'Sync complete'
-
-    addHistoryEntry('Manual sync completed', true)
-
-    setTimeout(() => {
-      isSyncing.value = false
-      syncProgress.value = ''
-      progressPercent.value = 0
-    }, 2000)
-
-  } catch (error) {
-    console.error('Manual sync failed:', error)
-    syncProgress.value = 'Sync failed'
-    addHistoryEntry('Manual sync failed', false)
-
-    setTimeout(() => {
-      isSyncing.value = false
-      syncProgress.value = ''
-      progressPercent.value = 0
-    }, 3000)
-  }
-}
-
-const saveGitHubToken = async () => {
-  if (!githubToken.value) return
-
-  try {
-    // Update provider configuration with new GitHub token
-    const providerConfig = {
-      provider: 'github-gist' as const,
-      apiKey: githubToken.value,
-      autoSync: true,
-      syncInterval: 5 * 60 * 1000, // 5 minutes
-      compressionEnabled: true
-    }
-
-    await reliableSyncManager.configureProvider?.(providerConfig)
-    addHistoryEntry('GitHub token saved', true)
-  } catch (error) {
-    console.error('Failed to save GitHub token:', error)
-    addHistoryEntry('Failed to save GitHub token', false)
-  }
-}
-
-const saveCouchDBConfig = async () => {
-  if (!couchdbUrl.value) return
-
-  couchdbConnectionStatus.value = ''
-  couchdbConnectionMessage.value = ''
-
-  try {
-    // Test connection to CouchDB server
-    const testUrl = couchdbUrl.value.replace(/\/[^/]+$/, '') // Get base URL without database
-    const response = await fetch(testUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Basic ' + btoa(`${couchdbUsername.value}:${couchdbPassword.value}`)
-      }
-    })
-
-    if (response.ok) {
-      const serverInfo = await response.json()
-      couchdbConnectionStatus.value = 'success'
-      couchdbConnectionMessage.value = `✅ Connected to CouchDB ${serverInfo.version || ''}`
-
-      // Save config to localStorage
-      localStorage.setItem('pomo-couchdb-url', couchdbUrl.value)
-      localStorage.setItem('pomo-couchdb-username', couchdbUsername.value)
-      localStorage.setItem('pomo-couchdb-password', couchdbPassword.value)
-      localStorage.setItem('pomo-cloud-provider', 'couchdb')  // Save provider selection
-
-      selectedProvider.value = 'couchdb'  // Update dropdown to reflect CouchDB
-      syncEnabled.value = true
-      addHistoryEntry('CouchDB connected', true)
-    } else {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-  } catch (error) {
-    console.error('CouchDB connection test failed:', error)
-    couchdbConnectionStatus.value = 'error'
-    couchdbConnectionMessage.value = `❌ Connection failed: ${(error as Error).message}`
-    addHistoryEntry('CouchDB connection failed', false)
-  }
-}
-
-const copySyncUrl = async () => {
-  if (!syncStatus.value.syncUrl) return
-
-  try {
-    await navigator.clipboard.writeText(syncStatus.value.syncUrl)
-    addHistoryEntry('Sync URL copied', true)
-  } catch (error) {
-    console.error('Failed to copy URL:', error)
-    addHistoryEntry('Failed to copy URL', false)
-  }
-}
-
-// Live Sync Toggle
-const toggleLiveSync = async () => {
-  if (liveSyncActive.value) {
-    // Stop live sync
-    try {
-      await reliableSyncManager.stopLiveSync()
-      liveSyncActive.value = false
-      localStorage.setItem('pomo-live-sync-active', 'false')  // Persist state
-      addHistoryEntry('Live sync stopped', true)
-    } catch (error) {
-      console.error('Failed to stop live sync:', error)
-      addHistoryEntry('Failed to stop live sync', false)
-    }
-  } else {
-    // Start live sync
-    try {
-      isSyncing.value = true
-      syncProgress.value = 'Starting live sync...'
-      const success = await reliableSyncManager.startLiveSync()
-      if (success) {
-        liveSyncActive.value = true
-        selectedProvider.value = 'couchdb'
-        syncEnabled.value = true
-        couchdbConnectionStatus.value = 'success'
-        localStorage.setItem('pomo-live-sync-active', 'true')  // Persist state
-        localStorage.setItem('pomo-cloud-provider', 'couchdb')  // Persist provider
-        addHistoryEntry('Live sync started', true)
-      } else {
-        addHistoryEntry('Failed to start live sync', false)
-      }
-    } catch (error) {
-      console.error('Failed to start live sync:', error)
-      addHistoryEntry('Failed to start live sync', false)
-    } finally {
-      isSyncing.value = false
-      syncProgress.value = ''
-    }
-  }
-}
-
-// Restore sync state from sync manager or localStorage
-const restoreSyncState = async () => {
-  const wasLiveSyncActive = localStorage.getItem('pomo-live-sync-active') === 'true'
-  const hasConnected = localStorage.getItem('pomoflow_hasConnectedEver') === 'true'
-
-  // First check if live sync is ALREADY running in the sync manager
-  if (reliableSyncManager.isLiveSyncActive?.()) {
-    console.log('✅ Live sync already active in sync manager')
-    liveSyncActive.value = true
-    selectedProvider.value = 'couchdb'
-    syncEnabled.value = true
-    couchdbConnectionStatus.value = 'success'
-    localStorage.setItem('pomo-live-sync-active', 'true')
-    localStorage.setItem('pomo-cloud-provider', 'couchdb')
-    return
-  }
-
-  // If not running but should be, auto-start
-  if (wasLiveSyncActive || (hasConnected && selectedProvider.value === 'couchdb')) {
-    console.log('🔄 Auto-starting live sync from previous session...')
-    try {
-      const success = await reliableSyncManager.startLiveSync()
-      if (success) {
-        liveSyncActive.value = true
-        selectedProvider.value = 'couchdb'
-        syncEnabled.value = true
-        couchdbConnectionStatus.value = 'success'
-        localStorage.setItem('pomo-live-sync-active', 'true')
-        localStorage.setItem('pomo-cloud-provider', 'couchdb')
-        console.log('✅ Live sync auto-started successfully')
-      }
-    } catch (error) {
-      console.error('Failed to auto-start live sync:', error)
-      localStorage.setItem('pomo-live-sync-active', 'false')  // Reset if failed
-      liveSyncActive.value = false
-    }
-  }
-}
+// Placeholder methods for Supabase sync
+const onProviderChange = () => {}
+const toggleSync = () => {}
+const manualSync = () => {}
+const copySyncUrl = () => {}
+const toggleLiveSync = () => {}
+const restoreSyncState = () => {}
 
 const addHistoryEntry = (action: string, success: boolean) => {
   syncHistory.value.unshift({

@@ -16,7 +16,8 @@ export function useQuickSort() {
   // Getters
   // Fixed: Use direct filtering instead of mutating store state (antipattern)
   const uncategorizedTasks = computed<Task[]>(() => {
-    return taskStore.tasks.filter(task => isUncategorizedTask(task))
+    // BUG-FIX: Exclude soft-deleted tasks
+    return taskStore.tasks.filter(task => !task._soft_deleted && isUncategorizedTask(task))
   })
 
   // Watch for list updates to clamp index

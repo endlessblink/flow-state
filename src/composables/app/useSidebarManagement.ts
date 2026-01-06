@@ -119,6 +119,8 @@ export function useSidebarManagement() {
     today.setHours(0, 0, 0, 0)
 
     return taskStore.tasks.filter(task => {
+      // BUG-FIX: Exclude soft-deleted tasks
+      if (task._soft_deleted) return false
       // Exclude done tasks from today count (matches filteredTasks logic)
       if (task.status === 'done') {
         return false
@@ -167,6 +169,8 @@ export function useSidebarManagement() {
     const weekEndStr = weekEnd.toISOString().split('T')[0]
 
     return taskStore.tasks.filter(task => {
+      // BUG-FIX: Exclude soft-deleted tasks
+      if (task._soft_deleted) return false
       // Exclude done tasks from week count (matches filteredTasks logic)
       if (task.status === 'done') {
         return false
@@ -222,6 +226,8 @@ export function useSidebarManagement() {
 
     // Fallback to manual filtering
     return taskStore.tasks.filter(task => {
+      // BUG-FIX: Exclude soft-deleted tasks
+      if (task._soft_deleted) return false
       // Count all tasks that are not marked as done
       // This matches the "all_active" smart view logic
       return task.status !== 'done'
@@ -232,6 +238,8 @@ export function useSidebarManagement() {
   const uncategorizedCount = computed(() => {
     // Use the exact same logic as the store's uncategorized filter for consistency
     const filteredTasks = taskStore.tasks.filter(task => {
+      // BUG-FIX: Exclude soft-deleted tasks
+      if (task._soft_deleted) return false
       // Apply same filtering logic as uncategorized smart view in taskStore.filteredTasks
       // Check isUncategorized flag first
       if (task.isUncategorized === true) {

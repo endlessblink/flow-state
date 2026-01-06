@@ -186,7 +186,7 @@ const rootProjects = computed(() => {
     if (project.parentId) return false  // Only root projects
 
     // Check if project has any tasks
-    const hasActiveTasks = taskStore.tasks.some(task => task.projectId === project.id)
+    const hasActiveTasks = taskStore.tasks.some(task => task.projectId === project.id && !task._soft_deleted)
     return hasActiveTasks
   })
 

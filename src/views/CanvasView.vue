@@ -114,7 +114,11 @@
       <!-- Always show VueFlow canvas, even when empty -->
       <div class="canvas-container-wrapper">
         <!-- Canvas with tasks -->
-        <div class="canvas-container" style="width: 100%; height: 100vh; position: relative;">
+        <div 
+          class="canvas-container" 
+          style="width: 100%; height: 100vh; position: relative;"
+          @mousedown.capture="handleMouseDown"
+        >
           <VueFlow
             ref="vueFlowRef"
             v-model:nodes="nodes"
@@ -128,7 +132,8 @@
             zoom-on-scroll
             :pan-on-scroll="false"
             zoom-on-pinch
-            pan-on-drag
+            :pan-on-drag="!shift"
+            :nodes-draggable="!shift"
             multi-selection-key-code="Shift"
             snap-to-grid
             :snap-grid="[16, 16]"
@@ -158,6 +163,23 @@
             @connect-end="handleConnectEnd"
             @keydown="handleKeyDown"
           >
+          <!-- Rubber Band Selection Box - Moved outside VueFlow to avoid zoom transforms -->
+          <!-- Using fixed position to match clientX/Y coordinates directly -->
+          <div
+            v-if="selectionBox.isVisible"
+            class="selection-box"
+            :style="{
+              position: 'fixed',
+              left: `${selectionBox.x}px`,
+              top: `${selectionBox.y}px`,
+              width: `${selectionBox.width}px`,
+              height: `${selectionBox.height}px`,
+              zIndex: 9999,
+              pointerEvents: 'none',
+              border: '1px solid var(--accent-primary)',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)'
+            }"
+          />
             <!-- Background Grid -->
             <Background
               pattern-color="#e5e7eb"
@@ -418,6 +440,7 @@ import { useCanvasAlignment } from '../composables/canvas/useCanvasAlignment'
 // REMOVED: Library styles were forcing circular handles
 // import '@vue-flow/node-resizer/dist/style.css'
 
+import { useCanvasSmartGroups } from '../composables/canvas/useCanvasSmartGroups'
 import { useCanvasActions } from '../composables/canvas/useCanvasActions'
 import { useCanvasConnections } from '../composables/canvas/useCanvasConnections'
 import { useCanvasSync } from '../composables/canvas/useCanvasSync'
@@ -457,6 +480,32 @@ const storeHealth = validateStores()
 // we avoid the default (0,0,1) → saved viewport jump
 // Navigation (Extracted)
 const { initialViewport, fitCanvas, zoomToSelection } = useCanvasNavigation(canvasStore)
+
+// TASK-018: Rubber Band Selection
+const { 
+  selectionBox, 
+  startSelection, 
+  updateSelection, 
+  endSelection 
+} = useCanvasSelection()
+
+const handleMouseDown = (event: MouseEvent) => {
+  if (event.shiftKey) {
+    startSelection(event)
+  }
+}
+
+const handleMouseMove = (event: MouseEvent) => {
+  if (selectionBox.isVisible) {
+    updateSelection(event)
+  }
+}
+
+const handleMouseUp = (event: MouseEvent) => {
+  if (selectionBox.isVisible) {
+    endSelection(event)
+  }
+}
 
 // TASK-082: Date transition handler - move Today tasks to Overdue at midnight
 // Logic extracted to composable for testability (Jan 4, 2026)
@@ -775,14 +824,40 @@ const {
   clearOperationError
 })
 
+// TASK-100: Overdue Smart Group Logic
+const { autoCollectOverdueTasks } = useCanvasSmartGroups()
+
+// 🚀 Lifecycle Hooks (Moved Up)
+onMounted(async () => {
+  // Wait for stores to be ready
+  if (!storeHealth.taskStore || !storeHealth.canvasStore) {
+    console.warn('⚠️ Stores not ready on mount, canvas initialization may complete later')
+  }
+})
+
 // TASK-082 & REACTIVITY FIX: Watch filteredTasks to trigger sync
 // extensive debugging revealed this was missing/lost in merge, causing stale canvas
 watch(filteredTasks, () => {
-  if (!isAnyCanvasStateLocked()) {
-    batchedSyncNodes('high')
-    batchedSyncEdges('high')
-  }
+  batchedSyncNodes('high')
+  batchedSyncEdges('high')
 }, { deep: true, immediate: true })
+
+// TASK-100: Overdue Smart Group Logic - Wait for sections to load
+// Use immediate watcher to catch if sections are already loaded, or wait for them
+const hasRunOverdueCheck = ref(false)
+watch(() => canvasStore.sections, async (newSections) => {
+    if (newSections.length > 0 && !hasRunOverdueCheck.value) {
+        hasRunOverdueCheck.value = true
+        try {
+            console.log('🧹 [CANVAS] Sections loaded, checking for overdue tasks...')
+            // Small delay to ensure everything is settled
+            await nextTick()
+            await autoCollectOverdueTasks()
+        } catch (e) {
+            console.error('❌ Failed to auto-collect overdue tasks:', e)
+        }
+    }
+}, { immediate: true })
 
 // WATCHER: Also watch edges for external changes (optional safety)
 watch(edges, (newEdges) => {
@@ -3282,7 +3357,15 @@ onBeforeUnmount(() => {
 .vue-flow__handle-target {
   border: none !important;
   outline: none !important;
-  box-shadow: none !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.selection-box {
+  position: fixed;
+  border: 1px solid var(--primary-color);
+  background-color: rgba(99, 102, 241, 0.1);
+  pointer-events: none;
+  z-index: 9999;
 }
 
 /* Remove background/container borders */
@@ -3840,12 +3923,20 @@ body.dragging-active .vue-flow__background {
 
 /*
    SHIFT-DRAG SELECTION SUPPORT
-   When Shift is held, disable pointer events on Section/Group nodes
+   When Shift is held, disable pointer events on Section/Group AND Task nodes
    so the drag event falls through to the Pane to start the selection box.
    This enables rubber-band selection starting from inside a group.
 */
-.shift-selecting :deep(.vue-flow__node-sectionNode) {
+.shift-selecting .vue-flow__node-sectionNode,
+.shift-selecting .vue-flow__node-taskNode {
   pointer-events: none !important;
 }
 
+.selection-box {
+  position: fixed;
+  border: 1px solid var(--primary-color);
+  background-color: rgba(99, 102, 241, 0.1);
+  pointer-events: none;
+  z-index: 9999;
+}
 </style>

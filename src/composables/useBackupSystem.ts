@@ -8,29 +8,24 @@
  * @since 2025-12-03
  */
 
-import { ref, computed, watch as _watch, onMounted, onUnmounted, getCurrentInstance } from 'vue'
+import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
+import { useProjectStore } from '@/stores/projects'
 import { useCanvasStore } from '@/stores/canvas'
-import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { filterMockTasks } from '@/utils/mockTaskDetector'
-import type { Task } from '@/types/tasks'
+import type { Task, Project } from '@/types/tasks'
+import type { CanvasGroup } from '@/stores/canvas'
 
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
 
-// Task-like interface for backup data (minimal type for backup operations)
-interface BackupTaskLike {
-  title?: string
-  description?: string
-  [key: string]: unknown
-}
-
 export interface BackupData {
   id: string
-  tasks: BackupTaskLike[]
-  projects: unknown[]
-  canvas: unknown
+  tasks: Task[]
+  projects: Project[]
+  groups: CanvasGroup[]
   timestamp: number
   version: string
   checksum: string
@@ -38,6 +33,7 @@ export interface BackupData {
   metadata?: {
     taskCount: number
     projectCount: number
+    groupCount: number
     size?: number
     exportedAt?: string
   }
@@ -133,8 +129,9 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
   // Dependencies
   const taskStore = useTaskStore()
-  const _canvasStore = useCanvasStore()
-  const db = useDatabase()
+  const projectStore = useProjectStore()
+  const canvasStore = useCanvasStore()
+  const db = useSupabaseDatabase()
 
   // State
   const state = ref<BackupSystemState>({
@@ -266,51 +263,42 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       console.log(`[Backup] Creating ${type} backup...`)
 
       // Get tasks from store
-      let tasks: BackupTaskLike[] = (taskStore.tasks || []) as BackupTaskLike[]
-
-      // Validate tasks
-      if (!Array.isArray(tasks)) {
-        console.warn('[Backup] Tasks is not an array, using empty array')
-        tasks = []
-      }
+      let tasks = [...(taskStore.tasks || [])]
 
       // Filter mock tasks if enabled
       if (config.value.filterMockTasks && tasks.length > 0) {
-        const filterResult = filterMockTasks(tasks, { confidence: 'medium', logResults: false })
+        const filterResult = filterMockTasks(tasks as unknown as Record<string, unknown>[], { confidence: 'medium', logResults: false })
         if (filterResult.mockTasks.length > 0) {
           console.log(`[Backup] Filtered ${filterResult.mockTasks.length} mock tasks`)
         }
-        tasks = filterResult.cleanTasks as BackupTaskLike[]
+        tasks = filterResult.cleanTasks as unknown as Task[]
       }
 
       // BUG-059 FIX: Check if this backup looks suspicious before saving
       const suspiciousCheck = isBackupSuspicious(tasks.length, type)
       if (suspiciousCheck.suspicious) {
-        console.warn(`🛡️ [Backup] BLOCKED: ${suspiciousCheck.reason}`)
-        console.warn(`🛡️ [Backup] Golden backup preserved with ${getGoldenBackup()?.metadata?.taskCount || 0} tasks`)
         state.value.error = suspiciousCheck.reason
         return null
       }
 
-      // Get other data
-      const [projects, canvas] = await Promise.all([
-        db.load(DB_KEYS.PROJECTS),
-        db.load(DB_KEYS.CANVAS)
-      ])
+      // Get projects and groups from stores
+      const projects = [...(projectStore.projects || [])]
+      const groups = [...(canvasStore.groups || [])]
 
       // Create backup object
       const backupData: BackupData = {
         id: generateBackupId(),
         tasks,
-        projects: Array.isArray(projects) ? projects : [],
-        canvas: canvas || {},
+        projects,
+        groups,
         timestamp: Date.now(),
-        version: '2.0.0',
+        version: '3.0.0', // Version bump for Supabase-backed backup
         checksum: '',
         type,
         metadata: {
           taskCount: tasks.length,
-          projectCount: Array.isArray(projects) ? projects.length : 0
+          projectCount: projects.length,
+          groupCount: groups.length
         }
       }
 
@@ -318,7 +306,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       backupData.checksum = calculateChecksum({
         tasks: backupData.tasks,
         projects: backupData.projects,
-        canvas: backupData.canvas
+        groups: backupData.groups
       })
 
       // Calculate approximate size
@@ -339,7 +327,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       stats.value.lastBackupTime = backupData.timestamp
       stats.value.totalBackups++
 
-      console.log(`[Backup] Created successfully: ${backupData.metadata?.taskCount} tasks, ${backupData.metadata?.projectCount} projects`)
+      console.log(`[Backup] Created successfully: ${backupData.metadata?.taskCount} tasks, ${backupData.metadata?.projectCount} projects, ${backupData.metadata?.groupCount} groups`)
 
       return backupData
 
@@ -379,7 +367,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
         const currentChecksum = calculateChecksum({
           tasks: backupData.tasks,
           projects: backupData.projects,
-          canvas: backupData.canvas
+          groups: backupData.groups
         })
         if (currentChecksum !== backupData.checksum) {
           console.warn('[Backup] Checksum mismatch - backup may be corrupted')
@@ -392,19 +380,28 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       await createBackup('emergency')
       state.value.restoreProgress = 40
 
-      // Restore using atomic transaction
-      await db.atomicTransaction([
-        () => db.save(DB_KEYS.TASKS, backupData.tasks),
-        () => db.save(DB_KEYS.PROJECTS, backupData.projects || []),
-        () => db.save(DB_KEYS.CANVAS, backupData.canvas || {})
-      ], 'restore-backup')
+      // Restore to Supabase
+      // Note: We're doing serial saves for stability, but could be Promise.all
+      // Restore Tasks
+      await db.saveTasks(backupData.tasks)
+      state.value.restoreProgress = 60
 
+      // Restore Projects
+      await db.saveProjects(backupData.projects || [])
+      state.value.restoreProgress = 70
+
+      // Restore Groups
+      if (backupData.groups && Array.isArray(backupData.groups)) {
+        for (const group of backupData.groups) {
+          await db.saveGroup(group)
+        }
+      }
       state.value.restoreProgress = 80
 
-      // Reload stores (cast backup data to Task[] for restoreState)
-      if (taskStore.restoreState) {
-        await taskStore.restoreState(backupData.tasks as unknown as Task[])
-      }
+      // Reload stores from database
+      if (taskStore.loadFromDatabase) await taskStore.loadFromDatabase()
+      if (projectStore.loadProjectsFromDatabase) await projectStore.loadProjectsFromDatabase()
+      if (canvasStore.loadFromDatabase) await canvasStore.loadFromDatabase()
 
       state.value.restoreProgress = 100
 
@@ -752,81 +749,6 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       console.log(`[Backup] Restoring from golden backup: ${golden.metadata?.taskCount} tasks`)
       return await restoreBackup(golden)
     }
-  }
-}
-
-// ============================================================================
-// Singleton Export for Legacy Compatibility
-// ============================================================================
-
-/**
- * Singleton instance for components using the old object pattern
- * @deprecated Use useBackupSystem() composable instead
- */
-const singletonInstance: ReturnType<typeof useBackupSystem> | null = null as any
-
-export const backupSystem = {
-  getInstance() {
-    if (!singletonInstance) {
-      // Create a minimal instance for legacy usage
-      console.warn('[Backup] Using legacy singleton - migrate to useBackupSystem() composable')
-    }
-    return singletonInstance
-  },
-
-  // Legacy method mappings
-  async createBackup() {
-    const instance = this.getInstance()
-    return instance?.createBackup('manual') || null
-  },
-
-  getLatestBackup() {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.LATEST)
-      return stored ? JSON.parse(stored) : null
-    } catch {
-      return null
-    }
-  },
-
-  async exportTasks() {
-    const backup = this.getLatestBackup()
-    return backup ? JSON.stringify(backup, null, 2) : ''
-  },
-
-  downloadBackup() {
-    const backup = this.getLatestBackup()
-    if (!backup) throw new Error('No backup available')
-
-    const filename = `pomo-flow-backup-${new Date().toISOString().split('T')[0]}.json`
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    link.click()
-    URL.revokeObjectURL(url)
-  },
-
-  getStatus() {
-    const latest = this.getLatestBackup()
-    return {
-      isTasksReady: true,
-      isBackupReady: !!latest,
-      isOperational: !!latest
-    }
-  },
-
-  hasHebrewContent(backup: BackupData) {
-    if (!backup?.tasks) return false
-    const hebrewRegex = /[\u0590-\u05FF]/
-    return backup.tasks.some((task: BackupTaskLike) => task.title && hebrewRegex.test(task.title))
-  },
-
-  getHebrewTaskCount(backup: BackupData) {
-    if (!backup?.tasks) return 0
-    const hebrewRegex = /[\u0590-\u05FF]/
-    return backup.tasks.filter((task: BackupTaskLike) => task.title && hebrewRegex.test(task.title)).length
   }
 }
 

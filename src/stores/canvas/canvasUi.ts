@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 
 export const useCanvasUiStore = defineStore('canvasUi', () => {
-    const db = useDatabase()
+    const db = useSupabaseDatabase()
 
     // Viewport state
     const viewport = ref({
@@ -87,19 +87,26 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         showScheduleBadge.value = !showScheduleBadge.value
     }
 
-    // Persistence
+    // Persistence via User Settings in Supabase
     let viewportSaveTimer: ReturnType<typeof setTimeout> | null = null
     watch(viewport, (newViewport) => {
         if (viewportSaveTimer) clearTimeout(viewportSaveTimer)
         viewportSaveTimer = setTimeout(async () => {
-            if (!db.isReady?.value) return
             try {
-                await db.save(DB_KEYS.CANVAS_VIEWPORT, newViewport)
-                console.log('🔭 [canvasUi] Viewport saved:', newViewport)
+                // Save to local storage for immediate recovery
+                localStorage.setItem('canvas-viewport', JSON.stringify(newViewport))
+
+                // Also save to Supabase User Settings for cloud persistence
+                const settings = await db.fetchUserSettings()
+                await db.saveUserSettings({
+                    ...settings,
+                    canvas_viewport: newViewport
+                })
+                console.log('🔭 [canvasUi] Viewport saved to cloud:', newViewport)
             } catch (error) {
                 console.error('❌ Viewport save failed:', error)
             }
-        }, 500)
+        }, 2000) // Debounce heavily for viewport
     }, { deep: true })
 
     const loadSavedViewport = async (): Promise<boolean> => {

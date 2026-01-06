@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase, type User, type Session, type AuthError } from '@/services/auth/supabase'
+export type { User, Session, AuthError }
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -49,8 +50,53 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /* 
+   * Helper to migrate guest data to the new user account
+   */
+  const migrateGuestData = async () => {
+    try {
+      // Dynamic import to avoid circular dependency
+      const { useTaskStore } = await import('@/stores/tasks')
+      const taskStore = useTaskStore()
+
+      const guestTasks = [...taskStore.tasks]
+      if (guestTasks.length === 0) return
+
+      console.log(`📦 [AUTH] Migrating ${guestTasks.length} guest tasks to new user...`)
+
+      // We need to re-create these tasks for the new user
+      // The simple way is to use createTask for each, which handles the ID generation and DB insert
+      for (const task of guestTasks) {
+        // Skip tasks that might already look like they have an owner (sanity check)
+        // But realistically, all local tasks are guest tasks at this point
+
+        await taskStore.createTask({
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          // Canvas specific
+          canvasPosition: task.canvasPosition,
+          isInInbox: task.isInInbox,
+          // Other fields
+          estimatedDuration: task.estimatedDuration,
+          projectId: task.projectId
+        })
+      }
+
+      console.log('✅ [AUTH] Guest data migration complete')
+    } catch (e) {
+      console.error('❌ [AUTH] Guest data migration failed:', e)
+    }
+  }
+
   const signInWithPassword = async (email: string, password: string) => {
     try {
+      // 1. Capture guest data BEFORE sign-in clears/changes state
+      // (Actually, sign-in itself doesn't clear store, but the subsequent app reload/sync might)
+      // We'll run migration AFTER successful sign-in.
+
       isLoading.value = true
       error.value = null
 
@@ -60,6 +106,9 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
       if (signInError) throw signInError
+
+      // 2. Migrate Data
+      await migrateGuestData()
 
     } catch (e: any) {
       error.value = e
@@ -83,6 +132,10 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
       if (signInError) throw signInError
+
+      // Note: Magic link flow redirects, so migration would happen on the callback/landing page
+      // preventing us from doing it here. We'd need a "post-login-migration" check on app init.
+      // For now, Password login is the primary immediate flow.
 
     } catch (e: any) {
       error.value = e

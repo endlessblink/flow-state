@@ -1,5 +1,5 @@
-**Last Updated**: January 4, 2026 (BUG-087 Migration Data Loss Fix)
-**Version**: 5.16 (SQLite Migration Stability)
+**Last Updated**: January 6, 2026 (TASK-105 Supabase Migration & Sync Fixes)
+**Version**: 5.18 (Supabase Migration Complete)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -72,9 +72,10 @@
 <details id="active-task-details">
 <summary><b>Active Task Details</b></summary>
 
-### TASK-099: Auth Store & Database Integration (📋 PLANNED)
-- Integration with Supabase.
-- Refactor `useAuthStore.ts` and `useDatabase.ts`.
+### ~~TASK-099~~: Auth Store & Database Integration (✅ DONE)
+- [x] Integration with Supabase.
+- [x] Refactor `useAuthStore.ts` and `useDatabase.ts`.
+- [x] Migrated from PouchDB/CouchDB to Supabase.
 
 ### TASK-017: KDE Plasma Widget (Plasmoid) (READY)
 - Create a KDE Plasma 6 taskbar widget.
@@ -102,8 +103,78 @@
 - [x] Stabilize merged PRs (17 PRs merged & verified).
 - [ ] Address remaining TS/Lint errors system-wide.
 
+### ~~TASK-100~~: Implement Overdue Smart Group in Canvas (✅ DONE)
+- Create "Overdue" smart group logic.
+- Implement auto-collection of overdue non-recurring tasks.
+
 ### TASK-096: System Refactor Analysis (📋 TODO)
 - Analyze codebase for refactoring opportunities.
+
+### ~~TASK-101~~: Store Safety Pattern (`_raw*` prefix) (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 6, 2026
+**SOP**: [TASKS-raw-safety-pattern.md](./sop/active/TASKS-raw-safety-pattern.md)
+
+Implemented architectural safety pattern across all Pinia stores to prevent accidental display of soft-deleted or hidden items in UI components.
+
+**Changes**:
+- [x] `tasks.ts`: Renamed `tasks` → `_rawTasks`, created `filteredTasks` computed
+- [x] `notifications.ts`: Renamed to `_rawNotifications`, created filtered `notifications`
+- [x] `canvas.ts`: Renamed `groups` → `_rawGroups`, created `visibleGroups` (filters `isVisible !== false`)
+- [x] `projects.ts`: Renamed to `_rawProjects`, created computed `projects` (future-proofed)
+- [x] Deleted 6 dead code files (legacy sync/migration code)
+- [x] All mutations updated to use `_rawX.value`
+- [x] Build verified passing
+
+**Stores analyzed but not needing pattern**:
+- `taskCanvas.ts` - utility store, no soft-delete
+- `quickSort.ts` - historical session data
+- `timer.ts` - timer session history
+
+### ~~TASK-102~~: Fix Shift+Drag Selection (✅ DONE)
+- Fixed "stuck" rubber-band selection.
+- Fixed selection inside groups (absolute positioning).
+- Moved selection box outside VueFlow for visual stability.
+
+### ~~TASK-103~~: Debug Sync Error (Auth Guard) (✅ DONE)
+- Fixed "User not authenticated" sync errors in Guest Mode.
+- Implemented Auth Guards in `projects`, `tasks`, and `canvas` stores.
+
+### ~~TASK-104~~: Fix Critical Notification Store Crash (✅ DONE)
+- Fixed `ReferenceError: scheduledNotifications is not defined` in `notifications.ts`.
+
+### ~~TASK-105~~: Supabase Migration & Sync Loop Fixes (✅ DONE)
+**Priority**: P0-CRITICAL
+**Completed**: January 6, 2026
+**SOP**: [SYNC-supabase-circular-loop-fix.md](./sop/active/SYNC-supabase-circular-loop-fix.md)
+
+Fixed critical bugs after Supabase migration causing app not to load and ghost projects.
+
+**Root Causes Fixed**:
+- [x] Supabase 400 errors from invalid UUID values (string 'undefined' sent to DB)
+- [x] Circular sync loop: Realtime → store update → watcher → auto-save → realtime
+- [x] Corrupted projects from `updateProjectFromSync` spreading incomplete data
+- [x] Ghost/empty projects appearing in sidebar
+
+**Changes**:
+- [x] `supabaseMappers.ts`: Added UUID validation & sanitization helpers
+- [x] `supabaseMappers.ts`: Sanitize `parent_id`, `project_id`, `parent_task_id` fields
+- [x] `projects.ts`: Added `syncUpdateInProgress` flag to break circular loop
+- [x] `projects.ts`: `updateProjectFromSync` now validates incoming data
+- [x] `projects.ts`: `projects` computed filters out corrupted entries
+- [x] `projects.ts`: Added `cleanupCorruptedProjects()` utility
+- [x] `supabaseMigrationCleanup.ts`: Added `clearAllLocalData()` helper
+- [x] Deleted 18+ legacy PouchDB/CouchDB files (~10,000 lines removed)
+- [x] Build verified passing
+
+**Files Deleted** (legacy code removal):
+- `useCouchDBSync.ts`, `useConflictPruning.ts`, `useCrossTabCoordination.ts`
+- `useDatabaseHealthCheck.ts`, `conflictDetector.ts`, `conflictResolution.ts`
+- `debugHelper.ts`, `legacyStorageCleanup.ts`, `migratePouchToSql.ts`
+- `SqlCanvasStore.ts`, `SqlProjectStore.ts`, `SqlTaskStore.ts`
+- `PowerSyncConnector.ts`, `PowerSyncDatabase.ts`, `SqlDatabaseTypes.ts`
+- Various mapper files (`groupMapper.ts`, `projectMapper.ts`, `taskMapper.ts`)
+
 </details>
 
 <details>

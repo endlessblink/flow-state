@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import PowerSyncService from '@/services/database/PowerSyncDatabase'
-import { toSqlProject, fromSqlProject } from '@/utils/projectMapper'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Project } from '@/types/tasks'
 import { useTaskStore } from './tasks'
 import { syncState } from '@/services/sync/SyncStateService'
@@ -9,14 +8,29 @@ import { syncState } from '@/services/sync/SyncStateService'
 export const useProjectStore = defineStore('projects', () => {
 
     // State
-    const projects = ref<Project[]>([])
+    // SAFETY: Named _rawProjects to discourage direct access - use projects (filtered) instead
+    const _rawProjects = ref<Project[]>([])
     const activeProjectId = ref<string | null>(null)
     const isLoading = ref(false)
 
     // Manual operation flag to prevent watch system conflicts
     let manualOperationInProgress = false
 
-    // Root projects - projects without parentId
+    // SAFETY: Filtered projects for display
+    // - Filters out corrupted projects (missing name, invalid data)
+    // - Future: could filter out _soft_deleted projects if that feature is added
+    const projects = computed(() => _rawProjects.value.filter(p => {
+        // Must have valid id
+        if (!p.id) return false
+        // Must have valid name (not null, undefined, or empty string)
+        if (!p.name || typeof p.name !== 'string' || p.name.trim() === '') {
+            console.warn(`[PROJECT-FILTER] Hiding project with invalid name:`, p.id)
+            return false
+        }
+        return true
+    }))
+
+    // Root projects - projects without parentId (uses filtered projects to exclude corrupted)
     const rootProjects = computed(() => {
         return projects.value.filter(p => !p.parentId || p.parentId === 'undefined' || p.parentId === undefined)
     })
@@ -25,66 +39,49 @@ export const useProjectStore = defineStore('projects', () => {
     // Replaces O(N) array find with O(1) map lookup
     // This significantly improves performance when rendering lists of tasks
     // that need to look up project details (e.g. UnifiedInboxPanel)
+    // SAFETY: Use _rawProjects for lookup since we might need to find any project
     const projectMap = computed(() => {
         const map = new Map<string, Project>()
-        for (const p of projects.value) {
+        for (const p of _rawProjects.value) {
             map.set(p.id, p)
         }
         return map
     })
 
+    // -- Supabase Integration --
+    const { fetchProjects, saveProjects, saveProject, deleteProject: deleteProjectRemote, isSyncing } = useSupabaseDatabase()
+
     // Actions
     const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
+        // SAFETY: Prevent saving if not authenticated (Guest Mode)
+        // This avoids "User not authenticated" errors in the sync loop
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        if (!authStore.isAuthenticated) {
+            // console.debug(`🛡️ [SUPABASE-SKIP] Skipping project save (${context}) - Guest Mode`)
+            return
+        }
+
+
         try {
-            const db = await PowerSyncService.getInstance()
-
-            // Convert to SQL format
-            const sqlProjects = projectsToSave.map(toSqlProject)
-
-            // Execute Transaction - ALL FIELDS
-            await db.writeTransaction(async (tx) => {
-                for (const p of sqlProjects) {
-                    await tx.execute(`
-                        INSERT OR REPLACE INTO projects (
-                            id, name, description, color, color_type, icon, emoji,
-                            parent_id, view_type, "order",
-                            created_at, updated_at, is_deleted, deleted_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `, [
-                        p.id, p.name, p.description, p.color, p.color_type, p.icon, p.emoji,
-                        p.parent_id, p.view_type, p.order,
-                        p.created_at, p.updated_at, p.is_deleted, p.deleted_at
-                    ])
-                }
-            })
-            console.debug(`✅ [SQL] Saved ${sqlProjects.length} projects (${context})`)
-
-            // PouchDB dual-sync removed during decommissioning
-
+            await saveProjects(projectsToSave)
+            // console.debug(`✅ [SUPABASE] Saved ${projectsToSave.length} projects (${context})`)
         } catch (e) {
-            console.error(`❌ [SQL] Project save failed (${context}):`, e)
+            console.error(`❌ [SUPABASE] Project save failed (${context}):`, e)
         }
     }
 
     const loadProjectsFromDatabase = async () => {
         isLoading.value = true
         try {
-            const db = await PowerSyncService.getInstance()
-
-            // Query all non-deleted projects
-            const result = await db.getAll('SELECT * FROM projects WHERE is_deleted = 0')
-
-            // Map back to Frontend Project objects
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const loadedProjects = result.map(row => fromSqlProject(row as any))
-
-            projects.value = loadedProjects
-            console.log(`✅ [SQL] Loaded ${loadedProjects.length} projects from SQLite`)
-
+            const loadedProjects = await fetchProjects()
+            _rawProjects.value = loadedProjects
+            console.log(`✅ [SUPABASE] Loaded ${loadedProjects.length} projects`)
         } catch (error) {
-            console.error('❌ [SQL] Projects load failed:', error)
+            console.error('❌ [SUPABASE] Projects load failed:', error)
         } finally {
             isLoading.value = false
         }
@@ -94,7 +91,7 @@ export const useProjectStore = defineStore('projects', () => {
         manualOperationInProgress = true
         try {
             const newProject: Project = {
-                id: Date.now().toString(),
+                id: crypto.randomUUID(), // Use standard UUID
                 name: projectData.name || 'New Project',
                 color: projectData.color || '#4ECDC4',
                 colorType: projectData.colorType || 'hex',
@@ -105,8 +102,8 @@ export const useProjectStore = defineStore('projects', () => {
                 updatedAt: new Date(),
                 ...projectData
             } as Project
-            projects.value.push(newProject)
-            await saveProjectsToStorage(projects.value, `createProject-${newProject.id}`)
+            _rawProjects.value.push(newProject)
+            await saveProject(newProject)
             return newProject
         } finally {
             manualOperationInProgress = false
@@ -114,15 +111,16 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const updateProject = async (projectId: string, updates: Partial<Project>) => {
-        const projectIndex = projects.value.findIndex(p => p.id === projectId)
+        const projectIndex = _rawProjects.value.findIndex(p => p.id === projectId)
         if (projectIndex !== -1) {
             manualOperationInProgress = true
             try {
-                projects.value[projectIndex] = {
-                    ...projects.value[projectIndex],
-                    ...updates
+                _rawProjects.value[projectIndex] = {
+                    ..._rawProjects.value[projectIndex],
+                    ...updates,
+                    updatedAt: new Date()
                 }
-                await saveProjectsToStorage(projects.value, `updateProject-${projectId}`)
+                await saveProject(_rawProjects.value[projectIndex])
             } finally {
                 manualOperationInProgress = false
             }
@@ -130,15 +128,18 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const deleteProject = async (projectId: string) => {
-        const projectIndex = projects.value.findIndex(p => p.id === projectId)
+        const projectIndex = _rawProjects.value.findIndex(p => p.id === projectId)
         if (projectIndex !== -1) {
             manualOperationInProgress = true
             try {
-                const projectToDelete = projects.value[projectIndex]
+                const projectToDelete = _rawProjects.value[projectIndex]
                 const parentId = projectToDelete.parentId
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const taskStore = useTaskStore() as any
-                taskStore.tasks.forEach((task: any) => {
+                // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                taskStore._rawTasks.forEach((task: any) => {
                     if (task.projectId === projectId) {
                         taskStore.updateTask(task.id, {
                             projectId: 'uncategorized',
@@ -147,17 +148,17 @@ export const useProjectStore = defineStore('projects', () => {
                     }
                 })
 
-                projects.value.forEach(project => {
+                // SAFETY: Use _rawProjects for mutation
+                _rawProjects.value.forEach(project => {
                     if (project.parentId === projectId) {
                         project.parentId = parentId
                     }
                 })
 
-                projects.value.splice(projectIndex, 1)
+                _rawProjects.value.splice(projectIndex, 1)
 
-                // SQL Delete (Soft delete)
-                const db = await PowerSyncService.getInstance()
-                await db.execute('UPDATE projects SET is_deleted = 1, deleted_at = ? WHERE id = ?', [new Date().toISOString(), projectId])
+                // Supabase Soft Delete
+                await deleteProjectRemote(projectId)
 
             } catch (e) {
                 console.error('Failed to delete project:', e)
@@ -179,16 +180,18 @@ export const useProjectStore = defineStore('projects', () => {
             const projectIdSet = new Set(projectIds)
 
             // Build parent mapping for re-parenting children
+            // SAFETY: Use _rawProjects for lookup
             const parentMap = new Map<string, string | null>()
             projectIds.forEach(id => {
-                const project = projects.value.find(p => p.id === id)
+                const project = _rawProjects.value.find(p => p.id === id)
                 if (project) {
                     parentMap.set(id, project.parentId || null)
                 }
             })
 
             // Move tasks from all deleted projects to uncategorized
-            taskStore.tasks.forEach((task: any) => {
+            // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
+            taskStore._rawTasks.forEach((task: any) => {
                 if (projectIdSet.has(task.projectId)) {
                     taskStore.updateTask(task.id, {
                         projectId: 'uncategorized',
@@ -198,7 +201,8 @@ export const useProjectStore = defineStore('projects', () => {
             })
 
             // Re-parent children of deleted projects
-            projects.value.forEach(project => {
+            // SAFETY: Use _rawProjects for mutation
+            _rawProjects.value.forEach(project => {
                 if (projectIdSet.has(project.parentId || '')) {
                     // Find the nearest ancestor that's not being deleted
                     let newParentId = parentMap.get(project.parentId!) || null
@@ -210,16 +214,12 @@ export const useProjectStore = defineStore('projects', () => {
             })
 
             // Remove all deleted projects
-            projects.value = projects.value.filter(p => !projectIdSet.has(p.id))
+            _rawProjects.value = _rawProjects.value.filter(p => !projectIdSet.has(p.id))
 
-            // SQL Bulk Delete
-            const db = await PowerSyncService.getInstance()
-            const now = new Date().toISOString()
-            await db.writeTransaction(async (tx) => {
-                for (const id of projectIds) {
-                    await tx.execute('UPDATE projects SET is_deleted = 1, deleted_at = ? WHERE id = ?', [now, id])
-                }
-            })
+            // Supabase Bulk Delete
+            for (const id of projectIds) {
+                await deleteProjectRemote(id)
+            }
 
         } finally {
             manualOperationInProgress = false
@@ -227,14 +227,15 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const setProjectColor = async (projectId: string, color: string, colorType: 'hex' | 'emoji', emoji?: string) => {
-        const project = projects.value.find(p => p.id === projectId)
+        // SAFETY: Use _rawProjects for mutation
+        const project = _rawProjects.value.find(p => p.id === projectId)
         if (project) {
             manualOperationInProgress = true
             try {
                 project.color = color
                 project.colorType = colorType
                 project.emoji = colorType === 'emoji' ? emoji : undefined
-                await saveProjectsToStorage(projects.value, `setProjectColor-${projectId}`)
+                await saveProjectsToStorage(_rawProjects.value, `setProjectColor-${projectId}`)
             } finally {
                 manualOperationInProgress = false
             }
@@ -242,23 +243,26 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const setProjectViewType = async (projectId: string, viewType: Project['viewType']) => {
-        const project = projects.value.find(p => p.id === projectId)
+        // SAFETY: Use _rawProjects for mutation
+        const project = _rawProjects.value.find(p => p.id === projectId)
         if (project) {
             project.viewType = viewType
-            await saveProjectsToStorage(projects.value, `setProjectViewType-${projectId}`)
+            await saveProjectsToStorage(_rawProjects.value, `setProjectViewType-${projectId}`)
         }
     }
 
     const moveTaskToProject = async (taskId: string, targetProjectId: string) => {
         const taskStore = useTaskStore() as any
-        const task = (taskStore.tasks as any).find((t: any) => t.id === taskId)
+        // SAFETY: Use _rawTasks to find any task including soft-deleted
+        const task = (taskStore._rawTasks as any).find((t: any) => t.id === taskId)
         if (task) {
             manualOperationInProgress = true
             try {
                 task.projectId = targetProjectId
                 task.updatedAt = new Date()
                 console.log(`Task "${task.title}" moved to project "${getProjectDisplayName(targetProjectId)}"`)
-                await (taskStore as any).saveTasksToStorage(taskStore.tasks, `moveTaskToProject-${taskId}`)
+                // SAFETY: Save all raw tasks including soft-deleted
+                await (taskStore as any).saveTasksToStorage(taskStore._rawTasks, `moveTaskToProject-${taskId}`)
             } finally {
                 manualOperationInProgress = false
             }
@@ -352,24 +356,61 @@ export const useProjectStore = defineStore('projects', () => {
         activeProjectId.value = projectId
     }
 
+    // Flag to prevent auto-save after sync updates (breaks circular loop)
+    let syncUpdateInProgress = false
+
     const updateProjectFromSync = (projectId: string, data: any) => {
-        const index = projects.value.findIndex(p => p.id === projectId)
-        const normalized = {
-            ...data,
-            createdAt: new Date(data.createdAt || Date.now()),
-            updatedAt: new Date(data.updatedAt || Date.now())
+        // SAFETY: Validate incoming data to prevent corrupted projects
+        if (!data || typeof data !== 'object') {
+            console.warn(`[PROJECT-SYNC] Ignoring invalid data for project ${projectId}:`, data)
+            return
         }
-        if (index !== -1) {
-            projects.value[index] = normalized
-        } else {
-            projects.value.push(normalized)
+
+        // CRITICAL: Ensure name is present and valid
+        if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
+            console.warn(`[PROJECT-SYNC] Ignoring project update with invalid name for ${projectId}:`, data.name)
+            return
+        }
+
+        // Set flag to prevent watcher from triggering auto-save
+        syncUpdateInProgress = true
+
+        try {
+            const index = _rawProjects.value.findIndex(p => p.id === projectId)
+            const normalized = {
+                id: projectId,
+                name: data.name,
+                color: data.color || '#4ECDC4',
+                colorType: data.colorType || 'hex',
+                emoji: data.emoji,
+                viewType: data.viewType || 'status',
+                parentId: data.parentId || null,
+                createdAt: new Date(data.createdAt || Date.now()),
+                updatedAt: new Date(data.updatedAt || Date.now())
+            }
+
+            if (index !== -1) {
+                // Merge with existing data to preserve fields not in sync payload
+                _rawProjects.value[index] = {
+                    ..._rawProjects.value[index],
+                    ...normalized
+                }
+            } else {
+                _rawProjects.value.push(normalized)
+            }
+        } finally {
+            // Reset flag after Vue's next tick to ensure watcher sees it
+            setTimeout(() => {
+                syncUpdateInProgress = false
+            }, 100)
         }
     }
 
     const removeProjectFromSync = (projectId: string) => {
-        const index = projects.value.findIndex(p => p.id === projectId)
+        // SAFETY: Use _rawProjects for sync mutations
+        const index = _rawProjects.value.findIndex(p => p.id === projectId)
         if (index !== -1) {
-            projects.value.splice(index, 1)
+            _rawProjects.value.splice(index, 1)
         }
     }
 
@@ -378,10 +419,39 @@ export const useProjectStore = defineStore('projects', () => {
         return projects.value.length > 0
     }
 
+    /**
+     * Removes corrupted projects (missing name, invalid data) from local state
+     * Call this if you see ghost/empty projects in the sidebar
+     */
+    const cleanupCorruptedProjects = () => {
+        const before = _rawProjects.value.length
+        _rawProjects.value = _rawProjects.value.filter(p => {
+            if (!p.id) {
+                console.log(`[PROJECT-CLEANUP] Removing project with no id`)
+                return false
+            }
+            if (!p.name || typeof p.name !== 'string' || p.name.trim() === '') {
+                console.log(`[PROJECT-CLEANUP] Removing project with invalid name:`, p.id)
+                return false
+            }
+            return true
+        })
+        const removed = before - _rawProjects.value.length
+        console.log(`[PROJECT-CLEANUP] Removed ${removed} corrupted projects`)
+        return removed
+    }
+
     // Watchers
     let saveTimeout: ReturnType<typeof setTimeout> | null = null
     watch(projects, (newProjects) => {
-        if (manualOperationInProgress || isLoading.value || syncState.isSyncing.value) return
+        // CRITICAL: Prevent circular sync loop
+        // - manualOperationInProgress: Direct CRUD operations (already saving)
+        // - isLoading: Loading from database (don't save during load)
+        // - syncState.isSyncing: Global sync in progress
+        // - syncUpdateInProgress: Realtime update just happened (don't echo back)
+        if (manualOperationInProgress || isLoading.value || syncState.isSyncing.value || syncUpdateInProgress) {
+            return
+        }
         if (saveTimeout) clearTimeout(saveTimeout)
         saveTimeout = setTimeout(() => {
             saveProjectsToStorage([...newProjects], 'auto-save')
@@ -389,13 +459,14 @@ export const useProjectStore = defineStore('projects', () => {
     }, { deep: true })
 
     return {
+        // SAFETY: Export filtered projects as 'projects' - this is the safe default for components
+        // Use _rawProjects only for internal operations (load, save, sync, mutations)
         projects,
+        _rawProjects,
         activeProjectId,
         isLoading,
         rootProjects,
         loadProjectsFromDatabase,
-        // Alias for backward compatibility with app initialization
-        loadProjectsFromPouchDB: loadProjectsFromDatabase,
         createProject,
         updateProject,
         deleteProject,
@@ -415,6 +486,7 @@ export const useProjectStore = defineStore('projects', () => {
         moveTaskToProject,
         initializeFromDatabase,
         updateProjectFromSync,
-        removeProjectFromSync
+        removeProjectFromSync,
+        cleanupCorruptedProjects
     }
 })

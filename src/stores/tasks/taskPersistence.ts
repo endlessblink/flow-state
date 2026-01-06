@@ -1,12 +1,12 @@
 import { type Ref } from 'vue'
-import PowerSyncService from '@/services/database/PowerSyncDatabase'
-import { toSqlTask, fromSqlTask } from '@/utils/taskMapper'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Task } from '@/types/tasks'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats } from '@/utils/taskValidation'
 
 export function useTaskPersistence(
-    tasks: Ref<Task[]>,
+    // SAFETY: Named _rawTasks to indicate this is the raw array for load/save operations
+    _rawTasks: Ref<Task[]>,
     hideDoneTasks: Ref<boolean>,
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
@@ -33,13 +33,31 @@ export function useTaskPersistence(
 
     // --- SQL PERSISTENCE ---
 
+    // -- Supabase Integration --
+    const { fetchTasks, saveTasks, deleteTask: deleteFromDB } = useSupabaseDatabase()
+
+    const deleteTaskFromStorage = async (taskId: string): Promise<void> => {
+        console.log(`🗑️ [PERSISTENCE] deleteTaskFromStorage called for: ${taskId}`)
+        try {
+            await deleteFromDB(taskId)
+            console.log(`✅ [PERSISTENCE] Task ${taskId} soft-deleted successfully`)
+        } catch (e) {
+            console.error(`❌ [PERSISTENCE] Task deletion failed for ${taskId}:`, e)
+            throw e  // Re-throw so deleteTask in taskOperations knows it failed
+        }
+    }
+
     const saveTasksToStorage = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
-        try {
-            const db = await PowerSyncService.getInstance()
+        // SAFETY: Prevent saving if not authenticated (Guest Mode)
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        if (!authStore.isAuthenticated) return
 
+
+        try {
             // Validation
             const validation = validateBeforeSave(tasksToSave)
             if (validation.blockedTasks.length > 0) {
@@ -51,43 +69,11 @@ export function useTaskPersistence(
 
             logTaskIdStats(validTasksToSave, `save-${context}`)
 
-            // Convert to SQL format
-            const sqlTasks = validTasksToSave.map(toSqlTask)
-
-            // Execute Transaction - ALL FIELDS
-            await db.writeTransaction(async (tx) => {
-                for (const t of sqlTasks) {
-                    await tx.execute(`
-                        INSERT OR REPLACE INTO tasks (
-                            id, title, description, status, priority,
-                            project_id, parent_task_id,
-                            total_pomodoros, estimated_pomodoros, progress,
-                            due_date, scheduled_date, scheduled_time, estimated_duration,
-                            instances_json, subtasks_json, depends_on_json, tags_json,
-                            connection_types_json, recurrence_json, recurring_instances_json, notification_prefs_json,
-                            canvas_position_x, canvas_position_y, is_in_inbox,
-                            "order", column_id,
-                            created_at, updated_at, completed_at,
-                            is_deleted, deleted_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `, [
-                        t.id, t.title, t.description, t.status, t.priority,
-                        t.project_id, t.parent_task_id,
-                        t.total_pomodoros, t.estimated_pomodoros, t.progress,
-                        t.due_date, t.scheduled_date, t.scheduled_time, t.estimated_duration,
-                        t.instances_json, t.subtasks_json, t.depends_on_json, t.tags_json,
-                        t.connection_types_json, t.recurrence_json, t.recurring_instances_json, t.notification_prefs_json,
-                        t.canvas_position_x, t.canvas_position_y, t.is_in_inbox,
-                        t.order, t.column_id,
-                        t.created_at, t.updated_at, t.completed_at,
-                        t.is_deleted, t.deleted_at
-                    ])
-                }
-            })
-            // console.debug(`✅ [SQL] Saved ${sqlTasks.length} tasks (${context})`)
+            await saveTasks(validTasksToSave)
+            // console.debug(`✅ [SUPABASE] Saved ${validTasksToSave.length} tasks (${context})`)
 
         } catch (e) {
-            console.error(`❌ [SQL] Save failed (${context}):`, e)
+            console.error(`❌ [SUPABASE] Task save failed (${context}):`, e)
         }
     }
 
@@ -98,21 +84,10 @@ export function useTaskPersistence(
     const loadFromDatabase = async () => {
         try {
             isLoadingFromDatabase.value = true
-            const db = await PowerSyncService.getInstance()
 
-            // Query all non-deleted tasks
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const countResult = await db.getAll('SELECT count(*) as count FROM tasks') as any[]
-            console.log('🔍 [SQL-DEBUG] Total tasks in DB:', countResult[0]?.count)
-
-            const result = await db.getAll('SELECT * FROM tasks WHERE is_deleted = 0')
-
-            // Map back to Frontend Task objects
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const loadedTasks = result.map(row => fromSqlTask(row as any))
-
-            tasks.value = loadedTasks
-            console.log(`✅ [SQL] Loaded ${loadedTasks.length} tasks from SQLite`)
+            const loadedTasks = await fetchTasks()
+            _rawTasks.value = loadedTasks
+            console.log(`✅ [SUPABASE] Loaded ${loadedTasks.length} tasks`)
 
             // If empty, we might need a backup import (legacy logic simplified)
             if (loadedTasks.length === 0) {
@@ -120,7 +95,7 @@ export function useTaskPersistence(
             }
 
         } catch (error) {
-            console.error('❌ [SQL] Load failed:', error)
+            console.error('❌ [SUPABASE] Load failed:', error)
         } finally {
             isLoadingFromDatabase.value = false
         }
@@ -179,6 +154,7 @@ export function useTaskPersistence(
     return {
         saveTasksToStorage,
         saveSpecificTasks,
+        deleteTaskFromStorage,  // BUGFIX: Export to allow taskOperations to persist deletions
         loadFromDatabase,
         loadPersistedFilters,
         persistFilters,
@@ -192,11 +168,11 @@ export function useTaskPersistence(
         importTasks: async (tasksToImport: Task[]) => {
             // Basic import logic reused
             if (!tasksToImport.length) return
-            const existingIds = new Set(tasks.value.map(t => t.id))
+            const existingIds = new Set(_rawTasks.value.map(t => t.id))
             const newTasks = tasksToImport.filter(t => !existingIds.has(t.id))
             if (newTasks.length > 0) {
-                tasks.value.push(...newTasks)
-                await saveTasksToStorage(tasks.value, 'import-tool')
+                _rawTasks.value.push(...newTasks)
+                await saveTasksToStorage(_rawTasks.value, 'import-tool')
             }
         }
     }

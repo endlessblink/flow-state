@@ -31,7 +31,7 @@
               type="text"
               class="form-input"
               placeholder="Enter group name"
-              @keyup.enter="save"
+              @keydown.enter.prevent="save"
             >
           </div>
 
@@ -49,7 +49,7 @@
                 type="text"
                 class="color-text-input"
                 placeholder="#000000"
-                @keyup.enter="save"
+                @keydown.enter.prevent="save"
               >
             </div>
           </div>
@@ -190,6 +190,24 @@ watch(() => props.isVisible, (visible) => {
   if (!visible) {
     resetForm()
   }
+})
+
+// Global Enter key handler for the modal
+const handleKeydown = (e: KeyboardEvent) => {
+  if (props.isVisible && e.key === 'Enter') {
+    e.preventDefault()
+    save()
+  }
+}
+
+import { onMounted, onUnmounted } from 'vue'
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 

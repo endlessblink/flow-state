@@ -5,23 +5,25 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
-import { saveIndividualNotifications, loadIndividualNotifications, deleteIndividualNotification } from '@/utils/individualNotificationStorage'
 import type {
   ScheduledNotification,
   NotificationPreferences,
   RecurringTaskInstance as _RecurringTaskInstance
 } from '@/types/recurrence'
 import { useTaskStore } from './tasks'
+import { useAuthStore } from './auth'
 
 export const useNotificationStore = defineStore('notifications', () => {
   // Database composable
-  const db = useDatabase()
+  const supabaseDb = useSupabaseDatabase()
   const taskStore = useTaskStore()
+  const authStore = useAuthStore()
 
   // State
-  const scheduledNotifications = ref<ScheduledNotification[]>([])
+  // SAFETY: Named _rawNotifications to discourage direct access - use activeNotifications (exported as 'scheduledNotifications') instead
+  const _rawNotifications = ref<ScheduledNotification[]>([])
   const isPermissionGranted = ref(false)
   const isSchedulingActive = ref(false)
   const schedulingInterval = ref<NodeJS.Timeout | null>(null)
@@ -45,20 +47,20 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   // Computed
   const activeNotifications = computed(() =>
-    Array.isArray(scheduledNotifications.value)
-      ? scheduledNotifications.value.filter(n => !n.isShown && !n.isDismissed)
+    Array.isArray(_rawNotifications.value)
+      ? _rawNotifications.value.filter(n => !n.isShown && !n.isDismissed)
       : []
   )
 
   const pendingNotifications = computed(() =>
-    Array.isArray(scheduledNotifications.value)
-      ? scheduledNotifications.value.filter(n => !n.isShown && n.scheduledTime <= new Date())
+    Array.isArray(_rawNotifications.value)
+      ? _rawNotifications.value.filter(n => !n.isShown && n.scheduledTime <= new Date())
       : []
   )
 
   const snoozedNotifications = computed(() =>
-    Array.isArray(scheduledNotifications.value)
-      ? scheduledNotifications.value.filter(n => n.snoozedUntil && n.snoozedUntil > new Date())
+    Array.isArray(_rawNotifications.value)
+      ? _rawNotifications.value.filter(n => n.snoozedUntil && n.snoozedUntil > new Date())
       : []
   )
 
@@ -76,22 +78,22 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const loadScheduledNotifications = async () => {
     try {
-      // Check if database is ready before loading
-      if (!db.isReady?.value) {
+      // Check if user is authenticated before loading
+      if (!authStore.user?.id) {
         errorHandler.report({
           severity: ErrorSeverity.INFO,
           category: ErrorCategory.DATABASE,
-          message: 'Database not ready, skipping notification load',
+          message: 'User not authenticated, skipping notification load',
           context: { operation: 'loadScheduledNotifications' },
           showNotification: false
         })
         return
       }
 
-      const saved = await loadIndividualNotifications(db.database.value as any)
+      const saved = await supabaseDb.fetchNotifications()
       if (saved && saved.length > 0) {
-        scheduledNotifications.value = saved
-        console.log(`📬 Loaded ${saved.length} notifications from individual docs`)
+        _rawNotifications.value = saved
+        console.log(`📬 Loaded ${saved.length} notifications from Supabase`)
       }
     } catch (error) {
       errorHandler.report({
@@ -204,19 +206,19 @@ export const useNotificationStore = defineStore('notifications', () => {
   const checkAndShowNotifications = async () => {
     const now = new Date()
 
-    // CRITICAL FIX: Ensure scheduledNotifications.value is an array
-    if (!Array.isArray(scheduledNotifications.value)) {
+    // CRITICAL FIX: Ensure _rawNotifications.value is an array
+    if (!Array.isArray(_rawNotifications.value)) {
       errorHandler.report({
         severity: ErrorSeverity.INFO,
         category: ErrorCategory.STATE,
-        message: 'scheduledNotifications.value is not an array, resetting to empty array',
-        context: { operation: 'checkAndShowNotifications', type: typeof scheduledNotifications.value },
+        message: '_rawNotifications.value is not an array, resetting to empty array',
+        context: { operation: 'checkAndShowNotifications', type: typeof _rawNotifications.value },
         showNotification: false
       })
-      scheduledNotifications.value = []
+      _rawNotifications.value = []
     }
 
-    const readyNotifications = scheduledNotifications.value.filter(n =>
+    const readyNotifications = _rawNotifications.value.filter(n =>
       !n.isShown &&
       !n.isDismissed &&
       !n.snoozedUntil &&
@@ -330,7 +332,7 @@ export const useNotificationStore = defineStore('notifications', () => {
           createdAt: new Date()
         }
 
-        scheduledNotifications.value.push(notification)
+        _rawNotifications.value.push(notification)
       }
     }
 
@@ -382,18 +384,16 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Remove all notifications for a task
    */
   const removeTaskNotifications = async (taskId: string) => {
-    if (Array.isArray(scheduledNotifications.value)) {
-      const toDelete = scheduledNotifications.value.filter(n => n.taskId === taskId)
-      scheduledNotifications.value = scheduledNotifications.value.filter(n => n.taskId !== taskId)
+    if (Array.isArray(_rawNotifications.value)) {
+      const toDelete = _rawNotifications.value.filter(n => n.taskId === taskId)
+      _rawNotifications.value = _rawNotifications.value.filter(n => n.taskId !== taskId)
 
-      const pouchDb = db.database.value
-      if (pouchDb) {
-        for (const n of toDelete) {
-          await deleteIndividualNotification(pouchDb as any, n.id)
-        }
+      // Delete from Supabase
+      for (const n of toDelete) {
+        await supabaseDb.deleteNotification(n.id)
       }
     } else {
-      scheduledNotifications.value = []
+      _rawNotifications.value = []
     }
     await saveScheduledNotifications()
   }
@@ -402,7 +402,7 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Snooze a notification
    */
   const snoozeNotification = async (notificationId: string) => {
-    const notification = scheduledNotifications.value.find(n => n.id === notificationId)
+    const notification = _rawNotifications.value.find(n => n.id === notificationId)
     if (!notification) return
 
     const snoozeDuration = defaultPreferences.value.snoozeDuration || 10
@@ -417,7 +417,7 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Dismiss a notification
    */
   const dismissNotification = async (notificationId: string) => {
-    const notification = scheduledNotifications.value.find(n => n.id === notificationId)
+    const notification = _rawNotifications.value.find(n => n.id === notificationId)
     if (!notification) return
 
     notification.isDismissed = true
@@ -440,7 +440,7 @@ export const useNotificationStore = defineStore('notifications', () => {
 
     for (const task of tasks) {
       // Check if notifications are already scheduled for this task
-      const hasNotifications = scheduledNotifications.value.some(n => n.taskId === task.id)
+      const hasNotifications = _rawNotifications.value.some(n => n.taskId === task.id)
 
       if (!hasNotifications) {
         await scheduleTaskNotifications(
@@ -464,16 +464,16 @@ export const useNotificationStore = defineStore('notifications', () => {
    */
   const saveScheduledNotifications = async () => {
     try {
-      const dbInstance = db.database.value
-      if (!dbInstance) return
-      await saveIndividualNotifications(dbInstance as any, scheduledNotifications.value)
+      // Check if user is authenticated before saving
+      if (!authStore.user?.id) return
+      await supabaseDb.saveNotifications(_rawNotifications.value)
     } catch (error) {
       errorHandler.report({
         severity: ErrorSeverity.WARNING,
         category: ErrorCategory.DATABASE,
         message: 'Error saving notifications to database',
         error: error as Error,
-        context: { operation: 'saveScheduledNotifications', count: scheduledNotifications.value?.length },
+        context: { operation: 'saveScheduledNotifications', count: _rawNotifications.value?.length },
         showNotification: false
       })
     }
@@ -482,11 +482,11 @@ export const useNotificationStore = defineStore('notifications', () => {
   // BUG-025 FIX: Auto-save notifications when they change
   // This eliminates the need for manual saveScheduledNotifications() calls
   let notificationSaveTimer: ReturnType<typeof setTimeout> | null = null
-  watch(scheduledNotifications, () => {
+  watch(activeNotifications, () => {
     if (notificationSaveTimer) clearTimeout(notificationSaveTimer)
     notificationSaveTimer = setTimeout(async () => {
       await saveScheduledNotifications()
-      console.log('📬 [UNIFICATION] Notifications auto-saved (1s debounce)')
+      console.log('📬 [SUPABASE] Notifications auto-saved (1s debounce)')
     }, 1000) // Refined: 1s debounce
   }, { deep: true })
 
@@ -496,12 +496,12 @@ export const useNotificationStore = defineStore('notifications', () => {
   const cleanupOldNotifications = async () => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
-    if (Array.isArray(scheduledNotifications.value)) {
-      scheduledNotifications.value = scheduledNotifications.value.filter(n =>
+    if (Array.isArray(_rawNotifications.value)) {
+      _rawNotifications.value = _rawNotifications.value.filter(n =>
         n.createdAt > sevenDaysAgo || !n.isDismissed
       )
     } else {
-      scheduledNotifications.value = []
+      _rawNotifications.value = []
     }
 
     await saveScheduledNotifications()
@@ -519,9 +519,9 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Get notification statistics
    */
   const getNotificationStats = () => {
-    const total = Array.isArray(scheduledNotifications.value) ? scheduledNotifications.value.length : 0
-    const shown = Array.isArray(scheduledNotifications.value) ? scheduledNotifications.value.filter(n => n.isShown).length : 0
-    const dismissed = Array.isArray(scheduledNotifications.value) ? scheduledNotifications.value.filter(n => n.isDismissed).length : 0
+    const total = Array.isArray(_rawNotifications.value) ? _rawNotifications.value.length : 0
+    const shown = Array.isArray(_rawNotifications.value) ? _rawNotifications.value.filter(n => n.isShown).length : 0
+    const dismissed = Array.isArray(_rawNotifications.value) ? _rawNotifications.value.filter(n => n.isDismissed).length : 0
     const pending = pendingNotifications.value.length
 
     return {
@@ -536,13 +536,15 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   return {
     // State
-    scheduledNotifications,
+    // SAFETY: Export activeNotifications as 'scheduledNotifications' for safe default (excludes dismissed/shown)
+    scheduledNotifications: activeNotifications,
+    _rawNotifications, // For internal operations only
     isPermissionGranted,
     isSchedulingActive,
     defaultPreferences,
 
     // Computed
-    activeNotifications,
+    activeNotifications, // Keep for explicit usage
     pendingNotifications,
     snoozedNotifications,
 

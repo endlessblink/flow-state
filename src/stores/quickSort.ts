@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { useDatabase, DB_KEYS } from '@/composables/useDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useAuthStore } from '@/stores/auth'
 
 export interface CategoryAction {
   id: string
@@ -101,8 +102,8 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     sessionHistory.value.push(summary)
     lastCompletedDate.value = new Date().toISOString()
 
-    // BUG-025: Persist to PouchDB (auto-save watcher handles this, but explicit call for immediate save)
-    saveToDatabase()
+    // Persist to Supabase (pass the new session for immediate save)
+    saveToDatabase(summary)
 
     isActive.value = false
     currentSessionId.value = null
@@ -154,54 +155,57 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     redoStack.value = []
   }
 
-  // BUG-025 P4: Use PouchDB for cross-device sync instead of localStorage
-  const db = useDatabase()
+  // Use Supabase for cross-device sync
+  const supabaseDb = useSupabaseDatabase()
+  const authStore = useAuthStore()
 
-  async function saveToDatabase() {
+  async function saveToDatabase(newSession?: SessionSummary) {
     // Always save to localStorage first (fast, reliable)
     saveToLocalStorage()
-    // Then try PouchDB for cross-device sync
-    if (db.isReady?.value) {
+
+    // Then try Supabase for cross-device sync (only if authenticated)
+    if (authStore.user?.id && newSession) {
       try {
-        await db.save(DB_KEYS.QUICK_SORT_SESSIONS, {
-          history: sessionHistory.value,
-          lastCompletedDate: lastCompletedDate.value
-        })
-        console.log('📊 [BUG-025] Quick Sort data saved to PouchDB')
+        await supabaseDb.saveQuickSortSession(newSession)
+        console.log('📊 Quick Sort session saved to Supabase')
       } catch (error) {
-        console.warn('Failed to save Quick Sort data to PouchDB (localStorage already saved):', error)
+        console.warn('Failed to save Quick Sort session to Supabase (localStorage already saved):', error)
       }
     }
   }
 
   async function loadFromDatabase() {
-    // Load from localStorage first (always available)
+    // Load from localStorage first (always available, instant)
     loadFromLocalStorage()
-    // Then try PouchDB for cross-device updates
-    if (!db.isReady?.value) {
-      console.log('📊 [BUG-025] Quick Sort loaded from localStorage (DB not ready)')
+
+    // Then try Supabase for cross-device updates (only if authenticated)
+    if (!authStore.user?.id) {
+      console.log('📊 Quick Sort loaded from localStorage (not authenticated)')
       return
     }
+
     try {
-      interface QuickSortData {
-        history?: Array<{ completedAt: string; [key: string]: unknown }>
-        lastCompletedDate?: string | null
-      }
-      const saved = await db.load<QuickSortData>(DB_KEYS.QUICK_SORT_SESSIONS)
-      if (saved) {
-        if (saved.history && Array.isArray(saved.history)) {
-          sessionHistory.value = saved.history.map((s) => ({
-            ...s,
-            completedAt: new Date(s.completedAt)
-          })) as SessionSummary[]
+      const history = await supabaseDb.fetchQuickSortHistory()
+      if (history && history.length > 0) {
+        // Merge with localStorage data - Supabase is source of truth for synced sessions
+        sessionHistory.value = history as SessionSummary[]
+
+        // Update lastCompletedDate from most recent session
+        const sorted = [...history].sort(
+          (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+        )
+        if (sorted.length > 0) {
+          lastCompletedDate.value = sorted[0].completedAt instanceof Date
+            ? sorted[0].completedAt.toISOString()
+            : sorted[0].completedAt as string
         }
-        if (saved.lastCompletedDate) {
-          lastCompletedDate.value = saved.lastCompletedDate
-        }
-        console.log('📊 [BUG-025] Quick Sort data loaded from PouchDB')
+
+        // Update localStorage with synced data
+        saveToLocalStorage()
+        console.log('📊 Quick Sort data loaded from Supabase')
       }
     } catch (error) {
-      console.warn('Failed to load Quick Sort data from PouchDB (localStorage already loaded):', error)
+      console.warn('Failed to load Quick Sort data from Supabase (localStorage already loaded):', error)
     }
   }
 
@@ -240,12 +244,12 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     }
   }
 
-  // BUG-025: Auto-save when data changes
+  // Auto-save to localStorage when data changes (Supabase saves happen in endSession)
   let quickSortSaveTimer: ReturnType<typeof setTimeout> | null = null
   watch([sessionHistory, lastCompletedDate], () => {
     if (quickSortSaveTimer) clearTimeout(quickSortSaveTimer)
     quickSortSaveTimer = setTimeout(() => {
-      saveToDatabase()
+      saveToLocalStorage()
     }, 500) // 500ms debounce
   }, { deep: true })
 

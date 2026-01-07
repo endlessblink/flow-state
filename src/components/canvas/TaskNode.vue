@@ -12,7 +12,10 @@
       'multi-select-mode': multiSelectMode,
       'is-dragging': isNodeDragging,
       'is-connecting': isConnecting,
-      'is-recently-created': isRecentlyCreated
+      'is-recently-created': isRecentlyCreated,
+      'lod-1': isLOD1,
+      'lod-2': isLOD2,
+      'lod-3': isLOD3
     }"
     @dblclick="$emit('edit', task)"
     @click="handleClick"
@@ -29,12 +32,12 @@
       </div>
 
       <!-- Title -->
-      <div class="task-title" :class="titleAlignmentClasses">
+      <div v-if="!isLOD3" class="task-title" :class="titleAlignmentClasses">
         {{ task?.title || 'Untitled Task' }}
       </div>
 
       <!-- Description (if available) - TASK-075: Markdown rendering -->
-      <div v-if="task?.description" class="task-description" :class="titleAlignmentClasses">
+      <div v-if="task?.description && !isLOD1" class="task-description" :class="titleAlignmentClasses">
         <MarkdownRenderer
           :content="task.description"
           :class="{ 'expanded': isDescriptionExpanded || !isDescriptionLong }"
@@ -52,7 +55,7 @@
       </div>
 
       <!-- Metadata -->
-      <div class="task-metadata">
+      <div v-if="!isLOD2" class="task-metadata">
         <span v-if="showStatus" class="status-badge">{{ statusLabel }}</span>
         <span v-if="task?.dueDate" class="due-date-badge" title="Due Date">
           <Calendar :size="12" />
@@ -127,8 +130,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
-import { Position } from '@vue-flow/core'
+import { ref, computed, defineAsyncComponent, onMounted, inject } from 'vue'
+import { Position, useVueFlow } from '@vue-flow/core'
 import { Calendar, Timer, Zap, Clock, Check } from 'lucide-vue-next'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
@@ -177,6 +180,25 @@ const Handle = defineAsyncComponent(() =>
 const { startDrag, endDrag } = useDragAndDrop()
 const timerStore = useTimerStore()
 const taskStore = useTaskStore()
+
+// 🚀 LOD Support: Get zoom level from Vue Flow context
+// We use a safe wrapper to avoid breaking Storybook
+const viewport = ref({ zoom: 1 })
+try {
+  const vf = useVueFlow()
+  if (vf) {
+    viewport.value = vf.viewport
+  }
+} catch (e) {
+  // Not in Vue Flow context (e.g. Storybook)
+}
+
+const zoom = computed(() => viewport.value.zoom)
+
+// LOD Levels
+const isLOD1 = computed(() => zoom.value < 0.6) // Hide description
+const isLOD2 = computed(() => zoom.value < 0.4) // Hide metadata
+const isLOD3 = computed(() => zoom.value < 0.2) // Hide title, simple block
 
 // Hebrew text alignment support
 const { getAlignmentClasses } = useHebrewAlignment()
@@ -428,6 +450,26 @@ const formattedDuration = computed(() => {
   /* TASK-079: Thick visible border for zoom-out */
   border: 2px solid rgba(255, 255, 255, 0.25);
   z-index: -1;
+}
+
+/* Disable expensive filters at high zoom levels */
+.task-node.lod-2::before {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(42, 45, 55, 0.95); /* More opaque since blur is gone */
+}
+
+.task-node.lod-3 {
+  width: 120px;
+  min-width: 120px;
+  height: 60px;
+  box-shadow: none;
+  border: 4px solid rgba(255, 255, 255, 0.4);
+}
+
+.task-node.lod-3 .task-node-content {
+  padding: 0;
+  height: 100%;
 }
 
 .task-node:hover {

@@ -1,5 +1,5 @@
-**Last Updated**: January 7, 2026 (BUG-007 Sidebar Date Filters Fix)
-**Version**: 5.23 (Sidebar Date Filters Fix)
+**Last Updated**: January 7, 2026 (TASK-116 Smart Group Instant Updates + Nested Groups)
+**Version**: 5.24 (Smart Group Instant Updates)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -165,6 +165,17 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 - Design and implement new clean, minimal, cyberpunky "Cyber Tomato" icon set.
 - Includes: Main logo, Tauri app icon, and favicon.
 
+### TASK-111: Landing Page for Early Access (📋 PLANNED)
+**Priority**: P1-HIGH
+**Plan**: [plans/pomo-flow-landing-page.md](../plans/pomo-flow-landing-page.md)
+- Create landing page hosted on GitHub Pages (free)
+- Showcase features: Board, Calendar, Canvas views, Pomodoro timer
+- Email signup for early access waitlist
+- Explain semi open-source business model:
+  - Free: Local IndexedDB storage (no cloud sync)
+  - Cloud ($): Supabase sync + backups
+  - Pro ($): AI features + gamification
+
 ### TASK-108: Tauri/Web Design Parity (📋 PLANNED)
 **Priority**: P1-HIGH
 - Ensure the Tauri app design mimics 1-to-1 the web app design.
@@ -218,6 +229,93 @@ Fixed critical bugs after Supabase migration causing app not to load and ghost p
 - [x] `supabaseMigrationCleanup.ts`: Added `clearAllLocalData()` helper
 - [x] Deleted 18+ legacy PouchDB/CouchDB files (~10,000 lines removed)
 - [x] Build verified passing
+
+### ~~BUG-009~~: Milkdown Editor Security & Stability Fixes (✅ DONE)
+**Priority**: P0-CRITICAL (Security) / P1-HIGH (Stability)
+**Completed**: January 7, 2026
+
+Comprehensive security and stability fixes for the Milkdown markdown editor following TASK-109 implementation.
+
+**Security Fixes**:
+- [x] **CRITICAL**: Removed hardcoded CouchDB credentials from `database.ts` (admin/pomoflow-2024)
+- [x] Added URL sanitization to markdown link renderer - blocks `javascript:`, `vbscript:`, `data:` protocols
+- [x] Implemented protocol allowlist (http, https, mailto only)
+
+**Stability Fixes (Vue Proxy + Private Fields)**:
+- [x] Added `toRaw()` wrapper pattern to prevent "Cannot read private member" TypeError
+- [x] Created `safeEditorAction()` function that unwraps Vue proxy before accessing Milkdown Editor
+- [x] Added `isUnmounting` ref guard to prevent operations on destroyed editor instances
+- [x] Added `view.isDestroyed` check before ProseMirror view operations
+
+**TaskList Toolbar Button Fix**:
+- [x] Fixed TaskList toolbar to create proper checkboxes instead of raw `[ ]` text
+- [x] Uses `wrapInBulletListCommand` + `setNodeMarkup` with `checked: false` attribute
+- [x] Checkboxes now render as `□` and toggle to `☑` on click
+- [x] Compatible with `listItemBlockComponent` from `@milkdown/components`
+
+**Race Condition Guards**:
+- [x] Added `isSaving` ref to TaskEditModal to prevent double-save on rapid Ctrl+S
+- [x] Guard in `handleKeyDown` to skip keystrokes while save in progress
+- [x] try/finally pattern ensures `isSaving` resets even on error
+
+**Performance Improvements**:
+- [x] Changed RTL detection from computed to debounced ref (300ms)
+- [x] Prevents expensive regex execution on every keystroke
+
+**Type Safety**:
+- [x] Added `ToolbarCommand` union type for toolbar actions
+- [x] Implemented exhaustive switch with `never` type for compile-time safety
+
+**Test Suite**:
+- [x] Created `tests/markdown-editor.spec.ts` with 6 Playwright scenarios
+- [x] Tests: Basic editing, Bold toolbar, TaskList, Race conditions, Large content, Clean unmount
+- [x] Console error monitoring for private field and TypeError detection
+
+**Files Changed**:
+- `src/config/database.ts` - Security: removed credentials
+- `src/components/common/MilkdownEditorSurface.vue` - toRaw wrapper, guards
+- `src/components/common/MarkdownEditor.vue` - Debounced RTL
+- `src/components/tasks/TaskEditModal.vue` - Save race guard
+- `src/utils/markdown.ts` - URL sanitization
+- `tests/markdown-editor.spec.ts` - New test suite
+
+### ~~BUG-010~~: Milkdown Auto-Conversion Issue → Tiptap Migration (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 7, 2026
+
+Milkdown's aggressive input rules continued to auto-convert `-` to bullet lists before users could complete `- [ ]` task list syntax. After multiple fix attempts (disabling individual inputRules imports), the issue persisted.
+
+**Solution**: Migrated from Milkdown to Tiptap
+- Tiptap offers `enableInputRules: false` - single option to disable all auto-conversion
+- Better Vue 3 integration with official `@tiptap/vue-3`
+- Smaller bundle size (~100KB reduction)
+- Cleaner API for toolbar commands
+
+**Changes**:
+- [x] Created `TiptapEditor.vue` with `enableInputRules: false`
+- [x] Updated `MarkdownEditor.vue` to use TiptapEditor instead of MilkdownEditorSurface
+- [x] Full toolbar retained: Bold, Italic, Lists, Task Lists, Links, Undo/Redo
+- [x] Build passes, bundle 100KB smaller
+
+**Packages Added**:
+- `@tiptap/vue-3`, `@tiptap/starter-kit`, `@tiptap/extension-task-list`
+- `@tiptap/extension-task-item`, `@tiptap/extension-link`, `@tiptap/pm`
+
+**Skill Updates**:
+- [x] Created `tiptap-vue3` skill with working patterns
+- [x] Deprecated `milkdown-vue3` skill (kept for historical reference)
+- [x] Updated `skills.json` registry
+
+**Files**:
+- `src/components/common/TiptapEditor.vue` - New
+- `src/components/common/MarkdownEditor.vue` - Updated
+- `.claude/skills/tiptap-vue3/SKILL.md` - New skill
+- `.claude/skills/milkdown-vue3/SKILL.md` - Deprecated
+- `.claude/config/skills.json` - Updated
+
+**Note**: Milkdown packages remain in `package.json` but are unused. Can be removed in future cleanup.
+
+---
 
 ### ~~BUG-001~~: Fix Shift+Drag Selection Inside Groups (✅ DONE)
 **Priority**: P1-HIGH
@@ -485,8 +583,17 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 **Priority**: P1-HIGH
 **Completed**: January 7, 2026
 - [x] Implement Level-of-Detail (LOD) rendering for canvas nodes.
-- [x] Replace full task-to-canvas sync with incremental/diff-based updates.
-- [x] Optimize node data mapping to reduce reactive overhead.
+- [x] Replace `syncTasksToCanvas` with a more efficient incremental update logic.
+- [x] Reduce reactive overhead in node data mapping (O(N) Optimization).
+- [x] Verify drag performance (< 16ms/frame).
+
+### TASK-117: Fix Lint and TS Errors (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Started**: January 7, 2026
+- [ ] Analyze lint and typescript errors.
+- [ ] Fix typescript errors.
+- [ ] Fix lint errors.
+- [ ] Verify application stability.
 
 ### TASK-114: Virtual Scrolling Smoothness (📋 PLANNED)
 **Priority**: P2-MEDIUM
@@ -500,27 +607,49 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 - Implement specialized cleanup for detached Vue Flow elements.
 - Optimize task store internal representation for reduced memory footprint.
 
-### TASK-114: Smart Group Drop Should Update Task Due Date (🔄 IN PROGRESS)
+### ~~TASK-116~~: Smart Group Drop Should Update Task Due Date Instantly (✅ DONE)
 **Priority**: P1-HIGH
-**Started**: January 7, 2026
+**Completed**: January 7, 2026
 
-Moving a task to a smart group (Today, Tomorrow, This Week, etc.) should automatically update the task's due date to match the group's target date.
+Moving a task to a smart group (Today, Tomorrow, This Week, etc.) now instantly updates the task's properties without requiring a page refresh.
 
-**Problem**:
-- User moves task from one group to "Tomorrow" group on canvas
-- Task position updates but due date doesn't change
-- Expected: Task's `dueDate` should update to tomorrow's date
+**Problem Fixed**:
+- User moved task to "Tomorrow" group but dueDate didn't update visually until refresh
+- Hash-based watcher only watched `title:status:priority`, not `dueDate`
+- NodeUpdateBatcher used 16ms delay for 'normal' priority updates
 
-**Investigation**:
-- [x] `applySectionPropertiesToTask()` exists in `useCanvasDragDrop.ts` (line 168-254)
-- [x] `moveTaskToSmartGroup()` exists in `taskOperations.ts` (line 406-434)
-- [x] `detectPowerKeyword()` correctly identifies date keywords
-- [ ] Debug why applySectionPropertiesToTask isn't being called or isn't detecting the smart group
+**Root Cause**:
+The watcher in `CanvasView.vue` (line ~1835) only watched title, status, and priority changes. dueDate changes weren't triggering UI sync. Additionally, the batcher priority was 'normal' (16ms delay) instead of 'high' (instant).
 
-**Files**:
-- `src/composables/canvas/useCanvasDragDrop.ts`
-- `src/stores/tasks/taskOperations.ts`
-- `src/composables/useTaskSmartGroups.ts`
+**Fixes Applied**:
+- [x] Added `dueDate` and `estimatedDuration` to hash-based watcher in CanvasView.vue
+- [x] Changed batcher priority from 'normal' to 'high' for instant feedback
+- [x] Added missing 'later' case to `moveTaskToSmartGroup` (clears dueDate)
+- [x] Added 'duration' case to drag-drop handler for duration keywords (Quick, Short, Medium, Long)
+
+**New Feature - Nested Group Inheritance**:
+When dropping a task on a group that is inside another group, the task now receives properties from ALL containing groups.
+
+Example: "High Priority" group inside "Today" group → task gets both `priority: high` AND `dueDate: today`
+
+**Implementation**:
+- [x] `getAllContainingSections()` - Finds all sections containing a point, sorted by size (largest first)
+- [x] `getSectionProperties()` - Extracts properties from a single section (assignOnDrop, keyword detection, or legacy)
+- [x] `applyAllNestedSectionProperties()` - Merges and applies properties from all containing sections
+- [x] Console logs `🎯 [NESTED-GROUPS] Applying properties from X sections:` for debugging
+
+**All Power Group Keywords Now Working**:
+| Category | Keywords |
+|----------|----------|
+| Date | today, tomorrow, this weekend, this week, later |
+| Priority | high, medium, low |
+| Status | todo, active, done, paused |
+| Duration | quick (15m), short (30m), medium (1h), long (2h), unestimated (0) |
+
+**Files Changed**:
+- `src/views/CanvasView.vue` - Watcher hash + priority
+- `src/composables/canvas/useCanvasDragDrop.ts` - Nested groups + duration handler
+- `src/stores/tasks/taskOperations.ts` - Added 'later' case
 
 </details>
 

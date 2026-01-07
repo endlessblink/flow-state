@@ -404,6 +404,7 @@ export function useTaskOperations(
     }
 
     const moveTaskToSmartGroup = (taskId: string, type: string) => {
+        console.log(`📅 [TASK-114] moveTaskToSmartGroup called: taskId=${taskId}, type="${type}"`)
         const today = new Date()
         let dueDate = ''
         switch (type.toLowerCase()) {
@@ -429,7 +430,15 @@ export function useTaskOperations(
                 dueDate = formatDateKey(sun)
                 break
             }
+            case 'later': {
+                // "Later" clears the due date - task is postponed indefinitely
+                dueDate = ''
+                break
+            }
+            default:
+                console.log(`⚠️ [TASK-114] Unknown smart group type: "${type}" - no dueDate set`)
         }
+        console.log(`📅 [TASK-114] Computed dueDate: "${dueDate}" for type "${type}"`)
         updateTask(taskId, { dueDate })
     }
 

@@ -111,7 +111,7 @@
       <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
       <!-- context="canvas" to hide group filter chips (shown only in calendar) -->
       <!-- key forces Vue to recreate component when switching views -->
-      <UnifiedInboxPanel context="canvas" key="canvas-inbox" />
+      <UnifiedInboxPanel key="canvas-inbox" context="canvas" />
 
       <!-- Always show VueFlow canvas, even when empty -->
       <div class="canvas-container-wrapper">
@@ -166,23 +166,23 @@
             @connect-end="handleConnectEnd"
             @keydown="handleKeyDown"
           >
-          <!-- Rubber Band Selection Box - Moved outside VueFlow to avoid zoom transforms -->
-          <!-- Using fixed position to match clientX/Y coordinates directly -->
-          <div
-            v-if="selectionBox.isVisible"
-            class="selection-box"
-            :style="{
-              position: 'fixed',
-              left: `${selectionBox.x}px`,
-              top: `${selectionBox.y}px`,
-              width: `${selectionBox.width}px`,
-              height: `${selectionBox.height}px`,
-              zIndex: 9999,
-              pointerEvents: 'none',
-              border: '1px solid var(--accent-primary)',
-              backgroundColor: 'rgba(99, 102, 241, 0.1)'
-            }"
-          />
+            <!-- Rubber Band Selection Box - Moved outside VueFlow to avoid zoom transforms -->
+            <!-- Using fixed position to match clientX/Y coordinates directly -->
+            <div
+              v-if="selectionBox.isVisible"
+              class="selection-box"
+              :style="{
+                position: 'fixed',
+                left: `${selectionBox.x}px`,
+                top: `${selectionBox.y}px`,
+                width: `${selectionBox.width}px`,
+                height: `${selectionBox.height}px`,
+                zIndex: 9999,
+                pointerEvents: 'none',
+                border: '1px solid var(--accent-primary)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)'
+              }"
+            />
             <!-- Background Grid -->
             <Background
               pattern-color="#e5e7eb"
@@ -1832,15 +1832,16 @@ resourceManager.addWatcher(
   )
 )
 
-// FIX: Watch for task visual property changes (title, status, priority, dueDate)
+// FIX: Watch for task visual property changes (title, status, priority, dueDate, estimatedDuration)
 // Using hash-based approach (validated by Perplexity as more efficient than deep:true on objects)
 // NO deep:true needed - single string comparison, zero garbage collection
-// TASK-114: Added dueDate to trigger sync when smart groups update due dates
+// TASK-114: Added dueDate and estimatedDuration to trigger sync when smart groups update properties
+// Using 'high' priority for instant feedback when dropping tasks on smart groups
 resourceManager.addWatcher(
   watch(
-    () => (isInteracting.value ? null : taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}:${t.dueDate || ''}`).join('|')),
+    () => (isInteracting.value ? null : taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}:${t.dueDate || ''}:${t.estimatedDuration || 0}`).join('|')),
     (val) => {
-      if (val) batchedSyncNodes('normal')
+      if (val) batchedSyncNodes('high')
     },
     { flush: 'post' }
   )

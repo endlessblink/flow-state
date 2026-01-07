@@ -1,92 +1,75 @@
 # Pomo-Flow
 
-A sophisticated Vue 3 productivity application combining Pomodoro timer functionality with task management across multiple views.
+A sophisticated Vue 3 productivity application combining Pomodoro timer functionality with task management across multiple views (Board, Calendar, Canvas, Focus, etc.).
 
 ## Features
 
-- **7 Task Views**: Board, Calendar, Canvas, Focus, QuickSort, AllTasks, CalendarVueCal
-- **Pomodoro Timer**: Work/break sessions with browser notifications
-- **Task Management**: Projects, priorities, due dates, subtasks, recurring tasks
-- **Canvas Organization**: Free-form spatial task arrangement with Vue Flow
-- **Persistent Storage**: IndexedDB via LocalForage with automatic backup
-- **Glass Morphism UI**: Modern design system with dark/light themes
+- **7 Task Views**:
+    - **Board**: Kanban-style drag-and-drop management.
+    - **Calendar**: Time-blocking and scheduling (via `vue-cal`).
+    - **Canvas**: Infinite whiteboard for spatial organization (via `Vue Flow`).
+    - **Focus**: Distraction-free single-task execution.
+    - **AllTasks**: Comprehensive list view.
+    - **QuickSort**: Rapid task categorization.
+    - **CalendarVueCal**: Alternative calendar view.
+- **Pomodoro Timer**: Integrated work/break sessions with browser notifications.
+- **Task Management**: Projects, priorities, due dates, subtasks, and recurring tasks.
+- **Offline-First Storage**:
+    - **Primary**: PowerSync (SQLite/WASM) for robust local storage and sync.
+    - **Cloud Sync**: Seamless synchronization with Supabase/PostgreSQL.
+    - **Legacy Support**: Migration utilities for PouchDB (IndexedDB).
+- **Glass Morphism UI**: Modern, responsive design using Tailwind CSS and Naive UI.
 
 ## Quick Start
 
-```bash
-# Install dependencies
-npm install
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
 
-# Start development server
-npm run dev
-# Open http://localhost:5546
-```
+2. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:5546` in your browser.
 
-## Optional: Multi-Device Sync
+## Architecture & Tech Stack
 
-Pomo-Flow works fully offline with local browser storage (IndexedDB). No account required!
+- **Frontend Framework**: Vue 3 (Composition API) + TypeScript + Vite
+- **State Management**: Pinia
+- **Styling**: Tailwind CSS + Naive UI
+- **Database**:
+    - **Local**: PowerSync (SQLite/WASM)
+    - **Remote**: Supabase (PostgreSQL)
+- **Key Libraries**:
+    - `@vue-flow/core`: For the Canvas view.
+    - `vue-cal`: For the Calendar view.
+    - `lucide-vue-next`: For icons.
 
-For multi-device sync, you can self-host CouchDB:
+## Developer Tools
 
-### Quick Start (Docker)
+### Agentic Workflow (`dev-manager`)
 
-```bash
-docker run -d --name pomoflow-couchdb \
-  -p 5984:5984 \
-  -e COUCHDB_USER=admin \
-  -e COUCHDB_PASSWORD=your-secure-password \
-  couchdb:3
-```
+Pomo-Flow includes a specialized backend for AI agents to interact with the codebase and runtime.
 
-Then create a `.env` file:
+- **Start Manager**: `npm run dev:manager`
+- **Features**:
+    - Terminal emulation for executing local commands.
+    - File context injection for agents.
+    - "Review Changes" workflow.
+    - **Note**: Requires local Node.js environment.
 
-```env
-VITE_COUCHDB_URL=http://localhost:5984/pomoflow
-VITE_COUCHDB_USERNAME=admin
-VITE_COUCHDB_PASSWORD=your-secure-password
-```
+### Testing
 
-See `.env.example` for all configuration options.
-
-## Development Commands
-
-```bash
-npm run dev          # Development server (port 5546)
-npm run build        # Production build
-npm run test         # Run tests
-npm run test:watch   # Tests with UI
-npm run storybook    # Component documentation (port 6006)
-npm run kill         # Kill all PomoFlow processes
-npm run lint         # Lint code
-npm run lint:fix     # Fix linting issues
-```
-
-## Technology Stack
-
-- **Core**: Vue 3 + TypeScript + Pinia
-- **UI**: Tailwind CSS + Naive UI + Lucide Icons
-- **Canvas**: Vue Flow (@vue-flow/core)
-- **Calendar**: vue-cal
-- **Storage**: PouchDB (IndexedDB) + optional CouchDB sync
-- **Build**: Vite 7.2.4
-- **Testing**: Vitest + Playwright
-
-## Project Structure
-
-```
-src/
-├── views/           # 7 application views
-├── components/      # Reusable UI components (10 directories)
-├── stores/          # 12 Pinia stores
-├── composables/     # 56 Vue 3 composables
-├── assets/          # Styles and design tokens
-└── utils/           # Utility functions
-```
+- **Unit/Component Tests**: `npm run test` (Vitest)
+- **E2E Tests**: `npm run test:e2e` (Playwright)
+- **Safety Tests**: `npm run test:safety`
 
 ## Documentation
 
-- **CLAUDE.md** - Development guidance and patterns
-- **docs/MASTER_PLAN.md** - Project roadmap and architecture
+- **`AGENTS.md`**: Critical rules for AI agents (e.g., **NO DEMO DATA**).
+- **`docs/MASTER_PLAN.md`**: Comprehensive project roadmap and status.
+- **`CLAUDE.md`**: Coding guidelines and patterns.
 
 ## License
 

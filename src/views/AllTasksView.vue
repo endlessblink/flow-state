@@ -152,7 +152,10 @@ const sortedTasks = computed(() => {
       return tasks.sort((a, b) => {
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        // Lexicographical comparison for ISO date strings is equivalent to chronological sort
+        // and much faster than creating new Date objects in a loop
+        if (a.dueDate === b.dueDate) return 0
+        return a.dueDate < b.dueDate ? -1 : 1
       })
     case 'priority': {
       const priorityOrder = { high: 0, medium: 1, low: 2 }

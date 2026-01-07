@@ -638,7 +638,10 @@ const filteredTasksWithProjectFiltering = computed(() => {
       }
 
       // FIX (Dec 5, 2025): Include dueDate and canvasPosition in hash for proper cache invalidation
-      const currentHash = currentTasks.map(t => `${t.id}:${t.title.slice(0, 10)}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${t.updatedAt?.getTime() ?? ''}`).join('|')
+      const currentHash = currentTasks.map(t => {
+        const time = (t.updatedAt instanceof Date) ? t.updatedAt.getTime() : (typeof t.updatedAt === 'string' ? new Date(t.updatedAt).getTime() : '')
+        return `${t.id}:${t.title.slice(0, 10)}:${t.isInInbox}:${t.status}:${t.dueDate || ''}:${time}`
+      }).join('|')
       if (currentHash === lastFilteredTasksHash && lastFilteredTasks.length > 0) {
         return lastFilteredTasks
       }
@@ -2055,6 +2058,12 @@ const handleNodesChange = withVueFlowErrorBoundary('handleNodesChange', (changes
   changes.forEach((change) => {
     // Track selection changes - FIXED to maintain group connection
     if (change.type === 'select') {
+      // Skip if we just did a manual Ctrl+click toggle (prevents Vue Flow from overriding)
+      if (canvasStore.skipNextSelectionChange) {
+        canvasStore.skipNextSelectionChange = false
+        return
+      }
+
       const currentSelected = nodes.value.filter(n => 'selected' in n && n.selected).map(n => n.id)
 
       // Only update canvas store if selection actually changed to prevent disconnection
@@ -2729,16 +2738,16 @@ const handleTaskSelect = (task: Task, multiSelect: boolean) => {
     canvasStore.setSelectedNodes([task.id])
   }
 
-  // Ensure selection state is immediately reflected in the nodes
-  const nodeIndex = nodes.value.findIndex(n => n.id === task.id)
-  if (nodeIndex > -1) {
-    // Update the Vue Flow node selection state to match canvas store
-    const isSelected = canvasStore.selectedNodeIds.includes(task.id)
-    const nodeWithSelection = nodes.value[nodeIndex] as Node & { selected?: boolean }
-    if (nodeWithSelection.selected !== isSelected) {
-      nodeWithSelection.selected = isSelected
+  // CRITICAL: Sync ALL Vue Flow nodes' selection state to match canvas store
+  // This prevents Vue Flow's internal state from overriding our manual selection
+  const selectedIds = canvasStore.selectedNodeIds
+  nodes.value.forEach(node => {
+    const nodeWithSelection = node as Node & { selected?: boolean }
+    const shouldBeSelected = selectedIds.includes(node.id)
+    if (nodeWithSelection.selected !== shouldBeSelected) {
+      nodeWithSelection.selected = shouldBeSelected
     }
-  }
+  })
 }
 
 const handleTaskContextMenu = (event: MouseEvent, task: Task) => {

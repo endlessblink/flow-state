@@ -35,6 +35,7 @@ export interface BenchmarkResult {
 }
 
 export interface BenchmarkSuite {
+  canvasPerformance: BenchmarkResult
   virtualScrolling: BenchmarkResult
   taskStoreOperations: BenchmarkResult
   networkRequests: BenchmarkResult
@@ -101,6 +102,7 @@ export class PerformanceBenchmark {
 
       // Run benchmarks
       const results = {
+        canvasPerformance: await this.benchmarkCanvasPerformance(),
         virtualScrolling: await this.benchmarkVirtualScrolling(),
         taskStoreOperations: await this.benchmarkTaskStoreOperations(),
         networkRequests: await this.benchmarkNetworkRequests(),
@@ -120,6 +122,79 @@ export class PerformanceBenchmark {
     } finally {
       this.isRunning.value = false
     }
+  }
+
+  // Canvas performance benchmark
+  private async benchmarkCanvasPerformance(): Promise<BenchmarkResult> {
+    console.log('🖼️ Benchmarking canvas performance...')
+    const times: number[] = []
+    const errors: string[] = []
+
+    const nodeCounts = [100, 500, 1000]
+
+    try {
+      // Lazy load stores to avoid circular dependencies
+      const { useTaskStore } = await import('@/stores/tasks')
+      const { useCanvasStore } = await import('@/stores/canvas')
+      const taskStore = useTaskStore()
+      const canvasStore = useCanvasStore()
+
+      for (const nodeCount of nodeCounts) {
+        const startTime = performance.now()
+
+        // 1. Create tasks
+        const testTasks = Array.from({ length: nodeCount }, (_, i) => ({
+          id: `bench-task-${nodeCount}-${i}`,
+          title: `Benchmark Task ${i}`,
+          status: 'planned' as const,
+          priority: 'medium' as const,
+          projectId: 'bench-project',
+          canvasPosition: { x: (i % 20) * 250, y: Math.floor(i / 20) * 150 },
+          isInInbox: false,
+          subtasks: [],
+          tags: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }))
+
+        // Measure batch addition
+        // @ts-ignore
+        taskStore._rawTasks.push(...testTasks)
+
+        // Wait for next tick to ensure computed properties update
+        const { nextTick } = await import('vue')
+        await nextTick()
+
+        // 2. Measure Canvas Sync
+        const syncStart = performance.now()
+        // @ts-ignore
+        canvasStore.syncTasksToCanvas(taskStore.tasks || [])
+        const syncEnd = performance.now()
+
+        // 3. Measure Render (wait for multiple frames to ensure layout)
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        const renderEnd = performance.now()
+
+        const duration = renderEnd - startTime
+        // Ensure duration is at least very small but non-zero for stats if work was done
+        times.push(Math.max(duration, 0.001))
+
+        // Cleanup
+        // @ts-ignore
+        taskStore._rawTasks = taskStore._rawTasks.filter(t => !t.id.startsWith('bench-task-'))
+        // @ts-ignore
+        canvasStore.nodes = canvasStore.nodes.filter(n => !n.id.startsWith('bench-task-'))
+        await nextTick()
+
+        console.log(`   - ${nodeCount} nodes: ${duration.toFixed(2)}ms (Sync: ${(syncEnd - syncStart).toFixed(2)}ms)`)
+      }
+
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error))
+    }
+
+    this.progress.value = 10
+    return this.calculateBenchmarkResult('Canvas Performance', times, errors)
   }
 
   // Virtual scrolling benchmark
@@ -492,8 +567,8 @@ export class PerformanceBenchmark {
       minTime: min,
       maxTime: max,
       standardDeviation,
-      throughput: times.length / (total / 1000), // operations per second
-      successRate: ((times.length - errors.length) / times.length) * 100,
+      throughput: total > 0 ? (times.length / (total / 1000)) : 0, // operations per second
+      successRate: times.length > 0 ? (((times.length - errors.length) / times.length) * 100) : 0,
       errors
     }
   }

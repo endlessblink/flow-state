@@ -56,12 +56,11 @@ export function useCanvasEvents(syncNodes?: () => void) {
     // --- Event Handlers ---
 
     const handlePaneClick = (event: MouseEvent) => {
-        // SHIFT/CTRL+CLICK ON GROUP BODY SUPPORT
-        // Since we disable pointer-events on groups when Shift is held (to allow rubber-band selection),
-        // we must manually handle Shift/Ctrl+Click on a group to toggle its selection.
-        const isModifierClick = event.shiftKey || event.ctrlKey || event.metaKey
+        // BUG-007: Only Ctrl/Cmd+click toggles group selection
+        // Shift is reserved for rubber-band drag selection (handled in useCanvasSelection)
+        const isMultiSelectClick = event.ctrlKey || event.metaKey
 
-        if (isModifierClick) {
+        if (isMultiSelectClick) {
             // ✅ DRIFT FIX: Use Vue Flow native projection
             const { x, y } = screenToFlowCoordinate({
                 x: event.clientX,

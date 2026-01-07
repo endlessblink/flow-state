@@ -339,11 +339,23 @@ const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
     emit('close')
   } else if (event.key === 'Enter') {
-    if (event.shiftKey) {
-      // Shift+Enter: Allow newline in textareas (don't prevent default)
+    const target = event.target as HTMLElement
+    const isTextarea = target.tagName === 'TEXTAREA'
+    const isContentEditable = target.isContentEditable || target.closest('.ProseMirror') !== null
+
+    // In textareas and contenteditable elements (like Milkdown/ProseMirror):
+    // - Regular Enter creates newlines (don't intercept)
+    // - Ctrl/Cmd+Enter saves the task
+    if (isTextarea || isContentEditable) {
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault()
+        saveTask()
+      }
+      // Otherwise let Enter create a newline naturally
       return
     }
-    // Regular Enter: Save task and prevent newline
+
+    // Outside text editors: Enter saves the task
     event.preventDefault()
     saveTask()
   }

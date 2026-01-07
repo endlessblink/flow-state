@@ -43,6 +43,11 @@ export function useCanvasSelection() {
     }
 
     const handleSelectionChange = (params: { nodes: Node[] }) => {
+        // Skip if we just did a manual Ctrl+click toggle (prevents Vue Flow from overriding)
+        if (canvasStore.skipNextSelectionChange) {
+            // Don't reset flag here - let handleNodesChange handle it after all events
+            return
+        }
         const selectedNodeIds = params.nodes.map(n => n.id)
         canvasStore.setSelectedNodes(selectedNodeIds)
     }

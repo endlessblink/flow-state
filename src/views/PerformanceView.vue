@@ -1,0 +1,476 @@
+<template>
+  <div class="performance-view">
+    <header class="page-header glass">
+      <div class="header-content">
+        <h1>Performance Dashboard</h1>
+        <p>System health and benchmarking suite for Pomo-Flow</p>
+      </div>
+      <div class="actions">
+        <button 
+          class="btn btn-primary glass flex items-center gap-2" 
+          @click="runFullSuite" 
+          :disabled="isRunning"
+          aria-label="Run full performance benchmark suite"
+        >
+          <span>{{ isRunning ? '⚡ Running...' : '🚀 Run Full Suite' }}</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="dashboard-grid">
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <div class="card glass score-card" :class="performanceGradeClass">
+          <h3>Overall Grade</h3>
+          <div class="grade-display">{{ performanceGrade }}</div>
+          <p>{{ statusMessage }}</p>
+        </div>
+
+        <div class="card glass stat-card">
+          <h3>Canvas Latency</h3>
+          <div class="stat-value">{{ canvasLatency }}ms</div>
+          <div class="stat-label">1000 nodes sync</div>
+        </div>
+
+        <div class="card glass stat-card">
+          <h3>Memory Usage</h3>
+          <div class="stat-value">{{ memoryUsage }}MB</div>
+          <div class="stat-label">Heap size</div>
+        </div>
+      </div>
+
+      <!-- Main Results Table -->
+      <div class="results-container glass">
+        <h2>Benchmark Results</h2>
+        <div class="table-wrapper">
+          <table v-if="hasResults">
+            <thead>
+              <tr>
+                <th>Test Category</th>
+                <th>Average</th>
+                <th>Min/Max</th>
+                <th>Throughput</th>
+                <th>Success</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(result, key) in results" :key="key">
+                <td class="test-name">{{ result.name }}</td>
+                <td>{{ result.averageTime.toFixed(2) }}ms</td>
+                <td>{{ result.minTime.toFixed(1) }} / {{ result.maxTime.toFixed(1) }}ms</td>
+                <td>{{ (result.throughput || 0).toFixed(1) }} ops/s</td>
+                <td>
+                  <div class="progress-bar">
+                    <div class="progress" :style="{ width: result.successRate + '%' }"></div>
+                  </div>
+                  {{ Math.round(result.successRate) }}%
+                </td>
+                <td>
+                  <span class="status-badge" :class="getStatusClass(result)">
+                    {{ getStatusLabel(result) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty-state">
+            <p>No results yet. Run the benchmark suite to see metrics.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documentation/Recommendations -->
+      <div class="sidebar glass">
+        <h2>Recommendations</h2>
+        <ul v-if="recommendations.length > 0">
+          <li v-for="(rec, i) in recommendations" :key="i">
+            <strong>{{ rec.type }}:</strong> {{ rec.message }}
+          </li>
+        </ul>
+        <p v-else>System is performing optimally. No recommendations at this time.</p>
+
+        <div class="baseline-tools">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold flex items-center gap-2">
+              <Zap :size="20" class="text-indigo-400" />
+              Baseline Management
+            </h3>
+          </div>
+          <button 
+            class="btn btn-secondary glass w-full flex items-center justify-center gap-2"
+            @click="saveAsBaseline"
+            :disabled="!hasResults"
+            aria-label="Save current results as new performance baseline"
+          >
+            <Save :size="18" />
+            <span>Save as New Baseline</span>
+          </button>
+          <div class="footer-note">
+            Baselines are stored in <code>docs/performance/</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { performanceBenchmark } from '@/utils/performanceBenchmark'
+import { useRouter } from 'vue-router'
+import { Zap, Save } from 'lucide-vue-next' // Import icons
+
+const results = ref<any>({})
+const isRunning = ref(false) // Renamed from isBenchmarkRunning
+const currentProgress = ref(0)
+const hasResults = computed(() => Object.keys(results.value).length > 0)
+
+const runFullSuite = async () => { // Renamed from runBenchmark
+  isRunning.value = true
+  currentProgress.value = 0
+  
+  // Update progress in background
+  const progressInterval = setInterval(() => {
+    currentProgress.value = performanceBenchmark.currentProgress
+  }, 100)
+
+  try {
+    const suiteResponse = await performanceBenchmark.runFullSuite()
+    results.value = suiteResponse
+  } catch (err) {
+    console.error('Benchmark failed:', err)
+  } finally {
+    clearInterval(progressInterval)
+    isRunning.value = false
+    currentProgress.value = 100
+  }
+}
+
+onMounted(async () => {
+  const latest = await performanceBenchmark.getLatestReport()
+  if (latest && (latest as any).results) {
+    results.value = (latest as any).results
+  }
+})
+
+// Metrics helpers
+const canvasLatency = computed(() => {
+  if (results.value?.canvasPerformance) {
+    return results.value.canvasPerformance.averageTime.toFixed(1)
+  }
+  return '0.0'
+})
+
+const memoryUsage = computed(() => {
+  if (results.value?.memoryEfficiency?.memoryUsage) {
+    return (results.value.memoryEfficiency.memoryUsage / 1024 / 1024).toFixed(1)
+  }
+  return '0.0'
+})
+
+const performanceGrade = computed(() => {
+  if (!hasResults.value) return '-'
+  // Weight the grade more towards critical UI metrics (Canvas & Render)
+  const canvasTime = results.value.canvasPerformance?.averageTime || 0
+  const renderTime = results.value.renderPerformance?.averageTime || 0
+  const otherAvg = Object.values(results.value)
+    .filter((r: any) => r.name !== 'Canvas Performance' && r.name !== 'Render Performance')
+    .reduce((sum: number, r: any) => sum + r.averageTime, 0) / (Object.keys(results.value).length - 2 || 1)
+
+  const weightedAvg = (canvasTime * 0.4) + (renderTime * 0.4) + (otherAvg * 0.2)
+  
+  if (weightedAvg < 16) return 'A+'
+  if (weightedAvg < 48) return 'A'
+  if (weightedAvg < 96) return 'B'
+  if (weightedAvg < 192) return 'C'
+  return 'D'
+})
+
+const performanceGradeClass = computed(() => {
+  const grade = performanceGrade.value
+  if (grade === 'A+' || grade === 'A') return 'grade-a'
+  if (grade === 'B') return 'grade-b'
+  if (grade === 'C') return 'grade-c'
+  return 'grade-d'
+})
+
+const statusMessage = computed(() => {
+  if (!hasResults.value) return 'System status unknown'
+  const grade = performanceGrade.value
+  if (grade === 'A+' || grade === 'A') return 'Excellent Performance'
+  if (grade === 'B') return 'Good Performance'
+  return 'Performance Needs Attention'
+})
+
+const getStatusClass = (result: any) => {
+  if (result.averageTime < 16) return 'status-fast'
+  if (result.averageTime < 50) return 'status-medium'
+  return 'slow' // Changed to 'slow' to match .status-badge.slow CSS
+}
+
+const getStatusLabel = (result: any) => {
+  if (result.averageTime < 16) return 'FAST'
+  if (result.averageTime < 50) return 'OK'
+  return 'SLOW'
+}
+
+const recommendations = computed(() => {
+  const recs = []
+  if (results.value?.canvasPerformance?.averageTime > 50) {
+    recs.push({ type: 'Canvas', message: 'High latency detected with many nodes. Consider LOD optimization.' })
+  }
+  if (results.value?.memoryEfficiency?.memoryUsage > 200 * 1024 * 1024) {
+    recs.push({ type: 'Memory', message: 'Memory usage is elevated. Check for leaks in node pooling.' })
+  }
+  if (results.value?.renderPerformance?.averageTime > 20) {
+    recs.push({ type: 'Render', message: 'Main thread is taking too long for UI updates. Review watcher complexity.' })
+  }
+  return recs
+})
+
+const saveAsBaseline = () => {
+  const data = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    results: results.value,
+    environment: {
+      userAgent: navigator.userAgent,
+      memoryLimit: (performance as any).memory?.jsHeapSizeLimit || 'unknown'
+    }
+  }, null, 2)
+  
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `performance-baseline-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+</script>
+
+<style scoped>
+.performance-view {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: #e2e8f0;
+  height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: auto; /* Revert to auto for better accessibility grab area */
+  scrollbar-color: rgba(99, 102, 241, 0.5) rgba(15, 23, 42, 0.1);
+}
+
+/* Custom scrollbar for Webkit browsers with wider handle */
+.performance-view::-webkit-scrollbar {
+  width: 14px;
+}
+
+.performance-view::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.1);
+}
+
+.performance-view::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 7px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+.performance-view::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
+  background-clip: content-box;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+}
+
+.header-content h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-content p {
+  margin: 0.25rem 0 0;
+  opacity: 0.6;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 2rem;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  grid-column: 1 / -1;
+}
+
+.card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+  color: #6366f1;
+}
+
+.grade-display {
+  font-size: 5rem;
+  font-weight: 800;
+  margin: 1rem 0;
+  line-height: 1;
+  text-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
+  color: #ff6b6b; /* Brighter red for accessibility */
+}
+
+.grade-a { color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+.grade-b { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
+.grade-c { color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
+.grade-d { color: #ef4444; border-color: rgba(239, 68, 68, 0.3); } /* Added for consistency */
+
+.results-container {
+  padding: 1.5rem;
+}
+
+.table-wrapper {
+  margin-top: 1.5rem;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0.6;
+  font-weight: 500;
+}
+
+td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.test-name {
+  font-weight: 600;
+}
+
+.sidebar {
+  padding: 1.5rem;
+  height: fit-content;
+}
+
+.sidebar h2 {
+  font-size: 1.25rem;
+  margin-top: 0;
+}
+
+.sidebar ul {
+  padding-left: 1.25rem;
+  margin: 1rem 0;
+}
+
+.sidebar li {
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.baseline-tools {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-note {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+
+.status-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.status-fast { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.status-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.status-badge.slow {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ff8a8a; /* Brighter red for contrast on dark background */
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary { background: #6366f1; color: white; }
+.btn-primary:hover { background: #4f46e5; }
+.btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; }
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.progress-bar {
+  width: 60px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  display: inline-block;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.progress {
+  height: 100%;
+  background: #6366f1;
+  border-radius: 3px;
+}
+</style>

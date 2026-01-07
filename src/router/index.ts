@@ -63,12 +63,18 @@ const router = createRouter({
       props: true,
       meta: { requiresAuth: true }
     },
-      {
+    {
       path: '/keyboard-test',
       name: 'keyboard-test',
       component: () => import('@/components/debug/KeyboardDeletionTest.vue')
     },
-      // TODO: Add other views when implemented
+    {
+      path: '/performance',
+      name: 'performance',
+      component: () => import('@/views/PerformanceView.vue'),
+      meta: { requiresAdmin: true }
+    },
+    // TODO: Add other views when implemented
     // {
     //   path: '/todo',
     //   name: 'todo',
@@ -90,6 +96,13 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     console.log('🛣️ Route requires authentication - initializing local user')
     await authStore.initializeLocalUser()
+  }
+
+  // Check if route requires admin privileges
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    console.warn('👮 Access denied: Route requires Admin privileges')
+    next({ name: 'board' }) // Redirect non-admins to home
+    return
   }
 
   // Allow navigation - local auth is always available once initialized

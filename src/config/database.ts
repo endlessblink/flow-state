@@ -82,9 +82,9 @@ export const prodDatabaseConfig: DatabaseConfig = {
  *
  * This ensures sync works automatically on any browser without manual configuration.
  */
-const DEFAULT_COUCHDB_URL = 'http://84.46.253.137:5984/pomoflow-tasks'
-const DEFAULT_COUCHDB_USERNAME = 'admin'
-const DEFAULT_COUCHDB_PASSWORD = 'pomoflow-2024'
+const DEFAULT_COUCHDB_URL = 'http://localhost:5984/pomoflow-tasks'
+const DEFAULT_COUCHDB_USERNAME = ''
+const DEFAULT_COUCHDB_PASSWORD = ''
 
 const getStoredCouchDBConfig = () => {
   // Check if we're in a browser environment with localStorage
@@ -102,7 +102,7 @@ const getStoredCouchDBConfig = () => {
   // V3: Clean DB to avoid conflict history bloat
   const defaultUrl = import.meta.env.DEV
     ? 'http://localhost:5546/pomoflow-tasks-v3'
-    : 'http://84.46.253.137:5984/pomoflow-tasks-v3'
+    : 'http://localhost:5984/pomoflow-tasks-v3'
 
   // Browser environment - check localStorage first, then env vars, then defaults
   // IMPORTANT: Use .trim() and check for empty strings, not just null

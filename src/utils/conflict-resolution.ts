@@ -1,8 +1,9 @@
 import type { UnifiedTask } from '@/types/unified-task';
 import type { ConflictDiff } from './threeWayMerge';
-import {
+import type {
   ConflictInfo,
-  ResolutionResult,
+  ResolutionResult} from '@/types/conflicts';
+import {
   ConflictType,
   ResolutionType,
   DocumentVersion

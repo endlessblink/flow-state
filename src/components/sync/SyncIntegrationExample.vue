@@ -69,7 +69,6 @@
             >
               Clear Errors
             </button>
-
           </div>
         </div>
 
@@ -179,7 +178,6 @@
         </div>
 
         <!-- Test Results -->
-
       </div>
     </SyncErrorBoundary>
   </div>

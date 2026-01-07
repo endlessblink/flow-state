@@ -1,14 +1,28 @@
 <template>
   <div class="milkdown-surface-container">
     <div class="editor-toolbar">
-      <button class="toolbar-btn" title="Undo (Ctrl+Z)" @click="handleToolbar('Undo')"><Undo :size="14" /></button>
-      <button class="toolbar-btn" title="Redo (Ctrl+Y)" @click="handleToolbar('Redo')"><Redo :size="14" /></button>
+      <button class="toolbar-btn" title="Undo (Ctrl+Z)" @click="handleToolbar('Undo')">
+        <Undo :size="14" />
+      </button>
+      <button class="toolbar-btn" title="Redo (Ctrl+Y)" @click="handleToolbar('Redo')">
+        <Redo :size="14" />
+      </button>
       <div class="toolbar-divider" />
-      <button class="toolbar-btn" title="Bold (Ctrl+B)" @click="handleToolbar('Bold')"><BoldIcon :size="14" /></button>
-      <button class="toolbar-btn" title="Italic (Ctrl+I)" @click="handleToolbar('Italic')"><ItalicIcon :size="14" /></button>
-      <button class="toolbar-btn" title="Bullet List" @click="handleToolbar('BulletList')"><List :size="14" /></button>
-      <button class="toolbar-btn" title="Task List" @click="handleToolbar('TaskList')"><CheckSquare :size="14" /></button>
-      <button class="toolbar-btn" title="Link (Ctrl+K)" @click="handleToolbar('Link')"><LinkIcon :size="14" /></button>
+      <button class="toolbar-btn" title="Bold (Ctrl+B)" @click="handleToolbar('Bold')">
+        <BoldIcon :size="14" />
+      </button>
+      <button class="toolbar-btn" title="Italic (Ctrl+I)" @click="handleToolbar('Italic')">
+        <ItalicIcon :size="14" />
+      </button>
+      <button class="toolbar-btn" title="Bullet List" @click="handleToolbar('BulletList')">
+        <List :size="14" />
+      </button>
+      <button class="toolbar-btn" title="Task List" @click="handleToolbar('TaskList')">
+        <CheckSquare :size="14" />
+      </button>
+      <button class="toolbar-btn" title="Link (Ctrl+K)" @click="handleToolbar('Link')">
+        <LinkIcon :size="14" />
+      </button>
     </div>
     <div class="milkdown-surface" :dir="textDirection">
       <Milkdown />

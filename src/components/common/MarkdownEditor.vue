@@ -2,9 +2,9 @@
   <MilkdownProvider>
     <div class="markdown-editor" :dir="textDirection">
       <MilkdownEditorSurface
-        :modelValue="internalValue"
-        :textDirection="textDirection"
-        @update:modelValue="handleInternalUpdate"
+        :model-value="internalValue"
+        :text-direction="textDirection"
+        @update:model-value="handleInternalUpdate"
       />
     </div>
   </MilkdownProvider>

@@ -8,9 +8,9 @@
       <div class="actions">
         <button 
           class="btn btn-primary glass flex items-center gap-2" 
-          @click="runFullSuite" 
           :disabled="isRunning"
           aria-label="Run full performance benchmark suite"
+          @click="runFullSuite"
         >
           <span>{{ isRunning ? '⚡ Running...' : '🚀 Run Full Suite' }}</span>
         </button>
@@ -22,20 +22,30 @@
       <div class="summary-cards">
         <div class="card glass score-card" :class="performanceGradeClass">
           <h3>Overall Grade</h3>
-          <div class="grade-display">{{ performanceGrade }}</div>
+          <div class="grade-display">
+            {{ performanceGrade }}
+          </div>
           <p>{{ statusMessage }}</p>
         </div>
 
         <div class="card glass stat-card">
           <h3>Canvas Latency</h3>
-          <div class="stat-value">{{ canvasLatency }}ms</div>
-          <div class="stat-label">1000 nodes sync</div>
+          <div class="stat-value">
+            {{ canvasLatency }}ms
+          </div>
+          <div class="stat-label">
+            1000 nodes sync
+          </div>
         </div>
 
         <div class="card glass stat-card">
           <h3>Memory Usage</h3>
-          <div class="stat-value">{{ memoryUsage }}MB</div>
-          <div class="stat-label">Heap size</div>
+          <div class="stat-value">
+            {{ memoryUsage }}MB
+          </div>
+          <div class="stat-label">
+            Heap size
+          </div>
         </div>
       </div>
 
@@ -56,13 +66,15 @@
             </thead>
             <tbody>
               <tr v-for="(result, key) in results" :key="key">
-                <td class="test-name">{{ result.name }}</td>
+                <td class="test-name">
+                  {{ result.name }}
+                </td>
                 <td>{{ result.averageTime.toFixed(2) }}ms</td>
                 <td>{{ result.minTime.toFixed(1) }} / {{ result.maxTime.toFixed(1) }}ms</td>
                 <td>{{ (result.throughput || 0).toFixed(1) }} ops/s</td>
                 <td>
                   <div class="progress-bar">
-                    <div class="progress" :style="{ width: result.successRate + '%' }"></div>
+                    <div class="progress" :style="{ width: result.successRate + '%' }" />
                   </div>
                   {{ Math.round(result.successRate) }}%
                 </td>
@@ -88,7 +100,9 @@
             <strong>{{ rec.type }}:</strong> {{ rec.message }}
           </li>
         </ul>
-        <p v-else>System is performing optimally. No recommendations at this time.</p>
+        <p v-else>
+          System is performing optimally. No recommendations at this time.
+        </p>
 
         <div class="baseline-tools">
           <div class="flex items-center justify-between mb-4">
@@ -99,9 +113,9 @@
           </div>
           <button 
             class="btn btn-secondary glass w-full flex items-center justify-center gap-2"
-            @click="saveAsBaseline"
             :disabled="!hasResults"
             aria-label="Save current results as new performance baseline"
+            @click="saveAsBaseline"
           >
             <Save :size="18" />
             <span>Save as New Baseline</span>

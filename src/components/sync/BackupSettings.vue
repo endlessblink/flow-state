@@ -189,7 +189,6 @@
               <span v-else>Scan</span>
             </button>
           </div>
-
         </div>
       </div>
     </div>

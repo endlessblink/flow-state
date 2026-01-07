@@ -1832,12 +1832,13 @@ resourceManager.addWatcher(
   )
 )
 
-// FIX: Watch for task visual property changes (title, status, priority)
+// FIX: Watch for task visual property changes (title, status, priority, dueDate)
 // Using hash-based approach (validated by Perplexity as more efficient than deep:true on objects)
 // NO deep:true needed - single string comparison, zero garbage collection
+// TASK-114: Added dueDate to trigger sync when smart groups update due dates
 resourceManager.addWatcher(
   watch(
-    () => (isInteracting.value ? null : taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}`).join('|')),
+    () => (isInteracting.value ? null : taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}:${t.dueDate || ''}`).join('|')),
     (val) => {
       if (val) batchedSyncNodes('normal')
     },

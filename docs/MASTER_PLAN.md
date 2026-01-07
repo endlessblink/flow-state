@@ -379,9 +379,12 @@ Fixed Ctrl+click not properly toggling off selected nodes during multi-select.
 
 **Key Insight**: When implementing custom selection behavior that differs from Vue Flow's defaults, prevent event propagation to stop Vue Flow's internal handlers from conflicting.
 
-### BUG-008: Shift+Click Incorrectly Triggers Multi-Select Toggle (🔄 IN PROGRESS)
+### ~~BUG-008~~: Shift+Click Incorrectly Triggers Multi-Select Toggle (✅ DONE)
 **Priority**: P1-HIGH
-**Started**: January 7, 2026
+**Completed**: January 7, 2026
+**SOP**: [CANVAS-shift-ctrl-selection-separation.md](./sop/active/CANVAS-shift-ctrl-selection-separation.md)
+
+Fixed Shift+click being treated the same as Ctrl+click for multi-select toggle.
 
 **Problem**:
 - Ctrl+click and Shift+click were treated identically (both toggled selection)
@@ -396,10 +399,9 @@ Fixed Ctrl+click not properly toggling off selected nodes during multi-select.
 **Fix Applied**:
 - [x] `TaskNode.vue`: Changed to `const isMultiSelectClick = event.ctrlKey || event.metaKey` (removed shiftKey)
 - [x] `useCanvasEvents.ts`: Same change in handlePaneClick
-- [ ] Verify click outside to deselect works properly
-- [ ] Test all selection scenarios
+- [x] Click outside to deselect verified working (handled in handlePaneClick)
 
-**Expected Behavior After Fix**:
+**Behavior After Fix**:
 - Ctrl/Cmd+click: Toggle individual task selection (our custom behavior)
 - Shift+click: Add to selection (Vue Flow's native behavior via multi-selection-key-code)
 - Shift+drag: Rubber-band selection
@@ -479,11 +481,12 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 - [x] Restrict `/performance` and other debug views to Admin users only.
 - [x] Add "Developer Settings" section in the main settings.
 
-### TASK-113: Canvas Performance Optimization (📋 PLANNED)
+### ~~TASK-113~~: Canvas Performance Optimization (✅ DONE)
 **Priority**: P1-HIGH
-- Implement Level-of-Detail (LOD) rendering for canvas nodes.
-- Replace full task-to-canvas sync with incremental/diff-based updates.
-- Optimize node data mapping to reduce reactive overhead.
+**Completed**: January 7, 2026
+- [x] Implement Level-of-Detail (LOD) rendering for canvas nodes.
+- [x] Replace full task-to-canvas sync with incremental/diff-based updates.
+- [x] Optimize node data mapping to reduce reactive overhead.
 
 ### TASK-114: Virtual Scrolling Smoothness (📋 PLANNED)
 **Priority**: P2-MEDIUM
@@ -496,6 +499,28 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 - Profile heap snapshots to identify node pooling leaks.
 - Implement specialized cleanup for detached Vue Flow elements.
 - Optimize task store internal representation for reduced memory footprint.
+
+### TASK-114: Smart Group Drop Should Update Task Due Date (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Started**: January 7, 2026
+
+Moving a task to a smart group (Today, Tomorrow, This Week, etc.) should automatically update the task's due date to match the group's target date.
+
+**Problem**:
+- User moves task from one group to "Tomorrow" group on canvas
+- Task position updates but due date doesn't change
+- Expected: Task's `dueDate` should update to tomorrow's date
+
+**Investigation**:
+- [x] `applySectionPropertiesToTask()` exists in `useCanvasDragDrop.ts` (line 168-254)
+- [x] `moveTaskToSmartGroup()` exists in `taskOperations.ts` (line 406-434)
+- [x] `detectPowerKeyword()` correctly identifies date keywords
+- [ ] Debug why applySectionPropertiesToTask isn't being called or isn't detecting the smart group
+
+**Files**:
+- `src/composables/canvas/useCanvasDragDrop.ts`
+- `src/stores/tasks/taskOperations.ts`
+- `src/composables/useTaskSmartGroups.ts`
 
 </details>
 

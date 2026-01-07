@@ -47,6 +47,7 @@
     <!-- Clear Filters -->
     <button
       class="clear-filters-btn"
+      aria-label="Clear all filters"
       @click="clearAllFilters"
     >
       Clear

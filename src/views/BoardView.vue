@@ -17,6 +17,7 @@
           class="done-column-toggle icon-only"
           :class="{ active: showDoneColumn }"
           :title="showDoneColumn ? 'Hide Done column' : 'Show Done column'"
+          :aria-label="showDoneColumn ? 'Hide Done column' : 'Show Done column'"
           @click="handleToggleDoneColumn"
         >
           <CheckCircle v-if="showDoneColumn" :size="16" />

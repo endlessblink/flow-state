@@ -99,6 +99,7 @@
         <button
           class="ml-2 text-indigo-400 hover:text-white transition-colors"
           title="Clear filter"
+          aria-label="Clear filter"
           @click="clearStatusFilter"
         >
           <X :size="14" />

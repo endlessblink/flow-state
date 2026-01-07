@@ -33,7 +33,7 @@ const router = createRouter({
       path: '/design-system',
       name: 'design-system',
       beforeEnter() {
-        window.open('http://localhost:6006', '_blank')
+        window.open('http://localhost:6006', '_blank', 'noopener,noreferrer')
         return false
       },
       redirect: '/'

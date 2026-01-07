@@ -36,6 +36,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Selection state
   const selectedNodeIds = ref<string[]>([])
+  const skipNextSelectionChange = ref(false) // Flag to prevent Vue Flow overriding manual Ctrl+click
   const connectMode = ref(false)
   const connectingFrom = ref<string | null>(null)
 
@@ -390,6 +391,9 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const toggleNodeSelection = (id: string) => {
+    // Set flag to prevent Vue Flow's @selection-change from overriding this manual toggle
+    skipNextSelectionChange.value = true
+
     const index = selectedNodeIds.value.indexOf(id)
     if (index === -1) {
       selectedNodeIds.value.push(id)
@@ -452,6 +456,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     nodes,
     edges,
     selectedNodeIds,
+    skipNextSelectionChange, // Flag to prevent Vue Flow overriding manual Ctrl+click
     connectMode,
     connectingFrom,
 
@@ -508,6 +513,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     startConnection,
     clearConnection,
     syncTrigger,
+    syncTasksToCanvas,
 
     // Aliases - sections is same as groups (visibleGroups filtered)
     sections: visibleGroups,

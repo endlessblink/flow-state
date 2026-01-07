@@ -63,6 +63,8 @@ export const useLocalAuthStore = defineStore('localAuth', () => {
   const userPreferences = computed(() => localUser.value?.preferences ?? DEFAULT_PREFERENCES)
   const userDisplayName = computed(() => localUser.value?.displayName ?? 'Local User')
   const isNewSession = computed(() => localUser.value?.sessionCount === 1)
+  const isAdmin = computed(() => localStorage.getItem('pomo-flow-dev-mode') === 'true')
+  const isDev = computed(() => localStorage.getItem('pomo-flow-dev-mode') === 'true')
 
   /**
    * Generate a UUID for anonymous user identification
@@ -288,6 +290,8 @@ export const useLocalAuthStore = defineStore('localAuth', () => {
     userPreferences,
     userDisplayName,
     isNewSession,
+    isAdmin,
+    isDev,
 
     // Actions
     initializeLocalUser,

@@ -1,5 +1,5 @@
-**Last Updated**: January 7, 2026 (TASK-111 Multi-Select Group Filter)
-**Version**: 5.22 (Ctrl+Click Group Multi-Select)
+**Last Updated**: January 7, 2026 (BUG-007 Sidebar Date Filters Fix)
+**Version**: 5.23 (Sidebar Date Filters Fix)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -93,9 +93,9 @@
 **Priority**: P2-MEDIUM
 - Define custom recurrence syntax and parsing logic.
 
-### TASK-046: Establish Canvas Performance Baselines (🔄 IN PROGRESS)
+### ~~TASK-046~~: Establish Canvas Performance Baselines (✅ DONE)
 **Priority**: P1-HIGH
-- Establishment of latency metrics using `performanceBenchmark.ts`.
+**Completed**: January 7, 2026
 
 ### TASK-065: GitHub Release (📋 TODO)
 **Priority**: P3-LOW
@@ -312,6 +312,29 @@ When task position was locked (from drag or edit), syncNodes() still recalculate
 - [x] Skip absolute→relative conversion when position is locked to prevent drift
 - [x] Build passes, no TypeScript errors
 
+### ~~BUG-005~~: Milkdown Checkboxes & Task Lists Not Working (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 7, 2026
+
+Checkboxes in markdown editor weren't rendering or clickable due to plugin initialization order issues.
+
+**Root Causes Fixed**:
+- Listener context was accessed BEFORE `.use(listener)` registration
+- Theme was applied via `.config(nord)` instead of `.use(nord)`
+
+**Fixes Applied** (`MilkdownEditorSurface.vue`):
+- [x] Reordered plugins: `.use(listener)` now comes before config that uses `listenerCtx`
+- [x] Changed `.config(nord)` to `.use(nord)` for proper theme initialization
+- [x] Verified checkbox rendering works when typing `- [ ]` at line start
+- [x] Verified checkbox toggle (click) functionality works (□ ↔ ☑)
+
+**Note**: TaskList toolbar button inserts raw `- [ ]` text which doesn't trigger input rules. This is expected behavior - users type the pattern manually for it to convert.
+
+**Files**:
+- `src/components/common/MilkdownEditorSurface.vue`
+
+---
+
 ### ~~BUG-004~~: Multi-Drag Positions Reset After Click (✅ DONE)
 **Priority**: P1-HIGH
 **Completed**: January 6, 2026
@@ -332,6 +355,55 @@ Fixed multi-selected tasks (Ctrl+click) losing their relative positions after dr
 
 **Key Insight** (from [Vue Flow TypeDocs](https://vueflow.dev/typedocs/interfaces/NodeDragEvent.html)):
 `NodeDragEvent.nodes` contains ALL nodes being dragged, not just the primary `node`.
+
+### ~~BUG-006~~: Ctrl+Click Toggle Deselect Not Working (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 7, 2026
+
+Fixed Ctrl+click not properly toggling off selected nodes during multi-select.
+
+**Problem**:
+- When selecting 3 tasks with Ctrl+click, then Ctrl+clicking the middle one to deselect
+- Expected: Middle task deselected, others remain selected
+- Actual: Only middle task selected, others cleared
+
+**Root Cause**:
+- Vue Flow's internal click handling was still processing clicks even after our custom handler
+- Vue Flow uses `multi-selection-key-code="Shift"` (doesn't recognize Ctrl as multi-select key)
+- Vue Flow treated Ctrl+click as regular click, setting ONLY clicked node as selected
+- This overrode our store's selection state via `@selection-change` and `@nodes-change` events
+
+**Fix Applied**:
+- [x] `TaskNode.vue`: Added `event.stopPropagation()` in `handleClick()` for modifier key clicks
+- [x] This prevents Vue Flow from processing the click and overriding our custom multi-select
+
+**Key Insight**: When implementing custom selection behavior that differs from Vue Flow's defaults, prevent event propagation to stop Vue Flow's internal handlers from conflicting.
+
+### BUG-008: Shift+Click Incorrectly Triggers Multi-Select Toggle (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Started**: January 7, 2026
+
+**Problem**:
+- Ctrl+click and Shift+click were treated identically (both toggled selection)
+- Expected: Ctrl+click toggles individual selection, Shift is reserved for rubber-band drag
+- Actual: Shift+click was intercepting clicks and toggling selection instead of allowing Vue Flow's native Shift behavior
+
+**Root Cause**:
+- `TaskNode.vue` line 306: `const isModifierClick = event.ctrlKey || event.metaKey || event.shiftKey` treated all modifiers the same
+- `useCanvasEvents.ts` handlePaneClick also treated Shift as multi-select trigger
+- This conflicted with Vue Flow's `multi-selection-key-code="Shift"` setting
+
+**Fix Applied**:
+- [x] `TaskNode.vue`: Changed to `const isMultiSelectClick = event.ctrlKey || event.metaKey` (removed shiftKey)
+- [x] `useCanvasEvents.ts`: Same change in handlePaneClick
+- [ ] Verify click outside to deselect works properly
+- [ ] Test all selection scenarios
+
+**Expected Behavior After Fix**:
+- Ctrl/Cmd+click: Toggle individual task selection (our custom behavior)
+- Shift+click: Add to selection (Vue Flow's native behavior via multi-selection-key-code)
+- Shift+drag: Rubber-band selection
+- Click empty space: Clear all selections
 
 ### ~~TASK-111~~: Canvas Group Filter for Calendar Inbox (✅ DONE)
 **Priority**: P2-MEDIUM
@@ -367,6 +439,63 @@ Reduced cognitive overload in calendar inbox by adding canvas group filtering.
 - Regular click: single-select toggle
 - Ctrl/Cmd+click: multi-select toggle (add/remove groups)
 - Filter shows tasks in ANY selected group (OR logic)
+
+### ~~BUG-007~~: Sidebar Date Filters Not Matching Tasks (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 7, 2026
+
+Fixed "Today" and "This Week" sidebar filters not correctly showing tasks due to date format mismatch.
+
+**Problem**:
+- "Today" filter showed only 2 tasks when there were 6+ tasks due today
+- Date comparison used direct string equality (e.g., `task.dueDate === todayStr`)
+- Stored dates were in various malformed formats:
+  - `07T00:00:00+00:00-01-2026` (malformed from database)
+  - `07-01-2026` (DD-MM-YYYY)
+  - Expected: `2026-01-07` (YYYY-MM-DD)
+
+**Root Cause**:
+The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `dueDate` was already normalized to `YYYY-MM-DD` format, but database contained various date formats.
+
+**Solution**:
+- [x] Added `normalizeDateString()` helper function to handle all date formats
+- [x] Updated `isTodayTask()` to normalize dates before comparison
+- [x] Updated `isWeekTask()` to normalize dates before comparison
+- [x] Handles ISO 8601, DD-MM-YYYY, and malformed legacy formats
+
+**Changes**:
+- `src/composables/useSmartViews.ts`: Added `normalizeDateString()` and updated both filter functions
+
+**Verification**:
+- Today filter: 2 → 6 tasks (correctly shows all tasks due today)
+- All sidebar filters (Today, This Week, All Active, Inbox, Duration) working correctly
+- Build passes
+
+### TASK-112: Admin/Developer Role & UI Restrictions (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 7, 2026
+- [x] Implement `isAdmin` / `isDev` flags in `useAuthStore` or user metadata.
+- [x] Create an "Admin Class" logic for privileged dashboard access.
+- [x] Restrict `/performance` and other debug views to Admin users only.
+- [x] Add "Developer Settings" section in the main settings.
+
+### TASK-113: Canvas Performance Optimization (📋 PLANNED)
+**Priority**: P1-HIGH
+- Implement Level-of-Detail (LOD) rendering for canvas nodes.
+- Replace full task-to-canvas sync with incremental/diff-based updates.
+- Optimize node data mapping to reduce reactive overhead.
+
+### TASK-114: Virtual Scrolling Smoothness (📋 PLANNED)
+**Priority**: P2-MEDIUM
+- Profile and eliminate layout thrashing in list components.
+- Implement optimized rendering strategy for large lists.
+- Reduce computed property complexity in task items.
+
+### TASK-115: Memory Efficiency & Leak Fixes (📋 PLANNED)
+**Priority**: P2-MEDIUM
+- Profile heap snapshots to identify node pooling leaks.
+- Implement specialized cleanup for detached Vue Flow elements.
+- Optimize task store internal representation for reduced memory footprint.
 
 </details>
 

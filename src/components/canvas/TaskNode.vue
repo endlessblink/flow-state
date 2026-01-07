@@ -303,17 +303,22 @@ const isTimerActive = computed(() => {
 const handleClick = (event: MouseEvent) => {
   if (!props.task) return
 
-  const isModifierClick = event.ctrlKey || event.metaKey || event.shiftKey
+  // BUG-007: Only Ctrl/Cmd triggers multi-select toggle
+  // Shift is reserved for rubber-band drag selection (handled elsewhere)
+  const isMultiSelectClick = event.ctrlKey || event.metaKey
 
   // Prevent edit modal when connecting to avoid conflicts
   if (props.isConnecting) {
     // Don't emit edit event when connecting, just handle selection
-    emit('select', props.task, isModifierClick)
+    emit('select', props.task, isMultiSelectClick)
     return
   }
 
-  // Ctrl/Cmd/Shift+click always toggles selection (for multi-select)
-  if (isModifierClick) {
+  // Ctrl/Cmd+click toggles selection (for multi-select)
+  // CRITICAL: stopPropagation prevents Vue Flow from processing this click
+  // and overriding our custom multi-select behavior
+  if (isMultiSelectClick) {
+    event.stopPropagation()
     emit('select', props.task, true)
     return
   }

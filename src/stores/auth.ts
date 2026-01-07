@@ -29,6 +29,18 @@ export const useAuthStore = defineStore('auth', () => {
     user.value?.user_metadata?.picture ||
     null
   )
+  const isAdmin = computed(() => {
+    // Local override for development
+    if (localStorage.getItem('pomo-flow-dev-mode') === 'true') return true
+    return user.value?.app_metadata?.role === 'admin' ||
+      user.value?.user_metadata?.role === 'admin'
+  })
+  const isDev = computed(() => {
+    if (localStorage.getItem('pomo-flow-dev-mode') === 'true') return true
+    return isAdmin.value ||
+      user.value?.app_metadata?.role === 'developer' ||
+      user.value?.user_metadata?.role === 'developer'
+  })
 
   // Actions
   const initialize = async () => {
@@ -266,6 +278,8 @@ export const useAuthStore = defineStore('auth', () => {
     errorMessage,
     displayName,
     photoURL,
+    isAdmin,
+    isDev,
 
     // Actions
     initialize,

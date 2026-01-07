@@ -22,6 +22,56 @@ export const useSmartViews = () => {
   }
 
   /**
+   * Normalize any date string to YYYY-MM-DD format for consistent comparison
+   * Handles various formats:
+   * - YYYY-MM-DD (already correct)
+   * - DD-MM-YYYY
+   * - ISO 8601 strings (2026-01-07T00:00:00+00:00)
+   * - Malformed formats like "07T00:00:00+00:00-01-2026"
+   */
+  const normalizeDateString = (dateStr: string): string => {
+    if (!dateStr || typeof dateStr !== 'string') return ''
+
+    const trimmed = dateStr.trim()
+
+    // Already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed
+    }
+
+    // ISO 8601 format: 2026-01-07T00:00:00... - extract the date part
+    if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) {
+      return trimmed.substring(0, 10)
+    }
+
+    // DD-MM-YYYY format
+    if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+      const [day, month, year] = trimmed.split('-')
+      return `${year}-${month}-${day}`
+    }
+
+    // Malformed format like "07T00:00:00+00:00-01-2026"
+    // Pattern: DD followed by T, then time info, ending with -MM-YYYY
+    const malformedMatch = trimmed.match(/^(\d{2})T[\d:+]+(\d{2})-(\d{4})$/)
+    if (malformedMatch) {
+      const [, day, month, year] = malformedMatch
+      return `${year}-${month}-${day}`
+    }
+
+    // Try parsing as a Date object as last resort
+    try {
+      const parsed = new Date(trimmed)
+      if (!isNaN(parsed.getTime())) {
+        return getLocalDateString(parsed)
+      }
+    } catch {
+      // Fall through to return empty
+    }
+
+    return ''
+  }
+
+  /**
    * Check if a task is due today
    */
   const isTodayTask = (task: Task): boolean => {
@@ -31,10 +81,10 @@ export const useSmartViews = () => {
     today.setHours(0, 0, 0, 0)
     const todayStr = getLocalDateString(today)
 
-    // Check if task is due today (compare date strings directly for consistency)
+    // Check if task is due today (normalize date format before comparison)
     if (task.dueDate) {
-      // dueDate is stored as YYYY-MM-DD string, compare directly
-      if (task.dueDate === todayStr) {
+      const normalizedDueDate = normalizeDateString(task.dueDate)
+      if (normalizedDueDate === todayStr) {
         return true
       }
     }
@@ -43,8 +93,8 @@ export const useSmartViews = () => {
     if (task.instances && task.instances.length > 0) {
       if (task.instances.some(inst => {
         if (!inst || !inst.scheduledDate) return false
-        // scheduledDate is stored as YYYY-MM-DD string, compare directly
-        return inst.scheduledDate === todayStr
+        const normalizedInstDate = normalizeDateString(inst.scheduledDate)
+        return normalizedInstDate === todayStr
       })) {
         return true
       }
@@ -52,8 +102,8 @@ export const useSmartViews = () => {
 
     // Check legacy scheduled date for today
     if (task.scheduledDate) {
-      // scheduledDate is stored as YYYY-MM-DD string, compare directly
-      if (task.scheduledDate === todayStr) {
+      const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
+      if (normalizedScheduledDate === todayStr) {
         return true
       }
     }
@@ -63,7 +113,7 @@ export const useSmartViews = () => {
       return true
     }
 
-    // NEW: Include tasks created today (for new tasks that haven't been scheduled yet)
+    // Include tasks created today (for new tasks that haven't been scheduled yet)
     if (task.createdAt) {
       const createdDate = new Date(task.createdAt)
       if (!isNaN(createdDate.getTime())) {
@@ -97,7 +147,8 @@ export const useSmartViews = () => {
     // Include tasks due within the current week (today through Sunday)
     if (task.dueDate) {
       try {
-        if (task.dueDate >= todayStr && task.dueDate <= weekEndStr) {
+        const normalizedDueDate = normalizeDateString(task.dueDate)
+        if (normalizedDueDate && normalizedDueDate >= todayStr && normalizedDueDate <= weekEndStr) {
           return true
         }
       } catch (error) {
@@ -106,12 +157,12 @@ export const useSmartViews = () => {
     }
 
     // Check if task has instances scheduled within the week
-    // FIX: Match isTodayTask pattern - only return true if match found, otherwise continue checking
     if (task.instances && task.instances.length > 0) {
       try {
         if (task.instances.some(inst => {
           if (!inst || !inst.scheduledDate) return false
-          return inst.scheduledDate >= todayStr && inst.scheduledDate <= weekEndStr
+          const normalizedInstDate = normalizeDateString(inst.scheduledDate)
+          return normalizedInstDate && normalizedInstDate >= todayStr && normalizedInstDate <= weekEndStr
         })) {
           return true
         }
@@ -123,7 +174,8 @@ export const useSmartViews = () => {
     // Check legacy scheduled dates within the week
     if (task.scheduledDate) {
       try {
-        if (task.scheduledDate >= todayStr && task.scheduledDate <= weekEndStr) {
+        const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
+        if (normalizedScheduledDate && normalizedScheduledDate >= todayStr && normalizedScheduledDate <= weekEndStr) {
           return true
         }
       } catch (error) {

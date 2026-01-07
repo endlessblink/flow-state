@@ -255,6 +255,99 @@ app.get('/api/locks', async (req, res) => {
   }
 });
 
+// ===== AGENT MANAGEMENT UTILS =====
+
+function getAgentWorktreeInfo(taskId) {
+  const branchName = `agent/${taskId.toLowerCase()}`;
+  const worktreeDir = path.join(WORKTREES_DIR, taskId);
+  const worktreePathRel = path.relative(PROJECT_ROOT, worktreeDir);
+  return { branchName, worktreeDir, worktreePathRel };
+}
+
+function killAgentProcess(taskId) {
+  if (agentSessions.has(taskId)) {
+    const session = agentSessions.get(taskId);
+    try {
+      session.ptyProcess.kill();
+    } catch (e) { console.error('Error killing process:', e); }
+    agentSessions.delete(taskId);
+  }
+}
+
+// API: Merge Agent Worktree
+app.post('/api/agent/:id/merge', async (req, res) => {
+  const { id } = req.params;
+  const { branchName, worktreeDir } = getAgentWorktreeInfo(id);
+
+  console.log(`[Agent] Merging ${id} (branch: ${branchName})...`);
+
+  // 1. Kill process
+  killAgentProcess(id);
+
+  // 2. Merge (Squash)
+  // We run this from PROJECT_ROOT
+  // git merge --squash agent/branch
+  const mergeCmd = `git merge --squash ${branchName}`;
+
+  exec(mergeCmd, { cwd: PROJECT_ROOT }, (error, stdout, stderr) => {
+    if (error) {
+      console.error('[Agent] Merge failed:', stderr);
+      return res.status(500).json({ error: 'Merge failed: ' + stderr });
+    }
+
+    // 3. Cleanup worktree
+    // git worktree remove .worktrees/TASK-ID --force
+    exec(`git worktree remove ${worktreeDir} --force`, { cwd: PROJECT_ROOT }, (err2, out2, serr2) => {
+       // 4. Delete branch
+       exec(`git branch -D ${branchName}`, { cwd: PROJECT_ROOT }, () => {});
+
+       if (err2) console.warn('[Agent] Worktree remove warning:', serr2);
+
+       res.json({ success: true, message: 'Merged successfully. Please commit the staged changes.' });
+    });
+  });
+});
+
+// API: Discard Agent Worktree
+app.post('/api/agent/:id/discard', async (req, res) => {
+  const { id } = req.params;
+  const { branchName, worktreeDir } = getAgentWorktreeInfo(id);
+
+  console.log(`[Agent] Discarding ${id}...`);
+
+  // 1. Kill process
+  killAgentProcess(id);
+
+  // 2. Cleanup worktree
+  exec(`git worktree remove ${worktreeDir} --force`, { cwd: PROJECT_ROOT }, (error, stdout, stderr) => {
+    // 3. Delete branch
+    exec(`git branch -D ${branchName}`, { cwd: PROJECT_ROOT }, () => {
+       res.json({ success: true, message: 'Worktree discarded.' });
+    });
+  });
+});
+
+// API: Get Agent Status (Active sessions + Worktrees)
+app.get('/api/agent/status', async (req, res) => {
+  try {
+    const activeSessions = Array.from(agentSessions.keys());
+    const worktrees = [];
+
+    // Check which tasks have worktrees
+    const entries = await fs.readdir(WORKTREES_DIR, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        worktrees.push(entry.name); // folder name is taskId
+      }
+    }
+
+    res.json({ activeSessions, worktrees });
+  } catch (error) {
+    res.json({ activeSessions: [], worktrees: [] });
+  }
+});
+
+
 // ===== SOCKET.IO AGENT TERMINAL =====
 
 io.on('connection', (socket) => {
@@ -287,33 +380,21 @@ io.on('connection', (socket) => {
     // WORKTREE LOGIC
     if (useWorktree) {
       try {
-        const branchName = `agent/${taskId.toLowerCase()}`;
-        const worktreeDir = path.join(WORKTREES_DIR, taskId);
-        worktreePathRel = path.relative(PROJECT_ROOT, worktreeDir);
+        const { branchName, worktreeDir, worktreePathRel: rel } = getAgentWorktreeInfo(taskId);
+        worktreePathRel = rel;
 
         // Ensure parent dir exists
         if (!fsSync.existsSync(WORKTREES_DIR)) fsSync.mkdirSync(WORKTREES_DIR);
-
-        // Remove existing worktree dir if it exists (cleanup)
-        // Note: git worktree remove is cleaner but might fail if dirty.
-        // For MVP, we'll try to add, if it fails, we assume it exists or needs manual intervention.
-        // Or we just try to use it if it exists.
 
         const exists = fsSync.existsSync(worktreeDir);
         if (!exists) {
           // Create worktree
           // git worktree add -b <new-branch> <path> <commit-ish>
-          // We use -f to force if branch exists but checked out elsewhere (though worktrees avoid this issue mostly)
-          // We assume we branch off HEAD
           const cmd = `git worktree add -b ${branchName} ${worktreeDir} HEAD || git worktree add ${worktreeDir} ${branchName}`;
-          // If branch exists, second command runs
 
           await new Promise((resolve, reject) => {
             exec(cmd, { cwd: PROJECT_ROOT }, (err, stdout, stderr) => {
               if (err && !stderr.includes('already exists')) {
-                 // If it failed but not because it exists, reject
-                 // Actually git worktree add fails if path exists.
-                 // Let's simplified: check if dir exists. If not, create.
                  return reject(err);
               }
               resolve();
@@ -391,10 +472,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('agent-stop', () => {
-    if (connectedTaskId && agentSessions.has(connectedTaskId)) {
-      const session = agentSessions.get(connectedTaskId);
-      session.ptyProcess.kill();
-      // Cleanup happens in onExit
+    if (connectedTaskId) {
+      killAgentProcess(connectedTaskId);
     }
   });
 

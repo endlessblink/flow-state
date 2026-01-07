@@ -2010,7 +2010,11 @@
         </div>
         <div id="agent-diff-view" class="agent-view">
           <div id="diff-container">Loading diff...</div>
-          <div style="padding: 10px; border-top: 1px solid var(--border-medium); text-align: right;">
+          <div style="padding: 10px; border-top: 1px solid var(--border-medium); display: flex; justify-content: space-between; align-items: center;">
+            <div id="diff-actions" style="display: none; gap: 10px;">
+              <button class="btn" onclick="mergeChanges()" style="border-color: #10b981; color: #10b981;">Merge to Main</button>
+              <button class="btn" onclick="discardChanges()" style="border-color: #ef4444; color: #ef4444;">Discard Changes</button>
+            </div>
             <button class="btn" onclick="refreshDiff()">Refresh Diff</button>
           </div>
         </div>
@@ -4657,6 +4661,51 @@
       renderKanban();
     });
 
+    // Status polling
+    setInterval(updateAgentStatusIndicators, 5000);
+
+    async function updateAgentStatusIndicators() {
+      try {
+        const response = await fetch(`${API_BASE}/api/agent/status`);
+        const data = await response.json();
+        const activeSessions = new Set(data.activeSessions || []);
+        const worktrees = new Set(data.worktrees || []);
+
+        document.querySelectorAll('.task-card').forEach(card => {
+          const taskId = card.getAttribute('data-id');
+          if (!taskId) return;
+
+          let indicators = card.querySelector('.task-indicators');
+          if (!indicators) {
+            indicators = document.createElement('div');
+            indicators.className = 'task-indicators';
+            indicators.style.cssText = 'display: flex; gap: 4px; margin-top: 4px;';
+            // Insert before footer or title
+            const footer = card.querySelector('.task-footer');
+            if (footer) footer.parentNode.insertBefore(indicators, footer);
+          }
+
+          indicators.innerHTML = '';
+
+          if (activeSessions.has(taskId)) {
+            const badge = document.createElement('span');
+            badge.innerHTML = '⚡ Running';
+            badge.style.cssText = 'font-size: 10px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 6px; border-radius: 4px;';
+            indicators.appendChild(badge);
+          }
+
+          if (worktrees.has(taskId)) {
+            const badge = document.createElement('span');
+            badge.innerHTML = '🌿 Worktree';
+            badge.style.cssText = 'font-size: 10px; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 2px 6px; border-radius: 4px;';
+            indicators.appendChild(badge);
+          }
+        });
+      } catch (e) {
+        console.error('Failed to update status indicators', e);
+      }
+    }
+
     // ===== AGENT INTEGRATION =====
     let socket = null;
     let term = null;
@@ -4788,7 +4837,11 @@
 
     async function refreshDiff() {
       const container = document.getElementById('diff-container');
+      const actions = document.getElementById('diff-actions');
       container.innerHTML = 'Loading diff...';
+
+      // Show/Hide merge actions based on isolation mode
+      actions.style.display = currentWorktree ? 'flex' : 'none';
 
       try {
         let url = `${API_BASE}/api/diff`;
@@ -4818,6 +4871,46 @@
         container.innerHTML = html;
       } catch (e) {
         container.innerHTML = 'Error loading diff: ' + e.message;
+      }
+    }
+
+    async function mergeChanges() {
+      if (!currentEditTask || !confirm('Are you sure you want to merge changes from the worktree to the main branch? This action cannot be undone.')) return;
+
+      showSyncStatus('loading', 'Merging changes...');
+      try {
+        const response = await fetch(`${API_BASE}/api/agent/${currentEditTask.id}/merge`, { method: 'POST' });
+        const result = await response.json();
+
+        if (result.success) {
+          showToast('Changes merged successfully!', 'success');
+          closeAgentModal();
+          currentWorktree = null;
+        } else {
+          alert('Merge failed: ' + result.error);
+        }
+      } catch (e) {
+        alert('Error merging changes: ' + e.message);
+      }
+    }
+
+    async function discardChanges() {
+      if (!currentEditTask || !confirm('Are you sure you want to discard the worktree? All changes will be lost.')) return;
+
+      showSyncStatus('loading', 'Discarding worktree...');
+      try {
+        const response = await fetch(`${API_BASE}/api/agent/${currentEditTask.id}/discard`, { method: 'POST' });
+        const result = await response.json();
+
+        if (result.success) {
+          showToast('Worktree discarded.', 'info');
+          closeAgentModal();
+          currentWorktree = null;
+        } else {
+          alert('Discard failed: ' + result.error);
+        }
+      } catch (e) {
+        alert('Error discarding worktree: ' + e.message);
       }
     }
 

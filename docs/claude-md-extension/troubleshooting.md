@@ -27,6 +27,22 @@
 3. Test design token application
 4. Verify Tailwind dark mode configuration
 
+### Sidebar Filters Not Matching Tasks (BUG-007)
+**Symptom**: "Today" or "This Week" filter shows fewer tasks than expected.
+
+**Root Cause**: Date strings stored in inconsistent formats:
+- `07T00:00:00+00:00-01-2026` (malformed from database)
+- `07-01-2026` (DD-MM-YYYY)
+- `2026-01-07` (YYYY-MM-DD - expected)
+
+**Solution**: Use `normalizeDateString()` in `useSmartViews.ts` to convert all date formats before comparison.
+
+**Key Files**:
+- `src/composables/useSmartViews.ts` - Contains date normalization and filter logic
+- Filter functions: `isTodayTask()`, `isWeekTask()`
+
+**Testing**: Use Playwright to click sidebar filters and verify task counts in console logs.
+
 ### Tasks Mysteriously Disappearing (BUG-020)
 A built-in task disappearance logger exists for debugging data loss:
 - **Location**: `src/utils/taskDisappearanceLogger.ts`

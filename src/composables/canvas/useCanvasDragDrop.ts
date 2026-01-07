@@ -6,6 +6,7 @@ import type { useCanvasStore } from '@/stores/canvas';
 import { type CanvasSection } from '@/stores/canvas'
 import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '@/composables/useTaskSmartGroups'
 import { resolveDueDate } from '@/composables/useGroupSettings'
+import { formatDateKey } from '@/utils/dateUtils'
 // TASK-089: Updated to use unified canvas state lock system
 import { lockTaskPosition, lockGroupPosition } from '@/utils/canvasStateLock'
 
@@ -58,7 +59,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         )
     }
 
-    // Helper: Check if task is inside a section
+    // Helper: Check if task is inside a section (returns first match)
     const getContainingSection = (taskX: number, taskY: number, taskWidth: number = 220, taskHeight: number = 100) => {
         return canvasStore.sections.find(section => {
             const { x, y, width, height } = section.position
@@ -76,6 +77,30 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             )
 
             return isInside
+        })
+    }
+
+    // Helper: Get ALL sections containing a position (for nested group inheritance)
+    const getAllContainingSections = (taskX: number, taskY: number, taskWidth: number = 220, taskHeight: number = 100) => {
+        const taskCenterX = taskX + taskWidth / 2
+        const taskCenterY = taskY + taskHeight / 2
+
+        return canvasStore.sections.filter(section => {
+            const { x, y, width, height } = section.position
+            const detectionHeight = section.isCollapsed ? height : height
+
+            return (
+                taskCenterX >= x &&
+                taskCenterX <= x + width &&
+                taskCenterY >= y &&
+                taskCenterY <= y + detectionHeight
+            )
+        }).sort((a, b) => {
+            // Sort by area - LARGEST first (parent sections before child sections)
+            // This way child section properties will override parent properties
+            const areaA = (a.position.width || 300) * (a.position.height || 200)
+            const areaB = (b.position.width || 300) * (b.position.height || 200)
+            return areaB - areaA
         })
     }
 
@@ -164,12 +189,116 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         })
     }
 
-    // Helper: Apply section properties to task
+    // Helper: Get properties from a single section based on its name/settings
+    const getSectionProperties = (section: CanvasSection): Partial<Task> => {
+        const updates: Partial<Task> = {}
+
+        // 1. Check explicit assignOnDrop settings first
+        if (section.assignOnDrop) {
+            const settings = section.assignOnDrop
+            if (settings.priority) updates.priority = settings.priority
+            if (settings.status) updates.status = settings.status
+            if (settings.projectId) updates.projectId = settings.projectId
+            if (settings.dueDate) {
+                const resolvedDate = resolveDueDate(settings.dueDate)
+                if (resolvedDate !== null) updates.dueDate = resolvedDate
+            }
+            return updates
+        }
+
+        // 2. Auto-detect from section name
+        const keyword = detectPowerKeyword(section.name)
+        if (keyword) {
+            switch (keyword.category) {
+                case 'date':
+                    // For date keywords, compute the actual date
+                    const today = new Date()
+                    switch (keyword.value) {
+                        case 'today':
+                            updates.dueDate = formatDateKey(today)
+                            break
+                        case 'tomorrow':
+                            const tom = new Date(today)
+                            tom.setDate(today.getDate() + 1)
+                            updates.dueDate = formatDateKey(tom)
+                            break
+                        case 'this weekend':
+                            const sat = new Date(today)
+                            sat.setDate(today.getDate() + ((6 - today.getDay() + 7) % 7 || 7))
+                            updates.dueDate = formatDateKey(sat)
+                            break
+                        case 'this week':
+                            const sun = new Date(today)
+                            sun.setDate(today.getDate() + ((7 - today.getDay()) % 7 || 7))
+                            updates.dueDate = formatDateKey(sun)
+                            break
+                        case 'later':
+                            updates.dueDate = ''
+                            break
+                    }
+                    break
+                case 'priority':
+                    updates.priority = keyword.value as 'high' | 'medium' | 'low'
+                    break
+                case 'status':
+                    updates.status = keyword.value as Task['status']
+                    break
+                case 'duration':
+                    const durationMap: Record<string, number> = {
+                        'quick': 15, 'short': 30, 'medium': 60, 'long': 120, 'unestimated': 0
+                    }
+                    updates.estimatedDuration = durationMap[keyword.value] ?? 0
+                    break
+            }
+            return updates
+        }
+
+        // 3. Legacy fallback - check section type
+        if (section.type === 'priority' && section.propertyValue) {
+            updates.priority = section.propertyValue as 'high' | 'medium' | 'low'
+        } else if (section.type === 'status' && section.propertyValue) {
+            updates.status = section.propertyValue as Task['status']
+        } else if (section.type === 'project' && section.propertyValue) {
+            updates.projectId = section.propertyValue
+        }
+
+        return updates
+    }
+
+    // Helper: Apply properties from ALL containing sections (nested group inheritance)
+    const applyAllNestedSectionProperties = (taskId: string, taskX: number, taskY: number) => {
+        const containingSections = getAllContainingSections(taskX, taskY)
+        if (containingSections.length === 0) return
+
+        // Collect properties from all sections (largest/parent first, then children override)
+        const mergedUpdates: Partial<Task> = {}
+        const appliedSections: string[] = []
+
+        for (const section of containingSections) {
+            const sectionProps = getSectionProperties(section)
+            if (Object.keys(sectionProps).length > 0) {
+                Object.assign(mergedUpdates, sectionProps)
+                appliedSections.push(section.name)
+            }
+        }
+
+        if (Object.keys(mergedUpdates).length > 0) {
+            console.log(`🎯 [NESTED-GROUPS] Applying properties from ${appliedSections.length} sections:`, {
+                sections: appliedSections,
+                mergedUpdates
+            })
+            taskStore.updateTaskWithUndo(taskId, mergedUpdates)
+        }
+    }
+
+    // Helper: Apply section properties to task (single section - legacy)
     const applySectionPropertiesToTask = (taskId: string, section: CanvasSection) => {
         const updates: Partial<Task> = {}
+        console.log(`🎯 [TASK-114] applySectionPropertiesToTask called for task ${taskId} → section "${section.name}"`)
 
         // 1. UNIFIED APPROACH: Check for explicit assignOnDrop settings first
         if (section.assignOnDrop) {
+            console.log(`🎯 [TASK-114] Path 1: Using assignOnDrop settings:`, section.assignOnDrop)
             const settings = section.assignOnDrop
 
             if (settings.priority) {
@@ -197,10 +326,13 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
 
         // 2. AUTO-DETECT: If no assignOnDrop settings, try keyword detection on section name
         const keyword = detectPowerKeyword(section.name)
+        console.log(`🎯 [TASK-114] Path 2: detectPowerKeyword("${section.name}") =`, keyword)
         if (keyword) {
+            console.log(`🎯 [TASK-114] Detected keyword:`, keyword)
 
             switch (keyword.category) {
                 case 'date':
+                    console.log(`🎯 [TASK-114] Calling moveTaskToSmartGroup(${taskId}, "${keyword.value}")`)
                     taskStore.moveTaskToSmartGroup(taskId, keyword.value)
                     return
 
@@ -210,6 +342,18 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
 
                 case 'status':
                     updates.status = keyword.value as Task['status']
+                    break
+
+                case 'duration':
+                    // Map duration keyword to estimated minutes
+                    const durationMap: Record<string, number> = {
+                        'quick': 15,
+                        'short': 30,
+                        'medium': 60,
+                        'long': 120,
+                        'unestimated': 0
+                    }
+                    updates.estimatedDuration = durationMap[keyword.value] ?? 0
                     break
             }
 
@@ -770,9 +914,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 const containingSection = getContainingSection(checkX, checkY)
 
                 if (containingSection) {
-                    if (containingSection.type !== 'custom' || shouldUseSmartGroupLogic(containingSection.name)) {
-                        applySectionPropertiesToTask(node.id, containingSection)
-                    }
+                    // NESTED GROUPS: Apply properties from ALL containing sections
+                    // This enables inheritance: drop on "High Priority" inside "Today" → gets both priority AND dueDate
+                    applyAllNestedSectionProperties(node.id, checkX, checkY)
                 }
 
                 // TASK-072 FIX: Directly update Vue Flow node's parentNode instead of calling syncNodes()

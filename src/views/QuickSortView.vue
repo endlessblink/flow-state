@@ -2,7 +2,7 @@
   <div class="quick-sort-view">
     <!-- Header -->
     <header class="quick-sort-header">
-      <div class="header-content">
+      <div class="header-content--quicksort">
         <h1 class="view-title">
           <Zap :size="32" />
           Quick Sort
@@ -348,7 +348,7 @@ function formatTime(milliseconds: number): string {
   gap: var(--space-6);
 }
 
-.header-content {
+.header-content--quicksort {
   flex: 1;
 }
 

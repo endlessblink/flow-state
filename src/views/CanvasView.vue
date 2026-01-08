@@ -101,16 +101,14 @@
       <UnifiedInboxPanel key="canvas-inbox" context="canvas" />
 
       <!-- Always show VueFlow canvas, even when empty -->
-      <div class="canvas-container-wrapper">
-        <!-- Canvas with tasks -->
-        <div
-          class="canvas-container"
-          style="width: 100%; height: 100vh; position: relative;"
-          @mousedown.capture="handleMouseDown"
-          @mousemove="handleMouseMove"
-          @mouseup="handleMouseUp"
-          @click="handleCanvasContainerClick"
-        >
+      <!-- Canvas with tasks -->
+      <div
+        class="canvas-container"
+        @mousedown.capture="handleMouseDown"
+        @mousemove="handleMouseMove"
+        @mouseup="handleMouseUp"
+        @click="handleCanvasContainerClick"
+      >
           <VueFlow
             ref="vueFlowRef"
             v-model:nodes="nodes"
@@ -251,10 +249,9 @@
           <!-- Loading state when canvas is not ready -->
           <!-- Loading state when canvas is not ready -->
           <CanvasLoadingOverlay
-            v-if="!systemHealthy || !isCanvasReady" 
+            v-if="!systemHealthy || !isCanvasReady"
             :message="systemHealthy ? 'Initializing Canvas...' : 'System Initializing...'"
           />
-        </div>
       </div>
     </div>
 
@@ -2609,17 +2606,6 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
-.canvas-container-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  position: relative;
-}
-
-
-
 .canvas-drop-zone {
   flex: 1;
   display: flex;
@@ -2630,7 +2616,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+/* Container merged from .canvas-container-wrapper + .canvas-container */
 .canvas-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   position: relative;

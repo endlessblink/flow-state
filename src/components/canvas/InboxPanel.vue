@@ -159,7 +159,7 @@
           <Timer :size="12" />
         </div>
 
-        <div class="task-content">
+        <div class="task-content--canvas-inbox">
           <div class="task-title" dir="auto">
             {{ task.title }}
           </div>
@@ -753,7 +753,7 @@ onBeforeUnmount(() => {
   color: var(--color-warning);
 }
 
-.task-content {
+.task-content--canvas-inbox {
   padding-left: var(--space-3);
 }
 

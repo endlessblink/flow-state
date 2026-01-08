@@ -80,11 +80,12 @@ const isOpen = ref(false)
 const focusedIndex = ref(0)
 
 // Dropdown positioning
-const dropdownStyle = ref({
+const dropdownStyle = ref<Record<string, string>>({
   position: 'fixed' as const,
   top: '0px',
   left: '0px',
-  minWidth: '0px'
+  minWidth: '0px',
+  maxWidth: 'none'
 })
 
 const calculateDropdownPosition = () => {

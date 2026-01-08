@@ -48,7 +48,7 @@
     />
 
     <!-- Calendar Main Area -->
-    <div class="calendar-main">
+    <div class="calendar-main scroll-container">
       <!-- Calendar Header -->
       <CalendarHeader
         :format-current-date="formatCurrentDate"
@@ -619,11 +619,10 @@ const _handleToggleDoneTasks = (_event: MouseEvent) => {
   z-index: 1;
 }
 
+/* Uses .scroll-container utility for flex:1, overflow-y:auto, min-height:0 */
 .calendar-main {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   position: relative;
   z-index: 1;
 }

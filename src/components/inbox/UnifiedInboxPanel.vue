@@ -151,7 +151,7 @@ Call client"
     </div>
 
     <!-- Task List -->
-    <div v-if="!isCollapsed" class="inbox-tasks">
+    <div v-if="!isCollapsed" class="inbox-tasks scroll-container">
       <!-- Empty State -->
       <div v-if="inboxTasks.length === 0" class="empty-inbox">
         <div class="empty-icon">
@@ -1136,10 +1136,8 @@ onBeforeUnmount(() => {
   box-shadow: var(--state-hover-shadow);
 }
 
+/* Uses .scroll-container utility for flex:1, overflow-y:auto, min-height:0 */
 .inbox-tasks {
-  flex: 1;
-  min-height: 0; /* Critical for flexbox scroll containers */
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

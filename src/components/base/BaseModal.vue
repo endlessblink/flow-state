@@ -57,7 +57,7 @@
       </header>
 
       <!-- Modal Body -->
-      <main class="modal-body" :class="bodyClass">
+      <main class="modal-body scroll-container" :class="bodyClass">
         <slot />
       </main>
 
@@ -492,11 +492,9 @@ defineExpose({
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
-/* Modal Body */
+/* Modal Body - uses .scroll-container utility for flex:1, overflow-y:auto, min-height:0 */
 .modal-body {
   padding: var(--space-6);
-  overflow-y: auto;
-  flex: 1;
 }
 
 /* Modal Footer */

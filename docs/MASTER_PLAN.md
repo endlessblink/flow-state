@@ -147,6 +147,13 @@
 **Priority**: P1-HIGH
 **Completed**: January 7, 2026
 
+### TASK-095: TypeScript & Lint Cleanup (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+- [x] Detected and removed 7 dead files related to legacy PouchDB/Offline system.
+- [x] Refactored `offlineQueue` types to `src/types/offline.ts`.
+- [x] Reduced TypeScript errors from 71 to 14.
+
 ### TASK-138: Refactor CanvasView Phase 2 (Store & UI)
 **Priority**: P2-MEDIUM
 **Goal**: Clean up the store layer and begin UI decomposition.
@@ -163,7 +170,7 @@
 - [x] Extract event handlers to `useCanvasInteractionHandlers.ts`.
 - [x] Verify no regressions in drag/drop or sync.
 
-### TASK-141: Canvas Group System Refactor (📋 PLANNED)
+### TASK-141: Canvas Group System Refactor (🔄 IN PROGRESS)
 **Priority**: P0-CRITICAL
 **Plan**: [plans/canvas-group-system-refactor.md](../plans/canvas-group-system-refactor.md)
 **Goal**: Complete rewrite of canvas group system to fix all parent-child relationship bugs by embracing Vue Flow's native `parentNode` system.
@@ -174,14 +181,20 @@
 - Containment detection failures
 - Resize causes children to move incorrectly
 **Phases**:
-- [ ] Phase 0: Consolidation (remove competing systems)
-- [ ] Phase 1: Foundation (new parent-child composable)
-- [ ] Phase 2: Drag & Drop refactor
-- [ ] Phase 3: Resize handling
-- [ ] Phase 4: Data migration
-- [ ] Phase 5: Polish & validation
+- [x] Phase 0: Consolidation (verified canvasPositionLock.ts deleted, NodeUpdateBatcher bypass removed)
+- [x] Phase 1: Foundation - Created `useCanvasParentChild.ts` with:
+  - Containment detection (smallest-container-wins algorithm)
+  - Z-index calculation based on nesting depth
+  - Circular reference prevention
+  - Coordinate conversion (absolute ↔ relative)
+  - Parent assignment utilities
+- [x] Phase 2: Complete rewrite of `useCanvasDragDrop.ts` to use `useCanvasParentChild`
+- [x] Phase 3: Verified `useCanvasResize.ts` uses PositionManager properly
+- [ ] Phase 4: Data migration (if needed)
+- [ ] Phase 5: Manual testing & validation
+**Progress**: Core refactoring complete. Ready for manual testing.
 
-### TASK-142: Canvas Position System Refactor (📋 PLANNED)
+### TASK-142: Canvas Position System Refactor (🔄 IN PROGRESS)
 **Priority**: P1-HIGH
 **Created**: January 8, 2026
 **Plan**: [plans/canvas-position-system-refactor.md](../plans/canvas-position-system-refactor.md)
@@ -196,8 +209,8 @@
 - Provides conflict resolution between user actions and database sync
 
 **Phases**:
-- [ ] **Phase 1**: Create PositionManager service with lock persistence
-- [ ] **Phase 2**: Consolidate all position modifications through PositionManager
+- [x] **Phase 1**: Create PositionManager service with lock persistence (✅ Jan 8, 2026)
+- [x] **Phase 2**: Consolidate all position modifications through PositionManager (✅ Jan 8, 2026)
 - [ ] **Phase 3**: Implement event-driven lock lifecycle
 - [ ] **Phase 4**: Standardize coordinate system (absolute vs. relative)
 - [ ] **Phase 5**: Comprehensive Playwright tests and cleanup

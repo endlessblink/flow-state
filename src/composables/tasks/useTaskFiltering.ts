@@ -32,28 +32,37 @@ export const useTaskFiltering = (
     } = useSmartViews()
 
 
-    // Helper to recursively collect nested tasks
-    const collectNestedTasks = (taskIds: string[]): string[] => {
+    // Helper to recursively collect nested tasks - Optimized to O(N) using Map
+    const collectNestedTasks = (taskIds: string[], allTasks: Task[]): string[] => {
         const allNestedIds: string[] = []
-        const visited = new Set<string>()
+        const visited = new Set<string>(taskIds) // Pre-fill with starting IDs to prevent duplicates
 
-        const collectChildren = (parentId: string) => {
-            const children = tasks.value.filter(task => task.parentTaskId === parentId && !task._soft_deleted)
-            children.forEach(child => {
-                if (!visited.has(child.id)) {
-                    visited.add(child.id)
-                    allNestedIds.push(child.id)
-                    collectChildren(child.id)
+        // 1. Build Parent-Child Map (O(N))
+        const parentMap = new Map<string, string[]>()
+        allTasks.forEach(task => {
+            if (task.parentTaskId && !task._soft_deleted) {
+                if (!parentMap.has(task.parentTaskId)) {
+                    parentMap.set(task.parentTaskId, [])
                 }
-            })
-        }
-
-        taskIds.forEach(parentId => {
-            if (!visited.has(parentId)) {
-                visited.add(parentId)
-                collectChildren(parentId)
+                parentMap.get(task.parentTaskId)?.push(task.id)
             }
         })
+
+        // 2. Traverse (O(N) in worst case of full tree)
+        const traverse = (parentId: string) => {
+            const children = parentMap.get(parentId)
+            if (children) {
+                children.forEach(childId => {
+                    if (!visited.has(childId)) {
+                        visited.add(childId)
+                        allNestedIds.push(childId)
+                        traverse(childId)
+                    }
+                })
+            }
+        }
+
+        taskIds.forEach(parentId => traverse(parentId))
         return allNestedIds
     }
 
@@ -131,7 +140,7 @@ export const useTaskFiltering = (
 
         // Include nested tasks
         const filteredTaskIds = filtered.map(task => task.id)
-        const nestedTaskIds = collectNestedTasks(filteredTaskIds)
+        const nestedTaskIds = collectNestedTasks(filteredTaskIds, tasks.value)
 
         let nestedTasks: Task[] = []
         try {

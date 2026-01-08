@@ -1,5 +1,5 @@
 import type { Task } from '@/types/tasks'
-import { transactionManager } from '@/services/sync/TransactionManager'
+// TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 import { getLogger } from '@/utils/productionLogger'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 
@@ -26,20 +26,14 @@ export class TrashService {
      * Restore a task from trash
      */
     public async restoreTask(taskId: string): Promise<void> {
-        // Use WAL for safety
-        const txId = await transactionManager.beginTransaction('update', 'tasks', { taskId, action: 'restore' })
-
         try {
             await this.db.restoreTask(taskId)
-
-            await transactionManager.commit(txId)
             console.log(`♻️ [TRASH] Restored task ${taskId}`)
 
-            // Trigger store reload or event? 
+            // Trigger store reload or event
             window.dispatchEvent(new CustomEvent('pomoflow-task-restored', { detail: { taskId } }))
 
         } catch (error) {
-            await transactionManager.rollback(txId, error)
             console.error(`❌ [TRASH] Failed to restore task ${taskId}:`, error)
             throw error
         }
@@ -49,16 +43,10 @@ export class TrashService {
      * Permanently delete a task (Empty Trash)
      */
     public async permanentlyDeleteTask(taskId: string): Promise<void> {
-        // WAL for hard delete
-        const txId = await transactionManager.beginTransaction('delete', 'tasks', { taskId, type: 'hard_delete' })
-
         try {
             await this.db.permanentlyDeleteTask(taskId)
-
-            await transactionManager.commit(txId)
             console.log(`🔥 [TRASH] Task ${taskId} permanently deleted from Supabase`)
         } catch (error) {
-            await transactionManager.rollback(txId, error)
             console.error(`❌ [TRASH] Failed to permanently delete task ${taskId}:`, error)
             throw error
         }

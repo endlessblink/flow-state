@@ -130,12 +130,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, onMounted, inject } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
 import { Position, useVueFlow } from '@vue-flow/core'
 import { Calendar, Timer, Zap, Clock, Check } from 'lucide-vue-next'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
-import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useTimerStore } from '@/stores/timer'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
@@ -177,7 +177,7 @@ const Handle = defineAsyncComponent(() =>
 // Defensive validation - handled by template v-if
 
 
-const { startDrag, endDrag } = useDragAndDrop()
+const { startDrag: _startDrag, endDrag: _endDrag } = useDragAndDrop()
 const timerStore = useTimerStore()
 const taskStore = useTaskStore()
 
@@ -189,7 +189,7 @@ try {
   if (vf) {
     viewport.value = vf.viewport
   }
-} catch (e) {
+} catch (_e) {
   // Not in Vue Flow context (e.g. Storybook)
 }
 
@@ -309,7 +309,7 @@ const formattedDueDate = computed(() => {
       month: '2-digit',
       year: 'numeric'
     }).format(date)
-  } catch (e) {
+  } catch (_e) {
     return props.task.dueDate
   }
 })

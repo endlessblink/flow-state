@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, watch, computed } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import { useTaskStore, type Task } from './tasks'
-import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { type Task } from './tasks'
+// import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { detectPowerKeyword } from '@/composables/useTaskSmartGroups'
 import type {
   GroupFilter,
@@ -59,7 +59,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // SAFETY: Filtered groups for display - excludes hidden groups
   const visibleGroups = computed(() => _rawGroups.value.filter(g => g.isVisible !== false))
-  const groups = visibleGroups
+  // const groups = visibleGroups
   const showGroupGuides = ref(true)
   const snapToGroups = ref(true)
 
@@ -68,29 +68,90 @@ export const useCanvasStore = defineStore('canvas', () => {
   const edges = ref<any[]>([])
 
   // Collapsed state
-  const collapsedTaskPositions = ref<Map<string, TaskPosition[]>>(new Map())
+  // const collapsedTaskPositions = ref<Map<string, TaskPosition[]>>(new Map())
 
   // --- SQL INTERACTION ---
+
+  // TASK-130: LocalStorage key for Guest Mode group persistence
+  const GUEST_GROUPS_KEY = 'pomoflow-guest-groups'
+
+  // TASK-130: Save groups to localStorage for Guest Mode
+  const saveGroupsToLocalStorage = () => {
+    try {
+      localStorage.setItem(GUEST_GROUPS_KEY, JSON.stringify(_rawGroups.value))
+      console.log(`💾 [GUEST-MODE] Saved ${_rawGroups.value.length} groups to localStorage`)
+    } catch (e) {
+      console.error('❌ [GUEST-MODE] Failed to save groups to localStorage:', e)
+    }
+  }
+
+  // TASK-130: Load groups from localStorage for Guest Mode
+  const loadGroupsFromLocalStorage = (): CanvasGroup[] => {
+    try {
+      const stored = localStorage.getItem(GUEST_GROUPS_KEY)
+      if (stored) {
+        const groups = JSON.parse(stored) as CanvasGroup[]
+        console.log(`📦 [GUEST-MODE] Loaded ${groups.length} groups from localStorage`)
+        return groups
+      }
+    } catch (e) {
+      console.error('❌ [GUEST-MODE] Failed to load groups from localStorage:', e)
+    }
+    return []
+  }
 
   const loadFromDatabase = async () => {
     try {
       console.log(`[CanvasStore] loadFromDatabase called at ${new Date().toISOString()}`)
+
+      // TASK-130: Check if we're in Guest Mode
+      const { useAuthStore } = await import('@/stores/auth')
+      const authStore = useAuthStore()
+
+      if (!authStore.isAuthenticated) {
+        // Guest Mode: Load from localStorage
+        const localGroups = loadGroupsFromLocalStorage()
+        if (localGroups.length > 0) {
+          _rawGroups.value = localGroups
+          console.log(`✅ [GUEST-MODE] Using ${localGroups.length} groups from localStorage`)
+          return
+        }
+        // If no localStorage data, try Supabase (might have demo data or anon access)
+      }
 
       const loadedGroups = await fetchGroups()
       _rawGroups.value = loadedGroups
 
       console.log(`✅ [SUPABASE] Loaded ${loadedGroups.length} canvas groups`)
 
+      // TASK-130: If in Guest Mode and got Supabase data, cache to localStorage
+      if (!authStore.isAuthenticated && loadedGroups.length > 0) {
+        saveGroupsToLocalStorage()
+      }
+
     } catch (e) {
       console.error('❌ [SUPABASE] Failed to load canvas groups:', e)
+
+      // TASK-130: Fallback to localStorage on Supabase failure
+      const localGroups = loadGroupsFromLocalStorage()
+      if (localGroups.length > 0) {
+        _rawGroups.value = localGroups
+        console.log(`✅ [FALLBACK] Using ${localGroups.length} groups from localStorage`)
+      }
     }
   }
 
   const saveGroupToStorage = async (group: CanvasGroup) => {
-    // SAFETY: Prevent saving if not authenticated (Guest Mode)
     const { useAuthStore } = await import('@/stores/auth')
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+
+    // TASK-130: In Guest Mode, save to localStorage instead
+    if (!authStore.isAuthenticated) {
+      // Update group in _rawGroups first (should already be done by updateGroup)
+      // Then persist entire groups array to localStorage
+      saveGroupsToLocalStorage()
+      return
+    }
 
     try {
       await saveGroup(group)
@@ -331,27 +392,58 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
-  // NOTE: Simplified Task Sync - re-implementing basic logic
+  // NOTE: Optimized Task Sync - matching logic from useCanvasSync
   const syncTasksToCanvas = (tasks: Task[]) => {
-    // Basic sync logic to populate 'nodes' for VueFlow
     try {
       // 1. Filter tasks present on canvas
       const onCanvasTasks = tasks.filter(t => !t.isInInbox && t.canvasPosition)
 
-      // 2. Map to VueFlow Nodes
-      const taskNodes = onCanvasTasks.map(t => ({
-        id: t.id,
-        type: 'task',
-        position: (t.canvasPosition && !Number.isNaN(t.canvasPosition.x) && !Number.isNaN(t.canvasPosition.y))
-          ? t.canvasPosition
-          : { x: 0, y: 0 },
-        data: { task: t }, // Store full task reference
-        draggable: true
-      }))
+      // 2. Identify existing nodes to preserve references (crucial for performance)
+      const existingTaskNodes = new Map(
+        nodes.value
+          .filter(n => n.type === 'taskNode' || n.type === 'task')
+          .map(n => [n.id, n])
+      )
 
-      // 3. Merge (keep non-task nodes)
-      const otherNodes = nodes.value.filter(n => n.type !== 'task')
-      nodes.value = [...otherNodes, ...taskNodes]
+      // 3. Map to VueFlow Nodes using diff/patch strategy
+      const updatedTaskNodes = onCanvasTasks.map(t => {
+        const existingNode = existingTaskNodes.get(t.id)
+
+        // If node exists and critical data hasn't changed, reuse it
+        if (existingNode &&
+          existingNode.position.x === t.canvasPosition?.x &&
+          existingNode.position.y === t.canvasPosition?.y &&
+          // Simple check for data equality to avoid deep spreads if possible
+          existingNode.data?.task?.updatedAt === t.updatedAt
+        ) {
+          existingTaskNodes.delete(t.id) // Remove from deletion set
+          return existingNode
+        }
+
+        // Create new node object but try to preserve internal object shape for V8
+        const newNode = {
+          id: t.id,
+          type: 'taskNode', // Use the optimized component
+          position: (t.canvasPosition && !Number.isNaN(t.canvasPosition.x) && !Number.isNaN(t.canvasPosition.y))
+            ? { ...t.canvasPosition }
+            : { x: 0, y: 0 },
+          data: { task: t }, // Store full task reference
+          draggable: true,
+          connectable: true,
+          selectable: true,
+          zIndex: 10
+        }
+
+        if (existingNode) existingTaskNodes.delete(t.id)
+        return newNode
+      })
+
+      // 4. Merge: Keep non-task nodes + updated task nodes
+      // Filter out task nodes that were NOT in the new list (implicitly handled by rebuilding list)
+      const otherNodes = nodes.value.filter(n => n.type !== 'task' && n.type !== 'taskNode')
+
+      // Update store value - Vue will only diff changed object references
+      nodes.value = [...otherNodes, ...updatedTaskNodes]
 
     } catch (e) {
       console.error('Sync tasks to canvas failed:', e)
@@ -368,7 +460,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (savedViewport) {
       try {
         viewport.value = JSON.parse(savedViewport)
-      } catch { }
+      } catch { /* ignore */ }
     }
 
     // Initialize Task Sync (Lazy)
@@ -402,16 +494,16 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
-  const togglePowerMode = async (groupId: string, active: boolean) => {
-    await updateGroup(groupId, { isPowerMode: active })
-  }
+  //   const togglePowerMode = async (groupId: string, active: boolean) => {
+  //     await updateGroup(groupId, { isPowerMode: active })
+  //   }
 
   // Undo alias (fallback to regular update for now)
   const updateSectionWithUndo = updateGroup
 
   // Missing stubs to satisfy vue-tsc
-  const getMatchingTaskCount = (groupId: string, tasks?: any[]): number => 0
-  const toggleSectionVisibility = async (groupId: string) => { /* ... */ }
+  const getMatchingTaskCount = (_groupId: string, _tasks?: any[]): number => 0
+  const toggleSectionVisibility = async (_groupId: string) => { /* ... */ }
   const toggleSectionCollapse = async (groupId: string) => {
     // SAFETY: Use _rawGroups to find any group including hidden ones
     const g = _rawGroups.value.find(g => g.id === groupId)
@@ -429,7 +521,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
   const endSelection = () => { isSelecting.value = false; selectionRect.value = null }
-  const selectNodesInRect = (rect: any) => { /* ... */ }
+  const selectNodesInRect = (_rect: any) => { /* ... */ }
   const toggleMultiSelectMode = () => { multiSelectMode.value = !multiSelectMode.value }
   const togglePriorityIndicator = () => { showPriorityIndicator.value = !showPriorityIndicator.value }
   const toggleStatusBadge = () => { showStatusBadge.value = !showStatusBadge.value }

@@ -82,7 +82,9 @@ export default [
       'vue/no-deprecated-v-on-native-modifier': 'error',
       'vue/no-dupe-keys': 'error',
       'vue/no-duplicate-attributes': 'error',
-      'vue/no-multiple-template-root': 'error',
+      'vue/no-multiple-template-root': 'off',
+      // Vue 3 supports arguments on v-model
+      'vue/no-v-model-argument': 'off',
       'vue/no-reserved-component-names': 'error',
       'vue/no-reserved-props': 'error',
       'vue/no-unsupported-features': 'error',

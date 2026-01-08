@@ -61,5 +61,25 @@
 
 ## 4. Pending / Next Steps
 
-- **Verify Mobile Layout** (drag handles might need touch adjustments).
 - **Monitor Sync**: Check if any other stores need auth guards.
+
+---
+
+## 5. Fixes - Jan 8, 2026
+
+### Feature: Friday/Saturday Action Groups
+- **Context**: Replaced legacy "Weekend" smart group.
+- **Implementation**:
+  - `ensureActionGroups` creates separate "Friday" and "Saturday" groups if missing.
+  - **Logic**: Dropping a task into these groups updates its `dueDate` to the *next upcoming* Friday or Saturday.
+  - **File**: `useCanvasSmartGroups.ts`
+
+### Fix: `saveUserSettings` Sync Error
+- **Issue**: `Sync Error: [object Object]` / `duplicate key value violates unique constraint`.
+- **Root Cause**: `upsert` without `onConflict` was trying to insert duplicate `user_id` rows.
+- **Solution**: Added `{ onConflict: 'user_id' }` to the Supabase call.
+- **Bonus**: Improved `handleError` to properly parse non-Error objects from Supabase.
+
+### UX: Catalog View Filters
+- **Change**: Moved "Hide Done Tasks" (eye icon) from `AllTasksView` to `ViewControls` component.
+- **Benefit**: Consistent UI with other view controls (Sort, Density).

@@ -63,8 +63,14 @@ export const useLocalAuthStore = defineStore('localAuth', () => {
   const userPreferences = computed(() => localUser.value?.preferences ?? DEFAULT_PREFERENCES)
   const userDisplayName = computed(() => localUser.value?.displayName ?? 'Local User')
   const isNewSession = computed(() => localUser.value?.sessionCount === 1)
-  const isAdmin = computed(() => localStorage.getItem('pomo-flow-dev-mode') === 'true')
-  const isDev = computed(() => localStorage.getItem('pomo-flow-dev-mode') === 'true')
+  // BUG-012 FIX: localStorage override ONLY works in DEV builds (AND, not OR)
+  // This prevents production users from gaining admin access via localStorage
+  const isAdmin = computed(() => {
+    return import.meta.env.DEV && localStorage.getItem('pomo-flow-dev-mode') === 'true'
+  })
+  const isDev = computed(() => {
+    return import.meta.env.DEV && localStorage.getItem('pomo-flow-dev-mode') === 'true'
+  })
 
   /**
    * Generate a UUID for anonymous user identification

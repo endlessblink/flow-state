@@ -2,7 +2,64 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
 /**
+ * Sanitize URL to prevent XSS via javascript:, data:, and other dangerous protocols
+ * Returns the safe URL or null if the URL is unsafe
+ */
+const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
+const BLOCKED_PROTOCOLS = new Set(['javascript:', 'vbscript:', 'data:', 'file:', 'blob:'])
+
+function sanitizeUrl(href: string | null | undefined): string | null {
+  if (!href || typeof href !== 'string') return null
+
+  // Normalize and trim
+  const normalizedHref = href.trim().toLowerCase()
+
+  // Check for blocked protocols BEFORE URL parsing (catches obfuscation)
+  for (const blocked of BLOCKED_PROTOCOLS) {
+    if (normalizedHref.startsWith(blocked) ||
+        normalizedHref.includes('\n' + blocked) ||
+        normalizedHref.includes('\r' + blocked) ||
+        normalizedHref.includes('\t' + blocked)) {
+      return null
+    }
+  }
+
+  // Check for URL-encoded dangerous protocols
+  try {
+    const decoded = decodeURIComponent(href)
+    const decodedLower = decoded.toLowerCase()
+    if (decodedLower.startsWith('javascript:') ||
+        decodedLower.startsWith('vbscript:') ||
+        decodedLower.startsWith('data:')) {
+      return null
+    }
+  } catch {
+    // decodeURIComponent failed - URL might be malformed, allow URL parsing to handle it
+  }
+
+  try {
+    const url = new URL(href, window.location.origin)
+
+    // Explicit protocol allowlist check
+    if (!SAFE_PROTOCOLS.has(url.protocol)) {
+      return null
+    }
+
+    // Block protocol-relative URLs that could redirect to malicious sites
+    if (href.startsWith('//')) {
+      return null
+    }
+
+    return url.href
+  } catch {
+    // Invalid URL - return null for safety
+    return null
+  }
+}
+
+/**
  * Configure marked for our needs
+ * IMPORTANT: For Tiptap compatibility, task lists must use data-type attributes
  */
 marked.use({
     gfm: true,
@@ -10,12 +67,19 @@ marked.use({
     silent: true,
     renderer: {
         link({ href, title, text }) {
-            return `<a href="${href}" title="${title || ''}" target="_blank" rel="noopener noreferrer">${text}</a>`
+            // Sanitize URL to prevent XSS attacks
+            const safeHref = sanitizeUrl(href)
+            if (!safeHref) {
+              // Unsafe URL - render as plain text instead of link
+              return text
+            }
+            return `<a href="${safeHref}" title="${title || ''}" target="_blank" rel="noopener noreferrer">${text}</a>`
         },
         list({ items, ordered, start }) {
             const tag = ordered ? 'ol' : 'ul'
             const isTask = items.some(item => (item as any).task)
-            const classAttr = isTask ? ' class="task-list"' : ''
+            // For Tiptap: use data-type="taskList" instead of class
+            const dataAttr = isTask ? ' data-type="taskList"' : ''
             const startAttr = ordered && start !== 1 ? ` start="${start}"` : ''
 
             let body = ''
@@ -23,16 +87,16 @@ marked.use({
                 body += (this as any).listitem(item)
             }
 
-            return `<${tag}${classAttr}${startAttr}>\n${body}</${tag}>\n`
+            return `<${tag}${dataAttr}${startAttr}>\n${body}</${tag}>\n`
         },
-        // We'll let the container's dir="auto" handle the general layout 
-        // to avoid individual blocks flipping unexpectedly
+        // For Tiptap: task list items need data-type="taskItem" and data-checked attributes
         listitem({ text, task, checked }) {
             if (task) {
-                const checkedAttr = checked ? 'checked' : ''
-                return `<li class="task-list-item" dir="auto"><input type="checkbox" class="md-checkbox" ${checkedAttr}> ${text}</li>\n`
+                // Tiptap TaskItem format: <li data-type="taskItem" data-checked="true/false">
+                const checkedVal = checked ? 'true' : 'false'
+                return `<li data-type="taskItem" data-checked="${checkedVal}"><label><input type="checkbox" ${checked ? 'checked' : ''}></label><div>${text}</div></li>\n`
             }
-            return `<li dir="auto">${text}</li>\n`
+            return `<li>${text}</li>\n`
         }
     }
 })
@@ -47,45 +111,113 @@ export const parseMarkdown = (content: string): string => {
         // marked.parse is synchronous for strings in most environments
         const rawHtml = marked.parse(content) as string
 
-        // Sanitize with checkbox support
+        // Sanitize with checkbox support and Tiptap data attributes
         const sanitized = DOMPurify.sanitize(rawHtml, {
-            ADD_TAGS: ['input'],
-            ADD_ATTR: ['type', 'checked', 'class', 'disabled']
+            ADD_TAGS: ['input', 'mark'],
+            ADD_ATTR: ['type', 'checked', 'class', 'disabled', 'data-type', 'data-checked']
         })
 
-        // Transform checkboxes to be interactive classes
-        // 1. First, handle standard GFM checkboxes produced by marked
-        let transformed = sanitized.replace(
-            /<input[^>]+type=["' ]checkbox["' ][^>]*>/gi,
-            (match) => {
-                const isChecked = /\bchecked\b/i.test(match)
-                return `<input type="checkbox" class="md-checkbox" ${isChecked ? 'checked' : ''}>`
-            }
-        )
+        // Convert ==highlight== syntax to <mark> for Tiptap's Highlight extension
+        // This is a non-standard markdown extension commonly used in Obsidian and other editors
+        const withHighlight = sanitized.replace(/==(.*?)==/g, '<mark>$1</mark>')
 
-        // 2. Then, handle standalone [ ] and [x] at the beginning of lines or after block tags
-        // This is the "Live Preview" style parsing
-        transformed = transformed.replace(
-            /(<(?:p|li|h[1-6]|div)[^>]*>|(?:\r?\n)|^)\s*\[([ x])\]/gi,
-            (match, prefix, state) => {
-                const isChecked = state === 'x' || state === 'X'
-                return `${prefix}<input type="checkbox" class="md-checkbox" ${isChecked ? 'checked' : ''}>`
-            }
-        )
-
-        // 3. One more pass for cases where marked might have missed it or mixed it with text
-        // Only match if it looks like a task (at start of string or after a newline/space)
-        transformed = transformed.replace(
-            /(^|\s)\[([ x])\](\s|$)/gi,
-            (match, before, state, after) => {
-                const isChecked = state === 'x' || state === 'X'
-                return `${before}<input type="checkbox" class="md-checkbox" ${isChecked ? 'checked' : ''}>${after}`
-            }
-        )
-
-        return transformed
+        return withHighlight
     } catch (error) {
         console.error('Error parsing markdown:', error)
         return content // Fallback to raw text
     }
 }
+
+/**
+ * Convert HTML to Markdown (BUG-013 FIX)
+ * Simple conversion for Tiptap output - handles common formatting
+ */
+export function htmlToMarkdown(html: string): string {
+    if (!html || typeof html !== 'string') return ''
+
+    let markdown = html
+
+    // Sanitize first to prevent any XSS in the processing
+    markdown = DOMPurify.sanitize(markdown)
+
+    // Task list items: <input type="checkbox" checked> -> [x], unchecked -> [ ]
+    markdown = markdown.replace(/<input[^>]*type=["']?checkbox["']?[^>]*checked[^>]*>/gi, '[x] ')
+    markdown = markdown.replace(/<input[^>]*checked[^>]*type=["']?checkbox["']?[^>]*>/gi, '[x] ')
+    markdown = markdown.replace(/<input[^>]*type=["']?checkbox["']?[^>]*>/gi, '[ ] ')
+
+    // Bold: <strong> or <b> -> **text**
+    markdown = markdown.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+    markdown = markdown.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+
+    // Italic: <em> or <i> -> *text*
+    markdown = markdown.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+    markdown = markdown.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
+
+    // Strikethrough: <s> or <del> -> ~~text~~
+    markdown = markdown.replace(/<s[^>]*>(.*?)<\/s>/gi, '~~$1~~')
+    markdown = markdown.replace(/<del[^>]*>(.*?)<\/del>/gi, '~~$1~~')
+
+    // Underline: <u> -> no standard markdown, keep as HTML for now
+    // Some parsers support __text__ but it conflicts with bold
+    markdown = markdown.replace(/<u[^>]*>(.*?)<\/u>/gi, '<u>$1</u>')
+
+    // Highlight: <mark> -> ==text== (some markdown flavors support this)
+    markdown = markdown.replace(/<mark[^>]*>(.*?)<\/mark>/gi, '==$1==')
+
+    // Horizontal rule: <hr> -> ---
+    markdown = markdown.replace(/<hr[^>]*\/?>/gi, '\n---\n')
+
+    // Links: <a href="url">text</a> -> [text](url)
+    markdown = markdown.replace(/<a[^>]*href=["']([^"']*)["'][^>]*>(.*?)<\/a>/gi, '[$2]($1)')
+
+    // Code blocks: <pre><code> -> ```code```
+    markdown = markdown.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, '\n```\n$1\n```\n')
+    markdown = markdown.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, '\n```\n$1\n```\n')
+
+    // Inline code: <code> -> `text`
+    markdown = markdown.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+
+    // Headings
+    markdown = markdown.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n')
+    markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n')
+    markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n')
+
+    // List items: <li> -> - (for task lists, the checkbox is already handled above)
+    // Handle task list items specially (they have data-type or are in task lists)
+    markdown = markdown.replace(/<li[^>]*data-checked=["']true["'][^>]*>(.*?)<\/li>/gi, '- [x] $1\n')
+    markdown = markdown.replace(/<li[^>]*data-checked=["']false["'][^>]*>(.*?)<\/li>/gi, '- [ ] $1\n')
+    markdown = markdown.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n')
+
+    // Remove list wrappers
+    markdown = markdown.replace(/<\/?ul[^>]*>/gi, '')
+    markdown = markdown.replace(/<\/?ol[^>]*>/gi, '')
+
+    // Paragraphs: <p> -> text with newline
+    markdown = markdown.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n')
+
+    // Line breaks
+    markdown = markdown.replace(/<br\s*\/?>/gi, '\n')
+
+    // Blockquotes
+    markdown = markdown.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '> $1\n')
+
+    // Remove any remaining HTML tags
+    markdown = markdown.replace(/<[^>]+>/g, '')
+
+    // Decode HTML entities
+    markdown = markdown.replace(/&nbsp;/g, ' ')
+    markdown = markdown.replace(/&amp;/g, '&')
+    markdown = markdown.replace(/&lt;/g, '<')
+    markdown = markdown.replace(/&gt;/g, '>')
+    markdown = markdown.replace(/&quot;/g, '"')
+    markdown = markdown.replace(/&#39;/g, "'")
+
+    // Clean up extra whitespace
+    markdown = markdown.replace(/\n{3,}/g, '\n\n')
+    markdown = markdown.trim()
+
+    return markdown
+}
+
+// Export sanitizeUrl for use in TiptapEditor link validation (BUG-014 FIX)
+export { sanitizeUrl }

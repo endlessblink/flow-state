@@ -63,11 +63,23 @@
         @update:model-value="$emit('update:filterStatus', $event as string)"
       />
     </div>
+
+    <!-- Hide Done Tasks Toggle -->
+    <button
+      v-if="hideDoneTasks !== undefined"
+      class="hide-done-toggle icon-only"
+      :class="{ active: hideDoneTasks }"
+      :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+      @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
+    >
+      <EyeOff v-if="hideDoneTasks" :size="16" />
+      <Eye v-else :size="16" />
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { AlignJustify, List, LayoutList, ChevronsDown, ChevronsUp } from 'lucide-vue-next'
+import { AlignJustify, List, LayoutList, ChevronsDown, ChevronsUp, Eye, EyeOff } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
@@ -79,6 +91,7 @@ interface Props {
   density: DensityType
   sortBy: string
   filterStatus: string
+  hideDoneTasks?: boolean
 }
 
 defineProps<Props>()
@@ -89,6 +102,7 @@ const _emit = defineEmits<{
   (e: 'update:density', value: DensityType): void
   (e: 'update:sortBy', value: string): void
   (e: 'update:filterStatus', value: string): void
+  (e: 'update:hideDoneTasks', value: boolean): void
   (e: 'expandAll'): void
   (e: 'collapseAll'): void
 }>()
@@ -172,5 +186,55 @@ const filterOptions = [
 
 .control-wrapper {
   min-width: 140px;
+}
+
+.hide-done-toggle {
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-soft) 0%,
+    var(--glass-bg-light) 100%
+  );
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  user-select: none;
+}
+
+.hide-done-toggle.icon-only {
+  padding: var(--space-2);
+  /* Match height of other controls roughly */
+  height: 38px;
+  width: 38px;
+  justify-content: center;
+}
+
+.hide-done-toggle:hover {
+  background: linear-gradient(
+    135deg,
+    var(--state-hover-bg) 0%,
+    var(--glass-bg-soft) 100%
+  );
+  border-color: var(--state-hover-border);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+.hide-done-toggle.active {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 </style>

@@ -1,9 +1,21 @@
 ---
 name: milkdown-vue3
-description: This skill should be used when implementing, debugging, or fixing Milkdown markdown editors in Vue 3 applications. Triggers on Milkdown setup, WYSIWYG markdown editors, "editorView" context errors, Enter key not working in editor, and Vue 3 markdown editor implementation. Provides production-ready patterns that fix 5 critical bugs.
+description: "[DEPRECATED - Use tiptap-vue3 instead] Historical reference for Milkdown implementation. Milkdown has aggressive auto-conversion that prevents typing markdown syntax like '- [ ]'. Use tiptap-vue3 skill for new implementations."
 ---
 
 # Milkdown Vue 3 Skill
+
+> **DEPRECATED**: This skill is kept for historical reference only.
+>
+> **Recommendation**: Use the `tiptap-vue3` skill instead. Tiptap provides:
+> - Single `enableInputRules: false` option to disable auto-conversion
+> - Better Vue 3 integration
+> - Smaller bundle size
+> - Cleaner API
+>
+> **Why deprecated**: Milkdown's input rules auto-convert typing patterns (e.g., `-` to bullet list) before users can complete markdown syntax like `- [ ]` for task lists. Disabling this requires skipping multiple imports, which is error-prone.
+
+## Historical Reference
 
 Implement production-ready Milkdown WYSIWYG markdown editors in Vue 3 with correct patterns that prevent common bugs.
 

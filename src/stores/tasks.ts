@@ -6,7 +6,7 @@ import { useTaskOperations } from './tasks/taskOperations'
 import { useTaskHistory } from './tasks/taskHistory'
 import { useProjectStore } from './projects'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
-import { transactionManager } from '@/services/sync/TransactionManager'
+// TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 // TASK-089: Updated to use unified canvas state lock system
 import { isPositionLocked, getLockedPosition } from '@/utils/canvasStateLock'
 
@@ -107,47 +107,7 @@ export const useTaskStore = defineStore('tasks', () => {
       await loadFromDatabase()
       runAllTaskMigrations()
 
-      // Phase 14: Crash Recovery
-      await transactionManager.initialize()
-      window.addEventListener('pomoflow-wal-replay', async (event: any) => {
-        const { transactions } = event.detail
-        if (!transactions || !transactions.length) return
-
-        console.debug(`🚑 Recovering ${transactions.length} pending transactions...`)
-        for (const tx of transactions) {
-          try {
-            // Replay logic based on tx.operation and tx.collection
-            if (tx.collection === 'tasks') {
-              // Note: 'create' data has { ...taskData, id }
-              // 'update' data has { taskId, updates }
-              // 'delete' data has { taskId }
-              // 'bulk_update' has { type: 'bulk_delete', taskIds }
-
-              if (tx.operation === 'create') {
-                await operations.createTask(tx.data)
-              } else if (tx.operation === 'update') {
-                if (tx.data.action === 'restore') {
-                  console.warn('Skipping restore replay for now')
-                } else {
-                  await operations.updateTask(tx.data.taskId, tx.data.updates)
-                }
-              } else if (tx.operation === 'delete') {
-                await operations.deleteTask(tx.data.taskId)
-              } else if (tx.operation === 'bulk_update' && tx.data.type === 'bulk_delete') {
-                await operations.bulkDeleteTasks(tx.data.taskIds)
-              }
-            }
-            // Mark as replayed/committed
-            await transactionManager.commit(tx._id)
-          } catch (err) {
-            console.error(`❌ Failed to replay transaction ${tx._id}`, err)
-            // Determine if we should rollback or retry later
-          }
-        }
-      })
-
-      // Trigger replay check
-      await transactionManager.replayPendingTransactions()
+      // TASK-129: Removed PouchDB WAL crash recovery (transactionManager was a stub)
 
     } catch (error) {
       errorHandler.report({

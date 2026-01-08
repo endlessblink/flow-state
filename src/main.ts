@@ -49,20 +49,14 @@ import { useSecurityMonitor as _useSecurityMonitor } from './utils/securityMonit
 // Initialize local-first authentication system
 import { useLocalAuthStore as _useLocalAuthStore } from './stores/local-auth'
 
-// Task disappearance logger - kept for window.taskLogger side-effect (manual debugging)
-import { taskDisappearanceLogger as _taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
-
-// Supabase migration cleanup - clears old PouchDB/localStorage data
-import { runMigrationCleanup } from './utils/supabaseMigrationCleanup'
+// NOTE: PouchDB → Supabase migration complete (Jan 2026). Legacy cleanup code archived.
+// TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool no longer needed)
 
 // SECURITY: App is now 100% Supabase standard
 
 // Run pre-check and initialize app
 async function initializeApp() {
-  // CRITICAL: Run Supabase migration cleanup FIRST to clear old PouchDB/offline queue data
-  // This prevents deleted tasks from being restored by old systems
-  await runMigrationCleanup()
-
+  // NOTE: PouchDB migration cleanup removed Jan 2026 - migration complete
   console.log('🚀 [MAIN] Starting app initialization...')
 
   // Detect Tauri environment and apply class for CSS optimizations
@@ -128,11 +122,6 @@ async function initializeApp() {
   });
 
   app.mount('#app')
-
-  // Task disappearance logger available for manual debugging if needed:
-  // Import: import { taskDisappearanceLogger } from './utils/taskDisappearanceLogger'
-  // Enable: taskDisappearanceLogger.enable() or window.taskLogger.enable()
-  // TASK-022 monitoring completed Dec 25, 2025 - no issues detected
 }
 
 // Start the app

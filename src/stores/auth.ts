@@ -30,13 +30,15 @@ export const useAuthStore = defineStore('auth', () => {
     null
   )
   const isAdmin = computed(() => {
-    // Local override for development
-    if (localStorage.getItem('pomo-flow-dev-mode') === 'true') return true
+    // BUG-012 FIX: localStorage override ONLY works in DEV builds (AND, not OR)
+    // This prevents production users from gaining admin access via localStorage
+    if (import.meta.env.DEV && localStorage.getItem('pomo-flow-dev-mode') === 'true') return true
     return user.value?.app_metadata?.role === 'admin' ||
       user.value?.user_metadata?.role === 'admin'
   })
   const isDev = computed(() => {
-    if (localStorage.getItem('pomo-flow-dev-mode') === 'true') return true
+    // BUG-012 FIX: localStorage override ONLY works in DEV builds (AND, not OR)
+    if (import.meta.env.DEV && localStorage.getItem('pomo-flow-dev-mode') === 'true') return true
     return isAdmin.value ||
       user.value?.app_metadata?.role === 'developer' ||
       user.value?.user_metadata?.role === 'developer'

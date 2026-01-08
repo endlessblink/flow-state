@@ -27,7 +27,7 @@ export type SmartGroupType = typeof SMART_GROUPS[keyof typeof SMART_GROUPS]
 /**
  * Power keyword categories
  */
-export type PowerKeywordCategory = 'date' | 'priority' | 'status' | 'duration'
+export type PowerKeywordCategory = 'date' | 'priority' | 'status' | 'duration' | 'day_of_week'
 
 /**
  * Priority keywords
@@ -57,6 +57,20 @@ export const DURATION_KEYWORDS = {
   MEDIUM: ['medium task', 'regular task', '30-60m'],
   LONG: ['long task', 'big task', 'more than 60m'],
   UNESTIMATED: ['unestimated', 'unknown duration', 'needs estimate']
+} as const
+
+/**
+ * Day of week keywords (TASK-130)
+ * These map day names to their JS Date day index (0=Sunday, 6=Saturday)
+ */
+export const DAY_OF_WEEK_KEYWORDS = {
+  SUNDAY: { index: 0, keywords: ['sunday', 'sun'] },
+  MONDAY: { index: 1, keywords: ['monday', 'mon'] },
+  TUESDAY: { index: 2, keywords: ['tuesday', 'tue', 'tues'] },
+  WEDNESDAY: { index: 3, keywords: ['wednesday', 'wed'] },
+  THURSDAY: { index: 4, keywords: ['thursday', 'thu', 'thur', 'thurs'] },
+  FRIDAY: { index: 5, keywords: ['friday', 'fri'] },
+  SATURDAY: { index: 6, keywords: ['saturday', 'sat'] }
 } as const
 
 /**
@@ -140,6 +154,22 @@ export function detectPowerKeyword(groupName: string): PowerKeywordResult | null
     }
   }
 
+  // TASK-130: Check day-of-week keywords (exact match for day names)
+  for (const [day, config] of Object.entries(DAY_OF_WEEK_KEYWORDS)) {
+    for (const keyword of config.keywords) {
+      // Use exact match for short day names to avoid false positives
+      // e.g., "sun" shouldn't match "sunny task"
+      if (normalizedName === keyword || normalizedName === day.toLowerCase()) {
+        return {
+          keyword: day.toLowerCase(),
+          category: 'day_of_week',
+          value: String(config.index), // Store the day index as string
+          displayName: day.charAt(0) + day.slice(1).toLowerCase()
+        }
+      }
+    }
+  }
+
   return null
 }
 
@@ -170,6 +200,10 @@ export function getAllPowerKeywords(): { category: PowerKeywordCategory; keyword
     {
       category: 'duration',
       keywords: Object.values(DURATION_KEYWORDS).flat()
+    },
+    {
+      category: 'day_of_week',
+      keywords: Object.values(DAY_OF_WEEK_KEYWORDS).flatMap(d => d.keywords)
     }
   ]
 }

@@ -1,0 +1,671 @@
+
+> pomo-flow@1.0.0 lint
+> eslint src --max-warnings 0
+
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/base/ProjectEmojiIcon.vue
+  21:7  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/calendar/CalendarDayView.vue
+  30:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/calendar/CalendarWeekView.vue
+   6:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasGroup.vue
+  157:25  error  'onMounted' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasModals.vue
+  137:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/GroupNodeSimple.vue
+   97:7  error  'taskStore' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  120:7  error  'isPowerMode' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/common/GroupModal.vue
+  153:8  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/common/MarkdownRenderer.vue
+   7:5   warning  'v-html' directive can lead to XSS attack             vue/no-v-html
+  50:12  error    Custom event name 'checkbox-click' must be camelCase  vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/CalendarInboxPanel.vue
+  262:43  error  'Plus' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+  273:9   error  'updateTaskWithUndo' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  534:7   error  'handleQuickAddTask' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/UnifiedInboxPanel.vue
+  290:43  error  'Plus' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+  489:7   error  'getToday' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  818:7   error  'handleQuickAddTask' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/KanbanColumn.vue
+  25:9  error  Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+  32:9  error  Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/KanbanSwimlane.vue
+  110:32  error  'reactive' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  111:8   error  'draggable' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  113:8   error  'TaskCard' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  116:47  error  'Plus' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/TaskCard.vue
+  241:118  error  'HelpCircle' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/layout/SidebarSmartItem.vue
+   89:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  155:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/notifications/NotificationPreferences.vue
+  240:7  error  'snoozeOptions' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/recurrence/RecurrencePatternSelector.vue
+  291:7  error  'months' is assigned a value but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+  352:7  error  'getDaySuffix' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  362:7  error  'getDaysInSelectedMonth' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/BackupSettings.vue
+  341:36  error  'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  342:49  error  'BackupConfig' is defined but never used. Allowed unused vars must match /^_/u                    @typescript-eslint/no-unused-vars
+  347:34  error  'CheckCircle' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  348:3   error  'X' is defined but never used. Allowed unused vars must match /^_/u                               @typescript-eslint/no-unused-vars
+  348:6   error  'Info' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+  382:7   error  'stats' is assigned a value but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+  399:7   error  'isResetting' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  413:5   error  'updateInterval' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+  432:7   error  'updateStorageLocation' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  436:7   error  'updateAutoDownload' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  446:7   error  'setMaxBackups' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  540:14  error  'e' is defined but never used. Allowed unused caught errors must match /^_/u                      @typescript-eslint/no-unused-vars
+  545:7   error  'triggerFileUpload' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  613:7   error  'triggerManualExport' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/CloudSyncSettings.vue
+  123:18  error  'Cloud' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  123:25  error  'Download' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+  123:35  error  'RefreshCw' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  123:46  error  'Copy' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  123:52  error  'Key' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+  123:57  error  'Power' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  123:64  error  'Monitor' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+  123:80  error  'Zap' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+  139:7   error  'db' is assigned a value but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  145:7   error  'syncProgress' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  146:7   error  'progressPercent' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  176:7   error  'toggleSync' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  177:7   error  'manualSync' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  178:7   error  'copySyncUrl' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  179:7   error  'toggleLiveSync' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  182:7   error  'addHistoryEntry' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  216:7   error  'truncateId' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/ConflictResolutionDialog.vue
+  482:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  485:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  504:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/DiffViewer.vue
+  60:10  error  'computed' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/SyncAlertSystem.vue
+  198:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  344:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  345:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  370:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/SyncIntegrationExample.vue
+  228:7  error  'isTesting' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/SyncStatus.vue
+  339:7  error  Unexpected constant condition  no-constant-condition
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/diffs/CharacterDiff.vue
+  9:9  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/sync/diffs/WordDiff.vue
+  9:9  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/TaskEditModal.vue
+  408:7   error    'descriptionAlignmentClasses' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  409:7   error    'descriptionAlignmentStyles' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  715:14  warning  Unexpected any. Specify a different type                                                                @typescript-eslint/no-explicit-any
+  743:44  warning  Unexpected any. Specify a different type                                                                @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/ui/WelcomeModal.vue
+  109:7  error  'props' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/__tests__/useDateTransition.spec.ts
+  2:24  error  'expect' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  6:10  error  'useDateTransition' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/app/useAppInitialization.ts
+  26:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  70:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  81:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/app/useAppShortcuts.ts
+  8:11  error  'undoHistory' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/app/useSidebarManagement.ts
+  445:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarInteractionHandlers.ts
+  3:15  error  'Task' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarMonthView.ts
+  53:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  54:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarWeekView.ts
+  76:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  82:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasActions.ts
+   56:18  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+   61:65  error    'vfViewport' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  131:19  error    'newTask' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  412:23  error    'exists' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasConnections.ts
+  12:60   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  12:70   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  12:85   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  12:104  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  12:114  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:23   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasDragDrop.ts
+   18:72   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   18:82   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   18:97   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   18:105  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   43:85   error    'syncNodes' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  215:21   error    Unexpected lexical declaration in case block                                          no-case-declarations
+  250:21   error    Unexpected lexical declaration in case block                                          no-case-declarations
+  352:21   error    Unexpected lexical declaration in case block                                          no-case-declarations
+  404:39   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  405:39   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  662:92   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  720:87   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  728:88   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasEvents.ts
+   12:13  error  'viewport' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  163:19  error  'rect' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasFilteredState.ts
+   1:20  error  'ref' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  10:13  error  'width' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasInteractionHandlers.ts
+   13:72  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+   13:82  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+   13:90  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+   32:32  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+   57:87  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+   61:71  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+   77:74  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  161:33  error    'event' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  168:31  error    'param' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  267:59  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  281:55  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  283:29  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  294:60  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  302:32  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasNavigation.ts
+   2:27  error    'Node' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+   3:10  error    'useCanvasStore' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   4:10  error    'storeToRefs' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   6:50  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  32:15  error    'minX' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  33:15  error    'minY' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  36:15  error    'maxX' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  37:15  error    'maxY' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasResourceManager.ts
+  163:21  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  165:25  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  168:21  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  170:25  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  173:21  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  175:25  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasSelection.ts
+    1:25  error    'computed' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   19:13  error    'project' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  115:27  error    'event' is defined but never used. Allowed unused args must match /^_/u             @typescript-eslint/no-unused-vars
+  136:28  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  238:36  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasSmartGroups.ts
+   90:19  error    'dueDate' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  120:56  warning  Forbidden non-null assertion                                                        @typescript-eslint/no-non-null-assertion
+  122:56  warning  Forbidden non-null assertion                                                        @typescript-eslint/no-non-null-assertion
+  139:47  warning  Forbidden non-null assertion                                                        @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasSync.ts
+    1:10  error    'ref' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+    8:10  error    'isAnyCanvasStateLocked' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   15:21  warning  Unexpected any. Specify a different type                                                  @typescript-eslint/no-explicit-any
+   22:22  warning  Unexpected any. Specify a different type                                                  @typescript-eslint/no-explicit-any
+   32:11  error    'uiStore' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   39:9   error    'storeName' is defined but never used. Allowed unused args must match /^_/u               @typescript-eslint/no-unused-vars
+  556:28  warning  Unexpected any. Specify a different type                                                  @typescript-eslint/no-explicit-any
+  557:28  warning  Unexpected any. Specify a different type                                                  @typescript-eslint/no-explicit-any
+  571:28  warning  Unexpected any. Specify a different type                                                  @typescript-eslint/no-explicit-any
+  572:28  warning  Unexpected any. Specify a different type                                                  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useMidnightTaskMover.ts
+  1:15  error  'Ref' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  2:21  error  'Project' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/tasks/useTaskFiltering.ts
+  158:21  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  295:88  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/undoSingleton.ts
+   16:28  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+   66:9   warning  Forbidden non-null assertion                                                   @typescript-eslint/no-non-null-assertion
+   70:9   warning  Forbidden non-null assertion                                                   @typescript-eslint/no-non-null-assertion
+  169:20  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  212:20  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  222:20  error    'description' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  247:5   warning  Forbidden non-null assertion                                                   @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useCrossTabSyncIntegration.ts
+  288:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  309:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useDatabase.ts
+  34:9  error  'isSyncing' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useDateTransition.ts
+  14:39  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useHorizontalDragScroll.ts
+  325:7  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  327:7  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/usePerformanceManager.ts
+  71:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  71:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  97:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  97:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useReliableSyncManager.ts
+  75:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useRenderOptimization.ts
+  228:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  228:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useSafeI18n.ts
+  11:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useSupabaseDatabase.ts
+   47:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   85:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  133:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  149:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  169:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  187:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  201:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  244:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  262:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  278:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  287:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  298:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  304:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  312:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  327:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  347:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  359:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  371:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  380:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  387:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  405:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  411:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  419:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  431:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  438:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  453:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  459:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  465:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  472:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  483:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  489:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  495:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  503:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  504:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  505:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  506:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  514:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  519:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  526:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  534:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useVueFlowStability.ts
+  564:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useVueFlowStateManager.ts
+  127:13  error  'oldVal' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  146:13  error  'oldVal' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/AppHeader.vue
+  132:23  error  Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/AppSidebar.vue
+  360:38  error    'Timer' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  545:7   error    'quickCount' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  546:7   error    'shortCount' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  547:7   error    'mediumCount' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  548:7   error    'longCount' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  549:7   error    'unestimatedCount' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  554:39  warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/MainLayout.vue
+  35:15  error  'computed' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/ModalManager.vue
+  122:7   error    'timerStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  252:20  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  400:50  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  409:53  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/main.ts
+  16:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/auth/supabase.ts
+  17:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/data/DatabaseMaintenanceService.ts
+   1:15  error    'Ref' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   5:17  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+   7:29  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+  16:53  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+  78:52  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/data/FileSystemService.ts
+  111:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  117:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/data/MarkdownExportService.ts
+  319:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  336:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  339:78  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  340:90  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/doctor/IntegrityDoctorService.ts
+   67:40  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   93:58  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   95:15  error    'originalRev' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  119:28  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  146:38  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/sync/SyncOperationService.ts
+   68:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  108:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  201:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  201:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  202:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  202:82  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  206:90  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  246:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  341:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  447:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  455:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/sync/SyncOrchestrator.ts
+    3:10   error    'ref' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+    3:20   error    'Ref' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+   16:10   error    'getTimezoneManager' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   59:23   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   60:17   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   61:24   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   83:30   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  172:59   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  174:51   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  195:46   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  207:99   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  211:110  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  222:98   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  277:26   warning  Forbidden non-null assertion                                                          @typescript-eslint/no-non-null-assertion
+  283:26   warning  Forbidden non-null assertion                                                          @typescript-eslint/no-non-null-assertion
+  337:54   error    'resolution' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  337:66   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  400:36   error    'config' is defined but never used. Allowed unused args must match /^_/u              @typescript-eslint/no-unused-vars
+  400:44   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  507:16   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/sync/TransactionManager.ts
+    8:11  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+   46:15  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+   85:23  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  102:22  error    'ignore' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  109:49  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  118:23  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/__tests__/canvas.test.ts
+  448:13  error  'nodes' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/__tests__/tasks.test.ts
+  141:43  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  164:43  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/auth.ts
+   65:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   65:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  184:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  205:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  214:78  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  237:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  256:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/canvas.ts
+   27:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   46:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   67:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  444:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  463:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/notifications.ts
+  359:9  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/projects.ts
+   52:91  error    'isSyncing' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  179:49  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  194:48  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  208:53  warning  Forbidden non-null assertion                                                          @typescript-eslint/no-non-null-assertion
+  255:45  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  257:46  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  257:60  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  265:37  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  322:31  warning  Forbidden non-null assertion                                                          @typescript-eslint/no-non-null-assertion
+  362:61  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks.ts
+   22:40   warning  Unexpected any. Specify a different type                                                           @typescript-eslint/no-explicit-any
+   33:23   error    'saveTasks' is assigned a value but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   71:5    error    'tasks' is assigned a value but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+   87:91   error    'loadPersistedFilters' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+   87:129  error    'importTasksFromJSON' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   87:150  error    'importFromRecoveryTool' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  112:68   warning  Unexpected any. Specify a different type                                                           @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks/taskOperations.ts
+  468:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks/taskStates.ts
+  58:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/timer.ts
+  173:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  198:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  383:67  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  398:67  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/ui.ts
+  139:9  error  'showAllSidebars' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  146:9  error  'hideAllSidebars' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/canvas/NodeUpdateBatcher.ts
+  11:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/canvasPositionLock.ts
+  116:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/canvasStateLock.ts
+  338:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/conflict-detector.ts
+  6:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/conflict-resolution.ts
+    9:3   error    'DocumentVersion' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+   88:27  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  184:11  error    'localData' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  184:45  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  185:11  error    'remoteData' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  185:47  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  195:28  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  201:24  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  209:56  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  209:69  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  219:50  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  219:63  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  219:69  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/event-bus.ts
+  16:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/iconImports.ts
+  135:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/individualNotificationStorage.ts
+  64:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/individualProjectStorage.ts
+  205:32  error  'index' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/individualSectionStorage.ts
+  101:3  error  'maxRetries' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  113:3  error  'maxRetries' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  125:3  error  'maxRetries' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  127:9  error  'docId' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/individualTimerStorage.ts
+  25:74  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  53:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/integrity.ts
+  24:74  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:80  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:92  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  54:74  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  55:80  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  56:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  56:92  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/markdown.ts
+  79:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/performanceBenchmark.ts
+  161:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  170:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  183:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  185:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/supabaseMappers.ts
+  106:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  115:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  173:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  174:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  191:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  230:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  288:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  289:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  290:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  290:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  410:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  428:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  478:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  502:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  527:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  546:81  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/supabaseMigrationCleanup.ts
+  100:14  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  101:15  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  107:15  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  128:16  error    'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/syncValidator.ts
+  106:34  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  272:11  error    'totalErrors' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  522:36  error    'document' is defined but never used. Allowed unused args must match /^_/u              @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/taskValidation.ts
+  292:9  error  'validPriorities' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/CalendarView.vue
+  166:49  error  'nextTick' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+  189:8   error  'ProjectFilterDropdown' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  190:8   error  'ProjectEmojiIcon' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  191:10  error  'ChevronLeft' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  191:23  error  'ChevronRight' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  191:37  error  'Calendar' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+  191:47  error  'Eye' is defined but never used. Allowed unused vars must match /^_/u                              @typescript-eslint/no-unused-vars
+  191:52  error  'EyeOff' is defined but never used. Allowed unused vars must match /^_/u                           @typescript-eslint/no-unused-vars
+  193:15  error  'CalendarEvent' is defined but never used. Allowed unused vars must match /^_/u                    @typescript-eslint/no-unused-vars
+  257:3   error  'taskToDelete' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  268:7   error  'timeGridRef' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  308:66  error  'getWeekStart' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  318:3   error  'selectedCalendarEvents' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/CanvasView.vue
+   940:75  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   940:85  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   947:21  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   966:7   error    'systemHealthMessage' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1465:7   warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  1546:37  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/PerformanceView.vue
+  135:10  error    'useRouter' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  138:21  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  166:28  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  167:32  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  192:17  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  193:30  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  220:33  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  233:33  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  264:36  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/wal_test_script.ts
+  34:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 454 problems (150 errors, 304 warnings)
+

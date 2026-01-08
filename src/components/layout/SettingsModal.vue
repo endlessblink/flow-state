@@ -218,8 +218,12 @@
 
                 <div v-if="authStore.isAuthenticated" class="account-info">
                   <div class="user-details">
-                    <div class="user-email">{{ authStore.user?.email }}</div>
-                    <div class="user-status">Logged in via Supabase</div>
+                    <div class="user-email">
+                      {{ authStore.user?.email }}
+                    </div>
+                    <div class="user-status">
+                      Logged in via Supabase
+                    </div>
                   </div>
                   
                   <button class="logout-btn" @click="handleSignOut">
@@ -230,7 +234,9 @@
 
                 <div v-else class="guest-info">
                   <div class="guest-status">
-                    <div class="status-badge">Guest Mode</div>
+                    <div class="status-badge">
+                      Guest Mode
+                    </div>
                     <p class="setting-description">
                       You are currently using local storage. Create an account to sync your tasks across devices.
                     </p>

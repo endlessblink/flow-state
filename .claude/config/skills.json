@@ -311,23 +311,34 @@
       "description": "Build and fix Storybook stories for Vue 3 components with proper patterns, error resolution, and consistent documentation"
     },
     "milkdown-vue3": {
-      "name": "Milkdown Vue 3 Markdown Editor",
+      "name": "[DEPRECATED] Milkdown Vue 3 Editor",
+      "category": "implement",
+      "triggers": [],
+      "keywords": ["milkdown"],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["tiptap-vue3"],
+      "description": "DEPRECATED - Use tiptap-vue3 instead. Kept for historical reference only."
+    },
+    "tiptap-vue3": {
+      "name": "Tiptap Vue 3 WYSIWYG Editor",
       "category": "implement",
       "triggers": [
-        "milkdown setup",
-        "milkdown vue 3",
-        "WYSIWYG markdown editor",
-        "editorView context error",
-        "Enter key not working in editor",
+        "tiptap setup",
+        "tiptap vue 3",
+        "WYSIWYG editor",
+        "rich text editor",
         "markdown editor implementation",
-        "milkdown initialization",
-        "Context editorView not found"
+        "task list editor",
+        "disable auto-conversion",
+        "typing - auto bullet",
+        "editor input rules"
       ],
-      "keywords": ["milkdown", "markdown", "editor", "WYSIWYG", "vue3", "prosemirror", "nord", "commonmark", "context"],
+      "keywords": ["tiptap", "markdown", "editor", "WYSIWYG", "vue3", "prosemirror", "rich text", "task list", "input rules"],
       "activation_count": 0,
       "last_used": null,
       "related_skills": ["dev-vue", "dev-debug-reactivity", "dev-fix-keyboard"],
-      "description": "Implement production-ready Milkdown WYSIWYG markdown editors in Vue 3 with patterns that fix 5 critical bugs including Enter key and context errors"
+      "description": "Implement production-ready Tiptap WYSIWYG editors in Vue 3 with ZERO auto-conversion interference. Single enableInputRules: false option prevents unwanted markdown conversion."
     }
   },
   "categories": {

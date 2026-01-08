@@ -150,7 +150,55 @@ export function useCanvasSmartGroups() {
         }
     }
 
+    // Action Groups Logic (Friday & Saturday)
+    const FRIDAY_GROUP_NAME = 'Friday'
+    const FRIDAY_GROUP_COLOR = '#ec4899' // Pink-500
+
+    const SATURDAY_GROUP_NAME = 'Saturday'
+    const SATURDAY_GROUP_COLOR = '#8b5cf6' // Violet-500
+
+    const ensureActionGroups = async () => {
+        // Ensure Friday Group
+        let fridayGroup = canvasStore.sections.find(s => s.name === FRIDAY_GROUP_NAME || (s.type as string) === 'smart_friday')
+        if (!fridayGroup) {
+            await canvasStore.createSection({
+                id: crypto.randomUUID(),
+                name: FRIDAY_GROUP_NAME,
+                type: 'custom',
+                color: FRIDAY_GROUP_COLOR,
+                layout: 'grid',
+                position: { x: 500, y: 50, width: 400, height: 600 },
+                isCollapsed: false,
+                isVisible: true
+            })
+        }
+
+        // Ensure Saturday Group
+        let saturdayGroup = canvasStore.sections.find(s => s.name === SATURDAY_GROUP_NAME || (s.type as string) === 'smart_saturday')
+        if (!saturdayGroup) {
+            await canvasStore.createSection({
+                id: crypto.randomUUID(),
+                name: SATURDAY_GROUP_NAME,
+                type: 'custom',
+                color: SATURDAY_GROUP_COLOR,
+                layout: 'grid',
+                position: { x: 950, y: 50, width: 400, height: 600 },
+                isCollapsed: false,
+                isVisible: true
+            })
+        }
+    }
+
+    // Helper to calculate closest upcoming Friday/Saturday
+    const getNextDayOfWeek = (date: Date, dayOfWeek: number) => {
+        const resultDate = new Date(date.getTime())
+        resultDate.setDate(date.getDate() + (7 + dayOfWeek - date.getDay()) % 7)
+        return resultDate
+    }
+
     return {
-        autoCollectOverdueTasks
+        autoCollectOverdueTasks,
+        ensureActionGroups,
+        getNextDayOfWeek
     }
 }

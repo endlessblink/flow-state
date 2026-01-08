@@ -729,12 +729,16 @@
     </div>
 
     <script>
+        // API configuration - same as kanban board
+        const API_BASE = window.location.origin;
+
         // Parse MASTER_PLAN.md for detailed metrics
         async function fetchAndParse() {
             try {
-                const response = await fetch('/docs/MASTER_PLAN.md?v=' + Date.now());
+                const response = await fetch(`${API_BASE}/api/master-plan?v=${Date.now()}`);
                 if (!response.ok) throw new Error('Failed to fetch MASTER_PLAN.md');
-                const text = await response.text();
+                const json = await response.json();
+                const text = json.content;
                 return parseMarkdown(text);
             } catch (error) {
                 console.error('Error fetching MASTER_PLAN:', error);

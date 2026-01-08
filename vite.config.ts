@@ -4,18 +4,90 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
-// @ts-ignore
-import wasm from 'vite-plugin-wasm'
-// @ts-ignore
-import topLevelAwait from 'vite-plugin-top-level-await'
+import { VitePWA } from 'vite-plugin-pwa'
 
 import { visualizer } from 'rollup-plugin-visualizer'
+
+// Cache duration constants for PWA
+const CACHE_DURATIONS = {
+  ONE_DAY: 60 * 60 * 24,
+  ONE_WEEK: 60 * 60 * 24 * 7,
+  ONE_MONTH: 60 * 60 * 24 * 30,
+  ONE_YEAR: 60 * 60 * 24 * 365,
+} as const
 
 export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
-    wasm(),
-    topLevelAwait(),
+    // PWA Plugin - ROAD-004
+    VitePWA({
+      registerType: 'prompt',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      manifest: {
+        name: 'Pomo-Flow',
+        short_name: 'PomoFlow',
+        description: 'Pomodoro timer with task management',
+        theme_color: '#4F46E5',
+        background_color: '#0f172a', // Dark mode background
+        display: 'standalone',
+        orientation: 'portrait-primary',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          { src: 'icons/pwa-64x64.png', sizes: '64x64', type: 'image/png' },
+          { src: 'icons/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icons/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          // Supabase API: Network-first with offline queue
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-api-cache',
+              networkTimeoutSeconds: 3,
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: CACHE_DURATIONS.ONE_DAY,
+              },
+            },
+          },
+          // Images: Cache-first
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: CACHE_DURATIONS.ONE_MONTH,
+              },
+            },
+          },
+          // Fonts: Cache-first with long expiry
+          {
+            urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'font-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: CACHE_DURATIONS.ONE_YEAR,
+              },
+            },
+          },
+        ],
+      },
+      devOptions: {
+        enabled: true, // Enable PWA in dev for testing
+        type: 'module',
+      },
+    }),
     nodePolyfills({
       include: ['events', 'buffer', 'process'],
       globals: {
@@ -80,12 +152,7 @@ export default defineConfig(({ mode }) => ({
       'naive-ui',
       '@vueuse/core',
       '@vue-flow/core',
-      'date-fns',
-      'js-logger' // Transitively required by PowerSync
-    ],
-    exclude: [
-      '@powersync/web',
-      '@journeyapps/wa-sqlite'
+      'date-fns'
     ],
     // Force ESM interop for CJS modules
     needsInterop: [
@@ -93,10 +160,6 @@ export default defineConfig(({ mode }) => ({
     ]
   },
   worker: {
-    format: 'es', // CRITICAL: production builds require 'es' format
-    plugins: () => [
-      wasm(),
-      topLevelAwait()
-    ]
+    format: 'es' // CRITICAL: production builds require 'es' format
   }
 }))

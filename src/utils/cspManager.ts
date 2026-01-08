@@ -94,8 +94,8 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
         'wss:',
         'http://localhost:*',
         'https://localhost:*',
-        'http://84.46.253.137:5984', // CouchDB server
-        'https://httpbin.org', // For testing
+        'http:', // Development: allow HTTP connections
+        'https:', // Allow HTTPS connections
         'https://api.github.com',
         'https://raw.githubusercontent.com'
       ],
@@ -158,7 +158,6 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
       'script-src': [
         "'self'",
         "'nonce-{CSP_NONCE}'", // Use nonce for inline scripts
-        'http://84.46.253.137:5984',
         'https://api.github.com',
         'https://raw.githubusercontent.com'
       ],
@@ -175,8 +174,7 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
         "'self'",
         'data:',
         'blob:',
-        'https:',
-        'http://84.46.253.137:5984'
+        'https:'
       ],
 
       // Allow fonts
@@ -191,7 +189,7 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
       'connect-src': [
         "'self'",
         'wss:',
-        'https://84.46.253.137:5984',
+        'https:', // Allow HTTPS connections
         'https://api.github.com'
       ],
 
@@ -208,8 +206,8 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
       // Disallow frames
       'child-src': ["'none'"],
 
-      // Disallow workers (or restrict to specific sources)
-      'worker-src': ["'none'"],
+      // Allow service workers for PWA
+      'worker-src': ["'self'", "blob:"],
 
       // Allow manifest
       'manifest-src': ["'self'"],

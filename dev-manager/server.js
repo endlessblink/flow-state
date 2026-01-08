@@ -13,7 +13,8 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 6010;
+// Dev Manager is LOCKED to port 6010 - do not change this
+const PORT = 6010;
 
 // SSE clients for live file sync
 let sseClients = [];

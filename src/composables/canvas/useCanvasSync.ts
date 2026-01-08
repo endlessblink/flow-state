@@ -302,56 +302,63 @@ export function useCanvasSync(deps: SyncDependencies) {
             // 3. Apply Updates safely
             let hasChanges = false
 
-            // Remove invalid nodes
+            // Remove invalid nodes FIRST
             if (nodesToRemove.size > 0) {
-                // Filter in-place reduction
-                const filtered = currentNodes.filter(n => !nodesToRemove.has(n.id))
-                deps.nodes.value = filtered
+                deps.nodes.value = deps.nodes.value.filter(n => !nodesToRemove.has(n.id))
                 hasChanges = true
             }
 
-            // Apply updates
-            nodesToUpdate.forEach(({ index, node }) => {
-                // We update the existing object properties to preserve component instance if possible
-                // OR we replace the object at the index if needed.
-                // Vue Flow generally tracks by ID.
+            // Apply updates using ID-based lookup (BUG-011 FIX)
+            // IMPORTANT: After removal, indices in nodesToUpdate are no longer valid
+            // We must look up nodes by ID, not by index
+            nodesToUpdate.forEach(({ node }) => {
                 const target = deps.nodes.value.find(n => n.id === node.id)
                 if (target) {
                     let changed = false
-                    // Update Position
-                    if (Math.abs(target.position.x - node.position.x) > 0.1 || Math.abs(target.position.y - node.position.y) > 0.1) {
+
+                    // 1. Position optimization
+                    if (Math.abs(target.position.x - node.position.x) > 0.01 ||
+                        Math.abs(target.position.y - node.position.y) > 0.01) {
                         target.position = node.position
                         changed = true
                     }
-                    // Update Data (Reactive replacement)
-                    // BUG-FIX: For task nodes, always update data to ensure v-memo gets new reference
-                    // JSON comparison fails when task is mutated in place (both old and new stringify the same)
-                    // For section nodes, use JSON comparison as their data isn't mutated
+
+                    // 2. Data optimization (Deep compare for sections, Reference for tasks)
                     if (node.type === 'taskNode') {
-                        // Task nodes: always update data with new task reference (spread in desiredNodeMap)
-                        // This ensures v-memo detects property changes like status/priority
-                        target.data = node.data
-                        changed = true
-                    } else if (JSON.stringify(target.data) !== JSON.stringify(node.data)) {
-                        // Section nodes: use JSON comparison
-                        target.data = node.data
-                        changed = true
+                        // For tasks, we compare specific properties instead of full object spread every time
+                        // This prevents Vue Flow from re-rendering the custom node if only unrelated props changed
+                        const oldTask = target.data.task as Task
+                        const newTask = node.data.task as Task
+
+                        if (oldTask.id !== newTask.id ||
+                            oldTask.status !== newTask.status ||
+                            oldTask.priority !== newTask.priority ||
+                            oldTask.title !== newTask.title ||
+                            oldTask.updatedAt !== newTask.updatedAt) {
+                            target.data = node.data
+                            changed = true
+                        }
+                    } else {
+                        // Section nodes: compare name and dimensions
+                        if (target.data.label !== node.data.label ||
+                            target.data.width !== node.data.width ||
+                            target.data.height !== node.data.height ||
+                            target.data.isCollapsed !== node.data.isCollapsed) {
+                            target.data = node.data
+                            changed = true
+                        }
                     }
-                    // Parenting
+
+                    // 3. Metadata properties
                     if (target.parentNode !== node.parentNode) {
                         target.parentNode = node.parentNode
                         changed = true
                     }
-                    // ZIndex
                     if (target.zIndex !== node.zIndex) {
                         target.zIndex = node.zIndex
                         changed = true
                     }
-                    // Style
-                    if (JSON.stringify(target.style) !== JSON.stringify(node.style)) {
-                        target.style = node.style
-                        changed = true
-                    }
+
                     if (changed) hasChanges = true
                 }
             })

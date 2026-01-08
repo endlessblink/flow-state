@@ -416,11 +416,36 @@ const getSubtaskDescAlignmentStyles = (subtask: Subtask) => applyInputAlignment(
 
 // Watch for task changes
 watch(() => props.task, (newTask) => {
-  if (newTask) {
-    editedTask.value = {
-      ...newTask,
-      subtasks: [...(newTask.subtasks || [])] // Ensure subtasks is always an array
-    }
+  // Guard: If we are saving, ignore external updates to prevent conflicts/loops
+  if (isSaving.value || !newTask) return
+
+  // Prevent recursive updates if the task data hasn't actually changed meaningfully
+  // We compare the ID and a simplified fingerprint of the task data
+  // Using a simple JSON stringify comparison for the relevant fields
+  const currentFingerprint = JSON.stringify({
+    ...editedTask.value,
+    canvasPosition: undefined, // Ignore volatile canvas position
+    updatedAt: undefined       // Ignore timestamps
+  })
+
+  // Prepare new task state
+  const newTaskState = {
+    ...newTask,
+    subtasks: [...(newTask.subtasks || [])]
+  }
+
+  const newFingerprint = JSON.stringify({
+    ...newTaskState,
+    canvasPosition: undefined,
+    updatedAt: undefined
+  })
+
+  // Only update if data really changed (ignoring position updates which happen frequently during drag)
+  // BUT: Always update if IDs don't match (switching tasks)
+  if (editedTask.value.id !== newTask.id || currentFingerprint !== newFingerprint) {
+    // console.log('🔄 TaskEditModal: Updating local state from props', newTask.title)
+    editedTask.value = newTaskState
+    
     // Auto-expand sections based on content
     showSubtasks.value = (newTask.subtasks || []).length > 0
     showDependencies.value = (newTask.dependsOn && newTask.dependsOn.length > 0) || false
@@ -430,7 +455,7 @@ watch(() => props.task, (newTask) => {
     nextTick(() => {
       if (titleInput.value && newTask.title === 'New Task') {
         titleInput.value.focus()
-        titleInput.value.select() // Select the default text so user can type over it
+        titleInput.value.select()
       }
     })
   }

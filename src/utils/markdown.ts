@@ -164,6 +164,50 @@ export function htmlToMarkdown(html: string): string {
     // Highlight: <mark> -> ==text== (some markdown flavors support this)
     markdown = markdown.replace(/<mark[^>]*>(.*?)<\/mark>/gi, '==$1==')
 
+    // Tables: Convert HTML tables to markdown tables
+    // This is a simplified conversion - handles basic tables
+    markdown = markdown.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_, tableContent) => {
+        const rows: string[][] = []
+        const headerMatch = tableContent.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i)
+        const bodyMatch = tableContent.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i)
+
+        // Process header
+        if (headerMatch) {
+            const headerRow = headerMatch[1].match(/<tr[^>]*>([\s\S]*?)<\/tr>/i)
+            if (headerRow) {
+                const cells = headerRow[1].match(/<th[^>]*>([\s\S]*?)<\/th>/gi) || []
+                rows.push(cells.map(cell => cell.replace(/<th[^>]*>([\s\S]*?)<\/th>/i, '$1').replace(/<[^>]+>/g, '').trim()))
+            }
+        }
+
+        // Process body rows
+        const content = bodyMatch ? bodyMatch[1] : tableContent
+        const bodyRows = content.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || []
+        for (const row of bodyRows) {
+            const cells = row.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi) || []
+            if (cells.length > 0) {
+                rows.push(cells.map(cell => cell.replace(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/i, '$1').replace(/<[^>]+>/g, '').trim()))
+            }
+        }
+
+        if (rows.length === 0) return ''
+
+        // Build markdown table
+        const colCount = Math.max(...rows.map(r => r.length))
+        let mdTable = '\n'
+
+        // First row (header or first data row)
+        mdTable += '| ' + rows[0].map(c => c || ' ').join(' | ') + ' |\n'
+        // Separator
+        mdTable += '| ' + Array(colCount).fill('---').join(' | ') + ' |\n'
+        // Remaining rows
+        for (let i = 1; i < rows.length; i++) {
+            mdTable += '| ' + rows[i].map(c => c || ' ').join(' | ') + ' |\n'
+        }
+
+        return mdTable
+    })
+
     // Horizontal rule: <hr> -> ---
     markdown = markdown.replace(/<hr[^>]*\/?>/gi, '\n---\n')
 

@@ -198,17 +198,6 @@
               </section>
             </div>
 
-            <!-- Sync Tab -->
-            <div v-else-if="activeTab === 'sync'" key="sync" class="tab-pane">
-              <section class="settings-section">
-                <CloudSyncSettings />
-              </section>
-
-              <section class="settings-section">
-                <BackupSettings />
-              </section>
-            </div>
-
             <!-- Account Tab -->
             <div v-else-if="activeTab === 'account'" key="account" class="tab-pane">
               <section class="settings-section">
@@ -256,17 +245,14 @@ import { ref, onMounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
-import { 
-  X, 
-  Timer, 
-  Palette, 
-  Layout, 
-  RefreshCw, 
+import {
+  X,
+  Timer,
+  Palette,
+  Layout,
   User,
   LogOut
 } from 'lucide-vue-next'
-import CloudSyncSettings from '@/components/sync/CloudSyncSettings.vue'
-import BackupSettings from '@/components/sync/BackupSettings.vue'
 import LanguageSettings from '@/components/settings/LanguageSettings.vue'
 
 interface Props {
@@ -288,7 +274,6 @@ const tabs = [
   { id: 'timer', label: 'Timer', icon: Timer },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'workflow', label: 'Workflow', icon: Layout },
-  { id: 'sync', label: 'Sync', icon: RefreshCw },
   { id: 'account', label: 'Account', icon: User }
 ]
 

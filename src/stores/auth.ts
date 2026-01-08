@@ -64,15 +64,15 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = data.session?.user || null
 
       // Listen for auth changes (sign in, sign out, etc.)
-      supabase.auth.onAuthStateChange((_event: any, newSession: any) => {
+      supabase.auth.onAuthStateChange((_event, newSession) => {
         session.value = newSession
         user.value = newSession?.user || null
         console.log('👤 [AUTH] Auth state changed:', _event, user.value?.id)
       })
 
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Auth initialization failed:', e)
-      error.value = e
+      error.value = e as AuthError
     } finally {
       isLoading.value = false
       isInitialized.value = true
@@ -139,8 +139,8 @@ export const useAuthStore = defineStore('auth', () => {
       // 2. Migrate Data
       await migrateGuestData()
 
-    } catch (e: any) {
-      error.value = e
+    } catch (e: unknown) {
+      error.value = e as AuthError
       throw e
     } finally {
       isLoading.value = false
@@ -166,8 +166,8 @@ export const useAuthStore = defineStore('auth', () => {
       // preventing us from doing it here. We'd need a "post-login-migration" check on app init.
       // For now, Password login is the primary immediate flow.
 
-    } catch (e: any) {
-      error.value = e
+    } catch (e: unknown) {
+      error.value = e as AuthError
       throw e
     } finally {
       isLoading.value = false
@@ -183,8 +183,8 @@ export const useAuthStore = defineStore('auth', () => {
       // Clear state
       user.value = null
       session.value = null
-    } catch (e: any) {
-      error.value = e
+    } catch (e: unknown) {
+      error.value = e as AuthError
       console.error('Sign out failed:', e)
     } finally {
       isLoading.value = false
@@ -204,16 +204,16 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
       if (signInError) throw signInError
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Google sign in failed:', e)
-      error.value = e
+      error.value = e as AuthError
       throw e
     } finally {
       isLoading.value = false
     }
   }
 
-  const signUpWithEmail = async (email: string, password: string, metadata?: any) => {
+  const signUpWithEmail = async (email: string, password: string, metadata?: Record<string, unknown>) => {
     try {
       isLoading.value = true
       error.value = null
@@ -236,9 +236,9 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       return data
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Sign up failed:', e)
-      error.value = e
+      error.value = e as AuthError
       throw e
     } finally {
       isLoading.value = false
@@ -255,9 +255,9 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
       if (resetError) throw resetError
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Password reset failed:', e)
-      error.value = e
+      error.value = e as AuthError
       throw e
     } finally {
       isLoading.value = false

@@ -163,6 +163,45 @@
 - [x] Extract event handlers to `useCanvasInteractionHandlers.ts`.
 - [x] Verify no regressions in drag/drop or sync.
 
+### TASK-141: Canvas Group System Refactor (📋 PLANNED)
+**Priority**: P0-CRITICAL
+**Plan**: [plans/canvas-group-system-refactor.md](../plans/canvas-group-system-refactor.md)
+**Goal**: Complete rewrite of canvas group system to fix all parent-child relationship bugs by embracing Vue Flow's native `parentNode` system.
+**Problems Addressed**:
+- Groups don't recognize each other (parent-child detection fails)
+- Nested groups don't always move with parent group
+- Z-depth issues (groups hidden under others)
+- Containment detection failures
+- Resize causes children to move incorrectly
+**Phases**:
+- [ ] Phase 0: Consolidation (remove competing systems)
+- [ ] Phase 1: Foundation (new parent-child composable)
+- [ ] Phase 2: Drag & Drop refactor
+- [ ] Phase 3: Resize handling
+- [ ] Phase 4: Data migration
+- [ ] Phase 5: Polish & validation
+
+### TASK-142: Canvas Position System Refactor (📋 PLANNED)
+**Priority**: P1-HIGH
+**Created**: January 8, 2026
+**Plan**: [plans/canvas-position-system-refactor.md](../plans/canvas-position-system-refactor.md)
+**SOP**: [docs/sop/active/canvas-position-debugging.md](./sop/active/canvas-position-debugging.md)
+
+**Problem**: Constant position reset issues with tasks and groups on the canvas. Root cause is fragmented architecture with 10+ position modification points, 5+ competing state flags, and duplicate implementations.
+
+**Proposed Solution**: Centralized Position Manager service that:
+- Acts as single source of truth for all position updates
+- Manages event-driven locks (not time-based)
+- Handles coordinate transformation consistently
+- Provides conflict resolution between user actions and database sync
+
+**Phases**:
+- [ ] **Phase 1**: Create PositionManager service with lock persistence
+- [ ] **Phase 2**: Consolidate all position modifications through PositionManager
+- [ ] **Phase 3**: Implement event-driven lock lifecycle
+- [ ] **Phase 4**: Standardize coordinate system (absolute vs. relative)
+- [ ] **Phase 5**: Comprehensive Playwright tests and cleanup
+
 ### TASK-065: GitHub Release (📋 TODO)
 **Priority**: P3-LOW
 - Remove hardcoded CouchDB credentials.

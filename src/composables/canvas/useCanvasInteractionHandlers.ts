@@ -58,6 +58,12 @@ export function useCanvasInteractionHandlers(deps: InteractionHandlersDeps) {
         changes.forEach((change) => {
             // Track selection changes
             if (change.type === 'select') {
+                // Skip if we just did a manual Ctrl+click toggle (prevents Vue Flow from overriding)
+                if ((canvasStore as any).skipNextSelectionChange) {
+                    (canvasStore as any).skipNextSelectionChange = false
+                    return
+                }
+
                 const currentSelected = nodes.value.filter(n => (n as any).selected).map(n => n.id)
                 const selectedChanged = JSON.stringify(currentSelected) !== JSON.stringify(canvasStore.selectedNodeIds)
                 if (selectedChanged) {
@@ -265,8 +271,26 @@ export function useCanvasInteractionHandlers(deps: InteractionHandlersDeps) {
         canvasContextMenuState.x.value = event.clientX
         canvasContextMenuState.y.value = event.clientY
         const fullSection = canvasStore.sections.find((s: any) => s.id === sectionData.id)
+
         if (deps.canvasContextSection) {
-            deps.canvasContextSection.value = fullSection || null
+            if (fullSection) {
+                deps.canvasContextSection.value = fullSection
+            } else {
+                // BUG-091 FIX: Handle "ghost" sections that exist on canvas but not in store
+                // Provide a partial section object so the menu can still open and allow deletion
+                console.warn('👻 [CanvasView] Ghost section detected:', sectionData.id)
+                deps.canvasContextSection.value = {
+                    id: sectionData.id,
+                    name: sectionData.name || 'Unknown Group (Ghost)',
+                    color: sectionData.color || '#6366f1',
+                    position: { x: 0, y: 0, width: 300, height: 200 },
+                    isCollapsed: false,
+                    items: [],
+                    type: 'custom',
+                    layout: 'vertical',
+                    isVisible: true
+                }
+            }
         }
         canvasContextMenuState.show.value = true
     }
@@ -295,6 +319,14 @@ export function useCanvasInteractionHandlers(deps: InteractionHandlersDeps) {
         handleOpenSectionSettings(section.id)
     }
 
+    const handleTogglePowerMode = (section: { id: string, isPowerMode?: boolean, name?: string }) => {
+        console.log('⚡ [CanvasView] Toggle power mode for:', section.name)
+        // Check if togglePowerMode exists on store (it should)
+        if ((canvasStore as any).togglePowerMode) {
+            (canvasStore as any).togglePowerMode(section.id, !section.isPowerMode)
+        }
+    }
+
     // Register Hooks
     onEdgeClick(handleEdgeClick)
     onEdgeContextMenu(handleEdgeContextMenu)
@@ -319,6 +351,7 @@ export function useCanvasInteractionHandlers(deps: InteractionHandlersDeps) {
         handleSectionUpdate,
         collectTasksForSection,
         handleOpenSectionSettings,
-        handleOpenSectionSettingsFromContext
+        handleOpenSectionSettingsFromContext,
+        handleTogglePowerMode
     }
 }

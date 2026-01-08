@@ -1,246 +1,53 @@
 /**
- * useTimerChangesSync - Direct PouchDB Changes Feed for Timer Sync
+ * useTimerChangesSync - STUBBED
  *
- * TASK-021: Real-Time Cross-Instance Timer Sync
+ * BUG-024: This composable previously provided real-time timer synchronization
+ * using PouchDB's changes feed. The app has migrated to Supabase, so this
+ * functionality is currently disabled.
  *
- * This composable provides real-time timer synchronization across different
- * browser instances and devices by subscribing directly to PouchDB's changes feed.
- *
- * Root Cause (Dec 19, 2025): The `reliable-sync-change` event was never dispatched
- * during live sync, so the timer store's listener never received updates.
- * This composable bypasses that by using PouchDB's native changes API.
- *
- * @see https://pouchdb.com/guides/changes.html
+ * TODO: Implement Supabase Realtime timer sync when needed
  */
 
-import { ref, onUnmounted, getCurrentInstance } from 'vue'
-
-// Timer document ID in PouchDB/CouchDB
-const TIMER_DOC_ID = 'pomo-flow-timer-session:data'
-
-// Connection retry settings
-const RECONNECT_DELAY_MS = 3000
-const MAX_RECONNECT_ATTEMPTS = 5
-
-// PouchDB changes feed types
-interface PouchDBChange {
-  doc?: unknown
-  deleted?: boolean
-}
-
-interface PouchDBChangesEmitter {
-  on: (event: string, callback: (data: PouchDBChange | unknown) => void) => PouchDBChangesEmitter
-  cancel: () => void
-}
-
-interface PouchDBDatabase {
-  changes: (options: {
-    live: boolean
-    since: string
-    include_docs: boolean
-    doc_ids: string[]
-  }) => PouchDBChangesEmitter
-}
+import { ref, readonly } from 'vue'
 
 export interface TimerChangesHandler {
   (doc: unknown): void | Promise<void>
 }
 
 export interface UseTimerChangesSyncReturn {
-  /** Whether the changes feed is currently connected */
-  isConnected: Readonly<typeof isConnected>
-  /** Start listening for timer changes */
+  /** Whether the changes feed is currently connected (always false - stubbed) */
+  isConnected: ReturnType<typeof readonly<typeof isConnected>>
+  /** Start listening for timer changes (no-op - stubbed) */
   startListening: (onTimerChange: TimerChangesHandler) => void
-  /** Stop listening and cleanup */
+  /** Stop listening and cleanup (no-op - stubbed) */
   stopListening: () => void
-  /** Manually reconnect if disconnected */
+  /** Manually reconnect if disconnected (no-op - stubbed) */
   reconnect: () => void
 }
 
-// Module-level state to ensure single listener
-let changesHandler: PouchDBChangesEmitter | null = null
-let currentCallback: TimerChangesHandler | null = null
-let reconnectAttempts = 0
-let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 const isConnected = ref(false)
 
 /**
- * Get PouchDB instance from global singleton
- */
-const getPouchDB = (): PouchDBDatabase | null => {
-  if (typeof window === 'undefined') return null
-  return (window as Window & typeof globalThis).pomoFlowDb as PouchDBDatabase | null
-}
-
-/**
- * Start the changes feed listener
- */
-const startChangesListener = (onTimerChange: TimerChangesHandler): boolean => {
-  const pouchDb = getPouchDB()
-
-  if (!pouchDb) {
-    console.warn('[TIMER CHANGES] PouchDB not available yet')
-    return false
-  }
-
-  // Cancel existing handler if any
-  if (changesHandler) {
-    try {
-      changesHandler.cancel()
-    } catch (_e) {
-      // Ignore cancel errors
-    }
-    changesHandler = null
-  }
-
-  try {
-    console.log('[TIMER CHANGES] Starting changes feed listener for:', TIMER_DOC_ID)
-
-    changesHandler = pouchDb.changes({
-      live: true,
-      since: 'now',
-      include_docs: true,
-      doc_ids: [TIMER_DOC_ID]
-    })
-      .on('change', (change: unknown) => {
-        const changeData = change as PouchDBChange
-        if (changeData.doc && !changeData.deleted) {
-          console.log('[TIMER CHANGES] Received timer update from changes feed')
-          try {
-            onTimerChange(changeData.doc)
-          } catch (err) {
-            console.error('[TIMER CHANGES] Error in change handler:', err)
-          }
-        } else if (changeData.deleted) {
-          console.log('[TIMER CHANGES] Timer document deleted')
-          // Optionally handle deletion - pass null or special marker
-          try {
-            onTimerChange({ session: null, deleted: true })
-          } catch (err) {
-            console.error('[TIMER CHANGES] Error handling deletion:', err)
-          }
-        }
-      })
-      .on('error', (err: unknown) => {
-        console.error('[TIMER CHANGES] Changes feed error:', err)
-        isConnected.value = false
-
-        // Attempt reconnection
-        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          reconnectAttempts++
-          console.log(`[TIMER CHANGES] Reconnecting in ${RECONNECT_DELAY_MS}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`)
-          reconnectTimeout = setTimeout(() => {
-            if (currentCallback) {
-              startChangesListener(currentCallback)
-            }
-          }, RECONNECT_DELAY_MS)
-        } else {
-          console.error('[TIMER CHANGES] Max reconnect attempts reached')
-        }
-      })
-      .on('complete', (info: unknown) => {
-        // Live changes feed shouldn't complete unless cancelled
-        console.log('[TIMER CHANGES] Changes feed completed (cancelled or error):', info)
-        isConnected.value = false
-      })
-
-    isConnected.value = true
-    reconnectAttempts = 0
-    currentCallback = onTimerChange
-    console.log('[TIMER CHANGES] Changes feed listener started successfully')
-    return true
-
-  } catch (err) {
-    console.error('[TIMER CHANGES] Failed to start changes feed:', err)
-    isConnected.value = false
-    return false
-  }
-}
-
-/**
- * Stop the changes feed listener
- */
-const stopChangesListener = () => {
-  // Clear any pending reconnect
-  if (reconnectTimeout) {
-    clearTimeout(reconnectTimeout)
-    reconnectTimeout = null
-  }
-
-  // Cancel the changes handler
-  if (changesHandler) {
-    try {
-      changesHandler.cancel()
-      console.log('[TIMER CHANGES] Changes feed listener stopped')
-    } catch (err) {
-      console.error('[TIMER CHANGES] Error cancelling changes feed:', err)
-    }
-    changesHandler = null
-  }
-
-  currentCallback = null
-  isConnected.value = false
-  reconnectAttempts = 0
-}
-
-/**
- * Composable for timer changes synchronization
+ * STUBBED: Timer changes sync composable
  *
- * Usage in timer store:
- * ```typescript
- * import { useTimerChangesSync } from '@/composables/useTimerChangesSync'
- *
- * const timerChanges = useTimerChangesSync()
- *
- * // Start listening when store initializes
- * timerChanges.startListening((doc) => {
- *   handleRemoteTimerUpdate(doc)
- * })
- *
- * // Cleanup on store dispose (if needed)
- * timerChanges.stopListening()
- * ```
+ * Previously used PouchDB changes feed for real-time timer sync.
+ * Now returns no-op functions since PouchDB has been replaced with Supabase.
  */
 export function useTimerChangesSync(): UseTimerChangesSyncReturn {
-  // Auto-cleanup when component unmounts (if used in component)
-  if (getCurrentInstance()) {
-    onUnmounted(() => {
-      // Note: In a store context, this won't fire, so manual cleanup is needed
-      stopChangesListener()
-    })
+  if (import.meta.env.DEV) {
+    console.warn('[useTimerChangesSync] STUB - timer sync disabled (PouchDB removed, Supabase pending)')
   }
 
   return {
-    isConnected,
-    startListening: (onTimerChange: TimerChangesHandler) => {
-      // If PouchDB isn't ready yet, retry after a delay
-      if (!getPouchDB()) {
-        console.log('[TIMER CHANGES] Waiting for PouchDB to be ready...')
-        const checkInterval = setInterval(() => {
-          if (getPouchDB()) {
-            clearInterval(checkInterval)
-            startChangesListener(onTimerChange)
-          }
-        }, 500)
-
-        // Give up after 10 seconds
-        setTimeout(() => {
-          clearInterval(checkInterval)
-          if (!isConnected.value) {
-            console.error('[TIMER CHANGES] Timed out waiting for PouchDB')
-          }
-        }, 10000)
-        return
-      }
-
-      startChangesListener(onTimerChange)
+    isConnected: readonly(isConnected),
+    startListening: (_onTimerChange: TimerChangesHandler) => {
+      // No-op: PouchDB removed, Supabase timer sync not yet implemented
     },
-    stopListening: stopChangesListener,
+    stopListening: () => {
+      // No-op
+    },
     reconnect: () => {
-      if (currentCallback) {
-        stopChangesListener()
-        startChangesListener(currentCallback)
-      }
+      // No-op
     }
   }
 }

@@ -1,92 +1,7 @@
 // Global window type declarations for Pomo-Flow backup system
+// TASK-136: PouchDB types removed Jan 2026 - app uses Supabase
 
 declare global {
-  // PouchDB types - must be in global scope for use across stores
-  interface PouchDBDocument {
-    _id: string
-    _rev?: string
-    _conflicts?: string[]
-    [key: string]: unknown
-  }
-
-  interface PouchDBResponse {
-    ok: boolean
-    id: string
-    rev: string
-  }
-
-  interface PouchDBRow {
-    id: string
-    key: string
-    value: { rev: string }
-    doc?: PouchDBDocument
-  }
-
-  interface PouchDBAllDocsResponse {
-    total_rows: number
-    offset: number
-    rows: PouchDBRow[]
-  }
-
-  interface PouchDBChangesOptions {
-    since?: string | number
-    live?: boolean
-    include_docs?: boolean
-  }
-
-  interface PouchDBChanges {
-    on: (event: string, callback: (change: PouchDBChange) => void) => PouchDBChanges
-    cancel: () => void
-  }
-
-  interface PouchDBChange {
-    id: string
-    seq: number | string
-    changes: Array<{ rev: string }>
-    doc?: PouchDBDocument
-    deleted?: boolean
-  }
-
-  // PouchDB sync event types
-  interface PouchDBSyncChange {
-    direction: 'push' | 'pull'
-    change: {
-      docs: PouchDBDocument[]
-      ok?: boolean
-      errors?: unknown[]
-    }
-  }
-
-  interface PouchDBSyncInfo {
-    pending?: number
-    ok?: boolean
-    status?: string
-    docs_read?: number
-    docs_written?: number
-  }
-
-  interface PouchDBSyncError {
-    message?: string
-    status?: number
-    error?: boolean
-    reason?: string
-  }
-
-  interface PouchDBSyncHandler {
-    on: (event: 'change' | 'paused' | 'active' | 'denied' | 'complete' | 'error', callback: (info: unknown) => void) => PouchDBSyncHandler
-    cancel: () => void
-  }
-
-  // PouchDB instance type (simplified for window property)
-  interface PomoFlowDB {
-    get: (docId: string, options?: { conflicts?: boolean }) => Promise<PouchDBDocument>
-    put: (doc: PouchDBDocument) => Promise<PouchDBResponse>
-    remove: (docId: string, rev: string) => Promise<PouchDBResponse>
-    allDocs: (options?: { include_docs?: boolean } & Record<string, unknown>) => Promise<PouchDBAllDocsResponse>
-    bulkDocs: (docs: PouchDBDocument[]) => Promise<PouchDBResponse[]>
-    changes: (options?: PouchDBChangesOptions) => PouchDBChanges
-  }
-
   // Backup types
   interface BackupSnapshot {
     id: string
@@ -123,7 +38,7 @@ declare global {
   interface Window {
     // TASK-054: Storybook environment flag to prevent database pollution
     __STORYBOOK__?: boolean
-    pomoFlowDb?: PomoFlowDB
+    // TASK-136: pomoFlowDb removed - PouchDB decommissioned, app uses Supabase
     __pomoFlowUndoSystem?: UndoRedoActions
     pomoFlowBackup: {
       exportTasks: () => Promise<string>
@@ -239,18 +154,6 @@ declare module './App.vue' {
 }
 
 // Specific Vue component declarations for dynamic imports
-declare module '@/components/sync/SyncStatusIndicator.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, unknown>
-  export default component
-}
-
-declare module '@/components/sync/SyncErrorBoundary.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, unknown>
-  export default component
-}
-
 declare module '@/views/CanvasView.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, unknown>

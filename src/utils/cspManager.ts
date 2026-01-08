@@ -94,8 +94,8 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
         'wss:',
         'http://localhost:*',
         'https://localhost:*',
-        'http:', // Development: allow HTTP connections
-        'https:', // Allow HTTPS connections
+        // BUG-021 FIX: Explicit allowlist instead of wildcards
+        'https://*.supabase.co',
         'https://api.github.com',
         'https://raw.githubusercontent.com'
       ],
@@ -189,8 +189,10 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
       'connect-src': [
         "'self'",
         'wss:',
-        'https:', // Allow HTTPS connections
-        'https://api.github.com'
+        // BUG-021 FIX: Explicit allowlist instead of wildcards
+        'https://*.supabase.co',
+        'https://api.github.com',
+        'https://raw.githubusercontent.com'
       ],
 
       // Allow media

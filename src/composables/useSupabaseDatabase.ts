@@ -44,6 +44,34 @@ export function useSupabaseDatabase() {
         return authStore.user?.id || null
     }
 
+    /**
+     * Helper to execute Supabase operations with transient error retries (e.g. clock skew)
+     */
+    const withRetry = async <T>(operation: () => Promise<T>, context: string, maxRetries = 2): Promise<T> => {
+        let lastErr: any = null
+
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                return await operation()
+            } catch (err: any) {
+                lastErr = err
+                const message = err?.message || String(err)
+
+                // Check for "JWT issued at future" (Clock Skew)
+                if (message.includes('JWT issued at future')) {
+                    console.warn(`🕒 [CLOCK-SKEW] ${context} failed due to clock skew. Retrying in 1s... (Attempt ${i + 1}/${maxRetries})`)
+                    await new Promise(resolve => setTimeout(resolve, 1000))
+                    continue
+                }
+
+                // For other errors, don't retry immediately unless they look transient
+                throw err
+            }
+        }
+
+        throw lastErr
+    }
+
     const handleError = (error: unknown, context: string) => {
         // Handle Supabase/Postgrest errors which are objects but not Error instances
         let message = 'Unknown error'
@@ -77,15 +105,17 @@ export function useSupabaseDatabase() {
 
     const fetchProjects = async (): Promise<Project[]> => {
         try {
-            const { data, error } = await supabase
-                .from('projects')
-                .select('*')
-                .order('created_at', { ascending: true })
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .order('created_at', { ascending: true })
 
-            if (error) throw error
-            if (!data) return []
+                if (error) throw error
+                if (!data) return []
 
-            return (data as SupabaseProject[]).map(fromSupabaseProject)
+                return (data as SupabaseProject[]).map(fromSupabaseProject)
+            }, 'fetchProjects')
         } catch (e: unknown) {
             handleError(e, 'fetchProjects')
             return []
@@ -175,15 +205,17 @@ export function useSupabaseDatabase() {
 
     const fetchTasks = async (): Promise<Task[]> => {
         try {
-            const { data, error } = await supabase
-                .from('tasks')
-                .select('*')
-                .eq('is_deleted', false)
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .eq('is_deleted', false)
 
-            if (error) throw error
-            if (!data) return []
+                if (error) throw error
+                if (!data) return []
 
-            return (data as SupabaseTask[]).map(fromSupabaseTask)
+                return (data as SupabaseTask[]).map(fromSupabaseTask)
+            }, 'fetchTasks')
         } catch (e: unknown) {
             handleError(e, 'fetchTasks')
             return []
@@ -213,8 +245,12 @@ export function useSupabaseDatabase() {
             isSyncing.value = true
             const userId = getUserId()
             const payload = toSupabaseTask(task, userId)
-            const { error } = await supabase.from('tasks').upsert(payload)
-            if (error) throw error
+
+            await withRetry(async () => {
+                const { error } = await supabase.from('tasks').upsert(payload)
+                if (error) throw error
+            }, 'saveTask')
+
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'saveTask')
@@ -230,8 +266,12 @@ export function useSupabaseDatabase() {
             isSyncing.value = true
             const userId = getUserId()
             const payload = tasks.map(t => toSupabaseTask(t, userId))
-            const { error } = await supabase.from('tasks').upsert(payload)
-            if (error) throw error
+
+            await withRetry(async () => {
+                const { error } = await supabase.from('tasks').upsert(payload)
+                if (error) throw error
+            }, 'saveTasks')
+
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'saveTasks')
@@ -300,6 +340,34 @@ export function useSupabaseDatabase() {
         }
     }
 
+    // BUG-025 FIX: Atomic bulk delete using Supabase .in() operator
+    const bulkDeleteTasks = async (taskIds: string[]): Promise<void> => {
+        if (taskIds.length === 0) return
+        console.log(`🗑️ [SUPABASE-BULK-DELETE] Starting atomic soft-delete for ${taskIds.length} tasks`)
+        try {
+            isSyncing.value = true
+            getUserId() // Ensure authenticated
+
+            const { error, count } = await supabase
+                .from('tasks')
+                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+                .in('id', taskIds)
+                .select('*', { count: 'exact' })
+
+            console.log(`🗑️ [SUPABASE-BULK-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
+
+            if (error) throw error
+            lastSyncError.value = null
+            console.log(`✅ [SUPABASE-BULK-DELETE] ${taskIds.length} tasks marked as deleted atomically`)
+        } catch (e: unknown) {
+            console.error(`❌ [SUPABASE-BULK-DELETE] Failed to bulk delete ${taskIds.length} tasks:`, e)
+            handleError(e, 'bulkDeleteTasks')
+            throw e // Re-throw so caller knows it failed
+        } finally {
+            isSyncing.value = false
+        }
+    }
+
     // -- Groups --
 
     const fetchGroups = async (): Promise<any[]> => {
@@ -324,8 +392,12 @@ export function useSupabaseDatabase() {
             isSyncing.value = true
             const userId = getUserId()
             const payload = toSupabaseGroup(group, userId)
-            const { error } = await supabase.from('groups').upsert(payload)
-            if (error) throw error
+
+            await withRetry(async () => {
+                const { error } = await supabase.from('groups').upsert(payload)
+                if (error) throw error
+            }, 'saveGroup')
+
             lastSyncError.value = null
         } catch (e: unknown) {
             console.error('Save Group Error:', e)
@@ -478,9 +550,12 @@ export function useSupabaseDatabase() {
         try {
             const userId = getUserId()
             const payload = toSupabaseUserSettings(settings, userId)
-            // Fix: Explicitly specify conflict target to handle 'user_settings_user_id_key' violation
-            const { error } = await supabase.from('user_settings').upsert(payload, { onConflict: 'user_id' })
-            if (error) throw error
+
+            await withRetry(async () => {
+                // Fix: Explicitly specify conflict target to handle 'user_settings_user_id_key' violation
+                const { error } = await supabase.from('user_settings').upsert(payload, { onConflict: 'user_id' })
+                if (error) throw error
+            }, 'saveUserSettings')
         } catch (e: unknown) {
             handleError(e, 'saveUserSettings')
         }
@@ -530,19 +605,31 @@ export function useSupabaseDatabase() {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'projects' },
-                (payload: unknown) => onProjectChange(payload)
+                (payload: any) => {
+                    // SAFETY: Explicitly verify table to prevent cross-talk
+                    if (payload.table === 'projects') {
+                        onProjectChange(payload)
+                    } else if (payload.table) {
+                        console.warn(`[SYNC-WARN] Project handler received event for table: ${payload.table}`)
+                    }
+                }
             )
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'tasks' },
-                (payload: unknown) => onTaskChange(payload)
+                (payload: any) => {
+                    // SAFETY: Explicitly verify table
+                    if (payload.table === 'tasks') {
+                        onTaskChange(payload)
+                    }
+                }
             )
 
         if (onTimerChange) {
             channel.on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'timer_sessions' },
-                (payload: unknown) => onTimerChange(payload)
+                (payload: any) => onTimerChange(payload)
             )
         }
 
@@ -550,7 +637,7 @@ export function useSupabaseDatabase() {
             channel.on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'notifications' },
-                (payload: unknown) => onNotificationChange(payload)
+                (payload: any) => onNotificationChange(payload)
             )
         }
 
@@ -572,6 +659,7 @@ export function useSupabaseDatabase() {
         saveTask,
         saveTasks,
         deleteTask,
+        bulkDeleteTasks,
         restoreTask,
         permanentlyDeleteTask,
         fetchGroups,

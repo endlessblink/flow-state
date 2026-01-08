@@ -1,5 +1,6 @@
 <template>
   <div class="tiptap-editor-container">
+    <!-- Main Toolbar Row -->
     <div class="editor-toolbar">
       <!-- Undo/Redo -->
       <button
@@ -19,6 +20,34 @@
         <Redo :size="14" />
       </button>
       <div class="toolbar-divider" />
+
+      <!-- Headings -->
+      <button
+        class="toolbar-btn"
+        :class="{ active: editor?.isActive('heading', { level: 1 }) }"
+        title="Heading 1"
+        @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
+      >
+        <Heading1 :size="14" />
+      </button>
+      <button
+        class="toolbar-btn"
+        :class="{ active: editor?.isActive('heading', { level: 2 }) }"
+        title="Heading 2"
+        @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
+      >
+        <Heading2 :size="14" />
+      </button>
+      <button
+        class="toolbar-btn"
+        :class="{ active: editor?.isActive('heading', { level: 3 }) }"
+        title="Heading 3"
+        @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()"
+      >
+        <Heading3 :size="14" />
+      </button>
+      <div class="toolbar-divider" />
+
       <!-- Text Formatting -->
       <button
         class="toolbar-btn"
@@ -60,7 +89,64 @@
       >
         <HighlightIcon :size="14" />
       </button>
+
+      <!-- Text Color Dropdown -->
+      <div class="toolbar-dropdown">
+        <button
+          class="toolbar-btn"
+          title="Text Color"
+          @click="showColorPicker = !showColorPicker"
+        >
+          <Palette :size="14" />
+          <ChevronDown :size="10" class="dropdown-arrow" />
+        </button>
+        <div v-if="showColorPicker" class="color-picker-dropdown">
+          <button
+            v-for="color in textColors"
+            :key="color.value"
+            class="color-swatch"
+            :style="{ backgroundColor: color.value }"
+            :title="color.name"
+            @click="setTextColor(color.value)"
+          />
+          <button
+            class="color-swatch reset-color"
+            title="Reset Color"
+            @click="setTextColor('')"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
       <div class="toolbar-divider" />
+
+      <!-- Text Align -->
+      <button
+        class="toolbar-btn"
+        :class="{ active: editor?.isActive({ textAlign: 'left' }) }"
+        title="Align Left"
+        @click="editor?.chain().focus().setTextAlign('left').run()"
+      >
+        <AlignLeft :size="14" />
+      </button>
+      <button
+        class="toolbar-btn"
+        :class="{ active: editor?.isActive({ textAlign: 'center' }) }"
+        title="Align Center"
+        @click="editor?.chain().focus().setTextAlign('center').run()"
+      >
+        <AlignCenter :size="14" />
+      </button>
+      <button
+        class="toolbar-btn"
+        :class="{ active: editor?.isActive({ textAlign: 'right' }) }"
+        title="Align Right"
+        @click="editor?.chain().focus().setTextAlign('right').run()"
+      >
+        <AlignRight :size="14" />
+      </button>
+      <div class="toolbar-divider" />
+
       <!-- Lists -->
       <button
         class="toolbar-btn"
@@ -87,6 +173,7 @@
         <CheckSquare :size="14" />
       </button>
       <div class="toolbar-divider" />
+
       <!-- Blocks & Links -->
       <button
         class="toolbar-btn"
@@ -119,7 +206,34 @@
       >
         <LinkIcon :size="14" />
       </button>
+      <div class="toolbar-divider" />
+
+      <!-- Table -->
+      <div class="toolbar-dropdown">
+        <button
+          class="toolbar-btn"
+          :class="{ active: editor?.isActive('table') }"
+          title="Table"
+          @click="showTableMenu = !showTableMenu"
+        >
+          <TableIcon :size="14" />
+          <ChevronDown :size="10" class="dropdown-arrow" />
+        </button>
+        <div v-if="showTableMenu" class="table-menu-dropdown">
+          <button class="dropdown-item" @click="insertTable">Insert Table (3×3)</button>
+          <button class="dropdown-item" @click="editor?.chain().focus().addColumnBefore().run()" :disabled="!editor?.can().addColumnBefore()">Add Column Before</button>
+          <button class="dropdown-item" @click="editor?.chain().focus().addColumnAfter().run()" :disabled="!editor?.can().addColumnAfter()">Add Column After</button>
+          <button class="dropdown-item" @click="editor?.chain().focus().deleteColumn().run()" :disabled="!editor?.can().deleteColumn()">Delete Column</button>
+          <div class="dropdown-divider" />
+          <button class="dropdown-item" @click="editor?.chain().focus().addRowBefore().run()" :disabled="!editor?.can().addRowBefore()">Add Row Before</button>
+          <button class="dropdown-item" @click="editor?.chain().focus().addRowAfter().run()" :disabled="!editor?.can().addRowAfter()">Add Row After</button>
+          <button class="dropdown-item" @click="editor?.chain().focus().deleteRow().run()" :disabled="!editor?.can().deleteRow()">Delete Row</button>
+          <div class="dropdown-divider" />
+          <button class="dropdown-item danger" @click="editor?.chain().focus().deleteTable().run()" :disabled="!editor?.can().deleteTable()">Delete Table</button>
+        </div>
+      </div>
     </div>
+
     <div class="tiptap-surface" :dir="textDirection">
       <EditorContent :editor="editor" />
     </div>
@@ -127,15 +241,20 @@
 </template>
 
 <script setup lang="ts">
-import { watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import TaskList from '@tiptap/extension-task-list'
-import TaskItem from '@tiptap/extension-task-item'
-import Link from '@tiptap/extension-link'
+// Link and Underline imports removed to fix duplicate extension warnings
 import Placeholder from '@tiptap/extension-placeholder'
 import Highlight from '@tiptap/extension-highlight'
-import Underline from '@tiptap/extension-underline'
+import TextAlign from '@tiptap/extension-text-align'
+import { TextStyle } from '@tiptap/extension-text-style'
+import { Color } from '@tiptap/extension-color'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TableHeader } from '@tiptap/extension-table-header'
 import {
   Bold as BoldIcon,
   Italic as ItalicIcon,
@@ -150,7 +269,16 @@ import {
   Code,
   Minus as HorizontalRuleIcon,
   Undo,
-  Redo
+  Redo,
+  Heading1,
+  Heading2,
+  Heading3,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Table as TableIcon,
+  Palette,
+  ChevronDown
 } from 'lucide-vue-next'
 // BUG-013/BUG-014 FIX: Import markdown utilities for HTML<->Markdown conversion and URL sanitization
 import { parseMarkdown, htmlToMarkdown, sanitizeUrl } from '@/utils/markdown'
@@ -164,6 +292,22 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
+
+// UI state for dropdowns
+const showColorPicker = ref(false)
+const showTableMenu = ref(false)
+
+// Color palette for text color
+const textColors = [
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Yellow', value: '#eab308' },
+  { name: 'Green', value: '#22c55e' },
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Purple', value: '#8b5cf6' },
+  { name: 'Pink', value: '#ec4899' },
+  { name: 'Gray', value: '#6b7280' },
+]
 
 // Create editor with NO auto-conversion input rules
 // StarterKit includes input rules by default, so we disable them
@@ -186,19 +330,27 @@ const editor = useEditor({
     TaskItem.configure({
       nested: true,
     }),
-    Link.configure({
-      openOnClick: false,
-      HTMLAttributes: {
-        class: 'editor-link',
-      },
-    }),
+    // Link and Underline removed to fix duplicate extension warning
     Placeholder.configure({
       placeholder: 'Add a description... Use the toolbar for formatting.',
     }),
     Highlight.configure({
       multicolor: false, // Single yellow highlight
     }),
-    Underline,
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+    }),
+    TextStyle,
+    Color,
+    Table.configure({
+      resizable: true,
+      HTMLAttributes: {
+        class: 'editor-table',
+      },
+    }),
+    TableRow,
+    TableCell,
+    TableHeader,
   ],
   // Disable input rules globally - no auto-conversion on typing
   enableInputRules: false,
@@ -254,6 +406,30 @@ const setLink = () => {
   }
 
   editor.value.chain().focus().extendMarkRange('link').setLink({ href: safeUrl }).run()
+}
+
+// Text color handling
+const setTextColor = (color: string) => {
+  if (!editor.value) return
+  if (color === '') {
+    editor.value.chain().focus().unsetColor().run()
+  } else {
+    editor.value.chain().focus().setColor(color).run()
+  }
+  showColorPicker.value = false
+}
+
+// Table handling
+const insertTable = () => {
+  if (!editor.value) return
+  editor.value.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+  showTableMenu.value = false
+}
+
+// Close dropdowns when clicking outside
+const closeDropdowns = () => {
+  showColorPicker.value = false
+  showTableMenu.value = false
 }
 </script>
 
@@ -438,5 +614,165 @@ const setLink = () => {
   pointer-events: none;
   float: left;
   height: 0;
+}
+
+/* Headings */
+:deep(.tiptap h1) {
+  font-size: 1.75em;
+  font-weight: 700;
+  margin: 0.5em 0 0.25em 0;
+  color: var(--text-primary);
+}
+
+:deep(.tiptap h2) {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em 0;
+  color: var(--text-primary);
+}
+
+:deep(.tiptap h3) {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em 0;
+  color: var(--text-primary);
+}
+
+/* Text Align */
+:deep(.tiptap [style*="text-align: center"]) {
+  text-align: center;
+}
+
+:deep(.tiptap [style*="text-align: right"]) {
+  text-align: right;
+}
+
+/* Tables */
+:deep(.tiptap table.editor-table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  overflow: hidden;
+}
+
+:deep(.tiptap table.editor-table th),
+:deep(.tiptap table.editor-table td) {
+  border: 1px solid var(--glass-border);
+  padding: 0.5em 0.75em;
+  min-width: 80px;
+  vertical-align: top;
+}
+
+:deep(.tiptap table.editor-table th) {
+  background: var(--glass-bg-medium);
+  font-weight: 600;
+}
+
+:deep(.tiptap table.editor-table td) {
+  background: var(--glass-bg-soft);
+}
+
+:deep(.tiptap table.editor-table .selectedCell) {
+  background: var(--primary-100);
+}
+
+/* Dropdown containers */
+.toolbar-dropdown {
+  position: relative;
+}
+
+.dropdown-arrow {
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+/* Color picker dropdown */
+.color-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+  border-color: white;
+}
+
+.reset-color {
+  background: var(--glass-bg-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Table menu dropdown */
+.table-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  min-width: 180px;
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 4px 0;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dropdown-item:hover:not(:disabled) {
+  background: var(--glass-bg-light);
+}
+
+.dropdown-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dropdown-item.danger {
+  color: #ef4444;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 4px 0;
+}
+
+/* Toolbar row wrapping for smaller screens */
+.editor-toolbar {
+  flex-wrap: wrap;
 }
 </style>

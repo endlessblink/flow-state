@@ -158,11 +158,35 @@ export function useCanvasSmartGroups() {
     const SATURDAY_GROUP_COLOR = '#8b5cf6' // Violet-500
 
     const ensureActionGroups = async () => {
+        // BUG-022 FIX: Wait for sections to be loaded to prevent duplicate group creation
+        // If no sections exist yet, wait a bit for canvas store to initialize
+        let retries = 0
+        const maxRetries = 10
+        while (canvasStore.sections.length === 0 && retries < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+            retries++
+        }
+
+        // If still no sections after waiting, the store might legitimately be empty
+        // Continue with creation in that case
+
+        // Check _rawGroups to find ANY existing group, even if hidden
+        // accessing _rawGroups via public getter or direct access if valid
+        const allGroups = canvasStore._rawGroups || canvasStore.groups // Fallback
+
+        // Helper for robust name matching
+        const findGroup = (name: string, type: string) => {
+            const targetName = name.toLowerCase().trim()
+            return allGroups.find(s =>
+                (s.name && s.name.toLowerCase().trim() === targetName) ||
+                (s.type as string) === type
+            )
+        }
+
         // Ensure Friday Group
-        let fridayGroup = canvasStore.sections.find(s => s.name === FRIDAY_GROUP_NAME || (s.type as string) === 'smart_friday')
-        if (!fridayGroup) {
+        if (!findGroup(FRIDAY_GROUP_NAME, 'smart_friday')) {
+            console.log(`[SmartGroup] Creating missing Friday group (Checked ${allGroups.length} groups)`)
             await canvasStore.createSection({
-                id: crypto.randomUUID(),
                 name: FRIDAY_GROUP_NAME,
                 type: 'custom',
                 color: FRIDAY_GROUP_COLOR,
@@ -171,13 +195,14 @@ export function useCanvasSmartGroups() {
                 isCollapsed: false,
                 isVisible: true
             })
+        } else {
+            console.log(`[SmartGroup] Found existing Friday group`)
         }
 
         // Ensure Saturday Group
-        let saturdayGroup = canvasStore.sections.find(s => s.name === SATURDAY_GROUP_NAME || (s.type as string) === 'smart_saturday')
-        if (!saturdayGroup) {
+        if (!findGroup(SATURDAY_GROUP_NAME, 'smart_saturday')) {
+            console.log(`[SmartGroup] Creating missing Saturday group`)
             await canvasStore.createSection({
-                id: crypto.randomUUID(),
                 name: SATURDAY_GROUP_NAME,
                 type: 'custom',
                 color: SATURDAY_GROUP_COLOR,

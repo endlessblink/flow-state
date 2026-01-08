@@ -12,6 +12,32 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         zoom: 1
     })
 
+    // Track if initial viewport fit has been performed this session
+    // Persisted to localStorage to survive navigation (but not full page refresh)
+    const hasInitialFit = ref(false)
+    const viewportInitializedAt = ref<number | null>(null)
+
+    // Initialize hasInitialFit from localStorage on store creation
+    const initHasInitialFit = () => {
+        try {
+            const saved = localStorage.getItem('pomoflow-canvas-has-initial-fit')
+            if (saved) {
+                const parsed = JSON.parse(saved)
+                // Only restore if within 5 minutes (session still active)
+                const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+                if (parsed.value && parsed.timestamp > fiveMinutesAgo) {
+                    hasInitialFit.value = true
+                    viewportInitializedAt.value = parsed.timestamp
+                }
+            }
+        } catch (e) {
+            console.warn('[canvasUi] Failed to parse hasInitialFit:', e)
+        }
+    }
+
+    // Call on store creation
+    initHasInitialFit()
+
     // Group display state
     const activeGroupId = ref<string | null>(null)
     const showGroupGuides = ref(true)
@@ -68,6 +94,23 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
 
     const setActiveGroup = (id: string | null) => {
         activeGroupId.value = id
+    }
+
+    // Set hasInitialFit and persist to localStorage
+    const setHasInitialFit = (value: boolean) => {
+        hasInitialFit.value = value
+        viewportInitializedAt.value = value ? Date.now() : null
+        localStorage.setItem('pomoflow-canvas-has-initial-fit', JSON.stringify({
+            value,
+            timestamp: Date.now()
+        }))
+    }
+
+    // Reset hasInitialFit (for testing or when user requests re-center)
+    const resetHasInitialFit = () => {
+        hasInitialFit.value = false
+        viewportInitializedAt.value = null
+        localStorage.removeItem('pomoflow-canvas-has-initial-fit')
     }
 
     // Display preference toggles
@@ -149,12 +192,16 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         showScheduleBadge,
         zoomConfig,
         zoomHistory,
+        hasInitialFit,
+        viewportInitializedAt,
         requestSync,
         setViewport,
         saveZoomToHistory,
         setViewportWithHistory,
         updateZoomConfig,
         setActiveGroup,
+        setHasInitialFit,
+        resetHasInitialFit,
         togglePriorityIndicator,
         toggleStatusBadge,
         toggleDurationBadge,

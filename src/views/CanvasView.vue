@@ -53,12 +53,11 @@
            but component itself has absolute positioning. -->
       <CanvasFilterControls />
       <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
-      <div v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0" class="canvas-loading-overlay">
-        <div class="loading-content">
-          <div class="loading-spinner" />
-          <span class="loading-text">Loading canvas...</span>
-        </div>
-      </div>
+      <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
+      <CanvasLoadingOverlay 
+        v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0"
+        message="Loading canvas..."
+      />
 
       <!-- Empty state when no tasks exist -->
       <!-- Empty state when no tasks exist -->
@@ -90,23 +89,11 @@
           ALL Vue Flow related code must stay in this component during refactoring.
         -->
       <!-- Filter Status Indicator -->
-      <div
-        v-if="taskStore.activeStatusFilter"
-        class="absolute top-4 left-4 z-20 px-4 py-2 bg-[rgba(99,102,241,0.2)] backdrop-blur-sm border border-indigo-500/30 rounded-lg text-indigo-300 text-sm font-medium flex items-center gap-2 shadow-lg"
-      >
-        <Filter :size="16" />
-        <span>{{ getStatusFilterLabel(taskStore.activeStatusFilter) }} filter active</span>
-        <button
-          class="ml-2 text-indigo-400 hover:text-white transition-colors"
-          title="Clear filter"
-          @click="clearStatusFilter"
-        >
-          <X :size="14" />
-        </button>
-        <div class="text-xs text-indigo-400 ml-2">
-          (Check Canvas Inbox for more tasks)
-        </div>
-      </div>
+      <!-- Filter Status Indicator -->
+      <CanvasStatusBanner 
+        :active-status-filter="taskStore.activeStatusFilter"
+        @clear-filter="clearStatusFilter"
+      />
 
       <!-- Inbox Sidebar - Using UnifiedInboxPanel as per Storybook -->
       <!-- context="canvas" to hide group filter chips (shown only in calendar) -->
@@ -170,21 +157,9 @@
           >
             <!-- Rubber Band Selection Box - Moved outside VueFlow to avoid zoom transforms -->
             <!-- Using fixed position to match clientX/Y coordinates directly -->
-            <div
-              v-if="selectionBox.isVisible"
-              class="selection-box"
-              :style="{
-                position: 'fixed',
-                left: `${selectionBox.x}px`,
-                top: `${selectionBox.y}px`,
-                width: `${selectionBox.width}px`,
-                height: `${selectionBox.height}px`,
-                zIndex: 9999,
-                pointerEvents: 'none',
-                border: '1px solid var(--accent-primary)',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)'
-              }"
-            />
+            <!-- Rubber Band Selection Box - Moved outside VueFlow to avoid zoom transforms -->
+            <!-- Using fixed position to match clientX/Y coordinates directly -->
+            <CanvasSelectionBox :selection-box="selectionBox" />
             <!-- Background Grid -->
             <Background
               pattern-color="#e5e7eb"
@@ -274,16 +249,11 @@
           </VueFlow>
 
           <!-- Loading state when canvas is not ready -->
-          <div v-if="!systemHealthy || !isCanvasReady" class="canvas-loading-state">
-            <div class="flex items-center justify-center h-full">
-              <div class="text-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4" />
-                <p class="text-gray-600 dark:text-gray-400">
-                  {{ systemHealthy ? 'Initializing Canvas...' : 'System Initializing...' }}
-                </p>
-              </div>
-            </div>
-          </div>
+          <!-- Loading state when canvas is not ready -->
+          <CanvasLoadingOverlay
+            v-if="!systemHealthy || !isCanvasReady" 
+            :message="systemHealthy ? 'Initializing Canvas...' : 'System Initializing...'"
+          />
         </div>
       </div>
     </div>
@@ -394,7 +364,7 @@ import {
   useMagicKeys,
   useDebounceFn
 } from '@vueuse/core'
-import { Filter, X } from 'lucide-vue-next'
+
 
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
@@ -422,6 +392,9 @@ import CanvasModals from '../components/canvas/CanvasModals.vue'
 import CanvasEmptyState from '../components/canvas/CanvasEmptyState.vue'
 import CanvasContextMenus from '../components/canvas/CanvasContextMenus.vue'
 import CanvasFilterControls from '../components/canvas/CanvasFilterControls.vue'
+import CanvasStatusBanner from '../components/canvas/CanvasStatusBanner.vue'
+import CanvasLoadingOverlay from '../components/canvas/CanvasLoadingOverlay.vue'
+import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
 
 // Import Vue Flow styles
 import '@vue-flow/core/dist/style.css'
@@ -1034,18 +1007,7 @@ const handleBatchEditApplied = () => {
   closeBatchEditModal()
 }
 
-// Status filter helpers
-const getStatusFilterLabel = (status: string | null): string => {
-  if (!status) return ''
-  const labels: Record<string, string> = {
-    'done': 'Completed',
-    'in_progress': 'In Progress',
-    'planned': 'Planned',
-    'backlog': 'Backlog',
-    'on_hold': 'On Hold'
-  }
-  return labels[status] || status
-}
+
 
 const clearStatusFilter = () => {
   taskStore.setActiveStatusFilter(null)
@@ -3372,44 +3334,7 @@ body.dragging-active .vue-flow__background {
 }
 
 /* Canvas loading overlay */
-.canvas-loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-background);
-  z-index: 9999;
-}
 
-.loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--color-border);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading-text {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
 
 /* Canvas empty state */
 .canvas-empty-state {
@@ -3510,11 +3435,5 @@ body.dragging-active .vue-flow__background {
   pointer-events: none !important;
 }
 
-.selection-box {
-  position: fixed;
-  border: 1px solid var(--primary-color);
-  background-color: rgba(99, 102, 241, 0.1);
-  pointer-events: none;
-  z-index: 9999;
-}
+
 </style>

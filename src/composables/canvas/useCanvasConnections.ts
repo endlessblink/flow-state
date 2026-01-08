@@ -44,17 +44,26 @@ export function useCanvasConnections(
         deps.addTimer(timerId as unknown as number)
     }
 
-    // Wrapped connection handler
     const handleConnect = deps.withVueFlowErrorBoundary('handleConnect', (connection: { source: string; target: string; sourceHandle?: string; targetHandle?: string }) => {
-        console.log('🔗 Connection attempt:', connection)
+        // console.log('🔗 Connection attempt:', connection)
         const { source, target } = connection
 
         deps.closeCanvasContextMenu()
         deps.closeEdgeContextMenu()
         deps.closeNodeContextMenu()
 
+        // BUG-022 FIX: Allow immediate re-creation of recently deleted edges
+        // If the user manually connects A->B, we must unblock it from the "zombie edge" protection list
+        const potentialEdgeId = `e-${source}-${target}`
+        if (state.recentlyRemovedEdges.value.has(potentialEdgeId)) {
+            console.log(`🔌 [CONNECT] Unblocking recently removed edge ${potentialEdgeId} for manual reconnection`)
+            state.recentlyRemovedEdges.value.delete(potentialEdgeId)
+        }
+
         if (source.startsWith('section-') || target.startsWith('section-')) return
         if (source === target) return
+
+        // BUG-022 PREP: Capture edge ID for potential cleanup
 
         const sourceTask = taskStore.tasks.find(t => t.id === source)
         const targetTask = taskStore.tasks.find(t => t.id === target)

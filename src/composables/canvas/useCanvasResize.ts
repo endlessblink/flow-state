@@ -1,15 +1,33 @@
 import { ref, computed } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
-import { useCanvasStore } from '@/stores/canvas'
-import { useTaskStore } from '@/stores/tasks'
+import { useCanvasStore } from '../../stores/canvas'
+import { useTaskStore } from '../../stores/tasks'
 // TASK-089: Canvas state lock to prevent sync from overwriting user changes
-import { lockGroupPosition } from '@/utils/canvasStateLock'
+import { lockTaskPosition, lockGroupPosition } from '../../utils/canvasStateLock'
 
-export function useCanvasResize() {
+import { type Ref } from 'vue'
+
+export function useCanvasResize(deps?: {
+    findNode: (id: string) => any
+    updateNode: (id: string, node: any) => void
+    nodes: Ref<any[]>
+}) {
+    // BUG-056 FIX: Use provided deps if available, otherwise fallback to useVueFlow() with safety check
+    let vueFlow: ReturnType<typeof useVueFlow> | null = null
+    try {
+        if (!deps) {
+            vueFlow = useVueFlow()
+        }
+    } catch (e) {
+        console.warn('⚠️ [CANVAS-RESIZE] useVueFlow context not found and deps not provided')
+    }
+
+    const findNode = deps?.findNode || vueFlow?.findNode || (() => null)
+    const updateNode = deps?.updateNode || vueFlow?.updateNode || (() => { })
+    const nodes = (deps?.nodes || vueFlow?.nodes || ref([])) as Ref<any[]>
+
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { findNode, nodes } = useVueFlow() // Access nodes directly from Vue Flow context if possible, or expect them passed? 
-    // better to use the one from useVueFlow if we are inside the provider, but safe to expect valid context.
 
     // Track resize state for preview
     const resizeState = ref({
@@ -25,7 +43,8 @@ export function useCanvasResize() {
         currentHeight: 0,
         handlePosition: null as string | null,
         isDragging: false,
-        resizeStartTime: 0
+        resizeStartTime: 0,
+        childStartPositions: {} as Record<string, { x: number; y: number }>
     })
 
 
@@ -49,14 +68,37 @@ export function useCanvasResize() {
                 currentHeight: section.position.height,
                 handlePosition: null, // Set by handle if needed, but often unused in start
                 isDragging: false,
-                resizeStartTime: Date.now()
+                resizeStartTime: Date.now(),
+                childStartPositions: {} as Record<string, { x: number; y: number }>
             }
+
+            // BUG-055: Capture start positions from Vue Flow node directly for coordinate space alignment
+            const vueFlowNode = findNode(`section-${sectionId}`)
+            if (vueFlowNode) {
+                resizeState.value.startX = vueFlowNode.position.x
+                resizeState.value.startY = vueFlowNode.position.y
+            }
+
+            // Capture initial positions of children for continuous auto-correction
+            const vueFlowParentId = `section-${sectionId}`
+            // Note: nodes is a Ref from useVueFlow
+            if (nodes.value) {
+                nodes.value.forEach(node => {
+                    // FIX: node.type in Pomo Flow is 'taskNode', not 'task'
+                    if (node.type === 'taskNode' && node.parentNode === vueFlowParentId) {
+                        resizeState.value.childStartPositions[node.id] = { ...node.position }
+                    }
+                })
+            }
+
             console.log('🎬 [Resize] Started:', {
                 sectionId,
                 startX: section.position.x,
                 startY: section.position.y,
                 startWidth: section.position.width,
-                startHeight: section.position.height
+                startHeight: section.position.height,
+                resizeState: { ...resizeState.value },
+                childCount: Object.keys(resizeState.value.childStartPositions).length
             })
         }
     }
@@ -84,6 +126,39 @@ export function useCanvasResize() {
                 }
                 if (typeof typedEvent?.params?.y === 'number') {
                     resizeState.value.currentY = typedEvent.params.y
+                }
+            }
+
+            // BUG-055 FIX: Continuous inverse delta compensation for children during resize
+            // This prevents visual "riding" of tasks when resizing from Top/Left
+            const deltaX = resizeState.value.currentX - resizeState.value.startX
+            const deltaY = resizeState.value.currentY - resizeState.value.startY
+
+            if (deltaX !== 0 || deltaY !== 0) {
+                const childIds = Object.keys(resizeState.value.childStartPositions)
+
+                // Add window log to ensure it's visible in browser tests
+                if (typeof window !== 'undefined') {
+                    (window as any).lastResizeEvent = { deltaX, deltaY, children: childIds.length }
+                }
+
+                if (childIds.length > 0) {
+                    const vueFlowParentId = `section-${sectionId}`
+
+                    if (nodes.value) {
+                        nodes.value.forEach(node => {
+                            if (node.type === 'taskNode' && node.parentNode === vueFlowParentId && resizeState.value.childStartPositions[node.id]) {
+                                const startPos = resizeState.value.childStartPositions[node.id]
+                                const newRelX = startPos.x - deltaX
+                                const newRelY = startPos.y - deltaY
+
+                                // Use updateNode for reliable reactivity during continuous resize
+                                updateNode(node.id, {
+                                    position: { x: newRelX, y: newRelY }
+                                })
+                            }
+                        })
+                    }
                 }
             }
         }
@@ -122,8 +197,8 @@ export function useCanvasResize() {
             if (section) {
                 const deltaX = newX - resizeState.value.startX
                 const deltaY = newY - resizeState.value.startY
-                const validatedWidth = Math.max(200, Math.min(2000, Math.abs(width)))
-                const validatedHeight = Math.max(80, Math.min(2000, Math.abs(height)))
+                const validatedWidth = Math.max(200, Math.min(50000, Math.abs(width)))
+                const validatedHeight = Math.max(80, Math.min(50000, Math.abs(height)))
 
                 // CRITICAL FIX: Lock BEFORE store update to prevent watcher race condition
                 // Store update triggers watchers → syncNodes, lock must exist first
@@ -133,6 +208,10 @@ export function useCanvasResize() {
                     width: validatedWidth,
                     height: validatedHeight
                 }, 'resize')
+
+                console.log('🔄 [Resize Debug] Updating section in store:', {
+                    sectionId, deltaX, deltaY, newX, newY, resizeState: { ...resizeState.value }
+                })
 
                 // Update store (now protected by lock)
                 canvasStore.updateSection(sectionId, {
@@ -150,7 +229,7 @@ export function useCanvasResize() {
                     // We need to access nodes.value. Since we are inside a composable using useVueFlow(), 
                     // nodes is a Ref<Node[]>.
                     const childTaskNodes = nodes.value.filter(node =>
-                        node.type === 'task' && node.parentNode === vueFlowParentId
+                        node.type === 'taskNode' && node.parentNode === vueFlowParentId
                     )
 
                     console.log('📋 [BUG-055] Child task nodes to offset:', childTaskNodes.length)
@@ -161,34 +240,45 @@ export function useCanvasResize() {
                         const childRelativeY = currentPos.y - deltaY
 
                         // 1. Visual update (Relative)
-                        // Using node.position assignment usually triggers Vue Flow update if reactive, 
-                        // but explicit updateNode is safer if we have it. 
-                        // We strictly don't have updateNode imported from useVueFlow in the destructure yet.
-                        // Let's rely on direct mutation or get updateNode.
-                        node.position = { x: childRelativeX, y: childRelativeY }
+                        // Use updateNode for final authoritative position
+                        updateNode(node.id, {
+                            position: { x: childRelativeX, y: childRelativeY }
+                        })
 
                         // 2. Persist absolute
                         const task = taskStore.getTask(node.id)
                         if (task) {
+                            // Ensure lock is updated to prevent sync overrides
+                            const taskAbsX = newX + childRelativeX
+                            const taskAbsY = newY + childRelativeY
+                            lockTaskPosition(node.id, { x: taskAbsX, y: taskAbsY })
+
                             taskStore.updateTask(node.id, {
                                 canvasPosition: {
-                                    x: newX + childRelativeX,
-                                    y: newY + childRelativeY
+                                    x: taskAbsX,
+                                    y: taskAbsY
                                 }
                             })
                         }
                     })
                 }
+                // Settling logic
+                isResizeSettling.value = true
+                resizeState.value.isResizing = false
+                // TASK-089: Lock group position too at end of resize
+                lockGroupPosition(sectionId, {
+                    x: newX,
+                    y: newY,
+                    width: validatedWidth,
+                    height: validatedHeight
+                })
+
+                // Clear after delay
+                setTimeout(() => {
+                    isResizeSettling.value = false
+                }, 500)
             }
         }
-
-        // Settling logic
-        isResizeSettling.value = true
-        resizeState.value.isResizing = false
-        // Clear after delay
-        setTimeout(() => {
-            isResizeSettling.value = false
-        }, 500)
     }
 
     // Computed styles for template

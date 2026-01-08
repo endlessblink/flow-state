@@ -154,29 +154,32 @@ export function useCanvasSelection() {
             const screenW = graphW * viewport.zoom
             const screenH = graphH * viewport.zoom
 
-            // 3. Check Intersection
+            // 3. New Strategy for Sections:
+            // Groups/Sections should ONLY be selected if they are FULLY CONTAINED within the selection box.
+            // This prevents the common issue of accidentally selecting the parent group when
+            // trying to rubber-band select tasks *inside* that group.
+            if (node.type === 'sectionNode') {
+                const isFullyContained = (
+                    screenX >= boxLeft &&
+                    (screenX + screenW) <= boxRight &&
+                    screenY >= boxTop &&
+                    (screenY + screenH) <= boxBottom
+                )
+
+                if (isFullyContained) {
+                    selectedIds.push(node.id)
+                }
+                // If not fully contained, do not select (even if intersecting)
+                return
+            }
+
+            // Standard intersection check for tasks and other nodes
             const intersects = (
                 screenX < boxRight &&
                 (screenX + screenW) > boxLeft &&
                 screenY < boxBottom &&
                 (screenY + screenH) > boxTop
             )
-
-            // 4. For section nodes: skip if the selection box is INSIDE the section
-            // This prevents selecting a parent group when shift+dragging inside it
-            // Groups should only be selected via their label header
-            if (intersects && node.type === 'sectionNode') {
-                const selectionInsideSection = (
-                    screenX <= boxLeft &&
-                    screenY <= boxTop &&
-                    (screenX + screenW) >= boxRight &&
-                    (screenY + screenH) >= boxBottom
-                )
-                if (selectionInsideSection) {
-                    // Skip this section - selection is entirely inside it
-                    return
-                }
-            }
 
             if (intersects) {
                 selectedIds.push(node.id)

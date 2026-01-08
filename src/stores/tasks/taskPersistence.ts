@@ -36,6 +36,32 @@ export function useTaskPersistence(
     // -- Supabase Integration --
     const { fetchTasks, saveTasks, deleteTask: deleteFromDB, bulkDeleteTasks: bulkDeleteFromDB } = useSupabaseDatabase()
 
+    // TASK-142 FIX: Guest Mode localStorage persistence for tasks
+    const GUEST_TASKS_KEY = 'pomoflow-guest-tasks'
+
+    const saveTasksToLocalStorage = () => {
+        try {
+            localStorage.setItem(GUEST_TASKS_KEY, JSON.stringify(_rawTasks.value))
+            console.log(`💾 [GUEST-MODE] Saved ${_rawTasks.value.length} tasks to localStorage`)
+        } catch (e) {
+            console.error('❌ [GUEST-MODE] Failed to save tasks to localStorage:', e)
+        }
+    }
+
+    const loadTasksFromLocalStorage = (): Task[] => {
+        try {
+            const stored = localStorage.getItem(GUEST_TASKS_KEY)
+            if (stored) {
+                const tasks = JSON.parse(stored) as Task[]
+                console.log(`📦 [GUEST-MODE] Loaded ${tasks.length} tasks from localStorage`)
+                return tasks
+            }
+        } catch (e) {
+            console.error('❌ [GUEST-MODE] Failed to load tasks from localStorage:', e)
+        }
+        return []
+    }
+
     const deleteTaskFromStorage = async (taskId: string): Promise<void> => {
         console.log(`🗑️ [PERSISTENCE] deleteTaskFromStorage called for: ${taskId}`)
 
@@ -82,12 +108,8 @@ export function useTaskPersistence(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
-        // SAFETY: Prevent saving if not authenticated (Guest Mode)
-        const { useAuthStore } = await import('@/stores/auth')
-        const authStore = useAuthStore()
-        if (!authStore.isAuthenticated) return
-
-
+        // TASK-142 FIX: ALWAYS try Supabase - if reads work, writes should too
+        // The auth check was causing position resets: loads came from Supabase but saves were blocked
         try {
             // Validation
             const validation = validateBeforeSave(tasksToSave)
@@ -116,9 +138,30 @@ export function useTaskPersistence(
         try {
             isLoadingFromDatabase.value = true
 
+            // Guest mode: skip Supabase, start with empty tasks
+            const { useAuthStore } = await import('@/stores/auth')
+            const authStore = useAuthStore()
+            if (!authStore.isAuthenticated) {
+                console.log('👤 [GUEST-MODE] Skipping Supabase fetch - guest mode starts empty')
+                _rawTasks.value = []
+                return
+            }
+
             const loadedTasks = await fetchTasks()
+
+            // TASK-142: Position integrity validation - detect invalid canvas positions early
+            const tasksWithPositions = loadedTasks.filter(t => t.canvasPosition)
+            const invalidTasks = tasksWithPositions.filter(t =>
+                !Number.isFinite(t.canvasPosition?.x) ||
+                !Number.isFinite(t.canvasPosition?.y)
+            )
+            if (invalidTasks.length > 0) {
+                console.error(`❌ [INTEGRITY] ${invalidTasks.length} tasks have invalid canvas positions:`,
+                    invalidTasks.map(t => `${t.title}: ${JSON.stringify(t.canvasPosition)}`))
+            }
+
             _rawTasks.value = loadedTasks
-            console.log(`✅ [SUPABASE] Loaded ${loadedTasks.length} tasks`)
+            console.log(`✅ [SUPABASE] Loaded ${loadedTasks.length} tasks (${tasksWithPositions.length} with canvas positions)`)
 
             // If empty, we might need a backup import (legacy logic simplified)
             if (loadedTasks.length === 0) {

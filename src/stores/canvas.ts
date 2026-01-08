@@ -114,29 +114,53 @@ export const useCanvasStore = defineStore('canvas', () => {
     try {
       console.log(`[CanvasStore] loadFromDatabase called at ${new Date().toISOString()}`)
 
-      // TASK-130: Check if we're in Guest Mode
       const { useAuthStore } = await import('@/stores/auth')
       const authStore = useAuthStore()
 
+      // Guest mode: skip Supabase, start with empty groups
       if (!authStore.isAuthenticated) {
-        // Guest Mode: Load from localStorage
-        const localGroups = loadGroupsFromLocalStorage()
-        if (localGroups.length > 0) {
-          _rawGroups.value = localGroups
-          console.log(`✅ [GUEST-MODE] Using ${localGroups.length} groups from localStorage`)
-          return
-        }
-        // If no localStorage data, try Supabase (might have demo data or anon access)
+        console.log('👤 [GUEST-MODE] Skipping Supabase fetch - canvas starts empty')
+        _rawGroups.value = []
+        return
       }
 
+      // TASK-142 FIX: ALWAYS try Supabase first - it has the most up-to-date positions
+      // Only fall back to localStorage if Supabase fails or returns empty
       const loadedGroups = await fetchGroups()
-      _rawGroups.value = loadedGroups
 
-      console.log(`✅ [SUPABASE] Loaded ${loadedGroups.length} canvas groups:`, loadedGroups.map(g => g.name))
+      // TASK-142: Position integrity validation - detect invalid positions early
+      const invalidGroups = loadedGroups.filter(g =>
+        !g.position ||
+        !Number.isFinite(g.position.x) ||
+        !Number.isFinite(g.position.y) ||
+        !Number.isFinite(g.position.width) ||
+        !Number.isFinite(g.position.height)
+      )
+      if (invalidGroups.length > 0) {
+        console.error(`❌ [INTEGRITY] ${invalidGroups.length} groups have invalid positions:`,
+          invalidGroups.map(g => `${g.name}: ${JSON.stringify(g.position)}`))
+      }
 
-      // TASK-130: If in Guest Mode and got Supabase data, cache to localStorage
-      if (!authStore.isAuthenticated && loadedGroups.length > 0) {
-        saveGroupsToLocalStorage()
+      if (loadedGroups.length > 0) {
+        _rawGroups.value = loadedGroups
+        console.log(`✅ [SUPABASE] Loaded ${loadedGroups.length} canvas groups:`, loadedGroups.map(g => g.name))
+
+        // TASK-142 DEBUG: Log positions of loaded groups
+        console.log(`📍 [GROUP-LOAD] Positions from Supabase:`)
+        loadedGroups.forEach(g => {
+          console.log(`   - ${g.name}: (${g.position?.x?.toFixed(0) ?? 'null'}, ${g.position?.y?.toFixed(0) ?? 'null'})`)
+        })
+
+        // NOTE: Guest mode is fully ephemeral - no localStorage caching
+        // Authenticated users get data from Supabase directly
+        return
+      }
+
+      // Supabase returned empty - try localStorage as fallback
+      const localGroups = loadGroupsFromLocalStorage()
+      if (localGroups.length > 0) {
+        _rawGroups.value = localGroups
+        console.log(`✅ [FALLBACK] Using ${localGroups.length} groups from localStorage (Supabase empty)`)
       }
 
     } catch (e) {
@@ -152,21 +176,16 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const saveGroupToStorage = async (group: CanvasGroup) => {
-    const { useAuthStore } = await import('@/stores/auth')
-    const authStore = useAuthStore()
-
-    // TASK-130: In Guest Mode, save to localStorage instead
-    if (!authStore.isAuthenticated) {
-      // Update group in _rawGroups first (should already be done by updateGroup)
-      // Then persist entire groups array to localStorage
-      saveGroupsToLocalStorage()
-      return
-    }
+    // NOTE: Guest mode is fully ephemeral - groups exist only in memory
+    // Only authenticated users persist to Supabase
+    console.log(`📍 [GROUP-SAVE] Saving "${group.name}" pos=(${group.position?.x?.toFixed(0)}, ${group.position?.y?.toFixed(0)})`)
 
     try {
       await saveGroup(group)
+      console.log(`✅ [GROUP-SAVE] Group "${group.name}" saved to Supabase successfully`)
     } catch (e) {
-      console.error(`❌ [SUPABASE] Failed to save group ${group.id}:`, e)
+      // Supabase failed - guest mode data stays in memory only
+      console.warn(`⚠️ [GROUP-SAVE] Supabase save failed (guest mode: memory only):`, e)
     }
   }
 
@@ -553,6 +572,38 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Auto-init
   initialize()
+
+  // TASK-142 FIX: Watch for auth state changes to reload groups from Supabase
+  // This fixes the race condition where canvas loads before auth is ready
+  import('@/stores/auth').then(({ useAuthStore }) => {
+    const authStore = useAuthStore()
+
+    // Watch for auth becoming ready
+    watch(
+      () => [authStore.isInitialized, authStore.isAuthenticated],
+      async ([isInitialized, isAuthenticated], [, wasAuthenticated]) => {
+        // Only reload when:
+        // 1. Auth just became initialized (first load)
+        // 2. AND user is authenticated
+        // 3. AND groups were loaded from Guest Mode (localStorage)
+        if (isInitialized && isAuthenticated && !wasAuthenticated) {
+          console.log('🔄 [CANVAS] Auth state changed to authenticated - reloading groups from Supabase')
+
+          // Force reload from Supabase (not localStorage)
+          try {
+            const loadedGroups = await fetchGroups()
+            if (loadedGroups.length > 0) {
+              _rawGroups.value = loadedGroups
+              console.log(`✅ [SUPABASE] Reloaded ${loadedGroups.length} canvas groups after auth`)
+            }
+          } catch (e) {
+            console.error('❌ [CANVAS] Failed to reload groups after auth:', e)
+          }
+        }
+      },
+      { immediate: false }
+    )
+  })
 
   // Aliases for compatibility
   // export type CanvasSection = CanvasGroup // Moved to top level

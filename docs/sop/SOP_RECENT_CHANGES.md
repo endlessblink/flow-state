@@ -83,3 +83,42 @@
 ### UX: Catalog View Filters
 - **Change**: Moved "Hide Done Tasks" (eye icon) from `AllTasksView` to `ViewControls` component.
 - **Benefit**: Consistent UI with other view controls (Sort, Density).
+
+---
+
+## 6. System Consolidation Audit - Jan 8, 2026
+
+### TASK-144: Eliminate Duplicate Systems
+**Goal**: One lean system for every aspect - no competing implementations.
+
+### Created: Centralized Utilities
+| File | Purpose |
+|------|---------|
+| `src/utils/geometry.ts` | Single source for containment detection (`isPointInRect`, `findSmallestContainingRect`, etc.) |
+| `src/utils/durationCategories.ts` | Single source for duration definitions (`DURATION_THRESHOLDS`, `matchesDurationCategory`, etc.) |
+| `docs/architecture/system-guide.md` | Decision trees for choosing the right system |
+
+### Renamed: Clarity Improvements
+| Old Name | New Name | Reason |
+|----------|----------|--------|
+| `useTaskSmartGroups.ts` | `usePowerKeywords.ts` | Avoids SmartView/SmartGroup confusion |
+| `useCanvasSmartGroups.ts` | `useCanvasOverdueCollector.ts` | Clarifies actual purpose |
+
+**Note**: Old paths re-export from new locations for backwards compatibility.
+
+### Deprecated: usePerformanceMonitor
+- **Status**: Not imported anywhere (dead code)
+- **Action**: Added `@deprecated` JSDoc + runtime warning
+- **Migration**: Use `usePerformanceManager` instead
+
+### Deleted: Unused/Redundant Files
+| File | Size | Reason |
+|------|------|--------|
+| `useContextMenuEvents.ts` | ~2KB | Consolidated into `useContextMenu.ts` |
+| `useContextMenuPositioning.ts` | ~3KB | Consolidated into `useContextMenu.ts` |
+| `inputSanitizer.ts` | 12KB | Enterprise-grade overkill; `simpleSanitizer.ts` kept |
+
+### Result
+- Single source of truth for: geometry, duration categories, sanitization, performance, context menus
+- Clear naming conventions (Power Keywords vs Smart Views)
+- System selection guide for developers

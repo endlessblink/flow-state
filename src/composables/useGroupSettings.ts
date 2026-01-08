@@ -8,6 +8,8 @@
 import { computed, ref, watch } from 'vue'
 import { detectPowerKeyword, type PowerKeywordResult } from './useTaskSmartGroups'
 import type { AssignOnDropSettings, CollectFilterSettings } from '@/stores/canvas'
+// TASK-144: Use centralized duration defaults
+import { DURATION_DEFAULTS, type DurationCategory } from '@/utils/durationCategories'
 
 /**
  * Format date key as YYYY-MM-DD
@@ -135,12 +137,13 @@ export function useGroupSettings() {
         settings.status = keyword.value as AssignOnDropSettings['status']
         break
       case 'duration': {
-        const d = keyword.value
-        if (d === 'quick') settings.estimatedDuration = 15
-        else if (d === 'short') settings.estimatedDuration = 30
-        else if (d === 'medium') settings.estimatedDuration = 60
-        else if (d === 'long') settings.estimatedDuration = 120
-        else if (d === 'unestimated') settings.estimatedDuration = null // Use null to indicate "clear duration"
+        // TASK-144: Use centralized duration defaults
+        const d = keyword.value as DurationCategory
+        if (d === 'unestimated') {
+          settings.estimatedDuration = null // Use null to indicate "clear duration"
+        } else {
+          settings.estimatedDuration = DURATION_DEFAULTS[d]
+        }
         break
       }
     }

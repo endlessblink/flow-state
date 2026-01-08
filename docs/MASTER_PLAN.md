@@ -1,5 +1,5 @@
-**Last Updated**: January 8, 2026 (TASK-146 Container Consolidation)
-**Version**: 5.32 (CSS container utilities added, duplicate classes renamed)
+**Last Updated**: January 8, 2026 (TASK-148 Supabase Debugger Skill)
+**Version**: 5.33 (Supabase Debugger Skill created)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -124,6 +124,54 @@
 <details id="active-task-details">
 <summary><b>Active Task Details</b></summary>
 
+### ~~TASK-148~~: Supabase Debugger Skill (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+
+Created comprehensive Supabase Debugger Skill for Claude Code to debug, monitor, and optimize Supabase applications.
+
+**Skill Location**: `.claude/skills/supabase-debugger/`
+
+**Contents**:
+- [x] `SKILL.md` - Main skill file with 7 debugging workflows
+- [x] `references/commands.md` - Complete command reference (60+ commands)
+- [x] `references/workflows.md` - Extended debugging workflows for complex scenarios
+- [x] `references/schema-validation.md` - Schema validation SQL queries
+- [x] `scripts/check-connection.sh` - Connection diagnostic bash script
+- [x] `scripts/analyze-queries.sql` - Query performance analysis queries
+
+**Workflows Covered**:
+1. Connection Diagnostics
+2. Authentication Debugging
+3. Query Optimization
+4. Realtime Subscription Debugging
+5. Memory Investigation
+6. RLS Policy Validation
+7. Production Readiness Check
+
+---
+
+### ~~TASK-147~~: Guest Mode Fully Ephemeral (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 8, 2026
+
+Made guest mode (unauthenticated users) fully ephemeral - fresh empty app on every page refresh.
+
+**Changes**:
+- [x] Created `src/utils/guestModeStorage.ts` - utility to clear guest localStorage keys
+- [x] Modified `src/composables/app/useAppInitialization.ts` - clear guest data on startup
+- [x] Modified `src/stores/tasks/taskPersistence.ts` - skip Supabase fetch for guests
+- [x] Modified `src/stores/canvas.ts` - skip Supabase fetch for guests
+- [x] Modified `src/stores/projects.ts` - skip Supabase fetch for guests
+
+**Behavior**:
+- Guests see empty app on load (0 tasks, 0 groups, 0 projects)
+- Data created during session exists only in memory
+- Page refresh clears all data (fresh start)
+- Allows people to test the app without leftover data
+
+---
+
 ### ~~TASK-146~~: Container Consolidation (✅ DONE)
 **Priority**: P2-MEDIUM
 **Completed**: January 8, 2026
@@ -226,18 +274,18 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [ ] Extract `CanvasMiniMap` usage (if complex)
 - [ ] Refactor `useCanvasDragDrop` geometry logic to `utils/canvasGeometry.ts`
 
-### TASK-144: System Consolidation Audit (🔄 IN PROGRESS)
+### ~~TASK-144~~: System Consolidation Audit (✅ DONE)
 **Priority**: P2-MEDIUM
 **Plan**: [plans/system-consolidation-audit.md](../plans/system-consolidation-audit.md)
 **Goal**: Eliminate duplicate, redundant, and competing systems. One lean system for every aspect.
-**Progress**:
+**Result**: Successfully consolidated to single sources of truth:
 - [x] Phase 1: Context Menu Cleanup - Deleted `useContextMenuEvents.ts` and `useContextMenuPositioning.ts`
-- [x] Migrated `CanvasContextMenu.vue` to use consolidated `useContextMenu.ts`
-- [x] Phase 2: Utility Extraction - Created `geometry.ts`, updated containment logic
-- [ ] Phase 3: Duration Definition Centralization
-- [ ] Phase 4: Performance System Consolidation
-- [ ] Phase 5: Naming Clarity (Smart Groups vs Smart Views)
-- [ ] Phase 6: Documentation
+- [x] Phase 2: Utility Extraction - Created `geometry.ts` for containment detection
+- [x] Phase 3: Duration Centralization - Created `durationCategories.ts`, updated 8 files
+- [x] Phase 4: Naming Clarity - Renamed `useTaskSmartGroups` → `usePowerKeywords`, `useCanvasSmartGroups` → `useCanvasOverdueCollector`
+- [x] Phase 5: Performance Deprecation - Added deprecation to `usePerformanceMonitor.ts`
+- [x] Phase 6: Sanitization Cleanup - Deleted `inputSanitizer.ts` (12KB)
+- [x] Phase 7: Documentation - Created `docs/architecture/system-guide.md`
 
 ### TASK-138: Refactor CanvasView Phase 2 (Store & UI)
 **Priority**: P2-MEDIUM

@@ -5,9 +5,11 @@ import { useProjectStore } from '@/stores/projects'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notifications'
+import { useAuthStore } from '@/stores/auth'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
+import { clearGuestData } from '@/utils/guestModeStorage'
 // BUG-FIX: Import mappers to properly convert realtime data
 import { fromSupabaseTask, fromSupabaseProject, type SupabaseTask, type SupabaseProject } from '@/utils/supabaseMappers'
 
@@ -26,6 +28,16 @@ export function useAppInitialization() {
             (window as any).PomoFlowSessionStart = Date.now()
         }
         console.log('🚀 [APP] Starting strictly ordered initialization (Supabase Mode)...')
+
+        // 0. Initialize auth and clear guest data if not authenticated
+        const authStore = useAuthStore()
+        await authStore.initialize()
+
+        if (!authStore.isAuthenticated) {
+            // Guest mode: clear all persisted data for fresh experience
+            clearGuestData()
+            console.log('👤 [APP] Guest mode: starting with fresh empty app')
+        }
 
         // 1. Initial Load from Supabase
         console.log('⚡ [APP] Loading stores from Supabase...')

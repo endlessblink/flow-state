@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
+// TASK-144: Use centralized duration categories
+import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
 
 export function useInboxFiltering() {
     const taskStore = useTaskStore()
@@ -9,7 +11,7 @@ export function useInboxFiltering() {
     const unscheduledOnly = ref(false)
     const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
     const selectedProject = ref<string | null>(null)
-    const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
+    const selectedDuration = ref<DurationCategory | null>(null)
 
     // Helper functions for date calculations
     const getToday = () => {
@@ -142,20 +144,11 @@ export function useInboxFiltering() {
             }
         }
 
+        // TASK-144: Use centralized duration matching
         if (selectedDuration.value !== null) {
-            tasks = tasks.filter(task => {
-                const d = task.estimatedDuration
-                if (selectedDuration.value === 'unestimated') return !d
-                if (!d) return false
-
-                switch (selectedDuration.value) {
-                    case 'quick': return d <= 15
-                    case 'short': return d > 15 && d <= 30
-                    case 'medium': return d > 30 && d <= 60
-                    case 'long': return d > 60
-                    default: return false
-                }
-            })
+            tasks = tasks.filter(task =>
+                matchesDurationCategory(task.estimatedDuration, selectedDuration.value!)
+            )
         }
 
         return tasks

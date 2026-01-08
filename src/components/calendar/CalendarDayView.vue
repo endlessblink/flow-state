@@ -165,7 +165,7 @@ defineEmits<{
             />
 
             <!-- Task Content -->
-            <div class="task-content">
+            <div class="task-content--calendar">
               <div class="task-header">
                 <div class="task-title">
                   {{ calEvent.title }}
@@ -341,7 +341,7 @@ defineEmits<{
   padding-left: calc(var(--space-3) - 2px);
 }
 
-.task-content {
+.task-content--calendar {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);

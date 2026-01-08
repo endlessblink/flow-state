@@ -1,7 +1,7 @@
 <template>
   <div class="performance-view">
     <header class="page-header glass">
-      <div class="header-content">
+      <div class="header-content--performance">
         <h1>Performance Dashboard</h1>
         <p>System health and benchmarking suite for Pomo-Flow</p>
       </div>
@@ -323,7 +323,7 @@ const saveAsBaseline = () => {
   margin-bottom: 2rem;
 }
 
-.header-content h1 {
+.header-content--performance h1 {
   margin: 0;
   font-size: 1.75rem;
   background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
@@ -331,7 +331,7 @@ const saveAsBaseline = () => {
   -webkit-text-fill-color: transparent;
 }
 
-.header-content p {
+.header-content--performance p {
   margin: 0.25rem 0 0;
   opacity: 0.6;
 }

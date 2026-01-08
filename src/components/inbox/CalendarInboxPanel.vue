@@ -182,7 +182,7 @@
         </div>
 
         <!-- Task Content -->
-        <div class="task-content">
+        <div class="task-content--calendar-inbox">
           <div class="task-title" dir="auto">
             {{ task.title }}
           </div>

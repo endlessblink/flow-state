@@ -26,7 +26,7 @@
     </div>
 
     <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
-    <div class="kanban-scroll-container">
+    <div class="kanban-scroll-container scroll-container">
       <div class="kanban-board" @click="closeContextMenu">
         <KanbanSwimlane
           v-for="project in projectsWithTasks"
@@ -801,12 +801,9 @@ const _handleToggleTodayFilter = (event: MouseEvent) => {
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 
-/* SCROLL CONTAINER */
+/* SCROLL CONTAINER - uses .scroll-container utility for base styles */
 .kanban-scroll-container {
-  flex: 1;
-  overflow-y: auto;
   overflow-x: visible; /* Allow horizontal scrolling in inner containers */
-  min-height: 0; /* Critical: allows flexbox shrinking */
   padding-bottom: 2rem;
   position: relative;
 }

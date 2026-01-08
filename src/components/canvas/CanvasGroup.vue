@@ -233,14 +233,15 @@ const isPowerMode = computed(() => {
 })
 
 const powerModeTooltip = computed(() => {
-  if (!powerKeyword.value) return ''
-  const categoryLabels = {
+  if (!powerKeyword.value || !powerKeyword.value.category) return ''
+  const categoryLabels: Record<string, string> = {
     date: 'Sets due date',
     priority: 'Sets priority',
     status: 'Sets status',
     duration: 'Sets duration'
   }
-  return `Power Group: ${categoryLabels[powerKeyword.value.category]} to "${powerKeyword.value.displayName}"`
+  const label = categoryLabels[powerKeyword.value.category] || 'Sets property'
+  return `Power Group: ${label} to "${powerKeyword.value.displayName}"`
 })
 
 // Get count of matching tasks in inbox for collect button

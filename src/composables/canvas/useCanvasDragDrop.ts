@@ -600,7 +600,12 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 }
             }
 
-            // Check if it's a section node or task node
+            // TASK-142 GUARDRAIL: Section vs Task handling MUST be at the SAME nesting level.
+            // Bug was found where task logic was nested INSIDE section block, making it
+            // unreachable for actual task nodes. The structure MUST be:
+            //   if (section-node) { handle section } else { handle task }
+            // NOT:
+            //   if (section-node) { if (found) {...} else { handle task - UNREACHABLE! } }
             if (node.id.startsWith('section-')) {
                 const sectionId = node.id.replace('section-', '')
                 const section: CanvasSection | undefined = canvasStore.sections.find((s: CanvasSection) => s.id === sectionId)

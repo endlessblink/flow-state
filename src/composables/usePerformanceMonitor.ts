@@ -1,5 +1,14 @@
-// Performance Monitoring Composable
-// Tracks application performance metrics and provides optimization suggestions
+/**
+ * @deprecated usePerformanceMonitor is deprecated.
+ * Use usePerformanceManager instead.
+ * This file will be removed in a future release.
+ *
+ * Migration guide:
+ * - For debouncing/throttling: Use createDebounced/createThrottled from usePerformanceManager
+ * - For caching: Use setCache/getCache from usePerformanceManager
+ * - For memory monitoring: usePerformanceManager has built-in memory monitoring
+ * - For FPS/render metrics: These features were unused and are being removed
+ */
 
 import { ref, computed, onMounted as _onMounted, onUnmounted } from 'vue'
 
@@ -21,6 +30,15 @@ interface PerformanceEntry {
 }
 
 export const usePerformanceMonitor = () => {
+  // Runtime deprecation warning (dev only)
+  if (import.meta.env.DEV) {
+    console.warn(
+      '[DEPRECATED] usePerformanceMonitor is deprecated. ' +
+      'Use usePerformanceManager instead. ' +
+      'This file will be removed in a future release.'
+    )
+  }
+
   const metrics = ref<PerformanceMetrics>({
     renderTime: 0,
     stateUpdates: 0,

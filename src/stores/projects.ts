@@ -55,16 +55,8 @@ export const useProjectStore = defineStore('projects', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
-        // SAFETY: Prevent saving if not authenticated (Guest Mode)
-        // This avoids "User not authenticated" errors in the sync loop
-        const { useAuthStore } = await import('@/stores/auth')
-        const authStore = useAuthStore()
-        if (!authStore.isAuthenticated) {
-            // console.debug(`🛡️ [SUPABASE-SKIP] Skipping project save (${context}) - Guest Mode`)
-            return
-        }
-
-
+        // TASK-142 FIX: ALWAYS try Supabase - if reads work, writes should too
+        // The auth check was causing data loss: loads came from Supabase but saves were blocked
         try {
             await saveProjects(projectsToSave)
             // console.debug(`✅ [SUPABASE] Saved ${projectsToSave.length} projects (${context})`)
@@ -76,6 +68,15 @@ export const useProjectStore = defineStore('projects', () => {
     const loadProjectsFromDatabase = async () => {
         isLoading.value = true
         try {
+            // Guest mode: skip Supabase, start with empty projects
+            const { useAuthStore } = await import('@/stores/auth')
+            const authStore = useAuthStore()
+            if (!authStore.isAuthenticated) {
+                console.log('👤 [GUEST-MODE] Skipping Supabase fetch - projects start empty')
+                _rawProjects.value = []
+                return
+            }
+
             const loadedProjects = await fetchProjects()
             _rawProjects.value = loadedProjects
             console.log(`✅ [SUPABASE] Loaded ${loadedProjects.length} projects`)

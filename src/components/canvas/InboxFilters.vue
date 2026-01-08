@@ -159,6 +159,8 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2 } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
+// TASK-144: Use centralized duration categories
+import { type DurationCategory, DURATION_FILTER_OPTIONS, matchesDurationCategory } from '@/utils/durationCategories'
 
 
 interface Props {
@@ -167,7 +169,7 @@ interface Props {
   unscheduledOnly: boolean
   selectedPriority: 'high' | 'medium' | 'low' | null
   selectedProject: string | null
-  selectedDuration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
+  selectedDuration: DurationCategory | null
   hideDoneTasks?: boolean // TASK-076: Separate done filter for each view
 }
 
@@ -177,7 +179,7 @@ const emit = defineEmits<{
   'update:unscheduledOnly': [value: boolean]
   'update:selectedPriority': [value: 'high' | 'medium' | 'low' | null]
   'update:selectedProject': [value: string | null]
-  'update:selectedDuration': [value: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null]
+  'update:selectedDuration': [value: DurationCategory | null]
   'update:hideDoneTasks': [value: boolean] // TASK-076
   clearAll: []
 }>()
@@ -197,14 +199,8 @@ const priorities = [
   { value: 'low' as const, label: 'Low' }
 ]
 
-// Duration options
-const durations = [
-  { value: 'quick' as const, label: 'Quick (<15m)', icon: '⚡' },
-  { value: 'short' as const, label: 'Short (15-30m)', icon: '☕' },
-  { value: 'medium' as const, label: 'Medium (30-60m)', icon: '⏳' },
-  { value: 'long' as const, label: 'Long (>1h)', icon: '🏔️' },
-  { value: 'unestimated' as const, label: 'No Estimate', icon: '❓' }
-]
+// TASK-144: Duration options from centralized source
+const durations = DURATION_FILTER_OPTIONS
 
 // Computed: Check if task is scheduled on calendar (has instances with dates)
 const isScheduledOnCalendar = (task: Task): boolean => {
@@ -255,21 +251,11 @@ const getProjectCount = (projectId: string | null): number => {
   return props.tasks.filter(task => task.projectId === projectId).length
 }
 
-// Get count of tasks with specific duration
-const getDurationCount = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated'): number => {
-  return props.tasks.filter(task => {
-    const d = task.estimatedDuration
-    if (duration === 'unestimated') return !d
-    if (!d) return false
-    
-    switch (duration) {
-      case 'quick': return d <= 15
-      case 'short': return d > 15 && d <= 30
-      case 'medium': return d > 30 && d <= 60
-      case 'long': return d > 60
-      default: return false
-    }
-  }).length
+// TASK-144: Get count of tasks with specific duration using centralized matching
+const getDurationCount = (duration: DurationCategory): number => {
+  return props.tasks.filter(task =>
+    matchesDurationCategory(task.estimatedDuration, duration)
+  ).length
 }
 
 // Select priority and close dropdown

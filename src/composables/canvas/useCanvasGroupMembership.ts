@@ -6,27 +6,18 @@
  *
  * Note: Tasks are associated with groups through visual containment (position-based),
  * not through explicit groupId fields.
+ *
+ * TASK-144: Now uses shared geometry utilities from @/utils/geometry.ts
  */
 
 import { computed } from 'vue'
 import { useCanvasStore, type CanvasGroup } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
+import { isPointInRect, findSmallestContainingRect, type Rect } from '@/utils/geometry'
 
 export function useCanvasGroupMembership() {
   const canvasStore = useCanvasStore()
   const taskStore = useTaskStore()
-
-  /**
-   * Check if a point is inside a rectangle
-   */
-  const isPointInRect = (
-    x: number,
-    y: number,
-    rect: { x: number; y: number; width: number; height: number }
-  ): boolean => {
-    return x >= rect.x && x <= rect.x + rect.width &&
-           y >= rect.y && y <= rect.y + rect.height
-  }
 
   /**
    * Get the canvas group ID that contains a task.
@@ -38,22 +29,17 @@ export function useCanvasGroupMembership() {
 
     const { x, y } = task.canvasPosition
 
-    // Find the smallest containing group (most specific)
-    let bestMatch: CanvasGroup | null = null
-    let bestArea = Infinity
+    // Convert groups to Rect format for geometry utils
+    const groupRects = canvasStore.groups.map(group => ({
+      ...group,
+      x: group.position.x,
+      y: group.position.y,
+      width: group.position.width,
+      height: group.position.height
+    }))
 
-    for (const group of canvasStore.groups) {
-      const { x: gx, y: gy, width, height } = group.position
-      if (isPointInRect(x, y, { x: gx, y: gy, width, height })) {
-        const area = width * height
-        if (area < bestArea) {
-          bestArea = area
-          bestMatch = group
-        }
-      }
-    }
-
-    return bestMatch?.id || null
+    const containingGroup = findSmallestContainingRect(x, y, groupRects)
+    return containingGroup?.id || null
   }
 
   /**

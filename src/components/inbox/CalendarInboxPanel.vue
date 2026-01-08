@@ -267,6 +267,8 @@ import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import { useBrainDump } from '@/composables/useBrainDump'
+// TASK-144: Use centralized duration categories
+import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
@@ -306,7 +308,7 @@ const quickAddDirection = computed(() => {
 const unscheduledOnly = ref(false)
 const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
 const selectedProject = ref<string | null>(null)
-const selectedDuration = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
+const selectedDuration = ref<DurationCategory | null>(null)
 const showTodayOnly = ref(false)
 
 // TASK-106: Canvas group filter (primary filter for reducing overload)
@@ -399,20 +401,11 @@ const inboxTasks = computed(() => {
     }
   }
 
+  // TASK-144: Use centralized duration matching
   if (selectedDuration.value !== null) {
-    tasks = tasks.filter(task => {
-      const d = task.estimatedDuration
-      if (selectedDuration.value === 'unestimated') return !d
-      if (!d) return false
-
-      switch (selectedDuration.value) {
-        case 'quick': return d <= 15
-        case 'short': return d > 15 && d <= 30
-        case 'medium': return d > 30 && d <= 60
-        case 'long': return d > 60
-        default: return false
-      }
-    })
+    tasks = tasks.filter(task =>
+      matchesDurationCategory(task.estimatedDuration, selectedDuration.value!)
+    )
   }
 
   return tasks

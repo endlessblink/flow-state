@@ -66,6 +66,7 @@
             <button
               class="priority-btn"
               :class="{ active: task.priority === 'low' }"
+              aria-label="Set priority to Low"
               @click="updatePriority('low')"
             >
               Low
@@ -73,6 +74,7 @@
             <button
               class="priority-btn"
               :class="{ active: task.priority === 'medium' }"
+              aria-label="Set priority to Medium"
               @click="updatePriority('medium')"
             >
               Medium
@@ -80,6 +82,7 @@
             <button
               class="priority-btn"
               :class="{ active: task.priority === 'high' }"
+              aria-label="Set priority to High"
               @click="updatePriority('high')"
             >
               High
@@ -91,7 +94,15 @@
           <label class="edit-label">Due Date:</label>
 
           <!-- Clickable Date Display with Hidden Input -->
-          <div class="date-input-wrapper" @click="openDatePicker">
+          <div
+            class="date-input-wrapper"
+            role="button"
+            tabindex="0"
+            :aria-label="`Change due date, current date is ${formattedDueDate}`"
+            @click="openDatePicker"
+            @keydown.enter.prevent="openDatePicker"
+            @keydown.space.prevent="openDatePicker"
+          >
             <Calendar :size="16" class="date-icon" />
             <span class="date-display">{{ formattedDueDate }}</span>
             <input
@@ -109,6 +120,7 @@
             <button
               class="quick-date-btn"
               :class="{ active: isToday }"
+              aria-label="Set due date to Today"
               @click.stop="setToday"
             >
               Today
@@ -116,6 +128,7 @@
             <button
               class="quick-date-btn"
               :class="{ active: isTomorrow }"
+              aria-label="Set due date to Tomorrow"
               @click.stop="setTomorrow"
             >
               Tomorrow
@@ -123,6 +136,7 @@
             <button
               class="quick-date-btn"
               :class="{ active: isWeekend }"
+              aria-label="Set due date to this Weekend"
               @click.stop="setWeekend"
             >
               Weekend
@@ -130,6 +144,7 @@
             <button
               class="quick-date-btn"
               :class="{ active: isNextWeek }"
+              aria-label="Set due date to Next Week"
               @click.stop="setNextWeek"
             >
               Next Week
@@ -137,6 +152,7 @@
             <button
               class="quick-date-btn clear-btn"
               :class="{ active: hasNoDate }"
+              aria-label="Clear due date"
               @click.stop="clearDate"
             >
               Clear
@@ -150,6 +166,7 @@
             <button
               class="mark-done-btn action-icon-btn"
               title="Mark Done (D)"
+              aria-label="Mark task as done"
               @click.stop="handleMarkDone"
             >
               <CheckCircle :size="20" />
@@ -158,6 +175,7 @@
             <button
               class="edit-btn action-icon-btn"
               title="Edit Task (E)"
+              aria-label="Edit task details"
               @click.stop="handleEditTask"
             >
               <Edit :size="20" />
@@ -166,6 +184,7 @@
             <button
               class="delete-btn action-icon-btn"
               title="Done + Delete (Del)"
+              aria-label="Mark as done and delete task"
               @click.stop="handleMarkDoneAndDelete"
             >
               <Trash2 :size="20" />

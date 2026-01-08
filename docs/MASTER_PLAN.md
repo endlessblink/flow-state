@@ -1,5 +1,5 @@
-**Last Updated**: January 8, 2026 (TASK-136 CouchDB Decommissioned)
-**Version**: 5.31 (CouchDB removed, app uses Supabase exclusively)
+**Last Updated**: January 8, 2026 (TASK-146 Container Consolidation)
+**Version**: 5.32 (CSS container utilities added, duplicate classes renamed)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -28,6 +28,8 @@
 | ROAD-011 | AI Assistant | P1 | [See Detailed Plan](#roadmaps) | - |
 | ~~ROAD-022~~ | ✅ **DONE** | Auth (Supabase)| [Details](./archive/MASTER_PLAN_JAN_2026.md) | - |
 | ~~TASK-132~~ | ✅ **DONE** | Fix Canvas & Auth | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/3f8d0816-9774-4fe5-aa58-d6f311bc2d36/walkthrough.md) | - |
+| **BUG-144** | **Canvas Tasks Disappeared** | **P0** | 🔄 **DEBUGGING** | - |
+
 
 ---
 
@@ -122,6 +124,38 @@
 <details id="active-task-details">
 <summary><b>Active Task Details</b></summary>
 
+### ~~TASK-146~~: Container Consolidation (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+**PR**: #33
+
+Reduced CSS container class redundancy (~25%) through shared utilities and BEM renaming.
+
+**Changes**:
+- [x] Added `.scroll-container` utility (flexbox scroll pattern for nested layouts)
+- [x] Added `.content-section` utility (bordered content sections)
+- [x] Removed unnecessary `.canvas-container-wrapper` nesting in CanvasView.vue
+- [x] Migrated 4 files to use `.scroll-container` (BoardView, CalendarView, BaseModal, UnifiedInboxPanel)
+- [x] Renamed duplicate `.task-content` classes using BEM (--calendar, --inbox, --canvas-inbox, --calendar-inbox)
+- [x] Renamed duplicate `.header-content` classes using BEM (--modal, --swimlane, --performance, --quicksort, --welcome)
+
+**Files Modified**:
+- `src/assets/styles.css` - Added utility classes
+- `src/views/CanvasView.vue` - Simplified container nesting
+- `src/views/BoardView.vue` - Added scroll-container class
+- `src/views/CalendarView.vue` - Added scroll-container class
+- `src/components/base/BaseModal.vue` - Added scroll-container + BEM rename
+- `src/components/inbox/UnifiedInboxPanel.vue` - Added scroll-container + BEM rename
+- `src/components/calendar/CalendarDayView.vue` - BEM rename
+- `src/components/inbox/CalendarInboxPanel.vue` - BEM rename
+- `src/components/canvas/InboxPanel.vue` - BEM rename
+- `src/components/kanban/KanbanSwimlane.vue` - BEM rename
+- `src/components/ui/WelcomeModal.vue` - BEM rename
+- `src/views/PerformanceView.vue` - BEM rename
+- `src/views/QuickSortView.vue` - BEM rename
+
+---
+
 ### ~~TASK-099~~: Auth Store & Database Integration (✅ DONE)
 - [x] Integration with Supabase.
 - [x] Refactor `useAuthStore.ts` and `useDatabase.ts`.
@@ -154,6 +188,20 @@
 - [x] Refactored `offlineQueue` types to `src/types/offline.ts`.
 - [x] Reduced TypeScript errors from 71 to 14.
 
+### BUG-144: Canvas Content Disappeared (🚨 CRITICAL)
+**Priority**: P0-CRITICAL
+**Problem**: All task content disappeared from the canvas after recent refactoring.
+**Observations**:
+- Tasks exist in DOM but at far-off coordinates.
+- `canvasStore.nodes` is empty despite tasks being rendered.
+- `GroupNodeSimple.vue` (the `sectionNode`) is missing `<slot />`, breaking Vue Flow parent-child rendering.
+- `useCanvasSync.ts` may be incorrectly assigning `parentNode` without valid parent rendering.
+**Action Plan**:
+- [ ] Add `<slot />` to `GroupNodeSimple.vue`.
+- [ ] Debug and fix coordinate calculation in `useCanvasSync.ts`.
+- [ ] Reconcile `canvasStore.nodes` with `CanvasView.vue` node state.
+- [ ] Verify fix and restore visual appearance.
+
 ### TASK-142: Zero Error Baseline Achievement
 **Priority**: P1-HIGH
 **Goal**: Resolve the remaining 14 TypeScript errors to reach 0 errors.
@@ -163,7 +211,33 @@
 - [/] Fix `auth.ts` `onAuthStateChange` callback typing.
 - [/] Remove unused and broken `MarkdownExportService.ts`.
 - [/] Fix `markdown.ts` null safety in table conversion.
-- [ ] Run `vue-tsc` to confirm 0 errors.
+- [x] Run `vue-tsc` to confirm 0 errors.
+
+### BUG-144: Canvas Content Disappeared (✅ DONE)
+**Priority**: P0-CRITICAL
+**Completed**: January 8, 2026
+**Resolution**: Added missing `<slot />` to `GroupNodeSimple.vue` enabling Vue Flow to render nested specific nodes.
+
+### TASK-145: CanvasView Decomposition (🚀 NEXT)
+**Priority**: P2-MEDIUM
+**Goal**: Reduce `CanvasView.vue` size (3400+ lines) by extracting UI components.
+- [ ] Extract `CanvasControls` (Zoom/Pan UI)
+- [ ] Extract `CanvasToolbar` (Primary Actions)
+- [ ] Extract `CanvasMiniMap` usage (if complex)
+- [ ] Refactor `useCanvasDragDrop` geometry logic to `utils/canvasGeometry.ts`
+
+### TASK-144: System Consolidation Audit (🔄 IN PROGRESS)
+**Priority**: P2-MEDIUM
+**Plan**: [plans/system-consolidation-audit.md](../plans/system-consolidation-audit.md)
+**Goal**: Eliminate duplicate, redundant, and competing systems. One lean system for every aspect.
+**Progress**:
+- [x] Phase 1: Context Menu Cleanup - Deleted `useContextMenuEvents.ts` and `useContextMenuPositioning.ts`
+- [x] Migrated `CanvasContextMenu.vue` to use consolidated `useContextMenu.ts`
+- [x] Phase 2: Utility Extraction - Created `geometry.ts`, updated containment logic
+- [ ] Phase 3: Duration Definition Centralization
+- [ ] Phase 4: Performance System Consolidation
+- [ ] Phase 5: Naming Clarity (Smart Groups vs Smart Views)
+- [ ] Phase 6: Documentation
 
 ### TASK-138: Refactor CanvasView Phase 2 (Store & UI)
 **Priority**: P2-MEDIUM
@@ -205,26 +279,29 @@
 - [ ] Phase 5: Manual testing & validation
 **Progress**: Core refactoring complete. Ready for manual testing.
 
-### TASK-142: Canvas Position System Refactor (🔄 IN PROGRESS)
+### ~~TASK-142~~: Canvas Position System Refactor (✅ DONE)
 **Priority**: P1-HIGH
 **Created**: January 8, 2026
-**Plan**: [plans/canvas-position-system-refactor.md](../plans/canvas-position-system-refactor.md)
-**SOP**: [docs/sop/active/canvas-position-debugging.md](./sop/active/canvas-position-debugging.md)
+**Completed**: January 8, 2026
 
-**Problem**: Constant position reset issues with tasks and groups on the canvas. Root cause is fragmented architecture with 10+ position modification points, 5+ competing state flags, and duplicate implementations.
+**Problem**: Positions reset on page refresh. Root cause: Canvas store loaded groups from localStorage (Guest Mode) before auth was ready, so Supabase data was never used.
 
-**Proposed Solution**: Centralized Position Manager service that:
-- Acts as single source of truth for all position updates
-- Manages event-driven locks (not time-based)
-- Handles coordinate transformation consistently
-- Provides conflict resolution between user actions and database sync
+**Root Cause Identified**:
+1. Canvas store auto-initializes before auth store is ready
+2. `authStore.isAuthenticated` returns `false` at init time
+3. Groups load from localStorage instead of Supabase
+4. Group position changes saved to Supabase are lost on refresh
 
-**Phases**:
-- [x] **Phase 1**: Create PositionManager service with lock persistence (✅ Jan 8, 2026)
-- [x] **Phase 2**: Consolidate all position modifications through PositionManager (✅ Jan 8, 2026)
-- [ ] **Phase 3**: Implement event-driven lock lifecycle
-- [ ] **Phase 4**: Standardize coordinate system (absolute vs. relative)
-- [ ] **Phase 5**: Comprehensive Playwright tests and cleanup
+**Fix Applied**:
+- [x] Added auth state watcher in `canvas.ts` - reloads groups from Supabase when auth becomes ready
+- [x] Added position integrity validation on load (both tasks and groups)
+- [x] Added page refresh persistence tests (`tests/canvas-position-persistence.spec.ts`)
+- [x] Added regression guard in `CLAUDE.md` documenting architecture rules
+
+**Safeguards Added**:
+1. **Automated Tests**: `npm run test -- --grep "Position Persistence"` (4 tests)
+2. **Integrity Validation**: Console errors if positions have invalid values
+3. **CLAUDE.md Documentation**: Architecture rules to prevent future regressions
 
 ### TASK-065: GitHub Release (📋 TODO)
 **Priority**: P3-LOW

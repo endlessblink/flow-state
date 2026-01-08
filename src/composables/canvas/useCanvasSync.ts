@@ -4,8 +4,8 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { NodeUpdateBatcher } from '@/utils/canvas/NodeUpdateBatcher'
-// TASK-089: Canvas state lock to prevent sync from overwriting user changes
-import { isAnyCanvasStateLocked, getLockedTaskPosition } from '@/utils/canvasStateLock'
+// TASK-089/TASK-142: Canvas state lock to prevent sync from overwriting user changes
+import { isAnyCanvasStateLocked, getLockedTaskPosition, isGroupPositionLocked, getLockedGroupPosition } from '@/utils/canvasStateLock'
 
 interface SyncDependencies {
     nodes: Ref<Node[]>
@@ -93,7 +93,18 @@ export function useCanvasSync(deps: SyncDependencies) {
                 const nodeId = `section-${section.id}`
                 const existingPos = existingSectionPositions.get(nodeId)
 
-                if (section.parentGroupId) {
+                // TASK-142 FIX: If group position is locked, preserve Vue Flow's current position completely
+                const isLocked = isGroupPositionLocked(section.id)
+                if (isLocked && existingPos) {
+                    position = { x: existingPos.x, y: existingPos.y }
+                    // For locked sections, still need to determine parentNode but skip position recalc
+                    if (section.parentGroupId) {
+                        const parentGroup = sections.find(s => s.id === section.parentGroupId)
+                        if (parentGroup) {
+                            parentNode = `section-${parentGroup.id}`
+                        }
+                    }
+                } else if (section.parentGroupId) {
                     const parentGroup = sections.find(s => s.id === section.parentGroupId)
                     if (parentGroup) {
                         parentNode = `section-${parentGroup.id}`
@@ -101,11 +112,11 @@ export function useCanvasSync(deps: SyncDependencies) {
                         const relX = section.position.x - parentGroup.position.x
                         const relY = section.position.y - parentGroup.position.y
 
-                        // TASK-131 FIX: Add 2px tolerance check to prevent position drift
+                        // TASK-142 FIX: Increased tolerance from 2px to 10px
                         // If existing position is very close to calculated, preserve it
                         if (existingPos &&
-                            Math.abs(existingPos.x - relX) < 2.0 &&
-                            Math.abs(existingPos.y - relY) < 2.0) {
+                            Math.abs(existingPos.x - relX) < 10.0 &&
+                            Math.abs(existingPos.y - relY) < 10.0) {
                             position = { x: existingPos.x, y: existingPos.y }
                         } else if (Number.isFinite(relX) && Number.isFinite(relY)) {
                             position = { x: relX, y: relY }
@@ -116,9 +127,9 @@ export function useCanvasSync(deps: SyncDependencies) {
                         }
                     }
                 } else if (existingPos) {
-                    // TASK-131 FIX: For root-level sections, preserve existing position if close
-                    if (Math.abs(existingPos.x - position.x) < 2.0 &&
-                        Math.abs(existingPos.y - position.y) < 2.0) {
+                    // TASK-142 FIX: For root-level sections, preserve existing position if close (10px tolerance)
+                    if (Math.abs(existingPos.x - position.x) < 10.0 &&
+                        Math.abs(existingPos.y - position.y) < 10.0) {
                         position = { x: existingPos.x, y: existingPos.y }
                     }
                 }
@@ -180,18 +191,38 @@ export function useCanvasSync(deps: SyncDependencies) {
                 if (task.canvasPosition) {
                     // Find parent section
                     let parentNode = undefined
-                    // TASK-089 FIX: Respect locked positions to prevent position resets during deletion
-                    // If a task's position is locked (recently dragged), use the locked position
+                    // TASK-142 FIX: Check if position is locked FIRST
+                    // When locked, ALWAYS preserve Vue Flow's current position - no recalculation
                     const lockedPosition = getLockedTaskPosition(task.id)
+                    const existingPos = existingNodePositions.get(task.id)
+                    const existingParent = existingNodeParents.get(task.id)
+                    const taskExistsInNodes = existingNodeParents.has(task.id)
+
+                    // TASK-142: If locked AND existing node exists, completely preserve current state
+                    // This prevents ALL position resets during user interaction
+                    if (lockedPosition && taskExistsInNodes && existingPos) {
+                        desiredNodeMap.set(task.id, {
+                            id: task.id,
+                            type: 'taskNode',
+                            position: { x: existingPos.x, y: existingPos.y },
+                            data: { task: { ...task } },
+                            parentNode: existingParent, // Preserve current parent
+                            extent: undefined,
+                            expandParent: false,
+                            zIndex: 10,
+                            draggable: true,
+                            connectable: true,
+                            selectable: true
+                        })
+                        return // Skip all further processing for this locked task
+                    }
+
                     let position = lockedPosition
                         ? { x: lockedPosition.x, y: lockedPosition.y }
                         : { ...task.canvasPosition }
 
                     // BUG-002 FIX: Check if this task already exists in current nodes
                     // If so, preserve its parentNode state (prevents multi-drag position corruption)
-                    // Use .has() to check existence - handles both tasks WITH parentNode AND root-level tasks
-                    const taskExistsInNodes = existingNodeParents.has(task.id)
-                    const existingParent = existingNodeParents.get(task.id)
                     let skipContainmentCalc = false
 
                     if (taskExistsInNodes) {
@@ -202,44 +233,39 @@ export function useCanvasSync(deps: SyncDependencies) {
                             if (section) {
                                 parentNode = existingParent
 
-                                // BUG-003 FIX: If position is locked, preserve EXISTING node position
-                                // This prevents drift when converting absolute→relative with changed section position
-                                // The existing Vue Flow node already has the correct relative position
-                                const existingPos = existingNodePositions.get(task.id)
-                                if (lockedPosition && existingPos) {
-                                    position = { x: existingPos.x, y: existingPos.y }
-                                } else {
-                                    // No lock - recalculate relative position from absolute
-                                    const relX = position.x - section.position.x
-                                    const relY = position.y - section.position.y
+                                // No lock - recalculate relative position from absolute
+                                const relX = position.x - section.position.x
+                                const relY = position.y - section.position.y
 
-                                    // FIX: Preserve visual stability for existing nodes
-                                    // If calculated relative position is very close to current visual position (within 2px),
-                                    // prefer the current visual position to prevent micro-shifts or resets.
-                                    if (existingPos &&
-                                        Math.abs(existingPos.x - relX) < 2.0 &&
-                                        Math.abs(existingPos.y - relY) < 2.0) {
-                                        position = { x: existingPos.x, y: existingPos.y }
-                                    } else if (Number.isFinite(relX) && Number.isFinite(relY)) {
-                                        console.log(`⚠️ [SYNC-RESET] Task ${task.id} resetting position:`, {
-                                            existingVis: existingPos,
-                                            calcRel: { x: relX, y: relY },
-                                            storedAbs: task.canvasPosition,
-                                            sectionPos: section.position,
-                                            diff: existingPos ? { x: existingPos.x - relX, y: existingPos.y - relY } : null
-                                        })
-                                        position = { x: relX, y: relY }
-                                    }
+                                // TASK-142 FIX: Increased tolerance from 2px to 10px
+                                // Small floating point differences shouldn't trigger resets
+                                if (existingPos &&
+                                    Math.abs(existingPos.x - relX) < 10.0 &&
+                                    Math.abs(existingPos.y - relY) < 10.0) {
+                                    position = { x: existingPos.x, y: existingPos.y }
+                                } else if (Number.isFinite(relX) && Number.isFinite(relY)) {
+                                    // Only log significant resets (>10px difference)
+                                    console.log(`⚠️ [SYNC-RESET] Task ${task.id} resetting position:`, {
+                                        existingVis: existingPos,
+                                        calcRel: { x: relX, y: relY },
+                                        storedAbs: task.canvasPosition,
+                                        sectionPos: section.position,
+                                        diff: existingPos ? { x: existingPos.x - relX, y: existingPos.y - relY } : null
+                                    })
+                                    position = { x: relX, y: relY }
                                 }
                                 skipContainmentCalc = true
                             }
                             // If section no longer exists, fall through to containment check
                         } else {
                             // Task exists at ROOT level (no parentNode) - keep it at root
-                            // BUG-003 FIX: Preserve existing position when locked
-                            const existingPos = existingNodePositions.get(task.id)
-                            if (lockedPosition && existingPos) {
-                                position = { x: existingPos.x, y: existingPos.y }
+                            // Preserve existing position for visual stability
+                            if (existingPos) {
+                                // TASK-142: Use tolerance check for root tasks too
+                                if (Math.abs(existingPos.x - position.x) < 10.0 &&
+                                    Math.abs(existingPos.y - position.y) < 10.0) {
+                                    position = { x: existingPos.x, y: existingPos.y }
+                                }
                             }
                             // Don't recalculate containment - user intentionally placed it outside sections
                             skipContainmentCalc = true

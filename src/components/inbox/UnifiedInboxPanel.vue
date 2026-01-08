@@ -202,7 +202,7 @@ Call client"
         </div>
 
         <!-- Task Content -->
-        <div class="task-content">
+        <div class="task-content--inbox">
           <div class="task-title" dir="auto">
             {{ task.title }}
           </div>
@@ -1280,7 +1280,7 @@ onBeforeUnmount(() => {
   }
 }
 
-.task-content {
+.task-content--inbox {
   flex: 1;
   min-width: 0;
 }

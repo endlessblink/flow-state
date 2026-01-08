@@ -164,7 +164,7 @@ const viewport = ref({ zoom: 1 })
 try {
   const vf = useVueFlow()
   if (vf) {
-    viewport.value = vf.viewport
+    viewport.value = vf.viewport.value
   }
 } catch (_e) {
   // Not in Vue Flow context (e.g. Storybook)

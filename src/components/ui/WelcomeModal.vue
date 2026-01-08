@@ -5,7 +5,7 @@
         <div class="modal-container">
           <!-- Header -->
           <div class="modal-header">
-            <div class="header-content">
+            <div class="header-content--welcome">
               <span class="logo">🍅</span>
               <div>
                 <h2 class="modal-title">
@@ -182,7 +182,7 @@ const exportData = () => {
   border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
 }
 
-.header-content {
+.header-content--welcome {
   display: flex;
   align-items: center;
   gap: 0.75rem;

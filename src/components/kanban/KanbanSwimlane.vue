@@ -9,7 +9,7 @@
   >
     <!-- Swimlane Header (fixed, not scrollable) -->
     <div class="swimlane-header" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
-      <div class="header-content">
+      <div class="header-content--swimlane">
         <button class="collapse-btn">
           <ChevronDown v-if="!isCollapsed" :size="16" />
           <ChevronRight v-if="isCollapsed" :size="16" />
@@ -623,7 +623,7 @@ watch(() => props.tasks, () => {
   background: var(--kanban-header-bg);
 }
 
-.header-content {
+.header-content--swimlane {
   display: flex;
   align-items: center;
   gap: var(--space-3);

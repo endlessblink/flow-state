@@ -19,7 +19,7 @@
     >
       <!-- Modal Header -->
       <header v-if="showHeader" class="modal-header" :class="{ 'rtl-header': isRTL }">
-        <div class="header-content">
+        <div class="header-content--modal">
           <h2
             :id="titleId"
             class="modal-title"
@@ -443,7 +443,7 @@ defineExpose({
   background: transparent;
 }
 
-.header-content {
+.header-content--modal {
   flex: 1;
   min-width: 0;
 }

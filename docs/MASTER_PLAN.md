@@ -154,6 +154,17 @@
 - [x] Refactored `offlineQueue` types to `src/types/offline.ts`.
 - [x] Reduced TypeScript errors from 71 to 14.
 
+### TASK-142: Zero Error Baseline Achievement
+**Priority**: P1-HIGH
+**Goal**: Resolve the remaining 14 TypeScript errors to reach 0 errors.
+- [/] Fix `TiptapEditor.vue` missing `TaskItem` import.
+- [/] Fix `TaskNode.vue` `useVueFlow` type mismatch.
+- [/] Fix `CanvasGroup.vue` unsafe property access.
+- [/] Fix `auth.ts` `onAuthStateChange` callback typing.
+- [/] Remove unused and broken `MarkdownExportService.ts`.
+- [/] Fix `markdown.ts` null safety in table conversion.
+- [ ] Run `vue-tsc` to confirm 0 errors.
+
 ### TASK-138: Refactor CanvasView Phase 2 (Store & UI)
 **Priority**: P2-MEDIUM
 **Goal**: Clean up the store layer and begin UI decomposition.

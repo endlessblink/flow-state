@@ -2,8 +2,9 @@ import { defineStore } from 'pinia'
 import { ref, watch, computed } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { type Task } from './tasks'
-// import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { detectPowerKeyword } from '@/composables/useTaskSmartGroups'
+// TASK-131: Import lock checking for patchGroups
+import { isGroupPositionLocked } from '@/utils/canvasStateLock'
 import type {
   GroupFilter,
   TaskPosition,
@@ -30,8 +31,21 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   const { fetchGroups, saveGroup, deleteGroup: deleteGroupRemote } = useSupabaseDatabase()
 
-  // Viewport state
-  const viewport = ref({ x: 0, y: 0, zoom: 1 })
+  // Viewport state - Initialize synchronously from localStorage to prevent reset
+  const getSavedViewport = () => {
+    try {
+      const saved = localStorage.getItem('canvas-viewport')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Number.isFinite(parsed.x) && Number.isFinite(parsed.y) && Number.isFinite(parsed.zoom) && parsed.zoom > 0) {
+          return parsed
+        }
+      }
+    } catch (e) { console.error('Failed to load viewport synchronously:', e) }
+    return { x: 0, y: 0, zoom: 1 }
+  }
+
+  const viewport = ref(getSavedViewport())
   const zoomConfig = ref({ minZoom: 0.1, maxZoom: 4.0 })
 
   // Selection state
@@ -40,7 +54,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   const connectMode = ref(false)
   const connectingFrom = ref<string | null>(null)
 
-  // Missing states found in TS errors - adding stubs
+  // Missing states found in TS errors - adding stubs (Restored for compatibility)
   const multiSelectMode = ref(false)
   const selectionMode = ref('normal')
   const selectionRect = ref<any>(null)
@@ -59,16 +73,12 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // SAFETY: Filtered groups for display - excludes hidden groups
   const visibleGroups = computed(() => _rawGroups.value.filter(g => g.isVisible !== false))
-  // const groups = visibleGroups
   const showGroupGuides = ref(true)
   const snapToGroups = ref(true)
 
   // Vue Flow integration
   const nodes = ref<any[]>([])
   const edges = ref<any[]>([])
-
-  // Collapsed state
-  // const collapsedTaskPositions = ref<Map<string, TaskPosition[]>>(new Map())
 
   // --- SQL INTERACTION ---
 
@@ -122,7 +132,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       const loadedGroups = await fetchGroups()
       _rawGroups.value = loadedGroups
 
-      console.log(`✅ [SUPABASE] Loaded ${loadedGroups.length} canvas groups`)
+      console.log(`✅ [SUPABASE] Loaded ${loadedGroups.length} canvas groups:`, loadedGroups.map(g => g.name))
 
       // TASK-130: If in Guest Mode and got Supabase data, cache to localStorage
       if (!authStore.isAuthenticated && loadedGroups.length > 0) {
@@ -240,7 +250,67 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const setGroups = (newGroups: CanvasGroup[]) => {
+    // TASK-131: Deprecation warning
+    if (import.meta.env.DEV) {
+      console.warn('⚠️ setGroups() is deprecated. Use patchGroups() to respect position locks.')
+    }
+
+    // Guard against empty overwrite (common bug pattern)
+    if (newGroups.length === 0 && _rawGroups.value.length > 0) {
+      console.error('❌ [CANVAS] Refusing to overwrite existing groups with empty array')
+      return
+    }
+
     _rawGroups.value = [...newGroups]
+  }
+
+  /**
+   * TASK-131: Safe group update API that respects position locks.
+   * Use this instead of setGroups() to prevent position resets.
+   *
+   * @param updates - Map of group ID to partial updates
+   * @returns Result object with patched, skipped (locked), and not found IDs
+   */
+  type PatchableGroupKeys = Exclude<keyof CanvasGroup, 'id'>
+  type GroupPatch = Partial<Pick<CanvasGroup, PatchableGroupKeys>>
+
+  interface PatchGroupsResult {
+    readonly patched: string[]
+    readonly skippedLocked: string[]
+    readonly notFound: string[]
+  }
+
+  const patchGroups = (updates: Map<string, GroupPatch>): PatchGroupsResult => {
+    const result: PatchGroupsResult = {
+      patched: [],
+      skippedLocked: [],
+      notFound: []
+    }
+
+    for (const [groupId, changes] of updates) {
+      // Check if group position is locked (user is actively dragging/resizing)
+      if (isGroupPositionLocked(groupId) && (changes.position !== undefined)) {
+        console.log(`🛡️ [CANVAS] Skipping position update for locked group: ${groupId}`)
+        result.skippedLocked.push(groupId)
+        continue
+      }
+
+      const group = _rawGroups.value.find(g => g.id === groupId)
+      if (!group) {
+        result.notFound.push(groupId)
+        continue
+      }
+
+      // Apply the patch
+      Object.assign(group, changes, { updatedAt: new Date().toISOString() })
+      result.patched.push(groupId)
+    }
+
+    if (result.patched.length > 0) {
+      console.log(`✅ [CANVAS] Patched ${result.patched.length} groups`)
+    }
+
+    return result
   }
 
   const setViewport = (x: number, y: number, zoom: number) => {
@@ -409,15 +479,27 @@ export const useCanvasStore = defineStore('canvas', () => {
       const updatedTaskNodes = onCanvasTasks.map(t => {
         const existingNode = existingTaskNodes.get(t.id)
 
-        // If node exists and critical data hasn't changed, reuse it
-        if (existingNode &&
-          existingNode.position.x === t.canvasPosition?.x &&
-          existingNode.position.y === t.canvasPosition?.y &&
-          // Simple check for data equality to avoid deep spreads if possible
-          existingNode.data?.task?.updatedAt === t.updatedAt
-        ) {
-          existingTaskNodes.delete(t.id) // Remove from deletion set
-          return existingNode
+        // BUG-022 FIX: Comprehensive field comparison to detect all relevant changes
+        if (existingNode) {
+          const oldTask = existingNode.data?.task
+          const positionUnchanged =
+            existingNode.position.x === t.canvasPosition?.x &&
+            existingNode.position.y === t.canvasPosition?.y
+
+          // Check ALL fields that affect visual display (matches useCanvasSync.ts pattern)
+          const dataUnchanged = oldTask &&
+            oldTask.status === t.status &&
+            oldTask.priority === t.priority &&
+            oldTask.title === t.title &&
+            oldTask.updatedAt === t.updatedAt &&
+            oldTask.progress === t.progress &&
+            oldTask.dueDate === t.dueDate &&
+            oldTask.estimatedDuration === t.estimatedDuration
+
+          if (positionUnchanged && dataUnchanged) {
+            existingTaskNodes.delete(t.id) // Remove from deletion set
+            return existingNode
+          }
         }
 
         // Create new node object but try to preserve internal object shape for V8
@@ -452,23 +534,20 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Initialize
   const initialize = async () => {
-    // Load groups
+    // Load groups (removed duplicate call)
     await loadFromDatabase()
 
-    // Load Viewport
-    const savedViewport = localStorage.getItem('canvas-viewport')
-    if (savedViewport) {
-      try {
-        viewport.value = JSON.parse(savedViewport)
-      } catch { /* ignore */ }
-    }
+    // Viewport is now loaded synchronously during store creation
+    // No need to load it here again
 
-    // Initialize Task Sync (Lazy)
+    // TASK-131 FIX: DISABLED - This competing watcher caused position resets
+    // The deep:true watcher fired on ANY task property change and overwrote locked positions.
+    // useCanvasSync.ts in CanvasView.vue handles all sync with proper position locking.
+    // Keeping taskStore reference for other operations.
     import('./tasks').then(({ useTaskStore }) => {
       taskStore = useTaskStore()
-      watch(() => taskStore.tasks, (newTasks) => {
-        if (newTasks) syncTasksToCanvas(newTasks)
-      }, { deep: true, immediate: true })
+      // REMOVED: watch(() => taskStore.tasks, ...) - competed with useCanvasSync.ts
+      // This was the root cause of BUG-020 regression where task positions reset
     })
   }
 
@@ -494,10 +573,6 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
-  //   const togglePowerMode = async (groupId: string, active: boolean) => {
-  //     await updateGroup(groupId, { isPowerMode: active })
-  //   }
-
   // Undo alias (fallback to regular update for now)
   const updateSectionWithUndo = updateGroup
 
@@ -511,11 +586,11 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
   const clearSelection = () => { selectedNodeIds.value = [] }
   const requestSync = async () => { /* ... */ }
+  // Restored Selection methods
   const setSelectionMode = (mode: string) => { selectionMode.value = mode }
   const startSelection = (x: number, y: number) => { isSelecting.value = true; selectionRect.value = { x, y, width: 0, height: 0 } }
   const updateSelection = (x: number, y: number) => {
     if (selectionRect.value) {
-      // Basic width/height update just to prevent errors, proper logic needs start pos
       selectionRect.value.width = x - selectionRect.value.x
       selectionRect.value.height = y - selectionRect.value.y
     }
@@ -523,6 +598,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   const endSelection = () => { isSelecting.value = false; selectionRect.value = null }
   const selectNodesInRect = (_rect: any) => { /* ... */ }
   const toggleMultiSelectMode = () => { multiSelectMode.value = !multiSelectMode.value }
+
   const togglePriorityIndicator = () => { showPriorityIndicator.value = !showPriorityIndicator.value }
   const toggleStatusBadge = () => { showStatusBadge.value = !showStatusBadge.value }
   const toggleDurationBadge = () => { showDurationBadge.value = !showDurationBadge.value }
@@ -569,6 +645,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     updateGroup,
     deleteGroup,
     setGroups,
+    patchGroups,
     setViewport,
     loadSavedViewport,
     getTaskCountInGroupRecursive,

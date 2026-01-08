@@ -1,5 +1,5 @@
-**Last Updated**: January 8, 2026 (ROAD-004 PWA Phase 1 In Progress)
-**Version**: 5.29 (PWA Foundation - vite-plugin-pwa configured)
+**Last Updated**: January 8, 2026 (TASK-136 CouchDB Decommissioned)
+**Version**: 5.31 (CouchDB removed, app uses Supabase exclusively)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -24,9 +24,10 @@
 |----|---------|----------|--------|--------------|
 | ~~ROAD-001~~ | ✅ **DONE** | Power Groups | [Details](./archive/Done-Tasks-Master-Plan.md) | - |
 | **ROAD-013** | **Sync Hardening** | **P0** | 🔄 [See Detailed Plan](#roadmaps) | - |
-| **ROAD-004** | Mobile support (PWA) | P2 | 🔄 **IN PROGRESS** [See Detailed Plan](#roadmaps) | ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All Done) |
+| ROAD-004 | Mobile support (PWA) | P2 | 🔄 **IN PROGRESS** [See Detailed Plan](#roadmaps) | ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All Done) |
 | ROAD-011 | AI Assistant | P1 | [See Detailed Plan](#roadmaps) | - |
 | ~~ROAD-022~~ | ✅ **DONE** | Auth (Supabase)| [Details](./archive/MASTER_PLAN_JAN_2026.md) | - |
+| ~~TASK-132~~ | ✅ **DONE** | Fix Canvas & Auth | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/3f8d0816-9774-4fe5-aa58-d6f311bc2d36/walkthrough.md) | - |
 
 ---
 
@@ -146,17 +147,46 @@
 **Priority**: P1-HIGH
 **Completed**: January 7, 2026
 
+### TASK-138: Refactor CanvasView Phase 2 (Store & UI)
+**Priority**: P2-MEDIUM
+**Goal**: Clean up the store layer and begin UI decomposition.
+- [x] Delete dead code: `src/stores/taskCanvas.ts`.
+- [x] Clean up `src/stores/canvas.ts` (remove stubs, consolidate).
+- [ ] Extract UI components: `CanvasToolbar.vue`, `CanvasControls.vue`.
+- [ ] Move any remaining valid logic from `taskCanvas.ts` to `canvas.ts` before deletion.
+
+### TASK-137: Refactor CanvasView.vue Phase 1 (✅ DONE)
+**Priority**: P1-HIGH
+**Goal**: Reduce technical debt in the massive `CanvasView.vue` file by strictly extracting logic into composables without touching the critical Vue Flow template structure.
+- [x] Extract filtering logic to `useCanvasFiltering.ts`.
+- [x] Fix initialization order of `isInteracting`.
+- [x] Extract event handlers to `useCanvasInteractionHandlers.ts`.
+- [x] Verify no regressions in drag/drop or sync.
+
 ### TASK-065: GitHub Release (📋 TODO)
 **Priority**: P3-LOW
 - Remove hardcoded CouchDB credentials.
 - Add Docker self-host guide to README.
 - Create MIT LICENSE.
 
-### TASK-079: Tauri Desktop (📋 PLANNED)
+### TASK-079: Tauri Desktop & Mobile (🔄 PARTIAL)
 **Priority**: P1-HIGH
-- System Tray (icon + menu).
-- KDE Taskbar Progress (D-Bus).
-- Fokus-style Break Splash Screen.
+**Status**: Desktop basic functionality WORKING on Tuxedo OS
+
+**Desktop (Working)**:
+- [x] Basic Tauri v2 app runs on Linux (Tuxedo OS)
+- [ ] System Tray (icon + menu)
+- [ ] KDE Taskbar Progress (D-Bus)
+- [ ] Fokus-style Break Splash Screen
+
+**Mobile (Future - Tauri v2 supports Android/iOS)**:
+- [ ] Android build configuration
+- [ ] Foreground service for timer (prevents kill)
+- [ ] Native notifications
+- [ ] Home screen widget (optional)
+- [ ] APK distribution (sideload or Play Store $25)
+
+**Note**: PWA provides mobile access now (ROAD-004). Tauri Mobile adds native features like reliable background timer and widgets.
 
 ### ~~TASK-095~~: Complete TypeScript & Lint Cleaning (✅ DONE)
 - [x] Address remaining TS/Lint errors system-wide (Zero errors baseline achieved).
@@ -214,20 +244,46 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 - Design and implement new clean, minimal, cyberpunky "Cyber Tomato" icon set.
 - Includes: Main logo, Tauri app icon, and favicon.
 
-### TASK-111: Landing Page for Early Access (📋 PLANNED)
+### ~~TASK-111~~: Landing Page for Early Access (✅ DONE)
 **Priority**: P1-HIGH
 **Plan**: [plans/pomo-flow-landing-page.md](../plans/pomo-flow-landing-page.md)
-- Create landing page hosted on GitHub Pages (free)
-- Showcase features: Board, Calendar, Canvas views, Pomodoro timer
-- Email signup for early access waitlist
-- Explain open-core business model:
+**Started**: January 8, 2026
+**Completed**: January 8, 2026
+**Live URL**: https://endlessblink.github.io/pomo-flow-landing/
+- [x] Create landing page hosted on GitHub Pages (free)
+- [x] Showcase features: Board, Calendar, Canvas views, Pomodoro timer
+- [x] Email signup for early access waitlist (Formspree integration - needs form ID)
+- [x] Explain open-core business model:
   - Free (Self-Host): Deploy your own Supabase instance
-  - Cloud ($): Our hosted Supabase + backups + support
-  - Pro ($): AI features + gamification
+  - Cloud ($7/mo): Our hosted Supabase + backups + support
+  - Pro ($14/mo): AI features + gamification
 
 ### TASK-108: Tauri/Web Design Parity (📋 PLANNED)
 **Priority**: P1-HIGH
 - Ensure the Tauri app design mimics 1-to-1 the web app design.
+
+### TASK-131: AI Text Generation in Markdown Editor (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Related**: ROAD-011 (AI Assistant)
+
+Add AI-powered text generation to the Tiptap markdown editor. Custom implementation (not using Tiptap Cloud Pro).
+
+**Proposed Features**:
+- Custom Tiptap extension that calls Claude/OpenAI API
+- Commands: "Complete", "Rewrite", "Summarize", "Expand", "Fix grammar"
+- Stream responses directly into the editor
+- Keyboard shortcut (Ctrl+Space or similar) to trigger AI menu
+
+**Implementation Approach**:
+- Create `/src/extensions/TiptapAI.ts` custom extension
+- Add AI toolbar button with dropdown menu
+- Use existing API key configuration (from settings)
+- Stream tokens into editor at cursor position
+
+**Dependencies**:
+- Tiptap editor implementation (DONE - BUG-010)
+- API key configuration in settings
+- Rate limiting / usage tracking
 
 
 
@@ -330,7 +386,7 @@ Comprehensive security and stability fixes for the Milkdown markdown editor foll
 
 ### ~~BUG-010~~: Milkdown Auto-Conversion Issue → Tiptap Migration (✅ DONE)
 **Priority**: P1-HIGH
-**Completed**: January 7, 2026
+**Completed**: January 7-8, 2026
 
 Milkdown's aggressive input rules continued to auto-convert `-` to bullet lists before users could complete `- [ ]` task list syntax. After multiple fix attempts (disabling individual inputRules imports), the issue persisted.
 
@@ -346,9 +402,33 @@ Milkdown's aggressive input rules continued to auto-convert `-` to bullet lists 
 - [x] Full toolbar retained: Bold, Italic, Lists, Task Lists, Links, Undo/Redo
 - [x] Build passes, bundle 100KB smaller
 
+**Extended Toolbar Features (Jan 8)**:
+- [x] Strikethrough formatting (~~text~~)
+- [x] Underline formatting (<u>text</u>)
+- [x] Highlight/Mark (==text== ↔ `<mark>`)
+- [x] Placeholder text when editor is empty
+- [x] Numbered lists (ordered lists)
+- [x] Blockquotes
+- [x] Code blocks
+- [x] Horizontal rules (---)
+- [x] Fixed task list checkbox rendering (data-type attributes for Tiptap compatibility)
+- [x] Bidirectional markdown conversion for all new formats
+
+**Advanced Features (Jan 8 - Extended)**:
+- [x] H1, H2, H3 heading buttons
+- [x] Text Align (left, center, right)
+- [x] Text Color with 8-color palette picker
+- [x] Tables with full manipulation (insert, add/delete rows/columns)
+- [x] Toolbar with 22+ buttons organized in sections
+- [x] Dropdown menus for color picker and table operations
+- [x] Markdown table conversion (HTML ↔ markdown)
+
 **Packages Added**:
 - `@tiptap/vue-3`, `@tiptap/starter-kit`, `@tiptap/extension-task-list`
 - `@tiptap/extension-task-item`, `@tiptap/extension-link`, `@tiptap/pm`
+- `@tiptap/extension-placeholder`, `@tiptap/extension-highlight`, `@tiptap/extension-underline`
+- `@tiptap/extension-text-align`, `@tiptap/extension-text-style`, `@tiptap/extension-color`
+- `@tiptap/extension-table`, `@tiptap/extension-table-row`, `@tiptap/extension-table-cell`, `@tiptap/extension-table-header`
 
 **Skill Updates**:
 - [x] Created `tiptap-vue3` skill with working patterns
@@ -356,8 +436,9 @@ Milkdown's aggressive input rules continued to auto-convert `-` to bullet lists 
 - [x] Updated `skills.json` registry
 
 **Files**:
-- `src/components/common/TiptapEditor.vue` - New
+- `src/components/common/TiptapEditor.vue` - New, extended with 22+ toolbar buttons, dropdown menus
 - `src/components/common/MarkdownEditor.vue` - Updated
+- `src/utils/markdown.ts` - Updated for Tiptap compatibility, table/highlight/heading conversion
 - `.claude/skills/tiptap-vue3/SKILL.md` - New skill
 - `.claude/skills/milkdown-vue3/SKILL.md` - Deprecated
 - `.claude/config/skills.json` - Updated
@@ -735,6 +816,49 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 
 **Problem**: CanvasView.vue was using 'high' priority which runs synchronously and bypasses the batching system entirely.
 
+### TASK-123: Fix Canvas Reactivity Issues (✅ DONE)
+**Priority**: P1-HIGH
+**Status**: Resolved
+- [x] Fix UI updates not reflecting immediately without manual refresh.
+- [x] Ensure `useTaskStore` state changes propagate correctly.
+- [x] Optimize `CanvasView` computed properties and watchers.
+
+### BUG-020: Drag Drop Position Resets (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 8, 2026
+- [x] Prevent tasks from resetting position after drag operations.
+- [x] Fix multi-node drag position stability.
+- [x] Ensure `isNodeDragging` and `isDragSettling` are correctly managed.
+
+### BUG-021: Group Resize Limit (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+**Problem**: Users could not resize groups larger than 2000px, which was insufficient for large projects.
+**Fix**: Increased maximum width/height limits to 50,000px in `GroupNodeSimple.vue`, `CanvasView.vue`, and `useCanvasResize.ts`.
+
+### BUG-022: New Task Resets Existing Positions (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 8, 2026
+**Problem**: Creating a new task caused existing tasks to jump or reset their positions due to strict sync logic.
+**Fix**: 
+1. Added a tolerance check (2.0px) in `useCanvasSync.ts` to preserve existing visual positions if they are close.
+2. **Crucial**: Updated `handleNodeDragStop` in `useCanvasDragDrop.ts` to update absolute positions of ALL child tasks when a section is dragged. This ensures the store stays in sync with visual relative movements.
+
+### BUG-023: Editor UI Rendering Issues (✅ DONE)
+**Priority**: P0-CRITICAL
+**Completed**: January 8, 2026
+**Problem**: Editor showed artifacts or black box due to excessive reactivity re-rendering the component while typing.
+### BUG-024: Group Resize Task Stability (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 8, 2026
+**Problem**: Resizing a group from the top/left edge caused child tasks to visually move or reset because the parent's origin shift wasn't correctly counteracted in the store.
+**Fix**: Updated `handleSectionResizeEnd` in `CanvasView.vue` to explicitly calculate and persist the correct absolute position for all child tasks when the parent's origin changes, ensuring they remain stationary on the canvas.
+
+### BUG-025: Unrelated Groups Move with Parent (Weekends)
+**Priority**: P1-HIGH
+**Status**: 🔴 OPEN
+**Problem**: Dragging a specific group (e.g., "Weekend") causes other unrelated groups to move as if they were children, despite not being visually inside it.
+**Location**: `src/composables/canvas/useCanvasDragDrop.ts` (Likely `parentGroupId` logic)
 **Location**: `src/views/CanvasView.vue` line 1845
 
 **Fix Applied**: Changed priority back to 'normal'. The 16ms batch delay (60fps) still feels instant but prevents performance issues when multiple tasks change rapidly.
@@ -799,6 +923,12 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 **Problem**: The custom dropdown closed immediately when users tried to scroll the list of options.
 **Fix**: Updated `handleScroll` in `CustomSelect.vue` to ignore scroll events originating from within the dropdown itself.
 
+### BUG-022: Fix Zombie Edge UX
+**Priority**: P2-MEDIUM
+**Discovered**: January 8, 2026
+**Problem**: Users cannot immediately re-create a connection they just deleted because `recentlyRemovedEdges` treats it as a "zombie" edge from a sync conflict and blocks it for 2 seconds.
+**Solution**: Modify `handleConnect` to explicitly remove the edge ID from `recentlyRemovedEdges` when a user intentionally creates a connection, distinguishing it from an automated background sync.
+
 ### ~~BOX-001~~: Fix `ensureActionGroups` Undefined Error (✅ DONE)
 **Priority**: P1-HIGH
 **Completed**: January 8, 2026
@@ -846,6 +976,193 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 **Subtasks**:
 - [x] Removed the redundant ternary (2 occurrences)
 - [x] Build verification passed
+
+---
+
+## Code Review Findings (January 8, 2026)
+
+> These issues were identified during comprehensive multi-agent code review of uncommitted changes (PouchDB→Supabase migration + PWA setup).
+
+### ~~BUG-021~~: CSP Connect-Src Uses Wildcards (✅ DONE)
+**Priority**: P2-MEDIUM (Security)
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: CSP `connect-src` directive now allows connections to ANY HTTP/HTTPS endpoint using broad wildcards (`'http:'`, `'https:'`). This defeats CSP's purpose and enables potential data exfiltration.
+
+**Locations**:
+- `src/utils/cspManager.ts`
+- `src/utils/securityHeaders.ts`
+
+**Fix Applied**: Replaced wildcards with explicit allowlist:
+- `https://*.supabase.co` - Supabase API
+- `https://api.github.com` - GitHub API
+- `https://raw.githubusercontent.com` - GitHub raw content
+- Development: localhost and ws/wss preserved
+
+**Subtasks**:
+- [x] Replace wildcards with explicit allowlist (Supabase, GitHub API)
+- [x] Verify build passes
+
+### ~~BUG-022~~: Canvas Sync Has Incomplete Change Detection (✅ DONE)
+**Priority**: P2-MEDIUM (Performance)
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: `syncTasksToCanvas` only checks `position` and `updatedAt` to determine if a task node needs updating. Misses changes to status, priority, title, tags, causing stale data on canvas.
+
+**Location**: `src/stores/canvas.ts` (lines 412-432)
+
+**Fix Applied**: Added comprehensive field comparison matching `useCanvasSync.ts` pattern:
+- status, priority, title, updatedAt, progress, dueDate, estimatedDuration
+
+**Subtasks**:
+- [x] Add comprehensive field comparison (status, priority, title, progress, dueDate, estimatedDuration)
+- [x] Verify build passes
+
+### ~~TASK-131~~: Remove Dead Code - useOptimizedTaskStore.ts (✅ DONE)
+**Priority**: P2-MEDIUM
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: `src/composables/useOptimizedTaskStore.ts` (387 lines) is never imported anywhere. PouchDB-era batching layer that imports deprecated stubs.
+
+**Resolution**: File not found during review - already deleted in previous cleanup.
+
+**Subtasks**:
+- [x] Delete `src/composables/useOptimizedTaskStore.ts` (already deleted)
+- [x] Verify build passes
+
+### ~~TASK-132~~: Remove Dead Code - SyncRetryService.ts (✅ DONE)
+**Priority**: P2-MEDIUM
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: `src/services/sync/SyncRetryService.ts` (52 lines) is never imported or called.
+
+**Resolution**: File not found during review - already deleted in previous cleanup.
+
+**Subtasks**:
+- [x] Delete `src/services/sync/SyncRetryService.ts` (already deleted)
+- [x] Verify build passes
+
+### ~~BUG-023~~: PWA Cache TTL Too Long for Supabase API (✅ DONE)
+**Priority**: P2-MEDIUM
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: PWA configuration caches Supabase REST API responses for 24 hours. May serve stale task data after Supabase Realtime pushes updates.
+
+**Location**: `vite.config.ts`
+
+**Fix Applied**:
+- Added `FIVE_MINUTES` constant (300 seconds)
+- Changed Supabase API cache `maxAgeSeconds` from `ONE_DAY` to `FIVE_MINUTES`
+
+**Subtasks**:
+- [x] Reduce API cache TTL to 5 minutes
+- [x] Verify build passes
+
+### ~~BUG-024~~: Timer Cross-Device Sync Completely Broken (✅ DONE)
+**Priority**: P2-MEDIUM
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: `src/composables/useTimerChangesSync.ts` (249 lines) relies entirely on `window.pomoFlowDb` (PouchDB) which no longer exists. Timer sync is non-functional.
+
+**Fix Applied**: Stubbed the composable to return no-op functions:
+- `isConnected` always returns false
+- `startListening`, `stopListening`, `reconnect` are no-ops
+- DEV-only console.warn for debugging
+
+**Subtasks**:
+- [x] Stub composable with no-op functions
+- [x] Verify build passes
+
+### ~~TASK-133~~: Auth Store Uses catch (e: any) Pattern (✅ DONE)
+**Priority**: P3-LOW
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: `src/stores/auth.ts` uses `catch (e: any)` in 7 locations. Should use `catch (e: unknown)` with type narrowing.
+
+**Fix Applied**:
+- Changed all 7 `catch (e: any)` to `catch (e: unknown)`
+- Cast to `AuthError` type with `e as AuthError`
+- Fixed `_event: any, newSession: any` callback params
+- Fixed `metadata?: any` to `metadata?: Record<string, unknown>`
+
+**Subtasks**:
+- [x] Migrate all catch blocks to `unknown`
+- [x] Fix callback parameter types
+- [x] Verify build passes
+
+### ~~TASK-134~~: Stub Console Warnings in Production (✅ DONE)
+**Priority**: P3-LOW
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: Legacy stub files emit `console.warn` in production, polluting user console.
+
+**Resolution**:
+- `useDatabase.ts` and `useReliableSyncManager.ts` were already deleted in previous cleanup
+- The only remaining stub (`useTimerChangesSync.ts`) was fixed in BUG-024 with DEV check
+
+**Subtasks**:
+- [x] Wrap in `import.meta.env.DEV` check (done in BUG-024)
+
+### ~~BUG-025~~: Bulk Delete Operations Not Atomic (✅ DONE)
+**Priority**: P3-LOW
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: `bulkDeleteTasks` deletes tasks sequentially. If loop fails partway, database is in inconsistent state.
+
+**Fix Applied**:
+- Added `bulkDeleteTasks` to `useSupabaseDatabase.ts` using `.in('id', taskIds)` for atomic operation
+- Added `bulkDeleteTasksFromStorage` to `taskPersistence.ts`
+- Updated `taskOperations.ts` to use atomic bulk delete instead of sequential loop
+
+**Subtasks**:
+- [x] Batch Supabase operations using `.in('id', taskIds)`
+- [x] Verify build passes
+
+### ~~TASK-135~~: Commented Code in canvas.ts (✅ DONE)
+**Priority**: P3-LOW
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Problem**: Dead imports and commented variables in `src/stores/canvas.ts`.
+
+**Fix Applied**: Removed 4 commented code blocks:
+- Dead `errorHandler` import
+- Commented `const groups = visibleGroups`
+- Commented `collapsedTaskPositions` ref
+- Commented `togglePowerMode` function
+
+**Subtasks**:
+- [x] Remove commented dead code
+- [x] Verify build passes
+
+### ~~TASK-136~~: Decommission CouchDB (✅ DONE)
+**Priority**: P2-MEDIUM (Security)
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+
+**Decision**: User confirmed no data migration needed. CouchDB server to be shut down manually.
+
+**Changes Made**:
+- [x] Removed CouchDB credentials from `.env`
+- [x] Updated `.env.example` to show Supabase config instead
+- [x] Removed CouchDB remote config from `environments.ts`
+- [x] Removed PouchDB types from `global.d.ts`
+- [x] Removed PouchDB database verification from `useCanvasSync.ts`
+- [x] Deleted `scripts/migrate-couchdb-to-supabase.cjs`
+- [x] App now uses Supabase exclusively
+
+**Manual Action Required**: Shut down CouchDB server at `84.46.253.137:5984`
+
+---
 
 ### ~~TASK-127~~: Remove PouchDB-Era Task Disappearance Logger (✅ DONE)
 **Priority**: P2-MEDIUM
@@ -1012,24 +1329,262 @@ Codebase has 3 competing network status implementations. Adding PWA would create
 Multi-part fix for canvas group issues affecting day-of-week groups and z-index during drag.
 
 **Problems**:
-1. Groups reset locations on refresh (persistence issue)
-2. Friday/Saturday/all day-of-week groups don't update task due dates correctly when same-day
-3. Day groups should show upcoming date in label (e.g., "Friday / Jan 10")
-4. Groups appear under other groups when dragging (z-index issue)
+1. Groups reset locations on refresh (persistence issue) ✅ Fixed with localStorage fallback for Guest Mode
+2. Friday/Saturday/all day-of-week groups don't update task due dates correctly when same-day ✅ Fixed
+3. Day groups should show upcoming date in label (e.g., "Friday / Jan 10") ✅ Fixed
+4. Groups appear under other groups when dragging (z-index issue) ✅ Fixed
+5. Task positions AND viewport reset when deleting tasks ✅ Fixed (BUG-020)
 
 **Subtasks**:
-- [ ] Fix day-of-week date calculation (handle same-day edge case → next week)
-- [ ] Add all days of week to power keyword detection (Monday-Sunday)
-- [ ] Add date suffix to day group labels in GroupNodeSimple.vue
-- [ ] Fix z-index elevation during group drag
-- [ ] Investigate/fix group position persistence on refresh
+- [x] Fix day-of-week date calculation (handle same-day edge case → next week)
+- [x] Add all days of week to power keyword detection (Monday-Sunday)
+- [x] Add date suffix to day group labels in GroupNodeSimple.vue
+- [x] Fix z-index elevation during group drag
+- [x] Fix Guest Mode group position persistence with localStorage fallback
+- [x] Fix task/viewport reset on deletion (BUG-020) - debounced sync watcher
 - [ ] Test with Playwright
 
-**Files to modify**:
-- `src/composables/canvas/useCanvasDragDrop.ts` - Day-of-week date logic
-- `src/composables/useTaskSmartGroups.ts` - Add day-of-week keywords
-- `src/components/canvas/GroupNodeSimple.vue` - Date labels
-- `src/composables/canvas/useCanvasSync.ts` - Z-index handling
+**Files modified**:
+- `src/composables/canvas/useCanvasDragDrop.ts` - Day-of-week date logic + z-index elevation
+- `src/composables/useTaskSmartGroups.ts` - Add day-of-week keywords (DAY_OF_WEEK_KEYWORDS)
+- `src/components/canvas/GroupNodeSimple.vue` - Date labels (dayOfWeekDateSuffix computed)
+- `src/stores/canvas.ts` - Guest Mode localStorage persistence
+
+---
+
+### ~~BUG-026~~: Canvas SYNC-EDGES Excessive Logging (✅ DONE)
+**Priority**: P2-MEDIUM (Performance/DX)
+**Discovered**: January 8, 2026
+**Completed**: January 8, 2026
+**Related**: Undo/Redo System Review
+
+**Problem**: The `[SYNC-EDGES] Synced 0 edges` log fires hundreds of times per second on Canvas view, flooding the console and making debugging extremely difficult.
+
+**Solution**: Commented out the excessive logging at `src/composables/canvas/useCanvasSync.ts:452` with a note explaining why.
+
+**Subtasks**:
+- [x] Identify the source of SYNC-EDGES logging
+- [x] Remove log with explanatory comment
+- [x] Verified fix in browser - no more SYNC-EDGES flooding
+
+---
+
+### ~~BUG-027~~: Canvas View Frequent Remounting (❌ NOT A BUG)
+**Priority**: P1-HIGH (Usability)
+**Discovered**: January 8, 2026
+**Closed**: January 8, 2026
+**Related**: Undo/Redo System Review
+
+**Original Problem**: Canvas view appeared to repeatedly unmount and remount, observed via "Full Remount Detected" logs.
+
+**Investigation Result**: This was NOT a bug. The frequent remounting observed was caused by **HMR (Hot Module Replacement)** during development when code files were edited. During normal navigation (e.g., Board -> Canvas), the component only mounts once as expected.
+
+**Evidence**:
+- Normal navigation shows single "CanvasView mounted" message
+- Multiple mounts only occur when Vite HMR updates components
+- Canvas view is stable during production-like usage
+
+---
+
+### TASK-139: Undo State Persistence to localStorage (📋 PLANNED)
+**Priority**: P3-LOW (Enhancement)
+**Discovered**: January 8, 2026
+**Related**: Undo/Redo System Review
+
+**Feature**: Persist undo/redo history to localStorage for session recovery.
+
+**Current Behavior**: Undo history is lost on page refresh. Users lose ability to undo actions from before the refresh.
+
+**Proposed**:
+- [ ] Serialize undo stack to localStorage on state changes
+- [ ] Restore undo stack from localStorage on app initialization
+- [ ] Add TTL to prevent stale history from being restored
+- [ ] Handle large state gracefully (truncate if over localStorage limits)
+
+---
+
+### TASK-140: Undo/Redo Visual Feedback (📋 PLANNED)
+**Priority**: P3-LOW (UX Enhancement)
+**Discovered**: January 8, 2026
+**Related**: Undo/Redo System Review
+
+**Feature**: Show toast/notification when undo or redo is performed.
+
+**Current Behavior**: Undo/redo happens silently with no visual confirmation.
+
+**Proposed**:
+- [ ] Show brief toast: "Undone: [action description]"
+- [ ] Show brief toast: "Redone: [action description]"
+- [ ] Auto-dismiss after 2-3 seconds
+- [ ] Option to disable in settings
+
+---
+
+### TASK-141: Canvas Position System Refactor (📋 PLANNED)
+**Priority**: P1-HIGH
+**Created**: January 8, 2026
+**Plan**: [plans/canvas-position-system-refactor.md](../plans/canvas-position-system-refactor.md)
+**SOP**: [docs/sop/active/canvas-position-debugging.md](./sop/active/canvas-position-debugging.md)
+
+**Problem**: Constant position reset issues with tasks and groups on the canvas despite TASK-131 fixes. Root cause is fragmented architecture with 10+ position modification points, 5+ competing state flags, and duplicate implementations.
+
+**Proposed Solution**: Centralized Position Manager service that:
+- Acts as single source of truth for all position updates
+- Manages event-driven locks (not time-based)
+- Handles coordinate transformation consistently
+- Provides conflict resolution between user actions and database sync
+
+**Phases**:
+- [ ] **Phase 1**: Create PositionManager service with lock persistence
+- [ ] **Phase 2**: Consolidate all position modifications through PositionManager
+- [ ] **Phase 3**: Implement event-driven lock lifecycle
+- [ ] **Phase 4**: Standardize coordinate system (absolute vs. relative)
+- [ ] **Phase 5**: Comprehensive Playwright tests and cleanup
+
+**Files to Create**:
+- `src/services/canvas/PositionManager.ts`
+- `src/services/canvas/LockManager.ts`
+- `src/services/canvas/types.ts`
+
+**Files to Modify**:
+- `src/utils/canvasStateLock.ts`
+- `src/composables/canvas/useCanvasDragDrop.ts`
+- `src/composables/canvas/useCanvasResize.ts`
+- `src/composables/canvas/useCanvasSync.ts`
+- `src/stores/tasks/taskOperations.ts`
+- `src/stores/canvas.ts`
+- `src/views/CanvasView.vue`
+
+---
+
+### ~~BUG-020~~: Task Positions and Viewport Reset on Task Deletion (✅ DONE)
+**Priority**: P1-HIGH
+**Reported**: January 8, 2026
+**Fixed**: January 8, 2026
+**Related**: TASK-130
+
+**Problem**:
+When deleting a task, other task positions on the canvas reset to unexpected locations, and the viewport also resets.
+
+**Root Cause**:
+- `watch(filteredTasks, ...)` with `{ deep: true, immediate: true }` combined with `batchedSyncEdges('high')`
+- 'high' priority in NodeUpdateBatcher bypasses batching entirely and runs immediately
+- This created an infinite reactivity loop with hundreds of sync calls per second
+
+**Fix Applied**:
+- Wrapped sync calls in `useDebounceFn()` with 100ms delay in `CanvasView.vue:874-881`
+- Changed priority from 'high' to 'normal' so batching actually works
+- Removed duplicate `loadFromDatabase()` call in canvas store initialize function
+- Added retry logic to `ensureActionGroups()` to prevent duplicate group creation
+
+---
+
+### ~~TASK-131~~: Canvas View Stabilization - Eliminate All Resets (✅ DONE)
+**Priority**: P1-HIGH
+**Started**: January 8, 2026
+**Completed**: January 8, 2026
+**Plan**: [plans/canvas-view-stabilization-eliminate-resets.md](../plans/canvas-view-stabilization-eliminate-resets.md)
+**Related**: BUG-020
+
+Comprehensive refactor to eliminate ALL canvas state resets:
+- Task position resets
+- Group position/size resets
+- Viewport resets
+
+**Root Cause Identified & Fixed**:
+The position reset regression was caused by **competing sync systems** in `canvas.ts`:
+- A `deep: true` watcher on `taskStore.tasks` was calling `syncTasksToCanvas()`
+- This watcher fired on ANY task property change (not just position changes)
+- `syncTasksToCanvas()` did NOT respect position locks from `canvasStateLock.ts`
+- Result: User drags task → watcher fires → positions overwritten with stale values
+
+**Fix Applied** (src/stores/canvas.ts lines 481-489):
+```typescript
+// TASK-131 FIX: DISABLED - This competing watcher caused position resets
+// The deep:true watcher fired on ANY task property change and overwrote locked positions.
+// useCanvasSync.ts in CanvasView.vue handles all sync with proper position locking.
+import('./tasks').then(({ useTaskStore }) => {
+  taskStore = useTaskStore()
+  // REMOVED: watch(() => taskStore.tasks, ...) - competed with useCanvasSync.ts
+})
+```
+
+**Architecture Decision**:
+- `useCanvasSync.ts` in `CanvasView.vue` is the SINGLE source of truth for canvas synchronization
+- It properly implements position locking via `getLockedTaskPosition()`
+- All other sync mechanisms have been removed to prevent competition
+
+**Phase 1 Completed** (Initial Fix):
+- [x] Research phase completed (13 specialized agents)
+- [x] Identified root cause: competing watcher in canvas.ts
+- [x] Disabled competing `deep: true` watcher that ignored position locks
+- [x] Build verified passing
+
+**Phase 2 Completed** (Comprehensive Fixes - January 8, 2026):
+- [x] Deleted `canvasPositionLock.ts` (131 lines - duplicate of canvasStateLock.ts)
+- [x] Fixed NodeUpdateBatcher high-priority bypass (was skipping batching entirely)
+- [x] Created `positionUtils.ts` - consolidated position validation utilities
+- [x] Moved `hasInitialFit` to canvasUiStore with localStorage persistence (prevents viewport reset on navigation)
+- [x] Implemented surgical deletion (`removeTaskNode`/`removeTaskNodes` in useCanvasSync.ts)
+- [x] Added `patchGroups()` API to canvas store (respects position locks)
+- [x] Removed redundant `deep: true` watcher in CanvasView.vue (hash-based watchers handle all cases)
+- [x] Removed `triggerCanvasSync()` from delete operations (surgical watcher handles it)
+
+**Files Changed**:
+- `src/utils/canvasPositionLock.ts` - DELETED
+- `src/utils/canvas/NodeUpdateBatcher.ts` - Fixed high-priority bypass
+- `src/utils/canvas/positionUtils.ts` - NEW (position validation utilities)
+- `src/stores/canvas/canvasUi.ts` - Added hasInitialFit state
+- `src/stores/canvas.ts` - Added patchGroups() API
+- `src/composables/canvas/useCanvasSync.ts` - Added surgical deletion functions
+- `src/stores/tasks/taskOperations.ts` - Removed triggerCanvasSync from delete
+- `src/views/CanvasView.vue` - Surgical deletion watcher, removed deep:true watcher
+
+**Requires Manual Testing**:
+- [ ] Task deletion does NOT reset other task positions
+- [ ] Viewport persists when switching views (Canvas → Calendar → Canvas)
+- [ ] Group drag/resize positions persist correctly
+
+---
+
+### ~~BUG-028~~: Guest Mode Task Deletion Fails with Auth Error (✅ DONE)
+**Priority**: P1-HIGH
+**Reported**: January 8, 2026
+**Fixed**: January 8, 2026
+
+**Problem**:
+Deleting tasks in Guest Mode failed with "User not authenticated" Supabase error.
+
+**Root Cause**:
+`deleteTaskFromStorage()` in `taskPersistence.ts` tried to delete from Supabase even in Guest Mode where tasks only exist in memory.
+
+**Fix Applied**:
+Added authentication check at start of `deleteTaskFromStorage()` - if not authenticated, skip Supabase deletion and return success (task removal from memory happens in `taskOperations.ts`).
+
+**File**: `src/stores/tasks/taskPersistence.ts`
+
+---
+
+### ~~BUG-029~~: Duplicate Canvas Groups Created on Load (✅ DONE)
+**Priority**: P1-HIGH
+**Reported**: January 8, 2026
+**Fixed**: January 8, 2026
+
+**Problem**:
+Multiple "Friday" groups (and other smart groups) created each time canvas loaded, leading to 11+ groups when there should only be 8.
+
+**Root Cause**:
+Race condition in `ensureActionGroups()` - function ran before sections loaded from localStorage, so it didn't find existing groups and created new ones.
+
+**Fixes Applied**:
+1. Added retry loop (10x100ms) to wait for sections to load in `useCanvasSmartGroups.ts`
+2. Added case-insensitive group name matching
+3. Removed duplicate `loadFromDatabase()` call in `canvas.ts` initialize function
+4. Cleaned up existing duplicate groups from localStorage
+
+**Files**:
+- `src/composables/canvas/useCanvasSmartGroups.ts`
+- `src/stores/canvas.ts`
 
 ---
 

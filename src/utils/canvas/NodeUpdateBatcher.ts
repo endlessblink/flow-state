@@ -19,28 +19,41 @@ export class NodeUpdateBatcher {
     }
 
     schedule(update: () => void, priority: 'high' | 'normal' | 'low' = 'normal') {
-        if (priority === 'high') {
-            // High priority updates run immediately
-            update()
-            return
+        // All priorities go through batching to prevent cascading syncs
+        // High priority uses shorter delay (8ms), normal is 16ms (~60fps), low is 32ms
+        const priorityDelay = {
+            high: 8,
+            normal: this.BATCH_DELAY,
+            low: 32
         }
 
         this.batchQueue.push(update)
 
+        // Always restart with appropriate delay when high priority comes in
+        if (priority === 'high') {
+            if (this.batchTimeout) {
+                clearTimeout(this.batchTimeout)
+            }
+            this.batchTimeout = window.setTimeout(() => {
+                this.processBatch()
+            }, priorityDelay.high)
+            return
+        }
+
         // Start batch processing if not already running
-        if (!this.isProcessing) {
-            this.startBatchProcessing()
+        if (!this.isProcessing && !this.batchTimeout) {
+            this.startBatchProcessing(priorityDelay[priority])
         }
     }
 
-    private startBatchProcessing() {
+    private startBatchProcessing(delay: number = this.BATCH_DELAY) {
         if (this.batchTimeout) {
             clearTimeout(this.batchTimeout)
         }
 
         this.batchTimeout = window.setTimeout(() => {
             this.processBatch()
-        }, this.BATCH_DELAY)
+        }, delay)
     }
 
     private processBatch() {

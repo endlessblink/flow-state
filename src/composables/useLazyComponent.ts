@@ -201,10 +201,10 @@ export function createHoverPreloadComponent(
 }
 
 // Predefined lazy loaders for commonly used heavy components
+// NOTE: PouchDB/CouchDB sync components removed Jan 2026 - app uses Supabase now
 export const LazyComponents = {
   TaskEditModal: () => createLazyModal(() => import('@/components/tasks/TaskEditModal.vue')),
   CalendarInboxPanel: () => createLazyComponent(() => import('@/components/inbox/CalendarInboxPanel.vue')),
-  ForensicVerificationDashboard: () => createLazyDashboard(() => import('@/components/sync/ForensicVerificationDashboard.vue')),
   MultiSelectToggle: () => createLazyComponent(() => import('@/components/common/MultiSelectToggle.vue')),
   HierarchicalTaskRow: () => createLazyComponent(() => import('@/components/tasks/HierarchicalTaskRow.vue')),
   PerformanceTest: () => createLazyDashboard(() => import('@/components/debug/PerformanceTest.vue')),
@@ -214,8 +214,6 @@ export const LazyComponents = {
   ProjectModal: () => createLazyModal(() => import('@/components/projects/ProjectModal.vue')),
   GroupModal: () => createLazyModal(() => import('@/components/common/GroupModal.vue')),
   BatchEditModal: () => createLazyModal(() => import('@/components/tasks/BatchEditModal.vue')),
-  SyncSettings: () => createLazyModal(() => import('@/components/sync/CloudSyncSettings.vue')),
-  BackupSettings: () => createLazyModal(() => import('@/components/sync/BackupSettings.vue')),
   TaskContextMenu: () => createLazyComponent(() => import('@/components/tasks/TaskContextMenu.vue')),
   SearchModal: () => createLazyModal(() => import('@/components/layout/SearchModal.vue')),
   CommandPalette: () => createLazyModal(() => import('@/components/layout/CommandPalette.vue'))

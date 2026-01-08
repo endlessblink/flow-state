@@ -3,7 +3,6 @@ import { ref, computed, watch } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Project } from '@/types/tasks'
 import { useTaskStore } from './tasks'
-import { syncState } from '@/services/sync/SyncStateService'
 
 export const useProjectStore = defineStore('projects', () => {
 
@@ -447,9 +446,8 @@ export const useProjectStore = defineStore('projects', () => {
         // CRITICAL: Prevent circular sync loop
         // - manualOperationInProgress: Direct CRUD operations (already saving)
         // - isLoading: Loading from database (don't save during load)
-        // - syncState.isSyncing: Global sync in progress
         // - syncUpdateInProgress: Realtime update just happened (don't echo back)
-        if (manualOperationInProgress || isLoading.value || syncState.isSyncing.value || syncUpdateInProgress) {
+        if (manualOperationInProgress || isLoading.value || syncUpdateInProgress) {
             return
         }
         if (saveTimeout) clearTimeout(saveTimeout)

@@ -9,8 +9,11 @@ import type { ScheduledNotification } from '../types/recurrence'
  */
 const isValidUUID = (str: string | null | undefined): boolean => {
     if (!str) return false
+    // BUG-FIX: Allow both UUIDs (v4) and Timestamp IDs (legacy/current task creation)
+    // Timestamp IDs are usually 13 digits, UUIDs are 36 chars
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    return uuidRegex.test(str)
+    const timestampRegex = /^\d{10,20}$/ // Simple numeric check for timestamps
+    return uuidRegex.test(str) || timestampRegex.test(str)
 }
 
 /**
@@ -193,8 +196,8 @@ export function toSupabaseGroup(group: any, userId: string): SupabaseGroup {
     const sanitizedParentGroupId = group.parentGroupId &&
         group.parentGroupId !== 'undefined' &&
         group.parentGroupId !== 'null'
-            ? group.parentGroupId
-            : null
+        ? group.parentGroupId
+        : null
 
     return {
         id: group.id,

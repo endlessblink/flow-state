@@ -75,6 +75,14 @@ export function useCanvasSync(deps: SyncDependencies) {
             const desiredNodeMap = new Map<string, Node>()
 
             // --- Process Sections ---
+            // TASK-131 FIX: Track existing section positions to prevent drift (like tasks)
+            const existingSectionPositions = new Map<string, { x: number; y: number }>()
+            deps.nodes.value.forEach(n => {
+                if (n.type === 'sectionNode') {
+                    existingSectionPositions.set(n.id, { x: n.position.x, y: n.position.y })
+                }
+            })
+
             sections.forEach(section => {
                 // TASK-072 FIX: Always use recursive counting so parent groups include tasks from child groups
                 const taskCount = canvasStore.getTaskCountInGroupRecursive(section.id, Array.isArray(deps.filteredTasks.value) ? deps.filteredTasks.value : [])
@@ -82,6 +90,8 @@ export function useCanvasSync(deps: SyncDependencies) {
                 // TASK-072: Handle nested groups - set parent node and convert to relative position
                 let parentNode: string | undefined = undefined
                 let position = { x: section.position.x, y: section.position.y }
+                const nodeId = `section-${section.id}`
+                const existingPos = existingSectionPositions.get(nodeId)
 
                 if (section.parentGroupId) {
                     const parentGroup = sections.find(s => s.id === section.parentGroupId)
@@ -91,10 +101,25 @@ export function useCanvasSync(deps: SyncDependencies) {
                         const relX = section.position.x - parentGroup.position.x
                         const relY = section.position.y - parentGroup.position.y
 
-                        position = {
-                            x: Number.isFinite(relX) ? relX : 0,
-                            y: Number.isFinite(relY) ? relY : 0
+                        // TASK-131 FIX: Add 2px tolerance check to prevent position drift
+                        // If existing position is very close to calculated, preserve it
+                        if (existingPos &&
+                            Math.abs(existingPos.x - relX) < 2.0 &&
+                            Math.abs(existingPos.y - relY) < 2.0) {
+                            position = { x: existingPos.x, y: existingPos.y }
+                        } else if (Number.isFinite(relX) && Number.isFinite(relY)) {
+                            position = { x: relX, y: relY }
                         }
+                        // Only log when actually changing (reduces noise)
+                        if (!existingPos) {
+                            console.log(`🔗 [SYNC] Section ${section.name} is Child of ${parentGroup.name} (${parentNode})`)
+                        }
+                    }
+                } else if (existingPos) {
+                    // TASK-131 FIX: For root-level sections, preserve existing position if close
+                    if (Math.abs(existingPos.x - position.x) < 2.0 &&
+                        Math.abs(existingPos.y - position.y) < 2.0) {
+                        position = { x: existingPos.x, y: existingPos.y }
                     }
                 }
 
@@ -105,7 +130,7 @@ export function useCanvasSync(deps: SyncDependencies) {
                     return getDepth(group.parentGroupId, depth + 1)
                 }
                 const zIndex = getDepth(section.id)
-                const nodeId = `section-${section.id}`
+                // nodeId already defined above at line 93
 
                 desiredNodeMap.set(nodeId, {
                     id: nodeId,
@@ -133,8 +158,6 @@ export function useCanvasSync(deps: SyncDependencies) {
                     draggable: true, // Allow dragging sections
                     selectable: true,
                     connectable: false,
-                    // Use efficient resize/drag handling
-                    dragHandle: '.section-header', // Only drag from header
                     expandParent: false // Don't expand parent nodes
                 })
             })
@@ -189,7 +212,22 @@ export function useCanvasSync(deps: SyncDependencies) {
                                     // No lock - recalculate relative position from absolute
                                     const relX = position.x - section.position.x
                                     const relY = position.y - section.position.y
-                                    if (Number.isFinite(relX) && Number.isFinite(relY)) {
+
+                                    // FIX: Preserve visual stability for existing nodes
+                                    // If calculated relative position is very close to current visual position (within 2px),
+                                    // prefer the current visual position to prevent micro-shifts or resets.
+                                    if (existingPos &&
+                                        Math.abs(existingPos.x - relX) < 2.0 &&
+                                        Math.abs(existingPos.y - relY) < 2.0) {
+                                        position = { x: existingPos.x, y: existingPos.y }
+                                    } else if (Number.isFinite(relX) && Number.isFinite(relY)) {
+                                        console.log(`⚠️ [SYNC-RESET] Task ${task.id} resetting position:`, {
+                                            existingVis: existingPos,
+                                            calcRel: { x: relX, y: relY },
+                                            storedAbs: task.canvasPosition,
+                                            sectionPos: section.position,
+                                            diff: existingPos ? { x: existingPos.x - relX, y: existingPos.y - relY } : null
+                                        })
                                         position = { x: relX, y: relY }
                                     }
                                 }
@@ -449,6 +487,8 @@ export function useCanvasSync(deps: SyncDependencies) {
             })
 
             deps.edges.value = validEdges
+            // BUG-026: Disabled excessive logging - fires hundreds of times per second
+            // console.log(`🔗 [SYNC-EDGES] Synced ${validEdges.length} edges. Task IDs present: ${taskIds.size}`)
         } catch (error) {
             console.error('❌ Critical error in syncEdges():', error)
             console.log('🔧 Recovery: Keeping existing edges array unchanged')
@@ -515,24 +555,10 @@ export function useCanvasSync(deps: SyncDependencies) {
             // Reset reactive states
             deps.isHandlingNodeChange.value = false
             deps.isSyncing.value = false
-            // We can't clear all operationLoading keys here easily without ref access to the object, 
+            // We can't clear all operationLoading keys here easily without ref access to the object,
             // but setOperationLoading handles the 'loading' key which is most important.
 
-            // Reinitialize database connection
-            console.log('🔄 [SYSTEM] Reinitializing database connection...')
-            const windowDb = (window as unknown as { pomoFlowDb?: { info: () => Promise<{ db_name: string; doc_count: number }> } }).pomoFlowDb
-            if (typeof window !== 'undefined' && windowDb) {
-                try {
-                    const dbInfo = await windowDb.info()
-                    console.log('✅ [SYSTEM] Database connection verified:', {
-                        name: dbInfo.db_name,
-                        doc_count: dbInfo.doc_count
-                    })
-                } catch (dbError) {
-                    console.error('❌ [SYSTEM] Database verification failed:', dbError)
-                    throw new Error('Database connection could not be verified')
-                }
-            }
+            // TASK-136: PouchDB database verification removed - app uses Supabase
 
             // Resync data
             // console.log('🔄 [SYSTEM] Resynchronizing data...')
@@ -572,12 +598,70 @@ export function useCanvasSync(deps: SyncDependencies) {
         }
     }
 
+    /**
+     * Surgically remove a single task node and its connected edges.
+     * This prevents the position reset that occurs with full syncNodes().
+     *
+     * @param taskId - The ID of the task node to remove
+     * @returns true if node was found and removed, false otherwise
+     *
+     * @see TASK-131: Canvas View Stabilization
+     * @see BUG-020: Task Positions Reset on Deletion
+     */
+    const removeTaskNode = (taskId: string): boolean => {
+        // Find and remove the node
+        const nodeIndex = deps.nodes.value.findIndex(n => n.id === taskId)
+        if (nodeIndex === -1) {
+            console.log(`🔍 [SURGICAL-DELETE] Task node ${taskId} not found (may be in inbox)`)
+            return false
+        }
+
+        // Remove the node
+        deps.nodes.value.splice(nodeIndex, 1)
+
+        // Remove any edges connected to this node (both source and target)
+        const edgesBefore = deps.edges.value.length
+        deps.edges.value = deps.edges.value.filter(
+            e => e.source !== taskId && e.target !== taskId
+        )
+        const edgesRemoved = edgesBefore - deps.edges.value.length
+
+        console.log(`✂️ [SURGICAL-DELETE] Removed task node ${taskId} and ${edgesRemoved} connected edges`)
+        return true
+    }
+
+    /**
+     * Surgically remove multiple task nodes at once.
+     * More efficient than calling removeTaskNode() in a loop.
+     *
+     * @param taskIds - Array of task IDs to remove
+     * @returns Number of nodes actually removed
+     */
+    const removeTaskNodes = (taskIds: string[]): number => {
+        const taskIdSet = new Set(taskIds)
+        const nodesBefore = deps.nodes.value.length
+
+        // Filter out the nodes to delete
+        deps.nodes.value = deps.nodes.value.filter(n => !taskIdSet.has(n.id))
+
+        // Remove all edges connected to any of the deleted nodes
+        deps.edges.value = deps.edges.value.filter(
+            e => !taskIdSet.has(e.source) && !taskIdSet.has(e.target)
+        )
+
+        const nodesRemoved = nodesBefore - deps.nodes.value.length
+        console.log(`✂️ [SURGICAL-BULK-DELETE] Removed ${nodesRemoved} task nodes`)
+        return nodesRemoved
+    }
+
     return {
         syncNodes,
         syncEdges,
         batchedSyncNodes,
         batchedSyncEdges,
         performSystemRestart,
-        cleanupStaleNodes // Exported just in case, though mostly internal
+        cleanupStaleNodes, // Exported just in case, though mostly internal
+        removeTaskNode,
+        removeTaskNodes
     }
 }

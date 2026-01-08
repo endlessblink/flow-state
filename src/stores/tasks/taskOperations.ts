@@ -5,7 +5,8 @@ import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey } from '@/utils/dateUtils'
 // TASK-089 FIX: Unlock position when removing from canvas
-import { clearTaskLock } from '@/utils/canvasStateLock'
+// TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
+import { clearTaskLock, getLockedTaskPosition } from '@/utils/canvasStateLock'
 
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
@@ -25,7 +26,8 @@ export function useTaskOperations(
     manualOperationInProgress: Ref<boolean>,
     saveTasksToStorage: (tasks: Task[], context: string) => Promise<void>,
     saveSpecificTasks: (tasks: Task[], context: string) => Promise<void>,
-    deleteTaskFromStorage: (taskId: string) => Promise<void>,  // BUGFIX: Add deletion persistence
+    deleteTaskFromStorage: (taskId: string) => Promise<void>,
+    bulkDeleteTasksFromStorage: (taskIds: string[]) => Promise<void>,  // BUG-025: Atomic bulk delete
     persistFilters: () => void,
     _runAllTaskMigrations: () => void
 ) {
@@ -142,6 +144,16 @@ export function useTaskOperations(
                 clearTaskLock(taskId)
             }
 
+            // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
+            // If a position lock exists (from recent drag), use the locked position instead of the update
+            if (updates.canvasPosition && updates.canvasPosition !== null) {
+                const lockedPosition = getLockedTaskPosition(taskId)
+                if (lockedPosition) {
+                    console.log(`🛡️ [TASK-131] Position lock active for ${taskId} - using locked position instead of update`)
+                    updates.canvasPosition = { x: lockedPosition.x, y: lockedPosition.y }
+                }
+            }
+
             if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || !task.instances.length)) {
                 // updates.isInInbox = true // Wait, why force inbox true if just position is undefined but task has position? 
                 // This logic implies check if task HAS position.
@@ -195,8 +207,8 @@ export function useTaskOperations(
 
             _rawTasks.value.splice(index, 1)
 
-            // Trigger canvas sync for Tauri reactivity
-            triggerCanvasSync()
+            // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
+            // The watcher detects the deletion and removes only the affected node, preventing position resets
             console.log(`✅ [DELETE] Task ${taskId} deleted from local state and Supabase`)
         } catch (error) {
             _rawTasks.value.splice(index, 0, deletedTask)
@@ -229,22 +241,21 @@ export function useTaskOperations(
         }
     }
 
+    // BUG-025 FIX: Atomic bulk delete using Supabase .in() operator
     const bulkDeleteTasks = async (taskIds: string[]) => {
         if (!taskIds.length) return
         manualOperationInProgress.value = true
 
         try {
-            // BUGFIX: Persist deletions to Supabase FIRST
-            for (const taskId of taskIds) {
-                await deleteTaskFromStorage(taskId)
-            }
+            // BUG-025 FIX: Use atomic bulk delete instead of looping
+            await bulkDeleteTasksFromStorage(taskIds)
 
             const tasksToKeep = _rawTasks.value.filter(t => !taskIds.includes(t.id))
             _rawTasks.value = tasksToKeep
 
-            // Trigger canvas sync for Tauri reactivity
-            triggerCanvasSync()
-            console.log(`✅ [BULK-DELETE] ${taskIds.length} tasks deleted from local state and Supabase`)
+            // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
+            // The watcher detects bulk deletions and removes only the affected nodes, preventing position resets
+            console.log(`✅ [BULK-DELETE] ${taskIds.length} tasks deleted atomically from Supabase`)
         } catch (error) {
             console.error(`❌ [BULK-DELETE] Failed to delete ${taskIds.length} tasks:`, error)
             throw error

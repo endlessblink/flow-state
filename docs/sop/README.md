@@ -1,7 +1,7 @@
 # Pomo-Flow Standard Operating Procedures (SOPs)
 
-**Last Updated**: January 6, 2026
-**Total Documents**: 30 (added SYNC-supabase-circular-loop-fix.md)
+**Last Updated**: January 8, 2026
+**Total Documents**: 31 (added UNDO-system-architecture.md)
 
 ---
 
@@ -16,6 +16,7 @@
 | Styling | `STYLING-` | CSS, glassmorphism, design tokens |
 | Tasks | `TASKS-` | Task store, persistence, reactivity |
 | UI | `UI-` | General UI components |
+| Undo | `UNDO-` | Undo/redo system architecture |
 
 ---
 
@@ -89,6 +90,12 @@ docs/sop/
 |------|-------------|
 | `UI-filter-highlighting.md` | Filter highlighting system |
 | `UI-sidebar-categories.md` | Sidebar category counts fix |
+
+### Undo (UNDO-*)
+
+| File | Description |
+|------|-------------|
+| `UNDO-system-architecture.md` | Undo/redo system architecture & troubleshooting |
 
 ---
 

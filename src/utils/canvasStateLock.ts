@@ -54,6 +54,78 @@ const viewportLock: { current: CanvasLock | null } = { current: null }
 // 7 seconds - longer than the previous 5s to account for sync delays
 const LOCK_DURATION_MS = 7000
 
+// TASK-131 FIX: Persist locks to localStorage to survive HMR
+const LOCKS_STORAGE_KEY = 'pomoflow-canvas-locks'
+
+/**
+ * Save locks to localStorage to survive HMR/page refresh during development.
+ * Only saves non-expired locks.
+ */
+function persistLocksToStorage(): void {
+  try {
+    const now = Date.now()
+    const data = {
+      timestamp: now,
+      tasks: Array.from(taskLocks.entries()).filter(([_, lock]) => now - lock.lockedAt < LOCK_DURATION_MS),
+      groups: Array.from(groupLocks.entries()).filter(([_, lock]) => now - lock.lockedAt < LOCK_DURATION_MS),
+      viewport: viewportLock.current && now - viewportLock.current.lockedAt < LOCK_DURATION_MS
+        ? viewportLock.current
+        : null
+    }
+    localStorage.setItem(LOCKS_STORAGE_KEY, JSON.stringify(data))
+  } catch (_e) {
+    // Silently fail - localStorage might be full or unavailable
+  }
+}
+
+/**
+ * Restore locks from localStorage after HMR/page refresh.
+ * Only restores non-expired locks.
+ */
+function restoreLocksFromStorage(): void {
+  try {
+    const stored = localStorage.getItem(LOCKS_STORAGE_KEY)
+    if (!stored) return
+
+    const data = JSON.parse(stored)
+    const now = Date.now()
+
+    // Restore task locks that are still valid
+    if (data.tasks && Array.isArray(data.tasks)) {
+      for (const [taskId, lock] of data.tasks) {
+        if (lock && now - lock.lockedAt < LOCK_DURATION_MS) {
+          taskLocks.set(taskId, lock)
+          console.log(`🔒 [HMR] Restored task lock for ${taskId}`)
+        }
+      }
+    }
+
+    // Restore group locks that are still valid
+    if (data.groups && Array.isArray(data.groups)) {
+      for (const [groupId, lock] of data.groups) {
+        if (lock && now - lock.lockedAt < LOCK_DURATION_MS) {
+          groupLocks.set(groupId, lock)
+          console.log(`🔒 [HMR] Restored group lock for ${groupId}`)
+        }
+      }
+    }
+
+    // Restore viewport lock if still valid
+    if (data.viewport && now - data.viewport.lockedAt < LOCK_DURATION_MS) {
+      viewportLock.current = data.viewport
+      console.log(`🔒 [HMR] Restored viewport lock`)
+    }
+
+    // Clear storage after restore to avoid stale data on next reload
+    localStorage.removeItem(LOCKS_STORAGE_KEY)
+  } catch (_e) {
+    // Silently fail
+  }
+}
+
+// Restore locks on module load (handles HMR)
+restoreLocksFromStorage()
+
 /**
  * Lock a task's position after a local drag operation.
  */
@@ -73,6 +145,7 @@ export function lockTaskPosition(taskId: string, position: TaskPosition, source:
   }
   taskLocks.set(taskId, lock)
   console.log(`🔒 [CANVAS-LOCK] Task ${taskId} locked at (${position.x.toFixed(0)}, ${position.y.toFixed(0)}) [${source}]`)
+  persistLocksToStorage() // TASK-131: Persist to survive HMR
 }
 
 /**
@@ -94,6 +167,7 @@ export function lockGroupPosition(groupId: string, position: GroupPosition, sour
   }
   groupLocks.set(groupId, lock)
   console.log(`🔒 [CANVAS-LOCK] Group ${groupId} locked at (${position.x.toFixed(0)}, ${position.y.toFixed(0)}) ${position.width}x${position.height} [${source}]`)
+  persistLocksToStorage() // TASK-131: Persist to survive HMR
 }
 
 /**
@@ -114,6 +188,7 @@ export function lockViewport(viewport: ViewportState, source: CanvasLock['source
     source
   }
   console.log(`🔒 [CANVAS-LOCK] Viewport locked at (${viewport.x.toFixed(0)}, ${viewport.y.toFixed(0)}) zoom=${viewport.zoom.toFixed(2)} [${source}]`)
+  persistLocksToStorage() // TASK-131: Persist to survive HMR
 }
 
 /**

@@ -48,7 +48,8 @@ export const DEFAULT_SECURITY_CONFIG: SecurityHeaderConfig = {
       'style-src': ["'self'", "'unsafe-inline'"],
       'img-src': ["'self'", 'data:', 'https:', 'http:'],
       'font-src': ["'self'", 'data:', 'https:'],
-      'connect-src': ["'self'", 'ws:', 'wss:', 'http:', 'https:'],
+      // BUG-021 FIX: Explicit allowlist instead of wildcards
+      'connect-src': ["'self'", 'ws:', 'wss:', 'https://*.supabase.co', 'https://api.github.com', 'https://raw.githubusercontent.com'],
       'media-src': ["'self'"],
       'object-src': ["'none'"],
       'base-uri': ["'self'"],

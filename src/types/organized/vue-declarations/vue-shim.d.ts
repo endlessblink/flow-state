@@ -16,18 +16,6 @@ declare module '@/views/*' {
   export default component
 }
 
-declare module '@/components/sync/SyncStatusIndicator.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
-  export default component
-}
-
-declare module '@/components/sync/SyncErrorBoundary.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
-  export default component
-}
-
 declare module '@/views/CanvasView.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, any>
@@ -41,12 +29,6 @@ declare module '@/components/tasks/TaskEditModal.vue' {
 }
 
 declare module '@/components/inbox/CalendarInboxPanel.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
-  export default component
-}
-
-declare module '@/components/sync/ForensicVerificationDashboard.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, any>
   export default component
@@ -101,18 +83,6 @@ declare module '@/components/common/GroupModal.vue' {
 }
 
 declare module '@/components/tasks/BatchEditModal.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
-  export default component
-}
-
-declare module '@/components/sync/CloudSyncSettings.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
-  export default component
-}
-
-declare module '@/components/sync/BackupSettings.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, any>
   export default component

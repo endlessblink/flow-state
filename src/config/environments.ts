@@ -1,5 +1,6 @@
 /**
  * Environment-specific configurations for sync system
+ * TASK-136: CouchDB/PouchDB decommissioned Jan 2026 - app uses Supabase
  */
 
 export interface EnvironmentConfig {
@@ -12,17 +13,7 @@ export interface EnvironmentConfig {
       auto_compaction: boolean
       revs_limit: number
     }
-    remote?: {
-      url: string
-      auth?: {
-        username: string
-        password: string
-      }
-      timeout: number
-      batchSize: number
-      batchesLimit: number
-      skip_setup: boolean
-    }
+    // TASK-136: CouchDB `remote` config removed - app uses Supabase
   }
   sync: {
     live: boolean
@@ -75,18 +66,8 @@ export const developmentConfig: EnvironmentConfig = {
       adapter: 'idb',
       auto_compaction: true,
       revs_limit: 50
-    },
-    remote: {
-      url: 'http://localhost:5984/pomo-flow-dev',
-      auth: {
-        username: 'admin',
-        password: 'password'
-      },
-      timeout: 30000,
-      batchSize: 25,
-      batchesLimit: 5,
-      skip_setup: false
     }
+    // TASK-136: CouchDB remote config removed
   },
   sync: {
     live: true,
@@ -139,18 +120,8 @@ export const stagingConfig: EnvironmentConfig = {
       adapter: 'idb',
       auto_compaction: true,
       revs_limit: 100
-    },
-    remote: {
-      url: 'https://staging-db.pomoflow.com/pomo-flow-staging',
-      auth: {
-        username: import.meta.env.VITE_COUCHDB_USERNAME || 'staging_user',
-        password: import.meta.env.VITE_COUCHDB_PASSWORD || 'staging_pass'
-      },
-      timeout: 45000,
-      batchSize: 50,
-      batchesLimit: 10,
-      skip_setup: false
     }
+    // TASK-136: CouchDB remote config removed
   },
   sync: {
     live: true,
@@ -203,18 +174,8 @@ export const productionConfig: EnvironmentConfig = {
       adapter: 'idb',
       auto_compaction: true,
       revs_limit: 200
-    },
-    remote: {
-      url: import.meta.env.VITE_COUCHDB_URL || 'https://db.pomoflow.com/pomo-flow',
-      auth: {
-        username: import.meta.env.VITE_COUCHDB_USERNAME || '',
-        password: import.meta.env.VITE_COUCHDB_PASSWORD || ''
-      },
-      timeout: 60000,
-      batchSize: 100,
-      batchesLimit: 20,
-      skip_setup: false
     }
+    // TASK-136: CouchDB remote config removed
   },
   sync: {
     live: true,
@@ -301,8 +262,9 @@ export const getCORSConfig = () => {
 }
 
 // Environment-specific timeout configurations
+// TASK-136: Removed database.remote?.timeout - CouchDB decommissioned
 export const getTimeouts = () => ({
-  database: currentConfig.database.remote?.timeout || 30000,
+  database: 30000, // Default timeout for Supabase
   sync: currentConfig.sync.timeout,
   healthCheck: currentConfig.monitoring.healthCheckInterval,
   retry: {

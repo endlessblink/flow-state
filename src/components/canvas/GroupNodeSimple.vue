@@ -34,11 +34,11 @@
 
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
     <NodeResizer
-      :is-visible="selected"
+      :is-visible="true"
       :min-width="200"
       :min-height="80"
-      :max-width="2000"
-      :max-height="2000"
+      :max-width="50000"
+      :max-height="50000"
       :line-positions="[Position.Top, Position.Right, Position.Bottom, Position.Left]"
       @resize-start="handleResizeStart"
       @resize="handleResize"

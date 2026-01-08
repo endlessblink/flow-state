@@ -29,38 +29,12 @@ const errorStates = reactive<Record<string, Error | null>>({})
 
 /**
  * Import configuration for common composables
+ * NOTE: PouchDB/CouchDB sync entries removed Jan 2026 - app uses Supabase now
  */
 export const IMPORT_CONFIG = {
-  // Database-related imports
-  useDatabase: {
-    path: () => import('@/composables/useDatabase'),
-    preload: true, // Critical for app startup
-    timeout: 5000
-  },
-
   // Undo/Redo system imports
   useUnifiedUndoRedo: {
     path: () => import('@/composables/useUnifiedUndoRedo'),
-    preload: false, // Load on demand
-    timeout: 3000
-  },
-
-  // Sync system imports (consolidated - only ReliableSyncManager remains)
-  useReliableSyncManager: {
-    path: () => import('@/composables/useReliableSyncManager'),
-    preload: true, // Critical for sync functionality
-    timeout: 5000
-  },
-
-  // UI component imports
-  SyncStatusIndicator: {
-    path: () => import('@/components/sync/SyncStatusIndicator.vue'),
-    preload: false, // Load on demand
-    timeout: 3000
-  },
-
-  SyncErrorBoundary: {
-    path: () => import('@/components/sync/SyncErrorBoundary.vue'),
     preload: false, // Load on demand
     timeout: 3000
   },
@@ -304,16 +278,11 @@ export function useDynamicImports() {
 
 /**
  * Convenience functions for common imports
+ * NOTE: PouchDB/CouchDB sync helpers removed Jan 2026 - app uses Supabase now
  */
 
 // Helper type for dynamic modules
 type ModuleShape = Record<string, unknown>
-
-// Database composable with caching
-export const getDatabaseComposable = async () => {
-  const module = await dynamicImportManager.import<ModuleShape>('useDatabase')
-  return module.useDatabase || module
-}
 
 // Undo/Redo composable with caching
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -321,12 +290,6 @@ export const getUndoRedoComposable = async (): Promise<(...args: any[]) => any> 
   const module = await dynamicImportManager.import<ModuleShape>('useUnifiedUndoRedo')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (module.useUnifiedUndoRedo || module) as (...args: any[]) => any
-}
-
-// Sync manager with caching (consolidated)
-export const getSyncManager = async () => {
-  const module = await dynamicImportManager.import<ModuleShape>('useReliableSyncManager')
-  return module.getGlobalReliableSyncManager || module
 }
 
 // Store imports with caching
@@ -338,17 +301,6 @@ export const getTasksStore = async () => {
 export const getCanvasStore = async () => {
   const module = await dynamicImportManager.import<ModuleShape>('useCanvasStore')
   return module.useCanvasStore || module.default || module
-}
-
-// Vue component imports
-export const getSyncStatusIndicator = async () => {
-  const module = await dynamicImportManager.import<ModuleShape>('SyncStatusIndicator')
-  return module.default || module.SyncStatusIndicator
-}
-
-export const getSyncErrorBoundary = async () => {
-  const module = await dynamicImportManager.import<ModuleShape>('SyncErrorBoundary')
-  return module.default || module.SyncErrorBoundary
 }
 
 /**

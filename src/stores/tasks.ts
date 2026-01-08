@@ -84,14 +84,14 @@ export const useTaskStore = defineStore('tasks', () => {
     syncInProgress,
     runAllTaskMigrations
   )
-  const { saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool, importTasks } = persistence
+  const { saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool, importTasks } = persistence
 
   // 3. Initialize Operations
   // SAFETY: Pass _rawTasks for CRUD operations
   const operations = useTaskOperations(
     _rawTasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
     activeDurationFilter, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
-    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, persistFilters, runAllTaskMigrations
+    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, persistFilters, runAllTaskMigrations
   )
 
   // 4. Initialize History
@@ -138,20 +138,25 @@ export const useTaskStore = defineStore('tasks', () => {
         }
       } else {
         // BUG-061 FIX: Validate task before adding/updating
-        if (!taskDoc.id || !taskDoc.title === undefined) {
+        if (!taskDoc || !taskDoc.id || !taskDoc.title === undefined) {
           console.warn('⚠️ [TASK STORE] Ignoring invalid task from sync (missing id or title):', taskId)
           return
         }
 
-        // BUG-061 FIX: Ensure dates are Date objects (defensive)
+        // DEBUG: Trace sync payload for connections (BUG-023)
+        // Handle strings, timestamps, or Date objects safely
+        const toDate = (val: any): Date => {
+          if (!val) return new Date()
+          if (val instanceof Date) return val
+          // If string or number, try to parse
+          const d = new Date(val)
+          return isNaN(d.getTime()) ? new Date() : d
+        }
+
         const normalizedTask: Task = {
           ...taskDoc,
-          createdAt: taskDoc.createdAt instanceof Date
-            ? taskDoc.createdAt
-            : new Date(taskDoc.createdAt || Date.now()),
-          updatedAt: taskDoc.updatedAt instanceof Date
-            ? taskDoc.updatedAt
-            : new Date(taskDoc.updatedAt || Date.now())
+          createdAt: toDate(taskDoc.createdAt),
+          updatedAt: toDate(taskDoc.updatedAt)
         }
 
         // Update or add task

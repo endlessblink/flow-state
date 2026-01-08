@@ -61,30 +61,7 @@
           <Calendar :size="12" />
           {{ formattedDueDate }}
         </span>
-        <span
-          class="project-emoji-badge"
-          :class="`project-visual--${projectVisual.type}`"
-          :title="`Project: ${taskStore.getProjectDisplayName(task?.projectId)}`"
-        >
-          <!-- Emoji rendering using ProjectEmojiIcon for consistency -->
-          <ProjectEmojiIcon
-            v-if="projectVisual.type === 'emoji'"
-            :emoji="projectVisual.content"
-            size="md"
-          />
-          <!-- CSS Circle for colored projects -->
-          <div
-            v-else-if="projectVisual.type === 'css-circle'"
-            class="project-css-circle"
-            :style="{ '--project-color': projectVisual.color }"
-          />
-          <!-- Default fallback (folder icon) -->
-          <ProjectEmojiIcon
-            v-else
-            emoji="📁"
-            size="md"
-          />
-        </span>
+
         <span v-if="showSchedule && hasSchedule" class="schedule-badge" title="Scheduled">
           📅
         </span>
@@ -966,9 +943,10 @@ body.dragging-active .task-node .vue-flow__handle {
 }
 
 .project-emoji-badge {
-  background: var(--brand-bg-subtle);
-  border-color: var(--brand-border-subtle);
-  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-left: -2px; /* Pull slightly left to align with text */
 }
 
 .project-emoji {

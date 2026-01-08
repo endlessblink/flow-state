@@ -10,6 +10,7 @@ import { visualizer } from 'rollup-plugin-visualizer'
 
 // Cache duration constants for PWA
 const CACHE_DURATIONS = {
+  FIVE_MINUTES: 60 * 5, // BUG-023: Short TTL for API data
   ONE_DAY: 60 * 60 * 24,
   ONE_WEEK: 60 * 60 * 24 * 7,
   ONE_MONTH: 60 * 60 * 24 * 30,
@@ -43,7 +44,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
-          // Supabase API: Network-first with offline queue
+          // Supabase API: Network-first with short TTL (BUG-023 FIX)
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
             handler: 'NetworkFirst',
@@ -53,7 +54,7 @@ export default defineConfig(({ mode }) => ({
               cacheableResponse: { statuses: [0, 200] },
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: CACHE_DURATIONS.ONE_DAY,
+                maxAgeSeconds: CACHE_DURATIONS.FIVE_MINUTES, // Short TTL for fresh data
               },
             },
           },

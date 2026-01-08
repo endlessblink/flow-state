@@ -34,16 +34,47 @@ export function useTaskPersistence(
     // --- SQL PERSISTENCE ---
 
     // -- Supabase Integration --
-    const { fetchTasks, saveTasks, deleteTask: deleteFromDB } = useSupabaseDatabase()
+    const { fetchTasks, saveTasks, deleteTask: deleteFromDB, bulkDeleteTasks: bulkDeleteFromDB } = useSupabaseDatabase()
 
     const deleteTaskFromStorage = async (taskId: string): Promise<void> => {
         console.log(`🗑️ [PERSISTENCE] deleteTaskFromStorage called for: ${taskId}`)
+
+        // BUG-021 FIX: In Guest Mode, skip Supabase deletion (tasks only exist in memory)
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        if (!authStore.isAuthenticated) {
+            console.log(`✅ [PERSISTENCE] Task ${taskId} deleted (Guest Mode - memory only)`)
+            return // Success - task removal from memory happens in taskOperations.ts
+        }
+
         try {
             await deleteFromDB(taskId)
             console.log(`✅ [PERSISTENCE] Task ${taskId} soft-deleted successfully`)
         } catch (e) {
             console.error(`❌ [PERSISTENCE] Task deletion failed for ${taskId}:`, e)
             throw e  // Re-throw so deleteTask in taskOperations knows it failed
+        }
+    }
+
+    // BUG-025 FIX: Atomic bulk delete for multiple tasks
+    const bulkDeleteTasksFromStorage = async (taskIds: string[]): Promise<void> => {
+        if (taskIds.length === 0) return
+        console.log(`🗑️ [PERSISTENCE] bulkDeleteTasksFromStorage called for ${taskIds.length} tasks`)
+
+        // In Guest Mode, skip Supabase deletion (tasks only exist in memory)
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        if (!authStore.isAuthenticated) {
+            console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks deleted (Guest Mode - memory only)`)
+            return // Success - task removal from memory happens in taskOperations.ts
+        }
+
+        try {
+            await bulkDeleteFromDB(taskIds)
+            console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks soft-deleted atomically`)
+        } catch (e) {
+            console.error(`❌ [PERSISTENCE] Bulk task deletion failed:`, e)
+            throw e // Re-throw so bulkDeleteTasks in taskOperations knows it failed
         }
     }
 
@@ -154,7 +185,8 @@ export function useTaskPersistence(
     return {
         saveTasksToStorage,
         saveSpecificTasks,
-        deleteTaskFromStorage,  // BUGFIX: Export to allow taskOperations to persist deletions
+        deleteTaskFromStorage,
+        bulkDeleteTasksFromStorage,  // BUG-025: Atomic bulk delete
         loadFromDatabase,
         loadPersistedFilters,
         persistFilters,

@@ -19,6 +19,10 @@
         :disabled="isCollapsed"
         @blur="updateName"
       >
+      <!-- TASK-130: Show date suffix for day-of-week groups (e.g., "/ Jan 10") -->
+      <span v-if="dayOfWeekDateSuffix" class="section-date-suffix">
+        / {{ dayOfWeekDateSuffix }}
+      </span>
 
       <!-- TASK-068: All actions moved to context menu for cleaner header -->
 
@@ -125,6 +129,28 @@ const isPowerMode = computed(() => {
   }
   // Otherwise, auto-detect from name
   return powerKeyword.value !== null
+})
+
+// TASK-130: Compute upcoming date for day-of-week groups
+const dayOfWeekDateSuffix = computed(() => {
+  if (!powerKeyword.value || powerKeyword.value.category !== 'day_of_week') {
+    return null
+  }
+
+  const targetDayIndex = parseInt(powerKeyword.value.value, 10)
+  if (isNaN(targetDayIndex)) return null
+
+  const today = new Date()
+  // Calculate next occurrence: same formula as drag-drop
+  // If today IS the target day, show NEXT week's date
+  const daysUntilTarget = ((7 + targetDayIndex - today.getDay()) % 7) || 7
+  const targetDate = new Date(today)
+  targetDate.setDate(today.getDate() + daysUntilTarget)
+
+  // Format as "Jan 10" (short month + day)
+  const month = targetDate.toLocaleDateString('en-US', { month: 'short' })
+  const day = targetDate.getDate()
+  return `${month} ${day}`
 })
 
 // Watch for external name changes
@@ -346,6 +372,16 @@ const handleResizeEnd = (event: unknown) => {
 .section-name-input:hover,
 .section-name-input:focus {
   background: var(--glass-bg-medium);
+}
+
+/* TASK-130: Day-of-week date suffix styling */
+.section-date-suffix {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-left: var(--space-1);
 }
 
 /* TASK-068: Removed .section-type-badge CSS - non-actionable element removed */

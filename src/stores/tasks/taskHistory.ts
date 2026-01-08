@@ -2,7 +2,7 @@ import { type Ref, nextTick } from 'vue'
 import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
-import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
+// TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 
 
 export function useTaskHistory(
@@ -39,9 +39,7 @@ export function useTaskHistory(
         manualOperationInProgress.value = true
 
         try {
-            const oldTasks = [..._rawTasks.value]
             _rawTasks.value = [...newTasks]
-            taskDisappearanceLogger.logArrayReplacement(oldTasks, _rawTasks.value, 'undo-restoreTaskState')
 
             await saveTasksToStorage(_rawTasks.value, 'undo-restoreTaskState')
         } catch (error) {

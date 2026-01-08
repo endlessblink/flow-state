@@ -44,15 +44,33 @@ export function useSupabaseDatabase() {
         return authStore.user?.id || null
     }
 
-    const handleError = (error: any, context: string) => {
+    const handleError = (error: unknown, context: string) => {
+        // Handle Supabase/Postgrest errors which are objects but not Error instances
+        let message = 'Unknown error'
+        let details = ''
+
+        if (error instanceof Error) {
+            message = error.message
+        } else if (typeof error === 'object' && error !== null) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const e = error as any
+            message = e.message || String(error)
+            details = e.details || e.hint || ''
+        } else {
+            message = String(error)
+        }
+
+        const finalMessage = details ? `${message} (${details})` : message
+        const err = error instanceof Error ? error : new Error(finalMessage)
+
         errorHandler.report({
-            error,
-            message: `Sync Error(${context}): ${error.message || 'Unknown error'}`,
+            error: err,
+            message: `Sync Error(${context}): ${finalMessage}`,
             severity: ErrorSeverity.ERROR,
             category: ErrorCategory.SYNC,
             showNotification: true
         })
-        lastSyncError.value = error.message
+        lastSyncError.value = finalMessage
     }
 
     // -- Projects --
@@ -68,7 +86,7 @@ export function useSupabaseDatabase() {
             if (!data) return []
 
             return (data as SupabaseProject[]).map(fromSupabaseProject)
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'fetchProjects')
             return []
         }
@@ -82,7 +100,7 @@ export function useSupabaseDatabase() {
             const { error } = await supabase.from('projects').upsert(payload)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveProject')
         } finally {
             isSyncing.value = false
@@ -98,7 +116,7 @@ export function useSupabaseDatabase() {
             const { error } = await supabase.from('projects').upsert(payload)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveProjects')
         } finally {
             isSyncing.value = false
@@ -114,7 +132,7 @@ export function useSupabaseDatabase() {
                 .eq('id', projectId)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'deleteProject')
         } finally {
             isSyncing.value = false
@@ -130,7 +148,7 @@ export function useSupabaseDatabase() {
                 .eq('id', projectId)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'restoreProject')
         } finally {
             isSyncing.value = false
@@ -146,7 +164,7 @@ export function useSupabaseDatabase() {
                 .eq('id', projectId)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'permanentlyDeleteProject')
         } finally {
             isSyncing.value = false
@@ -166,7 +184,7 @@ export function useSupabaseDatabase() {
             if (!data) return []
 
             return (data as SupabaseTask[]).map(fromSupabaseTask)
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'fetchTasks')
             return []
         }
@@ -184,7 +202,7 @@ export function useSupabaseDatabase() {
             if (!data) return []
 
             return (data as SupabaseTask[]).map(fromSupabaseTask)
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'fetchTrash')
             return []
         }
@@ -198,7 +216,7 @@ export function useSupabaseDatabase() {
             const { error } = await supabase.from('tasks').upsert(payload)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveTask')
             throw e
         } finally {
@@ -215,7 +233,7 @@ export function useSupabaseDatabase() {
             const { error } = await supabase.from('tasks').upsert(payload)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveTasks')
             throw e
         } finally {
@@ -241,7 +259,7 @@ export function useSupabaseDatabase() {
             if (error) throw error
             lastSyncError.value = null
             console.log(`✅ [SUPABASE-DELETE] Task ${taskId} marked as deleted`)
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(`❌ [SUPABASE-DELETE] Failed to delete task ${taskId}:`, e)
             handleError(e, 'deleteTask')
             throw e  // Re-throw so caller knows it failed
@@ -259,7 +277,7 @@ export function useSupabaseDatabase() {
                 .eq('id', taskId)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'restoreTask')
         } finally {
             isSyncing.value = false
@@ -275,7 +293,7 @@ export function useSupabaseDatabase() {
                 .eq('id', taskId)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'permanentlyDeleteTask')
         } finally {
             isSyncing.value = false
@@ -295,7 +313,7 @@ export function useSupabaseDatabase() {
             if (!data) return []
 
             return (data as SupabaseGroup[]).map(fromSupabaseGroup)
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'fetchGroups')
             return []
         }
@@ -309,7 +327,7 @@ export function useSupabaseDatabase() {
             const { error } = await supabase.from('groups').upsert(payload)
             if (error) throw error
             lastSyncError.value = null
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error('Save Group Error:', e)
         } finally {
             isSyncing.value = false
@@ -324,7 +342,7 @@ export function useSupabaseDatabase() {
                 .update({ is_deleted: true })
                 .eq('id', groupId)
             if (error) throw error
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'deleteGroup')
         } finally {
             isSyncing.value = false
@@ -344,7 +362,7 @@ export function useSupabaseDatabase() {
             if (!data) return []
 
             return (data as SupabaseNotification[]).map(fromSupabaseNotification)
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'fetchNotifications')
             return []
         }
@@ -356,7 +374,7 @@ export function useSupabaseDatabase() {
             const payload = toSupabaseNotification(notification, userId)
             const { error } = await supabase.from('notifications').upsert(payload)
             if (error) throw error
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveNotification')
         }
     }
@@ -368,7 +386,7 @@ export function useSupabaseDatabase() {
             const payload = notifications.map(n => toSupabaseNotification(n, userId))
             const { error } = await supabase.from('notifications').upsert(payload)
             if (error) throw error
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveNotifications')
         }
     }
@@ -377,7 +395,7 @@ export function useSupabaseDatabase() {
         try {
             const { error } = await supabase.from('notifications').delete().eq('id', id)
             if (error) throw error
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'deleteNotification')
         }
     }
@@ -402,7 +420,7 @@ export function useSupabaseDatabase() {
             if (!data) return null
 
             return fromSupabaseTimerSession(data as SupabaseTimerSession)
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'fetchActiveTimerSession')
             return null
         }
@@ -416,7 +434,7 @@ export function useSupabaseDatabase() {
             const payload = toSupabaseTimerSession(session, userId, deviceId)
             const { error } = await supabase.from('timer_sessions').upsert(payload)
             if (error) throw error
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveActiveTimerSession')
         }
     }
@@ -428,7 +446,7 @@ export function useSupabaseDatabase() {
 
             const { error } = await supabase.from('timer_sessions').delete().eq('id', id)
             if (error) throw error
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'deleteTimerSession')
         }
     }
@@ -450,7 +468,7 @@ export function useSupabaseDatabase() {
             if (!data) return null
 
             return fromSupabaseUserSettings(data as SupabaseUserSettings)
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error('Fetch User Settings Error:', e)
             return null
         }
@@ -460,9 +478,10 @@ export function useSupabaseDatabase() {
         try {
             const userId = getUserId()
             const payload = toSupabaseUserSettings(settings, userId)
-            const { error } = await supabase.from('user_settings').upsert(payload)
+            // Fix: Explicitly specify conflict target to handle 'user_settings_user_id_key' violation
+            const { error } = await supabase.from('user_settings').upsert(payload, { onConflict: 'user_id' })
             if (error) throw error
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveUserSettings')
         }
     }
@@ -480,7 +499,7 @@ export function useSupabaseDatabase() {
             if (!data) return []
 
             return (data as SupabaseQuickSortSession[]).map(fromSupabaseQuickSortSession)
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'fetchQuickSortHistory')
             return []
         }
@@ -492,7 +511,7 @@ export function useSupabaseDatabase() {
             const payload = toSupabaseQuickSortSession(summary, userId)
             const { error } = await supabase.from('quick_sort_sessions').upsert(payload)
             if (error) throw error
-        } catch (e: any) {
+        } catch (e: unknown) {
             handleError(e, 'saveQuickSortSession')
         }
     }
@@ -500,10 +519,10 @@ export function useSupabaseDatabase() {
     // -- Realtime Subscription --
 
     const initRealtimeSubscription = (
-        onProjectChange: (payload: any) => void,
-        onTaskChange: (payload: any) => void,
-        onTimerChange?: (payload: any) => void,
-        onNotificationChange?: (payload: any) => void
+        onProjectChange: (payload: unknown) => void,
+        onTaskChange: (payload: unknown) => void,
+        onTimerChange?: (payload: unknown) => void,
+        onNotificationChange?: (payload: unknown) => void
     ) => {
         if (!authStore.user?.id) return null
 
@@ -511,19 +530,19 @@ export function useSupabaseDatabase() {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'projects' },
-                (payload: any) => onProjectChange(payload)
+                (payload: unknown) => onProjectChange(payload)
             )
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'tasks' },
-                (payload: any) => onTaskChange(payload)
+                (payload: unknown) => onTaskChange(payload)
             )
 
         if (onTimerChange) {
             channel.on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'timer_sessions' },
-                (payload: any) => onTimerChange(payload)
+                (payload: unknown) => onTimerChange(payload)
             )
         }
 
@@ -531,7 +550,7 @@ export function useSupabaseDatabase() {
             channel.on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'notifications' },
-                (payload: any) => onNotificationChange(payload)
+                (payload: unknown) => onNotificationChange(payload)
             )
         }
 

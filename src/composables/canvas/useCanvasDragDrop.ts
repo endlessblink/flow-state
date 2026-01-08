@@ -66,8 +66,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             const taskCenterX = taskX + taskWidth / 2
             const taskCenterY = taskY + taskHeight / 2
 
-            // For collapsed sections, use the full/original height for containment detection
-            const detectionHeight = section.isCollapsed ? height : height
+            // TASK-126 FIX: Use full height for containment detection (removed redundant ternary)
+            const detectionHeight = height
 
             const isInside = (
                 taskCenterX >= x &&
@@ -87,7 +87,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
 
         return canvasStore.sections.filter(section => {
             const { x, y, width, height } = section.position
-            const detectionHeight = section.isCollapsed ? height : height
+            // TASK-126 FIX: Use full height for containment detection (removed redundant ternary)
+            const detectionHeight = height
 
             return (
                 taskCenterX >= x &&
@@ -193,6 +194,23 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     const getSectionProperties = (section: CanvasSection): Partial<Task> => {
         const updates: Partial<Task> = {}
 
+        // 0. TASK-130: Check for day-of-week groups first (Monday-Sunday)
+        const dayOfWeekMap: Record<string, number> = {
+            'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+            'thursday': 4, 'friday': 5, 'saturday': 6
+        }
+        const lowerName = section.name.toLowerCase().trim()
+        if (dayOfWeekMap[lowerName] !== undefined) {
+            const today = new Date()
+            const targetDay = dayOfWeekMap[lowerName]
+            // Same formula: next occurrence, same-day → next week
+            const daysUntilTarget = ((7 + targetDay - today.getDay()) % 7) || 7
+            const resultDate = new Date(today)
+            resultDate.setDate(today.getDate() + daysUntilTarget)
+            updates.dueDate = formatDateKey(resultDate)
+            return updates
+        }
+
         // 1. Check explicit assignOnDrop settings first
         if (section.assignOnDrop) {
             const settings = section.assignOnDrop
@@ -217,21 +235,24 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                         case 'today':
                             updates.dueDate = formatDateKey(today)
                             break
-                        case 'tomorrow':
+                        case 'tomorrow': {
                             const tom = new Date(today)
                             tom.setDate(today.getDate() + 1)
                             updates.dueDate = formatDateKey(tom)
                             break
-                        case 'this weekend':
+                        }
+                        case 'this weekend': {
                             const sat = new Date(today)
                             sat.setDate(today.getDate() + ((6 - today.getDay() + 7) % 7 || 7))
                             updates.dueDate = formatDateKey(sat)
                             break
-                        case 'this week':
+                        }
+                        case 'this week': {
                             const sun = new Date(today)
                             sun.setDate(today.getDate() + ((7 - today.getDay()) % 7 || 7))
                             updates.dueDate = formatDateKey(sun)
                             break
+                        }
                         case 'later':
                             updates.dueDate = ''
                             break
@@ -295,6 +316,35 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     const applySectionPropertiesToTask = (taskId: string, section: CanvasSection) => {
         const updates: Partial<Task> = {}
         console.log(`🎯 [TASK-114] applySectionPropertiesToTask called for task ${taskId} → section "${section.name}"`)
+
+        // 0. DAY-OF-WEEK GROUPS (Monday-Sunday)
+        // TASK-130: Support all days of the week, not just Friday/Saturday
+        const dayOfWeekMap: Record<string, number> = {
+            'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+            'thursday': 4, 'friday': 5, 'saturday': 6
+        }
+        const lowerName = section.name.toLowerCase().trim()
+
+        if (dayOfWeekMap[lowerName] !== undefined) {
+            const today = new Date()
+            const targetDay = dayOfWeekMap[lowerName]
+
+            // TASK-130 FIX: Calculate next occurrence of this day
+            // If today IS the target day, we want NEXT week's occurrence (7 days ahead)
+            // Formula: ((7 + target - current) % 7) || 7
+            // The || 7 ensures same-day returns 7 (next week) instead of 0 (today)
+            const daysUntilTarget = ((7 + targetDay - today.getDay()) % 7) || 7
+            const resultDate = new Date(today)
+            resultDate.setDate(today.getDate() + daysUntilTarget)
+
+            updates.dueDate = formatDateKey(resultDate)
+
+            if (Object.keys(updates).length > 0) {
+                console.log(`📅 [DayGroup] Assigning ${lowerName} date: ${updates.dueDate} (${daysUntilTarget} days from now)`)
+                taskStore.updateTaskWithUndo(taskId, updates)
+                return
+            }
+        }
 
         // 1. UNIFIED APPROACH: Check for explicit assignOnDrop settings first
         if (section.assignOnDrop) {
@@ -415,6 +465,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         isDragSettling.value = false
     }
 
+    // TASK-130: Store original z-index for drag elevation restoration
+    const dragOriginalZIndex = new Map<string, number | undefined>()
+
     // Handle node drag start
     // BUG-002 FIX: Use correct event type with nodes array for multi-select drag
     const handleNodeDragStart = withVueFlowErrorBoundary('handleNodeDragStart', (event: { node: Node, nodes: Node[] }) => {
@@ -427,6 +480,26 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         // TASK-072 FIX: Also set isDragSettling to true immediately
         // This blocks syncNodes from the moment drag starts until settling period ends
         isDragSettling.value = true
+
+        // TASK-130 FIX: Elevate z-index for section nodes being dragged
+        // This ensures dragged groups appear above other groups
+        dragOriginalZIndex.clear()
+        draggedNodes.forEach(node => {
+            if (node.id.startsWith('section-')) {
+                // Store original z-index
+                dragOriginalZIndex.set(node.id, node.zIndex)
+                // Elevate to high z-index during drag (1000 base + current to maintain relative order)
+                const elevatedZIndex = 1000 + (typeof node.zIndex === 'number' ? node.zIndex : 0)
+                // Find and update node in nodes array
+                const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+                if (nodeIndex !== -1) {
+                    nodes.value[nodeIndex] = {
+                        ...nodes.value[nodeIndex],
+                        zIndex: elevatedZIndex
+                    }
+                }
+            }
+        })
 
         // BUG-002 FIX: Store start positions for ALL nodes being dragged (not just primary)
         draggedNodes.forEach(node => {
@@ -972,6 +1045,39 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 })
             }
         }
+
+        // TASK-130 FIX: Restore original z-index for section nodes after drag completes
+        // This happens in a microtask to let Vue Flow finish its updates first
+        setTimeout(() => {
+            dragOriginalZIndex.forEach((originalZIndex, nodeId) => {
+                const nodeIndex = nodes.value.findIndex(n => n.id === nodeId)
+                if (nodeIndex !== -1) {
+                    // Get the correct z-index - either restored original or recalculated from nesting depth
+                    const section = canvasStore.sections.find(s => `section-${s.id}` === nodeId)
+                    let finalZIndex = originalZIndex ?? 0
+
+                    // If section now has a parent, recalculate z-index based on nesting
+                    if (section?.parentGroupId) {
+                        // Calculate depth-based z-index
+                        const getDepth = (groupId: string, depth = 0): number => {
+                            const group = canvasStore.sections.find(s => s.id === groupId)
+                            if (!group || !group.parentGroupId || depth > 10) return depth
+                            return getDepth(group.parentGroupId, depth + 1)
+                        }
+                        finalZIndex = getDepth(section.id)
+                    }
+
+                    nodes.value[nodeIndex] = {
+                        ...nodes.value[nodeIndex],
+                        style: {
+                            ...(nodes.value[nodeIndex].style as Record<string, any>),
+                            zIndex: finalZIndex
+                        }
+                    }
+                }
+            })
+            dragOriginalZIndex.clear()
+        }, 100)
 
         // TASK-072 FIX: Use longer settling period to prevent watchers from resetting positions
         // The settling period blocks syncNodes from running after drag ends.

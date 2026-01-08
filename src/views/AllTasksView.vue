@@ -6,24 +6,14 @@
       v-model:density="density"
       v-model:sort-by="sortBy"
       :filter-status="filterStatus"
+      :hide-done-tasks="hideDoneTasks"
       @update:filter-status="taskStore.setActiveStatusFilter"
+      @update:hide-done-tasks="handleToggleDoneTasksFromControl"
       @expand-all="handleExpandAll"
       @collapse-all="handleCollapseAll"
     />
 
-    <!-- Quick Actions -->
-    <div class="quick-actions" style="display: flex; gap: 8px; margin-bottom: 16px;">
-      <!-- Hide Done Tasks Toggle -->
-      <button
-        class="hide-done-toggle icon-only"
-        :class="{ active: hideDoneTasks }"
-        :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-        @click="handleToggleDoneTasks"
-      >
-        <EyeOff v-if="hideDoneTasks" :size="16" />
-        <Eye v-else :size="16" />
-      </button>
-    </div>
+    <!-- Content Area -->
 
     <!-- Content Area -->
     <div class="tasks-container">
@@ -261,15 +251,21 @@ const handleMoveTask = (taskId: string, targetProjectId: string | null, targetPa
 }
 
 // Debug function to test toggle functionality
-const handleToggleDoneTasks = (event: MouseEvent) => {
-  // Prevent event bubbling that might interfere with other click handlers
-  event.stopPropagation()
-  console.log('🔧 AllTasksView: Toggle button clicked!')
-  console.log('🔧 AllTasksView: Current hideDoneTasks value:', taskStore.hideDoneTasks)
-
+const handleToggleDoneTasksFromControl = (newValue?: boolean) => {
+  console.log('🔧 AllTasksView: Toggle button clicked from ViewControls!')
+  console.log('🔧 AllTasksView: New value requested:', newValue)
+  
   try {
+    // We can just call toggle, or we can use the value if we exposed a setter.
+    // Since taskStore.toggleHideDoneTasks() is a toggle, let's use it. 
+    // Ideally we should set it to `newValue` if possible, but store only has toggle.
+    // However, if UI sends specific value, we should respect it if we can.
+    // But `hideDoneTasks` in store is a computed setter that updates canvas+calendar.
+    
+    // Simplest: just toggle. The UI in ViewControls emits `!props.hideDoneTasks`. 
+    // So it should align.
     taskStore.toggleHideDoneTasks()
-    console.log('🔧 AllTasksView: After toggle - hideDoneTasks value:', taskStore.hideDoneTasks)
+    
     console.log('🔧 AllTasksView: Method call successful')
   } catch (error) {
     console.error('🔧 AllTasksView: Error calling toggleHideDoneTasks:', error)

@@ -445,10 +445,18 @@ const getDueBadgeClass = (dueDate: string) => {
 }
 
 const formatDueDateLabel = (dueDate: string) => {
+  if (!dueDate) return ''
+  // Handle ISO strings (e.g., 2026-01-06T00:00:00+00:00) by taking just the date part for comparison
+  const dateStr = dueDate.split('T')[0]
   const today = new Date().toISOString().split('T')[0]
-  if (dueDate < today) return 'Overdue ' + dueDate
-  if (dueDate === today) return 'Today'
-  return dueDate
+  
+  // Format for display (e.g., "Jan 6")
+  const dateObj = new Date(dueDate)
+  const formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dateObj)
+
+  if (dateStr < today) return 'Overdue ' + formattedDate
+  if (dateStr === today) return 'Today'
+  return formattedDate
 }
 
 // Methods

@@ -1,7 +1,7 @@
-import { transactionManager } from '@/services/sync/TransactionManager'
+// TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 import { type Ref } from 'vue'
 import type { Task, Subtask, TaskInstance } from '@/types/tasks'
-import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
+// TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey } from '@/utils/dateUtils'
 // TASK-089 FIX: Unlock position when removing from canvas
@@ -53,11 +53,7 @@ export function useTaskOperations(
         const taskId = Date.now().toString()
         manualOperationInProgress.value = true
 
-        let txId: string | null = null
         try {
-            // WAL Logic
-            txId = await transactionManager.beginTransaction('create', 'tasks', { ...taskData, id: taskId })
-
             const instances: TaskInstance[] = []
             if (taskData.scheduledDate && taskData.scheduledTime) {
                 const now = new Date()
@@ -104,15 +100,11 @@ export function useTaskOperations(
             _rawTasks.value.push(newTask)
             await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
 
-            // Commit WAL
-            if (txId) await transactionManager.commit(txId)
-
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
 
             return newTask
         } catch (error) {
-            if (txId) await transactionManager.rollback(txId, error)
             const index = _rawTasks.value.findIndex(t => t.id === taskId)
             if (index !== -1) _rawTasks.value.splice(index, 1)
             throw error
@@ -131,17 +123,8 @@ export function useTaskOperations(
         if (!wasManualInProgress) manualOperationInProgress.value = true
 
         try {
-
             const task = _rawTasks.value[index]
             console.log(`📝 [TASK-OP] updateTask called for ${taskId}:`, updates)
-
-            // WAL Logic
-            let txId: string | null = null
-            try {
-                txId = await transactionManager.beginTransaction('update', 'tasks', { taskId, updates })
-            } catch (e) {
-                console.warn('WAL Write failed during update, proceeding anyway', e)
-            }
 
             // BUG-045 FIX: Removed auto-archive behavior
             // Tasks now stay on canvas when marked as done (no position/inbox changes)
@@ -185,13 +168,11 @@ export function useTaskOperations(
             // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
             try {
                 await saveSpecificTasks([_rawTasks.value[index]], `updateTask-${taskId}`)
-                if (txId) await transactionManager.commit(txId)
                 console.log(`✅ [TASK-OP] Task ${taskId} saved successfully. isInInbox: ${_rawTasks.value[index].isInInbox}`)
 
                 // Trigger canvas sync for Tauri reactivity
                 triggerCanvasSync()
             } catch (error) {
-                if (txId) await transactionManager.rollback(txId, error)
                 console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
                 // Note: We don't rollback memory state here to preserve UX, relying on "last write wins" locally
             }
@@ -205,25 +186,19 @@ export function useTaskOperations(
         if (index === -1) return
 
         const deletedTask = _rawTasks.value[index]
-        taskDisappearanceLogger.markUserDeletion(taskId)
         manualOperationInProgress.value = true
 
-        let txId: string | null = null
         try {
-            txId = await transactionManager.beginTransaction('delete', 'tasks', { taskId })
-
             // BUGFIX: Persist deletion to Supabase FIRST (soft delete)
             // This ensures task won't reappear on refresh
             await deleteTaskFromStorage(taskId)
 
             _rawTasks.value.splice(index, 1)
-            if (txId) await transactionManager.commit(txId)
 
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
             console.log(`✅ [DELETE] Task ${taskId} deleted from local state and Supabase`)
         } catch (error) {
-            if (txId) await transactionManager.rollback(txId, error)
             _rawTasks.value.splice(index, 0, deletedTask)
             console.error(`❌ [DELETE] Failed to delete task ${taskId}:`, error)
             throw error
@@ -258,26 +233,19 @@ export function useTaskOperations(
         if (!taskIds.length) return
         manualOperationInProgress.value = true
 
-        let txId: string | null = null
         try {
-            txId = await transactionManager.beginTransaction('bulk_update', 'tasks', { type: 'bulk_delete', taskIds })
-
             // BUGFIX: Persist deletions to Supabase FIRST
             for (const taskId of taskIds) {
                 await deleteTaskFromStorage(taskId)
             }
 
             const tasksToKeep = _rawTasks.value.filter(t => !taskIds.includes(t.id))
-            taskDisappearanceLogger.takeSnapshot(tasksToKeep, `bulkDelete-${taskIds.length} tasks`)
             _rawTasks.value = tasksToKeep
-
-            if (txId) await transactionManager.commit(txId)
 
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
             console.log(`✅ [BULK-DELETE] ${taskIds.length} tasks deleted from local state and Supabase`)
         } catch (error) {
-            if (txId) await transactionManager.rollback(txId, error)
             console.error(`❌ [BULK-DELETE] Failed to delete ${taskIds.length} tasks:`, error)
             throw error
         } finally {
@@ -436,7 +404,9 @@ export function useTaskOperations(
                 break
             }
             default:
-                console.log(`⚠️ [TASK-114] Unknown smart group type: "${type}" - no dueDate set`)
+                // BUG-016 FIX: Return early for unknown types to prevent clearing dueDate
+                console.warn(`⚠️ [TASK-114] Unknown smart group type: "${type}" - no update performed`)
+                return
         }
         console.log(`📅 [TASK-114] Computed dueDate: "${dueDate}" for type "${type}"`)
         updateTask(taskId, { dueDate })

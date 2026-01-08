@@ -334,7 +334,8 @@ const titleInput = ref<HTMLInputElement>()
 
 // Keyboard shortcuts
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (!props.isOpen) return
+  // Guard: Don't process keyboard shortcuts while saving
+  if (!props.isOpen || isSaving.value) return
 
   if (event.key === 'Escape') {
     emit('close')
@@ -392,6 +393,9 @@ const editedTask = ref<Task>({
 const showDependencies = ref(false)
 const showSubtasks = ref(true) // Expanded by default if has subtasks
 const showPomodoros = ref(false)
+
+// Save-in-progress guard to prevent race conditions from double-saves
+const isSaving = ref(false)
 
 // Hebrew alignment support
 const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
@@ -621,8 +625,11 @@ const resetPomodoros = () => {
 }
 
 const saveTask = () => {
-  if (!props.task) return
+  // Guard: Prevent double-save race conditions
+  if (isSaving.value || !props.task) return
+  isSaving.value = true
 
+  try {
   // DEBUG: Track task state before update
   const originalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
   const originalInstances = originalTask ? getTaskInstances(originalTask) : []
@@ -790,6 +797,10 @@ const saveTask = () => {
   console.log('🔍 DEBUG: FINAL STATE - Should be visible in calendar:', finalInstances.length > 0 || (finalTask?.scheduledDate && finalTask?.scheduledTime))
 
   emit('close')
+  } finally {
+    // Always reset saving state, even if an error occurred
+    isSaving.value = false
+  }
 }
 </script>
 

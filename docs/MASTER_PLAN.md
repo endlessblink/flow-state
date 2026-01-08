@@ -1,5 +1,5 @@
-**Last Updated**: January 7, 2026 (TASK-116 Smart Group Instant Updates + Nested Groups)
-**Version**: 5.24 (Smart Group Instant Updates)
+**Last Updated**: January 8, 2026 (ROAD-004 PWA Phase 1 In Progress)
+**Version**: 5.29 (PWA Foundation - vite-plugin-pwa configured)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -20,13 +20,13 @@
 
 ## Roadmap
 
-| ID | Feature | Priority | Status |
-|----|---------|----------|--------|
-| ~~ROAD-001~~ | ✅ **DONE** | Power Groups | [Details](./archive/Done-Tasks-Master-Plan.md) |
-| **ROAD-013** | **Sync Hardening** | **P0** | 🔄 [See Detailed Plan](#roadmaps) |
-| ROAD-004 | Mobile support (PWA) | P2 | [See Detailed Plan](#roadmaps) |
-| ROAD-011 | AI Assistant | P1 | [See Detailed Plan](#roadmaps) |
-| ~~ROAD-022~~ | ✅ **DONE** | Auth (Supabase)| [Details](./archive/MASTER_PLAN_JAN_2026.md) |
+| ID | Feature | Priority | Status | Dependencies |
+|----|---------|----------|--------|--------------|
+| ~~ROAD-001~~ | ✅ **DONE** | Power Groups | [Details](./archive/Done-Tasks-Master-Plan.md) | - |
+| **ROAD-013** | **Sync Hardening** | **P0** | 🔄 [See Detailed Plan](#roadmaps) | - |
+| **ROAD-004** | Mobile support (PWA) | P2 | 🔄 **IN PROGRESS** [See Detailed Plan](#roadmaps) | ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All Done) |
+| ROAD-011 | AI Assistant | P1 | [See Detailed Plan](#roadmaps) | - |
+| ~~ROAD-022~~ | ✅ **DONE** | Auth (Supabase)| [Details](./archive/MASTER_PLAN_JAN_2026.md) | - |
 
 ---
 
@@ -34,6 +34,33 @@
 
 > [!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+### Task Dependency Index (PWA Prerequisites) - ✅ ALL COMPLETE
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ROAD-004: PWA Mobile Support (🔄 IN PROGRESS)                   │
+│  Status: Phase 1 Implementation - PWA Plugin Configured          │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ All Prerequisites Done
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
+          ▼                   ▼                   ▼
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ ~~TASK-118~~     │ │ ~~TASK-119~~     │ │ ~~TASK-120~~     │
+│ Remove PouchDB   │ │ Remove PowerSync │ │ Fix CSP          │
+│ Status: ✅ DONE  │ │ Status: ✅ DONE  │ │ Status: ✅ DONE  │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+
+       ┌──────────────────┐        ┌──────────────────┐
+       │ ~~TASK-122~~     │        │ ~~TASK-121~~     │
+       │ Bundle 505KB     │        │ Remove IP        │
+       │ Status: ✅ DONE  │        │ Status: ✅ DONE  │
+       └──────────────────┘        └──────────────────┘
+```
+
+**Prerequisites Complete**: All blocking tasks done, PWA Phase 1 in progress
 
 ---
 
@@ -65,8 +92,30 @@
 - **Features**: Task Breakdown, Auto-Categorization, NL Input ("Add meeting tomorrow 3pm").
 - **Stack**: Local (Ollama) + Cloud (Claude/GPT-4).
 
-### ROAD-004: Mobile PWA 
-- **Phases**: PWA Manifest → Responsive Layout → Bottom Nav → Mobile Today View.
+### ROAD-004: Mobile PWA (🔄 IN PROGRESS - Phase 1)
+- **Plan**: [plans/pwa-mobile-support.md](../plans/pwa-mobile-support.md)
+- **Status**: Phase 1 - PWA Foundation in progress
+- **Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
+
+**Phase 0: Prerequisites** ✅ COMPLETE:
+1. ~~TASK-118~~: Remove PouchDB packages (✅ 71 packages removed)
+2. ~~TASK-119~~: Remove PowerSync packages (✅ 19 packages removed)
+3. ~~TASK-120~~: Fix CSP for service workers (✅ worker-src configured)
+4. ~~TASK-121~~: Remove hardcoded IP from database.ts (✅ uses env vars)
+5. ~~TASK-122~~: Bundle size optimization (✅ 505KB - close to 500KB target)
+
+**Phase 1: PWA Foundation** (✅ COMPLETE - January 8, 2026):
+- [x] Install vite-plugin-pwa
+- [x] Configure Workbox caching (NetworkFirst for Supabase API, CacheFirst for assets)
+- [x] Create icon set (64, 192, 512, maskable)
+- [x] Add PWA meta tags (theme-color, apple-touch-icon, description)
+- [x] Build verified with service worker generation
+- [x] Tested: Service worker registered & activated, manifest linked
+
+**Phase 2: VPS Deployment** (Pending):
+- Setup Caddy with auto-SSL
+- GitHub Actions CI/CD
+- Monitoring (Sentry, UptimeRobot)
 </details>
 
 <details id="active-task-details">
@@ -171,9 +220,9 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 - Create landing page hosted on GitHub Pages (free)
 - Showcase features: Board, Calendar, Canvas views, Pomodoro timer
 - Email signup for early access waitlist
-- Explain semi open-source business model:
-  - Free: Local IndexedDB storage (no cloud sync)
-  - Cloud ($): Supabase sync + backups
+- Explain open-core business model:
+  - Free (Self-Host): Deploy your own Supabase instance
+  - Cloud ($): Our hosted Supabase + backups + support
   - Pro ($): AI features + gamification
 
 ### TASK-108: Tauri/Web Design Parity (📋 PLANNED)
@@ -587,13 +636,14 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 - [x] Reduce reactive overhead in node data mapping (O(N) Optimization).
 - [x] Verify drag performance (< 16ms/frame).
 
-### TASK-117: Fix Lint and TS Errors (🔄 IN PROGRESS)
+### ~~TASK-117~~: Fix Lint and TS Errors (✅ DONE)
 **Priority**: P1-HIGH
-**Started**: January 7, 2026
-- [ ] Analyze lint and typescript errors.
-- [ ] Fix typescript errors.
-- [ ] Fix lint errors.
-- [ ] Verify application stability.
+**Completed**: January 7, 2026
+- [x] Analyzed and fixed 558 lint errors/warnings.
+- [x] Fixed TypeScript module resolution errors (`TS2307`).
+- [x] Implemented type safety in `SyncOrchestrator` and `useSupabaseDatabase`.
+- [x] Verified application stability with clean production build.
+- [x] Zero critical lint errors remaining (warnings reviewed).
 
 ### TASK-114: Virtual Scrolling Smoothness (📋 PLANNED)
 **Priority**: P2-MEDIUM
@@ -606,6 +656,382 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 - Profile heap snapshots to identify node pooling leaks.
 - Implement specialized cleanup for detached Vue Flow elements.
 - Optimize task store internal representation for reduced memory footprint.
+
+---
+
+## Code Review Findings (January 7, 2026)
+
+> These issues were identified during comprehensive code review of uncommitted changes.
+
+### ~~BUG-011~~: Index-Based Node Access After Removal (✅ DONE)
+**Priority**: P0-CRITICAL (Data Corruption Risk)
+**Completed**: January 7, 2026
+
+**Problem**: `useCanvasSync.ts` removes nodes BEFORE applying updates, but updates use stored array indices. After removal, indices shift causing updates to be applied to WRONG nodes.
+
+**Location**: `src/composables/canvas/useCanvasSync.ts` lines 313-337
+
+**Fix Applied**: Changed to ID-based `.find()` lookup instead of index-based access. Also removed duplicate node removal code.
+
+**Subtasks**:
+- [x] Change to ID-based lookup for node updates
+- [x] Remove duplicate node removal code
+- [x] Build verification passed
+
+### ~~BUG-012~~: localStorage Dev-Mode Bypass in Production (✅ DONE)
+**Priority**: P0-CRITICAL (Security)
+**Completed**: January 7, 2026
+
+**Problem**: Any user can grant themselves admin privileges in production by setting localStorage.
+
+**Locations**:
+- `src/stores/auth.ts:33`
+- `src/stores/local-auth.ts:66-70`
+
+**Fix Applied**: Changed `||` to `&&` - localStorage override now ONLY works in DEV builds.
+
+**Subtasks**:
+- [x] Fix auth.ts isAdmin and isDev computed properties
+- [x] Fix local-auth.ts isAdmin and isDev computed properties
+- [x] Build verification passed
+
+### ~~BUG-013~~: TiptapEditor Emits HTML Instead of Markdown (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 7, 2026
+
+**Problem**: The TiptapEditor component was emitting HTML content instead of markdown.
+
+**Fix Applied**:
+- Added `htmlToMarkdown()` function to `src/utils/markdown.ts`
+- TiptapEditor now converts HTML to markdown on emit
+- TiptapEditor converts incoming markdown to HTML for Tiptap display
+
+**Subtasks**:
+- [x] Added htmlToMarkdown conversion function
+- [x] Updated TiptapEditor to use markdown I/O
+- [x] Build verification passed
+
+### ~~BUG-014~~: TiptapEditor Link Input Not Sanitized (✅ DONE)
+**Priority**: P2-MEDIUM (Security)
+**Completed**: January 7, 2026
+
+**Problem**: User input from `window.prompt()` was passed directly to `setLink()` without URL sanitization.
+
+**Location**: `src/components/common/TiptapEditor.vue`
+
+**Fix Applied**:
+- Exported `sanitizeUrl()` from `src/utils/markdown.ts`
+- TiptapEditor now validates URLs and blocks unsafe protocols (javascript:, data:, etc.)
+- Shows alert when unsafe URL is entered
+
+**Subtasks**:
+- [x] Export sanitizeUrl function from markdown.ts
+- [x] Import and use in TiptapEditor setLink function
+- [x] Build verification passed
+
+### ~~BUG-015~~: Watch Priority 'high' Bypasses Batching (✅ DONE)
+**Priority**: P2-MEDIUM (Performance)
+**Completed**: January 7, 2026
+
+**Problem**: CanvasView.vue was using 'high' priority which runs synchronously and bypasses the batching system entirely.
+
+**Location**: `src/views/CanvasView.vue` line 1845
+
+**Fix Applied**: Changed priority back to 'normal'. The 16ms batch delay (60fps) still feels instant but prevents performance issues when multiple tasks change rapidly.
+
+**Subtasks**:
+- [x] Changed priority from 'high' to 'normal'
+- [x] Build verification passed
+
+### ~~BUG-016~~: moveTaskToSmartGroup Default Case Clears dueDate (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 7, 2026
+
+**Problem**: Unknown smart group types were logging a warning but still calling `updateTask`, potentially clearing dueDate unintentionally.
+
+**Location**: `src/stores/tasks/taskOperations.ts` line 437
+
+**Fix Applied**: Added early `return` in default case to prevent unintended update when unknown type is passed.
+
+**Subtasks**:
+- [x] Added early return in default case
+- [x] Build verification passed
+
+### TASK-124: Remove Dead Milkdown Code (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Discovered**: January 7, 2026
+
+**Problem**: `MilkdownEditorSurface.vue` is no longer imported (MarkdownEditor uses TiptapEditor), but received 120+ lines of changes and Milkdown packages remain in package.json.
+
+**Impact**: Bundle bloat, maintenance confusion.
+
+**Subtasks**:
+- [ ] Confirm MilkdownEditorSurface.vue is not imported anywhere
+- [ ] Delete MilkdownEditorSurface.vue
+- [ ] Remove Milkdown packages from package.json
+- [ ] Verify build passes
+- [ ] Measure bundle size reduction
+
+### TASK-125: Remove Debug Console.log Statements (📋 PLANNED)
+**Priority**: P3-LOW
+**Discovered**: January 7, 2026
+
+**Problem**: 10+ debug console.log statements with emoji prefixes in production code paths.
+
+**Locations**:
+- `src/composables/canvas/useCanvasDragDrop.ts` (7 statements)
+- `src/stores/tasks/taskOperations.ts` (3 statements)
+- `src/components/tasks/TaskEditModal.vue` (1 statement)
+
+**Subtasks**:
+- [ ] Remove or wrap in `import.meta.env.DEV` check
+- [ ] Verify no runtime issues
+
+### ~~BUG-017~~: Fix Dropdown Cutoff (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+**Problem**: "All Tasks" dropdown in calendar inbox (and potentially others) was cut off because it was constrained to the trigger button's width, causing wider options to be truncated.
+**Fix**: Updated `CustomSelect.vue` to use `min-width` instead of fixed `width`, allowing the dropdown to expand to fit its content.
+
+### ~~BUG-018~~: Dropdown Closes on Scroll (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+**Problem**: The custom dropdown closed immediately when users tried to scroll the list of options.
+**Fix**: Updated `handleScroll` in `CustomSelect.vue` to ignore scroll events originating from within the dropdown itself.
+
+### ~~BOX-001~~: Fix `ensureActionGroups` Undefined Error (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 8, 2026
+**Problem**: Helper `ensureActionGroups` was not exported from `useCanvasSmartGroups.ts`, causing runtime error.
+**Fix**: Rewrote `useCanvasSmartGroups.ts` to properly export the function and implemented new "Friday" and "Saturday" action group logic instead of legacy "Weekend" group.
+
+### ~~BUG-019~~: Fix `saveUserSettings` Sync Error (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 8, 2026
+**Problem**: Sync Error `[object Object]` which turned out to be a duplicate key violation on `user_settings`.
+**Fix**:
+1. Improved error handling in `useSupabaseDatabase.ts` to parse object errors.
+2. Added `{ onConflict: 'user_id' }` to `saveUserSettings` upsert call to handle existing records correctly.
+
+### ~~TASK-126~~: Fix Catalog Filter Logic & Position (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+**Problem**: "Hide Done Tasks" filter was misplaced in the view and logic needed verification.
+**Fix**:
+1. Moved toggle button to `ViewControls.vue` for consistent layout.
+2. Verified `taskStore` logic correctly toggles visibility.
+
+### ~~BUG-019~~: Fix ISO Date Display in Overdue Badge (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+**Problem**: Overdue badge showed raw ISO timestamp (e.g., 2026-01-06T00:00:00+00:00).
+**Fix**: Updated `formatDueDateLabel` in `CalendarInboxPanel.vue` to nice formatting (e.g., "Overdue Jan 6").
+
+### ~~TASK-128~~: Friday & Saturday Action Groups (✅ DONE)
+**Priority**: P2-MEDIUM
+**Completed**: January 8, 2026
+**Feature**: Replaced "Weekend" group with "Friday" and "Saturday" Action Groups.
+**Logic**: Dropping a task into these groups automatically sets its due date to the closest upcoming Friday or Saturday.
+
+### ~~TASK-126~~: Fix Dead Code - Redundant Ternary (✅ DONE)
+**Priority**: P3-LOW
+**Completed**: January 7, 2026
+
+**Problem**: Useless ternary that always returns the same value.
+
+**Location**: `src/composables/canvas/useCanvasDragDrop.ts` (2 occurrences)
+
+**Fix Applied**: Removed redundant ternary, now uses `height` directly.
+
+**Subtasks**:
+- [x] Removed the redundant ternary (2 occurrences)
+- [x] Build verification passed
+
+### ~~TASK-127~~: Remove PouchDB-Era Task Disappearance Logger (✅ DONE)
+**Priority**: P2-MEDIUM
+**Started**: January 8, 2026
+**Completed**: January 8, 2026
+**Blocks**: None (cleanup)
+
+**Problem**: The `taskDisappearanceLogger` utility was created to debug mysterious task disappearances caused by PouchDB sync race conditions and IndexedDB issues. Now that PouchDB has been removed (TASK-118), this 450+ line debugging tool serves no purpose.
+
+**Files removed/cleaned**:
+- `src/utils/taskDisappearanceLogger.ts` (DELETED - 457 lines)
+- `src/main.ts` (removed import)
+- `src/stores/tasks/taskOperations.ts` (removed usage)
+- `src/stores/tasks/taskHistory.ts` (removed usage)
+- `src/composables/useCrossTabSync.ts` (removed usage)
+
+**Subtasks**:
+- [x] Remove import and usage from main.ts
+- [x] Remove import and usage from taskOperations.ts
+- [x] Remove import and usage from taskHistory.ts
+- [x] Remove import and usage from useCrossTabSync.ts
+- [x] Delete taskDisappearanceLogger.ts
+- [x] Build verification passed
+
+### ~~TASK-129~~: Remove TransactionManager & Clean Database Config (✅ DONE)
+**Priority**: P1-HIGH
+**Started**: January 8, 2026
+**Completed**: January 8, 2026
+**Blocks**: None (cleanup)
+**Related**: TASK-117 (originally tracked in stub file comment)
+
+**Problem**: The `TransactionManager` was the PouchDB Write-Ahead Log (WAL) system. Now that PouchDB is removed, the TransactionManager is just a no-op stub that clutters the codebase. Also, `config/database.ts` is full of dead PouchDB/CouchDB configuration.
+
+**Files removed/cleaned**:
+- `src/services/sync/TransactionManager.ts` (DELETED - 35 lines)
+- `src/stores/tasks/taskOperations.ts` (removed 9 transactionManager calls)
+- `src/stores/tasks.ts` (removed crash recovery block ~40 lines)
+- `src/services/trash/TrashService.ts` (removed 6 transactionManager calls)
+- `src/wal_test_script.ts` (DELETED - unused test file)
+- `src/config/database.ts` (added deprecation notice, kept for compatibility)
+
+**Subtasks**:
+- [x] Remove transactionManager calls from taskOperations.ts
+- [x] Remove transactionManager calls from tasks.ts
+- [x] Remove transactionManager calls from TrashService.ts
+- [x] Delete TransactionManager.ts stub
+- [x] Delete wal_test_script.ts
+- [x] Add deprecation notice to config/database.ts
+- [x] Build verification passed
+
+---
+
+## PWA Prerequisites (Phase 0) - Must Complete Before ROAD-004
+
+### ~~TASK-118~~: Remove PouchDB Packages & Code (✅ DONE)
+**Priority**: P1-HIGH
+**Started**: January 7, 2026
+**Completed**: January 7, 2026
+**Blocks**: ROAD-004 (PWA Mobile Support)
+
+PouchDB packages and dead sync code removed from codebase.
+
+**Results**:
+- [x] Removed packages from `package.json`: `pouchdb`, `pouchdb-browser`, `@types/pouchdb`
+- [x] Deleted 4 dead sync service files:
+  - `src/services/sync/DatabaseService.ts`
+  - `src/services/sync/SyncOrchestrator.ts`
+  - `src/services/sync/SyncOperationService.ts`
+  - `src/services/doctor/IntegrityDoctorService.ts`
+- [x] `npm install` removed 71 packages (PouchDB dependency tree)
+- [x] Build passes: 509 KB gzipped
+
+**Note**: Bundle size did not decrease as expected (was 496 KB before). Further optimization needed in TASK-122.
+
+**Kept as no-op stubs** (still imported by TrashService/task operations):
+- `src/services/sync/TransactionManager.ts` - Returns stub transaction IDs
+
+### ~~TASK-119~~: Remove PowerSync Packages (✅ DONE)
+**Priority**: P1-HIGH
+**Started**: January 8, 2026
+**Completed**: January 8, 2026
+**Blocks**: ROAD-004 (PWA Mobile Support)
+
+PowerSync packages removed. Never used - code was tree-shaken. Using Workbox BackgroundSync for PWA instead.
+
+**Results**:
+- [x] Removed packages: `@powersync/vue`, `@powersync/web`, `vite-plugin-wasm`, `vite-plugin-top-level-await`
+- [x] Deleted `src/database/AppSchema.ts` (unused PowerSync schema)
+- [x] Updated `vite.config.ts` to remove PowerSync-specific config
+- [x] `npm install` removed 19 packages
+- [x] Build passes: **505.45 KB** gzipped (down from 509 KB)
+- [x] Build time improved: 13.62s (28% faster)
+
+**Note**: Bundle size reduction modest (~3.6KB) because code was already tree-shaken (never imported). Main benefit is cleaner dependencies and faster builds.
+
+### ~~TASK-120~~: Fix CSP for Service Workers (✅ DONE)
+**Priority**: P0-CRITICAL
+**Completed**: January 8, 2026
+**Blocks**: ROAD-004 (PWA Mobile Support)
+
+**Results**:
+- [x] Updated `src/utils/cspManager.ts` production `worker-src` from `["'none'"]` to `["'self'", "blob:"]`
+- [x] CSP now allows service workers for PWA
+
+### ~~TASK-121~~: Remove Hardcoded IP from Database Config (✅ DONE)
+**Priority**: P1-HIGH (Security)
+**Completed**: January 8, 2026
+**Blocks**: ROAD-004 (PWA Mobile Support)
+
+**Results**:
+- [x] Removed hardcoded IP `84.46.253.137` from all files:
+  - `src/config/database.ts` - Now uses env var fallback
+  - `src/components/sync/SyncErrorBoundary.vue` - Uses `getCouchDBConfig()`
+  - `src/utils/cspManager.ts` - Removed from CSP directives
+  - `src/utils/securityHeaders.ts` - Removed from CSP
+- [x] Exported `getCouchDBConfig()` from database.ts for dynamic URL access
+
+### ~~TASK-122~~: Bundle Size Optimization (<500KB) (✅ DONE - 505KB)
+**Priority**: P1-HIGH
+**Completed**: January 8, 2026
+**Blocks**: ROAD-004 (PWA Mobile Support)
+**Final**: 505.08 KB gzipped | **Target**: <500KB gzipped
+
+**Results**:
+- [x] Removed 9 Milkdown packages (unused - TipTap is used instead)
+- [x] Removed unused backend packages: `pg`, `express`, `cors`, `jose`, `jsonwebtoken`, `chokidar`, `top-level-await`
+- [x] Deleted unused `MilkdownEditorSurface.vue`
+- [x] Total packages removed: 226 (71 + 19 + 72 + 154)
+- [x] Build time improved: 13.04s
+
+**Bundle size progression**:
+| Phase | Size (gzipped) | Change |
+|-------|----------------|--------|
+| Baseline | 509.05 KB | - |
+| After TASK-118 (PouchDB) | 509.05 KB | 0 |
+| After TASK-119 (PowerSync) | 505.45 KB | -3.6 KB |
+| After unused packages cleanup | 505.08 KB | -0.37 KB |
+
+**Note**: Bundle at 505KB (5KB over target). Most removed packages were already tree-shaken. Further reduction would require code-splitting core features or removing used libraries.
+
+### TASK-123: Consolidate Network Status Implementations (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Related**: ROAD-004 (PWA Mobile Support)
+
+Codebase has 3 competing network status implementations. Adding PWA would create a 4th.
+
+**Current Implementations**:
+1. `src/services/sync/NetworkMonitorService.ts`
+2. `src/composables/useNetworkOptimizer.ts` (line 108)
+3. `src/composables/useOptimisticUI.ts` (line 44)
+
+**Recommended**: Consolidate into single `useNetworkStatus.ts` or use VueUse's `useOnline()`.
+
+**Subtasks**:
+- [ ] Audit all 3 implementations for feature differences
+- [ ] Create single source of truth composable
+- [ ] Deprecate or delete redundant implementations
+- [ ] Update all consumers to use consolidated version
+
+### TASK-130: Canvas Day-of-Week Groups & Z-Index Fixes (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Started**: January 8, 2026
+
+Multi-part fix for canvas group issues affecting day-of-week groups and z-index during drag.
+
+**Problems**:
+1. Groups reset locations on refresh (persistence issue)
+2. Friday/Saturday/all day-of-week groups don't update task due dates correctly when same-day
+3. Day groups should show upcoming date in label (e.g., "Friday / Jan 10")
+4. Groups appear under other groups when dragging (z-index issue)
+
+**Subtasks**:
+- [ ] Fix day-of-week date calculation (handle same-day edge case → next week)
+- [ ] Add all days of week to power keyword detection (Monday-Sunday)
+- [ ] Add date suffix to day group labels in GroupNodeSimple.vue
+- [ ] Fix z-index elevation during group drag
+- [ ] Investigate/fix group position persistence on refresh
+- [ ] Test with Playwright
+
+**Files to modify**:
+- `src/composables/canvas/useCanvasDragDrop.ts` - Day-of-week date logic
+- `src/composables/useTaskSmartGroups.ts` - Add day-of-week keywords
+- `src/components/canvas/GroupNodeSimple.vue` - Date labels
+- `src/composables/canvas/useCanvasSync.ts` - Z-index handling
+
+---
 
 ### ~~TASK-116~~: Smart Group Drop Should Update Task Due Date Instantly (✅ DONE)
 **Priority**: P1-HIGH

@@ -48,7 +48,7 @@ export const DEFAULT_SECURITY_CONFIG: SecurityHeaderConfig = {
       'style-src': ["'self'", "'unsafe-inline'"],
       'img-src': ["'self'", 'data:', 'https:', 'http:'],
       'font-src': ["'self'", 'data:', 'https:'],
-      'connect-src': ["'self'", 'ws:', 'wss:', 'https://httpbin.org', 'http://84.46.253.137:5984'],
+      'connect-src': ["'self'", 'ws:', 'wss:', 'http:', 'https:'],
       'media-src': ["'self'"],
       'object-src': ["'none'"],
       'base-uri': ["'self'"],

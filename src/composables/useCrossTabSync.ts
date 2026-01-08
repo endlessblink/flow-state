@@ -10,7 +10,7 @@ import type { Task } from '@/types/tasks'
 // CrossTabSaveCoordinator removed - Phase 2 simplification
 import CrossTabPerformance from '@/utils/CrossTabPerformance'
 import CrossTabBrowserCompatibility from '@/utils/CrossTabBrowserCompatibility'
-import { taskDisappearanceLogger } from '@/utils/taskDisappearanceLogger'
+// TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 
 // Store type interfaces for cross-tab sync
 interface TaskStoreType {
@@ -593,10 +593,7 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: TaskStor
           const store = taskStore as TaskStoreType
           const index = store.tasks.findIndex(t => t.id === operation.taskId)
           if (index > -1) {
-            // Log before splice - mark as cross-tab sync deletion (not user-initiated)
-            const oldTasks = [...store.tasks]
             store.tasks.splice(index, 1)
-            taskDisappearanceLogger.logArrayReplacement(oldTasks, store.tasks, 'crossTabSync-delete')
           }
         }
         break
@@ -605,14 +602,12 @@ const handleTaskOperation = async (operation: TaskOperation, taskStore: TaskStor
         if (operation.taskIds && Array.isArray(operation.taskIds)) {
           // Remove multiple tasks from local store
           const store = taskStore as TaskStoreType
-          const oldTasks = [...store.tasks]
           operation.taskIds.forEach(taskId => {
             const index = store.tasks.findIndex(t => t.id === taskId)
             if (index > -1) {
               store.tasks.splice(index, 1)
             }
           })
-          taskDisappearanceLogger.logArrayReplacement(oldTasks, store.tasks, 'crossTabSync-bulkDelete')
         }
         break
 

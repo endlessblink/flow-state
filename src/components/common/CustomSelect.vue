@@ -84,7 +84,7 @@ const dropdownStyle = ref({
   position: 'fixed' as const,
   top: '0px',
   left: '0px',
-  width: '0px'
+  minWidth: '0px'
 })
 
 const calculateDropdownPosition = () => {
@@ -103,7 +103,8 @@ const calculateDropdownPosition = () => {
     position: 'fixed',
     top: positionAbove ? `${rect.top - dropdownHeight - 4}px` : `${rect.bottom + 4}px`,
     left: `${rect.left}px`,
-    width: `${rect.width}px`
+    minWidth: `${rect.width}px`,
+    maxWidth: `max(${rect.width}px, calc(100vw - ${rect.left}px - 16px))`
   }
 }
 
@@ -184,8 +185,13 @@ const handleResize = () => {
 }
 
 // Handle scroll to close dropdown (avoid position issues)
-const handleScroll = () => {
+const handleScroll = (event: Event) => {
   if (isOpen.value) {
+    // If scrolling happens inside the dropdown, don't close
+    const target = event.target as HTMLElement
+    if (dropdownRef.value && (target === dropdownRef.value || dropdownRef.value.contains(target))) {
+      return
+    }
     closeDropdown()
   }
 }

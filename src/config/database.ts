@@ -1,3 +1,14 @@
+/**
+ * DEPRECATED: Legacy PouchDB + CouchDB configuration
+ *
+ * TASK-129: This file is mostly legacy code from the PouchDB era.
+ * Key facts:
+ * - isSyncEnabled() always returns false (sync disabled during decommissioning)
+ * - CouchDB config is no longer used (migrated to Supabase)
+ * - STORAGE_FLAGS are still used by some components
+ *
+ * TODO: Clean up in future pass - remove unused PouchDB/CouchDB config
+ */
 // Database configuration for PouchDB + CouchDB sync
 export interface DatabaseConfig {
   local: {
@@ -73,20 +84,19 @@ export const prodDatabaseConfig: DatabaseConfig = {
 }
 
 /**
- * BUG-054 FIX: Get CouchDB configuration with automatic defaults
+ * BUG-054 FIX: Get CouchDB configuration from environment/localStorage
  *
  * Priority order:
  * 1. localStorage (runtime user settings from Settings UI)
  * 2. Environment variables (build-time configuration)
- * 3. Hardcoded defaults (automatic sync for personal use)
  *
- * This ensures sync works automatically on any browser without manual configuration.
+ * SECURITY: No hardcoded credentials - must be configured via env vars or UI
  */
-const DEFAULT_COUCHDB_URL = 'http://84.46.253.137:5984/pomoflow-tasks'
-const DEFAULT_COUCHDB_USERNAME = 'admin'
-const DEFAULT_COUCHDB_PASSWORD = 'pomoflow-2024'
+const DEFAULT_COUCHDB_URL = ''
+const DEFAULT_COUCHDB_USERNAME = ''
+const DEFAULT_COUCHDB_PASSWORD = ''
 
-const getStoredCouchDBConfig = () => {
+export const getCouchDBConfig = () => {
   // Check if we're in a browser environment with localStorage
   if (typeof localStorage === 'undefined') {
     // SSR or non-browser environment - use env vars or defaults
@@ -98,11 +108,11 @@ const getStoredCouchDBConfig = () => {
   }
 
   // FIX: Use relative proxy path in development to bypass CORS
-  // CRITICAL: PouchDB requires 'http' to use Network/HTTP adapter!
+  // Production URL must be set via VITE_COUCHDB_URL environment variable
   // V3: Clean DB to avoid conflict history bloat
   const defaultUrl = import.meta.env.DEV
     ? 'http://localhost:5546/pomoflow-tasks-v3'
-    : 'http://84.46.253.137:5984/pomoflow-tasks-v3'
+    : '' // Production: MUST configure via VITE_COUCHDB_URL env var
 
   // Browser environment - check localStorage first, then env vars, then defaults
   // IMPORTANT: Use .trim() and check for empty strings, not just null
@@ -132,7 +142,7 @@ export const isSyncEnabled = (): boolean => {
 // Get configuration based on environment and user state
 export const getDatabaseConfig = (userId?: string | null): DatabaseConfig => {
   // Get dynamic config each time (reads from localStorage → env vars)
-  const couchConfig = getStoredCouchDBConfig()
+  const couchConfig = getCouchDBConfig()
   const syncEnabled = isSyncEnabled()
 
   // Determine if we should sync based on authentication

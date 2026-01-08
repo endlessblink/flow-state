@@ -182,6 +182,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 // import { getGlobalEnhancedSyncManager } from '@/composables/useEnhancedSyncManager' // Temporarily disabled
 import { useDatabase } from '@/composables/useDatabase'
+import { getCouchDBConfig } from '@/config/database'
 
 interface Props {
   fallbackComponent?: string
@@ -453,9 +454,18 @@ const checkConnection = async () => {
   try {
     connectionStatus.value = 'Testing connection...'
 
-    const response = await fetch('http://84.46.253.137:5984/', {
+    const config = getCouchDBConfig()
+    if (!config.url) {
+      connectionStatus.value = '⚠️ CouchDB URL not configured'
+      return
+    }
+
+    // Extract base URL from config (remove database name)
+    const baseUrl = config.url.replace(/\/[^/]+$/, '')
+
+    const response = await fetch(baseUrl + '/', {
       headers: {
-        'Authorization': 'Basic ' + Buffer.from('admin:pomoflow-2024').toString('base64')
+        'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`)
       }
     })
 

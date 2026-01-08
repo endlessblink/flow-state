@@ -3,8 +3,8 @@
     class="markdown-content" 
     :class="{ 'rtl-aware': rtlAware }"
     :dir="calculatedDir"
-    v-html="renderedHtml"
     @click="handleClick"
+    v-html="renderedHtml"
   />
 </template>
 

@@ -120,6 +120,8 @@
           class="canvas-container"
           style="width: 100%; height: 100vh; position: relative;"
           @mousedown.capture="handleMouseDown"
+          @mousemove="handleMouseMove"
+          @mouseup="handleMouseUp"
           @click="handleCanvasContainerClick"
         >
           <VueFlow
@@ -376,8 +378,7 @@ import {
   onMounted,
   onBeforeUnmount,
   nextTick,
-  markRaw,
-  reactive
+  markRaw
 } from 'vue'
 import {
   VueFlow,
@@ -417,7 +418,6 @@ import UnifiedInboxPanel from '../components/inbox/UnifiedInboxPanel.vue'
 
 // Phase 4 Decomposed Components
 import CanvasModals from '../components/canvas/CanvasModals.vue'
-import CanvasStatusOverlays from '../components/canvas/CanvasStatusOverlays.vue'
 import CanvasEmptyState from '../components/canvas/CanvasEmptyState.vue'
 import CanvasContextMenus from '../components/canvas/CanvasContextMenus.vue'
 import CanvasFilterControls from '../components/canvas/CanvasFilterControls.vue'
@@ -447,8 +447,8 @@ import { useCanvasSmartGroups } from '../composables/canvas/useCanvasSmartGroups
 import { useCanvasActions } from '../composables/canvas/useCanvasActions'
 import { useCanvasConnections } from '../composables/canvas/useCanvasConnections'
 import { useCanvasSync } from '../composables/canvas/useCanvasSync'
-import { useCanvasResize } from '../composables/canvas/useCanvasResize'
-import { NodeUpdateBatcher } from '../utils/canvas/NodeUpdateBatcher'
+// import { useCanvasResize } from '../composables/canvas/useCanvasResize'
+// import { NodeUpdateBatcher } from '../utils/canvas/NodeUpdateBatcher'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -853,7 +853,7 @@ const {
 })
 
 // TASK-100: Overdue Smart Group Logic
-const { autoCollectOverdueTasks } = useCanvasSmartGroups()
+const { autoCollectOverdueTasks, ensureActionGroups } = useCanvasSmartGroups()
 
 // 🚀 Lifecycle Hooks (Moved Up)
 onMounted(async () => {
@@ -861,6 +861,10 @@ onMounted(async () => {
   if (!storeHealth.taskStore || !storeHealth.canvasStore) {
     console.warn('⚠️ Stores not ready on mount, canvas initialization may complete later')
   }
+
+  // Check for smart groups
+  await autoCollectOverdueTasks()
+  await ensureActionGroups()
 })
 
 // TASK-082 & REACTIVITY FIX: Watch filteredTasks to trigger sync
@@ -964,7 +968,7 @@ const systemHealthy = computed(() => {
 
 // Graceful degradation message for when stores are unavailable
 const systemHealthMessage = computed(() => {
-  const unavailableStores = []
+  const unavailableStores: string[] = []
   if (!storeHealth.taskStore) unavailableStores.push('Task Store')
   if (!storeHealth.canvasStore) unavailableStores.push('Canvas Store')
   if (!storeHealth.uiStore) unavailableStores.push('UI Store')
@@ -1043,7 +1047,7 @@ const {
   handleEditTask,
   closeEditModal,
   handleSelectionChange,
-  clearSelection,
+  // clearSelection,
   getNodeColor
 } = useCanvasSelection()
 
@@ -1198,6 +1202,7 @@ const selectedEdge = computed(() =>
 
 
 // Retry failed operation
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const retryFailedOperation = async () => {
   if (!operationError.value?.retryable) {
     return
@@ -1836,12 +1841,13 @@ resourceManager.addWatcher(
 // Using hash-based approach (validated by Perplexity as more efficient than deep:true on objects)
 // NO deep:true needed - single string comparison, zero garbage collection
 // TASK-114: Added dueDate and estimatedDuration to trigger sync when smart groups update properties
-// Using 'high' priority for instant feedback when dropping tasks on smart groups
+// BUG-015 FIX: Changed from 'high' to 'normal' priority - 'high' bypasses batching entirely
+// The 16ms batch delay (60fps) still feels instant but prevents performance issues
 resourceManager.addWatcher(
   watch(
     () => (isInteracting.value ? null : taskStore.tasks.map(t => `${t.id}:${t.title}:${t.status}:${t.priority}:${t.dueDate || ''}:${t.estimatedDuration || 0}`).join('|')),
     (val) => {
-      if (val) batchedSyncNodes('high')
+      if (val) batchedSyncNodes('normal')
     },
     { flush: 'post' }
   )

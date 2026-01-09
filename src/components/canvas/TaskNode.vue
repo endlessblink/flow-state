@@ -277,10 +277,7 @@ const hasSchedule = computed(() =>
   props.task?.instances && props.task.instances.length > 0
 )
 
-// Project visual indicator (emoji or colored dot)
-const projectVisual = computed(() =>
-  taskStore.getProjectVisual(props.task?.projectId)
-)
+
 
 // TASK-091: Format due date for clean display
 const formattedDueDate = computed(() => {

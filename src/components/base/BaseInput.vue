@@ -81,7 +81,7 @@ const localValue = computed({
 
 // Computed properties for Hebrew text alignment
 const inputText = computed(() => String(localValue.value || ''))
-const _hasHebrew = computed(() => _shouldAlignRight(inputText.value))
+
 const alignmentClasses = computed(() => getAlignmentClasses(inputText.value))
 const alignmentStyles = computed(() => applyInputAlignment(inputText.value))
 

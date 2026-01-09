@@ -9,6 +9,9 @@ import { getTaskCenter, findSmallestContainingRect } from '@/utils/geometry'
 import { isAnyCanvasStateLocked, getLockedTaskPosition, isGroupPositionLocked, getLockedGroupPosition } from '@/utils/canvasStateLock'
 // TASK-151: Use centralized parent-child logic
 import { useCanvasParentChild } from './useCanvasParentChild'
+import { useNodeAttachment } from './useNodeAttachment'
+// TASK-158: Persistent deleted groups tracker (localStorage-backed)
+import { isGroupDeleted } from '@/utils/deletedGroupsTracker'
 
 interface SyncDependencies {
     nodes: Ref<Node[]>
@@ -65,7 +68,7 @@ export function useCanvasSync(deps: SyncDependencies) {
         try {
             // Add section nodes FIRST (so they render in background) with graceful degradation
             const sections = safeStoreOperation(
-                () => canvasStore.sections || [],
+                () => canvasStore.groups || [],
                 [] as CanvasSection[], // Fallback: empty sections array
                 'canvas sections access',
                 'canvasStore'
@@ -84,8 +87,9 @@ export function useCanvasSync(deps: SyncDependencies) {
                 getSectionAbsolutePosition,
                 isActuallyInsideParent,
                 calculateZIndex,
-                findSmallestContainingSection
-            } = useCanvasParentChild(deps.nodes, canvasStore.sections)
+                findSmallestContainingSection,
+                findSectionForTask
+            } = useCanvasParentChild(deps.nodes, canvasStore.groups)
 
             // --- Process Sections ---
             // TASK-131 FIX: Track existing section positions to prevent drift (like tasks)
@@ -97,9 +101,12 @@ export function useCanvasSync(deps: SyncDependencies) {
             })
 
             sections.forEach(section => {
-                // TASK-146 FIX: Prevent Zombie Groups (reappearing after delete)
-                // SAFEGUARD: Check if dependency handles exist (HMR race condition protection)
-                if (deps.recentlyDeletedGroups && deps.recentlyDeletedGroups.value && deps.recentlyDeletedGroups.value.has(section.id)) {
+                // TASK-158 FIX: Check BOTH in-memory Set AND persistent localStorage tracker
+                // In-memory: Fast check for active session deletions
+                // localStorage: Survives page refresh, handles network delays
+                const isInMemoryDeleted = deps.recentlyDeletedGroups?.value?.has(section.id)
+                const isPersistentDeleted = isGroupDeleted(section.id)
+                if (isInMemoryDeleted || isPersistentDeleted) {
                     // console.log(`🧟 [ZOMBIE-KILL] Blocked deleted group "${section.name}" (ID: ${section.id}) from reappearing`)
                     return
                 }
@@ -260,18 +267,62 @@ export function useCanvasSync(deps: SyncDependencies) {
                         console.log(`🔓 [TASK-142] Task ${task.id.substring(0, 8)} has NO LOCK - will recalculate position`)
                     }
 
-                    // TASK-142: If locked AND existing node exists, completely preserve current state
-                    // This prevents ALL position resets during user interaction
+                    // TASK-142: If locked AND existing node exists, we usually preserve current state.
+                    // BUG-153 FIX: But we MUST validate that the existingParent is still valid!
+                    // If the task was dragged out (so lockedPosition is outside parent), we must DETACH it.
                     if (lockedPosition && taskExistsInNodes && existingPos) {
+                        let finalParent = existingParent
+                        let finalPos = { x: existingPos.x, y: existingPos.y }
+
+                        // Validate existing parent relationship
+                        if (existingParent && lockedPosition) {
+                            const parentSectionId = existingParent.replace('section-', '')
+                            const parentSection = sections.find(s => s.id === parentSectionId)
+
+                            if (parentSection) {
+                                // Check if the LOCKED (absolute) position is actually inside the parent
+                                // Use a slightly relaxed check (center point) to allow easy detachment
+                                const taskCenter = { x: lockedPosition.x + 110, y: lockedPosition.y + 50 } // Approx center
+                                const parentAbsPos = getSectionAbsolutePosition(parentSection)
+                                const parentRect = {
+                                    x: parentAbsPos.x,
+                                    y: parentAbsPos.y,
+                                    width: parentSection.position.width,
+                                    height: parentSection.position.height
+                                }
+
+                                // Simple point-in-rect check
+                                const isInside = (
+                                    taskCenter.x >= parentRect.x &&
+                                    taskCenter.x <= parentRect.x + parentRect.width &&
+                                    taskCenter.y >= parentRect.y &&
+                                    taskCenter.y <= parentRect.y + parentRect.height
+                                )
+
+                                if (!isInside) {
+                                    // ZOMBIE CURE: Task is locked at a position OUTSIDE its parent.
+                                    // Force detach.
+                                    console.log(`🧟 [BUG-153] Curing Zombie Task ${task.id}: Locked at (${lockedPosition.x}, ${lockedPosition.y}) outside parent "${parentSection.name}"`)
+                                    finalParent = undefined
+                                    finalPos = { x: lockedPosition.x, y: lockedPosition.y } // Use Absolute
+                                }
+                            } else {
+                                // Parent doesn't exist? Detach.
+                                finalParent = undefined
+                                finalPos = { x: lockedPosition.x, y: lockedPosition.y }
+                            }
+                        }
+
                         desiredNodeMap.set(task.id, {
                             id: task.id,
                             type: 'taskNode',
-                            position: { x: existingPos.x, y: existingPos.y },
+                            position: finalPos,
                             data: { task: { ...task } },
-                            parentNode: existingParent, // Preserve current parent
-                            extent: undefined,
+                            parentNode: finalParent, // Use validated parent
+                            // BUG-152D FIX: Do NOT use extent: 'parent'
+                            // The parentNode property alone handles child-moves-with-parent via relative positioning.
                             expandParent: false,
-                            zIndex: 1000, // TASK-141: Tasks always above groups (groups use 1-99)
+                            zIndex: 1000,
                             draggable: true,
                             connectable: true,
                             selectable: true
@@ -284,44 +335,125 @@ export function useCanvasSync(deps: SyncDependencies) {
                         : { ...task.canvasPosition }
 
                     // BUG-002 FIX: Check if this task already exists in current nodes
-                    // If so, preserve its parentNode state (prevents multi-drag position corruption)
                     let skipContainmentCalc = false
 
                     if (taskExistsInNodes) {
-                        if (existingParent) {
-                            // Task has a parentNode - preserve the relationship
+                        if (existingParent && existingParent !== 'undefined') {
+                            // Task has a parentNode in the graph. Validate it's still correct.
                             const sectionId = existingParent.replace('section-', '')
                             const section = sections.find(s => s.id === sectionId)
-                            if (section) {
-                                parentNode = existingParent
 
-                                // TASK-149 FIX: Use Vue Flow position if it exists (it's authoritative for visual state)
-                                // Otherwise calculate relative from absolute
-                                if (existingPos) {
-                                    position = { x: existingPos.x, y: existingPos.y }
-                                } else {
-                                    // No existing Vue Flow position - calculate relative from absolute
-                                    const relX = position.x - section.position.x
-                                    const relY = position.y - section.position.y
-                                    if (Number.isFinite(relX) && Number.isFinite(relY)) {
-                                        position = { x: relX, y: relY }
-                                    }
+                            // Determine the absolute position we are syncing to
+                            // Default to store/lock position
+                            let targetAbsoluteX = position.x
+                            let targetAbsoluteY = position.y
+
+                            if (section) {
+                                const parentAbsPos = getSectionAbsolutePosition(section)
+
+                                // BUG-153 FIX: If we have a valid relative position in the graph (existingPos),
+                                // we must use it combined with the CURRENT parent absolute position.
+                                // Why? Because if the Group just moved, 'position' (from store) is stale (old absolute).
+                                // But 'existingPos' (relative) matches the visual state (inside the group).
+                                // If we use stale store absolute vs new group absolute, we get a false "Zombie" detachment.
+                                if (existingPos && !lockedPosition) {
+                                    // BUG-153 FIX: Calculate exact absolute position including borders
+                                    const { calculateAbsolutePosition } = useNodeAttachment()
+                                    // PERFORMANCE OPTIMIZATION: Use static metrics to avoid expensive DOM queries per task
+                                    // Matches GroupNodeSimple.vue styles (2px border, 0 padding)
+                                    const metrics = { borderLeft: 2, borderTop: 2, paddingLeft: 0, paddingTop: 0 }
+                                    const absPos = calculateAbsolutePosition(existingPos, parentAbsPos, metrics)
+                                    targetAbsoluteX = absPos.x
+                                    targetAbsoluteY = absPos.y
                                 }
+
+                                // ZOMBIE CURE: Validate containment
+                                // Use center-point check
+                                const taskCenter = { x: targetAbsoluteX + 110, y: targetAbsoluteY + 50 }
+                                // const parentAbsPos = getSectionAbsolutePosition(section) // MOVED UP
+                                const parentRect = {
+                                    x: parentAbsPos.x,
+                                    y: parentAbsPos.y,
+                                    width: section.position.width,
+                                    height: section.position.height
+                                }
+
+                                const isInside = (
+                                    taskCenter.x >= parentRect.x &&
+                                    taskCenter.x <= parentRect.x + parentRect.width &&
+                                    taskCenter.y >= parentRect.y &&
+                                    taskCenter.y <= parentRect.y + parentRect.height
+                                )
+
+                                if (isInside) {
+                                    // Valid parent - preserve it
+                                    parentNode = existingParent
+
+                                    // Calculate relative position for Vue Flow
+                                    // Use existing relative pos if available and we're not locked (smoother)
+                                    // But if locked, we MUST recalculate relative from absolute lock
+                                    if (existingPos && !lockedPosition) {
+                                        position = { x: existingPos.x, y: existingPos.y }
+                                    } else {
+                                        // BUG-153 FIX: Use precise relative calculation including borders/padding
+                                        const { calculateRelativePosition, getParentMetrics } = useNodeAttachment()
+                                        // DOM ID for section node is `section-${section.id}`
+                                        const metrics = getParentMetrics(`section-${section.id}`) || { borderLeft: 0, borderTop: 0, paddingLeft: 0, paddingTop: 0 }
+                                        const relPos = calculateRelativePosition(
+                                            { x: targetAbsoluteX, y: targetAbsoluteY },
+                                            parentAbsPos, // This `parentAbsPos` comes from getSectionAbsolutePosition(section)
+                                            metrics
+                                        )
+                                        if (Number.isFinite(relPos.x) && Number.isFinite(relPos.y)) {
+                                            position = relPos
+                                        }
+                                    }
+                                    skipContainmentCalc = true
+                                } else {
+                                    // NOT inside parent - DETACH (Zombie Cure)
+                                    // position is already absolute (targetAbsoluteX/Y), so we just clear parentNode
+                                    console.log(`🧟 [BUG-153] Zombie Cure (General): Task ${task.id} outside parent "${section.name}". Detaching.`)
+                                    parentNode = undefined
+                                    // skipContainmentCalc stays false? No, we might want to check *other* parents? 
+                                    // If we detached, we effectively say "It is at this absolute position".
+                                    // Should we auto-attach to a NEW parent?
+                                    // If we dragged it to Root, yes.
+                                    // If we dragged it to Another Group, yes.
+                                    // So enable containment calc!
+                                    skipContainmentCalc = false
+                                }
+                            } else {
+                                // Parent missing - detach
+                                parentNode = undefined
+                                skipContainmentCalc = false
+                            }
+                        } else {
+                            // Task exists at ROOT level (no parentNode)
+                            // BUG-152 FIX: Check if task position CHANGED
+                            const canvasPos = task.canvasPosition || { x: 0, y: 0 }
+                            const positionChanged = existingPos && (
+                                Math.abs(existingPos.x - canvasPos.x) > 5 ||
+                                Math.abs(existingPos.y - canvasPos.y) > 5
+                            )
+
+                            if (positionChanged) {
+                                position = { x: canvasPos.x, y: canvasPos.y }
+                                console.log(`[BUG-152] Task ${task.id} position changed, recalculating containment`)
+                            } else if (existingPos) {
+                                position = { x: existingPos.x, y: existingPos.y }
                                 skipContainmentCalc = true
                             }
-                            // If section no longer exists, fall through to containment check
-                        } else {
-                            // Task exists at ROOT level (no parentNode) - keep it at root
-                            // TASK-149 FIX: Vue Flow position is authoritative for existing nodes
-                            if (existingPos) {
-                                position = { x: existingPos.x, y: existingPos.y }
-                            }
-                            // Don't recalculate containment - user intentionally placed it outside sections
-                            skipContainmentCalc = true
                         }
                     }
 
                     // Only calculate containment for NEW tasks (not in current nodes)
+                    if (skipContainmentCalc) {
+                        console.log(`[BUG-152] SKIPPED containment for task ${task.id}:`, {
+                            taskExistsInNodes,
+                            existingParent,
+                            reason: taskExistsInNodes ? (existingParent ? 'has existing parent' : 'at root level, position unchanged') : 'unknown'
+                        })
+                    }
                     if (!skipContainmentCalc) {
                         // Check if task belongs to a section visually
                         // BUG-034 FIX: Use task CENTER for bounds check (consistent with getTasksInSectionBounds)
@@ -332,22 +464,35 @@ export function useCanvasSync(deps: SyncDependencies) {
                             y: position.y + TASK_HEIGHT / 2
                         }
 
-                        // TASK-072 FIX: Find the MOST SPECIFIC (smallest/nested) section that contains the task
-                        // REPLACED: Use findSmallestContainingSection from centralized logic
-                        // We pass the full task rect for robust checking
-                        const section = findSmallestContainingSection({
-                            x: position.x,
-                            y: position.y,
-                            width: TASK_WIDTH, // 220
-                            height: TASK_HEIGHT // 100
+                        console.log(`[BUG-152] Containment check for task ${task.id}:`, {
+                            position,
+                            center,
+                            taskExistsInNodes,
+                            existingParent
                         })
+
+                        // TASK-072 FIX: Find the MOST SPECIFIC (smallest/nested) section that contains the task
+                        // REPLACED: Use findSectionForTask (Center Point Logic)
+                        // We use the center point for robust checking
+                        const section = findSectionForTask(center)
+
+                        console.log(`[BUG-152] findSmallestContainingSection result:`, section ? {
+                            id: section.id,
+                            name: section.name,
+                            position: section.position
+                        } : 'null - no containing section found')
 
                         if (section) {
                             // Task is visually inside a section - make it a child
                             parentNode = `section-${section.id}`
-                            // BUG-034 FIX: Convert ABSOLUTE to RELATIVE for Vue Flow parent-child system
-                            const relX = position.x - section.position.x
-                            const relY = position.y - section.position.y
+
+                            // BUG-153 FIX: Convert ABSOLUTE to RELATIVE correctly for nested groups
+                            // section.position might be relative (if nested), so we must use getSectionAbsolutePosition
+                            const sectionAbsPos = getSectionAbsolutePosition(section)
+                            const relX = position.x - sectionAbsPos.x
+                            const relY = position.y - sectionAbsPos.y
+
+                            console.log(`[BUG-152] Assigning parent ${parentNode}, relative pos: (${relX.toFixed(0)}, ${relY.toFixed(0)})`)
 
                             // Fix: Only assign parent if relative calculation is valid
                             // This prevents tasks from stacking at (0,0) relative to group if calculation fails
@@ -368,7 +513,9 @@ export function useCanvasSync(deps: SyncDependencies) {
                         // Without this, task mutations don't trigger re-renders because same object reference is reused
                         data: { task: { ...task } },
                         parentNode, // Set parent if found
-                        extent: undefined, // Allow free movement - we use absolute coordinates (BUG-034 fix)
+                        // BUG-152D FIX: Do NOT use extent: 'parent' - it CONSTRAINS drag to parent bounds
+                        // and prevents users from dragging tasks out of groups.
+                        // The parentNode property alone handles child-moves-with-parent via relative positioning.
                         expandParent: false, // Don't expand parent on drag
                         zIndex: 1000, // TASK-141: Tasks always above groups (groups use 1-99)
                         draggable: true,
@@ -444,17 +591,44 @@ export function useCanvasSync(deps: SyncDependencies) {
                             changed = true
                         }
                     } else {
-                        // Section nodes: compare name and dimensions
-                        if (target.data.label !== node.data.label ||
-                            target.data.width !== node.data.width ||
-                            target.data.height !== node.data.height ||
-                            target.data.isCollapsed !== node.data.isCollapsed) {
-                            target.data = node.data
+                        // Section nodes: compare name, dimensions, AND taskCount
+                        // BUG-152A FIX: Include taskCount in comparison to ensure counts update
+                        // when tasks are added/removed from groups
+                        // BUG-152E FIX: MUTATE individual properties instead of replacing target.data
+                        // Replacing breaks the reference that useNode() is tracking in GroupNodeSimple.
+                        // See: https://github.com/bcakmakoglu/vue-flow/discussions/920
+                        if (target.data.label !== node.data.label) {
+                            target.data.label = node.data.label
+                            changed = true
+                        }
+                        if (target.data.width !== node.data.width) {
+                            target.data.width = node.data.width
+                            changed = true
+                        }
+                        if (target.data.height !== node.data.height) {
+                            target.data.height = node.data.height
+                            changed = true
+                        }
+                        if (target.data.isCollapsed !== node.data.isCollapsed) {
+                            target.data.isCollapsed = node.data.isCollapsed
+                            changed = true
+                        }
+                        if (target.data.taskCount !== node.data.taskCount) {
+                            target.data.taskCount = node.data.taskCount
+                            changed = true
+                        }
+                        // Also update any other section data properties that might have changed
+                        if (target.data.name !== node.data.name) {
+                            target.data.name = node.data.name
+                            changed = true
+                        }
+                        if (target.data.color !== node.data.color) {
+                            target.data.color = node.data.color
                             changed = true
                         }
                     }
 
-                    // 3. Metadata properties
+                    // 3. Metadata properties (Shared for Tasks and Sections)
                     if (target.parentNode !== node.parentNode) {
                         target.parentNode = node.parentNode
                         changed = true

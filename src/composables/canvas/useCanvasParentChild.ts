@@ -115,6 +115,51 @@ export function useCanvasParentChild(
     }
 
     /**
+     * Specialized containment check for TASKS only.
+     * Uses "Center Point" logic: If the task's center is inside the group, it's contained.
+     * This is FASTER and MORE INTUITIVE for drag-drop than the "Area > 50%" check used for groups.
+     * 
+     * @param taskCenter - { x, y } absolute coordinates of task center
+     * @param excludeId - ID of group to ignore (e.g. parent if needed, usually not used)
+     */
+    const findSectionForTask = (
+        taskCenter: { x: number, y: number },
+        excludeId?: string
+    ): CanvasSection | null => {
+        // @ts-ignore
+        const list = Array.isArray(sections) ? sections : (sections.value || [])
+
+        const validContainers: CanvasSection[] = []
+
+        list.forEach((section: CanvasSection) => {
+            if (section.id === excludeId) return
+            if (section.isVisible === false) return
+            // Avoid using sections that are collapsed? (Optional: current behavior usually allows dropping into collapsed)
+
+            const absPos = getSectionAbsolutePosition(section)
+            const rect = {
+                x: absPos.x,
+                y: absPos.y,
+                width: section.position?.width ?? 300,
+                height: section.position?.height ?? 200
+            }
+
+            if (isPointInRect(taskCenter.x, taskCenter.y, rect)) {
+                validContainers.push(section)
+            }
+        })
+
+        if (validContainers.length === 0) return null
+
+        // Sort by area (ascending: smallest first) - we want the most specific (deepest) group
+        return validContainers.sort((a, b) => {
+            const areaA = (a.position?.width ?? 300) * (a.position?.height ?? 200)
+            const areaB = (b.position?.width ?? 300) * (b.position?.height ?? 200)
+            return areaA - areaB
+        })[0]
+    }
+
+    /**
      * verifies if a child section is physically strictly inside its claimed parent.
      * Used during sync to detect when a child has been dragged out.
      */
@@ -168,6 +213,7 @@ export function useCanvasParentChild(
         // Methods
         getSectionAbsolutePosition,
         findSmallestContainingSection,
+        findSectionForTask,
         findAllContainingSections,
         isActuallyInsideParent,
         calculateZIndex,

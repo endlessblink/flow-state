@@ -12,43 +12,252 @@
     transform: translateX(100%) !important;
 }
 
-/* KANBAN STYLES */
+/* =============================================================================
+   CRISP ICON RENDERING - Prevent blur from backdrop-filter (TASK-157)
+   ============================================================================= */
+
+/* All Lucide SVG icons - force GPU layer for crisp rendering */
+svg.lucide,
+[class*="lucide-"] {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    shape-rendering: geometricPrecision;
+    /* Prevent blur inheritance from backdrop-filter parents */
+    isolation: isolate;
+}
+
+/* Icon buttons - ensure crisp rendering */
+.filter-toggle svg,
+.done-toggle svg,
+.done-column-toggle svg,
+.view-type-btn svg,
+.nav-btn svg,
+.today-btn svg,
+button svg {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    shape-rendering: geometricPrecision;
+}
+
+/* =============================================================================
+   KANBAN STYLES - TODOIST-INSPIRED CLEAN LAYOUT (TASK-157)
+   ============================================================================= */
+
+/* Columns - Narrower & cleaner (MUST override scoped styles) */
 .kanban-column {
-    background: transparent;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: var(--space-2) !important;
+    box-shadow: none !important;
+    min-width: 240px !important;
+    max-width: 280px !important;
 }
 
-.column-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    padding: 0 var(--space-1);
+.kanban-column:hover {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
 }
 
-.column-title {
-    color: var(--text-muted);
-    font-weight: var(--font-medium);
-    font-size: var(--text-sm);
+/* Column Header - Just text, no box */
+.kanban-column .column-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: var(--space-3) !important;
+    padding: var(--space-1) 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    backdrop-filter: none !important;
 }
 
-/* TASK CARDS - ULTRA REFINED */
-/* NOTE: Inbox panel task cards use scoped styles with glass-bg-light */
-/* This global style is for Kanban/Board view task cards */
-.kanban-column .task-card,
-.board-view .task-card {
-    background: var(--surface-secondary);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    padding: var(--space-4);
-    margin-bottom: 0.75rem;
-    box-shadow: 0 1px 2px 0 var(--surface-hover);
-    transition: all var(--duration-normal) var(--spring-smooth);
+.kanban-column .column-title {
+    color: var(--text-muted) !important;
+    font-weight: 500 !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    text-shadow: none !important;
 }
 
-.kanban-column .task-card:hover,
-.board-view .task-card:hover {
-    border-color: var(--border-medium);
-    box-shadow: var(--shadow-medium);
+.kanban-column .task-count {
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+    min-width: auto !important;
+}
+
+/* Add task button in column - subtle */
+.kanban-column .add-task-btn {
+    opacity: 0.4 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: var(--space-1) !important;
+}
+
+.kanban-column .add-task-btn:hover {
+    opacity: 1 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Tasks Container - tighter spacing */
+.kanban-column .tasks-container {
+    gap: var(--space-2) !important;
+    padding: 0 !important;
+}
+
+/* Empty column state - minimal */
+.kanban-column .empty-column {
+    padding: var(--space-4) !important;
+    background: transparent !important;
+    border: 1px dashed var(--border-subtle) !important;
+    border-radius: var(--radius-md) !important;
+}
+
+/* WIP indicators - subtle */
+.kanban-column.wip-warning,
+.kanban-column.wip-exceeded {
+    border-left: none !important;
+    background: transparent !important;
+}
+
+.kanban-column.wip-warning .task-count,
+.kanban-column.wip-exceeded .task-count {
+    color: var(--color-warning) !important;
+}
+
+/* TASK-157: Minimal Board Header */
+.kanban-header--minimal {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: var(--space-2) var(--space-4) !important;
+    border-bottom: none !important;
+    background: transparent !important;
+}
+
+.kanban-header--minimal .board-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: 0 !important;
+}
+
+.kanban-header--minimal .task-count--subtle {
+    font-size: 13px !important;
+    color: var(--text-muted) !important;
+    font-weight: 400 !important;
+    margin-left: var(--space-2) !important;
+}
+
+.header-controls--minimal {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
+}
+
+.filter-toggle,
+.done-column-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: var(--radius-md) !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.filter-toggle:hover,
+.done-column-toggle:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-primary) !important;
+}
+
+.filter-toggle.active,
+.done-column-toggle.active {
+    background: var(--color-primary-alpha, rgba(99, 102, 241, 0.15)) !important;
+    color: var(--color-primary, #6366f1) !important;
+}
+
+/* Collapsible Filter Bar */
+.filter-bar {
+    padding: var(--space-2) var(--space-4) !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Slide-down transition */
+.slide-down-enter-active,
+.slide-down-leave-active {
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+    max-height: 60px;
+}
+
+/* TASK-157: Minimal Swimlane Header */
+.swimlane-header--minimal {
+    display: flex !important;
+    align-items: center !important;
+    padding: var(--space-1) var(--space-2) !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: none !important;
+    margin-bottom: var(--space-1) !important;
+}
+
+.swimlane-header--minimal .header-content--swimlane {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
+}
+
+.swimlane-header--minimal .collapse-btn {
+    padding: 2px !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+}
+
+.swimlane-header--minimal .project-name {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
+    margin: 0 !important;
+}
+
+.swimlane-header--minimal .task-count--subtle {
+    font-size: 12px !important;
+    color: var(--text-muted) !important;
+    font-weight: 400 !important;
 }
 
 /* SMART VIEW BADGES AND FILTERS */

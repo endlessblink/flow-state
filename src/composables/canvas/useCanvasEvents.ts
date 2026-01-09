@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -9,7 +9,8 @@ export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     // ✅ DRIFT FIX: Use generic screenToFlowCoordinate
-    const { viewport, screenToFlowCoordinate } = useVueFlow()
+    // BUG-152 FIX: Get setNodes and getNodes for proper Vue Flow initialization
+    const { viewport, screenToFlowCoordinate, setNodes, getNodes, updateNode, findNode } = useVueFlow()
 
     // --- Interaction State ---
     const isConnecting = ref(false)
@@ -148,7 +149,7 @@ export function useCanvasEvents(syncNodes?: () => void) {
     }
 
     // Drag and Drop (Task -> Canvas)
-    const handleDrop = (event: DragEvent) => {
+    const handleDrop = async (event: DragEvent) => {
         event.preventDefault()
         const data = event.dataTransfer?.getData('application/json')
         if (!data) return
@@ -160,7 +161,6 @@ export function useCanvasEvents(syncNodes?: () => void) {
             const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
             if (!vueFlowElement) return
 
-            const rect = vueFlowElement.getBoundingClientRect()
             // ✅ DRIFT FIX: Use Vue Flow native projection
             const flowCoords = screenToFlowCoordinate({
                 x: event.clientX,
@@ -168,15 +168,51 @@ export function useCanvasEvents(syncNodes?: () => void) {
             })
             const { x, y } = flowCoords
 
-            taskStore.updateTask(taskId, {
+            console.log(`[BUG-152] Inbox drop: task ${taskId} at (${x.toFixed(0)}, ${y.toFixed(0)})`)
+
+            // BUG-152 FIX: AWAIT the task update before calling syncNodes
+            // Otherwise syncNodes runs with stale task data
+            await taskStore.updateTask(taskId, {
                 canvasPosition: { x, y },
                 isInInbox: false
             })
 
-            // TASK-089: Guard syncNodes to prevent overwriting locked positions
-            if (syncNodes && !isAnyCanvasStateLocked()) {
+            // BUG-152 FIX: Wait for Vue reactivity to propagate before syncing
+            // filteredTasks is a computed that needs time to recalculate
+            await nextTick()
+
+            // BUG-152 FIX: Call syncNodes to build the node array with parent-child relationships
+            if (syncNodes) {
+                console.log('[BUG-152] Inbox drop: calling syncNodes to build nodes')
                 syncNodes()
             }
+
+            // BUG-152C FIX: Wait for v-model to sync nodes.value to Vue Flow's internal state
+            // BEFORE reading getNodes.value. Without this tick, getNodes returns STALE state.
+            await nextTick()
+
+            // BUG-152 FIX: CRITICAL - Use setNodes() to force Vue Flow to reinitialize
+            // Direct array mutation doesn't trigger Vue Flow's complete initialization sequence
+            // setNodes() ensures parent-child relationships are properly discovered
+            const currentNodes = getNodes.value
+            console.log(`[BUG-152] Forcing Vue Flow reinit with ${currentNodes.length} nodes via setNodes()`)
+            setNodes(currentNodes)
+
+            // BUG-152 FIX: Double nextTick() for Vue Flow parent-child discovery
+            // Vue Flow needs two render cycles:
+            // 1st tick: Vue detects node array change, updates DOM
+            // 2nd tick: Vue Flow discovers parent-child relationships, recalculates coordinates
+            await nextTick()
+            await nextTick()
+
+            // BUG-152 FIX: Verify the task got a parent assigned
+            const droppedNode = findNode(taskId)
+            console.log(`[BUG-152] Task ${taskId} after drop:`, {
+                parentNode: droppedNode?.parentNode,
+                position: droppedNode?.position
+            })
+
+            console.log(`[BUG-152] Inbox drop complete`)
 
         } catch (e) {
             console.error('Error handling drop:', e)

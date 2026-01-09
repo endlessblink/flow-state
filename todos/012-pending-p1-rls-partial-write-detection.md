@@ -1,7 +1,8 @@
 ---
-status: pending
+status: complete
 priority: p1
 issue_id: 012
+resolved_by: BUG-171 (saveProjects fix in useSupabaseDatabaseV2.ts)
 tags: [code-review, security, supabase, data-integrity]
 dependencies: []
 ---

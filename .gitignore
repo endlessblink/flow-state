@@ -31,6 +31,9 @@ check-*.mjs
 *-backup-*.md
 *.bak
 
+# Database backups (keep locally, don't commit - contain user data)
+supabase/backups/*.sql
+
 # Log files with sensitive data (CRITICAL SECURITY)
 firebase-debug.log
 *.log

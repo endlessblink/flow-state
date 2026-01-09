@@ -627,7 +627,8 @@ const {
   screenToFlowCoordinate, // BUG-044 FIX: Use official coordinate projection
   updateNodeData, // TASK-072: Official Vue Flow API for updating node data reactively
   updateNode, // BUG-055: Update node position for inverse delta compensation
-  setViewport: vueFlowSetViewport // Required for force-resetting corrupted viewports
+  setViewport: vueFlowSetViewport, // Required for force-resetting corrupted viewports
+  setNodes // BUG-152: Required to force Vue Flow parent-child re-initialization
 } = useVueFlow()
 
 // TASK-072: Sync Vue Flow viewport changes to canvas store for persistence
@@ -819,7 +820,7 @@ onMounted(async () => {
 // TASK-100: Overdue Smart Group Logic - Wait for sections to load
 // Use immediate watcher to catch if sections are already loaded, or wait for them
 const hasRunOverdueCheck = ref(false)
-watch(() => canvasStore.sections, async (newSections) => {
+watch(() => canvasStore.groups, async (newSections) => {
     // BUG-023 FIX: Wait for sections to be loaded before ensuring action groups
     // This prevents creating duplicate "Friday/Saturday" groups if they haven't loaded from DB yet
     if (newSections.length > 0 && !hasRunOverdueCheck.value) {
@@ -910,16 +911,7 @@ const systemHealthy = computed(() => {
   return storeHealth.taskStore && storeHealth.canvasStore && storeHealth.uiStore
 })
 
-// Graceful degradation message for when stores are unavailable
-const systemHealthMessage = computed(() => {
-  const unavailableStores: string[] = []
-  if (!storeHealth.taskStore) unavailableStores.push('Task Store')
-  if (!storeHealth.canvasStore) unavailableStores.push('Canvas Store')
-  if (!storeHealth.uiStore) unavailableStores.push('UI Store')
 
-  if (unavailableStores.length === 0) return ''
-  return `⚠️ System running in degraded mode. Unavailable: ${unavailableStores.join(', ')}`
-})
 
 // CPU Optimization: Memoized filtered tasks with canvas positions
 let lastCanvasTasks: Task[] = []
@@ -1058,7 +1050,7 @@ const isSectionSettingsOpen = ref(false)
 const editingSectionId = ref<string | null>(null)
 const editingSection = computed(() => {
   if (!editingSectionId.value) return null
-  return canvasStore.sections.find(s => s.id === editingSectionId.value) || null
+  return canvasStore.groups.find(s => s.id === editingSectionId.value) || null
 })
 
 // Canvas Context Menu state
@@ -1294,37 +1286,7 @@ const tasksWithCanvasPositions = computed(() => {
   return result
 })
 
-// CPU Optimization: Cached inbox tasks check
-let lastHasInboxTasks = false
-let lastHasInboxTasksHash = ''
 
-const _hasInboxTasks = computed(() => {
-  const tasks = filteredTasks.value
-  if (!Array.isArray(tasks)) {
-    return false
-  }
-
-  // Create hash from relevant task properties
-  const currentHash = tasks.map(t => `${t.id}:${!!t.canvasPosition}:${t.isInInbox}:${t.status}`).join('|')
-  if (currentHash === lastHasInboxTasksHash) {
-    return lastHasInboxTasks
-  }
-
-  // Optimized checking with early exit
-  // Dec 16, 2025 FIX: ONLY check canvasPosition, IGNORE isInInbox
-  for (let i = 0; i < tasks.length; i++) {
-    const task = tasks[i]
-    if (!task.canvasPosition && task.status !== 'done') {
-      lastHasInboxTasksHash = currentHash
-      lastHasInboxTasks = true
-      return true
-    }
-  }
-
-  lastHasInboxTasksHash = currentHash
-  lastHasInboxTasks = false
-  return false
-})
 
 // CPU Optimization: Cached dynamic node extent calculation
 let lastDynamicNodeExtent: [[number, number], [number, number]] | null = null
@@ -1393,18 +1355,7 @@ const dynamicNodeExtent = computed(() => {
   }
 })
 
-// Glass morphism corner handles - Modern minimal style
-const _resizeHandleStyle = computed(() => ({
-  width: '10px',
-  height: '10px',
-  borderRadius: '3px',  // Rounded square (Figma/Linear style)
-  background: 'rgba(255, 255, 255, 0.3)',  // Translucent white glass
-  border: '1.5px solid rgba(99, 102, 241, 0.6)',  // Accent border
-  backdropFilter: 'blur(8px)',  // Glass effect
-  WebkitBackdropFilter: 'blur(8px)',  // Safari support
-  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.15)',
-  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-}))
+
 
 
 
@@ -1533,6 +1484,7 @@ const {
   filteredTasks,
   withVueFlowErrorBoundary,
   syncNodes,
+  setNodes, // BUG-152: Force Vue Flow parent-child re-initialization after drag
   updateNodeData // TASK-072: Vue Flow's official API for reactive node data updates
 }, {
   isNodeDragging
@@ -1744,7 +1696,7 @@ resourceManager.addWatcher(
 
 // CPU Optimization: Watch sections with smart batching
 resourceManager.addWatcher(
-  watch(() => canvasStore.sections.map(s => s.id).join(','), () => {
+  watch(() => canvasStore.groups.map(s => s.id).join(','), () => {
     batchedSyncNodes('normal')
   })
 )
@@ -1753,7 +1705,7 @@ resourceManager.addWatcher(
 // FIX: Using string-based comparison instead of deep:true on object arrays to prevent infinite loops
 resourceManager.addWatcher(
   watch(
-    () => canvasStore.sections.map(s => `${s.id}:${s.isCollapsed}`).join('|'),
+    () => canvasStore.groups.map(s => `${s.id}:${s.isCollapsed}`).join('|'),
     () => {
       batchedSyncNodes('high')
     }
@@ -1761,14 +1713,21 @@ resourceManager.addWatcher(
 )
 
 // DEBUG: Track ALL section node position changes in Vue Flow nodes array
+// TASK-160: Fixed memory leak - now cleans up stale entries when sections are deleted
+// TASK-161: Changed flush: 'sync' to flush: 'post' to avoid blocking main thread
 const sectionPositionTracker = new Map<string, { x: number; y: number }>()
 resourceManager.addWatcher(
   watch(
     () => nodes.value.filter(n => n.type === 'sectionNode').map(n => `${n.id}:${n.position.x.toFixed(0)}:${n.position.y.toFixed(0)}`).join('|'),
     (newVal, oldVal) => {
       if (newVal === oldVal) return
+
+      // TASK-160: Get current section IDs to clean up stale entries
+      const currentSectionIds = new Set<string>()
+
       // Track which sections changed
       nodes.value.filter(n => n.type === 'sectionNode').forEach(n => {
+        currentSectionIds.add(n.id)
         const prev = sectionPositionTracker.get(n.id)
         if (prev) {
           const dx = Math.abs(n.position.x - prev.x)
@@ -1783,8 +1742,15 @@ resourceManager.addWatcher(
         }
         sectionPositionTracker.set(n.id, { x: n.position.x, y: n.position.y })
       })
+
+      // TASK-160: Clean up entries for deleted sections to prevent memory leak
+      for (const id of sectionPositionTracker.keys()) {
+        if (!currentSectionIds.has(id)) {
+          sectionPositionTracker.delete(id)
+        }
+      }
     },
-    { flush: 'sync' } // Catch immediately
+    { flush: 'post' } // TASK-161: Changed from 'sync' to avoid blocking main thread
   )
 )
 
@@ -1989,8 +1955,8 @@ resourceManager.addWatcher(
 // NOTE: Console log removed to fix 0-2 FPS issue
 // FIX: Removed duplicate section watcher that used deep:true causing infinite loops
 // Section changes are already handled by:
-// - Line 2008: watch(() => canvasStore.sections.map(s => s.id).join(','), ...) - section ID changes
-// - Line 2011: watch(() => canvasStore.sections.map(s => `${s.id}:${s.isCollapsed}`).join('|'), ...) - collapse changes
+// - Line 2008: watch(() => canvasStore.groups.map(s => s.id).join(','), ...) - section ID changes
+// - Line 2011: watch(() => canvasStore.groups.map(s => `${s.id}:${s.isCollapsed}`).join('|'), ...) - collapse changes
 
 // CPU Optimization: Debounced viewport watch to prevent excessive updates
 const debouncedViewportUpdate = useDebounceFn(() => {
@@ -2037,7 +2003,7 @@ resourceManager.addWatcher(
 const collectTasksForSection = (sectionId: string) => {
   console.log(`[Auto-Collect] 🧲 Magnet clicked for section: ${sectionId}`)
 
-  const section = canvasStore.sections.find(s => s.id === sectionId)
+  const section = canvasStore.groups.find(s => s.id === sectionId)
   if (!section) {
     console.error(`[Auto-Collect] ❌ Section ${sectionId} not found`)
     return
@@ -2244,7 +2210,7 @@ const createTaskInGroup = async (section: CanvasSection) => {
   console.log('➕ [CanvasView] Create task in group:', section.name)
 
   // Position the task in the section
-  const sectionNode = canvasStore.sections.find(s => s.id === section.id)
+  const sectionNode = canvasStore.groups.find(s => s.id === section.id)
   if (!sectionNode) {
     console.warn('❌ [CanvasView] Section not found:', section.id)
     return

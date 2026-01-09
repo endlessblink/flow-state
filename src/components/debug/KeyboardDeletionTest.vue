@@ -28,7 +28,7 @@ const testTaskId = ref<string>('')
 
 // Computed properties
 const filteredTasks = computed(() => taskStore.tasks.filter(task => task.status === 'planned'))
-const _canvasTasks = computed(() => filteredTasks.value.filter(task => task.canvasPosition))
+
 const hasTestTask = computed(() => !!testTaskId.value && taskStore.tasks.find(t => t.id === testTaskId.value))
 
 // Helper functions

@@ -16,15 +16,16 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 
 ## Project Overview
 
-**Pomo-Flow** - Vue 3 productivity app combining Pomodoro timer with task management across Board, Calendar, and Canvas views. Uses PouchDB + CouchDB persistence with glass morphism design.
+**Pomo-Flow** - Vue 3 productivity app combining Pomodoro timer with task management across Board, Calendar, and Canvas views. Uses Supabase for persistence/auth with glass morphism design.
 
 ## Current Status
 
 | Component | Status |
 |-----------|--------|
-| Canvas | ✅ Working |
+| Canvas | ✅ Working (groups, nesting, drag-drop) |
+| Board | ✅ Working (Kanban swimlanes) |
 | Calendar | ⚠️ Partial (resize issues) |
-| CouchDB Sync | ✅ Working |
+| Supabase Sync | ✅ Working (RLS enabled) |
 | Build/CI | ✅ Passing |
 
 **Full Tracking**: `docs/MASTER_PLAN.md`
@@ -45,7 +46,8 @@ npm run storybook    # Component docs (port 6006)
 - **Vue 3** + TypeScript + Vite + Pinia
 - **Tailwind CSS** + Naive UI + Glass morphism
 - **Vue Flow** for canvas, **Vuedraggable** for drag-drop
-- **PouchDB** (local) + **CouchDB** (optional sync)
+- **Supabase** (Postgres + Auth + Realtime)
+- **TipTap** for rich text editing
 
 ## Key Development Rules
 
@@ -55,6 +57,62 @@ npm run storybook    # Component docs (port 6006)
 4. **Type Safety** - All new code must have proper TypeScript types
 5. **Check Task Dependencies** - See Task Dependency Index in `docs/MASTER_PLAN.md`
 6. **NEVER Create Demo Data** - First-time users MUST see empty app, not sample data
+7. **Database Safety** - NEVER run destructive database commands without user approval (see below)
+
+## Database Safety (CRITICAL)
+
+**NEVER run these commands automatically:**
+- `supabase db reset` - PERMANENTLY BLOCKED (wipes all data)
+- `DROP DATABASE` / `DROP TABLE` / `TRUNCATE` - User must run manually
+- `DELETE FROM` without WHERE clause - Blocked
+- `supabase db push --force` - Blocked
+
+**Before ANY migration:**
+1. Create a backup first:
+   ```bash
+   mkdir -p supabase/backups
+   supabase db dump > supabase/backups/backup-$(date +%Y%m%d-%H%M%S).sql
+   ```
+2. The `destructive-command-blocker.sh` hook will BLOCK migrations without recent backup
+
+**Backup location:** `supabase/backups/` (not committed to git)
+
+**Dual-Engine Backup System (Shadow Mirror):**
+- **Engine A**: Standard Postgres Dump (`.sql`, 50-file rotation)
+- **Engine B**: Shadow Mirror (`backups/shadow.db` - SQLite)
+- **Interval**: Automatic every 5 minutes via `npm run dev`
+- **Manual Trigger**: `npm run backup:watch` or `node scripts/shadow-mirror.cjs`
+- **Configuration**: Service Role Key in `.env.local` required for full Shadow access bypass RLS.
+
+**Hook enforcement:** `.claude/hooks/destructive-command-blocker.sh`
+
+**If you need to reset the database:**
+- Tell the user to run the command MANUALLY in their terminal
+- Claude Code cannot and will not run destructive commands
+
+## Supabase Architecture
+
+**Database Layer:** `useSupabaseDatabaseV2.ts` (single source of truth)
+- All CRUD operations go through this composable
+- Type mappers in `src/utils/supabaseMappers.ts` convert between app/DB types
+- Auth via `src/services/auth/supabase.ts` + `src/stores/auth.ts`
+
+**Tables (with RLS enabled):**
+- `tasks` - Task data with user isolation
+- `groups` - Canvas groups/sections
+- `projects` - Project organization
+- `timer_sessions` - Pomodoro session history
+- `notifications` - Scheduled notifications
+- `user_settings` - User preferences
+- `quick_sort_sessions` - QuickSort session data
+
+**Key Files:**
+```
+src/composables/useSupabaseDatabaseV2.ts  # Main database composable
+src/utils/supabaseMappers.ts              # Type conversion
+src/services/auth/supabase.ts             # Supabase client init
+src/stores/auth.ts                        # Auth state management
+```
 
 ## Canvas Position Persistence (CRITICAL)
 
@@ -74,6 +132,15 @@ npm run storybook    # Component docs (port 6006)
 **Before modifying canvas sync:**
 1. Run `npm run test -- --grep "Position Persistence"`
 2. Manual test: drag item, refresh, verify position persists
+
+**Canvas Composables** (`src/composables/canvas/`):
+| Composable | Purpose |
+|------------|---------|
+| `useCanvasSync.ts` | **CRITICAL** - Single source of truth for node sync |
+| `useCanvasParentChild.ts` | Group nesting and parent-child relationships |
+| `useCanvasDragDrop.ts` | Drag-drop handlers and position updates |
+| `useCanvasEvents.ts` | Vue Flow event handlers |
+| `useCanvasActions.ts` | Task/group CRUD operations |
 
 ## MASTER_PLAN.md Task ID Format
 
@@ -131,11 +198,12 @@ Detailed docs available in `docs/claude-md-extension/`:
 | `architecture.md` | Project structure, stores, composables, data models |
 | `code-patterns.md` | Component/store patterns, naming conventions |
 | `testing.md` | Playwright/Vitest examples, dev workflow |
-| `database.md` | PouchDB/CouchDB architecture, sync config |
+| `database.md` | ⚠️ OUTDATED - references PouchDB (app now uses Supabase) |
 | `design-system.md` | Design tokens, Tailwind config, glass morphism |
 | `troubleshooting.md` | Common issues, gotchas, SOPs |
+| `backup-system.md` | Dual-engine backup system documentation |
 
 ---
 
-**Last Updated**: January 8, 2026
+**Last Updated**: January 9, 2026
 **Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase

@@ -1,4 +1,4 @@
-import { type Ref, type ComputedRef, ref } from 'vue'
+import { type Ref, type ComputedRef, ref, nextTick } from 'vue'
 import { type Node } from '@vue-flow/core'
 import type { useTaskStore } from '../../stores/tasks';
 import { type Task } from '../../stores/tasks'
@@ -24,6 +24,8 @@ import { getAbsoluteNodePosition } from '../../utils/canvasGraph'
 import { DURATION_DEFAULTS, type DurationCategory } from '../../utils/durationCategories'
 // TASK-151: Use centralized parent-child logic
 import { useCanvasParentChild } from './useCanvasParentChild'
+import { useNodeAttachment } from './useNodeAttachment'
+import { useVueFlow } from '@vue-flow/core'
 
 interface DragDropDeps {
     taskStore: ReturnType<typeof useTaskStore>
@@ -32,6 +34,8 @@ interface DragDropDeps {
     filteredTasks: ComputedRef<Task[]>
     withVueFlowErrorBoundary: (handlerName: string, handler: (...args: any[]) => any, options?: any) => any
     syncNodes: () => void
+    // BUG-152 FIX: setNodes forces Vue Flow to reinitialize parent-child relationships
+    setNodes?: (nodes: Node[]) => void
     // Vue Flow's official API for updating node data reactively (kept for backward compatibility)
     updateNodeData?: (nodeId: string, data: Record<string, unknown>) => void
 }
@@ -55,7 +59,7 @@ const _internalDragSettling = ref(false)
 export const isDragSettlingRef = _internalDragSettling
 
 export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
-    const { taskStore, canvasStore, nodes, filteredTasks, withVueFlowErrorBoundary, syncNodes, updateNodeData: _updateNodeData } = deps
+    const { taskStore, canvasStore, nodes, filteredTasks, withVueFlowErrorBoundary, syncNodes, setNodes, updateNodeData: _updateNodeData } = deps
     // TASK-072: isDragSettling prevents syncNodes from running during the settling period after drag ends
     // Use provided ref or fall back to internal one (exported as isDragSettlingRef)
     const { isNodeDragging, isDragSettling = _internalDragSettling } = state
@@ -65,8 +69,10 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     // TASK-151 FIX: Use centralized parent-child logic
     const {
         findSmallestContainingSection,
-        findAllContainingSections
-    } = useCanvasParentChild(nodes, canvasStore.sections)
+        findAllContainingSections,
+        findSectionForTask,
+        getSectionAbsolutePosition // BUG-153: Need this for absolute position calculation
+    } = useCanvasParentChild(nodes, canvasStore.groups)
 
     // Helper: Check if task center is within section bounds
     // REFACTORED: Uses isTaskCenterInRect from shared utils
@@ -84,14 +90,10 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     // Kept aliases for compatibility if needed, but direct usage is preferred
 
     // Helper: Check if task is inside a section (returns first match)
-    // REFACTORED: Uses findSmallestContainingSection from useCanvasParentChild
+    // REFACTORED: Uses findSectionForTask (Center Point Logic) for immediate snappy feel
     const getContainingSection = (taskX: number, taskY: number, taskWidth: number = 220, taskHeight: number = 100) => {
-        return findSmallestContainingSection({
-            x: taskX,
-            y: taskY,
-            width: taskWidth,
-            height: taskHeight
-        })
+        const center = getTaskCenter(taskX, taskY, taskWidth, taskHeight)
+        return findSectionForTask(center)
     }
 
     // Helper: Get ALL sections containing a position (for nested group inheritance)
@@ -140,6 +142,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
 
     // TASK-072 FIX: Update section task counts without calling syncNodes()
     // BUG-047 FIX: Also update all ancestor groups to reflect recursive counting
+    // BUG-152 FIX: Use nextTick to ensure task store updates have propagated
     //
     // CRITICAL INSIGHT from Vue Flow docs (https://github.com/bcakmakoglu/vue-flow/discussions/920):
     // "useNode returns us the node object straight from the state - since the node obj is reactive,
@@ -147,8 +150,28 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     //
     // The key is to MUTATE the existing node.data, NOT replace the node object.
     // Replacing the node breaks the reference that useNode() is watching in custom components.
-    const updateSectionTaskCounts = (oldSectionId?: string, newSectionId?: string) => {
+    const updateSectionTaskCounts = async (oldSectionId?: string, newSectionId?: string) => {
+        // BUG-152 FIX: Wait for Vue reactivity to propagate task position updates
+        // Without this, filteredTasks may have stale canvasPosition values
+        await nextTick()
+        await nextTick() // BUG-152: Extra tick for store propagation
+
         const tasks = filteredTasks.value || []
+
+        // BUG-152 DEBUG: Log task positions we're using for counting
+        if (newSectionId) {
+            const section = canvasStore.groups.find(s => s.id === newSectionId)
+            if (section) {
+                console.log(`[BUG-152 COUNT DEBUG] Counting for "${section.name}":`, {
+                    sectionBounds: { x: section.position.x, y: section.position.y, w: section.position.width, h: section.position.height },
+                    tasksWithPositions: tasks.filter(t => t.canvasPosition).map(t => ({
+                        id: t.id.substring(0, 15),
+                        title: t.title?.substring(0, 15),
+                        pos: t.canvasPosition
+                    }))
+                })
+            }
+        }
 
         // Collect all sections that need updating (including ancestors)
         const sectionsToUpdate = new Set<string>()
@@ -169,6 +192,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         sectionsToUpdate.forEach(sectionId => {
             updateSingleSectionCount(sectionId, tasks)
         })
+
+        console.log(`[BUG-152] Updated task counts for ${sectionsToUpdate.size} groups`)
     }
 
     // Helper: Get properties from a single section based on its name/settings
@@ -484,7 +509,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
 
                 if (node.id.startsWith('section-')) {
                     const sectionId = node.id.replace('section-', '')
-                    const section = canvasStore.sections.find(s => s.id === sectionId)
+                    const section = canvasStore.groups.find(s => s.id === sectionId)
                     if (section) {
                         startX = section.position.x
                         startY = section.position.y
@@ -547,6 +572,9 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 if (taskNodes.length > 0) {
                     console.log(`%c[BUG-002] Multi-drag stop: ${taskNodes.length} tasks`, 'color: #9C27B0; font-weight: bold')
 
+                    // BUG-152 FIX: Track affected groups to update counts later
+                    const affectedGroupIds = new Set<string>()
+
                     // Save positions for ALL task nodes, preserving their current parentNode state
                     for (const taskNode of taskNodes) {
                         // Calculate absolute position using Vue Flow graph utility (handles deep nesting)
@@ -555,16 +583,73 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                         const absoluteY = absolutePos.y
 
                         // Validate and save
-                        if (Number.isFinite(absoluteX) && Number.isFinite(absoluteY)) {
-                            lockTaskPosition(taskNode.id, { x: absoluteX, y: absoluteY })
-                            try {
-                                await taskStore.updateTask(taskNode.id, {
-                                    canvasPosition: { x: absoluteX, y: absoluteY }
-                                })
-                            } catch (err) {
-                                console.error(`[BUG-002] Failed to save position for task ${taskNode.id}:`, err)
+                        // BUG-153 FIX: Check if task has moved to a new parent (or root)
+                        const center = getTaskCenter(absoluteX, absoluteY, 220, 100)
+                        const containingSection = findSectionForTask(center)
+                        const newParentNodeId = containingSection ? `section-${containingSection.id}` : undefined
+
+                        // Determine if parent changed
+                        const currentParentId = taskNode.parentNode
+                        if (currentParentId !== newParentNodeId) {
+                            console.log(`%c[BUG-153] Multi-drag task ${taskNode.id} parent change: ${currentParentId} -> ${newParentNodeId}`, 'color: #E91E63')
+
+                            // Track OLD parent for count update
+                            if (currentParentId) {
+                                const oldGroupId = currentParentId.replace('section-', '')
+                                affectedGroupIds.add(oldGroupId)
+                                getAncestorGroupIds(oldGroupId).forEach(id => affectedGroupIds.add(id))
+                            }
+                            // Track NEW parent for count update
+                            if (newParentNodeId) {
+                                const newGroupId = newParentNodeId.replace('section-', '')
+                                affectedGroupIds.add(newGroupId)
+                                getAncestorGroupIds(newGroupId).forEach(id => affectedGroupIds.add(id))
+                            }
+
+                            // BUG-153 FIX: Use Atomic Coordinate Handover
+                            const { attachNodeToParent, detachNodeFromParent } = useNodeAttachment()
+
+                            if (containingSection) {
+                                // ATTACHMENT: World -> Parent Space
+                                // We wait for this to complete to ensure coords are right before next store update? 
+                                // Actually, for multi-drag we might need to be careful about async.
+                                // But since we are updating nodes.value directly below, we can calculate and set.
+                                // attachNodeToParent modifies the node in place.
+                                const result = await attachNodeToParent(taskNode.id, `section-${containingSection.id}`)
+                                if (result.success && result.newPosition) {
+                                    // Update our local variables so we save the right thing to store if needed?
+                                    // Actually, taskStore saves ABSOLUTE position (canvasPosition). 
+                                    // So we don't need to change what we save to store (absoluteX, absoluteY).
+                                    // We only need to ensure Vue Flow sees the relative position.
+                                    console.log(`✅ [BUG-153] Multi-drag Attached ${taskNode.id}`, result.newPosition)
+                                }
+                            } else {
+                                // DETACHMENT
+                                const result = await detachNodeFromParent(taskNode.id)
+                                if (result.success) {
+                                    // Update data explicitly
+                                    const nodeIndex = nodes.value.findIndex(n => n.id === taskNode.id)
+                                    if (nodeIndex !== -1) {
+                                        nodes.value[nodeIndex].data = {
+                                            ...nodes.value[nodeIndex].data,
+                                            parentId: undefined
+                                        }
+                                    }
+                                    console.log(`✅ [BUG-153] Multi-drag Detached ${taskNode.id}`)
+                                }
                             }
                         }
+
+                        // Always lock absolute position for visual stability
+                        lockTaskPosition(taskNode.id, { x: absoluteX, y: absoluteY })
+                        try {
+                            await taskStore.updateTask(taskNode.id, {
+                                canvasPosition: { x: absoluteX, y: absoluteY }
+                            })
+                        } catch (err) {
+                            console.error(`[BUG-002] Failed to save position for task ${taskNode.id}:`, err)
+                        }
+
 
                         dragStartPositions.delete(taskNode.id)
                     }
@@ -576,6 +661,17 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                             const nodeWithSelection = n as Node & { selected?: boolean }
                             nodeWithSelection.selected = selectedIdsBeforeDrag.includes(n.id)
                         })
+                    }
+
+                    // Wait for Vue reactivity to propagate task position updates
+                    await nextTick()
+
+                    // Final count updates for all affected groups (old and new)
+                    await nextTick()
+                    if (affectedGroupIds.size > 0) {
+                        const tasks = filteredTasks.value || []
+                        affectedGroupIds.forEach(id => updateSingleSectionCount(id, tasks))
+                        console.log(`[BUG-152] Updated task counts for ${affectedGroupIds.size} groups after multi-drag`)
                     }
 
                     // Handle any sections in the drag
@@ -590,24 +686,42 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             }
 
             // TASK-142 GUARDRAIL: Section vs Task handling MUST be at the SAME nesting level.
-            // Bug was found where task logic was nested INSIDE section block, making it
-            // unreachable for actual task nodes. The structure MUST be:
-            //   if (section-node) { handle section } else { handle task }
-            // NOT:
-            //   if (section-node) { if (found) {...} else { handle task - UNREACHABLE! } }
             if (node.id.startsWith('section-')) {
                 const sectionId = node.id.replace('section-', '')
-                const section: CanvasSection | undefined = canvasStore.sections.find((s: CanvasSection) => s.id === sectionId)
+                const section: CanvasSection | undefined = canvasStore.groups.find((s: CanvasSection) => s.id === sectionId)
 
                 if (section) {
                     // Clean up the stored position
                     dragStartPositions.delete(node.id)
 
-                    // ... (rest of section logic) ...
-                    // Converting existing code to fit structure
-                    const absolutePos = getAbsolutePosition(node.id)
-                    const absoluteX = Number.isFinite(absolutePos.x) ? absolutePos.x : section.position.x
-                    const absoluteY = Number.isFinite(absolutePos.y) ? absolutePos.y : section.position.y
+                    // BUG-153 DEBUG: Log ALL available position sources with ACTUAL VALUES
+                    const nodePos = node.position
+                    const computedPos = (node as any).computedPosition
+                    console.log(`%c[BUG-153 DEBUG] Position sources for "${section.name}":`, 'color: #FF5722; font-weight: bold')
+                    console.log(`  node.position (from event): x=${nodePos?.x}, y=${nodePos?.y}`)
+                    console.log(`  node.computedPosition (Vue Flow): x=${computedPos?.x}, y=${computedPos?.y}`)
+                    console.log(`  section.position (from store): x=${section.position.x}, y=${section.position.y}`)
+                    console.log(`  getAbsolutePosition result:`, getAbsolutePosition(node.id))
+                    console.log(`  node.parentNode:`, node.parentNode || 'NONE (root node)')
+
+                    // Get final absolute visual position from drag
+                    // BUG-153 FIX: For ROOT nodes (no parent), node.position IS the absolute position
+                    // For CHILD nodes, computedPosition is the absolute position
+                    // The event's node.position is the most accurate source during drag stop
+                    let absoluteX: number
+                    let absoluteY: number
+
+                    if (!node.parentNode) {
+                        // Root node: node.position IS absolute
+                        absoluteX = Number.isFinite(nodePos.x) ? nodePos.x : section.position.x
+                        absoluteY = Number.isFinite(nodePos.y) ? nodePos.y : section.position.y
+                        console.log(`  ROOT node - using node.position: (${absoluteX}, ${absoluteY})`)
+                    } else {
+                        // Child node: use computedPosition for absolute coords
+                        absoluteX = computedPos && Number.isFinite(computedPos.x) ? computedPos.x : section.position.x
+                        absoluteY = computedPos && Number.isFinite(computedPos.y) ? computedPos.y : section.position.y
+                        console.log(`  CHILD node - using computedPosition: (${absoluteX}, ${absoluteY})`)
+                    }
 
                     console.log(`%c[TASK-072] DRAG STOP: "${section.name}"`, 'color: #4CAF50; font-weight: bold')
 
@@ -621,27 +735,13 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     const newWidth = node.style && typeof node.style === 'object' && 'width' in node.style ? parseInt(String(node.style.width)) : oldBounds.width
                     const newHeight = node.style && typeof node.style === 'object' && 'height' in node.style ? parseInt(String(node.style.height)) : oldBounds.height
 
-                    lockGroupPosition(sectionId, {
-                        x: absoluteX,
-                        y: absoluteY,
-                        width: newWidth,
-                        height: newHeight
-                    }, 'drag')
+                    // 1. Determine the Intended Parent (Containment Logic)
+                    // We must decide the parent FIRST to know if we save Relative or Absolute coordinates
+                    let newParentGroupId: string | null = section.parentGroupId || null
 
-                    await canvasStore.updateSectionWithUndo(sectionId, {
-                        position: {
-                            x: absoluteX,
-                            y: absoluteY,
-                            width: newWidth,
-                            height: newHeight
-                        }
-                    })
-
-                    // Handle parent-child relationships
-                    const sectionArea = oldBounds.width * oldBounds.height
-
+                    // Logic to check if we moved OUT of the current parent
                     if (section.parentGroupId) {
-                        const currentParent = canvasStore.sections.find(s => s.id === section.parentGroupId)
+                        const currentParent = canvasStore.groups.find(s => s.id === section.parentGroupId)
                         if (currentParent) {
                             const stillInside = (
                                 absoluteX >= currentParent.position.x &&
@@ -650,155 +750,216 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                                 absoluteY + oldBounds.height <= currentParent.position.y + currentParent.position.height
                             )
                             if (!stillInside) {
-                                console.log(`%c[TASK-072] Clearing parentGroupId`, 'color: #E91E63')
-                                await canvasStore.updateSection(sectionId, { parentGroupId: null })
-
-                                const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
-                                if (nodeIndex !== -1) {
-                                    nodes.value[nodeIndex] = {
-                                        ...nodes.value[nodeIndex],
-                                        parentNode: undefined,
-                                        position: { x: absoluteX, y: absoluteY },
-                                        style: { ...nodes.value[nodeIndex].style as any, zIndex: 0 }
-                                    }
-                                }
+                                console.log(`%c[TASK-072] Moving OUT of parent ${currentParent.name}`, 'color: #E91E63')
+                                newParentGroupId = null
                             }
+                        } else {
+                            // Parent not found? Safety fallback
+                            newParentGroupId = null
                         }
                     }
 
-                    // Check for new parent
-                    const updatedSection = canvasStore.sections.find(s => s.id === sectionId)
-                    if (updatedSection && !updatedSection.parentGroupId) {
+                    // Logic to check if we moved INTO a new parent (only if currently root or moved out)
+                    if (!newParentGroupId) {
+                        const sectionArea = oldBounds.width * oldBounds.height
                         let containingParent: CanvasSection | null = null
-                        const sections: CanvasSection[] = canvasStore.sections || []
+                        const sections: CanvasSection[] = canvasStore.groups || []
+
+                        // BUG-153 DEBUG: Log the dragged section's position
+                        console.log(`%c[BUG-153] Checking containment for "${section.name}"`, 'color: #9C27B0; font-weight: bold')
+                        console.log(`  Dragged section absolute pos: (${absoluteX.toFixed(0)}, ${absoluteY.toFixed(0)})`)
+                        console.log(`  Dragged section size: ${oldBounds.width}x${oldBounds.height}`)
+                        console.log(`  Dragged section area: ${sectionArea}`)
+                        console.log(`  Potential parents: ${sections.filter(s => s.id !== sectionId).map(s => s.name).join(', ')}`)
+
                         sections.forEach((potentialParent: CanvasSection) => {
                             if (potentialParent.id === sectionId) return
+                            // Prevent circular parenting
                             if (potentialParent.parentGroupId === sectionId) return
+
                             const parentArea = potentialParent.position.width * potentialParent.position.height
 
-                            // BUG-025 FIX: Relaxed strictness for dragging comfort
-                            // TASK-131 FIX: Relaxed ratio from 1.5 to 1.1 - 10% larger is enough
-                            if (parentArea <= sectionArea * 1.05) return
+                            // BUG-153 FIX: Get parent's ABSOLUTE position (store pos might be relative if parent is nested)
+                            const parentNodeId = `section-${potentialParent.id}`
+                            const parentVueFlowNode = nodes.value.find(n => n.id === parentNodeId)
+                            let parentAbsX: number
+                            let parentAbsY: number
 
-                            // Use centralized containment check
-                            // TASK-151 FIX: Use findSmallestContainingSection logic indirectly via this loop
-                            // For simplicity, we just use the robust isNodeMoreThanHalfInside used by the new system
-                            // The logic here is custom for finding a parent for a GROUP, not a task
-                            // So we might as well just use the helper from our new composable or utils
+                            if (parentVueFlowNode) {
+                                // If parent has its own parent, use computedPosition; otherwise position is absolute
+                                if (parentVueFlowNode.parentNode) {
+                                    const computed = (parentVueFlowNode as any).computedPosition
+                                    parentAbsX = computed?.x ?? potentialParent.position.x
+                                    parentAbsY = computed?.y ?? potentialParent.position.y
+                                } else {
+                                    parentAbsX = parentVueFlowNode.position?.x ?? potentialParent.position.x
+                                    parentAbsY = parentVueFlowNode.position?.y ?? potentialParent.position.y
+                                }
+                            } else {
+                                // Fallback to store position (might be wrong if nested, but rare case)
+                                parentAbsX = potentialParent.position.x
+                                parentAbsY = potentialParent.position.y
+                            }
+
+                            // BUG-153 DEBUG: Log each parent check
+                            console.log(`  Checking parent "${potentialParent.name}":`)
+                            console.log(`    Store position: (${potentialParent.position.x}, ${potentialParent.position.y})`)
+                            console.log(`    Absolute position: (${parentAbsX.toFixed(0)}, ${parentAbsY.toFixed(0)}) ${potentialParent.position.width}x${potentialParent.position.height}`)
+                            console.log(`    Parent area: ${parentArea}, Section area: ${sectionArea}, Ratio: ${(parentArea / sectionArea).toFixed(2)}`)
+
+                            // BUG-025 FIX: Relaxed strictness for dragging comfort (10% larger is enough)
+                            if (parentArea <= sectionArea * 1.05) {
+                                console.log(`    ❌ SKIPPED: Parent not large enough (needs > ${(sectionArea * 1.05).toFixed(0)})`)
+                                return
+                            }
+
                             const isInside = isNodeMoreThanHalfInside(
                                 absoluteX,
                                 absoluteY,
                                 oldBounds.width,
                                 oldBounds.height,
                                 {
-                                    x: potentialParent.position.x,
-                                    y: potentialParent.position.y,
+                                    x: parentAbsX,
+                                    y: parentAbsY,
                                     width: potentialParent.position.width,
                                     height: potentialParent.position.height
                                 }
                             )
 
+                            console.log(`    isNodeMoreThanHalfInside result: ${isInside}`)
+
                             if (isInside) {
-                                // BUG-025 CHECK: Only ensure the parent is actually physically larger
+                                console.log(`    parentArea (${parentArea}) > sectionArea (${sectionArea}) = ${parentArea > sectionArea}`)
                                 if (parentArea > sectionArea) {
+                                    const currentBest = containingParent ? containingParent.position.width * containingParent.position.height : null
+                                    console.log(`    Current best parent area: ${currentBest}, this parent: ${parentArea}`)
                                     if (!containingParent || parentArea < (containingParent.position.width * containingParent.position.height)) {
                                         containingParent = potentialParent
+                                        console.log(`    ✅ SELECTED as containing parent!`)
+                                    } else {
+                                        console.log(`    ❌ Parent larger than current best, keeping existing`)
                                     }
+                                } else {
+                                    console.log(`    ❌ Parent area not larger than section area (${parentArea} <= ${sectionArea})`)
                                 }
+                            } else {
+                                console.log(`    ❌ NOT inside parent bounds`)
                             }
                         })
 
+                        console.log(`%c[BUG-153] Containment check complete:`, 'color: #673AB7; font-weight: bold')
                         if (containingParent) {
-                            const parent = containingParent as CanvasSection
-                            console.log(`%c[TASK-072] Setting parentGroupId`, 'color: #FF9800')
-                            await canvasStore.updateSection(sectionId, { parentGroupId: parent.id })
+                            console.log(`  ✅ Found parent: "${(containingParent as CanvasSection).name}" (id: ${(containingParent as CanvasSection).id})`)
+                            console.log(`%c[TASK-072] Moving INTO parent ${(containingParent as CanvasSection).name}`, 'color: #FF9800')
+                            newParentGroupId = (containingParent as CanvasSection).id
+                        } else {
+                            console.log(`  ❌ No containing parent found`)
+                        }
+                        console.log(`  Final newParentGroupId: ${newParentGroupId || 'null (will be root)'}`)
+                    }
 
-                            const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
-                            if (nodeIndex !== -1) {
-                                const parentNodeId = `section-${parent.id}`
-                                const relativeX = absoluteX - parent.position.x
-                                const relativeY = absoluteY - parent.position.y
-                                const parentNode = nodes.value.find(n => n.id === parentNodeId)
-                                const parentZIndex = (parentNode?.style as Record<string, any>)?.zIndex ?? 0
-                                const childZIndex = (typeof parentZIndex === 'number' ? parentZIndex : parseInt(String(parentZIndex)) || 0) + 1
+                    // 2. Calculate Final Store Position (Relative vs Absolute)
+                    let finalStoreX = absoluteX
+                    let finalStoreY = absoluteY
 
-                                nodes.value[nodeIndex] = {
-                                    ...nodes.value[nodeIndex],
-                                    parentNode: parentNodeId,
-                                    position: { x: relativeX, y: relativeY },
-                                    style: { ...nodes.value[nodeIndex].style as any, zIndex: childZIndex }
-                                }
-                            }
+                    // If we have a parent, we MUST save relative coordinates
+                    if (newParentGroupId) {
+                        const parentSection = canvasStore.groups.find(s => s.id === newParentGroupId)
+                        if (parentSection) {
+                            // BUG-153 FIX: Calculate relative position correctly
+                            // getAbsolutePosition works recursively, so parentAbsPos is reliable
+                            const parentAbsPos = getAbsolutePosition(`section-${newParentGroupId}`)
+
+                            // If parent node not found in graph (rare), fallback to store position 
+                            // (which assumes store pos is absolute if root, but might be relative if nested... 
+                            // safe fallback is to trust the graph)
+                            const parentBaseX = Number.isFinite(parentAbsPos.x) ? parentAbsPos.x : parentSection.position.x
+                            const parentBaseY = Number.isFinite(parentAbsPos.y) ? parentAbsPos.y : parentSection.position.y
+
+                            finalStoreX = absoluteX - parentBaseX
+                            finalStoreY = absoluteY - parentBaseY
+
+                            console.log(`[BUG-153] Converting to RELATIVE: Abs(${absoluteX.toFixed(0)}) - Parent(${parentBaseX.toFixed(0)}) = ${finalStoreX.toFixed(0)}`)
                         }
                     }
-                    // TASK-141 FIX: When dragging a group, Vue Flow updates visual child positions (relative stays same),
-                    // but we must update the ABSOLUTE positions in the store so they don't jump on next sync.
-                    // CRITICAL: Include BOTH task nodes AND nested section nodes (child groups)
-                    const taskChildNodes = nodes.value.filter(n => n.type === 'taskNode' && n.parentNode === `section-${sectionId}`)
-                    const sectionChildNodes = nodes.value.filter(n => n.type === 'sectionNode' && n.parentNode === `section-${sectionId}`)
 
-                    console.log(`🔍 [GROUP-DRAG] Checking for children of section-${sectionId}`, {
-                        totalNodes: nodes.value.length,
-                        foundTaskChildren: taskChildNodes.length,
-                        foundSectionChildren: sectionChildNodes.length
+                    // 3. Lock UI (Absolute) to prevent Sync jitter
+                    // We always lock the ABSOLUTE visual position because that's what Vue Flow renders
+                    lockGroupPosition(sectionId, {
+                        x: absoluteX,
+                        y: absoluteY,
+                        width: newWidth,
+                        height: newHeight
+                    }, 'drag')
+
+                    // 4. Update Store (Relative or Absolute)
+                    console.log(`%c[BUG-153] SAVING TO STORE:`, 'color: #E91E63; font-weight: bold')
+                    console.log(`  Section: "${section.name}" (id: ${sectionId})`)
+                    console.log(`  Position: (${finalStoreX.toFixed(0)}, ${finalStoreY.toFixed(0)}) ${newWidth}x${newHeight}`)
+                    console.log(`  parentGroupId: ${newParentGroupId || 'null'}`)
+
+                    await canvasStore.updateSectionWithUndo(sectionId, {
+                        position: {
+                            x: finalStoreX,
+                            y: finalStoreY,
+                            width: newWidth,
+                            height: newHeight
+                        },
+                        parentGroupId: newParentGroupId
                     })
 
-                    // TASK-141 FIX: Handle nested group children FIRST (they may have their own children)
-                    if (sectionChildNodes.length > 0) {
-                        console.log(`%c[TASK-141] Updating ${sectionChildNodes.length} nested child groups to new absolute position`, 'color: #9C27B0; font-weight: bold')
+                    console.log(`[BUG-153] Store update complete. Verifying...`)
+                    const updatedSection = canvasStore.groups.find(s => s.id === sectionId)
+                    console.log(`  Verified parentGroupId in store: ${updatedSection?.parentGroupId || 'null'}`)
 
-                        const sectionBatchUpdates: Promise<void>[] = []
+                    // 5. Update Vue Flow Node State (Immediate visual feedback)
+                    // If we changed parent, we need to update the node structure immediately
+                    // so it doesn't wait for the next sync cycle
+                    const nodeIndex = nodes.value.findIndex(n => n.id === node.id)
+                    if (nodeIndex !== -1) {
+                        const newParentNodeId = newParentGroupId ? `section-${newParentGroupId}` : undefined
 
-                        for (const childSectionNode of sectionChildNodes) {
-                            const childSectionId = childSectionNode.id.replace('section-', '')
-                            const newChildAbsX = absoluteX + childSectionNode.position.x
-                            const newChildAbsY = absoluteY + childSectionNode.position.y
+                        // Calculate relative position for Vue Flow (which is always relative to parentNode)
+                        // If newParentGroupId exists, finalStoreX/Y IS the relative position.
+                        // If it doesn't, finalStoreX/Y is absolute, which is also correct for root nodes.
+                        const visualX = finalStoreX
+                        const visualY = finalStoreY
 
-                            if (Number.isFinite(newChildAbsX) && Number.isFinite(newChildAbsY)) {
-                                // 1. Lock the child section position
-                                const childSection = canvasStore.sections.find(s => s.id === childSectionId)
-                                const childWidth = childSection?.position.width || 300
-                                const childHeight = childSection?.position.height || 200
-
-                                lockGroupPosition(childSectionId, {
-                                    x: newChildAbsX,
-                                    y: newChildAbsY,
-                                    width: childWidth,
-                                    height: childHeight
-                                }, 'drag')
-
-                                // 2. Queue the store update
-                                const updatePromise = canvasStore.updateSection(childSectionId, {
-                                    position: {
-                                        x: newChildAbsX,
-                                        y: newChildAbsY,
-                                        width: childWidth,
-                                        height: childHeight
-                                    }
-                                }).catch(err => console.error(`[TASK-141] Failed to update child section ${childSectionId}`, err))
-
-                                sectionBatchUpdates.push(updatePromise)
-
-                                console.log(`  📦 [TASK-141] Child group "${childSection?.name || childSectionId}": (${childSectionNode.position.x}, ${childSectionNode.position.y}) → absolute (${newChildAbsX}, ${newChildAbsY})`)
-                            }
+                        // Calculate Z-Index
+                        let childZIndex = 0
+                        if (newParentNodeId) {
+                            const parentNode = nodes.value.find(n => n.id === newParentNodeId)
+                            const parentZIndex = (parentNode?.style as Record<string, any>)?.zIndex ?? 0
+                            childZIndex = (typeof parentZIndex === 'number' ? parentZIndex : parseInt(String(parentZIndex)) || 0) + 1
                         }
 
-                        if (sectionBatchUpdates.length > 0) {
-                            await Promise.all(sectionBatchUpdates)
-                            console.log(`%c[TASK-141] Nested groups batch update complete`, 'color: #4CAF50')
+                        nodes.value[nodeIndex] = {
+                            ...nodes.value[nodeIndex],
+                            parentNode: newParentNodeId,
+                            position: { x: visualX, y: visualY },
+                            style: { ...nodes.value[nodeIndex].style as any, zIndex: childZIndex }
                         }
                     }
 
+                    // 6. Handle Children
+                    const taskChildNodes = nodes.value.filter(n => n.type === 'taskNode' && n.parentNode === `section-${sectionId}`)
+
+                    // NOTE: We DO NOT update child sections (nested groups) here.
+                    // Because nested groups are stored relatively, moving the parent 
+                    // automatically moves the children visually without changing their stored numbers.
+                    // Updating them to "new absolute" would actually break them (BUG-153).
+
                     // Handle child TASK nodes
+                    // Tasks are ALWAYS stored with absolute coordinates in canvasPosition
                     if (taskChildNodes.length > 0) {
                         console.log(`%c[GROUP-DRAG] Updating ${taskChildNodes.length} child tasks to new absolute position`, 'color: #2196F3')
 
-                        // BUG-024 FIX: ATOMIC BATCH SYNC
-                        // Calculate and Lock ALL positions first, then persist in parallel
-                        // This prevents the "race" where some tasks update and others don't before a sync tick
                         const batchUpdates: Promise<void>[] = []
 
                         taskChildNodes.forEach(childNode => {
+                            // Calculate new absolute position for the task
+                            // Since we know the delta of the parent move, we apply it to the child?
+                            // No, simpler: absoluteX (new parent pos) + childNode.position.x (relative to parent)
                             const newChildAbsX = absoluteX + childNode.position.x
                             const newChildAbsY = absoluteY + childNode.position.y
 
@@ -816,12 +977,8 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                         })
 
                         if (batchUpdates.length > 0) {
-                            console.log(`%c[GROUP-DRAG] Batch updating ${batchUpdates.length} tasks...`, 'color: #2196F3')
                             await Promise.all(batchUpdates)
-                            console.log(`%c[GROUP-DRAG] Batch update complete`, 'color: #4CAF50')
                         }
-
-                        console.log(`%c[TASK-072] DRAG COMPLETE - Vue Flow manages child positions`, 'color: #4CAF50')
                     }
                 }
             } else {
@@ -859,7 +1016,7 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 let absoluteY = targetY
                 if (node.parentNode) {
                     const sectionId = node.parentNode.replace('section-', '')
-                    const section = canvasStore.sections.find(s => s.id === sectionId)
+                    const section = canvasStore.groups.find(s => s.id === sectionId)
                     if (section) {
                         absoluteX = section.position.x + targetX
                         absoluteY = section.position.y + targetY
@@ -881,13 +1038,18 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 }
 
                 // Check containment and apply properties
+                // BUG-153 FIX: Use getSectionAbsolutePosition to properly handle nested groups
+                // Previously only accounted for one level of nesting, causing tasks in Group 2
+                // (inside Group 1) to have incorrect absolute positions for containment checks
                 let checkX, checkY
                 if (node.parentNode) {
                     const sectionId = node.parentNode.replace('section-', '')
-                    const section = canvasStore.sections.find(s => s.id === sectionId)
+                    const section = canvasStore.groups.find(s => s.id === sectionId)
                     if (section) {
-                        checkX = section.position.x + node.position.x
-                        checkY = section.position.y + node.position.y
+                        // BUG-153 FIX: Get ABSOLUTE position of parent section (handles deep nesting)
+                        const parentAbsPos = getSectionAbsolutePosition(section)
+                        checkX = parentAbsPos.x + node.position.x
+                        checkY = parentAbsPos.y + node.position.y
                     } else {
                         checkX = node.position.x
                         checkY = node.position.y
@@ -905,6 +1067,19 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                     // Single task drag - apply section containment
                     const containingSection = getContainingSection(checkX, checkY)
 
+                    // BUG-152 DEBUG: Log containment detection
+                    console.log(`[BUG-152 DEBUG] Task ${node.id.substring(0, 15)}:`, {
+                        checkX: checkX?.toFixed(0),
+                        checkY: checkY?.toFixed(0),
+                        containingSection: containingSection ? `${containingSection.name} (${containingSection.id.substring(0, 10)})` : 'NONE',
+                        sectionBounds: containingSection ? {
+                            x: containingSection.position.x,
+                            y: containingSection.position.y,
+                            w: containingSection.position.width,
+                            h: containingSection.position.height
+                        } : null
+                    })
+
                     if (containingSection) {
                         try {
                             applyAllNestedSectionProperties(node.id, checkX, checkY)
@@ -918,27 +1093,69 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                         const currentParentNode = nodes.value[nodeIndex].parentNode
                         const newParentNode = containingSection ? `section-${containingSection.id}` : undefined
 
+                        // BUG-152 DEBUG: Log parent comparison
+                        console.log(`[BUG-152 DEBUG] Parent comparison:`, {
+                            currentParentNode: currentParentNode || 'NONE',
+                            newParentNode: newParentNode || 'NONE',
+                            willChange: currentParentNode !== newParentNode
+                        })
+
                         if (currentParentNode !== newParentNode) {
-                            console.log(`%c[TASK-072] Task parentNode change: ${currentParentNode} → ${newParentNode}`, 'color: #2196F3')
-                            const oldSectionId = currentParentNode?.replace('section-', '')
-                            const newSectionId = newParentNode?.replace('section-', '')
+                            console.log(`%c[BUG-152] Task parentNode change: ${currentParentNode} → ${newParentNode}`, 'color: #2196F3')
+
+                            // Extract section IDs for task count updates (strip 'section-' prefix)
+                            const oldSectionId = currentParentNode ? currentParentNode.replace('section-', '') : undefined
+                            const newSectionId = containingSection?.id
+
+                            // BUG-153 FIX: Use the new composable for Atomic Coordinate Handover
+                            // This replaces the manual calculation that was missing parent metrics
+                            const { attachNodeToParent, detachNodeFromParent } = useNodeAttachment()
 
                             if (containingSection) {
-                                const relativeX = checkX - containingSection.position.x
-                                const relativeY = checkY - containingSection.position.y
-                                nodes.value[nodeIndex] = {
-                                    ...nodes.value[nodeIndex],
-                                    parentNode: newParentNode,
-                                    position: { x: relativeX, y: relativeY }
+                                // ATTACHMENT: World -> Parent Space
+                                // BUG-153 FIX: Use Vue Flow node ID format (section-{groupId}) not raw group ID
+                                const parentNodeId = `section-${containingSection.id}`
+                                // BUG-153 FIX: MUST await attachment before setNodes to ensure parentNode is set
+                                const result = await attachNodeToParent(node.id, parentNodeId)
+                                if (result.success) {
+                                    console.log(`✅ [BUG-153] Attached ${node.id} to ${parentNodeId}`, result.newPosition)
+                                    // BUG-153: Membership is persisted via absolute canvasPosition
+                                    // and inferred by findSectionForTask during sync.
+                                    console.log(`✅ [BUG-153] Node parentNode set to ${parentNodeId} for task ${node.id.substring(0, 8)}`)
+                                } else {
+                                    console.error(`❌ [BUG-153] Attach failed:`, result.error)
                                 }
                             } else {
-                                nodes.value[nodeIndex] = {
-                                    ...nodes.value[nodeIndex],
-                                    parentNode: undefined,
-                                    position: { x: checkX, y: checkY }
+                                // DETACHMENT: Parent Space -> World Space
+                                console.log(`%c[BUG-152] Task ${node.id} moved to ROOT (clearing parent)`, 'color: #E91E63')
+
+                                // Detach using composable to restore absolute coordinates
+                                // BUG-153 FIX: MUST await detachment before setNodes
+                                const result = await detachNodeFromParent(node.id)
+                                if (result.success) {
+                                    // Update data explicitly for store sync
+                                    nodes.value[nodeIndex].data = {
+                                        ...nodes.value[nodeIndex].data,
+                                        parentId: undefined
+                                    }
+                                    console.log(`✅ [BUG-153] Detached ${node.id} to World`, result.newPosition)
+                                    // BUG-153: Detachment is persisted via absolute canvasPosition
+                                    console.log(`✅ [BUG-153] Node parentNode cleared for task ${node.id.substring(0, 8)}`)
                                 }
                             }
-                            updateSectionTaskCounts(oldSectionId, newSectionId)
+
+                            // BUG-152 FIX: CRITICAL - Use setNodes() to force Vue Flow to reinitialize
+                            // Direct array mutation doesn't trigger Vue Flow's complete initialization sequence
+                            // setNodes() ensures parent-child relationships are properly discovered
+                            if (setNodes) {
+                                console.log(`[BUG-152] Forcing Vue Flow reinit via setNodes() after parent change`)
+                                setNodes([...nodes.value])
+                                await nextTick()
+                                await nextTick()
+                            }
+
+                            // BUG-152 FIX: Await to ensure counts update before continuing
+                            await updateSectionTaskCounts(oldSectionId, newSectionId)
                         }
                     }
                 }
@@ -960,11 +1177,11 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                 dragOriginalZIndex.forEach((originalZIndex, nodeId) => {
                     const nodeIndex = nodes.value.findIndex(n => n.id === nodeId)
                     if (nodeIndex !== -1) {
-                        const section = canvasStore.sections.find(s => `section-${s.id}` === nodeId)
+                        const section = canvasStore.groups.find(s => `section-${s.id}` === nodeId)
                         let finalZIndex = originalZIndex ?? 0
                         if (section?.parentGroupId) {
                             const getDepth = (groupId: string, depth = 0): number => {
-                                const group = canvasStore.sections.find(s => s.id === groupId)
+                                const group = canvasStore.groups.find(s => s.id === groupId)
                                 if (!group || !group.parentGroupId || depth > 10) return depth
                                 return getDepth(group.parentGroupId, depth + 1)
                             }

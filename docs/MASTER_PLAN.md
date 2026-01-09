@@ -1,4 +1,4 @@
-**Last Updated**: January 9, 2026 (TASK-161 Enable RLS Security)
+**Last Updated**: January 9, 2026 (BUG-170/171 Data Loss Prevention Fixes)
 **Version**: 5.34 (Board + Catalog View Redesign)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -28,7 +28,11 @@
 | ROAD-011 | AI Assistant | P1 | [See Detailed Plan](#roadmaps) | - |
 | ~~ROAD-022~~ | ✅ **DONE** | Auth (Supabase)| [Details](./archive/MASTER_PLAN_JAN_2026.md) | - |
 | ~~TASK-132~~ | ✅ **DONE** | Fix Canvas & Auth | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/3f8d0816-9774-4fe5-aa58-d6f311bc2d36/walkthrough.md) | - |
-| **BUG-144** | **Canvas Tasks Disappeared** | **P0** | 🔄 **DEBUGGING** | - |
+| ~~BUG-144~~ | ✅ **DONE** Canvas Tasks Disappeared | [Details](#bug-144-canvas-content-disappeared-done) | - |
+| **BUG-169** | **Tasks Auto-Removed on Login** | **P0** | ✅ **FIXED** | TASK-168 |
+| ~~**BUG-170**~~ | ~~Self-Healing Destroys Group Relationships~~ | P1 | ✅ **ALREADY FIXED** | TODO-011 |
+| ~~**BUG-171**~~ | ~~RLS Partial Write Failures Silent~~ | P1 | ✅ **FIXED** | TODO-012 |
+| ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
 
 
 ---
@@ -99,6 +103,11 @@
 - **Plan**: [plans/pwa-mobile-support.md](../plans/pwa-mobile-support.md)
 - **Status**: Phase 1 - PWA Foundation in progress
 - **Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
+
+### ROAD-025: Backup Containerization (VPS Distribution)
+- **Goal**: Move `auto-backup-daemon.cjs` into a dedicated Docker container (`backup-service`) for production/VPS distribution.
+- **Plan**: Create `Dockerfile` and update `docker-compose.yml`.
+- **Why**: Ensures backups run reliably in production environments without manual CLI intervention.
 
 **Phase 0: Prerequisites** ✅ COMPLETE:
 1. ~~TASK-118~~: Remove PouchDB packages (✅ 71 packages removed)
@@ -227,6 +236,20 @@ Unified skill merging Legacy Tech Remover + Comprehensive Auditor with dead code
 
 ---
 
+### TASK-169: Codebase Cleanup Phase 1 (🔄 IN PROGRESS)
+**Priority**: P2-MEDIUM
+**Started**: January 9, 2026
+**Related**: TASK-160 (Codebase Health Auditor Skill)
+
+Address findings from the newly implemented Codebase Health Auditor.
+
+**Scope**:
+- [ ] Cleanup SAFE items (unused files/exports)
+- [ ] Cleanup Vue-specific items (unused props/emits/computed)
+- [ ] Verify build and tests pass
+
+---
+
 ### ~~TASK-147~~: Guest Mode Fully Ephemeral (✅ DONE)
 **Priority**: P1-HIGH
 **Completed**: January 8, 2026
@@ -341,6 +364,46 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 **Priority**: P0-CRITICAL
 **Completed**: January 8, 2026
 **Resolution**: Added missing `<slot />` to `GroupNodeSimple.vue` enabling Vue Flow to render nested specific nodes.
+
+### BUG-169: Tasks Auto-Removed on Login (✅ FIXED)
+**Priority**: P0-CRITICAL
+**Completed**: January 9, 2026
+**Problem**: Tasks appeared briefly then disappeared automatically when signed in. Canvas kept reinitializing.
+**Root Cause Analysis**:
+1. Realtime subscription handler used truthy check for `is_deleted` (would match `undefined`)
+2. No safety guards during auth state transitions / session startup
+3. Empty array overwrites could wipe local data during race conditions
+**Resolution**:
+- [x] Changed `is_deleted` check from truthy to explicit `=== true`
+- [x] Added 5-second "stabilization window" blocking deletions on session start
+- [x] Added 10-second safety guard preventing empty array overwrites
+- [x] Enhanced logging to diagnose realtime events (`is_deleted_type`, timestamps)
+**Files Modified**:
+- `src/composables/app/useAppInitialization.ts` - Realtime handler safety guards
+- `src/stores/tasks/taskPersistence.ts` - Empty overwrite protection
+- `src/stores/canvas.ts` - Empty overwrite protection in loadFromDatabase and auth watcher
+
+### BUG-170: Self-Healing Destroys Group Relationships (✅ ALREADY FIXED)
+**Priority**: P1-HIGH
+**Discovered**: January 9, 2026
+**Status**: Already fixed in commit `d4350e6` (TASK-141 Canvas Group System Refactor)
+**Problem**: `useCanvasSync.ts` was auto-clearing `parentGroupId` when a section's center was outside its parent's bounds.
+**Evidence**: Current code at `useCanvasSync.ts:142-143` only logs a warning, does NOT auto-modify data.
+**No action required** - the destructive auto-healing was removed during TASK-141 refactor.
+
+### BUG-171: RLS Partial Write Failures Silent (✅ FIXED)
+**Priority**: P1-HIGH
+**Completed**: January 9, 2026
+**Problem**: When upserting multiple rows, if RLS blocks some but not all, the code silently succeeded with incomplete data.
+**Root Cause** (from TODO-012):
+- `saveTasks` already had proper check
+- `saveProjects` had NO verification - silent data loss possible
+**Resolution**:
+- [x] Added `.select('id')` to `saveProjects` to get returned data
+- [x] Added `data.length !== payload.length` check to detect partial writes
+- [x] Added `throw e` to re-throw errors so callers know save failed
+**Files Modified**:
+- `src/composables/useSupabaseDatabaseV2.ts` - `saveProjects` function
 
 ### TASK-145: CanvasView Decomposition (🚀 NEXT)
 **Priority**: P2-MEDIUM
@@ -490,6 +553,54 @@ _rawGroups.value = loadedGroups // Respects deletions
 
 ---
 
+### ~~TASK-168~~: Database Safety Hooks - Prevent Destructive Commands (✅ DONE)
+**Priority**: P0-CRITICAL (Safety)
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+
+**Problem**: Claude Code ran `supabase db reset` without user confirmation, wiping ALL user data. Need automated safeguards to prevent destructive commands.
+
+**Solution Applied**:
+- [x] Created `.claude/hooks/destructive-command-blocker.sh` - PreToolUse hook that intercepts Bash commands
+- [x] **Permanently Blocked**: `supabase db reset`, `DROP DATABASE`, `TRUNCATE`, `DELETE FROM` without WHERE, `--force` flags
+- [x] **Backup Required**: Migrations (`supabase db push`) now require recent backup (within 1 hour) in `supabase/backups/`
+- [x] **Warnings**: DELETE with WHERE, DROP TABLE warn but allow with backup
+- [x] Updated `.claude/settings.json` to register hook
+- [x] Updated `CLAUDE.md` with Database Safety section
+- [x] Created `supabase/backups/` directory for backup storage
+
+**Hook Behavior**:
+| Command | Result |
+|---------|--------|
+| `supabase db reset` | 🚫 PERMANENTLY BLOCKED |
+| `supabase db push` | 🛑 BLOCKED without backup |
+| `DROP DATABASE` | 🚫 PERMANENTLY BLOCKED |
+| `DELETE FROM x` (no WHERE) | 🚫 BLOCKED |
+| `DELETE FROM x WHERE ...` | ⚠️ WARNING (allowed) |
+
+**Automatic Backup System**:
+- Automatic backup before any migration (hook auto-creates if none exists)
+- VPS cron job support (every 6 hours + daily full backup)
+- Backup rotation (configurable, default 10)
+- Works with both local Supabase CLI and direct PostgreSQL connection
+
+**npm Scripts**:
+- `npm run db:backup` - Full backup
+- `npm run db:backup:data` - Data only
+- `npm run db:backup:tasks` - Tasks and groups only
+
+**Files Created/Modified**:
+- `.claude/hooks/destructive-command-blocker.sh` (safety hook with auto-backup)
+- `.claude/settings.json` (hook registration)
+- `scripts/backup-db.sh` (main backup script)
+- `scripts/deploy/setup-backup-cron.sh` (VPS cron setup)
+- `docs/claude-md-extension/backup-system.md` (documentation)
+- `CLAUDE.md` (added Database Safety section)
+- `.gitignore` (ignore backup files)
+- `package.json` (added db:backup scripts)
+
+---
+
 ## Code Review Findings (January 9, 2026)
 
 > Comprehensive multi-agent code review identified 7 new issues. Related todo files in `todos/019-025-*.md`.
@@ -621,20 +732,112 @@ When Vue Flow initialized with `zoom: 0` (before the canvas was ready), `isLOD3`
 **Priority**: P1-HIGH
 **Created**: January 9, 2026
 **Fixed**: January 9, 2026
+**Additional Fixes**: January 9, 2026
 
-**Problem**: When tasks were dropped into a group, the task count badge didn't update until a page refresh. Tasks also couldn't be moved immediately after being dropped.
+**Problem**: When tasks were dropped into a group, the task count badge didn't update until a page refresh. Tasks also couldn't be moved immediately after being dropped, and couldn't be dragged outside of groups.
 
 **Root Causes**:
 1. `updateSectionTaskCounts` used `filteredTasks.value` which hadn't updated yet (async timing)
 2. Multi-drag path had early return that skipped `updateSectionTaskCounts` entirely
 3. No `nextTick` to wait for Vue reactivity to propagate store updates
+4. **BUG-152A**: `syncNodes()` didn't include `taskCount` in comparison for existing section nodes
+5. **BUG-152C**: `handleDrop()` called `setNodes(getNodes.value)` before v-model synced, reading stale state
+6. **BUG-152D**: `extent: 'parent'` CONSTRAINED tasks to group bounds, preventing drag-out
+7. **BUG-152E**: `syncNodes()` REPLACED `target.data = node.data` which broke `useNode()` reference tracking
 
 **Fix Applied**:
 - Made `updateSectionTaskCounts` async with `await nextTick()` before reading `filteredTasks`
 - Added task count updates to multi-drag path (was missing)
 - Await the async function at call sites
+- **BUG-152A**: Added `taskCount` to comparison in `syncNodes()` so group counts update
+- **BUG-152C**: Added `await nextTick()` before `setNodes()` to allow v-model sync
+- **BUG-152D**: Removed `extent: 'parent'` - `parentNode` alone handles child-moves-with-parent
+- **BUG-152E**: Changed to MUTATE individual properties (`target.data.taskCount = x`) instead of replacing the whole data object. This maintains the reference that `useNode()` is tracking in GroupNodeSimple.
 
-**File Changed**: `src/composables/canvas/useCanvasDragDrop.ts`
+**Files Changed**:
+- `src/composables/canvas/useCanvasDragDrop.ts`
+- `src/composables/canvas/useCanvasSync.ts`
+- `src/composables/canvas/useCanvasEvents.ts`
+
+---
+
+### BUG-153: Nested Groups and Parent-Child Relationships Broken (🔄 REFACTORING)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+**Status**: 🔄 IN PROGRESS - Refactoring to trust Vue Flow native behavior
+
+**Problem Summary**: Multiple issues with nested groups (Group 2 inside Group 1):
+
+| # | Issue | Observed Behavior | Expected Behavior |
+|---|-------|-------------------|-------------------|
+| 1 | **Group 1 works correctly** | Task counts and dragging work fine | ✅ (baseline) |
+| 2 | **Group 2 intermittent task count** | Sometimes counts tasks correctly, sometimes not | Should always count correctly |
+| 3 | **Can't drag tasks inside Group 2** | Tasks in nested group cannot be dragged | Should be draggable |
+| 4 | **Group 2 doesn't move with Group 1** | When dragging Group 1, Group 2 stays in place | Nested group should move with parent |
+| 5 | **Task parent not updated when moved** | Task moved from Group 1 to Group 2 is still "controlled" by Group 1 | Task should be controlled by Group 2 |
+| 6 | **Group positions reset on refresh** | Groups jump back to old positions on page reload | Should persist positions across refresh |
+
+**Detailed Analysis**:
+
+**Issue 2 & 5: Task parent/containment issues**
+- When task is dragged from Group 1 to Group 2:
+  - Task COUNT updates correctly (based on position containment check)
+  - BUT task's Vue Flow `parentNode` still points to Group 1 (`section-{group1-id}`)
+  - Result: Task is visually in Group 2 but Vue Flow thinks it belongs to Group 1
+
+**Issue 3: Can't drag nested tasks**
+- Tasks inside Group 2 (nested) cannot be dragged
+- Likely because Vue Flow parent-child relationship is broken
+- May be related to removed `extent: 'parent'` or broken `parentNode` assignment
+
+**Issue 4: Nested group doesn't move with parent**
+- When creating Group 2 inside Group 1:
+  - `UnifiedGroupModal.vue:saveGroup()` doesn't detect/set `parentGroupId`
+  - Without `parentGroupId` in store, `syncNodes()` doesn't set Vue Flow `parentNode`
+  - Result: Group 2 is NOT a child of Group 1 in Vue Flow, doesn't move together
+
+**Root Causes Identified**:
+1. `UnifiedGroupModal.vue:saveGroup()` - No parent detection when creating group inside another
+2. `useCanvasDragDrop.ts` - Task `parentNode` not updated when moving between nested groups
+3. `useCanvasSync.ts` - Relies on `parentGroupId` from store; if not set, nesting broken
+4. Removed `extent: 'parent'` may have affected nested task dragging
+5. **Issue 6 Root Cause**: `useCanvasDragDrop.ts` was saving **Absolute** positions for nested groups, but `useCanvasSync.ts` interprets stored positions as **Relative** when `parentGroupId` is set. This caused groups to "jump" by the parent's offset on reload.
+
+**Files to Fix**:
+- `src/components/canvas/UnifiedGroupModal.vue` - Add parent detection on creation
+- `src/composables/canvas/useCanvasDragDrop.ts` - Fix task parent change between nested groups
+- `src/composables/canvas/useCanvasSync.ts` - Verify parent assignment logic for tasks in nested groups
+- `src/stores/canvas.ts` - Verify position persistence to Supabase
+
+**Fixes Applied**:
+1. ✅ **Issue 1** (UnifiedGroupModal.vue): Added parent group detection when creating nested groups - now sets `parentGroupId` and converts position to relative coordinates
+2. ✅ **Issue 2 & 5** (useCanvasDragDrop.ts): Fixed task parent change using `getSectionAbsolutePosition()` to properly handle deep nesting
+3. ✅ **Issue 3 & 4**: Resolved by fixes 1 & 2 - nested groups now have proper parentGroupId and tasks use correct absolute positions
+4. ✅ **Issue 6** (useCanvasDragDrop.ts): Refactored `handleNodeDragStop` to calculate and save **Relative Positions** for nested groups, and removed the destructive loop that forced absolute updates on child groups.
+5. ✅ **Task-to-Group attachment bug** (useCanvasDragDrop.ts): Fixed `attachNodeToParent` call passing incorrect ID format - was passing `containingSection.id` (e.g., `group-xxx`) but Vue Flow expects `section-${containingSection.id}` (e.g., `section-group-xxx`). This caused `getNode.value()` to return undefined, breaking parent-child relationship setup.
+6. ✅ **Async timing bug** (useCanvasDragDrop.ts): Changed from `.then()` to `await` for `attachNodeToParent` and `detachNodeFromParent` calls. Without `await`, `setNodes([...nodes.value])` was copying nodes BEFORE `parentNode` was set, breaking the relationship.
+7. ✅ **Undefined variable bug** (useCanvasDragDrop.ts): Added `oldSectionId` and `newSectionId` extraction from `currentParentNode` and `containingSection.id` for task count updates.
+8. ✅ **data.parentId sync bug** (useNodeAttachment.ts): Added `childNode.data.parentId = groupId` during attachment. `useCanvasSync.ts` uses this property to detect existing parent relationships.
+9. ✅ **Database persistence bug** (useCanvasDragDrop.ts): Added `taskStore.updateTask()` calls to persist `parentId` to database for both attachment (setting it) and detachment (clearing it with `null`).
+
+**Status**: 🔄 REFACTORING (Jan 9) - Previous fixes were band-aids. Now simplifying to trust Vue Flow.
+
+**Root Cause Analysis (Jan 9)**:
+Despite 9 separate fixes, the issue persists because we built ~1200 lines of custom coordinate logic in `useCanvasDragDrop.ts` that **fights with Vue Flow's native parent-child handling**.
+
+**The Real Problem**:
+- Vue Flow's `parentNode` property already handles relative positioning automatically
+- Our custom code constantly recalculates and overwrites positions
+- Each bug fix added more complexity instead of addressing root cause
+- Technical debt accumulated from layered fixes: BUG-002, BUG-047, BUG-152, TASK-072, TASK-089, TASK-131, TASK-142
+
+**New Approach - Trust Vue Flow**:
+1. Delete custom coordinate conversion logic
+2. Use Vue Flow's native `parentNode` - just set it on drop
+3. Let Vue Flow handle relative/absolute position automatically
+4. Persist only `parentId` to database, let sync restore relationship
+
+**SOP**: See `docs/sop/active/SOP-VUE-FLOW-PARENT-CHILD.md`
 
 ---
 
@@ -741,10 +944,10 @@ Guest Mode:
 
 ---
 
-### ~~TASK-153~~: Validate Golden Backup Before Restore (✅ DONE)
+### TASK-153: Validate Golden Backup Before Restore (🔄 IN PROGRESS)
 **Priority**: P1-HIGH
 **Created**: January 9, 2026
-**Completed**: January 9, 2026
+**Status**: Verification Failed (Jan 9) - Reopened
 
 **Problem**: `pomo-flow-golden-backup` in `useBackupSystem.ts` NEVER expires. It can contain tasks/groups deleted weeks ago. Restoring it resurrects deleted data.
 
@@ -760,6 +963,14 @@ Guest Mode:
 - [x] `restoreFromGoldenBackup()` now filters deleted items automatically
 
 **New Functions**:
+- `validateGoldenBackup()` - Returns age warning + preview of what will be restored
+- `filterGoldenBackupData()` - Removes items deleted in Supabase before restore
+- `fetchDeletedTaskIds/ProjectIds/GroupIds()` - Fetch deleted item IDs from Supabase
+
+**Outstanding Issues (Reopened Jan 9)**:
+- [ ] **CRITICAL FIX**: Create missing `src/utils/integrity.ts` dependency (causing build/test failures)
+- [ ] **UI Implementation**: Add "Restore from Golden Backup" button in `SettingsModal.vue`
+- [ ] **Verification**: Run `tests/unit/backup-validation.spec.ts` successfully
 - `validateGoldenBackup()` - Returns age warning + preview of what will be restored
 - `filterGoldenBackupData()` - Removes items deleted in Supabase before restore
 - `fetchDeletedTaskIds/ProjectIds/GroupIds()` - Fetch deleted item IDs from Supabase

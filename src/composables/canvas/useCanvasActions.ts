@@ -3,6 +3,8 @@ import { type Ref, nextTick } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
+// TASK-158: Persistent deleted groups tracking (replaces setTimeout approach)
+import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
 
 interface ActionsDeps {
     viewport: Ref<{ x: number; y: number; zoom: number }>
@@ -235,17 +237,11 @@ export function useCanvasActions(
         const sectionNodeId = `section-${section.id}`
         console.log(`🗑️ [CanvasActions] Confirming delete for group: ${section.name} (${section.id})`)
 
-        // TASK-149 FIX: Add to recentlyDeletedGroups BEFORE any delete operation
-        // This prevents syncNodes from recreating the group before store update completes
+        // TASK-158 FIX: Use persistent deleted groups tracker (replaces setTimeout)
+        // Mark as deleted BEFORE operation (prevents sync from recreating)
+        markGroupDeleted(section.id)
         if (deps.recentlyDeletedGroups) {
             deps.recentlyDeletedGroups.value.add(section.id)
-            console.log(`🧟 [ZOMBIE-PREVENT] Added ${section.id} to recentlyDeletedGroups`)
-
-            // Clear from set after 10 seconds (enough for all sync cycles to complete)
-            setTimeout(() => {
-                deps.recentlyDeletedGroups?.value.delete(section.id)
-                console.log(`🧟 [ZOMBIE-PREVENT] Cleared ${section.id} from recentlyDeletedGroups`)
-            }, 10000)
         }
 
         // BUG-091 FIX: Check if section exists in store (might be a ghost)
@@ -254,11 +250,25 @@ export function useCanvasActions(
         if (!existsInStore) {
             console.warn('👻 [CanvasActions] Ghost section detected, forcing direct removal:', sectionNodeId)
             forceRemoveGhostNode(section.id)
+            // Confirm deletion since there's nothing in Supabase to delete
+            confirmGroupDeleted(section.id)
+            if (deps.recentlyDeletedGroups) {
+                deps.recentlyDeletedGroups.value.delete(section.id)
+            }
         } else {
             // TASK-149 FIX: AWAIT the deletion to ensure Supabase soft-delete completes
-            // before any sync operation can fetch and recreate the group
-            await canvasStore.deleteSection(section.id)
-            console.log(`✅ [TASK-149] Delete completed for "${section.name}" - now safe to sync`)
+            try {
+                await canvasStore.deleteSection(section.id)
+                console.log(`✅ [TASK-158] Delete completed for "${section.name}" - confirmed`)
+                // TASK-158: Confirm deletion after Supabase success
+                confirmGroupDeleted(section.id)
+                if (deps.recentlyDeletedGroups) {
+                    deps.recentlyDeletedGroups.value.delete(section.id)
+                }
+            } catch (e) {
+                console.error(`❌ [TASK-158] Delete failed for "${section.name}" - keeping in tracker`, e)
+                // Don't clear from tracker on failure - let TTL handle cleanup
+            }
         }
 
         // Force high priority sync which cleans up/re-verifies
@@ -373,15 +383,17 @@ export function useCanvasActions(
             // Check existence
             const existsInStore = canvasStore.sections.some(s => s.id === sectionId)
 
-            // TASK-149 FIX: Add to recentlyDeletedGroups to prevent zombie recreation
+            // TASK-158 FIX: Use persistent deleted groups tracker
+            markGroupDeleted(sectionId)
             if (deps.recentlyDeletedGroups) {
                 deps.recentlyDeletedGroups.value.add(sectionId)
-                setTimeout(() => deps.recentlyDeletedGroups?.value.delete(sectionId), 10000)
             }
 
             if (!existsInStore) {
                 if (confirm('Delete this ghost group?')) {
                     forceRemoveGhostNode(sectionId)
+                    confirmGroupDeleted(sectionId)
+                    deps.recentlyDeletedGroups?.value.delete(sectionId)
                 }
             } else {
                 const section = canvasStore.sections.find(s => s.id === sectionId)
@@ -392,9 +404,18 @@ export function useCanvasActions(
                         : `Delete "${section.name}" section?`
 
                     if (confirm(msg)) {
-                        // TASK-149 FIX: AWAIT the deletion
-                        await canvasStore.deleteSection(sectionId)
-                        deps.syncNodes()
+                        try {
+                            await canvasStore.deleteSection(sectionId)
+                            confirmGroupDeleted(sectionId)
+                            deps.recentlyDeletedGroups?.value.delete(sectionId)
+                            deps.syncNodes()
+                        } catch (e) {
+                            console.error(`❌ [TASK-158] Delete failed - keeping in tracker`, e)
+                        }
+                    } else {
+                        // User cancelled - remove from tracker
+                        confirmGroupDeleted(sectionId)
+                        deps.recentlyDeletedGroups?.value.delete(sectionId)
                     }
                 }
             }
@@ -413,17 +434,25 @@ export function useCanvasActions(
 
         for (const item of items) {
             if (item.type === 'section') {
-                // TASK-149 FIX: Add to recentlyDeletedGroups to prevent zombie groups
+                // TASK-158 FIX: Use persistent deleted groups tracker
+                markGroupDeleted(item.id)
                 if (deps.recentlyDeletedGroups) {
                     deps.recentlyDeletedGroups.value.add(item.id)
-                    setTimeout(() => deps.recentlyDeletedGroups?.value.delete(item.id), 10000)
                 }
 
                 const exists = canvasStore.sections.some(s => s.id === item.id)
                 if (!exists) {
                     forceRemoveGhostNode(item.id)
+                    confirmGroupDeleted(item.id)
+                    deps.recentlyDeletedGroups?.value.delete(item.id)
                 } else {
-                    await canvasStore.deleteSection(item.id)
+                    try {
+                        await canvasStore.deleteSection(item.id)
+                        confirmGroupDeleted(item.id)
+                        deps.recentlyDeletedGroups?.value.delete(item.id)
+                    } catch (e) {
+                        console.error(`❌ [TASK-158] Bulk delete failed for ${item.id}`, e)
+                    }
                 }
             } else if (isPermanent) {
                 // [DEEP-DIVE FIX] Call explicit permanent delete

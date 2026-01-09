@@ -12,8 +12,8 @@ LOCKS_DIR="${CLAUDE_PROJECT_DIR}/.claude/locks"
 # Ensure locks directory exists
 mkdir -p "$LOCKS_DIR"
 
-# Read JSON input
-INPUT=$(cat)
+# Read JSON input (with timeout to prevent hanging)
+INPUT=$(timeout 1 cat 2>/dev/null || echo '{}')
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""')
 
 if [[ -z "$SESSION_ID" ]]; then

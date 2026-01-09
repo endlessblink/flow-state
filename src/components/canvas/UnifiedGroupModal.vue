@@ -439,13 +439,70 @@ const saveGroup = async () => {
       emit('updated', updatedGroup)
     }
   } else {
+    // BUG-153 FIX: Detect if creating group inside another group
+    // Find the smallest containing group (for proper nesting)
+    let parentGroupId: string | undefined = undefined
+    let finalPosition = { x: props.position.x, y: props.position.y }
+
+    // BUG-153 DEBUG: Log position and all groups for containment check
+    console.log(`[BUG-153 DEBUG] Checking containment for new group at:`, {
+      clickPosition: { x: props.position.x, y: props.position.y },
+      existingGroups: canvasStore.groups.map(g => ({
+        name: g.name,
+        id: g.id.substring(0, 10),
+        bounds: {
+          x: g.position?.x ?? 0,
+          y: g.position?.y ?? 0,
+          w: g.position?.width ?? 300,
+          h: g.position?.height ?? 200
+        }
+      }))
+    })
+
+    // Check all existing groups to see if creation position is inside any
+    const containingGroups = canvasStore.groups.filter(group => {
+      const gx = group.position?.x ?? 0
+      const gy = group.position?.y ?? 0
+      const gw = group.position?.width ?? 300
+      const gh = group.position?.height ?? 200
+      const isInside = props.position.x >= gx && props.position.x <= gx + gw &&
+                       props.position.y >= gy && props.position.y <= gy + gh
+      console.log(`[BUG-153 DEBUG] "${group.name}": click (${props.position.x.toFixed(0)}, ${props.position.y.toFixed(0)}) vs bounds (${gx.toFixed(0)}-${(gx+gw).toFixed(0)}, ${gy.toFixed(0)}-${(gy+gh).toFixed(0)}) → ${isInside ? 'INSIDE' : 'outside'}`)
+      return isInside
+    })
+
+    if (containingGroups.length > 0) {
+      // Sort by area (smallest first) to get the most nested/specific container
+      containingGroups.sort((a, b) => {
+        const areaA = (a.position?.width ?? 300) * (a.position?.height ?? 200)
+        const areaB = (b.position?.width ?? 300) * (b.position?.height ?? 200)
+        return areaA - areaB
+      })
+
+      const parentGroup = containingGroups[0]
+      parentGroupId = parentGroup.id
+
+      // Convert absolute position to relative (relative to parent's top-left)
+      const parentX = parentGroup.position?.x ?? 0
+      const parentY = parentGroup.position?.y ?? 0
+      finalPosition = {
+        x: props.position.x - parentX,
+        y: props.position.y - parentY
+      }
+
+      console.log(`[BUG-153] Creating nested group inside "${parentGroup.name}" (${parentGroupId})`, {
+        absolutePos: { x: props.position.x, y: props.position.y },
+        relativePos: finalPosition
+      })
+    }
+
     // Create new group with undo support
     const newGroup = await undoSystem.createGroupWithUndo({
       name: groupData.value.name.trim(),
       type: inferGroupType(),
       position: {
-        x: props.position.x,
-        y: props.position.y,
+        x: finalPosition.x,
+        y: finalPosition.y,
         width: 300,
         height: 200
       },
@@ -453,6 +510,7 @@ const saveGroup = async () => {
       layout: 'grid',
       isVisible: true,
       isCollapsed: false,
+      parentGroupId, // BUG-153: Set parent for nested groups
       assignOnDrop: Object.keys(assignOnDrop).length > 0 ? assignOnDrop : undefined
     })
 

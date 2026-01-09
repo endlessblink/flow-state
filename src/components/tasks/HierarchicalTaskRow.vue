@@ -303,10 +303,7 @@ const isAllSubtasksCompleted = computed(() =>
   hasSubtasks.value && completedSubtaskCount.value === childTasks.value.length
 )
 
-const _subtaskProgressPercentage = computed(() => {
-  if (!hasSubtasks.value) return 0
-  return Math.round((completedSubtaskCount.value / childTasks.value.length) * 100)
-})
+
 
 const isOverdue = computed(() => {
   if (!props.task.dueDate) return false

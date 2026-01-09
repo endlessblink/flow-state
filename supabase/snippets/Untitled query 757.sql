@@ -1,0 +1,1 @@
+SELECT DISTINCT user_id FROM groups LIMIT 1;

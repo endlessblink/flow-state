@@ -110,10 +110,11 @@ export const useCanvasStore = defineStore('canvas', () => {
       const { useAuthStore } = await import('@/stores/auth')
       const authStore = useAuthStore()
 
-      // Guest mode: skip Supabase, start with empty groups
+      // Guest mode: load from localStorage (persists across refreshes)
       if (!authStore.isAuthenticated) {
-        console.log('👤 [GUEST-MODE] Skipping Supabase fetch - canvas starts empty')
-        _rawGroups.value = []
+        const localGroups = loadGroupsFromLocalStorage()
+        console.log(`👤 [GUEST-MODE] Loaded ${localGroups.length} groups from localStorage`)
+        _rawGroups.value = localGroups
         return
       }
 
@@ -136,6 +137,21 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       // TASK-150 FIX: When authenticated, Supabase is the source of truth
       // Don't fall back to localStorage which may have stale/deleted groups
+
+      // BUG-169 FIX: Safety guard - don't overwrite existing groups with empty array
+      // during the first 10 seconds of the session (prevents auth race conditions)
+      if (loadedGroups.length === 0 && _rawGroups.value.length > 0) {
+        const sessionStart = typeof window !== 'undefined' ? (window as any).PomoFlowSessionStart || 0 : 0
+        const timeSinceSessionStart = Date.now() - sessionStart
+
+        if (timeSinceSessionStart < 10000) {
+          console.warn(`🛡️ [GROUP-LOAD] BLOCKED empty overwrite - ${_rawGroups.value.length} existing groups would be lost (session ${timeSinceSessionStart}ms old)`)
+          return
+        }
+
+        console.warn(`⚠️ [GROUP-LOAD] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty (session ${timeSinceSessionStart}ms old)`)
+      }
+
       _rawGroups.value = loadedGroups
 
       if (loadedGroups.length > 0) {
@@ -166,16 +182,17 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const saveGroupToStorage = async (group: CanvasGroup) => {
-    // NOTE: Guest mode is fully ephemeral - groups exist only in memory
-    // Only authenticated users persist to Supabase
     console.log(`📍 [GROUP-SAVE] Saving "${group.name}" pos=(${group.position?.x?.toFixed(0)}, ${group.position?.y?.toFixed(0)})`)
+
+    // Always save to localStorage for persistence across refreshes
+    saveGroupsToLocalStorage()
 
     try {
       await saveGroup(group)
       console.log(`✅ [GROUP-SAVE] Group "${group.name}" saved to Supabase successfully`)
     } catch (e) {
-      // Supabase failed - guest mode data stays in memory only
-      console.warn(`⚠️ [GROUP-SAVE] Supabase save failed (guest mode: memory only):`, e)
+      // Supabase failed or skipped (guest mode) - localStorage backup is still saved
+      console.debug(`⏭️ [GROUP-SAVE] Supabase skipped/failed - localStorage backup saved`)
     }
   }
 
@@ -253,6 +270,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (index !== -1) {
       _rawGroups.value.splice(index, 1)
 
+      // Save to localStorage for guest mode persistence
+      saveGroupsToLocalStorage()
+
       // Supabase Soft Delete
       await deleteGroupRemote(id)
     }
@@ -271,6 +291,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
 
     _rawGroups.value = [...newGroups]
+    saveGroupsToLocalStorage()
   }
 
   /**
@@ -317,6 +338,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     if (result.patched.length > 0) {
       console.log(`✅ [CANVAS] Patched ${result.patched.length} groups`)
+      saveGroupsToLocalStorage()
     }
 
     return result
@@ -633,10 +655,24 @@ export const useCanvasStore = defineStore('canvas', () => {
           console.log('🔄 [CANVAS] Auth state changed to authenticated - reloading groups from Supabase')
 
           // Force reload from Supabase (not localStorage)
-          // BUG FIX: ALWAYS set groups from Supabase, even if empty (respects deletions)
           try {
             const loadedGroups = await fetchGroups()
-            _rawGroups.value = loadedGroups // ALWAYS set, even if empty
+
+            // BUG-169 FIX: Safety guard - don't overwrite existing groups with empty array
+            // during the first 10 seconds of the session (prevents auth race conditions)
+            if (loadedGroups.length === 0 && _rawGroups.value.length > 0) {
+              const sessionStart = typeof window !== 'undefined' ? (window as any).PomoFlowSessionStart || 0 : 0
+              const timeSinceSessionStart = Date.now() - sessionStart
+
+              if (timeSinceSessionStart < 10000) {
+                console.warn(`🛡️ [AUTH-WATCHER] BLOCKED empty overwrite - ${_rawGroups.value.length} existing groups would be lost (session ${timeSinceSessionStart}ms old)`)
+                return
+              }
+
+              console.warn(`⚠️ [AUTH-WATCHER] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty`)
+            }
+
+            _rawGroups.value = loadedGroups
             if (loadedGroups.length > 0) {
               console.log(`✅ [SUPABASE] Reloaded ${loadedGroups.length} canvas groups after auth`)
             } else {

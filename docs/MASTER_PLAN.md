@@ -1,4 +1,4 @@
-**Last Updated**: January 9, 2026 (TASK-151 Fix PGRST204 & Caching)
+**Last Updated**: January 9, 2026 (TASK-152-157 localStorage Fallback Audit Tasks)
 **Version**: 5.33 (Supabase Debugger Skill created)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -349,6 +349,136 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [ ] Fix 6: Increase parent assignment ratio from 1.05x to 1.5x
 - [ ] Fix 2: Add toRelativePosition helper to canvasGraph.ts
 - [ ] Fix 7: Z-index based on nesting depth, not area
+
+### BUG-151: Tasks Render Empty on First Refresh (✅ DONE)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+**Fixed**: January 9, 2026
+
+**Problem**: Task nodes rendered as empty shells (no title, description, metadata) on the first page refresh, but appeared correctly after a second refresh.
+
+**Root Cause**: In `TaskNode.vue`, the viewport zoom was copied once during setup instead of being tracked reactively:
+```typescript
+// BUG: One-time copy, not reactive
+viewport.value = vf.viewport.value
+```
+When Vue Flow initialized with `zoom: 0` (before the canvas was ready), `isLOD3` became `true` (since `0 < 0.2`), hiding all content. Since the viewport wasn't tracked reactively, it never updated.
+
+**Fix Applied**:
+- Store Vue Flow context reference for reactive access
+- Access `viewport.value.zoom` through computed with guards
+- Default to `zoom: 1` if value is 0, undefined, or invalid
+
+**File Changed**: `src/components/canvas/TaskNode.vue` (lines 161-180)
+
+---
+
+### TASK-157: Consolidate Dual Backup Systems (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+
+**Problem**: Two competing backup systems exist - `useBackupSystem.ts` and `usePersistentStorage.ts`. Both write backups independently, creating confusion about which is "correct" on restore.
+
+**Files Affected**:
+- `src/composables/useBackupSystem.ts` - BUG-059 golden backup system
+- `src/composables/usePersistentStorage.ts` - Legacy multi-layer backup
+
+**Fix Required**:
+- [ ] Audit which backup system is actually used
+- [ ] Consolidate to single backup strategy
+- [ ] Remove unused backup system
+- [ ] Document backup architecture decision
+
+---
+
+### TASK-156: Add TTL to Backup History (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+
+**Problem**: `pomo-flow-backup-history` in `useBackupSystem.ts` persists old backups indefinitely with no expiration. Could consume significant localStorage space and restore stale data.
+
+**Files Affected**:
+- `src/composables/useBackupSystem.ts:69-78` (STORAGE_KEYS)
+- `src/composables/useBackupSystem.ts:435-465` (save/load history)
+
+**Fix Required**:
+- [ ] Add timestamp validation on backup load
+- [ ] Implement 30-day TTL for backup history
+- [ ] Add schema version to backup format
+- [ ] Prune backups older than TTL on app startup
+
+---
+
+### TASK-155: Defer Viewport Load Until Auth Ready (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+
+**Problem**: `canvas-viewport` is loaded synchronously in `canvas.ts:39` BEFORE Supabase/auth is ready. This can cause viewport to show stale position before Supabase data overwrites it.
+
+**Files Affected**:
+- `src/stores/canvas.ts:37-48` (getSavedViewport)
+- `src/stores/canvas/canvasUi.ts:168-175` (loadSavedViewport)
+
+**Fix Required**:
+- [ ] Move viewport load to after auth initialization
+- [ ] Use Supabase user_settings as primary viewport source
+- [ ] Fall back to localStorage only if Supabase returns null
+- [ ] Add viewport to GUEST_EPHEMERAL_KEYS cleanup
+
+---
+
+### TASK-154: Add TTL to Offline Queue (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+
+**Problem**: `pomoflow-offline-queue` in `offlineQueue.ts` has no TTL. Failed operations retry indefinitely. Old operations from days ago could replay on reconnect.
+
+**Files Affected**:
+- `src/utils/offlineQueue.ts:791-833` (persist/load queue)
+- `src/utils/offlineQueue.ts:401-428` (retry logic)
+
+**Fix Required**:
+- [ ] Add `createdAt` timestamp to each queued operation
+- [ ] Add 24-hour TTL validation on queue load
+- [ ] Discard operations older than TTL
+- [ ] Add max retry count (e.g., 10) before discarding
+- [ ] Validate target entity still exists before replaying
+
+---
+
+### TASK-153: Validate Golden Backup Before Restore (📋 PLANNED)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+
+**Problem**: `pomo-flow-golden-backup` in `useBackupSystem.ts` NEVER expires. It can contain tasks/groups deleted weeks ago. Restoring it resurrects deleted data.
+
+**Files Affected**:
+- `src/composables/useBackupSystem.ts:183-204` (get/save golden backup)
+- `src/composables/useBackupSystem.ts:209-243` (isBackupSuspicious)
+
+**Fix Required**:
+- [ ] Add timestamp validation before restore (warn if >7 days old)
+- [ ] Cross-reference golden backup items with current Supabase data
+- [ ] Filter out items that exist in Supabase with `is_deleted: true`
+- [ ] Show user what will be restored before proceeding
+- [ ] Add "never restore deleted items" option
+
+---
+
+### ~~TASK-152~~: Update Supabase Debugger Skill (✅ DONE)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+
+**Problem**: Supabase debugger skill lacked localStorage fallback debugging workflow.
+
+**Fix Applied**:
+- [x] Added Workflow 8: localStorage Fallback Audit to skill
+- [x] Documented all 42 localStorage keys in Pomo-Flow
+- [x] Added danger pattern examples and prevention patterns
+- [x] Created SOP at `docs/sops/SOP-localStorage-fallback-fixes.md`
+
+---
 
 ### ~~TASK-151~~: Resolve PGRST204 Error & Component Cache (✅ DONE)
 **Priority**: P1-HIGH

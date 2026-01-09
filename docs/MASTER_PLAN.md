@@ -1,4 +1,4 @@
-**Last Updated**: January 8, 2026 (TASK-148 Supabase Debugger Skill)
+**Last Updated**: January 9, 2026 (TASK-151 Fix PGRST204 & Caching)
 **Version**: 5.33 (Supabase Debugger Skill created)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -326,6 +326,53 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [ ] Phase 4: Data migration (if needed)
 - [ ] Phase 5: Manual testing & validation
 **Progress**: Core refactoring complete. Ready for manual testing.
+
+### TASK-149: Canvas Group Stability Fixes (🔄 IN PROGRESS)
+**Priority**: P0-CRITICAL
+**Created**: January 9, 2026
+**Related**: TASK-141 (Canvas Group System Refactor)
+
+**Problems Addressed**:
+1. **Position jump during resize** - Groups jump when resizing other groups (race condition)
+2. **Zombie groups** - Deleted groups reappear after sync
+3. **10px tolerance snapping** - Micro-jumps from position preservation logic
+4. **Inconsistent containment** - Different algorithms in drag vs sync
+5. **Permissive parent assignment** - 5% size difference too loose
+6. **Z-index by area not depth** - Same-size siblings have same z-index
+
+**Fixes Planned**:
+- [ ] Fix 4: Set settling flag BEFORE async store updates in resize
+- [ ] Fix 5: Remove 10px tolerance snapping in useCanvasSync.ts
+- [ ] Fix 8: Strengthen recentlyDeletedGroups zombie prevention
+- [ ] Fix 1: Atomic batch position updates in resize handler
+- [ ] Fix 3: Standardize containment to 75% threshold everywhere
+- [ ] Fix 6: Increase parent assignment ratio from 1.05x to 1.5x
+- [ ] Fix 2: Add toRelativePosition helper to canvasGraph.ts
+- [ ] Fix 7: Z-index based on nesting depth, not area
+
+### ~~TASK-151~~: Resolve PGRST204 Error & Component Cache (✅ DONE)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+
+**Problem**: Group deletion failed with PGRST204 because code attempted to update non-existent 'deleted_at' column. Browser caching prevented previous fixes from taking effect.
+
+**Fix Applied**:
+- [x] Created useSupabaseDatabaseV2.ts to force cache busting
+- [x] Removed deleted_at reference in deleteGroup and bulkDeleteTasks
+- [x] Updated all imports to use V2 composable
+
+### ~~TASK-150~~: Group Deletion Not Persisting on Refresh (✅ DONE)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+
+**Problem**: Deleted groups reappeared after page refresh. Root cause: When authenticated user deletes groups, `fetchGroups()` correctly returns empty (filtered by `is_deleted: false`), but `loadFromDatabase()` fell back to localStorage which had stale/deleted groups.
+
+**Fix Applied**:
+- [x] Removed localStorage fallback for authenticated users in `canvas.ts`
+- [x] Supabase is now single source of truth - empty means empty, no resurrection from localStorage
+- [x] Note: `groups` table doesn't have `deleted_at` column (unlike tasks/projects) - schema intentional difference
 
 ### ~~TASK-142~~: Canvas Position System Refactor (✅ DONE)
 **Priority**: P1-HIGH

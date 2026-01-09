@@ -263,4 +263,194 @@ test.describe('Canvas Position Persistence (TASK-131 Regression Guard)', () => {
       taskStore.deleteTask(id);
     }, taskId);
   });
+
+  test('TASK-142: group position should persist after page refresh', async ({ page }) => {
+    // This test guards against the auth timing race condition fix
+    // ROOT CAUSE: Canvas store loaded groups from localStorage before auth was ready,
+    // so group changes saved to Supabase were lost on refresh
+
+    // Step 1: Check if there are any groups on canvas
+    const groupCount = await page.evaluate(() => {
+      const app = document.querySelector('#app');
+      if (!app || !('__vue_app__' in app)) return 0;
+      const vueApp = (app as any).__vue_app__;
+      const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+      return canvasStore?.groups?.length || 0;
+    });
+
+    if (groupCount === 0) {
+      console.log('No groups on canvas, skipping group persistence test');
+      return;
+    }
+
+    // Step 2: Find a group node and get its initial position
+    const groupNode = page.locator('.vue-flow__node[data-id^="section-"]').first();
+    const isVisible = await groupNode.isVisible().catch(() => false);
+
+    if (!isVisible) {
+      await page.keyboard.press('f'); // Fit view
+      await page.waitForTimeout(500);
+    }
+
+    const box = await groupNode.boundingBox();
+    if (!box) {
+      console.log('Group node not visible, skipping test');
+      return;
+    }
+
+    // Get initial group position from store
+    const initialGroupPosition = await page.evaluate(() => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+      const firstGroup = canvasStore?.groups?.[0];
+      return firstGroup ? { x: firstGroup.position.x, y: firstGroup.position.y, id: firstGroup.id } : null;
+    });
+
+    console.log('Initial group position:', initialGroupPosition);
+    expect(initialGroupPosition).toBeTruthy();
+
+    // Step 3: Drag the group to a new position
+    const startX = box.x + 50;
+    const startY = box.y + 20;
+    const deltaX = 150;
+    const deltaY = 80;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.waitForTimeout(100);
+    await page.mouse.move(startX + deltaX, startY + deltaY, { steps: 10 });
+    await page.waitForTimeout(100);
+    await page.mouse.up();
+
+    // Wait for save to complete
+    await page.waitForTimeout(2000);
+
+    // Get position after drag
+    const positionAfterDrag = await page.evaluate((groupId) => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+      const group = canvasStore?.groups?.find((g: any) => g.id === groupId);
+      return group ? { x: group.position.x, y: group.position.y } : null;
+    }, initialGroupPosition?.id);
+
+    console.log('Position after drag:', positionAfterDrag);
+    expect(positionAfterDrag).toBeTruthy();
+
+    // Verify position actually changed
+    if (initialGroupPosition && positionAfterDrag) {
+      const moved = Math.abs(positionAfterDrag.x - initialGroupPosition.x) > 50 ||
+                    Math.abs(positionAfterDrag.y - initialGroupPosition.y) > 50;
+      expect(moved).toBe(true);
+    }
+
+    // Step 4: CRITICAL - Refresh the page
+    await page.reload();
+    await page.waitForSelector('.vue-flow', { timeout: 10000 });
+    await page.waitForTimeout(3000); // Wait for auth + canvas to fully load
+
+    // Step 5: Verify position persisted after refresh
+    const positionAfterRefresh = await page.evaluate((groupId) => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+      const group = canvasStore?.groups?.find((g: any) => g.id === groupId);
+      return group ? { x: group.position.x, y: group.position.y } : null;
+    }, initialGroupPosition?.id);
+
+    console.log('Position after refresh:', positionAfterRefresh);
+
+    // CRITICAL ASSERTION: Position after refresh should match position after drag
+    expect(positionAfterRefresh).toBeTruthy();
+    if (positionAfterDrag && positionAfterRefresh) {
+      const xDiff = Math.abs(positionAfterRefresh.x - positionAfterDrag.x);
+      const yDiff = Math.abs(positionAfterRefresh.y - positionAfterDrag.y);
+
+      // Position should persist within tolerance
+      expect(xDiff).toBeLessThan(20);
+      expect(yDiff).toBeLessThan(20);
+    }
+  });
+
+  test('TASK-142: task position should persist after page refresh', async ({ page }) => {
+    // Create a task with specific canvas position
+    const testData = await page.evaluate(async () => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const taskStore = vueApp.config.globalProperties.$pinia._s.get('tasks');
+
+      const task = await taskStore.createTask({
+        title: 'Refresh Persistence Test',
+        status: 'planned',
+        canvasPosition: { x: 400, y: 250 }
+      });
+
+      return { id: task.id, x: 400, y: 250 };
+    });
+
+    expect(testData.id).toBeTruthy();
+    await page.waitForTimeout(1000);
+
+    // Drag to new position
+    await page.keyboard.press('f'); // Fit view
+    await page.waitForTimeout(500);
+
+    const nodeSelector = `.vue-flow__node[data-id="task-${testData.id}"]`;
+    const taskNode = page.locator(nodeSelector);
+    const box = await taskNode.boundingBox();
+
+    if (box) {
+      await page.mouse.move(box.x + box.width / 2, box.y + 20);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + 100, { steps: 10 });
+      await page.mouse.up();
+    }
+
+    // Wait for save
+    await page.waitForTimeout(2000);
+
+    // Get position after drag
+    const positionAfterDrag = await page.evaluate((id) => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const taskStore = vueApp.config.globalProperties.$pinia._s.get('tasks');
+      const task = taskStore.tasks.find((t: any) => t.id === id);
+      return task?.canvasPosition || null;
+    }, testData.id);
+
+    console.log('Task position after drag:', positionAfterDrag);
+
+    // CRITICAL: Refresh the page
+    await page.reload();
+    await page.waitForSelector('.vue-flow', { timeout: 10000 });
+    await page.waitForTimeout(3000);
+
+    // Verify position persisted
+    const positionAfterRefresh = await page.evaluate((id) => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const taskStore = vueApp.config.globalProperties.$pinia._s.get('tasks');
+      const task = taskStore.tasks.find((t: any) => t.id === id);
+      return task?.canvasPosition || null;
+    }, testData.id);
+
+    console.log('Task position after refresh:', positionAfterRefresh);
+
+    if (positionAfterDrag && positionAfterRefresh) {
+      const xDiff = Math.abs(positionAfterRefresh.x - positionAfterDrag.x);
+      const yDiff = Math.abs(positionAfterRefresh.y - positionAfterDrag.y);
+
+      expect(xDiff).toBeLessThan(20);
+      expect(yDiff).toBeLessThan(20);
+    }
+
+    // Cleanup
+    await page.evaluate((id) => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const taskStore = vueApp.config.globalProperties.$pinia._s.get('tasks');
+      taskStore.deleteTask(id);
+    }, testData.id);
+  });
 });

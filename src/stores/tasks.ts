@@ -27,7 +27,7 @@ export const getTaskInstances = (task: any) => task.recurringInstances || []
  */
 export const clearHardcodedTestTasks = async () => {
   console.log('🗑️ Clearing hardcoded test tasks only (preserving real tasks)...')
-  const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+  const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabaseV2')
   const { useDemoGuard } = await import('@/composables/useDemoGuard')
 
   const { fetchTasks, saveTasks, deleteTask } = useSupabaseDatabase()

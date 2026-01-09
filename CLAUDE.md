@@ -56,6 +56,25 @@ npm run storybook    # Component docs (port 6006)
 5. **Check Task Dependencies** - See Task Dependency Index in `docs/MASTER_PLAN.md`
 6. **NEVER Create Demo Data** - First-time users MUST see empty app, not sample data
 
+## Canvas Position Persistence (CRITICAL)
+
+**DO NOT** add code that can cause canvas positions to reset. Known causes:
+
+| Issue | Root Cause | Fix |
+|-------|------------|-----|
+| **TASK-131**: Positions reset during session | Competing `deep: true` watcher in `canvas.ts` | REMOVED - `useCanvasSync.ts` is single source of truth |
+| **TASK-142**: Positions reset on refresh | Canvas store loaded before auth ready | Auth watcher reloads groups from Supabase |
+
+**Architecture Rules:**
+- `useCanvasSync.ts` is the SINGLE source of sync for canvas nodes
+- NEVER add watchers in `canvas.ts` that call `syncTasksToCanvas()`
+- Vue Flow positions are authoritative for existing nodes
+- Position locks (7s timeout) must be respected during sync
+
+**Before modifying canvas sync:**
+1. Run `npm run test -- --grep "Position Persistence"`
+2. Manual test: drag item, refresh, verify position persists
+
 ## MASTER_PLAN.md Task ID Format
 
 | Prefix | Usage |
@@ -118,5 +137,5 @@ Detailed docs available in `docs/claude-md-extension/`:
 
 ---
 
-**Last Updated**: January 6, 2026
-**Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, PouchDB 9.0.0
+**Last Updated**: January 8, 2026
+**Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase

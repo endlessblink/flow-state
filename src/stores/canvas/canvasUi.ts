@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
 
 export const useCanvasUiStore = defineStore('canvasUi', () => {
     const db = useSupabaseDatabase()

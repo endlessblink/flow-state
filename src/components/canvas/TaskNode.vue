@@ -380,6 +380,8 @@ const formattedDuration = computed(() => {
   width: 280px;
   min-width: 200px;
   max-width: 320px;
+  /* FOUC FIX: Set min-height to prevent collapse before content rendering */
+  min-height: 80px;
   position: relative;
   transition: all var(--duration-normal) var(--spring-smooth);
   cursor: grab;

@@ -106,7 +106,7 @@ export interface SupabaseGroup {
     type: string
     color?: string
 
-    position_json?: any
+    position_json?: any // Fixed: Use legacy database column name
     layout?: string
 
     is_visible?: boolean
@@ -206,7 +206,7 @@ export function toSupabaseGroup(group: any, userId: string): SupabaseGroup {
         type: group.type,
         color: group.color,
 
-        position_json: group.position,
+        position_json: group.position, // Fixed: Map internal position to DB position_json
         layout: group.layout,
 
         is_visible: group.isVisible,
@@ -224,8 +224,9 @@ export function toSupabaseGroup(group: any, userId: string): SupabaseGroup {
         is_pinned: group.isPinned,
         property_value: typeof group.propertyValue === 'object' ? JSON.stringify(group.propertyValue) : group.propertyValue,
 
-        is_deleted: false, // Default active
-        created_at: new Date().toISOString(),
+        // TASK-149 FIX: Do NOT set is_deleted here - it overwrites soft-deletes!
+        // Let the database default handle new groups (default: false)
+        // Upsert will only update fields present in the payload
         updated_at: new Date().toISOString()
     }
 }
@@ -237,7 +238,7 @@ export function fromSupabaseGroup(record: SupabaseGroup): any {
         type: record.type,
         color: record.color,
 
-        position: record.position_json,
+        position: record.position_json, // Fixed: Map DB position_json to internal position
         layout: record.layout,
 
         isVisible: record.is_visible,

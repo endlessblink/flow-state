@@ -195,6 +195,11 @@ export function useCanvasResize(deps?: {
         if (width && height) {
             const section = canvasStore.sections.find(s => s.id === sectionId)
             if (section) {
+                // TASK-149 FIX: Set settling flags BEFORE any async store operations
+                // This prevents syncNodes from running during the update sequence
+                isResizeSettling.value = true
+                resizeState.value.isResizing = false
+
                 const deltaX = newX - resizeState.value.startX
                 const deltaY = newY - resizeState.value.startY
                 const validatedWidth = Math.max(200, Math.min(50000, Math.abs(width)))
@@ -226,7 +231,7 @@ export function useCanvasResize(deps?: {
                 // BUG-055 FIX: Inverse delta compensation for children
                 if (deltaX !== 0 || deltaY !== 0) {
                     const vueFlowParentId = `section-${sectionId}`
-                    // We need to access nodes.value. Since we are inside a composable using useVueFlow(), 
+                    // We need to access nodes.value. Since we are inside a composable using useVueFlow(),
                     // nodes is a Ref<Node[]>.
                     const childTaskNodes = nodes.value.filter(node =>
                         node.type === 'taskNode' && node.parentNode === vueFlowParentId
@@ -261,11 +266,55 @@ export function useCanvasResize(deps?: {
                             })
                         }
                     })
+
+                    // FIX: Also handle child SECTION nodes (nested groups)
+                    const childSectionNodes = nodes.value.filter(node =>
+                        node.type === 'sectionNode' && node.parentNode === vueFlowParentId
+                    )
+
+                    console.log('📋 [RESIZE-FIX] Child section nodes to offset:', childSectionNodes.length)
+
+                    childSectionNodes.forEach(node => {
+                        const currentPos = node.position || { x: 0, y: 0 }
+                        const childRelativeX = currentPos.x - deltaX
+                        const childRelativeY = currentPos.y - deltaY
+
+                        // 1. Visual update (Relative)
+                        updateNode(node.id, {
+                            position: { x: childRelativeX, y: childRelativeY }
+                        })
+
+                        // 2. Persist absolute and lock
+                        const childSectionId = node.id.replace('section-', '')
+                        const childSection = canvasStore.sections.find(s => s.id === childSectionId)
+                        if (childSection) {
+                            const childAbsX = newX + childRelativeX
+                            const childAbsY = newY + childRelativeY
+
+                            // Lock to prevent sync overrides
+                            lockGroupPosition(childSectionId, {
+                                x: childAbsX,
+                                y: childAbsY,
+                                width: childSection.position.width,
+                                height: childSection.position.height
+                            }, 'resize')
+
+                            // Update store
+                            canvasStore.updateSection(childSectionId, {
+                                position: {
+                                    x: childAbsX,
+                                    y: childAbsY,
+                                    width: childSection.position.width,
+                                    height: childSection.position.height
+                                }
+                            })
+
+                            console.log(`📦 [RESIZE-FIX] Updated nested group "${childSection.name}" position`)
+                        }
+                    })
                 }
-                // Settling logic
-                isResizeSettling.value = true
-                resizeState.value.isResizing = false
-                // TASK-089: Lock group position too at end of resize
+
+                // TASK-089: Lock group position at end of resize
                 lockGroupPosition(sectionId, {
                     x: newX,
                     y: newY,
@@ -273,10 +322,11 @@ export function useCanvasResize(deps?: {
                     height: validatedHeight
                 })
 
-                // Clear after delay
+                // TASK-149: Longer settling period (1000ms instead of 500ms) to ensure all sync cycles complete
                 setTimeout(() => {
                     isResizeSettling.value = false
-                }, 500)
+                    console.log('%c[TASK-149] Resize settling complete - syncNodes unblocked', 'color: #4CAF50')
+                }, 1000)
             }
         }
     }

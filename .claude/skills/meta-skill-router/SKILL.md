@@ -153,27 +153,22 @@ Router:
 3. Force route to 'qa-testing' (validation)
 ```
 
-## Router Logic
+## ⚡ **Action: Route Request**
 
-### 1. Intent Analysis
-- Parse user input for key phrases and patterns
-- Analyze project context (file changes, current view, etc.)
-- Identify domain-specific requirements
+To determine the best skill for a task, **ALWAYS** run:
 
-### 2. Pattern Matching
-- Match against routing patterns in priority order
-- Handle multiple pattern matches with confidence scoring
-- Select highest confidence skill route
+```bash
+node .claude/skills/meta-skill-router/router.js "YOUR_QUERY_HERE"
+```
 
-### 3. Quality Gate Enforcement
-- Check if mandatory gates apply to the request
-- Chain required skills in correct order
-- Prevent bypassing critical quality steps
+Then, invoke the skill returned by the router.
 
-### 4. User Override Handling
-- Allow explicit skill selection with `/skill:skill-name` syntax
-- Remember user preferences for similar requests
-- Provide feedback on routing decisions
+### Example
+User: "Fix the timer bug"
+Agent:
+1. Run `node .claude/skills/meta-skill-router/router.js "fix timer bug"`
+2. Output: `dev-bug-fixer`
+3. Agent invokes `dev-bug-fixer` skill.s
 
 ## Configuration
 

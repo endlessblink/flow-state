@@ -1,5 +1,5 @@
 import { type Ref } from 'vue'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
 import type { Task } from '@/types/tasks'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats } from '@/utils/taskValidation'

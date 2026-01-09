@@ -32,6 +32,11 @@
       </div>
     </div>
 
+    <!-- TASK-141: ADD SLOT FOR CHILD NODES (CRITICAL FOR VUE FLOW NESTING) -->
+    <div v-if="!isCollapsed" class="section-body">
+      <slot />
+    </div>
+
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
     <NodeResizer
       :is-visible="true"

@@ -16,8 +16,9 @@ import {
     isTaskCenterInRect,
     findSmallestContainingRect,
     findAllContainingRects,
-    type Rect
+    isNodeMoreThanHalfInside
 } from '../../utils/geometry'
+import type { Rect } from '../../utils/geometry'
 import { getAbsoluteNodePosition } from '../../utils/canvasGraph'
 // TASK-144: Use centralized duration defaults
 import { DURATION_DEFAULTS, type DurationCategory } from '../../utils/durationCategories'
@@ -72,35 +73,46 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
     }
 
     // Helper: Check if task is inside a section (returns first match)
-    // REFACTORED: Uses findSmallestContainingRect from shared utils
+    // REFACTORED: Uses robust isNodeMoreThanHalfInside from shared utils to prevent false positives
     const getContainingSection = (taskX: number, taskY: number, taskWidth: number = 220, taskHeight: number = 100) => {
-        const center = getTaskCenter(taskX, taskY, taskWidth, taskHeight)
-        const sectionRects = canvasStore.sections.map(s => ({
-            x: s.position.x,
-            y: s.position.y,
-            width: s.position.width,
-            height: s.position.height,
-            originalSection: s
-        }))
+        // Find all sections where the task is > 50% inside
+        const validSections = canvasStore.sections.filter(s =>
+            isNodeMoreThanHalfInside(taskX, taskY, taskWidth, taskHeight, {
+                x: s.position.x,
+                y: s.position.y,
+                width: s.position.width,
+                height: s.position.height
+            })
+        )
 
-        const match = findSmallestContainingRect(center.x, center.y, sectionRects)
-        return match ? match.originalSection : undefined
+        if (validSections.length === 0) return undefined
+
+        // Return the smallest one by area (most specific)
+        return validSections.reduce((smallest, current) => {
+            const smallestArea = smallest.position.width * smallest.position.height
+            const currentArea = current.position.width * current.position.height
+            return currentArea < smallestArea ? current : smallest
+        })
     }
 
     // Helper: Get ALL sections containing a position (for nested group inheritance)
-    // REFACTORED: Uses findAllContainingRects from shared utils
+    // REFACTORED: Uses robust isNodeMoreThanHalfInside from shared utils
     const getAllContainingSections = (taskX: number, taskY: number, taskWidth: number = 220, taskHeight: number = 100) => {
-        const center = getTaskCenter(taskX, taskY, taskWidth, taskHeight)
-        const sectionRects = canvasStore.sections.map(s => ({
-            x: s.position.x,
-            y: s.position.y,
-            width: s.position.width || 300,
-            height: s.position.height || 200,
-            original: s
-        }))
+        const matches = canvasStore.sections.filter(s =>
+            isNodeMoreThanHalfInside(taskX, taskY, taskWidth, taskHeight, {
+                x: s.position.x,
+                y: s.position.y,
+                width: s.position.width || 300,
+                height: s.position.height || 200
+            })
+        )
 
-        const matches = findAllContainingRects(center.x, center.y, sectionRects)
-        return matches.map(m => m.original)
+        // Sort largest to smallest (parents first)
+        return matches.sort((a, b) => {
+            const areaA = a.position.width * a.position.height
+            const areaB = b.position.width * b.position.height
+            return areaB - areaA
+        })
     }
 
     // TASK-072 FIX: Recursively calculate absolute position for any nesting depth
@@ -547,23 +559,10 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
 
                     // Save positions for ALL task nodes, preserving their current parentNode state
                     for (const taskNode of taskNodes) {
-                        // Calculate absolute position
-                        let absoluteX: number, absoluteY: number
-
-                        if (taskNode.parentNode) {
-                            const sectionId = taskNode.parentNode.replace('section-', '')
-                            const section = canvasStore.sections.find(s => s.id === sectionId)
-                            if (section) {
-                                absoluteX = section.position.x + taskNode.position.x
-                                absoluteY = section.position.y + taskNode.position.y
-                            } else {
-                                absoluteX = taskNode.position.x
-                                absoluteY = taskNode.position.y
-                            }
-                        } else {
-                            absoluteX = taskNode.position.x
-                            absoluteY = taskNode.position.y
-                        }
+                        // Calculate absolute position using Vue Flow graph utility (handles deep nesting)
+                        const absolutePos = getAbsolutePosition(taskNode.id)
+                        const absoluteX = absolutePos.x
+                        const absoluteY = absolutePos.y
 
                         // Validate and save
                         if (Number.isFinite(absoluteX) && Number.isFinite(absoluteY)) {
@@ -686,26 +685,30 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                             if (potentialParent.id === sectionId) return
                             if (potentialParent.parentGroupId === sectionId) return
                             const parentArea = potentialParent.position.width * potentialParent.position.height
-                            if (parentArea <= sectionArea) return
-                            const isInside = (
-                                absoluteX >= potentialParent.position.x &&
-                                absoluteY >= potentialParent.position.y &&
-                                absoluteX + oldBounds.width <= potentialParent.position.x + potentialParent.position.width &&
-                                absoluteY + oldBounds.height <= potentialParent.position.y + potentialParent.position.height
+
+                            // BUG-025 FIX: Relaxed strictness for dragging comfort
+                            // TASK-131 FIX: Relaxed ratio from 1.5 to 1.1 - 10% larger is enough
+                            if (parentArea <= sectionArea * 1.05) return
+
+                            // Use robust containment check (require > 70% inside for groups)
+                            // This allows for "messy" drops where edges might slightly overhang
+                            const isInside = isNodeMoreThanHalfInside(
+                                absoluteX,
+                                absoluteY,
+                                oldBounds.width,
+                                oldBounds.height,
+                                {
+                                    x: potentialParent.position.x,
+                                    y: potentialParent.position.y,
+                                    width: potentialParent.position.width,
+                                    height: potentialParent.position.height
+                                }
                             )
 
-                            // BUG-025 FIX: Strict validation - prevent unrelated groups from capturing this group
-                            // TASK-131 FIX: Increased ratio from 1.1 to 1.5 - 10% was too lenient, siblings were capturing each other
-                            // Ensure the potential parent is significantly larger (at least 50% larger area) to avoid accidental sibling captures
-                            // and ensure we are strictly fully inside.
                             if (isInside) {
-                                // Double check area ratio to prevent "same size" siblings from capturing each other
-                                const potentialParentArea = potentialParent.position.width * potentialParent.position.height
-                                const ratio = potentialParentArea / sectionArea
-
-                                // Only allow nesting if parent is at least 50% larger than child (avoids near-match siblings)
-                                if (ratio > 1.5) {
-                                    if (!containingParent || potentialParentArea < (containingParent.position.width * containingParent.position.height)) {
+                                // BUG-025 CHECK: Only ensure the parent is actually physically larger
+                                if (parentArea > sectionArea) {
+                                    if (!containingParent || parentArea < (containingParent.position.width * containingParent.position.height)) {
                                         containingParent = potentialParent
                                     }
                                 }

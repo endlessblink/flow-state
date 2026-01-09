@@ -197,6 +197,48 @@ function shouldFilter(message: string): boolean {
     }
   }
 
+  // Phase 17: Aggressive suppression of all debug logs by default
+  // These patterns cover most of the verbose logging throughout the codebase
+  // Suppress Canvas/Sync logs
+  if (msg.includes('[SYNC]') ||
+    msg.includes('[CANVAS]') ||
+    msg.includes('[TASK-') ||
+    msg.includes('[BUG-') ||
+    msg.includes('[VUE_FLOW') ||
+    msg.includes('[GROUP-') ||
+    msg.includes('[NESTED-') ||
+    msg.includes('[CalendarDrag]') ||
+    msg.includes('[CalendarResize]') ||
+    msg.includes('[UNDO') ||
+    msg.includes('[REDO]') ||
+    msg.includes('[PERSISTENCE]') ||
+    msg.includes('[SUPABASE]') ||
+    msg.includes('[GUEST-MODE]') ||
+    msg.includes('[SYSTEM]') ||
+    msg.includes('[RECOVERY]') ||
+    msg.includes('[SURGICAL') ||
+    msg.includes('[Auto-Collect]') ||
+    msg.includes('🔗') ||
+    msg.includes('🔓') ||
+    msg.includes('🔒') ||
+    msg.includes('🛡️') ||
+    msg.includes('🔄') ||
+    msg.includes('✅') ||
+    msg.includes('⚠️') ||
+    msg.includes('📍') ||
+    msg.includes('📦') ||
+    msg.includes('💾') ||
+    msg.includes('🎯') ||
+    msg.includes('🧹') ||
+    msg.includes('🔧') ||
+    msg.includes('📐') ||
+    msg.includes('📏') ||
+    msg.includes('🎨') ||
+    msg.includes('🖱️') ||
+    msg.includes('✂️')) {
+    return true
+  }
+
   return false
 }
 

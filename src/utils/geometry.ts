@@ -123,3 +123,42 @@ export function isTaskCenterInRect(
   const center = getTaskCenter(taskX, taskY, taskWidth, taskHeight)
   return isPointInRect(center.x, center.y, rect)
 }
+
+/**
+ * Robust containment check: Requires node to be significantly overlapping the container.
+ * This prevents "false positives" where a node just barely touches a group.
+ * 
+ *
+ * Strategy: Check overlap area.
+ * Returns true if more than `threshold` (default 0.5) of the node's area is inside the container RECT.
+ */
+export function isNodeMoreThanHalfInside(
+  nodeX: number,
+  nodeY: number,
+  nodeWidth: number,
+  nodeHeight: number,
+  containerRect: Rect,
+  threshold: number = 0.5
+): boolean {
+  // 1. Calculate intersection rectangle
+  const validX = Math.max(nodeX, containerRect.x)
+  const validY = Math.max(nodeY, containerRect.y)
+  const validRight = Math.min(nodeX + nodeWidth, containerRect.x + containerRect.width)
+  const validBottom = Math.min(nodeY + nodeHeight, containerRect.y + containerRect.height)
+
+  // Check if they simply don't overlap
+  if (validX >= validRight || validY >= validBottom) {
+    return false
+  }
+
+  // 2. Calculate overlap area
+  const intersectionWidth = validRight - validX
+  const intersectionHeight = validBottom - validY
+  const intersectionArea = intersectionWidth * intersectionHeight
+
+  // 3. Calculate node area
+  const nodeArea = nodeWidth * nodeHeight
+
+  // 4. Threshold check
+  return (intersectionArea / nodeArea) > threshold
+}

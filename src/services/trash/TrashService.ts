@@ -1,7 +1,7 @@
 import type { Task } from '@/types/tasks'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 import { getLogger } from '@/utils/productionLogger'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
 
 export class TrashService {
     private logger = getLogger()

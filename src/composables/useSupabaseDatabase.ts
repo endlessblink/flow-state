@@ -26,7 +26,11 @@ export interface TimerSettings {
     playNotificationSounds: boolean
 }
 
-export function useSupabaseDatabase() {
+// Define DatabaseDependencies for the new function signature
+interface DatabaseDependencies { }
+
+export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
+    console.log('>>> 🔄 [HMR-CHECK] useSupabaseDatabase loaded at ' + new Date().toISOString())
     const authStore = useAuthStore()
     const isSyncing = ref(false)
     const lastSyncError = ref<string | null>(null)
@@ -214,6 +218,15 @@ export function useSupabaseDatabase() {
                 if (error) throw error
                 if (!data) return []
 
+                // TASK-142 DEBUG: Log what positions we receive from Supabase
+                const tasksWithPos = data.filter((d: any) => d.position)
+                if (tasksWithPos.length > 0) {
+                    console.log(`📥 [TASK-142] LOADED ${tasksWithPos.length} tasks with positions from Supabase:`,
+                        tasksWithPos.map((d: any) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                } else {
+                    console.log(`📥 [TASK-142] LOADED ${data.length} tasks - NONE have positions in DB`)
+                }
+
                 return (data as SupabaseTask[]).map(fromSupabaseTask)
             }, 'fetchTasks')
         } catch (e: unknown) {
@@ -267,9 +280,32 @@ export function useSupabaseDatabase() {
             const userId = getUserId()
             const payload = tasks.map(t => toSupabaseTask(t, userId))
 
+            // TASK-142 DEBUG: Log what we're sending
+            const tasksWithPos = payload.filter(p => p.position)
+            if (tasksWithPos.length > 0) {
+                console.log(`📤 [TASK-142] SENDING ${tasksWithPos.length} tasks with positions:`,
+                    tasksWithPos.map(t => ({ id: t.id?.substring(0, 8), pos: t.position })))
+            }
+
+            // TASK-142 FIX: Add .select() and check data.length to detect RLS silent failures
+            // Supabase RLS can block writes but return { error: null, data: [] }
+            // Also detect PARTIAL failures where some rows are blocked
             await withRetry(async () => {
-                const { error } = await supabase.from('tasks').upsert(payload)
+                const { data, error } = await supabase.from('tasks').upsert(payload).select('id, position')
                 if (error) throw error
+                if (!data || data.length !== payload.length) {
+                    const writtenCount = data?.length ?? 0
+                    const failedCount = payload.length - writtenCount
+                    throw new Error(`RLS blocked ${failedCount} of ${payload.length} writes (only ${writtenCount} succeeded)`)
+                }
+                // TASK-142 DEBUG: Log what Supabase returned
+                const positionSaves = data.filter((d: any) => d.position)
+                if (positionSaves.length > 0) {
+                    console.log(`📥 [TASK-142] RECEIVED ${positionSaves.length} tasks with positions:`,
+                        positionSaves.map((d: any) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                } else if (tasksWithPos.length > 0) {
+                    console.error(`❌ [TASK-142] POSITION LOST! Sent ${tasksWithPos.length} with positions, received 0 back!`)
+                }
             }, 'saveTasks')
 
             lastSyncError.value = null
@@ -350,7 +386,8 @@ export function useSupabaseDatabase() {
 
             const { error, count } = await supabase
                 .from('tasks')
-                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+                // FIX: Schema compatibility - remove deleted_at if not in DB
+                .update({ is_deleted: true })
                 .in('id', taskIds)
                 .select('*', { count: 'exact' })
 
@@ -393,29 +430,59 @@ export function useSupabaseDatabase() {
             const userId = getUserId()
             const payload = toSupabaseGroup(group, userId)
 
+            // TASK-142 FIX: Add .select() and check data.length to detect RLS silent failures
+            // BUG FIX: Use position_json (actual DB column name), not position
             await withRetry(async () => {
-                const { error } = await supabase.from('groups').upsert(payload)
+                const { data, error } = await supabase.from('groups').upsert(payload).select('id, position_json')
                 if (error) throw error
+                if (!data || data.length === 0) {
+                    throw new Error('RLS blocked write - upsert returned no data for group')
+                }
+                // Log position save for debugging
+                if (data[0]?.position_json) {
+                    console.log(`📍 [GROUP-SAVE] Saved group "${group.name}" pos=(${data[0].position_json.x?.toFixed(0)}, ${data[0].position_json.y?.toFixed(0)}) to Supabase - VERIFIED`)
+                }
             }, 'saveGroup')
 
             lastSyncError.value = null
         } catch (e: unknown) {
             console.error('Save Group Error:', e)
+            throw e // Re-throw so callers know the save failed
         } finally {
             isSyncing.value = false
         }
     }
 
     const deleteGroup = async (groupId: string): Promise<void> => {
+        console.log(`🗑️ [SUPABASE-DELETE-GROUP] Starting soft-delete for group: ${groupId}`)
         try {
             isSyncing.value = true
-            const { error } = await supabase
+            const userId = getUserId() // Ensure user is authenticated
+
+            // TASK-149 FIX: Add user_id filter and verify rows affected
+            const { data, error, count } = await supabase
                 .from('groups')
+                // FIX: Column 'deleted_at' does not exist in schema. Use 'is_deleted' only.
                 .update({ is_deleted: true })
                 .eq('id', groupId)
+                .eq('user_id', userId)
+                .select('id, is_deleted', { count: 'exact' })
+
+            console.log(`🗑️ [SUPABASE-DELETE-GROUP] Result - error: ${error?.message || 'none'}, affected: ${count ?? 'unknown'}`)
+
             if (error) throw error
+
+            // Verify the delete actually worked
+            if (!data || data.length === 0) {
+                console.error(`❌ [SUPABASE-DELETE-GROUP] No rows updated - group may not exist or RLS blocked`)
+                throw new Error(`Delete failed for group ${groupId} - no rows affected`)
+            }
+
+            console.log(`✅ [SUPABASE-DELETE-GROUP] Group ${groupId} marked as deleted`)
         } catch (e: unknown) {
+            console.error(`❌ [SUPABASE-DELETE-GROUP] Failed:`, e)
             handleError(e, 'deleteGroup')
+            throw e // Re-throw so callers know the delete failed
         } finally {
             isSyncing.value = false
         }

@@ -633,11 +633,14 @@ export const useCanvasStore = defineStore('canvas', () => {
           console.log('🔄 [CANVAS] Auth state changed to authenticated - reloading groups from Supabase')
 
           // Force reload from Supabase (not localStorage)
+          // BUG FIX: ALWAYS set groups from Supabase, even if empty (respects deletions)
           try {
             const loadedGroups = await fetchGroups()
+            _rawGroups.value = loadedGroups // ALWAYS set, even if empty
             if (loadedGroups.length > 0) {
-              _rawGroups.value = loadedGroups
               console.log(`✅ [SUPABASE] Reloaded ${loadedGroups.length} canvas groups after auth`)
+            } else {
+              console.log(`📭 [SUPABASE] No groups in database after auth (all deleted or none created)`)
             }
           } catch (e) {
             console.error('❌ [CANVAS] Failed to reload groups after auth:', e)

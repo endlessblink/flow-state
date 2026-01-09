@@ -1,5 +1,5 @@
-**Last Updated**: January 9, 2026 (TASK-152-157 localStorage Fallback Audit Tasks)
-**Version**: 5.33 (Supabase Debugger Skill created)
+**Last Updated**: January 9, 2026 (BUG-061 OverdueCollector Auto-Creation Fix)
+**Version**: 5.34 (Board + Catalog View Redesign)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -148,6 +148,82 @@ Created comprehensive Supabase Debugger Skill for Claude Code to debug, monitor,
 5. Memory Investigation
 6. RLS Policy Validation
 7. Production Readiness Check
+
+---
+
+### TASK-157: ADHD-Friendly View Redesign (🔄 IN PROGRESS)
+**Priority**: P2-MEDIUM
+**Started**: January 9, 2026
+
+Redesign Board and Catalog views with Todoist-style compact design for ADHD-friendly UX.
+
+**Problem**: Board (Kanban), List, and Table views are underused due to:
+- Visual overload (TaskCard: 1,217 lines, 7-9 metadata badges)
+- God components (HierarchicalTaskRow: 1,023 lines, 37+ event listeners)
+- No external structure to guide focus (unlike Calendar/Canvas/Quick Sort)
+
+**Solution**: Compact, Todoist-inspired redesign with full bulk operations.
+
+**Phase 1: Foundation (Bulk Selection System)**
+- [ ] Create `useBulkSelection.ts` composable (Ctrl+Click, Shift+Click, Ctrl+A)
+- [ ] Create `useBulkActions.ts` composable (batch status/priority/project/delete)
+- [ ] Create `BulkActionBar.vue` component (~100 lines)
+
+**Phase 2: Catalog View Redesign**
+- [ ] Create `TaskRowCompact.vue` (~150 lines, replaces 1,023-line HierarchicalTaskRow)
+- [ ] Create `CatalogView.vue` (~400 lines, unified List/Table with density toggle)
+- [ ] Create `CatalogHeader.vue` (~100 lines, density/sort controls)
+
+**Phase 3: Board/Kanban Redesign**
+- [ ] Create `KanbanCardCompact.vue` (~250 lines, replaces 1,217-line TaskCard)
+- [ ] Simplify `BoardView.vue` (~400 lines from ~820)
+
+**Phase 4: Polish**
+- [ ] Add keyboard shortcuts (Ctrl+A, Escape, Delete, 1/2/3 for priority)
+- [ ] Add animations (selection, removal, action bar)
+- [ ] Add accessibility (ARIA, focus management)
+
+**Target Metrics**:
+- Tasks visible per screen: +40-50%
+- TaskCard LOC: 1,217 → 250 (-79%)
+- HierarchicalTaskRow LOC: 1,023 → 150 (-85%)
+- Full bulk operations across all views
+
+---
+
+### TASK-160: Codebase Health Auditor Skill (🔄 IN PROGRESS)
+**Priority**: P2-MEDIUM
+**Started**: January 9, 2026
+
+Unified skill merging Legacy Tech Remover + Comprehensive Auditor with dead code detection.
+
+**Problem**: Multiple fragmented skills for code cleanup:
+- 🧹 Legacy Tech Remover - only detects legacy patterns
+- 📊 Comprehensive Auditor - only 3/12 dimensions implemented
+- Missing: unused file/export detection, Vue-specific analysis
+
+**Solution**: Single unified skill with:
+- Knip integration (unused files/exports)
+- depcheck integration (unused npm packages)
+- TypeScript strict checking
+- Vue-specific dead code detection
+- Risk-based categorization (SAFE/CAUTION/RISKY)
+- Safe auto-removal with git rollback
+
+**Progress**:
+- [ ] Create skill directory structure
+- [ ] Write SKILL.md documentation
+- [ ] Create package.json with dependencies
+- [ ] Implement orchestrator.ts entry point
+- [ ] Implement knip-detector.ts
+- [ ] Implement depcheck-detector.ts
+- [ ] Implement typescript-detector.ts
+- [ ] Implement vue-detector.ts
+- [ ] Implement risk-scorer.ts
+- [ ] Implement reporters (JSON, Markdown)
+- [ ] Register skill in skills.json
+
+**Plan**: [.claude/plans/lexical-beaming-reddy.md](../../.claude/plans/lexical-beaming-reddy.md)
 
 ---
 
@@ -350,6 +426,155 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [ ] Fix 2: Add toRelativePosition helper to canvasGraph.ts
 - [ ] Fix 7: Z-index based on nesting depth, not area
 
+---
+
+### ~~BUG-060~~: Auth Watcher Didn't Clear Deleted Groups (✅ DONE)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+**Related**: TASK-150 (localStorage Fallback Fix)
+
+**Problem**: Deleted canvas groups reappeared after page refresh. The auth watcher in `canvas.ts` only set groups if Supabase returned groups, but didn't clear localStorage-loaded groups if Supabase returned empty (all deleted).
+
+**Root Cause**:
+```typescript
+// BEFORE (line 638) - Only set if groups exist
+if (loadedGroups.length > 0) {
+  _rawGroups.value = loadedGroups
+}
+// BUG: If Supabase returns empty, localStorage groups persisted!
+```
+
+**Fix Applied**:
+```typescript
+// AFTER - ALWAYS set from Supabase, even if empty
+_rawGroups.value = loadedGroups // Respects deletions
+```
+
+**File Modified**: `src/stores/canvas.ts:636-648`
+
+---
+
+### ~~BUG-061~~: OverdueCollector Auto-Creating Deleted Groups (✅ DONE)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+**Related**: BUG-060
+
+**Problem**: Even after fixing BUG-060, deleted canvas groups (Friday, Saturday) kept reappearing after page refresh because the `ensureActionGroups()` function in `useCanvasOverdueCollector.ts` auto-created them on every app startup.
+
+**Root Cause**: The `ensureActionGroups()` function checked if Friday/Saturday groups existed and created them if not. When groups were deleted from Supabase, they no longer existed, so the function recreated them.
+
+**Fix Applied**: Disabled auto-creation in `ensureActionGroups()` - users should manually create groups via canvas context menu.
+
+**File Modified**: `src/composables/canvas/useCanvasOverdueCollector.ts:187-242`
+
+---
+
+## Code Review Findings (January 9, 2026)
+
+> Comprehensive multi-agent code review identified 7 new issues. Related todo files in `todos/019-025-*.md`.
+
+### ~~TASK-158~~: Fix Zombie Group Race Condition (✅ DONE)
+**Priority**: P1-CRITICAL
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+**Todo File**: `todos/019-pending-p1-zombie-group-race-condition.md`
+
+**Problem**: The `recentlyDeletedGroups` Set with 10-second timeout creates a dangerous race condition. If Supabase delete takes longer than 10 seconds (network issues), the timeout clears protection and sync could recreate deleted groups.
+
+**Solution Applied**:
+- [x] Created `src/utils/deletedGroupsTracker.ts` - localStorage-backed tracker with 60s TTL fallback
+- [x] Updated `useCanvasActions.ts` - Uses `markGroupDeleted()` before delete, `confirmGroupDeleted()` after Supabase success
+- [x] Updated `useCanvasSync.ts` - Checks both in-memory Set AND persistent localStorage tracker
+- [x] Deleted groups now persist across page refresh until confirmed deleted
+
+---
+
+### ~~TASK-159~~: Add user_id Filter to Delete Operations (✅ DONE)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+**Todo File**: `todos/020-pending-p1-missing-user-id-delete-filter.md`
+
+**Problem**: While `deleteGroup()` correctly implements user_id filter, 9 other delete operations rely solely on RLS without explicit user_id filtering - violating defense-in-depth.
+
+**Solution Applied**:
+- [x] Added `.eq('user_id', userId)` to all 9 delete/restore operations
+- [x] Added row count verification to detect silent RLS blocks
+- [x] Operations now throw errors if no rows affected
+- [x] Also fixed `bulkDeleteTasks` to include `deleted_at` timestamp (missing before)
+
+**Operations Updated**:
+- `deleteProject`, `restoreProject`, `permanentlyDeleteProject`
+- `deleteTask`, `restoreTask`, `permanentlyDeleteTask`, `bulkDeleteTasks`
+- `deleteNotification`, `deleteTimerSession`
+
+---
+
+### ~~TASK-160~~: Fix Unbounded Map Memory Leak (✅ DONE)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+**Todo File**: `todos/021-complete-p2-unbounded-map-memory-leak.md`
+
+**Problem**: `sectionPositionTracker` Map in CanvasView.vue never clears entries when sections are deleted, causing memory growth.
+
+**Location**: `src/views/CanvasView.vue` (line 1766)
+
+**Solution**: Added cleanup logic that removes stale entries when sections are deleted. The watcher now tracks current section IDs and removes any Map entries for sections that no longer exist.
+
+---
+
+### ~~TASK-161~~: Fix Sync Watcher Blocking Main Thread (✅ DONE)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+**Todo File**: `todos/022-complete-p2-sync-watcher-blocks-main-thread.md`
+
+**Problem**: Watcher uses `flush: 'sync'` with expensive string operations, blocking main thread and causing jank with 50+ sections.
+
+**Location**: `src/views/CanvasView.vue` (lines 1768-1802)
+
+**Solution**: Changed `flush: 'sync'` to `flush: 'post'` to defer watcher execution until after Vue finishes DOM updates. This prevents the watcher from blocking the main thread during rapid position changes.
+
+---
+
+### TASK-162: Extract Magic Number Constants (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+**Todo File**: `todos/023-pending-p2-magic-number-constants.md`
+
+**Problem**: Timeout values (500ms, 1000ms, 10000ms) and dimensions (220, 100, 300, 200) scattered across 8+ files with no single source of truth.
+
+**Proposed Fix**: Create `src/constants/canvas.ts` with `CANVAS_TIMING` and `TASK_DIMENSIONS` constants.
+
+---
+
+### TASK-163: DRY Day-of-Week Logic (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Created**: January 9, 2026
+**Todo File**: `todos/024-pending-p2-day-of-week-logic-duplication.md`
+
+**Problem**: 50+ lines of identical day-of-week processing logic duplicated in `getSectionProperties()` and `applySectionPropertiesToTask()`.
+
+**Location**: `src/composables/canvas/useCanvasDragDrop.ts` (lines 186-203, 309-336)
+
+**Proposed Fix**: Extract to `calculateDayOfWeekDate()` helper function.
+
+---
+
+### TASK-164: Create Agent API Layer (📋 PLANNED)
+**Priority**: P3-LOW
+**Created**: January 9, 2026
+**Todo File**: `todos/025-pending-p3-agent-native-api-layer.md`
+
+**Problem**: No formal agent/tool API layer exists. Zoom controls require Vue context and aren't agent-accessible.
+
+**Proposed Fix**: Create `src/api/agentApi.ts` exposing store actions via `window.__pomoflowAgent`.
+
+---
+
 ### BUG-151: Tasks Render Empty on First Refresh (✅ DONE)
 **Priority**: P1-HIGH
 **Created**: January 9, 2026
@@ -373,21 +598,60 @@ When Vue Flow initialized with `zoom: 0` (before the canvas was ready), `isLOD3`
 
 ---
 
-### TASK-157: Consolidate Dual Backup Systems (📋 PLANNED)
+### BUG-152: Group Task Count Requires Refresh After Drop (✅ DONE)
+**Priority**: P1-HIGH
+**Created**: January 9, 2026
+**Fixed**: January 9, 2026
+
+**Problem**: When tasks were dropped into a group, the task count badge didn't update until a page refresh. Tasks also couldn't be moved immediately after being dropped.
+
+**Root Causes**:
+1. `updateSectionTaskCounts` used `filteredTasks.value` which hadn't updated yet (async timing)
+2. Multi-drag path had early return that skipped `updateSectionTaskCounts` entirely
+3. No `nextTick` to wait for Vue reactivity to propagate store updates
+
+**Fix Applied**:
+- Made `updateSectionTaskCounts` async with `await nextTick()` before reading `filteredTasks`
+- Added task count updates to multi-drag path (was missing)
+- Await the async function at call sites
+
+**File Changed**: `src/composables/canvas/useCanvasDragDrop.ts`
+
+---
+
+### ~~TASK-157~~: Consolidate Dual Backup Systems (✅ DONE)
 **Priority**: P2-MEDIUM
 **Created**: January 9, 2026
+**Completed**: January 9, 2026
 
 **Problem**: Two competing backup systems exist - `useBackupSystem.ts` and `usePersistentStorage.ts`. Both write backups independently, creating confusion about which is "correct" on restore.
 
-**Files Affected**:
-- `src/composables/useBackupSystem.ts` - BUG-059 golden backup system
-- `src/composables/usePersistentStorage.ts` - Legacy multi-layer backup
+**Files Modified**:
+- `src/composables/usePersistentStorage.ts` - Added @deprecated notice
 
-**Fix Required**:
-- [ ] Audit which backup system is actually used
-- [ ] Consolidate to single backup strategy
-- [ ] Remove unused backup system
-- [ ] Document backup architecture decision
+**Audit Findings**:
+- [x] **Neither backup system is actively imported anywhere in the app**
+- [x] Data persistence is handled directly by Pinia stores + Supabase
+- [x] Backup composables exist for manual export/import, not auto-persistence
+- [x] `useBackupSystem.ts` has been enhanced with golden backup, TTL, validation (TASK-153/156)
+- [x] `usePersistentStorage.ts` is legacy code, never imported
+
+**Decision**:
+- **KEEP**: `useBackupSystem.ts` - Enhanced with BUG-059, TASK-153, TASK-156 improvements
+- **DEPRECATED**: `usePersistentStorage.ts` - Marked with @deprecated JSDoc notice
+- **Architecture**: Supabase is the source of truth for authenticated users; localStorage is cache only
+
+**Backup Architecture Summary**:
+```
+Authenticated Users:
+  Source of Truth: Supabase (tasks, projects, groups, user_settings)
+  localStorage: Cache only, cleared on logout
+  Golden Backup: Emergency restore with deleted-item filtering
+
+Guest Mode:
+  Source of Truth: None (ephemeral)
+  localStorage: Cleared on page refresh (GUEST_EPHEMERAL_KEYS)
+```
 
 ---
 
@@ -552,8 +816,8 @@ When Vue Flow initialized with `zoom: 0` (before the canvas was ready), `isLOD3`
 - Add Docker self-host guide to README.
 - Create MIT LICENSE.
 
-### TASK-079: Tauri Desktop & Mobile (🔄 PARTIAL)
-**Priority**: P1-HIGH
+### TASK-079: Tauri Desktop & Mobile (📋 PLANNED)
+**Priority**: P3-LOW
 **Status**: Desktop basic functionality WORKING on Tuxedo OS
 
 **Desktop (Working)**:
@@ -645,7 +909,7 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 **Priority**: P1-HIGH
 - Ensure the Tauri app design mimics 1-to-1 the web app design.
 
-### TASK-131: AI Text Generation in Markdown Editor (📋 PLANNED)
+### TASK-165: AI Text Generation in Markdown Editor (📋 PLANNED)
 **Priority**: P2-MEDIUM
 **Related**: ROAD-011 (AI Assistant)
 
@@ -656,6 +920,35 @@ Add AI-powered text generation to the Tiptap markdown editor. Custom implementat
 - Commands: "Complete", "Rewrite", "Summarize", "Expand", "Fix grammar"
 - Stream responses directly into the editor
 - Keyboard shortcut (Ctrl+Space or similar) to trigger AI menu
+
+### TASK-166: Bi-directional Day Group Date Picker (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Related**: TASK-130 (Day Groups)
+
+Add option to change the date of a smart group directly, which will update the day name accordingly (bi-directional binding).
+
+**Requirements**:
+- Clickable date suffix in Day Groups
+- Date picker popup
+- When date changes:
+    - If new date is "today", rename group to "Today" or Day Name?
+    - If new date matches a day name, rename group to that day (e.g., "Monday")
+    - If date is next week, rename to "Next Monday"
+- Update invalidation logic to handle manual overrides
+
+**Proposed Implementation**:
+- `GroupNodeSimple.vue`: Add date picker trigger
+- `useGroupSettings.ts`: updateGroupDate() action
+
+### TASK-167: Day Group Date Formatting & Verification (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Related**: TASK-130
+**Started**: January 9, 2026
+
+**Requirement**: Day Groups must show date in "Day / D.M.YY" format (e.g. "Monday / 12.1.26").
+**Status**:
+- [x] Update `GroupNodeSimple.vue` formatting
+- [x] Debug Playwright test (Verified passing with robust selectors)
 
 **Implementation Approach**:
 - Create `/src/extensions/TiptapAI.ts` custom extension
@@ -1705,9 +1998,10 @@ Codebase has 3 competing network status implementations. Adding PWA would create
 - [ ] Deprecate or delete redundant implementations
 - [ ] Update all consumers to use consolidated version
 
-### TASK-130: Canvas Day-of-Week Groups & Z-Index Fixes (🔄 IN PROGRESS)
+### ~~TASK-130~~: Canvas Day-of-Week Groups & Z-Index Fixes (✅ DONE)
 **Priority**: P1-HIGH
 **Started**: January 8, 2026
+**Completed**: January 9, 2026
 
 Multi-part fix for canvas group issues affecting day-of-week groups and z-index during drag.
 

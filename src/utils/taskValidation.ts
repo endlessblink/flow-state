@@ -30,8 +30,16 @@ export interface BatchValidationResult {
 }
 
 /**
+ * UUID regex pattern for validation
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+/**
  * Check if a task ID is valid
- * Valid IDs must be non-empty strings that are not 'undefined' or 'null' literals
+ * Valid IDs must be:
+ * - Non-empty strings
+ * - Not 'undefined' or 'null' literals
+ * - Valid UUID format OR legacy prefixed format (group-xxx, instance-xxx, etc.)
  */
 export function isValidTaskId(id: unknown): id is string {
   if (typeof id !== 'string') return false
@@ -39,6 +47,19 @@ export function isValidTaskId(id: unknown): id is string {
   if (id === 'undefined') return false
   if (id === 'null') return false
   if (id.trim() === '') return false
+
+  // Check for valid UUID format (Supabase requirement)
+  if (UUID_REGEX.test(id)) return true
+
+  // Allow legacy prefixed IDs (group-xxx, instance-xxx, recovered-xxx, etc.)
+  if (id.includes('-') && !id.match(/^\d+$/)) return true
+
+  // Block pure numeric IDs (e.g., "1767970660403") - these break Supabase
+  if (/^\d+$/.test(id)) {
+    console.warn(`🛡️ [VALIDATION] Blocking numeric ID: ${id} (not UUID compatible)`)
+    return false
+  }
+
   return true
 }
 

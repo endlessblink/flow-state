@@ -7,28 +7,17 @@
       'scrolling': isScrolling
     }"
   >
-    <!-- Swimlane Header (fixed, not scrollable) -->
-    <div class="swimlane-header" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
+    <!-- Swimlane Header - TASK-157: Simplified Todoist-style -->
+    <div class="swimlane-header swimlane-header--minimal" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
       <div class="header-content--swimlane">
         <button class="collapse-btn">
-          <ChevronDown v-if="!isCollapsed" :size="16" />
-          <ChevronRight v-if="isCollapsed" :size="16" />
+          <ChevronDown v-if="!isCollapsed" :size="14" />
+          <ChevronRight v-if="isCollapsed" :size="14" />
         </button>
-        <div class="project-indicator" />
         <h3 class="project-name">
           {{ project.name }}
         </h3>
-        <span class="task-count">{{ totalTasks }} tasks</span>
-
-        <!-- View Type Dropdown -->
-        <div class="view-type-dropdown" @click.stop>
-          <CustomSelect
-            :model-value="localViewType"
-            :options="viewTypeOptions"
-            placeholder="View by..."
-            @update:model-value="(val) => { localViewType = String(val) as Project['viewType']; handleViewTypeChange({ target: { value: val } } as any) }"
-          />
-        </div>
+        <span class="task-count--subtle">{{ totalTasks }}</span>
       </div>
     </div>
 

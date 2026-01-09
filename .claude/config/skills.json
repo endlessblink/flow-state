@@ -159,6 +159,34 @@
         "meta-skill-router"
       ],
       "description": "Master skill for Architecture, Planning, and Repo organization."
+    },
+    "codebase-health-auditor": {
+      "name": "Codebase Health Auditor",
+      "category": "audit",
+      "triggers": [
+        "dead code",
+        "unused",
+        "cleanup",
+        "audit",
+        "legacy",
+        "orphan",
+        "codebase health"
+      ],
+      "keywords": [
+        "dead code",
+        "unused",
+        "cleanup",
+        "audit",
+        "knip",
+        "depcheck"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "qa-master",
+        "arch-architect"
+      ],
+      "description": "Unified dead code detection and cleanup tool combining Knip, depcheck, TypeScript, and Vue-specific analysis."
     }
   },
   "categories": {

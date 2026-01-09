@@ -1,16 +1,21 @@
 <template>
   <div class="board-view-wrapper">
-    <!-- KANBAN BOARD HEADER CONTROLS -->
-    <div class="kanban-header">
+    <!-- KANBAN BOARD HEADER CONTROLS - TASK-157: Simplified Todoist-style -->
+    <div class="kanban-header kanban-header--minimal">
       <div class="header-left">
-        <h2 class="board-title">
-          Kanban Board
-        </h2>
-        <span class="task-count">{{ totalDisplayedTasks }} tasks</span>
+        <h2 class="board-title">Board</h2>
+        <span class="task-count--subtle">{{ totalDisplayedTasks }}</span>
       </div>
-      <div class="header-controls">
-        <!-- Filter Controls -->
-        <FilterControls />
+      <div class="header-controls header-controls--minimal">
+        <!-- Filter Toggle (collapsed by default) -->
+        <button
+          class="filter-toggle icon-only"
+          :class="{ active: showFilters }"
+          title="Toggle filters"
+          @click="showFilters = !showFilters"
+        >
+          <SlidersHorizontal :size="20" :stroke-width="1.5" />
+        </button>
 
         <!-- Show Done Column Toggle -->
         <button
@@ -19,11 +24,18 @@
           :title="showDoneColumn ? 'Hide Done column' : 'Show Done column'"
           @click="handleToggleDoneColumn"
         >
-          <CheckCircle v-if="showDoneColumn" :size="16" />
-          <Circle v-else :size="16" />
+          <CheckCircle v-if="showDoneColumn" :size="20" :stroke-width="1.5" />
+          <Circle v-else :size="20" :stroke-width="1.5" />
         </button>
       </div>
     </div>
+
+    <!-- Collapsible Filter Bar -->
+    <Transition name="slide-down">
+      <div v-if="showFilters" class="filter-bar">
+        <FilterControls />
+      </div>
+    </Transition>
 
     <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
     <div class="kanban-scroll-container scroll-container">
@@ -98,7 +110,7 @@ import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { CheckCircle, Circle } from 'lucide-vue-next'
+import { CheckCircle, Circle, SlidersHorizontal } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
 import FilterControls from '@/components/base/FilterControls.vue'
 
@@ -116,6 +128,9 @@ const currentDensity = computed(() => uiStore.boardDensity)
 
 // Show done column setting
 const showDoneColumn = ref(false)
+
+// TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
+const showFilters = ref(false)
 
 // BUG-025 P4: Load kanban settings from PouchDB
 interface KanbanSettings {

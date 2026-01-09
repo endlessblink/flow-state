@@ -152,10 +152,19 @@ const dayOfWeekDateSuffix = computed(() => {
   const targetDate = new Date(today)
   targetDate.setDate(today.getDate() + daysUntilTarget)
 
-  // Format as "Jan 10" (short month + day)
-  const month = targetDate.toLocaleDateString('en-US', { month: 'short' })
+  // Format as "10.1.26" (D.M.YY)
   const day = targetDate.getDate()
-  return `${month} ${day}`
+  const month = targetDate.getMonth() + 1
+  const year = targetDate.getFullYear().toString().slice(-2)
+  
+  const formatted = `${day}.${month}.${year}`
+  console.log('[GroupNodeSimple] Computed Date Suffix:', { 
+    group: sectionName.value, 
+    keyword: powerKeyword.value?.keyword, 
+    formatted 
+  })
+  
+  return formatted
 })
 
 // Watch for external name changes

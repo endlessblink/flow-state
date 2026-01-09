@@ -152,3 +152,134 @@ onNodesChange((changes) => {
   })
 })
 ```
+
+---
+
+## 5. Critical: Parent-Child Timing Issues (BUG-152)
+
+### The Problem
+When dropping a task from inbox onto a group:
+- ❌ Task count doesn't update
+- ❌ Task doesn't move with parent group when dragged
+- ✓ Page refresh fixes both issues
+
+**Root Cause**: Vue Flow's internal parent-child discovery and coordinate calculations need extra time to settle after you replace the nodes array.
+
+### The Solution: setNodes() + Double nextTick()
+
+**WRONG (Direct Array Mutation)**:
+```typescript
+// This doesn't trigger Vue Flow's complete initialization
+nodes.value = syncNodes()
+await nextTick()
+// Vue Flow hasn't finished processing parent-child relationships!
+```
+
+**CORRECT (Use setNodes)**:
+```typescript
+import { useVueFlow } from '@vue-flow/core'
+
+const { setNodes, findNode } = useVueFlow()
+
+async function handleDrop(event, taskId, groupId) {
+  // 1. Update store
+  taskStore.updateTask(taskId, {
+    canvasPosition: { x, y },
+    isInInbox: false
+  })
+
+  // 2. Use setNodes() - triggers Vue Flow's proper initialization
+  setNodes(syncNodes())
+
+  // 3. CRITICAL: Double nextTick() for parent-child discovery
+  await nextTick()  // First tick: Vue detects change, updates DOM
+  await nextTick()  // Second tick: Vue Flow processes parent-child
+
+  // 4. Now safe to read from Vue Flow state
+  const task = findNode(`task-${taskId}`)
+  console.log('Parent:', task?.parentNode)  // ✓ Populated
+}
+```
+
+### Why Double nextTick()?
+
+Vue Flow's parent-child discovery needs multiple render cycles:
+
+| Tick | What Happens |
+|------|--------------|
+| 1st  | Vue detects array change, updates DOM |
+| 2nd  | Vue Flow discovers parent-child relationships, recalculates coordinates |
+
+### Alternative: updateNode() for Single Node Changes
+
+```typescript
+const { updateNode, findNode } = useVueFlow()
+
+async function handleDrop(taskId, groupId, pos) {
+  // 1. Update store
+  taskStore.updateTask(taskId, updates)
+
+  // 2. Update only the dropped task
+  const relativePos = convertToRelativeCoordinates(pos, groupPos)
+  updateNode(taskId, {
+    position: relativePos,
+    parentNode: `section-${groupId}`
+  })
+
+  // 3. Update group's task count
+  const groupNode = findNode(`section-${groupId}`)
+  if (groupNode) {
+    updateNode(`section-${groupId}`, {
+      data: {
+        ...groupNode.data,
+        taskCount: getTaskCountInGroup(groupId)
+      }
+    })
+  }
+
+  // 4. Double nextTick
+  await nextTick()
+  await nextTick()
+}
+```
+
+### Best Practice: Track Parent in Pinia Store
+
+For reliable task counts, track parent-child explicitly in Pinia:
+
+```typescript
+// In Pinia store
+const taskToGroupMap = ref<Record<string, string>>({})
+
+function setTaskParent(taskId: string, parentGroupId: string | null) {
+  if (parentGroupId) {
+    taskToGroupMap.value[taskId] = parentGroupId
+  } else {
+    delete taskToGroupMap.value[taskId]
+  }
+}
+
+const getTaskCountInGroup = computed(() => (groupId: string) => {
+  return Object.entries(taskToGroupMap.value)
+    .filter(([_, gId]) => gId === groupId).length
+})
+```
+
+### Common Mistakes
+
+| Mistake | Why It Breaks | Fix |
+|---------|---------------|-----|
+| Direct `nodes.value =` | Skips Vue Flow initialization | Use `setNodes()` |
+| Single `nextTick()` | Parent-child not discovered yet | Double `nextTick()` |
+| Reading from `nodes.value` in computed | Stale data | Use `findNode()` |
+| Converting to relative twice | Position is wrong | Let Vue Flow handle it OR you handle it, not both |
+| Child created before parent | parentNode can't be found | Create parents first in `syncNodes()` |
+
+### Verification Checklist
+
+After implementing, verify:
+- [ ] Drop task on group → count increments immediately
+- [ ] Drag group → task moves with it
+- [ ] Refresh page → state persists correctly
+- [ ] Move task between groups → counts update correctly
+- [ ] Rapid drops → no race conditions

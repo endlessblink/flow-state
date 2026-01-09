@@ -82,13 +82,13 @@ export const DURATION_KEYWORDS = {
  * These map day names to their JS Date day index (0=Sunday, 6=Saturday)
  */
 export const DAY_OF_WEEK_KEYWORDS = {
-  SUNDAY: { index: 0, keywords: ['sunday', 'sun'] },
-  MONDAY: { index: 1, keywords: ['monday', 'mon'] },
-  TUESDAY: { index: 2, keywords: ['tuesday', 'tue', 'tues'] },
-  WEDNESDAY: { index: 3, keywords: ['wednesday', 'wed'] },
-  THURSDAY: { index: 4, keywords: ['thursday', 'thu', 'thur', 'thurs'] },
-  FRIDAY: { index: 5, keywords: ['friday', 'fri'] },
-  SATURDAY: { index: 6, keywords: ['saturday', 'sat'] }
+  SUNDAY: { index: 0, keywords: ['sunday', 'sun', 'next sunday'] },
+  MONDAY: { index: 1, keywords: ['monday', 'mon', 'next monday'] },
+  TUESDAY: { index: 2, keywords: ['tuesday', 'tue', 'tues', 'next tuesday'] },
+  WEDNESDAY: { index: 3, keywords: ['wednesday', 'wed', 'next wednesday'] },
+  THURSDAY: { index: 4, keywords: ['thursday', 'thu', 'thur', 'thurs', 'next thursday'] },
+  FRIDAY: { index: 5, keywords: ['friday', 'fri', 'next friday'] },
+  SATURDAY: { index: 6, keywords: ['saturday', 'sat', 'next saturday'] }
 } as const
 
 /**

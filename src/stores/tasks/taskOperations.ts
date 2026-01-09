@@ -52,7 +52,7 @@ export function useTaskOperations(
             guardTaskCreation(taskData.title)
         }
 
-        const taskId = Date.now().toString()
+        const taskId = crypto.randomUUID()
         manualOperationInProgress.value = true
 
         try {
@@ -207,9 +207,12 @@ export function useTaskOperations(
 
             _rawTasks.value.splice(index, 1)
 
+            // Save to localStorage AFTER splice (for guest mode persistence)
+            await saveTasksToStorage(_rawTasks.value, 'deleteTask')
+
             // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
             // The watcher detects the deletion and removes only the affected node, preventing position resets
-            console.log(`✅ [DELETE] Task ${taskId} deleted from local state and Supabase`)
+            console.log(`✅ [DELETE] Task ${taskId} deleted from local state and storage`)
         } catch (error) {
             _rawTasks.value.splice(index, 0, deletedTask)
             console.error(`❌ [DELETE] Failed to delete task ${taskId}:`, error)
@@ -253,9 +256,12 @@ export function useTaskOperations(
             const tasksToKeep = _rawTasks.value.filter(t => !taskIds.includes(t.id))
             _rawTasks.value = tasksToKeep
 
+            // Save to localStorage AFTER filter (for guest mode persistence)
+            await saveTasksToStorage(_rawTasks.value, 'bulkDeleteTasks')
+
             // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
             // The watcher detects bulk deletions and removes only the affected nodes, preventing position resets
-            console.log(`✅ [BULK-DELETE] ${taskIds.length} tasks deleted atomically from Supabase`)
+            console.log(`✅ [BULK-DELETE] ${taskIds.length} tasks deleted atomically`)
         } catch (error) {
             console.error(`❌ [BULK-DELETE] Failed to delete ${taskIds.length} tasks:`, error)
             throw error

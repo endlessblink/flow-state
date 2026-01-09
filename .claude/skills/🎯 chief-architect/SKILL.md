@@ -115,6 +115,7 @@ A strategic meta-skill designed for personal productivity application developmen
 - **State Persistence**: Pinia + `pinia-shared-state` (Native BroadcastChannel) for cross-tab sync
 - **Data Simplicity**: Maintainable schemas for single-developer projects
 - **Personal Data Backup**: JSON/CSV Export & Import strategies (`useBackupSystem.ts`)
+- **Dual-Engine Resilience**: Shadow Backup System (Postgres + SQLite Mirror) running every 5 mins
 - **Performance**: Optimistic UI updates with background sync
 
 ### Domain 2: Personal Frontend Architecture (Vue 3 + Tailwind)

@@ -127,9 +127,13 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveProject = async (project: Project): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveProject - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = toSupabaseProject(project, userId)
             const { error } = await supabase.from('projects').upsert(payload)
             if (error) throw error
@@ -143,15 +147,26 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
 
     const saveProjects = async (projects: Project[]): Promise<void> => {
         if (projects.length === 0) return
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveProjects - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = projects.map(p => toSupabaseProject(p, userId))
-            const { error } = await supabase.from('projects').upsert(payload)
+            // BUG-171 FIX: Add .select() and verify data.length to detect RLS partial write failures
+            const { data, error } = await supabase.from('projects').upsert(payload).select('id')
             if (error) throw error
+            if (!data || data.length !== payload.length) {
+                const writtenCount = data?.length ?? 0
+                const failedCount = payload.length - writtenCount
+                throw new Error(`RLS blocked ${failedCount} of ${payload.length} project writes (only ${writtenCount} succeeded)`)
+            }
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'saveProjects')
+            throw e // BUG-171: Re-throw so callers know the save failed
         } finally {
             isSyncing.value = false
         }
@@ -254,9 +269,13 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveTask = async (task: Task): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveTask - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = toSupabaseTask(task, userId)
 
             await withRetry(async () => {
@@ -275,9 +294,13 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
 
     const saveTasks = async (tasks: Task[]): Promise<void> => {
         if (tasks.length === 0) return
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveTasks - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = tasks.map(t => toSupabaseTask(t, userId))
 
             // TASK-142 DEBUG: Log what we're sending
@@ -318,11 +341,14 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const deleteTask = async (taskId: string): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping deleteTask - not authenticated')
+            return
+        }
         console.log(`🗑️ [SUPABASE-DELETE] Starting soft-delete for task: ${taskId}`)
         try {
             isSyncing.value = true
-            // Ensure user is authenticated, will throw if not
-            getUserId()
 
             const { error, count } = await supabase
                 .from('tasks')
@@ -439,10 +465,14 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     // BUG-025 FIX: Atomic bulk delete using Supabase .in() operator
     const bulkDeleteTasks = async (taskIds: string[]): Promise<void> => {
         if (taskIds.length === 0) return
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping bulkDeleteTasks - not authenticated')
+            return
+        }
         console.log(`🗑️ [SUPABASE-BULK-DELETE] Starting atomic soft-delete for ${taskIds.length} tasks`)
         try {
             isSyncing.value = true
-            getUserId() // Ensure authenticated
 
             const { error, count } = await supabase
                 .from('tasks')
@@ -485,9 +515,13 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveGroup = async (group: any): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveGroup - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = toSupabaseGroup(group, userId)
 
             // TASK-142 FIX: Add .select() and check data.length to detect RLS silent failures
@@ -514,10 +548,14 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const deleteGroup = async (groupId: string): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping deleteGroup - not authenticated')
+            return
+        }
         console.log(`🗑️ [SUPABASE-DELETE-GROUP] Starting soft-delete for group: ${groupId}`)
         try {
             isSyncing.value = true
-            const userId = getUserId() // Ensure user is authenticated
 
             // TASK-149 FIX: Add user_id filter and verify rows affected
             const { data, error, count } = await supabase
@@ -568,8 +606,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveNotification = async (notification: ScheduledNotification): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveNotification - not authenticated')
+            return
+        }
         try {
-            const userId = getUserId()
             const payload = toSupabaseNotification(notification, userId)
             const { error } = await supabase.from('notifications').upsert(payload)
             if (error) throw error
@@ -580,8 +622,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
 
     const saveNotifications = async (notifications: ScheduledNotification[]): Promise<void> => {
         if (notifications.length === 0) return
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveNotifications - not authenticated')
+            return
+        }
         try {
-            const userId = getUserId()
             const payload = notifications.map(n => toSupabaseNotification(n, userId))
             const { error } = await supabase.from('notifications').upsert(payload)
             if (error) throw error
@@ -674,8 +720,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveUserSettings = async (settings: any): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveUserSettings - not authenticated')
+            return
+        }
         try {
-            const userId = getUserId()
             const payload = toSupabaseUserSettings(settings, userId)
 
             await withRetry(async () => {
@@ -708,8 +758,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveQuickSortSession = async (summary: any): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveQuickSortSession - not authenticated')
+            return
+        }
         try {
-            const userId = getUserId()
             const payload = toSupabaseQuickSortSession(summary, userId)
             const { error } = await supabase.from('quick_sort_sessions').upsert(payload)
             if (error) throw error

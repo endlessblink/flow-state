@@ -66,6 +66,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
+// TASK-157: Reverted to original card - fixing layout instead
 import TaskCard from './TaskCard.vue'
 import type { Task } from '@/stores/tasks'
 import { Plus } from 'lucide-vue-next'

@@ -405,8 +405,7 @@ const titleAlignmentClasses = computed(() => getAlignmentClasses(editedTask.valu
 const titleAlignmentStyles = computed(() => applyInputAlignment(editedTask.value.title))
 
 // Hebrew alignment for task description
-const descriptionAlignmentClasses = computed(() => getAlignmentClasses(editedTask.value.description))
-const descriptionAlignmentStyles = computed(() => applyInputAlignment(editedTask.value.description))
+
 
 // Helper function for subtask Hebrew alignment
 const getSubtaskAlignmentClasses = (subtask: Subtask) => getAlignmentClasses(subtask.title)

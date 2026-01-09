@@ -1,90 +1,110 @@
 <template>
-  <div class="view-controls">
+  <!-- TASK-157: Simplified Todoist-style Catalog header -->
+  <div class="view-controls view-controls--minimal">
     <!-- View Type Toggle -->
-    <div class="view-type-toggle">
-      <BaseButton
-        :variant="viewType === 'table' ? 'active' : 'secondary'"
-        size="sm"
+    <div class="view-type-toggle view-type-toggle--minimal">
+      <button
+        class="view-type-btn"
+        :class="{ active: viewType === 'table' }"
         @click="$emit('update:viewType', 'table')"
       >
-        <LayoutList :size="16" />
+        <LayoutList :size="18" :stroke-width="1.5" />
         Table
-      </BaseButton>
-      <BaseButton
-        :variant="viewType === 'list' ? 'active' : 'secondary'"
-        size="sm"
+      </button>
+      <button
+        class="view-type-btn"
+        :class="{ active: viewType === 'list' }"
         @click="$emit('update:viewType', 'list')"
       >
-        <List :size="16" />
+        <List :size="18" :stroke-width="1.5" />
         List
-      </BaseButton>
-    </div>
-
-    <!-- Density Control (Table View Only) -->
-    <div v-if="viewType === 'table'" class="density-control">
-      <button
-        v-for="option in densityOptions"
-        :key="option.value"
-        class="density-option"
-        :class="{ active: density === option.value }"
-        :title="option.label"
-        @click="$emit('update:density', option.value)"
-      >
-        <component :is="option.icon" :size="16" />
       </button>
     </div>
 
-    <!-- Expand/Collapse Controls (List View Only) -->
-    <div v-if="viewType === 'list'" class="tree-controls">
-      <BaseButton variant="secondary" size="sm" @click="$emit('expandAll')">
-        <ChevronsDown :size="16" />
-        Expand All
-      </BaseButton>
-      <BaseButton variant="secondary" size="sm" @click="$emit('collapseAll')">
-        <ChevronsUp :size="16" />
-        Collapse All
-      </BaseButton>
-    </div>
+    <!-- Filter Toggle (collapsed by default) -->
+    <button
+      class="filter-toggle"
+      :class="{ active: showFilters }"
+      title="Toggle filters"
+      @click="showFilters = !showFilters"
+    >
+      <SlidersHorizontal :size="20" :stroke-width="1.5" />
+    </button>
 
-    <!-- Sort Control -->
-    <div class="control-wrapper">
-      <CustomSelect
-        :model-value="sortBy"
-        :options="sortOptions"
-        @update:model-value="$emit('update:sortBy', $event as string)"
-      />
-    </div>
-
-    <!-- Filter Control -->
-    <div class="control-wrapper">
-      <CustomSelect
-        :model-value="filterStatus"
-        :options="filterOptions"
-        @update:model-value="$emit('update:filterStatus', $event as string)"
-      />
-    </div>
-
-    <!-- Hide Done Tasks Toggle -->
+    <!-- Hide Done Tasks Toggle (always visible as icon) -->
     <button
       v-if="hideDoneTasks !== undefined"
-      class="hide-done-toggle icon-only"
+      class="done-toggle"
       :class="{ active: hideDoneTasks }"
       :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
       @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
     >
-      <EyeOff v-if="hideDoneTasks" :size="16" />
-      <Eye v-else :size="16" />
+      <EyeOff v-if="hideDoneTasks" :size="20" :stroke-width="1.5" />
+      <Eye v-else :size="20" :stroke-width="1.5" />
     </button>
   </div>
+
+  <!-- Collapsible Filter Bar -->
+  <Transition name="slide-down">
+    <div v-if="showFilters" class="filter-bar">
+      <!-- Density Control (Table View Only) -->
+      <div v-if="viewType === 'table'" class="density-control">
+        <button
+          v-for="option in densityOptions"
+          :key="option.value"
+          class="density-option"
+          :class="{ active: density === option.value }"
+          :title="option.label"
+          @click="$emit('update:density', option.value)"
+        >
+          <component :is="option.icon" :size="16" />
+        </button>
+      </div>
+
+      <!-- Expand/Collapse Controls (List View Only) -->
+      <div v-if="viewType === 'list'" class="tree-controls">
+        <BaseButton variant="secondary" size="sm" @click="$emit('expandAll')">
+          <ChevronsDown :size="16" />
+          Expand
+        </BaseButton>
+        <BaseButton variant="secondary" size="sm" @click="$emit('collapseAll')">
+          <ChevronsUp :size="16" />
+          Collapse
+        </BaseButton>
+      </div>
+
+      <!-- Sort Control -->
+      <div class="control-wrapper">
+        <CustomSelect
+          :model-value="sortBy"
+          :options="sortOptions"
+          @update:model-value="$emit('update:sortBy', $event as string)"
+        />
+      </div>
+
+      <!-- Filter Control -->
+      <div class="control-wrapper">
+        <CustomSelect
+          :model-value="filterStatus"
+          :options="filterOptions"
+          @update:model-value="$emit('update:filterStatus', $event as string)"
+        />
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
-import { AlignJustify, List, LayoutList, ChevronsDown, ChevronsUp, Eye, EyeOff } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { AlignJustify, List, LayoutList, ChevronsDown, ChevronsUp, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
 export type ViewType = 'table' | 'list'
 export type DensityType = 'compact' | 'comfortable' | 'spacious'
+
+// TASK-157: Filters hidden by default for cleaner look
+const showFilters = ref(false)
 
 interface Props {
   viewType: ViewType
@@ -236,5 +256,97 @@ const filterOptions = [
   backdrop-filter: var(--state-active-glass);
   color: var(--state-active-text);
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* TASK-157: Minimal Catalog Header Styles */
+.view-controls--minimal {
+  padding: var(--space-2) 0;
+  gap: var(--space-2);
+}
+
+.view-type-toggle--minimal {
+  background: transparent;
+  border: none;
+  gap: var(--space-1);
+}
+
+.view-type-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.view-type-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.view-type-btn.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+}
+
+.filter-toggle,
+.done-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-toggle:hover,
+.done-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.filter-toggle.active,
+.done-toggle.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Slide-down transition */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  max-height: 60px;
 }
 </style>

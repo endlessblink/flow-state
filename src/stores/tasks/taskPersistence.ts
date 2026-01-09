@@ -65,12 +65,15 @@ export function useTaskPersistence(
     const deleteTaskFromStorage = async (taskId: string): Promise<void> => {
         console.log(`🗑️ [PERSISTENCE] deleteTaskFromStorage called for: ${taskId}`)
 
-        // BUG-021 FIX: In Guest Mode, skip Supabase deletion (tasks only exist in memory)
+        // NOTE: localStorage save happens in taskOperations.deleteTask AFTER splice
+        // Don't save here - the task is still in _rawTasks at this point!
+
+        // In Guest Mode, skip Supabase deletion
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
         if (!authStore.isAuthenticated) {
-            console.log(`✅ [PERSISTENCE] Task ${taskId} deleted (Guest Mode - memory only)`)
-            return // Success - task removal from memory happens in taskOperations.ts
+            console.log(`✅ [PERSISTENCE] Task ${taskId} will be removed from localStorage after splice`)
+            return
         }
 
         try {
@@ -87,12 +90,15 @@ export function useTaskPersistence(
         if (taskIds.length === 0) return
         console.log(`🗑️ [PERSISTENCE] bulkDeleteTasksFromStorage called for ${taskIds.length} tasks`)
 
-        // In Guest Mode, skip Supabase deletion (tasks only exist in memory)
+        // NOTE: localStorage save happens in caller AFTER array modification
+        // Don't save here - tasks are still in _rawTasks at this point!
+
+        // In Guest Mode, skip Supabase deletion
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
         if (!authStore.isAuthenticated) {
-            console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks deleted (Guest Mode - memory only)`)
-            return // Success - task removal from memory happens in taskOperations.ts
+            console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks will be removed from localStorage after splice`)
+            return
         }
 
         try {
@@ -108,8 +114,9 @@ export function useTaskPersistence(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
-        // TASK-142 FIX: ALWAYS try Supabase - if reads work, writes should too
-        // The auth check was causing position resets: loads came from Supabase but saves were blocked
+        // Always save to localStorage for persistence across refreshes (guest mode)
+        saveTasksToLocalStorage()
+
         try {
             // Validation
             const validation = validateBeforeSave(tasksToSave)
@@ -126,7 +133,8 @@ export function useTaskPersistence(
             // console.debug(`✅ [SUPABASE] Saved ${validTasksToSave.length} tasks (${context})`)
 
         } catch (e) {
-            console.error(`❌ [SUPABASE] Task save failed (${context}):`, e)
+            // Supabase failed or skipped (guest mode) - localStorage backup is still saved
+            console.debug(`⏭️ [PERSISTENCE] Supabase skipped/failed - localStorage backup saved (${context})`)
         }
     }
 
@@ -138,12 +146,13 @@ export function useTaskPersistence(
         try {
             isLoadingFromDatabase.value = true
 
-            // Guest mode: skip Supabase, start with empty tasks
+            // Guest mode: load from localStorage (persists across refreshes)
             const { useAuthStore } = await import('@/stores/auth')
             const authStore = useAuthStore()
             if (!authStore.isAuthenticated) {
-                console.log('👤 [GUEST-MODE] Skipping Supabase fetch - guest mode starts empty')
-                _rawTasks.value = []
+                const localTasks = loadTasksFromLocalStorage()
+                console.log(`👤 [GUEST-MODE] Loaded ${localTasks.length} tasks from localStorage`)
+                _rawTasks.value = localTasks
                 return
             }
 
@@ -160,13 +169,23 @@ export function useTaskPersistence(
                     invalidTasks.map(t => `${t.title}: ${JSON.stringify(t.canvasPosition)}`))
             }
 
+            // BUG-169 FIX: Safety guard - don't overwrite existing tasks with empty array
+            // This prevents data loss from race conditions during auth propagation
+            if (loadedTasks.length === 0 && _rawTasks.value.length > 0) {
+                const sessionStart = typeof window !== 'undefined' ? (window as any).PomoFlowSessionStart || 0 : 0
+                const timeSinceSessionStart = Date.now() - sessionStart
+
+                // In the first 10 seconds, don't overwrite existing tasks with empty
+                if (timeSinceSessionStart < 10000) {
+                    console.warn(`🛡️ [TASK-LOAD] BLOCKED empty overwrite - ${_rawTasks.value.length} existing tasks would be lost (session ${timeSinceSessionStart}ms old)`)
+                    return
+                }
+
+                console.warn(`⚠️ [TASK-LOAD] Supabase returned 0 tasks but ${_rawTasks.value.length} exist locally - proceeding with empty (session ${timeSinceSessionStart}ms old)`)
+            }
+
             _rawTasks.value = loadedTasks
             console.log(`✅ [SUPABASE] Loaded ${loadedTasks.length} tasks (${tasksWithPositions.length} with canvas positions)`)
-
-            // If empty, we might need a backup import (legacy logic simplified)
-            if (loadedTasks.length === 0) {
-                // Check if we need to run imports? For now, assume migration handled it.
-            }
 
         } catch (error) {
             console.error('❌ [SUPABASE] Load failed:', error)

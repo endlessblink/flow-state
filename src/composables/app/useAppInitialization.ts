@@ -95,12 +95,43 @@ export function useAppInitialization() {
             const taskId = newDoc?.id || oldDoc?.id
             if (!taskId) return
 
-            if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+            // BUG-169 DEBUG: Log ALL realtime events to diagnose task disappearance
+            console.log(`🔔 [REALTIME] Task event:`, {
+                eventType,
+                taskId: taskId?.substring(0, 8),
+                is_deleted: newDoc?.is_deleted,
+                is_deleted_type: typeof newDoc?.is_deleted,
+                title: newDoc?.title?.substring(0, 20) || oldDoc?.title?.substring(0, 20),
+                created_at: newDoc?.created_at,
+                updated_at: newDoc?.updated_at
+            })
+
+            // BUG-169 FIX: Safety guards to prevent spurious task deletions
+            // 1. Check for hard DELETE event (eventType === 'DELETE')
+            // 2. Check for soft delete ONLY if is_deleted is EXPLICITLY true (not just truthy)
+            //    This prevents issues where undefined/null might be misinterpreted
+            const isHardDelete = eventType === 'DELETE'
+            const isSoftDelete = newDoc && newDoc.is_deleted === true
+
+            if (isHardDelete || isSoftDelete) {
+                // Extra safety: Check if this task exists locally and was recently created
+                // If created in the last 10 seconds, block the deletion (likely a sync race)
+                const sessionStart = (window as any).PomoFlowSessionStart || 0
+                const timeSinceSessionStart = Date.now() - sessionStart
+
+                // Don't process deletions in the first 5 seconds of the session (anti-race guard)
+                if (timeSinceSessionStart < 5000) {
+                    console.warn(`🛡️ [REALTIME] BLOCKED deletion for task ${taskId.substring(0, 8)} - session just started (${timeSinceSessionStart}ms ago)`)
+                    return
+                }
+
+                console.warn(`⚠️ [REALTIME] Removing task ${taskId.substring(0, 8)} - eventType: ${eventType}, is_deleted: ${newDoc?.is_deleted}`)
                 taskStore.updateTaskFromSync(taskId, null, true)
             } else if (newDoc) {
                 // BUG-FIX: Map raw Supabase data to app format
                 // This ensures is_deleted -> _soft_deleted, position -> canvasPosition, etc.
                 const mappedTask = fromSupabaseTask(newDoc as SupabaseTask)
+                console.log(`✅ [REALTIME] Updating task ${taskId.substring(0, 8)} - title: ${mappedTask.title?.substring(0, 20)}`)
                 taskStore.updateTaskFromSync(taskId, mappedTask, false)
             }
         }

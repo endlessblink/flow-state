@@ -53,7 +53,7 @@ export function useCanvasResize(deps?: {
 
     // Handlers
     const handleSectionResizeStart = ({ sectionId, event: _event }: { sectionId: string; event: unknown }) => {
-        const section = canvasStore.sections.find(s => s.id === sectionId)
+        const section = canvasStore.groups.find(s => s.id === sectionId)
         if (section) {
             resizeState.value = {
                 isResizing: true,
@@ -182,9 +182,9 @@ export function useCanvasResize(deps?: {
         let newY = vueFlowNode.position.y
 
         // Check nested group status
-        const sectionForParentCheck = canvasStore.sections.find(s => s.id === sectionId)
+        const sectionForParentCheck = canvasStore.groups.find(s => s.id === sectionId)
         if (sectionForParentCheck?.parentGroupId) {
-            const parentGroup = canvasStore.sections.find(s => s.id === sectionForParentCheck.parentGroupId)
+            const parentGroup = canvasStore.groups.find(s => s.id === sectionForParentCheck.parentGroupId)
             if (parentGroup) {
                 newX = vueFlowNode.position.x + parentGroup.position.x
                 newY = vueFlowNode.position.y + parentGroup.position.y
@@ -193,7 +193,7 @@ export function useCanvasResize(deps?: {
         }
 
         if (width && height) {
-            const section = canvasStore.sections.find(s => s.id === sectionId)
+            const section = canvasStore.groups.find(s => s.id === sectionId)
             if (section) {
                 // TASK-149 FIX: Set settling flags BEFORE any async store operations
                 // This prevents syncNodes from running during the update sequence
@@ -286,7 +286,7 @@ export function useCanvasResize(deps?: {
 
                         // 2. Persist absolute and lock
                         const childSectionId = node.id.replace('section-', '')
-                        const childSection = canvasStore.sections.find(s => s.id === childSectionId)
+                        const childSection = canvasStore.groups.find(s => s.id === childSectionId)
                         if (childSection) {
                             const childAbsX = newX + childRelativeX
                             const childAbsY = newY + childRelativeY

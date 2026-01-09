@@ -227,9 +227,7 @@ const allSelected = computed(() =>
 )
 
 // Check if any items are selected
-const _hasSelection = computed(() =>
-  props.selectedCount > 0
-)
+
 
 // Icon size based on component size
 const iconSize = computed(() => {

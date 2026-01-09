@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
 import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
 
 defineProps<{
@@ -15,10 +16,14 @@ defineEmits<{
   (e: 'toggleDoneTasks'): void
   (e: 'update:viewMode', value: 'day' | 'week' | 'month'): void
 }>()
+
+// TASK-157: Filters hidden by default for cleaner look
+const showFilters = ref(false)
 </script>
 
 <template>
-  <div class="calendar-header">
+  <!-- TASK-157: Simplified Todoist-style calendar header -->
+  <div class="calendar-header calendar-header--minimal">
     <div class="date-navigation">
       <button class="nav-btn" title="Previous Day" @click="$emit('previousDay')">
         <ChevronLeft :size="16" :stroke-width="1.5" />
@@ -30,28 +35,23 @@ defineEmits<{
         <ChevronRight :size="16" :stroke-width="1.5" />
       </button>
     </div>
-    <div class="header-actions">
-      <button class="today-btn" @click="$emit('goToToday')">
-        <Calendar :size="16" :stroke-width="1.5" />
+    <div class="header-actions header-actions--minimal">
+      <button class="today-btn today-btn--minimal" @click="$emit('goToToday')">
+        <Calendar :size="18" :stroke-width="1.5" />
         Today
       </button>
 
-      <!-- Project Filter -->
-      <ProjectFilterDropdown />
-
-      <!-- Hide Done Tasks Toggle (TASK-076) -->
+      <!-- Filter Toggle (collapsed by default) -->
       <button
-        class="hide-done-toggle"
-        :class="{ active: hideCalendarDoneTasks }"
-        :title="hideCalendarDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-        @click="$emit('toggleDoneTasks')"
+        class="filter-toggle"
+        :class="{ active: showFilters }"
+        title="Toggle filters"
+        @click="showFilters = !showFilters"
       >
-        <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
-        <Eye v-else :size="16" :stroke-width="1.5" />
-        <span>{{ hideCalendarDoneTasks ? 'Hidden' : 'Done' }}</span>
+        <SlidersHorizontal :size="20" :stroke-width="1.5" />
       </button>
 
-      <div class="view-selector">
+      <div class="view-selector view-selector--minimal">
         <button
           class="view-btn"
           :class="{ active: viewMode === 'day' }"
@@ -76,6 +76,26 @@ defineEmits<{
       </div>
     </div>
   </div>
+
+  <!-- Collapsible Filter Bar -->
+  <Transition name="slide-down">
+    <div v-if="showFilters" class="filter-bar">
+      <!-- Project Filter -->
+      <ProjectFilterDropdown />
+
+      <!-- Hide Done Tasks Toggle -->
+      <button
+        class="hide-done-toggle"
+        :class="{ active: hideCalendarDoneTasks }"
+        :title="hideCalendarDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+        @click="$emit('toggleDoneTasks')"
+      >
+        <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
+        <Eye v-else :size="16" :stroke-width="1.5" />
+        <span>{{ hideCalendarDoneTasks ? 'Hidden' : 'Done' }}</span>
+      </button>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -237,5 +257,102 @@ defineEmits<{
   backdrop-filter: var(--state-active-glass);
   color: var(--text-primary);
   box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* TASK-157: Minimal Calendar Header Styles */
+.calendar-header--minimal {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.header-actions--minimal {
+  gap: var(--space-2);
+}
+
+.today-btn--minimal {
+  padding: var(--space-1) var(--space-3);
+  font-size: 13px;
+  background: transparent;
+  border: none;
+}
+
+.today-btn--minimal:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.filter-toggle.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+}
+
+.view-selector--minimal {
+  background: transparent;
+  backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  gap: var(--space-1);
+}
+
+.view-selector--minimal .view-btn {
+  padding: var(--space-1) var(--space-3);
+  font-size: 13px;
+}
+
+.view-selector--minimal .view-btn.active {
+  background: rgba(99, 102, 241, 0.15);
+  border: none;
+  box-shadow: none;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Slide-down transition */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  max-height: 60px;
 }
 </style>

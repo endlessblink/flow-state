@@ -310,7 +310,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   context: 'standalone',
-  showBrainDump: true,
+  showBrainDump: false, // TASK-157: Hidden by default for cleaner look
   startCollapsed: false,
   maxCollapsedWidth: '48px',
   expandedWidth: '320px'

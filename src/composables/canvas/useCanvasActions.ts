@@ -11,6 +11,8 @@ interface ActionsDeps {
     closeCanvasContextMenu: () => void
     closeEdgeContextMenu: () => void
     closeNodeContextMenu: () => void
+    // TASK-149: Pass recentlyDeletedGroups to prevent zombie groups
+    recentlyDeletedGroups?: Ref<Set<string>>
 }
 
 interface ActionsState {
@@ -226,12 +228,25 @@ export function useCanvasActions(
         deps.closeCanvasContextMenu()
     }
 
-    const confirmDeleteGroup = () => {
+    const confirmDeleteGroup = async () => {
         const section = state.groupPendingDelete.value
         if (!section) return
 
         const sectionNodeId = `section-${section.id}`
         console.log(`🗑️ [CanvasActions] Confirming delete for group: ${section.name} (${section.id})`)
+
+        // TASK-149 FIX: Add to recentlyDeletedGroups BEFORE any delete operation
+        // This prevents syncNodes from recreating the group before store update completes
+        if (deps.recentlyDeletedGroups) {
+            deps.recentlyDeletedGroups.value.add(section.id)
+            console.log(`🧟 [ZOMBIE-PREVENT] Added ${section.id} to recentlyDeletedGroups`)
+
+            // Clear from set after 10 seconds (enough for all sync cycles to complete)
+            setTimeout(() => {
+                deps.recentlyDeletedGroups?.value.delete(section.id)
+                console.log(`🧟 [ZOMBIE-PREVENT] Cleared ${section.id} from recentlyDeletedGroups`)
+            }, 10000)
+        }
 
         // BUG-091 FIX: Check if section exists in store (might be a ghost)
         const existsInStore = canvasStore.sections.some(s => s.id === section.id)
@@ -240,11 +255,14 @@ export function useCanvasActions(
             console.warn('👻 [CanvasActions] Ghost section detected, forcing direct removal:', sectionNodeId)
             forceRemoveGhostNode(section.id)
         } else {
-            // Perform the deletion (safe to call even if not in store)
-            canvasStore.deleteSection(section.id)
+            // TASK-149 FIX: AWAIT the deletion to ensure Supabase soft-delete completes
+            // before any sync operation can fetch and recreate the group
+            await canvasStore.deleteSection(section.id)
+            console.log(`✅ [TASK-149] Delete completed for "${section.name}" - now safe to sync`)
         }
 
         // Force high priority sync which cleans up/re-verifies
+        // Now safe because Supabase delete is complete
         nextTick(() => deps.batchedSyncNodes('high'))
 
         // Close the modal
@@ -347,13 +365,19 @@ export function useCanvasActions(
         state.selectedNode.value = null
     }
 
-    const deleteNode = () => {
+    const deleteNode = async () => {
         if (!state.selectedNode.value) return
 
         if (state.selectedNode.value.id.startsWith('section-')) {
             const sectionId = state.selectedNode.value.id.replace('section-', '')
             // Check existence
             const existsInStore = canvasStore.sections.some(s => s.id === sectionId)
+
+            // TASK-149 FIX: Add to recentlyDeletedGroups to prevent zombie recreation
+            if (deps.recentlyDeletedGroups) {
+                deps.recentlyDeletedGroups.value.add(sectionId)
+                setTimeout(() => deps.recentlyDeletedGroups?.value.delete(sectionId), 10000)
+            }
 
             if (!existsInStore) {
                 if (confirm('Delete this ghost group?')) {
@@ -368,7 +392,8 @@ export function useCanvasActions(
                         : `Delete "${section.name}" section?`
 
                     if (confirm(msg)) {
-                        canvasStore.deleteSection(sectionId)
+                        // TASK-149 FIX: AWAIT the deletion
+                        await canvasStore.deleteSection(sectionId)
                         deps.syncNodes()
                     }
                 }
@@ -379,59 +404,7 @@ export function useCanvasActions(
 
     // --- Keyboard Handlers ---
 
-    const handleKeyDown = async (event: KeyboardEvent) => {
-        const isDeleteKey = event.key === 'Delete' || event.key === 'Backspace'
 
-        if (event.key === 'f' || event.key === 'F') {
-            // Handled by Zoom composable usually, but we might intercept here if needed.
-        }
-
-        if (!isDeleteKey) return
-
-        const selectedNodes = getSelectedNodes.value
-        if (!selectedNodes || selectedNodes.length === 0) return
-
-        // Input protection
-        const target = event.target as HTMLElement | null
-        if (target) {
-            const tagName = target.tagName
-            const isEditable = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
-            if (isEditable && !event.shiftKey) return
-        }
-
-        event.preventDefault()
-        const permanentDelete = event.shiftKey
-
-        // Collect all items to delete - show ONE confirmation for all
-        const itemsToDelete: { id: string; name: string; type: 'task' | 'section' }[] = []
-
-        for (const node of selectedNodes) {
-            if (node.id.startsWith('section-')) {
-                const sectionId = node.id.replace('section-', '')
-                const section = canvasStore.sections.find(s => s.id === sectionId)
-                const exists = !!section
-                itemsToDelete.push({
-                    id: sectionId,
-                    name: section?.name || 'Unknown Section',
-                    type: 'section'
-                })
-            } else {
-                const task = taskStore.getTask(node.id)
-                itemsToDelete.push({
-                    id: node.id,
-                    name: task?.title || 'Unknown Task',
-                    type: 'task'
-                })
-            }
-        }
-
-        if (itemsToDelete.length === 0) return
-
-        // Show bulk delete confirmation modal
-        state.bulkDeleteItems.value = itemsToDelete
-        state.bulkDeleteIsPermanent.value = permanentDelete
-        state.isBulkDeleteModalOpen.value = true
-    }
 
     // Confirm bulk delete - called when user confirms the modal
     const confirmBulkDelete = async () => {
@@ -440,6 +413,12 @@ export function useCanvasActions(
 
         for (const item of items) {
             if (item.type === 'section') {
+                // TASK-149 FIX: Add to recentlyDeletedGroups to prevent zombie groups
+                if (deps.recentlyDeletedGroups) {
+                    deps.recentlyDeletedGroups.value.add(item.id)
+                    setTimeout(() => deps.recentlyDeletedGroups?.value.delete(item.id), 10000)
+                }
+
                 const exists = canvasStore.sections.some(s => s.id === item.id)
                 if (!exists) {
                     forceRemoveGhostNode(item.id)
@@ -496,7 +475,7 @@ export function useCanvasActions(
         handleNodeContextMenu,
         closeNodeContextMenu,
         deleteNode,
-        handleKeyDown,
+
         // Bulk delete handlers
         confirmBulkDelete,
         cancelBulkDelete

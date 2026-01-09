@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useTaskStore } from './tasks'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
 
 // Cross-tab sync imports - for timer synchronization across browser tabs
 import {

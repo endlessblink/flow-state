@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, watch, computed } from 'vue'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+// Force HMR update
 import { type Task } from './tasks'
 import { detectPowerKeyword } from '@/composables/useTaskSmartGroups'
 // TASK-131: Import lock checking for patchGroups
 import { isGroupPositionLocked } from '@/utils/canvasStateLock'
+import { getAbsoluteNodePosition } from '@/utils/canvasGraph'
 import type {
   GroupFilter,
   TaskPosition,
@@ -141,8 +143,11 @@ export const useCanvasStore = defineStore('canvas', () => {
           invalidGroups.map(g => `${g.name}: ${JSON.stringify(g.position)}`))
       }
 
+      // TASK-150 FIX: When authenticated, Supabase is the source of truth
+      // Don't fall back to localStorage which may have stale/deleted groups
+      _rawGroups.value = loadedGroups
+
       if (loadedGroups.length > 0) {
-        _rawGroups.value = loadedGroups
         console.log(`✅ [SUPABASE] Loaded ${loadedGroups.length} canvas groups:`, loadedGroups.map(g => g.name))
 
         // TASK-142 DEBUG: Log positions of loaded groups
@@ -150,18 +155,12 @@ export const useCanvasStore = defineStore('canvas', () => {
         loadedGroups.forEach(g => {
           console.log(`   - ${g.name}: (${g.position?.x?.toFixed(0) ?? 'null'}, ${g.position?.y?.toFixed(0) ?? 'null'})`)
         })
-
-        // NOTE: Guest mode is fully ephemeral - no localStorage caching
-        // Authenticated users get data from Supabase directly
-        return
+      } else {
+        console.log(`📭 [SUPABASE] No groups in database (all deleted or none created)`)
       }
 
-      // Supabase returned empty - try localStorage as fallback
-      const localGroups = loadGroupsFromLocalStorage()
-      if (localGroups.length > 0) {
-        _rawGroups.value = localGroups
-        console.log(`✅ [FALLBACK] Using ${localGroups.length} groups from localStorage (Supabase empty)`)
-      }
+      // NOTE: Authenticated users use Supabase as single source of truth
+      // No localStorage fallback - empty means empty
 
     } catch (e) {
       console.error('❌ [SUPABASE] Failed to load canvas groups:', e)
@@ -379,14 +378,54 @@ export const useCanvasStore = defineStore('canvas', () => {
     const group = _rawGroups.value.find(g => g.id === groupId)
     if (!group) return 0
 
+    // Helper: Calculate absolute position recursively from store data
+    // This is safer than relying on Vue Flow nodes which might be stale during sync
+    const getGroupAbsolutePosition = (group: CanvasGroup): { x: number, y: number } => {
+      // SAFETY: Handle undefined position (legacy data or partial smart groups)
+      let x = group.position?.x ?? 0
+      let y = group.position?.y ?? 0
+      let parentId = group.parentGroupId
+
+      // Safety depth limit to prevent infinite loops
+      let depth = 0
+      while (parentId && parentId !== 'NONE' && depth < 20) {
+        // SAFETY: _rawGroups is the source of truth
+        const parent = _rawGroups.value.find(g => g.id === parentId)
+        if (parent) {
+          x += parent.position?.x ?? 0
+          y += parent.position?.y ?? 0
+          parentId = parent.parentGroupId
+          depth++
+        } else {
+          break
+        }
+      }
+      return { x, y }
+    }
+
     // Direct tasks in this group
     let count = tasks.filter(t => {
-      // Check if task explicitly assigned (future proof)
-      // if (t.groupId === groupId) return true
+      // 1. Calculate Group Absolute Rect
+      const absPos = getGroupAbsolutePosition(group)
+      const groupRect = {
+        x: absPos.x,
+        y: absPos.y,
+        width: group.position?.width ?? 300,
+        height: group.position?.height ?? 200
+      }
 
-      // Check visual containment
+      // 2. Get Task Center (Absolute)
+      let taskCenterX, taskCenterY
+
       if (t.canvasPosition) {
-        return isPointInRect(t.canvasPosition.x, t.canvasPosition.y, group.position)
+        // Task position is ALWAYS absolute in store
+        // Just align to center
+        const w = 220
+        const h = 100
+        taskCenterX = t.canvasPosition.x + (w / 2)
+        taskCenterY = t.canvasPosition.y + (h / 2)
+
+        return isPointInRect(taskCenterX, taskCenterY, groupRect)
       }
       return false
     }).length

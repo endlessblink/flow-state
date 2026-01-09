@@ -48,11 +48,15 @@
       @dragover.prevent
       @contextmenu.prevent="handleCanvasRightClick"
     >
-      <!-- Canvas Filter Toggles - Absolute position handled in component or component moved out -->
-      <!-- Keeping component inside drop zone to match previous Z-index context, 
-           but component itself has absolute positioning. -->
-      <CanvasFilterControls />
-      <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
+      <!-- Canvas Controls - Zoom/Fit -->
+      <CanvasControls />
+      
+      <!-- Canvas Toolbar - Actions & Filters -->
+      <CanvasToolbar
+        @addTask="handleAddTask"
+        @createGroup="handleToolbarCreateGroup"
+      />
+
       <!-- Loading overlay while canvas initializes (only when there are tasks that should be on canvas) -->
       <CanvasLoadingOverlay 
         v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0"
@@ -60,10 +64,9 @@
       />
 
       <!-- Empty state when no tasks exist -->
-      <!-- Empty state when no tasks exist -->
-      <CanvasEmptyState 
-        v-if="hasNoTasks" 
-        @add-task="handleAddTask"
+      <CanvasEmptyState
+        v-if="hasNoTasks"
+        @addTask="handleAddTask"
       />
 
       <!-- ================================================================= -->
@@ -388,7 +391,9 @@ import UnifiedInboxPanel from '../components/inbox/UnifiedInboxPanel.vue'
 import CanvasModals from '../components/canvas/CanvasModals.vue'
 import CanvasEmptyState from '../components/canvas/CanvasEmptyState.vue'
 import CanvasContextMenus from '../components/canvas/CanvasContextMenus.vue'
-import CanvasFilterControls from '../components/canvas/CanvasFilterControls.vue'
+// import CanvasFilterControls from '../components/canvas/CanvasFilterControls.vue' // Replaced by CanvasToolbar
+import CanvasToolbar from '../components/canvas/CanvasToolbar.vue' // [NEW]
+import CanvasControls from '../components/canvas/CanvasControls.vue' // [NEW]
 import CanvasStatusBanner from '../components/canvas/CanvasStatusBanner.vue'
 import CanvasLoadingOverlay from '../components/canvas/CanvasLoadingOverlay.vue'
 import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
@@ -418,7 +423,9 @@ import { useCanvasSmartGroups } from '../composables/canvas/useCanvasSmartGroups
 import { useCanvasActions } from '../composables/canvas/useCanvasActions'
 import { useCanvasConnections } from '../composables/canvas/useCanvasConnections'
 import { useCanvasSync } from '../composables/canvas/useCanvasSync'
+
 import { useCanvasResize } from '../composables/canvas/useCanvasResize'
+import { useCanvasHotkeys } from '../composables/canvas/useCanvasHotkeys'
 // import { NodeUpdateBatcher } from '../utils/canvas/NodeUpdateBatcher'
 
 const taskStore = useTaskStore()
@@ -666,6 +673,7 @@ const nodesInitialized = useNodesInitialized()
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
 const recentlyRemovedEdges = ref(new Set<string>())
+const recentlyDeletedGroups = ref(new Set<string>()) // TASK-146: Track deleted groups locally
 
 // Phase 1: Resource Manager & Zoom (Extracted)
 const resourceManager = useCanvasResourceManager(nodes, edges)
@@ -758,6 +766,7 @@ const {
   edges,
   filteredTasks,
   recentlyRemovedEdges,
+  recentlyDeletedGroups, // TASK-146: Pass to sync logic
   vueFlowRef,
   isHandlingNodeChange,
   isSyncing,
@@ -770,6 +779,16 @@ const {
   setOperationError,
   setOperationLoading,
   clearOperationError
+})
+
+// FIX: Trigger sync when drag settling completes to ensure correct task counts
+// This ensures that after the 500ms settlement delay, we perform a final sync
+// to update task counts in groups and ensure persistence consistency
+watch(isDragSettlingRef, (newValue) => {
+    if (!newValue && !isNodeDragging.value && !isSyncing.value) {
+        console.log('👀 [CANVAS-VIEW] Drag settlement complete, triggering sync for task counts...')
+        batchedSyncNodes('normal')
+    }
 })
 
 // TASK-100: Overdue Smart Group Logic
@@ -1406,6 +1425,13 @@ const nodeTypes = markRaw({
 const { width, height } = useWindowSize()
 const { ctrl: _ctrl, shift } = useMagicKeys()
 
+// 🚀 Hotkeys (Extracted Phase 4)
+// Must be initialized before useActions to wire up bulk delete state
+// But bulk delete state comes from useCanvasActions... Circular?
+// Wait, useCanvasHotkeys needs bulkDeleteState refs.
+// useCanvasActions CREATES the state.
+// So we must initialize useCanvasActions first, get state, then init hotkeys.
+
 // 🚀 CPU Optimization: Efficient Node Update Batching System
 // Extracted to src/utils/canvas/NodeUpdateBatcher.ts
 // MOVED: nodeUpdateBatcher initialization moved to after vueFlowRef declaration
@@ -1447,7 +1473,7 @@ const {
   handleNodeContextMenu,
   // closeNodeContextMenu, // Provided by useCanvasEvents
   deleteNode,
-  handleKeyDown,
+
   confirmBulkDelete,
   cancelBulkDelete
 } = useCanvasActions(
@@ -1459,6 +1485,7 @@ const {
 
     closeEdgeContextMenu,
     closeNodeContextMenu, // Provided by useCanvasEvents
+    recentlyDeletedGroups, // TASK-149: Pass to prevent zombie groups
   },
   {
     isQuickTaskCreateOpen,
@@ -1486,6 +1513,14 @@ const {
   },
   undoHistory
 )
+
+// 🚀 Hotkeys Integration
+const { handleKeyDown } = useCanvasHotkeys({
+  isBulkDeleteModalOpen, 
+  bulkDeleteItems, 
+  bulkDeleteIsPermanent
+})
+
 
 const {
   handleNodeDragStart,
@@ -1722,6 +1757,34 @@ resourceManager.addWatcher(
     () => {
       batchedSyncNodes('high')
     }
+  )
+)
+
+// DEBUG: Track ALL section node position changes in Vue Flow nodes array
+const sectionPositionTracker = new Map<string, { x: number; y: number }>()
+resourceManager.addWatcher(
+  watch(
+    () => nodes.value.filter(n => n.type === 'sectionNode').map(n => `${n.id}:${n.position.x.toFixed(0)}:${n.position.y.toFixed(0)}`).join('|'),
+    (newVal, oldVal) => {
+      if (newVal === oldVal) return
+      // Track which sections changed
+      nodes.value.filter(n => n.type === 'sectionNode').forEach(n => {
+        const prev = sectionPositionTracker.get(n.id)
+        if (prev) {
+          const dx = Math.abs(n.position.x - prev.x)
+          const dy = Math.abs(n.position.y - prev.y)
+          if (dx > 20 || dy > 20) {
+            console.debug(`ℹ️ [NODE-POSITION-CHANGE] Section "${n.data?.name || n.id}" moved`, {
+              from: prev,
+              to: { x: n.position.x, y: n.position.y },
+              delta: { dx: dx.toFixed(0), dy: dy.toFixed(0) }
+            })
+          }
+        }
+        sectionPositionTracker.set(n.id, { x: n.position.x, y: n.position.y })
+      })
+    },
+    { flush: 'sync' } // Catch immediately
   )
 )
 
@@ -2131,6 +2194,17 @@ const _createGroup = () => {
 
   // Close the context menu
   closeCanvasContextMenu()
+}
+
+// Handler for toolbar create group (uses center of screen or offset)
+const handleToolbarCreateGroup = (event: MouseEvent) => {
+  // Use Vue Flow projection to find center of current viewport
+  const { x, y, zoom } = canvasStore.viewport
+  const centerX = (-x + (width.value / 2)) / zoom
+  const centerY = (-y + (height.value / 2)) / zoom
+  
+  groupModalPosition.value = { x: centerX, y: centerY }
+  isGroupModalOpen.value = true
 }
 
 // Section Settings Modal handlers
@@ -2746,13 +2820,14 @@ onBeforeUnmount(() => {
 }
 
 
+/* TASK-141 FIX: Tasks must ALWAYS be above groups (groups use z-index 1-99) */
 .vue-flow__node:not([data-id^="section-"]) {
-  z-index: 10 !important;
+  z-index: 1000 !important;
 }
 
 /* Ensure task nodes stay on top during hover */
 .vue-flow__node:not([data-id^="section-"]):hover {
-  z-index: 20 !important;
+  z-index: 1001 !important;
   transform: scale(1.02);
   transition: transform 0.2s ease;
 }
@@ -2890,13 +2965,7 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-sm);
 }
 
-.selection-box {
-  position: fixed;
-  border: 1px solid var(--primary-color);
-  background-color: rgba(99, 102, 241, 0.1);
-  pointer-events: none;
-  z-index: 9999;
-}
+
 
 /* Remove background/container borders */
 .vue-flow__background,

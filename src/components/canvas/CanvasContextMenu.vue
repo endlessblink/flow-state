@@ -211,8 +211,7 @@ import {
   LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3,
   Settings, Zap, Magnet // TASK-068: Icons for group actions moved from header
 } from 'lucide-vue-next'
-import { useContextMenuEvents } from '@/composables/useContextMenuEvents'
-import { useContextMenuPositioning } from '@/composables/useContextMenuPositioning'
+import { useContextMenu } from '@/composables/useContextMenu'
 import type { CanvasSection } from '@/stores/canvas'
 
 interface Props {
@@ -296,21 +295,15 @@ const submenuStyle = computed((): Record<string, string> => {
   }
 })
 
-// Use unified positioning system with reactive getters
-const { menuPosition, updatePosition } = useContextMenuPositioning({
+// Use unified context menu composable (consolidated events + positioning)
+const { menuPosition, updatePosition } = useContextMenu({
   x: () => props.x,
   y: () => props.y,
-  menuRef,
-  isVisible: () => props.isVisible,
-  offset: { x: 0, y: 0 },
-  viewportPadding: 16
-})
-
-// Use unified event handling with reactive getter
-useContextMenuEvents({
   isVisible: () => props.isVisible,
   menuRef,
   closeCallback: () => emit('close'),
+  offset: { x: 0, y: 0 },
+  viewportPadding: 16,
   preventCloseOnMenuClick: true
 })
 
@@ -474,7 +467,7 @@ const handleArrangeInGrid = () => {
   emit('close')
 }
 
-// Cleanup handled by useContextMenuEvents composable
+// Cleanup handled by useContextMenu composable
 </script>
 
 <style scoped>

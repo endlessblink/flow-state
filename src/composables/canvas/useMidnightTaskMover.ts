@@ -43,6 +43,11 @@ export function useMidnightTaskMover(
 
         // Find tasks that are visually inside the "Today" group (canvasPosition within group bounds)
         const todayBounds = todayGroup.position
+        if (!todayBounds) {
+            console.warn('[TASK-082] "Today" group found but position is missing - skipping transition')
+            return { movedCount: 0, reason: 'today-group-invalid' }
+        }
+
         const tasksInToday = taskStore.tasks.filter(task => {
             // Skip tasks that are in inbox or have no position
             if (!task.canvasPosition || task.isInInbox) return false
@@ -65,13 +70,20 @@ export function useMidnightTaskMover(
 
         // Calculate positions in the Overdue group
         const overdueBounds = overdueGroup.position
+        if (!overdueBounds) {
+            console.warn('[TASK-082] "Overdue" group found but position is missing - skipping transition')
+            return { movedCount: 0, reason: 'overdue-group-invalid' }
+        }
+
         const taskWidth = 220
         const taskHeight = 100
         const padding = 20
         const headerHeight = 60
 
         // Simple grid layout calculation
-        const cols = Math.max(1, Math.floor((overdueBounds.width - padding * 2) / (taskWidth + 10)))
+        // Fix: Use width/height from bounds or defaults if missing in partials
+        const boundsWidth = overdueBounds.width || 400
+        const cols = Math.max(1, Math.floor((boundsWidth - padding * 2) / (taskWidth + 10)))
 
         // Move each task to the Overdue group
         for (let i = 0; i < tasksInToday.length; i++) {

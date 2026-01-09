@@ -1,0 +1,534 @@
+---
+name: supabase-debugger
+description: This skill should be used when debugging, monitoring, or optimizing Supabase applications. Triggers on Supabase connection issues, RLS policy problems, authentication failures, slow queries, realtime subscription bugs, memory leaks, and database schema validation. Provides real-time inspection, error tracking, performance analysis, and systematic debugging workflows for local and cloud Supabase environments.
+---
+
+# Supabase Debugger
+
+Debug, monitor, and optimize Supabase applications with systematic troubleshooting workflows and real-time analysis.
+
+## Overview
+
+This skill enables comprehensive debugging of Supabase applications covering:
+- **Authentication**: Session monitoring, token inspection, MFA tracking
+- **Database**: Query analysis, RLS policy validation, connection pooling
+- **Realtime**: Subscription monitoring, latency testing, payload analysis
+- **Performance**: Memory tracking, slow query detection, optimization recommendations
+
+## When to Use This Skill
+
+Activate this skill when encountering:
+- "Connection refused" or database connectivity issues
+- Authentication token expired/invalid errors
+- RLS policy violations or permission denied errors
+- Slow queries or page load performance issues
+- Realtime messages not delivering
+- Memory usage growing unexpectedly
+- Schema validation errors (missing columns, constraints)
+- Pre-deployment verification needs
+
+## Workflow Decision Tree
+
+```
+Issue Type?
+├── Connection Issues → Workflow 1: Connection Diagnostics
+├── Auth Problems → Workflow 2: Authentication Debugging
+├── Slow Performance → Workflow 3: Query Optimization
+├── Realtime Issues → Workflow 4: Subscription Debugging
+├── Memory Leaks → Workflow 5: Memory Investigation
+├── RLS Violations → Workflow 6: Policy Validation
+└── Pre-Deploy Check → Workflow 7: Production Readiness
+```
+
+## Workflow 1: Connection Diagnostics
+
+When encountering "Connection refused" or database connectivity issues:
+
+### Step 1: Verify Infrastructure
+
+```bash
+# Check if Docker is running
+docker ps
+
+# Check Supabase services status
+npx supabase status
+```
+
+### Step 2: Test Database Connection
+
+```bash
+# Test PostgreSQL connection directly
+psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "SELECT 1"
+
+# Check connection from application
+curl http://localhost:54321/rest/v1/ -H "apikey: YOUR_ANON_KEY"
+```
+
+### Step 3: Analyze Connection Pool
+
+```sql
+-- Check active connections
+SELECT count(*), state, wait_event_type
+FROM pg_stat_activity
+GROUP BY state, wait_event_type;
+
+-- Check max connections
+SHOW max_connections;
+```
+
+### Step 4: Common Fixes
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Connection refused | Docker not running | `docker-compose up -d` |
+| Too many connections | Pool exhausted | Implement connection pooling |
+| Timeout | Network issue | Check firewall, increase timeout |
+
+## Workflow 2: Authentication Debugging
+
+When users report login failures or token issues:
+
+### Step 1: Inspect Token
+
+```javascript
+// Decode JWT token (in browser console)
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+const payload = JSON.parse(atob(token.split('.')[1]));
+console.log({
+  userId: payload.sub,
+  email: payload.email,
+  role: payload.role,
+  expiresAt: new Date(payload.exp * 1000),
+  isExpired: Date.now() > payload.exp * 1000
+});
+```
+
+### Step 2: Check Auth Configuration
+
+```sql
+-- Check auth.users table
+SELECT id, email, created_at, last_sign_in_at, confirmed_at
+FROM auth.users
+WHERE email = 'user@example.com';
+
+-- Check auth settings
+SELECT * FROM auth.config;
+```
+
+### Step 3: Monitor Auth Events
+
+```javascript
+// Set up auth state listener
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Auth event:', event);
+  console.log('Session:', session);
+});
+```
+
+### Step 4: Token Refresh Implementation
+
+```javascript
+// Implement token refresh before expiration
+const { data, error } = await supabase.auth.refreshSession();
+if (error) {
+  console.error('Refresh failed:', error.message);
+  // Handle by redirecting to login
+}
+```
+
+## Workflow 3: Query Optimization
+
+When experiencing slow page loads or database performance issues:
+
+### Step 1: Enable Query Logging
+
+```sql
+-- Enable pg_stat_statements extension
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+-- View slow queries
+SELECT
+  query,
+  calls,
+  total_time / calls as avg_time_ms,
+  rows
+FROM pg_stat_statements
+WHERE query NOT LIKE '%pg_stat_statements%'
+ORDER BY total_time DESC
+LIMIT 20;
+```
+
+### Step 2: Analyze Specific Query
+
+```sql
+-- Explain analyze a slow query
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT * FROM tasks WHERE user_id = 'uuid-here';
+```
+
+### Step 3: Index Recommendations
+
+```sql
+-- Find missing indexes on foreign keys
+SELECT
+  tc.table_name,
+  kcu.column_name,
+  'CREATE INDEX idx_' || tc.table_name || '_' || kcu.column_name
+    || ' ON ' || tc.table_name || '(' || kcu.column_name || ');' as suggested_index
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND NOT EXISTS (
+  SELECT 1 FROM pg_indexes
+  WHERE tablename = tc.table_name
+  AND indexdef LIKE '%' || kcu.column_name || '%'
+);
+```
+
+### Step 4: Query Optimization Patterns
+
+```javascript
+// BEFORE: Slow query
+const { data } = await supabase
+  .from('users')
+  .select('*')
+  .limit(100);
+
+// AFTER: Optimized query
+const { data } = await supabase
+  .from('users')
+  .select('id, name, email')  // Specific columns
+  .order('created_at', { ascending: false })
+  .limit(100);
+```
+
+## Workflow 4: Subscription Debugging
+
+When realtime messages are not delivering:
+
+### Step 1: Verify Realtime Status
+
+```javascript
+// Check subscription state
+const channel = supabase.channel('test');
+channel.on('system', {}, (payload) => {
+  console.log('System event:', payload);
+}).subscribe((status) => {
+  console.log('Subscription status:', status);
+});
+```
+
+### Step 2: Test Channel Connectivity
+
+```javascript
+// Simple broadcast test
+const channel = supabase.channel('test-channel');
+
+channel
+  .on('broadcast', { event: 'test' }, (payload) => {
+    console.log('Received:', payload);
+  })
+  .subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await channel.send({
+        type: 'broadcast',
+        event: 'test',
+        payload: { message: 'hello', timestamp: Date.now() }
+      });
+    }
+  });
+```
+
+### Step 3: Check Database Triggers
+
+```sql
+-- Verify realtime is enabled on table
+SELECT * FROM pg_publication_tables
+WHERE pubname = 'supabase_realtime';
+
+-- Enable realtime for a table
+ALTER PUBLICATION supabase_realtime ADD TABLE your_table;
+```
+
+### Step 4: Common Realtime Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| No messages | Table not in publication | Add to supabase_realtime publication |
+| Dropped messages | Payload > 1MB | Reduce payload size with select() |
+| Stale connection | No heartbeat | Implement reconnection logic |
+| Filter not working | Syntax error | Use `eq.` prefix: `filter: 'id=eq.123'` |
+
+## Workflow 5: Memory Investigation
+
+When memory usage grows without cleanup:
+
+### Step 1: Track Memory Delta
+
+```javascript
+// Browser memory tracking
+const initialMemory = performance.memory?.usedJSHeapSize || 0;
+setInterval(() => {
+  const currentMemory = performance.memory?.usedJSHeapSize || 0;
+  const delta = currentMemory - initialMemory;
+  console.log(`Memory delta: ${(delta / 1024 / 1024).toFixed(2)} MB`);
+}, 5000);
+```
+
+### Step 2: Audit Subscriptions
+
+```javascript
+// List all active channels
+const channels = supabase.getChannels();
+console.log('Active channels:', channels.length);
+channels.forEach(ch => {
+  console.log(`- ${ch.topic}: ${ch.state}`);
+});
+```
+
+### Step 3: Proper Cleanup Pattern
+
+```javascript
+// React/Vue cleanup pattern
+useEffect(() => {
+  const channel = supabase
+    .channel('my-channel')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'tasks' },
+      handleChange
+    )
+    .subscribe();
+
+  // CRITICAL: Cleanup on unmount
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
+```
+
+### Step 4: Database Connection Cleanup
+
+```javascript
+// Implement connection pooling
+const supabase = createClient(url, key, {
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,  // Rate limit
+    },
+  },
+});
+```
+
+## Workflow 6: RLS Policy Validation
+
+When encountering permission denied errors:
+
+### Step 1: Check Current Policies
+
+```sql
+-- View all policies on a table
+SELECT
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  roles,
+  cmd,
+  qual,
+  with_check
+FROM pg_policies
+WHERE tablename = 'your_table';
+```
+
+### Step 2: Test Policy as User
+
+```sql
+-- Temporarily switch to user role and test
+SET ROLE authenticated;
+SET request.jwt.claim.sub = 'user-uuid-here';
+
+SELECT * FROM your_table;  -- Test SELECT
+INSERT INTO your_table (col) VALUES ('test');  -- Test INSERT
+
+RESET ROLE;
+```
+
+### Step 3: Common RLS Patterns
+
+```sql
+-- Users can only see their own data
+CREATE POLICY "Users see own data"
+ON tasks FOR SELECT
+USING (auth.uid() = user_id);
+
+-- Users can insert their own data
+CREATE POLICY "Users create own data"
+ON tasks FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own data
+CREATE POLICY "Users update own data"
+ON tasks FOR UPDATE
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+```
+
+### Step 4: Debug Silent RLS Failures
+
+```javascript
+// Check if operation succeeded
+const { data, error, count } = await supabase
+  .from('tasks')
+  .insert({ title: 'Test' })
+  .select()
+  .single();
+
+if (error) {
+  console.error('Insert error:', error);
+} else if (!data) {
+  console.warn('RLS may have silently blocked the operation');
+} else {
+  console.log('Success:', data);
+}
+```
+
+## Workflow 7: Production Readiness Check
+
+Pre-deployment validation checklist:
+
+### Step 1: Database Health
+
+```sql
+-- Check for missing indexes
+SELECT
+  relname as table,
+  seq_scan,
+  idx_scan,
+  n_tup_ins + n_tup_upd + n_tup_del as writes
+FROM pg_stat_user_tables
+WHERE seq_scan > idx_scan * 10
+AND seq_scan > 1000;
+
+-- Check table sizes
+SELECT
+  relname as table,
+  pg_size_pretty(pg_total_relation_size(relid)) as size
+FROM pg_catalog.pg_statio_user_tables
+ORDER BY pg_total_relation_size(relid) DESC;
+```
+
+### Step 2: RLS Coverage
+
+```sql
+-- Check all tables have RLS enabled
+SELECT
+  schemaname,
+  tablename,
+  rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public';
+
+-- Verify each table has policies
+SELECT
+  t.tablename,
+  COUNT(p.policyname) as policy_count
+FROM pg_tables t
+LEFT JOIN pg_policies p ON t.tablename = p.tablename
+WHERE t.schemaname = 'public'
+GROUP BY t.tablename
+HAVING COUNT(p.policyname) = 0;
+```
+
+### Step 3: Performance Baseline
+
+```sql
+-- Capture slow query baseline
+SELECT
+  query,
+  calls,
+  mean_time,
+  max_time
+FROM pg_stat_statements
+WHERE mean_time > 100
+ORDER BY mean_time DESC
+LIMIT 10;
+```
+
+### Step 4: Deployment Checklist
+
+- [ ] All migrations tested locally
+- [ ] RLS policies on all public tables
+- [ ] Indexes on frequently queried columns
+- [ ] No hardcoded credentials
+- [ ] Connection pooling configured
+- [ ] Error handling implemented
+- [ ] Subscription cleanup verified
+- [ ] Rate limiting configured
+
+## Quick Reference Commands
+
+### Database Analysis
+
+```sql
+-- Table row counts
+SELECT schemaname, relname, n_live_tup
+FROM pg_stat_user_tables
+ORDER BY n_live_tup DESC;
+
+-- Index usage
+SELECT indexrelname, idx_scan, idx_tup_read
+FROM pg_stat_user_indexes;
+
+-- Active locks
+SELECT * FROM pg_locks WHERE granted = false;
+
+-- Current connections
+SELECT count(*), state FROM pg_stat_activity GROUP BY state;
+```
+
+### Realtime Debugging
+
+```javascript
+// Monitor all database changes
+supabase
+  .channel('db-changes')
+  .on('postgres_changes',
+    { event: '*', schema: 'public' },
+    (payload) => console.log('Change:', payload)
+  )
+  .subscribe();
+```
+
+### Auth Debugging
+
+```javascript
+// Get current session
+const { data: { session } } = await supabase.auth.getSession();
+console.log('Current user:', session?.user);
+console.log('Token expires:', new Date(session?.expires_at * 1000));
+```
+
+## Troubleshooting Reference
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `PGRST301` | JWT expired | Refresh token before expiration |
+| `42501` | RLS violation | Check policy with `pg_policies` |
+| `42703` | Column not found | Verify schema matches code |
+| `23505` | Unique violation | Handle duplicate key errors |
+| `23503` | Foreign key violation | Ensure referenced row exists |
+| `57P03` | Cannot connect | Check Supabase is running |
+| `REALTIME_SUBSCRIBE_ERROR` | Invalid channel | Check channel name format |
+
+## Resources
+
+For detailed reference documentation, see:
+- `references/commands.md` - Complete command reference
+- `references/workflows.md` - Extended debugging workflows
+- `references/schema-validation.md` - Schema validation queries
+- `scripts/check-connection.sh` - Connection diagnostic script
+- `scripts/analyze-queries.sql` - Query analysis queries

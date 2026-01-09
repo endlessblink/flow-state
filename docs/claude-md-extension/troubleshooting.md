@@ -73,11 +73,27 @@ window.taskLogger.exportLogs()            // Export for analysis
 - **Instance creation** - Use `getTaskInstances()` helper for consistent access
 - **Calendar integration** - Instances enable flexible multi-date scheduling
 
+### Tasks Render Empty on First Refresh (BUG-151)
+**Symptom**: Task nodes appear as empty shells (frame only, no content) on first page refresh. Second refresh fixes it.
+
+**Root Cause**: Vue Flow viewport copied once during setup, not tracked reactively. When Vue Flow initializes with `zoom: 0`, LOD3 triggers and hides content permanently.
+
+**Solution**: Access viewport through computed property with guards.
+
+**SOP**: `docs/sop/SOP-001-vue-flow-viewport-reactivity.md`
+
+**Key File**: `src/components/canvas/TaskNode.vue` (lines 161-180)
+
 ## Standard Operating Procedures (SOPs)
 
-**Location**: `docs/debug/sop/`
+**Location**: `docs/sop/`
 
 SOPs document production fixes with root cause analysis, solution steps, and rollback procedures.
+
+### Available SOPs
+| ID | Title | Related Bug |
+|----|-------|-------------|
+| SOP-001 | Vue Flow Viewport Reactivity | BUG-151 |
 
 ### When to Create SOPs
 - After fixing production bugs

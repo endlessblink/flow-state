@@ -160,17 +160,24 @@ const taskStore = useTaskStore()
 
 // 🚀 LOD Support: Get zoom level from Vue Flow context
 // We use a safe wrapper to avoid breaking Storybook
-const viewport = ref({ zoom: 1 })
+// BUG-151 FIX: Store vf reference for REACTIVE access to viewport
+// Previously: viewport.value = vf.viewport.value (ONE-TIME COPY - not reactive!)
+// This caused tasks to render empty on first refresh when zoom was initially 0
+let vfContext: ReturnType<typeof useVueFlow> | null = null
 try {
-  const vf = useVueFlow()
-  if (vf) {
-    viewport.value = vf.viewport.value
-  }
+  vfContext = useVueFlow()
 } catch (_e) {
   // Not in Vue Flow context (e.g. Storybook)
 }
 
-const zoom = computed(() => viewport.value.zoom)
+// BUG-151 FIX: Access viewport.zoom REACTIVELY through the ref
+// This ensures LOD levels update when Vue Flow's viewport changes
+const zoom = computed(() => {
+  if (!vfContext) return 1
+  const z = vfContext.viewport.value?.zoom
+  // Guard against 0, undefined, NaN - default to 1 (full detail)
+  return (typeof z === 'number' && Number.isFinite(z) && z > 0) ? z : 1
+})
 
 // LOD Levels
 const isLOD1 = computed(() => zoom.value < 0.6) // Hide description

@@ -3,6 +3,12 @@
  * Robust offline operation queuing with intelligent synchronization
  */
 
+// TASK-154: TTL for offline queue operations (24 hours)
+const QUEUE_OPERATION_TTL_MS = 24 * 60 * 60 * 1000
+
+// TASK-154: Maximum retry count before discarding operations
+const QUEUE_MAX_RETRIES = 10
+
 export interface QueuedOperation {
   id: string
   type: 'create' | 'update' | 'delete' | 'sync' | 'merge'
@@ -386,8 +392,16 @@ export class OfflineQueue {
           break
         }
 
+        // TASK-154: Check TTL before processing
+        const age = Date.now() - operation.timestamp
+        if (age > QUEUE_OPERATION_TTL_MS) {
+          console.warn(`⏰ [TASK-154] Skipping stale operation (${(age / (60 * 60 * 1000)).toFixed(1)}h old):`, operation.id)
+          this.removeFromQueue(operation.id)
+          continue
+        }
+
         result.processed++
-        console.log(`⚙️ Processing queued operation: ${operation.type} ${operation.documentId} (attempt ${operation.retryCount + 1})`)
+        console.log(`⚙️ Processing queued operation: ${operation.type} ${operation.documentId} (attempt ${operation.retryCount + 1}/${QUEUE_MAX_RETRIES})`)
 
         try {
           const success = await this.executeOperation(operation)
@@ -400,15 +414,16 @@ export class OfflineQueue {
             result.failed++
             operation.retryCount++
 
-            if (operation.retryCount >= 3) {
-              console.error(`💥 Giving up on operation after 3 retries:`, operation)
+            // TASK-154: Use constant for max retries
+            if (operation.retryCount >= QUEUE_MAX_RETRIES) {
+              console.error(`💥 Giving up on operation after ${QUEUE_MAX_RETRIES} retries:`, operation)
               result.errors.push({
                 operation,
-                error: new Error(`Operation failed after 3 retries`)
+                error: new Error(`Operation failed after ${QUEUE_MAX_RETRIES} retries`)
               })
               this.removeFromQueue(operation.id)
             } else {
-              console.warn(`⚠️ Operation failed, will retry later (attempt ${operation.retryCount}/3):`, operation)
+              console.warn(`⚠️ Operation failed, will retry later (attempt ${operation.retryCount}/${QUEUE_MAX_RETRIES}):`, operation)
             }
           }
         } catch (error) {
@@ -419,11 +434,12 @@ export class OfflineQueue {
           console.error(`❌ Failed to process queued operation:`, errorObj)
           result.errors.push({ operation, error: errorObj })
 
-          if (operation.retryCount >= 3) {
-            console.error(`💥 Giving up on operation after 3 retries:`, operation)
+          // TASK-154: Use constant for max retries
+          if (operation.retryCount >= QUEUE_MAX_RETRIES) {
+            console.error(`💥 Giving up on operation after ${QUEUE_MAX_RETRIES} retries:`, operation)
             this.removeFromQueue(operation.id)
           } else {
-            console.warn(`⚠️ Operation failed, will retry later (attempt ${operation.retryCount}/3):`, operation)
+            console.warn(`⚠️ Operation failed, will retry later (attempt ${operation.retryCount}/${QUEUE_MAX_RETRIES}):`, operation)
           }
         }
       }
@@ -803,6 +819,7 @@ export class OfflineQueue {
 
   /**
    * Load queue from localStorage
+   * TASK-154: Added TTL validation to discard stale operations
    */
   private loadPersistedQueue(): void {
     try {
@@ -810,8 +827,10 @@ export class OfflineQueue {
       if (persisted) {
         const queueData = JSON.parse(persisted) as { queue: unknown[] }
         const ops = queueData.queue || []
+        const now = Date.now()
 
-        this.queue = ops.map((op: unknown) => {
+        // TASK-154: Parse and filter operations
+        const parsedOps = ops.map((op: unknown) => {
           const operation = op as QueuedOperation
           return {
             ...operation,
@@ -819,7 +838,48 @@ export class OfflineQueue {
           }
         }) as QueuedOperation[]
 
-        console.log(`📂 Loaded ${this.queue.length} operations from offline queue`)
+        // TASK-154: Filter out stale operations (older than TTL)
+        const validOps: QueuedOperation[] = []
+        const staleOps: QueuedOperation[] = []
+        const expiredRetryOps: QueuedOperation[] = []
+
+        for (const op of parsedOps) {
+          const age = now - op.timestamp
+
+          // Check TTL (24 hours)
+          if (age > QUEUE_OPERATION_TTL_MS) {
+            staleOps.push(op)
+            continue
+          }
+
+          // TASK-154: Check max retry count
+          if (op.retryCount >= QUEUE_MAX_RETRIES) {
+            expiredRetryOps.push(op)
+            continue
+          }
+
+          validOps.push(op)
+        }
+
+        this.queue = validOps
+
+        // Log discarded operations
+        if (staleOps.length > 0) {
+          console.warn(`⏰ [TASK-154] Discarded ${staleOps.length} stale operations (older than 24h):`,
+            staleOps.map(op => ({ id: op.id, type: op.type, entityId: op.entityId?.substring(0, 8), ageHours: ((now - op.timestamp) / (60 * 60 * 1000)).toFixed(1) })))
+        }
+
+        if (expiredRetryOps.length > 0) {
+          console.warn(`💀 [TASK-154] Discarded ${expiredRetryOps.length} operations that exceeded max retries (${QUEUE_MAX_RETRIES}):`,
+            expiredRetryOps.map(op => ({ id: op.id, type: op.type, entityId: op.entityId?.substring(0, 8), retries: op.retryCount })))
+        }
+
+        // If we discarded any, update persistence
+        if (staleOps.length > 0 || expiredRetryOps.length > 0) {
+          this.persistQueue()
+        }
+
+        console.log(`📂 Loaded ${this.queue.length} operations from offline queue (discarded ${staleOps.length + expiredRetryOps.length} stale/expired)`)
 
         // Process queue if online
         if (this.isOnline && this.queue.length > 0) {

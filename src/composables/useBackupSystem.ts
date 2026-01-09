@@ -81,6 +81,28 @@ const STORAGE_KEYS = {
 // If new backup has less than this % of previous max tasks, block auto-backup
 const DATA_LOSS_THRESHOLD = 0.5 // 50%
 
+// TASK-153: Maximum age for golden backup before warning (7 days in ms)
+const GOLDEN_BACKUP_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
+// TASK-156: Maximum age for backup history entries (30 days in ms)
+const BACKUP_HISTORY_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
+// TASK-156: Current backup schema version
+const BACKUP_SCHEMA_VERSION = '3.1.0'
+
+// TASK-153: Types for golden backup validation
+export interface GoldenBackupValidation {
+  isValid: boolean
+  ageMs: number
+  ageWarning: string | null
+  preview: {
+    tasks: { total: number; filtered: number; toRestore: number }
+    projects: { total: number; filtered: number; toRestore: number }
+    groups: { total: number; filtered: number; toRestore: number }
+  }
+  warnings: string[]
+}
+
 const DEFAULT_CONFIG: BackupConfig = {
   enabled: true,
   autoSaveInterval: 5 * 60 * 1000, // 5 minutes
@@ -204,6 +226,132 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
   }
 
   /**
+   * TASK-153: Validate golden backup before restore
+   * - Checks age and warns if > 7 days old
+   * - Cross-references with current Supabase data to filter deleted items
+   * - Returns preview of what will be restored
+   */
+  async function validateGoldenBackup(): Promise<GoldenBackupValidation | null> {
+    const golden = getGoldenBackup()
+    if (!golden) {
+      console.warn('[Backup] No golden backup to validate')
+      return null
+    }
+
+    const warnings: string[] = []
+    const now = Date.now()
+    const ageMs = now - golden.timestamp
+
+    // Check age warning
+    let ageWarning: string | null = null
+    if (ageMs > GOLDEN_BACKUP_MAX_AGE_MS) {
+      const ageDays = Math.floor(ageMs / (24 * 60 * 60 * 1000))
+      ageWarning = `Golden backup is ${ageDays} days old (created ${new Date(golden.timestamp).toLocaleDateString()})`
+      warnings.push(ageWarning)
+    }
+
+    // Get current deleted item IDs from Supabase
+    let deletedTaskIds: Set<string> = new Set()
+    let deletedProjectIds: Set<string> = new Set()
+    let deletedGroupIds: Set<string> = new Set()
+
+    try {
+      // Fetch deleted items from Supabase to filter them out
+      if (db.fetchDeletedTaskIds) {
+        deletedTaskIds = new Set(await db.fetchDeletedTaskIds())
+      }
+      if (db.fetchDeletedProjectIds) {
+        deletedProjectIds = new Set(await db.fetchDeletedProjectIds())
+      }
+      if (db.fetchDeletedGroupIds) {
+        deletedGroupIds = new Set(await db.fetchDeletedGroupIds())
+      }
+    } catch (error) {
+      console.warn('[Backup] Could not fetch deleted item IDs from Supabase:', error)
+      warnings.push('Could not verify deleted items against Supabase - some deleted items may be restored')
+    }
+
+    // Calculate what would be restored after filtering
+    const tasksToRestore = golden.tasks.filter(t => !deletedTaskIds.has(t.id))
+    const projectsToRestore = (golden.projects || []).filter(p => !deletedProjectIds.has(p.id))
+    const groupsToRestore = (golden.groups || []).filter(g => !deletedGroupIds.has(g.id))
+
+    const filteredTasks = golden.tasks.length - tasksToRestore.length
+    const filteredProjects = (golden.projects?.length || 0) - projectsToRestore.length
+    const filteredGroups = (golden.groups?.length || 0) - groupsToRestore.length
+
+    if (filteredTasks > 0) {
+      warnings.push(`${filteredTasks} tasks will be skipped (deleted in Supabase)`)
+    }
+    if (filteredProjects > 0) {
+      warnings.push(`${filteredProjects} projects will be skipped (deleted in Supabase)`)
+    }
+    if (filteredGroups > 0) {
+      warnings.push(`${filteredGroups} groups will be skipped (deleted in Supabase)`)
+    }
+
+    return {
+      isValid: true,
+      ageMs,
+      ageWarning,
+      preview: {
+        tasks: {
+          total: golden.tasks.length,
+          filtered: filteredTasks,
+          toRestore: tasksToRestore.length
+        },
+        projects: {
+          total: golden.projects?.length || 0,
+          filtered: filteredProjects,
+          toRestore: projectsToRestore.length
+        },
+        groups: {
+          total: golden.groups?.length || 0,
+          filtered: filteredGroups,
+          toRestore: groupsToRestore.length
+        }
+      },
+      warnings
+    }
+  }
+
+  /**
+   * TASK-153: Filter golden backup data to exclude items deleted in Supabase
+   */
+  async function filterGoldenBackupData(golden: BackupData): Promise<BackupData> {
+    let deletedTaskIds: Set<string> = new Set()
+    let deletedProjectIds: Set<string> = new Set()
+    let deletedGroupIds: Set<string> = new Set()
+
+    try {
+      if (db.fetchDeletedTaskIds) {
+        deletedTaskIds = new Set(await db.fetchDeletedTaskIds())
+      }
+      if (db.fetchDeletedProjectIds) {
+        deletedProjectIds = new Set(await db.fetchDeletedProjectIds())
+      }
+      if (db.fetchDeletedGroupIds) {
+        deletedGroupIds = new Set(await db.fetchDeletedGroupIds())
+      }
+    } catch (error) {
+      console.warn('[Backup] Could not fetch deleted IDs, restoring all items:', error)
+    }
+
+    return {
+      ...golden,
+      tasks: golden.tasks.filter(t => !deletedTaskIds.has(t.id)),
+      projects: (golden.projects || []).filter(p => !deletedProjectIds.has(p.id)),
+      groups: (golden.groups || []).filter(g => !deletedGroupIds.has(g.id)),
+      metadata: {
+        ...golden.metadata,
+        taskCount: golden.tasks.filter(t => !deletedTaskIds.has(t.id)).length,
+        projectCount: (golden.projects || []).filter(p => !deletedProjectIds.has(p.id)).length,
+        groupCount: (golden.groups || []).filter(g => !deletedGroupIds.has(g.id)).length
+      }
+    }
+  }
+
+  /**
    * BUG-059 FIX: Check if backup looks suspicious (potential data loss)
    */
   function isBackupSuspicious(taskCount: number, type: 'auto' | 'manual' | 'emergency'): { suspicious: boolean; reason: string } {
@@ -287,7 +435,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
         projects,
         groups,
         timestamp: Date.now(),
-        version: '3.0.0', // Version bump for Supabase-backed backup
+        version: BACKUP_SCHEMA_VERSION, // TASK-156: Use constant for schema version
         checksum: '',
         type,
         metadata: {
@@ -444,13 +592,37 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
   /**
    * Load backup history from localStorage
+   * TASK-156: Added TTL pruning for old backups
    */
   function loadHistory(): void {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.HISTORY)
       if (stored) {
-        backupHistory.value = JSON.parse(stored)
-        stats.value.historyCount = backupHistory.value.length
+        const rawHistory: BackupData[] = JSON.parse(stored)
+        const now = Date.now()
+
+        // TASK-156: Filter out backups older than TTL (30 days)
+        const validBackups: BackupData[] = []
+        const expiredBackups: BackupData[] = []
+
+        for (const backup of rawHistory) {
+          const age = now - backup.timestamp
+          if (age > BACKUP_HISTORY_TTL_MS) {
+            expiredBackups.push(backup)
+          } else {
+            validBackups.push(backup)
+          }
+        }
+
+        backupHistory.value = validBackups
+        stats.value.historyCount = validBackups.length
+
+        // Log pruned backups
+        if (expiredBackups.length > 0) {
+          console.log(`🧹 [TASK-156] Pruned ${expiredBackups.length} backups older than 30 days`)
+          // Save updated history without expired backups
+          localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(validBackups))
+        }
       }
 
       // Load last backup time from latest
@@ -734,16 +906,42 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     getGoldenBackup,
     getMaxTaskCount,
 
+    // TASK-153: Validate golden backup before restore
+    validateGoldenBackup,
+
     // Restore from golden backup (last known good state)
-    restoreFromGoldenBackup: async () => {
+    // TASK-153: Now filters out items deleted in Supabase before restoring
+    restoreFromGoldenBackup: async (skipValidation: boolean = false) => {
       const golden = getGoldenBackup()
       if (!golden) {
         console.error('[Backup] No golden backup available')
         return false
       }
-      console.log(`[Backup] Restoring from golden backup: ${golden.metadata?.taskCount} tasks`)
-      return await restoreBackup(golden)
-    }
+
+      // TASK-153: Validate and warn about age/deleted items
+      if (!skipValidation) {
+        const validation = await validateGoldenBackup()
+        if (validation) {
+          if (validation.warnings.length > 0) {
+            console.warn('[Backup] Golden backup validation warnings:', validation.warnings)
+          }
+          console.log(`[Backup] Golden backup preview:`, {
+            tasks: `${validation.preview.tasks.toRestore}/${validation.preview.tasks.total} (${validation.preview.tasks.filtered} filtered)`,
+            projects: `${validation.preview.projects.toRestore}/${validation.preview.projects.total} (${validation.preview.projects.filtered} filtered)`,
+            groups: `${validation.preview.groups.toRestore}/${validation.preview.groups.total} (${validation.preview.groups.filtered} filtered)`
+          })
+        }
+      }
+
+      // TASK-153: Filter out items that are deleted in Supabase
+      const filteredGolden = await filterGoldenBackupData(golden)
+
+      console.log(`[Backup] Restoring from golden backup: ${filteredGolden.metadata?.taskCount} tasks (filtered from ${golden.metadata?.taskCount})`)
+      return await restoreBackup(filteredGolden)
+    },
+
+    // TASK-153: Get validation info for UI display before restore
+    getGoldenBackupValidation: validateGoldenBackup
   }
 }
 

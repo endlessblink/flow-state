@@ -22,6 +22,8 @@ import type { Rect } from '../../utils/geometry'
 import { getAbsoluteNodePosition } from '../../utils/canvasGraph'
 // TASK-144: Use centralized duration defaults
 import { DURATION_DEFAULTS, type DurationCategory } from '../../utils/durationCategories'
+// TASK-151: Use centralized parent-child logic
+import { useCanvasParentChild } from './useCanvasParentChild'
 
 interface DragDropDeps {
     taskStore: ReturnType<typeof useTaskStore>
@@ -60,6 +62,12 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
 
     // TASK-144: Helper functions now use shared geometry utilities from @/utils/geometry.ts
 
+    // TASK-151 FIX: Use centralized parent-child logic
+    const {
+        findSmallestContainingSection,
+        findAllContainingSections
+    } = useCanvasParentChild(nodes, canvasStore.sections)
+
     // Helper: Check if task center is within section bounds
     // REFACTORED: Uses isTaskCenterInRect from shared utils
     const isTaskInSectionBounds = (x: number, y: number, section: CanvasSection, taskWidth: number = 220, taskHeight: number = 100) => {
@@ -72,46 +80,28 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
         return isTaskCenterInRect(x, y, rect, taskWidth, taskHeight)
     }
 
+    // LEGACY HELPERS REPLACED BY useCanvasParentChild
+    // Kept aliases for compatibility if needed, but direct usage is preferred
+
     // Helper: Check if task is inside a section (returns first match)
-    // REFACTORED: Uses robust isNodeMoreThanHalfInside from shared utils to prevent false positives
+    // REFACTORED: Uses findSmallestContainingSection from useCanvasParentChild
     const getContainingSection = (taskX: number, taskY: number, taskWidth: number = 220, taskHeight: number = 100) => {
-        // Find all sections where the task is > 50% inside
-        const validSections = canvasStore.sections.filter(s =>
-            isNodeMoreThanHalfInside(taskX, taskY, taskWidth, taskHeight, {
-                x: s.position.x,
-                y: s.position.y,
-                width: s.position.width,
-                height: s.position.height
-            })
-        )
-
-        if (validSections.length === 0) return undefined
-
-        // Return the smallest one by area (most specific)
-        return validSections.reduce((smallest, current) => {
-            const smallestArea = smallest.position.width * smallest.position.height
-            const currentArea = current.position.width * current.position.height
-            return currentArea < smallestArea ? current : smallest
+        return findSmallestContainingSection({
+            x: taskX,
+            y: taskY,
+            width: taskWidth,
+            height: taskHeight
         })
     }
 
     // Helper: Get ALL sections containing a position (for nested group inheritance)
-    // REFACTORED: Uses robust isNodeMoreThanHalfInside from shared utils
+    // REFACTORED: Uses findAllContainingSections from useCanvasParentChild
     const getAllContainingSections = (taskX: number, taskY: number, taskWidth: number = 220, taskHeight: number = 100) => {
-        const matches = canvasStore.sections.filter(s =>
-            isNodeMoreThanHalfInside(taskX, taskY, taskWidth, taskHeight, {
-                x: s.position.x,
-                y: s.position.y,
-                width: s.position.width || 300,
-                height: s.position.height || 200
-            })
-        )
-
-        // Sort largest to smallest (parents first)
-        return matches.sort((a, b) => {
-            const areaA = a.position.width * a.position.height
-            const areaB = b.position.width * b.position.height
-            return areaB - areaA
+        return findAllContainingSections({
+            x: taskX,
+            y: taskY,
+            width: taskWidth,
+            height: taskHeight
         })
     }
 
@@ -690,8 +680,11 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
                             // TASK-131 FIX: Relaxed ratio from 1.5 to 1.1 - 10% larger is enough
                             if (parentArea <= sectionArea * 1.05) return
 
-                            // Use robust containment check (require > 70% inside for groups)
-                            // This allows for "messy" drops where edges might slightly overhang
+                            // Use centralized containment check
+                            // TASK-151 FIX: Use findSmallestContainingSection logic indirectly via this loop
+                            // For simplicity, we just use the robust isNodeMoreThanHalfInside used by the new system
+                            // The logic here is custom for finding a parent for a GROUP, not a task
+                            // So we might as well just use the helper from our new composable or utils
                             const isInside = isNodeMoreThanHalfInside(
                                 absoluteX,
                                 absoluteY,

@@ -56,6 +56,23 @@ window.taskLogger.printSummary()          // Get logging summary
 window.taskLogger.exportLogs()            // Export for analysis
 ```
 
+### Deleted Canvas Groups Reappearing (BUG-060, BUG-061)
+**Symptom**: Groups (Friday, Saturday, Today) keep coming back after deletion and page refresh.
+
+**Root Causes**:
+1. Auth watcher didn't clear localStorage-loaded groups when Supabase returned empty
+2. `ensureActionGroups()` auto-created Friday/Saturday groups on startup
+
+**Solution**:
+- Auth watcher now ALWAYS sets `_rawGroups.value` from Supabase (even if empty)
+- `ensureActionGroups()` is disabled - users create groups manually via context menu
+
+**SOP**: `docs/sop/active/CANVAS-group-resurrection-fix.md`
+
+**Key Files**:
+- `src/stores/canvas.ts` (auth watcher)
+- `src/composables/canvas/useCanvasOverdueCollector.ts` (ensureActionGroups)
+
 ## Critical Gotchas
 
 ### Undo/Redo System
@@ -94,6 +111,7 @@ SOPs document production fixes with root cause analysis, solution steps, and rol
 | ID | Title | Related Bug |
 |----|-------|-------------|
 | SOP-001 | Vue Flow Viewport Reactivity | BUG-151 |
+| CANVAS-group-resurrection-fix | Deleted Groups Reappearing | BUG-060, BUG-061 |
 
 ### When to Create SOPs
 - After fixing production bugs

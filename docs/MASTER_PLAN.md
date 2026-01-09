@@ -1,4 +1,4 @@
-**Last Updated**: January 9, 2026 (BUG-061 OverdueCollector Auto-Creation Fix)
+**Last Updated**: January 9, 2026 (TASK-161 Enable RLS Security)
 **Version**: 5.34 (Board + Catalog View Redesign)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -468,6 +468,25 @@ _rawGroups.value = loadedGroups // Respects deletions
 **Fix Applied**: Disabled auto-creation in `ensureActionGroups()` - users should manually create groups via canvas context menu.
 
 **File Modified**: `src/composables/canvas/useCanvasOverdueCollector.ts:187-242`
+
+---
+
+### ~~TASK-161~~: Enable RLS Security on All Supabase Tables (✅ DONE)
+**Priority**: P0-CRITICAL (Security)
+**Created**: January 9, 2026
+**Completed**: January 9, 2026
+
+**Problem**: Supabase linter detected that RLS (Row Level Security) policies were defined but RLS was NOT enabled on the tables. This meant any authenticated user could potentially read/modify ALL users' data.
+
+**Affected Tables**: groups, tasks, projects, notifications, timer_sessions, user_settings, quick_sort_sessions, pomodoro_history, deleted_tasks_log, tasks_backup
+
+**Fix Applied**: Created migration `20260109000000_enable_rls_security.sql` to:
+1. Enable RLS on all tables with existing policies
+2. Enable RLS with no policies on internal tables (deleted_tasks_log, tasks_backup) - restricting to service role only
+
+**Verification**: `npx supabase db lint` now shows "No schema errors found"
+
+**Migration File**: `supabase/migrations/20260109000000_enable_rls_security.sql`
 
 ---
 

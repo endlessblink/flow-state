@@ -7,6 +7,8 @@ import { NodeUpdateBatcher } from '@/utils/canvas/NodeUpdateBatcher'
 import { getTaskCenter, findSmallestContainingRect } from '@/utils/geometry'
 // TASK-089/TASK-142: Canvas state lock to prevent sync from overwriting user changes
 import { isAnyCanvasStateLocked, getLockedTaskPosition, isGroupPositionLocked, getLockedGroupPosition } from '@/utils/canvasStateLock'
+// TASK-151: Use centralized parent-child logic
+import { useCanvasParentChild } from './useCanvasParentChild'
 
 interface SyncDependencies {
     nodes: Ref<Node[]>
@@ -76,6 +78,15 @@ export function useCanvasSync(deps: SyncDependencies) {
             // 1. Build map of desired nodes (Goals)
             const desiredNodeMap = new Map<string, Node>()
 
+            // TASK-151 FIX: Centralized Parent-Child Logic
+            // Must be declared here to be available for both sections and tasks loops
+            const {
+                getSectionAbsolutePosition,
+                isActuallyInsideParent,
+                calculateZIndex,
+                findSmallestContainingSection
+            } = useCanvasParentChild(deps.nodes, canvasStore.sections)
+
             // --- Process Sections ---
             // TASK-131 FIX: Track existing section positions to prevent drift (like tasks)
             const existingSectionPositions = new Map<string, { x: number; y: number }>()
@@ -103,56 +114,14 @@ export function useCanvasSync(deps: SyncDependencies) {
                 const nodeId = `section-${section.id}`
                 const existingPos = existingSectionPositions.get(nodeId)
 
-                // TASK-141 FIX: Recursive helper to get ABSOLUTE position by walking entire parent chain
-                // This is needed because positions are stored RELATIVE to parent when parentGroupId is set
-                const getAbsolutePosition = (sect: typeof section): { x: number, y: number } => {
-                    let x = sect.position?.x ?? 0
-                    let y = sect.position?.y ?? 0
-                    let currentParentId = sect.parentGroupId
+                // TASK-151 FIX: Logic now initialized at top of function
 
-                    // Walk up the parent chain, accumulating offsets
-                    while (currentParentId && currentParentId !== 'NONE') {
-                        const parent = sections.find(s => s.id === currentParentId)
-                        if (parent) {
-                            x += parent.position?.x ?? 0
-                            y += parent.position?.y ?? 0
-                            currentParentId = parent.parentGroupId
-                        } else {
-                            break // Parent not found
-                        }
-                    }
-                    return { x, y }
-                }
+
+                // TASK-141 FIX: Recursive helper REPLACED by centralized one
+                // getSectionAbsolutePosition is now imported
 
                 // TASK-141 FIX: Helper to validate if section is ACTUALLY inside its claimed parent
-                // based on visual position bounds (not just stored parentGroupId)
-                const isActuallyInsideParent = (childSection: typeof section, parentSection: typeof section): boolean => {
-                    // Get absolute positions for both child and parent
-                    const childAbs = getAbsolutePosition(childSection)
-                    const parentAbs = getAbsolutePosition(parentSection)
-
-                    const childWidth = childSection.position?.width ?? 300
-                    const childHeight = childSection.position?.height ?? 200
-                    const childCenterX = childAbs.x + childWidth / 2
-                    const childCenterY = childAbs.y + childHeight / 2
-
-                    const parentX = parentAbs.x
-                    const parentY = parentAbs.y
-                    const parentW = parentSection.position?.width ?? 300
-                    const parentH = parentSection.position?.height ?? 200
-
-                    const isInside = childCenterX >= parentX &&
-                        childCenterX <= parentX + parentW &&
-                        childCenterY >= parentY &&
-                        childCenterY <= parentY + parentH
-
-                    // Debug logging for containment checks
-                    if (!isInside) {
-                        // Safe logging avoiding crash
-                    }
-
-                    return isInside
-                }
+                // isActuallyInsideParent is now imported
 
                 // TASK-142 FIX: If group position is locked, preserve Vue Flow's current position completely
                 const isLocked = isGroupPositionLocked(section.id)
@@ -194,15 +163,8 @@ export function useCanvasSync(deps: SyncDependencies) {
                 }
 
                 // TASK-141 FIX: z-index based on SIZE - smaller groups render ON TOP (higher z-index)
-                // This ensures smaller groups are always accessible when placed over bigger groups
-                // Groups use z-index range 1-99 (tasks are always higher at 1000+)
-                const groupWidth = section.position?.width ?? 300
-                const groupHeight = section.position?.height ?? 200
-                const groupArea = groupWidth * groupHeight
-                // Inverse relationship: smaller area = higher z-index
-                const MAX_AREA = 10000000 // 10 million pixels max
-                const normalizedArea = Math.min(groupArea / MAX_AREA, 1)
-                const zIndex = Math.max(1, Math.floor((1 - normalizedArea) * 99))
+                // REPLACED with centralized calculation
+                const zIndex = calculateZIndex(section, false)
                 // nodeId already defined above at line 93
 
                 // TASK-150 FIX: Prevent group position resets during drag/settle operations
@@ -371,9 +333,14 @@ export function useCanvasSync(deps: SyncDependencies) {
                         }
 
                         // TASK-072 FIX: Find the MOST SPECIFIC (smallest/nested) section that contains the task
-                        // If task is inside both parent and nested group, prefer the nested group
-                        // sectionRects is pre-computed outside the loop for performance
-                        const section = findSmallestContainingRect(center.x, center.y, sectionRects)
+                        // REPLACED: Use findSmallestContainingSection from centralized logic
+                        // We pass the full task rect for robust checking
+                        const section = findSmallestContainingSection({
+                            x: position.x,
+                            y: position.y,
+                            width: TASK_WIDTH, // 220
+                            height: TASK_HEIGHT // 100
+                        })
 
                         if (section) {
                             // Task is visually inside a section - make it a child

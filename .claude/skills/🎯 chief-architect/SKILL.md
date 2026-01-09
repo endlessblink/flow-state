@@ -21,9 +21,9 @@ A strategic meta-skill designed for personal productivity application developmen
 - **Scale**: 10-100 users maximum
 
 ## Activation Triggers
-- **Keywords**: architecture, orchestration, strategy, decision, personal app, migration, system design, productivity app, mobile prep, cross-platform, ideas, issues, process ideas, auto-process
-- **Files**: Entire codebase, project documentation, architectural decisions, ideas-issues.md
-- **Contexts**: Personal productivity app planning, local-first architecture, mobile preparation, cross-tab sync, technology evaluation, idea management, issue tracking
+- **Keywords**: architecture, orchestration, strategy, decision, personal app, migration, system design, productivity app, mobile prep, cross-platform, skill telemetry, master plan, consolidation
+- **Files**: Entire codebase, project documentation, architectural decisions, docs/MASTER_PLAN.md
+- **Contexts**: Personal productivity app planning, local-first architecture, mobile preparation, cross-tab sync, technology evaluation, skill telemetry analysis, roadmap management
 
 ## 🚨 CRITICAL ORCHESTRATION REQUIREMENTS
 
@@ -109,37 +109,38 @@ A strategic meta-skill designed for personal productivity application developmen
 
 ## Personal App Architecture Domains
 
-### Domain 1: Local-First Data Architecture
+### Domain 1: Hybrid Data Architecture (Supabase + Local)
 **Focus Areas:**
-- **IndexedDB Optimization**: Cross-tab synchronization, offline-first design
+- **Supabase Integration**: `supabase-js` v2.x, PostgreSQL, Realtime subscriptions, Edge Functions
+- **State Persistence**: Pinia + `pinia-shared-state` (Native BroadcastChannel) for cross-tab sync
 - **Data Simplicity**: Maintainable schemas for single-developer projects
-- **Personal Data Backup**: Local backup strategies and data recovery
-- **Cross-Platform Sync**: Browser ↔ Mobile data synchronization preparation
-- **Performance**: Responsive UI with local data processing
+- **Personal Data Backup**: JSON/CSV Export & Import strategies (`useBackupSystem.ts`)
+- **Performance**: Optimistic UI updates with background sync
 
-### Domain 2: Personal Frontend Architecture (Vue.js/TypeScript)
+### Domain 2: Personal Frontend Architecture (Vue 3 + Tailwind)
 **Focus Areas:**
-- **Component Simplicity**: Reusable components optimized for single developer
-- **State Management**: Pinia stores optimized for personal productivity apps
-- **User Experience**: Responsive design, smooth interactions, accessibility
-- **Performance Optimization**: Bundle size, lazy loading, memory efficiency
-- **Cross-Browser Compatibility**: Consistent experience across all browsers
+- **Core Stack**: Vue 3 (Composition API), Vite 7+, TypeScript 5+
+- **Component System**: Naive UI + Tailwind CSS 3.4 for rapid styling
+- **State Management**: Pinia 2.1 with modular stores
+- **Canvas Interaction**: Vue Flow 1.47+ (Native Parent-Child System)
+- **Performance Optimization**: Bundle size, lazy loading, static resource caching
+- **Rich Text**: Tiptap editor integration
 
-### Domain 3: Mobile Preparation & Cross-Platform
+### Domain 3: Mobile & Desktop (Tauri)
 **Focus Areas:**
-- **Capacitor Integration**: Prepare browser app for mobile deployment
-- **Responsive Design**: Mobile-first UI/UX design patterns
-- **Touch Interactions**: Mobile gesture support and touch optimization
-- **Performance**: Battery efficiency and mobile performance optimization
-- **Platform Integration**: Native features (notifications, haptics, etc.)
+- **Desktop Wrapper**: Tauri 2.0 integration for native desktop experience
+- **Mobile Preparation**: Responsive design suitable for future mobile port
+- **Touch Interactions**: Mobile gesture support (`@vueuse/gesture`)
+- **Performance**: Battery efficiency and resource optimization
+- **Platform Integration**: Native system notifications and window controls
 
 ### Domain 4: Personal Development Workflow
 **Focus Areas:**
 - **Feature Flag Management**: Development workflow for incremental features
-- **Testing Strategy**: Focused testing for personal app reliability
-- **Checkpoint Strategy**: Git-based checkpoint system for personal development
-- **Quality Assurance**: Personal standards for code quality and user experience
-- **Documentation**: Maintainable documentation for single-developer projects
+- **Testing Strategy**: Vitest (Unit) + Playwright (E2E) for stability
+- **Checkpoint Strategy**: Git-based checkpoint system (`scripts/checkpoint-with-backup.sh`)
+- **Quality Assurance**: Automated validation scripts (`validate:comprehensive`)
+- **Documentation**: `MASTER_PLAN.md` as central source of truth
 
 ### Domain 5: User Experience & Productivity
 **Focus Areas:**
@@ -266,272 +267,28 @@ async orchestratePersonalImplementation(
 }
 ```
 
-## 📝 Ideas Processing Module (NEW)
+## 📊 Skill Telemetry & Consolidation (Active)
 
-### Ideas File Watching System
-```typescript
-// File watching for automatic ideas processing
-interface IdeasFileWatcher {
-  watcher: fs.FSWatcher | null;
-  processTimeout: NodeJS.Timeout | null;
-  isProcessing: boolean;
-  lastProcessed: Date | null;
-}
+### Telemetry System
+The project uses a custom telemetry system to track skill usage and optimize agent interactions.
 
-const ideasFileWatcher: IdeasFileWatcher = {
-  watcher: null,
-  processTimeout: null,
-  isProcessing: false,
-  lastProcessed: null
-};
+**Key Components:**
+- **Reporting**: `scripts/skills-telemetry.cjs` (Report, Export, Reset)
+- **Monitoring**: `src/mcp-health-monitor.cjs` (MCP Health)
+- **Logging**: `.claude/skill-logger.js` (Skill execution logs)
+- **Visualization**: `.claude/skills-management/` (Dashboard)
 
-/**
- * Start watching ideas-issues.md for changes
- * Automatically processes new ideas and issues
- */
-function watchIdeasFile(): void {
-  if (ideasFileWatcher.watcher) {
-    console.log('📝 Ideas file watcher already active');
-    return;
-  }
+### Skill Consolidation Protocol
+Regularly analyze and consolidate skills to strictly necessary set:
+1. **Analyze**: `npm run skills:consolidation-analyze`
+2. **Execute**: `npm run skills:consolidation-execute`
+3. **Verify**: Check `docs/skill-telemetry/` for usage patterns
 
-  const ideasFilePath = 'docs/planning/overview/ideas-issues.md';
+### Automation Scripts
+- `npm run validate:comprehensive`: Full system check
+- `npm run checkpoint`: Git + Backup checkpoint
+- `npm run file:organize`: Auto-organize file structure
 
-  try {
-    ideasFileWatcher.watcher = fs.watch(
-      ideasFilePath,
-      { persistent: false },
-      (eventType: string) => {
-        if (eventType === 'change' && !ideasFileWatcher.isProcessing) {
-          console.log('📝 Ideas file changed, debouncing...');
-
-          // Debounce to avoid processing mid-edit
-          if (ideasFileWatcher.processTimeout) {
-            clearTimeout(ideasFileWatcher.processTimeout);
-          }
-
-          ideasFileWatcher.processTimeout = setTimeout(() => {
-            autoProcessIdeas();
-          }, 2000); // 2 second debounce
-        }
-      }
-    );
-
-    console.log('✅ Ideas file watcher started');
-  } catch (error) {
-    console.error('❌ Failed to start ideas file watcher:', error);
-  }
-}
-
-/**
- * Automatically process new ideas and issues
- * Uses existing enhance/promote workflow
- */
-async function autoProcessIdeas(): Promise<void> {
-  if (ideasFileWatcher.isProcessing) {
-    console.log('📝 Ideas processing already in progress, skipping...');
-    return;
-  }
-
-  ideasFileWatcher.isProcessing = true;
-
-  try {
-    // 1. Create backup before processing
-    await createBackupBeforeProcessing();
-
-    // 2. Detect new items in "💭 Raw Ideas" section
-    const newItems = await detectNewIdeas();
-
-    if (newItems.length === 0) {
-      console.log('📝 No new ideas to process');
-      return;
-    }
-
-    console.log(`📝 Processing ${newItems.length} new ideas...`);
-
-    // 3. Process each item using existing workflow
-    for (const item of newItems) {
-      console.log(`📝 Processing: ${item.title}`);
-
-      // Use existing enhancement logic
-      const enhanced = await enhanceIdea(item);
-
-      // Validate confidence score
-      const confidence = calculateConfidenceScore(enhanced);
-
-      if (confidence < 80) {
-        console.log(`⚠️ Low confidence (${confidence}%) for "${item.title}" - marking for review`);
-        enhanced.requiresReview = true;
-      }
-
-      // Use existing promotion logic
-      await promoteToMasterPlan(enhanced);
-
-      // Archive to weekly folder
-      await archiveToWeeklyFolder(item.id);
-
-      console.log(`✅ Processed: ${item.title} (confidence: ${confidence}%)`);
-    }
-
-    ideasFileWatcher.lastProcessed = new Date();
-    console.log(`✅ Successfully processed ${newItems.length} ideas`);
-
-  } catch (error) {
-    console.error('❌ Auto-processing failed:', error);
-    // Attempt rollback if processing failed
-    await rollbackFromBackup();
-  } finally {
-    ideasFileWatcher.isProcessing = false;
-  }
-}
-
-/**
- * Detect new ideas from ideas-issues.md
- * Returns items without "Processed: YYYY-MM-DD" marker
- */
-async function detectNewIdeas(): Promise<RawIdea[]> {
-  const ideasFilePath = 'docs/planning/overview/ideas-issues.md';
-
-  try {
-    const content = await fs.readFile(ideasFilePath, 'utf-8');
-
-    // Extract "💭 Raw Ideas" section
-    const rawIdeasSection = content.match(/## 💭 Raw Ideas.*?## /ms);
-    if (!rawIdeasSection) {
-      return [];
-    }
-
-    const items: RawIdea[] = [];
-    const ideaMatches = rawIdeasSection[0].match(/### (IDEA-\d+|ISSUE-\d+) \| (.+?)\n\*\*Captured\*\*: (.+?)\n\*\*Priority\*\*: (.+?)\n\*\*Tags\*\*: (.+?)\n\n(.+?)(?=\n---|\n##)/gs);
-
-    for (const match of ideaMatches) {
-      const [, id, title, captured, priority, tags, description] = match;
-
-      // Skip if already processed
-      if (content.includes(`${id} - **Processed:`)) {
-        continue;
-      }
-
-      items.push({
-        id: id.trim(),
-        title: title.trim(),
-        captured: new Date(captured.trim()),
-        priority: parsePriority(priority.trim()),
-        tags: tags.trim().split(' ').map(t => t.replace('#', '')),
-        description: description.trim(),
-        itemType: id.startsWith('IDEA-') ? 'idea' : 'issue'
-      });
-    }
-
-    return items;
-  } catch (error) {
-    console.error('Error detecting new ideas:', error);
-    return [];
-  }
-}
-
-/**
- * Calculate confidence score for idea classification
- */
-function calculateConfidenceScore(enhanced: EnhancedIdea): number {
-  let score = 50; // Base score
-
-  // Add points for clear categorization
-  if (enhanced.itemType === 'issue' && enhanced.priority === 'high') score += 30;
-  if (enhanced.itemType === 'idea' && enhanced.tags.includes('feature')) score += 25;
-
-  // Add points for technical specificity
-  if (enhanced.technicalSpecs?.implementationApproach) score += 15;
-  if (enhanced.effortEstimate?.complexity) score += 10;
-
-  // Add points for clear requirements
-  if (enhanced.description.length > 50) score += 10;
-  if (enhanced.tags.length >= 2) score += 5;
-
-  return Math.min(100, score);
-}
-
-/**
- * Archive processed item to weekly folder
- */
-async function archiveToWeeklyFolder(itemId: string): Promise<void> {
-  const weekNumber = getWeekNumber(new Date());
-  const year = new Date().getFullYear();
-
-  const archiveFolder = `docs/archives/ideas-issues/week-${weekNumber}-${year}`;
-
-  // Ensure archive folder exists
-  await fs.mkdir(archiveFolder, { recursive: true });
-
-  // Move item from active file to archive
-  await moveItemToArchive(itemId, archiveFolder);
-
-  console.log(`📦 Archived ${itemId} to ${archiveFolder}`);
-}
-
-/**
- * Stop watching ideas file
- */
-function stopWatchingIdeasFile(): void {
-  if (ideasFileWatcher.watcher) {
-    ideasFileWatcher.watcher.close();
-    ideasFileWatcher.watcher = null;
-    console.log('📝 Ideas file watcher stopped');
-  }
-}
-
-/**
- * Get week number for archive folder naming
- */
-function getWeekNumber(date: Date): number {
-  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-  const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-  return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-}
-
-/**
- * Create backup before processing
- */
-async function createBackupBeforeProcessing(): Promise<void> {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-
-  await fs.copyFile(
-    'docs/planning/overview/ideas-issues.md',
-    `docs/planning/overview/ideas-issues.md.backup-${timestamp}`
-  );
-
-  await fs.copyFile(
-    'docs/MASTER_PLAN.md',
-    `docs/MASTER_PLAN.md.backup-${timestamp}`
-  );
-
-  console.log(`💾 Created backups with timestamp ${timestamp}`);
-}
-
-/**
- * Rollback from backup if processing fails
- */
-async function rollbackFromBackup(): Promise<void> {
-  // Find latest backup
-  const backups = await fs.readdir('docs/planning/overview/')
-    .then(files => files.filter(f => f.includes('ideas-issues.md.backup-')))
-    .sort()
-    .reverse();
-
-  if (backups.length === 0) {
-    console.error('❌ No backups found for rollback');
-    return;
-  }
-
-  const latestBackup = backups[0];
-  await fs.copyFile(
-    `docs/planning/overview/${latestBackup}`,
-    'docs/planning/overview/ideas-issues.md'
-  );
-
-  console.log(`🔄 Rolled back to ${latestBackup}`);
-}
-```
 
 ## Personal App Skill Routing Logic
 
@@ -673,13 +430,13 @@ async routePersonalAppTestingTask(task: PersonalAppTestingTask, context: Persona
 
 ## Personal App Usage Examples
 
-### Example 1: Cross-Tab Synchronization Implementation
+### Example 1: Supabase Synchronization Implementation
 ```
-chief-architect implement-cross-tab-sync \
-  --current-stack "indexeddb/localforage" \
-  --sync-strategy "broadcast-channel" \
-  --requirements "real-time-sync,offline-first,user-experience-priority" \
-  --validation "playwright-cross-tab-testing"
+chief-architect implement-supabase-sync \
+  --current-stack "supabase-js" \
+  --sync-strategy "realtime-subscriptions" \
+  --requirements "optimistic-ui,conflict-resolution" \
+  --validation "playwright-multi-client"
 ```
 
 ### Example 2: Personal App Performance Optimization
@@ -708,26 +465,27 @@ chief-architect enhance-user-experience \
   --validation "user-testing,playwright-visual-validation"
 ```
 
-### Example 5: Start Automatic Ideas Processing (NEW)
+### Example 5: Telemetry Health Check
 ```
-chief-architect watch-ideas-file \
-  --auto-process "true" \
-  --confidence-threshold "80" \
-  --archive-strategy "weekly-folders"
-```
-
-### Example 6: Manual Ideas Processing (NEW)
-```
-chief-architect process-ideas \
-  --source-file "docs/planning/overview/ideas-issues.md" \
-  --target-file "docs/MASTER_PLAN.md" \
-  --enhance-existing "true"
+chief-architect check-system-health \
+  --run "npm run telemetry:health" \
+  --validate "mcp-crash-monitor"
 ```
 
-### Example 7: Stop Ideas File Watching (NEW)
+### Example 6: Manual Master Plan Update
 ```
-chief-architect stop-watching-ideas \
-  --cleanup "backup-folders"
+chief-architect update-master-plan \
+  --task "TASK-123" \
+  --action "complete" \
+  --verify "automated-tests"
+```
+
+### Example 7: Skill Consolidation (Maintenance)
+```
+chief-architect run-skill-consolidation \
+  --analyze "true" \
+  --execute "false" \
+  --report "docs/consolidation-report.md"
 ```
 
 ## Personal App Implementation Protocol

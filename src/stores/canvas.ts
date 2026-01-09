@@ -33,21 +33,12 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   const { fetchGroups, saveGroup, deleteGroup: deleteGroupRemote } = useSupabaseDatabase()
 
-  // Viewport state - Initialize synchronously from localStorage to prevent reset
-  const getSavedViewport = () => {
-    try {
-      const saved = localStorage.getItem('canvas-viewport')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Number.isFinite(parsed.x) && Number.isFinite(parsed.y) && Number.isFinite(parsed.zoom) && parsed.zoom > 0) {
-          return parsed
-        }
-      }
-    } catch (e) { console.error('Failed to load viewport synchronously:', e) }
-    return { x: 0, y: 0, zoom: 1 }
-  }
+  // TASK-155 FIX: Initialize viewport with defaults - DON'T load from localStorage synchronously
+  // Viewport is loaded asynchronously from Supabase after auth is ready via loadSavedViewport()
+  // This prevents stale localStorage viewport from showing before Supabase data is loaded
+  const getDefaultViewport = () => ({ x: 0, y: 0, zoom: 1 })
 
-  const viewport = ref(getSavedViewport())
+  const viewport = ref(getDefaultViewport())
   const zoomConfig = ref({ minZoom: 0.1, maxZoom: 4.0 })
 
   // Selection state
@@ -343,9 +334,21 @@ export const useCanvasStore = defineStore('canvas', () => {
     // Viewport persistence is now purely localStorage based for this device
   }
 
+  // TASK-155 FIX: Load viewport from Supabase first, fallback to localStorage for guests
   const loadSavedViewport = async () => {
     try {
-      // Priority 1: Local Storage (fastest)
+      // Priority 1: Supabase user_settings (source of truth for authenticated users)
+      const { fetchUserSettings } = useSupabaseDatabase()
+      const settings = await fetchUserSettings()
+      const savedViewport = settings?.canvas_viewport as { x: number; y: number; zoom: number } | undefined
+
+      if (savedViewport && typeof savedViewport.x === 'number' && Number.isFinite(savedViewport.zoom) && savedViewport.zoom > 0) {
+        viewport.value = savedViewport
+        console.log('🔭 [TASK-155] Viewport restored from Supabase:', savedViewport)
+        return true
+      }
+
+      // Priority 2: Local Storage (fallback for guests or if Supabase returns nothing)
       const local = localStorage.getItem('canvas-viewport')
       if (local) {
         const parsed = JSON.parse(local)
@@ -356,9 +359,10 @@ export const useCanvasStore = defineStore('canvas', () => {
           parsed.zoom > 0
         ) {
           viewport.value = parsed
+          console.log('🔭 [TASK-155] Viewport restored from localStorage (fallback):', parsed)
           return true
         }
-        console.warn('⚠️ [CANVAS] Invalid viewport in localStorage, resetting:', parsed)
+        console.warn('⚠️ [CANVAS] Invalid viewport in localStorage, using defaults')
       }
       return false
     } catch (e) {

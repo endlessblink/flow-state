@@ -376,6 +376,66 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         }
     }
 
+    // TASK-153: Fetch IDs of deleted tasks (for golden backup validation)
+    const fetchDeletedTaskIds = async (): Promise<string[]> => {
+        try {
+            const userId = getUserIdSafe()
+            if (!userId) return []
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('id')
+                .eq('is_deleted', true)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return data?.map(d => d.id) || []
+        } catch (e: unknown) {
+            console.error('[TASK-153] Failed to fetch deleted task IDs:', e)
+            return []
+        }
+    }
+
+    // TASK-153: Fetch IDs of deleted projects (for golden backup validation)
+    const fetchDeletedProjectIds = async (): Promise<string[]> => {
+        try {
+            const userId = getUserIdSafe()
+            if (!userId) return []
+
+            const { data, error } = await supabase
+                .from('projects')
+                .select('id')
+                .eq('is_deleted', true)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return data?.map(d => d.id) || []
+        } catch (e: unknown) {
+            console.error('[TASK-153] Failed to fetch deleted project IDs:', e)
+            return []
+        }
+    }
+
+    // TASK-153: Fetch IDs of deleted groups (for golden backup validation)
+    const fetchDeletedGroupIds = async (): Promise<string[]> => {
+        try {
+            const userId = getUserIdSafe()
+            if (!userId) return []
+
+            const { data, error } = await supabase
+                .from('groups')
+                .select('id')
+                .eq('is_deleted', true)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return data?.map(d => d.id) || []
+        } catch (e: unknown) {
+            console.error('[TASK-153] Failed to fetch deleted group IDs:', e)
+            return []
+        }
+    }
+
     // BUG-025 FIX: Atomic bulk delete using Supabase .in() operator
     const bulkDeleteTasks = async (taskIds: string[]): Promise<void> => {
         if (taskIds.length === 0) return
@@ -729,6 +789,10 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         bulkDeleteTasks,
         restoreTask,
         permanentlyDeleteTask,
+        // TASK-153: Fetch deleted item IDs for golden backup validation
+        fetchDeletedTaskIds,
+        fetchDeletedProjectIds,
+        fetchDeletedGroupIds,
         fetchGroups,
         saveGroup,
         deleteGroup,

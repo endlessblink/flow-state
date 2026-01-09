@@ -37,7 +37,8 @@ Issue Type?
 ├── Realtime Issues → Workflow 4: Subscription Debugging
 ├── Memory Leaks → Workflow 5: Memory Investigation
 ├── RLS Violations → Workflow 6: Policy Validation
-└── Pre-Deploy Check → Workflow 7: Production Readiness
+├── Pre-Deploy Check → Workflow 7: Production Readiness
+└── Data Resurrection → Workflow 8: localStorage Fallback Audit
 ```
 
 ## Workflow 1: Connection Diagnostics
@@ -468,6 +469,111 @@ LIMIT 10;
 - [ ] Error handling implemented
 - [ ] Subscription cleanup verified
 - [ ] Rate limiting configured
+
+## Workflow 8: localStorage Fallback Audit
+
+When deleted data reappears after page refresh, or Supabase data conflicts with cached data:
+
+### Step 1: Identify All localStorage Keys
+
+```bash
+# Scan codebase for all localStorage usage
+grep -roh "localStorage\.\(get\|set\|remove\)Item(['\"][^'\"]*['\"]" src/ \
+  --include="*.ts" --include="*.vue" | \
+  sed "s/localStorage\.\(get\|set\|remove\)Item(['\"]//g" | \
+  sed "s/['\"]//g" | sort -u
+```
+
+### Step 2: Check for Dangerous Fallback Patterns
+
+**DANGER PATTERN**: Loading from localStorage when Supabase returns empty
+
+```typescript
+// ❌ BAD: Resurrects deleted data
+const loadedGroups = await fetchGroups()  // Returns [] (all deleted)
+if (loadedGroups.length === 0) {
+  const localGroups = loadFromLocalStorage()  // Has OLD deleted groups!
+  _rawGroups.value = localGroups  // RESURRECTS DELETED DATA
+}
+
+// ✅ GOOD: Supabase is source of truth
+const loadedGroups = await fetchGroups()
+_rawGroups.value = loadedGroups  // Empty means empty
+```
+
+### Step 3: Pomo-Flow localStorage Inventory
+
+| Key | File | Risk Level | Notes |
+|-----|------|------------|-------|
+| `pomoflow-guest-groups` | canvas.ts | **FIXED** | Was resurrecting deleted groups |
+| `pomo-flow-golden-backup` | useBackupSystem.ts | **HIGH** | Never expires, can restore old data |
+| `pomoflow-offline-queue` | offlineQueue.ts | **MEDIUM** | No TTL, infinite retry |
+| `pomo-flow-resolution-rules` | userResolutionRules.ts | **MEDIUM** | Could affect conflict resolution |
+| `canvas-viewport` | canvas.ts | **MEDIUM** | Loaded before Supabase ready |
+| `pomo-flow-filters` | taskPersistence.ts | **MEDIUM** | Stale filters show wrong view |
+| `pomo-flow-backup-history` | useBackupSystem.ts | **MEDIUM** | Old backups persist indefinitely |
+| `pomoflow-canvas-locks` | canvasStateLock.ts | **LOW** | Has 7s TTL |
+| `pomoflow-canvas-has-initial-fit` | canvasUi.ts | **LOW** | Has 5min TTL |
+
+### Step 4: Audit Checklist
+
+For each localStorage key that stores user data:
+
+- [ ] **Source of Truth**: Is Supabase the authoritative source for authenticated users?
+- [ ] **Fallback Behavior**: Does empty from Supabase mean empty locally?
+- [ ] **TTL/Expiration**: Does cached data expire?
+- [ ] **Version/Schema**: Is there schema validation on load?
+- [ ] **Guest Mode Cleanup**: Is key in `GUEST_EPHEMERAL_KEYS` list?
+
+### Step 5: Common Fixes
+
+| Issue | Symptom | Fix |
+|-------|---------|-----|
+| Deleted data reappears | Groups/tasks come back after refresh | Remove localStorage fallback for authenticated users |
+| Stale viewport | Canvas position wrong after login | Defer viewport load until after Supabase fetch |
+| Old backup restores deleted items | Restore brings back items user deleted | Add timestamp/version to backups, validate on restore |
+| Offline queue replays old ops | Operations re-applied on reconnect | Add TTL to queued operations, validate target exists |
+
+### Step 6: Verify Fix
+
+```javascript
+// In browser console after fix:
+// 1. Create some groups
+// 2. Delete all groups
+// 3. Refresh page
+// 4. Check groups are still gone:
+console.log('Groups after refresh:',
+  JSON.parse(localStorage.getItem('pomoflow-guest-groups') || '[]').length,
+  'local,',
+  // Check Pinia store
+  useCanvasStore().groups.length,
+  'in store'
+);
+```
+
+### Step 7: Prevention Pattern
+
+```typescript
+// src/stores/canvas.ts - CORRECT PATTERN
+const loadFromDatabase = async () => {
+  const authStore = useAuthStore()
+
+  // Guest mode: start empty (ephemeral)
+  if (!authStore.isAuthenticated) {
+    _rawGroups.value = []
+    return
+  }
+
+  // Authenticated: Supabase is SINGLE source of truth
+  const loadedGroups = await fetchGroups()
+  _rawGroups.value = loadedGroups  // Empty = empty, no fallback!
+
+  // Log for debugging
+  if (loadedGroups.length === 0) {
+    console.log('📭 [SUPABASE] No groups (all deleted or none created)')
+  }
+}
+```
 
 ## Quick Reference Commands
 

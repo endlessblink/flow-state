@@ -16,13 +16,14 @@
   <div class="canvas-view-new">
     <!-- Main Canvas Area -->
     <div
+      ref="canvasContainerRef"
       class="canvas-container"
       @drop="handleDrop"
       @dragover.prevent
     >
       <VueFlow
-        v-model:nodes="nodes"
-        v-model:edges="edges"
+        :nodes="nodes"
+        :edges="edges"
         :node-types="nodeTypes"
         :default-edge-options="defaultEdgeOptions"
         :fit-view-on-init="flowOptions.fitViewOnInit"
@@ -64,6 +65,9 @@
         />
       </VueFlow>
 
+      <!-- Inbox Panel (Phase 3) -->
+      <CanvasInbox />
+
       <!-- Loading Overlay -->
       <div v-if="isLoading" class="canvas-loading">
         <div class="loading-spinner"></div>
@@ -79,15 +83,18 @@
             <line x1="9" y1="21" x2="9" y2="9"></line>
           </svg>
         </div>
-        <h3>Canvas Rebuild - Phase 2</h3>
-        <p>Groups load from Supabase ({{ store.groupCount }} groups in store)</p>
+        <h3>Canvas Rebuild - Phase 5</h3>
+        <p>{{ store.groupCount }} groups, {{ inboxTasks.length }} inbox tasks</p>
         <div class="phase-checklist">
           <div class="check-item done">Vue Flow renders</div>
           <div class="check-item done">Background grid</div>
           <div class="check-item done">Pan/Zoom controls</div>
           <div class="check-item done">MiniMap</div>
           <div class="check-item done">Groups load (Phase 2)</div>
-          <div class="check-item pending">Tasks (Phase 3)</div>
+          <div class="check-item done">Tasks + Inbox (Phase 3)</div>
+          <div class="check-item done">Drag to canvas (Phase 4)</div>
+          <div class="check-item done">Parent-child (Phase 5)</div>
+          <div class="check-item pending">Feature parity (Phase 6)</div>
         </div>
       </div>
     </div>
@@ -95,31 +102,40 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { VueFlow } from '@vue-flow/core'
+import '@vue-flow/core/dist/style.css'
+import '@vue-flow/core/dist/theme-default.css'
 import { Background, BackgroundVariant } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import { useCanvasCore } from '@/composables/canvasNew/useCanvasCore'
 import { useCanvasGroups } from '@/composables/canvasNew/useCanvasGroups'
+import { useCanvasNodes } from '@/composables/canvasNew/useCanvasNodes'
+import { useCanvasDrag } from '@/composables/canvasNew/useCanvasDrag'
 import { useCanvasNewStore } from '@/stores/canvasNew'
+import CanvasInbox from '@/components/canvasNew/CanvasInbox.vue'
 
 // ============================================
 // COMPOSABLES
 // ============================================
 
 const store = useCanvasNewStore()
+
+// Canvas container ref for drop coordinate calculation
+const canvasContainerRef = ref<HTMLElement | null>(null)
+
 const {
   nodes,
   edges,
   nodeTypes,
   defaultEdgeOptions,
   flowOptions,
-  handleNodeDragStop,
   handleNodesChange,
   handleEdgesChange,
   handleConnect,
-  syncNodes
+  syncNodes,
+  project
 } = useCanvasCore()
 
 const {
@@ -127,19 +143,96 @@ const {
   groupNodes
 } = useCanvasGroups()
 
+const {
+  taskNodes,
+  inboxTasks,
+  taskCountsByGroup
+} = useCanvasNodes()
+
+const {
+  handleCanvasDrop,
+  handleNodeDragStop: onNodeDragStop
+} = useCanvasDrag()
+
 // ============================================
 // COMPUTED
 // ============================================
 
 const isLoading = computed(() => store.isLoading)
 
+/**
+ * Calculate recursive task count for a group
+ * Includes tasks in all nested child groups
+ */
+function getRecursiveTaskCount(groupId: string, visited = new Set<string>()): number {
+  // Prevent infinite loops from circular references
+  if (visited.has(groupId)) return 0
+  visited.add(groupId)
+
+  // Get direct task count for this group
+  let count = taskCountsByGroup.value.get(groupId) ?? 0
+
+  // Find all child groups and add their recursive counts
+  store.groups.forEach(group => {
+    if (group.parentGroupId === groupId) {
+      count += getRecursiveTaskCount(group.id, visited)
+    }
+  })
+
+  return count
+}
+
+/**
+ * Enrich group nodes with task counts
+ * Phase 5: Groups should show how many tasks they contain
+ * Uses RECURSIVE counting - parent groups include tasks from child groups
+ */
+const groupNodesWithCounts = computed(() => {
+  return groupNodes.value.map(node => {
+    // Extract group ID from node ID (format: "section-{groupId}")
+    const groupId = node.id.replace('section-', '')
+
+    // Get recursive task count (includes tasks in child groups)
+    const taskCount = getRecursiveTaskCount(groupId)
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        taskCount
+      }
+    }
+  })
+})
+
 // ============================================
 // EVENT HANDLERS
 // ============================================
 
-function handleDrop(event: DragEvent) {
-  // Will be implemented in Phase 4
-  console.log('[CanvasViewNew] Drop event:', event)
+async function handleDrop(event: DragEvent) {
+  event.preventDefault()
+
+  // Get container rect for coordinate conversion
+  const container = canvasContainerRef.value
+  if (!container) {
+    console.warn('[CanvasViewNew] No container ref for drop')
+    return
+  }
+
+  const containerRect = container.getBoundingClientRect()
+  await handleCanvasDrop(event, project, containerRect)
+
+  // Re-sync nodes after drop to update Vue Flow
+  await syncNodes(groupNodesWithCounts.value, taskNodes.value)
+}
+
+async function handleNodeDragStop(event: { node: any }) {
+  // Use the drag composable's handler
+  await onNodeDragStop(event)
+
+  // Re-sync nodes to update Vue Flow with any parent-child changes
+  // This ensures tasks that were dragged into/out of groups have correct parentNode
+  await syncNodes(groupNodesWithCounts.value, taskNodes.value)
 }
 
 // ============================================
@@ -147,33 +240,26 @@ function handleDrop(event: DragEvent) {
 // ============================================
 
 onMounted(async () => {
-  console.log('[CanvasViewNew] Mounted - Loading groups...')
+  console.log('[CanvasViewNew] Mounted - Loading canvas...')
 
   // Load groups from Supabase
   await loadGroups()
 
-  // Sync groups to Vue Flow
-  await syncNodes(groupNodes.value)
+  // Sync groups AND tasks to Vue Flow
+  // Groups must come first (for parent-child relationships)
+  await syncNodes(groupNodesWithCounts.value, taskNodes.value)
 
   store.setInitialized(true)
-  console.log('[CanvasViewNew] Initialized with', groupNodes.value.length, 'groups')
+  console.log('[CanvasViewNew] Initialized with', groupNodesWithCounts.value.length, 'groups and', taskNodes.value.length, 'tasks')
 })
 
 onUnmounted(() => {
   console.log('[CanvasViewNew] Unmounted')
 })
 
-// Watch for store group changes and re-sync
-watch(
-  () => store.groups,
-  async () => {
-    if (store.isInitialized) {
-      console.log('[CanvasViewNew] Groups changed, re-syncing...')
-      await syncNodes(groupNodes.value)
-    }
-  },
-  { deep: true }
-)
+// NOTE: No watcher for groups - following "Explicit Over Reactive" principle
+// Sync is triggered explicitly via loadGroups() or when actions occur
+// This prevents the recursive update loops that plagued the old canvas
 </script>
 
 <style scoped>
@@ -194,6 +280,37 @@ watch(
 .canvas-flow {
   width: 100%;
   height: 100%;
+}
+
+/* CRITICAL: Z-index fix for node stacking order
+ *
+ * Problem: CSS stacking contexts. When a parent element has z-index,
+ * it creates a stacking context that traps children inside.
+ *
+ * Solution:
+ * - Groups have z-index: auto (no stacking context)
+ * - Child groups appear ABOVE parent groups via later DOM order
+ * - Tasks use very high z-index to always be on top
+ */
+
+/* GROUPS: Reset z-index to avoid stacking context traps */
+:deep(.vue-flow__node-sectionNode) {
+  z-index: auto !important;
+}
+
+/* TASKS: Always on top of ALL groups, regardless of nesting */
+:deep(.vue-flow__node-taskNode) {
+  z-index: 1000 !important;
+}
+
+/* Selected tasks slightly higher */
+:deep(.vue-flow__node-taskNode.selected) {
+  z-index: 1001 !important;
+}
+
+/* Dragging tasks on top of everything */
+:deep(.vue-flow__node-taskNode.dragging) {
+  z-index: 10000 !important;
 }
 
 /* Background styling */

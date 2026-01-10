@@ -19,11 +19,11 @@
 # - DROP TABLE (specific)
 # - ALTER TABLE DROP COLUMN
 
-# Read the command from stdin (Claude passes tool input as JSON)
-INPUT=$(cat)
+# Read the command from stdin (with timeout to prevent freeze in Zellij)
+INPUT=$(timeout 1 cat 2>/dev/null || echo '{}')
 
 # Extract the command from JSON input
-COMMAND=$(echo "$INPUT" | jq -r '.command // empty' 2>/dev/null)
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
 
 # If no command found, allow (not a bash command)
 if [ -z "$COMMAND" ]; then

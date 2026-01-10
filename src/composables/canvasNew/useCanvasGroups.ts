@@ -32,9 +32,12 @@ export function useCanvasGroups() {
 
   /**
    * Convert store groups to Vue Flow nodes
+   * Calculates nesting depth for proper z-index layering
    */
   const groupNodes = computed<Node[]>(() => {
-    return store.groups.map((group) => createGroupNode(group))
+    // Calculate depth for each group (for z-index)
+    const depthMap = calculateGroupDepths(store.groups)
+    return store.groups.map((group) => createGroupNode(group, depthMap.get(group.id) ?? 0))
   })
 
   // ============================================
@@ -42,9 +45,49 @@ export function useCanvasGroups() {
   // ============================================
 
   /**
-   * Create a Vue Flow node from a canvas group
+   * Calculate nesting depth for each group
+   * Root groups = 0, their children = 1, etc.
    */
-  function createGroupNode(group: CanvasGroupNew): Node {
+  function calculateGroupDepths(groups: CanvasGroupNew[]): Map<string, number> {
+    const depthMap = new Map<string, number>()
+    const groupMap = new Map(groups.map(g => [g.id, g]))
+
+    function getDepth(groupId: string, visited = new Set<string>()): number {
+      // Prevent infinite recursion from circular references
+      if (visited.has(groupId)) return 0
+      visited.add(groupId)
+
+      // Check cache
+      if (depthMap.has(groupId)) return depthMap.get(groupId)!
+
+      const group = groupMap.get(groupId)
+      if (!group || !group.parentGroupId) {
+        depthMap.set(groupId, 0)
+        return 0
+      }
+
+      const parentDepth = getDepth(group.parentGroupId, visited)
+      const depth = parentDepth + 1
+      depthMap.set(groupId, depth)
+      return depth
+    }
+
+    // Calculate depth for all groups
+    groups.forEach(g => getDepth(g.id))
+    return depthMap
+  }
+
+  /**
+   * Create a Vue Flow node from a canvas group
+   * @param group - The group data
+   * @param depth - Nesting depth (0 = root, 1 = child of root, etc.)
+   */
+  function createGroupNode(group: CanvasGroupNew, depth: number = 0): Node {
+    // Z-index strategy:
+    // - DO NOT set z-index on groups - it creates stacking contexts that trap children
+    // - Vue Flow handles render order via node array order (parents before children)
+    // - Tasks use CSS with !important to always be above groups
+
     return {
       id: `section-${group.id}`,
       type: GROUP_NODE_TYPE,
@@ -56,13 +99,15 @@ export function useCanvasGroups() {
       parentNode: group.parentGroupId
         ? `section-${group.parentGroupId}`
         : undefined,
+      // NO zIndex property - avoid stacking context issues
       data: {
         ...group,
-        taskCount: 0 // Will be updated when tasks are loaded (Phase 3)
+        taskCount: 0, // Will be updated via computed
+        depth // Include depth in data for debugging/styling
       },
       // Group nodes should be expandable to contain children
       expandParent: true,
-      // Style for the group (dimensions handled by component)
+      // Style for dimensions only - NO z-index
       style: {
         width: `${group.dimensions?.width ?? DEFAULT_GROUP_WIDTH}px`,
         height: `${group.dimensions?.height ?? DEFAULT_GROUP_HEIGHT}px`

@@ -38,8 +38,9 @@
 | **TASK-189** | **System Tech Debt Audit** | **P1** | ✅ **DONE** [Details](#task-189-system-tech-debt-audit-done) | - |
 | TASK-190 | Quick Wins - Tech Debt Cleanup | P1 | 📋 PLANNED | TASK-189 |
 | ~~TASK-191~~ | Board View Refactor | P1 | ✅ **DONE** (2024-01-10) - Deep Refinement (CSS extraction, logic externalization, LOC reduction: Swimlane ~130, Column ~60) | TASK-184 patterns |
-| TASK-192 | Calendar View Refactor | P1 | 📋 PLANNED | TASK-191 patterns |
-| **TASK-193** | **Skill Consolidation (78→45)** | **P1** | 🔄 **IN PROGRESS** | [Details](#task-193-skill-consolidation-in-progress) |
+| ~~TASK-192~~ | ✅ **DONE** | Calendar View Refactor | P1 | ✅ **DONE** (2026-01-10) - Performance, race conditions, type safety, prop reduction. | TASK-191 patterns |
+| ~~TASK-193~~ | ~~Skill Consolidation (78→57)~~ | P1 | ✅ **DONE** | [Details](#task-193-skill-consolidation-done) |
+| ~~TASK-194~~ | ✅ **DONE** | Settings System Refactor | P2 | ✅ **DONE** (2026-01-10) - Unified store, extracted tabs, reactive density. | TASK-191, TASK-192 |
 | ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
 
 
@@ -214,23 +215,35 @@
 **Status**: IN_PROGRESS
 **Goal**: The largest technical debt item (3.4k lines). Orchestrate the canvas rather than implementing it.
 
-### TASK-193: Skill Consolidation (🔄 IN PROGRESS)
+### ~~TASK-193~~: Skill Consolidation (✅ DONE)
 **Priority**: P1-HIGH
-**Status**: IN_PROGRESS
-**Goal**: Reduce Claude Code skills from 78 to ~45 (40 visible + 5 buffer) to fix skill matching issues caused by token truncation.
+**Status**: DONE
+**Completion Date**: 2026-01-10
+**Goal**: Reduce Claude Code skills from 78 to ~57 to fix skill matching issues caused by token truncation.
 **Report**: [docs/process-docs/skill-consolidation_10.1.26/skill-consolidation_10.1.26.md](./process-docs/skill-consolidation_10.1.26/skill-consolidation_10.1.26.md)
 
 **Problem**: Claude Code truncates skill list at ~56 skills due to token limits. With 78 skills, many specialized skills (like `vue-flow-debug`) are hidden and can't be automatically matched.
 
-**Actions**:
+**Actions Completed**:
 - [x] Merge `skills-manager` into `skill-creator-doctor`
-- [ ] Archive 10 duplicate skills (emoji vs non-emoji)
-- [ ] Archive 4 obsolete tech skills (PouchDB/IndexedDB)
-- [ ] Delete 1 backup file
-- [ ] Merge 4 consolidation groups (Storybook, Auditor, Calendar, Cleanup)
-- [ ] Fix or archive broken metadata skills
+- [x] Archive 10 duplicate skills (emoji vs non-emoji)
+- [x] Archive 2 obsolete tech skills (PouchDB/IndexedDB focused)
+- [x] Delete backup file and stray .md file
+- [x] Merge Storybook skills (3→1)
+- [x] Merge Auditor skills (3→1)
+- [x] Merge Calendar skills (3→1)
+- [x] Merge Cleanup skills (3→1)
 
-**Target**: 78 → 45 skills (42% reduction)
+**Results**: 78 → 57 skills (27% reduction, 21 skills archived)
+
+**Archives**:
+- `.claude/skills-archive/duplicates-20260110/` (10 skills)
+- `.claude/skills-archive/obsolete-tech-20260110/` (2 skills)
+- `.claude/skills-archive/storybook-merge-20260110/` (2 skills)
+- `.claude/skills-archive/auditor-merge-20260110/` (2 skills)
+- `.claude/skills-archive/calendar-merge-20260110/` (2 skills)
+- `.claude/skills-archive/cleanup-merge-20260110/` (2 skills)
+- `.claude/skills-archive/skills-manager-merged-20260110/` (1 skill)
 
 ### ~~TASK-188~~: Refactor DoneToggle.vue (✅ DONE)
 **Priority**: P3-LOW

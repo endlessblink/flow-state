@@ -1,22 +1,29 @@
 <script setup lang="ts">
+import { inject } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent } from '@/types/tasks'
 import type { MonthDay } from '@/composables/calendar/useCalendarMonthView'
+
+// Inject helpers from parent CalendarView
+const helpers = inject('calendar-helpers') as any
+const {
+  getProjectVisual,
+  getProjectName,
+  getProjectColor,
+  getPriorityClass,
+  getPriorityLabel,
+  getTaskStatus,
+  getStatusLabel,
+  getStatusIcon,
+  formatEventTime
+} = helpers
 
 defineProps<{
   monthDays: MonthDay[]
   currentTaskId?: string | null
   
-  // Helpers/Methods passed as props
-  getProjectVisual: (event: CalendarEvent) => { type: 'emoji' | 'color'; content: string }
-  getProjectName: (event: CalendarEvent) => string
-  getProjectColor: (event: CalendarEvent) => string
-  getPriorityClass: (event: CalendarEvent) => string
-  getPriorityLabel: (event: CalendarEvent) => string
-  getTaskStatus: (event: CalendarEvent) => string
-  getStatusLabel: (event: CalendarEvent) => string
-  getStatusIcon: (status: string) => string
-  formatEventTime: (event: CalendarEvent) => string
+  monthDays: MonthDay[]
+  currentTaskId?: string | null
 }>()
 
 defineEmits<{

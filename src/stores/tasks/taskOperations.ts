@@ -364,6 +364,43 @@ export function useTaskOperations(
         }
     }
 
+    /**
+     * ✅ TASK-192: Atomic update for task scheduling
+     * Combines task updates and instance updates to prevent race conditions
+     */
+    const updateTaskWithSchedule = async (taskId: string, schedule: {
+        scheduledDate: string
+        scheduledTime: string
+        instanceId?: string
+    }) => {
+        const task = _rawTasks.value.find(t => t.id === taskId)
+        if (!task) return
+
+        const updates: Partial<Task> = {
+            scheduledDate: schedule.scheduledDate,
+            scheduledTime: schedule.scheduledTime,
+            // When scheduling on calendar, it's no longer in inbox
+            isInInbox: false
+        }
+
+        // If instance exists, update it too
+        if (schedule.instanceId && task.instances) {
+            const instances = [...task.instances]
+            const idx = instances.findIndex(i => i.id === schedule.instanceId)
+            if (idx !== -1) {
+                instances[idx] = {
+                    ...instances[idx],
+                    scheduledDate: schedule.scheduledDate,
+                    scheduledTime: schedule.scheduledTime,
+                    updatedAt: new Date()
+                }
+                updates.instances = instances
+            }
+        }
+
+        await updateTask(taskId, updates)
+    }
+
     const startTaskNow = (taskId: string) => {
         console.log('🎯 startTaskNow (operations) called for task:', taskId)
         const task = _rawTasks.value.find(t => t.id === taskId)
@@ -556,6 +593,7 @@ export function useTaskOperations(
         createTaskInstance,
         updateTaskInstance,
         deleteTaskInstance,
+        updateTaskWithSchedule,
         startTaskNow,
         moveTaskToSmartGroup,
         moveTaskToDate,

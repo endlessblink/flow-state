@@ -1,60 +1,38 @@
 import { defineStore } from 'pinia'
-import { ref, watch as _watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
-// Temporarily remove i18n to fix setup function error
-// import { useI18n } from 'vue-i18n'
-// import { useDirection } from '@/i18n/useDirection'
 
 const UI_STATE_STORAGE_KEY = 'pomo-flow-ui-state'
 
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
-/**
- * Power group override mode for canvas power groups
- * - 'always': Always override task properties when dropped on power group
- * - 'only_empty': Only set property if task doesn't have one
- * - 'ask': Ask user each time when there's a conflict
- */
-export type PowerGroupOverrideMode = 'always' | 'only_empty' | 'ask'
-
 export const useUIStore = defineStore('ui', () => {
-  // RTL and i18n support - temporarily disabled to fix initialization
-  // const { locale } = useI18n()
-  // const { direction, isRTL, isLTR, setDirection, directionPreference } = useDirection()
-
   // Temporary hardcoded values until i18n is fixed
   const locale = ref('en')
   const direction = ref('ltr')
   const isRTL = computed(() => direction.value === 'rtl')
   const isLTR = computed(() => direction.value === 'ltr')
-  const directionPreference = ref('ltr') // Temporary value
+  const directionPreference = ref('ltr')
 
   // Sidebar visibility state
   const mainSidebarVisible = ref(true)
   const secondarySidebarVisible = ref(true)
   const focusMode = ref(false)
-  const boardDensity = ref<'ultrathin' | 'compact' | 'comfortable'>('comfortable')
 
-  // Project Multi-Selection State (Global for filtering)
-  // We use a Set for efficiency but expose as array for compatibility if needed
+  // Project Multi-Selection State
   const selectedProjectIds = ref<Set<string>>(new Set())
-  const lastSelectedProjectId = ref<string | null>(null) // For Shift+Click range selection
+  const lastSelectedProjectId = ref<string | null>(null)
 
   // Theme and additional UI state
   const theme = ref<'light' | 'dark' | 'auto'>('dark')
-  const sidebarCollapsed = ref(false) // Legacy compatibility property
+  const sidebarCollapsed = ref(false)
   const activeView = ref<'board' | 'canvas' | 'calendar' | 'all-tasks'>('board')
 
-  // Power group settings
-  const powerGroupOverrideMode = ref<PowerGroupOverrideMode>('always')
-
-  // Expanded State (Persisted)
-  // We use Array/Boolean here but we could use Set for projects if preferred.
-  // Using Array for simple JSON serialization matching current implementation.
+  // Expanded State
   const expandedProjectIds = ref<string[]>([])
   const isDurationSectionExpanded = ref(true)
 
-  // Language and direction state
+  // Language state
   const availableLanguages = [
     { code: 'en', name: 'English', nativeName: 'English' },
     { code: 'he', name: 'Hebrew', nativeName: 'עברית' }
@@ -123,13 +101,10 @@ export const useUIStore = defineStore('ui', () => {
 
   const toggleFocusMode = () => {
     focusMode.value = !focusMode.value
-
     if (focusMode.value) {
-      // Entering focus mode - hide all sidebars
       mainSidebarVisible.value = false
       secondarySidebarVisible.value = false
     } else {
-      // Exiting focus mode - restore sidebars
       mainSidebarVisible.value = true
       secondarySidebarVisible.value = true
     }
@@ -147,17 +122,6 @@ export const useUIStore = defineStore('ui', () => {
     mainSidebarVisible.value = false
     secondarySidebarVisible.value = false
     focusMode.value = true
-    persistState()
-  }
-
-  const setBoardDensity = (density: 'ultrathin' | 'compact' | 'comfortable') => {
-    boardDensity.value = density
-    persistState()
-  }
-
-  // Power group settings actions
-  const setPowerGroupOverrideMode = (mode: PowerGroupOverrideMode) => {
-    powerGroupOverrideMode.value = mode
     persistState()
   }
 
@@ -194,14 +158,11 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   const setDirectionPreference = (pref: 'ltr' | 'rtl' | 'auto') => {
-    // Temporarily disabled direction setting functionality
-    // setDirection(pref)
     directionPreference.value = pref
     persistState()
   }
 
   const toggleDirection = () => {
-    // Temporarily disabled direction toggling
     if (directionPreference.value === 'auto') {
       setDirectionPreference(isRTL.value ? 'ltr' : 'rtl')
     } else {
@@ -216,11 +177,6 @@ export const useUIStore = defineStore('ui', () => {
       mainSidebarVisible: mainSidebarVisible.value,
       secondarySidebarVisible: secondarySidebarVisible.value,
       focusMode: focusMode.value,
-      boardDensity: boardDensity.value,
-      locale: locale.value,
-      directionPreference: directionPreference.value,
-      powerGroupOverrideMode: powerGroupOverrideMode.value,
-      // New persisted fields
       activeView: activeView.value,
       expandedProjectIds: expandedProjectIds.value,
       isDurationSectionExpanded: isDurationSectionExpanded.value
@@ -236,36 +192,16 @@ export const useUIStore = defineStore('ui', () => {
         mainSidebarVisible.value = state.mainSidebarVisible ?? true
         secondarySidebarVisible.value = state.secondarySidebarVisible ?? true
         focusMode.value = state.focusMode ?? false
-        boardDensity.value = state.boardDensity ?? 'comfortable'
 
-        // Restore active view if valid
         if (state.activeView && ['board', 'canvas', 'calendar', 'all-tasks'].includes(state.activeView)) {
           activeView.value = state.activeView
         }
 
-        // Restore expansion states
         if (Array.isArray(state.expandedProjectIds)) {
           expandedProjectIds.value = state.expandedProjectIds
         }
         if (typeof state.isDurationSectionExpanded === 'boolean') {
           isDurationSectionExpanded.value = state.isDurationSectionExpanded
-        }
-
-        // Restore language and direction preferences
-        if (state.locale && ['en', 'he'].includes(state.locale)) {
-          locale.value = state.locale
-          localStorage.setItem('app-locale', state.locale)
-        }
-
-        if (state.directionPreference && ['ltr', 'rtl', 'auto'].includes(state.directionPreference)) {
-          // Temporarily disabled direction setting
-          // setDirection(state.directionPreference)
-          directionPreference.value = state.directionPreference
-        }
-
-        // Load power group settings
-        if (state.powerGroupOverrideMode && ['always', 'only_empty', 'ask'].includes(state.powerGroupOverrideMode)) {
-          powerGroupOverrideMode.value = state.powerGroupOverrideMode
         }
       } catch (error) {
         errorHandler.report({
@@ -274,18 +210,16 @@ export const useUIStore = defineStore('ui', () => {
           message: 'Failed to load UI state from localStorage',
           error: error as Error,
           context: { operation: 'loadState', store: 'ui' },
-          showNotification: false // Non-critical - using defaults
+          showNotification: false
         })
       }
     }
   }
 
   return {
-    // State
     mainSidebarVisible,
     secondarySidebarVisible,
     focusMode,
-    boardDensity,
     theme,
     sidebarCollapsed,
     activeView,
@@ -293,8 +227,6 @@ export const useUIStore = defineStore('ui', () => {
     authModalView,
     authModalRedirect,
     settingsModalOpen,
-
-    // RTL and i18n state
     locale,
     direction,
     isRTL,
@@ -302,35 +234,23 @@ export const useUIStore = defineStore('ui', () => {
     directionPreference,
     availableLanguages,
     currentLanguage,
-
-    // Power group settings
-    powerGroupOverrideMode,
-
-    // Expansion State
     expandedProjectIds,
     isDurationSectionExpanded,
-
-    // Actions
     toggleMainSidebar,
     toggleSecondarySidebar,
     toggleFocusMode,
-    setBoardDensity,
-    setPowerGroupOverrideMode,
-
-    // Multi-select exports
+    showAllSidebars,
+    hideAllSidebars,
     selectedProjectIds,
     lastSelectedProjectId,
     toggleProjectSelection,
     setProjectSelection,
     clearProjectSelection,
-
     openAuthModal,
     closeAuthModal,
     switchAuthView,
     openSettingsModal,
     closeSettingsModal,
-
-    // Language and direction actions
     setLanguage,
     setDirectionPreference,
     toggleDirection,

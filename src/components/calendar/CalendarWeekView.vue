@@ -1,6 +1,23 @@
 <script setup lang="ts">
+import { inject } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { WeekEvent } from '@/types/tasks'
+
+// Inject helpers from parent CalendarView
+const helpers = inject('calendar-helpers') as any
+const {
+  formatHour,
+  getWeekEventStyle,
+  isCurrentWeekTimeCell,
+  getProjectVisual,
+  getProjectName,
+  getProjectColor,
+  getPriorityClass,
+  getPriorityLabel,
+  getTaskStatus,
+  getStatusLabel,
+  getStatusIcon
+} = helpers
 
 defineProps<{
   weekDays: any[]
@@ -8,18 +25,8 @@ defineProps<{
   weekEvents: WeekEvent[]
   currentTaskId?: string | null
   
-  // Helpers/Methods passed as props
-  formatHour: (hour: number) => string
-  getWeekEventStyle: (event: WeekEvent) => any
-  isCurrentWeekTimeCell: (dateString: string, hour: number) => boolean
-  getProjectVisual: (event: WeekEvent) => { type: 'emoji' | 'color'; content: string }
-  getProjectName: (event: WeekEvent) => string
-  getProjectColor: (event: WeekEvent) => string
-  getPriorityClass: (event: WeekEvent) => string
-  getPriorityLabel: (event: WeekEvent) => string
-  getTaskStatus: (event: WeekEvent) => string
-  getStatusLabel: (event: WeekEvent) => string
-  getStatusIcon: (status: string) => string
+  weekEvents: WeekEvent[]
+  currentTaskId?: string | null
 }>()
 
 defineEmits<{

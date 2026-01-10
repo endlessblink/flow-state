@@ -691,7 +691,445 @@ export const Interactive: Story = { /* Full interaction demo */ }
 
 ---
 
-**When to use this skill**: Creating or fixing Storybook stories, resolving story compilation errors, documenting Vue 3 components, setting up component showcases.
+# PART 2: Story Auditing (Merged from storybook-audit)
+
+This section provides systematic auditing capabilities for detecting and fixing common Storybook issues.
+
+## Trigger Keywords
+
+Activate auditing capabilities when user mentions:
+- "audit storybook", "fix storybook stories", "storybook cut off"
+- "storybook store error", "storybook database error"
+- "storybook modal cutoff", "storybook rendering issues"
+- "Cannot find name 'ref'", "missing imports", "Vue import error"
+- "missing event handlers", "modal won't close", "buttons don't work"
+
+## User Clarification Protocol
+
+**CRITICAL**: Before attempting fixes, ask clarifying questions to understand the exact issue.
+
+### Questions to Ask
+
+When user reports a Storybook issue, ask:
+
+1. **Issue Type Clarification**:
+   - "Is this happening on the Docs page or the Canvas/Story page?"
+   - "Is the component being cut off, showing an error, or not rendering at all?"
+
+2. **Component Context**:
+   - "What type of component is this? (Modal, Context Menu, Dropdown, Form, etc.)"
+   - "Does this component use any Pinia stores?"
+   - "Does the component have dynamic height (expandable sections, submenus)?"
+
+3. **Error Details**:
+   - "Are there any errors in the browser console?"
+   - "Can you share the exact error message?"
+
+### Decision Tree
+
+```
+User reports Storybook issue
+    ├── "cut off" / "clipped" / "can't see"
+    │   └── Ask: "Docs page or Canvas?" + "Component type?"
+    │   └── Likely: iframe height issue → Check 1
+    │
+    ├── "error" / "won't render" / "database"
+    │   └── Ask: "Console error message?"
+    │   └── Likely: Store dependency → Check 2
+    │
+    ├── "doesn't match" / "wrong props"
+    │   └── Ask: "Which props are incorrect?"
+    │   └── Likely: Props mismatch → Check 4
+    │
+    ├── "Cannot find name 'ref'" / "Cannot find name 'computed'"
+    │   └── Ask: "Which Vue APIs are you using in setup()?"
+    │   └── Likely: Missing imports → Check 7
+    │
+    ├── "buttons don't work" / "can't close modal"
+    │   └── Ask: "What happens when you click [button]?"
+    │   └── Likely: Missing event handlers → Check 8
+    │
+    └── Unknown
+        └── Run full audit, then ask about findings
+```
+
+## Audit Checks
+
+### Check 1: Iframe Height
+
+**Issue**: Docs pages cut off modals, popups, or dropdowns
+
+**Detection**:
+```bash
+# Find stories with potentially low iframe heights
+grep -rn "iframeHeight" src/stories/ | grep -E "iframeHeight: [0-5][0-9]{2},"
+
+# Find stories without explicit height
+grep -L "iframeHeight" src/stories/**/*.stories.ts
+```
+
+**Component Type Guidelines**:
+| Component Type | Minimum Height | Notes |
+|----------------|----------------|-------|
+| Simple components | 400px | Buttons, inputs, badges |
+| Context menus | 600px | May have submenus |
+| Dropdowns | 500px | Check max items |
+| Modals (small) | 700px | Confirmation dialogs |
+| Modals (large) | 900px | Forms, settings |
+| Full-page overlays | 100vh | Use fullscreen layout |
+| Components with submenus | 900px+ | Cascading menus need more |
+
+**Fix Pattern A: Iframe Height (Standard)**:
+```typescript
+parameters: {
+  layout: 'fullscreen',
+  docs: {
+    story: {
+      inline: false,
+      iframeHeight: 900,  // Adjust based on component type
+    }
+  }
+},
+```
+
+**Fix Pattern B: Inline Relative Container (Robust for Storybook 8/10)**:
+```typescript
+parameters: {
+  layout: 'fullscreen',
+  docs: {
+    story: { inline: true }
+  }
+},
+decorators: [
+  () => ({
+    template: `
+      <div class="story-container" style="
+        background: var(--glass-bg-solid);
+        height: 850px;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+      ">
+        <story />
+      </div>
+    `
+  })
+]
+```
+
+### Check 2: Store Dependencies (Pinia)
+
+**Issue**: Stories import real Pinia stores which initialize PouchDB → causes database errors
+
+**Detection**:
+```bash
+# Find stories importing stores
+grep -rn "from '@/stores" src/stories/
+grep -rn "useTaskStore\|useTimerStore\|useCanvasStore\|useUIStore" src/stories/
+```
+
+**Fix Options (in order of preference)**:
+
+**Option A - Props Only** (best for presentational components):
+```typescript
+// Pass data via props, no store needed
+const mockTask: Task = {
+  id: '1',
+  title: 'Test Task',
+  status: 'planned',
+  priority: 'high',
+}
+
+export const Default: Story = {
+  args: {
+    task: mockTask,
+    onEdit: () => console.log('edit'),
+    onDelete: () => console.log('delete'),
+  }
+}
+```
+
+**Option B - Fresh Pinia Decorator** (for components requiring store):
+```typescript
+// Create decorator: src/stories/decorators/freshPiniaDecorator.ts
+import { createPinia, setActivePinia } from 'pinia'
+
+export const freshPiniaDecorator = (story: any) => {
+  setActivePinia(createPinia())
+  return story()
+}
+```
+
+### Check 3: Template Validation
+
+**Issue**: Runtime templates contain `<style>` or `<script>` tags causing Vue errors
+
+**Detection**:
+```bash
+grep -rn "template:.*<style>" src/stories/
+grep -rn "template:.*<script>" src/stories/
+```
+
+### Check 4: Props Mismatch
+
+**Issue**: Story args don't match component prop definitions
+
+**Detection**:
+```bash
+# Get component props
+grep -A 30 "defineProps" src/components/[ComponentName].vue
+
+# Get story args
+grep -A 15 "args:" src/stories/[ComponentName].stories.ts
+```
+
+**Common Mismatches**:
+| Story Arg | Actual Prop | Fix |
+|-----------|-------------|-----|
+| `isVisible` | `isOpen` | Use `isOpen` |
+| `selectedTasks` | `taskIds` | Use `taskIds` |
+| `onClose` | `@close` emit | Add handler |
+
+### Check 5: Layout Parameter
+
+**Issue**: Modals/overlays using `layout: 'centered'` causing cutoff
+
+**Detection**:
+```bash
+grep -l "Modal\|Overlay\|Dialog\|Popup\|Drawer" src/stories/**/*.ts | \
+  xargs grep -L "layout: 'fullscreen'"
+```
+
+### Check 6: Design Token Enforcement
+
+**Issue**: Stories or decorators use hardcoded colors instead of CSS design tokens
+
+**Detection**:
+```bash
+# Find hardcoded hex colors in stories
+grep -rn "#[0-9a-fA-F]\{3,8\}" src/stories/ --include="*.ts" --include="*.vue"
+
+# Find hardcoded rgba values
+grep -rn "rgba\s*(" src/stories/ --include="*.ts" --include="*.vue"
+```
+
+**Token Categories to Use**:
+| Purpose | CSS Variable |
+|---------|-------------|
+| Priority High | `var(--color-priority-high)` |
+| Priority Medium | `var(--color-priority-medium)` |
+| Priority Low | `var(--color-priority-low)` |
+| Glass background | `var(--glass-bg)`, `var(--glass-bg-solid)` |
+| Glass border | `var(--glass-border)` |
+| Modal/Dropdown bg | `var(--modal-bg)`, `var(--dropdown-bg)` |
+| Text primary | `var(--text-primary)` |
+| Surface colors | `var(--surface-primary)`, `var(--surface-secondary)` |
+
+### Check 7: Missing Vue Imports
+
+**Issue**: Stories use Vue APIs without importing them
+
+**Fix Pattern**:
+```typescript
+// Add all used Vue APIs
+import { ref, computed, watch, onMounted } from 'vue'
+```
+
+### Check 8: Event Handlers
+
+**Issue**: Stories don't provide handlers for critical events
+
+**Critical Events Checklist**:
+
+For **Modal/Overlay** components:
+- [ ] `@close` - User closes modal
+- [ ] `@confirm` - User confirms action
+- [ ] `@cancel` - User cancels action
+
+For **Form** components:
+- [ ] `@submit` - User submits form
+- [ ] `@cancel` - User cancels form
+
+## Full Audit Workflow
+
+Run this bash script for a complete audit:
+
+```bash
+echo "=== STORYBOOK AUDIT REPORT ==="
+echo ""
+echo "=== 1. Store Dependencies ==="
+grep -rn "from '@/stores" src/stories/ 2>/dev/null | head -20 || echo "None found"
+echo ""
+echo "=== 2. Low Iframe Heights (<600px) ==="
+grep -rn "iframeHeight: [0-5][0-9]{2}," src/stories/ 2>/dev/null || echo "None found"
+echo ""
+echo "=== 3. Template Style/Script Tags ==="
+grep -rn "template:" src/stories/ 2>/dev/null | grep -E "<style|<script" || echo "None found"
+echo ""
+echo "=== 4. Modals Without Fullscreen ==="
+for f in $(find src/stories -name "*.stories.ts" 2>/dev/null); do
+  if grep -q "Modal\|Overlay\|Dialog" "$f" && ! grep -q "fullscreen" "$f"; then
+    echo "$f: NEEDS FULLSCREEN"
+  fi
+done
+echo ""
+echo "=== 5. Hardcoded Colors (Token Violations) ==="
+grep -rn "#[0-9a-fA-F]\{3,8\}" src/stories/ --include="*.ts" 2>/dev/null | head -15 || echo "None found"
+echo ""
+echo "=== Audit Complete ==="
+```
+
+## Component-Specific Guidelines
+
+### TaskContextMenu
+- Minimum height: 900px (has cascading submenus)
+- Needs mock task data, not store
+- All event handlers should be noops or console.log
+- Layout: fullscreen required
+
+### ContextMenu
+- Minimum height: 600px
+- Position must be calculated in render function
+- Use `onMounted` for centering
+
+### Modal Components (General)
+- Always use `layout: 'fullscreen'`
+- Wrap in full-height container div
+- Provide toggle mechanism for interactive demos
+- Test both open and closed states
+
+### Auth Components
+- Background: `var(--glass-bg-solid)`
+- Border: None (clean glass look)
+- Layout: `inline: true` with fixed height (600px-800px)
+
+---
+
+# PART 3: Component Discovery & Automation (Merged from storybook-master)
+
+This section provides automated component discovery, story generation, and CI integration.
+
+## 4-Phase Workflow
+
+### Phase 1: Component Discovery & Inventory
+
+**Smart Source Scanning**:
+- Multi-framework detection (React, Vue, Svelte, Web Components)
+- Pattern-based classification using folder structures
+- Metadata extraction from prop types and interfaces
+
+**Usage**:
+```bash
+python3 scripts/phase1_discovery.py
+```
+
+**Output Files**:
+- `storybook-inventory.csv`: Complete component inventory
+- `missing-stories-report.md`: Undocumented components report
+- `component-update-map.json`: Component-to-story mapping
+
+### Phase 2: Autodocs & Story Automation
+
+**Story Generation**:
+- CSF3 story format generation
+- Prop-driven controls auto-generation
+- Documentation blocks creation
+
+**Usage**:
+```bash
+python3 scripts/phase2_generation.py --auto-fix
+```
+
+### Phase 3: Automated Visual & Interaction Testing
+
+**Visual Test Harness**:
+- Snapshot testing for visual regression
+- Cross-browser testing
+- Accessibility compliance (axe-core, WCAG 2.1 AA)
+
+### Phase 4: CI/CD Integration
+
+**CI Enforcement**:
+- Build validation and coverage enforcement
+- Quality gates for merging
+- Automated PR comments
+
+## Configuration
+
+Create `.storybook/skill-config.yml`:
+
+```yaml
+discovery:
+  component_paths:
+    - "src/components/**/*"
+  story_paths:
+    - "src/**/*.stories.*"
+  ignore_patterns:
+    - "*.test.*"
+    - "node_modules/**"
+
+generation:
+  autodocs: true
+  controls: true
+  accessibility_testing: true
+
+testing:
+  visual_testing:
+    enabled: true
+    tool: "chromatic"
+  accessibility:
+    enabled: true
+    standards: ["WCAG2.1AA"]
+
+ci:
+  enforce_coverage: true
+  fail_on_missing_stories: true
+```
+
+## Scripts Available
+
+Located in `scripts/` directory:
+- `run_storybook_master.py` - Main orchestrator for all phases
+- `phase1_discovery.py` - Component discovery
+- `phase2_generation.py` - Story generation
+
+## Self-Learning Protocol
+
+**This skill learns from successful fixes.** When a solution works:
+
+1. **Document the solution** by asking user:
+   - "This fix worked. Should I add it to the skill's knowledge base?"
+   - "What was the root cause?"
+
+2. **Update the skill** with user approval:
+   - Add new component-specific guidelines
+   - Add new error patterns and fixes
+   - Update height recommendations
+
+---
+
+## Example Files
+
+Before/after examples are available in `examples/` directory:
+- `before-after-modal-iframe.md` - Iframe height fix for modals
+- `before-after-contextmenu-height.md` - Height fix for cascading menus
+- `before-after-store-dependency.md` - Store dependency fix
+- `before-after-template-style.md` - Template style tag fix
+- `before-after-props-mismatch.md` - Props matching component definitions
+- `before-after-missing-imports.md` - Missing Vue imports fix
+- `before-after-event-handlers.md` - Missing event handlers fix
+
+## References
+
+Best practices reference available in `references/storybook-best-practices.md`.
+
+---
+
+**When to use this skill**: Creating or fixing Storybook stories, resolving story compilation errors, documenting Vue 3 components, setting up component showcases, auditing stories for issues, automating component discovery.
 
 ---
 

@@ -114,9 +114,9 @@
 - **Features**: Task Breakdown, Auto-Categorization, NL Input ("Add meeting tomorrow 3pm").
 - **Stack**: Local (Ollama) + Cloud (Claude/GPT-4).
 
-### ROAD-004: Mobile PWA (🔄 IN PROGRESS - Phase 6)
+### ROAD-004: Mobile PWA (🔄 IN PROGRESS - Phase 1)
 - **Plan**: [plans/pwa-mobile-support.md](../plans/pwa-mobile-support.md)
-- **Status**: Phase 6 - Stabilization in progress
+- **Status**: Phase 1 - PWA Foundation in progress
 - **Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
 
 ### ROAD-025: Backup Containerization (VPS Distribution)
@@ -151,7 +151,7 @@
 ### TASK-184: Canvas System Rebuild (🔄 IN PROGRESS)
 **Priority**: P0-CRITICAL
 **Started**: January 10, 2026
-**Status**: Partial Refactor Complete, Hardening Required
+**Status**: Phase 6 - Stabilization
 **Updated**: January 10, 2026 - Deep Dive Assessment
 
 **Original Problem**: Canvas system had ~22,500 lines of complex, over-engineered code.
@@ -313,17 +313,16 @@ const shouldAcceptRemoteChange = (id: string, remoteTimestamp: number): boolean 
 **Completed**: January 10, 2026
 **Verification**: `tests/repro_zombie_movement.spec.ts` passing.
 
-### TASK-195: Timer System Refactor (🔄 IN PROGRESS - Phase 6)
+### TASK-195: Timer System Refactor (🔄 IN PROGRESS)
 **Priority**: P2-MEDIUM
 **Status**: IN_PROGRESS
 **Goal**: Fix performance issues, split monolithic sync composable, and remove console pollution.
-- [x] Phase 1: Empty canvas renders at `/canvas-new`
-- [x] Phase 2: Groups load from Supabase
-- [x] Phase 3: Tasks in inbox + canvas
-- [x] Phase 4: Drag task to canvas (position persists)
-- [x] Phase 5: Parent-child works (tasks move with groups)
-- [ ] Phase 6: Feature parity (all 15 features)
-- [ ] Phase 7: Swap and cleanup (delete old, rename new)
+- [x] Phase 1: Console removal (38 statements)
+- [x] Phase 2: Fix store-in-computed anti-pattern
+- [x] Phase 3: Extract time formatting utility
+- [x] Phase 4: Split `useCrossTabSync.ts` into focused composables
+- [x] Phase 5: Use VueUse `useIntervalFn`
+- [x] Phase 6: Final integration and verification
 
 ### ~~TASK-195~~: Timer System Refactor (✅ DONE)
 

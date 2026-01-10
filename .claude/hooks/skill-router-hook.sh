@@ -2,11 +2,16 @@
 # Skill Router Hook - Automatically suggests appropriate skills based on user prompt
 # This hook parses the user's prompt and outputs a reminder to invoke the matching skill
 
-# Read user prompt from stdin
-read -r PROMPT
+# Read user prompt from stdin (with timeout to prevent freeze)
+USER_PROMPT=$(timeout 2 cat 2>/dev/null || echo '')
 
 # Convert to lowercase for matching
-PROMPT_LOWER=$(echo "$PROMPT" | tr '[:upper:]' '[:lower:]')
+PROMPT_LOWER=$(echo "$USER_PROMPT" | tr '[:upper:]' '[:lower:]')
+
+# Exit early if no prompt
+if [ -z "$PROMPT_LOWER" ]; then
+  exit 0
+fi
 
 # Skill trigger mappings - ORDER MATTERS (most specific first)
 # Format: "skill_name:trigger_pattern"
@@ -81,7 +86,7 @@ SKILL_MAPPINGS=(
   "chief-architect:architecture decision|tech stack|app structure|design decision"
 
   # General debugging (LAST - catches remaining)
-  "dev-debugging:bug|broken|fix|debug|not working|disappear|crash|error|issue|missing|stuck"
+  "dev-debugging:bug|broken|fix|debug|not working|disappear|crash|error|issue|missing|stuck|drift"
 )
 
 # Check each skill's triggers in order
@@ -108,7 +113,12 @@ done
 
 # Output skill suggestion if matched
 if [ -n "$MATCHED_SKILL" ]; then
-  echo "SKILL SUGGESTION: Consider using the '$MATCHED_SKILL' skill for this request (matched: $MATCH_REASON). Use the Skill tool to invoke it if appropriate."
+  cat << EOF
+<user-prompt-submit-hook>
+SKILL MATCH: The '$MATCHED_SKILL' skill is relevant for this request (matched: $MATCH_REASON).
+Consider using: Skill tool with skill="$MATCHED_SKILL"
+</user-prompt-submit-hook>
+EOF
 fi
 
 # Always exit 0 - this is just a suggestion, not a blocker

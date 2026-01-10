@@ -1,277 +1,248 @@
-# Canvas View Refactor Prompt
+# Canvas System Deep Refactor Prompt
 
 ## Overview
-Refactor `src/views/CanvasView.vue` to reduce complexity while preserving Vue Flow functionality.
 
 **Current State:**
-- CanvasView.vue: **2,098 LOC** (Template: 154, Script: 1,767, Style: 2)
-- Composables: 33 files, 6,025 LOC
-- Console.log statements: **203 total** (59 in view, 144 in composables)
+- CanvasView.vue: **388 LOC** ✅ (reduced from 2,098)
+- Canvas Composables: **34 files, 6,962 LOC**
+- Position Lock Bandaid: **452 LOC** (masks real sync bug)
+- Dead Code: **1,312 LOC** (unused composables + duplicates)
+- Console.log: **133+ statements**
+- `any` Types: **57 instances**
+- Bug Workarounds: **8+ in code comments**
 
 **Target:**
-- CanvasView.vue: **<600 LOC**
-- Console.log: **0**
-- Health Score: 6.0/10 → 8.0+/10
+- Remove dead code: -1,312 LOC
+- Fix root sync issue: Remove position lock bandaid
+- Console.log: 0
+- Type safety: 0 `any` types
+- Health Score: 6.0/10 → 8.5+/10
 
 ---
 
-## ⚠️ CRITICAL: Vue Flow Extraction Rules
+## ⚠️ CRITICAL: Vue Flow Rules (DO NOT VIOLATE)
 
-**DO NOT EXTRACT from CanvasView.vue:**
+**NEVER extract from CanvasView.vue:**
 - `v-model:nodes` and `v-model:edges` bindings
-- `@node-drag-stop`, `@connect`, `@edge-created` event handlers
-- `VueFlow` component and direct children
+- Vue Flow event handlers (`@node-drag-stop`, etc.)
 - `useVueFlow()` composable usage
-- Node/edge synchronization logic
-
-**SAFE TO EXTRACT:**
-- Canvas controls (zoom, pan, toolbar)
-- Modals and overlays
-- Context menus
-- Helper functions that don't touch Vue Flow state
+- Node/edge synchronization core logic
 
 ---
 
-## Phase 1: Console.log Cleanup (Priority)
+## Phase 1: Delete Dead Code (1,312 LOC)
 
-### Goal
-Remove all 203 console.log/warn/error statements across canvas system.
+### 1A. Delete Unused Composables (746 LOC)
 
-### Files to Clean
+These files have **zero imports** anywhere:
+
 ```bash
-# Run to find all occurrences:
-grep -rn "console\.\(log\|warn\|error\|debug\)" src/views/CanvasView.vue src/composables/canvas/
+# Verify they're unused:
+for f in useCanvasFiltering useCanvasInteractionHandlers useCanvasInteractivity useCanvasResourceManager; do
+  echo "=== $f ==="
+  grep -r "$f" src/ --include="*.ts" --include="*.vue" | grep -v "composables/canvas/$f"
+done
+
+# Delete if confirmed unused:
+rm src/composables/canvas/useCanvasFiltering.ts
+rm src/composables/canvas/useCanvasInteractionHandlers.ts
+rm src/composables/canvas/useCanvasInteractivity.ts
+rm src/composables/canvas/useCanvasResourceManager.ts
 ```
 
-### Patterns to Replace
+### 1B. Delete Duplicate Sync Folder (566 LOC)
 
-**Remove debugging logs:**
+The `sync/` subfolder is never imported:
+
+```bash
+# Verify:
+grep -r "canvas/sync" src/
+
+# Delete:
+rm -rf src/composables/canvas/sync/
+```
+
+---
+
+## Phase 2: Fix Root Cause - Sync Race Condition
+
+### Problem
+
+The **7-second position lock** (`src/utils/canvasStateLock.ts`, 452 LOC) exists because:
+
+1. User drags a node
+2. Supabase sync pulls stale data before local push completes
+3. `syncNodes()` overwrites with old position
+
+The lock is a **bandaid** that masks the real bug.
+
+### Solution: Optimistic Updates with Conflict Resolution
+
+Replace the lock system with proper optimistic updates:
+
 ```typescript
-// REMOVE these patterns:
-console.log('[CanvasStore] loadFromDatabase called')
-console.log('Initial tab visibility:', document.visibilityState)
+// src/composables/canvas/useCanvasOptimisticSync.ts
+
+export function useCanvasOptimisticSync() {
+  // Track pending local changes
+  const pendingChanges = new Map<string, {
+    type: 'task' | 'group',
+    position: { x: number, y: number },
+    timestamp: number,
+    synced: boolean
+  }>()
+
+  // When user drags a node:
+  const trackLocalChange = (id: string, type: 'task' | 'group', position: { x: number, y: number }) => {
+    pendingChanges.set(id, {
+      type,
+      position,
+      timestamp: Date.now(),
+      synced: false
+    })
+  }
+
+  // When receiving sync data:
+  const shouldAcceptRemoteChange = (id: string, remoteTimestamp: number): boolean => {
+    const pending = pendingChanges.get(id)
+    if (!pending) return true // No local change, accept remote
+
+    // If remote is newer than our local change, accept it
+    if (remoteTimestamp > pending.timestamp) {
+      pendingChanges.delete(id)
+      return true
+    }
+
+    // Our local change is newer, reject remote
+    return false
+  }
+
+  // When local push succeeds:
+  const markSynced = (id: string) => {
+    const pending = pendingChanges.get(id)
+    if (pending) {
+      pending.synced = true
+      // Remove after confirmation window
+      setTimeout(() => pendingChanges.delete(id), 1000)
+    }
+  }
+
+  return {
+    trackLocalChange,
+    shouldAcceptRemoteChange,
+    markSynced,
+    pendingChanges
+  }
+}
+```
+
+### Migration Steps
+
+1. Create `useCanvasOptimisticSync.ts`
+2. Integrate with `useCanvasSync.ts` and `useCanvasDragDrop.ts`
+3. Test: drag node, verify position persists without 7s lock
+4. Delete `src/utils/canvasStateLock.ts` (452 LOC)
+
+---
+
+## Phase 3: Remove Console Pollution (133 statements)
+
+### Files with Console Statements
+
+```bash
+# Get counts per file:
+grep -rn "console\.\(log\|warn\|error\|debug\)" src/composables/canvas/*.ts | \
+  cut -d: -f1 | sort | uniq -c | sort -rn
+```
+
+### Removal Strategy
+
+**Keep**: Error handling that uses `handleError()` utility
+**Remove**: All debugging logs
+
+```typescript
+// REMOVE patterns like:
 console.log('[CanvasCore] Syncing nodes:', { groups, tasks })
-```
+console.log(`🔒 [CANVAS-LOCK] Task ${taskId} locked...`)
+console.log(`✅ [TASK-158] Delete completed...`)
 
-**Convert error handling to proper patterns:**
-```typescript
-// BEFORE
-console.error('❌ Operation failed:', error)
-
-// AFTER - use error handler utility
+// KEEP patterns that use proper error handling:
 import { handleError, ErrorCategory } from '@/utils/errorHandler'
 handleError(error, ErrorCategory.CANVAS, 'Operation failed')
 ```
 
 ---
 
-## Phase 2: Extract Orchestration Composable
+## Phase 4: Fix Type Safety (57 `any` types)
 
-### Goal
-Move the coordination logic from CanvasView.vue to a new orchestration composable.
-
-### Create `useCanvasOrchestrator.ts`
-
-This composable should coordinate all canvas subsystems:
-
-```typescript
-// src/composables/canvas/useCanvasOrchestrator.ts
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import type { Node, Edge } from '@vue-flow/core'
-
-export function useCanvasOrchestrator(options: {
-  taskStore: ReturnType<typeof useTaskStore>
-  canvasStore: ReturnType<typeof useCanvasStore>
-  canvasUiStore: ReturnType<typeof useCanvasUiStore>
-  uiStore: ReturnType<typeof useUIStore>
-}) {
-  const { taskStore, canvasStore, canvasUiStore, uiStore } = options
-
-  // Core reactive state
-  const nodes = ref<Node[]>([])
-  const edges = ref<Edge[]>([])
-  const isCanvasReady = ref(false)
-  const isInteracting = ref(false)
-
-  // Coordinate all subsystems
-  const lifecycle = useCanvasLifecycle(taskStore, canvasStore, uiStore)
-  const navigation = useCanvasNavigation(canvasStore)
-  const alignment = useCanvasAlignment()
-  const sync = useCanvasSync(nodes, edges, taskStore, canvasStore)
-  const actions = useCanvasActions(taskStore, canvasStore)
-  const modals = useCanvasModals()
-  const contextMenus = useCanvasContextMenus()
-  const filtering = useCanvasFiltering(taskStore, canvasStore, isInteracting)
-  const hotkeys = useCanvasHotkeys({ /* deps */ })
-
-  // Expose unified interface
-  return {
-    // State
-    nodes,
-    edges,
-    isCanvasReady,
-    isInteracting,
-
-    // From lifecycle
-    storeHealth: lifecycle.storeHealth,
-
-    // From navigation
-    initialViewport: navigation.initialViewport,
-    fitCanvas: navigation.fitCanvas,
-    zoomToSelection: navigation.zoomToSelection,
-
-    // From alignment
-    ...alignment,
-
-    // From sync
-    syncNow: sync.syncNow,
-
-    // From actions
-    ...actions,
-
-    // From modals
-    ...modals,
-
-    // From context menus
-    ...contextMenus,
-
-    // From filtering
-    filteredTasks: filtering.filteredTasks,
-
-    // From hotkeys
-    handleKeyDown: hotkeys.handleKeyDown,
-  }
-}
-```
-
-### Resulting CanvasView.vue Structure
-
-```vue
-<script setup lang="ts">
-import { useCanvasOrchestrator } from '@/composables/canvas/useCanvasOrchestrator'
-import { useTaskStore } from '@/stores/tasks'
-import { useCanvasStore } from '@/stores/canvas'
-import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
-import { useUIStore } from '@/stores/ui'
-
-const taskStore = useTaskStore()
-const canvasStore = useCanvasStore()
-const canvasUiStore = useCanvasUiStore()
-const uiStore = useUIStore()
-
-const {
-  // Core state
-  nodes,
-  edges,
-  isCanvasReady,
-
-  // Navigation
-  initialViewport,
-  fitCanvas,
-
-  // Actions
-  handleAddTask,
-  handleCreateGroup,
-  deleteSelectedTasks,
-
-  // Modals
-  showTaskEditModal,
-  closeTaskEditModal,
-
-  // Context menus
-  showCanvasContextMenu,
-  closeCanvasContextMenu,
-
-  // ... other destructured values
-} = useCanvasOrchestrator({
-  taskStore,
-  canvasStore,
-  canvasUiStore,
-  uiStore
-})
-
-// Vue Flow event handlers (MUST stay in component)
-const handleNodeDragStop = (event) => {
-  // Minimal handler that calls composable methods
-}
-
-const handleNodesChange = (changes) => {
-  // Minimal handler
-}
-</script>
-```
-
----
-
-## Phase 3: Consolidate Duplicate Composables
-
-### Issue
-Two sync folders exist with overlapping files:
-- `src/composables/canvas/useCanvasNodeSync.ts` (419 LOC)
-- `src/composables/canvas/sync/useCanvasNodeSync.ts` (419 LOC)
-- `src/composables/canvas/useCanvasEdgeSync.ts` (103 LOC)
-- `src/composables/canvas/sync/useCanvasEdgeSync.ts` (103 LOC)
-
-### Action
-1. Compare the files to identify differences
-2. Keep the more complete/recent version
-3. Update all imports to use the canonical location
-4. Delete the duplicate
+### Find All Instances
 
 ```bash
-# Check differences:
-diff src/composables/canvas/useCanvasNodeSync.ts src/composables/canvas/sync/useCanvasNodeSync.ts
-diff src/composables/canvas/useCanvasEdgeSync.ts src/composables/canvas/sync/useCanvasEdgeSync.ts
+grep -rn ": any\|as any\|<any>" src/composables/canvas/*.ts
 ```
 
-### Canonical Location
-Keep files in `src/composables/canvas/` (root), delete `/sync/` subfolder.
-
----
-
-## Phase 4: Extract Remaining Inline Logic
-
-### Functions to Extract from CanvasView.vue
-
-| Function | Lines | Target Composable |
-|----------|-------|-------------------|
-| `safeStoreOperation` | 17 | `useCanvasLifecycle.ts` |
-| `_getVisibleProjectIds` | 20 | `useCanvasFiltering.ts` |
-| `withVueFlowErrorBoundary` | 20 | `useVueFlowErrorHandling.ts` |
-| `systemHealthy` computed | 10 | `useCanvasLifecycle.ts` |
-| `retryFailedOperation` | 50 | `useCanvasActions.ts` |
-
-### Inline Refs to Consolidate
-
-Move these from CanvasView.vue to appropriate composables:
+### Common Patterns to Fix
 
 ```typescript
-// These are scattered in CanvasView.vue:
-const isHandlingNodeChange = ref(false)
-const isSyncing = ref(false)
-const isNodeDragging = ref(false)
-const hasRunOverdueCheck = ref(false)
-const recentlyRemovedEdges = ref(new Set<string>())
-const recentlyDeletedGroups = ref(new Set<string>())
+// BEFORE
+const handleEvent = (event: any) => { ... }
 
-// Move to useCanvasSync.ts or useCanvasOrchestrator.ts
+// AFTER
+import type { NodeDragEvent } from '@vue-flow/core'
+const handleEvent = (event: NodeDragEvent) => { ... }
+```
+
+```typescript
+// BEFORE
+const nodes = ref<any[]>([])
+
+// AFTER
+import type { Node } from '@vue-flow/core'
+const nodes = ref<Node[]>([])
 ```
 
 ---
 
-## Phase 5: Verification Checklist
+## Phase 5: Clean Up Bug Workarounds
 
-After refactoring, verify:
+### Bug References Still in Code
+
+| Bug ID | File | Action |
+|--------|------|--------|
+| BUG-007 | useCanvasEvents.ts | Verify fixed, remove comment |
+| BUG-022 | useCanvasConnections.ts | Verify fixed, remove comment |
+| BUG-025 | useCanvasGroupDrag.ts | Verify fixed, remove comment |
+| BUG-047 | useCanvasTaskCounts.ts | Verify fixed, remove comment |
+| BUG-091 | useCanvasGroupActions.ts | Verify fixed, remove comment |
+| BUG-152 | useCanvasEvents.ts (6x) | Consolidate fixes, clean comments |
+| BUG-153 | useNodeAttachment.ts | Verify fixed, remove comment |
+| BUG-184 | useCanvasDragDrop.ts | Verify fixed, remove comment |
+
+### For Each Bug:
+
+1. Check if the bug is in MASTER_PLAN and marked DONE
+2. If DONE: Remove the `// BUG-XXX FIX:` comments
+3. If NOT DONE: Keep comment, add to MASTER_PLAN if missing
+
+---
+
+## Phase 6: Verification Checklist
+
+After all phases:
 
 - [ ] **Build passes**: `npm run build`
-- [ ] **No console.log**: `grep -rn "console\." src/views/CanvasView.vue src/composables/canvas/`
-- [ ] **CanvasView.vue < 600 LOC**: `wc -l src/views/CanvasView.vue`
-- [ ] **Drag-drop works**: Drag task between groups
-- [ ] **Node connections work**: Create edge between nodes
-- [ ] **Viewport persists**: Refresh page, check zoom/pan preserved
-- [ ] **Context menus work**: Right-click on canvas, node, edge
-- [ ] **Modals work**: Edit task, create group modals open/close
-- [ ] **Hotkeys work**: Test Ctrl+Z undo, Delete key
+- [ ] **No dead code**: `rm -rf` commands executed
+- [ ] **No console.log**: `grep -r "console\." src/composables/canvas/ | wc -l` = 0
+- [ ] **No position lock file**: `ls src/utils/canvasStateLock.ts` = not found
+- [ ] **Type safety**: `grep -r ": any\|as any" src/composables/canvas/ | wc -l` = 0
+
+### Functional Tests
+
+- [ ] Drag task to new position → refresh → position persists
+- [ ] Drag group → child tasks move with it
+- [ ] Create edge between nodes → edge persists
+- [ ] Delete group → tasks return to inbox
+- [ ] Resize group → new size persists
 
 ---
 
@@ -279,46 +250,46 @@ After refactoring, verify:
 
 | Metric | Before | Target |
 |--------|--------|--------|
-| CanvasView.vue LOC | 2,098 | <600 |
-| Console.log total | 203 | 0 |
-| Duplicate composables | 4 files | 0 |
-| Build | Pass | Pass |
-| All features working | Yes | Yes |
-
----
-
-## Files to Modify
-
-### Primary
-- `src/views/CanvasView.vue` - Slim down to <600 LOC
-
-### Create
-- `src/composables/canvas/useCanvasOrchestrator.ts` - New orchestration layer
-
-### Modify (console.log removal)
-- All 26 composable files with console statements
-
-### Delete (duplicates)
-- `src/composables/canvas/sync/useCanvasNodeSync.ts`
-- `src/composables/canvas/sync/useCanvasEdgeSync.ts`
-- `src/composables/canvas/sync/` directory
+| Dead code | 1,312 LOC | 0 |
+| Console.log | 133+ | 0 |
+| Position lock bandaid | 452 LOC | 0 (deleted) |
+| `any` types | 57 | 0 |
+| Bug workaround comments | 8+ | 0 |
+| Health Score | 6.0/10 | 8.5+/10 |
 
 ---
 
 ## Order of Operations
 
-1. **Console.log cleanup** (lowest risk, immediate improvement)
-2. **Delete duplicate sync files** (consolidation)
-3. **Create useCanvasOrchestrator.ts** (new abstraction)
-4. **Extract inline logic** to existing composables
-5. **Slim CanvasView.vue** using orchestrator
-6. **Verify all functionality**
+1. **Phase 1**: Delete dead code (lowest risk, immediate -1,312 LOC)
+2. **Phase 3**: Remove console.log (low risk)
+3. **Phase 5**: Clean bug comments (low risk)
+4. **Phase 4**: Fix `any` types (medium risk)
+5. **Phase 2**: Fix sync race condition (highest risk, most impactful)
 
 ---
 
-## Notes
+## Files Summary
 
-- The Vue Flow component MUST stay in CanvasView.vue per the critical rules
-- Previous refactoring attempts that extracted Vue Flow caused complete breakage
-- Focus on moving TypeScript logic, not Vue Flow template bindings
-- Test frequently - canvas is critical functionality
+### Delete
+
+| File | LOC | Reason |
+|------|-----|--------|
+| `useCanvasFiltering.ts` | 98 | Unused |
+| `useCanvasInteractionHandlers.ts` | 360 | Unused |
+| `useCanvasInteractivity.ts` | 69 | Unused |
+| `useCanvasResourceManager.ts` | 219 | Unused |
+| `sync/useCanvasNodeSync.ts` | 467 | Duplicate |
+| `sync/useCanvasEdgeSync.ts` | 99 | Duplicate |
+| `canvasStateLock.ts` | 452 | Bandaid (after Phase 2) |
+| **Total** | **1,764** | |
+
+### Create
+
+| File | Purpose |
+|------|---------|
+| `useCanvasOptimisticSync.ts` | Proper sync conflict resolution |
+
+### Modify (Console Cleanup)
+
+All 26 composables with console statements.

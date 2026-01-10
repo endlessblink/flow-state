@@ -2,15 +2,13 @@ import { ref, nextTick, computed } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
-// TASK-089: Import position lock check to prevent sync from overwriting user changes
 import { isAnyCanvasStateLocked } from '@/utils/canvasStateLock'
+import { errorHandler, ErrorCategory } from '@/utils/errorHandler'
 import { useCanvasContextMenus } from './useCanvasContextMenus'
 
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    // ✅ DRIFT FIX: Use generic screenToFlowCoordinate
-    // BUG-152 FIX: Get setNodes and getNodes for proper Vue Flow initialization
     const { viewport, screenToFlowCoordinate, setNodes, getNodes, updateNode, findNode } = useVueFlow()
 
     // --- Interaction State ---
@@ -51,12 +49,11 @@ export function useCanvasEvents(syncNodes?: () => void) {
     // --- Event Handlers ---
 
     const handlePaneClick = (event: MouseEvent) => {
-        // BUG-007: Only Ctrl/Cmd+click toggles group selection
+        // Only Ctrl/Cmd+click toggles group selection
         // Shift is reserved for rubber-band drag selection (handled in useCanvasSelection)
         const isMultiSelectClick = event.ctrlKey || event.metaKey
 
         if (isMultiSelectClick) {
-            // ✅ DRIFT FIX: Use Vue Flow native projection
             const { x, y } = screenToFlowCoordinate({
                 x: event.clientX,
                 y: event.clientY
@@ -135,7 +132,6 @@ export function useCanvasEvents(syncNodes?: () => void) {
             const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
             if (!vueFlowElement) return
 
-            // ✅ DRIFT FIX: Use Vue Flow native projection
             const flowCoords = screenToFlowCoordinate({
                 x: event.clientX,
                 y: event.clientY
@@ -143,7 +139,7 @@ export function useCanvasEvents(syncNodes?: () => void) {
             const { x, y } = flowCoords
 
 
-            // BUG-152 FIX: AWAIT the task update before calling syncNodes
+            // AWAIT the task update before calling syncNodes
             // Otherwise syncNodes runs with stale task data
             await taskStore.updateTask(taskId, {
                 canvasPosition: { x, y },
@@ -152,46 +148,51 @@ export function useCanvasEvents(syncNodes?: () => void) {
 
             if (syncNodes) syncNodes()
 
-            // BUG-152 FIX: Wait for Vue reactivity to propagate before syncing
+            // Wait for Vue reactivity to propagate before syncing
             // filteredTasks is a computed that needs time to recalculate
             await nextTick()
 
-            // BUG-152 FIX: Call syncNodes to build the node array with parent-child relationships
+            // Call syncNodes to build the node array with parent-child relationships
             if (syncNodes) {
                 syncNodes()
             }
 
-            // BUG-152C FIX: Wait for v-model to sync nodes.value to Vue Flow's internal state
+            // Wait for v-model to sync nodes.value to Vue Flow's internal state
             // BEFORE reading getNodes.value. Without this tick, getNodes returns STALE state.
             await nextTick()
 
-            // BUG-152 FIX: CRITICAL - Use setNodes() to force Vue Flow to reinitialize
+            // CRITICAL - Use setNodes() to force Vue Flow to reinitialize
             // Direct array mutation doesn't trigger Vue Flow's complete initialization sequence
             // setNodes() ensures parent-child relationships are properly discovered
             const currentNodes = getNodes.value
             setNodes(currentNodes)
 
-            // BUG-152 FIX: Double nextTick() for Vue Flow parent-child discovery
+            // Double nextTick() for Vue Flow parent-child discovery
             await nextTick()
             await nextTick()
 
         } catch (error) {
-            console.error('❌ Error in handleDrop:', error)
+            errorHandler.report({
+                error: error as Error,
+                category: ErrorCategory.CANVAS,
+                message: 'Error in handleDrop',
+                userMessage: 'Failed to drop task on canvas'
+            })
         }
     }
 
-    const handleNodeContextMenu = (event: any) => {
-        const mouseEvent = (event.event || event) as MouseEvent
+    const handleNodeContextMenu = (event: { event: MouseEvent; node: Node } | MouseEvent) => {
+        const mouseEvent = ((event as any).event || event) as MouseEvent
         mouseEvent.preventDefault()
-        const node = event.node || event
+        const node = (event as any).node || event
         if (!node?.id) return
         openNodeContextMenu(mouseEvent.clientX, mouseEvent.clientY, node.id)
     }
 
-    const handleEdgeContextMenu = (event: any) => {
-        const mouseEvent = (event.event || event) as MouseEvent
+    const handleEdgeContextMenu = (event: { event: MouseEvent; edge: any } | MouseEvent) => {
+        const mouseEvent = ((event as any).event || event) as MouseEvent
         mouseEvent.preventDefault()
-        const edge = event.edge || event
+        const edge = (event as any).edge || event
         if (!edge?.id) return
         openEdgeContextMenu(mouseEvent.clientX, mouseEvent.clientY, edge.id)
     }

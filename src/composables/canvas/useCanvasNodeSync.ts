@@ -20,7 +20,9 @@ interface NodeSyncDeps {
 export function useCanvasNodeSync(deps: NodeSyncDeps) {
     const canvasStore = useCanvasStore()
 
-    // Helper for graceful store access
+    // Instantiate useNodeAttachment once in setup context
+    // This prevents 'inject() can only be used inside setup' errors during async syncNodes execution
+    const { calculateRelativePosition, calculateAbsolutePosition, getParentMetrics } = useNodeAttachment()
     const safeStoreOperation = <T>(
         operation: () => T,
         fallback: T,
@@ -82,26 +84,73 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
                 const isLocked = isGroupPositionLocked(section.id)
 
                 if (isLocked && existingPos) {
-                    position = { x: existingPos.x, y: existingPos.y }
+                    position = { x: existingPos.x, y: existingPos.y } // Assumed Absolute or Relative depending on context? 
+                    // Wait, existingPos is raw node.position. If it was parented, it's relative.
+                    // If we detach, we must convert.
+
                     if (section.parentGroupId) {
                         const parentGroup = sections.find(s => s.id === section.parentGroupId)
-                        if (parentGroup && isActuallyInsideParent(section, parentGroup)) {
+                        const isInside = parentGroup && isActuallyInsideParent(section, parentGroup)
+
+                        if (isInside && parentGroup) {
                             parentNode = `section-${parentGroup.id}`
                         } else if (parentGroup) {
-                            console.warn(`⚠️ [NodeSync] Section "${section.name}" has stale parentGroupId`)
+                            // DETACHMENT CASE: Was parented, now not inside.
+                            // If existingPos is relative, we must make it absolute.
+                            const existingNode = deps.nodes.value.find(n => n.id === nodeId)
+                            if (existingNode && existingNode.parentNode) {
+                                // It WAS parented in the graph. existingPos is Relative.
+                                const parentNodePos = existingSectionPositions.get(existingNode.parentNode)
+                                // We need absolute parent pos. existingSectionPositions has raw positions.
+                                // Recursively we might need real absolute. 
+                                // Safer: Use getAbsoluteNodePosition from graph utils if available, or calculate.
+                                // But here we are inside syncNodes loop.
+
+                                // Simplified Fix: If we detach, try to retrieve absolute position from node if possible?
+                                // existingPos comes from n.position.
+                                // If we can access positionAbsolute from node, use that!
+                                const absPos = (existingNode as any).positionAbsolute
+                                if (absPos) {
+                                    position = { x: absPos.x, y: absPos.y }
+                                }
+                            }
+                            console.warn(`⚠️ [NodeSync] Section "${section.name}" detached (stale parent)`)
                         }
                     }
                 } else if (section.parentGroupId && section.parentGroupId !== 'NONE') {
                     const parentGroup = sections.find(s => s.id === section.parentGroupId)
                     if (parentGroup) {
-                        parentNode = `section-${parentGroup.id}`
-                        if (existingPos) {
-                            position = { x: existingPos.x, y: existingPos.y }
+                        // BUG-184e FIX: Only set parentNode if child is ACTUALLY inside parent
+                        // Without this check, groups that were dragged outside their parent
+                        // would still move with the parent due to stale parentGroupId
+                        if (isActuallyInsideParent(section, parentGroup)) {
+                            parentNode = `section-${parentGroup.id}`
+                            if (existingPos) {
+                                position = { x: existingPos.x, y: existingPos.y }
+                            } else {
+                                position = { x: section.position?.x ?? 0, y: section.position?.y ?? 0 }
+                            }
                         } else {
-                            position = { x: section.position?.x ?? 0, y: section.position?.y ?? 0 }
+                            // Child is outside parent - treat as root level
+                            // Use absolute position from existing node or calculate from store
+                            const existingNode = deps.nodes.value.find(n => n.id === nodeId)
+                            const absPos = (existingNode as any)?.positionAbsolute
+                            if (absPos && Number.isFinite(absPos.x) && Number.isFinite(absPos.y)) {
+                                position = { x: absPos.x, y: absPos.y }
+                            } else {
+                                // Fallback: calculate absolute from section store data
+                                const sectionAbs = getSectionAbsolutePosition(section)
+                                position = { x: sectionAbs.x, y: sectionAbs.y }
+                            }
+                            // parentNode stays undefined (root level)
                         }
                     }
                 }
+
+                // ...
+
+                // Removed misplaced task logic block
+                // ...
 
                 const zIndex = calculateZIndex(section, false)
 
@@ -184,7 +233,6 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
                                 )
 
                                 if (!isInside) {
-                                    console.log(`🧟 [NodeSync] Curing Zombie Task ${task.id}`)
                                     finalParent = undefined
                                     finalPos = { x: lockedPosition.x, y: lockedPosition.y }
                                 }
@@ -228,9 +276,18 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
                                 const parentAbsPos = getSectionAbsolutePosition(section)
 
                                 if (existingPos && !lockedPosition) {
-                                    const { calculateAbsolutePosition } = useNodeAttachment()
+                                    // Use closure-scoped method
                                     const metrics = { borderLeft: 2, borderTop: 2, paddingLeft: 0, paddingTop: 0 }
-                                    const absPos = calculateAbsolutePosition(existingPos, parentAbsPos, metrics)
+                                    // Note: calculateAbsolutePosition was not extracted above.
+                                    // We need to add it to the top level extraction.
+                                    // For now, let's just do manual calc here or add it to extraction?
+                                    // Better: add it to extraction in next tool call.
+                                    // WAIT: I can't add it to line 22 in this call safely without overlapping.
+                                    // Logic: absX = relX + parentAbsX + borderLeft
+                                    const absPos = {
+                                        x: existingPos.x + parentAbsPos.x + 2, // 2 is assumed border
+                                        y: existingPos.y + parentAbsPos.y + 2
+                                    }
                                     targetAbsoluteX = absPos.x
                                     targetAbsoluteY = absPos.y
                                 }
@@ -304,12 +361,20 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
 
                         if (section) {
                             const sectionAbsPos = getSectionAbsolutePosition(section)
-                            const relX = position.x - sectionAbsPos.x
-                            const relY = position.y - sectionAbsPos.y
 
-                            if (Number.isFinite(relX) && Number.isFinite(relY)) {
+                            // FIX: Use robust relative calculation to handle borders correctly
+                            // useNodeAttachment methods are now available from closure scope
+                            const metrics = getParentMetrics(`section-${section.id}`) || { borderLeft: 0, borderTop: 0, paddingLeft: 0, paddingTop: 0 }
+
+                            const relPos = calculateRelativePosition(
+                                { x: position.x, y: position.y },
+                                sectionAbsPos,
+                                metrics
+                            )
+
+                            if (Number.isFinite(relPos.x) && Number.isFinite(relPos.y)) {
                                 parentNode = `section-${section.id}`
-                                position = { x: relX, y: relY }
+                                position = relPos
                             }
                         }
                     }

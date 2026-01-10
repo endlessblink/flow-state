@@ -102,6 +102,30 @@ export function useNodeAttachment() {
     }
 
     /**
+     * Helper: Recursively calculate absolute position from Vue Flow nodes.
+     * Use this when positionAbsolute is unreliable or missing.
+     */
+    function getNodeAbsolutePosition(node: Node): Coordinates {
+        if ((node as any).positionAbsolute && !Number.isNaN((node as any).positionAbsolute.x)) {
+            return (node as any).positionAbsolute
+        }
+        let x = node.position.x
+        let y = node.position.y
+        let parentId = node.parentNode
+        let safety = 0
+        while (parentId && safety < 100) {
+            const parent = getNode.value(parentId)
+            if (!parent) break
+            x += parent.position.x
+            y += parent.position.y
+            parentId = parent.parentNode
+            safety++
+        }
+        if (safety >= 100) console.warn(`[useNodeAttachment] Max recursion depth reached for ${node.id}`)
+        return { x, y }
+    }
+
+    /**
      * Forces Vue Flow to re-evaluate the nodes array.
      * Essential after complex coordinate updates.
      */
@@ -112,10 +136,14 @@ export function useNodeAttachment() {
     /**
      * Attaches a node to a new parent, preserving its visual location.
      * Updates `position` (to Relative) and `parentNode` atomically.
+     * 
+     * @param explicitChildAbsPos Optional absolute position to use for the child. 
+     *                            Use this if the child's node.position is stale (e.g. during Drag).
      */
     async function attachNodeToParent(
         nodeId: string,
-        parentId: string
+        parentId: string,
+        explicitChildAbsPos?: Coordinates
     ): Promise<AttachmentResult> {
         const childNode = getNode.value(nodeId)
         const parentNode = getNode.value(parentId)
@@ -125,21 +153,21 @@ export function useNodeAttachment() {
         if (nodeId === parentId) return { success: false, error: 'Cannot attach node to itself' }
 
         try {
-            // 1. Snapshot valid Absolute positions
-            // Use positionAbsolute if available (computed by Vue Flow), fallback to position if root
-            const childAbsPos = childNode.positionAbsolute || childNode.position
-            const parentAbsPos = parentNode.positionAbsolute || parentNode.position
+            // 1. Determine Child Absolute Position
+            const childAbsPos = explicitChildAbsPos || getNodeAbsolutePosition(childNode)
 
-            // 2. Get Parent Metrics (Offsets)
-            // If we can't get metrics, assume 0 but warn
+            // 2. Determine Parent Absolute Position (Recursively if needed)
+            const parentAbsPos = getNodeAbsolutePosition(parentNode)
+
+            // 3. Get Parent Metrics (Offsets)
             const metrics = getParentMetrics(parentId) || {
                 borderLeft: 0, borderTop: 0, paddingLeft: 0, paddingTop: 0
             }
 
-            // 3. Calculate Target Relative Position
+            // 4. Calculate Target Relative Position
             const relativePos = calculateRelativePosition(childAbsPos, parentAbsPos, metrics)
 
-            // 4. Apply Atomic Update
+            // 5. Apply Atomic Update
             console.log(`[useNodeAttachment] Attaching ${nodeId} to ${parentId}`, {
                 childAbs: childAbsPos,
                 parentAbs: parentAbsPos,
@@ -148,20 +176,18 @@ export function useNodeAttachment() {
 
             childNode.position = relativePos
             childNode.parentNode = parentId
+
             // TASK-UPDATE: Enforce parent boundaries as per user recommendation
             // FIXED: Removed 'parent' extent to allow dragging tasks OUT of groups (Zombie Task regression)
             // childNode.extent = 'parent'
 
             // BUG-153 FIX: Also set data.parentId for persistence/sync
-            // useCanvasSync.ts uses this to determine existing parent relationships
             if (childNode.data) {
-                // Extract group ID from Vue Flow node ID (section-group-xxx -> group-xxx)
                 const groupId = parentId.replace('section-', '')
                 childNode.data.parentId = groupId
-                console.log(`[useNodeAttachment] Set data.parentId = ${groupId}`)
             }
 
-            // 5. Force Reactivity
+            // 6. Force Reactivity
             forceReactivity()
 
             return { success: true, newPosition: relativePos }
@@ -177,26 +203,33 @@ export function useNodeAttachment() {
     /**
      * Detaches a node from its parent, preserving its visual location.
      * Updates `position` (to Absolute) and clears `parentNode`.
+     * 
+     * @param explicitPosition Optional absolute position to use instead of reading from Vue Flow.
+     *                         CRITICAL for drag operations where Vue Flow's state might be stale.
      */
-    async function detachNodeFromParent(nodeId: string): Promise<AttachmentResult> {
+    async function detachNodeFromParent(
+        nodeId: string,
+        explicitPosition?: Coordinates
+    ): Promise<AttachmentResult> {
         const node = getNode.value(nodeId)
 
         if (!node) return { success: false, error: `Node not found: ${nodeId}` }
-        if (!node.parentNode) return { success: false, error: `Node ${nodeId} has no parent` }
+        if (!node.parentNode && !explicitPosition) {
+            return { success: false, error: `Node ${nodeId} has no parent` }
+        }
 
         try {
-            // 1. Get current Absolute Position (World Space)
-            // Vue Flow maintains this in positionAbsolute usually
-            const absPos = node.positionAbsolute || node.position
+            // 1. Determine Absolute Position (World Space)
+            const absPos = explicitPosition || getNodeAbsolutePosition(node)
 
             // 2. Apply Update
             console.log(`[useNodeAttachment] Detaching ${nodeId} from ${node.parentNode}`, {
-                absPos
+                absPos,
+                usingExplicit: !!explicitPosition
             })
 
             node.position = absPos
             node.parentNode = undefined
-            // Clear any extent constraints
             node.extent = undefined
 
             if (node.data) {

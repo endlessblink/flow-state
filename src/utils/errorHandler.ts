@@ -16,6 +16,7 @@ export enum ErrorCategory {
   STATE = 'state',           // Pinia store, reactive state
   COMPONENT = 'component',   // Vue component lifecycle
   SYNC = 'sync',             // Cross-tab, device sync
+  CANVAS = 'canvas',         // Vue Flow, coordinate conversion
   UNKNOWN = 'unknown'        // Unclassified errors
 }
 

@@ -85,7 +85,13 @@ export function useCanvasResize(deps?: {
     }
 
     const handleSectionResize = ({ sectionId, event }: { sectionId: string; event: unknown }) => {
-        const typedEvent = event as { params?: { width?: number; height?: number; x?: number; y?: number }; width?: number; height?: number }
+        const typedEvent = event as {
+            params?: { width?: number; height?: number; x?: number; y?: number };
+            width?: number;
+            height?: number;
+            x?: number;  // Add top-level x
+            y?: number;  // Add top-level y
+        }
         const width = typedEvent?.params?.width || typedEvent?.width
         const height = typedEvent?.params?.height || typedEvent?.height
 
@@ -93,33 +99,43 @@ export function useCanvasResize(deps?: {
             resizeState.value.currentWidth = width
             resizeState.value.currentHeight = height
 
-            // Always read position from Vue Flow node (source of truth)
-            const vueFlowNode = findNode(`section-${sectionId}`)
-            if (vueFlowNode) {
-                resizeState.value.currentX = vueFlowNode.position.x
-                resizeState.value.currentY = vueFlowNode.position.y
-            } else if (typeof typedEvent?.params?.x === 'number') {
-                resizeState.value.currentX = typedEvent.params.x
-                if (typeof typedEvent?.params?.y === 'number') {
-                    resizeState.value.currentY = typedEvent.params.y
-                }
+            // FIX: Prefer event params for immediate responsiveness (preventing lag), fallback to node
+            const xParam = typedEvent?.params?.x ?? typedEvent?.x
+            const yParam = typedEvent?.params?.y ?? typedEvent?.y
+
+            if (typeof xParam === 'number') {
+                resizeState.value.currentX = xParam
+            } else {
+                const vueFlowNode = findNode(`section-${sectionId}`)
+                if (vueFlowNode) resizeState.value.currentX = vueFlowNode.position.x
+            }
+
+            if (typeof yParam === 'number') {
+                resizeState.value.currentY = yParam
+            } else {
+                const vueFlowNode = findNode(`section-${sectionId}`)
+                if (vueFlowNode) resizeState.value.currentY = vueFlowNode.position.y
             }
 
             // Continuous inverse delta compensation 
             const deltaX = resizeState.value.currentX - resizeState.value.startX
             const deltaY = resizeState.value.currentY - resizeState.value.startY
 
-            if (deltaX !== 0 || deltaY !== 0) {
+            // Inverse delta compensation ENABLED (Standard behavior: Children stay put in world space)
+            if (!Number.isNaN(deltaX) && !Number.isNaN(deltaY) && (deltaX !== 0 || deltaY !== 0)) {
                 const childIds = Object.keys(resizeState.value.childStartPositions)
                 if (childIds.length > 0) {
                     childIds.forEach(childId => {
                         const startPos = resizeState.value.childStartPositions[childId]
                         if (startPos) {
                             const newRelPos = calculateChildInverseDelta(startPos, deltaX, deltaY)
-                            // Use updateNode for reliable reactivity during continuous resize
-                            updateNode(childId, {
-                                position: newRelPos
-                            })
+
+                            if (!Number.isNaN(newRelPos.x) && !Number.isNaN(newRelPos.y)) {
+                                // Use updateNode for reliable reactivity during continuous resize
+                                updateNode(childId, {
+                                    position: newRelPos
+                                })
+                            }
                         }
                     })
                 }
@@ -140,19 +156,13 @@ export function useCanvasResize(deps?: {
         const width = typedEvent?.params?.width || typedEvent?.width
         const height = typedEvent?.params?.height || typedEvent?.height
 
-        // Calculate final absolute positions
+        // Calculate final positions (Local/Relative)
+        // We use Local coordinates for Store updates to prevent double-offsetting nested groups.
         let newX = vueFlowNode.position.x
         let newY = vueFlowNode.position.y
 
-        // Check nested group status (convert relative to absolute if needed)
-        const sectionForParentCheck = canvasStore.groups.find(s => s.id === sectionId)
-        if (sectionForParentCheck?.parentGroupId) {
-            const parentGroup = canvasStore.groups.find(s => s.id === sectionForParentCheck.parentGroupId)
-            if (parentGroup) {
-                newX = vueFlowNode.position.x + parentGroup.position.x
-                newY = vueFlowNode.position.y + parentGroup.position.y
-            }
-        }
+        // REMOVED: Absolute conversion block. 
+        // Logic was incorrectly adding parent position, causing corrupt store data for nested groups.
 
         if (width && height) {
             const section = canvasStore.groups.find(s => s.id === sectionId)
@@ -182,7 +192,10 @@ export function useCanvasResize(deps?: {
                     }
                 })
 
-                // Inverse delta compensation for children (Persist Final State)
+                // Update children's RELATIVE positions in Store (Persistence)
+                // Since we used Inverse Delta, children stayed put in World Space.
+                // This means their Relative Position inside this group CHANGED.
+                // We must update Nested Groups. Tasks (Absolute) don't need update.
                 if (deltaX !== 0 || deltaY !== 0) {
                     const childIds = Object.keys(resizeState.value.childStartPositions)
 
@@ -191,51 +204,28 @@ export function useCanvasResize(deps?: {
                         if (startPos) {
                             const newRelPos = calculateChildInverseDelta(startPos, deltaX, deltaY)
 
-                            // 1. Visual update (Relative)
-                            updateNode(childId, {
-                                position: newRelPos
-                            })
+                            // 1. Nested Groups (Store Relative)
+                            if (childId.startsWith('section-')) {
+                                const realGroupId = childId.replace('section-', '')
+                                const childGroup = canvasStore.groups.find(g => g.id === realGroupId)
 
-                            // 2. Persist absolute
-                            // Check if it is a task or a group
-                            const task = taskStore.getTask(childId)
-                            if (task) {
-                                const newAbsPos = calculateChildAbsolutePosition({ x: newX, y: newY }, newRelPos)
-                                lockTaskPosition(childId, newAbsPos)
-                                taskStore.updateTask(childId, {
-                                    canvasPosition: newAbsPos
-                                })
-                            } else {
-                                // Must be a nested section
-                                // Note: ID in childStartPositions is just UUID, but node ID usually is task UUID or string ID
-                                // Groups in childStartPositions were stored by their node ID? 
-                                // In handleSectionResizeStart we stored by `node.id`. 
-                                // For sections node.id is `section-${id}`? 
-                                // No, inside Vue Flow node.id is `section-uuid`. 
-                                // But `resizeState.value.childStartPositions` keys are `node.id`.
-                                // So we need to strip `section-` prefix if checking store.
-                                const cleanId = childId.startsWith('section-') ? childId.replace('section-', '') : childId
-                                const childSection = canvasStore.groups.find(s => s.id === cleanId)
-
-                                if (childSection) {
-                                    const newAbsPos = calculateChildAbsolutePosition({ x: newX, y: newY }, newRelPos)
-                                    lockGroupPosition(cleanId, {
-                                        x: newAbsPos.x,
-                                        y: newAbsPos.y,
-                                        width: childSection.position.width,
-                                        height: childSection.position.height
-                                    }, 'resize')
-
-                                    canvasStore.updateSection(cleanId, {
+                                if (childGroup) {
+                                    // FIX: Must include width/height to prevent data corruption/crashes
+                                    canvasStore.updateSection(realGroupId, {
                                         position: {
-                                            x: newAbsPos.x,
-                                            y: newAbsPos.y,
-                                            width: childSection.position.width,
-                                            height: childSection.position.height
+                                            x: newRelPos.x,
+                                            y: newRelPos.y,
+                                            width: childGroup.position.width,
+                                            height: childGroup.position.height
                                         }
                                     })
                                 }
                             }
+
+                            // 2. Tasks (Store Absolute)
+                            // Since World Position is constant, and Store uses Absolute,
+                            // we do NOT need to update tasks. 
+                            // syncNodes will re-calculate correct Relative from (TaskAbs - GroupAbs).
                         }
                     })
                 }

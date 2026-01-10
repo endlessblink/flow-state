@@ -22,8 +22,11 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
     const handleGroupDragStop = async (node: Node, draggedNodes: Node[]) => {
         const sectionId = node.id.replace('section-', '')
         const section = canvasStore.groups.find(s => s.id === sectionId)
-
         if (!section) return
+
+        // Capture OLD absolute position BEFORE any store updates
+        // This is crucial for calculating the delta correctly
+        const startGroupAbsPos = getSectionAbsolutePosition(section)
 
         // Cleanup start position
         deps.dragStartPositions.delete(node.id)
@@ -67,11 +70,14 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
         if (section.parentGroupId) {
             const currentParent = canvasStore.groups.find(s => s.id === section.parentGroupId)
             if (currentParent) {
+                // BUG-184e FIX: Use ABSOLUTE position for containment check
+                // If parent is nested, its position.x/y are relative, not absolute
+                const parentAbsPos = getSectionAbsolutePosition(currentParent)
                 const stillInside = (
-                    absoluteX >= currentParent.position.x &&
-                    absoluteY >= currentParent.position.y &&
-                    absoluteX + oldBounds.width <= currentParent.position.x + currentParent.position.width &&
-                    absoluteY + oldBounds.height <= currentParent.position.y + currentParent.position.height
+                    absoluteX >= parentAbsPos.x &&
+                    absoluteY >= parentAbsPos.y &&
+                    absoluteX + oldBounds.width <= parentAbsPos.x + currentParent.position.width &&
+                    absoluteY + oldBounds.height <= parentAbsPos.y + currentParent.position.height
                 )
                 if (!stillInside) {
                     newParentGroupId = null
@@ -189,18 +195,13 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
         }
 
         // BUG-184 FIX: Update child task positions in the store
-        // While Vue Flow handles visual positioning automatically (children move with parent),
-        // the task store's canvasPosition (ABSOLUTE) needs to be updated for:
-        // 1. Position persistence on refresh
-        // 2. Accurate task counting (isPointInRect checks)
-        // 3. Nested group cascading
+        // MOVED UP: To be safe, we use the pre-calculated deltaX/deltaY from the top of the function
 
-        // Calculate how much this group moved using proper absolute position (handles deep nesting)
-        const oldGroupAbsPos = getSectionAbsolutePosition(section)
-        const deltaX = absoluteX - oldGroupAbsPos.x
-        const deltaY = absoluteY - oldGroupAbsPos.y
+        // Calculate movement delta using the CAPTURED old position vs NEW visual position
+        const deltaX = absoluteX - startGroupAbsPos.x
+        const deltaY = absoluteY - startGroupAbsPos.y
 
-        if (deltaX !== 0 || deltaY !== 0) {
+        if (Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1) {
 
             // Recursively get all groups that are descendants of this group
             const getDescendantGroupIds = (parentId: string, visited = new Set<string>()): string[] => {
@@ -233,7 +234,6 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
                     const newAbsX = task.canvasPosition.x + deltaX
                     const newAbsY = task.canvasPosition.y + deltaY
 
-
                     // Lock to prevent sync overwrite
                     lockTaskPosition(taskNode.id, { x: newAbsX, y: newAbsY })
 
@@ -241,7 +241,7 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
                     taskStore.updateTask(taskNode.id, {
                         canvasPosition: { x: newAbsX, y: newAbsY }
                     }).catch(err => {
-                        // Silent fail for background background update
+                        console.error('Silent fail task update', err)
                     })
                 }
             }

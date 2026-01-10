@@ -12,7 +12,7 @@ interface CanvasStore {
 }
 
 /**
- * TASK-082: Logic to move tasks from "Today" to "Overdue" at midnight
+ * Logic to move tasks from "Today" to "Overdue" at midnight
  * Extracted from CanvasView for testability
  */
 export function useMidnightTaskMover(
@@ -21,7 +21,6 @@ export function useMidnightTaskMover(
 ) {
 
     const moveTodayTasksToOverdue = async () => {
-        console.log('[TASK-082] Midnight transition detected - checking for Today → Overdue task moves')
 
         // Find "Today" and "Overdue" groups by name (case-insensitive, partial match)
         const todayGroup = canvasStore.groups.find(g =>
@@ -32,19 +31,16 @@ export function useMidnightTaskMover(
         )
 
         if (!todayGroup) {
-            console.log('[TASK-082] No "Today" group found on canvas - skipping transition')
             return { movedCount: 0, reason: 'no-today-group' }
         }
 
         if (!overdueGroup) {
-            console.log('[TASK-082] No "Overdue" group found on canvas - tasks will stay in Today')
             return { movedCount: 0, reason: 'no-overdue-group' }
         }
 
         // Find tasks that are visually inside the "Today" group (canvasPosition within group bounds)
         const todayBounds = todayGroup.position
         if (!todayBounds) {
-            console.warn('[TASK-082] "Today" group found but position is missing - skipping transition')
             return { movedCount: 0, reason: 'today-group-invalid' }
         }
 
@@ -62,16 +58,11 @@ export function useMidnightTaskMover(
         })
 
         if (tasksInToday.length === 0) {
-            console.log('[TASK-082] No tasks in "Today" group to move')
             return { movedCount: 0, reason: 'no-tasks' }
         }
 
-        console.log(`[TASK-082] Moving ${tasksInToday.length} tasks from "Today" to "Overdue"`)
-
-        // Calculate positions in the Overdue group
         const overdueBounds = overdueGroup.position
         if (!overdueBounds) {
-            console.warn('[TASK-082] "Overdue" group found but position is missing - skipping transition')
             return { movedCount: 0, reason: 'overdue-group-invalid' }
         }
 
@@ -97,12 +88,11 @@ export function useMidnightTaskMover(
                 await taskStore.updateTask(task.id, {
                     canvasPosition: { x: newX, y: newY }
                 })
-            } catch (error) {
-                console.error(`[TASK-082] Failed to move task ${task.id}:`, error)
+            } catch {
+                // Continue with other tasks on individual failure
             }
         }
 
-        console.log(`[TASK-082] Successfully moved ${tasksInToday.length} tasks to "Overdue" group`)
         return { movedCount: tasksInToday.length, reason: 'success' }
     }
 

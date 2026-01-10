@@ -1,13 +1,13 @@
-import { onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
-import { useCanvasStore } from '@/stores/canvas'
-import { useUIStore } from '@/stores/ui'
-import { useCanvasNavigation } from '@/composables/canvas/useCanvasNavigation'
+import { onMounted, onBeforeUnmount } from 'vue'
+import type { useTaskStore } from '@/stores/tasks'
+import type { useCanvasStore } from '@/stores/canvas'
+import type { useUIStore } from '@/stores/ui'
+import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 export function useCanvasLifecycle(
-    taskStore: any,
-    canvasStore: any,
-    uiStore: any,
+    taskStore: ReturnType<typeof useTaskStore>,
+    canvasStore: ReturnType<typeof useCanvasStore>,
+    uiStore: ReturnType<typeof useUIStore>,
     fitCanvas: () => void,
     cleanupZoom: () => void
 ) {
@@ -19,9 +19,27 @@ export function useCanvasLifecycle(
             uiStore: !!uiStore
         }
 
-        if (!storeStatus.taskStore) console.error('❌ CRITICAL: TaskStore failed to initialize')
-        if (!storeStatus.canvasStore) console.error('❌ CRITICAL: CanvasStore failed to initialize')
-        if (!storeStatus.uiStore) console.error('❌ CRITICAL: UIStore failed to initialize')
+        if (!storeStatus.taskStore) {
+            errorHandler.report({
+                message: 'TaskStore failed to initialize',
+                severity: ErrorSeverity.CRITICAL,
+                category: ErrorCategory.STATE
+            })
+        }
+        if (!storeStatus.canvasStore) {
+            errorHandler.report({
+                message: 'CanvasStore failed to initialize',
+                severity: ErrorSeverity.CRITICAL,
+                category: ErrorCategory.CANVAS
+            })
+        }
+        if (!storeStatus.uiStore) {
+            errorHandler.report({
+                message: 'UIStore failed to initialize',
+                severity: ErrorSeverity.CRITICAL,
+                category: ErrorCategory.STATE
+            })
+        }
 
         return storeStatus
     }
@@ -31,11 +49,12 @@ export function useCanvasLifecycle(
     onMounted(async () => {
         // Wait for stores to be ready
         if (!storeHealth.taskStore || !storeHealth.canvasStore) {
-            console.warn('⚠️ Stores not ready on mount, canvas initialization may complete later')
+            errorHandler.report({
+                message: 'Stores not ready on mount, canvas initialization may complete later',
+                severity: ErrorSeverity.WARNING,
+                category: ErrorCategory.CANVAS
+            })
         }
-
-        // Initial fit is handled by useCanvasNavigation usually, but we can trigger it here if needed
-        // fitCanvas() 
     })
 
     onBeforeUnmount(() => {

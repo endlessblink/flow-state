@@ -28,7 +28,7 @@ import { useCanvasSmartGroups } from './useCanvasSmartGroups'
 import { useCanvasConnections } from './useCanvasConnections'
 
 // Helper for error boundaries
-const mockErrorBoundary = (_name: string, fn: any) => {
+const mockErrorBoundary = (_name: string, fn: Function) => {
     if (typeof fn !== 'function') return (...args: any[]) => {
         console.warn(`[CanvasError] Attempted to call non-function "${_name}"`, { args })
         return null
@@ -232,24 +232,20 @@ export function useCanvasOrchestrator() {
     // Initial sync on mount or as soon as stores are likely available
     onMounted(async () => {
         await nextTick()
-        console.log('🚀 [CanvasOrchestrator] Performing initial node/edge sync...')
         sync.syncNodes()
         sync.syncEdges()
     })
 
     // Watchers to keep canvas in sync with store changes
     watch(() => taskStore.tasks, () => {
-        console.log('🔄 [CanvasOrchestrator] Tasks changed, syncing nodes...')
         sync.batchedSyncNodes('low')
     }, { deep: true })
 
     watch(() => canvasStore.groups, () => {
-        console.log('🔄 [CanvasOrchestrator] Groups changed, syncing nodes...')
         sync.batchedSyncNodes('normal')
     }, { deep: true })
 
     watch(() => taskStore.activeStatusFilter, () => {
-        console.log('🔄 [CanvasOrchestrator] Filter changed, syncing nodes...')
         sync.syncNodes()
     })
 
